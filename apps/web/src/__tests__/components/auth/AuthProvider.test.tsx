@@ -9,14 +9,14 @@ import { api } from '@/lib/api';
 import React, { PropsWithChildren } from 'react';
 
 // Mock api module
-jest.mock('@/lib/api', () => ({
+vi.mock('@/lib/api', () => ({
   api: {
-    get: jest.fn(),
-    post: jest.fn(),
+    get: vi.fn(),
+    post: vi.fn(),
   },
 }));
 
-const mockApi = api as jest.Mocked<typeof api>;
+const mockApi = api as Mocked<typeof api>;
 
 describe('AuthProvider', () => {
   const wrapper = ({ children }: PropsWithChildren) => (
@@ -24,7 +24,7 @@ describe('AuthProvider', () => {
   );
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('Initialization', () => {
@@ -281,7 +281,7 @@ describe('AuthProvider', () => {
   describe('error handling', () => {
     it('throws error if useAuth used outside AuthProvider', () => {
       // Suppress console.error for this test
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       expect(() => {
         renderHook(() => useAuth());

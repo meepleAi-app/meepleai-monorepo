@@ -1,5 +1,12 @@
+/**
+ * AI04 QA Snippets E2E Tests - MIGRATED TO POM
+ *
+ * @see apps/web/e2e/helpers/qa-test-utils.ts
+ */
+
 import { test, expect, Page } from '@playwright/test';
 import { getTextMatcher, t } from './fixtures/i18n';
+import { waitForAutoSelection } from './helpers/qa-test-utils';
 
 const apiBase = 'http://localhost:8080';
 
@@ -10,40 +17,40 @@ async function setupAuthRoutes(page: Page) {
       id: 'user-1',
       email: 'user@meepleai.dev',
       displayName: 'Test User',
-      role: 'User'
+      role: 'User',
     },
-    expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString()
+    expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
   };
 
-  await page.route(`${apiBase}/api/v1/auth/me`, async (route) => {
+  await page.route(`${apiBase}/api/v1/auth/me`, async route => {
     if (authenticated) {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify(userResponse)
+        body: JSON.stringify(userResponse),
       });
     } else {
       await route.fulfill({
         status: 401,
         contentType: 'application/json',
-        body: JSON.stringify({ error: 'Unauthorized' })
+        body: JSON.stringify({ error: 'Unauthorized' }),
       });
     }
   });
 
-  await page.route(`${apiBase}/api/v1/auth/login`, async (route) => {
+  await page.route(`${apiBase}/api/v1/auth/login`, async route => {
     authenticated = true;
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify(userResponse)
+      body: JSON.stringify(userResponse),
     });
   });
 
   return {
     authenticate() {
       authenticated = true;
-    }
+    },
   };
 }
 
@@ -53,39 +60,45 @@ test.describe('AI-04: Q&A with Snippets and Not Specified Fallback', () => {
     auth.authenticate();
 
     // Mock games API
-    await page.route(`${apiBase}/api/v1/games`, async (route) => {
+    await page.route(`${apiBase}/api/v1/games`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify([
-          { id: 'chess-1', name: 'Chess', createdAt: '2025-01-01T00:00:00Z' },
-          { id: 'tictactoe-1', name: 'Tic-Tac-Toe', createdAt: '2025-01-01T00:00:00Z' }
-        ])
+          { id: 'chess-1', title: 'Chess', createdAt: '2025-01-01T00:00:00Z' },
+          { id: 'tictactoe-1', title: 'Tic-Tac-Toe', createdAt: '2025-01-01T00:00:00Z' },
+        ]),
       });
     });
 
     // Mock agents API for chess
-    await page.route(`${apiBase}/api/v1/games/chess-1/agents`, async (route) => {
+    await page.route(`${apiBase}/api/v1/games/chess-1/agents`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify([
-          { id: 'agent-qa-1', gameId: 'chess-1', name: 'Chess Q&A Agent', kind: 'qa', createdAt: '2025-01-01T00:00:00Z' }
-        ])
+          {
+            id: 'agent-qa-1',
+            gameId: 'chess-1',
+            name: 'Chess Q&A Agent',
+            kind: 'qa',
+            createdAt: '2025-01-01T00:00:00Z',
+          },
+        ]),
       });
     });
 
     // Mock chats API
-    await page.route(`${apiBase}/api/v1/chats?gameId=chess-1`, async (route) => {
+    await page.route(`${apiBase}/api/v1/chats?gameId=chess-1`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify([])
+        body: JSON.stringify([]),
       });
     });
 
     // Mock chat creation
-    await page.route(`${apiBase}/api/v1/chats`, async (route) => {
+    await page.route(`${apiBase}/api/v1/chats`, async route => {
       if (route.request().method() === 'POST') {
         await route.fulfill({
           status: 200,
@@ -97,56 +110,55 @@ test.describe('AI-04: Q&A with Snippets and Not Specified Fallback', () => {
             agentId: 'agent-qa-1',
             agentName: 'Chess Q&A Agent',
             startedAt: new Date().toISOString(),
-            lastMessageAt: null
-          })
+            lastMessageAt: null,
+          }),
         });
       }
     });
 
     // Mock Q&A API with snippets (AI-04 happy path)
-    await page.route(`${apiBase}/api/v1/agents/qa`, async (route) => {
-      const requestBody = route.request().postDataJSON() as { query: string; gameId: string; chatId: string };
+    await page.route(`${apiBase}/api/v1/agents/qa`, async route => {
+      const requestBody = route.request().postDataJSON() as {
+        query: string;
+        gameId: string;
+        chatId: string;
+      };
 
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          answer: 'En passant is a special pawn capture move in chess. It can only occur when a pawn moves two squares forward from its starting position and lands beside an opponent\'s pawn.',
+          answer:
+            "En passant is a special pawn capture move in chess. It can only occur when a pawn moves two squares forward from its starting position and lands beside an opponent's pawn.",
           snippets: [
             {
               text: 'A pawn attacking a square crossed by an opponent\'s pawn which has advanced two squares in one move from its original square may capture this opponent\'s pawn as though the latter had been moved only one square. This capture is only legal on the move following this advance and is called an "en passant" capture.',
               source: 'chess-rules.pdf',
               page: 12,
-              line: null
+              line: null,
             },
             {
-              text: 'The en passant capture must be made immediately after the opponent\'s pawn makes the two-square advance; otherwise, the right to do so is lost.',
+              text: "The en passant capture must be made immediately after the opponent's pawn makes the two-square advance; otherwise, the right to do so is lost.",
               source: 'chess-advanced-tactics.pdf',
               page: 45,
-              line: null
-            }
+              line: null,
+            },
           ],
           messageId: 'msg-123',
           tokenUsage: {
             promptTokens: 150,
             completionTokens: 85,
-            totalTokens: 235
-          }
-        })
+            totalTokens: 235,
+          },
+        }),
       });
     });
 
     // Navigate to chat page
     await page.goto('/chat');
 
-    // Verify page loaded
-    await expect(page.getByRole('heading', { name: 'MeepleAI Chat' })).toBeVisible();
-
-    // Select Chess game (should be auto-selected)
-    await expect(page.locator('#gameSelect')).toHaveValue('chess-1');
-
-    // Verify agent is auto-selected
-    await expect(page.locator('#agentSelect')).toHaveValue('agent-qa-1');
+    // Wait for auto-selection (Issue #1800 fix: use waitForAutoSelection instead of .toHaveValue())
+    await waitForAutoSelection(page, 'chess-1', 'agent-qa-1');
 
     // Enter question about en passant
     const input = page.getByPlaceholder('Fai una domanda sul gioco...');
@@ -156,14 +168,18 @@ test.describe('AI-04: Q&A with Snippets and Not Specified Fallback', () => {
     await page.getByRole('button', { name: 'Invia' }).click();
 
     // Wait for assistant response
-    await expect(page.getByText('En passant is a special pawn capture move in chess')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('En passant is a special pawn capture move in chess')).toBeVisible({
+      timeout: 10000,
+    });
 
     // Verify snippets section is visible
     await expect(page.getByText('Fonti:')).toBeVisible();
 
     // Verify first snippet with source and page number
     await expect(page.getByText('chess-rules.pdf (Pagina 12)')).toBeVisible();
-    await expect(page.getByText(/A pawn attacking a square crossed by an opponent's pawn/)).toBeVisible();
+    await expect(
+      page.getByText(/A pawn attacking a square crossed by an opponent's pawn/)
+    ).toBeVisible();
 
     // Verify second snippet with source and page number
     await expect(page.getByText('chess-advanced-tactics.pdf (Pagina 45)')).toBeVisible();
@@ -174,43 +190,51 @@ test.describe('AI-04: Q&A with Snippets and Not Specified Fallback', () => {
     await expect(page.getByRole('button', { name: '👎 Non utile' })).toBeVisible();
   });
 
-  test('E2E: User asks question with no relevant context and receives "Not specified"', async ({ page }) => {
+  test('E2E: User asks question with no relevant context and receives "Not specified"', async ({
+    page,
+  }) => {
     const auth = await setupAuthRoutes(page);
     auth.authenticate();
 
     // Mock games API
-    await page.route(`${apiBase}/api/v1/games`, async (route) => {
+    await page.route(`${apiBase}/api/v1/games`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify([
-          { id: 'chess-1', name: 'Chess', createdAt: '2025-01-01T00:00:00Z' }
-        ])
+          { id: 'chess-1', title: 'Chess', createdAt: '2025-01-01T00:00:00Z' },
+        ]),
       });
     });
 
     // Mock agents API
-    await page.route(`${apiBase}/api/v1/games/chess-1/agents`, async (route) => {
+    await page.route(`${apiBase}/api/v1/games/chess-1/agents`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify([
-          { id: 'agent-qa-1', gameId: 'chess-1', name: 'Chess Q&A Agent', kind: 'qa', createdAt: '2025-01-01T00:00:00Z' }
-        ])
+          {
+            id: 'agent-qa-1',
+            gameId: 'chess-1',
+            name: 'Chess Q&A Agent',
+            kind: 'qa',
+            createdAt: '2025-01-01T00:00:00Z',
+          },
+        ]),
       });
     });
 
     // Mock chats API
-    await page.route(`${apiBase}/api/v1/chats?gameId=chess-1`, async (route) => {
+    await page.route(`${apiBase}/api/v1/chats?gameId=chess-1`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify([])
+        body: JSON.stringify([]),
       });
     });
 
     // Mock chat creation
-    await page.route(`${apiBase}/api/v1/chats`, async (route) => {
+    await page.route(`${apiBase}/api/v1/chats`, async route => {
       if (route.request().method() === 'POST') {
         await route.fulfill({
           status: 200,
@@ -222,14 +246,14 @@ test.describe('AI-04: Q&A with Snippets and Not Specified Fallback', () => {
             agentId: 'agent-qa-1',
             agentName: 'Chess Q&A Agent',
             startedAt: new Date().toISOString(),
-            lastMessageAt: null
-          })
+            lastMessageAt: null,
+          }),
         });
       }
     });
 
     // Mock Q&A API returning "Not specified" with empty snippets (AI-04 fallback)
-    await page.route(`${apiBase}/api/v1/agents/qa`, async (route) => {
+    await page.route(`${apiBase}/api/v1/agents/qa`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -240,9 +264,9 @@ test.describe('AI-04: Q&A with Snippets and Not Specified Fallback', () => {
           tokenUsage: {
             promptTokens: 120,
             completionTokens: 5,
-            totalTokens: 125
-          }
-        })
+            totalTokens: 125,
+          },
+        }),
       });
     });
 
@@ -272,38 +296,44 @@ test.describe('AI-04: Q&A with Snippets and Not Specified Fallback', () => {
     auth.authenticate();
 
     // Mock games API
-    await page.route(`${apiBase}/api/v1/games`, async (route) => {
+    await page.route(`${apiBase}/api/v1/games`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify([
-          { id: 'tictactoe-1', name: 'Tic-Tac-Toe', createdAt: '2025-01-01T00:00:00Z' }
-        ])
+          { id: 'tictactoe-1', title: 'Tic-Tac-Toe', createdAt: '2025-01-01T00:00:00Z' },
+        ]),
       });
     });
 
     // Mock agents API
-    await page.route(`${apiBase}/api/v1/games/tictactoe-1/agents`, async (route) => {
+    await page.route(`${apiBase}/api/v1/games/tictactoe-1/agents`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify([
-          { id: 'agent-qa-2', gameId: 'tictactoe-1', name: 'Tic-Tac-Toe Q&A Agent', kind: 'qa', createdAt: '2025-01-01T00:00:00Z' }
-        ])
+          {
+            id: 'agent-qa-2',
+            gameId: 'tictactoe-1',
+            name: 'Tic-Tac-Toe Q&A Agent',
+            kind: 'qa',
+            createdAt: '2025-01-01T00:00:00Z',
+          },
+        ]),
       });
     });
 
     // Mock chats API
-    await page.route(`${apiBase}/api/v1/chats?gameId=tictactoe-1`, async (route) => {
+    await page.route(`${apiBase}/api/v1/chats?gameId=tictactoe-1`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify([])
+        body: JSON.stringify([]),
       });
     });
 
     // Mock chat creation
-    await page.route(`${apiBase}/api/v1/chats`, async (route) => {
+    await page.route(`${apiBase}/api/v1/chats`, async route => {
       if (route.request().method() === 'POST') {
         await route.fulfill({
           status: 200,
@@ -315,41 +345,42 @@ test.describe('AI-04: Q&A with Snippets and Not Specified Fallback', () => {
             agentId: 'agent-qa-2',
             agentName: 'Tic-Tac-Toe Q&A Agent',
             startedAt: new Date().toISOString(),
-            lastMessageAt: null
-          })
+            lastMessageAt: null,
+          }),
         });
       }
     });
 
     // Mock Q&A API with snippets from multiple sources
-    await page.route(`${apiBase}/api/v1/agents/qa`, async (route) => {
+    await page.route(`${apiBase}/api/v1/agents/qa`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          answer: 'To win Tic-Tac-Toe, you need to get three of your marks in a row, either horizontally, vertically, or diagonally.',
+          answer:
+            'To win Tic-Tac-Toe, you need to get three of your marks in a row, either horizontally, vertically, or diagonally.',
           snippets: [
             {
               text: 'The first player to get three of their marks in a row (horizontally, vertically, or diagonally) wins the game.',
               source: 'tictactoe-basic-rules.pdf',
               page: 1,
-              line: null
+              line: null,
             },
             {
-              text: 'Victory conditions: Three X\'s or O\'s in any row, column, or diagonal.',
+              text: "Victory conditions: Three X's or O's in any row, column, or diagonal.",
               source: 'tictactoe-manual.pdf',
               page: 3,
-              line: null
+              line: null,
             },
             {
               text: 'Strategic tip: The center square provides the most winning opportunities as it participates in four possible winning lines.',
               source: 'tictactoe-strategy-guide.pdf',
               page: 7,
-              line: null
-            }
+              line: null,
+            },
           ],
-          messageId: 'msg-789'
-        })
+          messageId: 'msg-789',
+        }),
       });
     });
 
@@ -382,35 +413,41 @@ test.describe('AI-04: Q&A with Snippets and Not Specified Fallback', () => {
     auth.authenticate();
 
     // Mock games and agents
-    await page.route(`${apiBase}/api/v1/games`, async (route) => {
+    await page.route(`${apiBase}/api/v1/games`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify([
-          { id: 'chess-1', name: 'Chess', createdAt: '2025-01-01T00:00:00Z' }
-        ])
+          { id: 'chess-1', title: 'Chess', createdAt: '2025-01-01T00:00:00Z' },
+        ]),
       });
     });
 
-    await page.route(`${apiBase}/api/v1/games/chess-1/agents`, async (route) => {
+    await page.route(`${apiBase}/api/v1/games/chess-1/agents`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify([
-          { id: 'agent-qa-1', gameId: 'chess-1', name: 'Chess Q&A Agent', kind: 'qa', createdAt: '2025-01-01T00:00:00Z' }
-        ])
+          {
+            id: 'agent-qa-1',
+            gameId: 'chess-1',
+            name: 'Chess Q&A Agent',
+            kind: 'qa',
+            createdAt: '2025-01-01T00:00:00Z',
+          },
+        ]),
       });
     });
 
-    await page.route(`${apiBase}/api/v1/chats?gameId=chess-1`, async (route) => {
+    await page.route(`${apiBase}/api/v1/chats?gameId=chess-1`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify([])
+        body: JSON.stringify([]),
       });
     });
 
-    await page.route(`${apiBase}/api/v1/chats`, async (route) => {
+    await page.route(`${apiBase}/api/v1/chats`, async route => {
       if (route.request().method() === 'POST') {
         await route.fulfill({
           status: 200,
@@ -422,13 +459,13 @@ test.describe('AI-04: Q&A with Snippets and Not Specified Fallback', () => {
             agentId: 'agent-qa-1',
             agentName: 'Chess Q&A Agent',
             startedAt: new Date().toISOString(),
-            lastMessageAt: null
-          })
+            lastMessageAt: null,
+          }),
         });
       }
     });
 
-    await page.route(`${apiBase}/api/v1/agents/qa`, async (route) => {
+    await page.route(`${apiBase}/api/v1/agents/qa`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -439,22 +476,22 @@ test.describe('AI-04: Q&A with Snippets and Not Specified Fallback', () => {
               text: 'Castling consists of moving the king two squares towards a rook, then placing the rook on the other side of the king, adjacent to it.',
               source: 'chess-rules.pdf',
               page: 8,
-              line: null
-            }
+              line: null,
+            },
           ],
-          messageId: 'msg-feedback-123'
-        })
+          messageId: 'msg-feedback-123',
+        }),
       });
     });
 
     // Mock feedback API
     let feedbackReceived: any = null;
-    await page.route(`${apiBase}/api/v1/agents/feedback`, async (route) => {
+    await page.route(`${apiBase}/api/v1/agents/feedback`, async route => {
       feedbackReceived = route.request().postDataJSON();
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ success: true })
+        body: JSON.stringify({ success: true }),
       });
     });
 
@@ -473,7 +510,6 @@ test.describe('AI-04: Q&A with Snippets and Not Specified Fallback', () => {
     await helpfulButton.click();
 
     // Wait a moment for API call
-    await page.waitForTimeout(500);
 
     // Verify button shows active state (green background)
     await expect(helpfulButton).toHaveCSS('background-color', 'rgb(52, 168, 83)');
@@ -490,35 +526,41 @@ test.describe('AI-04: Q&A with Snippets and Not Specified Fallback', () => {
     const auth = await setupAuthRoutes(page);
     auth.authenticate();
 
-    await page.route(`${apiBase}/api/v1/games`, async (route) => {
+    await page.route(`${apiBase}/api/v1/games`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify([
-          { id: 'game-1', name: 'Test Game', createdAt: '2025-01-01T00:00:00Z' }
-        ])
+          { id: 'game-1', name: 'Test Game', createdAt: '2025-01-01T00:00:00Z' },
+        ]),
       });
     });
 
-    await page.route(`${apiBase}/api/v1/games/game-1/agents`, async (route) => {
+    await page.route(`${apiBase}/api/v1/games/game-1/agents`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify([
-          { id: 'agent-1', gameId: 'game-1', name: 'Test Agent', kind: 'qa', createdAt: '2025-01-01T00:00:00Z' }
-        ])
+          {
+            id: 'agent-1',
+            gameId: 'game-1',
+            name: 'Test Agent',
+            kind: 'qa',
+            createdAt: '2025-01-01T00:00:00Z',
+          },
+        ]),
       });
     });
 
-    await page.route(`${apiBase}/api/v1/chats?gameId=game-1`, async (route) => {
+    await page.route(`${apiBase}/api/v1/chats?gameId=game-1`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify([])
+        body: JSON.stringify([]),
       });
     });
 
-    await page.route(`${apiBase}/api/v1/chats`, async (route) => {
+    await page.route(`${apiBase}/api/v1/chats`, async route => {
       if (route.request().method() === 'POST') {
         await route.fulfill({
           status: 200,
@@ -530,13 +572,13 @@ test.describe('AI-04: Q&A with Snippets and Not Specified Fallback', () => {
             agentId: 'agent-1',
             agentName: 'Test Agent',
             startedAt: new Date().toISOString(),
-            lastMessageAt: null
-          })
+            lastMessageAt: null,
+          }),
         });
       }
     });
 
-    await page.route(`${apiBase}/api/v1/agents/qa`, async (route) => {
+    await page.route(`${apiBase}/api/v1/agents/qa`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -547,11 +589,11 @@ test.describe('AI-04: Q&A with Snippets and Not Specified Fallback', () => {
               text: 'Some text without page number.',
               source: 'source-without-page.txt',
               page: null,
-              line: null
-            }
+              line: null,
+            },
           ],
-          messageId: 'msg-no-page'
-        })
+          messageId: 'msg-no-page',
+        }),
       });
     });
 

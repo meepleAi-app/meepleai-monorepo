@@ -9,17 +9,17 @@ import { ApiError, UnauthorizedError } from '../core/errors';
 
 describe('Logger', () => {
   let originalEnv: NodeJS.ProcessEnv;
-  let consoleErrorSpy: jest.SpyInstance;
-  let consoleWarnSpy: jest.SpyInstance;
-  let consoleInfoSpy: jest.SpyInstance;
-  let consoleDebugSpy: jest.SpyInstance;
+  let consoleErrorSpy: SpyInstance;
+  let consoleWarnSpy: SpyInstance;
+  let consoleInfoSpy: SpyInstance;
+  let consoleDebugSpy: SpyInstance;
 
   beforeEach(() => {
     originalEnv = process.env;
-    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
-    consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
-    consoleInfoSpy = jest.spyOn(console, 'info').mockImplementation();
-    consoleDebugSpy = jest.spyOn(console, 'debug').mockImplementation();
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation();
+    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation();
+    consoleInfoSpy = vi.spyOn(console, 'info').mockImplementation();
+    consoleDebugSpy = vi.spyOn(console, 'debug').mockImplementation();
   });
 
   afterEach(() => {
@@ -100,11 +100,9 @@ describe('Logger', () => {
     it('should log warnings to console', () => {
       logger.warn('Warning message', { key: 'value' });
 
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
-        '[API Warning]',
-        'Warning message',
-        { key: 'value' }
-      );
+      expect(consoleWarnSpy).toHaveBeenCalledWith('[API Warning]', 'Warning message', {
+        key: 'value',
+      });
     });
   });
 
@@ -112,26 +110,26 @@ describe('Logger', () => {
     it('should log info to console', () => {
       logger.info('Info message', { userId: '123' });
 
-      expect(consoleInfoSpy).toHaveBeenCalledWith(
-        '[API Info]',
-        'Info message',
-        { userId: '123' }
-      );
+      expect(consoleInfoSpy).toHaveBeenCalledWith('[API Info]', 'Info message', { userId: '123' });
     });
   });
 
   describe('debug logging', () => {
-    it.skip('should log debug in development', () => {
-      logger.debug('Debug message', { debug: true });
-
-      expect(consoleDebugSpy).toHaveBeenCalledWith(
-        '[API Debug]',
-        'Debug message',
-        { debug: true }
-      );
+    afterEach(() => {
+      vi.unstubAllEnvs();
     });
 
-    it.skip('should not log debug in production', () => {
+    it('should log debug in development', () => {
+      vi.stubEnv('NODE_ENV', 'development');
+
+      logger.debug('Debug message', { debug: true });
+
+      expect(consoleDebugSpy).toHaveBeenCalledWith('[API Debug]', 'Debug message', { debug: true });
+    });
+
+    it('should not log debug in production', () => {
+      vi.stubEnv('NODE_ENV', 'production');
+
       logger.debug('Debug message', { debug: true });
 
       // Should not call console.debug in production
@@ -141,10 +139,10 @@ describe('Logger', () => {
 });
 
 describe('logApiError', () => {
-  let consoleErrorSpy: jest.SpyInstance;
+  let consoleErrorSpy: SpyInstance;
 
   beforeEach(() => {
-    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation();
   });
 
   afterEach(() => {

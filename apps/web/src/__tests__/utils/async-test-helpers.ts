@@ -10,7 +10,7 @@ import userEvent from '@testing-library/user-event';
  */
 export async function advanceTimersAndFlush(ms: number): Promise<void> {
   await act(async () => {
-    jest.advanceTimersByTime(ms);
+    vi.advanceTimersByTime(ms);
     await Promise.resolve(); // Flush microtask queue
   });
 }
@@ -48,12 +48,12 @@ export function setupUserEvent() {
  * @example
  * afterEach(async () => {
  *   await flushAllPending();
- *   jest.useRealTimers();
+ *   vi.useRealTimers();
  * });
  */
 export async function flushAllPending(): Promise<void> {
   await act(async () => {
-    jest.runOnlyPendingTimers();
+    vi.runOnlyPendingTimers();
     await Promise.resolve();
   });
 }

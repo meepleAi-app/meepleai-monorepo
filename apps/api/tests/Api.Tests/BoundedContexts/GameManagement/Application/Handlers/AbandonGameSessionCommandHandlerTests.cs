@@ -49,7 +49,7 @@ public class AbandonGameSessionCommandHandlerTests
             Reason: "Players had to leave");
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -84,7 +84,7 @@ public class AbandonGameSessionCommandHandlerTests
             Reason: "Emergency came up");
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal("Abandoned", result.Status);
@@ -110,7 +110,7 @@ public class AbandonGameSessionCommandHandlerTests
             Reason: null);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal("Abandoned", result.Status);
@@ -138,7 +138,7 @@ public class AbandonGameSessionCommandHandlerTests
             Reason: "Power outage");
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal("Abandoned", result.Status);
@@ -167,7 +167,7 @@ public class AbandonGameSessionCommandHandlerTests
             Reason: "Never resumed");
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal("Abandoned", result.Status);
@@ -191,7 +191,7 @@ public class AbandonGameSessionCommandHandlerTests
             Reason: "Not enough players showed up");
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal("Abandoned", result.Status);
@@ -218,7 +218,7 @@ public class AbandonGameSessionCommandHandlerTests
             Reason: "Game took too long");
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal("Abandoned", result.Status);
@@ -245,7 +245,7 @@ public class AbandonGameSessionCommandHandlerTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, CancellationToken.None));
+            () => _handler.Handle(command, TestContext.Current.CancellationToken));
 
         Assert.Contains($"Session with ID {sessionId} not found", exception.Message);
 
@@ -275,7 +275,7 @@ public class AbandonGameSessionCommandHandlerTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, CancellationToken.None));
+            () => _handler.Handle(command, TestContext.Current.CancellationToken));
 
         Assert.Contains("Cannot abandon finished session", exception.Message);
     }
@@ -302,7 +302,7 @@ public class AbandonGameSessionCommandHandlerTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, CancellationToken.None));
+            () => _handler.Handle(command, TestContext.Current.CancellationToken));
 
         Assert.Contains("Cannot abandon finished session", exception.Message);
     }
@@ -326,7 +326,7 @@ public class AbandonGameSessionCommandHandlerTests
             Reason: "");
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal("Abandoned", result.Status);
@@ -362,7 +362,7 @@ public class AbandonGameSessionCommandHandlerTests
             Reason: "Test abandon");
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert - All metadata should be preserved
         Assert.Equal(sessionId.ToString(), result.Id.ToString());
@@ -394,7 +394,7 @@ public class AbandonGameSessionCommandHandlerTests
             Reason: "Test");
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         var afterAbandon = DateTime.UtcNow;
 
@@ -446,3 +446,4 @@ public class AbandonGameSessionCommandHandlerTests
 
     #endregion
 }
+

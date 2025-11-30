@@ -230,7 +230,7 @@ describe('MockApiRouter', () => {
 
         router.get('/auth/me', () => createJsonResponse(mockData));
 
-        const mockFetch = jest.fn(router.toMockImplementation());
+        const mockFetch = vi.fn(router.toMockImplementation());
 
         const response = await mockFetch('http://localhost:8080/auth/me');
         const data = await response.json();

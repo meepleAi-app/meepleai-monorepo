@@ -3,6 +3,7 @@ using Api.BoundedContexts.DocumentProcessing.Application.Queries;
 using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.Tests.BoundedContexts.DocumentProcessing.TestHelpers;
+using FluentAssertions;
 using Moq;
 using Xunit;
 
@@ -11,6 +12,7 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Handlers;
 /// <summary>
 /// Comprehensive tests for GetPdfDocumentByIdQueryHandler.
 /// Tests document retrieval, mapping to DTO, and null handling.
+/// ISSUE-1818: Migrated to FluentAssertions for improved readability.
 /// </summary>
 public class GetPdfDocumentByIdQueryHandlerTests
 {
@@ -47,18 +49,18 @@ public class GetPdfDocumentByIdQueryHandlerTests
         var query = new GetPdfDocumentByIdQuery(documentId);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(documentId, result.Id);
-        Assert.Equal(gameId, result.GameId);
-        Assert.Equal("catan-rules.pdf", result.FileName);
-        Assert.Equal("/uploads/catan-rules.pdf", result.FilePath);
-        Assert.Equal(2 * 1024 * 1024, result.FileSizeBytes);
-        Assert.Equal("completed", result.ProcessingStatus);
-        Assert.Equal(24, result.PageCount);
-        Assert.NotNull(result.ProcessedAt);
+        result.Should().NotBeNull();
+        result.Id.Should().Be(documentId);
+        result.GameId.Should().Be(gameId);
+        result.FileName.Should().Be("catan-rules.pdf");
+        result.FilePath.Should().Be("/uploads/catan-rules.pdf");
+        result.FileSizeBytes.Should().Be(2 * 1024 * 1024);
+        result.ProcessingStatus.Should().Be("completed");
+        result.PageCount.Should().Be(24);
+        result.ProcessedAt.Should().NotBeNull();
 
         _documentRepositoryMock.Verify(
             r => r.GetByIdAsync(documentId, It.IsAny<CancellationToken>()),
@@ -82,14 +84,14 @@ public class GetPdfDocumentByIdQueryHandlerTests
         var query = new GetPdfDocumentByIdQuery(documentId);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(documentId, result.Id);
-        Assert.Equal("pending", result.ProcessingStatus);
-        Assert.Null(result.PageCount);
-        Assert.Null(result.ProcessedAt);
+        result.Should().NotBeNull();
+        result.Id.Should().Be(documentId);
+        result.ProcessingStatus.Should().Be("pending");
+        result.PageCount.Should().BeNull();
+        result.ProcessedAt.Should().BeNull();
     }
 
     [Fact]
@@ -110,13 +112,13 @@ public class GetPdfDocumentByIdQueryHandlerTests
         var query = new GetPdfDocumentByIdQuery(documentId);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("processing", result.ProcessingStatus);
-        Assert.Null(result.PageCount);
-        Assert.Null(result.ProcessedAt);
+        result.Should().NotBeNull();
+        result.ProcessingStatus.Should().Be("processing");
+        result.PageCount.Should().BeNull();
+        result.ProcessedAt.Should().BeNull();
     }
 
     [Fact]
@@ -137,12 +139,12 @@ public class GetPdfDocumentByIdQueryHandlerTests
         var query = new GetPdfDocumentByIdQuery(documentId);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("failed", result.ProcessingStatus);
-        Assert.Null(result.PageCount);
+        result.Should().NotBeNull();
+        result.ProcessingStatus.Should().Be("failed");
+        result.PageCount.Should().BeNull();
     }
 
     [Fact]
@@ -164,12 +166,12 @@ public class GetPdfDocumentByIdQueryHandlerTests
         var query = new GetPdfDocumentByIdQuery(documentId);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(fileSizeBytes, result.FileSizeBytes);
-        Assert.Equal(200, result.PageCount);
+        result.Should().NotBeNull();
+        result.FileSizeBytes.Should().Be(fileSizeBytes);
+        result.PageCount.Should().Be(200);
     }
 
     #endregion
@@ -189,10 +191,10 @@ public class GetPdfDocumentByIdQueryHandlerTests
         var query = new GetPdfDocumentByIdQuery(documentId);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
 
         _documentRepositoryMock.Verify(
             r => r.GetByIdAsync(documentId, It.IsAny<CancellationToken>()),
@@ -212,10 +214,10 @@ public class GetPdfDocumentByIdQueryHandlerTests
         var query = new GetPdfDocumentByIdQuery(documentId);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     #endregion
@@ -244,7 +246,7 @@ public class GetPdfDocumentByIdQueryHandlerTests
         var result = await _handler.Handle(query, cancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         _documentRepositoryMock.Verify(
             r => r.GetByIdAsync(documentId, cancellationToken),
             Times.Once);

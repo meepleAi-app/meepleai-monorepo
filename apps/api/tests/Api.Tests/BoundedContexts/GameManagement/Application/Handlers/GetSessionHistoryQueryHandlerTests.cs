@@ -50,7 +50,7 @@ public class GetSessionHistoryQueryHandlerTests
         var query = new GetSessionHistoryQuery();
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -81,7 +81,7 @@ public class GetSessionHistoryQueryHandlerTests
         var query = new GetSessionHistoryQuery(GameId: gameId);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -115,7 +115,7 @@ public class GetSessionHistoryQueryHandlerTests
             EndDate: endDate);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -147,7 +147,7 @@ public class GetSessionHistoryQueryHandlerTests
             Offset: offset);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -188,7 +188,7 @@ public class GetSessionHistoryQueryHandlerTests
             Offset: offset);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -215,7 +215,7 @@ public class GetSessionHistoryQueryHandlerTests
         var query = new GetSessionHistoryQuery();
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -234,7 +234,7 @@ public class GetSessionHistoryQueryHandlerTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<ArgumentException>(
-            () => _handler.Handle(query, CancellationToken.None));
+            () => _handler.Handle(query, TestContext.Current.CancellationToken));
 
         Assert.Contains("Limit must be non-negative", exception.Message);
     }
@@ -247,7 +247,7 @@ public class GetSessionHistoryQueryHandlerTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<ArgumentException>(
-            () => _handler.Handle(query, CancellationToken.None));
+            () => _handler.Handle(query, TestContext.Current.CancellationToken));
 
         Assert.Contains("Limit cannot exceed 1000", exception.Message);
     }
@@ -260,7 +260,7 @@ public class GetSessionHistoryQueryHandlerTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<ArgumentException>(
-            () => _handler.Handle(query, CancellationToken.None));
+            () => _handler.Handle(query, TestContext.Current.CancellationToken));
 
         Assert.Contains("Offset must be non-negative", exception.Message);
     }
@@ -282,7 +282,7 @@ public class GetSessionHistoryQueryHandlerTests
         var query = new GetSessionHistoryQuery(Limit: 1000);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -306,7 +306,7 @@ public class GetSessionHistoryQueryHandlerTests
         var query = new GetSessionHistoryQuery(Limit: 0, Offset: 0);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -339,7 +339,7 @@ public class GetSessionHistoryQueryHandlerTests
         var query = new GetSessionHistoryQuery();
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -356,3 +356,4 @@ public class GetSessionHistoryQueryHandlerTests
 
     #endregion
 }
+

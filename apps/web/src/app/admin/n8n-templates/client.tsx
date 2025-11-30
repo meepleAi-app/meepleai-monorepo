@@ -1,6 +1,5 @@
 'use client';
 
-import { useAuthUser } from '@/hooks/useAuthUser';
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api';
 import { ErrorDisplay } from '@/components/errors';
@@ -50,7 +49,7 @@ const categories = [
 ];
 
 export function AdminPageClient() {
-  const { user } = useAuthUser();
+  const { user, loading: authLoading } = useAuthUser();
 
   if (!user) return null;
   const [templates, setTemplates] = useState<WorkflowTemplate[]>([]);

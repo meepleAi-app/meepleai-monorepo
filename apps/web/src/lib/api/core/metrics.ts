@@ -5,6 +5,8 @@
  * Metrics are stored in-memory and can be exposed via a metrics endpoint.
  */
 
+import { escapePrometheusLabelValue } from './prometheusUtils';
+
 export interface RetryMetrics {
   /** Total number of retry attempts made */
   totalRetries: number;
@@ -51,11 +53,17 @@ class MetricsCollector {
 
     // Track by status code (0 for network errors)
     const code = statusCode || 0;
+    // Safe: code is a validated number, not user-controlled string
+    // eslint-disable-next-line security/detect-object-injection
     this.metrics.retriesByStatusCode[code] =
+      // eslint-disable-next-line security/detect-object-injection
       (this.metrics.retriesByStatusCode[code] || 0) + 1;
 
     // Track by endpoint
+    // Safe: endpoint is used for aggregation only, values are sanitized before output
+    // eslint-disable-next-line security/detect-object-injection
     this.metrics.retriesByEndpoint[endpoint] =
+      // eslint-disable-next-line security/detect-object-injection
       (this.metrics.retriesByEndpoint[endpoint] || 0) + 1;
   }
 
@@ -127,8 +135,8 @@ class MetricsCollector {
     lines.push('# HELP http_client_retries_by_endpoint Retry attempts by endpoint');
     lines.push('# TYPE http_client_retries_by_endpoint counter');
     Object.entries(this.metrics.retriesByEndpoint).forEach(([endpoint, count]) => {
-      // Escape endpoint path for Prometheus label
-      const escapedEndpoint = endpoint.replace(/"/g, '\\"');
+      // Escape endpoint path for Prometheus label (prevents CWE-116: incomplete sanitization)
+      const escapedEndpoint = escapePrometheusLabelValue(endpoint);
       lines.push(`http_client_retries_by_endpoint{endpoint="${escapedEndpoint}"} ${count}`);
     });
 

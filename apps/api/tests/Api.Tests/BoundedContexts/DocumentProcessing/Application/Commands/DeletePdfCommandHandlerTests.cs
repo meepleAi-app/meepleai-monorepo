@@ -9,15 +9,14 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Commands;
 
 /// <summary>
 /// Tests for DeletePdfCommandHandler.
 /// Tests PDF deletion with cascade cleanup (document, vectors, blob storage, cache).
-/// NOTE: Complex handler with many dependencies - focused on construction and error handling.
-/// TODO: Add integration tests for full deletion workflow.
-/// ISSUE-1500: TEST-002 - Fixed test isolation (fresh context per test)
+/// ISSUE-1818: Migrated to FluentAssertions for improved readability.
 /// </summary>
 public class DeletePdfCommandHandlerTests
 {
@@ -60,7 +59,7 @@ public class DeletePdfCommandHandlerTests
             loggerMock.Object);
 
         // Assert
-        Assert.NotNull(handler);
+        handler.Should().NotBeNull();
     }
 
     [Fact]
@@ -69,16 +68,17 @@ public class DeletePdfCommandHandlerTests
         // Arrange - fresh mocks per test
         var (scopeFactoryMock, blobStorageServiceMock, cacheServiceMock, loggerMock) = CreateMocks();
 
-        // Act & Assert
-        var exception = Assert.Throws<ArgumentNullException>(() =>
-            new DeletePdfCommandHandler(
+        // Act
+        Action act = () => new DeletePdfCommandHandler(
                 null!,
                 scopeFactoryMock.Object,
                 blobStorageServiceMock.Object,
                 cacheServiceMock.Object,
-                loggerMock.Object));
+                loggerMock.Object);
 
-        Assert.Equal("db", exception.ParamName);
+        // Assert
+        act.Should().Throw<ArgumentNullException>()
+            .WithParameterName("db");
     }
 
     [Fact]
@@ -88,16 +88,17 @@ public class DeletePdfCommandHandlerTests
         using var context = CreateFreshDbContext();
         var (_, blobStorageServiceMock, cacheServiceMock, loggerMock) = CreateMocks();
 
-        // Act & Assert
-        var exception = Assert.Throws<ArgumentNullException>(() =>
-            new DeletePdfCommandHandler(
+        // Act
+        Action act = () => new DeletePdfCommandHandler(
                 context,
                 null!,
                 blobStorageServiceMock.Object,
                 cacheServiceMock.Object,
-                loggerMock.Object));
+                loggerMock.Object);
 
-        Assert.Equal("scopeFactory", exception.ParamName);
+        // Assert
+        act.Should().Throw<ArgumentNullException>()
+            .WithParameterName("scopeFactory");
     }
 
     [Fact]
@@ -107,16 +108,17 @@ public class DeletePdfCommandHandlerTests
         using var context = CreateFreshDbContext();
         var (scopeFactoryMock, _, cacheServiceMock, loggerMock) = CreateMocks();
 
-        // Act & Assert
-        var exception = Assert.Throws<ArgumentNullException>(() =>
-            new DeletePdfCommandHandler(
+        // Act
+        Action act = () => new DeletePdfCommandHandler(
                 context,
                 scopeFactoryMock.Object,
                 null!,
                 cacheServiceMock.Object,
-                loggerMock.Object));
+                loggerMock.Object);
 
-        Assert.Equal("blobStorageService", exception.ParamName);
+        // Assert
+        act.Should().Throw<ArgumentNullException>()
+            .WithParameterName("blobStorageService");
     }
 
     [Fact]
@@ -126,16 +128,17 @@ public class DeletePdfCommandHandlerTests
         using var context = CreateFreshDbContext();
         var (scopeFactoryMock, blobStorageServiceMock, _, loggerMock) = CreateMocks();
 
-        // Act & Assert
-        var exception = Assert.Throws<ArgumentNullException>(() =>
-            new DeletePdfCommandHandler(
+        // Act
+        Action act = () => new DeletePdfCommandHandler(
                 context,
                 scopeFactoryMock.Object,
                 blobStorageServiceMock.Object,
                 null!,
-                loggerMock.Object));
+                loggerMock.Object);
 
-        Assert.Equal("cacheService", exception.ParamName);
+        // Assert
+        act.Should().Throw<ArgumentNullException>()
+            .WithParameterName("cacheService");
     }
 
     [Fact]
@@ -145,16 +148,17 @@ public class DeletePdfCommandHandlerTests
         using var context = CreateFreshDbContext();
         var (scopeFactoryMock, blobStorageServiceMock, cacheServiceMock, _) = CreateMocks();
 
-        // Act & Assert
-        var exception = Assert.Throws<ArgumentNullException>(() =>
-            new DeletePdfCommandHandler(
+        // Act
+        Action act = () => new DeletePdfCommandHandler(
                 context,
                 scopeFactoryMock.Object,
                 blobStorageServiceMock.Object,
                 cacheServiceMock.Object,
-                null!));
+                null!);
 
-        Assert.Equal("logger", exception.ParamName);
+        // Assert
+        act.Should().Throw<ArgumentNullException>()
+            .WithParameterName("logger");
     }
 
     #endregion
@@ -171,7 +175,7 @@ public class DeletePdfCommandHandlerTests
         var command = new DeletePdfCommand(pdfId);
 
         // Assert
-        Assert.Equal(pdfId, command.PdfId);
+        command.PdfId.Should().Be(pdfId);
     }
 
     #endregion
@@ -188,9 +192,9 @@ public class DeletePdfCommandHandlerTests
         var result = new PdfDeleteResult(true, "PDF deleted successfully", gameId);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Equal("PDF deleted successfully", result.Message);
-        Assert.Equal(gameId, result.GameId);
+        result.Success.Should().BeTrue();
+        result.Message.Should().Be("PDF deleted successfully");
+        result.GameId.Should().Be(gameId);
     }
 
     [Fact]
@@ -200,9 +204,9 @@ public class DeletePdfCommandHandlerTests
         var result = new PdfDeleteResult(false, "PDF not found", null);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Equal("PDF not found", result.Message);
-        Assert.Null(result.GameId);
+        result.Success.Should().BeFalse();
+        result.Message.Should().Be("PDF not found");
+        result.GameId.Should().BeNull();
     }
 
     #endregion

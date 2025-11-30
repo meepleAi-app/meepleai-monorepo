@@ -190,7 +190,7 @@ export class MockApiRouter {
    *
    * @example
    * ```typescript
-   * const mockFetch = jest.fn();
+   * const mockFetch = vi.fn();
    * mockFetch.mockImplementation(router.toMockImplementation());
    * global.fetch = mockFetch;
    * ```
@@ -285,11 +285,11 @@ export const createErrorResponse = (
  */
 export const createMockFetch = (
   handler: (url: string, init?: RequestInit) => Promise<Response>
-): jest.MockedFunction<typeof fetch> => {
-  return jest.fn((input: RequestInfo | URL, init?: RequestInit) => {
+): MockedFunction<typeof fetch> => {
+  return vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof input === 'string' ? input : input.toString();
     return handler(url, init);
-  }) as jest.MockedFunction<typeof fetch>;
+  }) as MockedFunction<typeof fetch>;
 };
 
 /**

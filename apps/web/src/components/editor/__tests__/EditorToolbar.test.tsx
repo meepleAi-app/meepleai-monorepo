@@ -8,29 +8,29 @@ describe("EditorToolbar", () => {
   beforeEach(() => {
     const createChain = (canPerform = true) => {
       const focusableActions = {
-        toggleBold: jest.fn(() => ({ run: jest.fn(() => canPerform) })),
-        toggleItalic: jest.fn(() => ({ run: jest.fn(() => canPerform) })),
-        toggleStrike: jest.fn(() => ({ run: jest.fn(() => canPerform) })),
-        toggleCode: jest.fn(() => ({ run: jest.fn(() => canPerform) })),
-        toggleHeading: jest.fn(() => ({ run: jest.fn(() => canPerform) })),
-        toggleBulletList: jest.fn(() => ({ run: jest.fn(() => canPerform) })),
-        toggleOrderedList: jest.fn(() => ({ run: jest.fn(() => canPerform) })),
-        toggleCodeBlock: jest.fn(() => ({ run: jest.fn(() => canPerform) })),
-        setHorizontalRule: jest.fn(() => ({ run: jest.fn(() => canPerform) })),
-        unsetAllMarks: jest.fn(() => ({ run: jest.fn(() => canPerform) })),
-        undo: jest.fn(() => ({ run: jest.fn(() => canPerform) })),
-        redo: jest.fn(() => ({ run: jest.fn(() => canPerform) }))
+        toggleBold: vi.fn(() => ({ run: vi.fn(() => canPerform) })),
+        toggleItalic: vi.fn(() => ({ run: vi.fn(() => canPerform) })),
+        toggleStrike: vi.fn(() => ({ run: vi.fn(() => canPerform) })),
+        toggleCode: vi.fn(() => ({ run: vi.fn(() => canPerform) })),
+        toggleHeading: vi.fn(() => ({ run: vi.fn(() => canPerform) })),
+        toggleBulletList: vi.fn(() => ({ run: vi.fn(() => canPerform) })),
+        toggleOrderedList: vi.fn(() => ({ run: vi.fn(() => canPerform) })),
+        toggleCodeBlock: vi.fn(() => ({ run: vi.fn(() => canPerform) })),
+        setHorizontalRule: vi.fn(() => ({ run: vi.fn(() => canPerform) })),
+        unsetAllMarks: vi.fn(() => ({ run: vi.fn(() => canPerform) })),
+        undo: vi.fn(() => ({ run: vi.fn(() => canPerform) })),
+        redo: vi.fn(() => ({ run: vi.fn(() => canPerform) }))
       };
 
       return {
-        focus: jest.fn(() => focusableActions)
+        focus: vi.fn(() => focusableActions)
       };
     };
 
     mockEditor = {
-      isActive: jest.fn(() => false),
-      can: jest.fn(() => ({ chain: jest.fn(() => createChain(true)) })),
-      chain: jest.fn(() => createChain(true))
+      isActive: vi.fn(() => false),
+      can: vi.fn(() => ({ chain: vi.fn(() => createChain(true)) })),
+      chain: vi.fn(() => createChain(true))
     } as any;
   });
 
@@ -133,7 +133,7 @@ describe("EditorToolbar", () => {
   });
 
   it("highlights active formatting buttons", () => {
-    mockEditor.isActive = jest.fn((name: string) => name === "bold");
+    mockEditor.isActive = vi.fn((name: string) => name === "bold");
 
     render(<EditorToolbar editor={mockEditor as Editor} />);
 
@@ -146,27 +146,27 @@ describe("EditorToolbar", () => {
     // Create a new mock where actions return false (cannot perform)
     const createChainFalse = () => {
       const focusableActions = {
-        toggleBold: jest.fn(() => ({ run: jest.fn(() => true) })),
-        toggleItalic: jest.fn(() => ({ run: jest.fn(() => true) })),
-        toggleStrike: jest.fn(() => ({ run: jest.fn(() => true) })),
-        toggleCode: jest.fn(() => ({ run: jest.fn(() => true) })),
-        toggleHeading: jest.fn(() => ({ run: jest.fn(() => true) })),
-        toggleBulletList: jest.fn(() => ({ run: jest.fn(() => true) })),
-        toggleOrderedList: jest.fn(() => ({ run: jest.fn(() => true) })),
-        toggleCodeBlock: jest.fn(() => ({ run: jest.fn(() => true) })),
-        setHorizontalRule: jest.fn(() => ({ run: jest.fn(() => true) })),
-        unsetAllMarks: jest.fn(() => ({ run: jest.fn(() => true) })),
-        undo: jest.fn(() => ({ run: jest.fn(() => false) })), // Cannot undo
-        redo: jest.fn(() => ({ run: jest.fn(() => false) }))  // Cannot redo
+        toggleBold: vi.fn(() => ({ run: vi.fn(() => true) })),
+        toggleItalic: vi.fn(() => ({ run: vi.fn(() => true) })),
+        toggleStrike: vi.fn(() => ({ run: vi.fn(() => true) })),
+        toggleCode: vi.fn(() => ({ run: vi.fn(() => true) })),
+        toggleHeading: vi.fn(() => ({ run: vi.fn(() => true) })),
+        toggleBulletList: vi.fn(() => ({ run: vi.fn(() => true) })),
+        toggleOrderedList: vi.fn(() => ({ run: vi.fn(() => true) })),
+        toggleCodeBlock: vi.fn(() => ({ run: vi.fn(() => true) })),
+        setHorizontalRule: vi.fn(() => ({ run: vi.fn(() => true) })),
+        unsetAllMarks: vi.fn(() => ({ run: vi.fn(() => true) })),
+        undo: vi.fn(() => ({ run: vi.fn(() => false) })), // Cannot undo
+        redo: vi.fn(() => ({ run: vi.fn(() => false) }))  // Cannot redo
       };
 
       return {
-        focus: jest.fn(() => focusableActions)
+        focus: vi.fn(() => focusableActions)
       };
     };
 
-    mockEditor.can = jest.fn(() => ({
-      chain: jest.fn(() => createChainFalse())
+    mockEditor.can = vi.fn(() => ({
+      chain: vi.fn(() => createChainFalse())
     })) as any;
 
     render(<EditorToolbar editor={mockEditor as Editor} />);

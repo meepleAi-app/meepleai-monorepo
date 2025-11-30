@@ -55,7 +55,9 @@ docs/                Architecture, ADRs, guides
 |------|---------|-------|
 | **Backend** | `dotnet build && dotnet test` | xUnit+Testcontainers |
 | | `dotnet ef migrations add <Name> --project src/Api` | Auto-applied |
-| **Frontend** | `pnpm dev` / `pnpm build` / `pnpm test` | Jest 90%+ |
+| **Frontend** | `pnpm dev` / `pnpm build` / `pnpm test` | Vitest 90%+ |
+| | `pnpm storybook` | Storybook dev server |
+| | `pnpm test:visual` | Visual regression (Chromatic) |
 | **Docker** | `docker compose up -d` | Full stack (15 services) |
 
 **Services**:
@@ -110,6 +112,14 @@ docs/                Architecture, ADRs, guides
 - Admin UI: `/admin/configuration`
 - Categories: Features, RateLimit, AI/LLM, RAG, PDF
 - Version control, rollback, bulk ops
+
+### Visual Testing (Chromatic)
+- **Status**: Phase 1 Complete (Infrastructure Setup)
+- **Coverage**: 0% (Phase 2 - In Planning)
+- **Mode**: Non-blocking (will enable blocking at 50%+ coverage)
+- **CI Integration**: Automatic visual regression on PRs
+- **Scripts**: `pnpm test:visual`, `pnpm test:visual:ci`, `pnpm test:visual:debug`
+- **Documentation**: [Visual Testing Guide](docs/02-development/testing/visual-testing-guide.md)
 
 ---
 

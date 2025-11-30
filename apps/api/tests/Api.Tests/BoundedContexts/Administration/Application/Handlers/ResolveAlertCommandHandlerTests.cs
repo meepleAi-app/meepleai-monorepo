@@ -31,7 +31,7 @@ public class ResolveAlertCommandHandlerTests
             .ReturnsAsync(true);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result);
@@ -50,7 +50,7 @@ public class ResolveAlertCommandHandlerTests
             .ReturnsAsync(false);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result);
@@ -80,3 +80,4 @@ public class ResolveAlertCommandHandlerTests
             Times.Once);
     }
 }
+

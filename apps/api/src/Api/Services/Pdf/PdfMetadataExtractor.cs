@@ -83,7 +83,7 @@ public class PdfMetadataExtractor : IPdfMetadataExtractor
     {
         // PDF date format: D:YYYYMMDDHHmmSSOHH'mm'
         // Example: D:20231025120000+02'00'
-        if (string.IsNullOrEmpty(pdfDate) || !pdfDate.StartsWith("D:"))
+        if (string.IsNullOrEmpty(pdfDate) || !pdfDate.StartsWith("D:", StringComparison.Ordinal))
         {
             return null;
         }

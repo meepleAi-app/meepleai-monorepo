@@ -79,3 +79,4 @@ public class SessionStatusTests
         Assert.Equal("InProgress", statusString);
     }
 }
+

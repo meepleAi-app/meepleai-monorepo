@@ -1,3 +1,9 @@
+/**
+ * Editor Rich Text E2E Tests - MIGRATED TO POM
+ *
+ * @see apps/web/e2e/pages/
+ */
+
 import { test, expect } from '@playwright/test';
 import { getTextMatcher, t } from './fixtures/i18n';
 
@@ -79,12 +85,13 @@ test.describe('Rich Text Editor (EDIT-03)', () => {
     await page.getByText('📝 Editor Visuale').click({ force: true });
 
     // Wait a bit for the editor to fully initialize
-    await page.waitForTimeout(500);
 
     // Make a change (this is tricky with TipTap, might need to use JSON mode)
     await page.getByText('{ } Codice JSON').click({ force: true });
     const textarea = page.locator('textarea');
-    await textarea.fill('{"gameId":"demo-chess","version":"1.0","createdAt":"2025-01-01","rules":[]}');
+    await textarea.fill(
+      '{"gameId":"demo-chess","version":"1.0","createdAt":"2025-01-01","rules":[]}'
+    );
 
     // Check for unsaved changes indicator
     await expect(page.getByText(/unsaved|modifiche non salvate/i)).toBeVisible();
@@ -96,7 +103,9 @@ test.describe('Rich Text Editor (EDIT-03)', () => {
 
     // Make a change
     const textarea = page.locator('textarea');
-    await textarea.fill('{"gameId":"demo-chess","version":"1.0","createdAt":"2025-01-01","rules":[]}');
+    await textarea.fill(
+      '{"gameId":"demo-chess","version":"1.0","createdAt":"2025-01-01","rules":[]}'
+    );
 
     // Save button should be enabled
     const saveButton = page.getByRole('button', { name: getTextMatcher('editor.save') });
@@ -138,7 +147,9 @@ test.describe('Rich Text Editor (EDIT-03)', () => {
 
   test('should navigate to version history from editor', async ({ page }) => {
     // Click "Storico Versioni" link (use force: true to handle nextjs-portal overlay)
-    await page.getByRole('link', { name: /version history|storico versioni/i }).click({ force: true });
+    await page
+      .getByRole('link', { name: /version history|storico versioni/i })
+      .click({ force: true });
 
     // Should navigate to versions page
     await expect(page).toHaveURL(new RegExp(`/versions\\?gameId=${testGameId}`));
@@ -166,7 +177,9 @@ test.describe('Rich Text Editor (EDIT-03)', () => {
     await expect(page.getByTitle(/redo|Ripeti.*Ctrl/i)).toBeVisible();
   });
 
-  test('should hide undo/redo buttons in rich text mode (TipTap has built-in)', async ({ page }) => {
+  test('should hide undo/redo buttons in rich text mode (TipTap has built-in)', async ({
+    page,
+  }) => {
     // Ensure we're in rich text mode (use force: true to handle nextjs-portal overlay)
     await page.getByText('📝 Editor Visuale').click({ force: true });
 

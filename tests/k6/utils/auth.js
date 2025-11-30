@@ -121,7 +121,7 @@ function extractSessionToken(setCookieHeader) {
   const cookies = Array.isArray(setCookieHeader) ? setCookieHeader : [setCookieHeader];
 
   for (const cookie of cookies) {
-    const match = cookie.match(/meepleai-session=([^;]+)/);
+    const match = cookie.match(/meepleai_session=([^;]+)/);
     if (match) {
       return match[1];
     }

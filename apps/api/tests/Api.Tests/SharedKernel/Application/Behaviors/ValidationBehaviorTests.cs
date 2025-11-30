@@ -34,7 +34,7 @@ public sealed class ValidationBehaviorTests
         var behavior = new ValidationBehavior<LoginCommand, object>(validators);
 
         // Act
-        var result = await behavior.Handle(command, next, CancellationToken.None);
+        var result = await behavior.Handle(command, next, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -66,7 +66,7 @@ public sealed class ValidationBehaviorTests
         var behavior = new ValidationBehavior<LoginCommand, object>(validators);
 
         // Act
-        var result = await behavior.Handle(command, next, CancellationToken.None);
+        var result = await behavior.Handle(command, next, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -105,7 +105,7 @@ public sealed class ValidationBehaviorTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<ValidationException>(
-            () => behavior.Handle(command, next, CancellationToken.None)
+            () => behavior.Handle(command, next, TestContext.Current.CancellationToken)
         );
 
         Assert.Equal(2, exception.Errors.Count());
@@ -142,7 +142,7 @@ public sealed class ValidationBehaviorTests
         var behavior = new ValidationBehavior<LoginCommand, object>(validators);
 
         // Act
-        var result = await behavior.Handle(command, next, CancellationToken.None);
+        var result = await behavior.Handle(command, next, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -198,7 +198,7 @@ public sealed class ValidationBehaviorTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<ValidationException>(
-            () => behavior.Handle(command, next, CancellationToken.None)
+            () => behavior.Handle(command, next, TestContext.Current.CancellationToken)
         );
 
         Assert.Equal(2, exception.Errors.Count());
@@ -242,3 +242,4 @@ public sealed class ValidationBehaviorTests
         Assert.False(nextCalled);
     }
 }
+

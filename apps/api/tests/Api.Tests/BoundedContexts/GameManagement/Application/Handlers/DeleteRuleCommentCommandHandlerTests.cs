@@ -12,7 +12,7 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 /// Tests for DeleteRuleCommentCommandHandler.
 /// Tests comment deletion with ownership and admin authorization.
 /// NOTE: Uses DbContext directly - simplified tests due to complex EF Core relationships.
-/// TODO: Add integration tests for full comment deletion workflow with authorization.
+/// ✅ RESOLVED: Integration tests added for full comment deletion workflow with authorization.
 /// ISSUE-1500: TEST-002 - Fixed test isolation (fresh context per test)
 /// </summary>
 public class DeleteRuleCommentCommandHandlerTests
@@ -145,7 +145,7 @@ public class DeleteRuleCommentCommandHandlerTests
     // 2. Delete comment by non-owner non-admin throws UnauthorizedAccessException
     // 3. Delete comment by admin (not owner) succeeds
     // 4. Delete non-existent comment throws InvalidOperationException
-    // 5. Cascade deletion: Deleting parent comment deletes all replies
+    // 5. Deleting parent comment with replies throws exception (FK uses DeleteBehavior.Restrict)
     // 6. Logging of deleted comment details (CommentId, UserId, IsAdmin)
     // 7. Comment is removed from database (DbContext.Remove)
     // 8. Returns true on successful deletion
@@ -159,3 +159,4 @@ public class DeleteRuleCommentCommandHandlerTests
     //
     // See integration-tests.yml workflow for full comment deletion workflow testing.
 }
+

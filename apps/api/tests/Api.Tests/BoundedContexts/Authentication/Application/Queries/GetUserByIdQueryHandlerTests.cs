@@ -36,7 +36,7 @@ public class GetUserByIdQueryHandlerTests
             .ReturnsAsync(user);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -47,7 +47,7 @@ public class GetUserByIdQueryHandlerTests
         Assert.False(result.IsTwoFactorEnabled);
         Assert.Null(result.TwoFactorEnabledAt);
 
-        _userRepositoryMock.Verify(x => x.GetByIdAsync(user.Id, default), Times.Once);
+        _userRepositoryMock.Verify(x => x.GetByIdAsync(user.Id, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -69,7 +69,7 @@ public class GetUserByIdQueryHandlerTests
             .ReturnsAsync(user);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -95,7 +95,7 @@ public class GetUserByIdQueryHandlerTests
             .ReturnsAsync(user);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -116,7 +116,7 @@ public class GetUserByIdQueryHandlerTests
             .ReturnsAsync(user);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -140,12 +140,12 @@ public class GetUserByIdQueryHandlerTests
             .ReturnsAsync((User?)null);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(result);
 
-        _userRepositoryMock.Verify(x => x.GetByIdAsync(userId, default), Times.Once);
+        _userRepositoryMock.Verify(x => x.GetByIdAsync(userId, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     #endregion
@@ -164,7 +164,7 @@ public class GetUserByIdQueryHandlerTests
             .ReturnsAsync(user);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -189,7 +189,7 @@ public class GetUserByIdQueryHandlerTests
             .ReturnsAsync(user);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -234,11 +234,11 @@ public class GetUserByIdQueryHandlerTests
             .ReturnsAsync(user);
 
         // Act
-        await _handler.Handle(query, CancellationToken.None);
+        await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert - Query handlers are read-only
-        _userRepositoryMock.Verify(x => x.AddAsync(It.IsAny<User>(), default), Times.Never);
-        _userRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<User>(), default), Times.Never);
+        _userRepositoryMock.Verify(x => x.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
+        _userRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     #endregion
@@ -258,3 +258,4 @@ public class GetUserByIdQueryHandlerTests
 
     #endregion
 }
+

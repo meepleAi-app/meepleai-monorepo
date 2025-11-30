@@ -50,7 +50,7 @@ public class EndGameSessionCommandHandlerTests
             WinnerName: "Alice");
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -91,7 +91,7 @@ public class EndGameSessionCommandHandlerTests
             WinnerName: null);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -120,7 +120,7 @@ public class EndGameSessionCommandHandlerTests
             WinnerName: "Charlie");
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal("Charlie", result.WinnerName);
@@ -149,7 +149,7 @@ public class EndGameSessionCommandHandlerTests
             WinnerName: "Player 1");
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(startedAt, result.StartedAt); // StartedAt should be preserved
@@ -177,7 +177,7 @@ public class EndGameSessionCommandHandlerTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, CancellationToken.None));
+            () => _handler.Handle(command, TestContext.Current.CancellationToken));
 
         Assert.Contains($"Session with ID {sessionId} not found", exception.Message);
 
@@ -254,7 +254,7 @@ public class EndGameSessionCommandHandlerTests
             WinnerName: "Player 1");
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(gameId, result.GameId);
@@ -280,7 +280,7 @@ public class EndGameSessionCommandHandlerTests
             WinnerName: "Bob");
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(3, result.Players.Count);
@@ -291,3 +291,4 @@ public class EndGameSessionCommandHandlerTests
 
     #endregion
 }
+

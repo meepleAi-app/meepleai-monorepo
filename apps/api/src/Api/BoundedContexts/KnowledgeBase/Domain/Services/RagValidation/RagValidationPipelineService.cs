@@ -1,5 +1,9 @@
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
+using System.Threading.Tasks;
 using Api.Models;
+using Api.Services;
 using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
@@ -64,6 +68,8 @@ public class RagValidationPipelineService : IRagValidationPipelineService
             throw new ArgumentException("Game ID cannot be null or empty", nameof(gameId));
 
         language ??= "en";
+        var snippets = (response.snippets ?? new List<Snippet>()).Where(s => s != null).ToList();
+        var answerText = response.answer ?? string.Empty;
 
         var stopwatch = Stopwatch.StartNew();
 
@@ -72,40 +78,48 @@ public class RagValidationPipelineService : IRagValidationPipelineService
             gameId);
 
         // Layer 1: Confidence Validation (must be first, synchronous early exit possible)
-        var confidenceResult = _confidenceValidation.ValidateConfidence(response.confidence);
+        var confidenceResult = _confidenceValidation.ValidateConfidence(response.confidence)
+                               ?? DefaultConfidenceResult(response.confidence);
         _logger.LogDebug(
             "Layer 1 (Confidence): {Status} - {Message}",
             confidenceResult.IsValid ? "PASS" : "FAIL",
             confidenceResult.ValidationMessage);
 
         // Layer 3 & 4: Execute in parallel for performance optimization (BGAI-037)
-        var citationTask = _citationValidation.ValidateCitationsAsync(
-            response.snippets.ToList(),
-            gameId,
-            cancellationToken);
+        var citationTask = EnsureCitationTask(
+            _citationValidation.ValidateCitationsAsync(snippets, gameId, CancellationToken.None),
+            snippets.Count);
 
-        var hallucinationTask = _hallucinationDetection.DetectHallucinationsAsync(
-            response.answer,
-            language,
-            cancellationToken);
+        var hallucinationTask = EnsureHallucinationTask(
+            _hallucinationDetection.DetectHallucinationsAsync(answerText, language, CancellationToken.None));
 
         // Wait for both tasks to complete
         await Task.WhenAll(citationTask, hallucinationTask);
 
-        var citationResult = await citationTask;
-        var hallucinationResult = await hallucinationTask;
+        var citationResult = EnsureCitationResult(await citationTask, snippets.Count);
+        var hallucinationResult = EnsureHallucinationResult(await hallucinationTask);
+        var citation = citationResult!;
+        var hallucination = hallucinationResult!;
+
+        var citationValidCount = citation.ValidCitations;
+        var citationTotalCount = citation.TotalCitations;
+        var citationStatus = citation.IsValid ? "PASS" : "FAIL";
 
         _logger.LogDebug(
             "Layer 3 (Citation): {Status} - {ValidCount}/{TotalCount} citations valid",
-            citationResult.IsValid ? "PASS" : "FAIL",
-            citationResult.ValidCitations,
-            citationResult.TotalCitations);
+            citationStatus,
+            citationValidCount,
+            citationTotalCount);
+
+        var hallucinationDetected = hallucination.DetectedKeywords?.Count ?? 0;
+        var hallucinationSeverity = hallucination.Severity;
+        var hallucinationStatus = hallucination.IsValid ? "PASS" : "FAIL";
 
         _logger.LogDebug(
             "Layer 4 (Hallucination): {Status} - {DetectedCount} keywords detected (severity: {Severity})",
-            hallucinationResult.IsValid ? "PASS" : "FAIL",
-            hallucinationResult.DetectedKeywords.Count,
-            hallucinationResult.Severity);
+            hallucinationStatus,
+            hallucinationDetected,
+            hallucinationSeverity);
 
         stopwatch.Stop();
 
@@ -114,11 +128,11 @@ public class RagValidationPipelineService : IRagValidationPipelineService
         const int totalLayers = 3; // Standard mode: 3 layers
 
         if (confidenceResult.IsValid) layersPassed++;
-        if (citationResult.IsValid) layersPassed++;
-        if (hallucinationResult.IsValid) layersPassed++;
+        if (citation.IsValid) layersPassed++;
+        if (hallucination.IsValid) layersPassed++;
 
         var isValid = layersPassed == totalLayers;
-        var severity = CalculateSeverity(confidenceResult, null, citationResult, hallucinationResult);
+        var severity = CalculateSeverity(confidenceResult!, null, citationResult!, hallucinationResult!);
         var message = BuildValidationMessage(isValid, layersPassed, totalLayers, false);
 
         _logger.LogInformation(
@@ -135,8 +149,8 @@ public class RagValidationPipelineService : IRagValidationPipelineService
             TotalLayers = totalLayers,
             ConfidenceValidation = confidenceResult,
             MultiModelConsensus = null,
-            CitationValidation = citationResult,
-            HallucinationDetection = hallucinationResult,
+            CitationValidation = citation,
+            HallucinationDetection = hallucination,
             ValidationAccuracyMetrics = null,
             Message = message,
             Severity = severity,
@@ -166,6 +180,8 @@ public class RagValidationPipelineService : IRagValidationPipelineService
             throw new ArgumentException("User prompt cannot be null or empty", nameof(userPrompt));
 
         language ??= "en";
+        var snippets = (response.snippets ?? new List<Snippet>()).Where(s => s != null).ToList();
+        var answerText = response.answer ?? string.Empty;
 
         var stopwatch = Stopwatch.StartNew();
 
@@ -174,7 +190,8 @@ public class RagValidationPipelineService : IRagValidationPipelineService
             gameId);
 
         // Layer 1: Confidence Validation (must be first, synchronous early exit possible)
-        var confidenceResult = _confidenceValidation.ValidateConfidence(response.confidence);
+        var confidenceResult = _confidenceValidation.ValidateConfidence(response.confidence)
+                               ?? DefaultConfidenceResult(response.confidence);
         _logger.LogDebug(
             "Layer 1 (Confidence): {Status} - {Message}",
             confidenceResult.IsValid ? "PASS" : "FAIL",
@@ -182,56 +199,71 @@ public class RagValidationPipelineService : IRagValidationPipelineService
 
         // Layer 2, 3, 4: Execute in parallel for performance optimization (BGAI-037)
         // Note: Layer 4 depends on Layer 2 result for text selection, but we handle this with continuation
-        var multiModelTask = _multiModelValidation.ValidateWithConsensusAsync(
-            systemPrompt,
-            userPrompt,
-            temperature: 0.3,
-            maxTokens: 1000,
-            cancellationToken);
+        var multiModelTask = EnsureMultiModelTask(
+            _multiModelValidation.ValidateWithConsensusAsync(
+                systemPrompt,
+                userPrompt,
+                temperature: 0.3,
+                maxTokens: 1000,
+                CancellationToken.None));
 
-        var citationTask = _citationValidation.ValidateCitationsAsync(
-            response.snippets.ToList(),
-            gameId,
-            cancellationToken);
+        var citationTask = EnsureCitationTask(
+            _citationValidation.ValidateCitationsAsync(snippets, gameId, CancellationToken.None),
+            snippets.Count);
 
         // Start hallucination detection after multi-model completes (needs consensus response)
         var hallucinationTask = multiModelTask.ContinueWith(async task =>
         {
-            var multiModelResult = await task;
+            var multiModelResult = EnsureMultiModelResult(await task);
             var textToValidate = multiModelResult.HasConsensus && !string.IsNullOrWhiteSpace(multiModelResult.ConsensusResponse)
                 ? multiModelResult.ConsensusResponse
-                : response.answer;
+                : answerText;
 
             return await _hallucinationDetection.DetectHallucinationsAsync(
                 textToValidate,
                 language,
-                cancellationToken);
+                CancellationToken.None);
         }, cancellationToken).Unwrap();
 
         // Wait for all tasks to complete
         await Task.WhenAll(multiModelTask, citationTask, hallucinationTask);
 
-        var multiModelResult = await multiModelTask;
-        var citationResult = await citationTask;
-        var hallucinationResult = await hallucinationTask;
+        var multiModelResult = EnsureMultiModelResult(await multiModelTask);
+        var citationResult = EnsureCitationResult(await citationTask, snippets.Count);
+        var hallucinationResult = EnsureHallucinationResult(await hallucinationTask);
+        var multiModel = multiModelResult!;
+        var citation = citationResult!;
+        var hallucination = hallucinationResult!;
+
+        var multiModelStatus = multiModel.HasConsensus ? "PASS" : "FAIL";
+        var multiModelSimilarity = multiModel.SimilarityScore;
+        var multiModelThreshold = multiModel.RequiredThreshold;
 
         _logger.LogDebug(
             "Layer 2 (Multi-Model Consensus): {Status} - Similarity: {Similarity:F3} (threshold: {Threshold:F2})",
-            multiModelResult.HasConsensus ? "PASS" : "FAIL",
-            multiModelResult.SimilarityScore,
-            multiModelResult.RequiredThreshold);
+            multiModelStatus,
+            multiModelSimilarity,
+            multiModelThreshold);
+
+        var citationValidCount2 = citation.ValidCitations;
+        var citationTotalCount2 = citation.TotalCitations;
+        var citationStatus2 = citation.IsValid ? "PASS" : "FAIL";
 
         _logger.LogDebug(
             "Layer 3 (Citation): {Status} - {ValidCount}/{TotalCount} citations valid",
-            citationResult.IsValid ? "PASS" : "FAIL",
-            citationResult.ValidCitations,
-            citationResult.TotalCitations);
+            citationStatus2,
+            citationValidCount2,
+            citationTotalCount2);
+
+        var hallucinationDetected2 = hallucination.DetectedKeywords?.Count ?? 0;
+        var hallucinationSeverity2 = hallucination.Severity;
+        var hallucinationStatus2 = hallucination.IsValid ? "PASS" : "FAIL";
 
         _logger.LogDebug(
             "Layer 4 (Hallucination): {Status} - {DetectedCount} keywords detected (severity: {Severity})",
-            hallucinationResult.IsValid ? "PASS" : "FAIL",
-            hallucinationResult.DetectedKeywords.Count,
-            hallucinationResult.Severity);
+            hallucinationStatus2,
+            hallucinationDetected2,
+            hallucinationSeverity2);
 
         stopwatch.Stop();
 
@@ -240,12 +272,12 @@ public class RagValidationPipelineService : IRagValidationPipelineService
         const int totalLayers = 4; // Multi-model mode: 4 layers (Layer 5 is for metrics tracking, not pass/fail)
 
         if (confidenceResult.IsValid) layersPassed++;
-        if (multiModelResult.HasConsensus) layersPassed++;
-        if (citationResult.IsValid) layersPassed++;
-        if (hallucinationResult.IsValid) layersPassed++;
+        if (multiModel.HasConsensus) layersPassed++;
+        if (citation.IsValid) layersPassed++;
+        if (hallucination.IsValid) layersPassed++;
 
         var isValid = layersPassed == totalLayers;
-        var severity = CalculateSeverity(confidenceResult, multiModelResult, citationResult, hallucinationResult);
+        var severity = CalculateSeverity(confidenceResult!, multiModelResult!, citationResult!, hallucinationResult!);
         var message = BuildValidationMessage(isValid, layersPassed, totalLayers, true);
 
         // Layer 5: Validation Accuracy Tracking (informational only, doesn't affect pass/fail)
@@ -265,9 +297,9 @@ public class RagValidationPipelineService : IRagValidationPipelineService
             LayersPassed = layersPassed,
             TotalLayers = totalLayers,
             ConfidenceValidation = confidenceResult,
-            MultiModelConsensus = multiModelResult,
-            CitationValidation = citationResult,
-            HallucinationDetection = hallucinationResult,
+            MultiModelConsensus = multiModel,
+            CitationValidation = citation,
+            HallucinationDetection = hallucination,
             ValidationAccuracyMetrics = accuracyMetrics,
             Message = message,
             Severity = severity,
@@ -316,4 +348,98 @@ public class RagValidationPipelineService : IRagValidationPipelineService
 
         return $"{status} ({mode} mode)";
     }
+
+    private static CitationValidationResult EnsureCitationResult(CitationValidationResult? result, int totalSnippets)
+    {
+        if (result != null)
+        {
+            return result;
+        }
+
+        return new CitationValidationResult
+        {
+            IsValid = false,
+            TotalCitations = totalSnippets,
+            ValidCitations = 0,
+            Errors = new List<CitationValidationError>(),
+            Message = "Citation validation unavailable (result was null)"
+        };
+    }
+
+    private static HallucinationValidationResult EnsureHallucinationResult(HallucinationValidationResult? result)
+    {
+        if (result != null)
+        {
+            return result;
+        }
+
+        return new HallucinationValidationResult
+        {
+            IsValid = false,
+            DetectedKeywords = new List<string>(),
+            Language = "en",
+            TotalKeywordsChecked = 0,
+            Message = "Hallucination detection unavailable (result was null)",
+            Severity = HallucinationSeverity.Medium
+        };
+    }
+
+    private static MultiModelConsensusResult EnsureMultiModelResult(MultiModelConsensusResult? result)
+    {
+        if (result != null)
+        {
+            return result;
+        }
+
+        return new MultiModelConsensusResult
+        {
+            HasConsensus = false,
+            ConsensusResponse = string.Empty,
+            SimilarityScore = 0.0,
+            RequiredThreshold = 0.9,
+            Severity = ConsensusSeverity.Error,
+            Message = "Multi-model validation unavailable (result was null)",
+            TotalDurationMs = 0,
+            Gpt4Response = DefaultModelResponse("gpt-4o"),
+            ClaudeResponse = DefaultModelResponse("claude-3")
+        };
+    }
+
+    private static ConfidenceValidationResult DefaultConfidenceResult(double? confidence) =>
+        new ConfidenceValidationResult
+        {
+            IsValid = false,
+            ActualConfidence = confidence ?? 0,
+            RequiredThreshold = 0.7,
+            ValidationMessage = "Confidence validation unavailable (result was null)",
+            Severity = ValidationSeverity.Warning
+        };
+
+    private static ModelResponse DefaultModelResponse(string modelId) =>
+        new ModelResponse
+        {
+            ModelId = modelId,
+            ResponseText = string.Empty,
+            IsSuccess = false,
+            Usage = new LlmUsage(0, 0, 0),
+            DurationMs = 0
+        };
+
+    private static Task<CitationValidationResult> EnsureCitationTask(Task<CitationValidationResult>? task, int totalSnippets) =>
+        task ?? Task.FromResult(DefaultCitationResult(totalSnippets));
+
+    private static Task<HallucinationValidationResult> EnsureHallucinationTask(Task<HallucinationValidationResult>? task) =>
+        task ?? Task.FromResult(DefaultHallucinationResult());
+
+    private static Task<MultiModelConsensusResult> EnsureMultiModelTask(Task<MultiModelConsensusResult>? task) =>
+        task ?? Task.FromResult(DefaultMultiModelResult());
+
+    private static CitationValidationResult DefaultCitationResult(int totalSnippets) =>
+        EnsureCitationResult(null, totalSnippets);
+
+    private static HallucinationValidationResult DefaultHallucinationResult() =>
+        EnsureHallucinationResult(null);
+
+    private static MultiModelConsensusResult DefaultMultiModelResult() =>
+        EnsureMultiModelResult(null);
 }

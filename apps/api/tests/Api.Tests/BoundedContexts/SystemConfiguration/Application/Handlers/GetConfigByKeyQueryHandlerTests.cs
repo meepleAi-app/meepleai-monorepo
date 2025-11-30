@@ -45,7 +45,7 @@ public class GetConfigByKeyQueryHandlerTests
             .ReturnsAsync(config);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -67,7 +67,7 @@ public class GetConfigByKeyQueryHandlerTests
             .ReturnsAsync((SystemConfig?)null);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(result);
@@ -96,7 +96,7 @@ public class GetConfigByKeyQueryHandlerTests
             .ReturnsAsync(config);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -125,7 +125,7 @@ public class GetConfigByKeyQueryHandlerTests
             .ReturnsAsync(config);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -178,7 +178,7 @@ public class GetConfigByKeyQueryHandlerTests
             .ReturnsAsync(config);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -209,7 +209,7 @@ public class GetConfigByKeyQueryHandlerTests
             .Verifiable();
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -242,7 +242,7 @@ public class GetConfigByKeyQueryHandlerTests
             .Verifiable();
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -273,7 +273,7 @@ public class GetConfigByKeyQueryHandlerTests
             .Verifiable();
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -304,7 +304,7 @@ public class GetConfigByKeyQueryHandlerTests
             .Verifiable();
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -315,3 +315,4 @@ public class GetConfigByKeyQueryHandlerTests
             Times.Once);
     }
 }
+

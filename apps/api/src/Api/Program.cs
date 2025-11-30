@@ -152,6 +152,9 @@ builder.Services.AddInfrastructureServices(builder.Configuration, builder.Enviro
 // In production, uses TimeProvider.System. Tests can override with TestTimeProvider/FakeTimeProvider.
 builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
 
+// SEC-07: Issue #1787 - TOTP Replay Attack Prevention Background Cleanup
+builder.Services.AddHostedService<Api.Infrastructure.BackgroundTasks.UsedTotpCodeCleanupTask>();
+
 // Issue #1449: FluentValidation for CQRS pipeline
 builder.Services.AddFluentValidation();
 
@@ -532,6 +535,7 @@ static async Task EnsureTestUserExistsAsync(WebApplication app, MeepleAiDbContex
                 Action = "DEMO_USER_CREATED",
                 Resource = "User",
                 ResourceId = demoUser.Id.ToString(),
+                Result = "Success",
                 Details = $"Demo user created: {userData.Email} ({userData.Role})",
                 IpAddress = "system",
                 UserAgent = "bootstrap",

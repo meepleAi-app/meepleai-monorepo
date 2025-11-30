@@ -8,6 +8,7 @@ namespace Api.Services.Pdf;
 /// </summary>
 public class TableCellParser : ITableCellParser
 {
+#pragma warning disable MA0051 // Method is too long
     public ColumnSplitResult SplitIntoColumns(PositionedTextLine line, List<ColumnBoundary>? existingBoundaries)
     {
         var result = new ColumnSplitResult();
@@ -33,7 +34,7 @@ public class TableCellParser : ITableCellParser
             {
                 var text = line.GetTrimmedText();
                 var textualColumns = Regex
-                    .Split(text, "\\s{2,}")
+                    .Split(text, "\\s{2,}", RegexOptions.CultureInvariant | RegexOptions.NonBacktracking)
                     .Select(segment => segment.Trim())
                     .ToList();
 
@@ -88,6 +89,7 @@ public class TableCellParser : ITableCellParser
 
         return result;
     }
+#pragma warning restore MA0051 // Method is too long
 
     public DetectedColumnLayout DetectColumnLayout(PositionedTextLine line)
     {

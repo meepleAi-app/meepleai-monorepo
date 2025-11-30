@@ -105,3 +105,4 @@ public class GameBuilder
     /// </summary>
     public static implicit operator Game(GameBuilder builder) => builder.Build();
 }
+

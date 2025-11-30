@@ -170,3 +170,4 @@ public class ChatThreadTests
         Assert.Contains("already active", exception.Message);
     }
 }
+

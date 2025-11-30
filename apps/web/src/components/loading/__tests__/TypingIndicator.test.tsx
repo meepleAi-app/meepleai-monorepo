@@ -7,14 +7,14 @@ import { render, screen } from '@testing-library/react';
 import { TypingIndicator } from '../TypingIndicator';
 
 // Mock useReducedMotion hook
-const mockUseReducedMotion = jest.fn();
-jest.mock('@/lib/animations', () => ({
-  ...jest.requireActual('@/lib/animations'),
+const mockUseReducedMotion = vi.fn();
+vi.mock('@/lib/animations', () => ({
+  ...vi.importActual('@/lib/animations'),
   useReducedMotion: () => mockUseReducedMotion(),
 }));
 
 // Mock framer-motion to avoid animation issues in tests
-jest.mock('framer-motion', () => ({
+vi.mock('framer-motion', () => ({
   motion: {
     div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
     span: ({ children, ...props }: any) => <span {...props}>{children}</span>,
@@ -28,7 +28,7 @@ describe('TypingIndicator', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('Visibility', () => {

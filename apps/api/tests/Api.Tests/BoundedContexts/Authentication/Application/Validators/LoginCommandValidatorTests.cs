@@ -179,3 +179,4 @@ public sealed class LoginCommandValidatorTests
         result.ShouldHaveValidationErrorFor(x => x.Password);
     }
 }
+

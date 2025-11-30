@@ -1,11 +1,7 @@
 /**
- * E2E Tests - PDF Viewer Modal (BGAI-076)
+ * PDF Viewer Modal E2E Tests - MIGRATED TO POM
  *
- * Tests for PDF viewer modal functionality including:
- * - Citation click-to-jump PDF viewer (BGAI-074)
- * - Modal rendering and controls
- * - Page navigation and zoom
- * - Keyboard shortcuts
+ * @see apps/web/e2e/pages/
  */
 
 import { test, expect } from '@playwright/test';
@@ -20,7 +16,7 @@ test.describe('PDF Viewer Modal (BGAI-076)', () => {
   test.describe('Citation Click-to-Jump (BGAI-074)', () => {
     test('opens PDF viewer when clicking on a citation', async ({ page }) => {
       // Mock API response with citations
-      await page.route('**/api/v1/agents/qa/stream', async (route) => {
+      await page.route('**/api/v1/agents/qa/stream', async route => {
         const response = [
           'event: token\ndata: {"token":"Test answer"}\n\n',
           'event: citations\ndata: {"citations":[{"documentId":"doc-1","pageNumber":5,"snippet":"Test citation","relevanceScore":0.95}]}\n\n',
@@ -35,7 +31,7 @@ test.describe('PDF Viewer Modal (BGAI-076)', () => {
       });
 
       // Mock PDF download URL
-      await page.route('**/api/v1/pdf/*/download', async (route) => {
+      await page.route('**/api/v1/pdf/*/download', async route => {
         // Return a mock PDF (1x1 pixel PDF for testing)
         const mockPdf = Buffer.from(
           '%PDF-1.0\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj 2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj 3 0 obj<</Type/Page/MediaBox[0 0 3 3]/Parent 2 0 R/Resources<<>>>>endobj\nxref\n0 4\n0000000000 65535 f\n0000000010 00000 n\n0000000053 00000 n\n0000000102 00000 n\ntrailer<</Size 4/Root 1 0 R>>\nstartxref\n149\n%EOF'
@@ -65,7 +61,7 @@ test.describe('PDF Viewer Modal (BGAI-076)', () => {
 
     test('jumps to the correct page when opening PDF from citation', async ({ page }) => {
       // Mock API response with citation to page 10
-      await page.route('**/api/v1/agents/qa/stream', async (route) => {
+      await page.route('**/api/v1/agents/qa/stream', async route => {
         const response = [
           'event: token\ndata: {"token":"Answer"}\n\n',
           'event: citations\ndata: {"citations":[{"documentId":"doc-1","pageNumber":10,"snippet":"Citation from page 10","relevanceScore":0.9}]}\n\n',
@@ -80,7 +76,7 @@ test.describe('PDF Viewer Modal (BGAI-076)', () => {
       });
 
       // Mock PDF download
-      await page.route('**/api/v1/pdf/*/download', async (route) => {
+      await page.route('**/api/v1/pdf/*/download', async route => {
         const mockPdf = Buffer.from(
           '%PDF-1.0\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj 2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj 3 0 obj<</Type/Page/MediaBox[0 0 3 3]/Parent 2 0 R/Resources<<>>>>endobj\nxref\n0 4\n0000000000 65535 f\n0000000010 00000 n\n0000000053 00000 n\n0000000102 00000 n\ntrailer<</Size 4/Root 1 0 R>>\nstartxref\n149\n%EOF'
         );
@@ -109,7 +105,7 @@ test.describe('PDF Viewer Modal (BGAI-076)', () => {
 
     test('displays document name in PDF viewer modal', async ({ page }) => {
       // Similar setup as previous test
-      await page.route('**/api/v1/agents/qa/stream', async (route) => {
+      await page.route('**/api/v1/agents/qa/stream', async route => {
         const response = [
           'event: token\ndata: {"token":"Answer"}\n\n',
           'event: citations\ndata: {"citations":[{"documentId":"doc-1","pageNumber":5,"snippet":"Test","relevanceScore":0.9}]}\n\n',
@@ -123,7 +119,7 @@ test.describe('PDF Viewer Modal (BGAI-076)', () => {
         });
       });
 
-      await page.route('**/api/v1/pdf/*/download', async (route) => {
+      await page.route('**/api/v1/pdf/*/download', async route => {
         const mockPdf = Buffer.from(
           '%PDF-1.0\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj 2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj 3 0 obj<</Type/Page/MediaBox[0 0 3 3]/Parent 2 0 R/Resources<<>>>>endobj\nxref\n0 4\n0000000000 65535 f\n0000000010 00000 n\n0000000053 00000 n\n0000000102 00000 n\ntrailer<</Size 4/Root 1 0 R>>\nstartxref\n149\n%EOF'
         );
@@ -150,7 +146,7 @@ test.describe('PDF Viewer Modal (BGAI-076)', () => {
   test.describe('Modal Behavior', () => {
     test.beforeEach(async ({ page }) => {
       // Setup citation and PDF mocks for each test
-      await page.route('**/api/v1/agents/qa/stream', async (route) => {
+      await page.route('**/api/v1/agents/qa/stream', async route => {
         const response = [
           'event: token\ndata: {"token":"Answer"}\n\n',
           'event: citations\ndata: {"citations":[{"documentId":"doc-1","pageNumber":1,"snippet":"Test","relevanceScore":0.9}]}\n\n',
@@ -164,7 +160,7 @@ test.describe('PDF Viewer Modal (BGAI-076)', () => {
         });
       });
 
-      await page.route('**/api/v1/pdf/*/download', async (route) => {
+      await page.route('**/api/v1/pdf/*/download', async route => {
         const mockPdf = Buffer.from(
           '%PDF-1.0\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj 2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj 3 0 obj<</Type/Page/MediaBox[0 0 3 3]/Parent 2 0 R/Resources<<>>>>endobj\nxref\n0 4\n0000000000 65535 f\n0000000010 00000 n\n0000000053 00000 n\n0000000102 00000 n\ntrailer<</Size 4/Root 1 0 R>>\nstartxref\n149\n%EOF'
         );
@@ -217,7 +213,7 @@ test.describe('PDF Viewer Modal (BGAI-076)', () => {
   test.describe('Zoom Controls', () => {
     test.beforeEach(async ({ page }) => {
       // Setup mocks and open modal
-      await page.route('**/api/v1/agents/qa/stream', async (route) => {
+      await page.route('**/api/v1/agents/qa/stream', async route => {
         const response = [
           'event: token\ndata: {"token":"Answer"}\n\n',
           'event: citations\ndata: {"citations":[{"documentId":"doc-1","pageNumber":1,"snippet":"Test","relevanceScore":0.9}]}\n\n',
@@ -231,7 +227,7 @@ test.describe('PDF Viewer Modal (BGAI-076)', () => {
         });
       });
 
-      await page.route('**/api/v1/pdf/*/download', async (route) => {
+      await page.route('**/api/v1/pdf/*/download', async route => {
         const mockPdf = Buffer.from(
           '%PDF-1.0\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj 2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj 3 0 obj<</Type/Page/MediaBox[0 0 3 3]/Parent 2 0 R/Resources<<>>>>endobj\nxref\n0 4\n0000000000 65535 f\n0000000010 00000 n\n0000000053 00000 n\n0000000102 00000 n\ntrailer<</Size 4/Root 1 0 R>>\nstartxref\n149\n%EOF'
         );
@@ -299,7 +295,7 @@ test.describe('PDF Viewer Modal (BGAI-076)', () => {
   test.describe('Keyboard Shortcuts', () => {
     test.beforeEach(async ({ page }) => {
       // Setup mocks and open modal
-      await page.route('**/api/v1/agents/qa/stream', async (route) => {
+      await page.route('**/api/v1/agents/qa/stream', async route => {
         const response = [
           'event: token\ndata: {"token":"Answer"}\n\n',
           'event: citations\ndata: {"citations":[{"documentId":"doc-1","pageNumber":1,"snippet":"Test","relevanceScore":0.9}]}\n\n',
@@ -313,7 +309,7 @@ test.describe('PDF Viewer Modal (BGAI-076)', () => {
         });
       });
 
-      await page.route('**/api/v1/pdf/*/download', async (route) => {
+      await page.route('**/api/v1/pdf/*/download', async route => {
         const mockPdf = Buffer.from(
           '%PDF-1.0\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj 2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj 3 0 obj<</Type/Page/MediaBox[0 0 3 3]/Parent 2 0 R/Resources<<>>>>endobj\nxref\n0 4\n0000000000 65535 f\n0000000010 00000 n\n0000000053 00000 n\n0000000102 00000 n\ntrailer<</Size 4/Root 1 0 R>>\nstartxref\n149\n%EOF'
         );
@@ -352,7 +348,7 @@ test.describe('PDF Viewer Modal (BGAI-076)', () => {
   test.describe('Multiple Citations', () => {
     test('can open different PDFs from different citations', async ({ page }) => {
       // Mock response with multiple citations
-      await page.route('**/api/v1/agents/qa/stream', async (route) => {
+      await page.route('**/api/v1/agents/qa/stream', async route => {
         const response = [
           'event: token\ndata: {"token":"Answer"}\n\n',
           'event: citations\ndata: {"citations":[{"documentId":"doc-1","pageNumber":5,"snippet":"First citation","relevanceScore":0.95},{"documentId":"doc-2","pageNumber":10,"snippet":"Second citation","relevanceScore":0.90}]}\n\n',
@@ -366,7 +362,7 @@ test.describe('PDF Viewer Modal (BGAI-076)', () => {
         });
       });
 
-      await page.route('**/api/v1/pdf/*/download', async (route) => {
+      await page.route('**/api/v1/pdf/*/download', async route => {
         const mockPdf = Buffer.from(
           '%PDF-1.0\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj 2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj 3 0 obj<</Type/Page/MediaBox[0 0 3 3]/Parent 2 0 R/Resources<<>>>>endobj\nxref\n0 4\n0000000000 65535 f\n0000000010 00000 n\n0000000053 00000 n\n0000000102 00000 n\ntrailer<</Size 4/Root 1 0 R>>\nstartxref\n149\n%EOF'
         );
@@ -403,7 +399,7 @@ test.describe('PDF Viewer Modal (BGAI-076)', () => {
   test.describe('Accessibility', () => {
     test.beforeEach(async ({ page }) => {
       // Setup mocks and open modal
-      await page.route('**/api/v1/agents/qa/stream', async (route) => {
+      await page.route('**/api/v1/agents/qa/stream', async route => {
         const response = [
           'event: token\ndata: {"token":"Answer"}\n\n',
           'event: citations\ndata: {"citations":[{"documentId":"doc-1","pageNumber":1,"snippet":"Test","relevanceScore":0.9}]}\n\n',
@@ -417,7 +413,7 @@ test.describe('PDF Viewer Modal (BGAI-076)', () => {
         });
       });
 
-      await page.route('**/api/v1/pdf/*/download', async (route) => {
+      await page.route('**/api/v1/pdf/*/download', async route => {
         const mockPdf = Buffer.from(
           '%PDF-1.0\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj 2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj 3 0 obj<</Type/Page/MediaBox[0 0 3 3]/Parent 2 0 R/Resources<<>>>>endobj\nxref\n0 4\n0000000000 65535 f\n0000000010 00000 n\n0000000053 00000 n\n0000000102 00000 n\ntrailer<</Size 4/Root 1 0 R>>\nstartxref\n149\n%EOF'
         );

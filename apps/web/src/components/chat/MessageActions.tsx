@@ -15,13 +15,14 @@ import React from 'react';
 import { Message } from '@/types';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { FEEDBACK_OUTCOMES, type FeedbackOutcome } from '@/lib/constants/feedback';
 
 interface MessageActionsProps {
   message: Message;
   isUser: boolean;
   onEdit?: (messageId: string, content: string) => void;
   onDelete?: (messageId: string) => void;
-  onFeedback?: (messageId: string, feedback: 'helpful' | 'not-helpful') => void;
+  onFeedback?: (messageId: string, feedback: FeedbackOutcome) => void;
   isEditing?: boolean;
   isUpdating?: boolean;
 }
@@ -78,14 +79,14 @@ export function MessageActions({
         className="flex gap-2 mt-2"
       >
         <Button
-          onClick={() => onFeedback?.(message.id, 'helpful')}
+          onClick={() => onFeedback?.(message.id, FEEDBACK_OUTCOMES.HELPFUL)}
           aria-label="Mark as helpful"
-          aria-pressed={message.feedback === 'helpful'}
+          aria-pressed={message.feedback === FEEDBACK_OUTCOMES.HELPFUL}
           variant="ghost"
           size="sm"
           className={cn(
             "h-auto px-2 py-1 text-xs gap-1",
-            message.feedback === 'helpful'
+            message.feedback === FEEDBACK_OUTCOMES.HELPFUL
               ? "bg-green-600 text-white hover:bg-green-700"
               : "bg-slate-100 text-slate-500 hover:bg-slate-200"
           )}
@@ -94,14 +95,14 @@ export function MessageActions({
           <span>Utile</span>
         </Button>
         <Button
-          onClick={() => onFeedback?.(message.id, 'not-helpful')}
+          onClick={() => onFeedback?.(message.id, FEEDBACK_OUTCOMES.NOT_HELPFUL)}
           aria-label="Mark as not helpful"
-          aria-pressed={message.feedback === 'not-helpful'}
+          aria-pressed={message.feedback === FEEDBACK_OUTCOMES.NOT_HELPFUL}
           variant="ghost"
           size="sm"
           className={cn(
             "h-auto px-2 py-1 text-xs gap-1",
-            message.feedback === 'not-helpful'
+            message.feedback === FEEDBACK_OUTCOMES.NOT_HELPFUL
               ? "bg-red-600 text-white hover:bg-red-700"
               : "bg-slate-100 text-slate-500 hover:bg-slate-200"
           )}

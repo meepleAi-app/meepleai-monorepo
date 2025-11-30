@@ -11,18 +11,18 @@ import { createMockAgent } from '@/__tests__/fixtures/common-fixtures';
 
 // Mock data
 const mockGames: Game[] = [
-  { id: '770e8400-e29b-41d4-a716-000000000001', name: 'Chess' },
-  { id: '770e8400-e29b-41d4-a716-000000000002', name: 'Go' },
-  { id: '770e8400-e29b-41d4-a716-000000000003', name: 'Monopoly' },
+  { id: '770e8400-e29b-41d4-a716-000000000001', title: 'Chess', createdAt: '2024-01-01' },
+  { id: '770e8400-e29b-41d4-a716-000000000002', title: 'Go', createdAt: '2024-01-02' },
+  { id: '770e8400-e29b-41d4-a716-000000000003', title: 'Monopoly', createdAt: '2024-01-03' },
 ];
 
 const mockAgents: Agent[] = [
-  createMockAgent({ id: 'agent-1', name: 'Chess Master', type: 'Expert', createdAt: '2024-01-01' }),
-  createMockAgent({ id: 'agent-2', name: 'Go Sensei', type: 'Expert', createdAt: '2024-01-02' }),
+  createMockAgent({ id: 'agent-1', gameId: 'game-1', name: 'Chess Master', type: 'qa' }),
+  createMockAgent({ id: 'agent-2', gameId: 'game-2', name: 'Go Sensei', type: 'explain' }),
 ];
 
 describe('SearchFilters', () => {
-  const mockOnFiltersChange = jest.fn();
+  const mockOnFiltersChange = vi.fn();
 
   beforeEach(() => {
     mockOnFiltersChange.mockClear();
@@ -250,12 +250,7 @@ describe('SearchFilters', () => {
   });
 
   it('should handle missing games and agents props', () => {
-    render(
-      <SearchFilters
-        filters={{}}
-        onFiltersChange={mockOnFiltersChange}
-      />
-    );
+    render(<SearchFilters filters={{}} onFiltersChange={mockOnFiltersChange} />);
 
     expect(screen.getByLabelText('Game')).toBeInTheDocument();
     expect(screen.getByLabelText('Agent')).toBeInTheDocument();

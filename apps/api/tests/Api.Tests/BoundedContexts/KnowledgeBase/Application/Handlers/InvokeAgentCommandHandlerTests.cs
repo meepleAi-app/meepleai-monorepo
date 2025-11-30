@@ -78,7 +78,7 @@ public class InvokeAgentCommandHandlerTests
         );
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -90,7 +90,7 @@ public class InvokeAgentCommandHandlerTests
         Assert.NotEmpty(result.Results);
 
         // Verify agent was updated
-        _mockAgentRepo.Verify(r => r.UpdateAsync(It.IsAny<Agent>(), default), Times.Once);
+        _mockAgentRepo.Verify(r => r.UpdateAsync(It.IsAny<Agent>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -108,7 +108,7 @@ public class InvokeAgentCommandHandlerTests
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await _handler.Handle(command, CancellationToken.None));
+            await _handler.Handle(command, TestContext.Current.CancellationToken));
         Assert.Contains("not found", ex.Message.ToLower());
     }
 
@@ -130,7 +130,7 @@ public class InvokeAgentCommandHandlerTests
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await _handler.Handle(command, CancellationToken.None));
+            await _handler.Handle(command, TestContext.Current.CancellationToken));
         Assert.Contains("not active", ex.Message.ToLower());
     }
 
@@ -153,7 +153,7 @@ public class InvokeAgentCommandHandlerTests
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await _handler.Handle(command, CancellationToken.None));
+            await _handler.Handle(command, TestContext.Current.CancellationToken));
         Assert.Contains("embedding", ex.Message.ToLower());
     }
 
@@ -185,7 +185,7 @@ public class InvokeAgentCommandHandlerTests
         );
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -215,7 +215,7 @@ public class InvokeAgentCommandHandlerTests
         );
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -255,7 +255,7 @@ public class InvokeAgentCommandHandlerTests
         );
 
         // Act
-        await _handler.Handle(command, CancellationToken.None);
+        await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(initialCount + 1, agent.InvocationCount);
@@ -293,7 +293,7 @@ public class InvokeAgentCommandHandlerTests
         );
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -342,3 +342,4 @@ public class InvokeAgentCommandHandlerTests
         };
     }
 }
+

@@ -11,19 +11,13 @@
  */
 
 import React from 'react';
-import { useChatContext } from './ChatProvider';
+import { useChatContext } from '@/hooks/useChatContext';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 
 export function MessageEditForm() {
-  const {
-    editingMessageId,
-    editContent,
-    setEditContent,
-    saveEdit,
-    cancelEdit,
-    loading
-  } = useChatContext();
+  const { editingMessageId, editContent, setEditContent, saveEdit, cancelEdit, loading } =
+    useChatContext();
 
   if (!editingMessageId) {
     return null;
@@ -36,7 +30,7 @@ export function MessageEditForm() {
     <div className="mt-2">
       <Textarea
         value={editContent}
-        onChange={(e) => setEditContent(e.target.value)}
+        onChange={e => setEditContent(e.target.value)}
         disabled={isUpdating}
         className="min-h-[80px] resize-y"
         aria-label="Edit message content"

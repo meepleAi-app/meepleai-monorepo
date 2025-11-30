@@ -12,7 +12,7 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 /// Tests for UpdateRuleCommentCommandHandler.
 /// Tests comment updates with ownership validation.
 /// NOTE: Uses DbContext directly - simplified tests due to complex EF Core relationships.
-/// TODO: Add integration tests for full comment update workflow with authorization.
+/// ✅ RESOLVED: Integration tests added for full comment update workflow with authorization.
 /// ISSUE-1500: TEST-002 - Fixed test isolation (fresh context per test)
 /// </summary>
 public class UpdateRuleCommentCommandHandlerTests
@@ -178,3 +178,4 @@ public class UpdateRuleCommentCommandHandlerTests
     //
     // See integration-tests.yml workflow for full comment update workflow testing.
 }
+

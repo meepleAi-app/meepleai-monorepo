@@ -92,3 +92,4 @@ public class TotpSecretTests
         Assert.True(secret1 != secret2);
     }
 }
+

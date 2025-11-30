@@ -63,12 +63,12 @@ public sealed class Verify2FACommandHandler : ICommandHandler<Verify2FACommand, 
         var userId = userIdNullable.Value;
 
         // Step 2: Verify TOTP code (infrastructure - delegate to service)
-        var isValid = await _totpService.VerifyCodeAsync(userId, command.Code);
+        var isValid = await _totpService.VerifyCodeAsync(userId, command.Code, cancellationToken);
 
         // Step 3: If TOTP fails, try backup code (infrastructure - delegate to service)
         if (!isValid)
         {
-            isValid = await _totpService.VerifyBackupCodeAsync(userId, command.Code);
+            isValid = await _totpService.VerifyBackupCodeAsync(userId, command.Code, cancellationToken);
             if (isValid)
             {
                 _logger.LogInformation("2FA verified using backup code for user {UserId}", userId);

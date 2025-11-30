@@ -13,16 +13,11 @@
 
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { useChatContext } from './ChatProvider';
+import { useChatContext } from '@/hooks/useChatContext';
 import { LoadingButton } from '../loading/LoadingButton';
 
 export function BottomNav() {
-  const {
-    selectedGameId,
-    selectedAgentId,
-    loading,
-    createChat
-  } = useChatContext();
+  const { selectedGameId, selectedAgentId, loading, createChat } = useChatContext();
 
   const handleCreateChat = () => {
     void createChat();
@@ -44,10 +39,10 @@ export function BottomNav() {
           disabled={isDisabled}
           aria-label="Create new chat on mobile"
           className={cn(
-            "flex-1 py-2.5 text-white border-none rounded text-sm font-medium touch-target",
+            'flex-1 py-2.5 text-white border-none rounded text-sm font-medium touch-target',
             isDisabled
-              ? "bg-[#dadce0] cursor-not-allowed"
-              : "bg-[#1a73e8] cursor-pointer hover:bg-[#1557b0]"
+              ? 'bg-[#dadce0] cursor-not-allowed'
+              : 'bg-[#1a73e8] cursor-pointer hover:bg-[#1557b0]'
           )}
         >
           + Nuova Chat

@@ -49,7 +49,7 @@ public class CreateGameCommandHandlerTests
             .Returns(Task.CompletedTask);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -86,7 +86,7 @@ public class CreateGameCommandHandlerTests
             Title: "Chess");
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -113,7 +113,7 @@ public class CreateGameCommandHandlerTests
             MinPlayers: 1);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -131,7 +131,7 @@ public class CreateGameCommandHandlerTests
             MinPlayTimeMinutes: 15);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -150,7 +150,7 @@ public class CreateGameCommandHandlerTests
             MaxPlayers: 4);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -171,7 +171,7 @@ public class CreateGameCommandHandlerTests
             MaxPlayTimeMinutes: 45);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -192,7 +192,7 @@ public class CreateGameCommandHandlerTests
             YearPublished: 2017);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -215,7 +215,7 @@ public class CreateGameCommandHandlerTests
         var command = new CreateGameCommand(Title: longTitle);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -232,7 +232,7 @@ public class CreateGameCommandHandlerTests
             MaxPlayers: 1);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -250,7 +250,7 @@ public class CreateGameCommandHandlerTests
             MaxPlayers: 20);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -267,7 +267,7 @@ public class CreateGameCommandHandlerTests
             YearPublished: 1475); // Historical game
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -284,7 +284,7 @@ public class CreateGameCommandHandlerTests
             YearPublished: currentYear);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -327,8 +327,8 @@ public class CreateGameCommandHandlerTests
         var command2 = new CreateGameCommand(Title: "Game 2");
 
         // Act
-        var result1 = await _handler.Handle(command1, CancellationToken.None);
-        var result2 = await _handler.Handle(command2, CancellationToken.None);
+        var result1 = await _handler.Handle(command1, TestContext.Current.CancellationToken);
+        var result2 = await _handler.Handle(command2, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotEqual(result1.Id, result2.Id);
@@ -352,7 +352,7 @@ public class CreateGameCommandHandlerTests
             MaxPlayTimeMinutes: 70);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert - DTO should have all properties mapped
         Assert.NotEqual(Guid.Empty, result.Id);
@@ -370,3 +370,4 @@ public class CreateGameCommandHandlerTests
 
     #endregion
 }
+

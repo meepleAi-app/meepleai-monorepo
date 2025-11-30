@@ -50,7 +50,7 @@ jobs:
       infra: ${{ steps.filter.outputs.infra }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: Paths Filter
@@ -76,7 +76,7 @@ jobs:
     if: ${{ !failure() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.schemas == 'true') }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -92,7 +92,7 @@ jobs:
     if: ${{ !failure() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.api == 'true' || needs.changes.outputs.web == 'true') }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 1  # Shallow clone for faster checkout
 
@@ -152,7 +152,7 @@ jobs:
         working-directory: apps/web
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup frontend environment
         uses: ./.github/actions/setup-frontend
@@ -170,13 +170,14 @@ jobs:
         run: pnpm build-storybook --quiet
 
       # Unit Tests: <5s execution target, >=90% coverage
+      # Migration: Vitest 3.2.4 + MSW 2.x (Issue #1503)
       - name: Unit Tests with Coverage (Enforced >=90%)
         env:
           NODE_ENV: test
           CI: true
         run: pnpm test:coverage
-        # Note: Jest globalTeardown automatically runs cleanup script (Windows only)
-        # Coverage threshold enforcement is active (90% for branches, functions, lines, statements)
+        # Note: Vitest with MSW 2.x for API mocking (migrated from Jest)
+        # Coverage threshold enforcement active (90% branches, 64% functions/lines/statements)
 
       - name: Upload Web Coverage to Codecov
         uses: codecov/codecov-action@v4
@@ -189,11 +190,106 @@ jobs:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
       # UI-05: Accessibility Testing (Unit Level)
-      - name: Run Accessibility Unit Tests (jest-axe)
+      # Migration: Vitest + jest-axe integration (Issue #1503)
+      - name: Run Accessibility Unit Tests (Vitest + jest-axe)
         env:
           NODE_ENV: test
           CI: true
         run: pnpm test:a11y
+
+  ci-visual-regression:
+    needs: changes
+    name: Web - Visual Regression Tests (Chromatic)
+    runs-on: ubuntu-latest
+    # Run on schedule/workflow_dispatch, or when web/storybook files changed in push/PR
+    if: ${{ !failure() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.web == 'true') }}
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0  # Required for Chromatic baseline comparison
+
+      - name: Setup frontend environment
+        uses: ./.github/actions/setup-frontend
+        with:
+          node-version: '20'
+          pnpm-version: '10'
+          working-directory: apps/web
+          frozen-lockfile: 'false'
+
+      - name: Cache Storybook build
+        uses: actions/cache@v4
+        with:
+          path: apps/web/storybook-static
+          key: ${{ runner.os }}-storybook-${{ hashFiles('apps/web/src/**/*.stories.*', 'apps/web/.storybook/**') }}
+          restore-keys: |
+            ${{ runner.os }}-storybook-
+
+      - name: Build Storybook
+        run: pnpm build-storybook --quiet
+
+      # Visual Regression Testing with Chromatic
+      # NOTE: Currently NON-BLOCKING (exitZeroOnChanges: true)
+      # Will become blocking once Storybook coverage reaches 50%+ (Phase 2)
+      # See: docs/02-development/testing/visual-testing-guide.md
+      - name: Publish to Chromatic (Visual Regression Testing)
+        id: chromatic
+        uses: chromaui/action@v13
+        with:
+          projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
+          workingDir: apps/web
+          buildScriptName: build-storybook
+          onlyChanged: true              # Only test changed stories
+          exitZeroOnChanges: true        # NON-BLOCKING: Don't fail on visual changes
+          exitOnceUploaded: true         # Exit after upload (faster CI)
+          autoAcceptChanges: false       # Don't auto-accept (require manual review)
+        continue-on-error: true          # Don't block merge on Chromatic errors
+
+      # Comment PR with Chromatic results
+      # Provides team visibility into visual changes without blocking merge
+      - name: Comment PR with Visual Regression Results
+        if: github.event_name == 'pull_request' && steps.chromatic.outcome != 'skipped'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const chromaticUrl = '${{ steps.chromatic.outputs.storybookUrl }}';
+            const buildUrl = '${{ steps.chromatic.outputs.buildUrl }}';
+            const changesCount = '${{ steps.chromatic.outputs.changeCount }}' || '0';
+
+            let status = '✅';
+            let message = 'No visual changes detected';
+
+            if (changesCount !== '0') {
+              status = '⚠️';
+              message = `${changesCount} visual change(s) detected - Review required`;
+            }
+
+            const comment = `## ${status} Visual Regression Testing
+
+            **Status**: ${message}
+
+            **Chromatic Build**: ${buildUrl || 'Processing...'}
+            **Storybook Preview**: ${chromaticUrl || 'Building...'}
+
+            ${changesCount !== '0' ? '⚠️ **Action Required**: Please review visual changes in Chromatic before merging.' : '✅ All visual tests passed!'}
+
+            ---
+            📚 **Note**: Visual regression testing is currently **non-blocking**.
+            Stories coverage: 0% (Phase 1 - Infrastructure setup)
+            Target: 50%+ coverage before enabling blocking mode (Phase 2)
+
+            [Learn more about visual testing](../blob/main/docs/02-development/testing/visual-testing-guide.md)
+            `;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
 
   ci-web-e2e:
     needs: changes
@@ -206,7 +302,7 @@ jobs:
         working-directory: apps/web
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup frontend environment
         uses: ./.github/actions/setup-frontend
@@ -235,7 +331,7 @@ jobs:
 
       - name: Upload Playwright Report
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: playwright-e2e-report-${{ github.run_number }}
           path: apps/web/playwright-report/
@@ -277,7 +373,7 @@ jobs:
           - 6379:6379
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -418,7 +514,7 @@ jobs:
 
       - name: Upload Newman Reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: newman-reports-${{ github.run_number }}
           path: |
@@ -428,7 +524,7 @@ jobs:
 
       - name: Upload API Logs
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: api-logs-${{ github.run_number }}
           path: apps/api/src/Api/api.log
@@ -454,7 +550,7 @@ jobs:
         working-directory: apps/web
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup frontend environment
         uses: ./.github/actions/setup-frontend
@@ -477,7 +573,7 @@ jobs:
         run: pnpm test:e2e e2e/accessibility.spec.ts
       - name: Upload Playwright Report
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: playwright-a11y-report-${{ github.run_number }}
           path: apps/web/playwright-report/
@@ -522,7 +618,7 @@ jobs:
         working-directory: apps/api
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Install PDF extraction dependencies
         run: sudo apt-get update && sudo apt-get install -y libgdiplus
@@ -565,8 +661,11 @@ jobs:
           # Note: xUnit v3 AssemblyFixture automatically runs cleanup after all tests
           # Timeout: 20min (Issue #829: increased from 15min for xUnit v3 + ExecuteDeleteAsync overhead)
           # With optimizations, expected completion: ~12-14min
+          # SECURITY NOTE: TwoFactorSecurityPenetrationTests excluded (5-8min) - runs in dedicated workflow
           echo "::notice::Running unit and integration tests (90% of test suite) with 90% coverage threshold"
+          echo "::notice::Excluding TwoFactorSecurityPenetrationTests (runs in security-penetration-tests.yml)"
           dotnet test \
+            --filter "FullyQualifiedName!~TwoFactorSecurityPenetrationTests" \
             --logger "console;verbosity=normal" \
             --no-build \
             --blame-hang-timeout 5m \
@@ -594,9 +693,12 @@ jobs:
           # Run tests with randomized order to validate test isolation
           # Reference: docs/02-development/testing/test-isolation-best-practices.md
           # Seed based on workflow run ID for reproducible failures
+          # SECURITY NOTE: TwoFactorSecurityPenetrationTests excluded - runs in dedicated workflow
           TEST_SEED="${{ github.run_id }}"
           echo "::notice::Running tests in random order (seed: $TEST_SEED) to validate test isolation"
+          echo "::notice::Excluding TwoFactorSecurityPenetrationTests (runs in security-penetration-tests.yml)"
           dotnet test \
+            --filter "FullyQualifiedName!~TwoFactorSecurityPenetrationTests" \
             --logger "console;verbosity=minimal" \
             --no-build \
             --blame-hang-timeout 5m \
@@ -628,7 +730,7 @@ jobs:
 
       - name: Upload Coverage Report
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: api-coverage-report-${{ github.run_number }}
           path: apps/api/tests/Api.Tests/coverage-report/
@@ -642,7 +744,7 @@ jobs:
     if: ${{ !failure() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.infra == 'true') }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Validate Prometheus Rules
         run: |
@@ -711,7 +813,7 @@ jobs:
         working-directory: apps/api
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
@@ -831,7 +933,7 @@ jobs:
 
       - name: Upload RAG Evaluation Report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: rag-evaluation-report-${{ github.run_number }}
           path: apps/api/evaluation-reports/
@@ -894,7 +996,7 @@ jobs:
         working-directory: apps/api
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Install PDF extraction dependencies
         run: sudo apt-get update && sudo apt-get install -y libgdiplus
@@ -976,7 +1078,7 @@ jobs:
 
       - name: Upload Test Results
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: llm-integration-test-results-${{ github.run_number }}
           path: apps/api/tests/Api.Tests/TestResults/

@@ -15,34 +15,33 @@
 
 'use client';
 
-
-import React, { useState, useEffect } from 'react';
-import { useRouter, useParams } from 'next/navigation';
-import Link from 'next/link';
-import { Game, BggGameDetails, GameSessionDto, api } from '@/lib/api';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { logger } from '@/lib/logger';
-import { createErrorContext } from '@/lib/errors';
-import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { BggGameDetails, Game, GameSessionDto, api } from '@/lib/api';
+import { createErrorContext } from '@/lib/errors';
+import { logger } from '@/lib/logger';
 import {
-  Users,
-  Clock,
-  Calendar,
-  Star,
-  TrendingUp,
-  ExternalLink,
-  ArrowLeft,
   AlertCircle,
-  StickyNote,
+  ArrowLeft,
+  BookOpen,
+  Calendar,
+  Clock,
+  ExternalLink,
   PlayCircle,
-  BookOpen
+  Star,
+  StickyNote,
+  TrendingUp,
+  Users,
 } from 'lucide-react';
+import Link from 'next/link';
+import { useParams, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 // LocalStorage key for notes
 const NOTES_STORAGE_KEY = 'meepleai_game_notes';
@@ -101,18 +100,23 @@ export default function GameDetailPage() {
       return;
     }
 
+    const bggId = game.bggId;
+
     const loadBggDetails = async () => {
       setBggLoading(true);
       setBggError(null);
       try {
-        const details = await api.bgg.getGameDetails(game.bggId!);
+        const details = await api.bgg.getGameDetails(bggId);
         setBggDetails(details);
       } catch (err) {
         setBggError('Failed to load BGG details');
         logger.error(
           'Failed to load BGG details',
           err instanceof Error ? err : new Error(String(err)),
-          createErrorContext('GameDetailPage', 'loadBggDetails', { bggId: game.bggId, operation: 'fetch_bgg_details' })
+          createErrorContext('GameDetailPage', 'loadBggDetails', {
+            bggId,
+            operation: 'fetch_bgg_details',
+          })
         );
       } finally {
         setBggLoading(false);
@@ -131,14 +135,17 @@ export default function GameDetailPage() {
       try {
         const response = await api.sessions.getHistory({
           gameId,
-          limit: 50
+          limit: 50,
         });
         setSessions(response.sessions);
       } catch (err) {
         logger.error(
           'Failed to load game sessions',
           err instanceof Error ? err : new Error(String(err)),
-          createErrorContext('GameDetailPage', 'loadSessions', { gameId, operation: 'fetch_sessions' })
+          createErrorContext('GameDetailPage', 'loadSessions', {
+            gameId,
+            operation: 'fetch_sessions',
+          })
         );
         setSessions([]);
       } finally {
@@ -157,6 +164,7 @@ export default function GameDetailPage() {
       const savedNotes = localStorage.getItem(NOTES_STORAGE_KEY);
       if (savedNotes) {
         const allNotes: GameNotes = JSON.parse(savedNotes);
+        // eslint-disable-next-line security/detect-object-injection
         setNotes(allNotes[gameId] || '');
       }
     } catch (err) {
@@ -175,6 +183,7 @@ export default function GameDetailPage() {
     try {
       const savedNotes = localStorage.getItem(NOTES_STORAGE_KEY);
       const allNotes: GameNotes = savedNotes ? JSON.parse(savedNotes) : {};
+      // eslint-disable-next-line security/detect-object-injection
       allNotes[gameId] = notes;
       localStorage.setItem(NOTES_STORAGE_KEY, JSON.stringify(allNotes));
       alert('Notes saved successfully!');
@@ -214,391 +223,375 @@ export default function GameDetailPage() {
   }
 
   return (
-      <div className="container mx-auto p-6 max-w-6xl">
-        {/* Header */}
-        <div className="mb-6">
-          <Button asChild variant="ghost" className="mb-4">
-            <Link href="/games">
-              <ArrowLeft className="mr-2 h-4 w-4" /> Back to Games
-            </Link>
-          </Button>
+    <div className="container mx-auto p-6 max-w-6xl">
+      {/* Header */}
+      <div className="mb-6">
+        <Button asChild variant="ghost" className="mb-4">
+          <Link href="/games">
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Games
+          </Link>
+        </Button>
 
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold mb-2">{game.title}</h1>
-              {game.publisher && (
-                <p className="text-muted-foreground">{game.publisher}</p>
-              )}
-            </div>
-            {game.bggId && (
-              <Badge variant="secondary">BGG #{game.bggId}</Badge>
-            )}
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold mb-2">{game.title}</h1>
+            {game.publisher && <p className="text-muted-foreground">{game.publisher}</p>}
           </div>
-
-          {/* Basic Info */}
-          <div className="flex flex-wrap gap-4 text-sm mt-4">
-            {(game.minPlayers !== null || game.maxPlayers !== null) && (
-              <div className="flex items-center gap-2">
-                <Users className="h-4 w-4 text-muted-foreground" />
-                <span>
-                  {game.minPlayers === game.maxPlayers
-                    ? `${game.minPlayers} players`
-                    : `${game.minPlayers || '?'}-${game.maxPlayers || '?'} players`}
-                </span>
-              </div>
-            )}
-
-            {(game.minPlayTimeMinutes !== null || game.maxPlayTimeMinutes !== null) && (
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-muted-foreground" />
-                <span>
-                  {game.minPlayTimeMinutes === game.maxPlayTimeMinutes
-                    ? `${game.minPlayTimeMinutes} min`
-                    : `${game.minPlayTimeMinutes || '?'}-${game.maxPlayTimeMinutes || '?'} min`}
-                </span>
-              </div>
-            )}
-
-            {game.yearPublished && (
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <span>{game.yearPublished}</span>
-              </div>
-            )}
-          </div>
+          {game.bggId && <Badge variant="secondary">BGG #{game.bggId}</Badge>}
         </div>
 
-        {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="overview">
-              <Star className="mr-2 h-4 w-4" />
-              Overview
-            </TabsTrigger>
-            <TabsTrigger value="rules">
-              <BookOpen className="mr-2 h-4 w-4" />
-              Rules
-            </TabsTrigger>
-            <TabsTrigger value="sessions">
-              <PlayCircle className="mr-2 h-4 w-4" />
-              Sessions
-            </TabsTrigger>
-            <TabsTrigger value="notes">
-              <StickyNote className="mr-2 h-4 w-4" />
-              Notes
-            </TabsTrigger>
-          </TabsList>
+        {/* Basic Info */}
+        <div className="flex flex-wrap gap-4 text-sm mt-4">
+          {(game.minPlayers !== null || game.maxPlayers !== null) && (
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-muted-foreground" />
+              <span>
+                {game.minPlayers === game.maxPlayers
+                  ? `${game.minPlayers} players`
+                  : `${game.minPlayers || '?'}-${game.maxPlayers || '?'} players`}
+              </span>
+            </div>
+          )}
 
-          {/* Overview Tab */}
-          <TabsContent value="overview" className="space-y-4">
-            {game.bggId && (
-              <>
-                {bggLoading && (
-                  <div className="space-y-3">
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-3/4" />
-                  </div>
-                )}
+          {(game.minPlayTimeMinutes !== null || game.maxPlayTimeMinutes !== null) && (
+            <div className="flex items-center gap-2">
+              <Clock className="h-4 w-4 text-muted-foreground" />
+              <span>
+                {game.minPlayTimeMinutes === game.maxPlayTimeMinutes
+                  ? `${game.minPlayTimeMinutes} min`
+                  : `${game.minPlayTimeMinutes || '?'}-${game.maxPlayTimeMinutes || '?'} min`}
+              </span>
+            </div>
+          )}
 
-                {bggError && (
-                  <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>{bggError}</AlertDescription>
-                  </Alert>
-                )}
+          {game.yearPublished && (
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <span>{game.yearPublished}</span>
+            </div>
+          )}
+        </div>
+      </div>
 
-                {bggDetails && (
-                  <div className="space-y-4">
-                    {/* BGG Image */}
-                    {bggDetails.imageUrl && (
-                      <div className="flex justify-center">
-                        <img
-                          src={bggDetails.imageUrl}
-                          alt={bggDetails.name}
-                          className="max-h-96 rounded-md object-contain"
-                        />
-                      </div>
-                    )}
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="overview">
+            <Star className="mr-2 h-4 w-4" />
+            Overview
+          </TabsTrigger>
+          <TabsTrigger value="rules">
+            <BookOpen className="mr-2 h-4 w-4" />
+            Rules
+          </TabsTrigger>
+          <TabsTrigger value="sessions">
+            <PlayCircle className="mr-2 h-4 w-4" />
+            Sessions
+          </TabsTrigger>
+          <TabsTrigger value="notes">
+            <StickyNote className="mr-2 h-4 w-4" />
+            Notes
+          </TabsTrigger>
+        </TabsList>
 
-                    {/* BGG Ratings */}
+        {/* Overview Tab */}
+        <TabsContent value="overview" className="space-y-4">
+          {game.bggId && (
+            <>
+              {bggLoading && (
+                <div className="space-y-3">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-3/4" />
+                </div>
+              )}
+
+              {bggError && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{bggError}</AlertDescription>
+                </Alert>
+              )}
+
+              {bggDetails && (
+                <div className="space-y-4">
+                  {/* BGG Image */}
+                  {bggDetails.imageUrl && (
+                    <div className="flex justify-center">
+                      <img
+                        src={bggDetails.imageUrl}
+                        alt={bggDetails.name}
+                        className="max-h-96 rounded-md object-contain"
+                      />
+                    </div>
+                  )}
+
+                  {/* BGG Ratings */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Ratings & Stats</CardTitle>
+                    </CardHeader>
+                    <CardContent className="grid grid-cols-2 gap-4 text-sm">
+                      {bggDetails.averageRating && (
+                        <div className="flex items-center gap-2">
+                          <Star className="h-4 w-4 text-yellow-500" />
+                          <span>Rating: {bggDetails.averageRating.toFixed(2)}</span>
+                        </div>
+                      )}
+
+                      {bggDetails.averageWeight && (
+                        <div className="flex items-center gap-2">
+                          <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                          <span>Complexity: {bggDetails.averageWeight.toFixed(2)}/5</span>
+                        </div>
+                      )}
+
+                      {bggDetails.usersRated && (
+                        <div className="text-muted-foreground col-span-2">
+                          {bggDetails.usersRated.toLocaleString()} ratings
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Description */}
+                  {bggDetails.description && (
                     <Card>
                       <CardHeader>
-                        <CardTitle>Ratings & Stats</CardTitle>
+                        <CardTitle>Description</CardTitle>
                       </CardHeader>
-                      <CardContent className="grid grid-cols-2 gap-4 text-sm">
-                        {bggDetails.averageRating && (
-                          <div className="flex items-center gap-2">
-                            <Star className="h-4 w-4 text-yellow-500" />
-                            <span>Rating: {bggDetails.averageRating.toFixed(2)}</span>
+                      <CardContent>
+                        <div
+                          className="prose prose-sm max-w-none text-muted-foreground"
+                          dangerouslySetInnerHTML={{ __html: bggDetails.description }}
+                        />
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Categories & Mechanics */}
+                  {(bggDetails.categories.length > 0 || bggDetails.mechanics.length > 0) && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Categories & Mechanics</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        {bggDetails.categories.length > 0 && (
+                          <div>
+                            <h4 className="font-semibold mb-2 text-sm">Categories</h4>
+                            <div className="flex flex-wrap gap-2">
+                              {bggDetails.categories.map(category => (
+                                <Badge key={category} variant="secondary">
+                                  {category}
+                                </Badge>
+                              ))}
+                            </div>
                           </div>
                         )}
 
-                        {bggDetails.averageWeight && (
-                          <div className="flex items-center gap-2">
-                            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                            <span>Complexity: {bggDetails.averageWeight.toFixed(2)}/5</span>
-                          </div>
-                        )}
-
-                        {bggDetails.usersRated && (
-                          <div className="text-muted-foreground col-span-2">
-                            {bggDetails.usersRated.toLocaleString()} ratings
+                        {bggDetails.mechanics.length > 0 && (
+                          <div>
+                            <h4 className="font-semibold mb-2 text-sm">Mechanics</h4>
+                            <div className="flex flex-wrap gap-2">
+                              {bggDetails.mechanics.map(mechanic => (
+                                <Badge key={mechanic} variant="outline">
+                                  {mechanic}
+                                </Badge>
+                              ))}
+                            </div>
                           </div>
                         )}
                       </CardContent>
                     </Card>
+                  )}
 
-                    {/* Description */}
-                    {bggDetails.description && (
-                      <Card>
-                        <CardHeader>
-                          <CardTitle>Description</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div
-                            className="prose prose-sm max-w-none text-muted-foreground"
-                            dangerouslySetInnerHTML={{ __html: bggDetails.description }}
-                          />
-                        </CardContent>
-                      </Card>
-                    )}
+                  {/* Designers & Publishers */}
+                  {(bggDetails.designers.length > 0 || bggDetails.publishers.length > 0) && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Credits</CardTitle>
+                      </CardHeader>
+                      <CardContent className="grid grid-cols-2 gap-4 text-sm">
+                        {bggDetails.designers.length > 0 && (
+                          <div>
+                            <h4 className="font-semibold mb-1">Designers</h4>
+                            <ul className="list-disc list-inside text-muted-foreground">
+                              {bggDetails.designers.slice(0, 5).map(designer => (
+                                <li key={designer}>{designer}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
 
-                    {/* Categories & Mechanics */}
-                    {(bggDetails.categories.length > 0 || bggDetails.mechanics.length > 0) && (
-                      <Card>
-                        <CardHeader>
-                          <CardTitle>Categories & Mechanics</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
-                          {bggDetails.categories.length > 0 && (
-                            <div>
-                              <h4 className="font-semibold mb-2 text-sm">Categories</h4>
-                              <div className="flex flex-wrap gap-2">
-                                {bggDetails.categories.map((category) => (
-                                  <Badge key={category} variant="secondary">
-                                    {category}
-                                  </Badge>
-                                ))}
-                              </div>
-                            </div>
-                          )}
+                        {bggDetails.publishers.length > 0 && (
+                          <div>
+                            <h4 className="font-semibold mb-1">Publishers</h4>
+                            <ul className="list-disc list-inside text-muted-foreground">
+                              {bggDetails.publishers.slice(0, 5).map(publisher => (
+                                <li key={publisher}>{publisher}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  )}
 
-                          {bggDetails.mechanics.length > 0 && (
-                            <div>
-                              <h4 className="font-semibold mb-2 text-sm">Mechanics</h4>
-                              <div className="flex flex-wrap gap-2">
-                                {bggDetails.mechanics.map((mechanic) => (
-                                  <Badge key={mechanic} variant="outline">
-                                    {mechanic}
-                                  </Badge>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    )}
-
-                    {/* Designers & Publishers */}
-                    {(bggDetails.designers.length > 0 || bggDetails.publishers.length > 0) && (
-                      <Card>
-                        <CardHeader>
-                          <CardTitle>Credits</CardTitle>
-                        </CardHeader>
-                        <CardContent className="grid grid-cols-2 gap-4 text-sm">
-                          {bggDetails.designers.length > 0 && (
-                            <div>
-                              <h4 className="font-semibold mb-1">Designers</h4>
-                              <ul className="list-disc list-inside text-muted-foreground">
-                                {bggDetails.designers.slice(0, 5).map((designer) => (
-                                  <li key={designer}>{designer}</li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-
-                          {bggDetails.publishers.length > 0 && (
-                            <div>
-                              <h4 className="font-semibold mb-1">Publishers</h4>
-                              <ul className="list-disc list-inside text-muted-foreground">
-                                {bggDetails.publishers.slice(0, 5).map((publisher) => (
-                                  <li key={publisher}>{publisher}</li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    )}
-
-                    {/* BGG Link */}
-                    <Button
-                      variant="outline"
-                      asChild
-                      className="w-full"
+                  {/* BGG Link */}
+                  <Button variant="outline" asChild className="w-full">
+                    <a
+                      href={`https://boardgamegeek.com/boardgame/${game.bggId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
                     >
-                      <a
-                        href={`https://boardgamegeek.com/boardgame/${game.bggId}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        View on BoardGameGeek
-                        <ExternalLink className="ml-2 h-4 w-4" />
-                      </a>
-                    </Button>
-                  </div>
-                )}
-              </>
-            )}
-
-            {!game.bggId && (
-              <Alert>
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  No BoardGameGeek data available for this game.
-                </AlertDescription>
-              </Alert>
-            )}
-          </TabsContent>
-
-          {/* Rules Tab */}
-          <TabsContent value="rules">
-            <Card>
-              <CardHeader>
-                <CardTitle>Game Rules</CardTitle>
-                <CardDescription>
-                  Rules specification and reference
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Alert>
-                  <BookOpen className="h-4 w-4" />
-                  <AlertDescription>
-                    Rules integration coming soon. Backend query (GetRuleSpecsQuery) will be
-                    implemented in a separate issue.
-                  </AlertDescription>
-                </Alert>
-                <div className="mt-4 text-sm text-muted-foreground">
-                  <p>Future features:</p>
-                  <ul className="list-disc list-inside mt-2 space-y-1">
-                    <li>View rule specifications</li>
-                    <li>Search rules by keyword</li>
-                    <li>Version history</li>
-                    <li>PDF rule document viewer</li>
-                  </ul>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Sessions Tab */}
-          <TabsContent value="sessions" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Play Sessions</CardTitle>
-                <CardDescription>
-                  Game session history and statistics
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {sessionsLoading && (
-                  <div className="space-y-3">
-                    <Skeleton className="h-16 w-full" />
-                    <Skeleton className="h-16 w-full" />
-                    <Skeleton className="h-16 w-full" />
-                  </div>
-                )}
-
-                {!sessionsLoading && sessions.length === 0 && (
-                  <Alert>
-                    <PlayCircle className="h-4 w-4" />
-                    <AlertDescription>
-                      No play sessions recorded yet. Start a new session to track your games!
-                    </AlertDescription>
-                  </Alert>
-                )}
-
-                {!sessionsLoading && sessions.length > 0 && (
-                  <div className="space-y-3">
-                    {sessions.map((session) => (
-                      <Card key={session.id}>
-                        <CardHeader className="pb-3">
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <Badge variant={session.status === 'Completed' ? 'default' : 'secondary'}>
-                                {session.status}
-                              </Badge>
-                              <CardDescription className="mt-2">
-                                {new Date(session.startedAt).toLocaleDateString()} •{' '}
-                                {session.durationMinutes} min
-                              </CardDescription>
-                            </div>
-                            {session.winnerName && (
-                              <Badge variant="outline">
-                                Winner: {session.winnerName}
-                              </Badge>
-                            )}
-                          </div>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="flex items-center gap-2 text-sm">
-                            <Users className="h-4 w-4 text-muted-foreground" />
-                            <span>
-                              {session.playerCount} players:{' '}
-                              {session.players.map(p => p.playerName).join(', ')}
-                            </span>
-                          </div>
-                          {session.notes && (
-                            <p className="text-sm text-muted-foreground mt-2">
-                              Notes: {session.notes}
-                            </p>
-                          )}
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-
-                <Separator className="my-4" />
-
-                <Button asChild className="w-full">
-                  <Link href="/sessions">View All Sessions</Link>
-                </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Notes Tab */}
-          <TabsContent value="notes">
-            <Card>
-              <CardHeader>
-                <CardTitle>Your Notes</CardTitle>
-                <CardDescription>
-                  Personal notes about {game.title}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <Textarea
-                  placeholder="Write your notes about strategies, house rules, or game impressions..."
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  rows={10}
-                  className="resize-none"
-                />
-                <div className="flex justify-between items-center">
-                  <p className="text-xs text-muted-foreground">
-                    Notes are saved locally in your browser
-                  </p>
-                  <Button onClick={handleSaveNotes}>
-                    <StickyNote className="mr-2 h-4 w-4" />
-                    Save Notes
+                      View on BoardGameGeek
+                      <ExternalLink className="ml-2 h-4 w-4" />
+                    </a>
                   </Button>
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
+              )}
+            </>
+          )}
+
+          {!game.bggId && (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>No BoardGameGeek data available for this game.</AlertDescription>
+            </Alert>
+          )}
+        </TabsContent>
+
+        {/* Rules Tab */}
+        <TabsContent value="rules">
+          <Card>
+            <CardHeader>
+              <CardTitle>Game Rules</CardTitle>
+              <CardDescription>Rules specification and reference</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Alert>
+                <BookOpen className="h-4 w-4" />
+                <AlertDescription>
+                  Rules integration coming soon. Backend query (GetRuleSpecsQuery) will be
+                  implemented in a separate issue.
+                </AlertDescription>
+              </Alert>
+              <div className="mt-4 text-sm text-muted-foreground">
+                <p>Future features:</p>
+                <ul className="list-disc list-inside mt-2 space-y-1">
+                  <li>View rule specifications</li>
+                  <li>Search rules by keyword</li>
+                  <li>Version history</li>
+                  <li>PDF rule document viewer</li>
+                </ul>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Sessions Tab */}
+        <TabsContent value="sessions" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Play Sessions</CardTitle>
+              <CardDescription>Game session history and statistics</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {sessionsLoading && (
+                <div className="space-y-3">
+                  <Skeleton className="h-16 w-full" />
+                  <Skeleton className="h-16 w-full" />
+                  <Skeleton className="h-16 w-full" />
+                </div>
+              )}
+
+              {!sessionsLoading && sessions.length === 0 && (
+                <Alert>
+                  <PlayCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    No play sessions recorded yet. Start a new session to track your games!
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {!sessionsLoading && sessions.length > 0 && (
+                <div className="space-y-3">
+                  {sessions.map(session => (
+                    <Card key={session.id}>
+                      <CardHeader className="pb-3">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <Badge
+                              variant={session.status === 'Completed' ? 'default' : 'secondary'}
+                            >
+                              {session.status}
+                            </Badge>
+                            <CardDescription className="mt-2">
+                              {new Date(session.startedAt).toLocaleDateString()} •{' '}
+                              {session.durationMinutes} min
+                            </CardDescription>
+                          </div>
+                          {session.winnerName && (
+                            <Badge variant="outline">Winner: {session.winnerName}</Badge>
+                          )}
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex items-center gap-2 text-sm">
+                          <Users className="h-4 w-4 text-muted-foreground" />
+                          <span>
+                            {session.playerCount} players:{' '}
+                            {session.players.map(p => p.playerName).join(', ')}
+                          </span>
+                        </div>
+                        {session.notes && (
+                          <p className="text-sm text-muted-foreground mt-2">
+                            Notes: {session.notes}
+                          </p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+
+              <Separator className="my-4" />
+
+              <Button asChild className="w-full">
+                <Link href="/sessions">View All Sessions</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Notes Tab */}
+        <TabsContent value="notes">
+          <Card>
+            <CardHeader>
+              <CardTitle>Your Notes</CardTitle>
+              <CardDescription>Personal notes about {game.title}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Textarea
+                placeholder="Write your notes about strategies, house rules, or game impressions..."
+                value={notes}
+                onChange={e => setNotes(e.target.value)}
+                rows={10}
+                className="resize-none"
+              />
+              <div className="flex justify-between items-center">
+                <p className="text-xs text-muted-foreground">
+                  Notes are saved locally in your browser
+                </p>
+                <Button onClick={handleSaveNotes}>
+                  <StickyNote className="mr-2 h-4 w-4" />
+                  Save Notes
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 }

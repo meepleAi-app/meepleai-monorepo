@@ -1,6 +1,5 @@
 'use client';
 
-import { useAuthUser } from '@/hooks/useAuthUser';
 import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
@@ -54,7 +53,7 @@ const CATEGORIES = [
 
 export function AdminPageClient() {
   const router = useRouter();
-  const { user } = useAuthUser();
+  const { user, loading: authLoading } = useAuthUser();
 
   if (!user) return null;
 

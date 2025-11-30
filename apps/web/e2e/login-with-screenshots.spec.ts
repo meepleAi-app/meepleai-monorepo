@@ -1,10 +1,16 @@
-import { test, expect } from '@playwright/test';
+/**
+ * E2E Login Test with Screenshots - MIGRATED TO POM
+ *
+ * @see apps/web/e2e/pages/auth/LoginPage.ts
+ */
 
-const API_BASE = 'http://localhost:8080';
+import { test, expect } from '@playwright/test';
+import { LoginPage } from './pages';
+
 const WEB_BASE = 'http://localhost:3000';
 
 /**
- * E2E Login Test with Screenshots
+ * Login Flow with Screenshot Capture
  *
  * Tests the complete login flow with screenshot capture at each step:
  * 1. Navigate to homepage

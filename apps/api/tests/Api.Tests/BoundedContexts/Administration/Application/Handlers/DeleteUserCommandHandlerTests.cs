@@ -51,7 +51,7 @@ public class DeleteUserCommandHandlerTests
             RequestingUserId: requestingUserId.ToString());
 
         // Act
-        await _handler.Handle(command, CancellationToken.None);
+        await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         _userRepositoryMock.Verify(
@@ -86,7 +86,7 @@ public class DeleteUserCommandHandlerTests
             RequestingUserId: requestingUserId.ToString());
 
         // Act
-        await _handler.Handle(command, CancellationToken.None);
+        await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         _userRepositoryMock.Verify(
@@ -119,7 +119,7 @@ public class DeleteUserCommandHandlerTests
             RequestingUserId: requestingUserId.ToString());
 
         // Act
-        await _handler.Handle(command, CancellationToken.None);
+        await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         _userRepositoryMock.Verify(
@@ -145,7 +145,7 @@ public class DeleteUserCommandHandlerTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<DomainException>(
-            () => _handler.Handle(command, CancellationToken.None));
+            () => _handler.Handle(command, TestContext.Current.CancellationToken));
 
         Assert.Equal("Cannot delete your own account", exception.Message);
 
@@ -181,7 +181,7 @@ public class DeleteUserCommandHandlerTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<DomainException>(
-            () => _handler.Handle(command, CancellationToken.None));
+            () => _handler.Handle(command, TestContext.Current.CancellationToken));
 
         Assert.Equal("Cannot delete the last admin user", exception.Message);
 
@@ -208,7 +208,7 @@ public class DeleteUserCommandHandlerTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<DomainException>(
-            () => _handler.Handle(command, CancellationToken.None));
+            () => _handler.Handle(command, TestContext.Current.CancellationToken));
 
         Assert.Contains($"User {userId} not found", exception.Message);
 
@@ -247,7 +247,7 @@ public class DeleteUserCommandHandlerTests
 
         // Act & Assert
         await Assert.ThrowsAsync<DomainException>(
-            () => _handler.Handle(command, CancellationToken.None));
+            () => _handler.Handle(command, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -274,7 +274,7 @@ public class DeleteUserCommandHandlerTests
             RequestingUserId: requestingUserId.ToString());
 
         // Act
-        await _handler.Handle(command, CancellationToken.None);
+        await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert - Should succeed
         _userRepositoryMock.Verify(
@@ -301,7 +301,7 @@ public class DeleteUserCommandHandlerTests
             RequestingUserId: requestingUserId.ToString());
 
         // Act
-        await _handler.Handle(command, CancellationToken.None);
+        await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert - CountAdminsAsync should NOT be called for non-admin users
         _userRepositoryMock.Verify(
@@ -351,3 +351,4 @@ public class DeleteUserCommandHandlerTests
 
     #endregion
 }
+

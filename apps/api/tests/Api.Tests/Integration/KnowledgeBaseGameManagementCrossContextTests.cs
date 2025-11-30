@@ -13,6 +13,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using FluentAssertions;
+using Npgsql;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -30,6 +31,7 @@ public sealed class KnowledgeBaseGameManagementCrossContextTests : IAsyncLifetim
     private IContainer? _postgresContainer;
     private MeepleAiDbContext? _dbContext;
     private IServiceProvider? _serviceProvider;
+    private IServiceProvider ServiceProvider => _serviceProvider ?? throw new InvalidOperationException("Service provider not initialized");
 
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
@@ -75,7 +77,7 @@ public sealed class KnowledgeBaseGameManagementCrossContextTests : IAsyncLifetim
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
 
-        await _dbContext.Database.EnsureCreatedAsync(TestCancellationToken);
+        await EnsureCreatedWithRetry(_dbContext);
     }
 
     public async ValueTask DisposeAsync()
@@ -134,9 +136,9 @@ public sealed class KnowledgeBaseGameManagementCrossContextTests : IAsyncLifetim
         // Arrange
         await ResetDatabaseAsync();
 
-        var userRepository = _serviceProvider!.GetRequiredService<IUserRepository>();
-        var gameRepository = _serviceProvider.GetRequiredService<IGameRepository>();
-        var chatThreadRepository = _serviceProvider.GetRequiredService<IChatThreadRepository>();
+        var userRepository = ServiceProvider.GetRequiredService<IUserRepository>();
+        var gameRepository = ServiceProvider.GetRequiredService<IGameRepository>();
+        var chatThreadRepository = ServiceProvider.GetRequiredService<IChatThreadRepository>();
 
         var user = CreateTestUser("chatuser@meepleai.dev", "Chat User");
         await userRepository.AddAsync(user, TestCancellationToken);
@@ -182,10 +184,10 @@ public sealed class KnowledgeBaseGameManagementCrossContextTests : IAsyncLifetim
         // Arrange
         await ResetDatabaseAsync();
 
-        var userRepository = _serviceProvider!.GetRequiredService<IUserRepository>();
-        var gameRepository = _serviceProvider.GetRequiredService<IGameRepository>();
-        var gameSessionRepository = _serviceProvider.GetRequiredService<IGameSessionRepository>();
-        var chatThreadRepository = _serviceProvider.GetRequiredService<IChatThreadRepository>();
+        var userRepository = ServiceProvider.GetRequiredService<IUserRepository>();
+        var gameRepository = ServiceProvider.GetRequiredService<IGameRepository>();
+        var gameSessionRepository = ServiceProvider.GetRequiredService<IGameSessionRepository>();
+        var chatThreadRepository = ServiceProvider.GetRequiredService<IChatThreadRepository>();
 
         var user = CreateTestUser("player@meepleai.dev", "Active Player");
         await userRepository.AddAsync(user, TestCancellationToken);
@@ -238,9 +240,9 @@ public sealed class KnowledgeBaseGameManagementCrossContextTests : IAsyncLifetim
         // Arrange
         await ResetDatabaseAsync();
 
-        var userRepository = _serviceProvider!.GetRequiredService<IUserRepository>();
-        var gameRepository = _serviceProvider.GetRequiredService<IGameRepository>();
-        var chatThreadRepository = _serviceProvider.GetRequiredService<IChatThreadRepository>();
+        var userRepository = ServiceProvider.GetRequiredService<IUserRepository>();
+        var gameRepository = ServiceProvider.GetRequiredService<IGameRepository>();
+        var chatThreadRepository = ServiceProvider.GetRequiredService<IChatThreadRepository>();
 
         var users = new List<User>();
         var userNames = new[] { "Alice", "Bob", "Charlie" };
@@ -294,10 +296,10 @@ public sealed class KnowledgeBaseGameManagementCrossContextTests : IAsyncLifetim
         // Arrange
         await ResetDatabaseAsync();
 
-        var userRepository = _serviceProvider!.GetRequiredService<IUserRepository>();
-        var gameRepository = _serviceProvider.GetRequiredService<IGameRepository>();
-        var gameSessionRepository = _serviceProvider.GetRequiredService<IGameSessionRepository>();
-        var chatThreadRepository = _serviceProvider.GetRequiredService<IChatThreadRepository>();
+        var userRepository = ServiceProvider.GetRequiredService<IUserRepository>();
+        var gameRepository = ServiceProvider.GetRequiredService<IGameRepository>();
+        var gameSessionRepository = ServiceProvider.GetRequiredService<IGameSessionRepository>();
+        var chatThreadRepository = ServiceProvider.GetRequiredService<IChatThreadRepository>();
 
         var user = CreateTestUser("finisher@meepleai.dev", "Game Finisher");
         await userRepository.AddAsync(user, TestCancellationToken);
@@ -369,4 +371,22 @@ public sealed class KnowledgeBaseGameManagementCrossContextTests : IAsyncLifetim
             Role.User
         );
     }
+
+    private static async Task EnsureCreatedWithRetry(MeepleAiDbContext context)
+    {
+        const int maxAttempts = 3;
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            try
+            {
+                await context.Database.EnsureCreatedAsync(TestCancellationToken);
+                return;
+            }
+            catch (NpgsqlException) when (attempt < maxAttempts)
+            {
+                await Task.Delay(500, TestCancellationToken);
+            }
+        }
+    }
 }
+

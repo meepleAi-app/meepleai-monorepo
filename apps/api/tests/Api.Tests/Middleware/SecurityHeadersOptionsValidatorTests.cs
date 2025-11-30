@@ -359,3 +359,4 @@ public class SecurityHeadersOptionsValidatorTests
         Assert.True(result.Succeeded);
     }
 }
+

@@ -42,7 +42,7 @@ public class GetLinkedOAuthAccountsQueryHandlerTests
             .ReturnsAsync(new List<OAuthAccount>());
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -69,7 +69,7 @@ public class GetLinkedOAuthAccountsQueryHandlerTests
             .ReturnsAsync(accounts);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -104,7 +104,7 @@ public class GetLinkedOAuthAccountsQueryHandlerTests
             .ReturnsAsync(new List<OAuthAccount> { account });
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -114,7 +114,7 @@ public class GetLinkedOAuthAccountsQueryHandlerTests
         Assert.Equal(accountId, dto.Id);
         Assert.Equal("google", dto.Provider);
         Assert.Equal("google_user_123", dto.ProviderUserId);
-        Assert.NotNull(dto.CreatedAt);
+        Assert.Equal(account.CreatedAt, dto.CreatedAt);
     }
 
     [Fact]
@@ -149,7 +149,7 @@ public class GetLinkedOAuthAccountsQueryHandlerTests
             .ReturnsAsync(new List<OAuthAccount> { expiredAccount, validAccount });
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(2, result.Accounts.Count);
@@ -193,7 +193,7 @@ public class GetLinkedOAuthAccountsQueryHandlerTests
             .ReturnsAsync(new List<OAuthAccount> { googleAccount, githubAccount });
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(2, result.Accounts.Count);
@@ -221,7 +221,7 @@ public class GetLinkedOAuthAccountsQueryHandlerTests
             .ThrowsAsync(new Exception("Database error"));
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -241,7 +241,7 @@ public class GetLinkedOAuthAccountsQueryHandlerTests
             .ThrowsAsync(new Exception("Database error"));
 
         // Act
-        await _handler.Handle(query, CancellationToken.None);
+        await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         _loggerMock.Verify(
@@ -273,3 +273,4 @@ public class GetLinkedOAuthAccountsQueryHandlerTests
 
     #endregion
 }
+

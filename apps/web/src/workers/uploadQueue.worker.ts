@@ -16,15 +16,21 @@
  * - Main thread logs these errors with structured logging
  */
 
-import { retryWithBackoff, isRetryableError } from '../lib/retryUtils';
-import { extractCorrelationId } from '../lib/errorUtils';
 import { ApiError } from '../lib/api';
+import { extractCorrelationId } from '../lib/errorUtils';
+import { isRetryableError, retryWithBackoff } from '../lib/retryUtils';
 
 // ============================================================================
 // Type Definitions
 // ============================================================================
 
-export type UploadStatus = 'pending' | 'uploading' | 'processing' | 'success' | 'failed' | 'cancelled';
+export type UploadStatus =
+  | 'pending'
+  | 'uploading'
+  | 'processing'
+  | 'success'
+  | 'failed'
+  | 'cancelled';
 
 export interface UploadQueueItem {
   id: string;
@@ -65,7 +71,10 @@ export type WorkerRequest =
   | { type: 'CLEAR_ALL' }
   | { type: 'START_PROCESSING' }
   | { type: 'GET_STATE' }
-  | { type: 'RESTORE_STATE'; payload: { items: UploadQueueItem[]; metrics: UploadQueueState['metrics'] } };
+  | {
+      type: 'RESTORE_STATE';
+      payload: { items: UploadQueueItem[]; metrics: UploadQueueState['metrics'] };
+    };
 
 export type WorkerResponse =
   | { type: 'STATE_UPDATED'; payload: UploadQueueState }
@@ -74,7 +83,10 @@ export type WorkerResponse =
   | { type: 'UPLOAD_FAILED'; payload: { id: string; error: string; correlationId?: string } }
   | { type: 'WORKER_READY' }
   | { type: 'WORKER_ERROR'; payload: { message: string } }
-  | { type: 'PERSIST_REQUEST'; payload: { items: UploadQueueItem[]; metrics: UploadQueueState['metrics'] } };
+  | {
+      type: 'PERSIST_REQUEST';
+      payload: { items: UploadQueueItem[]; metrics: UploadQueueState['metrics'] };
+    };
 
 export type BroadcastMessage =
   | { type: 'QUEUE_SYNC'; payload: UploadQueueState; tabId: string }
@@ -109,8 +121,8 @@ const state: UploadQueueState = {
     successfulUploads: 0,
     failedUploads: 0,
     cancelledUploads: 0,
-    totalBytesUploaded: 0
-  }
+    totalBytesUploaded: 0,
+  },
 };
 
 const activeUploads = new Map<string, AbortController>();
@@ -131,8 +143,8 @@ function requestPersistence(): void {
     type: 'PERSIST_REQUEST',
     payload: {
       items: state.items,
-      metrics: state.metrics
-    }
+      metrics: state.metrics,
+    },
   } as WorkerResponse);
 }
 
@@ -178,7 +190,7 @@ function broadcastQueueUpdate(): void {
       broadcastChannel.postMessage({
         type: 'QUEUE_SYNC',
         payload: state,
-        tabId: TAB_ID
+        tabId: TAB_ID,
       } as BroadcastMessage);
     } catch (error) {
       console.error('[UploadWorker] Failed to broadcast update:', error);
@@ -191,7 +203,7 @@ function broadcastUploadStarted(id: string): void {
     try {
       broadcastChannel.postMessage({
         type: 'UPLOAD_STARTED',
-        payload: { id, tabId: TAB_ID }
+        payload: { id, tabId: TAB_ID },
       } as BroadcastMessage);
     } catch (error) {
       console.error('[UploadWorker] Failed to broadcast upload started:', error);
@@ -211,6 +223,7 @@ function mergeQueueState(otherState: UploadQueueState): void {
       state.items.push(otherItem);
     } else if (!activeIds.has(otherItem.id)) {
       // Update if not currently uploading
+      // eslint-disable-next-line security/detect-object-injection
       state.items[existingIndex] = otherItem;
     }
   });
@@ -253,7 +266,7 @@ async function uploadFile(item: UploadQueueItem, fileData: ArrayBuffer): Promise
     // Reconstruct File object from stored data
     const file = new File([fileData], item.file.name, {
       type: item.file.type,
-      lastModified: item.file.lastModified
+      lastModified: item.file.lastModified,
     });
 
     const formData = new FormData();
@@ -268,7 +281,7 @@ async function uploadFile(item: UploadQueueItem, fileData: ArrayBuffer): Promise
           method: 'POST',
           body: formData,
           credentials: 'include',
-          signal: abortController.signal
+          signal: abortController.signal,
         });
 
         if (!res.ok) {
@@ -280,7 +293,7 @@ async function uploadFile(item: UploadQueueItem, fileData: ArrayBuffer): Promise
             message: errorMessage,
             statusCode: res.status,
             correlationId,
-            response: res
+            response: res,
           });
           throw apiError;
         }
@@ -289,7 +302,7 @@ async function uploadFile(item: UploadQueueItem, fileData: ArrayBuffer): Promise
       },
       {
         maxAttempts: maxRetries,
-        shouldRetry: (error) => {
+        shouldRetry: error => {
           // Don't retry if aborted
           if (error instanceof DOMException && error.name === 'AbortError') {
             return false;
@@ -298,11 +311,11 @@ async function uploadFile(item: UploadQueueItem, fileData: ArrayBuffer): Promise
         },
         onRetry: (error, attempt) => {
           updateItemRetryCount(item.id, attempt);
-        }
+        },
       }
     );
 
-    const data = await response.json() as { documentId: string };
+    const data = (await response.json()) as { documentId: string };
 
     // Update to processing status
     updateItemStatus(item.id, 'processing', 50, undefined, data.documentId);
@@ -324,9 +337,8 @@ async function uploadFile(item: UploadQueueItem, fileData: ArrayBuffer): Promise
     // Notify main thread
     self.postMessage({
       type: 'UPLOAD_SUCCESS',
-      payload: { id: item.id, pdfId: data.documentId }
+      payload: { id: item.id, pdfId: data.documentId },
     } as WorkerResponse);
-
   } catch (error: unknown) {
     // Check if it was cancelled
     if (error instanceof DOMException && error.name === 'AbortError') {
@@ -347,9 +359,8 @@ async function uploadFile(item: UploadQueueItem, fileData: ArrayBuffer): Promise
     // Notify main thread
     self.postMessage({
       type: 'UPLOAD_FAILED',
-      payload: { id: item.id, error: errorMessage, correlationId }
+      payload: { id: item.id, error: errorMessage, correlationId },
     } as WorkerResponse);
-
   } finally {
     activeUploads.delete(item.id);
   }
@@ -439,7 +450,7 @@ function updateItemRetryCount(id: string, retryCount: number): void {
 function notifyStateUpdate(): void {
   self.postMessage({
     type: 'STATE_UPDATED',
-    payload: state
+    payload: state,
   } as WorkerResponse);
 }
 
@@ -460,14 +471,14 @@ function handleAddFiles(files: FileData[], gameId: string, language: string): vo
         name: fileData.name,
         size: fileData.size,
         type: fileData.type,
-        lastModified: fileData.lastModified
+        lastModified: fileData.lastModified,
       },
       gameId,
       language,
       status: 'pending',
       progress: 0,
       retryCount: 0,
-      createdAt: Date.now()
+      createdAt: Date.now(),
     };
   });
 
@@ -524,10 +535,8 @@ function handleRemoveItem(id: string): void {
 
 function handleClearCompleted(): void {
   const completedIds = state.items
-    .filter(item =>
-      item.status === 'success' ||
-      item.status === 'failed' ||
-      item.status === 'cancelled'
+    .filter(
+      item => item.status === 'success' || item.status === 'failed' || item.status === 'cancelled'
     )
     .map(item => item.id);
 
@@ -598,7 +607,7 @@ self.onmessage = (event: MessageEvent<WorkerRequest>) => {
     console.error('[UploadWorker] Error handling message:', error);
     self.postMessage({
       type: 'WORKER_ERROR',
-      payload: { message: error instanceof Error ? error.message : 'Unknown error' }
+      payload: { message: error instanceof Error ? error.message : 'Unknown error' },
     } as WorkerResponse);
   }
 };
@@ -607,7 +616,7 @@ self.onmessage = (event: MessageEvent<WorkerRequest>) => {
 setupBroadcastChannel();
 
 self.postMessage({
-  type: 'WORKER_READY'
+  type: 'WORKER_READY',
 } as WorkerResponse);
 
 // eslint-disable-next-line no-console

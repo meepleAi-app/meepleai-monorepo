@@ -8,7 +8,7 @@
  */
 
 import React, { FormEvent } from 'react';
-import { useChatContext } from './ChatProvider';
+import { useChatContext } from '@/hooks/useChatContext';
 import { LoadingButton } from '../loading/LoadingButton';
 import { SearchModeToggle, SearchMode } from '@/components';
 import { Input } from '@/components/ui/input';
@@ -22,7 +22,10 @@ export function MessageInput() {
     selectedAgentId,
     loading,
     searchMode,
-    setSearchMode
+    setSearchMode,
+    // Streaming state (Issue #1007)
+    isStreaming,
+    stopStreaming,
   } = useChatContext();
 
   const handleSubmit = (e: FormEvent) => {
@@ -33,7 +36,11 @@ export function MessageInput() {
     void sendMessage(inputValue);
   };
 
-  const isDisabled = loading.sending || !selectedGameId || !selectedAgentId;
+  const handleStop = () => {
+    stopStreaming();
+  };
+
+  const isDisabled = loading.sending || isStreaming || !selectedGameId || !selectedAgentId;
   const isSendDisabled = !inputValue.trim() || isDisabled;
 
   return (
@@ -41,7 +48,7 @@ export function MessageInput() {
       {/* AI-14: Search Mode Toggle */}
       <SearchModeToggle
         value={searchMode as SearchMode}
-        onChange={(mode) => setSearchMode(mode)}
+        onChange={mode => setSearchMode(mode)}
         disabled={isDisabled}
       />
 
@@ -54,21 +61,34 @@ export function MessageInput() {
           id="message-input"
           type="text"
           value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
+          onChange={e => setInputValue(e.target.value)}
           placeholder="Fai una domanda sul gioco..."
           disabled={isDisabled}
           aria-label="Message input"
           className="flex-1"
         />
-        <LoadingButton
-          type="submit"
-          isLoading={loading.sending}
-          loadingText="Invio..."
-          disabled={isSendDisabled}
-          aria-label="Send message"
-        >
-          Invia
-        </LoadingButton>
+        {isStreaming ? (
+          <LoadingButton
+            type="button"
+            onClick={handleStop}
+            isLoading={false}
+            disabled={false}
+            aria-label="Stop streaming"
+            className="bg-red-600 hover:bg-red-700"
+          >
+            ⏹ Stop
+          </LoadingButton>
+        ) : (
+          <LoadingButton
+            type="submit"
+            isLoading={loading.sending}
+            loadingText="Invio..."
+            disabled={isSendDisabled}
+            aria-label="Send message"
+          >
+            Invia
+          </LoadingButton>
+        )}
       </form>
     </div>
   );

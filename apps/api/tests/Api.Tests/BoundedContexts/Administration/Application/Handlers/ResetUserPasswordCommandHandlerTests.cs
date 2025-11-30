@@ -51,7 +51,7 @@ public class ResetUserPasswordCommandHandlerTests
             NewPassword: "NewPassword456!");
 
         // Act
-        await _handler.Handle(command, CancellationToken.None);
+        await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         _userRepositoryMock.Verify(
@@ -81,7 +81,7 @@ public class ResetUserPasswordCommandHandlerTests
             NewPassword: "ResetPassword789!");
 
         // Act
-        await _handler.Handle(command, CancellationToken.None);
+        await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         _unitOfWorkMock.Verify(
@@ -108,7 +108,7 @@ public class ResetUserPasswordCommandHandlerTests
             NewPassword: strongPassword);
 
         // Act
-        await _handler.Handle(command, CancellationToken.None);
+        await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         _unitOfWorkMock.Verify(
@@ -136,7 +136,7 @@ public class ResetUserPasswordCommandHandlerTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<DomainException>(
-            () => _handler.Handle(command, CancellationToken.None));
+            () => _handler.Handle(command, TestContext.Current.CancellationToken));
 
         Assert.Contains($"User {userId} not found", exception.Message);
 
@@ -167,7 +167,7 @@ public class ResetUserPasswordCommandHandlerTests
             NewPassword: "AdminPass123!");
 
         // Act
-        await _handler.Handle(adminCommand, CancellationToken.None);
+        await _handler.Handle(adminCommand, TestContext.Current.CancellationToken);
 
         // Assert
         _unitOfWorkMock.Verify(
@@ -204,7 +204,7 @@ public class ResetUserPasswordCommandHandlerTests
             NewPassword: "NewPassword123!");
 
         // Act
-        await _handler.Handle(command, CancellationToken.None);
+        await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert - All user properties except password should be unchanged
         Assert.Equal(userId, user.Id);
@@ -251,3 +251,4 @@ public class ResetUserPasswordCommandHandlerTests
 
     #endregion
 }
+

@@ -1,3 +1,4 @@
+using System.Threading;
 using Api.BoundedContexts.Authentication.Application.Commands;
 using Api.BoundedContexts.Authentication.Application.Commands.OAuth;
 using Api.BoundedContexts.Authentication.Application.DTOs;
@@ -27,6 +28,8 @@ namespace Api.Tests.BoundedContexts.Authentication.Application.Handlers.OAuth;
 /// </summary>
 public class HandleOAuthCallbackCommandHandlerTests : IDisposable
 {
+    private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
+
     private readonly Mock<IOAuthService> _oauthServiceMock;
     private readonly Mock<IUserRepository> _userRepositoryMock;
     private readonly Mock<IOAuthAccountRepository> _oauthAccountRepositoryMock;
@@ -101,7 +104,7 @@ public class HandleOAuthCallbackCommandHandlerTests : IDisposable
             .ReturnsAsync(sessionResponse);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestCancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -110,12 +113,12 @@ public class HandleOAuthCallbackCommandHandlerTests : IDisposable
         Assert.NotNull(result.SessionToken);
 
         // Verify user was created in database
-        var createdUser = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == userInfo.Email.ToLowerInvariant());
+        var createdUser = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == userInfo.Email.ToLowerInvariant(), TestCancellationToken);
         Assert.NotNull(createdUser);
         Assert.Equal(userInfo.Email.ToLowerInvariant(), createdUser.Email);
 
         // Verify OAuth account was created
-        var createdAccount = await _dbContext.OAuthAccounts.FirstOrDefaultAsync(oa => oa.UserId == createdUser.Id);
+        var createdAccount = await _dbContext.OAuthAccounts.FirstOrDefaultAsync(oa => oa.UserId == createdUser.Id, TestCancellationToken);
         Assert.NotNull(createdAccount);
         Assert.Equal(command.Provider.ToLowerInvariant(), createdAccount.Provider);
     }
@@ -134,7 +137,7 @@ public class HandleOAuthCallbackCommandHandlerTests : IDisposable
             CreatedAt = DateTime.UtcNow
         };
         _dbContext.Users.Add(existingUser);
-        await _dbContext.SaveChangesAsync();
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         var command = CreateTestCommand("discord");
         var tokenResponse = CreateTokenResponse();
@@ -152,7 +155,7 @@ public class HandleOAuthCallbackCommandHandlerTests : IDisposable
             .ReturnsAsync(sessionResponse);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestCancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -160,7 +163,7 @@ public class HandleOAuthCallbackCommandHandlerTests : IDisposable
         Assert.False(result.IsNewUser); // User already existed
 
         // Verify OAuth account was linked
-        var linkedAccount = await _dbContext.OAuthAccounts.FirstOrDefaultAsync(oa => oa.UserId == existingUser.Id);
+        var linkedAccount = await _dbContext.OAuthAccounts.FirstOrDefaultAsync(oa => oa.UserId == existingUser.Id, TestCancellationToken);
         Assert.NotNull(linkedAccount);
         Assert.Equal(command.Provider.ToLowerInvariant(), linkedAccount.Provider);
     }
@@ -194,7 +197,7 @@ public class HandleOAuthCallbackCommandHandlerTests : IDisposable
             User = existingUser
         };
         _dbContext.OAuthAccounts.Add(existingAccount);
-        await _dbContext.SaveChangesAsync();
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         var command = CreateTestCommand("github");
         var tokenResponse = CreateTokenResponse();
@@ -212,7 +215,7 @@ public class HandleOAuthCallbackCommandHandlerTests : IDisposable
             .ReturnsAsync(sessionResponse);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestCancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -220,7 +223,7 @@ public class HandleOAuthCallbackCommandHandlerTests : IDisposable
         Assert.False(result.IsNewUser);
 
         // Verify token was updated
-        var updatedAccount = await _dbContext.OAuthAccounts.FirstAsync(oa => oa.Id == existingAccount.Id);
+        var updatedAccount = await _dbContext.OAuthAccounts.FirstAsync(oa => oa.Id == existingAccount.Id, TestCancellationToken);
         Assert.Equal("new_encrypted_token", updatedAccount.AccessTokenEncrypted);
     }
 
@@ -245,7 +248,7 @@ public class HandleOAuthCallbackCommandHandlerTests : IDisposable
             .ReturnsAsync(sessionResponse);
 
         // Act
-        await _handler.Handle(command, CancellationToken.None);
+        await _handler.Handle(command, TestCancellationToken);
 
         // Assert
         _oauthServiceMock.Verify(
@@ -274,7 +277,7 @@ public class HandleOAuthCallbackCommandHandlerTests : IDisposable
             .ReturnsAsync(sessionResponse);
 
         // Act
-        await _handler.Handle(command, CancellationToken.None);
+        await _handler.Handle(command, TestCancellationToken);
 
         // Assert
         _oauthServiceMock.Verify(
@@ -302,7 +305,7 @@ public class HandleOAuthCallbackCommandHandlerTests : IDisposable
             .ReturnsAsync(sessionResponse);
 
         // Act
-        await _handler.Handle(command, CancellationToken.None);
+        await _handler.Handle(command, TestCancellationToken);
 
         // Assert
         _mediatorMock.Verify(
@@ -335,7 +338,7 @@ public class HandleOAuthCallbackCommandHandlerTests : IDisposable
             .ReturnsAsync(sessionResponse);
 
         // Act
-        await _handler.Handle(command, CancellationToken.None);
+        await _handler.Handle(command, TestCancellationToken);
 
         // Assert
         _loggerMock.Verify(
@@ -363,7 +366,7 @@ public class HandleOAuthCallbackCommandHandlerTests : IDisposable
             .ReturnsAsync(false); // Invalid CSRF state
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestCancellationToken);
 
         // Assert
         Assert.False(result.Success);
@@ -391,7 +394,7 @@ public class HandleOAuthCallbackCommandHandlerTests : IDisposable
             .ThrowsAsync(new InvalidOperationException("Token exchange failed"));
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestCancellationToken);
 
         // Assert
         Assert.False(result.Success);
@@ -418,7 +421,7 @@ public class HandleOAuthCallbackCommandHandlerTests : IDisposable
             .ThrowsAsync(new InvalidOperationException("Failed to retrieve user info"));
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestCancellationToken);
 
         // Assert
         Assert.False(result.Success);
@@ -446,7 +449,7 @@ public class HandleOAuthCallbackCommandHandlerTests : IDisposable
             .ReturnsAsync(userInfo);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestCancellationToken);
 
         // Assert
         Assert.False(result.Success);
@@ -473,7 +476,7 @@ public class HandleOAuthCallbackCommandHandlerTests : IDisposable
             .ThrowsAsync(new DomainException("Session creation failed"));
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestCancellationToken);
 
         // Assert
         Assert.False(result.Success);
@@ -491,7 +494,7 @@ public class HandleOAuthCallbackCommandHandlerTests : IDisposable
             .ReturnsAsync(false);
 
         // Act
-        await _handler.Handle(command, CancellationToken.None);
+        await _handler.Handle(command, TestCancellationToken);
 
         // Assert
         _loggerMock.Verify(
@@ -520,7 +523,7 @@ public class HandleOAuthCallbackCommandHandlerTests : IDisposable
             .ThrowsAsync(exception);
 
         // Act
-        await _handler.Handle(command, CancellationToken.None);
+        await _handler.Handle(command, TestCancellationToken);
 
         // Assert
         _loggerMock.Verify(
@@ -613,3 +616,4 @@ public class HandleOAuthCallbackCommandHandlerTests : IDisposable
 
     #endregion
 }
+

@@ -3,43 +3,43 @@ import userEvent from "@testing-library/user-event";
 import RichTextEditor from "../RichTextEditor";
 
 // Mock TipTap editor
-jest.mock("@tiptap/react", () => ({
-  useEditor: jest.fn((config) => {
+vi.mock("@tiptap/react", () => ({
+  useEditor: vi.fn((config) => {
     const createChain = (canPerform = true) => {
       const focusableActions = {
-        toggleBold: jest.fn(() => ({ run: jest.fn(() => canPerform) })),
-        toggleItalic: jest.fn(() => ({ run: jest.fn(() => canPerform) })),
-        toggleStrike: jest.fn(() => ({ run: jest.fn(() => canPerform) })),
-        toggleCode: jest.fn(() => ({ run: jest.fn(() => canPerform) })),
-        toggleHeading: jest.fn(() => ({ run: jest.fn(() => canPerform) })),
-        toggleBulletList: jest.fn(() => ({ run: jest.fn(() => canPerform) })),
-        toggleOrderedList: jest.fn(() => ({ run: jest.fn(() => canPerform) })),
-        toggleCodeBlock: jest.fn(() => ({ run: jest.fn(() => canPerform) })),
-        setHorizontalRule: jest.fn(() => ({ run: jest.fn(() => canPerform) })),
-        unsetAllMarks: jest.fn(() => ({ run: jest.fn(() => canPerform) })),
-        undo: jest.fn(() => ({ run: jest.fn(() => canPerform) })),
-        redo: jest.fn(() => ({ run: jest.fn(() => canPerform) }))
+        toggleBold: vi.fn(() => ({ run: vi.fn(() => canPerform) })),
+        toggleItalic: vi.fn(() => ({ run: vi.fn(() => canPerform) })),
+        toggleStrike: vi.fn(() => ({ run: vi.fn(() => canPerform) })),
+        toggleCode: vi.fn(() => ({ run: vi.fn(() => canPerform) })),
+        toggleHeading: vi.fn(() => ({ run: vi.fn(() => canPerform) })),
+        toggleBulletList: vi.fn(() => ({ run: vi.fn(() => canPerform) })),
+        toggleOrderedList: vi.fn(() => ({ run: vi.fn(() => canPerform) })),
+        toggleCodeBlock: vi.fn(() => ({ run: vi.fn(() => canPerform) })),
+        setHorizontalRule: vi.fn(() => ({ run: vi.fn(() => canPerform) })),
+        unsetAllMarks: vi.fn(() => ({ run: vi.fn(() => canPerform) })),
+        undo: vi.fn(() => ({ run: vi.fn(() => canPerform) })),
+        redo: vi.fn(() => ({ run: vi.fn(() => canPerform) }))
       };
 
       return {
-        focus: jest.fn(() => focusableActions)
+        focus: vi.fn(() => focusableActions)
       };
     };
 
     const mockEditor = {
-      getHTML: jest.fn(() => config.content || "<p></p>"),
-      isActive: jest.fn(() => false),
-      can: jest.fn(() => ({
-        chain: jest.fn(() => createChain(true))
+      getHTML: vi.fn(() => config.content || "<p></p>"),
+      isActive: vi.fn(() => false),
+      can: vi.fn(() => ({
+        chain: vi.fn(() => createChain(true))
       })),
-      chain: jest.fn(() => createChain(true)),
+      chain: vi.fn(() => createChain(true)),
       commands: {
-        setContent: jest.fn()
+        setContent: vi.fn()
       },
       storage: {
         characterCount: {
-          characters: jest.fn(() => 100),
-          words: jest.fn(() => 15)
+          characters: vi.fn(() => 100),
+          words: vi.fn(() => 15)
         }
       }
     };
@@ -59,11 +59,11 @@ jest.mock("@tiptap/react", () => ({
 }));
 
 describe("RichTextEditor", () => {
-  const mockOnChange = jest.fn();
-  const mockOnBlur = jest.fn();
+  const mockOnChange = vi.fn();
+  const mockOnBlur = vi.fn();
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it("renders without crashing", () => {

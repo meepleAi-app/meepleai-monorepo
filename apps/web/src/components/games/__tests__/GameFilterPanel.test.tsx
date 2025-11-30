@@ -4,11 +4,11 @@ import { GameFilterPanel } from '../GameFilterPanel';
 import { GameFilters } from '@/lib/api';
 
 describe('GameFilterPanel', () => {
-  const mockOnChange = jest.fn();
+  const mockOnChange = vi.fn();
   const defaultFilters: GameFilters = {};
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('Basic Rendering', () => {

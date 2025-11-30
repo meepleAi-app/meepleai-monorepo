@@ -267,7 +267,7 @@ export const createMessagesSlice: StateCreator<
           messageId: feedbackMessageId,
           endpoint,
           gameId,
-          feedback: nextFeedback,
+          outcome: nextFeedback,
         });
       }
     } catch (err) {

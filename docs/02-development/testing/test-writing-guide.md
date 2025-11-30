@@ -547,6 +547,83 @@ public class GameControllerTests : IAsyncLifetime
 - Use `WebApplicationFactory<Program>` for integration tests
 - Clean up containers in `DisposeAsync()`
 
+### RAG Validation Pipeline Integration Testing
+
+Integration tests for RAG validation pipeline with Testcontainers and mocked LLM.
+
+**File**: `apps/api/tests/Api.Tests/BoundedContexts/KnowledgeBase/Integration/RagValidationPipelineIntegrationTests.cs`
+**Issue**: #978 (BGAI-036)
+
+```csharp
+// Test RAG validation pipeline with Testcontainers PostgreSQL
+[Collection("RagValidationPipelineIntegration")]
+[Trait("Category", "Integration")]
+[Trait("Dependency", "Testcontainers")]
+public class RagValidationPipelineIntegrationTests : IAsyncLifetime
+{
+    private IContainer? _postgresContainer;
+    private IRagValidationPipelineService? _validationPipeline;
+
+    public async ValueTask InitializeAsync()
+    {
+        // Start PostgreSQL Testcontainer
+        _postgresContainer = new ContainerBuilder()
+            .WithImage("postgres:16-alpine")
+            .WithEnvironment("POSTGRES_USER", "postgres")
+            .WithEnvironment("POSTGRES_PASSWORD", "postgres")
+            .WithEnvironment("POSTGRES_DB", "rag_validation_test")
+            .WithPortBinding(5432, true)
+            .WithWaitStrategy(Wait.ForUnixContainer()
+                .UntilCommandIsCompleted("pg_isready", "-U", "postgres"))
+            .Build();
+
+        await _postgresContainer.StartAsync(CancellationToken.None);
+
+        // IMPORTANT: Wait 2s for container stability
+        await Task.Delay(2000);
+
+        // Setup DI with validation services
+        var services = new ServiceCollection();
+        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
+        services.AddDbContext<MeepleAiDbContext>(/* ... */);
+        services.AddScoped<IRagValidationPipelineService, RagValidationPipelineService>();
+        // Mock MultiModelValidationService to avoid OpenRouter dependency
+    }
+
+    [Fact]
+    public async Task FullPipeline_AllFourLayers_WithMockedMultiModel()
+    {
+        // Arrange
+        var qaResponse = new QaResponse(
+            answer: "Players start with 10 credits.",
+            snippets: new List<Snippet> { /* ... */ },
+            confidence: 0.88
+        );
+
+        // Act - Test all 4 validation layers
+        var result = await _validationPipeline!.ValidateWithMultiModelAsync(
+            qaResponse,
+            gameId.ToString(),
+            systemPrompt,
+            userPrompt,
+            "en",
+            CancellationToken.None
+        );
+
+        // Assert
+        Assert.True(result.TotalLayers >= 4); // 4 or 5 layers
+        Assert.True(result.LayersPassed >= 3);
+    }
+}
+```
+
+**Key patterns**:
+- Use Testcontainers for PostgreSQL (citation validation needs DB)
+- Add 2s delay after container start for stability
+- Mock `IMultiModelValidationService` to avoid real LLM calls
+- Test validation pipeline logic, not LLM integration
+- Run with: `dotnet test --filter "FullyQualifiedName~RagValidationPipelineIntegrationTests"`
+
 ---
 
 ## E2E Testing (Playwright)
@@ -735,6 +812,32 @@ public async Task LoginAsync_WithInvalidPassword_ThrowsUnauthorizedException() {
 public async Task ValidateApiKeyAsync_WithExpiredKey_ReturnsNull() { }
 ```
 
+### Test Timeout Guidelines
+
+**CRITICAL**: All integration tests with Testcontainers, network calls, or database operations MUST have explicit timeouts to prevent indefinite hangs.
+
+**Timeout Values**:
+- **Unit tests**: 5000ms (5s) - Fast, in-memory operations
+- **Integration tests**: 30000ms (30s) - Testcontainers, database, network operations
+- **Performance tests**: 60000ms (60s) - Memory profiling, large file processing
+
+**Example**:
+```csharp
+[Fact(Timeout = 30000)] // 30s for Testcontainers integration tests
+public async Task UploadPdf_WithValidFile_Succeeds()
+{
+    // Test with real database, blob storage, and network calls
+}
+
+[Fact(Timeout = 60000)] // 60s for performance/memory tests
+public async Task UploadPdf_WithLargeFile_HandlesMemoryEfficiently()
+{
+    // Test with 5MB+ files and memory profiling
+}
+```
+
+**Rationale**: Tests without timeouts can hang indefinitely if infrastructure fails (database connection timeout, Testcontainers startup issue, network unavailability), blocking CI/CD pipelines and wasting resources.
+
 ---
 
 ## Mocking Strategies
@@ -874,6 +977,69 @@ public async Task LoginAsync_CreatesSession()
         "Agent"
     ), Times.Once);
 }
+```
+
+### FluentAssertions (Recommended)
+
+**MeepleAI uses FluentAssertions** for more readable and expressive test assertions. FluentAssertions 8.8.0 is installed and preferred for all new tests.
+
+**Basic Assertions**:
+```csharp
+// ✅ Good: FluentAssertions (preferred)
+result.Should().NotBeNull();
+result.Value.Should().Be(expected);
+result.Success.Should().BeTrue();
+collection.Should().HaveCount(5);
+text.Should().Contain("expected");
+
+// ❌ Avoid: xUnit Assert (legacy, less readable)
+Assert.NotNull(result);
+Assert.Equal(expected, result.Value);
+Assert.True(result.Success);
+Assert.Equal(5, collection.Count);
+Assert.Contains("expected", text);
+```
+
+**Exception Assertions**:
+```csharp
+// ✅ Good: FluentAssertions
+Action act = () => handler.Handle(invalidCommand);
+act.Should().Throw<ArgumentNullException>()
+    .WithParameterName("command");
+
+// ❌ Avoid: xUnit Assert
+var exception = Assert.Throws<ArgumentNullException>(() => handler.Handle(invalidCommand));
+Assert.Equal("command", exception.ParamName);
+```
+
+**Custom Assertions** (ISSUE-1818):
+```csharp
+// Custom assertions for domain types
+using Api.Tests.BoundedContexts.DocumentProcessing.TestHelpers.Assertions;
+
+var uploadResult = await handler.Handle(command, ct);
+
+// Custom domain-specific assertions
+uploadResult.Should().BeSuccessful();
+uploadResult.Should().HaveDocument();
+uploadResult.Should().HaveMessage("Upload successful");
+uploadResult.Document.Id.Should().NotBeEmpty();
+```
+
+**String Comparison**:
+```csharp
+// Case-insensitive contains
+text.Should().ContainEquivalentOf("expected");  // ✅ FluentAssertions
+// NOT: text.Should().Contain("expected", StringComparison.OrdinalIgnoreCase); ❌
+```
+
+**Collection Assertions**:
+```csharp
+collection.Should().NotBeEmpty();
+collection.Should().HaveCount(5);
+collection.Should().Contain(x => x.Id == expected);
+collection.Should().OnlyContain(x => x.IsValid);
+collection.Should().ContainSingle(x => x.IsDefault);
 ```
 
 ---

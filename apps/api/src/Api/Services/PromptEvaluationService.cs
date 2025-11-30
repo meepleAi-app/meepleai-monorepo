@@ -630,8 +630,8 @@ public class PromptEvaluationService : IPromptEvaluationService
         try
         {
             // Run evaluations on both versions
-            var baselineResult = await EvaluateAsync(templateId, baselineVersionId, datasetPath, null, ct);
-            var candidateResult = await EvaluateAsync(templateId, candidateVersionId, datasetPath, null, ct);
+            var baselineResult = await EvaluateAsync(templateId, baselineVersionId, datasetPath, null, ct).ConfigureAwait(false);
+            var candidateResult = await EvaluateAsync(templateId, candidateVersionId, datasetPath, null, ct).ConfigureAwait(false);
 
             // BGAI-041: Calculate deltas for new 5-metric framework
             var deltas = new MetricDeltas
@@ -677,11 +677,13 @@ public class PromptEvaluationService : IPromptEvaluationService
     /// <summary>
     /// BGAI-041: Generates recommendation based on A/B comparison results (5-metric framework)
     /// </summary>
-    private (ComparisonRecommendation recommendation, string reasoning) GenerateRecommendation(
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Meziantou.Analyzer", "MA0051:Method is too long", Justification = "Business scoring logic is clearer in one method")]
+    private static (ComparisonRecommendation recommendation, string reasoning) GenerateRecommendation(
         PromptEvaluationResult baseline,
         PromptEvaluationResult candidate,
         MetricDeltas deltas)
     {
+        _ = baseline; // baseline metrics are reflected in deltas; suppress unused parameter warning
         var reasons = new List<string>();
 
         // REJECT if candidate fails any threshold
@@ -777,19 +779,20 @@ public class PromptEvaluationService : IPromptEvaluationService
     /// <summary>
     /// Generates Markdown report
     /// </summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Meziantou.Analyzer", "MA0051:Method is too long", Justification = "Report generation is clearer in a single method")]
     private string GenerateMarkdownReport(PromptEvaluationResult result)
     {
         var sb = new StringBuilder();
 
         sb.AppendLine("# Prompt Evaluation Report");
         sb.AppendLine();
-        sb.AppendLine($"**Evaluation ID**: `{result.EvaluationId}`");
-        sb.AppendLine($"**Template**: `{result.TemplateId}`");
-        sb.AppendLine($"**Version**: `{result.VersionId}`");
-        sb.AppendLine($"**Dataset**: `{result.DatasetId}`");
-        sb.AppendLine($"**Executed**: {result.ExecutedAt:yyyy-MM-dd HH:mm:ss} UTC");
-        sb.AppendLine($"**Total Queries**: {result.TotalQueries}");
-        sb.AppendLine($"**Status**: {(result.Passed ? "✅ PASSED" : "❌ FAILED")}");
+        sb.AppendLine(string.Format(System.Globalization.CultureInfo.InvariantCulture, "**Evaluation ID**: `{0}`", result.EvaluationId));
+        sb.AppendLine(string.Format(System.Globalization.CultureInfo.InvariantCulture, "**Template**: `{0}`", result.TemplateId));
+        sb.AppendLine(string.Format(System.Globalization.CultureInfo.InvariantCulture, "**Version**: `{0}`", result.VersionId));
+        sb.AppendLine(string.Format(System.Globalization.CultureInfo.InvariantCulture, "**Dataset**: `{0}`", result.DatasetId));
+        sb.AppendLine(string.Format(System.Globalization.CultureInfo.InvariantCulture, "**Executed**: {0:yyyy-MM-dd HH:mm:ss} UTC", result.ExecutedAt));
+        sb.AppendLine(string.Format(System.Globalization.CultureInfo.InvariantCulture, "**Total Queries**: {0}", result.TotalQueries));
+        sb.AppendLine(string.Format(System.Globalization.CultureInfo.InvariantCulture, "**Status**: {0}", result.Passed ? "✅ PASSED" : "❌ FAILED"));
         sb.AppendLine();
 
         sb.AppendLine("## Metrics Summary (BGAI-041: 5-Metric Framework)");
@@ -798,11 +801,11 @@ public class PromptEvaluationService : IPromptEvaluationService
         sb.AppendLine("|--------|-------|--------|--------|");
 
         var metrics = result.Metrics;
-        sb.AppendLine($"| Accuracy | {metrics.Accuracy:F1}% | ≥ 80% | {(metrics.Accuracy >= 80 ? "✅" : "❌")} |");
-        sb.AppendLine($"| Relevance | {metrics.Relevance:F1}% | ≥ 85% | {(metrics.Relevance >= 85 ? "✅" : "❌")} |");
-        sb.AppendLine($"| Completeness | {metrics.Completeness:F1}% | ≥ 75% | {(metrics.Completeness >= 75 ? "✅" : "❌")} |");
-        sb.AppendLine($"| Clarity | {metrics.Clarity:F1}% | ≥ 80% | {(metrics.Clarity >= 80 ? "✅" : "❌")} |");
-        sb.AppendLine($"| Citation Quality | {metrics.CitationQuality:F1}% | ≥ 85% | {(metrics.CitationQuality >= 85 ? "✅" : "❌")} |");
+        sb.AppendLine(string.Format(System.Globalization.CultureInfo.InvariantCulture, "| Accuracy | {0:F1}% | ≥ 80% | {1} |", metrics.Accuracy, metrics.Accuracy >= 80 ? "✅" : "❌"));
+        sb.AppendLine(string.Format(System.Globalization.CultureInfo.InvariantCulture, "| Relevance | {0:F1}% | ≥ 85% | {1} |", metrics.Relevance, metrics.Relevance >= 85 ? "✅" : "❌"));
+        sb.AppendLine(string.Format(System.Globalization.CultureInfo.InvariantCulture, "| Completeness | {0:F1}% | ≥ 75% | {1} |", metrics.Completeness, metrics.Completeness >= 75 ? "✅" : "❌"));
+        sb.AppendLine(string.Format(System.Globalization.CultureInfo.InvariantCulture, "| Clarity | {0:F1}% | ≥ 80% | {1} |", metrics.Clarity, metrics.Clarity >= 80 ? "✅" : "❌"));
+        sb.AppendLine(string.Format(System.Globalization.CultureInfo.InvariantCulture, "| Citation Quality | {0:F1}% | ≥ 85% | {1} |", metrics.CitationQuality, metrics.CitationQuality >= 85 ? "✅" : "❌"));
         sb.AppendLine();
 
         sb.AppendLine("## Summary");
@@ -816,19 +819,19 @@ public class PromptEvaluationService : IPromptEvaluationService
         for (var i = 0; i < result.QueryResults.Count; i++)
         {
             var qr = result.QueryResults[i];
-            sb.AppendLine($"### Query {i + 1}: `{qr.TestCaseId}`");
+            sb.AppendLine(string.Format(System.Globalization.CultureInfo.InvariantCulture, "### Query {0}: `{1}`", i + 1, qr.TestCaseId));
             sb.AppendLine();
             sb.AppendLine($"**Query**: {qr.Query}");
             sb.AppendLine();
             sb.AppendLine($"**Response**: {qr.Response}");
             sb.AppendLine();
-            sb.AppendLine($"- **Confidence**: {qr.Confidence:F2}");
-            sb.AppendLine($"- **Latency**: {qr.LatencyMs}ms");
-            sb.AppendLine($"- **Accurate**: {(qr.IsAccurate ? "✅" : "❌")}");
-            sb.AppendLine($"- **Relevant**: {(qr.IsRelevant ? "✅" : "❌")}");
-            sb.AppendLine($"- **Complete**: {(qr.IsComplete ? "✅" : "❌")}");
-            sb.AppendLine($"- **Clear**: {(qr.IsClear ? "✅" : "❌")}");
-            sb.AppendLine($"- **Good Citation Quality**: {(qr.HasGoodCitationQuality ? "✅" : "❌")}");
+            sb.AppendLine(string.Format(System.Globalization.CultureInfo.InvariantCulture, "- **Confidence**: {0:F2}", qr.Confidence));
+            sb.AppendLine(string.Format(System.Globalization.CultureInfo.InvariantCulture, "- **Latency**: {0}ms", qr.LatencyMs));
+            sb.AppendLine(string.Format(System.Globalization.CultureInfo.InvariantCulture, "- **Accurate**: {0}", qr.IsAccurate ? "✅" : "❌"));
+            sb.AppendLine(string.Format(System.Globalization.CultureInfo.InvariantCulture, "- **Relevant**: {0}", qr.IsRelevant ? "✅" : "❌"));
+            sb.AppendLine(string.Format(System.Globalization.CultureInfo.InvariantCulture, "- **Complete**: {0}", qr.IsComplete ? "✅" : "❌"));
+            sb.AppendLine(string.Format(System.Globalization.CultureInfo.InvariantCulture, "- **Clear**: {0}", qr.IsClear ? "✅" : "❌"));
+            sb.AppendLine(string.Format(System.Globalization.CultureInfo.InvariantCulture, "- **Good Citation Quality**: {0}", qr.HasGoodCitationQuality ? "✅" : "❌"));
 
             if (!string.IsNullOrEmpty(qr.Notes))
             {

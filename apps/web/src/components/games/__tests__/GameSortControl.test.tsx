@@ -4,10 +4,10 @@ import { GameSortControl } from '../GameSortControl';
 import { GameSortOptions, GameSortField } from '@/lib/api';
 
 describe('GameSortControl', () => {
-  const mockOnChange = jest.fn();
+  const mockOnChange = vi.fn();
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('Basic Rendering', () => {

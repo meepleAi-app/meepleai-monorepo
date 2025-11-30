@@ -11,10 +11,10 @@
  * Uses Shadcn/UI Card component for consistent design.
  */
 
-import React from 'react';
-import { Citation } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { Citation } from '@/types';
+import React from 'react';
 
 interface CitationCardProps {
   citation: Citation;
@@ -27,7 +27,7 @@ export const CitationCard = React.memo(function CitationCard({
   citation,
   showRelevanceScore = false,
   className,
-  onClick
+  onClick,
 }: CitationCardProps) {
   const { pageNumber, snippet, relevanceScore } = citation;
 
@@ -50,8 +50,8 @@ export const CitationCard = React.memo(function CitationCard({
   return (
     <Card
       className={cn(
-        "border-l-4 border-l-blue-500 bg-gray-50 hover:bg-gray-100 transition-colors",
-        isClickable && "cursor-pointer hover:shadow-md active:shadow-sm",
+        'border-l-4 border-l-blue-500 bg-gray-50 hover:bg-gray-100 transition-colors',
+        isClickable && 'cursor-pointer hover:shadow-md active:shadow-sm',
         className
       )}
       data-testid="citation-card"
@@ -65,7 +65,7 @@ export const CitationCard = React.memo(function CitationCard({
         <div className="flex items-start justify-between gap-2 mb-2">
           {/* Page Number Badge */}
           <span
-            className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-medium flex-shrink-0"
+            className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-medium shrink-0"
             data-testid="citation-page"
             aria-label={`Page ${pageNumber}`}
           >
@@ -95,9 +95,7 @@ export const CitationCard = React.memo(function CitationCard({
         </p>
 
         {isClickable && (
-          <p className="text-xs text-blue-600 mt-2">
-            Clicca per visualizzare nel PDF
-          </p>
+          <p className="text-xs text-blue-600 mt-2">Clicca per visualizzare nel PDF</p>
         )}
       </CardContent>
     </Card>

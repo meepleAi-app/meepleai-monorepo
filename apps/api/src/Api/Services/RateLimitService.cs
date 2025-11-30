@@ -174,6 +174,7 @@ public class RateLimitService : IRateLimitService
 
     /// <summary>
     /// Get a specific rate limit value with fallback chain.
+    /// Issue #1663: Applies 10x multiplier in Dev/Test environments for K6 performance testing.
     /// </summary>
     private async Task<T> GetRateLimitValueAsync<T>(string limitType, string role, CancellationToken ct = default) where T : struct
     {
@@ -189,9 +190,10 @@ public class RateLimitService : IRateLimitService
         if (value.HasValue)
         {
             var validated = ValidateRateLimit(value.Value, limitType, role);
+            var multiplied = ApplyEnvironmentMultiplier(validated, limitType, role, "DB role-specific");
             _logger.LogInformation("Rate limit {LimitType} for {Role}: {Value} (from DB role-specific)",
-                limitType, role, validated);
-            return validated;
+                limitType, role, multiplied);
+            return multiplied;
         }
 
         // 2. Try DB config with global key (e.g., RateLimit.MaxTokens)
@@ -200,9 +202,10 @@ public class RateLimitService : IRateLimitService
         if (value.HasValue)
         {
             var validated = ValidateRateLimit(value.Value, limitType, role);
+            var multiplied = ApplyEnvironmentMultiplier(validated, limitType, role, "DB global");
             _logger.LogInformation("Rate limit {LimitType} for {Role}: {Value} (from DB global)",
-                limitType, role, validated);
-            return validated;
+                limitType, role, multiplied);
+            return multiplied;
         }
 
         // 3. Try appsettings.json (backward compatibility)
@@ -212,17 +215,19 @@ public class RateLimitService : IRateLimitService
             if (appsettingsValue.HasValue)
             {
                 var validated = ValidateRateLimit(appsettingsValue.Value, limitType, role);
+                var multiplied = ApplyEnvironmentMultiplier(validated, limitType, role, "appsettings");
                 _logger.LogInformation("Rate limit {LimitType} for {Role}: {Value} (from appsettings)",
-                    limitType, role, validated);
-                return validated;
+                    limitType, role, multiplied);
+                return multiplied;
             }
         }
 
         // 4. Hardcoded defaults
         var defaultValue = GetHardcodedDefault<T>(limitType, role);
+        var multipliedDefault = ApplyEnvironmentMultiplier(defaultValue, limitType, role, "hardcoded default");
         _logger.LogWarning("Rate limit {LimitType} for {Role}: {Value} (using hardcoded default)",
-            limitType, role, defaultValue);
-        return defaultValue;
+            limitType, role, multipliedDefault);
+        return multipliedDefault;
     }
 
     /// <summary>
@@ -274,39 +279,55 @@ public class RateLimitService : IRateLimitService
     }
 
     /// <summary>
-    /// Get hardcoded default values for rate limits.
-    /// Issue #1663: Increased limits for Development/Test environments to support K6 performance testing.
+    /// Apply environment-specific multiplier to rate limit values.
+    /// Issue #1663: 10x multiplier for Development/Test environments for K6 performance testing.
+    /// </summary>
+    private T ApplyEnvironmentMultiplier<T>(T value, string limitType, string role, string source) where T : struct
+    {
+        var isTestEnvironment = _environment.IsDevelopment() || _environment.EnvironmentName == "Test";
+        if (!isTestEnvironment)
+        {
+            return value;
+        }
+
+        const int multiplier = 10;
+
+        T multipliedValue = value switch
+        {
+            int intValue => (T)(object)(intValue * multiplier),
+            double doubleValue => (T)(object)(doubleValue * multiplier),
+            _ => value
+        };
+
+        _logger.LogDebug(
+            "Applied 10x Dev/Test multiplier to rate limit {LimitType} for {Role}: {Original} → {Multiplied} (from {Source})",
+            limitType, role, value, multipliedValue, source);
+
+        return multipliedValue;
+    }
+
+    /// <summary>
+    /// Get hardcoded default values for rate limits (base values without multiplier).
     /// </summary>
     private T GetHardcodedDefault<T>(string limitType, string role) where T : struct
     {
-        // K6 Performance Testing: Use more generous limits in Dev/Test for performance testing (Issue #1663)
-        var isTestEnvironment = _environment.IsDevelopment() || _environment.EnvironmentName == "Test";
-        var multiplier = isTestEnvironment ? 10 : 1;
-
-        var baseValue = (limitType, role) switch
+        return (limitType, role) switch
         {
-            ("MaxTokens", "admin") => (T)(object)(1000 * multiplier),
-            ("MaxTokens", "editor") => (T)(object)(500 * multiplier),
-            ("MaxTokens", "user") => (T)(object)(100 * multiplier),
-            ("MaxTokens", "anonymous") => (T)(object)(60 * multiplier),
-            ("RefillRate", "admin") => (T)(object)(10.0 * multiplier),
-            ("RefillRate", "editor") => (T)(object)(5.0 * multiplier),
-            ("RefillRate", "user") => (T)(object)(1.0 * multiplier),
-            ("RefillRate", "anonymous") => (T)(object)(1.0 * multiplier),
+            ("MaxTokens", "admin") => (T)(object)1000,
+            ("MaxTokens", "editor") => (T)(object)500,
+            ("MaxTokens", "user") => (T)(object)100,
+            ("MaxTokens", "anonymous") => (T)(object)60,
+            ("RefillRate", "admin") => (T)(object)10.0,
+            ("RefillRate", "editor") => (T)(object)5.0,
+            ("RefillRate", "user") => (T)(object)1.0,
+            ("RefillRate", "anonymous") => (T)(object)1.0,
             _ => throw new ArgumentException($"Unknown limit type {limitType} or role {role}")
         };
-
-        if (isTestEnvironment && limitType == "MaxTokens")
-        {
-            _logger.LogDebug("Using test environment rate limits: {LimitType}={Value} for {Role} (10x multiplier)",
-                limitType, baseValue, role);
-        }
-
-        return baseValue;
     }
 
     /// <summary>
     /// Get configuration from hardcoded defaults (fallback when ConfigurationService not available).
+    /// Issue #1663: Applies 10x multiplier in Dev/Test environments.
     /// </summary>
     private RateLimitConfig GetConfigFromHardcodedDefaults(string? role)
     {
@@ -320,8 +341,12 @@ public class RateLimitService : IRateLimitService
             _ => _config.Anonymous
         };
 
+        // Apply environment multiplier for Dev/Test (Issue #1663)
+        var maxTokens = ApplyEnvironmentMultiplier(roleConfig.MaxTokens, "MaxTokens", normalizedRole, "injected config");
+        var refillRate = ApplyEnvironmentMultiplier(roleConfig.RefillRate, "RefillRate", normalizedRole, "injected config");
+
         _logger.LogDebug("Using hardcoded rate limit config for {Role} (ConfigurationService not available)", normalizedRole);
-        return new RateLimitConfig(roleConfig.MaxTokens, roleConfig.RefillRate);
+        return new RateLimitConfig(maxTokens, refillRate);
     }
 
     private static int ConvertRedisResultToInt(RedisResult result)

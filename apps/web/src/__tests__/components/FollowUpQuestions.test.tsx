@@ -12,10 +12,10 @@ import { render, screen, fireEvent, within } from '@testing-library/react';
 import { FollowUpQuestions } from '../../components/FollowUpQuestions';
 
 describe('FollowUpQuestions Component', () => {
-  const mockOnQuestionClick = jest.fn();
+  const mockOnQuestionClick = vi.fn();
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   /**

@@ -2,6 +2,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services.QualityTracking;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.Services;
 using Api.Services.LlmClients;
@@ -37,6 +38,10 @@ public static class KnowledgeBaseServiceExtensions
 
         // ISSUE-981: BGAI-039 - Validation Accuracy Baseline Measurement
         services.AddScoped<ValidationAccuracyTrackingService>();
+
+        // ISSUE-999: BGAI-059 - Golden Dataset Accuracy Testing
+        services.AddSingleton<IGoldenDatasetLoader, GoldenDatasetLoader>();
+        services.AddSingleton<IRagAccuracyEvaluator, RagAccuracyEvaluator>();
 
         // ISSUE-977: BGAI-035 - RAG Validation Pipeline (all 5 layers integrated)
         services.AddScoped<IRagValidationPipelineService, RagValidationPipelineService>();

@@ -14,7 +14,7 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 /// Tests for CreateRuleCommentCommandHandler.
 /// Tests comment creation with @mention support and line number validation.
 /// NOTE: Uses DbContext directly - simplified tests due to complex EF Core relationships.
-/// TODO: Add integration tests for full comment creation workflow with @mention extraction.
+/// ✅ RESOLVED: Integration tests added in CreateRuleCommentIntegrationTests.cs (Issue #1691)
 /// ISSUE-1500: TEST-002 - Fixed test isolation (fresh context per test)
 /// </summary>
 public class CreateRuleCommentCommandHandlerTests
@@ -159,8 +159,8 @@ public class CreateRuleCommentCommandHandlerTests
     [Fact]
     public void Command_WithLongComment_ConstructsCorrectly()
     {
-        // Act - Test with long comment (up to 10,000 character limit)
-        var longText = new string('x', 5000);
+        // Act - Test with long comment (up to 2,000 character limit per database schema)
+        var longText = new string('x', 2000);
         var command = new CreateRuleCommentCommand(
             GameId: Guid.NewGuid().ToString(),
             Version: "2.0",
@@ -169,7 +169,7 @@ public class CreateRuleCommentCommandHandlerTests
             UserId: Guid.NewGuid());
 
         // Assert
-        Assert.Equal(5000, command.CommentText.Length);
+        Assert.Equal(2000, command.CommentText.Length);
     }
 
     #endregion
@@ -186,7 +186,7 @@ public class CreateRuleCommentCommandHandlerTests
     // 5. Create comment on specific line number
     // 6. Create general comment (null line number)
     // 7. Validation: Empty comment text throws exception
-    // 8. Validation: Comment exceeding 10,000 characters throws exception
+    // 8. Validation: Comment exceeding 2,000 characters throws exception
     // 9. Validation: Negative line number throws exception
     // 10. Validation: Zero line number throws exception
     // 11. Navigation properties are loaded correctly (User, Replies, ResolvedByUser)
@@ -198,3 +198,4 @@ public class CreateRuleCommentCommandHandlerTests
     //
     // See integration-tests.yml workflow for full comment workflow testing.
 }
+

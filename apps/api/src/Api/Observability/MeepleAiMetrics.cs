@@ -64,6 +64,65 @@ public static class MeepleAiMetrics
 
     #endregion
 
+    #region LLM/Agent Token Usage Metrics (Issue #1694 - OpenTelemetry GenAI Semantic Conventions)
+
+    /// <summary>
+    /// Counter for LLM token usage following OpenTelemetry GenAI semantic conventions.
+    /// Tracks prompt_tokens, completion_tokens, and total_tokens by model and provider.
+    /// </summary>
+    /// <remarks>
+    /// OpenTelemetry GenAI Semantic Conventions:
+    /// - gen_ai.usage.prompt_tokens
+    /// - gen_ai.usage.completion_tokens
+    /// - gen_ai.usage.total_tokens
+    /// Tags: model_id, provider, agent_type
+    /// </remarks>
+    public static readonly Counter<long> GenAiTokenUsage = Meter.CreateCounter<long>(
+        name: "gen_ai.client.token.usage",
+        unit: "tokens",
+        description: "LLM token usage by type (prompt/completion) following OpenTelemetry GenAI semantic conventions");
+
+    /// <summary>
+    /// Histogram for LLM operation duration following OpenTelemetry GenAI semantic conventions.
+    /// Tracks latency of LLM calls by model and operation type.
+    /// </summary>
+    /// <remarks>
+    /// OpenTelemetry GenAI Semantic Convention: gen_ai.client.operation.duration
+    /// </remarks>
+    public static readonly Histogram<double> GenAiOperationDuration = Meter.CreateHistogram<double>(
+        name: "gen_ai.client.operation.duration",
+        unit: "ms",
+        description: "LLM operation duration following OpenTelemetry GenAI semantic conventions");
+
+    /// <summary>
+    /// Histogram for LLM cost tracking per invocation in USD.
+    /// Tracks estimated cost for each LLM call based on token usage and provider pricing.
+    /// </summary>
+    public static readonly Histogram<double> LlmCostUsd = Meter.CreateHistogram<double>(
+        name: "meepleai.llm.cost.usd",
+        unit: "usd",
+        description: "LLM cost in USD per invocation by model and provider");
+
+    /// <summary>
+    /// Counter for agent token usage by agent type.
+    /// Tracks total tokens consumed by each agent type for cost attribution and monitoring.
+    /// </summary>
+    public static readonly Counter<long> AgentTokenUsage = Meter.CreateCounter<long>(
+        name: "meepleai.agent.tokens.total",
+        unit: "tokens",
+        description: "Total tokens used by agent type");
+
+    /// <summary>
+    /// Histogram for agent invocation cost in USD by agent type.
+    /// Tracks cost per agent invocation for budget monitoring and optimization.
+    /// </summary>
+    public static readonly Histogram<double> AgentCostUsd = Meter.CreateHistogram<double>(
+        name: "meepleai.agent.cost.usd",
+        unit: "usd",
+        description: "Agent invocation cost in USD by agent type");
+
+    #endregion
+
     #region Vector Search Metrics
 
     /// <summary>
@@ -333,6 +392,82 @@ public static class MeepleAiMetrics
         name: "meepleai.cache.evictions.total",
         unit: "evictions",
         description: "Total number of cache evictions");
+
+    #endregion
+
+    #region Two-Factor Authentication Metrics (SEC-08)
+
+    /// <summary>
+    /// Counter for failed TOTP verification attempts.
+    /// Tracks brute force attack patterns and authentication failures.
+    /// </summary>
+    public static readonly Counter<long> TwoFactorFailedTotpAttempts = Meter.CreateCounter<long>(
+        name: "meepleai.2fa.failed_totp_attempts.total",
+        unit: "attempts",
+        description: "Total number of failed TOTP verification attempts");
+
+    /// <summary>
+    /// Counter for failed backup code verification attempts.
+    /// Tracks potential backup code brute force attacks.
+    /// </summary>
+    public static readonly Counter<long> TwoFactorFailedBackupAttempts = Meter.CreateCounter<long>(
+        name: "meepleai.2fa.failed_backup_attempts.total",
+        unit: "attempts",
+        description: "Total number of failed backup code verification attempts");
+
+    /// <summary>
+    /// Counter for blocked TOTP replay attacks.
+    /// Tracks security threats from code reuse attempts.
+    /// </summary>
+    public static readonly Counter<long> TwoFactorReplayAttacksBlocked = Meter.CreateCounter<long>(
+        name: "meepleai.2fa.replay_attacks_blocked.total",
+        unit: "attacks",
+        description: "Total number of TOTP replay attacks blocked");
+
+    /// <summary>
+    /// Counter for successful TOTP verifications.
+    /// Baseline metric for calculating failure rates and success ratios.
+    /// </summary>
+    public static readonly Counter<long> TwoFactorSuccessfulTotpVerifications = Meter.CreateCounter<long>(
+        name: "meepleai.2fa.successful_totp.total",
+        unit: "successes",
+        description: "Total number of successful TOTP verifications");
+
+    /// <summary>
+    /// Counter for successful backup code uses.
+    /// Tracks backup code consumption for monitoring remaining codes per user.
+    /// </summary>
+    public static readonly Counter<long> TwoFactorSuccessfulBackupCodeUses = Meter.CreateCounter<long>(
+        name: "meepleai.2fa.successful_backup.total",
+        unit: "successes",
+        description: "Total number of successful backup code uses");
+
+    /// <summary>
+    /// Counter for 2FA setup operations (generate TOTP secret + backup codes).
+    /// Tracks user adoption and onboarding metrics.
+    /// </summary>
+    public static readonly Counter<long> TwoFactorSetupTotal = Meter.CreateCounter<long>(
+        name: "meepleai.2fa.setup.total",
+        unit: "setups",
+        description: "Total number of 2FA setup operations");
+
+    /// <summary>
+    /// Counter for 2FA enable operations (verification + activation).
+    /// Tracks successful 2FA enrollments.
+    /// </summary>
+    public static readonly Counter<long> TwoFactorEnableTotal = Meter.CreateCounter<long>(
+        name: "meepleai.2fa.enable.total",
+        unit: "enables",
+        description: "Total number of 2FA enable operations");
+
+    /// <summary>
+    /// Counter for 2FA disable operations.
+    /// Tracks when users disable 2FA (security posture monitoring).
+    /// </summary>
+    public static readonly Counter<long> TwoFactorDisableTotal = Meter.CreateCounter<long>(
+        name: "meepleai.2fa.disable.total",
+        unit: "disables",
+        description: "Total number of 2FA disable operations");
 
     #endregion
 
@@ -632,6 +767,196 @@ public static class MeepleAiMetrics
         if (rrfScore.HasValue)
         {
             HybridSearchRrfScore.Record(rrfScore.Value);
+        }
+    }
+
+    /// <summary>
+    /// Records LLM token usage following OpenTelemetry GenAI semantic conventions.
+    /// Issue #1694: Track actual token usage from LLM calls with cost calculation.
+    /// </summary>
+    /// <param name="promptTokens">Number of tokens in the prompt/input</param>
+    /// <param name="completionTokens">Number of tokens in the completion/output</param>
+    /// <param name="totalTokens">Total tokens used</param>
+    /// <param name="modelId">Model identifier (e.g., "openai/gpt-4o-mini")</param>
+    /// <param name="provider">Provider name (e.g., "OpenRouter", "Ollama")</param>
+    /// <param name="operationDurationMs">Optional LLM operation duration in milliseconds</param>
+    /// <param name="costUsd">Optional estimated cost in USD</param>
+    public static void RecordLlmTokenUsage(
+        int promptTokens,
+        int completionTokens,
+        int totalTokens,
+        string modelId,
+        string provider,
+        double? operationDurationMs = null,
+        decimal? costUsd = null)
+    {
+        // OpenTelemetry GenAI Semantic Convention: gen_ai.client.token.usage
+        var baseTags = new TagList
+        {
+            { "gen_ai.request.model", modelId },
+            { "gen_ai.response.model", modelId },
+            { "gen_ai.system", provider.ToLowerInvariant() }
+        };
+
+        // Record prompt tokens
+        var promptTags = baseTags;
+        promptTags.Add("gen_ai.token.type", "input");
+        GenAiTokenUsage.Add(promptTokens, promptTags);
+
+        // Record completion tokens
+        var completionTags = baseTags;
+        completionTags.Add("gen_ai.token.type", "output");
+        GenAiTokenUsage.Add(completionTokens, completionTags);
+
+        // Record total tokens (for backward compatibility with existing TokensUsed metric)
+        TokensUsed.Record(totalTokens, baseTags);
+
+        // Record operation duration if provided
+        if (operationDurationMs.HasValue)
+        {
+            var durationTags = new TagList
+            {
+                { "gen_ai.request.model", modelId },
+                { "gen_ai.operation.name", "chat" },
+                { "gen_ai.system", provider.ToLowerInvariant() }
+            };
+            GenAiOperationDuration.Record(operationDurationMs.Value, durationTags);
+        }
+
+        // Record cost if provided
+        if (costUsd.HasValue)
+        {
+            var costTags = new TagList
+            {
+                { "model_id", modelId },
+                { "provider", provider.ToLowerInvariant() }
+            };
+            LlmCostUsd.Record((double)costUsd.Value, costTags);
+        }
+    }
+
+    /// <summary>
+    /// Records agent invocation with token usage and cost tracking.
+    /// Issue #1694: Enhanced agent metrics with LLM token consumption and cost attribution.
+    /// </summary>
+    /// <param name="agentType">Agent type (e.g., "RagAgent", "CitationAgent")</param>
+    /// <param name="tokenUsage">Token usage information from LLM call</param>
+    /// <param name="durationMs">Agent invocation duration in milliseconds</param>
+    /// <param name="success">Whether the invocation succeeded</param>
+    public static void RecordAgentInvocationWithTokens(
+        string agentType,
+        BoundedContexts.KnowledgeBase.Domain.ValueObjects.TokenUsage tokenUsage,
+        double durationMs,
+        bool success = true)
+    {
+        // Record standard agent invocation metrics
+        RecordAgentInvocation(agentType, durationMs, success);
+
+        // Record agent-specific token usage
+        var tokenTags = new TagList
+        {
+            { "agent_type", agentType.ToLowerInvariant() },
+            { "model_id", tokenUsage.ModelId },
+            { "provider", tokenUsage.Provider.ToLowerInvariant() }
+        };
+
+        AgentTokenUsage.Add(tokenUsage.TotalTokens, tokenTags);
+
+        // Record agent-specific cost
+        AgentCostUsd.Record((double)tokenUsage.EstimatedCost, tokenTags);
+
+        // Also record LLM-level metrics with OpenTelemetry GenAI conventions
+        RecordLlmTokenUsage(
+            promptTokens: tokenUsage.PromptTokens,
+            completionTokens: tokenUsage.CompletionTokens,
+            totalTokens: tokenUsage.TotalTokens,
+            modelId: tokenUsage.ModelId,
+            provider: tokenUsage.Provider,
+            operationDurationMs: durationMs,
+            costUsd: tokenUsage.EstimatedCost);
+    }
+
+
+    /// <summary>
+    /// Records a 2FA verification attempt (TOTP or backup code).
+    /// Tracks success/failure metrics and security events for Issue #1788 (SEC-08).
+    /// </summary>
+    /// <param name="verificationType">Type of verification: "totp" or "backup_code"</param>
+    /// <param name="success">Whether the verification succeeded</param>
+    /// <param name="userId">Optional user ID for granular tracking (should be hashed in production)</param>
+    /// <param name="isReplayAttack">Whether this was a detected replay attack (TOTP only)</param>
+    public static void Record2FAVerification(
+        string verificationType,
+        bool success,
+        string? userId = null,
+        bool isReplayAttack = false)
+    {
+        var tags = new TagList
+        {
+            { "verification_type", verificationType.ToLowerInvariant() },
+            { "success", success }
+        };
+
+        if (!string.IsNullOrWhiteSpace(userId))
+        {
+            // Note: In production, consider hashing userId for GDPR compliance
+            tags.Add("user_id", userId);
+        }
+
+        if (verificationType.ToLowerInvariant() == "totp")
+        {
+            if (isReplayAttack)
+            {
+                TwoFactorReplayAttacksBlocked.Add(1, tags);
+            }
+            else if (success)
+            {
+                TwoFactorSuccessfulTotpVerifications.Add(1, tags);
+            }
+            else
+            {
+                TwoFactorFailedTotpAttempts.Add(1, tags);
+            }
+        }
+        else if (verificationType.ToLowerInvariant() == "backup_code")
+        {
+            if (success)
+            {
+                TwoFactorSuccessfulBackupCodeUses.Add(1, tags);
+            }
+            else
+            {
+                TwoFactorFailedBackupAttempts.Add(1, tags);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Records a 2FA lifecycle operation (setup, enable, disable).
+    /// Tracks user adoption and security posture metrics for Issue #1788 (SEC-08).
+    /// </summary>
+    /// <param name="operation">Operation type: "setup", "enable", or "disable"</param>
+    /// <param name="userId">Optional user ID for audit trail (should be hashed in production)</param>
+    public static void Record2FALifecycle(string operation, string? userId = null)
+    {
+        var tags = new TagList { { "operation", operation.ToLowerInvariant() } };
+
+        if (!string.IsNullOrWhiteSpace(userId))
+        {
+            tags.Add("user_id", userId);
+        }
+
+        switch (operation.ToLowerInvariant())
+        {
+            case "setup":
+                TwoFactorSetupTotal.Add(1, tags);
+                break;
+            case "enable":
+                TwoFactorEnableTotal.Add(1, tags);
+                break;
+            case "disable":
+                TwoFactorDisableTotal.Add(1, tags);
+                break;
         }
     }
 

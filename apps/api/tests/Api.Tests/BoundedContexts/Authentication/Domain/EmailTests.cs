@@ -62,3 +62,4 @@ public class EmailTests
         Assert.NotEqual(email1, email3);
     }
 }
+

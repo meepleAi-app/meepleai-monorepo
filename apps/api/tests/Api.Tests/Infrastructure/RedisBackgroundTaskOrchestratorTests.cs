@@ -16,6 +16,8 @@ namespace Api.Tests.Infrastructure;
 /// </summary>
 public class RedisBackgroundTaskOrchestratorTests
 {
+    private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
+
     private readonly Mock<IConnectionMultiplexer> _mockRedis;
     private readonly Mock<IDatabase> _mockDatabase;
     private readonly Mock<ILogger<RedisBackgroundTaskOrchestrator>> _mockLogger;
@@ -59,10 +61,10 @@ public class RedisBackgroundTaskOrchestratorTests
             .ReturnsAsync(true);
 
         // Act
-        await _orchestrator.ScheduleAsync(taskId, taskName, taskFactory);
+        await _orchestrator.ScheduleAsync(taskId, taskName, taskFactory, TestCancellationToken);
 
         // Give task time to execute
-        await Task.Delay(100);
+        await Task.Delay(100, TestCancellationToken);
 
         // Assert
         Assert.True(taskExecuted);
@@ -78,7 +80,7 @@ public class RedisBackgroundTaskOrchestratorTests
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(() =>
-            _orchestrator.ScheduleAsync(null!, "Test", taskFactory));
+            _orchestrator.ScheduleAsync(null!, "Test", taskFactory, TestCancellationToken));
     }
 
     [Fact]
@@ -86,7 +88,7 @@ public class RedisBackgroundTaskOrchestratorTests
     {
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _orchestrator.ScheduleAsync("test-id", "Test", null!));
+            _orchestrator.ScheduleAsync("test-id", "Test", null!, TestCancellationToken));
     }
 
     [Fact]
@@ -112,13 +114,13 @@ public class RedisBackgroundTaskOrchestratorTests
             .ReturnsAsync(true);
 
         // Act
-        await _orchestrator.ScheduleDelayedAsync(taskId, taskName, delay, taskFactory);
+        await _orchestrator.ScheduleDelayedAsync(taskId, taskName, delay, taskFactory, TestCancellationToken);
 
         // Assert - task should not be executed immediately
         Assert.False(taskExecuted);
 
         // Wait for delay + execution time
-        await Task.Delay(200);
+        await Task.Delay(200, TestCancellationToken);
 
         // Assert - task should be executed after delay
         Assert.True(taskExecuted);
@@ -133,7 +135,7 @@ public class RedisBackgroundTaskOrchestratorTests
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(() =>
-            _orchestrator.ScheduleDelayedAsync("test-id", "Test", delay, taskFactory));
+            _orchestrator.ScheduleDelayedAsync("test-id", "Test", delay, taskFactory, TestCancellationToken));
     }
 
     [Fact]
@@ -165,13 +167,13 @@ public class RedisBackgroundTaskOrchestratorTests
             .ReturnsAsync(true);
 
         // Act
-        await _orchestrator.ScheduleAsync(taskId, taskName, taskFactory);
-        await Task.Delay(50); // Give task time to start
+        await _orchestrator.ScheduleAsync(taskId, taskName, taskFactory, TestCancellationToken);
+        await Task.Delay(50, TestCancellationToken); // Give task time to start
 
         var cancelResult = await _orchestrator.CancelAsync(taskId);
 
         // Wait for cancellation to complete
-        await Task.Delay(100);
+        await Task.Delay(100, TestCancellationToken);
 
         // Assert
         Assert.True(cancelResult);
@@ -306,7 +308,7 @@ public class RedisBackgroundTaskOrchestratorTests
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(() =>
-            _orchestrator.ExecuteWithDistributedLockAsync(null!, taskFactory, lockTimeout));
+            _orchestrator.ExecuteWithDistributedLockAsync(null!, taskFactory, lockTimeout, TestCancellationToken));
     }
 
     [Fact]
@@ -318,7 +320,7 @@ public class RedisBackgroundTaskOrchestratorTests
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(() =>
-            _orchestrator.ExecuteWithDistributedLockAsync("test-lock", taskFactory, lockTimeout));
+            _orchestrator.ExecuteWithDistributedLockAsync("test-lock", taskFactory, lockTimeout, TestCancellationToken));
     }
 
     [Fact]
@@ -330,6 +332,7 @@ public class RedisBackgroundTaskOrchestratorTests
         var interval = TimeSpan.FromMilliseconds(50);
         var executionCount = 0;
         var cts = new CancellationTokenSource();
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, TestCancellationToken);
 
         Func<CancellationToken, Task> taskFactory = async ct =>
         {
@@ -350,10 +353,10 @@ public class RedisBackgroundTaskOrchestratorTests
             .ReturnsAsync(true);
 
         // Act
-        await _orchestrator.ScheduleRecurringAsync(taskId, taskName, interval, taskFactory, cts.Token);
+        await _orchestrator.ScheduleRecurringAsync(taskId, taskName, interval, taskFactory, linkedCts.Token);
 
         // Wait for at least 2 executions
-        await Task.Delay(300);
+        await Task.Delay(300, TestCancellationToken);
 
         // Assert
         Assert.True(executionCount >= 2);
@@ -368,7 +371,7 @@ public class RedisBackgroundTaskOrchestratorTests
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(() =>
-            _orchestrator.ScheduleRecurringAsync("test-id", "Test", interval, taskFactory));
+            _orchestrator.ScheduleRecurringAsync("test-id", "Test", interval, taskFactory, TestCancellationToken));
     }
 
     [Fact]
@@ -394,13 +397,13 @@ public class RedisBackgroundTaskOrchestratorTests
             .ReturnsAsync(true);
 
         // Act
-        await _orchestrator.ScheduleDelayedAsync(taskId, taskName, delay, taskFactory);
-        await Task.Delay(50); // Give task time to be scheduled
+        await _orchestrator.ScheduleDelayedAsync(taskId, taskName, delay, taskFactory, TestCancellationToken);
+        await Task.Delay(50, TestCancellationToken); // Give task time to be scheduled
 
         var cancelResult = await _orchestrator.CancelAsync(taskId);
 
         // Wait to ensure task doesn't execute
-        await Task.Delay(200);
+        await Task.Delay(200, TestCancellationToken);
 
         // Assert
         Assert.True(cancelResult, "Cancel should return true for scheduled task");
@@ -433,13 +436,13 @@ public class RedisBackgroundTaskOrchestratorTests
             .ReturnsAsync(true);
 
         // Act
-        await _orchestrator.ScheduleRecurringAsync(taskId, taskName, interval, taskFactory);
-        await Task.Delay(50); // Give task time to be scheduled but not executed
+        await _orchestrator.ScheduleRecurringAsync(taskId, taskName, interval, taskFactory, TestCancellationToken);
+        await Task.Delay(50, TestCancellationToken); // Give task time to be scheduled but not executed
 
         var cancelResult = await _orchestrator.CancelAsync(taskId);
 
         // Wait to ensure task doesn't execute
-        await Task.Delay(200);
+        await Task.Delay(200, TestCancellationToken);
 
         // Assert
         Assert.True(cancelResult, "Cancel should return true for scheduled recurring task");
@@ -473,10 +476,10 @@ public class RedisBackgroundTaskOrchestratorTests
             .ReturnsAsync(true);
 
         // Act
-        await _orchestrator.ScheduleRecurringAsync(taskId, taskName, interval, taskFactory);
+        await _orchestrator.ScheduleRecurringAsync(taskId, taskName, interval, taskFactory, TestCancellationToken);
 
         // Wait for first execution to complete
-        await Task.Delay(150);
+        await Task.Delay(150, TestCancellationToken);
 
         var initialCount = executionCount;
         Assert.True(initialCount >= 1, "Task should have executed at least once");
@@ -485,7 +488,7 @@ public class RedisBackgroundTaskOrchestratorTests
         var cancelResult = await _orchestrator.CancelAsync(taskId);
 
         // Wait for potential second execution
-        await Task.Delay(300);
+        await Task.Delay(300, TestCancellationToken);
 
         // Assert
         Assert.True(cancelResult, "Cancel should return true");
@@ -516,16 +519,17 @@ public class RedisBackgroundTaskOrchestratorTests
             .ReturnsAsync(true);
 
         // Act
-        await _orchestrator.ScheduleAsync(taskId, taskName, taskFactory);
-        await Task.Delay(50); // Give task time to start
+        await _orchestrator.ScheduleAsync(taskId, taskName, taskFactory, TestCancellationToken);
+        await Task.Delay(50, TestCancellationToken); // Give task time to start
 
         var cancelResult = await _orchestrator.CancelAsync(taskId);
 
         // Wait for cancellation to complete
-        await Task.Delay(200);
+        await Task.Delay(200, TestCancellationToken);
 
         // Assert
         Assert.True(cancelResult, "Cancel should return true");
         Assert.False(taskCompleted, "Task should not complete after cancellation");
     }
 }
+

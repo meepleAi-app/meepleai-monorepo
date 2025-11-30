@@ -1,9 +1,9 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import PromptVersionCard from '../PromptVersionCard';
+import PromptVersionCard from '../prompt/PromptVersionCard';
 
 // Mock Next.js Link component
-jest.mock('next/link', () => ({
+vi.mock('next/link', () => ({
   __esModule: true,
   default: ({ children, href }: { children: React.ReactNode; href: string }) => (
     <a href={href}>{children}</a>
@@ -11,8 +11,8 @@ jest.mock('next/link', () => ({
 }));
 
 describe('PromptVersionCard', () => {
-  const mockOnActivate = jest.fn();
-  const mockOnCompare = jest.fn();
+  const mockOnActivate = vi.fn();
+  const mockOnCompare = vi.fn();
 
   const baseVersion = {
     id: 'version-1',
@@ -42,7 +42,7 @@ describe('PromptVersionCard', () => {
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('Rendering', () => {

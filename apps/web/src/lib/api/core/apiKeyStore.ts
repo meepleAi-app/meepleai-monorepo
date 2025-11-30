@@ -3,49 +3,15 @@ import { encrypt, decrypt, clearEncryptionKey } from './secureStorage';
 const STORAGE_KEY = 'meepleai:apiKey';
 
 let memoryApiKey: string | null = null;
-let isHydrating = false;
 
 // Track hydration status to prevent race conditions
-let hydrationPromise: Promise<void> | null = null;
+let hydrationPromise: Promise<boolean> | null = null;
 let isHydrated = false;
 
+// Generation counter to detect cleared/invalidated keys during async operations
+let hydrationGeneration = 0;
+
 const isBrowser = () => typeof window !== 'undefined' && typeof window.sessionStorage !== 'undefined';
-
-/**
- * Hydrate the in-memory API key cache from encrypted sessionStorage
- * This should be called on app startup to restore API key after page reload
- */
-async function hydrateApiKey(): Promise<void> {
-  // Skip if not in browser or already hydrating
-  if (!isBrowser() || isHydrating || memoryApiKey !== null) {
-    return;
-  }
-
-  isHydrating = true;
-
-  try {
-    const encryptedValue = window.sessionStorage.getItem(STORAGE_KEY);
-
-    if (encryptedValue) {
-      try {
-        const decrypted = await decrypt(encryptedValue);
-        memoryApiKey = decrypted;
-      } catch (error) {
-        console.error('Failed to decrypt API key during hydration, clearing storage:', error);
-        // If decryption fails, clear the corrupted data
-        window.sessionStorage.removeItem(STORAGE_KEY);
-        memoryApiKey = null;
-      }
-    }
-  } finally {
-    isHydrating = false;
-  }
-}
-
-// Auto-hydrate on module load (client-side only)
-if (isBrowser()) {
-  hydrationPromise = hydrateApiKey();
-}
 
 /**
  * Store API key securely with encryption
@@ -54,6 +20,8 @@ if (isBrowser()) {
 export async function setStoredApiKey(apiKey: string): Promise<void> {
   memoryApiKey = apiKey;
   isHydrated = true; // Mark as hydrated since we're setting a key
+  hydrationPromise = null; // Allow re-hydration if needed
+  hydrationGeneration++; // Invalidate any in-flight operations
 
   if (isBrowser()) {
     try {
@@ -72,18 +40,37 @@ export async function setStoredApiKey(apiKey: string): Promise<void> {
  */
 export async function getStoredApiKey(): Promise<string | null> {
   if (isBrowser()) {
+    // Capture current generation before async operation
+    const startGeneration = hydrationGeneration;
+
     const encryptedValue = window.sessionStorage.getItem(STORAGE_KEY);
 
     if (encryptedValue) {
       try {
         const decrypted = await decrypt(encryptedValue);
+
+        // Check if key was cleared during decryption (generation changed)
+        if (hydrationGeneration !== startGeneration) {
+          console.log('API key was cleared during retrieval, discarding decrypted value');
+          return null;
+        }
+
+        // Verify storage still exists before writing to memory
+        const currentEncryptedValue = window.sessionStorage.getItem(STORAGE_KEY);
+        if (!currentEncryptedValue) {
+          console.log('API key storage was cleared during retrieval, discarding decrypted value');
+          return null;
+        }
+
         memoryApiKey = decrypted;
         return decrypted;
       } catch (error) {
         console.error('Failed to decrypt API key, clearing storage:', error);
-        // If decryption fails, clear the corrupted data
-        window.sessionStorage.removeItem(STORAGE_KEY);
-        memoryApiKey = null;
+        // If decryption fails, clear the corrupted data only if generation hasn't changed
+        if (hydrationGeneration === startGeneration) {
+          window.sessionStorage.removeItem(STORAGE_KEY);
+          memoryApiKey = null;
+        }
         return null;
       }
     }
@@ -95,11 +82,15 @@ export async function getStoredApiKey(): Promise<string | null> {
 /**
  * Clear stored API key and encryption keys
  * Resets hydration state to allow re-hydration
+ * Increments generation counter to invalidate any in-flight hydrations
  */
 export function clearStoredApiKey(): void {
   memoryApiKey = null;
   hydrationPromise = null;
   isHydrated = false;
+
+  // Increment generation to invalidate any in-flight hydrations
+  hydrationGeneration++;
 
   if (isBrowser()) {
     window.sessionStorage.removeItem(STORAGE_KEY);
@@ -128,6 +119,9 @@ export function hydrateApiKey(): Promise<boolean> {
       return false;
     }
 
+    // Capture current generation before async operation
+    const startGeneration = hydrationGeneration;
+
     const encryptedValue = window.sessionStorage.getItem(STORAGE_KEY);
     if (!encryptedValue) {
       isHydrated = true;
@@ -136,14 +130,32 @@ export function hydrateApiKey(): Promise<boolean> {
 
     try {
       const decrypted = await decrypt(encryptedValue);
+
+      // Check if key was cleared during decryption (generation changed)
+      if (hydrationGeneration !== startGeneration) {
+        console.log('API key was cleared during hydration, discarding decrypted value');
+        isHydrated = true; // Mark as hydrated to prevent stuck state
+        return false;
+      }
+
+      // Verify storage still exists before writing to memory
+      const currentEncryptedValue = window.sessionStorage.getItem(STORAGE_KEY);
+      if (!currentEncryptedValue) {
+        console.log('API key storage was cleared during hydration, discarding decrypted value');
+        isHydrated = true; // Mark as hydrated to prevent stuck state
+        return false;
+      }
+
       memoryApiKey = decrypted;
       isHydrated = true;
       return true;
     } catch (error) {
       console.error('Failed to hydrate API key from sessionStorage:', error);
-      // Clear corrupted data
-      window.sessionStorage.removeItem(STORAGE_KEY);
-      memoryApiKey = null;
+      // Clear corrupted data only if generation hasn't changed
+      if (hydrationGeneration === startGeneration) {
+        window.sessionStorage.removeItem(STORAGE_KEY);
+        memoryApiKey = null;
+      }
       isHydrated = true;
       return false;
     }
@@ -204,7 +216,7 @@ export function getStoredApiKeySync(): string | null {
 
   // If we have encrypted storage but haven't hydrated yet, trigger hydration
   // (This can happen if the sync method is called before hydration completes)
-  if (isBrowser() && !isHydrating && hydrationPromise === null) {
+  if (isBrowser() && !isHydrated && hydrationPromise === null) {
     const hasEncrypted = window.sessionStorage.getItem(STORAGE_KEY) !== null;
     if (hasEncrypted) {
       // Trigger async hydration in background

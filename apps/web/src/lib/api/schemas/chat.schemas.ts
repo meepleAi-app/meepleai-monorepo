@@ -36,7 +36,8 @@ export const ChatThreadMessageDtoSchema = z.object({
   backendMessageId: z.string().uuid().optional(),
   endpoint: z.string().optional(),
   gameId: z.string().uuid().optional(),
-  feedback: z.enum(['helpful', 'not-helpful']).nullable().optional(),
+  // Note: Keep in sync with FEEDBACK_OUTCOMES in @/lib/constants/feedback
+  feedback: z.enum(['helpful', 'not-helpful', 'incorrect']).nullable().optional(),
 });
 
 export type ChatThreadMessageDto = z.infer<typeof ChatThreadMessageDtoSchema>;

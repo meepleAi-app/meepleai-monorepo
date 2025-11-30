@@ -1,3 +1,9 @@
+/**
+ * Editor E2E Tests - MIGRATED TO POM
+ *
+ * @see apps/web/e2e/pages/
+ */
+
 import { test, expect, type Page } from '@playwright/test';
 import { getTextMatcher, t } from './fixtures/i18n';
 
@@ -67,7 +73,7 @@ test.describe('RuleSpec Editor', () => {
     test('allows Admin to access editor', async () => {
       await loginAs('Admin');
       await page.goto('http://localhost:3000/editor?gameId=demo-chess');
-    await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('networkidle');
 
       await expect(page.locator('h1:has-text("Editor RuleSpec")')).toBeVisible();
       await expect(page.locator('text=Game: demo-chess')).toBeVisible();
@@ -76,7 +82,7 @@ test.describe('RuleSpec Editor', () => {
     test('allows Editor to access editor', async () => {
       await loginAs('Editor');
       await page.goto('http://localhost:3000/editor?gameId=demo-chess');
-    await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('networkidle');
 
       await expect(page.locator('h1:has-text("Editor RuleSpec")')).toBeVisible();
     });
@@ -84,14 +90,14 @@ test.describe('RuleSpec Editor', () => {
     test('blocks User from accessing editor', async () => {
       await loginAs('User');
       await page.goto('http://localhost:3000/editor?gameId=demo-chess');
-    await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('networkidle');
 
       await expect(page.getByText(getTextMatcher('common.permissionDenied'))).toBeVisible();
     });
 
     test('redirects unauthenticated users to home', async () => {
       await page.goto('http://localhost:3000/editor?gameId=demo-chess');
-    await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('networkidle');
 
       await expect(page.getByText(getTextMatcher('common.loginRequired'))).toBeVisible();
       await expect(page.getByRole('link', { name: getTextMatcher('nav.home') })).toBeVisible();
@@ -105,7 +111,7 @@ test.describe('RuleSpec Editor', () => {
 
     test('loads existing RuleSpec for demo-chess', async () => {
       await page.goto('http://localhost:3000/editor?gameId=demo-chess');
-    await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('networkidle');
 
       const textarea = await getEditorTextarea();
       await expect(textarea).toBeVisible();
@@ -118,7 +124,7 @@ test.describe('RuleSpec Editor', () => {
 
     test('shows validation indicator for valid JSON', async () => {
       await page.goto('http://localhost:3000/editor?gameId=demo-chess');
-    await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('networkidle');
 
       await expect(page.getByText(getTextMatcher('editor.validJson'))).toBeVisible();
       await expect(page.getByRole('button', { name: getTextMatcher('editor.save') })).toBeEnabled();
@@ -126,7 +132,7 @@ test.describe('RuleSpec Editor', () => {
 
     test('displays preview panel with rule count', async () => {
       await page.goto('http://localhost:3000/editor?gameId=demo-chess');
-    await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('networkidle');
 
       await expect(page.locator('h2:has-text("Preview")')).toBeVisible();
       await expect(page.getByText(getTextMatcher('editor.ruleCount'))).toBeVisible();
@@ -134,7 +140,7 @@ test.describe('RuleSpec Editor', () => {
 
     test('shows error when gameId is missing', async () => {
       await page.goto('http://localhost:3000/editor');
-    await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('networkidle');
 
       await expect(page.getByText(getTextMatcher('editor.missingGameId'))).toBeVisible();
     });
@@ -142,11 +148,13 @@ test.describe('RuleSpec Editor', () => {
     test('shows error when RuleSpec not found', async () => {
       const nonExistentGameId = `nonexistent-${Date.now()}`;
       await page.goto(`http://localhost:3000/editor?gameId=${nonExistentGameId}`);
-    await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('networkidle');
 
       // Should show error or loading state
       await expect(
-        page.getByText(getTextMatcher('editor.notFound')).or(page.getByText(getTextMatcher('common.loading')))
+        page
+          .getByText(getTextMatcher('editor.notFound'))
+          .or(page.getByText(getTextMatcher('common.loading')))
       ).toBeVisible({ timeout: 10000 });
     });
   });
@@ -155,7 +163,7 @@ test.describe('RuleSpec Editor', () => {
     test.beforeEach(async () => {
       await loginAs('Admin');
       await page.goto('http://localhost:3000/editor?gameId=demo-chess');
-    await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('networkidle');
     });
 
     test('detects invalid JSON syntax', async () => {
@@ -164,71 +172,95 @@ test.describe('RuleSpec Editor', () => {
       await textarea.fill('{ invalid json');
 
       await expect(page.locator('text=/Expected property name/i')).toBeVisible();
-      await expect(page.getByRole('button', { name: getTextMatcher('editor.save') })).toBeDisabled();
+      await expect(
+        page.getByRole('button', { name: getTextMatcher('editor.save') })
+      ).toBeDisabled();
     });
 
     test('validates required gameId field', async () => {
       const textarea = await getEditorTextarea();
 
-      const invalidSpec = JSON.stringify({
-        version: '1.0.0',
-        createdAt: new Date().toISOString(),
-        rules: []
-      }, null, 2);
+      const invalidSpec = JSON.stringify(
+        {
+          version: '1.0.0',
+          createdAt: new Date().toISOString(),
+          rules: [],
+        },
+        null,
+        2
+      );
 
       await textarea.fill(invalidSpec);
 
       await expect(page.getByText(/gameId.*required/i)).toBeVisible();
-      await expect(page.getByRole('button', { name: getTextMatcher('editor.save') })).toBeDisabled();
+      await expect(
+        page.getByRole('button', { name: getTextMatcher('editor.save') })
+      ).toBeDisabled();
     });
 
     test('validates required version field', async () => {
       const textarea = await getEditorTextarea();
 
-      const invalidSpec = JSON.stringify({
-        gameId: 'test',
-        createdAt: new Date().toISOString(),
-        rules: []
-      }, null, 2);
+      const invalidSpec = JSON.stringify(
+        {
+          gameId: 'test',
+          createdAt: new Date().toISOString(),
+          rules: [],
+        },
+        null,
+        2
+      );
 
       await textarea.fill(invalidSpec);
 
       await expect(page.getByText(/version.*required/i)).toBeVisible();
-      await expect(page.getByRole('button', { name: getTextMatcher('editor.save') })).toBeDisabled();
+      await expect(
+        page.getByRole('button', { name: getTextMatcher('editor.save') })
+      ).toBeDisabled();
     });
 
     test('validates rules array structure', async () => {
       const textarea = await getEditorTextarea();
 
-      const invalidSpec = JSON.stringify({
-        gameId: 'test',
-        version: '1.0.0',
-        createdAt: new Date().toISOString(),
-        rules: 'not an array'
-      }, null, 2);
+      const invalidSpec = JSON.stringify(
+        {
+          gameId: 'test',
+          version: '1.0.0',
+          createdAt: new Date().toISOString(),
+          rules: 'not an array',
+        },
+        null,
+        2
+      );
 
       await textarea.fill(invalidSpec);
 
       await expect(page.getByText(/rules.*array/i)).toBeVisible();
-      await expect(page.getByRole('button', { name: getTextMatcher('editor.save') })).toBeDisabled();
+      await expect(
+        page.getByRole('button', { name: getTextMatcher('editor.save') })
+      ).toBeDisabled();
     });
 
     test('validates rule atom required fields', async () => {
       const textarea = await getEditorTextarea();
 
-      const invalidSpec = JSON.stringify({
-        gameId: 'test',
-        version: '1.0.0',
-        createdAt: new Date().toISOString(),
-        rules: [
-          { text: 'Missing id field' }
-        ]
-      }, null, 2);
+      const invalidSpec = JSON.stringify(
+        {
+          gameId: 'test',
+          version: '1.0.0',
+          createdAt: new Date().toISOString(),
+          rules: [{ text: 'Missing id field' }],
+        },
+        null,
+        2
+      );
 
       await textarea.fill(invalidSpec);
 
       await expect(page.getByText(/rules.*id.*required/i)).toBeVisible();
-      await expect(page.getByRole('button', { name: getTextMatcher('editor.save') })).toBeDisabled();
+      await expect(
+        page.getByRole('button', { name: getTextMatcher('editor.save') })
+      ).toBeDisabled();
     });
 
     test('shows valid state after fixing invalid JSON', async () => {
@@ -239,14 +271,16 @@ test.describe('RuleSpec Editor', () => {
       await expect(page.locator('text=/Expected property name/i')).toBeVisible();
 
       // Then fix it
-      const validSpec = JSON.stringify({
-        gameId: 'demo-chess',
-        version: '1.0.0',
-        createdAt: new Date().toISOString(),
-        rules: [
-          { id: 'r1', text: 'Valid rule' }
-        ]
-      }, null, 2);
+      const validSpec = JSON.stringify(
+        {
+          gameId: 'demo-chess',
+          version: '1.0.0',
+          createdAt: new Date().toISOString(),
+          rules: [{ id: 'r1', text: 'Valid rule' }],
+        },
+        null,
+        2
+      );
 
       await textarea.fill(validSpec);
 
@@ -272,15 +306,19 @@ test.describe('RuleSpec Editor', () => {
 
       const textarea = await testPage.locator('textarea[spellcheck="false"]');
 
-      const newSpec = JSON.stringify({
-        gameId,
-        version: 'v1',
-        createdAt: new Date().toISOString(),
-        rules: [
-          { id: 'r1', text: 'Test rule 1', section: 'Setup', page: '1', line: '1' },
-          { id: 'r2', text: 'Test rule 2', section: 'Gameplay', page: '2', line: '5' }
-        ]
-      }, null, 2);
+      const newSpec = JSON.stringify(
+        {
+          gameId,
+          version: 'v1',
+          createdAt: new Date().toISOString(),
+          rules: [
+            { id: 'r1', text: 'Test rule 1', section: 'Setup', page: '1', line: '1' },
+            { id: 'r2', text: 'Test rule 2', section: 'Gameplay', page: '2', line: '5' },
+          ],
+        },
+        null,
+        2
+      );
 
       await textarea.fill(newSpec);
 
@@ -289,12 +327,14 @@ test.describe('RuleSpec Editor', () => {
       await saveButton.click({ force: true });
 
       // Wait for success message
-      await expect(testPage.getByText(/successfully saved|salvato con successo/i)).toBeVisible({ timeout: 10000 });
+      await expect(testPage.getByText(/successfully saved|salvato con successo/i)).toBeVisible({
+        timeout: 10000,
+      });
     });
 
     test('shows error when save fails', async () => {
       await page.goto('http://localhost:3000/editor?gameId=demo-chess');
-    await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('networkidle');
 
       const textarea = await getEditorTextarea();
 
@@ -309,12 +349,14 @@ test.describe('RuleSpec Editor', () => {
       await saveButton.click({ force: true });
 
       // Should show error (either conflict or other error)
-      await expect(page.getByText(/error/i).or(page.locator('[style*="fce4e4"]'))).toBeVisible({ timeout: 10000 });
+      await expect(page.getByText(/error/i).or(page.locator('[style*="fce4e4"]'))).toBeVisible({
+        timeout: 10000,
+      });
     });
 
     test('disables save button while saving', async () => {
       await page.goto('http://localhost:3000/editor?gameId=demo-chess');
-    await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('networkidle');
 
       const textarea = await getEditorTextarea();
       const content = await textarea.inputValue();
@@ -335,7 +377,7 @@ test.describe('RuleSpec Editor', () => {
     test.beforeEach(async () => {
       await loginAs('Admin');
       await page.goto('http://localhost:3000/editor?gameId=demo-chess');
-    await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('networkidle');
     });
 
     test('undo button is disabled initially', async () => {
@@ -468,7 +510,7 @@ test.describe('RuleSpec Editor', () => {
     test.beforeEach(async () => {
       await loginAs('Admin');
       await page.goto('http://localhost:3000/editor?gameId=demo-chess');
-    await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('networkidle');
     });
 
     test('shows game metadata in preview', async () => {
@@ -489,7 +531,7 @@ test.describe('RuleSpec Editor', () => {
         text: 'This is a brand new rule',
         section: 'Testing',
         page: '99',
-        line: '1'
+        line: '1',
       });
 
       await textarea.fill(JSON.stringify(spec, null, 2));
@@ -513,7 +555,7 @@ test.describe('RuleSpec Editor', () => {
     test.beforeEach(async () => {
       await loginAs('Admin');
       await page.goto('http://localhost:3000/editor?gameId=demo-chess');
-    await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('networkidle');
     });
 
     test('navigates to version history', async () => {

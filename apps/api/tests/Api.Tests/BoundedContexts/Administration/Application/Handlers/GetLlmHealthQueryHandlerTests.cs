@@ -16,7 +16,7 @@ namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 /// Tests for GetLlmHealthQueryHandler.
 /// Tests LLM provider health monitoring and circuit breaker status aggregation.
 /// NOTE: Complex handler with service dependencies - focused on construction and basic scenarios.
-/// TODO: Add integration tests for full health monitoring workflow.
+/// RESOLVED: Issue #1690 - Integration tests added in LlmHealthIntegrationTests.cs.
 /// </summary>
 public class GetLlmHealthQueryHandlerTests
 {
@@ -119,3 +119,4 @@ public class GetLlmHealthQueryHandlerTests
     // See integration-tests.yml workflow and ProviderHealthCheckServiceTests.cs
     // for health check service unit tests.
 }
+

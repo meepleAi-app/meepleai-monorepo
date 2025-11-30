@@ -24,7 +24,7 @@ public sealed record ProvideAgentFeedbackCommand : IRequest
     public required string UserId { get; init; }
 
     /// <summary>
-    /// Feedback outcome (e.g., "helpful", "not_helpful", "incorrect").
+    /// Feedback outcome (e.g., "helpful", "not-helpful", "incorrect").
     /// Null to remove existing feedback.
     /// </summary>
     public string? Outcome { get; init; }

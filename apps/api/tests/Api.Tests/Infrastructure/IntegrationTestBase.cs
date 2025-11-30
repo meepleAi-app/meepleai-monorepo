@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Moq;
 using Testcontainers.PostgreSql;
 using Xunit;
+using Npgsql;
 
 namespace Api.Tests.Infrastructure;
 
@@ -41,16 +42,32 @@ public abstract class IntegrationTestBase<TRepository> : IAsyncLifetime
     {
         TimeProvider = new TestTimeProvider();
 
-        _postgresContainer = new PostgreSqlBuilder()
-            .WithImage("postgres:16-alpine")
-            .WithDatabase(DatabaseName)
-            .WithUsername("testuser")
-            .WithPassword("testpass")
-            .Build();
+        var externalConn = Environment.GetEnvironmentVariable("TEST_POSTGRES_CONNSTRING");
+        if (!string.IsNullOrWhiteSpace(externalConn))
+        {
+            var builder = new NpgsqlConnectionStringBuilder(externalConn)
+            {
+                Database = DatabaseName,
+                SslMode = SslMode.Disable,
+                KeepAlive = 30,
+                Pooling = false
+            };
+            _connectionString = builder.ConnectionString;
+        }
+        else
+        {
+            _postgresContainer = new PostgreSqlBuilder()
+                .WithImage("postgres:16-alpine")
+                .WithDatabase(DatabaseName)
+                .WithUsername("testuser")
+                .WithPassword("testpass")
+                .WithPortBinding(5432, assignRandomHostPort: true)
+                .Build();
 
-        await _postgresContainer.StartAsync();
+            await _postgresContainer.StartAsync();
 
-        _connectionString = _postgresContainer.GetConnectionString();
+            _connectionString = _postgresContainer.GetConnectionString();
+        }
 
         // Create initial DbContext to run migrations
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
@@ -64,6 +81,8 @@ public abstract class IntegrationTestBase<TRepository> : IAsyncLifetime
             .Returns(new List<Api.SharedKernel.Domain.Interfaces.IDomainEvent>().AsReadOnly());
         using (var context = new MeepleAiDbContext(options, mockMediator.Object, mockEventCollector.Object))
         {
+            // Make sure we start from a pristine schema for every test run
+            await context.Database.EnsureDeletedAsync();
             await context.Database.MigrateAsync();
         }
 
@@ -197,3 +216,4 @@ public abstract class IntegrationTestBase<TRepository> : IAsyncLifetime
         CreateFreshDbContext();
     }
 }
+

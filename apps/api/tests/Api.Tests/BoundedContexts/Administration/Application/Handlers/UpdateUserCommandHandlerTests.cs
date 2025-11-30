@@ -57,12 +57,12 @@ public class UpdateUserCommandHandlerTests
             .ReturnsAsync((User?)null);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
         Assert.Equal("new@example.com", result.Email);
-        _mockUnitOfWork.Verify(u => u.SaveChangesAsync(default), Times.Once);
+        _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -90,12 +90,12 @@ public class UpdateUserCommandHandlerTests
             .ReturnsAsync(user);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
         Assert.Equal("New Name", result.DisplayName);
-        _mockUnitOfWork.Verify(u => u.SaveChangesAsync(default), Times.Once);
+        _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -123,12 +123,12 @@ public class UpdateUserCommandHandlerTests
             .ReturnsAsync(user);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
         Assert.Equal("admin", result.Role); // Role values are lowercase
-        _mockUnitOfWork.Verify(u => u.SaveChangesAsync(default), Times.Once);
+        _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -149,11 +149,11 @@ public class UpdateUserCommandHandlerTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<DomainException>(
-            () => _handler.Handle(command, CancellationToken.None));
+            () => _handler.Handle(command, TestContext.Current.CancellationToken));
         Assert.Contains("not found", exception.Message);
         Assert.Contains(userId.ToString(), exception.Message);
 
-        _mockUnitOfWork.Verify(u => u.SaveChangesAsync(default), Times.Never);
+        _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -194,11 +194,11 @@ public class UpdateUserCommandHandlerTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<DomainException>(
-            () => _handler.Handle(command, CancellationToken.None));
+            () => _handler.Handle(command, TestContext.Current.CancellationToken));
         Assert.Contains("already in use", exception.Message);
         Assert.Contains("other@example.com", exception.Message);
 
-        _mockUnitOfWork.Verify(u => u.SaveChangesAsync(default), Times.Never);
+        _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -229,14 +229,14 @@ public class UpdateUserCommandHandlerTests
             .ReturnsAsync((User?)null);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
         Assert.Equal("new@example.com", result.Email);
         Assert.Equal("New Name", result.DisplayName);
         Assert.Equal("editor", result.Role); // Role values are lowercase
-        _mockUnitOfWork.Verify(u => u.SaveChangesAsync(default), Times.Once);
+        _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -264,7 +264,7 @@ public class UpdateUserCommandHandlerTests
             .ReturnsAsync(user);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -296,7 +296,7 @@ public class UpdateUserCommandHandlerTests
             .ReturnsAsync(user);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -305,6 +305,7 @@ public class UpdateUserCommandHandlerTests
         _mockUserRepository.Verify(
             r => r.GetByEmailAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()),
             Times.Never);
-        _mockUnitOfWork.Verify(u => u.SaveChangesAsync(default), Times.Once);
+        _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 }
+

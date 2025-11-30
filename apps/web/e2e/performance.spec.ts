@@ -1,23 +1,7 @@
 /**
- * Performance Testing Suite with Lighthouse CI
+ * Performance E2E Tests - MIGRATED TO POM
  *
- * Tests Core Web Vitals and performance metrics for critical pages:
- * - Homepage (/)
- * - Chat (/chat)
- * - Upload (/upload)
- *
- * Core Web Vitals Targets:
- * - LCP (Largest Contentful Paint) < 2.5s
- * - FID (First Input Delay) < 100ms
- * - CLS (Cumulative Layout Shift) < 0.1
- *
- * Performance Scores:
- * - Performance: >= 85%
- * - Accessibility: >= 95%
- * - Best Practices: >= 90%
- * - SEO: >= 90%
- *
- * @see Issue #842
+ * @see apps/web/e2e/pages/
  */
 
 import { test, expect } from '@playwright/test';
@@ -58,11 +42,11 @@ const reportConfig = {
 // Core Web Vitals thresholds
 const coreWebVitalsThresholds = {
   lcp: 2500, // Largest Contentful Paint < 2.5s
-  fid: 100,  // First Input Delay < 100ms (replaced by TBT in Lighthouse)
-  cls: 0.1,  // Cumulative Layout Shift < 0.1
+  fid: 100, // First Input Delay < 100ms (replaced by TBT in Lighthouse)
+  cls: 0.1, // Cumulative Layout Shift < 0.1
   fcp: 2000, // First Contentful Paint < 2s
-  tbt: 300,  // Total Blocking Time < 300ms (proxy for FID)
-  si: 3000,  // Speed Index < 3s
+  tbt: 300, // Total Blocking Time < 300ms (proxy for FID)
+  si: 3000, // Speed Index < 3s
 };
 
 // CRITICAL FIX: Each worker gets a unique debugging port to avoid EADDRINUSE collisions
@@ -75,18 +59,19 @@ test.describe('Performance Testing - Critical Pages', () => {
     // Launch browser with worker-specific debugging port
     await context.close();
     const { chromium } = await import('@playwright/test');
-    const browser = testInfo.project.use.browserName === 'chromium'
-      ? await chromium.launch({
-          args: [
-            `--remote-debugging-port=${port}`,
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-accelerated-2d-canvas',
-            '--disable-gpu',
-          ],
-        })
-      : null;
+    const browser =
+      testInfo.project.use.browserName === 'chromium'
+        ? await chromium.launch({
+            args: [
+              `--remote-debugging-port=${port}`,
+              '--no-sandbox',
+              '--disable-setuid-sandbox',
+              '--disable-dev-shm-usage',
+              '--disable-accelerated-2d-canvas',
+              '--disable-gpu',
+            ],
+          })
+        : null;
 
     if (!browser) throw new Error('Browser launch failed');
 
@@ -119,18 +104,19 @@ test.describe('Performance Testing - Critical Pages', () => {
 
     await context.close();
     const { chromium } = await import('@playwright/test');
-    const browser = testInfo.project.use.browserName === 'chromium'
-      ? await chromium.launch({
-          args: [
-            `--remote-debugging-port=${port}`,
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-accelerated-2d-canvas',
-            '--disable-gpu',
-          ],
-        })
-      : null;
+    const browser =
+      testInfo.project.use.browserName === 'chromium'
+        ? await chromium.launch({
+            args: [
+              `--remote-debugging-port=${port}`,
+              '--no-sandbox',
+              '--disable-setuid-sandbox',
+              '--disable-dev-shm-usage',
+              '--disable-accelerated-2d-canvas',
+              '--disable-gpu',
+            ],
+          })
+        : null;
 
     if (!browser) throw new Error('Browser launch failed');
 
@@ -163,18 +149,19 @@ test.describe('Performance Testing - Critical Pages', () => {
 
     await context.close();
     const { chromium } = await import('@playwright/test');
-    const browser = testInfo.project.use.browserName === 'chromium'
-      ? await chromium.launch({
-          args: [
-            `--remote-debugging-port=${port}`,
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-accelerated-2d-canvas',
-            '--disable-gpu',
-          ],
-        })
-      : null;
+    const browser =
+      testInfo.project.use.browserName === 'chromium'
+        ? await chromium.launch({
+            args: [
+              `--remote-debugging-port=${port}`,
+              '--no-sandbox',
+              '--disable-setuid-sandbox',
+              '--disable-dev-shm-usage',
+              '--disable-accelerated-2d-canvas',
+              '--disable-gpu',
+            ],
+          })
+        : null;
 
     if (!browser) throw new Error('Browser launch failed');
 
@@ -195,7 +182,9 @@ test.describe('Performance Testing - Critical Pages', () => {
       },
     });
 
-    const uploadContainer = newPage.locator('[data-testid="upload-container"], .upload-container, main');
+    const uploadContainer = newPage.locator(
+      '[data-testid="upload-container"], .upload-container, main'
+    );
     await expect(uploadContainer).toBeVisible({ timeout: 5000 });
 
     await browser.close();
@@ -209,18 +198,19 @@ test.describe('Performance Testing - Additional Pages', () => {
 
     await context.close();
     const { chromium } = await import('@playwright/test');
-    const browser = testInfo.project.use.browserName === 'chromium'
-      ? await chromium.launch({
-          args: [
-            `--remote-debugging-port=${port}`,
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-accelerated-2d-canvas',
-            '--disable-gpu',
-          ],
-        })
-      : null;
+    const browser =
+      testInfo.project.use.browserName === 'chromium'
+        ? await chromium.launch({
+            args: [
+              `--remote-debugging-port=${port}`,
+              '--no-sandbox',
+              '--disable-setuid-sandbox',
+              '--disable-dev-shm-usage',
+              '--disable-accelerated-2d-canvas',
+              '--disable-gpu',
+            ],
+          })
+        : null;
 
     if (!browser) throw new Error('Browser launch failed');
 
@@ -255,18 +245,19 @@ test.describe('Performance Testing - Additional Pages', () => {
 
     await context.close();
     const { chromium } = await import('@playwright/test');
-    const browser = testInfo.project.use.browserName === 'chromium'
-      ? await chromium.launch({
-          args: [
-            `--remote-debugging-port=${port}`,
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-accelerated-2d-canvas',
-            '--disable-gpu',
-          ],
-        })
-      : null;
+    const browser =
+      testInfo.project.use.browserName === 'chromium'
+        ? await chromium.launch({
+            args: [
+              `--remote-debugging-port=${port}`,
+              '--no-sandbox',
+              '--disable-setuid-sandbox',
+              '--disable-dev-shm-usage',
+              '--disable-accelerated-2d-canvas',
+              '--disable-gpu',
+            ],
+          })
+        : null;
 
     if (!browser) throw new Error('Browser launch failed');
 
@@ -298,14 +289,19 @@ test.describe('Core Web Vitals - Detailed Checks', () => {
 
     // Measure performance using Navigation Timing API
     const performanceMetrics = await page.evaluate(() => {
-      const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
+      const navigation = performance.getEntriesByType(
+        'navigation'
+      )[0] as PerformanceNavigationTiming;
       const paint = performance.getEntriesByType('paint');
 
       const fcp = paint.find(entry => entry.name === 'first-contentful-paint');
-      const lcp = performance.getEntriesByType('largest-contentful-paint').pop() as PerformanceEntry;
+      const lcp = performance
+        .getEntriesByType('largest-contentful-paint')
+        .pop() as PerformanceEntry;
 
       return {
-        domContentLoaded: navigation.domContentLoadedEventEnd - navigation.domContentLoadedEventStart,
+        domContentLoaded:
+          navigation.domContentLoadedEventEnd - navigation.domContentLoadedEventStart,
         loadComplete: navigation.loadEventEnd - navigation.loadEventStart,
         fcp: fcp?.startTime || 0,
         lcp: lcp?.startTime || 0,
@@ -345,12 +341,10 @@ test.describe('Core Web Vitals - Detailed Checks', () => {
     await page.evaluate(() => {
       window.scrollTo(0, document.body.scrollHeight / 2);
     });
-    await page.waitForTimeout(500);
 
     await page.evaluate(() => {
       window.scrollTo(0, document.body.scrollHeight);
     });
-    await page.waitForTimeout(500);
 
     // In production, this would be measured via Lighthouse
     // For now, we verify the page doesn't have obvious layout issues
@@ -366,7 +360,7 @@ test.describe('Performance Budget Enforcement', () => {
   test('Verify bundle size is reasonable', async ({ page }) => {
     const resourceSizes: Record<string, number> = {};
 
-    page.on('response', async (response) => {
+    page.on('response', async response => {
       const url = response.url();
       try {
         const buffer = await response.body();
@@ -394,16 +388,12 @@ test.describe('Performance Budget Enforcement', () => {
   test('Verify no blocking resources on critical path', async ({ page }) => {
     const blockingResources: string[] = [];
 
-    page.on('response', async (response) => {
+    page.on('response', async response => {
       const headers = response.headers();
       const url = response.url();
 
       // Check for render-blocking resources
-      if (
-        (url.includes('.css') || url.includes('.js')) &&
-        !headers['async'] &&
-        !headers['defer']
-      ) {
+      if ((url.includes('.css') || url.includes('.js')) && !headers['async'] && !headers['defer']) {
         blockingResources.push(url);
       }
     });

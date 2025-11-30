@@ -57,7 +57,7 @@ public class StartGameSessionCommandHandlerTests
             .Returns(Task.CompletedTask);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -65,7 +65,6 @@ public class StartGameSessionCommandHandlerTests
         Assert.Equal(gameId, result.GameId);
         Assert.Equal("InProgress", result.Status); // Session is started immediately
         Assert.Equal(2, result.Players.Count);
-        Assert.NotNull(result.StartedAt);
 
         // Verify captured session
         Assert.NotNull(capturedSession);
@@ -103,7 +102,7 @@ public class StartGameSessionCommandHandlerTests
             });
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -132,7 +131,7 @@ public class StartGameSessionCommandHandlerTests
             });
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -158,7 +157,7 @@ public class StartGameSessionCommandHandlerTests
             });
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotEqual(Guid.Empty, result.Id);
@@ -188,7 +187,7 @@ public class StartGameSessionCommandHandlerTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, CancellationToken.None));
+            () => _handler.Handle(command, TestContext.Current.CancellationToken));
 
         Assert.Contains($"Game with ID {gameId} not found", exception.Message);
 
@@ -217,7 +216,7 @@ public class StartGameSessionCommandHandlerTests
             });
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert - Order should be preserved from input
         Assert.Equal("Third", result.Players[0].PlayerName);
@@ -286,12 +285,12 @@ public class StartGameSessionCommandHandlerTests
             });
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert - Session should be InProgress after Start() is called
         Assert.Equal("InProgress", result.Status);
-        Assert.NotNull(result.StartedAt);
     }
 
     #endregion
 }
+

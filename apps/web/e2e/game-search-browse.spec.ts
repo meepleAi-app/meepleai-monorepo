@@ -1,7 +1,14 @@
+/**
+ * E2E Tests for Game Search & Browse (Issue #843 Phase 3) - MIGRATED TO POM
+ *
+ * @see apps/web/e2e/pages/ - Page Object Model architecture
+ */
+
 import { test, expect } from '@playwright/test';
 import { GamePage } from './pages/game/GamePage';
+import { AuthHelper, GamesHelper, USER_FIXTURES } from './pages';
 
-const API_BASE = 'http://localhost:8080';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
 /**
  * E2E Tests for Game Search & Browse (Issue #843 Phase 3)
@@ -79,28 +86,16 @@ test.describe('Game Search & Browse', () => {
 
   test.beforeEach(async ({ page }) => {
     gamePage = new GamePage(page);
+    const authHelper = new AuthHelper(page);
 
     // Disable animations for stable tests
     await page.emulateMedia({ reducedMotion: 'reduce' });
 
-    // Mock authentication (required for game list access)
-    await page.route(`${API_BASE}/api/v1/auth/me`, async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          user: {
-            id: 'test-user',
-            email: 'user@example.com',
-            displayName: 'Test User',
-            role: 'User',
-          },
-        }),
-      });
-    });
+    // Mock authentication using AuthHelper
+    await authHelper.mockAuthenticatedSession(USER_FIXTURES.user);
 
     // Mock default game list (all games)
-    await page.route(`${API_BASE}/api/v1/games*`, async (route) => {
+    await page.route(`${API_BASE}/api/v1/games*`, async route => {
       const url = new URL(route.request().url());
       const search = url.searchParams.get('search')?.toLowerCase();
       const sortBy = url.searchParams.get('sortBy') || 'name-asc';
@@ -112,14 +107,12 @@ test.describe('Game Search & Browse', () => {
 
       // Apply search filter
       if (search) {
-        filteredGames = filteredGames.filter((game) =>
-          game.title.toLowerCase().includes(search)
-        );
+        filteredGames = filteredGames.filter(game => game.title.toLowerCase().includes(search));
       }
 
       // Apply category filter
       if (category && category !== 'all') {
-        filteredGames = filteredGames.filter((game) => game.category === category);
+        filteredGames = filteredGames.filter(game => game.category === category);
       }
 
       // Apply sorting
@@ -258,7 +251,7 @@ test.describe('Game Search & Browse', () => {
 
       // Check if category filter exists
       const categoryFilter = page.getByRole('combobox', { name: /category/i });
-      const filterExists = await categoryFilter.count() > 0;
+      const filterExists = (await categoryFilter.count()) > 0;
 
       if (filterExists) {
         await gamePage.filterByCategory('strategy');
@@ -345,7 +338,7 @@ test.describe('Game Search & Browse', () => {
 
       // Check if page number buttons exist
       const page2Button = page.getByRole('button', { name: /^2$/ });
-      const paginationExists = await page2Button.count() > 0;
+      const paginationExists = (await page2Button.count()) > 0;
 
       if (paginationExists) {
         // Go to page 2 using page number
@@ -407,7 +400,7 @@ test.describe('Game Search & Browse', () => {
       await gamePage.goto();
 
       // Mock chat page endpoint
-      await page.route(`${API_BASE}/api/v1/games/*/agents`, async (route) => {
+      await page.route(`${API_BASE}/api/v1/games/*/agents`, async route => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',

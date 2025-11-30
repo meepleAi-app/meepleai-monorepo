@@ -32,80 +32,92 @@ const config = loadConfig();
 const testType = getTestType();
 const thresholds = getThresholds(testType); // Dynamic thresholds based on test type
 
-export const options = {
-  scenarios: {
-    rag_search: {
-      executor: 'ramping-vus',
-      startVUs: 10,
-      stages: testType === 'smoke' ? [
-        { duration: '30s', target: 10 },
-      ] : testType === 'stress' ? [
-        { duration: '2m', target: 200 },
-        { duration: '5m', target: 200 },
-        { duration: '2m', target: 0 },
-      ] : [ // load (default)
-        { duration: '2m', target: 100 },
-        { duration: '5m', target: 100 },
-        { duration: '2m', target: 0 },
-      ],
-      exec: 'ragSearch',
-      startTime: '0s',
-    },
-
-    chat: {
-      executor: 'ramping-vus',
-      startVUs: 5,
-      stages: testType === 'smoke' ? [
-        { duration: '30s', target: 5 },
-      ] : testType === 'stress' ? [
-        { duration: '2m', target: 100 },
-        { duration: '5m', target: 100 },
-        { duration: '2m', target: 0 },
-      ] : [ // load (default)
-        { duration: '2m', target: 50 },
-        { duration: '5m', target: 50 },
-        { duration: '2m', target: 0 },
-      ],
-      exec: 'chat',
-      startTime: '0s',
-    },
-
-    games: {
-      executor: 'ramping-vus',
-      startVUs: 20,
-      stages: testType === 'smoke' ? [
-        { duration: '30s', target: 20 },
-      ] : testType === 'stress' ? [
-        { duration: '2m', target: 400 },
-        { duration: '5m', target: 400 },
-        { duration: '2m', target: 0 },
-      ] : [ // load (default)
-        { duration: '2m', target: 200 },
-        { duration: '5m', target: 200 },
-        { duration: '2m', target: 0 },
-      ],
-      exec: 'games',
-      startTime: '0s',
-    },
-
-    sessions: {
-      executor: 'ramping-vus',
-      startVUs: 10,
-      stages: testType === 'smoke' ? [
-        { duration: '30s', target: 10 },
-      ] : testType === 'stress' ? [
-        { duration: '2m', target: 200 },
-        { duration: '5m', target: 200 },
-        { duration: '2m', target: 0 },
-      ] : [ // load (default)
-        { duration: '2m', target: 100 },
-        { duration: '5m', target: 100 },
-        { duration: '2m', target: 0 },
-      ],
-      exec: 'sessions',
-      startTime: '0s',
-    },
+// Issue #1769: Smoke tests skip RAG/chat scenarios (require Ollama/external services)
+// Only test infrastructure with games/sessions endpoints
+const scenariosConfig = testType === 'smoke' ? {
+  games: {
+    executor: 'ramping-vus',
+    startVUs: 20,
+    stages: [{ duration: '30s', target: 20 }],
+    exec: 'games',
+    startTime: '0s',
   },
+  sessions: {
+    executor: 'ramping-vus',
+    startVUs: 10,
+    stages: [{ duration: '30s', target: 10 }],
+    exec: 'sessions',
+    startTime: '0s',
+  },
+} : {
+  // Load/stress/spike: Full test suite including RAG/chat
+  rag_search: {
+    executor: 'ramping-vus',
+    startVUs: 10,
+    stages: testType === 'stress' ? [
+      { duration: '2m', target: 200 },
+      { duration: '5m', target: 200 },
+      { duration: '2m', target: 0 },
+    ] : [ // load (default)
+      { duration: '2m', target: 100 },
+      { duration: '5m', target: 100 },
+      { duration: '2m', target: 0 },
+    ],
+    exec: 'ragSearch',
+    startTime: '0s',
+  },
+
+  chat: {
+    executor: 'ramping-vus',
+    startVUs: 5,
+    stages: testType === 'stress' ? [
+      { duration: '2m', target: 100 },
+      { duration: '5m', target: 100 },
+      { duration: '2m', target: 0 },
+    ] : [ // load (default)
+      { duration: '2m', target: 50 },
+      { duration: '5m', target: 50 },
+      { duration: '2m', target: 0 },
+    ],
+    exec: 'chat',
+    startTime: '0s',
+  },
+
+  games: {
+    executor: 'ramping-vus',
+    startVUs: 20,
+    stages: testType === 'stress' ? [
+      { duration: '2m', target: 400 },
+      { duration: '5m', target: 400 },
+      { duration: '2m', target: 0 },
+    ] : [ // load (default)
+      { duration: '2m', target: 200 },
+      { duration: '5m', target: 200 },
+      { duration: '2m', target: 0 },
+    ],
+    exec: 'games',
+    startTime: '0s',
+  },
+
+  sessions: {
+    executor: 'ramping-vus',
+    startVUs: 10,
+    stages: testType === 'stress' ? [
+      { duration: '2m', target: 200 },
+      { duration: '5m', target: 200 },
+      { duration: '2m', target: 0 },
+    ] : [ // load (default)
+      { duration: '2m', target: 100 },
+      { duration: '5m', target: 100 },
+      { duration: '2m', target: 0 },
+    ],
+    exec: 'sessions',
+    startTime: '0s',
+  },
+};
+
+export const options = {
+  scenarios: scenariosConfig,
 
   thresholds: thresholds,
 
@@ -119,7 +131,15 @@ export function setup() {
   console.log(`\n🚀 Starting MeepleAI Performance Test Suite`);
   console.log(`   Test Type: ${testType.toUpperCase()}`);
   console.log(`   API: ${config.apiBaseUrl}`);
-  console.log(`   Game ID: ${config.testGameId}\n`);
+  console.log(`   Game ID: ${config.testGameId}`);
+
+  // Issue #1769: Smoke tests exclude RAG/chat (require Ollama/external services)
+  if (testType === 'smoke') {
+    console.log(`   🔵 Smoke Test: Infrastructure validation only (games + sessions)`);
+    console.log(`   ⏭️  Skipping: RAG Search & Chat (require Ollama)\n`);
+  } else {
+    console.log(`   🔴 ${testType.toUpperCase()} Test: Full test suite (all scenarios)\n`);
+  }
 
   return setupTestUser(config.apiBaseUrl, config.testUser.email, config.testUser.password);
 }
@@ -190,16 +210,21 @@ function textSummary(data, options) {
   summary += `${indent}  P99: ${(metrics.http_req_duration?.values['p(99)'] || 0).toFixed(2)}ms\n`;
   summary += `${indent}  Max: ${(metrics.http_req_duration?.values.max || 0).toFixed(2)}ms\n\n`;
 
-  // Endpoint-Specific Stats
+  // Endpoint-Specific Stats (Issue #1769: smoke tests exclude RAG/chat)
   summary += `${indent}🎯 Endpoint Performance\n`;
   summary += `${indent}${'-'.repeat(60)}\n`;
 
-  const endpoints = [
-    { name: 'RAG Search', tag: 'rag-search', threshold: 2000 },
-    { name: 'Chat', tag: 'chat', threshold: 1000 },
-    { name: 'Games', tag: 'games', threshold: 500 },
-    { name: 'Sessions', tag: 'sessions', threshold: 100 },
+  const allEndpoints = [
+    { name: 'RAG Search', tag: 'rag-search', threshold: 2000, smokeOnly: false },
+    { name: 'Chat', tag: 'chat', threshold: 1000, smokeOnly: false },
+    { name: 'Games', tag: 'games', threshold: 500, smokeOnly: true },
+    { name: 'Sessions', tag: 'sessions', threshold: 100, smokeOnly: true },
   ];
+
+  // Filter endpoints based on test type
+  const endpoints = testType === 'smoke'
+    ? allEndpoints.filter(e => e.smokeOnly)
+    : allEndpoints;
 
   for (const endpoint of endpoints) {
     const metricKey = `http_req_duration{endpoint:${endpoint.tag}}`;

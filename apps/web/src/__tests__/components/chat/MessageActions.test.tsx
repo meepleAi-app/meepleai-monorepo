@@ -30,15 +30,15 @@ describe('MessageActions', () => {
   const defaultProps = {
     message: mockUserMessage,
     isUser: true,
-    onEdit: jest.fn(),
-    onDelete: jest.fn(),
-    onFeedback: jest.fn(),
+    onEdit: vi.fn(),
+    onDelete: vi.fn(),
+    onFeedback: vi.fn(),
     isEditing: false,
     isUpdating: false
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('User Message Actions', () => {
@@ -61,7 +61,7 @@ describe('MessageActions', () => {
 
     it('calls onEdit when edit button is clicked', async () => {
       const user = userEvent.setup();
-      const onEdit = jest.fn();
+      const onEdit = vi.fn();
       render(<MessageActions {...defaultProps} onEdit={onEdit} />);
 
       const editButton = screen.getByLabelText('Edit message');
@@ -72,7 +72,7 @@ describe('MessageActions', () => {
 
     it('calls onDelete when delete button is clicked', async () => {
       const user = userEvent.setup();
-      const onDelete = jest.fn();
+      const onDelete = vi.fn();
       render(<MessageActions {...defaultProps} onDelete={onDelete} />);
 
       const deleteButton = screen.getByLabelText('Delete message');
@@ -155,7 +155,7 @@ describe('MessageActions', () => {
 
     it('calls onFeedback with "helpful" when helpful button is clicked', async () => {
       const user = userEvent.setup();
-      const onFeedback = jest.fn();
+      const onFeedback = vi.fn();
       render(<MessageActions {...assistantProps} onFeedback={onFeedback} />);
 
       const helpfulButton = screen.getByLabelText('Mark as helpful');
@@ -166,7 +166,7 @@ describe('MessageActions', () => {
 
     it('calls onFeedback with "not-helpful" when not-helpful button is clicked', async () => {
       const user = userEvent.setup();
-      const onFeedback = jest.fn();
+      const onFeedback = vi.fn();
       render(<MessageActions {...assistantProps} onFeedback={onFeedback} />);
 
       const notHelpfulButton = screen.getByLabelText('Mark as not helpful');

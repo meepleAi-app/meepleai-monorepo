@@ -1,9 +1,14 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Microsoft.Extensions.Configuration;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Domain.Services;
 
+/// <summary>
+/// Tests for PdfTextProcessingDomainService
+/// ISSUE-1818: Migrated to FluentAssertions
+/// </summary>
 public class PdfTextProcessingDomainServiceTests
 {
     private readonly PdfTextProcessingDomainService _sut;
@@ -36,7 +41,7 @@ public class PdfTextProcessingDomainServiceTests
         var result = _sut.ShouldTriggerOcr(extractedText, pageCount);
 
         // Assert
-        Assert.True(result, "Should trigger OCR when chars/page < threshold");
+        result.Should().BeTrue("Should trigger OCR when chars/page < threshold");
     }
 
     [Fact]
@@ -50,7 +55,7 @@ public class PdfTextProcessingDomainServiceTests
         var result = _sut.ShouldTriggerOcr(extractedText, pageCount);
 
         // Assert
-        Assert.False(result, "Should not trigger OCR when chars/page >= threshold");
+        result.Should().BeFalse("Should not trigger OCR when chars/page >= threshold");
     }
 
     [Fact]
@@ -64,7 +69,7 @@ public class PdfTextProcessingDomainServiceTests
         var result = _sut.ShouldTriggerOcr(extractedText, pageCount);
 
         // Assert
-        Assert.False(result, "Should not trigger OCR for zero pages (invalid input)");
+        result.Should().BeFalse("Should not trigger OCR for zero pages (invalid input)");
     }
 
     [Fact]
@@ -78,7 +83,7 @@ public class PdfTextProcessingDomainServiceTests
         var result = _sut.ShouldTriggerOcr(extractedText, pageCount);
 
         // Assert
-        Assert.True(result, "Should trigger OCR for empty text (likely scanned PDF)");
+        result.Should().BeTrue("Should trigger OCR for empty text (likely scanned PDF)");
     }
 
     #endregion
@@ -92,7 +97,7 @@ public class PdfTextProcessingDomainServiceTests
         var result = _sut.NormalizeText("");
 
         // Assert
-        Assert.Equal(string.Empty, result);
+        result.Should().Be(string.Empty);
     }
 
     [Fact]
@@ -105,8 +110,8 @@ public class PdfTextProcessingDomainServiceTests
         var result = _sut.NormalizeText(rawText);
 
         // Assert
-        Assert.DoesNotContain("\r", result);
-        Assert.Contains("Line1\nLine2\nLine3\nLine4", result);
+        result.Should().NotContain("\r");
+        result.Should().Contain("Line1\nLine2\nLine3\nLine4");
     }
 
     [Fact]
@@ -119,7 +124,7 @@ public class PdfTextProcessingDomainServiceTests
         var result = _sut.NormalizeText(rawText);
 
         // Assert
-        Assert.Equal("Word1 Word2 Word3", result);
+        result.Should().Be("Word1 Word2 Word3");
     }
 
     [Fact]
@@ -132,7 +137,7 @@ public class PdfTextProcessingDomainServiceTests
         var result = _sut.NormalizeText(rawText);
 
         // Assert
-        Assert.Contains("sentence that was split", result);
+        result.Should().Contain("sentence that was split");
     }
 
     [Fact]
@@ -145,8 +150,8 @@ public class PdfTextProcessingDomainServiceTests
         var result = _sut.NormalizeText(rawText);
 
         // Assert
-        Assert.Contains("Paragraph1\n\nParagraph2", result);
-        Assert.DoesNotContain("\n\n\n", result);
+        result.Should().Contain("Paragraph1\n\nParagraph2");
+        result.Should().NotContain("\n\n\n");
     }
 
     [Fact]
@@ -154,14 +159,14 @@ public class PdfTextProcessingDomainServiceTests
     {
         // Arrange: Zero-width space (U+200B)
         var rawText = "Word1\u200BWord2";
-        Assert.Equal(11, rawText.Length); // Verify input has zero-width character
+        rawText.Length.Should().Be(11); // Verify input has zero-width character
 
         // Act
         var result = _sut.NormalizeText(rawText);
 
         // Assert
-        Assert.Equal(10, result.Length); // Zero-width character removed
-        Assert.Equal("Word1Word2", result);
+        result.Length.Should().Be(10); // Zero-width character removed
+        result.Should().Be("Word1Word2");
     }
 
     [Fact]
@@ -174,7 +179,7 @@ public class PdfTextProcessingDomainServiceTests
         var result = _sut.NormalizeText(rawText);
 
         // Assert: Should normalize to composed form (NFC)
-        Assert.Equal("café", result);
+        result.Should().Be("café");
     }
 
     #endregion
@@ -192,7 +197,7 @@ public class PdfTextProcessingDomainServiceTests
         var result = _sut.AssessQuality(text, pageCount);
 
         // Assert
-        Assert.Equal(ExtractionQuality.VeryLow, result);
+        result.Should().Be(ExtractionQuality.VeryLow);
     }
 
     [Fact]
@@ -206,7 +211,7 @@ public class PdfTextProcessingDomainServiceTests
         var result = _sut.AssessQuality(text, pageCount);
 
         // Assert
-        Assert.Equal(ExtractionQuality.Low, result);
+        result.Should().Be(ExtractionQuality.Low);
     }
 
     [Fact]
@@ -220,7 +225,7 @@ public class PdfTextProcessingDomainServiceTests
         var result = _sut.AssessQuality(text, pageCount);
 
         // Assert
-        Assert.Equal(ExtractionQuality.Medium, result);
+        result.Should().Be(ExtractionQuality.Medium);
     }
 
     [Fact]
@@ -234,7 +239,7 @@ public class PdfTextProcessingDomainServiceTests
         var result = _sut.AssessQuality(text, pageCount);
 
         // Assert
-        Assert.Equal(ExtractionQuality.High, result);
+        result.Should().Be(ExtractionQuality.High);
     }
 
     [Fact]
@@ -248,7 +253,7 @@ public class PdfTextProcessingDomainServiceTests
         var result = _sut.AssessQuality(text, pageCount);
 
         // Assert
-        Assert.Equal(ExtractionQuality.VeryLow, result);
+        result.Should().Be(ExtractionQuality.VeryLow);
     }
 
     [Fact]
@@ -262,8 +267,9 @@ public class PdfTextProcessingDomainServiceTests
         var result = _sut.AssessQuality(text, pageCount);
 
         // Assert
-        Assert.Equal(ExtractionQuality.VeryLow, result);
+        result.Should().Be(ExtractionQuality.VeryLow);
     }
 
     #endregion
 }
+

@@ -1,35 +1,42 @@
 /**
- * E2E Tests - Citation Display (Issue #859)
+ * E2E Tests - Citation Display (Issue #859) - MIGRATED TO POM
  *
  * Tests for PDF citation display in chat messages
+ *
+ * @see apps/web/e2e/pages/ - Page Object Model architecture
  */
 
 import { test, expect } from '@playwright/test';
+import { ChatHelper } from './pages';
 
 test.describe('Chat Citations Display (#859)', () => {
   test.beforeEach(async ({ page }) => {
-    // Navigate to chat page (assumes logged in via global setup)
+    // Navigate to chat page
     await page.goto('/chat');
     await page.waitForLoadState('networkidle');
   });
 
   test('displays citations for assistant messages with citations', async ({ page }) => {
-    // Mock API response with citations
-    await page.route('**/api/v1/agents/qa/stream', async (route) => {
-      const response = [
-        'event: token\ndata: {"token":"Test "}\n\n',
-        'event: token\ndata: {"token":"answer "}\n\n',
-        'event: token\ndata: {"token":"with citations"}\n\n',
-        'event: citations\ndata: {"citations":[{"documentId":"doc-1","pageNumber":10,"snippet":"Citation from page 10","relevanceScore":0.95},{"documentId":"doc-2","pageNumber":25,"snippet":"Citation from page 25","relevanceScore":0.80}]}\n\n',
-        'event: complete\ndata: {"totalTokens":100,"confidence":0.9}\n\n',
-      ].join('');
+    const chatHelper = new ChatHelper(page);
 
-      await route.fulfill({
-        status: 200,
-        headers: { 'Content-Type': 'text/event-stream' },
-        body: response,
-      });
-    });
+    // Mock QA stream with citations
+    await chatHelper.mockQAStreamWithCitations(
+      ['Test ', 'answer ', 'with citations'],
+      [
+        {
+          documentId: 'doc-1',
+          pageNumber: 10,
+          snippet: 'Citation from page 10',
+          relevanceScore: 0.95,
+        },
+        {
+          documentId: 'doc-2',
+          pageNumber: 25,
+          snippet: 'Citation from page 25',
+          relevanceScore: 0.8,
+        },
+      ]
+    );
 
     // Send a message
     await page.getByRole('textbox', { name: /fai una domanda/i }).fill('Test question');
@@ -59,20 +66,19 @@ test.describe('Chat Citations Display (#859)', () => {
   });
 
   test('allows toggling citation visibility when collapsible', async ({ page }) => {
-    // Similar setup as above
-    await page.route('**/api/v1/agents/qa/stream', async (route) => {
-      const response = [
-        'event: token\ndata: {"token":"Answer"}\n\n',
-        'event: citations\ndata: {"citations":[{"documentId":"doc-1","pageNumber":5,"snippet":"Test citation","relevanceScore":0.9}]}\n\n',
-        'event: complete\ndata: {"totalTokens":50}\n\n',
-      ].join('');
+    const chatHelper = new ChatHelper(page);
 
-      await route.fulfill({
-        status: 200,
-        headers: { 'Content-Type': 'text/event-stream' },
-        body: response,
-      });
-    });
+    await chatHelper.mockQAStreamWithCitations(
+      ['Answer'],
+      [
+        {
+          documentId: 'doc-1',
+          pageNumber: 5,
+          snippet: 'Test citation',
+          relevanceScore: 0.9,
+        },
+      ]
+    );
 
     await page.getByRole('textbox', { name: /fai una domanda/i }).fill('Test');
     await page.getByRole('button', { name: /invia/i }).click();
@@ -106,18 +112,10 @@ test.describe('Chat Citations Display (#859)', () => {
   });
 
   test('does not show citations when citations array is empty', async ({ page }) => {
-    await page.route('**/api/v1/agents/qa/stream', async (route) => {
-      const response = [
-        'event: token\ndata: {"token":"Answer without citations"}\n\n',
-        'event: complete\ndata: {"totalTokens":20}\n\n',
-      ].join('');
+    const chatHelper = new ChatHelper(page);
 
-      await route.fulfill({
-        status: 200,
-        headers: { 'Content-Type': 'text/event-stream' },
-        body: response,
-      });
-    });
+    // Mock stream without citations
+    await chatHelper.mockQAStreamWithCitations(['Answer without citations'], []);
 
     await page.getByRole('textbox', { name: /fai una domanda/i }).fill('Test');
     await page.getByRole('button', { name: /invia/i }).click();

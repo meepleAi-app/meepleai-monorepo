@@ -64,7 +64,7 @@ public class AdminDisable2FACommandHandlerTests
             TargetUserId: targetUserId);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -99,7 +99,7 @@ public class AdminDisable2FACommandHandlerTests
             TargetUserId: targetUserId);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result.Success);
@@ -130,7 +130,7 @@ public class AdminDisable2FACommandHandlerTests
             TargetUserId: targetUserId);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result.Success);
@@ -162,7 +162,7 @@ public class AdminDisable2FACommandHandlerTests
             TargetUserId: targetUserId);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result.Success);
@@ -198,7 +198,7 @@ public class AdminDisable2FACommandHandlerTests
             TargetUserId: targetUserId);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result.Success);
@@ -238,7 +238,7 @@ public class AdminDisable2FACommandHandlerTests
             TargetUserId: targetUserId);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result.Success);
@@ -270,7 +270,7 @@ public class AdminDisable2FACommandHandlerTests
             TargetUserId: adminUserId); // Same user
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert - Admin can disable their own 2FA via this endpoint
         Assert.True(result.Success);
@@ -314,7 +314,7 @@ public class AdminDisable2FACommandHandlerTests
             TargetUserId: targetUserId);
 
         // Act
-        await _handler.Handle(command, CancellationToken.None);
+        await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert - Check that domain event was raised
         var domainEvents = targetUser.DomainEvents;
@@ -382,3 +382,4 @@ public class AdminDisable2FACommandHandlerTests
 
     #endregion
 }
+

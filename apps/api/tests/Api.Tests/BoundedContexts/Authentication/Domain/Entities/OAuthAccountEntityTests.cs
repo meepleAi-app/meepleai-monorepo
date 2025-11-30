@@ -626,10 +626,11 @@ public class OAuthAccountEntityTests
     public void SupportedProviders_IsCaseInsensitive()
     {
         // Assert
-        Assert.True(OAuthAccount.SupportedProviders.Contains("GOOGLE"));
-        Assert.True(OAuthAccount.SupportedProviders.Contains("Discord"));
-        Assert.True(OAuthAccount.SupportedProviders.Contains("github"));
+        Assert.Contains("GOOGLE", OAuthAccount.SupportedProviders);
+        Assert.Contains("Discord", OAuthAccount.SupportedProviders);
+        Assert.Contains("github", OAuthAccount.SupportedProviders);
     }
 
     #endregion
 }
+

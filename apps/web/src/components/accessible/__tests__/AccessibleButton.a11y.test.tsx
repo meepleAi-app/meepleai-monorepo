@@ -167,7 +167,7 @@ describe('AccessibleButton - Accessibility', () => {
    * Related: AccessibleSkipLink.a11y.test.tsx and logger.test.ts have similar skipped tests
    */
   it('should warn in development if icon-only button missing aria-label', () => {
-    const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation();
 
     render(
       <AccessibleButton iconOnly onClick={() => {}}>

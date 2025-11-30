@@ -2,7 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import SearchModeToggle, { SearchMode } from '../SearchModeToggle';
 
 describe('SearchModeToggle', () => {
-  const mockOnChange = jest.fn();
+  const mockOnChange = vi.fn();
 
   const getSemanticButton = () =>
     screen.getByRole('radio', {
@@ -20,7 +20,7 @@ describe('SearchModeToggle', () => {
     });
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('Rendering', () => {

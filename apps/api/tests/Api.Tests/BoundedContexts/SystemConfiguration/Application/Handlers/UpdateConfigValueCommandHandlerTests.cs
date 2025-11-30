@@ -55,7 +55,7 @@ public class UpdateConfigValueCommandHandlerTests
             .ReturnsAsync(existingConfig);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -89,7 +89,7 @@ public class UpdateConfigValueCommandHandlerTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<DomainException>(
-            () => _handler.Handle(command, CancellationToken.None));
+            () => _handler.Handle(command, TestContext.Current.CancellationToken));
         Assert.Contains("not found", exception.Message);
         Assert.Contains(configId.ToString(), exception.Message);
 
@@ -126,7 +126,7 @@ public class UpdateConfigValueCommandHandlerTests
             .ReturnsAsync(existingConfig);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(2, result.Version);
@@ -157,7 +157,7 @@ public class UpdateConfigValueCommandHandlerTests
             .ReturnsAsync(existingConfig);
 
         // Act
-        await _handler.Handle(command, CancellationToken.None);
+        await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert - The domain entity should store previous value internally
         // This is verified through the UpdateValue method being called
@@ -237,7 +237,7 @@ public class UpdateConfigValueCommandHandlerTests
             .ReturnsAsync(existingConfig);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -249,3 +249,4 @@ public class UpdateConfigValueCommandHandlerTests
         Assert.Equal("Cache", result.Category);
     }
 }
+

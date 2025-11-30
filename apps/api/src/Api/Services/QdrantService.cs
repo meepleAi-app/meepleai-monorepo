@@ -137,13 +137,13 @@ public class QdrantService : IQdrantService
         try
         {
             _logger.LogInformation("Indexing {Count} chunks for PDF {PdfId}", validChunks.Count, pdfId);
-            var basePayload = new Dictionary<string, Value>
+            var basePayload = new Dictionary<string, Value>(StringComparer.Ordinal)
             {
                 ["game_id"] = gameId,
                 ["pdf_id"] = pdfId
             };
             var points = _vectorIndexer.BuildPoints(validChunks, basePayload);
-            await _vectorIndexer.UpsertPointsAsync(CollectionName, points.AsReadOnly(), ct);
+            await _vectorIndexer.UpsertPointsAsync(CollectionName, points.AsReadOnly(), ct).ConfigureAwait(false);
             _logger.LogInformation("Successfully indexed {Count} chunks for PDF {PdfId}", validChunks.Count, pdfId);
             activity?.SetTag("success", true);
             activity?.SetTag("indexed.count", validChunks.Count);
@@ -192,7 +192,7 @@ public class QdrantService : IQdrantService
                 filter: filter,
                 limit: limit,
                 ct: ct
-            );
+            ).ConfigureAwait(false);
             var results = _vectorSearcher.ConvertToSearchResults(searchResults);
             _logger.LogInformation("Found {Count} results", results.Count);
             // OPS-02: Add trace attributes for successful operation
@@ -227,7 +227,7 @@ public class QdrantService : IQdrantService
         {
             _logger.LogInformation("Deleting vectors for PDF {PdfId}", pdfId);
             var filter = _vectorSearcher.BuildPdfFilter(pdfId);
-            await _vectorIndexer.DeleteByFilterAsync(CollectionName, filter, ct);
+            await _vectorIndexer.DeleteByFilterAsync(CollectionName, filter, ct).ConfigureAwait(false);
             _logger.LogInformation("Successfully deleted vectors for PDF {PdfId}", pdfId);
             return true;
         }
@@ -258,7 +258,7 @@ public class QdrantService : IQdrantService
             var category = metadata.GetValueOrDefault("category", "unknown");
             _logger.LogInformation("Indexing {Count} chunks with category {Category}", chunks.Count, category);
             // Convert metadata to Value dictionary
-            var basePayload = new Dictionary<string, Value>();
+            var basePayload = new Dictionary<string, Value>(StringComparer.Ordinal);
             foreach (var kvp in metadata)
             {
                 basePayload[kvp.Key] = kvp.Value;
@@ -266,7 +266,7 @@ public class QdrantService : IQdrantService
             // Build points from chunks
             var points = _vectorIndexer.BuildPoints(chunks, basePayload);
             // Upsert to Qdrant
-            await _vectorIndexer.UpsertPointsAsync(CollectionName, points.AsReadOnly(), ct);
+            await _vectorIndexer.UpsertPointsAsync(CollectionName, points.AsReadOnly(), ct).ConfigureAwait(false);
             _logger.LogInformation("Successfully indexed {Count} chunks with metadata", chunks.Count);
             return IndexResult.CreateSuccess(chunks.Count);
         }
@@ -299,7 +299,7 @@ public class QdrantService : IQdrantService
                 filter: filter,
                 limit: limit,
                 ct: ct
-            );
+            ).ConfigureAwait(false);
             var results = _vectorSearcher.ConvertToSearchResults(searchResults);
             _logger.LogInformation("Found {Count} results in category {Category}", results.Count, category);
             return SearchResult.CreateSuccess(results);
@@ -517,7 +517,6 @@ public record ChessIndexResult
     public static ChessIndexResult CreateFailure(string error) =>
         new() { Success = false, ErrorMessage = error };
 }
-
 
 
 

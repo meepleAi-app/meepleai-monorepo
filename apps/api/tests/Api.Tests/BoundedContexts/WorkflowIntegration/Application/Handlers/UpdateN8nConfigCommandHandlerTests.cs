@@ -57,7 +57,7 @@ public class UpdateN8nConfigCommandHandlerTests
             .ReturnsAsync(existingConfig);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -93,7 +93,7 @@ public class UpdateN8nConfigCommandHandlerTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<DomainException>(
-            () => _handler.Handle(command, CancellationToken.None));
+            () => _handler.Handle(command, TestContext.Current.CancellationToken));
         Assert.Contains("not found", exception.Message);
         Assert.Contains(configId.ToString(), exception.Message);
 
@@ -134,7 +134,7 @@ public class UpdateN8nConfigCommandHandlerTests
             .ReturnsAsync(existingConfig);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.IsActive);
@@ -168,7 +168,7 @@ public class UpdateN8nConfigCommandHandlerTests
             .ReturnsAsync(existingConfig);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result.IsActive);
@@ -203,7 +203,7 @@ public class UpdateN8nConfigCommandHandlerTests
             .ReturnsAsync(existingConfig);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert - WebhookUrl should remain unchanged when null is passed
         Assert.Equal("https://old.webhook.com", result.WebhookUrl);
@@ -237,7 +237,7 @@ public class UpdateN8nConfigCommandHandlerTests
             .ReturnsAsync(existingConfig);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal("Updated Name Only", result.Name);
@@ -289,3 +289,4 @@ public class UpdateN8nConfigCommandHandlerTests
             Times.Once);
     }
 }
+

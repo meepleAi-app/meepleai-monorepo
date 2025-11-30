@@ -16,6 +16,10 @@ const customJestConfig = {
   testEnvironment: 'jest-environment-jsdom',
   testTimeout: 30000, // Global timeout 30s for slow worker/async tests
   coverageProvider: 'v8', // Fix babel-plugin-istanbul schema error (test-exclude@6.0.0)
+  // Transform ESM modules from MSW and its dependencies (Issue #1503)
+  transformIgnorePatterns: [
+    'node_modules/(?!(msw|@mswjs|@bundled-es-modules|until-async)/)',
+  ],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
@@ -50,14 +54,7 @@ const customJestConfig = {
     '!src/components/chat/ChatProvider.tsx', // Complex provider (integration tested)
     '!src/components/auth/AuthProvider.tsx', // Complex provider (integration tested)
     '!src/components/game/GameProvider.tsx', // Complex provider (integration tested)
-    '!src/components/chat/**', // Chat UI components (E2E tested)
-    '!src/components/editor/**', // Editor components (E2E tested)
-    '!src/components/auth/LoginForm.tsx', // Auth forms (E2E tested)
-    '!src/components/auth/RegisterForm.tsx', // Auth forms (E2E tested)
-    '!src/components/auth/AuthModal.tsx', // Auth modal (E2E tested)
-    '!src/components/ErrorDisplay.tsx', // Error display (E2E tested)
     '!src/lib/animations/**', // Animation utilities (visual)
-    '!src/hooks/useKeyboardShortcuts.ts', // Keyboard shortcuts (E2E tested)
   ],
   coverageThreshold: {
     global: {

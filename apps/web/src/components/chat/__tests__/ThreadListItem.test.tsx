@@ -29,12 +29,12 @@ describe('ThreadListItem', () => {
   };
 
   const mockHandlers = {
-    onSelect: jest.fn(),
-    onDelete: jest.fn(),
+    onSelect: vi.fn(),
+    onDelete: vi.fn(),
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('Rendering', () => {

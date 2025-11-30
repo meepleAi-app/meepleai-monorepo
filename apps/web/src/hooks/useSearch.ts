@@ -60,7 +60,7 @@ function buildSearchIndex(sources: SearchDataSources): SearchResult[] {
   const results: SearchResult[] = [];
 
   // Index messages
-  sources.messages?.forEach((message) => {
+  sources.messages?.forEach(message => {
     const result: MessageSearchResult = {
       id: message.id,
       type: 'message',
@@ -76,7 +76,7 @@ function buildSearchIndex(sources: SearchDataSources): SearchResult[] {
   });
 
   // Index chats
-  sources.chats?.forEach((chat) => {
+  sources.chats?.forEach(chat => {
     const result: ChatSearchResult = {
       id: chat.id,
       type: 'chat',
@@ -92,7 +92,7 @@ function buildSearchIndex(sources: SearchDataSources): SearchResult[] {
   });
 
   // Index games
-  sources.games?.forEach((game) => {
+  sources.games?.forEach(game => {
     const result: GameSearchResult = {
       id: game.id,
       type: 'game',
@@ -106,12 +106,12 @@ function buildSearchIndex(sources: SearchDataSources): SearchResult[] {
   });
 
   // Index agents
-  sources.agents?.forEach((agent) => {
+  sources.agents?.forEach(agent => {
     const result: AgentSearchResult = {
       id: agent.id,
       type: 'agent',
       title: agent.name,
-      subtitle: `${agent.kind} Agent`, // Issue #868: Use kind (strategyName not in Agent type)
+      subtitle: `${agent.type} Agent`, // Changed from 'kind' to match Agent interface
       timestamp: new Date(agent.createdAt),
       agent,
       gameId: undefined, // Issue #868: Agents are global, not tied to games
@@ -129,7 +129,7 @@ function buildSearchIndex(sources: SearchDataSources): SearchResult[] {
 function applyFilters(results: SearchResult[], filters?: SearchFilters): SearchResult[] {
   if (!filters) return results;
 
-  return results.filter((result) => {
+  return results.filter(result => {
     // Filter by type
     if (filters.types && filters.types.length > 0) {
       if (!filters.types.includes(result.type)) return false;
@@ -138,9 +138,11 @@ function applyFilters(results: SearchResult[], filters?: SearchFilters): SearchR
     // Filter by game (agents are global and always included)
     if (filters.gameId && result.type !== 'agent') {
       const gameId =
-        result.type === 'message' ? result.gameId :
-        result.type === 'chat' ? result.gameId :
-        undefined;
+        result.type === 'message'
+          ? result.gameId
+          : result.type === 'chat'
+            ? result.gameId
+            : undefined;
       if (gameId !== filters.gameId) return false;
     }
 
@@ -187,11 +189,13 @@ function loadRecentSearches(): RecentSearch[] {
     return searches.map(s => ({
       ...s,
       timestamp: new Date(s.timestamp),
-      filters: s.filters ? {
-        ...s.filters,
-        dateFrom: s.filters.dateFrom ? new Date(s.filters.dateFrom) : undefined,
-        dateTo: s.filters.dateTo ? new Date(s.filters.dateTo) : undefined,
-      } : undefined,
+      filters: s.filters
+        ? {
+            ...s.filters,
+            dateFrom: s.filters.dateFrom ? new Date(s.filters.dateFrom) : undefined,
+            dateTo: s.filters.dateTo ? new Date(s.filters.dateTo) : undefined,
+          }
+        : undefined,
     }));
   } catch {
     return [];
@@ -233,66 +237,72 @@ export function useSearch(dataSources: SearchDataSources) {
   }, [searchIndex]);
 
   // Perform search with fuzzy matching
-  const search = useCallback((options: SearchOptions): SearchResult[] => {
-    const { query: searchQuery, filters: searchFilters, limit = 50, threshold } = options;
+  const search = useCallback(
+    (options: SearchOptions): SearchResult[] => {
+      const { query: searchQuery, filters: searchFilters, limit = 50, threshold } = options;
 
-    // If no query, return filtered results
-    if (!searchQuery || searchQuery.trim() === '') {
-      const filtered = applyFilters(searchIndex, searchFilters);
-      return filtered
-        .sort((a, b) => {
-          // Sort by timestamp (newest first)
-          if (!a.timestamp) return 1;
-          if (!b.timestamp) return -1;
-          return b.timestamp.getTime() - a.timestamp.getTime();
-        })
-        .slice(0, limit);
-    }
+      // If no query, return filtered results
+      if (!searchQuery || searchQuery.trim() === '') {
+        const filtered = applyFilters(searchIndex, searchFilters);
+        return filtered
+          .sort((a, b) => {
+            // Sort by timestamp (newest first)
+            if (!a.timestamp) return 1;
+            if (!b.timestamp) return -1;
+            return b.timestamp.getTime() - a.timestamp.getTime();
+          })
+          .slice(0, limit);
+      }
 
-    // Apply custom threshold if provided
-    const fuseInstance = threshold !== undefined
-      ? new Fuse(searchIndex, { ...FUSE_OPTIONS, threshold })
-      : fuse;
+      // Apply custom threshold if provided
+      const fuseInstance =
+        threshold !== undefined ? new Fuse(searchIndex, { ...FUSE_OPTIONS, threshold }) : fuse;
 
-    // Perform fuzzy search
-    const fuseResults = fuseInstance.search(searchQuery);
+      // Perform fuzzy search
+      const fuseResults = fuseInstance.search(searchQuery);
 
-    // Convert Fuse results to SearchResult[]
-    let results = fuseResults.map((result) => ({
-      ...result.item,
-      relevanceScore: 1 - (result.score || 0), // Invert score (higher is better)
-    }));
+      // Convert Fuse results to SearchResult[]
+      let results = fuseResults.map(result => ({
+        ...result.item,
+        relevanceScore: 1 - (result.score || 0), // Invert score (higher is better)
+      }));
 
-    // Apply filters
-    results = applyFilters(results, searchFilters);
+      // Apply filters
+      results = applyFilters(results, searchFilters);
 
-    // Limit results
-    return results.slice(0, limit);
-  }, [searchIndex, fuse]);
+      // Limit results
+      return results.slice(0, limit);
+    },
+    [searchIndex, fuse]
+  );
 
   // Add search to recent history
-  const addToRecentSearches = useCallback((searchQuery: string, searchFilters: SearchFilters, resultCount: number) => {
-    if (!searchQuery.trim()) return;
+  const addToRecentSearches = useCallback(
+    (searchQuery: string, searchFilters: SearchFilters, resultCount: number) => {
+      if (!searchQuery.trim()) return;
 
-    const newSearch: RecentSearch = {
-      id: `${Date.now()}-${Math.random()}`,
-      query: searchQuery,
-      filters: searchFilters,
-      timestamp: new Date(),
-      resultCount,
-    };
+      const newSearch: RecentSearch = {
+        id: `${Date.now()}-${Math.random()}`,
+        query: searchQuery,
+        filters: searchFilters,
+        timestamp: new Date(),
+        resultCount,
+      };
 
-    setRecentSearches((prev) => {
-      // Remove duplicates (same query and filters)
-      const filtered = prev.filter(
-        (s) => s.query !== searchQuery || JSON.stringify(s.filters) !== JSON.stringify(searchFilters)
-      );
-      // Add new search at the beginning
-      const updated = [newSearch, ...filtered].slice(0, MAX_RECENT_SEARCHES);
-      saveRecentSearches(updated);
-      return updated;
-    });
-  }, []);
+      setRecentSearches(prev => {
+        // Remove duplicates (same query and filters)
+        const filtered = prev.filter(
+          s =>
+            s.query !== searchQuery || JSON.stringify(s.filters) !== JSON.stringify(searchFilters)
+        );
+        // Add new search at the beginning
+        const updated = [newSearch, ...filtered].slice(0, MAX_RECENT_SEARCHES);
+        saveRecentSearches(updated);
+        return updated;
+      });
+    },
+    []
+  );
 
   // Clear recent searches
   const clearRecentSearches = useCallback(() => {
@@ -306,8 +316,8 @@ export function useSearch(dataSources: SearchDataSources) {
 
   // Remove specific recent search
   const removeRecentSearch = useCallback((id: string) => {
-    setRecentSearches((prev) => {
-      const updated = prev.filter((s) => s.id !== id);
+    setRecentSearches(prev => {
+      const updated = prev.filter(s => s.id !== id);
       saveRecentSearches(updated);
       return updated;
     });

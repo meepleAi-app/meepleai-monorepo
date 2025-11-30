@@ -37,11 +37,9 @@ public static class PdfEndpoints
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(session.User.Role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            // Note: Upload quota enforcement is handled by PdfUploadQuotaService in UploadPdfCommandHandler
+            // Admin and Editor roles automatically bypass quota checks
+            // Regular users are subject to tier-based daily/weekly limits
 
             var form = await context.Request.ReadFormAsync(ct);
             var file = form.Files.GetFile("file");
@@ -107,17 +105,16 @@ public static class PdfEndpoints
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
-            // Session validated by RequireSessionFilter
-            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
-
             // Validate query parameter
             if (string.IsNullOrWhiteSpace(q))
             {
                 return Results.BadRequest(new { error = "Query parameter 'q' is required" });
             }
 
-            var results = await bggService.SearchGamesAsync(q, exact, ct);
-            logger.LogInformation("BGG search returned {Count} results for query: {Query}", results.Count, q);
+            var validatedQuery = q!;
+
+            var results = await bggService.SearchGamesAsync(validatedQuery, exact, ct);
+            logger.LogInformation("BGG search returned {Count} results for query: {Query}", results.Count, validatedQuery);
             return Results.Json(new { results });
         })
         .RequireSession(); // Issue #1446: Automatic session validation
@@ -129,9 +126,6 @@ public static class PdfEndpoints
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
-            // Session validated by RequireSessionFilter
-            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
-
             // Validate BGG ID
             if (bggId <= 0)
             {
@@ -153,9 +147,6 @@ public static class PdfEndpoints
 
         group.MapGet("/games/{gameId:guid}/pdfs", async (Guid gameId, HttpContext context, IMediator mediator, CancellationToken ct) =>
         {
-            // Session validated by RequireSessionFilter
-            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
-
             var pdfs = await mediator.Send(new GetPdfDocumentsByGameQuery(gameId), ct);
             return Results.Json(new { pdfs });
         })
@@ -163,9 +154,6 @@ public static class PdfEndpoints
 
         group.MapGet("/pdfs/{pdfId:guid}/text", async (Guid pdfId, HttpContext context, IMediator mediator, CancellationToken ct) =>
         {
-            // Session validated by RequireSessionFilter
-            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
-
             // Use CQRS Query to get PDF text
             var pdf = await mediator.Send(new GetPdfTextQuery(pdfId), ct);
 

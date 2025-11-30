@@ -27,7 +27,7 @@
       ]
     },
     "types": [
-      "jest",
+      "vitest/globals",
       "node"
     ],
     "plugins": [
@@ -38,16 +38,24 @@
   },
   "include": [
     "next-env.d.ts",
-    "jest.d.ts",
+    "vitest.d.ts",
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts"
+    ".next/dev/types/**/*.ts",
+    ".next/dev/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",
     "scripts",
     "**/*.stories.tsx",
-    "**/*.stories.ts"
+    "**/*.stories.ts",
+    "**/__tests__/**",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.spec.ts",
+    "**/*.spec.tsx",
+    "vitest.setup.tsx",
+    "src/test-utils/**"
   ]
 }

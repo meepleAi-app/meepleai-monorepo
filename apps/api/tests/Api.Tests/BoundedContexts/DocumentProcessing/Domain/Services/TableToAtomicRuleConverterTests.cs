@@ -442,3 +442,4 @@ public class TableToAtomicRuleConverterTests
 
     #endregion
 }
+

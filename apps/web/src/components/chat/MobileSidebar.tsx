@@ -13,17 +13,12 @@
 
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { useChatContext } from './ChatProvider';
+import { useChatContext } from '@/hooks/useChatContext';
 import { GameSelector } from './GameSelector';
 import { AgentSelector } from './AgentSelector';
 import { ChatHistory } from './ChatHistory';
 import { LoadingButton } from '../loading/LoadingButton';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Game } from '@/types';
 
 interface MobileSidebarProps {
@@ -32,13 +27,7 @@ interface MobileSidebarProps {
 }
 
 export function MobileSidebar({ open, onOpenChange }: MobileSidebarProps) {
-  const {
-    games,
-    selectedGameId,
-    selectedAgentId,
-    loading,
-    createChat
-  } = useChatContext();
+  const { games, selectedGameId, selectedAgentId, loading, createChat } = useChatContext();
 
   const handleCreateChat = async () => {
     await createChat();
@@ -62,10 +51,10 @@ export function MobileSidebar({ open, onOpenChange }: MobileSidebarProps) {
             {selectedGameId && (
               <div
                 className="px-3 py-1 bg-[#e8f0fe] text-[#1a73e8] rounded-xl text-[11px] font-semibold border border-[#1a73e8]"
-                title={`Currently chatting about: ${games.find((g: Game) => g.id === selectedGameId)?.name ?? 'Unknown game'}`}
-                aria-label={`Active game context: ${games.find((g: Game) => g.id === selectedGameId)?.name ?? 'Unknown game'}`}
+                title={`Currently chatting about: ${games.find((g: Game) => g.id === selectedGameId)?.title ?? 'Unknown game'}`}
+                aria-label={`Active game context: ${games.find((g: Game) => g.id === selectedGameId)?.title ?? 'Unknown game'}`}
               >
-                {games.find((g: Game) => g.id === selectedGameId)?.name ?? '...'}
+                {games.find((g: Game) => g.id === selectedGameId)?.title ?? '...'}
               </div>
             )}
           </div>
@@ -84,10 +73,8 @@ export function MobileSidebar({ open, onOpenChange }: MobileSidebarProps) {
             disabled={isDisabled}
             aria-label="Create new chat"
             className={cn(
-              "w-full py-2.5 text-white border-none rounded text-sm font-medium touch-target",
-              isDisabled
-                ? "bg-[#dadce0] cursor-not-allowed"
-                : "bg-[#1a73e8] cursor-pointer"
+              'w-full py-2.5 text-white border-none rounded text-sm font-medium touch-target',
+              isDisabled ? 'bg-[#dadce0] cursor-not-allowed' : 'bg-[#1a73e8] cursor-pointer'
             )}
           >
             + Nuova Chat

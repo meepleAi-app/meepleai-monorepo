@@ -1,4 +1,10 @@
-import { test, expect } from './fixtures/auth';
+/**
+ * Comments Enhanced E2E Tests - MIGRATED TO POM
+ *
+ * @see apps/web/e2e/pages/
+ */
+
+import { test, expect } from '@playwright/test';
 import { getTextMatcher, t } from './fixtures/i18n';
 
 /**
@@ -35,7 +41,9 @@ test.describe('EDIT-05: Enhanced Comments System', () => {
       await expect(page.locator('h3')).toContainText(t('timeline.eventDetails'));
 
       // Should show resolved comments toggle
-      await expect(page.locator(`text=${t('admin.users.deleteConfirm')}`)).toBeVisible().catch(() => {});
+      await expect(page.locator(`text=${t('admin.users.deleteConfirm')}`))
+        .toBeVisible()
+        .catch(() => {});
 
       // Arrange: Find comment form
       const commentForm = page.locator('textarea[placeholder*="Aggiungi un commento"]');
@@ -82,7 +90,10 @@ test.describe('EDIT-05: Enhanced Comments System', () => {
       await expect(page.locator(`text=${replyText}`)).toBeVisible({ timeout: 10000 });
 
       // Reply should be indented (depth > 0)
-      const replyContainer = page.locator(`text=${replyText}`).locator('xpath=ancestor::div[contains(@style, "margin-left")]').first();
+      const replyContainer = page
+        .locator(`text=${replyText}`)
+        .locator('xpath=ancestor::div[contains(@style, "margin-left")]')
+        .first();
       await expect(replyContainer).toBeVisible();
     });
 
@@ -140,7 +151,10 @@ test.describe('EDIT-05: Enhanced Comments System', () => {
       await expect(page.locator('button:has-text("Riapri")').last()).toBeVisible();
 
       // Comment should have visual indication (opacity/strikethrough)
-      const resolvedComment = page.locator(`text=${commentText}`).locator('xpath=ancestor::div[contains(@style, "opacity")]').first();
+      const resolvedComment = page
+        .locator(`text=${commentText}`)
+        .locator('xpath=ancestor::div[contains(@style, "opacity")]')
+        .first();
       await expect(resolvedComment).toBeVisible();
     });
 
@@ -161,7 +175,9 @@ test.describe('EDIT-05: Enhanced Comments System', () => {
       await unresolveButton.click({ force: true });
 
       // Assert: "Risolto" badge should disappear
-      await expect(page.locator('span:has-text("Risolto")').last()).not.toBeVisible({ timeout: 10000 });
+      await expect(page.locator('span:has-text("Risolto")').last()).not.toBeVisible({
+        timeout: 10000,
+      });
 
       // Should show "Risolvi" button again
       await expect(page.locator('button:has-text("Risolvi")').last()).toBeVisible();
@@ -197,7 +213,6 @@ test.describe('EDIT-05: Enhanced Comments System', () => {
       await checkbox.uncheck();
 
       // Wait for comments to reload
-      await page.waitForTimeout(1000);
 
       // Assert: Only unresolved comment should be visible
       await expect(page.locator(`text=${unresolvedText}`)).toBeVisible();
@@ -205,7 +220,6 @@ test.describe('EDIT-05: Enhanced Comments System', () => {
 
       // Act: Re-check "Mostra commenti risolti"
       await checkbox.check();
-      await page.waitForTimeout(1000);
 
       // Assert: Both comments should be visible again
       await expect(page.locator(`text=${unresolvedText}`)).toBeVisible();
@@ -221,7 +235,10 @@ test.describe('EDIT-05: Enhanced Comments System', () => {
       await expect(page.locator(`text=${editorCommentText}`)).toBeVisible({ timeout: 10000 });
 
       // Assert: Should see edit and delete buttons for own comment
-      const ownCommentContainer = page.locator(`text=${editorCommentText}`).locator('xpath=ancestor::div[1]').first();
+      const ownCommentContainer = page
+        .locator(`text=${editorCommentText}`)
+        .locator('xpath=ancestor::div[1]')
+        .first();
       await expect(ownCommentContainer.locator('button:has-text("Modifica")')).toBeVisible();
       await expect(ownCommentContainer.locator('button:has-text("Elimina")')).toBeVisible();
 
@@ -257,7 +274,9 @@ test.describe('EDIT-05: Enhanced Comments System', () => {
       await expect(page.locator(`text=${originalText}`)).not.toBeVisible();
     });
 
-    test('should show cancel button when replying and cancel reply', async ({ editorPage: page }) => {
+    test('should show cancel button when replying and cancel reply', async ({
+      editorPage: page,
+    }) => {
       // Arrange: Create parent comment
       const parentText = `Parent ${Date.now()}`;
       const commentForm = page.locator('textarea[placeholder*="Aggiungi un commento"]');
@@ -323,7 +342,10 @@ test.describe('EDIT-05: Enhanced Comments System', () => {
       page.on('dialog', dialog => dialog.accept());
 
       // Delete editor's comment
-      const editorCommentContainer = page.locator(`text=${editorCommentText}`).locator('xpath=ancestor::div[1]').first();
+      const editorCommentContainer = page
+        .locator(`text=${editorCommentText}`)
+        .locator('xpath=ancestor::div[1]')
+        .first();
       await editorCommentContainer.locator('button:has-text("Elimina")').click({ force: true });
 
       // Assert: Comment should be removed

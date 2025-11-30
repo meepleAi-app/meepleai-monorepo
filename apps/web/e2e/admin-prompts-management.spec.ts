@@ -14,14 +14,22 @@
  * Note: Some tests may be blocked by UI implementation gaps
  */
 
+/**
+ * Prompt Management Admin E2E Tests - MIGRATED TO POM
+ *
+ * @see apps/web/e2e/pages/ - Page Object Model architecture
+ */
+
 import { test as base, expect, Page, Route } from '@playwright/test';
-import { loginAsAdmin } from './fixtures/auth';
+import { AdminHelper } from './pages';
 import { PromptManagementPage } from './pages/admin/AdminPage';
 
 const test = base.extend<{ adminPage: Page }>({
   adminPage: async ({ page }: { page: Page }, use: (page: Page) => Promise<void>) => {
-    // Set up auth mocks first
-    await loginAsAdmin(page, true);
+    const adminHelper = new AdminHelper(page);
+
+    // Set up admin auth (skip navigation)
+    await adminHelper.setupAdminAuth(true);
 
     // Mock prompt management API endpoints
     await page.route('**/api/v1/admin/prompts*', async (route: Route) => {
@@ -44,7 +52,7 @@ const test = base.extend<{ adminPage: Page }>({
                 activeVersion: 1,
                 totalVersions: 3,
                 createdAt: '2025-11-01T10:00:00Z',
-                updatedAt: '2025-11-05T15:30:00Z'
+                updatedAt: '2025-11-05T15:30:00Z',
               },
               {
                 id: 'prompt-2',
@@ -55,13 +63,13 @@ const test = base.extend<{ adminPage: Page }>({
                 activeVersion: 2,
                 totalVersions: 2,
                 createdAt: '2025-11-02T11:00:00Z',
-                updatedAt: '2025-11-06T09:00:00Z'
-              }
+                updatedAt: '2025-11-06T09:00:00Z',
+              },
             ],
             totalCount: 2,
             page: 1,
-            pageSize: 20
-          })
+            pageSize: 20,
+          }),
         });
       }
       // Get specific prompt
@@ -81,8 +89,8 @@ const test = base.extend<{ adminPage: Page }>({
             createdAt: '2025-11-01T10:00:00Z',
             updatedAt: '2025-11-05T15:30:00Z',
             createdByUserId: 'user-1',
-            updatedByUserId: 'user-1'
-          })
+            updatedByUserId: 'user-1',
+          }),
         });
       }
       // Get versions
@@ -99,7 +107,7 @@ const test = base.extend<{ adminPage: Page }>({
               changeDescription: 'Added context handling',
               isActive: false,
               createdAt: '2025-11-05T15:30:00Z',
-              createdByUserId: 'user-1'
+              createdByUserId: 'user-1',
             },
             {
               id: 'version-2',
@@ -109,7 +117,7 @@ const test = base.extend<{ adminPage: Page }>({
               changeDescription: 'Improved response quality',
               isActive: false,
               createdAt: '2025-11-03T12:00:00Z',
-              createdByUserId: 'user-1'
+              createdByUserId: 'user-1',
             },
             {
               id: 'version-1',
@@ -119,9 +127,9 @@ const test = base.extend<{ adminPage: Page }>({
               changeDescription: 'Initial version',
               isActive: true,
               createdAt: '2025-11-01T10:00:00Z',
-              createdByUserId: 'user-1'
-            }
-          ])
+              createdByUserId: 'user-1',
+            },
+          ]),
         });
       }
       // Create new version
@@ -138,8 +146,8 @@ const test = base.extend<{ adminPage: Page }>({
             changeDescription: requestBody.changeDescription,
             isActive: false,
             createdAt: new Date().toISOString(),
-            createdByUserId: 'user-1'
-          })
+            createdByUserId: 'user-1',
+          }),
         });
       }
       // Activate version
@@ -149,8 +157,8 @@ const test = base.extend<{ adminPage: Page }>({
           contentType: 'application/json',
           body: JSON.stringify({
             success: true,
-            message: 'Version activated successfully'
-          })
+            message: 'Version activated successfully',
+          }),
         });
       }
       // Get audit logs
@@ -167,7 +175,7 @@ const test = base.extend<{ adminPage: Page }>({
               userId: 'user-1',
               userEmail: 'admin@meepleai.dev',
               details: { version: 1, previousVersion: null },
-              timestamp: '2025-11-05T15:30:00Z'
+              timestamp: '2025-11-05T15:30:00Z',
             },
             {
               id: 'audit-2',
@@ -177,9 +185,9 @@ const test = base.extend<{ adminPage: Page }>({
               userId: 'user-1',
               userEmail: 'admin@meepleai.dev',
               details: { version: 2 },
-              timestamp: '2025-11-03T12:00:00Z'
-            }
-          ])
+              timestamp: '2025-11-03T12:00:00Z',
+            },
+          ]),
         });
       }
       // Get categories
@@ -187,20 +195,18 @@ const test = base.extend<{ adminPage: Page }>({
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify(['agent', 'rag', 'chat', 'setup'])
+          body: JSON.stringify(['agent', 'rag', 'chat', 'setup']),
         });
-      }
-      else {
+      } else {
         await route.continue();
       }
     });
 
     await use(page);
-  }
+  },
 });
 
 test.describe('Prompt Management Admin E2E Tests', () => {
-
   test('should display prompt templates list', async ({ adminPage: page }) => {
     const promptPage = new PromptManagementPage(page);
     await promptPage.goto();
@@ -312,7 +318,9 @@ test.describe('Prompt Management Admin E2E Tests', () => {
     await page.waitForSelector('[data-testid="version-row"]', { timeout: 10000 });
 
     // Click activate on version 2
-    const version2Row = page.locator('[data-testid="version-row"]').filter({ hasText: 'Version 2' });
+    const version2Row = page
+      .locator('[data-testid="version-row"]')
+      .filter({ hasText: 'Version 2' });
     await version2Row.getByRole('button', { name: /activate/i }).click();
 
     // Should show success
@@ -347,7 +355,9 @@ test.describe('Prompt Management Admin E2E Tests', () => {
     await page.waitForSelector('[data-testid="version-row"]', { timeout: 10000 });
 
     // Version 1 should be marked as active
-    const activeVersion = page.locator('[data-testid="version-row"]').filter({ has: page.locator('[data-testid="active-badge"]') });
+    const activeVersion = page
+      .locator('[data-testid="version-row"]')
+      .filter({ has: page.locator('[data-testid="active-badge"]') });
     await expect(activeVersion).toBeVisible();
   });
 
@@ -373,8 +383,8 @@ test.describe('Prompt Management Admin E2E Tests', () => {
           status: 409,
           contentType: 'application/json',
           body: JSON.stringify({
-            error: 'A new version was created by another user. Please refresh and try again.'
-          })
+            error: 'A new version was created by another user. Please refresh and try again.',
+          }),
         });
       } else {
         await route.continue();
@@ -398,7 +408,9 @@ test.describe('Prompt Management Admin E2E Tests', () => {
     await page.waitForSelector('[data-testid="version-row"]', { timeout: 10000 });
 
     // Click rollback on older version
-    const version1Row = page.locator('[data-testid="version-row"]').filter({ hasText: 'Version 1' });
+    const version1Row = page
+      .locator('[data-testid="version-row"]')
+      .filter({ hasText: 'Version 1' });
     const rollbackButton = version1Row.getByRole('button', { name: /rollback/i });
 
     if (await rollbackButton.isVisible({ timeout: 1000 }).catch(() => false)) {
@@ -417,7 +429,9 @@ test.describe('Prompt Management Admin E2E Tests', () => {
     await promptPage.assertPromptListVisible();
 
     // Check if quick activate button exists in list view
-    const quickActivateButton = page.getByRole('button', { name: /quick.*activate|attiva/i }).first();
+    const quickActivateButton = page
+      .getByRole('button', { name: /quick.*activate|attiva/i })
+      .first();
 
     if (await quickActivateButton.isVisible({ timeout: 1000 }).catch(() => false)) {
       await quickActivateButton.click();

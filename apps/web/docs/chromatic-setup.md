@@ -37,16 +37,19 @@ pnpm test:visual:ci         # CI mode with upload
 
 **Setup**:
 1. ✅ Install: `pnpm add -D @chromatic-com/playwright`
-2. ✅ Add reporter to `playwright.config.ts`
-3. ✅ Set env var: `CHROMATIC_PROJECT_TOKEN=chpt_293b6e01ef6f39d`
+2. ⚠️ Reporter disabled - compatibility issue with Playwright 1.56+
+3. ✅ Set env var in `.env.local`: `CHROMATIC_PROJECT_TOKEN=chpt_293b6e01ef6f39d`
 
-**Usage**:
+**Current Issue**:
+```
+Error: @chromatic-com/playwright/dist/index.js: file must export a single class
+```
+
+**Workaround**:
 ```bash
-# Run E2E tests (generates archives)
+# Use Chromatic CLI directly (when E2E tests pass)
 npx playwright test
-
-# Upload archives to Chromatic
-npx chromatic --playwright --project-token=chpt_293b6e01ef6f39d
+npx chromatic --playwright --project-token=$CHROMATIC_PROJECT_TOKEN
 ```
 
 **What it tests**:
@@ -55,7 +58,9 @@ npx chromatic --playwright --project-token=chpt_293b6e01ef6f39d
 - Responsive layouts across devices
 - Real browser rendering
 
-**Status**: ⏳ **Configured, needs E2E tests passing first**
+**Status**: ⏳ **Package installed, reporter disabled due to compatibility issue**
+
+**Note**: Monitor `@chromatic-com/playwright` updates for Playwright 1.56+ compatibility
 
 ---
 

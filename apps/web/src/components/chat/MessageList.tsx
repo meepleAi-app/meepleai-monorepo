@@ -4,18 +4,17 @@
  * Displays messages with loading and empty states.
  * Integrates with ChatProvider for message state.
  *
- * Simplified version for Phase 3 - will be enhanced in Phase 4 with:
- * - Message animations (AnimatePresence)
+ * Updated for Issue #1840:
+ * - VirtualizedMessageList integration (react-window)
+ * - ChatMessage component (Issue #1831)
  * - Auto-scroll to bottom on new messages
- * - Scroll-to-top button for long conversations
- * - Message grouping by date
+ * - Efficient rendering for large message lists (>50 messages)
  */
 
 import React from 'react';
 import { useChatContext } from '@/hooks/useChatContext';
-import { Message } from './Message';
+import { VirtualizedMessageList } from './VirtualizedMessageList';
 import { SkeletonLoader } from '../loading/SkeletonLoader';
-import { Message as MessageType } from '@/types';
 
 export function MessageList() {
   const {
@@ -56,37 +55,24 @@ export function MessageList() {
     );
   }
 
-  // Messages list
+  // Streaming message data
+  const streamingMessage =
+    isStreaming && (streamingAnswer || streamingStateMessage)
+      ? {
+          content: streamingAnswer || '',
+          stateMessage: streamingStateMessage,
+        }
+      : undefined;
+
+  // Messages list with virtualization (Issue #1840)
   return (
     <div role="region" aria-label="Chat messages" className="flex-1 overflow-y-auto p-6 bg-white">
-      <ul role="log" aria-live="polite" aria-atomic="false" className="list-none m-0 p-0">
-        {messages.map((msg: MessageType) => (
-          <Message key={msg.id} message={msg} isUser={msg.role === 'user'} />
-        ))}
-
-        {/* Streaming message (Issue #1007) */}
-        {isStreaming && streamingAnswer && (
-          <Message
-            key="streaming-message"
-            message={{
-              id: 'temp-streaming',
-              role: 'assistant',
-              content: streamingAnswer,
-              timestamp: new Date(),
-            }}
-            isUser={false}
-          />
-        )}
-
-        {/* Streaming state indicator (Issue #1007) */}
-        {isStreaming && streamingStateMessage && !streamingAnswer && (
-          <li className="mb-4 flex justify-start">
-            <div className="max-w-[70%] px-4 py-2 rounded-lg bg-gray-100 text-gray-600 text-sm italic">
-              {streamingStateMessage}
-            </div>
-          </li>
-        )}
-      </ul>
+      <VirtualizedMessageList
+        messages={messages}
+        streamingMessage={streamingMessage}
+        isStreaming={isStreaming}
+        className="h-full"
+      />
     </div>
   );
 }

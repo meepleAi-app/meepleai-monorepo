@@ -135,7 +135,7 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
         {
             try
             {
-                await Task.Delay(100);
+                await Task.Delay(TestConstants.Timing.SmallDelay);
                 Directory.Delete(_testDataDirectory, true);
             }
             catch (IOException ex)
@@ -314,7 +314,7 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
         midWriteBlob.Setup(b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Returns(async (Stream stream, string fileName, string gameId, CancellationToken ct) =>
             {
-                await Task.Delay(300, ct); // Will throw TaskCanceledException
+                await Task.Delay(TestConstants.Timing.LargeDelay, ct); // Will throw TaskCanceledException
                 return new BlobStorageResult(false, null, null, 0, "Never reached");
             });
         services.AddSingleton<IBlobStorageService>(midWriteBlob.Object);
@@ -374,7 +374,7 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
         midExtractor.Setup(e => e.ExtractTextAsync(It.IsAny<Stream>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
             .Returns(async (Stream stream, bool ocr, CancellationToken ct) =>
             {
-                await Task.Delay(300, ct); // Will throw if cancelled mid-processing
+                await Task.Delay(TestConstants.Timing.LargeDelay, ct); // Will throw if cancelled mid-processing
                 throw new OperationCanceledException("Should not reach here");
             });
         services.AddSingleton<IPdfTextExtractor>(midExtractor.Object);

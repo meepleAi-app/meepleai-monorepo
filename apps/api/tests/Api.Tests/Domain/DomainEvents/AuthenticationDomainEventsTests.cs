@@ -30,7 +30,7 @@ public class AuthenticationDomainEventsTests
         var passwordChangedEvent = (PasswordChangedEvent)domainEvent;
         passwordChangedEvent.UserId.Should().Be(user.Id);
         passwordChangedEvent.EventId.Should().NotBeEmpty();
-        passwordChangedEvent.OccurredAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
+        passwordChangedEvent.OccurredAt.Should().BeCloseTo(DateTime.UtcNow, TestConstants.Timing.ShortTimeout);
     }
 
     [Fact]

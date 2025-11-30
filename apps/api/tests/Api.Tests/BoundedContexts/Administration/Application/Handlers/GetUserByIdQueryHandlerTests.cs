@@ -126,7 +126,7 @@ public class GetUserByIdQueryHandlerTests
         // Assert
         Assert.NotNull(result);
         Assert.NotNull(result.LastSeenAt);
-        Assert.Equal(lastSeenDate, result.LastSeenAt.Value, TimeSpan.FromSeconds(1));
+        Assert.Equal(lastSeenDate, result.LastSeenAt.Value, TestConstants.Timing.VeryShortTimeout);
     }
 
     [Fact]
@@ -184,7 +184,7 @@ public class GetUserByIdQueryHandlerTests
         // Assert
         Assert.NotNull(result);
         Assert.NotNull(result.LastSeenAt);
-        Assert.Equal(recentLastSeen, result.LastSeenAt.Value, TimeSpan.FromSeconds(1));
+        Assert.Equal(recentLastSeen, result.LastSeenAt.Value, TestConstants.Timing.VeryShortTimeout);
     }
 
     [Fact]

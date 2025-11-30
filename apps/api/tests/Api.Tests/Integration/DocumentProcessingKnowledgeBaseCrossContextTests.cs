@@ -128,7 +128,7 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
             }
             catch (NpgsqlException) when (attempt < maxAttempts)
             {
-                await Task.Delay(500, TestCancellationToken);
+                await Task.Delay(TestConstants.Timing.RetryDelay, TestCancellationToken);
             }
         }
     }

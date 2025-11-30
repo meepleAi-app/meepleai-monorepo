@@ -1,3 +1,4 @@
+using Api.Tests.BoundedContexts.KnowledgeBase.TestHelpers;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.Services;
@@ -109,14 +110,14 @@ public class ProviderHealthCheckServiceTests
         var service = new ProviderHealthCheckService(serviceScopeFactory, logger.Object);
 
         // Simulate initialization (normally done by StartAsync)
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+        using var cts = new CancellationTokenSource(TestConstants.Timing.VeryShortTimeout);
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, TestCancellationToken);
 
         // Act
         await service.StartAsync(linkedCts.Token);
 
         // Give time for initialization
-        await Task.Delay(100, TestCancellationToken);
+        await Task.Delay(TestConstants.Timing.SmallDelay, TestCancellationToken);
 
         var allHealth = service.GetAllProviderHealth();
 
@@ -154,7 +155,7 @@ public class ProviderHealthCheckServiceTests
 
         // Act
         await service.StartAsync(linkedCts.Token);
-        await Task.Delay(11000, TestCancellationToken); // Wait for 10s warmup + first check
+        await Task.Delay(KnowledgeBaseTestConstants.ProviderHealthCheck.WarmupAndFirstCheck, TestCancellationToken); // Wait for 10s warmup + first check
 
         var health = service.GetProviderHealth("Ollama");
 
@@ -190,7 +191,7 @@ public class ProviderHealthCheckServiceTests
 
         // Act
         await service.StartAsync(linkedCts.Token);
-        await Task.Delay(11000, TestCancellationToken); // Wait for 10s warmup + first check
+        await Task.Delay(KnowledgeBaseTestConstants.ProviderHealthCheck.WarmupAndFirstCheck, TestCancellationToken); // Wait for 10s warmup + first check
 
         var health = service.GetProviderHealth("Ollama");
 
@@ -217,7 +218,7 @@ public class ProviderHealthCheckServiceTests
                 It.IsAny<CancellationToken>()))
             .Returns(async (string m, string s, string u, double t, int max, CancellationToken ct) =>
             {
-                await Task.Delay(10000, ct); // Simulate slow response (will timeout)
+                await Task.Delay(KnowledgeBaseTestConstants.ProviderHealthCheck.SlowResponseTimeout, ct); // Simulate slow response (will timeout)
                 return LlmCompletionResult.CreateSuccess("pong");
             });
 
@@ -230,7 +231,7 @@ public class ProviderHealthCheckServiceTests
 
         // Act
         await service.StartAsync(linkedCts.Token);
-        await Task.Delay(16000, TestCancellationToken); // Wait for warmup + first check with timeout
+        await Task.Delay(KnowledgeBaseTestConstants.ProviderHealthCheck.WarmupWithTimeoutBuffer, TestCancellationToken); // Wait for warmup + first check with timeout
 
         var health = service.GetProviderHealth("Ollama");
 
@@ -262,7 +263,7 @@ public class ProviderHealthCheckServiceTests
 
         // Act
         await service.StartAsync(TestCancellationToken);
-        await Task.Delay(100, TestCancellationToken); // Let it run briefly
+        await Task.Delay(TestConstants.Timing.SmallDelay, TestCancellationToken); // Let it run briefly
         await service.StopAsync(TestCancellationToken);
 
         // Assert - No exception thrown, service stopped gracefully

@@ -1,3 +1,4 @@
+using Api.Tests.Constants;
 using System.Net.Http.Json;
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
@@ -299,7 +300,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
         await using var pdfStream = File.OpenRead(BarragePdfPath);
 
         // Act with short cancellation token
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(120));
+        using var cts = new CancellationTokenSource(PdfUploadTestConstants.ProcessingTimeouts.VlmProcessing);
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, TestCancellationToken);
 
         // Should complete within 120s for integration test

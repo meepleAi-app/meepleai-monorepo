@@ -73,7 +73,7 @@ public class WeeklyEvaluationServiceTests : IDisposable
 
         // Act
         var executeTask = service.StartAsync(_cts.Token);
-        await Task.Delay(100, CancellationToken.None); // Give it time to potentially run
+        await Task.Delay(TestConstants.Timing.SmallDelay, CancellationToken.None); // Give it time to potentially run
         await service.StopAsync(_cts.Token);
 
         // Assert
@@ -96,7 +96,7 @@ public class WeeklyEvaluationServiceTests : IDisposable
 
         // Act
         await service.StartAsync(_cts.Token);
-        await Task.Delay(100, CancellationToken.None);
+        await Task.Delay(TestConstants.Timing.SmallDelay, CancellationToken.None);
         await service.StopAsync(_cts.Token);
 
         // Assert
@@ -119,7 +119,7 @@ public class WeeklyEvaluationServiceTests : IDisposable
 
         // Act
         await service.StartAsync(_cts.Token);
-        await Task.Delay(100, CancellationToken.None);
+        await Task.Delay(TestConstants.Timing.SmallDelay, CancellationToken.None);
         await service.StopAsync(_cts.Token);
 
         // Assert
@@ -163,7 +163,7 @@ public class WeeklyEvaluationServiceTests : IDisposable
         _timeProvider.Advance(TimeSpan.FromMinutes(0.002));
 
         // Wait for execution to complete in real time
-        await Task.Delay(200, CancellationToken.None);
+        await Task.Delay(TestConstants.Timing.SmallDelay, CancellationToken.None);
 
         await service.StopAsync(_cts.Token);
 
@@ -215,7 +215,7 @@ public class WeeklyEvaluationServiceTests : IDisposable
         _timeProvider.Advance(TimeSpan.FromMinutes(0.002));
 
         // Wait for execution to complete in real time
-        await Task.Delay(200, CancellationToken.None);
+        await Task.Delay(TestConstants.Timing.SmallDelay, CancellationToken.None);
 
         await service.StopAsync(_cts.Token);
 
@@ -264,7 +264,7 @@ public class WeeklyEvaluationServiceTests : IDisposable
         _timeProvider.Advance(TimeSpan.FromMinutes(0.002));
 
         // Wait for execution to complete in real time
-        await Task.Delay(200, CancellationToken.None);
+        await Task.Delay(TestConstants.Timing.SmallDelay, CancellationToken.None);
 
         await service.StopAsync(_cts.Token);
 
@@ -313,7 +313,7 @@ public class WeeklyEvaluationServiceTests : IDisposable
         _timeProvider.Advance(TimeSpan.FromMinutes(0.002));
 
         // Wait for first execution (which throws) to complete in real time
-        await Task.Delay(200, CancellationToken.None);
+        await Task.Delay(TestConstants.Timing.SmallDelay, CancellationToken.None);
 
         // Service should continue running despite exception
         // We can verify by checking that it didn't crash
@@ -402,7 +402,7 @@ public class WeeklyEvaluationServiceTests : IDisposable
         _timeProvider.Advance(TimeSpan.FromMinutes(0.002));
 
         // Wait for execution to complete in real time
-        await Task.Delay(200, CancellationToken.None);
+        await Task.Delay(TestConstants.Timing.SmallDelay, CancellationToken.None);
 
         await service.StopAsync(_cts.Token);
 
@@ -471,7 +471,7 @@ public class WeeklyEvaluationServiceTests : IDisposable
         _timeProvider.Advance(TimeSpan.FromMinutes(0.002));
 
         // Wait for execution to complete in real time
-        await Task.Delay(200, CancellationToken.None);
+        await Task.Delay(TestConstants.Timing.SmallDelay, CancellationToken.None);
 
         await service.StopAsync(_cts.Token);
 
@@ -525,7 +525,7 @@ public class WeeklyEvaluationServiceTests : IDisposable
         _timeProvider.Advance(TimeSpan.FromMinutes(0.002));
 
         // Wait for execution to complete in real time
-        await Task.Delay(200, CancellationToken.None);
+        await Task.Delay(TestConstants.Timing.SmallDelay, CancellationToken.None);
 
         await service.StopAsync(_cts.Token);
 
@@ -628,7 +628,7 @@ public class WeeklyEvaluationServiceTests : IDisposable
         _timeProvider.Advance(TimeSpan.FromMinutes(0.002));
 
         // Wait for execution to complete in real time
-        await Task.Delay(200, CancellationToken.None);
+        await Task.Delay(TestConstants.Timing.SmallDelay, CancellationToken.None);
 
         await service.StopAsync(_cts.Token);
 

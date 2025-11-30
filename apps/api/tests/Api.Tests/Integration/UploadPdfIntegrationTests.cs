@@ -146,7 +146,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
             }
             catch (NpgsqlException) when (attempt < 2)
             {
-                await Task.Delay(500, TestCancellationToken);
+                await Task.Delay(TestConstants.Timing.RetryDelay, TestCancellationToken);
             }
         }
 
@@ -165,7 +165,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
             try
             {
                 // Wait for any pending I/O to complete
-                await Task.Delay(100);
+                await Task.Delay(TestConstants.Timing.SmallDelay);
                 Directory.Delete(_testDataDirectory, true);
             }
             catch (IOException ex)
@@ -973,7 +973,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         {
             // Transaction A locks user, tries to lock game
             var userA = await contextA.Users.Where(u => u.Id == testUser.Id).FirstAsync(TestCancellationToken);
-            await Task.Delay(100, TestCancellationToken); // Simulate processing time
+            await Task.Delay(TestConstants.Timing.SmallDelay, TestCancellationToken); // Simulate processing time
 
             // Transaction B locks game, tries to lock user (potential deadlock)
             var gameB = await contextB.Games.Where(g => g.Id == testGame.Id).FirstAsync(TestCancellationToken);
@@ -1138,7 +1138,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         doc.GameId.Should().Be(testGame.Id);
         doc.UploadedByUserId.Should().Be(testUser.Id);
         doc.ProcessingStatus.Should().Be("pending");
-        doc.UploadedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(10));
+        doc.UploadedAt.Should().BeCloseTo(DateTime.UtcNow, TestConstants.Timing.AssertionTolerance);
 
         // Verify relationships loaded correctly
         doc.Game.Should().NotBeNull();

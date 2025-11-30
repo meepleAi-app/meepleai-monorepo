@@ -93,9 +93,24 @@ public static class TestConstants
     /// </summary>
     public static class Timing
     {
+        // Timeouts
         public static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(30);
         public static readonly TimeSpan ShortTimeout = TimeSpan.FromSeconds(5);
         public static readonly TimeSpan LongTimeout = TimeSpan.FromMinutes(5);
+
+        // Short delays for async operations
+        public static readonly TimeSpan MinimalDelay = TimeSpan.FromMilliseconds(1);
+        public static readonly TimeSpan TinyDelay = TimeSpan.FromMilliseconds(10);
+        public static readonly TimeSpan SmallDelay = TimeSpan.FromMilliseconds(100);
+        public static readonly TimeSpan MediumDelay = TimeSpan.FromMilliseconds(150);
+        public static readonly TimeSpan LargeDelay = TimeSpan.FromMilliseconds(300);
+        public static readonly TimeSpan RetryDelay = TimeSpan.FromMilliseconds(500);
+        public static readonly TimeSpan VeryShortTimeout = TimeSpan.FromSeconds(1);
+        public static readonly TimeSpan MediumTimeout = TimeSpan.FromSeconds(2);
+
+        // Assertion tolerances
+        public static readonly TimeSpan AssertionTolerance = TimeSpan.FromSeconds(10);
+        public static readonly TimeSpan StrictAssertionTolerance = TimeSpan.FromSeconds(2);
 
         public static readonly DateTime TestDate = new(2025, 1, 1, 12, 0, 0, DateTimeKind.Utc);
     }

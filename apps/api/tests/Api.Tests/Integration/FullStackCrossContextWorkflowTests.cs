@@ -93,7 +93,7 @@ public sealed class FullStackCrossContextWorkflowTests : IAsyncLifetime
             }
             catch (NpgsqlException) when (attempt < 2)
             {
-                await Task.Delay(500, TestCancellationToken);
+                await Task.Delay(TestConstants.Timing.RetryDelay, TestCancellationToken);
             }
         }
     }
@@ -316,7 +316,7 @@ public sealed class FullStackCrossContextWorkflowTests : IAsyncLifetime
 
         // Create short-lived session
         var sessionToken = SessionToken.Generate();
-        var session = new Session(Guid.NewGuid(), user.Id, sessionToken, TimeSpan.FromSeconds(1));
+        var session = new Session(Guid.NewGuid(), user.Id, sessionToken, TestConstants.Timing.VeryShortTimeout);
         await sessionRepository.AddAsync(session, TestCancellationToken);
 
         var game = new Game(
@@ -342,7 +342,7 @@ public sealed class FullStackCrossContextWorkflowTests : IAsyncLifetime
         await _dbContext!.SaveChangesAsync(TestCancellationToken);
 
         // Wait for session expiration
-        await Task.Delay(TimeSpan.FromSeconds(2));
+        await Task.Delay(TestConstants.Timing.MediumTimeout);
 
         // Assert
         var userSessions = await sessionRepository.GetByUserIdAsync(user.Id, TestCancellationToken);

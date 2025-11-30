@@ -183,7 +183,7 @@ public sealed class ResolveRuleCommentIntegrationTests : IAsyncLifetime
             }
             catch (Exception ex) when ((ex is Npgsql.NpgsqlException or InvalidOperationException) && attempt < maxAttempts)
             {
-                await Task.Delay(500, TestCancellationToken);
+                await Task.Delay(TestConstants.Timing.RetryDelay, TestCancellationToken);
             }
         }
     }

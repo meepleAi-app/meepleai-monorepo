@@ -123,7 +123,7 @@ public sealed class UpdateRuleCommentIntegrationTests : IAsyncLifetime
             }
             catch (NpgsqlException) when (attempt < maxAttempts)
             {
-                await Task.Delay(500, TestCancellationToken);
+                await Task.Delay(TestConstants.Timing.RetryDelay, TestCancellationToken);
             }
         }
     }
@@ -257,7 +257,7 @@ public sealed class UpdateRuleCommentIntegrationTests : IAsyncLifetime
 
         // Assert
         result.Should().NotBeNull();
-        result.CreatedAt.Should().BeCloseTo(originalCreatedAt, TimeSpan.FromSeconds(1));
+        result.CreatedAt.Should().BeCloseTo(originalCreatedAt, TestConstants.Timing.VeryShortTimeout);
         result.GameId.Should().Be(originalGameId.ToString());
         result.Version.Should().Be(originalVersion);
     }

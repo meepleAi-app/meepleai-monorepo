@@ -102,9 +102,9 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
         var userId = await CreateTestUserAsync();
 
         var (key1, _) = ApiKey.Create(Guid.NewGuid(), userId, "Key 1", "read");
-        await Task.Delay(10); // Ensure different timestamps
+        await Task.Delay(TestConstants.Timing.TinyDelay); // Ensure different timestamps
         var (key2, _) = ApiKey.Create(Guid.NewGuid(), userId, "Key 2", "write");
-        await Task.Delay(10);
+        await Task.Delay(TestConstants.Timing.TinyDelay);
         var (key3, _) = ApiKey.Create(Guid.NewGuid(), userId, "Key 3", "admin");
 
         await Repository.AddAsync(key1);

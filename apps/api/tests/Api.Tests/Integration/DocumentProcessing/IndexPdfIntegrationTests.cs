@@ -126,7 +126,7 @@ public sealed class IndexPdfIntegrationTests : IAsyncLifetime
             }
             catch (NpgsqlException) when (attempt < 2)
             {
-                await Task.Delay(500, TestCancellationToken);
+                await Task.Delay(TestConstants.Timing.RetryDelay, TestCancellationToken);
             }
         }
 
@@ -614,7 +614,7 @@ public sealed class IndexPdfIntegrationTests : IAsyncLifetime
         var originalIndexedAt = originalVectorDoc!.IndexedAt;
 
         // Wait a moment to ensure timestamp difference
-        await Task.Delay(100, TestCancellationToken);
+        await Task.Delay(TestConstants.Timing.RetryDelay, TestCancellationToken);
 
         var handler = _serviceProvider!.GetRequiredService<IndexPdfCommandHandler>();
         var command = new IndexPdfCommand(pdfId.ToString());

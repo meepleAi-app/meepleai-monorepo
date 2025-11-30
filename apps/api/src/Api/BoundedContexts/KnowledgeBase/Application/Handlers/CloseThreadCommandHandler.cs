@@ -25,7 +25,7 @@ public class CloseThreadCommandHandler : ICommandHandler<CloseThreadCommand, Cha
     public async Task<ChatThreadDto> Handle(CloseThreadCommand command, CancellationToken cancellationToken)
     {
         // Retrieve thread
-        var thread = await _threadRepository.GetByIdAsync(command.ThreadId, cancellationToken);
+        var thread = await _threadRepository.GetByIdAsync(command.ThreadId, cancellationToken).ConfigureAwait(false);
         if (thread == null)
             throw new InvalidOperationException($"Thread with ID {command.ThreadId} not found");
 
@@ -33,8 +33,8 @@ public class CloseThreadCommandHandler : ICommandHandler<CloseThreadCommand, Cha
         thread.CloseThread();
 
         // Persist
-        await _threadRepository.UpdateAsync(thread, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _threadRepository.UpdateAsync(thread, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         // Map to DTO
         return MapToDto(thread);

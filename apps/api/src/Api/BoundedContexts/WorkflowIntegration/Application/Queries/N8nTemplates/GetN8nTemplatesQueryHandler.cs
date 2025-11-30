@@ -29,7 +29,7 @@ public sealed class GetN8nTemplatesQueryHandler : IQueryHandler<GetN8nTemplatesQ
             query.Category != null ? $" for category '{query.Category}'" : string.Empty);
 
         // Delegate to infrastructure service for file I/O and deserialization
-        var templates = await _templateService.GetTemplatesAsync(query.Category, cancellationToken);
+        var templates = await _templateService.GetTemplatesAsync(query.Category, cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation("Retrieved {Count} n8n templates", templates.Count);
 

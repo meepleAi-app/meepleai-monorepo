@@ -26,13 +26,13 @@ public class InvalidateCacheCommandHandler : ICommandHandler<InvalidateCacheComm
             foreach (var env in environments)
             {
                 var cacheKey = $"config:{command.Key}:{env}";
-                await _cache.RemoveAsync(cacheKey, cancellationToken);
+                await _cache.RemoveAsync(cacheKey, cancellationToken).ConfigureAwait(false);
             }
         }
         else
         {
             // Invalidate all configuration cache entries using tag-based invalidation
-            await _cache.RemoveByTagAsync("config:category:general", cancellationToken);
+            await _cache.RemoveByTagAsync("config:category:general", cancellationToken).ConfigureAwait(false);
         }
 
         return default;

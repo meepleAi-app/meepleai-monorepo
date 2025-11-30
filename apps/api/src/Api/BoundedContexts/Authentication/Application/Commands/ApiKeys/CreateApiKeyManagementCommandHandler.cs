@@ -52,7 +52,7 @@ public class CreateApiKeyManagementCommandHandler : ICommandHandler<CreateApiKey
         }
 
         _db.ApiKeys.Add(entity);
-        await _db.SaveChangesAsync(cancellationToken);
+        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "API key created. KeyId: {KeyId}, UserId: {UserId}, Name: {Name}",

@@ -34,8 +34,8 @@ public class AbandonGameSessionCommandHandler : ICommandHandler<AbandonGameSessi
         session.Abandon(command.Reason);
 
         // Persist
-        await _sessionRepository.UpdateAsync(session, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         // Map to DTO using shared mapper
         return session.ToDto();

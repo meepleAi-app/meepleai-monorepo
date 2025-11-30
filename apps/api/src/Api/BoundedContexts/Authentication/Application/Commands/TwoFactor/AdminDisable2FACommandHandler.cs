@@ -31,7 +31,7 @@ public class AdminDisable2FACommandHandler : ICommandHandler<AdminDisable2FAComm
         try
         {
             // Verify admin user exists and has admin role
-            var adminUser = await _userRepository.GetByIdAsync(command.AdminUserId, cancellationToken);
+            var adminUser = await _userRepository.GetByIdAsync(command.AdminUserId, cancellationToken).ConfigureAwait(false);
             if (adminUser == null)
             {
                 _logger.LogWarning("Admin user {AdminUserId} not found", command.AdminUserId);
@@ -45,7 +45,7 @@ public class AdminDisable2FACommandHandler : ICommandHandler<AdminDisable2FAComm
             }
 
             // Verify target user exists
-            var targetUser = await _userRepository.GetByIdAsync(command.TargetUserId, cancellationToken);
+            var targetUser = await _userRepository.GetByIdAsync(command.TargetUserId, cancellationToken).ConfigureAwait(false);
             if (targetUser == null)
             {
                 _logger.LogWarning("Target user {TargetUserId} not found for admin 2FA disable", command.TargetUserId);
@@ -63,10 +63,10 @@ public class AdminDisable2FACommandHandler : ICommandHandler<AdminDisable2FAComm
             targetUser.Disable2FA(wasAdminOverride: true);
 
             // Persist the updated user state via repository
-            await _userRepository.UpdateAsync(targetUser, cancellationToken);
+            await _userRepository.UpdateAsync(targetUser, cancellationToken).ConfigureAwait(false);
 
             // Save changes (event handler will send email notification)
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Admin {AdminUserId} successfully disabled 2FA for user {TargetUserId}",

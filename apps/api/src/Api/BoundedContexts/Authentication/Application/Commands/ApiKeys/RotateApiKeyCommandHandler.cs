@@ -61,9 +61,9 @@ public class RotateApiKeyCommandHandler : ICommandHandler<RotateApiKeyCommand, R
         _db.ApiKeys.Add(newEntity);
 
         // Revoke old key
-        await _authService.RevokeApiKeyAsync(command.KeyId, command.UserId, cancellationToken);
+        await _authService.RevokeApiKeyAsync(command.KeyId, command.UserId, cancellationToken).ConfigureAwait(false);
 
-        await _db.SaveChangesAsync(cancellationToken);
+        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "API key rotated. OldKeyId: {OldKeyId}, NewKeyId: {NewKeyId}, UserId: {UserId}",

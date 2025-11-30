@@ -30,11 +30,11 @@ public sealed class ConfigurationToggledEventHandler : DomainEventHandlerBase<Co
         foreach (var env in environments)
         {
             var cacheKey = $"config:{domainEvent.Key.Value}:{env}";
-            await _cache.RemoveAsync(cacheKey, cancellationToken);
+            await _cache.RemoveAsync(cacheKey, cancellationToken).ConfigureAwait(false);
         }
 
         // Also use tag-based invalidation for broader cleanup
-        await _cache.RemoveByTagAsync("config:category:general", cancellationToken);
+        await _cache.RemoveByTagAsync("config:category:general", cancellationToken).ConfigureAwait(false);
 
         // Future: Send notification for feature flag toggles
         // Future: Track feature flag usage metrics

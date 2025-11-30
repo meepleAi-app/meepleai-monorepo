@@ -95,7 +95,7 @@ public class GameSessionRepository : RepositoryBase, IGameSessionRepository
         if (limit.HasValue)
             query = query.Take(limit.Value);
 
-        var sessionEntities = await query.ToListAsync(cancellationToken);
+        var sessionEntities = await query.ToListAsync(cancellationToken).ConfigureAwait(false);
         return sessionEntities.Select(MapToDomain).ToList();
     }
 
@@ -128,7 +128,7 @@ public class GameSessionRepository : RepositoryBase, IGameSessionRepository
         if (limit.HasValue)
             query = query.Take(limit.Value);
 
-        var sessionEntities = await query.ToListAsync(cancellationToken);
+        var sessionEntities = await query.ToListAsync(cancellationToken).ConfigureAwait(false);
         return sessionEntities.Select(MapToDomain).ToList();
     }
 
@@ -138,7 +138,7 @@ public class GameSessionRepository : RepositoryBase, IGameSessionRepository
         CollectDomainEvents(session);
 
         var sessionEntity = MapToPersistence(session);
-        await DbContext.GameSessions.AddAsync(sessionEntity, cancellationToken);
+        await DbContext.GameSessions.AddAsync(sessionEntity, cancellationToken).ConfigureAwait(false);
     }
 
     public Task UpdateAsync(GameSession session, CancellationToken cancellationToken = default)
@@ -168,7 +168,7 @@ public class GameSessionRepository : RepositoryBase, IGameSessionRepository
 
     public async Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return await DbContext.GameSessions.AnyAsync(s => s.Id == id, cancellationToken);
+        return await DbContext.GameSessions.AnyAsync(s => s.Id == id, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>

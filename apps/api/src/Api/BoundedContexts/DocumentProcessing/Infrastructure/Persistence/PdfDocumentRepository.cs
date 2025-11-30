@@ -60,7 +60,7 @@ public class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
     {
         CollectDomainEvents(document);
         var entity = MapToPersistence(document);
-        await DbContext.PdfDocuments.AddAsync(entity, cancellationToken);
+        await DbContext.PdfDocuments.AddAsync(entity, cancellationToken).ConfigureAwait(false);
     }
 
     public Task UpdateAsync(PdfDocument document, CancellationToken cancellationToken = default)
@@ -88,7 +88,7 @@ public class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
 
     public async Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return await DbContext.PdfDocuments.AnyAsync(p => p.Id == id, cancellationToken);
+        return await DbContext.PdfDocuments.AnyAsync(p => p.Id == id, cancellationToken).ConfigureAwait(false);
     }
 
     private static PdfDocument MapToDomain(Api.Infrastructure.Entities.PdfDocumentEntity entity)

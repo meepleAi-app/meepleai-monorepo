@@ -28,18 +28,18 @@ public class BulkUpdateConfigsCommandHandler : ICommandHandler<BulkUpdateConfigs
 
         foreach (var update in command.Updates)
         {
-            var config = await _configurationRepository.GetByIdAsync(update.Id, cancellationToken);
+            var config = await _configurationRepository.GetByIdAsync(update.Id, cancellationToken).ConfigureAwait(false);
             if (config == null)
             {
                 throw new InvalidOperationException($"Configuration with ID {update.Id} not found");
             }
 
             config.UpdateValue(update.Value, command.UserId);
-            await _configurationRepository.UpdateAsync(config, cancellationToken);
+            await _configurationRepository.UpdateAsync(config, cancellationToken).ConfigureAwait(false);
             updatedConfigs.Add(MapToDto(config));
         }
 
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return updatedConfigs;
     }
 

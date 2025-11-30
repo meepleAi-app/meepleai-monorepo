@@ -55,7 +55,7 @@ public sealed class LogWorkflowErrorCommandHandler : ICommandHandler<LogWorkflow
         // - Database persistence
         // - Cache invalidation
         // - Resilience pattern (never fails webhook)
-        await _errorLoggingService.LogErrorAsync(request, cancellationToken);
+        await _errorLoggingService.LogErrorAsync(request, cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation("Workflow error logged successfully for WorkflowId={WorkflowId}", command.WorkflowId);
     }

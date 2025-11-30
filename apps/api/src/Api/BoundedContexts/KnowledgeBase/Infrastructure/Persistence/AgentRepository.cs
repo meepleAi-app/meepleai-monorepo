@@ -87,8 +87,8 @@ public class AgentRepository : RepositoryBase, IAgentRepository
     {
         CollectDomainEvents(agent);
         var entity = KnowledgeBaseMappers.ToEntity(agent);
-        await DbContext.Set<AgentEntity>().AddAsync(entity, ct);
-        await DbContext.SaveChangesAsync(ct);
+        await DbContext.Set<AgentEntity>().AddAsync(entity, ct).ConfigureAwait(false);
+        await DbContext.SaveChangesAsync(ct).ConfigureAwait(false);
     }
 
     public async Task UpdateAsync(Agent agent, CancellationToken ct = default)
@@ -105,7 +105,7 @@ public class AgentRepository : RepositoryBase, IAgentRepository
         }
 
         DbContext.Set<AgentEntity>().Update(entity);
-        await DbContext.SaveChangesAsync(ct);
+        await DbContext.SaveChangesAsync(ct).ConfigureAwait(false);
     }
 
     public async Task DeleteAsync(Guid id, CancellationToken ct = default)
@@ -116,7 +116,7 @@ public class AgentRepository : RepositoryBase, IAgentRepository
         if (entity != null)
         {
             DbContext.Set<AgentEntity>().Remove(entity);
-            await DbContext.SaveChangesAsync(ct);
+            await DbContext.SaveChangesAsync(ct).ConfigureAwait(false);
         }
     }
 

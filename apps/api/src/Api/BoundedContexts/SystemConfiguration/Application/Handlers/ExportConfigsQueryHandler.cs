@@ -20,7 +20,7 @@ public class ExportConfigsQueryHandler : IQueryHandler<ExportConfigsQuery, Confi
     public async Task<ConfigurationExportDto> Handle(ExportConfigsQuery query, CancellationToken cancellationToken)
     {
         // Get all configurations for the environment
-        var allConfigs = await _configurationRepository.GetAllAsync(cancellationToken);
+        var allConfigs = await _configurationRepository.GetAllAsync(cancellationToken).ConfigureAwait(false);
 
         // Filter by environment and active status
         var configs = allConfigs

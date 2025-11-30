@@ -73,7 +73,7 @@ public class MoveValidationDomainService
         }
 
         // Retrieve RuleSpec for the game
-        var ruleSpec = await GetRuleSpecAsync(session.GameId, ruleSpecVersion, cancellationToken);
+        var ruleSpec = await GetRuleSpecAsync(session.GameId, ruleSpecVersion, cancellationToken).ConfigureAwait(false);
 
         if (ruleSpec == null)
         {

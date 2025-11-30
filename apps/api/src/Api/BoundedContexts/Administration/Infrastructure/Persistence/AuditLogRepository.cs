@@ -59,7 +59,7 @@ public class AuditLogRepository : RepositoryBase, IAuditLogRepository
     {
         CollectDomainEvents(auditLog);
         var entity = MapToPersistence(auditLog);
-        await DbContext.AuditLogs.AddAsync(entity, cancellationToken);
+        await DbContext.AuditLogs.AddAsync(entity, cancellationToken).ConfigureAwait(false);
     }
 
     public Task UpdateAsync(AuditLog auditLog, CancellationToken cancellationToken = default)
@@ -74,7 +74,7 @@ public class AuditLogRepository : RepositoryBase, IAuditLogRepository
 
     public async Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return await DbContext.AuditLogs.AnyAsync(a => a.Id == id, cancellationToken);
+        return await DbContext.AuditLogs.AnyAsync(a => a.Id == id, cancellationToken).ConfigureAwait(false);
     }
 
     private static AuditLog MapToDomain(Api.Infrastructure.Entities.AuditLogEntity entity)

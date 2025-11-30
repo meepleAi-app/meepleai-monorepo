@@ -32,7 +32,7 @@ public sealed class TwoFactorDisabledEventHandler : DomainEventHandlerBase<TwoFa
         // Send security alert email to user
         try
         {
-            var user = await _userRepository.GetByIdAsync(domainEvent.UserId, cancellationToken);
+            var user = await _userRepository.GetByIdAsync(domainEvent.UserId, cancellationToken).ConfigureAwait(false);
             if (user != null)
             {
                 await _emailService.SendTwoFactorDisabledEmailAsync(

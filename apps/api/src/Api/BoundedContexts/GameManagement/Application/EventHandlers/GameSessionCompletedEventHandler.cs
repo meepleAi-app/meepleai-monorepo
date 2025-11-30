@@ -18,7 +18,7 @@ public sealed class GameSessionCompletedEventHandler : DomainEventHandlerBase<Ga
     {
         // Auto-audit logging is handled by base class
         // Add additional business logic here if needed (e.g., update game statistics)
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
     }
 
     protected override Dictionary<string, object?>? GetAuditMetadata(GameSessionCompletedEvent domainEvent)

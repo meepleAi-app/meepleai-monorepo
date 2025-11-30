@@ -65,7 +65,7 @@ public class UnresolveRuleCommentCommandHandler : IRequestHandler<UnresolveRuleC
             }
         }
 
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Unresolved comment {CommentId} by user {UserId} (unresolveParent: {UnresolveParent}, admin: {IsAdmin})",

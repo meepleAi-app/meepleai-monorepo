@@ -37,7 +37,7 @@ public class UpdateUserTierCommandHandler : ICommandHandler<UpdateUserTierComman
     {
         // Authorization: While endpoint checks admin role, we verify again for defense in depth
         // and to ensure handler can be safely called from any context
-        var requester = await _userRepository.GetByIdAsync(command.RequesterUserId, cancellationToken);
+        var requester = await _userRepository.GetByIdAsync(command.RequesterUserId, cancellationToken).ConfigureAwait(false);
         if (requester == null)
             throw new DomainException("Requester not found");
 
@@ -45,7 +45,7 @@ public class UpdateUserTierCommandHandler : ICommandHandler<UpdateUserTierComman
             throw new DomainException("Only administrators can change user tiers");
 
         // Get target user
-        var user = await _userRepository.GetByIdAsync(command.UserId, cancellationToken);
+        var user = await _userRepository.GetByIdAsync(command.UserId, cancellationToken).ConfigureAwait(false);
         if (user == null)
             throw new DomainException($"User {command.UserId} not found");
 
@@ -65,8 +65,8 @@ public class UpdateUserTierCommandHandler : ICommandHandler<UpdateUserTierComman
         user.UpdateTier(newTier, requester.Role);
 
         // Persist updates - required because repository uses AsNoTracking
-        await _userRepository.UpdateAsync(user, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _userRepository.UpdateAsync(user, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Admin {AdminId} changed tier for user {UserId} from {OldTier} to {NewTier}",

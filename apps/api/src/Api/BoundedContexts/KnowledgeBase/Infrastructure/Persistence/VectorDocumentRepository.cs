@@ -59,8 +59,8 @@ public class VectorDocumentRepository : RepositoryBase, IVectorDocumentRepositor
     {
         CollectDomainEvents(document);
         var entity = document.ToEntity();
-        await DbContext.VectorDocuments.AddAsync(entity, cancellationToken);
-        await DbContext.SaveChangesAsync(cancellationToken);
+        await DbContext.VectorDocuments.AddAsync(entity, cancellationToken).ConfigureAwait(false);
+        await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public async Task UpdateAsync(VectorDocument document, CancellationToken cancellationToken = default)
@@ -68,7 +68,7 @@ public class VectorDocumentRepository : RepositoryBase, IVectorDocumentRepositor
         CollectDomainEvents(document);
         var entity = document.ToEntity();
         DbContext.VectorDocuments.Update(entity);
-        await DbContext.SaveChangesAsync(cancellationToken);
+        await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
@@ -79,7 +79,7 @@ public class VectorDocumentRepository : RepositoryBase, IVectorDocumentRepositor
         if (entity != null)
         {
             DbContext.VectorDocuments.Remove(entity);
-            await DbContext.SaveChangesAsync(cancellationToken);
+            await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
     }
 
@@ -97,7 +97,7 @@ public class VectorDocumentRepository : RepositoryBase, IVectorDocumentRepositor
 
     public async Task<int> GetTotalCountAsync(CancellationToken cancellationToken = default)
     {
-        return await DbContext.VectorDocuments.CountAsync(cancellationToken);
+        return await DbContext.VectorDocuments.CountAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<int> GetTotalEmbeddingsCountAsync(CancellationToken cancellationToken = default)

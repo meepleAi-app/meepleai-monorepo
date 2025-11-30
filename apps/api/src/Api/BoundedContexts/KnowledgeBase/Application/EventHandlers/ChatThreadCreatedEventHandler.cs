@@ -17,7 +17,7 @@ public sealed class ChatThreadCreatedEventHandler : DomainEventHandlerBase<ChatT
     protected override async Task HandleEventAsync(ChatThreadCreatedEvent domainEvent, CancellationToken cancellationToken)
     {
         // Auto-audit logging is handled by base class
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
     }
 
     protected override Dictionary<string, object?>? GetAuditMetadata(ChatThreadCreatedEvent domainEvent)

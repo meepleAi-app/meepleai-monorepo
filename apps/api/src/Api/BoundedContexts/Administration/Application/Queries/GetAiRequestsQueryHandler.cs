@@ -47,7 +47,7 @@ public class GetAiRequestsQueryHandler : IQueryHandler<GetAiRequestsQuery, AiReq
         }
 
         // Get total count before pagination
-        var totalCount = await query.CountAsync(cancellationToken);
+        var totalCount = await query.CountAsync(cancellationToken).ConfigureAwait(false);
 
         // Get paginated results
         var requests = await query

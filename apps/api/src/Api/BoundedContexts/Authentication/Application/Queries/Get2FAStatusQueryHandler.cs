@@ -25,7 +25,7 @@ public class Get2FAStatusQueryHandler : IQueryHandler<Get2FAStatusQuery, TwoFact
     {
         try
         {
-            var status = await _totpService.GetTwoFactorStatusAsync(query.UserId, cancellationToken);
+            var status = await _totpService.GetTwoFactorStatusAsync(query.UserId, cancellationToken).ConfigureAwait(false);
 
             // Map from infrastructure response to application DTO
             return new TwoFactorStatusDto

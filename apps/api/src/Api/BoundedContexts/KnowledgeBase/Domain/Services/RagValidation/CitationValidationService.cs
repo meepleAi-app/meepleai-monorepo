@@ -139,7 +139,7 @@ public class CitationValidationService : ICitationValidationService
         var pdfDict = pdfDocuments.ToDictionary(p => p.Id.ToString(), p => p.PageCount ?? 0);
         var errors = new List<CitationValidationError>();
 
-        return await ValidateSingleCitationInternalAsync(snippet, pdfDict, errors, cancellationToken);
+        return await ValidateSingleCitationInternalAsync(snippet, pdfDict, errors, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>

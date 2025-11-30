@@ -190,12 +190,12 @@ public class HybridLlmService : ILlmService
                 {
                     RecordSuccess(client.ProviderName, attemptStopwatch.ElapsedMilliseconds);
                     AddRoutingMetadata(result, decision, client, attemptStopwatch.ElapsedMilliseconds);
-                    await LogCostAsync(result, user, attemptStopwatch.ElapsedMilliseconds, ct);
+                    await LogCostAsync(result, user, attemptStopwatch.ElapsedMilliseconds, ct).ConfigureAwait(false);
                     return result;
                 }
 
                 RecordFailure(client.ProviderName, attemptStopwatch.ElapsedMilliseconds);
-                await LogCostFailureAsync(result.ErrorMessage, user, attemptStopwatch.ElapsedMilliseconds, ct);
+                await LogCostFailureAsync(result.ErrorMessage, user, attemptStopwatch.ElapsedMilliseconds, ct).ConfigureAwait(false);
                 lastFailure = NormalizeFailureResult(result, client.ProviderName);
             }
             catch (Exception ex)
@@ -207,7 +207,7 @@ public class HybridLlmService : ILlmService
                     "Error generating completion with {Provider} ({Model}) - Circuit state: {CircuitState}",
                     client.ProviderName, decision.ModelId, GetCircuitState(client.ProviderName));
 
-                await LogCostFailureAsync(ex.Message, user, attemptStopwatch.ElapsedMilliseconds, ct);
+                await LogCostFailureAsync(ex.Message, user, attemptStopwatch.ElapsedMilliseconds, ct).ConfigureAwait(false);
                 lastFailure = LlmCompletionResult.CreateFailure($"Provider error: {ex.Message}");
             }
 
@@ -314,7 +314,7 @@ public class HybridLlmService : ILlmService
             Just the raw JSON object that matches the required structure.
             """;
 
-        var result = await GenerateCompletionAsync(enhancedSystemPrompt, userPrompt, user, ct);
+        var result = await GenerateCompletionAsync(enhancedSystemPrompt, userPrompt, user, ct).ConfigureAwait(false);
 
         if (!result.Success || string.IsNullOrWhiteSpace(result.Response))
         {

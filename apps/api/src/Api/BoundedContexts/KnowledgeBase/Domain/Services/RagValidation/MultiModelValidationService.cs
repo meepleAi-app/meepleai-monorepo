@@ -88,10 +88,10 @@ public class MultiModelValidationService : IMultiModelValidationService
         var gpt4Task = QueryModelAsync(Gpt4Model, systemPrompt, userPrompt, temperature, maxTokens, cancellationToken);
         var claudeTask = QueryModelAsync(ClaudeModel, systemPrompt, userPrompt, temperature, maxTokens, cancellationToken);
 
-        await Task.WhenAll(gpt4Task, claudeTask);
+        await Task.WhenAll(gpt4Task, claudeTask).ConfigureAwait(false);
 
-        var gpt4Response = await gpt4Task;
-        var claudeResponse = await claudeTask;
+        var gpt4Response = await gpt4Task.ConfigureAwait(false);
+        var claudeResponse = await claudeTask.ConfigureAwait(false);
 
         stopwatch.Stop();
 

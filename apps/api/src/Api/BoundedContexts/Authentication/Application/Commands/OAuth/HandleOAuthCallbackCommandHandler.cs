@@ -61,7 +61,7 @@ public sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<HandleOA
         try
         {
             // Step 1: Validate CSRF state token (infrastructure concern - delegate to service)
-            var isStateValid = await _oauthService.ValidateStateAsync(command.State);
+            var isStateValid = await _oauthService.ValidateStateAsync(command.State).ConfigureAwait(false);
             if (!isStateValid)
             {
                 _logger.LogWarning("Invalid OAuth state parameter for provider {Provider}", command.Provider);
@@ -76,7 +76,7 @@ public sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<HandleOA
             OAuthTokenResponse tokenResponse;
             try
             {
-                tokenResponse = await _oauthService.ExchangeCodeForTokenAsync(command.Provider, command.Code);
+                tokenResponse = await _oauthService.ExchangeCodeForTokenAsync(command.Provider, command.Code).ConfigureAwait(false);
             }
             catch (InvalidOperationException ex)
             {
@@ -92,7 +92,7 @@ public sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<HandleOA
             OAuthUserInfo userInfo;
             try
             {
-                userInfo = await _oauthService.GetUserInfoAsync(command.Provider, tokenResponse.AccessToken);
+                userInfo = await _oauthService.GetUserInfoAsync(command.Provider, tokenResponse.AccessToken).ConfigureAwait(false);
             }
             catch (InvalidOperationException ex)
             {
@@ -139,13 +139,13 @@ public sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<HandleOA
                 }
 
                 user = oauthAccount.User;
-                await UpdateOAuthTokenAsync(oauthAccount, tokenResponse, cancellationToken);
+                await UpdateOAuthTokenAsync(oauthAccount, tokenResponse, cancellationToken).ConfigureAwait(false);
                 _logger.LogInformation("OAuth login for existing account. Provider: {Provider}, UserId: {UserId}", command.Provider, user.Id);
             }
             else
             {
                 // Check if user exists with same email (auto-link for MVP)
-                user = await _db.Users.FirstOrDefaultAsync(u => u.Email == userInfo.Email.ToLowerInvariant(), cancellationToken);
+                user = await _db.Users.FirstOrDefaultAsync(u => u.Email == userInfo.Email.ToLowerInvariant(), cancellationToken).ConfigureAwait(false);
 
                 if (user == null)
                 {
@@ -169,7 +169,7 @@ public sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<HandleOA
                         CreatedAt = _timeProvider.GetUtcNow().UtcDateTime
                     };
                     _db.Users.Add(user);
-                    await _db.SaveChangesAsync(cancellationToken);
+                    await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
                     isNewUser = true;
                     _logger.LogInformation("Created new user via OAuth. Provider: {Provider}, UserId: {UserId}", command.Provider, user.Id);
                 }
@@ -179,7 +179,7 @@ public sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<HandleOA
                 }
 
                 // Create OAuth account link (business logic in handler)
-                await CreateOAuthAccountAsync(user.Id, command.Provider, userInfo, tokenResponse, cancellationToken);
+                await CreateOAuthAccountAsync(user.Id, command.Provider, userInfo, tokenResponse, cancellationToken).ConfigureAwait(false);
             }
 
             // Step 5: Create session via MediatR (already CQRS-compliant)
@@ -188,7 +188,7 @@ public sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<HandleOA
                 IpAddress: command.IpAddress,
                 UserAgent: command.UserAgent);
 
-            var sessionResponse = await _mediator.Send(createSessionCommand, cancellationToken);
+            var sessionResponse = await _mediator.Send(createSessionCommand, cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "OAuth callback successful for provider {Provider}, UserId: {UserId}, IsNewUser: {IsNewUser}",
@@ -247,7 +247,7 @@ public sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<HandleOA
             ? now.AddSeconds(tokenResponse.ExpiresIn.Value)
             : (DateTime?)null;
 
-        var accessTokenEncrypted = await _encryptionService.EncryptAsync(tokenResponse.AccessToken, EncryptionPurpose);
+        var accessTokenEncrypted = await _encryptionService.EncryptAsync(tokenResponse.AccessToken, EncryptionPurpose).ConfigureAwait(false);
         var refreshTokenEncrypted = tokenResponse.RefreshToken != null
             ? await _encryptionService.EncryptAsync(tokenResponse.RefreshToken, EncryptionPurpose)
             : null;
@@ -267,7 +267,7 @@ public sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<HandleOA
         };
 
         _db.OAuthAccounts.Add(oauthAccount);
-        await _db.SaveChangesAsync(cancellationToken);
+        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -280,17 +280,17 @@ public sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<HandleOA
             ? now.AddSeconds(tokenResponse.ExpiresIn.Value)
             : (DateTime?)null;
 
-        account.AccessTokenEncrypted = await _encryptionService.EncryptAsync(tokenResponse.AccessToken, EncryptionPurpose);
+        account.AccessTokenEncrypted = await _encryptionService.EncryptAsync(tokenResponse.AccessToken, EncryptionPurpose).ConfigureAwait(false);
 
         if (tokenResponse.RefreshToken != null)
         {
-            account.RefreshTokenEncrypted = await _encryptionService.EncryptAsync(tokenResponse.RefreshToken, EncryptionPurpose);
+            account.RefreshTokenEncrypted = await _encryptionService.EncryptAsync(tokenResponse.RefreshToken, EncryptionPurpose).ConfigureAwait(false);
         }
 
         account.TokenExpiresAt = expiresAt;
         account.UpdatedAt = now;
 
-        await _db.SaveChangesAsync(cancellationToken);
+        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>

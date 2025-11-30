@@ -55,7 +55,7 @@ public class GameRepository : RepositoryBase, IGameRepository
         CollectDomainEvents(game);
 
         var gameEntity = MapToPersistence(game);
-        await DbContext.Games.AddAsync(gameEntity, cancellationToken);
+        await DbContext.Games.AddAsync(gameEntity, cancellationToken).ConfigureAwait(false);
     }
 
     public Task UpdateAsync(Game game, CancellationToken cancellationToken = default)
@@ -77,7 +77,7 @@ public class GameRepository : RepositoryBase, IGameRepository
 
     public async Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return await DbContext.Games.AsNoTracking().AnyAsync(g => g.Id == id, cancellationToken);
+        return await DbContext.Games.AsNoTracking().AnyAsync(g => g.Id == id, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>

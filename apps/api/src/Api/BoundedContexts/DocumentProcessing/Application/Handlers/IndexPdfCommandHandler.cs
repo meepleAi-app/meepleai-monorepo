@@ -88,7 +88,7 @@ public class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, IndexingR
             _logger.LogInformation("PDF {PdfId} already indexed, deleting old vectors before re-indexing", pdfId);
 
             // Delete old vectors from Qdrant
-            var deleteResult = await _qdrantService.DeleteDocumentAsync(pdfId, cancellationToken);
+            var deleteResult = await _qdrantService.DeleteDocumentAsync(pdfId, cancellationToken).ConfigureAwait(false);
             if (!deleteResult)
             {
                 _logger.LogWarning("Failed to delete old vectors for PDF {PdfId}, continuing anyway", pdfId);
@@ -97,7 +97,7 @@ public class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, IndexingR
             // Update existing entity status to "processing"
             existingVectorDoc.IndexingStatus = "processing";
             existingVectorDoc.IndexingError = null;
-            await _db.SaveChangesAsync(cancellationToken);
+            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
         else
         {
@@ -115,7 +115,7 @@ public class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, IndexingR
                 EmbeddingDimensions = embeddingDimensions
             };
             _db.Set<VectorDocumentEntity>().Add(existingVectorDoc);
-            await _db.SaveChangesAsync(cancellationToken);
+            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
 
         try
@@ -140,7 +140,7 @@ public class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, IndexingR
             _logger.LogInformation("Generating embeddings for {ChunkCount} chunks", textChunks.Count);
 
             var texts = textChunks.Select(c => c.Text).ToList();
-            var embeddingResult = await _embeddingService.GenerateEmbeddingsAsync(texts, cancellationToken);
+            var embeddingResult = await _embeddingService.GenerateEmbeddingsAsync(texts, cancellationToken).ConfigureAwait(false);
 
             if (!embeddingResult.Success || embeddingResult.Embeddings.Count == 0)
             {
@@ -200,7 +200,7 @@ public class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, IndexingR
             existingVectorDoc.IndexedAt = _timeProvider.GetUtcNow().UtcDateTime;
             existingVectorDoc.IndexingError = null;
 
-            await _db.SaveChangesAsync(cancellationToken);
+            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation("Successfully indexed PDF {PdfId}: {ChunkCount} chunks, {TotalChars} characters",
                 pdfId, documentChunks.Count, pdf.ExtractedText.Length);
@@ -236,7 +236,7 @@ public class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, IndexingR
     {
         vectorDoc.IndexingStatus = "failed";
         vectorDoc.IndexingError = errorMessage;
-        await _db.SaveChangesAsync(ct);
+        await _db.SaveChangesAsync(ct).ConfigureAwait(false);
 
         return IndexingResultDto.CreateFailure(errorMessage, errorCode);
     }

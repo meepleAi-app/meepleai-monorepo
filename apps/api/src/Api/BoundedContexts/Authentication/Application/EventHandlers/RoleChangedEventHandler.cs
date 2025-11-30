@@ -22,7 +22,7 @@ public sealed class RoleChangedEventHandler : DomainEventHandlerBase<RoleChanged
     {
         // Auto-audit logging is handled by base class
         // Add additional business logic here if needed (e.g., invalidate user sessions if demoted)
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
     }
 
     protected override Guid? GetUserId(RoleChangedEvent domainEvent) => domainEvent.UserId;

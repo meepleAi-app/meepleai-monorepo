@@ -31,8 +31,8 @@ public class LogWorkflowErrorCommandHandler : ICommandHandler<LogWorkflowErrorCo
             stackTrace: command.StackTrace
         );
 
-        await _errorLogRepository.AddAsync(errorLog, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _errorLogRepository.AddAsync(errorLog, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         return new WorkflowErrorLogDto(
             Id: errorLog.Id,

@@ -42,7 +42,7 @@ public sealed class GetWorkflowErrorsQueryHandler : IQueryHandler<GetWorkflowErr
         // - Database query with filters
         // - Pagination
         // - HybridCache (5-min expiration)
-        var errors = await _errorLoggingService.GetErrorsAsync(queryParams, cancellationToken);
+        var errors = await _errorLoggingService.GetErrorsAsync(queryParams, cancellationToken).ConfigureAwait(false);
 
         var totalPages = (int)Math.Ceiling((double)errors.Total / errors.PageSize);
         _logger.LogInformation(

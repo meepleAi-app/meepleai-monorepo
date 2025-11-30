@@ -121,7 +121,7 @@ public class GoldenDatasetLoader : IGoldenDatasetLoader
 
         try
         {
-            var json = await File.ReadAllTextAsync(_datasetPath, cancellationToken);
+            var json = await File.ReadAllTextAsync(_datasetPath, cancellationToken).ConfigureAwait(false);
             var dataset = JsonSerializer.Deserialize<GoldenDatasetFile>(json, new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
@@ -182,7 +182,7 @@ public class GoldenDatasetLoader : IGoldenDatasetLoader
         if (string.IsNullOrWhiteSpace(gameId))
             throw new ArgumentException("Game ID cannot be empty", nameof(gameId));
 
-        var allCases = await LoadAllAsync(cancellationToken);
+        var allCases = await LoadAllAsync(cancellationToken).ConfigureAwait(false);
         return allCases.Where(tc => tc.GameId.Equals(gameId, StringComparison.OrdinalIgnoreCase)).ToList();
     }
 
@@ -191,7 +191,7 @@ public class GoldenDatasetLoader : IGoldenDatasetLoader
         if (string.IsNullOrWhiteSpace(difficulty))
             throw new ArgumentException("Difficulty cannot be empty", nameof(difficulty));
 
-        var allCases = await LoadAllAsync(cancellationToken);
+        var allCases = await LoadAllAsync(cancellationToken).ConfigureAwait(false);
         return allCases.Where(tc => tc.Difficulty.Equals(difficulty, StringComparison.OrdinalIgnoreCase)).ToList();
     }
 
@@ -200,7 +200,7 @@ public class GoldenDatasetLoader : IGoldenDatasetLoader
         if (string.IsNullOrWhiteSpace(category))
             throw new ArgumentException("Category cannot be empty", nameof(category));
 
-        var allCases = await LoadAllAsync(cancellationToken);
+        var allCases = await LoadAllAsync(cancellationToken).ConfigureAwait(false);
         return allCases.Where(tc => tc.Category.Equals(category, StringComparison.OrdinalIgnoreCase)).ToList();
     }
 
@@ -209,7 +209,7 @@ public class GoldenDatasetLoader : IGoldenDatasetLoader
         if (count <= 0)
             throw new ArgumentException("Sample count must be positive", nameof(count));
 
-        var allCases = await LoadAllAsync(cancellationToken);
+        var allCases = await LoadAllAsync(cancellationToken).ConfigureAwait(false);
 
         if (count >= allCases.Count)
             return allCases;
@@ -252,7 +252,7 @@ public class GoldenDatasetLoader : IGoldenDatasetLoader
         if (string.IsNullOrWhiteSpace(annotator))
             throw new ArgumentException("Annotator cannot be empty", nameof(annotator));
 
-        var allCases = await LoadAllAsync(cancellationToken);
+        var allCases = await LoadAllAsync(cancellationToken).ConfigureAwait(false);
 
         var filtered = exclude
             ? allCases.Where(tc => !tc.AnnotatedBy.Equals(annotator, StringComparison.OrdinalIgnoreCase)).ToList()

@@ -60,12 +60,12 @@ public class UnstructuredPdfTextExtractor : IPdfTextExtractor
             content.Add(languageContent, "language");
 
             // Step 3: Call Python service (CODE-01: Dispose HttpResponseMessage)
-            using var response = await client.PostAsync("/api/v1/extract", content, ct);
+            using var response = await client.PostAsync("/api/v1/extract", content, ct).ConfigureAwait(false);
 
             // Step 4: Handle errors
             if (!response.IsSuccessStatusCode)
             {
-                var errorContent = await response.Content.ReadAsStringAsync(ct);
+                var errorContent = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
                 _logger.LogError(
                     "Unstructured service returned error: {StatusCode}, Body: {ErrorContent}",
                     response.StatusCode,
@@ -76,7 +76,7 @@ public class UnstructuredPdfTextExtractor : IPdfTextExtractor
             }
 
             // Step 5: Parse response
-            var jsonContent = await response.Content.ReadAsStringAsync(ct);
+            var jsonContent = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             var extractionResponse = JsonSerializer.Deserialize<UnstructuredExtractionResponse>(
                 jsonContent,
                 _jsonOptions);
@@ -171,7 +171,7 @@ public class UnstructuredPdfTextExtractor : IPdfTextExtractor
         // Note: Unstructured returns semantic chunks, not strict page-by-page text
         // For now, we extract full text and then attempt to map chunks to pages
 
-        var extractionResult = await ExtractTextAsync(pdfStream, enableOcrFallback, ct);
+        var extractionResult = await ExtractTextAsync(pdfStream, enableOcrFallback, ct).ConfigureAwait(false);
 
         if (!extractionResult.Success)
         {

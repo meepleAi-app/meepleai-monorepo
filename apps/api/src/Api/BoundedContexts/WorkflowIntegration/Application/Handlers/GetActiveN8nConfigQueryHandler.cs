@@ -16,7 +16,7 @@ public class GetActiveN8nConfigQueryHandler : IQueryHandler<GetActiveN8nConfigQu
 
     public async Task<N8nConfigurationDto?> Handle(GetActiveN8nConfigQuery query, CancellationToken cancellationToken)
     {
-        var config = await _configRepository.GetActiveConfigurationAsync(cancellationToken);
+        var config = await _configRepository.GetActiveConfigurationAsync(cancellationToken).ConfigureAwait(false);
 
         if (config == null)
             return null;

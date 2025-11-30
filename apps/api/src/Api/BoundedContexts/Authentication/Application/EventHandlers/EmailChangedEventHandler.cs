@@ -22,7 +22,7 @@ public sealed class EmailChangedEventHandler : DomainEventHandlerBase<EmailChang
     {
         // Auto-audit logging is handled by base class
         // Add additional business logic here if needed (e.g., send email verification to new address)
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
     }
 
     protected override Guid? GetUserId(EmailChangedEvent domainEvent) => domainEvent.UserId;

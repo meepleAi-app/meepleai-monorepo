@@ -28,7 +28,7 @@ public class GetAgentByIdQueryHandler : IRequestHandler<GetAgentByIdQuery, Agent
         GetAgentByIdQuery request,
         CancellationToken cancellationToken)
     {
-        var agent = await _agentRepository.GetByIdAsync(request.AgentId, cancellationToken);
+        var agent = await _agentRepository.GetByIdAsync(request.AgentId, cancellationToken).ConfigureAwait(false);
 
         if (agent == null)
         {

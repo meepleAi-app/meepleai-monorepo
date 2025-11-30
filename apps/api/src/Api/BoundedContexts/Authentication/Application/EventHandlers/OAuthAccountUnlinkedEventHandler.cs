@@ -22,7 +22,7 @@ public sealed class OAuthAccountUnlinkedEventHandler : DomainEventHandlerBase<OA
     {
         // Auto-audit logging is handled by base class
         // Add additional business logic here if needed (e.g., send OAuth unlinked security alert)
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
     }
 
     protected override Guid? GetUserId(OAuthAccountUnlinkedEvent domainEvent) => domainEvent.UserId;

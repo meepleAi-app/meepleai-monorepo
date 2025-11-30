@@ -26,7 +26,7 @@ public class GetPdfOwnershipQueryHandler : IQueryHandler<GetPdfOwnershipQuery, P
     {
         try
         {
-            var document = await _documentRepository.GetByIdAsync(query.PdfId, cancellationToken);
+            var document = await _documentRepository.GetByIdAsync(query.PdfId, cancellationToken).ConfigureAwait(false);
 
             if (document == null)
             {

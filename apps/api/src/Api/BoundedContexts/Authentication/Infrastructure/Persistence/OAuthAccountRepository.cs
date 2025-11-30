@@ -82,7 +82,7 @@ public class OAuthAccountRepository : RepositoryBase, IOAuthAccountRepository
         CollectDomainEvents(entity);
 
         var oauthEntity = MapToPersistence(entity);
-        await DbContext.OAuthAccounts.AddAsync(oauthEntity, cancellationToken);
+        await DbContext.OAuthAccounts.AddAsync(oauthEntity, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task UpdateAsync(OAuthAccount entity, CancellationToken cancellationToken = default)
@@ -92,12 +92,12 @@ public class OAuthAccountRepository : RepositoryBase, IOAuthAccountRepository
 
         var oauthEntity = MapToPersistence(entity);
         DbContext.OAuthAccounts.Update(oauthEntity);
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
     }
 
     public async Task DeleteAsync(OAuthAccount entity, CancellationToken cancellationToken = default)
     {
-        var oauthEntity = await DbContext.OAuthAccounts.FindAsync(new object[] { entity.Id }, cancellationToken);
+        var oauthEntity = await DbContext.OAuthAccounts.FindAsync(new object[] { entity.Id }, cancellationToken).ConfigureAwait(false);
         if (oauthEntity != null)
         {
             DbContext.OAuthAccounts.Remove(oauthEntity);

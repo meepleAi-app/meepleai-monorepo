@@ -33,17 +33,17 @@ public class GetLlmCostReportQueryHandler : IRequestHandler<GetLlmCostReportQuer
         // Get total cost
         var totalCost = request.UserId.HasValue
             ? await _costLogRepository.GetUserCostAsync(request.UserId.Value, request.StartDate, request.EndDate, ct)
-            : await _costLogRepository.GetTotalCostAsync(request.StartDate, request.EndDate, ct);
+            : await _costLogRepository.GetTotalCostAsync(request.StartDate, request.EndDate, ct).ConfigureAwait(false);
 
         // Get costs by provider
-        var costsByProvider = await _costLogRepository.GetCostsByProviderAsync(request.StartDate, request.EndDate, ct);
+        var costsByProvider = await _costLogRepository.GetCostsByProviderAsync(request.StartDate, request.EndDate, ct).ConfigureAwait(false);
 
         // Get costs by role
-        var costsByRole = await _costLogRepository.GetCostsByRoleAsync(request.StartDate, request.EndDate, ct);
+        var costsByRole = await _costLogRepository.GetCostsByRoleAsync(request.StartDate, request.EndDate, ct).ConfigureAwait(false);
 
         // Get today's cost for threshold check
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
-        var dailyCost = await _costLogRepository.GetDailyCostAsync(today, ct);
+        var dailyCost = await _costLogRepository.GetDailyCostAsync(today, ct).ConfigureAwait(false);
         var exceedsThreshold = dailyCost > DailyAlertThreshold;
 
         if (exceedsThreshold)

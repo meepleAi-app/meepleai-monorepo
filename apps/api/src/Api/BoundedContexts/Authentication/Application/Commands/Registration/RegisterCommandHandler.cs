@@ -36,12 +36,12 @@ public class RegisterCommandHandler : ICommandHandler<RegisterCommand, RegisterR
         var email = new Email(command.Email);
 
         // Check if email already exists
-        var existingUser = await _userRepository.GetByEmailAsync(email, cancellationToken);
+        var existingUser = await _userRepository.GetByEmailAsync(email, cancellationToken).ConfigureAwait(false);
         if (existingUser != null)
             throw new DomainException("Email is already registered");
 
         // Determine role (first user is admin, others are user unless specified)
-        var hasAnyUsers = await _userRepository.HasAnyUsersAsync(cancellationToken);
+        var hasAnyUsers = await _userRepository.HasAnyUsersAsync(cancellationToken).ConfigureAwait(false);
         Role role;
 
         if (!hasAnyUsers)
@@ -91,9 +91,9 @@ public class RegisterCommandHandler : ICommandHandler<RegisterCommand, RegisterR
         );
 
         // Save user and session
-        await _userRepository.AddAsync(user, cancellationToken);
-        await _sessionRepository.AddAsync(session, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _userRepository.AddAsync(user, cancellationToken).ConfigureAwait(false);
+        await _sessionRepository.AddAsync(session, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         // Map to DTO
         var userDto = MapToUserDto(user);

@@ -117,7 +117,7 @@ public class QdrantVectorStoreAdapter : IQdrantVectorStoreAdapter
     {
         // QdrantService uses a single collection for all games
         // So we just check if the main collection exists
-        return await _qdrantService.CollectionExistsAsync(cancellationToken);
+        return await _qdrantService.CollectionExistsAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public async Task EnsureCollectionExistsAsync(
@@ -126,6 +126,6 @@ public class QdrantVectorStoreAdapter : IQdrantVectorStoreAdapter
         CancellationToken cancellationToken = default)
     {
         // QdrantService manages collection creation globally
-        await _qdrantService.EnsureCollectionExistsAsync(cancellationToken);
+        await _qdrantService.EnsureCollectionExistsAsync(cancellationToken).ConfigureAwait(false);
     }
 }

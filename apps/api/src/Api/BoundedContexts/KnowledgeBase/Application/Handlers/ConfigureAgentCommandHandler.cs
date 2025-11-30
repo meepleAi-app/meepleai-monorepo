@@ -30,7 +30,7 @@ public class ConfigureAgentCommandHandler : IRequestHandler<ConfigureAgentComman
         try
         {
             // Retrieve agent
-            var agent = await _agentRepository.GetByIdAsync(request.AgentId, cancellationToken);
+            var agent = await _agentRepository.GetByIdAsync(request.AgentId, cancellationToken).ConfigureAwait(false);
 
             if (agent == null)
             {
@@ -50,7 +50,7 @@ public class ConfigureAgentCommandHandler : IRequestHandler<ConfigureAgentComman
             agent.Configure(strategy);
 
             // Persist changes
-            await _agentRepository.UpdateAsync(agent, cancellationToken);
+            await _agentRepository.UpdateAsync(agent, cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Agent {AgentId} configured with strategy {StrategyName}",

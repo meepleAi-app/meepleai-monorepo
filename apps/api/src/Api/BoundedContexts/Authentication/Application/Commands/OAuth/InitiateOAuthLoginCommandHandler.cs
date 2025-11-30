@@ -54,10 +54,10 @@ public sealed class InitiateOAuthLoginCommandHandler : ICommandHandler<InitiateO
             var state = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
 
             // Step 2: Store state with expiration (infrastructure - delegate to service)
-            await _oauthService.StoreStateAsync(state);
+            await _oauthService.StoreStateAsync(state).ConfigureAwait(false);
 
             // Step 3: Get authorization URL (infrastructure - delegate to service)
-            var authUrl = await _oauthService.GetAuthorizationUrlAsync(provider, state);
+            var authUrl = await _oauthService.GetAuthorizationUrlAsync(provider, state).ConfigureAwait(false);
 
             _logger.LogInformation("OAuth login initiated for provider {Provider}, IP: {IpAddress}",
                 provider,

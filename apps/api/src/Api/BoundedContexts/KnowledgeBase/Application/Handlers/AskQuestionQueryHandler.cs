@@ -68,7 +68,7 @@ public class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespons
             Language: query.Language
         );
 
-        var searchResults = await _searchQueryHandler.Handle(searchQuery, cancellationToken);
+        var searchResults = await _searchQueryHandler.Handle(searchQuery, cancellationToken).ConfigureAwait(false);
 
         // Map search results to domain entities for quality tracking
         var domainSearchResults = searchResults.Select(sr => new Domain.Entities.SearchResult(
@@ -88,7 +88,7 @@ public class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespons
         string chatHistoryContext = string.Empty;
         if (query.ThreadId.HasValue)
         {
-            var thread = await _chatThreadRepository.GetByIdAsync(query.ThreadId.Value, cancellationToken);
+            var thread = await _chatThreadRepository.GetByIdAsync(query.ThreadId.Value, cancellationToken).ConfigureAwait(false);
             if (thread != null)
             {
                 // Security: Validate thread belongs to requested game (prevent cross-game data leak)

@@ -54,8 +54,8 @@ public class CreateGameCommandHandler : ICommandHandler<CreateGameCommand, GameD
         );
 
         // Persist
-        await _gameRepository.AddAsync(game, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _gameRepository.AddAsync(game, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         // Map to DTO
         return MapToDto(game);

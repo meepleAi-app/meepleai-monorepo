@@ -17,7 +17,7 @@ public sealed class MessageDeletedEventHandler : DomainEventHandlerBase<MessageD
     protected override async Task HandleEventAsync(MessageDeletedEvent domainEvent, CancellationToken cancellationToken)
     {
         // Auto-audit logging is handled by base class
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
     }
 
     protected override Dictionary<string, object?>? GetAuditMetadata(MessageDeletedEvent domainEvent)

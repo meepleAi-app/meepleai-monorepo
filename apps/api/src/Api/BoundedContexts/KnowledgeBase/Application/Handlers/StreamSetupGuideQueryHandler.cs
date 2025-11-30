@@ -74,11 +74,11 @@ public class StreamSetupGuideQueryHandler : IStreamingQueryHandler<StreamSetupGu
         yield return CreateEvent(StreamingEventType.StateUpdate,
             new StreamingStateUpdate("Preparing setup guide..."));
 
-        await Task.Delay(TimeSpan.FromMilliseconds(50), cancellationToken);
+        await Task.Delay(TimeSpan.FromMilliseconds(50), cancellationToken).ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
 
         // Generate setup guide using internal method (no yield in try-catch)
-        var result = await GenerateSetupGuideInternalAsync(query.GameId, cancellationToken);
+        var result = await GenerateSetupGuideInternalAsync(query.GameId, cancellationToken).ConfigureAwait(false);
 
         if (!result.Success)
         {
@@ -127,7 +127,7 @@ public class StreamSetupGuideQueryHandler : IStreamingQueryHandler<StreamSetupGu
         {
             // Step 1: Generate embedding for setup query
             var setupQuery = "game setup preparation initial components placement player starting conditions";
-            var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(setupQuery, cancellationToken);
+            var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(setupQuery, cancellationToken).ConfigureAwait(false);
 
             if (!embeddingResult.Success || embeddingResult.Embeddings.Count == 0)
             {
@@ -166,13 +166,13 @@ public class StreamSetupGuideQueryHandler : IStreamingQueryHandler<StreamSetupGu
             var confidence = (double?)searchResult.Results.Max(r => r.Score);
 
             // Step 3: Generate setup steps with LLM
-            var systemPrompt = await GetSetupGuideSystemPromptAsync(cancellationToken);
+            var systemPrompt = await GetSetupGuideSystemPromptAsync(cancellationToken).ConfigureAwait(false);
             var userPrompt = $@"CONTEXT FROM RULEBOOK:
 {context}
 
 TASK: Generate a step-by-step setup guide for this board game. Focus on the initial setup before gameplay begins.";
 
-            var llmResult = await _llmService.GenerateCompletionAsync(systemPrompt, userPrompt, cancellationToken);
+            var llmResult = await _llmService.GenerateCompletionAsync(systemPrompt, userPrompt, cancellationToken).ConfigureAwait(false);
 
             if (!llmResult.Success || string.IsNullOrWhiteSpace(llmResult.Response))
             {
@@ -239,7 +239,7 @@ TASK: Generate a step-by-step setup guide for this board game. Focus on the init
             // Small delay between steps for progressive delivery
             if (i < steps.Count - 1)
             {
-                await Task.Delay(TimeSpan.FromMilliseconds(100), cancellationToken);
+                await Task.Delay(TimeSpan.FromMilliseconds(100), cancellationToken).ConfigureAwait(false);
             }
         }
 
@@ -470,7 +470,7 @@ TASK: Generate a step-by-step setup guide for this board game. Focus on the init
         {
             try
             {
-                var promptTemplate = await _promptTemplateService.GetActivePromptAsync("setup-guide-system-prompt", ct);
+                var promptTemplate = await _promptTemplateService.GetActivePromptAsync("setup-guide-system-prompt", ct).ConfigureAwait(false);
                 if (!string.IsNullOrWhiteSpace(promptTemplate))
                 {
                     _logger.LogDebug("Using database-driven setup guide system prompt");

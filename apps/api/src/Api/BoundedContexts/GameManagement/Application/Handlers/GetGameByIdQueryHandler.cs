@@ -20,7 +20,7 @@ public class GetGameByIdQueryHandler : IQueryHandler<GetGameByIdQuery, GameDto?>
 
     public async Task<GameDto?> Handle(GetGameByIdQuery query, CancellationToken cancellationToken)
     {
-        var game = await _gameRepository.GetByIdAsync(query.GameId, cancellationToken);
+        var game = await _gameRepository.GetByIdAsync(query.GameId, cancellationToken).ConfigureAwait(false);
 
         return game != null ? MapToDto(game) : null;
     }

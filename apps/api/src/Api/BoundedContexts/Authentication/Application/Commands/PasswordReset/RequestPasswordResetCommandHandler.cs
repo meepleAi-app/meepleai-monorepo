@@ -38,7 +38,7 @@ public sealed class RequestPasswordResetCommandHandler : ICommandHandler<Request
             }
 
             // Delegate to infrastructure service for token generation and email
-            await _passwordResetService.RequestPasswordResetAsync(command.Email, cancellationToken);
+            await _passwordResetService.RequestPasswordResetAsync(command.Email, cancellationToken).ConfigureAwait(false);
 
             return new RequestPasswordResetResult
             {

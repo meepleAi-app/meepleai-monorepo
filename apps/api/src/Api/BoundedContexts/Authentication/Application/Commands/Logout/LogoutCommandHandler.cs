@@ -29,7 +29,7 @@ public class LogoutCommandHandler : ICommandHandler<LogoutCommand>
         var tokenHash = sessionToken.ComputeHash();
 
         // Find session by token hash
-        var session = await _sessionRepository.GetByTokenHashAsync(tokenHash, cancellationToken);
+        var session = await _sessionRepository.GetByTokenHashAsync(tokenHash, cancellationToken).ConfigureAwait(false);
 
         if (session == null)
             throw new DomainException("Invalid session token");
@@ -37,7 +37,7 @@ public class LogoutCommandHandler : ICommandHandler<LogoutCommand>
         // Revoke the session
         session.Revoke();
 
-        await _sessionRepository.UpdateAsync(session, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 }

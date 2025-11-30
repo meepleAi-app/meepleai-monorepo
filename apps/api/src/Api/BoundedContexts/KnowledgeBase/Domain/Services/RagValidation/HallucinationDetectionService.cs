@@ -145,7 +145,7 @@ public class HallucinationDetectionService : IHallucinationDetectionService
         // Auto-detect language if not provided and detection service available
         if (string.IsNullOrWhiteSpace(language) && _languageDetection != null)
         {
-            language = await _languageDetection.DetectLanguageAsync(responseText);
+            language = await _languageDetection.DetectLanguageAsync(responseText).ConfigureAwait(false);
             _logger.LogDebug("Auto-detected language: {Language}", language);
         }
 

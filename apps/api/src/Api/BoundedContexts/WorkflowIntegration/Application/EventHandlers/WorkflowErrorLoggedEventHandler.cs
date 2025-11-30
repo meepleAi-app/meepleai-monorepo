@@ -22,7 +22,7 @@ public sealed class WorkflowErrorLoggedEventHandler : DomainEventHandlerBase<Wor
         // Future: Send alert to operations team
         // Future: Trigger automatic error analysis
         // Future: Update error metrics dashboard
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
     }
 
     protected override Dictionary<string, object?>? GetAuditMetadata(WorkflowErrorLoggedEvent domainEvent)

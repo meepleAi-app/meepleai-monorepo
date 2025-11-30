@@ -88,7 +88,7 @@ public class ChatThreadRepository : RepositoryBase, IChatThreadRepository
     {
         CollectDomainEvents(thread);
         var threadEntity = MapToPersistence(thread);
-        await DbContext.ChatThreads.AddAsync(threadEntity, cancellationToken);
+        await DbContext.ChatThreads.AddAsync(threadEntity, cancellationToken).ConfigureAwait(false);
     }
 
     public Task UpdateAsync(ChatThread thread, CancellationToken cancellationToken = default)
@@ -116,7 +116,7 @@ public class ChatThreadRepository : RepositoryBase, IChatThreadRepository
 
     public async Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return await DbContext.ChatThreads.AnyAsync(t => t.Id == id, cancellationToken);
+        return await DbContext.ChatThreads.AnyAsync(t => t.Id == id, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>

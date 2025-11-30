@@ -33,7 +33,7 @@ public class OrchestratedPdfTextExtractor : IPdfTextExtractor
         bool enableOcrFallback = true,
         CancellationToken ct = default)
     {
-        var enhancedResult = await _orchestrator.ExtractTextWithFallbackAsync(pdfStream, enableOcrFallback, ct);
+        var enhancedResult = await _orchestrator.ExtractTextWithFallbackAsync(pdfStream, enableOcrFallback, ct).ConfigureAwait(false);
 
         // Map EnhancedExtractionResult → TextExtractionResult
         return new TextExtractionResult(
@@ -54,7 +54,7 @@ public class OrchestratedPdfTextExtractor : IPdfTextExtractor
         bool enableOcrFallback = true,
         CancellationToken ct = default)
     {
-        var enhancedResult = await _orchestrator.ExtractPagedTextWithFallbackAsync(pdfStream, enableOcrFallback, ct);
+        var enhancedResult = await _orchestrator.ExtractPagedTextWithFallbackAsync(pdfStream, enableOcrFallback, ct).ConfigureAwait(false);
 
         // Map EnhancedPagedExtractionResult → PagedTextExtractionResult
         return new PagedTextExtractionResult(

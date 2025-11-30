@@ -36,8 +36,8 @@ public class CreateApiKeyCommandHandler : ICommandHandler<CreateApiKeyCommand, C
         );
 
         // Persist API key
-        await _apiKeyRepository.AddAsync(apiKey, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _apiKeyRepository.AddAsync(apiKey, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         // Return response with plaintext key (only time it's visible)
         return new CreateApiKeyResponse(

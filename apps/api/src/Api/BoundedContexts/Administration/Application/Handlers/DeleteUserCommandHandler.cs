@@ -31,20 +31,20 @@ public class DeleteUserCommandHandler : ICommandHandler<DeleteUserCommand>
 
         // Find user
         var userId = Guid.Parse(command.UserId);
-        var user = await _userRepository.GetByIdAsync(userId, cancellationToken);
+        var user = await _userRepository.GetByIdAsync(userId, cancellationToken).ConfigureAwait(false);
         if (user == null)
             throw new DomainException($"User {command.UserId} not found");
 
         // Prevent deletion of last admin
         if (user.Role.IsAdmin())
         {
-            var adminCount = await _userRepository.CountAdminsAsync(cancellationToken);
+            var adminCount = await _userRepository.CountAdminsAsync(cancellationToken).ConfigureAwait(false);
             if (adminCount <= 1)
                 throw new DomainException("Cannot delete the last admin user");
         }
 
         // Delete user
-        await _userRepository.DeleteAsync(user, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _userRepository.DeleteAsync(user, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 }

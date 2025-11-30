@@ -24,7 +24,7 @@ public sealed class PasswordChangedEventHandler : DomainEventHandlerBase<Passwor
         // Add any additional business logic here if needed (e.g., send password change notification email)
 
         // For now, just logging via base class is sufficient
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
     }
 
     protected override Guid? GetUserId(PasswordChangedEvent domainEvent) => domainEvent.UserId;

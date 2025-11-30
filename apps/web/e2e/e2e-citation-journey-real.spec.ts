@@ -56,6 +56,7 @@ import {
   sendQuestionAndWaitForResponse,
   verifyCitationDisplay,
 } from './helpers/citation-test-utils';
+import { WaitHelper } from './helpers/WaitHelper';
 
 test.describe.serial('E2E Citation Journey - Real Backend Integration (@slow)', () => {
   test.setTimeout(300000); // 5 minutes for real processing
@@ -149,7 +150,8 @@ test.describe.serial('E2E Citation Journey - Real Backend Integration (@slow)', 
       });
 
       // Additional wait for response to fully render
-      await page.waitForTimeout(2000);
+      const waitHelper = new WaitHelper(page);
+      await waitHelper.waitForNetworkIdle(5000);
     });
 
     // ========================================================================

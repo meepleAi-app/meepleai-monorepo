@@ -182,7 +182,6 @@ test.describe('Q&A Interface - Performance (Issue #1009)', () => {
     await page.locator('button[type="submit"]').click();
 
     // During streaming, UI should remain interactive
-    await page.waitForTimeout(500);
 
     // Verify input field is still accessible (though may be disabled during streaming)
     const inputField = page.locator('#message-input');
@@ -215,7 +214,6 @@ test.describe('Q&A Interface - Performance (Issue #1009)', () => {
       await page.locator('button[type="submit"]').click();
 
       // Small delay between requests
-      await page.waitForTimeout(100);
     }
 
     // All answers should eventually appear
@@ -251,8 +249,6 @@ test.describe('Q&A Interface - Performance (Issue #1009)', () => {
       await expect(page.getByText(`Answer ${i}.`)).toBeVisible({ timeout: 5000 });
 
       latencies.push(Date.now() - start);
-
-      await page.waitForTimeout(100); // Brief pause between requests
     }
 
     // Calculate P95 (95th percentile)

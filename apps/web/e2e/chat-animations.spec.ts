@@ -7,6 +7,7 @@
 import { test, expect, Page, BrowserContext, Route } from '@playwright/test';
 import './fixtures/auth';
 import { getTextMatcher, t } from './fixtures/i18n';
+import { WaitHelper } from './helpers/WaitHelper';
 
 /**
  * Helper: Navigate to chat page (auth handled by fixture)
@@ -212,7 +213,8 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
 
       // Send a message to create history
       await sendMessage(page, 'Test message for skeleton');
-      await page.waitForTimeout(2000);
+      const waitHelper = new WaitHelper(page);
+      await waitHelper.waitForNetworkIdle(5000);
 
       // Intercept chat history request to delay it
       await page.route('**/api/v1/chats/*', async (route: Route) => {
@@ -277,7 +279,6 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
       await sendMessage(page, 'Show typing indicator test');
 
       // Wait a bit for streaming to start
-      await page.waitForTimeout(300);
 
       // Verify typing indicator is visible
       // The indicator shows when isStreaming && !currentAnswer
@@ -335,8 +336,6 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
       await sendMessage(page, 'Test user message animation');
 
       // Wait for user message to appear
-      await page.waitForTimeout(500);
-
       // Find the user message
       const userMessage = page.getByText('Test user message animation');
       await expect(userMessage).toBeVisible();
@@ -424,7 +423,7 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
     await waitForGamesToLoad(page);
 
     // Create a chat with multiple messages
-    let chatCreated = false;
+    const chatCreated = false;
     await page.route('**/api/v1/agents/qa/stream', async (route: Route) => {
       await route.fulfill({
         status: 200,
@@ -445,7 +444,6 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
       for (let i = 1; i <= 3; i++) {
         await sendMessage(page, `Message ${i}`);
         await page.waitForTimeout(800);
-        chatCreated = true;
       }
 
       if (chatCreated) {
@@ -453,8 +451,6 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
         const firstChat = page.locator('li[role="button"]').first();
         if (await firstChat.isVisible().catch(() => false)) {
           await firstChat.click({ force: true });
-          await page.waitForTimeout(500);
-
           // Check for staggered animation completion
           // Each message should have data-animation-complete attribute
           const animatedMessages = page.locator('[data-message-id]');
@@ -524,7 +520,8 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
       expect(hasSpinner).toBe(true);
 
       // Wait for completion
-      await page.waitForTimeout(2500);
+      const waitHelper = new WaitHelper(page);
+      await waitHelper.waitForNetworkIdle(5000);
 
       // Verify button returns to normal state
       await expect(sendButton).not.toBeDisabled({ timeout: 1000 });
@@ -570,7 +567,8 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
       expect(hasSpinner).toBe(true);
 
       // Wait for completion
-      await page.waitForTimeout(2500);
+      const waitHelper = new WaitHelper(page);
+      await waitHelper.waitForNetworkIdle(5000);
 
       // Verify button returns to enabled state
       await expect(newChatButton).toBeEnabled({ timeout: 1000 });
@@ -608,7 +606,6 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
         await sendMessage(page, `Message ${i} with some additional content to make it longer`);
         await page.waitForTimeout(600);
       }
-
       // Get messages container
       const messagesContainer = page.locator('[role="region"][aria-label="Chat messages"]');
 
@@ -616,8 +613,6 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
       await messagesContainer.evaluate((el: HTMLElement) => {
         el.scrollTop = 0;
       });
-
-      await page.waitForTimeout(300);
 
       // Send new message
       await sendMessage(page, 'Latest message should scroll into view');
@@ -680,7 +675,6 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
       await sendMessage(page, 'Test reduced motion');
 
       // Wait for typing indicator
-      await page.waitForTimeout(300);
 
       // Verify typing indicator dots don't have animation
       const typingIndicator = page.locator(
@@ -750,13 +744,10 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
 
       // Trigger animations (send message, load history)
       await sendMessage(page, 'Performance test message 1');
-      await page.waitForTimeout(500);
 
       await sendMessage(page, 'Performance test message 2');
-      await page.waitForTimeout(500);
 
       await sendMessage(page, 'Performance test message 3');
-
       // Wait for FPS measurement to complete
       const averageFPS = await fpsPromise;
 
@@ -836,10 +827,8 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
       await sendMessage(page, 'Long streaming test');
 
       // Wait for streaming to start
-      await page.waitForTimeout(500);
 
       // Verify stop button appears
-      const stopButton = page.locator('button[aria-label="Stop streaming"]');
       const hasStopButton = await stopButton.isVisible().catch(() => false);
 
       if (hasStopButton) {

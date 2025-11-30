@@ -43,11 +43,9 @@ test.describe('Chess page - User registration and access journey', () => {
 
     // Step 2: Open auth modal and wait for it to be visible
     await page.getByRole('button', { name: 'Get Started' }).first().click();
-    await page.waitForTimeout(500); // Wait for modal animation
 
     // Step 3: Switch to Register tab and wait for form switch animation
     await page.getByRole('button', { name: 'Register' }).click();
-    await page.waitForTimeout(800); // Wait for form switch animation to complete
 
     // Step 4: Fill registration form using reliable selectors
     // Find all email inputs and use the last visible one (register form)
@@ -199,10 +197,8 @@ test.describe('Chess page - User registration and access journey', () => {
     // Open auth modal and wait for animation
     await page.getByRole('button', { name: 'Get Started' }).first().click();
     await page.waitForTimeout(500); // Wait for modal animation
-
     // Switch to Register tab and wait for form switch animation
     await page.getByRole('button', { name: 'Register' }).click();
-    await page.waitForTimeout(800); // Wait for form switch animation to complete
 
     // Fill registration form using robust selectors
     const emailInputs = page.locator('input[type="email"]');

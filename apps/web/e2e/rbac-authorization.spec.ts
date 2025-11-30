@@ -7,6 +7,7 @@
 import { test, expect } from '@playwright/test';
 import { AuthHelper, USER_FIXTURES } from './pages';
 import { expectForbiddenOrRedirect, expectPageLoaded } from './helpers/assertions';
+import { WaitHelper } from './helpers/WaitHelper';
 
 const API_BASE =
   process.env.PLAYWRIGHT_API_BASE || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
@@ -214,7 +215,8 @@ test.describe('RBAC Authorization Tests - E2E-004', () => {
       } catch {
         // If middleware didn't redirect, check for RequireRole loading/redirect
         await page.waitForLoadState('networkidle');
-        await page.waitForTimeout(2000); // Give RequireRole time to redirect
+        const waitHelper = new WaitHelper(page);
+        await waitHelper.waitForNetworkIdle(5000); // Give RequireRole time to redirect
 
         const currentUrl = page.url();
         const isLoginRedirect = currentUrl.includes('/login');
@@ -241,7 +243,8 @@ test.describe('RBAC Authorization Tests - E2E-004', () => {
       } catch {
         // If middleware didn't redirect, check for RequireRole loading/redirect
         await page.waitForLoadState('networkidle');
-        await page.waitForTimeout(2000); // Give RequireRole time to redirect
+        const waitHelper = new WaitHelper(page);
+        await waitHelper.waitForNetworkIdle(5000); // Give RequireRole time to redirect
 
         const currentUrl = page.url();
         const isLoginRedirect = currentUrl.includes('/login');

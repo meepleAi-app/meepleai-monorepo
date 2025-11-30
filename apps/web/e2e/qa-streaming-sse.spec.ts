@@ -6,6 +6,7 @@
 
 import { test, expect } from '@playwright/test';
 import { setupQATestEnvironment, waitForAutoSelection, QASnippet } from './helpers/qa-test-utils';
+import { WaitHelper } from './helpers/WaitHelper';
 
 test.describe('Q&A Interface - SSE Streaming (Issue #1009)', () => {
   test('should establish SSE connection and receive streaming events', async ({ page }) => {
@@ -127,7 +128,8 @@ test.describe('Q&A Interface - SSE Streaming (Issue #1009)', () => {
         body: sseData,
       });
 
-      await page.waitForTimeout(2000);
+      const waitHelper = new WaitHelper(page);
+      await waitHelper.waitForNetworkIdle(5000);
       streamingStopped = true;
     });
 
@@ -136,7 +138,6 @@ test.describe('Q&A Interface - SSE Streaming (Issue #1009)', () => {
 
     await page.fill('#message-input', 'Long question');
     await page.locator('button[type="submit"]').click();
-    await page.waitForTimeout(200);
 
     const stopButton = page.locator('button[aria-label="Stop streaming"], button:has-text("Stop")');
 
@@ -170,8 +171,6 @@ test.describe('Q&A Interface - SSE Streaming (Issue #1009)', () => {
 
     await page.fill('#message-input', 'Where is the game played?');
     await page.locator('button[type="submit"]').click();
-
-    await page.waitForTimeout(500);
 
     // Verify complete sentence assembled from tokens
     await expect(page.getByText(/The game is played on a board/i)).toBeVisible({ timeout: 5000 });

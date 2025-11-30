@@ -85,7 +85,6 @@ test.describe('Rich Text Editor (EDIT-03)', () => {
     await page.getByText('📝 Editor Visuale').click({ force: true });
 
     // Wait a bit for the editor to fully initialize
-    await page.waitForTimeout(500);
 
     // Make a change (this is tricky with TipTap, might need to use JSON mode)
     await page.getByText('{ } Codice JSON').click({ force: true });

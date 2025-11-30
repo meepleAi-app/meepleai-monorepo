@@ -62,7 +62,6 @@ test.describe('PDF Processing Progress Tracking (PDF-08)', () => {
 
     const confirmButton = page.locator('button', { hasText: 'Confirm selection' });
     await confirmButton.click();
-    await page.waitForTimeout(500);
 
     // Upload file
     const fileInput = page.locator('input[type="file"]');
@@ -77,7 +76,6 @@ test.describe('PDF Processing Progress Tracking (PDF-08)', () => {
     await uploadButton.click();
 
     // Then: Progress bar should appear
-    await page.waitForTimeout(1000);
     const progressBar = page.locator('[role="progressbar"]');
     await expect(progressBar).toBeVisible({ timeout: 10000 });
 
@@ -103,7 +101,6 @@ test.describe('PDF Processing Progress Tracking (PDF-08)', () => {
     await expect(gameSelect).toBeVisible({ timeout: 10000 });
     const confirmButton = page.locator('button', { hasText: 'Confirm selection' });
     await confirmButton.click();
-    await page.waitForTimeout(500);
 
     const fileInput = page.locator('input[type="file"]');
     const buffer = Buffer.from('%PDF-1.4\nTest PDF content');
@@ -117,7 +114,6 @@ test.describe('PDF Processing Progress Tracking (PDF-08)', () => {
     await uploadButton.click();
 
     // Then: Time remaining should be displayed
-    await page.waitForTimeout(1000);
     await expect(page.locator('text=/estimated time remaining/i')).toBeVisible({
       timeout: 10000,
     });
@@ -138,7 +134,6 @@ test.describe('PDF Processing Progress Tracking (PDF-08)', () => {
     await expect(gameSelect).toBeVisible({ timeout: 10000 });
     const confirmButton = page.locator('button', { hasText: 'Confirm selection' });
     await confirmButton.click();
-    await page.waitForTimeout(500);
 
     const fileInput = page.locator('input[type="file"]');
     const buffer = Buffer.from('%PDF-1.4\nTest PDF content');
@@ -152,7 +147,6 @@ test.describe('PDF Processing Progress Tracking (PDF-08)', () => {
     await uploadButton.click();
 
     // Then: Cancel button should be visible
-    await page.waitForTimeout(1000);
     const cancelButton = page.locator('button', { hasText: /cancel processing/i });
     await expect(cancelButton).toBeVisible({ timeout: 10000 });
 
@@ -178,7 +172,6 @@ test.describe('PDF Processing Progress Tracking (PDF-08)', () => {
     await expect(gameSelect).toBeVisible({ timeout: 10000 });
     const confirmButton = page.locator('button', { hasText: 'Confirm selection' });
     await confirmButton.click();
-    await page.waitForTimeout(500);
 
     const fileInput = page.locator('input[type="file"]');
     const buffer = Buffer.from('%PDF-1.4\nTest PDF content');
@@ -192,7 +185,6 @@ test.describe('PDF Processing Progress Tracking (PDF-08)', () => {
     await uploadButton.click();
 
     // When: User cancels processing
-    await page.waitForTimeout(1000);
     const cancelButton = page.locator('button', { hasText: /cancel processing/i });
     await expect(cancelButton).toBeVisible({ timeout: 10000 });
     await cancelButton.click();
@@ -218,7 +210,6 @@ test.describe('PDF Processing Progress Tracking (PDF-08)', () => {
     await expect(gameSelect).toBeVisible({ timeout: 10000 });
     const confirmButton = page.locator('button', { hasText: 'Confirm selection' });
     await confirmButton.click();
-    await page.waitForTimeout(500);
 
     const fileInput = page.locator('input[type="file"]');
     const buffer = Buffer.from('%PDF-1.4\nTest PDF content');
@@ -232,7 +223,6 @@ test.describe('PDF Processing Progress Tracking (PDF-08)', () => {
     await uploadButton.click();
 
     // When: User clicks cancel but chooses to continue
-    await page.waitForTimeout(1000);
     const cancelButton = page.locator('button', { hasText: /cancel processing/i });
     await expect(cancelButton).toBeVisible({ timeout: 10000 });
     await cancelButton.click();
@@ -259,7 +249,6 @@ test.describe('PDF Processing Progress Tracking (PDF-08)', () => {
     await expect(gameSelect).toBeVisible({ timeout: 10000 });
     const confirmButton = page.locator('button', { hasText: 'Confirm selection' });
     await confirmButton.click();
-    await page.waitForTimeout(500);
 
     const fileInput = page.locator('input[type="file"]');
     const buffer = Buffer.from('%PDF-1.4\nTest PDF content');
@@ -273,7 +262,6 @@ test.describe('PDF Processing Progress Tracking (PDF-08)', () => {
     await uploadButton.click();
 
     // Then: Progress percentage should be displayed
-    await page.waitForTimeout(1000);
     await expect(page.locator('text=/progress:/i')).toBeVisible({ timeout: 10000 });
     await expect(page.locator('text=/%/i')).toBeVisible();
   });
@@ -289,7 +277,6 @@ test.describe('PDF Processing Progress Tracking (PDF-08)', () => {
     await expect(gameSelect).toBeVisible({ timeout: 10000 });
     const confirmButton = page.locator('button', { hasText: 'Confirm selection' });
     await confirmButton.click();
-    await page.waitForTimeout(500);
 
     const fileInput = page.locator('input[type="file"]');
     const buffer = Buffer.from('%PDF-1.4\nTest PDF content');
@@ -303,9 +290,10 @@ test.describe('PDF Processing Progress Tracking (PDF-08)', () => {
     await uploadButton.click();
 
     // Then: Progress bar should have proper ARIA attributes
-    await page.waitForTimeout(1000);
     const progressBar = page.locator('[role="progressbar"]').first();
-    await expect(progressBar).toHaveAttribute('aria-label', 'PDF processing progress');
+    await expect(progressBar).toHaveAttribute('aria-label', 'PDF processing progress', {
+      timeout: 10000,
+    });
     await expect(progressBar).toHaveAttribute('aria-valuemin', '0');
     await expect(progressBar).toHaveAttribute('aria-valuemax', '100');
     await expect(progressBar).toHaveAttribute('aria-live', 'polite');

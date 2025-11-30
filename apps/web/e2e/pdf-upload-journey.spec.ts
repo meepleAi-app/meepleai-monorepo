@@ -14,6 +14,7 @@
 import { test as base, expect, Page } from '@playwright/test';
 import { AuthHelper, GamesHelper, USER_FIXTURES } from './pages';
 import { getTextMatcher, t } from './fixtures/i18n';
+import { WaitHelper } from './helpers/WaitHelper';
 
 // Extend test with editor authentication
 const test = base.extend<{ editorPage: Page }>({
@@ -54,7 +55,6 @@ test.describe('PDF Upload Journey', () => {
     await confirmButton.click();
 
     // Wait for confirmation to process
-    await page.waitForTimeout(500);
 
     // When: User uploads a PDF file
     const fileInput = page.locator('input[type="file"]');
@@ -73,7 +73,8 @@ test.describe('PDF Upload Journey', () => {
     await uploadButton.click();
 
     // Wait for upload to complete - the page will transition to "parse" step
-    await page.waitForTimeout(2000);
+    const waitHelper = new WaitHelper(page);
+    await waitHelper.waitForNetworkIdle(10000);
 
     // Verify that the PDF was added to the pdfs array
     // The upload should have triggered the POST /ingest/pdf endpoint
@@ -93,8 +94,8 @@ test.describe('PDF Upload Journey', () => {
     const uploadedPdfsHeading = page.locator('h3', { hasText: 'Uploaded PDFs' });
     await expect(uploadedPdfsHeading).toBeVisible({ timeout: 10000 });
 
-    // Wait for PDFs to load
-    await page.waitForTimeout(2000);
+    // Wait for PDFs to load (reuse waitHelper from L77)
+    await waitHelper.waitForNetworkIdle(10000);
 
     // Then: PDF table should be visible
     const pdfsTable = page.locator('table[aria-label="Uploaded PDFs"]');

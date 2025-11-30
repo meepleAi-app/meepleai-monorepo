@@ -117,7 +117,6 @@ test.describe('Admin Configuration Management', () => {
       const initialState = await firstToggle.isChecked();
 
       await firstToggle.click({ force: true });
-      await page.waitForTimeout(500);
 
       // Verify state changed
       const newState = await firstToggle.isChecked();
@@ -137,7 +136,6 @@ test.describe('Admin Configuration Management', () => {
 
     for (const tab of tabs) {
       await page.getByRole('button', { name: new RegExp(tab, 'i') }).click({ force: true });
-      await page.waitForTimeout(300);
 
       // Verify tab is active (URL or visual indicator)
       const isActive =

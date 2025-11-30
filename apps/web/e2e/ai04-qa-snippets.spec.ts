@@ -510,7 +510,6 @@ test.describe('AI-04: Q&A with Snippets and Not Specified Fallback', () => {
     await helpfulButton.click();
 
     // Wait a moment for API call
-    await page.waitForTimeout(500);
 
     // Verify button shows active state (green background)
     await expect(helpfulButton).toHaveCSS('background-color', 'rgb(52, 168, 83)');

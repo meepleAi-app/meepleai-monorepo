@@ -6,6 +6,14 @@
 
 import { test as base, expect, Page } from '@playwright/test';
 import { AuthHelper, USER_FIXTURES } from './pages';
+import { WaitHelper } from './helpers/WaitHelper';
+import {
+  mockGamesAPI,
+  mockAgentsAPI,
+  waitForAutoSelection,
+  QATestGame,
+  QATestAgent,
+} from './helpers/qa-test-utils';
 
 const test = base.extend<{ userPage: Page }>({
   userPage: async ({ page }, use) => {
@@ -16,11 +24,30 @@ const test = base.extend<{ userPage: Page }>({
 });
 
 test.describe('Chat Streaming (CHAT-01)', () => {
+  const testGame: QATestGame = {
+    id: 'chess-1',
+    title: 'Chess',
+    createdAt: '2025-01-01T00:00:00Z',
+  };
+
+  const testAgent: QATestAgent = {
+    id: 'agent-qa-1',
+    gameId: 'chess-1',
+    name: 'Chess Q&A Agent',
+    kind: 'qa',
+    createdAt: '2025-01-01T00:00:00Z',
+  };
+
   test.beforeEach(async ({ userPage: page }) => {
+    // Mock games and agents for auto-selection (Issue #1800 fix)
+    await mockGamesAPI(page, [testGame]);
+    await mockAgentsAPI(page, testGame.id, [testAgent]);
+
     // Navigate to chat (already authenticated as user)
     await page.goto('/chat');
-    await page.waitForLoadState('networkidle');
-    await page.waitForLoadState('networkidle');
+
+    // Wait for auto-selection to complete
+    await waitForAutoSelection(page, testGame.id, testAgent.id);
   });
 
   test('should display streaming UI elements', async ({ userPage: page }) => {
@@ -67,8 +94,9 @@ test.describe('Chat Streaming (CHAT-01)', () => {
     await page.fill('#message-input', 'What are the rules?');
     await page.locator('button[type="submit"]').click({ timeout: 5000 });
 
-    // Wait for streaming to start
-    await page.waitForTimeout(100);
+    // Wait for SSE response to start (smart wait)
+    const waitHelper = new WaitHelper(page);
+    await waitHelper.waitForApiResponse('/stream', 200, 3000).catch(() => {});
 
     // Stop button should be visible (has ⏹ Stop or aria-label)
     const stopButton = page.locator('button[aria-label="Stop streaming"], button:has-text("Stop")');
@@ -109,8 +137,11 @@ test.describe('Chat Streaming (CHAT-01)', () => {
     await page.fill('#message-input', 'Tell me about the game');
     await page.locator('button[type="submit"]').click({ timeout: 5000 });
 
-    // Wait a bit for streaming to start
-    await page.waitForTimeout(200);
+    // Wait for streaming button state change (smart wait)
+    const waitHelper = new WaitHelper(page);
+    await waitHelper
+      .waitForActionable('button[aria-label="Stop streaming"], button:has-text("Stop")', 3000)
+      .catch(() => {});
 
     // Try to find and click stop button (use force: true to handle nextjs-portal overlay)
     const stopButton = page.locator('button[aria-label="Stop streaming"], button:has-text("Stop")');
@@ -150,10 +181,7 @@ test.describe('Chat Streaming (CHAT-01)', () => {
     await page.fill('#message-input', 'Is this game fun?');
     await page.locator('button[type="submit"]').click({ timeout: 5000 });
 
-    // Wait for response to appear
-    await page.waitForTimeout(500);
-
-    // Should eventually show the complete answer
+    // Wait for complete answer (auto-retry assertion)
     await expect(page.getByText(/The game is fun/i)).toBeVisible({ timeout: 5000 });
   });
 
@@ -179,10 +207,7 @@ test.describe('Chat Streaming (CHAT-01)', () => {
     await page.fill('#message-input', 'How do players move?');
     await page.locator('button[type="submit"]').click({ timeout: 5000 });
 
-    // Wait for response
-    await page.waitForTimeout(500);
-
-    // Should show sources section
+    // Should show sources section (auto-retry assertion)
     await expect(page.getByText(/Fonti|sources/i)).toBeVisible({ timeout: 5000 });
 
     // Should show the citation source
@@ -249,7 +274,6 @@ test.describe('Chat Streaming (CHAT-01)', () => {
     await expect(page.locator('#message-input')).toBeDisabled({ timeout: 500 });
 
     // Wait for completion
-    await page.waitForTimeout(1500);
 
     // Input should be re-enabled after streaming completes
     await expect(page.locator('#message-input')).toBeEnabled({ timeout: 1000 });
@@ -276,20 +300,16 @@ test.describe('Chat Streaming (CHAT-01)', () => {
     await page.fill('#message-input', 'First question');
     await page.click('button[type="submit"]', { force: true });
 
-    await page.waitForTimeout(500);
-
     // First message should be visible
-    await expect(page.getByText('First question')).toBeVisible();
+    await expect(page.getByText('First question')).toBeVisible({ timeout: 3000 });
 
     // Send second message (use force: true to handle nextjs-portal overlay)
     await page.fill('#message-input', 'Second question');
     await page.click('button[type="submit"]', { force: true });
 
-    await page.waitForTimeout(500);
-
     // Both messages should be visible
-    await expect(page.getByText('First question')).toBeVisible();
-    await expect(page.getByText('Second question')).toBeVisible();
+    await expect(page.getByText('First question')).toBeVisible({ timeout: 3000 });
+    await expect(page.getByText('Second question')).toBeVisible({ timeout: 3000 });
   });
 
   test('should show state updates during streaming', async ({ userPage: page }) => {
@@ -317,7 +337,6 @@ test.describe('Chat Streaming (CHAT-01)', () => {
 
     // Should show state update (might be brief)
     // We check if either a state message appears or the final answer
-    await page.waitForTimeout(300);
 
     const hasStateUpdate = await page
       .getByText(/Generating|Searching/i)
@@ -355,8 +374,6 @@ test.describe('Chat Streaming (CHAT-01)', () => {
     // Send first message (use force: true to handle nextjs-portal overlay)
     await page.fill('#message-input', 'Question 1');
     await page.click('button[type="submit"]', { force: true });
-
-    await page.waitForTimeout(200);
 
     // Send second message quickly (use force: true to handle nextjs-portal overlay)
     await page.fill('#message-input', 'Question 2');

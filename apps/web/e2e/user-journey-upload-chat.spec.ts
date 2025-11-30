@@ -7,6 +7,7 @@
 import { test, expect } from '@playwright/test';
 import path from 'path';
 import { authenticateViaAPI } from './fixtures/auth';
+import { WaitHelper } from './helpers/WaitHelper';
 
 /**
  * Complete User Journey E2E Test: Upload → Chat with REAL RAG Integration
@@ -86,8 +87,9 @@ test.describe('Complete User Journey: Real Backend Integration', () => {
     // ========================================================================
 
     await test.step('Select or create HARMONIES game', async () => {
-      // Wait for games to load
-      await page.waitForTimeout(2000);
+      // Wait for games to load (smart wait)
+      const waitHelper = new WaitHelper(page);
+      await waitHelper.waitForNetworkIdle(5000);
 
       const gameSelect = page.locator('select#gameSelect');
 
@@ -110,7 +112,8 @@ test.describe('Complete User Journey: Real Backend Integration', () => {
         const confirmButton = page.getByRole('button', { name: /confirm/i });
         if (await confirmButton.isVisible({ timeout: 2000 })) {
           await confirmButton.click();
-          await page.waitForTimeout(1000);
+          const waitHelper = new WaitHelper(page);
+          await waitHelper.waitForNetworkIdle(3000);
         }
       }
     });
@@ -127,11 +130,10 @@ test.describe('Complete User Journey: Real Backend Integration', () => {
       // Upload the file
       await fileInput.setInputFiles(pdfPath);
 
-      // Wait for upload to start
-      await page.waitForTimeout(2000);
-
-      // Click upload button if needed
+      // Wait for upload button to become actionable
+      const waitHelper = new WaitHelper(page);
       const uploadButton = page.locator('[data-testid="upload-button"]');
+      await waitHelper.waitForActionable('[data-testid="upload-button"]', 5000).catch(() => {});
       if ((await uploadButton.isVisible({ timeout: 2000 })) && (await uploadButton.isEnabled())) {
         await uploadButton.click();
       }
@@ -157,11 +159,12 @@ test.describe('Complete User Journey: Real Backend Integration', () => {
         );
         console.log('✓ PDF processing completed successfully');
       } catch (error) {
-        // Fallback: check for any success indicators in page content
+        // Fallback: wait for network idle (embeddings processing)
+        const waitHelper = new WaitHelper(page);
+        await waitHelper.waitForNetworkIdle(10000);
+
         const pageContent = await page.textContent('body');
         console.log('Upload status:', pageContent?.substring(0, 500));
-        // If no explicit indicator, wait a bit more for embeddings
-        await page.waitForTimeout(5000);
       }
     });
 
@@ -193,8 +196,9 @@ test.describe('Complete User Journey: Real Backend Integration', () => {
           const harmoniesOption = options.find(opt => opt.includes('HARMONIES'));
           if (harmoniesOption) {
             await gameSelect.selectOption({ label: harmoniesOption });
+            const waitHelper = new WaitHelper(page);
+            await waitHelper.waitForNetworkIdle(3000);
           }
-          await page.waitForTimeout(1000);
         } catch (e) {
           // Game might not be in dropdown yet
           console.log('Could not select HARMONIES, using default game');
@@ -248,8 +252,9 @@ test.describe('Complete User Journey: Real Backend Integration', () => {
           console.log('Streaming took longer than expected');
         });
 
-      // Additional wait for response to render
-      await page.waitForTimeout(2000);
+      // Wait for response to fully render (DOM stable after streaming)
+      const waitHelper = new WaitHelper(page);
+      await waitHelper.waitForDOMStable('body', 5000);
     });
 
     // ========================================================================

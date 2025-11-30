@@ -17,6 +17,7 @@
 import { test, expect } from '@playwright/test';
 import { getTextMatcher } from './fixtures/i18n';
 import { LoginPage, AuthHelper } from './pages';
+import { WaitHelper } from './helpers/WaitHelper';
 
 test.describe('OAuth Authentication Flow', () => {
   let loginPage: LoginPage;
@@ -151,7 +152,8 @@ test.describe('OAuth Authentication Flow', () => {
       const googleButton = page.getByRole('button', { name: googleMatcher });
 
       await googleButton.click();
-      await page.waitForTimeout(2000);
+      const waitHelper = new WaitHelper(page);
+      await waitHelper.waitForNetworkIdle(5000);
 
       // Should show browser error or stay on page (graceful degradation)
       const url = page.url();
@@ -233,7 +235,6 @@ test.describe('OAuth Authentication Flow', () => {
       const googleButton = page.getByRole('button', { name: googleMatcher });
 
       await googleButton.hover();
-      await page.waitForTimeout(300);
 
       // Button should still be visible after hover
       await expect(googleButton).toBeVisible();
@@ -365,7 +366,6 @@ test.describe('OAuth Authentication Flow', () => {
       });
 
       await googleButton.click();
-      await page.waitForTimeout(1000);
 
       // Navigation should have been triggered
       expect(navigationStarted).toBe(true);

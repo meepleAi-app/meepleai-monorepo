@@ -10,7 +10,8 @@ namespace Api.Services;
 public class LanguageDetectionService : ILanguageDetectionService
 {
     private static readonly string[] SupportedLanguages = { "en", "it", "de", "fr", "es" };
-    private static readonly Regex WordRegex = new(@"\p{L}+", RegexOptions.Compiled);
+    // FIX MA0009: Add timeout to prevent ReDoS attacks
+    private static readonly Regex WordRegex = new(@"\p{L}+", RegexOptions.Compiled, TimeSpan.FromSeconds(1));
     private static readonly IReadOnlyDictionary<string, LanguageProfile> Profiles = new Dictionary<string, LanguageProfile>
     {
         ["en"] = CreateProfile(

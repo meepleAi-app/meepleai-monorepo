@@ -179,28 +179,30 @@ public static partial class DataMasking
     }
 
     // Regex patterns for connection string password detection
-    [GeneratedRegex(@"(password|pwd)=[^;]+", RegexOptions.IgnoreCase)]
+    // FIX MA0009: Add timeout to prevent ReDoS attacks
+    [GeneratedRegex(@"(password|pwd)=[^;]+", RegexOptions.IgnoreCase, matchTimeoutMilliseconds: 1000)]
     private static partial Regex PasswordInConnectionStringPattern1();
 
-    [GeneratedRegex(@"(Password|PWD)=[^;]+")]
+    [GeneratedRegex(@"(Password|PWD)=[^;]+", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
     private static partial Regex PasswordInConnectionStringPattern2();
 
-    [GeneratedRegex(@"(password|pwd):\w+", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"(password|pwd):\w+", RegexOptions.IgnoreCase, matchTimeoutMilliseconds: 1000)]
     private static partial Regex PasswordInConnectionStringPattern3();
 
     // Regex patterns for response body sanitization
-    [GeneratedRegex(@"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b")]
+    // FIX MA0009: Add timeout to prevent ReDoS attacks
+    [GeneratedRegex(@"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
     private static partial Regex EmailPattern();
 
-    [GeneratedRegex(@"Bearer\s+[A-Za-z0-9_\-\.]+")]
+    [GeneratedRegex(@"Bearer\s+[A-Za-z0-9_\-\.]+", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
     private static partial Regex BearerTokenPattern();
 
-    [GeneratedRegex(@"""api_key""\s*:\s*""[^""]+""", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"""api_key""\s*:\s*""[^""]+""", RegexOptions.IgnoreCase, matchTimeoutMilliseconds: 1000)]
     private static partial Regex ApiKeyPattern();
 
-    [GeneratedRegex(@"""password""\s*:\s*""[^""]+""", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"""password""\s*:\s*""[^""]+""", RegexOptions.IgnoreCase, matchTimeoutMilliseconds: 1000)]
     private static partial Regex PasswordPattern();
 
-    [GeneratedRegex(@"""secret""\s*:\s*""[^""]+""", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"""secret""\s*:\s*""[^""]+""", RegexOptions.IgnoreCase, matchTimeoutMilliseconds: 1000)]
     private static partial Regex SecretPattern();
 }

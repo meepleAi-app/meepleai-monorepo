@@ -490,8 +490,9 @@ public class PromptEvaluationService : IPromptEvaluationService
 
         // Parse citations from response
         // Patterns: "Page 5", "p. 5", "page 5", "p.5"
+        // FIX MA0009: Add timeout to prevent ReDoS attacks
         var citationPattern = @"(?:page|p\.?)\s*(\d+)";
-        var matches = Regex.Matches(response, citationPattern, RegexOptions.IgnoreCase);
+        var matches = Regex.Matches(response, citationPattern, RegexOptions.IgnoreCase, TimeSpan.FromSeconds(1));
 
         var foundCitations = matches
             .Select(m => m.Groups[1].Value)

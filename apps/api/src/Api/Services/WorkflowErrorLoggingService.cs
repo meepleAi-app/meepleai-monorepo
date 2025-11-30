@@ -170,11 +170,13 @@ public class WorkflowErrorLoggingService : IWorkflowErrorLoggingService
         var sanitized = message;
 
         // Remove potential API keys, tokens, passwords in error messages
+        // FIX MA0009: Add timeout to prevent ReDoS attacks
         sanitized = System.Text.RegularExpressions.Regex.Replace(
             sanitized,
             @"(api[_-]?key|token|password|secret)[""']?\s*[:=]\s*[""']?[\w\-]{8,}",
             "$1=***REDACTED***",
-            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase,
+            TimeSpan.FromSeconds(1));
 
         // Truncate if too long (defense against log injection)
         if (sanitized.Length > 5000)

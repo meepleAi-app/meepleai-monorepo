@@ -264,10 +264,12 @@ public class SecurityHeadersOptionsValidator : IValidateOptions<SecurityHeadersO
             else
             {
                 // Extract max-age value and validate it's a number
+                // FIX MA0009: Add timeout to prevent ReDoS attacks
                 var maxAgeMatch = System.Text.RegularExpressions.Regex.Match(
                     options.HstsPolicy,
                     @"max-age=(\d+)",
-                    System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase,
+                    TimeSpan.FromSeconds(1));
 
                 if (maxAgeMatch.Success)
                 {

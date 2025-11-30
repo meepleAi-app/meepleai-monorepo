@@ -19,8 +19,9 @@ public class CitationExtractorService : ICitationExtractorService
     public bool ValidateCitations(List<Snippet> snippets, string answer)
     {
         // Extract [1], [2], etc. from answer
+        // FIX MA0009: Add timeout to prevent ReDoS attacks
         var citationPattern = @"\[(\d+)\]";
-        var matches = Regex.Matches(answer, citationPattern);
+        var matches = Regex.Matches(answer, citationPattern, RegexOptions.None, TimeSpan.FromSeconds(1));
 
         if (matches.Count == 0)
         {

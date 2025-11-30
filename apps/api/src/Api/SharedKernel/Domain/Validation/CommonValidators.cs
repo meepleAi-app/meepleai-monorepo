@@ -11,9 +11,11 @@ public static class CommonValidators
     #region Email Validation
 
     // Email validation regex (RFC 5322 simplified) - matches Email.cs implementation
+    // FIX MA0009: Add timeout to prevent ReDoS attacks
     private static readonly Regex EmailRegex = new(
         @"^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$",
-        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        RegexOptions.Compiled | RegexOptions.IgnoreCase,
+        TimeSpan.FromSeconds(1));
 
     /// <summary>
     /// Validates that a string is a valid email address.
@@ -105,9 +107,11 @@ public static class CommonValidators
 
     #region API Key Validation
 
+    // FIX MA0009: Add timeout to prevent ReDoS attacks
     private static readonly Regex ApiKeyRegex = new(
         @"^mpl_(dev|staging|prod)_[A-Za-z0-9+/]{32,}={0,2}$",
-        RegexOptions.Compiled);
+        RegexOptions.Compiled,
+        TimeSpan.FromSeconds(1));
 
     /// <summary>
     /// Validates that a string matches the MeepleAI API key format (mpl_{env}_{base64}).
@@ -319,9 +323,11 @@ public static class CommonValidators
 
     #region Version Validation
 
+    // FIX MA0009: Add timeout to prevent ReDoS attacks
     private static readonly Regex VersionRegex = new(
         @"^\d+\.\d+(\.\d+)?$",
-        RegexOptions.Compiled);
+        RegexOptions.Compiled,
+        TimeSpan.FromSeconds(1));
 
     /// <summary>
     /// Validates that a string is a valid semantic version (e.g., "1.0" or "1.0.0").
@@ -354,9 +360,11 @@ public static class CommonValidators
 
     #region Configuration Key Validation
 
+    // FIX MA0009: Add timeout to prevent ReDoS attacks
     private static readonly Regex ConfigKeyRegex = new(
         @"^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)*$",
-        RegexOptions.Compiled);
+        RegexOptions.Compiled,
+        TimeSpan.FromSeconds(1));
 
     /// <summary>
     /// Validates that a string is a valid configuration key (e.g., "Section.SubSection.Key").

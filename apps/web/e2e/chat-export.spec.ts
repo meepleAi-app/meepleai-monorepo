@@ -495,7 +495,6 @@ test.describe('Chat Export E2E Tests', () => {
     expect(download1.suggestedFilename()).toMatch(/\.json$/);
 
     // Wait a bit
-    await page.waitForTimeout(500);
 
     // Second export (should work independently)
     const downloadPromise2 = page.waitForEvent('download');

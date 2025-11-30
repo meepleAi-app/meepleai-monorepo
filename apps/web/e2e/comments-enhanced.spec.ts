@@ -213,7 +213,6 @@ test.describe('EDIT-05: Enhanced Comments System', () => {
       await checkbox.uncheck();
 
       // Wait for comments to reload
-      await page.waitForTimeout(1000);
 
       // Assert: Only unresolved comment should be visible
       await expect(page.locator(`text=${unresolvedText}`)).toBeVisible();
@@ -221,7 +220,6 @@ test.describe('EDIT-05: Enhanced Comments System', () => {
 
       // Act: Re-check "Mostra commenti risolti"
       await checkbox.check();
-      await page.waitForTimeout(1000);
 
       // Assert: Both comments should be visible again
       await expect(page.locator(`text=${unresolvedText}`)).toBeVisible();

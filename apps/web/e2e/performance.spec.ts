@@ -341,12 +341,10 @@ test.describe('Core Web Vitals - Detailed Checks', () => {
     await page.evaluate(() => {
       window.scrollTo(0, document.body.scrollHeight / 2);
     });
-    await page.waitForTimeout(500);
 
     await page.evaluate(() => {
       window.scrollTo(0, document.body.scrollHeight);
     });
-    await page.waitForTimeout(500);
 
     // In production, this would be measured via Lighthouse
     // For now, we verify the page doesn't have obvious layout issues

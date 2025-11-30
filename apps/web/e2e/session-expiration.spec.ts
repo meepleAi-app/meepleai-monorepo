@@ -6,6 +6,7 @@
 
 import { test, expect, Page } from '@playwright/test';
 import { getTextMatcher, t } from './fixtures/i18n';
+import { WaitHelper } from './helpers/WaitHelper';
 
 const apiBase = 'http://localhost:8080';
 
@@ -221,7 +222,6 @@ test.describe('Session Expiration Behavior', () => {
     // If no warning UI exists yet, this test documents expected behavior for future implementation.
 
     // Wait a bit to ensure the hook has run
-    await page.waitForTimeout(1000);
 
     // Verify we're still on the chat page (not redirected)
     await expect(page).toHaveURL('/chat');
@@ -281,7 +281,8 @@ test.describe('Session Expiration Behavior', () => {
 
     // Wait for enough time to trigger the hook's manual check or polling
     // The hook polls every 5 minutes, but we can trigger earlier by waiting for API call
-    await page.waitForTimeout(2000);
+    const waitHelper = new WaitHelper(page);
+    await waitHelper.waitForNetworkIdle(5000);
 
     // Trigger manual session check by reloading (simulates hook behavior)
     // In a real scenario, the hook's useEffect would trigger this automatically
@@ -317,7 +318,6 @@ test.describe('Session Expiration Behavior', () => {
     await page.goto('/chat');
 
     // Wait a bit to ensure the hook has run
-    await page.waitForTimeout(1000);
 
     // Should stay on chat page (not redirect due to network error)
     await expect(page).toHaveURL('/chat');

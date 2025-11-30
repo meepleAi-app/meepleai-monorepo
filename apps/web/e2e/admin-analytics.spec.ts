@@ -127,7 +127,6 @@ test.describe('Analytics Dashboard E2E', () => {
     await page.selectOption('select', '7');
 
     // Wait for data to refresh
-    await page.waitForTimeout(1000);
     await expect(page.getByText(getTextMatcher('admin.analytics.dashboard'))).toBeVisible();
   });
 

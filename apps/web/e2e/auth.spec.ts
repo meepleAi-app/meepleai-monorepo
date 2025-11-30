@@ -35,11 +35,10 @@ test.describe('Authentication Flows', () => {
     await loginPage.navigate();
     await loginPage.login('admin@meepleai.dev', 'Demo123!');
 
-    // Wait and verify no error messages
-    await page.waitForTimeout(1000);
+    // Verify no error messages
     const errorElement = page.locator('text=/invalid|error|failed/i').first();
     await expect(errorElement)
-      .not.toBeVisible({ timeout: 2000 })
+      .not.toBeVisible({ timeout: 3000 })
       .catch(() => {
         // Error element might not exist at all, which is fine
       });
@@ -57,7 +56,6 @@ test.describe('Authentication Flows', () => {
     await loginPage.login('wrong@example.com', 'wrongpassword');
 
     // Should show error message
-    await page.waitForTimeout(500);
     const pageContent = await page.content();
     expect(pageContent.toLowerCase()).toMatch(/invalid|error|failed|incorrect/);
   });
@@ -80,9 +78,7 @@ test.describe('Authentication Flows', () => {
       await logoutButton.click();
 
       // Should redirect to home or login
-      await page.waitForTimeout(1000);
-      const currentUrl = page.url();
-      expect(currentUrl).toMatch(/\/(login|)$/);
+      await expect(page).toHaveURL(/\/(login|)$/, { timeout: 3000 });
     }
   });
 });
@@ -149,8 +145,7 @@ test.describe('SSR Auth Protection', () => {
     await page.goto('/upload');
 
     // Should stay on /upload page
-    await page.waitForTimeout(500);
-    expect(page.url()).toContain('/upload');
+    await expect(page).toHaveURL(/\/upload/, { timeout: 3000 });
   });
 
   test('should allow authenticated editor to access /upload', async ({ page }) => {
@@ -176,8 +171,7 @@ test.describe('SSR Auth Protection', () => {
     await page.goto('/upload');
 
     // Should stay on /upload page
-    await page.waitForTimeout(500);
-    expect(page.url()).toContain('/upload');
+    await expect(page).toHaveURL(/\/upload/, { timeout: 3000 });
   });
 
   test('should allow authenticated editor to access /editor', async ({ page }) => {
@@ -187,8 +181,7 @@ test.describe('SSR Auth Protection', () => {
     await page.goto('/editor');
 
     // Should stay on /editor page
-    await page.waitForTimeout(500);
-    expect(page.url()).toContain('/editor');
+    await expect(page).toHaveURL(/\/editor/, { timeout: 3000 });
   });
 });
 
@@ -236,8 +229,7 @@ test.describe('Role-Based Authorization', () => {
     await page.goto('/admin');
 
     // Should stay on /admin page
-    await page.waitForTimeout(500);
-    expect(page.url()).toContain('/admin');
+    await expect(page).toHaveURL(/\/admin/, { timeout: 3000 });
   });
 
   test('should block non-admin from /admin/users', async ({ page }) => {
@@ -247,8 +239,7 @@ test.describe('Role-Based Authorization', () => {
     await page.goto('/admin/users');
 
     // Should redirect away from admin area
-    await page.waitForTimeout(500);
-    expect(page.url()).not.toContain('/admin');
+    await expect(page).not.toHaveURL(/\/admin/, { timeout: 3000 });
   });
 
   test('should allow admin to access /admin/users', async ({ page }) => {
@@ -274,8 +265,7 @@ test.describe('Role-Based Authorization', () => {
     await page.goto('/admin/users');
 
     // Should stay on /admin/users page
-    await page.waitForTimeout(500);
-    expect(page.url()).toContain('/admin/users');
+    await expect(page).toHaveURL(/\/admin\/users/, { timeout: 3000 });
   });
 });
 
@@ -347,9 +337,7 @@ test.describe('User Profile Management', () => {
     await saveButton.click();
 
     // Should show success message
-    await page.waitForTimeout(500);
-    const pageContent = await page.content();
-    expect(pageContent.toLowerCase()).toMatch(/success|updated|saved/);
+    await expect(page.locator('text=/success|updated|saved/i')).toBeVisible({ timeout: 3000 });
   });
 
   test('should change password successfully', async ({ page }) => {
@@ -426,9 +414,7 @@ test.describe('User Profile Management', () => {
     await changePasswordBtn.click();
 
     // Should show success message
-    await page.waitForTimeout(500);
-    const pageContent = await page.content();
-    expect(pageContent.toLowerCase()).toMatch(/success|changed|updated/);
+    await expect(page.locator('text=/success|changed|updated/i')).toBeVisible({ timeout: 3000 });
   });
 
   test('should show error when passwords do not match', async ({ page }) => {
@@ -491,8 +477,6 @@ test.describe('User Profile Management', () => {
     await changePasswordBtn.click();
 
     // Should show error
-    await page.waitForTimeout(500);
-    const pageContent = await page.content();
-    expect(pageContent.toLowerCase()).toMatch(/match|error|invalid/);
+    await expect(page.locator('text=/match|error|invalid/i')).toBeVisible({ timeout: 3000 });
   });
 });

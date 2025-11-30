@@ -6,6 +6,7 @@
 
 import { test, expect } from '@playwright/test';
 import { getTextMatcher, t } from './fixtures/i18n';
+import { WaitHelper } from './helpers/WaitHelper';
 
 test.describe('RuleSpecEditor E2E', () => {
   test.beforeEach(async ({ page }) => {
@@ -85,7 +86,8 @@ test.describe('RuleSpecEditor E2E', () => {
     await expect(page.getByText(/unsaved|modifiche non salvate/i)).toBeVisible({ timeout: 2000 });
 
     // Wait for auto-save (2 second debounce)
-    await page.waitForTimeout(2500);
+    const waitHelper = new WaitHelper(page);
+    await waitHelper.waitForNetworkIdle(5000);
     await expect(page.getByText(/auto.saved|auto.salvato/i)).toBeVisible({ timeout: 5000 });
 
     // Test undo functionality (use force: true to handle nextjs-portal overlay)
@@ -215,14 +217,12 @@ test.describe('RuleSpecEditor E2E', () => {
 
     // Use Ctrl+Z to undo
     await page.keyboard.press('Control+z');
-    await page.waitForTimeout(500);
 
     const content = await textarea.inputValue();
     expect(content).toContain('"version": "1.0.0"');
 
     // Use Ctrl+Y to redo
     await page.keyboard.press('Control+y');
-    await page.waitForTimeout(500);
 
     const redoneContent = await textarea.inputValue();
     expect(redoneContent).toContain('"version": "2.0.0"');
@@ -282,11 +282,9 @@ test.describe('RuleSpecEditor E2E', () => {
     const toggleButton = page.getByTestId('view-toggle').or(page.getByText(/Switch to|toggle/i));
     if ((await toggleButton.count()) > 0) {
       await toggleButton.click({ force: true });
-      await page.waitForTimeout(500);
 
       // Toggle back to JSON (use force: true to handle nextjs-portal overlay)
       await toggleButton.click({ force: true });
-      await page.waitForTimeout(500);
 
       // Content should be preserved
       const newContent = await textarea.inputValue();

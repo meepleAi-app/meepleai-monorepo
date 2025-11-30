@@ -7,6 +7,7 @@
 
 import { test, expect } from './fixtures/auth';
 import { getTextMatcher, t } from './fixtures/i18n';
+import { WaitHelper } from './helpers/WaitHelper';
 
 test.describe('Timeline RAG Feature', () => {
   test('should require authentication', async ({ page }) => {
@@ -91,14 +92,14 @@ test.describe('Timeline RAG Feature', () => {
       if (buttonExists) {
         // Click to collapse
         await filtersButton.click({ force: true });
-        await page.waitForTimeout(500); // Wait for animation
 
         // Click to expand again
         await filtersButton.click({ force: true });
-        await page.waitForTimeout(500);
 
         // Filters should be visible again
-        await expect(page.getByText(getTextMatcher('timeline.eventType'))).toBeVisible();
+        await expect(page.getByText(getTextMatcher('timeline.eventType'))).toBeVisible({
+          timeout: 3000,
+        });
       }
     });
 
@@ -134,7 +135,8 @@ test.describe('Timeline RAG Feature', () => {
       await sendButton.click({ force: true });
 
       // Wait a bit for events to be tracked
-      await page.waitForTimeout(2000);
+      const waitHelper = new WaitHelper(page);
+      await waitHelper.waitForNetworkIdle(5000);
 
       // Check if events appeared in timeline
       const eventsList = page
@@ -162,7 +164,6 @@ test.describe('Timeline RAG Feature', () => {
 
         // Toggle it
         await messageCheckbox.click({ force: true });
-        await page.waitForTimeout(500);
 
         // Verify it toggled
         const nowChecked = await messageCheckbox.isChecked();
@@ -170,7 +171,6 @@ test.describe('Timeline RAG Feature', () => {
 
         // Toggle back
         await messageCheckbox.click({ force: true });
-        await page.waitForTimeout(500);
       }
     });
 
@@ -185,10 +185,9 @@ test.describe('Timeline RAG Feature', () => {
 
       // Type search query
       await searchInput.fill('test search');
-      await page.waitForTimeout(500);
 
       // Verify input has the value
-      await expect(searchInput).toHaveValue('test search');
+      await expect(searchInput).toHaveValue('test search', { timeout: 3000 });
 
       // Clear search
       await searchInput.clear();
@@ -205,7 +204,6 @@ test.describe('Timeline RAG Feature', () => {
 
       if (buttonExists) {
         await resetButton.click({ force: true });
-        await page.waitForTimeout(500);
 
         // Verify search is cleared
         const searchInput = page
@@ -240,11 +238,9 @@ test.describe('Timeline RAG Feature', () => {
       if (buttonExists) {
         // Click to collapse
         await detailsButton.click({ force: true });
-        await page.waitForTimeout(500);
 
         // Click to expand again
         await detailsButton.click({ force: true });
-        await page.waitForTimeout(500);
       }
     });
 
@@ -280,18 +276,16 @@ test.describe('Timeline RAG Feature', () => {
     test('should handle responsive layout', async ({ userPage: page }) => {
       // Test mobile viewport
       await page.setViewportSize({ width: 375, height: 667 });
-      await page.waitForTimeout(500);
 
       // Timeline should still be visible
       const timeline = page.getByRole('heading', { name: getTextMatcher('timeline.heading') });
-      await expect(timeline).toBeVisible();
+      await expect(timeline).toBeVisible({ timeout: 3000 });
 
       // Test desktop viewport
       await page.setViewportSize({ width: 1920, height: 1080 });
-      await page.waitForTimeout(500);
 
       // Timeline should still be visible
-      await expect(timeline).toBeVisible();
+      await expect(timeline).toBeVisible({ timeout: 3000 });
     });
 
     test('should persist through chat interactions', async ({ userPage: page }) => {
@@ -303,16 +297,14 @@ test.describe('Timeline RAG Feature', () => {
 
       // Navigate within page (scroll, etc.)
       await page.evaluate(() => window.scrollTo(0, 100));
-      await page.waitForTimeout(500);
 
       // Timeline should still be visible
-      await expect(timelineHeading).toBeVisible();
+      await expect(timelineHeading).toBeVisible({ timeout: 3000 });
 
       // Scroll back
       await page.evaluate(() => window.scrollTo(0, 0));
-      await page.waitForTimeout(500);
 
-      await expect(timelineHeading).toBeVisible();
+      await expect(timelineHeading).toBeVisible({ timeout: 3000 });
     });
 
     test('should have accessibility features', async ({ userPage: page }) => {
@@ -369,7 +361,6 @@ test.describe('Timeline RAG Feature', () => {
     test('should support keyboard navigation', async ({ userPage: page }) => {
       // Test tab navigation
       await page.keyboard.press('Tab');
-      await page.waitForTimeout(200);
 
       // Focus should move through interactive elements
       const focusedElement = await page.evaluate(() => document.activeElement?.tagName);
@@ -426,14 +417,12 @@ test.describe('Timeline RAG Feature', () => {
       await searchInput.fill('persistent test');
 
       // Verify filter persists
-      await page.waitForTimeout(1000);
-      await expect(searchInput).toHaveValue('persistent test');
+      await expect(searchInput).toHaveValue('persistent test', { timeout: 3000 });
 
       // Filter should remain after scrolling
       await page.evaluate(() => window.scrollBy(0, 100));
-      await page.waitForTimeout(500);
 
-      await expect(searchInput).toHaveValue('persistent test');
+      await expect(searchInput).toHaveValue('persistent test', { timeout: 3000 });
     });
   });
 });

@@ -17,6 +17,7 @@
 import { test as base, expect, Page } from '@playwright/test';
 import { AuthHelper, ChatHelper, USER_FIXTURES } from './pages';
 import { getTextMatcher, t } from './fixtures/i18n';
+import { WaitHelper } from './helpers/WaitHelper';
 
 // Extended test with user authentication
 const test = base.extend<{ userPage: Page }>({
@@ -61,7 +62,8 @@ test.describe('CHAT-06: Message Editing and Deletion', () => {
     ).toBeVisible({ timeout: 10000 });
 
     // Wait for AI response to complete
-    await page.waitForTimeout(2000);
+    const waitHelper = new WaitHelper(page);
+    await waitHelper.waitForNetworkIdle(5000);
 
     // Locate the user message
     const userMessageBubble = page.locator(
@@ -94,7 +96,6 @@ test.describe('CHAT-06: Message Editing and Deletion', () => {
     await saveButton.click({ force: true });
 
     // Wait for API call and UI update
-    await page.waitForTimeout(1000);
 
     // Verify message updated with new content
     await expect(page.getByText(editedMessage)).toBeVisible({ timeout: 5000 });
@@ -188,10 +189,11 @@ test.describe('CHAT-06: Message Editing and Deletion', () => {
     await page.getByRole('button', { name: 'Elimina' }).click({ force: true });
 
     // Wait for deletion to process
-    await page.waitForTimeout(1000);
 
     // Verify modal closes
-    await expect(page.getByRole('heading', { name: 'Eliminare il messaggio?' })).not.toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Eliminare il messaggio?' })).not.toBeVisible({
+      timeout: 3000,
+    });
 
     // Verify message replaced with "[Messaggio eliminato]"
     await expect(page.getByText('[Messaggio eliminato]')).toBeVisible({ timeout: 5000 });
@@ -259,8 +261,9 @@ test.describe('CHAT-06: Message Editing and Deletion', () => {
       page.locator(`li[aria-label="Your message"]:has-text("${testMessage}")`)
     ).toBeVisible({ timeout: 10000 });
 
-    // Wait for AI response
-    await page.waitForTimeout(3000);
+    // Wait for AI response (network idle)
+    const waitHelper = new WaitHelper(page);
+    await waitHelper.waitForNetworkIdle(5000);
 
     // Locate user message
     const userMessageBubble = page.locator(
@@ -287,7 +290,6 @@ test.describe('CHAT-06: Message Editing and Deletion', () => {
       await aiMessages.first().hover();
 
       // Wait a bit
-      await page.waitForTimeout(500);
 
       // AI messages should NOT have edit/delete buttons
       const aiEditButton = aiMessages.first().locator('button[aria-label="Edit message"]');
@@ -313,7 +315,10 @@ test.describe('CHAT-06: Message Editing and Deletion', () => {
     await expect(
       page.locator(`li[aria-label="Your message"]:has-text("${testMessage}")`)
     ).toBeVisible({ timeout: 10000 });
-    await page.waitForTimeout(2000);
+
+    // Wait for network idle before mocking invalidation
+    const waitHelper = new WaitHelper(page);
+    await waitHelper.waitForNetworkIdle(5000);
 
     // Intercept chat history endpoint to return message with isInvalidated=true
     await page.route('**/api/v1/chats/*/messages*', async route => {
@@ -401,10 +406,7 @@ test.describe('CHAT-06: Message Editing and Deletion', () => {
     const saveButton = page.locator('button[aria-label="Save edited message"]');
     await saveButton.click({ force: true });
 
-    // Wait for error to appear
-    await page.waitForTimeout(1000);
-
-    // Verify error message appears
+    // Verify error message appears (auto-retry assertion)
     const errorAlert = page.locator('div[role="alert"]').filter({ hasText: /errore|permess/i });
     const anyError = page.getByText(/errore|permess|autorizzat/i);
 

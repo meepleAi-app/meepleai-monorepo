@@ -124,7 +124,6 @@ test.describe('PDF Preview Component - Full User Journey', () => {
     // When: User confirms game selection
     const confirmButton = page.locator('button', { hasText: 'Confirm selection' });
     await confirmButton.click();
-    await page.waitForTimeout(500);
 
     // When: User selects a PDF file
     const fileInput = page.locator('input[type="file"]');
@@ -258,7 +257,6 @@ test.describe('PDF Preview Component - Full User Journey', () => {
     // Wait for games and confirm selection
     await expect(page.locator('select#gameSelect')).toBeVisible({ timeout: 10000 });
     await page.locator('button', { hasText: 'Confirm selection' }).click();
-    await page.waitForTimeout(500);
 
     // When: User selects a PDF file
     const fileInput = page.locator('input[type="file"]');
@@ -306,7 +304,6 @@ test.describe('PDF Preview Component - Full User Journey', () => {
     // Wait for games and confirm selection
     await expect(page.locator('select#gameSelect')).toBeVisible({ timeout: 10000 });
     await page.locator('button', { hasText: 'Confirm selection' }).click();
-    await page.waitForTimeout(500);
 
     // When: User selects an invalid file (not a real PDF)
     const fileInput = page.locator('input[type="file"]');
@@ -334,7 +331,6 @@ test.describe('PDF Preview Component - Full User Journey', () => {
     await page.goto('/upload');
     await expect(page.locator('select#gameSelect')).toBeVisible({ timeout: 10000 });
     await page.locator('button', { hasText: 'Confirm selection' }).click();
-    await page.waitForTimeout(500);
 
     // Select PDF file
     const fileInput = page.locator('input[type="file"]');
@@ -374,7 +370,6 @@ test.describe('PDF Preview Component - Full User Journey', () => {
     await page.goto('/upload');
     await expect(page.locator('select#gameSelect')).toBeVisible({ timeout: 10000 });
     await page.locator('button', { hasText: 'Confirm selection' }).click();
-    await page.waitForTimeout(500);
 
     // Select PDF file
     const fileInput = page.locator('input[type="file"]');

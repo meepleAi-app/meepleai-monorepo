@@ -8,6 +8,7 @@
 
 import { test, expect, Page } from '@playwright/test';
 import { getTextMatcher, t } from './fixtures/i18n';
+import { WaitHelper } from './helpers/WaitHelper';
 
 test.describe('Error Handling E2E Tests', () => {
   test.describe('Network errors', () => {
@@ -305,12 +306,12 @@ test.describe('Error Handling E2E Tests', () => {
 
       await page.goto('/');
 
-      // Wait for logs to be sent (batched)
-      await page.waitForTimeout(6000); // Wait for flush interval
+      // Wait for logs to be sent (batched) - smart wait for API call
+      const waitHelper = new WaitHelper(page);
+      await waitHelper.waitForApiResponse('/api/v1/logs/client', 204, 10000);
 
       // Verify logs were sent
-      // Note: This depends on your logging implementation
-      // Adjust based on actual log batching behavior
+      expect(logRequests.length).toBeGreaterThan(0);
     });
   });
 

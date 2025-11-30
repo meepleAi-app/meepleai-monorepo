@@ -89,7 +89,6 @@ test.describe('Q&A Interface - Accessibility (Issue #1009)', () => {
     await page.keyboard.press('Escape');
 
     // Verify no submission occurred
-    await page.waitForTimeout(1000);
     await expect(page.getByText('Test question')).not.toBeVisible();
   });
 
@@ -330,7 +329,6 @@ test.describe('Q&A Interface - Accessibility (Issue #1009)', () => {
     await page.keyboard.press('Enter');
 
     // Button should show active state
-    await page.waitForTimeout(500);
     const bgColor = await helpfulButton.evaluate(el => window.getComputedStyle(el).backgroundColor);
     expect(bgColor).toBeTruthy();
   });

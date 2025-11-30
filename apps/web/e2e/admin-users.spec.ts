@@ -53,7 +53,6 @@ test.describe('Admin User Management E2E Flow', () => {
     await expect(page.getByText(/created successfully/)).toBeVisible();
 
     // Wait for toast to disappear or close it to avoid interference
-    await page.waitForTimeout(1000); // Give toast time to auto-dismiss
 
     // Verify new user appears in table (use role to be specific with exact match)
     await expect(
@@ -85,7 +84,6 @@ test.describe('Admin User Management E2E Flow', () => {
     await expect(page.getByText(/updated successfully/)).toBeVisible();
 
     // Wait for toast to dismiss
-    await page.waitForTimeout(1000);
 
     // Verify updates appear in table (use role for specificity)
     await expect(page.getByRole('cell', { name: 'Updated User Name' })).toBeVisible();
@@ -145,7 +143,6 @@ test.describe('Admin User Management E2E Flow', () => {
     await expect(page.getByText(/deleted successfully/)).toBeVisible();
 
     // Wait for toast to dismiss
-    await page.waitForTimeout(1000);
 
     // Verify user no longer in list
     await expect(page.getByText('newuser@example.com')).not.toBeVisible();

@@ -127,7 +127,6 @@ test.describe('CHAT-03: Multi-game chat context switching', () => {
     }
 
     // Wait for page to update
-    await page.waitForTimeout(500);
 
     // Verify game context badge shows Chess again
     await expect(contextBadge).toContainText(/chess/i);
@@ -152,7 +151,6 @@ test.describe('CHAT-03: Multi-game chat context switching', () => {
     }
 
     // Wait for page to update
-    await page.waitForTimeout(500);
 
     // Verify Checkers history is still there
     await expect(
@@ -187,7 +185,6 @@ test.describe('CHAT-03: Multi-game chat context switching', () => {
     if (chessValue) {
       await gameSelector.selectOption(chessValue);
     }
-    await page.waitForTimeout(300);
 
     // Verify badge shows Chess
     await expect(contextBadge).toBeVisible();
@@ -202,7 +199,6 @@ test.describe('CHAT-03: Multi-game chat context switching', () => {
     if (ticTacToeValue) {
       await gameSelector.selectOption(ticTacToeValue);
     }
-    await page.waitForTimeout(300);
 
     // Verify badge updated
     await expect(contextBadge).toContainText(/tic.tac.toe/i);
@@ -257,9 +253,7 @@ test.describe('CHAT-03: Multi-game chat context switching', () => {
     if (ticTacToeValue) {
       await gameSelector.selectOption(ticTacToeValue);
     }
-    await page.waitForTimeout(500);
 
-    // Chat list should be different (either empty or different chats)
     const ticTacToeChats = await page
       .locator('[role="list"] [role="button"], nav[aria-label="Chat history"] li')
       .count();
@@ -327,7 +321,6 @@ test.describe('CHAT-03: Multi-game chat context switching', () => {
       if (chessValue2) {
         await gameSelector.selectOption(chessValue2);
       }
-      await page.waitForTimeout(200);
 
       // Verify Chess message exists
       await expect(messagesArea.locator('text=Chess question 1')).toBeVisible();
@@ -344,7 +337,6 @@ test.describe('CHAT-03: Multi-game chat context switching', () => {
       if (ticTacToeValue2) {
         await gameSelector.selectOption(ticTacToeValue2);
       }
-      await page.waitForTimeout(200);
 
       // Verify Tic-Tac-Toe message exists
       await expect(messagesArea.locator('text=Tic-Tac-Toe question 1')).toBeVisible();

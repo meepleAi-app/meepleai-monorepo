@@ -9,7 +9,8 @@ namespace Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 /// </summary>
 public sealed class Version : ValueObject
 {
-    private static readonly Regex VersionRegex = new(@"^(\d+)\.(\d+)\.(\d+)$", RegexOptions.Compiled);
+    // FIX MA0009: Add timeout to prevent ReDoS attacks
+    private static readonly Regex VersionRegex = new(@"^(\d+)\.(\d+)\.(\d+)$", RegexOptions.Compiled, TimeSpan.FromSeconds(1));
 
     public int Major { get; }
     public int Minor { get; }

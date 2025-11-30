@@ -304,7 +304,8 @@ TASK: Generate a step-by-step setup guide for this board game. Focus on the init
                         var titlePart = trimmedLine.Substring(colonIndex + 1).Trim();
 
                         // Extract step number
-                        var numberMatch = Regex.Match(stepPart, @"\d+");
+                        // FIX MA0009: Add timeout to prevent ReDoS attacks
+                        var numberMatch = Regex.Match(stepPart, @"\d+", RegexOptions.None, TimeSpan.FromSeconds(1));
                         if (numberMatch.Success && int.TryParse(numberMatch.Value, out int stepNum))
                         {
                             currentStepNumber = stepNum;

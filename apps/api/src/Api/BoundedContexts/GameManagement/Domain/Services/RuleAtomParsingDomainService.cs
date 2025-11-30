@@ -93,9 +93,10 @@ public partial class RuleAtomParsingDomainService
         );
     }
 
-    [GeneratedRegex(@"^\[Table on page (?<page>\d+)\]\s*(?<rest>.+)$", RegexOptions.IgnoreCase)]
+    // FIX MA0009: Add timeout to prevent ReDoS attacks
+    [GeneratedRegex(@"^\[Table on page (?<page>\d+)\]\s*(?<rest>.+)$", RegexOptions.IgnoreCase, matchTimeoutMilliseconds: 1000)]
     private static partial Regex TablePageRegex();
 
-    [GeneratedRegex(@"page\s+(?<page>\d+)", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"page\s+(?<page>\d+)", RegexOptions.IgnoreCase, matchTimeoutMilliseconds: 1000)]
     private static partial Regex PageNumberRegex();
 }

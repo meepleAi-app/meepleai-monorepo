@@ -403,13 +403,15 @@ public class N8nTemplateService
         foreach (var (key, value) in parameters)
         {
             var pattern = $@"\{{\{{\s*{Regex.Escape(key)}\s*\}}}}";
-            workflowJson = Regex.Replace(workflowJson, pattern, value);
+            // FIX MA0009: Add timeout to prevent ReDoS attacks
+            workflowJson = Regex.Replace(workflowJson, pattern, value, RegexOptions.None, TimeSpan.FromSeconds(1));
         }
 
         // Also apply defaults for any remaining placeholders
         // This handles parameters with default values that weren't explicitly provided
+        // FIX MA0009: Add timeout to prevent ReDoS attacks
         var defaultPattern = @"\{\{(\w+)\}\}";
-        var matches = Regex.Matches(workflowJson, defaultPattern);
+        var matches = Regex.Matches(workflowJson, defaultPattern, RegexOptions.None, TimeSpan.FromSeconds(1));
 
         if (matches.Count > 0)
         {

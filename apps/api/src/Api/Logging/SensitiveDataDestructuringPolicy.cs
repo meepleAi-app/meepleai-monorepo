@@ -67,16 +67,17 @@ public partial class SensitiveDataDestructuringPolicy : IDestructuringPolicy
     };
 
     // Regex patterns for detecting sensitive data in strings
-    [GeneratedRegex(@"mpl_(live|test)_[A-Za-z0-9+/]{40}", RegexOptions.IgnoreCase | RegexOptions.Compiled)]
+    // FIX MA0009: Add timeout to prevent ReDoS attacks
+    [GeneratedRegex(@"mpl_(live|test)_[A-Za-z0-9+/]{40}", RegexOptions.IgnoreCase | RegexOptions.Compiled, matchTimeoutMilliseconds: 1000)]
     private static partial Regex ApiKeyPattern();
 
-    [GeneratedRegex(@"Bearer\s+[A-Za-z0-9\-._~+/]+=*", RegexOptions.IgnoreCase | RegexOptions.Compiled)]
+    [GeneratedRegex(@"Bearer\s+[A-Za-z0-9\-._~+/]+=*", RegexOptions.IgnoreCase | RegexOptions.Compiled, matchTimeoutMilliseconds: 1000)]
     private static partial Regex BearerTokenPattern();
 
-    [GeneratedRegex(@"sk-[A-Za-z0-9]{20,}", RegexOptions.IgnoreCase | RegexOptions.Compiled)]
+    [GeneratedRegex(@"sk-[A-Za-z0-9]{20,}", RegexOptions.IgnoreCase | RegexOptions.Compiled, matchTimeoutMilliseconds: 1000)]
     private static partial Regex OpenAIKeyPattern();
 
-    [GeneratedRegex(@"(password|passwd|pwd)\s*=\s*[^\s;]+", RegexOptions.IgnoreCase | RegexOptions.Compiled)]
+    [GeneratedRegex(@"(password|passwd|pwd)\s*=\s*[^\s;]+", RegexOptions.IgnoreCase | RegexOptions.Compiled, matchTimeoutMilliseconds: 1000)]
     private static partial Regex PasswordInConnectionStringPattern();
 
     private const string RedactedValue = "[REDACTED]";

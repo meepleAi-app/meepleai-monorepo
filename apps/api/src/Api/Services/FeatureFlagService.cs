@@ -33,7 +33,7 @@ public class FeatureFlagService : IFeatureFlagService
         if (role.HasValue)
         {
             var roleFlagKey = $"{featureName}.{role.Value}";
-            var roleSpecificFlag = await _configService.GetValueAsync<bool?>(roleFlagKey, null);
+            var roleSpecificFlag = await _configService.GetValueAsync<bool?>(roleFlagKey, null).ConfigureAwait(false);
 
             if (roleSpecificFlag.HasValue)
             {
@@ -44,7 +44,7 @@ public class FeatureFlagService : IFeatureFlagService
         }
 
         // Fall back to global flag
-        var globalFlag = await _configService.GetValueAsync<bool?>(featureName, null);
+        var globalFlag = await _configService.GetValueAsync<bool?>(featureName, null).ConfigureAwait(false);
 
         if (globalFlag.HasValue)
         {
@@ -65,7 +65,7 @@ public class FeatureFlagService : IFeatureFlagService
         var key = role.HasValue ? $"{featureName}.{role.Value}" : featureName;
 
         // Check if configuration exists
-        var existing = await _configService.GetConfigurationByKeyAsync(key);
+        var existing = await _configService.GetConfigurationByKeyAsync(key).ConfigureAwait(false);
 
         var userGuid = userId != null && Guid.TryParse(userId, out var parsed) ? parsed : Guid.Empty;
 
@@ -83,7 +83,7 @@ public class FeatureFlagService : IFeatureFlagService
                 IsActive: true,
                 RequiresRestart: false);
 
-            await _configService.UpdateConfigurationAsync(configId, updateRequest, userGuid);
+            await _configService.UpdateConfigurationAsync(configId, updateRequest, userGuid).ConfigureAwait(false);
 
             _logger.LogInformation("Feature {FeatureName} enabled{RoleInfo} by {UserId}",
                 featureName, role.HasValue ? $" for {role.Value}" : "", userId ?? "system");
@@ -101,7 +101,7 @@ public class FeatureFlagService : IFeatureFlagService
                 RequiresRestart: false,
                 Environment: "Production");
 
-            await _configService.CreateConfigurationAsync(createRequest, userGuid);
+            await _configService.CreateConfigurationAsync(createRequest, userGuid).ConfigureAwait(false);
 
             _logger.LogInformation("Feature {FeatureName} created and enabled{RoleInfo} by {UserId}",
                 featureName, role.HasValue ? $" for {role.Value}" : "", userId ?? "system");
@@ -116,7 +116,7 @@ public class FeatureFlagService : IFeatureFlagService
         var key = role.HasValue ? $"{featureName}.{role.Value}" : featureName;
 
         // Check if configuration exists
-        var existing = await _configService.GetConfigurationByKeyAsync(key);
+        var existing = await _configService.GetConfigurationByKeyAsync(key).ConfigureAwait(false);
 
         var userGuid = userId != null && Guid.TryParse(userId, out var parsed) ? parsed : Guid.Empty;
 
@@ -134,7 +134,7 @@ public class FeatureFlagService : IFeatureFlagService
                 IsActive: true,
                 RequiresRestart: false);
 
-            await _configService.UpdateConfigurationAsync(configId, updateRequest, userGuid);
+            await _configService.UpdateConfigurationAsync(configId, updateRequest, userGuid).ConfigureAwait(false);
 
             _logger.LogInformation("Feature {FeatureName} disabled{RoleInfo} by {UserId}",
                 featureName, role.HasValue ? $" for {role.Value}" : "", userId ?? "system");
@@ -152,7 +152,7 @@ public class FeatureFlagService : IFeatureFlagService
                 RequiresRestart: false,
                 Environment: "Production");
 
-            await _configService.CreateConfigurationAsync(createRequest, userGuid);
+            await _configService.CreateConfigurationAsync(createRequest, userGuid).ConfigureAwait(false);
 
             _logger.LogInformation("Feature {FeatureName} created and disabled{RoleInfo} by {UserId}",
                 featureName, role.HasValue ? $" for {role.Value}" : "", userId ?? "system");

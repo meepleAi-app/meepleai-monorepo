@@ -141,7 +141,7 @@ public sealed class KnowledgeBaseGameManagementCrossContextTests : IAsyncLifetim
         var chatThreadRepository = ServiceProvider.GetRequiredService<IChatThreadRepository>();
 
         var user = CreateTestUser("chatuser@meepleai.dev", "Chat User");
-        await userRepository.AddAsync(user, TestCancellationToken, TestContext.Current.CancellationToken);
+        await userRepository.AddAsync(user, TestCancellationToken);
 
         var game = new Game(
             Guid.NewGuid(),
@@ -149,7 +149,7 @@ public sealed class KnowledgeBaseGameManagementCrossContextTests : IAsyncLifetim
             playerCount: new PlayerCount(1, 5),
             playTime: new PlayTime(40, 70)
         );
-        await gameRepository.AddAsync(game, TestCancellationToken, TestContext.Current.CancellationToken);
+        await gameRepository.AddAsync(game, TestCancellationToken);
         await _dbContext!.SaveChangesAsync(TestCancellationToken);
 
         // Act
@@ -162,7 +162,7 @@ public sealed class KnowledgeBaseGameManagementCrossContextTests : IAsyncLifetim
         chatThread.AddUserMessage("How does bird feeding work?");
         chatThread.AddAssistantMessage("In Wingspan, birds are fed using food tokens...");
 
-        await chatThreadRepository.AddAsync(chatThread, TestCancellationToken, TestContext.Current.CancellationToken);
+        await chatThreadRepository.AddAsync(chatThread, TestCancellationToken);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         // Assert
@@ -190,7 +190,7 @@ public sealed class KnowledgeBaseGameManagementCrossContextTests : IAsyncLifetim
         var chatThreadRepository = ServiceProvider.GetRequiredService<IChatThreadRepository>();
 
         var user = CreateTestUser("player@meepleai.dev", "Active Player");
-        await userRepository.AddAsync(user, TestCancellationToken, TestContext.Current.CancellationToken);
+        await userRepository.AddAsync(user, TestCancellationToken);
 
         var game = new Game(
             Guid.NewGuid(),
@@ -198,7 +198,7 @@ public sealed class KnowledgeBaseGameManagementCrossContextTests : IAsyncLifetim
             playerCount: new PlayerCount(1, 5),
             playTime: new PlayTime(120, 180)
         );
-        await gameRepository.AddAsync(game, TestCancellationToken, TestContext.Current.CancellationToken);
+        await gameRepository.AddAsync(game, TestCancellationToken);
 
         var players = new List<SessionPlayer>
         {
@@ -207,7 +207,7 @@ public sealed class KnowledgeBaseGameManagementCrossContextTests : IAsyncLifetim
         };
         var gameSession = new GameSession(Guid.NewGuid(), game.Id, players);
         gameSession.Start();
-        await gameSessionRepository.AddAsync(gameSession, TestCancellationToken, TestContext.Current.CancellationToken);
+        await gameSessionRepository.AddAsync(gameSession, TestCancellationToken);
         await _dbContext!.SaveChangesAsync(TestCancellationToken);
 
         // Act
@@ -220,7 +220,7 @@ public sealed class KnowledgeBaseGameManagementCrossContextTests : IAsyncLifetim
         chatThread.AddUserMessage("Can I place an ocean tile adjacent to another ocean?");
         chatThread.AddAssistantMessage("Yes, ocean tiles can be placed adjacent...");
 
-        await chatThreadRepository.AddAsync(chatThread, TestCancellationToken, TestContext.Current.CancellationToken);
+        await chatThreadRepository.AddAsync(chatThread, TestCancellationToken);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         // Assert
@@ -250,7 +250,7 @@ public sealed class KnowledgeBaseGameManagementCrossContextTests : IAsyncLifetim
         foreach (var name in userNames)
         {
             var user = CreateTestUser($"{name.ToLower()}@meepleai.dev", name);
-            await userRepository.AddAsync(user, TestCancellationToken, TestContext.Current.CancellationToken);
+            await userRepository.AddAsync(user, TestCancellationToken);
             users.Add(user);
         }
 
@@ -260,7 +260,7 @@ public sealed class KnowledgeBaseGameManagementCrossContextTests : IAsyncLifetim
             playerCount: new PlayerCount(1, 4),
             playTime: new PlayTime(90, 150)
         );
-        await gameRepository.AddAsync(game, TestCancellationToken, TestContext.Current.CancellationToken);
+        await gameRepository.AddAsync(game, TestCancellationToken);
         await _dbContext!.SaveChangesAsync(TestCancellationToken);
 
         // Act - Each user creates their own thread
@@ -274,7 +274,7 @@ public sealed class KnowledgeBaseGameManagementCrossContextTests : IAsyncLifetim
                 $"{userNames[i]}'s Gloomhaven Questions"
             );
             thread.AddUserMessage($"Question from {userNames[i]}");
-            await chatThreadRepository.AddAsync(thread, TestCancellationToken, TestContext.Current.CancellationToken);
+            await chatThreadRepository.AddAsync(thread, TestCancellationToken);
             threadIds.Add(thread.Id);
         }
         await _dbContext.SaveChangesAsync(TestCancellationToken);
@@ -302,7 +302,7 @@ public sealed class KnowledgeBaseGameManagementCrossContextTests : IAsyncLifetim
         var chatThreadRepository = ServiceProvider.GetRequiredService<IChatThreadRepository>();
 
         var user = CreateTestUser("finisher@meepleai.dev", "Game Finisher");
-        await userRepository.AddAsync(user, TestCancellationToken, TestContext.Current.CancellationToken);
+        await userRepository.AddAsync(user, TestCancellationToken);
 
         var game = new Game(
             Guid.NewGuid(),
@@ -310,7 +310,7 @@ public sealed class KnowledgeBaseGameManagementCrossContextTests : IAsyncLifetim
             playerCount: new PlayerCount(1, 5),
             playTime: new PlayTime(90, 120)
         );
-        await gameRepository.AddAsync(game, TestCancellationToken, TestContext.Current.CancellationToken);
+        await gameRepository.AddAsync(game, TestCancellationToken);
 
         var gameSession = new GameSession(
             Guid.NewGuid(),
@@ -318,7 +318,7 @@ public sealed class KnowledgeBaseGameManagementCrossContextTests : IAsyncLifetim
             new List<SessionPlayer> { new SessionPlayer("Game Finisher", 1) }
         );
         gameSession.Start();
-        await gameSessionRepository.AddAsync(gameSession, TestCancellationToken, TestContext.Current.CancellationToken);
+        await gameSessionRepository.AddAsync(gameSession, TestCancellationToken);
 
         var chatThread = new ChatThread(
             Guid.NewGuid(),
@@ -331,7 +331,7 @@ public sealed class KnowledgeBaseGameManagementCrossContextTests : IAsyncLifetim
         chatThread.AddUserMessage("What if both players have equal power?");
         chatThread.AddAssistantMessage("When players have equal power, the attacker wins...");
 
-        await chatThreadRepository.AddAsync(chatThread, TestCancellationToken, TestContext.Current.CancellationToken);
+        await chatThreadRepository.AddAsync(chatThread, TestCancellationToken);
         await _dbContext!.SaveChangesAsync(TestCancellationToken);
 
         // Act - Complete game and close thread (reload to avoid tracking conflicts)

@@ -180,7 +180,7 @@ public static class PromptManagementEndpoints
 
             try
             {
-                var result = await mediator.Send(command, ct);
+                var result = await mediator.Send(command, ct).ConfigureAwait(false);
                 return Results.Ok(new { message = "Version activated successfully", version = result });
             }
             catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
@@ -224,7 +224,7 @@ public static class PromptManagementEndpoints
                 StoreResults = request.StoreResults
             };
 
-            var result = await mediator.Send(command, ct);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
             return Results.Ok(result);
         })
@@ -261,7 +261,7 @@ public static class PromptManagementEndpoints
                 DatasetPath = request.DatasetPath
             };
 
-            var comparison = await mediator.Send(command, ct);
+            var comparison = await mediator.Send(command, ct).ConfigureAwait(false);
 
             logger.LogInformation("Comparison completed - Recommendation: {Recommendation}", comparison.Recommendation);
 
@@ -292,7 +292,7 @@ public static class PromptManagementEndpoints
                 Limit = limit
             };
 
-            var results = await mediator.Send(query, ct);
+            var results = await mediator.Send(query, ct).ConfigureAwait(false);
             return Results.Ok(results);
         })
         .WithName("GetEvaluationHistory")
@@ -326,7 +326,7 @@ public static class PromptManagementEndpoints
 
             try
             {
-                var (report, contentType) = await mediator.Send(query, ct);
+                var (report, contentType) = await mediator.Send(query, ct).ConfigureAwait(false);
                 return Results.Content(report, contentType);
             }
             catch (InvalidOperationException)
@@ -350,7 +350,7 @@ public static class PromptManagementEndpoints
             if (!authorized) return error!;
 
             var query = new Api.BoundedContexts.Administration.Application.Queries.GetPromptVersionHistoryQuery(templateId.ToString());
-            var history = await mediator.Send(query, ct);
+            var history = await mediator.Send(query, ct).ConfigureAwait(false);
             return Results.Json(history);
         });
 
@@ -362,14 +362,14 @@ public static class PromptManagementEndpoints
 
             // Get template to retrieve name
             var templateQuery = new Api.BoundedContexts.Administration.Application.Queries.GetPromptTemplateQuery(templateId.ToString());
-            var template = await mediator.Send(templateQuery, ct);
+            var template = await mediator.Send(templateQuery, ct).ConfigureAwait(false);
             if (template == null)
             {
                 return Results.NotFound(new { error = "Template not found" });
             }
 
             var activeQuery = new Api.BoundedContexts.Administration.Application.Queries.GetActivePromptVersionQuery(template.Name);
-            var activeVersion = await mediator.Send(activeQuery, ct);
+            var activeVersion = await mediator.Send(activeQuery, ct).ConfigureAwait(false);
             if (activeVersion == null)
             {
                 return Results.NotFound(new { error = "No active version found for this template" });
@@ -387,7 +387,7 @@ public static class PromptManagementEndpoints
 
             logger.LogInformation("Admin {AdminId} activating version {VersionId} for template {TemplateId}", session.User.Id, versionId, templateId);
             var command = new Api.BoundedContexts.Administration.Application.Commands.ActivatePromptVersionCommand(templateId, versionId, Guid.Parse(session.User.Id), request.Reason);
-            var activatedVersion = await mediator.Send(command, ct);
+            var activatedVersion = await mediator.Send(command, ct).ConfigureAwait(false);
             logger.LogInformation("Version {VersionId} (v{VersionNumber}) activated successfully", activatedVersion.Id, activatedVersion.VersionNumber);
             return Results.Json(activatedVersion);
         });
@@ -399,7 +399,7 @@ public static class PromptManagementEndpoints
             if (!authorized) return error!;
 
             var query = new Api.BoundedContexts.Administration.Application.Queries.GetPromptAuditLogQuery(templateId.ToString(), limit);
-            var auditLog = await mediator.Send(query, ct);
+            var auditLog = await mediator.Send(query, ct).ConfigureAwait(false);
             return Results.Json(auditLog);
         });
 
@@ -410,7 +410,7 @@ public static class PromptManagementEndpoints
             if (!authorized) return error!;
 
             var query = new Api.BoundedContexts.Administration.Application.Queries.ListPromptTemplatesQuery(category);
-            var templates = await mediator.Send(query, ct);
+            var templates = await mediator.Send(query, ct).ConfigureAwait(false);
             return Results.Json(templates);
         });
 
@@ -421,7 +421,7 @@ public static class PromptManagementEndpoints
             if (!authorized) return error!;
 
             var query = new Api.BoundedContexts.Administration.Application.Queries.GetPromptTemplateQuery(templateId.ToString());
-            var template = await mediator.Send(query, ct);
+            var template = await mediator.Send(query, ct).ConfigureAwait(false);
             if (template == null)
             {
                 return Results.NotFound(new { error = "Template not found" });

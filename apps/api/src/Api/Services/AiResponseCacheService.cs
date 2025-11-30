@@ -184,7 +184,7 @@ public class AiResponseCacheService : IAiResponseCacheService
     public async Task InvalidateGameAsync(string gameId, CancellationToken ct = default)
     {
         var tag = $"game:{gameId}";
-        var removed = await _hybridCache.RemoveByTagAsync(tag, ct);
+        var removed = await _hybridCache.RemoveByTagAsync(tag, ct).ConfigureAwait(false);
         _logger.LogInformation("Invalidated {Count} cache entries for game: {GameId}", removed, gameId);
     }
 
@@ -193,7 +193,7 @@ public class AiResponseCacheService : IAiResponseCacheService
     {
         var endpointName = endpoint.ToString().ToLowerInvariant();
         var tags = new[] { $"game:{gameId}", $"endpoint:{endpointName}" };
-        var removed = await _hybridCache.RemoveByTagsAsync(tags, ct);
+        var removed = await _hybridCache.RemoveByTagsAsync(tags, ct).ConfigureAwait(false);
         _logger.LogInformation(
             "Invalidated {Count} cache entries for game {GameId}, endpoint {Endpoint}",
             removed, gameId, endpoint);
@@ -202,7 +202,7 @@ public class AiResponseCacheService : IAiResponseCacheService
     /// <inheritdoc />
     public async Task InvalidateByCacheTagAsync(string tag, CancellationToken ct = default)
     {
-        var removed = await _hybridCache.RemoveByTagAsync(tag, ct);
+        var removed = await _hybridCache.RemoveByTagAsync(tag, ct).ConfigureAwait(false);
         _logger.LogInformation("Invalidated {Count} cache entries for tag: {Tag}", removed, tag);
     }
 
@@ -211,7 +211,7 @@ public class AiResponseCacheService : IAiResponseCacheService
     {
         // PERF-05: Simplified implementation using HybridCache stats
         // Advanced DB-based stats tracking can be added later if needed
-        var hybridStats = await _hybridCache.GetStatsAsync(ct);
+        var hybridStats = await _hybridCache.GetStatsAsync(ct).ConfigureAwait(false);
 
         var total = hybridStats.TotalHits + hybridStats.TotalMisses;
         var hitRate = total > 0 ? (double)hybridStats.TotalHits / total : 0;

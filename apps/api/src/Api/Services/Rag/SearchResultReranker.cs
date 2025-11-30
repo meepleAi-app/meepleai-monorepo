@@ -24,7 +24,7 @@ public class SearchResultReranker : ISearchResultReranker
     public async Task<List<SearchResultItem>> FuseSearchResultsAsync(List<SearchResult> searchResults)
     {
         // CONFIG-04: Load dynamic RRF constant from configuration
-        var k = await GetRrfKAsync();
+        var k = await GetRrfKAsync().ConfigureAwait(false);
 
         // Dictionary to store RRF scores for each unique document
         var rrfScores = new Dictionary<string, (SearchResultItem item, double score)>(StringComparer.Ordinal);
@@ -82,7 +82,7 @@ public class SearchResultReranker : ISearchResultReranker
     {
         if (_configurationService != null)
         {
-            var dbValue = await _configurationService.GetValueAsync<int?>("RAG.RrfK");
+            var dbValue = await _configurationService.GetValueAsync<int?>("RAG.RrfK").ConfigureAwait(false);
             if (dbValue.HasValue && dbValue.Value >= 1 && dbValue.Value <= 100)
             {
                 return dbValue.Value;

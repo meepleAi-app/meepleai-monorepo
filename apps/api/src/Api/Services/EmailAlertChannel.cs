@@ -75,7 +75,7 @@ public class EmailAlertChannel : IAlertChannel
                 mailMessage.To.Add(recipient);
             }
 
-            await client.SendMailAsync(mailMessage, cancellationToken);
+            await client.SendMailAsync(mailMessage, cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Email alert sent to {Recipients} for {AlertType}",

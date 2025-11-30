@@ -77,7 +77,7 @@ public class N8nTemplateService
         {
             try
             {
-                var json = await File.ReadAllTextAsync(file, ct);
+                var json = await File.ReadAllTextAsync(file, ct).ConfigureAwait(false);
                 var template = JsonSerializer.Deserialize<WorkflowTemplateFile>(json, new JsonSerializerOptions
                 {
                     PropertyNameCaseInsensitive = true
@@ -153,7 +153,7 @@ public class N8nTemplateService
 
         try
         {
-            var json = await File.ReadAllTextAsync(filePath, ct);
+            var json = await File.ReadAllTextAsync(filePath, ct).ConfigureAwait(false);
             var template = JsonSerializer.Deserialize<WorkflowTemplateFile>(json, new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
@@ -214,7 +214,7 @@ public class N8nTemplateService
         CancellationToken ct = default)
     {
         // Load template
-        var template = await GetTemplateAsync(templateId, ct);
+        var template = await GetTemplateAsync(templateId, ct).ConfigureAwait(false);
         if (template == null)
         {
             throw new InvalidOperationException($"Template '{templateId}' not found");
@@ -486,8 +486,8 @@ public class N8nTemplateService
 
         try
         {
-            using var response = await httpClient.SendAsync(request, ct);
-            var responseBody = await response.Content.ReadAsStringAsync(ct);
+            using var response = await httpClient.SendAsync(request, ct).ConfigureAwait(false);
+            var responseBody = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
 
             if (!response.IsSuccessStatusCode)
             {

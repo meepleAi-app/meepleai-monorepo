@@ -41,7 +41,7 @@ public static class TwoFactorEndpoints
                 UserEmail = userEmail
             };
 
-            var setup = await mediator.Send(command, ct);
+            var setup = await mediator.Send(command, ct).ConfigureAwait(false);
             logger.LogInformation("2FA setup generated for user {UserId} via CQRS", userId);
             return Results.Ok(setup);
         })
@@ -68,7 +68,7 @@ public static class TwoFactorEndpoints
                 TotpCode: request.Code
             );
 
-            var result = await mediator.Send(command, ct);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
             if (!result.Success)
             {
@@ -92,7 +92,7 @@ public static class TwoFactorEndpoints
         {
             // Rate limit: 3 attempts per minute per session token
             var rateLimitKey = $"2fa:verify:{request.SessionToken}";
-            var result = await rateLimitService.CheckRateLimitAsync(rateLimitKey, maxTokens: 3, refillRate: 0.05);
+            var result = await rateLimitService.CheckRateLimitAsync(rateLimitKey, maxTokens: 3, refillRate: 0.05).ConfigureAwait(false);
 
             if (!result.Allowed)
             {
@@ -107,7 +107,7 @@ public static class TwoFactorEndpoints
                 Code = request.Code
             };
 
-            var verifyResult = await mediator.Send(verifyCommand, ct);
+            var verifyResult = await mediator.Send(verifyCommand, ct).ConfigureAwait(false);
 
             if (!verifyResult.Success || verifyResult.UserId == null)
             {
@@ -121,7 +121,7 @@ public static class TwoFactorEndpoints
                 IpAddress: context.Connection.RemoteIpAddress?.ToString(),
                 UserAgent: context.Request.Headers.UserAgent.ToString());
 
-            var sessionResult = await mediator.Send(sessionCommand, ct);
+            var sessionResult = await mediator.Send(sessionCommand, ct).ConfigureAwait(false);
 
             CookieHelpers.WriteSessionCookie(context, sessionResult.SessionToken, sessionResult.ExpiresAt);
             logger.LogInformation("2FA verified and session created for user {UserId} via CQRS", verifyResult.UserId.Value);
@@ -158,7 +158,7 @@ public static class TwoFactorEndpoints
                 TotpOrBackupCode: request.Code
             );
 
-            var result = await mediator.Send(command, ct);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
             if (!result.Success)
             {
@@ -195,7 +195,7 @@ public static class TwoFactorEndpoints
                 UserId: userId
             );
 
-            var status = await mediator.Send(query, ct);
+            var status = await mediator.Send(query, ct).ConfigureAwait(false);
 
             if (status == null)
             {
@@ -236,7 +236,7 @@ public static class TwoFactorEndpoints
                 TargetUserId: targetUserId
             );
 
-            var result = await mediator.Send(command, ct);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
             if (!result.Success)
             {

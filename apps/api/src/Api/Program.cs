@@ -260,7 +260,7 @@ using (var scope = app.Services.CreateScope())
 
         // AI-01: Initialize Qdrant collection
         var qdrant = scope.ServiceProvider.GetRequiredService<IQdrantService>();
-        await qdrant.EnsureCollectionExistsAsync();
+        await qdrant.EnsureCollectionExistsAsync().ConfigureAwait(false);
 
         // Validate embedding configuration consistency
         var embedding = scope.ServiceProvider.GetRequiredService<IEmbeddingService>();
@@ -272,7 +272,13 @@ using (var scope = app.Services.CreateScope())
             provider, model, embeddingDimensions);
 
         // Bootstrap: Create initial admin user if database is empty
-        await EnsureInitialAdminUserAsync(app, db, scope.ServiceProvider);
+        await EnsureInitialAdminUserAsync(app, db, scope.ServiceProvider).ConfigureAwait(false);
+
+        // K6 Performance Testing: Ensure test user exists in Development/Test environments (Issue #1663)
+        if (app.Environment.IsDevelopment() || string.Equals(app.Environment.EnvironmentName, "Test", StringComparison.Ordinal))
+        {
+            await EnsureTestUserExistsAsync(app, db, scope.ServiceProvider).ConfigureAwait(false);
+        }
     }
 }
 
@@ -301,7 +307,7 @@ app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks
             }),
             totalDuration = report.TotalDuration.TotalMilliseconds
         });
-        await context.Response.WriteAsync(result);
+        await context.Response.WriteAsync(result).ConfigureAwait(false);
     }
 });
 
@@ -422,7 +428,7 @@ static async Task EnsureInitialAdminUserAsync(WebApplication app, MeepleAiDbCont
         };
 
         db.Users.Add(adminUser);
-        await db.SaveChangesAsync();
+        await db.SaveChangesAsync().ConfigureAwait(false);
 
         app.Logger.LogInformation(
             "✅ Initial admin user created successfully: {Email} (ID: {UserId})",
@@ -446,7 +452,7 @@ static async Task EnsureInitialAdminUserAsync(WebApplication app, MeepleAiDbCont
         };
 
         db.AuditLogs.Add(auditLog);
-        await db.SaveChangesAsync();
+        await db.SaveChangesAsync().ConfigureAwait(false);
     }
     catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
     {
@@ -472,6 +478,85 @@ static async Task EnsureInitialAdminUserAsync(WebApplication app, MeepleAiDbCont
         app.Logger.LogError(ex, "Failed to create initial admin user");
         throw;
     }
+}
+
+// K6 Performance Testing: Ensure demo test users exist for testing (Issue #1663)
+static async Task EnsureTestUserExistsAsync(WebApplication app, MeepleAiDbContext db, IServiceProvider services)
+{
+    var passwordHashingService = services.GetRequiredService<IPasswordHashingService>();
+    const string demoPassword = "Demo123!";
+    var passwordHash = passwordHashingService.HashSecret(demoPassword);
+
+    // Demo users expected by Postman/Newman and K6 tests
+    var demoUsers = new[]
+    {
+        new { Email = "user@meepleai.dev", DisplayName = "Demo User", Role = "User" },
+        new { Email = "editor@meepleai.dev", DisplayName = "Demo Editor", Role = "Editor" },
+        // Note: admin@meepleai.dev is created by EnsureInitialAdminUserAsync
+    };
+
+    foreach (var userData in demoUsers)
+    {
+        // Check if user already exists
+        var userExists = await db.Users.AnyAsync(u => u.Email == userData.Email).ConfigureAwait(false);
+
+        if (userExists)
+        {
+            app.Logger.LogDebug("ℹ️  Demo user already exists: {Email}", userData.Email);
+            continue;
+        }
+
+        try
+        {
+            var demoUser = new UserEntity
+            {
+                Id = Guid.NewGuid(),
+                Email = userData.Email,
+                DisplayName = userData.DisplayName,
+                PasswordHash = passwordHash,
+                Role = userData.Role,
+                CreatedAt = DateTime.UtcNow,
+                IsDemoAccount = true
+            };
+
+            db.Users.Add(demoUser);
+            await db.SaveChangesAsync().ConfigureAwait(false);
+
+            app.Logger.LogInformation(
+                "✅ Demo user created: {Email} ({Role}) - for Postman/Newman and K6 testing",
+                userData.Email,
+                userData.Role
+            );
+
+            // Audit log
+            var auditLog = new AuditLogEntity
+            {
+                Id = Guid.NewGuid(),
+                UserId = null,
+                Action = "DEMO_USER_CREATED",
+                Resource = "User",
+                ResourceId = demoUser.Id.ToString(),
+                Result = "Success",
+                Details = $"Demo user created: {userData.Email} ({userData.Role})",
+                IpAddress = "system",
+                UserAgent = "bootstrap",
+                CreatedAt = DateTime.UtcNow
+            };
+
+            db.AuditLogs.Add(auditLog);
+            await db.SaveChangesAsync().ConfigureAwait(false);
+        }
+        catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
+        {
+            app.Logger.LogDebug("ℹ️  Demo user creation skipped: {Email} already exists concurrently", userData.Email);
+        }
+        catch (Exception ex)
+        {
+            app.Logger.LogWarning(ex, "Failed to create demo user {Email} - non-critical for production", userData.Email);
+        }
+    }
+
+    app.Logger.LogInformation("✓ Demo user seeding complete");
 }
 
 // Helper method to detect unique constraint violations across database providers

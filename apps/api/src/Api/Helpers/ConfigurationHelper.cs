@@ -51,12 +51,12 @@ public class ConfigurationHelper
         try
         {
             // Check if configuration exists in database (to distinguish "not found" from "found with default value")
-            var dbConfig = await _configService.GetConfigurationByKeyAsync(key, environment);
+            var dbConfig = await _configService.GetConfigurationByKeyAsync(key, environment).ConfigureAwait(false);
             if (dbConfig != null && dbConfig.IsActive)
             {
                 // Configuration exists, get the typed value even if it equals default(T)
                 // Pass defaultValue so that if deserialization fails, it returns the provided default
-                var dbValue = await _configService.GetValueAsync(key, defaultValue, environment);
+                var dbValue = await _configService.GetValueAsync(key, defaultValue, environment).ConfigureAwait(false);
 
                 // SEC-738: Don't log sensitive configuration values (CWE-532 prevention)
                 if (IsSensitiveConfigurationKey(key))
@@ -127,7 +127,7 @@ public class ConfigurationHelper
         string? environment = null,
         CancellationToken ct = default)
     {
-        return await GetValueAsync(key, defaultValue, environment, ct);
+        return await GetValueAsync(key, defaultValue, environment, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -139,7 +139,7 @@ public class ConfigurationHelper
         string? environment = null,
         CancellationToken ct = default)
     {
-        return await GetValueAsync(key, defaultValue, environment, ct);
+        return await GetValueAsync(key, defaultValue, environment, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -151,7 +151,7 @@ public class ConfigurationHelper
         string? environment = null,
         CancellationToken ct = default)
     {
-        return await GetValueAsync(key, defaultValue, environment, ct);
+        return await GetValueAsync(key, defaultValue, environment, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -163,7 +163,7 @@ public class ConfigurationHelper
         string? environment = null,
         CancellationToken ct = default)
     {
-        return await GetValueAsync(key, defaultValue, environment, ct);
+        return await GetValueAsync(key, defaultValue, environment, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -175,7 +175,7 @@ public class ConfigurationHelper
         string? environment = null,
         CancellationToken ct = default)
     {
-        return await GetValueAsync(key, defaultValue, environment, ct);
+        return await GetValueAsync(key, defaultValue, environment, ct).ConfigureAwait(false);
     }
 
     /// <summary>

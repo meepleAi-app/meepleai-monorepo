@@ -31,7 +31,7 @@ public static class ConfigurationEndpoints
             if (!authorized) return error!;
 
             var query = new GetAllConfigsQuery(category, environment, activeOnly, page, pageSize);
-            var result = await mediator.Send(query, ct);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
             return Results.Json(result);
         })
         .WithName("GetConfigurations")
@@ -48,7 +48,7 @@ public static class ConfigurationEndpoints
             if (!authorized) return error!;
 
             var query = new GetConfigByIdQuery(id);
-            var config = await mediator.Send(query, ct);
+            var config = await mediator.Send(query, ct).ConfigureAwait(false);
             return config != null ? Results.Json(config) : Results.NotFound();
         })
         .WithName("GetConfigurationById")
@@ -68,7 +68,7 @@ public static class ConfigurationEndpoints
             if (!authorized) return error!;
 
             var query = new GetConfigByKeyQuery(key, environment, activeOnly);
-            var config = await mediator.Send(query, ct);
+            var config = await mediator.Send(query, ct).ConfigureAwait(false);
             return config != null ? Results.Json(config) : Results.NotFound();
         })
         .WithName("GetConfigurationByKey")
@@ -97,7 +97,7 @@ public static class ConfigurationEndpoints
                 Environment: request.Environment,
                 RequiresRestart: request.RequiresRestart
             );
-            var config = await mediator.Send(command, ct);
+            var config = await mediator.Send(command, ct).ConfigureAwait(false);
             logger.LogInformation("Configuration {Key} created with ID {Id}", request.Key, config.Id);
             return Results.Created($"/api/v1/admin/configurations/{config.Id}", config);
         })
@@ -130,7 +130,7 @@ public static class ConfigurationEndpoints
                 NewValue: request.Value,
                 UpdatedByUserId: Guid.Parse(session.User.Id)
             );
-            var config = await mediator.Send(command, ct);
+            var config = await mediator.Send(command, ct).ConfigureAwait(false);
 
             if (config == null)
             {
@@ -159,7 +159,7 @@ public static class ConfigurationEndpoints
 
             logger.LogInformation("Admin {AdminId} deleting configuration {Id}", session.User.Id, id);
             var command = new DeleteConfigurationCommand(id);
-            var success = await mediator.Send(command, ct);
+            var success = await mediator.Send(command, ct).ConfigureAwait(false);
 
             if (!success)
             {
@@ -190,7 +190,7 @@ public static class ConfigurationEndpoints
                 session.User.Id, id, isActive ? "active" : "inactive");
 
             var command = new ToggleConfigurationCommand(id, isActive);
-            var config = await mediator.Send(command, ct);
+            var config = await mediator.Send(command, ct).ConfigureAwait(false);
 
             if (config == null)
             {
@@ -225,7 +225,7 @@ public static class ConfigurationEndpoints
             )).ToList();
 
             var command = new BulkUpdateConfigsCommand(updates, Guid.Parse(session.User.Id));
-            var configs = await mediator.Send(command, ct);
+            var configs = await mediator.Send(command, ct).ConfigureAwait(false);
 
             logger.LogInformation("Bulk update completed successfully for {Count} configurations", configs.Count);
             return Results.Json(configs);
@@ -247,7 +247,7 @@ public static class ConfigurationEndpoints
             if (!authorized) return error!;
 
             var command = new ValidateConfigCommand(key, value, valueType);
-            var result = await mediator.Send(command, ct);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
             return Results.Json(result);
         })
         .WithName("ValidateConfiguration")
@@ -265,7 +265,7 @@ public static class ConfigurationEndpoints
             if (!authorized) return error!;
 
             var query = new ExportConfigsQuery(environment, activeOnly);
-            var export = await mediator.Send(query, ct);
+            var export = await mediator.Send(query, ct).ConfigureAwait(false);
             return Results.Json(export);
         })
         .WithName("ExportConfigurations")
@@ -297,7 +297,7 @@ public static class ConfigurationEndpoints
             )).ToList();
 
             var command = new ImportConfigsCommand(items, request.OverwriteExisting, Guid.Parse(session.User.Id));
-            var importedCount = await mediator.Send(command, ct);
+            var importedCount = await mediator.Send(command, ct).ConfigureAwait(false);
 
             logger.LogInformation("Successfully imported {Count} configurations", importedCount);
             return Results.Json(new { importedCount });
@@ -318,7 +318,7 @@ public static class ConfigurationEndpoints
             if (!authorized) return error!;
 
             var query = new GetConfigHistoryQuery(id, limit);
-            var history = await mediator.Send(query, ct);
+            var history = await mediator.Send(query, ct).ConfigureAwait(false);
             return Results.Json(history);
         })
         .WithName("GetConfigurationHistory")
@@ -340,7 +340,7 @@ public static class ConfigurationEndpoints
                 session.User.Id, id, version);
 
             var command = new RollbackConfigCommand(id, version, Guid.Parse(session.User.Id));
-            var config = await mediator.Send(command, ct);
+            var config = await mediator.Send(command, ct).ConfigureAwait(false);
 
             if (config == null)
             {
@@ -365,7 +365,7 @@ public static class ConfigurationEndpoints
             if (!authorized) return error!;
 
             var query = new GetConfigCategoriesQuery();
-            var categories = await mediator.Send(query, ct);
+            var categories = await mediator.Send(query, ct).ConfigureAwait(false);
             return Results.Json(categories);
         })
         .WithName("GetCategories")
@@ -392,7 +392,7 @@ public static class ConfigurationEndpoints
             }
 
             var command = new InvalidateCacheCommand(key);
-            await mediator.Send(command, ct);
+            await mediator.Send(command, ct).ConfigureAwait(false);
 
             return Results.Json(new { ok = true, message = key != null ? $"Cache invalidated for key: {key}" : "All configuration cache invalidated" });
         })

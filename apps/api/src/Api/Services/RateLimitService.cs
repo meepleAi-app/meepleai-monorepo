@@ -112,7 +112,7 @@ public class RateLimitService : IRateLimitService
 
         try
         {
-            var result = await db.ScriptEvaluateAsync(script, keys, values);
+            var result = await db.ScriptEvaluateAsync(script, keys, values).ConfigureAwait(false);
             var resultArray = (RedisResult[])result!;
             var numericResults = Array.ConvertAll(resultArray, ConvertRedisResultToInt);
 
@@ -163,8 +163,8 @@ public class RateLimitService : IRateLimitService
         var normalizedRole = role?.ToLowerInvariant() ?? "anonymous";
 
         // Get both maxTokens and refillRate from database with fallback
-        var maxTokens = await GetRateLimitValueAsync<int>("MaxTokens", normalizedRole, ct);
-        var refillRate = await GetRateLimitValueAsync<double>("RefillRate", normalizedRole, ct);
+        var maxTokens = await GetRateLimitValueAsync<int>("MaxTokens", normalizedRole, ct).ConfigureAwait(false);
+        var refillRate = await GetRateLimitValueAsync<double>("RefillRate", normalizedRole, ct).ConfigureAwait(false);
 
         _logger.LogDebug("Rate limit config for {Role}: MaxTokens={MaxTokens}, RefillRate={RefillRate}",
             normalizedRole, maxTokens, refillRate);
@@ -186,7 +186,7 @@ public class RateLimitService : IRateLimitService
 
         // 1. Try DB config with role-specific key (e.g., RateLimit.MaxTokens.admin)
         var roleKey = $"RateLimit.{limitType}.{role}";
-        var value = await _configService.GetValueAsync<T?>(roleKey);
+        var value = await _configService.GetValueAsync<T?>(roleKey).ConfigureAwait(false);
         if (value.HasValue)
         {
             var validated = ValidateRateLimit(value.Value, limitType, role);
@@ -198,7 +198,7 @@ public class RateLimitService : IRateLimitService
 
         // 2. Try DB config with global key (e.g., RateLimit.MaxTokens)
         var globalKey = $"RateLimit.{limitType}";
-        value = await _configService.GetValueAsync<T?>(globalKey);
+        value = await _configService.GetValueAsync<T?>(globalKey).ConfigureAwait(false);
         if (value.HasValue)
         {
             var validated = ValidateRateLimit(value.Value, limitType, role);

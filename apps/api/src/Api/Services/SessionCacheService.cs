@@ -32,7 +32,7 @@ public class SessionCacheService : ISessionCacheService
         {
             var db = _redis.GetDatabase();
             var cacheKey = GetCacheKey(tokenHash);
-            var cached = await db.StringGetAsync(cacheKey);
+            var cached = await db.StringGetAsync(cacheKey).ConfigureAwait(false);
 
             if (!cached.HasValue)
             {
@@ -82,15 +82,15 @@ public class SessionCacheService : ISessionCacheService
                 return;
             }
 
-            await db.StringSetAsync(cacheKey, json, ttl);
+            await db.StringSetAsync(cacheKey, json, ttl).ConfigureAwait(false);
             _logger.LogDebug("Cached session for hash: {TokenHash} (TTL: {TTL}s)", tokenHash.Substring(0, 8), (int)ttl.TotalSeconds);
 
             // Also add to user's session set for bulk invalidation
             if (session.User != null)
             {
                 var userSetKey = GetUserSessionsSetKey(Guid.Parse(session.User.Id));
-                await db.SetAddAsync(userSetKey, cacheKey);
-                await db.KeyExpireAsync(userSetKey, ttl); // Set same expiration
+                await db.SetAddAsync(userSetKey, cacheKey).ConfigureAwait(false);
+                await db.KeyExpireAsync(userSetKey, ttl).ConfigureAwait(false); // Set same expiration
             }
         }
         catch (RedisConnectionException ex)
@@ -118,7 +118,7 @@ public class SessionCacheService : ISessionCacheService
         {
             var db = _redis.GetDatabase();
             var cacheKey = GetCacheKey(tokenHash);
-            var removed = await db.KeyDeleteAsync(cacheKey);
+            var removed = await db.KeyDeleteAsync(cacheKey).ConfigureAwait(false);
 
             if (removed)
             {
@@ -147,7 +147,7 @@ public class SessionCacheService : ISessionCacheService
             var userSetKey = GetUserSessionsSetKey(userId);
 
             // Get all session keys for this user
-            var sessionKeys = await db.SetMembersAsync(userSetKey);
+            var sessionKeys = await db.SetMembersAsync(userSetKey).ConfigureAwait(false);
 
             if (sessionKeys.Length == 0)
             {
@@ -157,10 +157,10 @@ public class SessionCacheService : ISessionCacheService
 
             // Delete all session keys
             var redisKeys = sessionKeys.Select(k => (RedisKey)k.ToString()).ToArray();
-            var removed = await db.KeyDeleteAsync(redisKeys);
+            var removed = await db.KeyDeleteAsync(redisKeys).ConfigureAwait(false);
 
             // Delete the user set itself
-            await db.KeyDeleteAsync(userSetKey);
+            await db.KeyDeleteAsync(userSetKey).ConfigureAwait(false);
 
             _logger.LogInformation("Invalidated {Count} session(s) for user: {UserId}", removed, userId);
         }

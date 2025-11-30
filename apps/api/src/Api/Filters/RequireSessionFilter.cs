@@ -58,6 +58,6 @@ public class RequireSessionFilter : IEndpointFilter
         // Session was validated by TryGetActiveSession() extension method
         // which checks HttpContext.Items[nameof(ActiveSession)]
         // Endpoint can safely retrieve session from HttpContext.Items
-        return await next(context);
+        return await next(context).ConfigureAwait(false);
     }
 }

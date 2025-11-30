@@ -61,7 +61,7 @@ public class EmailService : IEmailService
                 smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
             }
 
-            await smtpClient.SendMailAsync(message, ct);
+            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Password reset email sent successfully to {Email}",
@@ -107,7 +107,7 @@ public class EmailService : IEmailService
                 smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
             }
 
-            await smtpClient.SendMailAsync(message, ct);
+            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Two-factor authentication disabled email sent successfully to {Email} (Admin override: {AdminOverride})",

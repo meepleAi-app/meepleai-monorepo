@@ -102,14 +102,14 @@ public class RagEvaluationService : IRagEvaluationService
 
             // SECURITY: Check file size to prevent resource exhaustion
             var fileInfo = new FileInfo(fullPath);
-            var maxFileSizeMB = await _configService.GetValueAsync<int?>("Evaluation:MaxDatasetFileSizeMB", 10) ?? 10;
+            var maxFileSizeMB = (await _configService.GetValueAsync<int?>("Evaluation:MaxDatasetFileSizeMB", 10).ConfigureAwait(false)) ?? 10;
             var maxFileSizeBytes = maxFileSizeMB * 1024L * 1024L;
             if (fileInfo.Length > maxFileSizeBytes)
             {
                 throw new ArgumentException($"Dataset file exceeds maximum size of {maxFileSizeMB} MB (actual: {fileInfo.Length / 1024 / 1024} MB)", nameof(filePath));
             }
 
-            var jsonContent = await System.IO.File.ReadAllTextAsync(fullPath, ct);
+            var jsonContent = await System.IO.File.ReadAllTextAsync(fullPath, ct).ConfigureAwait(false);
             var dataset = JsonSerializer.Deserialize<RagEvaluationDataset>(jsonContent, new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true

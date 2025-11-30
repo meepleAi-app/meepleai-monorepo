@@ -27,7 +27,7 @@ public class QdrantCollectionManager : IQdrantCollectionManager
     {
         try
         {
-            var collectionsResponse = await _clientAdapter.ListCollectionsAsync(ct);
+            var collectionsResponse = await _clientAdapter.ListCollectionsAsync(ct).ConfigureAwait(false);
             return collectionsResponse.Any(c => string.Equals(c, collectionName, StringComparison.Ordinal));
         }
         catch (RpcException ex)
@@ -54,7 +54,7 @@ public class QdrantCollectionManager : IQdrantCollectionManager
     {
         try
         {
-            var exists = await CollectionExistsAsync(collectionName, ct);
+            var exists = await CollectionExistsAsync(collectionName, ct).ConfigureAwait(false);
 
             if (exists)
             {
@@ -65,13 +65,13 @@ public class QdrantCollectionManager : IQdrantCollectionManager
             _logger.LogInformation("Creating collection {CollectionName} with vector size {VectorSize}",
                 collectionName, vectorSize);
 
-            await CreateCollectionAsync(collectionName, vectorSize, ct);
+            await CreateCollectionAsync(collectionName, vectorSize, ct).ConfigureAwait(false);
 
             // Create payload indexes for filtering
-            await CreatePayloadIndexAsync(collectionName, "game_id", PayloadSchemaType.Keyword, ct);
-            await CreatePayloadIndexAsync(collectionName, "pdf_id", PayloadSchemaType.Keyword, ct);
-            await CreatePayloadIndexAsync(collectionName, "category", PayloadSchemaType.Keyword, ct);
-            await CreatePayloadIndexAsync(collectionName, "language", PayloadSchemaType.Keyword, ct);
+            await CreatePayloadIndexAsync(collectionName, "game_id", PayloadSchemaType.Keyword, ct).ConfigureAwait(false);
+            await CreatePayloadIndexAsync(collectionName, "pdf_id", PayloadSchemaType.Keyword, ct).ConfigureAwait(false);
+            await CreatePayloadIndexAsync(collectionName, "category", PayloadSchemaType.Keyword, ct).ConfigureAwait(false);
+            await CreatePayloadIndexAsync(collectionName, "language", PayloadSchemaType.Keyword, ct).ConfigureAwait(false);
 
             _logger.LogInformation("Collection {CollectionName} created successfully with indexes", collectionName);
         }

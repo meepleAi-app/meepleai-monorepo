@@ -96,7 +96,7 @@ public class MeepleAiDbContext : DbContext
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         // Save changes first
-        var result = await base.SaveChangesAsync(cancellationToken);
+        var result = await base.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         // Get collected domain events from repositories
         var events = _eventCollector.GetAndClearEvents();
@@ -104,7 +104,7 @@ public class MeepleAiDbContext : DbContext
         // Dispatch domain events after successful save
         foreach (var domainEvent in events)
         {
-            await _mediator.Publish(domainEvent, cancellationToken);
+            await _mediator.Publish(domainEvent, cancellationToken).ConfigureAwait(false);
         }
 
         return result;

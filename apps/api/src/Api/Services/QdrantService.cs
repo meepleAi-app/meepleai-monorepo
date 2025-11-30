@@ -48,14 +48,14 @@ public class QdrantService : IQdrantService
     /// </summary>
     public async Task<bool> CollectionExistsAsync(CancellationToken ct = default)
     {
-        return await _collectionManager.CollectionExistsAsync(CollectionName, ct);
+        return await _collectionManager.CollectionExistsAsync(CollectionName, ct).ConfigureAwait(false);
     }
     /// <summary>
     /// Initialize Qdrant collection if it doesn't exist
     /// </summary>
     public async Task EnsureCollectionExistsAsync(CancellationToken ct = default)
     {
-        await _collectionManager.EnsureCollectionExistsAsync(CollectionName, _vectorSize, ct);
+        await _collectionManager.EnsureCollectionExistsAsync(CollectionName, _vectorSize, ct).ConfigureAwait(false);
     }
     /// <summary>
     /// Index document chunks with embeddings
@@ -353,7 +353,7 @@ public class QdrantService : IQdrantService
             // Build points from chunks
             var points = _vectorIndexer.BuildPoints(chunks, basePayload);
             // Upsert to Qdrant
-            await _vectorIndexer.UpsertPointsAsync(CollectionName, points.AsReadOnly(), ct);
+            await _vectorIndexer.UpsertPointsAsync(CollectionName, points.AsReadOnly(), ct).ConfigureAwait(false);
             _logger.LogInformation("Successfully indexed {Count} chunks for PDF {PdfId} with language {Language}",
                 chunks.Count, pdfId, language);
             activity?.SetTag("success", true);
@@ -437,7 +437,7 @@ public class QdrantService : IQdrantService
         {
             _logger.LogInformation("Deleting vectors for category {Category}", category);
             var filter = _vectorSearcher.BuildCategoryFilter(category);
-            await _vectorIndexer.DeleteByFilterAsync(CollectionName, filter, ct);
+            await _vectorIndexer.DeleteByFilterAsync(CollectionName, filter, ct).ConfigureAwait(false);
             _logger.LogInformation("Successfully deleted vectors for category {Category}", category);
             return true;
         }

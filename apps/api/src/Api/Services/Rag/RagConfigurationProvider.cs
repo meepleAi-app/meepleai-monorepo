@@ -34,7 +34,7 @@ public class RagConfigurationProvider : IRagConfigurationProvider
         // 1. Try database via ConfigurationService
         if (_configurationService != null)
         {
-            var dbValue = await _configurationService.GetValueAsync<T?>($"RAG.{configKey}");
+            var dbValue = await _configurationService.GetValueAsync<T?>($"RAG.{configKey}").ConfigureAwait(false);
             if (dbValue.HasValue)
             {
                 var validated = ValidateRagConfig(dbValue.Value, configKey);

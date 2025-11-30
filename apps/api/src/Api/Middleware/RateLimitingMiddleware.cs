@@ -50,8 +50,8 @@ public class RateLimitingMiddleware
                 rateKey = $"ip:{ip}";
             }
 
-            var cfg = await rateLimiter.GetConfigForRoleAsync(role, context.RequestAborted);
-            var rl = await rateLimiter.CheckRateLimitAsync(rateKey, cfg.MaxTokens, cfg.RefillRate, context.RequestAborted);
+            var cfg = await rateLimiter.GetConfigForRoleAsync(role, context.RequestAborted).ConfigureAwait(false);
+            var rl = await rateLimiter.CheckRateLimitAsync(rateKey, cfg.MaxTokens, cfg.RefillRate, context.RequestAborted).ConfigureAwait(false);
 
             // Always add headers for observability
             context.Response.Headers["X-RateLimit-Limit"] = cfg.MaxTokens.ToString(CultureInfo.InvariantCulture);
@@ -70,7 +70,7 @@ public class RateLimitingMiddleware
                 };
 
                 context.Response.ContentType = "application/json";
-                await context.Response.WriteAsync(JsonSerializer.Serialize(payload));
+                await context.Response.WriteAsync(JsonSerializer.Serialize(payload)).ConfigureAwait(false);
                 return;
             }
         }
@@ -80,12 +80,12 @@ public class RateLimitingMiddleware
             // MIDDLEWARE BOUNDARY PATTERN: Rate limiting middleware must fail-open to avoid self-DOS
             // Rationale: This catch should only handle rate limiting infrastructure failures (e.g. Redis down).
             _logger.LogWarning(ex, "Rate limiting middleware encountered an error; allowing request (fail-open)");
-            await _next(context);
+            await _next(context).ConfigureAwait(false);
             return;
         }
 #pragma warning restore CA1031 // Do not catch general exception types
 
-        await _next(context);
+        await _next(context).ConfigureAwait(false);
     }
 }
 

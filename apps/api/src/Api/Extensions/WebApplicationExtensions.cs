@@ -79,7 +79,7 @@ public static class WebApplicationExtensions
                 return Task.CompletedTask;
             });
 
-            await next();
+            await next().ConfigureAwait(false);
         });
 
         // AUTH-03: Session cookie authentication (must be before API key and authorization)

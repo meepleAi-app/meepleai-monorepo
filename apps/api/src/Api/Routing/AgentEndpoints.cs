@@ -36,7 +36,7 @@ public static class AgentEndpoints
                 IsActive: req.IsActive ?? true
             );
 
-            var result = await mediator.Send(command, ct);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
             logger.LogInformation(
                 "Created agent {AgentId} by user {UserId}",
@@ -62,7 +62,7 @@ public static class AgentEndpoints
             var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
 
             var query = new GetAgentByIdQuery(id);
-            var result = await mediator.Send(query, ct);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
 
             if (result == null)
             {
@@ -90,7 +90,7 @@ public static class AgentEndpoints
             var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
 
             var query = new GetAllAgentsQuery(activeOnly, type);
-            var results = await mediator.Send(query, ct);
+            var results = await mediator.Send(query, ct).ConfigureAwait(false);
 
             logger.LogInformation(
                 "Retrieved {Count} agents for user {UserId}",
@@ -126,7 +126,7 @@ public static class AgentEndpoints
                 StrategyParameters: req.StrategyParameters ?? new Dictionary<string, object>(StringComparer.Ordinal)
             );
 
-            var result = await mediator.Send(command, ct);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
             if (!result.Success)
             {
@@ -174,7 +174,7 @@ public static class AgentEndpoints
                 UserId: Guid.Parse(session.User.Id)
             );
 
-            var result = await mediator.Send(command, ct);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
             logger.LogInformation(
                 "Agent {AgentId} invoked by user {UserId}: InvocationId={InvocationId}, Confidence={Confidence:F3}, Results={ResultCount}",

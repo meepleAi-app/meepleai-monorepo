@@ -26,7 +26,7 @@ public static class RuleSpecEndpoints
             var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
 
             logger.LogInformation("Fetching RuleSpec for game {GameId}", gameId);
-            var ruleSpec = await mediator.Send(new GetRuleSpecQuery(gameId), ct);
+            var ruleSpec = await mediator.Send(new GetRuleSpecQuery(gameId), ct).ConfigureAwait(false);
 
             if (ruleSpec == null)
             {
@@ -66,7 +66,7 @@ public static class RuleSpecEndpoints
                 UserAgent: context.Request.Headers.UserAgent.ToString()
             );
 
-            var updated = await mediator.Send(command, ct);
+            var updated = await mediator.Send(command, ct).ConfigureAwait(false);
             logger.LogInformation("RuleSpec updated successfully for game {GameId}, version {Version}", gameId, updated.Version);
 
             // Convert DTO back to Model for backward compatibility
@@ -81,7 +81,7 @@ public static class RuleSpecEndpoints
             if (!authorized) return error!;
 
             logger.LogInformation("Fetching RuleSpec version history for game {GameId}", gameId);
-            var history = await mediator.Send(new GetVersionHistoryQuery(gameId), ct);
+            var history = await mediator.Send(new GetVersionHistoryQuery(gameId), ct).ConfigureAwait(false);
             return Results.Json(history);
         });
 
@@ -115,7 +115,7 @@ public static class RuleSpecEndpoints
                 SearchQuery: searchQuery
             );
 
-            var timeline = await mediator.Send(query, ct);
+            var timeline = await mediator.Send(query, ct).ConfigureAwait(false);
             return Results.Json(timeline);
         })
         .RequireAuthorization()
@@ -129,7 +129,7 @@ public static class RuleSpecEndpoints
             if (!authorized) return error!;
 
             logger.LogInformation("Fetching RuleSpec version {Version} for game {GameId}", version, gameId);
-            var ruleSpec = await mediator.Send(new GetRuleSpecVersionQuery(gameId, version), ct);
+            var ruleSpec = await mediator.Send(new GetRuleSpecVersionQuery(gameId, version), ct).ConfigureAwait(false);
 
             if (ruleSpec == null)
             {
@@ -154,7 +154,7 @@ public static class RuleSpecEndpoints
             logger.LogInformation("Computing diff between versions {FromVersion} and {ToVersion} for game {GameId}", from, to, gameId);
 
             var query = new ComputeRuleSpecDiffQuery(gameId, from, to);
-            var diff = await mediator.Send(query, ct);
+            var diff = await mediator.Send(query, ct).ConfigureAwait(false);
 
             if (diff == null)
             {
@@ -186,7 +186,7 @@ public static class RuleSpecEndpoints
             // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
             logger.LogInformation("User {UserId} creating comment on RuleSpec {GameId} version {Version}", userId, gameId, version);
             var command = new CreateRuleCommentCommand(gameId, version, request.LineNumber, request.CommentText, userId);
-            var comment = await mediator.Send(command, ct);
+            var comment = await mediator.Send(command, ct).ConfigureAwait(false);
             logger.LogInformation("Comment {CommentId} created successfully", comment.Id);
             return Results.Created($"/api/v1/comments/{comment.Id}", comment);
         })
@@ -219,7 +219,7 @@ public static class RuleSpecEndpoints
             // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
             logger.LogInformation("User {UserId} replying to comment {CommentId}", userId, commentId);
             var command = new ReplyToRuleCommentCommand(commentId, request.CommentText, userId);
-            var reply = await mediator.Send(command, ct);
+            var reply = await mediator.Send(command, ct).ConfigureAwait(false);
             logger.LogInformation("Reply {ReplyId} created successfully", reply.Id);
             return Results.Created($"/api/v1/comments/{reply.Id}", reply);
         })
@@ -251,7 +251,7 @@ public static class RuleSpecEndpoints
                 userId, gameId, version, includeResolved);
 
             var query = new GetRuleCommentsQuery(gameId, version, includeResolved);
-            var comments = await mediator.Send(query, ct);
+            var comments = await mediator.Send(query, ct).ConfigureAwait(false);
             return Results.Ok(comments);
         })
         .RequireSession() // Issue #1446: Automatic session validation
@@ -280,7 +280,7 @@ public static class RuleSpecEndpoints
                 userId, gameId, version, lineNumber);
 
             var query = new GetCommentsForLineQuery(gameId, version, lineNumber);
-            var comments = await mediator.Send(query, ct);
+            var comments = await mediator.Send(query, ct).ConfigureAwait(false);
             return Results.Ok(comments);
         })
         .RequireSession() // Issue #1446: Automatic session validation
@@ -314,7 +314,7 @@ public static class RuleSpecEndpoints
 
             var isAdmin = string.Equals(session!.User.Role, "admin", StringComparison.Ordinal);
             var command = new ResolveRuleCommentCommand(commentId, userId, isAdmin, resolveReplies);
-            var comment = await mediator.Send(command, ct);
+            var comment = await mediator.Send(command, ct).ConfigureAwait(false);
             logger.LogInformation("Comment {CommentId} resolved successfully", commentId);
             return Results.Ok(comment);
         })
@@ -351,7 +351,7 @@ public static class RuleSpecEndpoints
 
             var isAdmin = string.Equals(session!.User.Role, "admin", StringComparison.Ordinal);
             var command = new UnresolveRuleCommentCommand(commentId, userId, isAdmin, unresolveParent);
-            var comment = await mediator.Send(command, ct);
+            var comment = await mediator.Send(command, ct).ConfigureAwait(false);
             logger.LogInformation("Comment {CommentId} unresolved successfully", commentId);
             return Results.Ok(comment);
         })
@@ -391,7 +391,7 @@ public static class RuleSpecEndpoints
             }
 
             var command = new ExportRuleSpecsCommand(gameIds);
-            var zipBytes = await mediator.Send(command, ct);
+            var zipBytes = await mediator.Send(command, ct).ConfigureAwait(false);
 
             var fileName = $"meepleai-rulespecs-{DateTime.UtcNow:yyyy-MM-dd}.zip";
             logger.LogInformation("Successfully created ZIP archive {FileName} with {Size} bytes", fileName, zipBytes.Length);

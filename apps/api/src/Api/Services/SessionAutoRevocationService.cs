@@ -55,13 +55,13 @@ public class SessionAutoRevocationService : BackgroundService
             _config.InactivityTimeoutDays);
 
         // Wait a bit before the first run to allow the application to fully start
-        await Task.Delay(TimeSpan.FromMinutes(1), _timeProvider, stoppingToken);
+        await Task.Delay(TimeSpan.FromMinutes(1), _timeProvider, stoppingToken).ConfigureAwait(false);
 
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
-                await RevokeInactiveSessionsAsync(stoppingToken);
+                await RevokeInactiveSessionsAsync(stoppingToken).ConfigureAwait(false);
             }
             catch (DbUpdateException ex)
             {
@@ -75,7 +75,7 @@ public class SessionAutoRevocationService : BackgroundService
             // Wait for the configured interval before next run
             var delay = TimeSpan.FromHours(_config.AutoRevocationIntervalHours);
             _logger.LogDebug("Next auto-revocation check in {Hours} hours", _config.AutoRevocationIntervalHours);
-            await Task.Delay(delay, _timeProvider, stoppingToken);
+            await Task.Delay(delay, _timeProvider, stoppingToken).ConfigureAwait(false);
         }
 
         _logger.LogInformation("Session auto-revocation service stopped");
@@ -91,7 +91,7 @@ public class SessionAutoRevocationService : BackgroundService
             var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
             var command = new Api.BoundedContexts.Authentication.Application.Commands.RevokeInactiveSessionsCommand();
-            var revokedCount = await mediator.Send(command, ct);
+            var revokedCount = await mediator.Send(command, ct).ConfigureAwait(false);
 
             if (revokedCount > 0)
             {

@@ -256,7 +256,7 @@ public class StartGameSessionCommandHandlerTests
             r => r.ExistsAsync(gameId, cancellationToken),
             Times.Once);
         _sessionRepositoryMock.Verify(
-            r => r.AddAsync(It.IsAny<GameSession>(, TestContext.Current.CancellationToken), cancellationToken),
+            r => r.AddAsync(It.IsAny<GameSession>(), cancellationToken),
             Times.Once);
         _unitOfWorkMock.Verify(
             u => u.SaveChangesAsync(cancellationToken),

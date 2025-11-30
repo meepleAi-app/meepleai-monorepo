@@ -139,7 +139,7 @@ public class AlertingService : IAlertingService
 
         // Save to database
         _dbContext.Alerts.Add(alertEntity);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Alert {AlertType} created with severity {Severity}. Channels: {Channels}",
@@ -170,7 +170,7 @@ public class AlertingService : IAlertingService
             alert.ResolvedAt = _timeProvider.GetUtcNow().UtcDateTime;
         }
 
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Resolved {Count} alert(s) for type {AlertType}",

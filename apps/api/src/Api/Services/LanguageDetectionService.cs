@@ -97,7 +97,7 @@ public class LanguageDetectionService : ILanguageDetectionService
         try
         {
             // Language detection uses lightweight heuristics based on keywords, stop words, and accents.
-            var detectedLanguage = await Task.Run(() => DetectLanguageCore(text));
+            var detectedLanguage = await Task.Run(() => DetectLanguageCore(text)).ConfigureAwait(false);
 
             _logger.LogInformation("Detected language: {Language} (text length: {Length})",
                 detectedLanguage, text.Length);

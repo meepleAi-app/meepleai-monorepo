@@ -62,7 +62,7 @@ public class PasswordResetService : IPasswordResetService
         }
 
         // Find user by email
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == normalizedEmail, ct);
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == normalizedEmail, ct).ConfigureAwait(false);
 
         // For security, always return success even if user doesn't exist
         // This prevents email enumeration attacks
@@ -102,7 +102,7 @@ public class PasswordResetService : IPasswordResetService
         };
 
         _db.PasswordResetTokens.Add(resetToken);
-        await _db.SaveChangesAsync(ct);
+        await _db.SaveChangesAsync(ct).ConfigureAwait(false);
 
         // Send email
         try
@@ -250,7 +250,7 @@ public class PasswordResetService : IPasswordResetService
             session.RevokedAt = now;
         }
 
-        await _db.SaveChangesAsync(ct);
+        await _db.SaveChangesAsync(ct).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Password reset completed for user: {UserId}",

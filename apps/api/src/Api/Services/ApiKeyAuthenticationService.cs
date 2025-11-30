@@ -128,7 +128,7 @@ public class ApiKeyAuthenticationService
         if (!Guid.TryParse(userId, out var userGuid))
             throw new ArgumentException("User ID must be a valid GUID", nameof(userId));
 
-        var user = await _db.Users.FindAsync([userGuid], ct);
+        var user = await _db.Users.FindAsync([userGuid], ct).ConfigureAwait(false);
         if (user == null)
             throw new InvalidOperationException($"User not found: {userId}");
 
@@ -184,7 +184,7 @@ public class ApiKeyAuthenticationService
             return false;
         }
 
-        var apiKey = await _db.ApiKeys.FindAsync([keyGuid], ct);
+        var apiKey = await _db.ApiKeys.FindAsync([keyGuid], ct).ConfigureAwait(false);
         if (apiKey == null)
         {
             _logger.LogWarning("API key revocation failed: key not found. KeyId: {KeyId}", keyId);
@@ -199,7 +199,7 @@ public class ApiKeyAuthenticationService
 
         apiKey.RevokedAt = _timeProvider.GetUtcNow().UtcDateTime;
         apiKey.RevokedBy = revokedByUserId != null && Guid.TryParse(revokedByUserId, out var revokedByGuid) ? revokedByGuid : null;
-        await _db.SaveChangesAsync(ct);
+        await _db.SaveChangesAsync(ct).ConfigureAwait(false);
 
         _logger.LogInformation(
             "API key revoked. KeyId: {KeyId}, RevokedBy: {RevokedBy}",

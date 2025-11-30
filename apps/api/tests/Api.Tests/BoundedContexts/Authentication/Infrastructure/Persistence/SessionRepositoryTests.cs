@@ -478,8 +478,8 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
         // Act - Check active immediately
         var activeNow = await Repository.GetActiveSessionsByUserIdAsync(userId);
 
-        // Wait for expiration
-        await Task.Delay(1500);
+        // Advance time past expiration (1 second + buffer)
+        TimeProvider.Advance(TimeSpan.FromSeconds(2));
 
         // Check active after expiration
         var activeAfter = await Repository.GetActiveSessionsByUserIdAsync(userId);
@@ -678,7 +678,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
         return userId;
     }
 
-    private static Session CreateTestSession(
+    private Session CreateTestSession(
         Guid userId,
         TimeSpan? lifetime = null,
         string? ipAddress = "127.0.0.1",
@@ -691,7 +691,8 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
             token: token,
             lifetime: lifetime ?? TimeSpan.FromDays(30),
             ipAddress: ipAddress,
-            userAgent: userAgent
+            userAgent: userAgent,
+            timeProvider: TimeProvider  // Use TestTimeProvider from base class
         );
     }
 

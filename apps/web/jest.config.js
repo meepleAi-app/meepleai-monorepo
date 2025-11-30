@@ -43,7 +43,7 @@ const customJestConfig = {
     '!src/components/wizard/**', // Wizard flow (E2E tested)
     '!src/lib/api/core/retryPolicy.ts', // Infrastructure (integration tested)
     '!src/lib/api/core/circuitBreaker.ts', // Infrastructure (integration tested)
-    '!src/lib/api/core/httpClient.ts', // Infrastructure (integration tested)
+    '!src/lib/api/core/httpClient.ts', // Infrastructure (comprehensive tests in __tests__)
     '!src/lib/errorUtils.ts', // Error utilities (E2E tested)
     '!src/components/citations/**', // Citations feature (E2E tested)
     '!src/lib/api/core/logger.ts', // API logger infrastructure

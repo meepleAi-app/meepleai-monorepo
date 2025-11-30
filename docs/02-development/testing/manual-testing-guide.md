@@ -97,10 +97,12 @@ curl http://localhost:8080/health
 **Azione**:
 1. Logout (se loggato)
 2. Vai a `/login`
-3. Inserisci:
-   - Email: `admin@meepleai.dev`
-   - Password: `Demo123!`
+3. Inserisci (use your registered admin account):
+   - Email: `your-admin@example.com`
+   - Password: `YourPassword123!`
 4. Clicca "Login"
+
+**Nota**: Crea un admin user via `INITIAL_ADMIN_EMAIL` env var o registrazione manuale.
 
 **Risultato Atteso**:
 - ✅ Redirect alla homepage
@@ -123,7 +125,7 @@ curl http://localhost:8080/health
 **Azione**:
 1. Vai a `/login`
 2. Clicca "Forgot Password?"
-3. Inserisci email: `admin@meepleai.dev`
+3. Inserisci email: `your-email@example.com`
 4. Clicca "Send Reset Link"
 
 **Risultato Atteso**:
@@ -134,7 +136,7 @@ curl http://localhost:8080/health
 **Completamento Reset**:
 1. Copia il token dai logs
 2. Vai a `/reset-password?token={TOKEN}`
-3. Inserisci nuova password: `NewDemo123!`
+3. Inserisci nuova password: `NewPassword123!`
 4. Clicca "Reset Password"
 
 **Risultato Atteso**:
@@ -145,7 +147,7 @@ curl http://localhost:8080/health
 ### 2.5 Gestione Profilo Utente
 
 **Azione**:
-1. Login come `admin@meepleai.dev`
+1. Login come `admin-test@example.com`
 2. Vai a `/profile`
 3. Modifica:
    - Display Name: `Admin Updated`
@@ -185,7 +187,7 @@ curl -X GET http://localhost:8080/api/v1/games \
 ### 3.2 Creazione Nuovo Gioco (Admin/Editor)
 
 **Azione**:
-1. Login come `admin@meepleai.dev` o `editor@meepleai.dev`
+1. Login come `admin-test@example.com` o `editor-test@example.com`
 2. Vai alla sezione Admin o Game Management
 3. Clicca "Add New Game"
 4. Compila:
@@ -283,7 +285,7 @@ curl -X POST http://localhost:8080/api/v1/sessions \
 ### 4.1 Upload PDF con Successo (3-Stage Pipeline)
 
 **Azione**:
-1. Login come `admin@meepleai.dev` o `editor@meepleai.dev`
+1. Login come `admin-test@example.com` o `editor-test@example.com`
 2. Vai a `/upload`
 3. Seleziona gioco: `Catan`
 4. Carica PDF: `catan_rules.pdf` (file di test, <50MB)
@@ -590,7 +592,7 @@ curl -X POST http://localhost:8080/api/v1/sessions \
 ### 6.1 Dashboard Admin
 
 **Azione**:
-1. Login come `admin@meepleai.dev`
+1. Login come `admin-test@example.com`
 2. Vai a `/admin`
 
 **Risultato Atteso**:
@@ -945,7 +947,7 @@ curl -X GET http://localhost:8080/api/v1/games \
 ### 9.4 Link OAuth a Account Esistente
 
 **Azione**:
-1. Login con email/password: `admin@meepleai.dev`
+1. Login con email/password: `admin-test@example.com`
 2. Vai a `/settings`
 3. Sezione "Connected Accounts"
 4. Clicca "Connect Google"
@@ -976,7 +978,7 @@ curl -X GET http://localhost:8080/api/v1/games \
 ### 10.1 Attivazione 2FA
 
 **Azione**:
-1. Login come `admin@meepleai.dev`
+1. Login come `admin-test@example.com`
 2. Vai a `/settings` > "Security"
 3. Sezione "Two-Factor Authentication"
 4. Clicca "Enable 2FA"
@@ -995,7 +997,7 @@ curl -X GET http://localhost:8080/api/v1/games \
 
 **Azione**:
 1. Logout
-2. Login con email/password: `admin@meepleai.dev` / `Demo123!`
+2. Login con email/password: `admin-test@example.com` / `TestPassword123!`
 3. Redirect a `/login/2fa`
 4. Inserisci codice 6-digit da authenticator app
 5. Clicca "Verify"
@@ -1151,7 +1153,7 @@ time curl http://localhost:8080/api/v1/games
 curl -X POST http://localhost:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "admin@meepleai.dev'' OR ''1''=''1",
+    "email": "admin-test@example.com'' OR ''1''=''1",
     "password": "anything"
   }'
 ```
@@ -1375,7 +1377,7 @@ done
 [AUTH] Login con 2FA fallisce con codice corretto
 
 Steps:
-1. Login con admin@meepleai.dev / Demo123!
+1. Login con admin-test@example.com / TestPassword123!
 2. Inserisco codice 2FA corretto da Google Authenticator: 123456
 3. Clicca "Verify"
 

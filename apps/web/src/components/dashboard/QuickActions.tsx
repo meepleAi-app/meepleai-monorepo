@@ -20,7 +20,7 @@
  */
 
 import React from 'react';
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation';
 import { QuickActionCard, type QuickActionCardProps } from './QuickActionCard';
 import { PlusCircle, MessageSquarePlus, LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';

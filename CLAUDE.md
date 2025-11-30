@@ -128,7 +128,7 @@ docs/                Architecture, ADRs, guides
 **EF Core 9 + PostgreSQL**:
 - Entities: User, Game, RuleSpec, Session, ApiKey, OAuthAccount, Alert, PdfDocument, VectorDoc, ChatThread, N8nConfig
 - Migrations: Auto-applied on startup
-- Seed: Demo users (admin/editor/user@meepleai.dev, pwd: `Demo123!`)
+- Initial admin user created from environment variables on first run
 
 **Repositories** (per context): Pure infrastructure, no business logic
 

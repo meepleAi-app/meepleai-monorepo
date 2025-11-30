@@ -210,7 +210,7 @@ Use any HTTP client (curl, Postman, or frontend):
 ```bash
 curl -X POST http://localhost:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email": "admin@meepleai.dev", "password": "Demo123!"}'
+  -d '{"email": "admin-test@example.com", "password": "TestPassword123!"}'
 ```
 
 #### 5. Inspect Variables
@@ -225,11 +225,11 @@ When breakpoint hits:
 ```
 ▼ Locals
   ► command: LoginCommand
-    - Email: "admin@meepleai.dev"
-    - Password: "Demo123!"
+    - Email: "admin-test@example.com"
+    - Password: "TestPassword123!"
   ► user: User
     - Id: 1
-    - Email: "admin@meepleai.dev"
+    - Email: "admin-test@example.com"
     - Role: "Admin"
 ```
 
@@ -916,8 +916,8 @@ test('user can login with valid credentials', async ({ page }) => {
   await page.goto('http://localhost:3000/login')
 
   // Set breakpoint here
-  await page.fill('input[name="email"]', 'admin@meepleai.dev')
-  await page.fill('input[name="password"]', 'Demo123!')
+  await page.fill('input[name="email"]', 'admin-test@example.com')
+  await page.fill('input[name="password"]', 'TestPassword123!')
 
   // Set breakpoint here
   await page.click('button[type="submit"]')

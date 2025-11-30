@@ -1,6 +1,7 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.Services;
+using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -8,6 +9,11 @@ using Xunit;
 
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Infrastructure.External;
 
+/// <summary>
+/// Tests for DocnetPdfTextExtractor.
+/// ISSUE-1818: Migrated to FluentAssertions for improved readability.
+/// ISSUE-1818: Migrated to FluentAssertions for improved readability.
+/// </summary>
 public class DocnetPdfTextExtractorTests : IDisposable
 {
     private readonly Mock<ILogger<DocnetPdfTextExtractor>> _mockLogger;
@@ -72,10 +78,10 @@ public class DocnetPdfTextExtractorTests : IDisposable
         var result = await _sut.ExtractTextAsync(pdfStream, enableOcrFallback: false, TestCancellationToken);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.NotEmpty(result.ExtractedText);
-        Assert.True(result.PageCount > 0);
-        Assert.False(result.OcrTriggered);
+        result.Success.Should().BeTrue();
+        result.ExtractedText.Should().NotBeEmpty();
+        result.PageCount.Should().BeGreaterThan(0);
+        result.OcrTriggered.Should().BeFalse();
     }
 
     [Fact]
@@ -88,8 +94,8 @@ public class DocnetPdfTextExtractorTests : IDisposable
         var result = await _sut.ExtractTextAsync(emptyStream, enableOcrFallback: false, TestCancellationToken);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.NotNull(result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().NotBeNull();
     }
 
     [Fact]
@@ -114,8 +120,8 @@ public class DocnetPdfTextExtractorTests : IDisposable
         var result = await _sut.ExtractTextAsync(pdfStream, enableOcrFallback: true, TestCancellationToken);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.True(result.OcrTriggered, "OCR should be triggered for low-quality extraction");
+        result.Success.Should().BeTrue();
+        result.OcrTriggered.Should().BeTrue("OCR should be triggered for low-quality extraction");
         _mockOcrService.Verify(ocr => ocr.ExtractTextFromPdfAsync(
             It.IsAny<string>(),
             It.IsAny<CancellationToken>()), Times.Once);
@@ -131,8 +137,8 @@ public class DocnetPdfTextExtractorTests : IDisposable
         var result = await _sut.ExtractTextAsync(pdfStream, enableOcrFallback: false, TestCancellationToken);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.False(result.OcrTriggered);
+        result.Success.Should().BeTrue();
+        result.OcrTriggered.Should().BeFalse();
         _mockOcrService.Verify(ocr => ocr.ExtractTextFromPdfAsync(
             It.IsAny<string>(),
             It.IsAny<CancellationToken>()), Times.Never);
@@ -159,8 +165,8 @@ public class DocnetPdfTextExtractorTests : IDisposable
         var result = await _sut.ExtractTextAsync(pdfStream, enableOcrFallback: true, TestCancellationToken);
 
         // Assert
-        Assert.True(result.Success, "Should fallback to standard extraction");
-        Assert.False(result.OcrTriggered);
+        result.Success.Should().BeTrue("Should fallback to standard extraction");
+        result.OcrTriggered.Should().BeFalse();
     }
 
     [Fact]
@@ -173,8 +179,8 @@ public class DocnetPdfTextExtractorTests : IDisposable
         var result = await _sut.ExtractTextAsync(corruptStream, enableOcrFallback: false, TestCancellationToken);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.NotNull(result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().NotBeNull();
     }
 
     #endregion
@@ -191,9 +197,9 @@ public class DocnetPdfTextExtractorTests : IDisposable
         var result = await _sut.ExtractPagedTextAsync(pdfStream, enableOcrFallback: false, TestCancellationToken);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.NotEmpty(result.PageChunks);
-        Assert.All(result.PageChunks, chunk => Assert.True(chunk.PageNumber > 0));
+        result.Success.Should().BeTrue();
+        result.PageChunks.Should().NotBeEmpty();
+        result.PageChunks.Should().AllSatisfy(chunk => chunk.PageNumber.Should().BeGreaterThan(0));
     }
 
     [Fact]
@@ -206,9 +212,9 @@ public class DocnetPdfTextExtractorTests : IDisposable
         var result = await _sut.ExtractPagedTextAsync(pdfStream, enableOcrFallback: false, TestCancellationToken);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Equal(3, result.TotalPages);
-        Assert.Equal(3, result.PageChunks.Count);
+        result.Success.Should().BeTrue();
+        result.TotalPages.Should().Be(3);
+        result.PageChunks.Count.Should().Be(3);
     }
 
     [Fact]
@@ -221,8 +227,8 @@ public class DocnetPdfTextExtractorTests : IDisposable
         var result = await _sut.ExtractPagedTextAsync(emptyStream, enableOcrFallback: false, TestCancellationToken);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.NotNull(result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().NotBeNull();
     }
 
     [Fact]
@@ -235,8 +241,8 @@ public class DocnetPdfTextExtractorTests : IDisposable
         var result = await _sut.ExtractPagedTextAsync(corruptStream, enableOcrFallback: false, TestCancellationToken);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.NotNull(result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().NotBeNull();
     }
 
     #endregion
@@ -258,8 +264,8 @@ public class DocnetPdfTextExtractorTests : IDisposable
         var results = await Task.WhenAll(tasks);
 
         // Assert: All should succeed despite semaphore limiting concurrency
-        Assert.All(results, result => Assert.True(result.Success));
-        Assert.Equal(10, results.Length);
+        results.Should().AllSatisfy(result => result.Success.Should().BeTrue());
+        results.Length.Should().Be(10);
     }
 
     #endregion
@@ -477,4 +483,3 @@ startxref
 
     #endregion
 }
-

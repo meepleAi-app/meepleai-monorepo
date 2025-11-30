@@ -979,6 +979,69 @@ public async Task LoginAsync_CreatesSession()
 }
 ```
 
+### FluentAssertions (Recommended)
+
+**MeepleAI uses FluentAssertions** for more readable and expressive test assertions. FluentAssertions 8.8.0 is installed and preferred for all new tests.
+
+**Basic Assertions**:
+```csharp
+// ✅ Good: FluentAssertions (preferred)
+result.Should().NotBeNull();
+result.Value.Should().Be(expected);
+result.Success.Should().BeTrue();
+collection.Should().HaveCount(5);
+text.Should().Contain("expected");
+
+// ❌ Avoid: xUnit Assert (legacy, less readable)
+Assert.NotNull(result);
+Assert.Equal(expected, result.Value);
+Assert.True(result.Success);
+Assert.Equal(5, collection.Count);
+Assert.Contains("expected", text);
+```
+
+**Exception Assertions**:
+```csharp
+// ✅ Good: FluentAssertions
+Action act = () => handler.Handle(invalidCommand);
+act.Should().Throw<ArgumentNullException>()
+    .WithParameterName("command");
+
+// ❌ Avoid: xUnit Assert
+var exception = Assert.Throws<ArgumentNullException>(() => handler.Handle(invalidCommand));
+Assert.Equal("command", exception.ParamName);
+```
+
+**Custom Assertions** (ISSUE-1818):
+```csharp
+// Custom assertions for domain types
+using Api.Tests.BoundedContexts.DocumentProcessing.TestHelpers.Assertions;
+
+var uploadResult = await handler.Handle(command, ct);
+
+// Custom domain-specific assertions
+uploadResult.Should().BeSuccessful();
+uploadResult.Should().HaveDocument();
+uploadResult.Should().HaveMessage("Upload successful");
+uploadResult.Document.Id.Should().NotBeEmpty();
+```
+
+**String Comparison**:
+```csharp
+// Case-insensitive contains
+text.Should().ContainEquivalentOf("expected");  // ✅ FluentAssertions
+// NOT: text.Should().Contain("expected", StringComparison.OrdinalIgnoreCase); ❌
+```
+
+**Collection Assertions**:
+```csharp
+collection.Should().NotBeEmpty();
+collection.Should().HaveCount(5);
+collection.Should().Contain(x => x.Id == expected);
+collection.Should().OnlyContain(x => x.IsValid);
+collection.Should().ContainSingle(x => x.IsDefault);
+```
+
 ---
 
 ## Common Pitfalls

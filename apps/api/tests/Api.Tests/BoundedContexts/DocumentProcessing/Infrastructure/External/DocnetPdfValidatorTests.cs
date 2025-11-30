@@ -1,5 +1,6 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
+using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -9,7 +10,9 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Infrastructure.External;
 
 /// <summary>
 /// Tests for DocnetPdfValidator adapter.
+/// ISSUE-1818: Migrated to FluentAssertions for improved readability.
 /// Tests both technical validation (magic bytes, Docnet parsing) and business rule delegation.
+/// ISSUE-1818: Migrated to FluentAssertions for improved readability.
 /// </summary>
 public class DocnetPdfValidatorTests : IDisposable
 {
@@ -50,9 +53,9 @@ public class DocnetPdfValidatorTests : IDisposable
         var result = await _validator.ValidateAsync(stream!, "test.pdf", TestCancellationToken);
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Contains("stream", result.Errors.Keys);
-        Assert.Contains("cannot be null", result.Errors["stream"]);
+        result.IsValid.Should().BeFalse();
+        result.Errors.Keys.Should().Contain("stream");
+        result.Errors["stream"].Should().ContainEquivalentOf("cannot be null");
     }
 
     [Fact]
@@ -65,9 +68,9 @@ public class DocnetPdfValidatorTests : IDisposable
         var result = await _validator.ValidateAsync(stream, "", TestCancellationToken);
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Contains("fileName", result.Errors.Keys);
-        Assert.Contains("cannot be empty", result.Errors["fileName"]);
+        result.IsValid.Should().BeFalse();
+        result.Errors.Keys.Should().Contain("fileName");
+        result.Errors["fileName"].Should().ContainEquivalentOf("cannot be empty");
     }
 
     [Fact]
@@ -80,8 +83,8 @@ public class DocnetPdfValidatorTests : IDisposable
         var result = await _validator.ValidateAsync(stream, "   ", TestCancellationToken);
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Contains("fileName", result.Errors.Keys);
+        result.IsValid.Should().BeFalse();
+        result.Errors.Keys.Should().Contain("fileName");
     }
 
     #endregion
@@ -101,7 +104,7 @@ public class DocnetPdfValidatorTests : IDisposable
         // Assert: Should not fail on magic bytes (may fail on other checks like file size)
         if (result.Errors.ContainsKey("fileFormat"))
         {
-            Assert.DoesNotContain("PDF signature", result.Errors["fileFormat"]);
+            result.Errors["fileFormat"].Should().NotContainEquivalentOf("PDF signature");
         }
     }
 
@@ -116,9 +119,9 @@ public class DocnetPdfValidatorTests : IDisposable
         var result = await _validator.ValidateAsync(stream, "test.pdf", TestCancellationToken);
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Contains("fileFormat", result.Errors.Keys);
-        Assert.Contains("PDF signature", result.Errors["fileFormat"]);
+        result.IsValid.Should().BeFalse();
+        result.Errors.Keys.Should().Contain("fileFormat");
+        result.Errors["fileFormat"].Should().ContainEquivalentOf("PDF signature");
     }
 
     [Fact]
@@ -131,8 +134,8 @@ public class DocnetPdfValidatorTests : IDisposable
         var result = await _validator.ValidateAsync(stream, "test.pdf", TestCancellationToken);
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Contains("fileFormat", result.Errors.Keys);
+        result.IsValid.Should().BeFalse();
+        result.Errors.Keys.Should().Contain("fileFormat");
     }
 
     #endregion
@@ -150,7 +153,7 @@ public class DocnetPdfValidatorTests : IDisposable
         var result = await _validator.ValidateAsync(stream, "test.pdf", TestCancellationToken);
 
         // Assert: Should not fail on file size
-        Assert.DoesNotContain("fileSize", result.Errors.Keys);
+        result.Errors.Keys.Should().NotContain("fileSize");
     }
 
     [Fact]
@@ -164,9 +167,9 @@ public class DocnetPdfValidatorTests : IDisposable
         var result = await _validator.ValidateAsync(stream, "test.pdf", TestCancellationToken);
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Contains("fileSize", result.Errors.Keys);
-        Assert.Contains("exceeds maximum", result.Errors["fileSize"]);
+        result.IsValid.Should().BeFalse();
+        result.Errors.Keys.Should().Contain("fileSize");
+        result.Errors["fileSize"].Should().ContainEquivalentOf("exceeds maximum");
     }
 
     #endregion
@@ -184,7 +187,7 @@ public class DocnetPdfValidatorTests : IDisposable
         var result = await _validator.ValidateAsync(stream, "document.pdf", TestCancellationToken);
 
         // Assert: Should not fail on MIME type
-        Assert.DoesNotContain("fileType", result.Errors.Keys);
+        result.Errors.Keys.Should().NotContain("fileType");
     }
 
     [Fact]
@@ -198,7 +201,7 @@ public class DocnetPdfValidatorTests : IDisposable
         var result = await _validator.ValidateAsync(stream, "document.txt", TestCancellationToken);
 
         // Assert
-        Assert.False(result.IsValid);
+        result.IsValid.Should().BeFalse();
         // Note: MIME type check delegates to domain service which checks content type
         // GetContentType() returns "application/octet-stream" for non-.pdf files
     }
@@ -218,10 +221,10 @@ public class DocnetPdfValidatorTests : IDisposable
         var result = await _validator.ValidateAsync(stream, "test.pdf", TestCancellationToken);
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.True(result.Errors.Count >= 2); // At least magic bytes + file size errors
-        Assert.Contains("fileFormat", result.Errors.Keys);
-        Assert.Contains("fileSize", result.Errors.Keys);
+        result.IsValid.Should().BeFalse();
+        result.Errors.Count.Should().BeGreaterThanOrEqualTo(2); // At least magic bytes + file size errors
+        result.Errors.Keys.Should().Contain("fileFormat");
+        result.Errors.Keys.Should().Contain("fileSize");
     }
 
     #endregion
@@ -238,7 +241,7 @@ public class DocnetPdfValidatorTests : IDisposable
         var metadata = await _validator.ExtractMetadataAsync(stream!, TestCancellationToken);
 
         // Assert
-        Assert.Null(metadata);
+        metadata.Should().BeNull();
     }
 
     [Fact]
@@ -251,7 +254,7 @@ public class DocnetPdfValidatorTests : IDisposable
         var metadata = await _validator.ExtractMetadataAsync(stream, TestCancellationToken);
 
         // Assert: Should return null for invalid PDF (Docnet parsing fails)
-        Assert.Null(metadata);
+        metadata.Should().BeNull();
     }
 
     #endregion
@@ -277,4 +280,3 @@ public class DocnetPdfValidatorTests : IDisposable
         GC.SuppressFinalize(this);
     }
 }
-

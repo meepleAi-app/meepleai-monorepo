@@ -4,6 +4,7 @@ using Api.BoundedContexts.DocumentProcessing.Application.Handlers;
 using Api.Infrastructure;
 using Api.Services;
 using Api.Tests.Helpers;
+using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -12,10 +13,12 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Handlers;
 
 /// <summary>
 /// Tests for IndexPdfCommandHandler.
+/// ISSUE-1818: Migrated to FluentAssertions for improved readability.
 /// Tests PDF text indexing workflow (chunking, embedding, Qdrant indexing).
 /// NOTE: Complex orchestrator with many dependencies - focused on construction and validation.
 /// RESOLVED: Issue #1690 - Integration tests added in IndexPdfIntegrationTests.cs.
 /// ISSUE-1500: TEST-002 - Fixed test isolation (fresh context per test)
+/// ISSUE-1818: Migrated to FluentAssertions for improved readability.
 /// </summary>
 public class IndexPdfCommandHandlerTests
 {
@@ -58,7 +61,7 @@ public class IndexPdfCommandHandlerTests
             loggerMock.Object);
 
         // Assert
-        Assert.NotNull(handler);
+        handler.Should().NotBeNull();
     }
 
     [Fact]
@@ -79,7 +82,7 @@ public class IndexPdfCommandHandlerTests
             timeProvider);
 
         // Assert
-        Assert.NotNull(handler);
+        handler.Should().NotBeNull();
     }
 
     [Fact]
@@ -99,7 +102,7 @@ public class IndexPdfCommandHandlerTests
             null);
 
         // Assert
-        Assert.NotNull(handler);
+        handler.Should().NotBeNull();
     }
 
     #endregion
@@ -116,7 +119,7 @@ public class IndexPdfCommandHandlerTests
         var command = new IndexPdfCommand(pdfId);
 
         // Assert
-        Assert.Equal(pdfId, command.PdfId);
+        command.PdfId.Should().Be(pdfId);
     }
 
     #endregion
@@ -134,10 +137,10 @@ public class IndexPdfCommandHandlerTests
         var result = IndexingResultDto.CreateSuccess("vector-doc-id", chunkCount, DateTime.UtcNow);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Equal(chunkCount, result.ChunkCount);
-        Assert.Null(result.ErrorMessage);
-        Assert.Null(result.ErrorCode);
+        result.Success.Should().BeTrue();
+        result.ChunkCount.Should().Be(chunkCount);
+        result.ErrorMessage.Should().BeNull();
+        result.ErrorCode.Should().BeNull();
     }
 
     [Fact]
@@ -151,10 +154,10 @@ public class IndexPdfCommandHandlerTests
         var result = IndexingResultDto.CreateFailure(errorMessage, errorCode);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Equal(0, result.ChunkCount);
-        Assert.Equal(errorMessage, result.ErrorMessage);
-        Assert.Equal(errorCode, result.ErrorCode);
+        result.Success.Should().BeFalse();
+        result.ChunkCount.Should().Be(0);
+        result.ErrorMessage.Should().Be(errorMessage);
+        result.ErrorCode.Should().Be(errorCode);
     }
 
     [Fact]
@@ -166,8 +169,8 @@ public class IndexPdfCommandHandlerTests
             PdfIndexingErrorCode.TextExtractionRequired);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Equal(PdfIndexingErrorCode.TextExtractionRequired, result.ErrorCode);
+        result.Success.Should().BeFalse();
+        result.ErrorCode.Should().Be(PdfIndexingErrorCode.TextExtractionRequired);
     }
 
     [Fact]
@@ -179,8 +182,8 @@ public class IndexPdfCommandHandlerTests
             PdfIndexingErrorCode.ChunkingFailed);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Equal(PdfIndexingErrorCode.ChunkingFailed, result.ErrorCode);
+        result.Success.Should().BeFalse();
+        result.ErrorCode.Should().Be(PdfIndexingErrorCode.ChunkingFailed);
     }
 
     [Fact]
@@ -192,8 +195,8 @@ public class IndexPdfCommandHandlerTests
             PdfIndexingErrorCode.EmbeddingFailed);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Equal(PdfIndexingErrorCode.EmbeddingFailed, result.ErrorCode);
+        result.Success.Should().BeFalse();
+        result.ErrorCode.Should().Be(PdfIndexingErrorCode.EmbeddingFailed);
     }
 
     [Fact]
@@ -205,8 +208,8 @@ public class IndexPdfCommandHandlerTests
             PdfIndexingErrorCode.QdrantIndexingFailed);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Equal(PdfIndexingErrorCode.QdrantIndexingFailed, result.ErrorCode);
+        result.Success.Should().BeFalse();
+        result.ErrorCode.Should().Be(PdfIndexingErrorCode.QdrantIndexingFailed);
     }
 
     #endregion
@@ -223,7 +226,7 @@ public class IndexPdfCommandHandlerTests
     public void PdfIndexingErrorCode_AllValuesAreValid(PdfIndexingErrorCode errorCode)
     {
         // Assert
-        Assert.True(Enum.IsDefined(typeof(PdfIndexingErrorCode), errorCode));
+        Enum.IsDefined(typeof(PdfIndexingErrorCode), errorCode).Should().BeTrue();
     }
 
     #endregion
@@ -232,4 +235,3 @@ public class IndexPdfCommandHandlerTests
     // should be in integration test suite due to DbContext and multi-service complexity.
     // See integration-tests.yml workflow.
 }
-

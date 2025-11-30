@@ -3,6 +3,7 @@ using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.Tests.Constants;
+using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -53,17 +54,17 @@ public class EnhancedPdfProcessingOrchestratorTests
         var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Equal(1, result.StageUsed);
-        Assert.Equal("Unstructured", result.StageName); // Orchestrator names stages
-        Assert.Equal("Stage1 text", result.ExtractedText);
-        Assert.Equal(ExtractionQuality.High, result.Quality);
-        Assert.True(result.TotalDurationMs >= 0); // Can be 0 for very fast operations
+        result.Success.Should().BeTrue();
+        result.StageUsed.Should().Be(1);
+        result.StageName.Should().Be("Unstructured"); // Orchestrator names stages
+        result.ExtractedText.Should().Be("Stage1 text");
+        result.Quality.Should().Be(ExtractionQuality.High);
+        result.TotalDurationMs.Should().BeGreaterThanOrEqualTo(0); // Can be 0 for very fast operations
 
         // Verify only Stage 1 was called
-        Assert.Equal(1, stage1.CallCount);
-        Assert.Equal(0, stage2.CallCount); // Should NOT be called
-        Assert.Equal(0, stage3.CallCount); // Should NOT be called
+        stage1.CallCount.Should().Be(1);
+        stage2.CallCount.Should().Be(0); // Should NOT be called
+        stage3.CallCount.Should().Be(0); // Should NOT be called
     }
 
     [Fact]
@@ -83,15 +84,15 @@ public class EnhancedPdfProcessingOrchestratorTests
         var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Equal(2, result.StageUsed);
-        Assert.Equal("Stage2 good", result.ExtractedText);
-        Assert.Equal(ExtractionQuality.Medium, result.Quality);
+        result.Success.Should().BeTrue();
+        result.StageUsed.Should().Be(2);
+        result.ExtractedText.Should().Be("Stage2 good");
+        result.Quality.Should().Be(ExtractionQuality.Medium);
 
         // Verify Stage 1 and 2 called, Stage 3 NOT called
-        Assert.Equal(1, stage1.CallCount);
-        Assert.Equal(1, stage2.CallCount);
-        Assert.Equal(0, stage3.CallCount);
+        stage1.CallCount.Should().Be(1);
+        stage2.CallCount.Should().Be(1);
+        stage3.CallCount.Should().Be(0);
     }
 
     [Fact]
@@ -111,14 +112,14 @@ public class EnhancedPdfProcessingOrchestratorTests
         var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Equal(3, result.StageUsed);
-        Assert.Equal("Stage3 fallback", result.ExtractedText);
+        result.Success.Should().BeTrue();
+        result.StageUsed.Should().Be(3);
+        result.ExtractedText.Should().Be("Stage3 fallback");
 
         // Verify all 3 stages attempted
-        Assert.Equal(1, stage1.CallCount);
-        Assert.Equal(1, stage2.CallCount);
-        Assert.Equal(1, stage3.CallCount);
+        stage1.CallCount.Should().Be(1);
+        stage2.CallCount.Should().Be(1);
+        stage3.CallCount.Should().Be(1);
     }
 
     [Fact]
@@ -138,13 +139,13 @@ public class EnhancedPdfProcessingOrchestratorTests
         var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Equal(3, result.StageUsed);
+        result.Success.Should().BeTrue();
+        result.StageUsed.Should().Be(3);
 
         // All 3 stages attempted due to quality thresholds
-        Assert.Equal(1, stage1.CallCount);
-        Assert.Equal(1, stage2.CallCount);
-        Assert.Equal(1, stage3.CallCount);
+        stage1.CallCount.Should().Be(1);
+        stage2.CallCount.Should().Be(1);
+        stage3.CallCount.Should().Be(1);
     }
 
     [Fact]
@@ -164,14 +165,14 @@ public class EnhancedPdfProcessingOrchestratorTests
         var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert - Returns Stage 3 result (even if failed)
-        Assert.False(result.Success);
-        Assert.Equal(3, result.StageUsed);
-        Assert.Contains("Stage3 error", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.StageUsed.Should().Be(3);
+        result.ErrorMessage.Should().Contain("Stage3 error");
 
         // All 3 stages attempted
-        Assert.Equal(1, stage1.CallCount);
-        Assert.Equal(1, stage2.CallCount);
-        Assert.Equal(1, stage3.CallCount);
+        stage1.CallCount.Should().Be(1);
+        stage2.CallCount.Should().Be(1);
+        stage3.CallCount.Should().Be(1);
     }
 
     [Fact]
@@ -191,9 +192,9 @@ public class EnhancedPdfProcessingOrchestratorTests
         var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert - Should fallback to Stage 2 after catching exception
-        Assert.True(result.Success);
-        Assert.Equal(2, result.StageUsed);
-        Assert.Equal("Stage2 recovered", result.ExtractedText);
+        result.Success.Should().BeTrue();
+        result.StageUsed.Should().Be(2);
+        result.ExtractedText.Should().Be("Stage2 recovered");
     }
 
     [Fact]
@@ -213,15 +214,15 @@ public class EnhancedPdfProcessingOrchestratorTests
         var result = await orchestrator.ExtractPagedTextWithFallbackAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Equal(1, result.StageUsed);
-        Assert.Equal(10, result.PageChunks.Count);
-        Assert.True(result.TotalDurationMs >= 0); // Can be 0 for very fast operations
+        result.Success.Should().BeTrue();
+        result.StageUsed.Should().Be(1);
+        result.PageChunks.Count.Should().Be(10);
+        result.TotalDurationMs.Should().BeGreaterThanOrEqualTo(0); // Can be 0 for very fast operations
 
         // Only Stage 1 called
-        Assert.Equal(1, stage1.PagedCallCount);
-        Assert.Equal(0, stage2.PagedCallCount);
-        Assert.Equal(0, stage3.PagedCallCount);
+        stage1.PagedCallCount.Should().Be(1);
+        stage2.PagedCallCount.Should().Be(0);
+        stage3.PagedCallCount.Should().Be(0);
     }
 
     [Fact]
@@ -241,14 +242,14 @@ public class EnhancedPdfProcessingOrchestratorTests
         var result = await orchestrator.ExtractPagedTextWithFallbackAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Equal(3, result.StageUsed);
-        Assert.Equal(5, result.PageChunks.Count);
+        result.Success.Should().BeTrue();
+        result.StageUsed.Should().Be(3);
+        result.PageChunks.Count.Should().Be(5);
 
         // All 3 stages attempted
-        Assert.Equal(1, stage1.PagedCallCount);
-        Assert.Equal(1, stage2.PagedCallCount);
-        Assert.Equal(1, stage3.PagedCallCount);
+        stage1.PagedCallCount.Should().Be(1);
+        stage2.PagedCallCount.Should().Be(1);
+        stage3.PagedCallCount.Should().Be(1);
     }
 
     [Fact]
@@ -270,16 +271,16 @@ public class EnhancedPdfProcessingOrchestratorTests
         var result = await orchestrator.ExtractPagedTextWithFallbackAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Equal(2, result.StageUsed); // Should use Stage 2 (Stage 1 below threshold)
-        Assert.Equal("SmolDocling", result.StageName);
-        Assert.Equal(10, result.PageChunks.Count);
-        Assert.Equal(8500, result.TotalCharacters); // 10 pages * 850 chars/page
+        result.Success.Should().BeTrue();
+        result.StageUsed.Should().Be(2); // Should use Stage 2 (Stage 1 below threshold)
+        result.StageName.Should().Be("SmolDocling");
+        result.PageChunks.Count.Should().Be(10);
+        result.TotalCharacters.Should().Be(8500); // 10 pages * 850 chars/page
 
         // Verify fallback occurred
-        Assert.Equal(1, stage1.PagedCallCount); // Stage 1 called but rejected
-        Assert.Equal(1, stage2.PagedCallCount); // Stage 2 called and accepted
-        Assert.Equal(0, stage3.PagedCallCount); // Stage 3 NOT called
+        stage1.PagedCallCount.Should().Be(1); // Stage 1 called but rejected
+        stage2.PagedCallCount.Should().Be(1); // Stage 2 called and accepted
+        stage3.PagedCallCount.Should().Be(0); // Stage 3 NOT called
     }
 
     [Fact]
@@ -302,16 +303,16 @@ public class EnhancedPdfProcessingOrchestratorTests
         var result = await orchestrator.ExtractPagedTextWithFallbackAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Equal(3, result.StageUsed); // Should use Stage 3 (all others below threshold)
-        Assert.Equal("Docnet", result.StageName);
-        Assert.Equal(5, result.PageChunks.Count);
-        Assert.Equal(1500, result.TotalCharacters); // 5 pages * 300 chars/page
+        result.Success.Should().BeTrue();
+        result.StageUsed.Should().Be(3); // Should use Stage 3 (all others below threshold)
+        result.StageName.Should().Be("Docnet");
+        result.PageChunks.Count.Should().Be(5);
+        result.TotalCharacters.Should().Be(1500); // 5 pages * 300 chars/page
 
         // Verify all stages attempted
-        Assert.Equal(1, stage1.PagedCallCount);
-        Assert.Equal(1, stage2.PagedCallCount);
-        Assert.Equal(1, stage3.PagedCallCount);
+        stage1.PagedCallCount.Should().Be(1);
+        stage2.PagedCallCount.Should().Be(1);
+        stage3.PagedCallCount.Should().Be(1);
     }
 
     [Fact]
@@ -332,16 +333,16 @@ public class EnhancedPdfProcessingOrchestratorTests
         var result = await orchestrator.ExtractPagedTextWithFallbackAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Equal(1, result.StageUsed); // Stage 1 accepted immediately
-        Assert.Equal("Unstructured", result.StageName);
-        Assert.Equal(8, result.PageChunks.Count);
-        Assert.Equal(6400, result.TotalCharacters); // 8 pages * 800 chars/page
+        result.Success.Should().BeTrue();
+        result.StageUsed.Should().Be(1); // Stage 1 accepted immediately
+        result.StageName.Should().Be("Unstructured");
+        result.PageChunks.Count.Should().Be(8);
+        result.TotalCharacters.Should().Be(6400); // 8 pages * 800 chars/page
 
         // Verify only Stage 1 called
-        Assert.Equal(1, stage1.PagedCallCount);
-        Assert.Equal(0, stage2.PagedCallCount); // NOT called
-        Assert.Equal(0, stage3.PagedCallCount); // NOT called
+        stage1.PagedCallCount.Should().Be(1);
+        stage2.PagedCallCount.Should().Be(0); // NOT called
+        stage3.PagedCallCount.Should().Be(0); // NOT called
     }
 
     [Fact]
@@ -361,9 +362,9 @@ public class EnhancedPdfProcessingOrchestratorTests
         var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert - Performance tracking
-        Assert.True(result.TotalDurationMs >= 0, "Total duration should be recorded (can be 0 for fast ops)");
-        Assert.True(result.TotalDurationMs < 5000, "Should complete quickly for fake extractors");
-        Assert.NotNull(result.StageName);
+        result.TotalDurationMs.Should().BeGreaterThanOrEqualTo(0, "Total duration should be recorded (can be 0 for fast ops)");
+        result.TotalDurationMs.Should().BeLessThan(5000, "Should complete quickly for fake extractors");
+        result.StageName.Should().NotBeNull();
     }
 
     [Fact]
@@ -392,11 +393,11 @@ public class EnhancedPdfProcessingOrchestratorTests
 
             if (shouldAccept)
             {
-                Assert.Equal(1, result.StageUsed); // Stage 1 accepted
+                result.StageUsed.Should().Be(1); // Stage 1 accepted
             }
             else
             {
-                Assert.True(result.StageUsed > 1, $"Quality {quality} should fallback (score {expectedScore} < {threshold})");
+                result.StageUsed.Should().BeGreaterThan(1, $"Quality {quality} should fallback (score {expectedScore} < {threshold})");
             }
         }
     }
@@ -432,26 +433,26 @@ public class EnhancedPdfProcessingOrchestratorTests
         var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert
-        Assert.Equal(shouldSucceed, result.Success);
+        result.Success.Should().Be(shouldSucceed);
 
         if (!shouldSucceed)
         {
             // Rejected due to size
-            Assert.Contains("exceeds maximum", result.ErrorMessage);
-            Assert.Equal(0, result.StageUsed); // No stage was used
-            Assert.Equal("None", result.StageName);
-            Assert.Equal(0, result.CharacterCount);
+            result.ErrorMessage.Should().Contain("exceeds maximum");
+            result.StageUsed.Should().Be(0); // No stage was used
+            result.StageName.Should().Be("None");
+            result.CharacterCount.Should().Be(0);
 
             // Verify extractors were NOT called (defense in depth prevented processing)
-            Assert.Equal(0, stage1.CallCount);
-            Assert.Equal(0, stage2.CallCount);
-            Assert.Equal(0, stage3.CallCount);
+            stage1.CallCount.Should().Be(0);
+            stage2.CallCount.Should().Be(0);
+            stage3.CallCount.Should().Be(0);
         }
         else
         {
             // Accepted and processed
-            Assert.True(result.Success);
-            Assert.True(result.StageUsed > 0, "At least one stage should have processed the PDF");
+            result.Success.Should().BeTrue();
+            result.StageUsed.Should().BeGreaterThan(0, "At least one stage should have processed the PDF");
         }
     }
 
@@ -482,9 +483,9 @@ public class EnhancedPdfProcessingOrchestratorTests
         var result = await orchestrator.ExtractTextWithFallbackAsync(nonSeekableStream, ct: TestCancellationToken);
 
         // Assert - Should process successfully even though limit is very low
-        Assert.True(result.Success, "Non-seekable stream should skip size check and process normally");
-        Assert.Equal("Extracted successfully", result.ExtractedText);
-        Assert.Equal(1, stage1.CallCount); // Stage 1 should have been called
+        result.Success.Should().BeTrue("Non-seekable stream should skip size check and process normally");
+        result.ExtractedText.Should().Be("Extracted successfully");
+        stage1.CallCount.Should().Be(1); // Stage 1 should have been called
     }
 
     [Fact]
@@ -508,9 +509,9 @@ public class EnhancedPdfProcessingOrchestratorTests
         var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert - Should reject (default is 100 MB)
-        Assert.False(result.Success);
-        Assert.Contains("exceeds maximum", result.ErrorMessage);
-        Assert.Contains("115", result.ErrorMessage); // Should show actual size (115343360 bytes = 110 MB = 115.3 in decimal MB)
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("exceeds maximum");
+        result.ErrorMessage.Should().Contain("115"); // Should show actual size (115343360 bytes = 110 MB = 115.3 in decimal MB)
     }
 
     #endregion
@@ -684,4 +685,3 @@ public class EnhancedPdfProcessingOrchestratorTests
 
     #endregion
 }
-

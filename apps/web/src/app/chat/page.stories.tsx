@@ -8,45 +8,15 @@
  */
 
 import type { Meta, StoryObj } from '@storybook/react';
-import React from 'react';
 // NOTE: @storybook/test incompatible with Storybook v10 (requires v8.6.14)
 // Removed interactive tests temporarily until Storybook upgrade
 import ChatPage from '@/components/pages/ChatPage';
-import { Message, AuthUser } from '@/types';
+import { Message } from '@/types';
 
-// Mock AuthProvider for Storybook (ChatPage requires AuthProvider context)
-const MockAuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const mockAuthContext = {
-    user: {
-      id: 'user-123',
-      email: 'test@example.com',
-      displayName: 'Test User',
-      role: 'user' as const,
-    } as AuthUser,
-    loading: false,
-    error: null,
-    login: async () => ({}) as AuthUser,
-    register: async () => ({}) as AuthUser,
-    logout: async () => {},
-    refreshUser: async () => {},
-    clearError: () => {},
-  };
-
-  // Create AuthContext dynamically for story isolation
-  const AuthContext = React.createContext(mockAuthContext);
-  return <AuthContext.Provider value={mockAuthContext}>{children}</AuthContext.Provider>;
-};
-
+// NOTE: AuthProvider is now provided globally via .storybook/preview.ts
 const meta: Meta<typeof ChatPage> = {
   title: 'Pages/Chat Page',
   component: ChatPage,
-  decorators: [
-    Story => (
-      <MockAuthProvider>
-        <Story />
-      </MockAuthProvider>
-    ),
-  ],
   parameters: {
     layout: 'fullscreen',
     chromatic: {

@@ -1,6 +1,38 @@
 import type { Preview } from '@storybook/react';
 import { withThemeByClassName } from '@storybook/addon-themes';
+import React from 'react';
 import '../src/styles/globals.css'; // Import Tailwind CSS
+import { AuthContext } from '../src/components/auth/AuthProvider';
+
+// Mock AuthProvider for Storybook global context
+// Uses real AuthContext to prevent "useAuth must be used within AuthProvider" errors
+const MockAuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const mockAuthContext = {
+    user: {
+      id: 'storybook-user',
+      email: 'test@example.com',
+      displayName: 'Storybook User',
+      role: 'user' as const,
+    },
+    loading: false,
+    error: null,
+    login: async () => ({ id: 'mock', email: 'mock', displayName: 'Mock', role: 'user' as const }),
+    register: async () => ({
+      id: 'mock',
+      email: 'mock',
+      displayName: 'Mock',
+      role: 'user' as const,
+    }),
+    logout: async () => {},
+    refreshUser: async () => {},
+    clearError: () => {},
+  };
+
+  return React.createElement(AuthContext.Provider, {
+    value: mockAuthContext,
+    children,
+  });
+};
 
 const preview: Preview = {
   parameters: {
@@ -35,6 +67,7 @@ const preview: Preview = {
       },
       defaultTheme: 'light',
     }),
+    Story => React.createElement(MockAuthProvider, null, React.createElement(Story)),
   ],
 };
 

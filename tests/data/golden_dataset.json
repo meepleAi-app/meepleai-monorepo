@@ -2,8 +2,8 @@
   "metadata": {
     "version": "1.0",
     "created_at": "2025-11-30T11:36:18.6961455Z",
-    "description": "Golden dataset for RAG quality testing - 1000 Q&A pairs across 10 popular board games (template-generated for alpha testing) + 20 expert-annotated Terraforming Mars Q&A (BGAI-056)",
-    "total_test_cases": 1020,
+    "description": "Golden dataset for RAG quality testing - 1000 Q&A pairs across 10 popular board games (template-generated for alpha testing) + 20 expert-annotated Terraforming Mars Q&A (BGAI-056) + 15 expert-annotated Wingspan Q&A (BGAI-057)",
+    "total_test_cases": 1035,
     "games_count": 10,
     "annotators": [
       "template_generated_alpha",
@@ -5356,6 +5356,246 @@
           "category": "gameplay",
           "annotated_by": "template_generator_alpha",
           "annotated_at": "2025-11-30T11:36:18.6991839Z"
+        },
+        {
+          "id": "wingspan_201",
+          "question": "Quante carte uccello e segnalini cibo riceve ogni giocatore all'inizio della partita?",
+          "expected_answer_keywords": ["5 carte", "5 segnalini cibo", "setup", "iniziale"],
+          "expected_citations": [
+            {
+              "page": 4,
+              "snippet_contains": "setup"
+            }
+          ],
+          "forbidden_keywords": ["inventato", "probabilmente", "suppongo", "forse", "credo"],
+          "difficulty": "easy",
+          "category": "setup",
+          "annotated_by": "expert_wingspan_bgai057",
+          "annotated_at": "2025-11-30T13:00:00Z"
+        },
+        {
+          "id": "wingspan_202",
+          "question": "Quanti round ci sono in una partita di Wingspan e quante azioni per round?",
+          "expected_answer_keywords": ["4 round", "8-7-6-5 azioni", "decrescente", "26 azioni totali"],
+          "expected_citations": [
+            {
+              "page": 5,
+              "snippet_contains": "round"
+            }
+          ],
+          "forbidden_keywords": ["inventato", "probabilmente", "suppongo", "forse"],
+          "difficulty": "easy",
+          "category": "setup",
+          "annotated_by": "expert_wingspan_bgai057",
+          "annotated_at": "2025-11-30T13:00:00Z"
+        },
+        {
+          "id": "wingspan_203",
+          "question": "Quali sono i tre tipi di habitat dove si possono piazzare gli uccelli?",
+          "expected_answer_keywords": ["foresta", "prateria", "zona umida", "habitat"],
+          "expected_citations": [
+            {
+              "page": 3,
+              "snippet_contains": "habitat"
+            }
+          ],
+          "forbidden_keywords": ["inventato", "probabilmente", "montagna", "deserto"],
+          "difficulty": "easy",
+          "category": "setup",
+          "annotated_by": "expert_wingspan_bgai057",
+          "annotated_at": "2025-11-30T13:00:00Z"
+        },
+        {
+          "id": "wingspan_204",
+          "question": "Quali sono le 4 azioni principali che un giocatore può fare nel suo turno?",
+          "expected_answer_keywords": ["giocare uccello", "ottenere cibo", "deporre uova", "pescare carte"],
+          "expected_citations": [
+            {
+              "page": 6,
+              "snippet_contains": "azioni"
+            }
+          ],
+          "forbidden_keywords": ["inventato", "probabilmente", "suppongo"],
+          "difficulty": "easy",
+          "category": "gameplay",
+          "annotated_by": "expert_wingspan_bgai057",
+          "annotated_at": "2025-11-30T13:00:00Z"
+        },
+        {
+          "id": "wingspan_205",
+          "question": "Come funziona la catena di abilità quando si attiva un'azione habitat?",
+          "expected_answer_keywords": ["sinistra a destra", "tutte le carte", "abilità quando attivato", "catena"],
+          "expected_citations": [
+            {
+              "page": 7,
+              "snippet_contains": "abilità"
+            }
+          ],
+          "forbidden_keywords": ["inventato", "probabilmente", "a caso", "solo una"],
+          "difficulty": "medium",
+          "category": "gameplay",
+          "annotated_by": "expert_wingspan_bgai057",
+          "annotated_at": "2025-11-30T13:00:00Z"
+        },
+        {
+          "id": "wingspan_206",
+          "question": "Qual è il costo in cibo per giocare una carta uccello?",
+          "expected_answer_keywords": ["costo indicato", "carta uccello", "simboli cibo", "angolo sinistro"],
+          "expected_citations": [
+            {
+              "page": 8,
+              "snippet_contains": "costo"
+            }
+          ],
+          "forbidden_keywords": ["inventato", "sempre 1", "gratis", "suppongo"],
+          "difficulty": "medium",
+          "category": "gameplay",
+          "annotated_by": "expert_wingspan_bgai057",
+          "annotated_at": "2025-11-30T13:00:00Z"
+        },
+        {
+          "id": "wingspan_207",
+          "question": "Come funzionano i bonus azione (convertire uova in carte, cibo in uova, carte in cibo)?",
+          "expected_answer_keywords": ["bonus azione", "convertire", "decidere prima", "azione habitat"],
+          "expected_citations": [
+            {
+              "page": 9,
+              "snippet_contains": "bonus"
+            }
+          ],
+          "forbidden_keywords": ["inventato", "probabilmente", "obbligatorio", "automatico"],
+          "difficulty": "medium",
+          "category": "gameplay",
+          "annotated_by": "expert_wingspan_bgai057",
+          "annotated_at": "2025-11-30T13:00:00Z"
+        },
+        {
+          "id": "wingspan_208",
+          "question": "Quante carte si possono tenere in mano alla fine del round?",
+          "expected_answer_keywords": ["nessun limite", "conservare", "fine round"],
+          "expected_citations": [
+            {
+              "page": 10,
+              "snippet_contains": "carte in mano"
+            }
+          ],
+          "forbidden_keywords": ["inventato", "scartare", "massimo 5", "massimo 7"],
+          "difficulty": "medium",
+          "category": "gameplay",
+          "annotated_by": "expert_wingspan_bgai057",
+          "annotated_at": "2025-11-30T13:00:00Z"
+        },
+        {
+          "id": "wingspan_209",
+          "question": "Quando si pescano carte uccello, si può scegliere dalla riserva o dal mazzo coperto?",
+          "expected_answer_keywords": ["scegliere", "riserva scoperta", "mazzo coperto", "mix possibile"],
+          "expected_citations": [
+            {
+              "page": 11,
+              "snippet_contains": "pescare carte"
+            }
+          ],
+          "forbidden_keywords": ["inventato", "solo riserva", "solo mazzo", "obbligatorio"],
+          "difficulty": "medium",
+          "category": "gameplay",
+          "annotated_by": "expert_wingspan_bgai057",
+          "annotated_at": "2025-11-30T13:00:00Z"
+        },
+        {
+          "id": "wingspan_210",
+          "question": "Cosa sono gli obiettivi round e come vengono assegnati i punti?",
+          "expected_answer_keywords": ["obiettivo round", "tessera obiettivo", "primo posto", "secondo posto", "punti"],
+          "expected_citations": [
+            {
+              "page": 12,
+              "snippet_contains": "obiettivo round"
+            }
+          ],
+          "forbidden_keywords": ["inventato", "probabilmente", "uguale per tutti"],
+          "difficulty": "medium",
+          "category": "gameplay",
+          "annotated_by": "expert_wingspan_bgai057",
+          "annotated_at": "2025-11-30T13:00:00Z"
+        },
+        {
+          "id": "wingspan_211",
+          "question": "Come funzionano le abilità degli uccelli con il testo 'quando attivato'?",
+          "expected_answer_keywords": ["quando attivato", "azione habitat", "catena", "attivazione"],
+          "expected_citations": [
+            {
+              "page": 13,
+              "snippet_contains": "quando attivato"
+            }
+          ],
+          "forbidden_keywords": ["inventato", "probabilmente", "automatico sempre"],
+          "difficulty": "medium",
+          "category": "gameplay",
+          "annotated_by": "expert_wingspan_bgai057",
+          "annotated_at": "2025-11-30T13:00:00Z"
+        },
+        {
+          "id": "wingspan_212",
+          "question": "Come si calcola il punteggio finale a fine partita?",
+          "expected_answer_keywords": ["carte uccello", "obiettivi bonus", "obiettivi round", "uova", "cibo conservato", "carte conservate"],
+          "expected_citations": [
+            {
+              "page": 14,
+              "snippet_contains": "punteggio finale"
+            }
+          ],
+          "forbidden_keywords": ["inventato", "probabilmente", "solo carte"],
+          "difficulty": "easy",
+          "category": "endgame",
+          "annotated_by": "expert_wingspan_bgai057",
+          "annotated_at": "2025-11-30T13:00:00Z"
+        },
+        {
+          "id": "wingspan_213",
+          "question": "Quando termina esattamente la partita di Wingspan?",
+          "expected_answer_keywords": ["fine 4° round", "ultima azione", "calcolo punteggio"],
+          "expected_citations": [
+            {
+              "page": 14,
+              "snippet_contains": "fine partita"
+            }
+          ],
+          "forbidden_keywords": ["inventato", "quando finiscono carte", "quando qualcuno vince"],
+          "difficulty": "easy",
+          "category": "endgame",
+          "annotated_by": "expert_wingspan_bgai057",
+          "annotated_at": "2025-11-30T13:00:00Z"
+        },
+        {
+          "id": "wingspan_214",
+          "question": "Se un uccello ha un'abilità che si attiva quando un altro giocatore fa qualcosa, in che ordine si risolvono le abilità?",
+          "expected_answer_keywords": ["ordine turno", "abilità reazione", "timing", "giocatore attivo"],
+          "expected_citations": [
+            {
+              "page": 15,
+              "snippet_contains": "abilità reazione"
+            }
+          ],
+          "forbidden_keywords": ["inventato", "probabilmente", "simultaneamente", "a caso"],
+          "difficulty": "hard",
+          "category": "edge_cases",
+          "annotated_by": "expert_wingspan_bgai057",
+          "annotated_at": "2025-11-30T13:00:00Z"
+        },
+        {
+          "id": "wingspan_215",
+          "question": "Cosa succede se un uccello con abilità 'quando ha almeno X uova' viene giocato e subito riceve uova?",
+          "expected_answer_keywords": ["condizione uova", "verifica immediata", "abilità attivata", "timing"],
+          "expected_citations": [
+            {
+              "page": 16,
+              "snippet_contains": "abilità condizionale"
+            }
+          ],
+          "forbidden_keywords": ["inventato", "probabilmente", "prossimo turno", "non si attiva"],
+          "difficulty": "hard",
+          "category": "edge_cases",
+          "annotated_by": "expert_wingspan_bgai057",
+          "annotated_at": "2025-11-30T13:00:00Z"
         }
       ]
     },

@@ -149,84 +149,84 @@
 }
 
 :root {
-  /* Base theme tokens */
+  /* Base theme tokens - Opzione A: Playful Boardroom */
   --radius: 0.625rem;
-  --background: 0 0% 100%;
-  --foreground: 240 10% 3.9%;
+  --background: 30 25% 97%;         /* Beige chiaro - warm background */
+  --foreground: 30 15% 15%;         /* Marrone scuro - readable text */
 
-  /* shadcn/ui semantic tokens */
-  --card: 0 0% 100%;
-  --card-foreground: 240 10% 3.9%;
+  /* shadcn/ui semantic tokens - Opzione A */
+  --card: 0 0% 100%;                /* White cards for contrast */
+  --card-foreground: 30 15% 15%;
   --popover: 0 0% 100%;
-  --popover-foreground: 240 10% 3.9%;
-  --primary: 221 83% 53%;           /* #0070f3 - Brand blue */
-  --primary-foreground: 210 40% 98%;
-  --secondary: 142 76% 36%;         /* #34a853 - Brand green */
-  --secondary-foreground: 210 40% 98%;
-  --muted: 240 4.8% 95.9%;
-  --muted-foreground: 240 3.8% 46.1%;
-  --accent: 36 100% 50%;            /* #ff9800 - Brand orange */
-  --accent-foreground: 240 5.9% 10%;
+  --popover-foreground: 30 15% 15%;
+  --primary: 25 95% 53%;            /* #F97316 - Arancio Catan-inspired */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 142 76% 36%;         /* #16A34A - Verde Carcassonne */
+  --secondary-foreground: 0 0% 100%;
+  --muted: 30 20% 90%;              /* Beige medio - muted backgrounds */
+  --muted-foreground: 30 12% 45%;
+  --accent: 271 91% 65%;            /* #A855F7 - Viola giochi */
+  --accent-foreground: 0 0% 100%;
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 0 0% 98%;
-  --border: 240 5.9% 90%;
-  --input: 240 5.9% 90%;
-  --ring: 221 83% 53%;
-  --chart-1: 12 76% 61%;
-  --chart-2: 173 58% 39%;
-  --chart-3: 197 37% 24%;
-  --chart-4: 43 74% 66%;
-  --chart-5: 27 87% 67%;
+  --border: 30 15% 85%;             /* Bordi beige */
+  --input: 30 15% 90%;
+  --ring: 25 95% 53%;               /* Primary orange for focus */
+  --chart-1: 25 95% 53%;            /* Orange */
+  --chart-2: 142 76% 36%;           /* Green */
+  --chart-3: 271 91% 65%;           /* Purple */
+  --chart-4: 45 93% 47%;            /* Gold/Yellow */
+  --chart-5: 0 72% 51%;             /* Red */
 
-  /* Sidebar tokens */
-  --sidebar: 0 0% 98%;
-  --sidebar-foreground: 240 5.3% 26.1%;
-  --sidebar-primary: 240 5.9% 10%;
-  --sidebar-primary-foreground: 0 0% 98%;
-  --sidebar-accent: 240 4.8% 95.9%;
-  --sidebar-accent-foreground: 240 5.9% 10%;
-  --sidebar-border: 220 13% 91%;
-  --sidebar-ring: 217.2 91.2% 59.8%;
+  /* Sidebar tokens - Warm beige theme */
+  --sidebar: 30 22% 94%;            /* Light beige sidebar */
+  --sidebar-foreground: 30 15% 20%;
+  --sidebar-primary: 25 95% 53%;    /* Primary orange */
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 30 20% 88%;
+  --sidebar-accent-foreground: 30 15% 15%;
+  --sidebar-border: 30 15% 82%;
+  --sidebar-ring: 25 95% 53%;
 }
 
 .dark {
-  /* Base theme tokens - Dark mode */
-  --background: 240 10% 3.9%;
-  --foreground: 0 0% 98%;
+  /* Base theme tokens - Dark mode (Opzione A adapted) */
+  --background: 30 8% 12%;          /* Dark warm brown */
+  --foreground: 30 5% 95%;          /* Light warm beige */
 
   /* shadcn/ui semantic tokens - Dark mode */
-  --card: 240 10% 3.9%;
-  --card-foreground: 0 0% 98%;
-  --popover: 240 10% 3.9%;
-  --popover-foreground: 0 0% 98%;
-  --primary: 221 83% 63%;            /* Lighter for dark mode visibility */
-  --primary-foreground: 240 5.9% 10%;
-  --secondary: 142 76% 46%;          /* Lighter for dark mode visibility */
-  --secondary-foreground: 240 5.9% 10%;
-  --muted: 240 3.7% 15.9%;
-  --muted-foreground: 240 5% 64.9%;
-  --accent: 36 100% 60%;             /* Lighter for dark mode visibility */
-  --accent-foreground: 240 5.9% 10%;
+  --card: 30 10% 15%;               /* Slightly lighter dark card */
+  --card-foreground: 30 5% 95%;
+  --popover: 30 10% 15%;
+  --popover-foreground: 30 5% 95%;
+  --primary: 25 95% 60%;            /* Lighter orange for visibility */
+  --primary-foreground: 30 8% 10%;
+  --secondary: 142 76% 45%;         /* Lighter green for visibility */
+  --secondary-foreground: 30 8% 10%;
+  --muted: 30 8% 20%;
+  --muted-foreground: 30 5% 65%;
+  --accent: 271 91% 70%;            /* Lighter purple for visibility */
+  --accent-foreground: 30 8% 10%;
   --destructive: 0 62.8% 30.6%;
   --destructive-foreground: 0 0% 98%;
-  --border: 240 3.7% 15.9%;
-  --input: 240 3.7% 15.9%;
-  --ring: 221 83% 63%;
-  --chart-1: 220 70% 50%;
-  --chart-2: 160 60% 45%;
-  --chart-3: 30 80% 55%;
-  --chart-4: 280 65% 60%;
-  --chart-5: 340 75% 55%;
+  --border: 30 8% 25%;
+  --input: 30 8% 25%;
+  --ring: 25 95% 60%;
+  --chart-1: 25 95% 60%;            /* Orange (lighter) */
+  --chart-2: 142 76% 50%;           /* Green (lighter) */
+  --chart-3: 271 91% 70%;           /* Purple (lighter) */
+  --chart-4: 45 93% 55%;            /* Gold/Yellow (lighter) */
+  --chart-5: 0 72% 60%;             /* Red (lighter) */
 
   /* Sidebar tokens - Dark mode */
-  --sidebar: 240 5.9% 10%;
-  --sidebar-foreground: 240 4.8% 95.9%;
-  --sidebar-primary: 224.3 76.3% 48%;
-  --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 240 3.7% 15.9%;
-  --sidebar-accent-foreground: 240 4.8% 95.9%;
-  --sidebar-border: 240 3.7% 15.9%;
-  --sidebar-ring: 217.2 91.2% 59.8%;
+  --sidebar: 30 10% 18%;
+  --sidebar-foreground: 30 5% 85%;
+  --sidebar-primary: 25 95% 60%;
+  --sidebar-primary-foreground: 30 8% 10%;
+  --sidebar-accent: 30 8% 22%;
+  --sidebar-accent-foreground: 30 5% 90%;
+  --sidebar-border: 30 8% 25%;
+  --sidebar-ring: 25 95% 60%;
 }
 
 @layer base {

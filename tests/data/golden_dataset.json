@@ -2,8 +2,8 @@
   "metadata": {
     "version": "1.0",
     "created_at": "2025-11-30T11:36:18.6961455Z",
-    "description": "Golden dataset for RAG quality testing - 1000 Q&A pairs across 10 popular board games (template-generated for alpha testing) + 20 expert-annotated Terraforming Mars Q&A (BGAI-056) + 15 expert-annotated Wingspan Q&A (BGAI-057)",
-    "total_test_cases": 1035,
+    "description": "Golden dataset for RAG quality testing - 1000 Q&A pairs across 10 popular board games (template-generated for alpha testing) + 20 expert-annotated Terraforming Mars Q&A (BGAI-056) + 15 expert-annotated Wingspan Q&A (BGAI-057) + 15 expert-annotated Azul Q&A (BGAI-058)",
+    "total_test_cases": 1050,
     "games_count": 10,
     "annotators": [
       "template_generated_alpha",
@@ -22445,6 +22445,246 @@
           "category": "gameplay",
           "annotated_by": "template_generator_alpha",
           "annotated_at": "2025-11-30T11:36:18.6993939Z"
+        },
+        {
+          "id": "azul_901",
+          "question": "Quante tessere vassoio si usano in base al numero di giocatori?",
+          "expected_answer_keywords": ["tessere vassoio", "2 giocatori", "5 tessere", "3 giocatori", "7 tessere", "4 giocatori", "9 tessere"],
+          "expected_citations": [
+            {
+              "page": 2,
+              "snippet_contains": "tessere vassoio"
+            }
+          ],
+          "forbidden_keywords": ["inventato", "probabilmente", "suppongo", "credo", "10 tessere"],
+          "difficulty": "easy",
+          "category": "setup",
+          "annotated_by": "expert_azul_bgai058",
+          "annotated_at": "2025-11-30T14:00:00Z"
+        },
+        {
+          "id": "azul_902",
+          "question": "Con quante piastrelle si riempie ogni tessera vassoio durante il setup?",
+          "expected_answer_keywords": ["4 piastrelle", "riempimento", "setup", "tessera vassoio", "casualmente"],
+          "expected_citations": [
+            {
+              "page": 2,
+              "snippet_contains": "4 piastrelle pescate casualmente"
+            }
+          ],
+          "forbidden_keywords": ["inventato", "probabilmente", "suppongo", "3 piastrelle", "5 piastrelle"],
+          "difficulty": "easy",
+          "category": "setup",
+          "annotated_by": "expert_azul_bgai058",
+          "annotated_at": "2025-11-30T14:00:00Z"
+        },
+        {
+          "id": "azul_903",
+          "question": "Chi riceve il segnalino primo giocatore all'inizio della partita?",
+          "expected_answer_keywords": ["primo giocatore", "Portogallo", "visitato", "più di recente", "segnalino"],
+          "expected_citations": [
+            {
+              "page": 2,
+              "snippet_contains": "visitato il Portogallo"
+            }
+          ],
+          "forbidden_keywords": ["inventato", "probabilmente", "suppongo", "casuale", "più anziano"],
+          "difficulty": "easy",
+          "category": "setup",
+          "annotated_by": "expert_azul_bgai058",
+          "annotated_at": "2025-11-30T14:00:00Z"
+        },
+        {
+          "id": "azul_904",
+          "question": "Su quale casella iniziano i segnapunti scorrevoli?",
+          "expected_answer_keywords": ["segnapunti", "casella 0", "percorso segnapunti", "setup", "entrambi"],
+          "expected_citations": [
+            {
+              "page": 2,
+              "snippet_contains": "caselle 0"
+            }
+          ],
+          "forbidden_keywords": ["inventato", "probabilmente", "suppongo", "casella 1", "casella 10"],
+          "difficulty": "easy",
+          "category": "setup",
+          "annotated_by": "expert_azul_bgai058",
+          "annotated_at": "2025-11-30T14:00:00Z"
+        },
+        {
+          "id": "azul_905",
+          "question": "Quali sono i due modi per prendere piastrelle durante il proprio turno?",
+          "expected_answer_keywords": ["tessera vassoio", "centro tavolo", "stesso colore", "tutte", "prendere"],
+          "expected_citations": [
+            {
+              "page": 3,
+              "snippet_contains": "due modi seguenti"
+            }
+          ],
+          "forbidden_keywords": ["inventato", "probabilmente", "suppongo", "sacchetto", "casualmente"],
+          "difficulty": "medium",
+          "category": "gameplay",
+          "annotated_by": "expert_azul_bgai058",
+          "annotated_at": "2025-11-30T14:00:00Z"
+        },
+        {
+          "id": "azul_906",
+          "question": "In che ordine si collocano le piastrelle nelle linee quadrettate?",
+          "expected_answer_keywords": ["destra a sinistra", "linee quadrettate", "una alla volta", "ordine"],
+          "expected_citations": [
+            {
+              "page": 3,
+              "snippet_contains": "da destra a sinistra"
+            }
+          ],
+          "forbidden_keywords": ["inventato", "probabilmente", "suppongo", "sinistra a destra", "casuale"],
+          "difficulty": "medium",
+          "category": "gameplay",
+          "annotated_by": "expert_azul_bgai058",
+          "annotated_at": "2025-11-30T14:00:00Z"
+        },
+        {
+          "id": "azul_907",
+          "question": "Quando NON è consentito collocare piastrelle di un colore in una linea quadrettata?",
+          "expected_answer_keywords": ["parete", "stesso colore", "già presente", "linea corrispondente", "non consentito"],
+          "expected_citations": [
+            {
+              "page": 4,
+              "snippet_contains": "non è consentito collocare"
+            }
+          ],
+          "forbidden_keywords": ["inventato", "probabilmente", "suppongo", "sempre possibile"],
+          "difficulty": "medium",
+          "category": "gameplay",
+          "annotated_by": "expert_azul_bgai058",
+          "annotated_at": "2025-11-30T14:00:00Z"
+        },
+        {
+          "id": "azul_908",
+          "question": "Cosa si fa con le piastrelle in eccesso che non entrano nella linea quadrettata scelta?",
+          "expected_answer_keywords": ["linea del pavimento", "eccesso", "punti negativi", "sinistra a destra"],
+          "expected_citations": [
+            {
+              "page": 5,
+              "snippet_contains": "linea del pavimento"
+            }
+          ],
+          "forbidden_keywords": ["inventato", "probabilmente", "suppongo", "scartare", "sacchetto"],
+          "difficulty": "medium",
+          "category": "gameplay",
+          "annotated_by": "expert_azul_bgai058",
+          "annotated_at": "2025-11-30T14:00:00Z"
+        },
+        {
+          "id": "azul_909",
+          "question": "Quando una linea quadrettata è considerata completa?",
+          "expected_answer_keywords": ["tutte le caselle riempite", "completa", "piastrella più a destra"],
+          "expected_citations": [
+            {
+              "page": 4,
+              "snippet_contains": "linea quadrettata sono state riempite"
+            }
+          ],
+          "forbidden_keywords": ["inventato", "probabilmente", "suppongo", "metà piena"],
+          "difficulty": "medium",
+          "category": "gameplay",
+          "annotated_by": "expert_azul_bgai058",
+          "annotated_at": "2025-11-30T14:00:00Z"
+        },
+        {
+          "id": "azul_910",
+          "question": "Quanti punti si ottengono collocando una piastrella isolata sulla parete?",
+          "expected_answer_keywords": ["1 punto", "isolata", "nessuna adiacente", "parete"],
+          "expected_citations": [
+            {
+              "page": 7,
+              "snippet_contains": "aggiungete 1 punto"
+            }
+          ],
+          "forbidden_keywords": ["inventato", "probabilmente", "suppongo", "2 punti", "0 punti"],
+          "difficulty": "medium",
+          "category": "scoring",
+          "annotated_by": "expert_azul_bgai058",
+          "annotated_at": "2025-11-30T14:00:00Z"
+        },
+        {
+          "id": "azul_911",
+          "question": "Come si calcolano i punti se la piastrella collocata ha connessioni sia orizzontali che verticali?",
+          "expected_answer_keywords": ["sommare", "orizzontali", "verticali", "entrambi", "punti separati"],
+          "expected_citations": [
+            {
+              "page": 7,
+              "snippet_contains": "piastrelle collegate orizzontalmente"
+            }
+          ],
+          "forbidden_keywords": ["inventato", "probabilmente", "suppongo", "solo orizzontali", "moltiplicare"],
+          "difficulty": "medium",
+          "category": "scoring",
+          "annotated_by": "expert_azul_bgai058",
+          "annotated_at": "2025-11-30T14:00:00Z"
+        },
+        {
+          "id": "azul_912",
+          "question": "Quanti punti si perdono per ogni piastrella sulla linea del pavimento?",
+          "expected_answer_keywords": ["-1", "-2", "-3", "linea pavimento", "punti negativi", "ordine"],
+          "expected_citations": [
+            {
+              "page": 8,
+              "snippet_contains": "perdete il numero di punti"
+            }
+          ],
+          "forbidden_keywords": ["inventato", "probabilmente", "suppongo", "0 punti", "tutti -1"],
+          "difficulty": "medium",
+          "category": "scoring",
+          "annotated_by": "expert_azul_bgai058",
+          "annotated_at": "2025-11-30T14:00:00Z"
+        },
+        {
+          "id": "azul_913",
+          "question": "Cosa si fa se il sacchetto si svuota mentre si devono rifornire le tessere vassoio?",
+          "expected_answer_keywords": ["riempire sacchetto", "piastrelle scatola", "continuare rifornimento"],
+          "expected_citations": [
+            {
+              "page": 8,
+              "snippet_contains": "riempitelo con tutte le piastrelle"
+            }
+          ],
+          "forbidden_keywords": ["inventato", "probabilmente", "suppongo", "fine partita", "ignorare"],
+          "difficulty": "hard",
+          "category": "edge_cases",
+          "annotated_by": "expert_azul_bgai058",
+          "annotated_at": "2025-11-30T14:00:00Z"
+        },
+        {
+          "id": "azul_914",
+          "question": "Dove vanno le piastrelle in eccesso se la linea del pavimento è già completamente piena?",
+          "expected_answer_keywords": ["scatola gioco", "linea pavimento piena", "eccedenti", "rimosse"],
+          "expected_citations": [
+            {
+              "page": 5,
+              "snippet_contains": "collocate le ulteriori piastrelle cadute nella scatola"
+            }
+          ],
+          "forbidden_keywords": ["inventato", "probabilmente", "suppongo", "sacchetto", "tenere in mano"],
+          "difficulty": "hard",
+          "category": "edge_cases",
+          "annotated_by": "expert_azul_bgai058",
+          "annotated_at": "2025-11-30T14:00:00Z"
+        },
+        {
+          "id": "azul_915",
+          "question": "Quali bonus punti si ottengono alla fine della partita e per quali obiettivi?",
+          "expected_answer_keywords": ["+2 punti", "linea orizzontale", "+7 punti", "linea verticale", "+10 punti", "colore completo", "5 piastrelle"],
+          "expected_citations": [
+            {
+              "page": 9,
+              "snippet_contains": "ulteriori punti"
+            }
+          ],
+          "forbidden_keywords": ["inventato", "probabilmente", "suppongo", "+5 punti", "tutti uguali"],
+          "difficulty": "hard",
+          "category": "edge_cases",
+          "annotated_by": "expert_azul_bgai058",
+          "annotated_at": "2025-11-30T14:00:00Z"
         }
       ]
     },

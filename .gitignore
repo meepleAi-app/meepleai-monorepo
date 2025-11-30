@@ -90,3 +90,7 @@ test-results/
 *.swo
 *~
 .DS_Store
+
+# Code Assistant Claude
+.claude/settings.local.json
+.claude/.mcp.local.json

@@ -185,7 +185,7 @@ public class ValidationHelpersTests
         var validator = ValidationHelpers.CreateAsyncValidator<string>(
             async v =>
             {
-                await Task.Delay(1); // Simulate async operation
+                await Task.Delay(TestConstants.Timing.MinimalDelay); // Simulate async operation
                 return v.Contains("test");
             },
             "Must contain 'test'");
@@ -204,7 +204,7 @@ public class ValidationHelpersTests
         var validator = ValidationHelpers.CreateAsyncValidator<string>(
             async v =>
             {
-                await Task.Delay(1); // Simulate async operation
+                await Task.Delay(TestConstants.Timing.MinimalDelay); // Simulate async operation
                 return v.Contains("test");
             },
             "Must contain 'test'");

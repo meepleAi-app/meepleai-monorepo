@@ -243,7 +243,7 @@ public class GameSessionDomainTests
         var duration = session.Duration;
 
         // Assert
-        Assert.InRange(duration, TimeSpan.Zero, TimeSpan.FromSeconds(2));
+        Assert.InRange(duration, TimeSpan.Zero, TestConstants.Timing.MediumTimeout);
     }
 
     [Fact]

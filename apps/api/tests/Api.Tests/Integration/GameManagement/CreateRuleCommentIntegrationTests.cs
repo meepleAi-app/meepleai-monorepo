@@ -115,7 +115,7 @@ public sealed class CreateRuleCommentIntegrationTests : IAsyncLifetime
             }
             catch (NpgsqlException) when (attempt < 2)
             {
-                await Task.Delay(500, TestCancellationToken);
+                await Task.Delay(TestConstants.Timing.RetryDelay, TestCancellationToken);
             }
         }
 

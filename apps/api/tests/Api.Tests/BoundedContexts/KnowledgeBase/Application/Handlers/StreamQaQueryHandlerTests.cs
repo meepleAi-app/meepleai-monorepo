@@ -738,7 +738,7 @@ public class StreamQaQueryHandlerTests
     {
         foreach (var token in tokens)
         {
-            await Task.Delay(1); // Simulate async streaming
+            await Task.Delay(TestConstants.Timing.MinimalDelay); // Simulate async streaming
             yield return token;
         }
     }

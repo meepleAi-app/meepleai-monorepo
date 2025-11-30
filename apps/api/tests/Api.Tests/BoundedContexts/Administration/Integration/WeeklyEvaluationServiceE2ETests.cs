@@ -122,11 +122,11 @@ public class WeeklyEvaluationServiceE2ETests
         );
 
         using var cts = new CancellationTokenSource();
-        cts.CancelAfter(TimeSpan.FromSeconds(1)); // Cancel after 1s
+        cts.CancelAfter(TestConstants.Timing.VeryShortTimeout); // Cancel after 1s
 
         // Act
         await service.StartAsync(cts.Token);
-        await Task.Delay(500, cts.Token); // Wait briefly
+        await Task.Delay(TestConstants.Timing.SmallDelay, cts.Token); // Wait briefly
         await service.StopAsync(CancellationToken.None);
 
         // Assert

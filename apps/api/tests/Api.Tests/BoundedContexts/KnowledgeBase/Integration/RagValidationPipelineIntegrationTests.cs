@@ -81,7 +81,7 @@ public class RagValidationPipelineIntegrationTests : IAsyncLifetime
         _output($"✓ PostgreSQL started on port {postgresPort}");
 
         // Wait additional time for container to be fully ready (Testcontainers race condition mitigation)
-        await Task.Delay(2000, TestCancellationToken);
+        await Task.Delay(TestConstants.Timing.MediumTimeout, TestCancellationToken);
         _output("✓ Additional wait completed for container stability");
 
         // Setup dependency injection

@@ -83,7 +83,7 @@ public abstract class TestBase : IDisposable
     /// </summary>
     protected static void AssertDateTimeApproximate(DateTime expected, DateTime actual, TimeSpan? tolerance = null)
     {
-        var allowedDifference = tolerance ?? TimeSpan.FromSeconds(1);
+        var allowedDifference = tolerance ?? TestConstants.Timing.VeryShortTimeout;
         var difference = Math.Abs((expected - actual).TotalSeconds);
         Xunit.Assert.True(difference <= allowedDifference.TotalSeconds,
             $"Expected {expected:O}, but got {actual:O} (difference: {difference}s)");

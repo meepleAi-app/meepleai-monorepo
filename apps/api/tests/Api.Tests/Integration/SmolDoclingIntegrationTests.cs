@@ -1,3 +1,4 @@
+using Api.Tests.Constants;
 using System;
 using System.Net;
 using System.Net.Http.Json;
@@ -118,7 +119,7 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
         _httpClient = new HttpClient
         {
             BaseAddress = new Uri(baseUrl),
-            Timeout = TimeSpan.FromSeconds(120) // Longer timeout for VLM processing
+            Timeout = PdfUploadTestConstants.ProcessingTimeouts.VlmProcessing // Longer timeout for VLM processing
         };
 
         // Create extractor with dependency injection
@@ -226,7 +227,7 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
         await using var pdfStream = File.OpenRead(BarragePdfPath);
 
         // Act with realistic timeout for integration test
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(120));
+        using var cts = new CancellationTokenSource(PdfUploadTestConstants.ProcessingTimeouts.VlmProcessing);
 
         // Should complete within 120s for integration test
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, TestCancellationToken);
@@ -274,7 +275,7 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
         var unavailableClient = new HttpClient
         {
             BaseAddress = new Uri("http://localhost:19999"), // Non-existent port
-            Timeout = TimeSpan.FromSeconds(5)
+            Timeout = TestConstants.Timing.ShortTimeout
         };
 
         var config = new ConfigurationBuilder().Build();
@@ -462,7 +463,7 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
 
         // Verify service is back online with retry logic (deterministic wait)
         var maxRetries = 30;
-        var retryDelay = TimeSpan.FromSeconds(1);
+        var retryDelay = TestConstants.Timing.VeryShortTimeout;
         var serviceReady = false;
 
         for (var i = 0; i < maxRetries; i++)

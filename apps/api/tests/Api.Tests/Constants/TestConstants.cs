@@ -140,5 +140,21 @@ public static class PdfUploadTestConstants
         /// </summary>
         public const string TestGameName = "Test Game for PDF Upload";
     }
+
+    /// <summary>
+    /// PDF processing timeout constants.
+    /// </summary>
+    public static class ProcessingTimeouts
+    {
+        /// <summary>
+        /// VLM processing timeout (120 seconds for SmolDocling/Unstructured operations)
+        /// </summary>
+        public static readonly TimeSpan VlmProcessing = TimeSpan.FromSeconds(120);
+
+        /// <summary>
+        /// Standard extraction timeout (30 seconds)
+        /// </summary>
+        public static readonly TimeSpan StandardExtraction = TimeSpan.FromSeconds(30);
+    }
 }
 

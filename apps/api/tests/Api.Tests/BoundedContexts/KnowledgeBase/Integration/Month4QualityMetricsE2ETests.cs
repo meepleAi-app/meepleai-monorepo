@@ -87,7 +87,7 @@ public class Month4QualityMetricsE2ETests : IAsyncLifetime
         _output($"✓ PostgreSQL started on port {postgresPort}");
 
         // Wait for container stability
-        await Task.Delay(2000, TestCancellationToken);
+        await Task.Delay(TestConstants.Timing.MediumTimeout, TestCancellationToken);
         _output("✓ Container stability wait completed");
 
         // Setup dependency injection

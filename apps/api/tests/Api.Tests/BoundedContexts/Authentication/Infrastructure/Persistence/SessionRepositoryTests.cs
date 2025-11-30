@@ -3,6 +3,7 @@ using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.Infrastructure;
+using Api.Tests.BoundedContexts.Authentication.TestHelpers;
 using Api.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
@@ -83,9 +84,9 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
         await ResetDatabaseAsync();
         var userId = await CreateTestUserAsync();
         var session1 = CreateTestSession(userId);
-        await Task.Delay(10); // Ensure different timestamps
+        await Task.Delay(TestConstants.Timing.TinyDelay); // Ensure different timestamps
         var session2 = CreateTestSession(userId);
-        await Task.Delay(10);
+        await Task.Delay(TestConstants.Timing.TinyDelay);
         var session3 = CreateTestSession(userId);
 
         await Repository.AddAsync(session1, TestCancellationToken);
@@ -474,7 +475,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
         await ResetDatabaseAsync();
         var userId = await CreateTestUserAsync();
         // Create session that expires in 1 second
-        var session = CreateTestSession(userId, TimeSpan.FromSeconds(1));
+        var session = CreateTestSession(userId, AuthenticationTestConstants.SessionExpiry.VeryShort);
         await Repository.AddAsync(session, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
@@ -482,7 +483,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
         var activeNow = await Repository.GetActiveSessionsByUserIdAsync(userId, TestCancellationToken);
 
         // Advance time past expiration (1 second + buffer)
-        TimeProvider.Advance(TimeSpan.FromSeconds(2));
+        TimeProvider.Advance(AuthenticationTestConstants.TimeAdvance.PastVeryShortExpiry);
 
         // Check active after expiration
         var activeAfter = await Repository.GetActiveSessionsByUserIdAsync(userId, TestCancellationToken);

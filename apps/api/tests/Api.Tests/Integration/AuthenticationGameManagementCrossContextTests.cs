@@ -111,7 +111,7 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
             }
             catch (Exception ex) when ((ex is NpgsqlException or InvalidOperationException) && attempt < 2)
             {
-                await Task.Delay(500, TestCancellationToken);
+                await Task.Delay(TestConstants.Timing.RetryDelay, TestCancellationToken);
             }
         }
     }

@@ -1,3 +1,4 @@
+using Api.Tests.BoundedContexts.Authentication.TestHelpers;
 using Api.BoundedContexts.Administration.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
@@ -301,7 +302,7 @@ public class TotpReplayAttackPreventionTests : IAsyncLifetime
         var firstResult = await _totpService!.VerifyCodeAsync(user.Id, firstCode);
 
         // Wait for time step to change (31 seconds to ensure new code)
-        await Task.Delay(TimeSpan.FromSeconds(31), TestCancellationToken);
+        await Task.Delay(AuthenticationTestConstants.TwoFactor.PastTotpWindow, TestCancellationToken);
 
         // Generate second code (different time step)
         var secondCode = GenerateValidTotpCode(secret);

@@ -107,12 +107,12 @@ const adminAuth = mockAdminAuth();
 - `fillField(label, value, user)` - Fill form field
 - `clickAndWaitForReady(buttonName, user, timeout)` - Click + wait
 
-### `sse-test-helpers.ts` (Issue #1502)
+### `sse-test-helpers.ts` (Issue #1502, #1495)
 
 **Purpose**: Server-Sent Events (SSE) mocking utilities for streaming tests
 
 **Core Functions**:
-- `createSSEResponse(events)` - Create SSE Response with ReadableStream
+- `createSSEResponse(events, options?)` - Create SSE Response with async sequential delivery
 - `createSSEErrorResponse(code, message)` - Create error SSE response
 
 **Event Builders**:
@@ -124,9 +124,19 @@ const adminAuth = mockAdminAuth();
 - `createErrorEvent(code, message)` - Error event
 
 **Composite Helpers** (Common Scenarios):
-- `createTokenStreamResponse(tokens, options?)` - Complete token stream with completion
-- `createStateUpdateResponse(states)` - State updates with completion
+- `createTokenStreamResponse(tokens, options?, sseOptions?)` - Complete token stream with completion
+- `createStateUpdateResponse(states, sseOptions?)` - State updates with completion
 - `createCitationsResponse(citations, answer?, confidence?)` - Citations with optional answer
+
+**SSE Options** (Issue #1495):
+```typescript
+interface SSEOptions {
+  eventDelay?: number;  // 0ms (fast), 10ms (default/realistic), 50-100ms (slow)
+  signal?: AbortSignal; // Cancellation support
+}
+```
+
+**📖 SEE**: `SSE_TIMING_GUIDELINES.md` for complete timing strategy guide
 
 ## Mock API Router
 

@@ -1,9 +1,9 @@
-﻿{
+{
   "metadata": {
     "version": "1.0",
     "created_at": "2025-11-30T11:36:18.6961455Z",
-    "description": "Golden dataset for RAG quality testing - 1000 Q&A pairs across 10 popular board games (template-generated for alpha testing)",
-    "total_test_cases": 1000,
+    "description": "Golden dataset for RAG quality testing - 1000 Q&A pairs across 10 popular board games (template-generated for alpha testing) + 20 expert-annotated Terraforming Mars Q&A (BGAI-056)",
+    "total_test_cases": 1020,
     "games_count": 10,
     "annotators": [
       "template_generated_alpha",
@@ -2415,6 +2415,540 @@
           "category": "gameplay",
           "annotated_by": "template_generator_alpha",
           "annotated_at": "2025-11-30T11:36:18.6990774Z"
+        },
+        {
+          "id": "terraforming-mars_101",
+          "question": "Quante carte corporazione riceve ogni giocatore all'inizio della partita?",
+          "expected_answer_keywords": [
+            "corporazione",
+            "due",
+            "scelta",
+            "setup"
+          ],
+          "expected_citations": [
+            {
+              "page": 4,
+              "snippet_contains": "carte corporazione"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo",
+            "credo"
+          ],
+          "difficulty": "easy",
+          "category": "setup",
+          "annotated_by": "expert_human_bgai056",
+          "annotated_at": "2025-11-30T13:00:00Z"
+        },
+        {
+          "id": "terraforming-mars_102",
+          "question": "Come si determina il primo giocatore in Terraforming Mars?",
+          "expected_answer_keywords": [
+            "primo giocatore",
+            "casuale",
+            "segnalino",
+            "setup"
+          ],
+          "expected_citations": [
+            {
+              "page": 4,
+              "snippet_contains": "primo giocatore"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo",
+            "credo"
+          ],
+          "difficulty": "easy",
+          "category": "setup",
+          "annotated_by": "expert_human_bgai056",
+          "annotated_at": "2025-11-30T13:00:00Z"
+        },
+        {
+          "id": "terraforming-mars_103",
+          "question": "Qual è il livello iniziale di produzione di ogni risorsa all'inizio del gioco?",
+          "expected_answer_keywords": [
+            "produzione",
+            "zero",
+            "iniziale",
+            "tracciati"
+          ],
+          "expected_citations": [
+            {
+              "page": 5,
+              "snippet_contains": "produzione iniziale"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo",
+            "credo"
+          ],
+          "difficulty": "medium",
+          "category": "setup",
+          "annotated_by": "expert_human_bgai056",
+          "annotated_at": "2025-11-30T13:00:00Z"
+        },
+        {
+          "id": "terraforming-mars_104",
+          "question": "Quante azioni può eseguire un giocatore durante il suo turno in una generazione?",
+          "expected_answer_keywords": [
+            "azioni",
+            "una o due",
+            "turno",
+            "passare"
+          ],
+          "expected_citations": [
+            {
+              "page": 8,
+              "snippet_contains": "1 o 2 azioni"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo",
+            "credo",
+            "illimitate"
+          ],
+          "difficulty": "easy",
+          "category": "turn_structure",
+          "annotated_by": "expert_human_bgai056",
+          "annotated_at": "2025-11-30T13:00:00Z"
+        },
+        {
+          "id": "terraforming-mars_105",
+          "question": "Cosa succede quando tutti i giocatori passano consecutivamente?",
+          "expected_answer_keywords": [
+            "passare",
+            "fase azione",
+            "termina",
+            "produzione"
+          ],
+          "expected_citations": [
+            {
+              "page": 8,
+              "snippet_contains": "tutti passano"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo",
+            "credo"
+          ],
+          "difficulty": "medium",
+          "category": "turn_structure",
+          "annotated_by": "expert_human_bgai056",
+          "annotated_at": "2025-11-30T13:00:00Z"
+        },
+        {
+          "id": "terraforming-mars_106",
+          "question": "In quale ordine si svolgono le fasi di una generazione in Terraforming Mars?",
+          "expected_answer_keywords": [
+            "primo giocatore",
+            "azioni",
+            "produzione",
+            "generazione"
+          ],
+          "expected_citations": [
+            {
+              "page": 7,
+              "snippet_contains": "fasi della generazione"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo",
+            "credo"
+          ],
+          "difficulty": "medium",
+          "category": "turn_structure",
+          "annotated_by": "expert_human_bgai056",
+          "annotated_at": "2025-11-30T13:00:00Z"
+        },
+        {
+          "id": "terraforming-mars_107",
+          "question": "È possibile passare il turno anche se si hanno ancora azioni disponibili?",
+          "expected_answer_keywords": [
+            "passare",
+            "volontario",
+            "azioni",
+            "strategia"
+          ],
+          "expected_citations": [
+            {
+              "page": 8,
+              "snippet_contains": "può passare"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo",
+            "credo",
+            "obbligatorio"
+          ],
+          "difficulty": "easy",
+          "category": "turn_structure",
+          "annotated_by": "expert_human_bgai056",
+          "annotated_at": "2025-11-30T13:00:00Z"
+        },
+        {
+          "id": "terraforming-mars_108",
+          "question": "Quanti megacrediti iniziali riceve un giocatore dalla corporazione iniziale?",
+          "expected_answer_keywords": [
+            "megacrediti",
+            "corporazione",
+            "rating",
+            "produzione"
+          ],
+          "expected_citations": [
+            {
+              "page": 5,
+              "snippet_contains": "megacrediti iniziali"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo",
+            "credo"
+          ],
+          "difficulty": "medium",
+          "category": "resources",
+          "annotated_by": "expert_human_bgai056",
+          "annotated_at": "2025-11-30T13:00:00Z"
+        },
+        {
+          "id": "terraforming-mars_109",
+          "question": "Come si converte la produzione di energia in calore alla fine di ogni generazione?",
+          "expected_answer_keywords": [
+            "energia",
+            "calore",
+            "conversione",
+            "produzione"
+          ],
+          "expected_citations": [
+            {
+              "page": 10,
+              "snippet_contains": "energia in calore"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo",
+            "credo",
+            "scelta"
+          ],
+          "difficulty": "medium",
+          "category": "resources",
+          "annotated_by": "expert_human_bgai056",
+          "annotated_at": "2025-11-30T13:00:00Z"
+        },
+        {
+          "id": "terraforming-mars_110",
+          "question": "Quanti cubetti pianta servono per piazzare una foresta sulla plancia?",
+          "expected_answer_keywords": [
+            "otto",
+            "pianta",
+            "foresta",
+            "azione"
+          ],
+          "expected_citations": [
+            {
+              "page": 12,
+              "snippet_contains": "8 piante"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo",
+            "credo",
+            "sette",
+            "nove"
+          ],
+          "difficulty": "easy",
+          "category": "resources",
+          "annotated_by": "expert_human_bgai056",
+          "annotated_at": "2025-11-30T13:00:00Z"
+        },
+        {
+          "id": "terraforming-mars_111",
+          "question": "Qual è la differenza tra produzione di una risorsa e risorsa posseduta?",
+          "expected_answer_keywords": [
+            "produzione",
+            "risorsa",
+            "tracciato",
+            "generazione"
+          ],
+          "expected_citations": [
+            {
+              "page": 9,
+              "snippet_contains": "produzione e risorse"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo",
+            "credo",
+            "uguale"
+          ],
+          "difficulty": "hard",
+          "category": "resources",
+          "annotated_by": "expert_human_bgai056",
+          "annotated_at": "2025-11-30T13:00:00Z"
+        },
+        {
+          "id": "terraforming-mars_112",
+          "question": "Quante carte si pescano quando si usa l'azione standard 'Pescare Carte'?",
+          "expected_answer_keywords": [
+            "pescare",
+            "carte",
+            "quattro",
+            "azione standard"
+          ],
+          "expected_citations": [
+            {
+              "page": 11,
+              "snippet_contains": "pesca 4 carte"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo",
+            "credo",
+            "tre",
+            "cinque"
+          ],
+          "difficulty": "easy",
+          "category": "cards",
+          "annotated_by": "expert_human_bgai056",
+          "annotated_at": "2025-11-30T13:00:00Z"
+        },
+        {
+          "id": "terraforming-mars_113",
+          "question": "Le carte con effetti permanenti vanno messe davanti al giocatore o scartate?",
+          "expected_answer_keywords": [
+            "effetti permanenti",
+            "davanti",
+            "visibili",
+            "sfondo blu"
+          ],
+          "expected_citations": [
+            {
+              "page": 13,
+              "snippet_contains": "carte attive"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo",
+            "credo",
+            "scartate"
+          ],
+          "difficulty": "medium",
+          "category": "cards",
+          "annotated_by": "expert_human_bgai056",
+          "annotated_at": "2025-11-30T13:00:00Z"
+        },
+        {
+          "id": "terraforming-mars_114",
+          "question": "Si possono giocare carte evento più volte durante la partita?",
+          "expected_answer_keywords": [
+            "evento",
+            "una volta",
+            "scarto",
+            "sfondo rosso"
+          ],
+          "expected_citations": [
+            {
+              "page": 14,
+              "snippet_contains": "carte evento"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo",
+            "credo",
+            "sempre"
+          ],
+          "difficulty": "easy",
+          "category": "cards",
+          "annotated_by": "expert_human_bgai056",
+          "annotated_at": "2025-11-30T13:00:00Z"
+        },
+        {
+          "id": "terraforming-mars_115",
+          "question": "Cosa sono i requisiti sulle carte progetto e quando si verificano?",
+          "expected_answer_keywords": [
+            "requisiti",
+            "condizioni",
+            "giocabilità",
+            "parametri globali"
+          ],
+          "expected_citations": [
+            {
+              "page": 15,
+              "snippet_contains": "requisiti delle carte"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo",
+            "credo"
+          ],
+          "difficulty": "hard",
+          "category": "cards",
+          "annotated_by": "expert_human_bgai056",
+          "annotated_at": "2025-11-30T13:00:00Z"
+        },
+        {
+          "id": "terraforming-mars_116",
+          "question": "Come si calcolano i punti vittoria dalle tessere foresta sulla plancia?",
+          "expected_answer_keywords": [
+            "foresta",
+            "punto vittoria",
+            "ogni",
+            "adiacente"
+          ],
+          "expected_citations": [
+            {
+              "page": 18,
+              "snippet_contains": "punti foresta"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo",
+            "credo"
+          ],
+          "difficulty": "medium",
+          "category": "scoring",
+          "annotated_by": "expert_human_bgai056",
+          "annotated_at": "2025-11-30T13:00:00Z"
+        },
+        {
+          "id": "terraforming-mars_117",
+          "question": "Quanto vale il Terraform Rating in punti vittoria a fine partita?",
+          "expected_answer_keywords": [
+            "terraform rating",
+            "punto vittoria",
+            "uno a uno",
+            "parametri"
+          ],
+          "expected_citations": [
+            {
+              "page": 18,
+              "snippet_contains": "TR = punti vittoria"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo",
+            "credo"
+          ],
+          "difficulty": "easy",
+          "category": "scoring",
+          "annotated_by": "expert_human_bgai056",
+          "annotated_at": "2025-11-30T13:00:00Z"
+        },
+        {
+          "id": "terraforming-mars_118",
+          "question": "I premi (Awards) assegnano punti anche a chi non li ha finanziati?",
+          "expected_answer_keywords": [
+            "premi",
+            "awards",
+            "primo",
+            "secondo",
+            "terzo"
+          ],
+          "expected_citations": [
+            {
+              "page": 17,
+              "snippet_contains": "punti premi"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo",
+            "credo",
+            "solo chi finanzia"
+          ],
+          "difficulty": "medium",
+          "category": "scoring",
+          "annotated_by": "expert_human_bgai056",
+          "annotated_at": "2025-11-30T13:00:00Z"
+        },
+        {
+          "id": "terraforming-mars_119",
+          "question": "Cosa succede se due giocatori pareggiano per una Milestone o un Award?",
+          "expected_answer_keywords": [
+            "pareggio",
+            "entrambi",
+            "punti",
+            "dividere"
+          ],
+          "expected_citations": [
+            {
+              "page": 17,
+              "snippet_contains": "pareggio"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo",
+            "credo",
+            "nessuno"
+          ],
+          "difficulty": "hard",
+          "category": "edge_cases",
+          "annotated_by": "expert_human_bgai056",
+          "annotated_at": "2025-11-30T13:00:00Z"
+        },
+        {
+          "id": "terraforming-mars_120",
+          "question": "Si possono piazzare tessere città/foresta su esagoni con bonus già occupati?",
+          "expected_answer_keywords": [
+            "esagono",
+            "occupato",
+            "impossibile",
+            "libero"
+          ],
+          "expected_citations": [
+            {
+              "page": 12,
+              "snippet_contains": "esagoni liberi"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo",
+            "credo",
+            "sovrapporre"
+          ],
+          "difficulty": "easy",
+          "category": "edge_cases",
+          "annotated_by": "expert_human_bgai056",
+          "annotated_at": "2025-11-30T13:00:00Z"
         }
       ]
     },

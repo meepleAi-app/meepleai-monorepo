@@ -15,20 +15,17 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { BottomNav } from './BottomNav';
 
-// Mock Next.js navigation hooks
-const mockNavigationDecorator = (pathname: string) => (Story: any) => {
-  // Mock usePathname
-  jest.mock('next/navigation', () => ({
-    usePathname: () => pathname,
-  }));
-  return <Story />;
-};
-
 const meta: Meta<typeof BottomNav> = {
   title: 'Layout/BottomNav',
   component: BottomNav,
   parameters: {
     layout: 'fullscreen',
+    nextjs: {
+      appDirectory: true,
+      navigation: {
+        pathname: '/dashboard',
+      },
+    },
     docs: {
       description: {
         component: `
@@ -63,8 +60,12 @@ type Story = StoryObj<typeof BottomNav>;
  * Pathname: /dashboard
  */
 export const Default: Story = {
-  decorators: [mockNavigationDecorator('/dashboard')],
   parameters: {
+    nextjs: {
+      navigation: {
+        pathname: '/dashboard',
+      },
+    },
     viewport: {
       defaultViewport: 'mobile1', // 375px
     },
@@ -81,8 +82,12 @@ export const Default: Story = {
  * Pathname: /games
  */
 export const GamesActive: Story = {
-  decorators: [mockNavigationDecorator('/games')],
   parameters: {
+    nextjs: {
+      navigation: {
+        pathname: '/games',
+      },
+    },
     viewport: {
       defaultViewport: 'mobile1',
     },
@@ -99,8 +104,12 @@ export const GamesActive: Story = {
  * Pathname: /chat
  */
 export const ChatActive: Story = {
-  decorators: [mockNavigationDecorator('/chat')],
   parameters: {
+    nextjs: {
+      navigation: {
+        pathname: '/chat',
+      },
+    },
     viewport: {
       defaultViewport: 'mobile1',
     },
@@ -117,8 +126,12 @@ export const ChatActive: Story = {
  * Pathname: /settings
  */
 export const SettingsActive: Story = {
-  decorators: [mockNavigationDecorator('/settings')],
   parameters: {
+    nextjs: {
+      navigation: {
+        pathname: '/settings',
+      },
+    },
     viewport: {
       defaultViewport: 'mobile1',
     },
@@ -135,8 +148,12 @@ export const SettingsActive: Story = {
  * Pathname: /profile
  */
 export const ProfileActive: Story = {
-  decorators: [mockNavigationDecorator('/profile')],
   parameters: {
+    nextjs: {
+      navigation: {
+        pathname: '/profile',
+      },
+    },
     viewport: {
       defaultViewport: 'mobile1',
     },
@@ -153,8 +170,12 @@ export const ProfileActive: Story = {
  * Shows full bottom navigation.
  */
 export const MobileView: Story = {
-  decorators: [mockNavigationDecorator('/dashboard')],
   parameters: {
+    nextjs: {
+      navigation: {
+        pathname: '/dashboard',
+      },
+    },
     viewport: {
       defaultViewport: 'mobile1', // 375px
     },
@@ -174,8 +195,12 @@ export const MobileView: Story = {
  * Bottom nav should be hidden (md:hidden).
  */
 export const TabletView: Story = {
-  decorators: [mockNavigationDecorator('/dashboard')],
   parameters: {
+    nextjs: {
+      navigation: {
+        pathname: '/dashboard',
+      },
+    },
     viewport: {
       defaultViewport: 'tablet', // 768px
     },
@@ -195,8 +220,12 @@ export const TabletView: Story = {
  * Pathname: /games/catan
  */
 export const NestedRouteActive: Story = {
-  decorators: [mockNavigationDecorator('/games/catan')],
   parameters: {
+    nextjs: {
+      navigation: {
+        pathname: '/games/catan',
+      },
+    },
     viewport: {
       defaultViewport: 'mobile1',
     },
@@ -212,8 +241,12 @@ export const NestedRouteActive: Story = {
  * Root path (/) should activate Home.
  */
 export const RootPath: Story = {
-  decorators: [mockNavigationDecorator('/')],
   parameters: {
+    nextjs: {
+      navigation: {
+        pathname: '/',
+      },
+    },
     viewport: {
       defaultViewport: 'mobile1',
     },

@@ -9,11 +9,14 @@ import { render, screen } from '@testing-library/react';
 import { VirtualizedMessageList } from '../VirtualizedMessageList';
 import { Message as MessageType } from '@/types';
 
-// Mock react-window (virtualization library)
+// Mock react-window v2 (virtualization library)
+// v2 API: List component with rowComponent, rowCount, rowHeight
 vi.mock('react-window', () => ({
-  FixedSizeList: vi.fn(({ children, itemCount }) => (
+  List: vi.fn(({ rowComponent: RowComponent, rowCount }) => (
     <div data-testid="virtualized-list">
-      {Array.from({ length: itemCount }, (_, index) => children({ index, style: {} }))}
+      {Array.from({ length: rowCount }, (_, index) => (
+        <RowComponent key={index} index={index} style={{}} />
+      ))}
     </div>
   )),
 }));

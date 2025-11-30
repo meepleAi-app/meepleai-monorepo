@@ -33,24 +33,43 @@ pnpm test:visual:ci         # CI mode with upload
 
 **Purpose**: Visual regression for full-page E2E tests
 
-**Configuration**: `playwright.config.ts` (reporter)
+**Configuration**: `playwright.config.ts` (test fixture, NOT reporter)
 
 **Setup**:
 1. ✅ Install: `pnpm add -D @chromatic-com/playwright`
-2. ⚠️ Reporter disabled - compatibility issue with Playwright 1.56+
+2. ✅ Import ChromaticConfig in playwright.config.ts
 3. ✅ Set env var in `.env.local`: `CHROMATIC_PROJECT_TOKEN=chpt_293b6e01ef6f39d`
+4. ✅ Add Chromatic fixture options to `use` config
 
-**Current Issue**:
-```
-Error: @chromatic-com/playwright/dist/index.js: file must export a single class
+**Configuration** (`playwright.config.ts`):
+```typescript
+import { defineConfig } from '@playwright/test';
+import { ChromaticConfig } from '@chromatic-com/playwright';
+
+export default defineConfig<ChromaticConfig>({
+  reporter: ['html'], // Standard reporters only
+  use: {
+    disableAutoSnapshot: false, // Chromatic auto-capture
+    cropToViewport: false,
+    // ... other options
+  }
+});
 ```
 
-**Workaround**:
+**Usage**:
 ```bash
-# Use Chromatic CLI directly (when E2E tests pass)
+# Step 1: Run E2E tests (generates archives)
 npx playwright test
+
+# Step 2: Upload to Chromatic
 npx chromatic --playwright --project-token=$CHROMATIC_PROJECT_TOKEN
+# Or use script:
+pnpm test:visual:e2e
 ```
+
+**Important**: Chromatic Playwright is a **test fixture**, not a reporter!
+❌ Don't add to `reporter` array
+✅ Import in config and use fixture options
 
 **What it tests**:
 - Full-page screenshots during E2E tests
@@ -58,9 +77,7 @@ npx chromatic --playwright --project-token=$CHROMATIC_PROJECT_TOKEN
 - Responsive layouts across devices
 - Real browser rendering
 
-**Status**: ⏳ **Package installed, reporter disabled due to compatibility issue**
-
-**Note**: Monitor `@chromatic-com/playwright` updates for Playwright 1.56+ compatibility
+**Status**: ✅ **Configured with Playwright 1.57.0**
 
 ---
 

@@ -197,6 +197,100 @@ jobs:
           CI: true
         run: pnpm test:a11y
 
+  ci-visual-regression:
+    needs: changes
+    name: Web - Visual Regression Tests (Chromatic)
+    runs-on: ubuntu-latest
+    # Run on schedule/workflow_dispatch, or when web/storybook files changed in push/PR
+    if: ${{ !failure() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.web == 'true') }}
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0  # Required for Chromatic baseline comparison
+
+      - name: Setup frontend environment
+        uses: ./.github/actions/setup-frontend
+        with:
+          node-version: '20'
+          pnpm-version: '10'
+          working-directory: apps/web
+          frozen-lockfile: 'false'
+
+      - name: Cache Storybook build
+        uses: actions/cache@v4
+        with:
+          path: apps/web/storybook-static
+          key: ${{ runner.os }}-storybook-${{ hashFiles('apps/web/src/**/*.stories.*', 'apps/web/.storybook/**') }}
+          restore-keys: |
+            ${{ runner.os }}-storybook-
+
+      - name: Build Storybook
+        run: pnpm build-storybook --quiet
+
+      # Visual Regression Testing with Chromatic
+      # NOTE: Currently NON-BLOCKING (exitZeroOnChanges: true)
+      # Will become blocking once Storybook coverage reaches 50%+ (Phase 2)
+      # See: docs/02-development/testing/visual-testing-guide.md
+      - name: Publish to Chromatic (Visual Regression Testing)
+        id: chromatic
+        uses: chromaui/action@v13
+        with:
+          projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
+          workingDir: apps/web
+          buildScriptName: build-storybook
+          onlyChanged: true              # Only test changed stories
+          exitZeroOnChanges: true        # NON-BLOCKING: Don't fail on visual changes
+          exitOnceUploaded: true         # Exit after upload (faster CI)
+          autoAcceptChanges: false       # Don't auto-accept (require manual review)
+        continue-on-error: true          # Don't block merge on Chromatic errors
+
+      # Comment PR with Chromatic results
+      # Provides team visibility into visual changes without blocking merge
+      - name: Comment PR with Visual Regression Results
+        if: github.event_name == 'pull_request' && steps.chromatic.outcome != 'skipped'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const chromaticUrl = '${{ steps.chromatic.outputs.storybookUrl }}';
+            const buildUrl = '${{ steps.chromatic.outputs.buildUrl }}';
+            const changesCount = '${{ steps.chromatic.outputs.changeCount }}' || '0';
+
+            let status = '✅';
+            let message = 'No visual changes detected';
+
+            if (changesCount !== '0') {
+              status = '⚠️';
+              message = `${changesCount} visual change(s) detected - Review required`;
+            }
+
+            const comment = `## ${status} Visual Regression Testing
+
+            **Status**: ${message}
+
+            **Chromatic Build**: ${buildUrl || 'Processing...'}
+            **Storybook Preview**: ${chromaticUrl || 'Building...'}
+
+            ${changesCount !== '0' ? '⚠️ **Action Required**: Please review visual changes in Chromatic before merging.' : '✅ All visual tests passed!'}
+
+            ---
+            📚 **Note**: Visual regression testing is currently **non-blocking**.
+            Stories coverage: 0% (Phase 1 - Infrastructure setup)
+            Target: 50%+ coverage before enabling blocking mode (Phase 2)
+
+            [Learn more about visual testing](../blob/main/docs/02-development/testing/visual-testing-guide.md)
+            `;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
   ci-web-e2e:
     needs: changes
     name: Web - E2E Tests (5%)

@@ -29,6 +29,9 @@
     "build-storybook": "storybook build",
     "chromatic": "chromatic",
     "chromatic:ci": "chromatic --exit-zero-on-changes --exit-once-uploaded",
+    "test:visual": "chromatic --exit-zero-on-changes",
+    "test:visual:ci": "chromatic --exit-zero-on-changes --exit-once-uploaded",
+    "test:visual:debug": "chromatic --debug",
     "prepare": "cd ../.. && husky || true"
   },
   "lint-staged": {

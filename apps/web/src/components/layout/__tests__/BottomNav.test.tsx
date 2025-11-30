@@ -85,8 +85,8 @@ describe('BottomNav', () => {
       expect(homeLink).toHaveAttribute('aria-current', 'page');
     });
 
-    it('should mark /giochi as active for /giochi/* routes', () => {
-      mockUsePathname.mockReturnValue('/giochi/catan');
+    it('should mark /games as active for /games/* routes', () => {
+      mockUsePathname.mockReturnValue('/games/catan');
       render(<BottomNav />);
 
       const giochiLink = screen.getByLabelText('Navigate to games catalog');
@@ -179,7 +179,7 @@ describe('BottomNav', () => {
         'href',
         '/dashboard'
       );
-      expect(screen.getByLabelText('Navigate to games catalog')).toHaveAttribute('href', '/giochi');
+      expect(screen.getByLabelText('Navigate to games catalog')).toHaveAttribute('href', '/games');
       expect(screen.getByLabelText('Navigate to chat interface')).toHaveAttribute('href', '/chat');
       expect(screen.getByLabelText('Navigate to settings')).toHaveAttribute('href', '/settings');
       expect(screen.getByLabelText('Navigate to user profile')).toHaveAttribute('href', '/profile');

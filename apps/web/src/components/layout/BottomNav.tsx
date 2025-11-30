@@ -39,7 +39,7 @@ const navItems: NavItem[] = [
     ariaLabel: 'Navigate to dashboard home',
   },
   {
-    href: '/giochi',
+    href: '/games',
     icon: Gamepad2,
     label: 'Giochi',
     ariaLabel: 'Navigate to games catalog',

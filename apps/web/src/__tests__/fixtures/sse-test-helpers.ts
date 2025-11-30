@@ -44,29 +44,107 @@
 // =============================================================================
 
 /**
+ * Options for configuring SSE response behavior
+ */
+export interface SSEOptions {
+  /**
+   * Delay in milliseconds between events (default: 10ms)
+   * - 0ms: Instant delivery (fast tests, may not catch race conditions)
+   * - 10ms: Default (realistic timing, catches most race conditions)
+   * - 50-100ms: Slow delivery (stress testing, timeout scenarios)
+   *
+   * @default 10
+   */
+  eventDelay?: number;
+
+  /**
+   * AbortSignal for cancellation testing
+   * When signal is aborted, stream will stop sending events
+   */
+  signal?: AbortSignal;
+}
+
+/**
  * Creates a mock SSE Response with proper headers and streaming format
  *
+ * **Issue #1495: Improved with async event delivery to prevent race conditions**
+ *
+ * Key improvements:
+ * - ✅ Sequential event delivery with configurable delays
+ * - ✅ Proper SSE message ordering (no race conditions)
+ * - ✅ Cancellation support via AbortSignal
+ * - ✅ Timeout testing support (configurable delays)
+ * - ✅ Robust token accumulation (state updates settle between events)
+ *
  * @param events - Array of SSE event strings (already JSON.stringify'd)
+ * @param options - Optional configuration for delays and cancellation
  * @returns Response object with ReadableStream and SSE headers
  *
- * @example
+ * @example Basic usage (with default 10ms delay)
+ * ```typescript
  * const events = [
- *   JSON.stringify({ type: 'token', data: { token: 'Hello' }, timestamp: '2025-01-15T10:00:00Z' }),
- *   JSON.stringify({ type: 'complete', data: { totalTokens: 1 }, timestamp: '2025-01-15T10:00:01Z' }),
+ *   JSON.stringify({ type: 'token', data: { token: 'Hello' } }),
+ *   JSON.stringify({ type: 'complete', data: { totalTokens: 1 } }),
  * ];
  * const response = createSSEResponse(events);
+ * ```
+ *
+ * @example Fast mode (0ms delay for quick tests)
+ * ```typescript
+ * const response = createSSEResponse(events, { eventDelay: 0 });
+ * ```
+ *
+ * @example Cancellation testing
+ * ```typescript
+ * const controller = new AbortController();
+ * const response = createSSEResponse(events, { signal: controller.signal });
+ * // Later: controller.abort() will stop the stream
+ * ```
+ *
+ * @example Timeout scenario testing
+ * ```typescript
+ * const response = createSSEResponse(events, { eventDelay: 100 });
+ * // Slower delivery to test timeout handling
+ * ```
  */
-export function createSSEResponse(events: string[]): Response {
-  const sseData = events.map(e => `data: ${e}\n\n`).join('');
-  const encoder = new TextEncoder();
-  const data = encoder.encode(sseData);
+export function createSSEResponse(events: string[], options: SSEOptions = {}): Response {
+  const { eventDelay = 10, signal } = options;
 
-  const stream = new ReadableStream({
-    start(controller) {
-      controller.enqueue(data);
-      controller.close();
-    },
-  });
+  // Validate eventDelay range
+  if (eventDelay < 0 || eventDelay > 1000) {
+    throw new Error(`eventDelay must be between 0-1000ms, got ${eventDelay}`);
+  }
+
+  // Warn if delay is too high (slow tests)
+  if (eventDelay > 100) {
+    console.warn(`[SSE Helper] High eventDelay (${eventDelay}ms) may slow down tests significantly`);
+  }
+
+  // Async generator for sequential event delivery
+  async function* generateEvents() {
+    const encoder = new TextEncoder();
+
+    for (let i = 0; i < events.length; i++) {
+      // Check if stream was cancelled
+      if (signal?.aborted) {
+        console.log(`[SSE Helper] Stream cancelled after ${i} events`);
+        break;
+      }
+
+      // Add delay between events (except first event)
+      // This simulates real network/processing delays and prevents race conditions
+      if (i > 0 && eventDelay > 0) {
+        await new Promise(resolve => setTimeout(resolve, eventDelay));
+      }
+
+      // Yield SSE-formatted event
+      const sseData = `data: ${events[i]}\n\n`;
+      yield encoder.encode(sseData);
+    }
+  }
+
+  // Create ReadableStream from async generator
+  const stream = ReadableStream.from(generateEvents());
 
   return new Response(stream, {
     status: 200,
@@ -242,7 +320,8 @@ export function createErrorEvent(code: string, message: string, timestamp?: stri
  * Creates a complete SSE response with token streaming
  *
  * @param tokens - Array of token strings to stream
- * @param options - Optional completion data (totalTokens, confidence, citations)
+ * @param completionOptions - Optional completion data (totalTokens, confidence, citations)
+ * @param sseOptions - Optional SSE behavior configuration (delays, cancellation)
  * @returns Response with SSE token and complete events
  *
  * @example
@@ -250,31 +329,36 @@ export function createErrorEvent(code: string, message: string, timestamp?: stri
  *   totalTokens: 3,
  *   confidence: 0.95,
  * });
+ *
+ * @example With custom delay
+ * const response = createTokenStreamResponse(['A', 'B'], {}, { eventDelay: 0 });
  */
 export function createTokenStreamResponse(
   tokens: string[],
-  options?: {
+  completionOptions?: {
     totalTokens?: number;
     confidence?: number | null;
     citations?: Array<{ source: string; page: number; text: string; score: number }>;
-  }
+  },
+  sseOptions?: SSEOptions
 ): Response {
   const events = [
     ...tokens.map(token => createTokenEvent(token)),
     createCompleteEvent(
-      options?.totalTokens ?? tokens.length,
-      options?.confidence ?? null,
-      options?.citations
+      completionOptions?.totalTokens ?? tokens.length,
+      completionOptions?.confidence ?? null,
+      completionOptions?.citations
     ),
   ];
 
-  return createSSEResponse(events);
+  return createSSEResponse(events, sseOptions);
 }
 
 /**
  * Creates a complete SSE response with state updates
  *
  * @param states - Array of state message strings
+ * @param sseOptions - Optional SSE behavior configuration (delays, cancellation)
  * @returns Response with SSE state update and complete events
  *
  * @example
@@ -283,14 +367,17 @@ export function createTokenStreamResponse(
  *   'Searching database...',
  *   'Generating response...',
  * ]);
+ *
+ * @example With custom delay
+ * const response = createStateUpdateResponse(['State 1', 'State 2'], { eventDelay: 0 });
  */
-export function createStateUpdateResponse(states: string[]): Response {
+export function createStateUpdateResponse(states: string[], sseOptions?: SSEOptions): Response {
   const events = [
     ...states.map(state => createStateUpdateEvent(state)),
     createCompleteEvent(0, null),
   ];
 
-  return createSSEResponse(events);
+  return createSSEResponse(events, sseOptions);
 }
 
 /**

@@ -13,6 +13,13 @@ import {
   createMockChatMessage,
   createMockAgent,
 } from '../../fixtures/common-fixtures';
+import {
+  createTokenEvent,
+  createStateUpdateEvent,
+  createCompleteEvent,
+  createSSEResponse,
+  type SSEOptions,
+} from '../../fixtures/sse-test-helpers';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
@@ -97,31 +104,20 @@ export const chatHandlers = [
   http.post(`${API_BASE}/api/v1/knowledge-base/ask`, async ({ request }) => {
     const body = await request.json() as { question: string; gameId: string };
 
-    // Create SSE stream
-    const encoder = new TextEncoder();
-
-    // Create events based on the question for test scenarios
+    // Build SSE events using centralized helpers (Issue #1495)
     const events: string[] = [];
 
-    // Always start with status event
-    events.push('data: ' + JSON.stringify({
-      type: 'status',
-      data: { message: 'Processing question...' },
-      timestamp: new Date().toISOString(),
-    }) + '\n\n');
+    // Status event
+    events.push(createStateUpdateEvent('Processing question...'));
 
     // Token events for answer
     const tokens = ['Hello', ' ', 'World', '!'];
-    tokens.forEach((token, index) => {
-      events.push('data: ' + JSON.stringify({
-        type: 'token',
-        data: { token },
-        timestamp: new Date(Date.now() + index * 100).toISOString(),
-      }) + '\n\n');
+    tokens.forEach(token => {
+      events.push(createTokenEvent(token));
     });
 
-    // Citations
-    events.push('data: ' + JSON.stringify({
+    // Citation event (custom format for legacy compatibility)
+    events.push(JSON.stringify({
       type: 'citation',
       data: {
         text: 'Test citation',
@@ -129,36 +125,16 @@ export const chatHandlers = [
         page: 1,
       },
       timestamp: new Date().toISOString(),
-    }) + '\n\n');
+    }));
 
     // Complete event
-    events.push('data: ' + JSON.stringify({
-      type: 'complete',
-      data: {
-        totalTokens: tokens.length,
-        confidence: 0.95,
-      },
-      timestamp: new Date().toISOString(),
-    }) + '\n\n');
+    events.push(createCompleteEvent(tokens.length, 0.95));
 
-    // Create readable stream
-    const stream = new ReadableStream({
-      start(controller) {
-        events.forEach((event) => {
-          controller.enqueue(encoder.encode(event));
-        });
-        controller.close();
-      },
-    });
-
-    return new HttpResponse(stream, {
-      headers: {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
-        'X-Correlation-Id': `test-correlation-${Date.now()}`,
-      },
-    });
+    // Create SSE response with default 10ms delay (prevents race conditions)
+    // Use eventDelay: 0 in fast tests, 10ms for realistic timing
+    const sseOptions: SSEOptions = { eventDelay: 10 };
+    
+    return createSSEResponse(events, sseOptions);
   }),
 
   // GET /api/v1/agents - List agents
@@ -206,24 +182,4 @@ export const resetChatState = () => {
       ],
     }),
   ];
-};
-
-// Helper to create custom SSE stream for testing
-export const createSSEStream = (events: Array<{ type: string; data: any }>) => {
-  const encoder = new TextEncoder();
-  const sseEvents = events.map(event =>
-    'data: ' + JSON.stringify({
-      ...event,
-      timestamp: new Date().toISOString(),
-    }) + '\n\n'
-  );
-
-  return new ReadableStream({
-    start(controller) {
-      sseEvents.forEach(event => {
-        controller.enqueue(encoder.encode(event));
-      });
-      controller.close();
-    },
-  });
 };

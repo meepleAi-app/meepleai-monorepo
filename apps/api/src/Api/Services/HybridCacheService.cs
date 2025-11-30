@@ -386,7 +386,7 @@ public class HybridCacheService : IHybridCacheService
         if (_redisDb == null)
         {
             _logger.LogWarning("Redis not available for GetKeysByTag: {Tag}", tag);
-            return new HashSet<string>();
+            return new HashSet<string>(StringComparer.Ordinal);
         }
 
         try
@@ -394,19 +394,19 @@ public class HybridCacheService : IHybridCacheService
             var redisKey = TagKeyPrefix + tag;
             var members = _redisDb.SetMembers(redisKey);
 
-            var keys = new HashSet<string>(members.Select(m => m.ToString()));
+            var keys = new HashSet<string>(members.Select(m => m.ToString()), StringComparer.Ordinal);
             _logger.LogDebug("Retrieved {Count} keys for tag: {Tag}", keys.Count, tag);
             return keys;
         }
         catch (RedisConnectionException ex)
         {
             _logger.LogWarning(ex, "Redis connection failed while getting keys for tag {Tag}", tag);
-            return new HashSet<string>();
+            return new HashSet<string>(StringComparer.Ordinal);
         }
         catch (RedisTimeoutException ex)
         {
             _logger.LogWarning(ex, "Redis timeout while getting keys for tag {Tag}", tag);
-            return new HashSet<string>();
+            return new HashSet<string>(StringComparer.Ordinal);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
@@ -417,7 +417,7 @@ public class HybridCacheService : IHybridCacheService
             // invalidation operations to complete gracefully even if some lookups fail.
             // Context: Redis SetMembers operations can fail in various ways (network, permissions, corrupt data)
             _logger.LogWarning(ex, "Unexpected error getting keys for tag {Tag}", tag);
-            return new HashSet<string>();
+            return new HashSet<string>(StringComparer.Ordinal);
         }
 #pragma warning restore CA1031 // Do not catch general exception types
     }
@@ -427,12 +427,12 @@ public class HybridCacheService : IHybridCacheService
         if (_redisDb == null)
         {
             _logger.LogWarning("Redis not available for GetKeysByTags");
-            return new HashSet<string>();
+            return new HashSet<string>(StringComparer.Ordinal);
         }
 
         if (tags.Length == 0)
         {
-            return new HashSet<string>();
+            return new HashSet<string>(StringComparer.Ordinal);
         }
 
         try
@@ -444,7 +444,7 @@ public class HybridCacheService : IHybridCacheService
             {
                 var redisKey = TagKeyPrefix + tag;
                 var members = _redisDb.SetMembers(redisKey);
-                var keys = new HashSet<string>(members.Select(m => m.ToString()));
+                var keys = new HashSet<string>(members.Select(m => m.ToString()), StringComparer.Ordinal);
 
                 if (result == null)
                 {
@@ -464,17 +464,17 @@ public class HybridCacheService : IHybridCacheService
             }
 
             _logger.LogDebug("Retrieved {Count} keys matching all tags: {Tags}", result?.Count ?? 0, string.Join(", ", tags));
-            return result ?? new HashSet<string>();
+            return result ?? new HashSet<string>(StringComparer.Ordinal);
         }
         catch (RedisConnectionException ex)
         {
             _logger.LogWarning(ex, "Redis connection failed while getting keys for multiple tags");
-            return new HashSet<string>();
+            return new HashSet<string>(StringComparer.Ordinal);
         }
         catch (RedisTimeoutException ex)
         {
             _logger.LogWarning(ex, "Redis timeout while getting keys for multiple tags");
-            return new HashSet<string>();
+            return new HashSet<string>(StringComparer.Ordinal);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
@@ -485,7 +485,7 @@ public class HybridCacheService : IHybridCacheService
             // allows tag-based invalidation operations to complete gracefully even if some lookups fail.
             // Context: Redis SetMembers and set intersection operations can fail in various ways
             _logger.LogWarning(ex, "Unexpected error getting keys for multiple tags");
-            return new HashSet<string>();
+            return new HashSet<string>(StringComparer.Ordinal);
         }
 #pragma warning restore CA1031 // Do not catch general exception types
     }

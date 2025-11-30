@@ -23,6 +23,7 @@ public sealed class VectorDocumentIndexedEventHandler : DomainEventHandlerBase<V
     protected override Dictionary<string, object?>? GetAuditMetadata(VectorDocumentIndexedEvent domainEvent)
     {
         return new Dictionary<string, object?>
+(StringComparer.Ordinal)
         {
             ["Action"] = "VectorDocumentIndexed",
             ["DocumentId"] = domainEvent.DocumentId,

@@ -207,10 +207,10 @@ public class RagAccuracyEvaluator : IRagAccuracyEvaluator
         Func<AccuracyEvaluationResult, string> groupKeySelector)
     {
         if (results == null || results.Count == 0)
-            return new Dictionary<string, ValidationAccuracyMetrics>();
+            return new Dictionary<string, ValidationAccuracyMetrics>(StringComparer.Ordinal);
 
         return results
-            .GroupBy(groupKeySelector)
+            .GroupBy(groupKeySelector, StringComparer.Ordinal)
             .ToDictionary(
                 g => g.Key,
                 g =>
@@ -226,6 +226,6 @@ public class RagAccuracyEvaluator : IRagAccuracyEvaluator
                         falseNegatives: falseNegatives
                     );
                 }
-            );
+, StringComparer.Ordinal);
     }
 }

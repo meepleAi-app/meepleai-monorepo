@@ -28,6 +28,7 @@ public sealed class GameLinkedToBggEventHandler : DomainEventHandlerBase<GameLin
     protected override Dictionary<string, object?>? GetAuditMetadata(GameLinkedToBggEvent domainEvent)
     {
         return new Dictionary<string, object?>
+(StringComparer.Ordinal)
         {
             ["GameId"] = domainEvent.GameId,
             ["BggId"] = domainEvent.BggId,

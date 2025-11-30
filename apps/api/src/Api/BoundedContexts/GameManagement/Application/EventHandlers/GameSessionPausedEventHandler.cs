@@ -22,6 +22,7 @@ public sealed class GameSessionPausedEventHandler : DomainEventHandlerBase<GameS
     protected override Dictionary<string, object?>? GetAuditMetadata(GameSessionPausedEvent domainEvent)
     {
         return new Dictionary<string, object?>
+(StringComparer.Ordinal)
         {
             ["SessionId"] = domainEvent.SessionId,
             ["PausedAt"] = domainEvent.PausedAt,

@@ -30,6 +30,7 @@ public sealed class TwoFactorEnabledEventHandler : DomainEventHandlerBase<TwoFac
     protected override Dictionary<string, object?>? GetAuditMetadata(TwoFactorEnabledEvent domainEvent)
     {
         return new Dictionary<string, object?>
+(StringComparer.Ordinal)
         {
             ["UserId"] = domainEvent.UserId,
             ["BackupCodesCount"] = domainEvent.BackupCodesCount,

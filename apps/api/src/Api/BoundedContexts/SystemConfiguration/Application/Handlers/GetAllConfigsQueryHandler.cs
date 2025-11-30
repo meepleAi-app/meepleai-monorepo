@@ -34,7 +34,7 @@ public class GetAllConfigsQueryHandler : IQueryHandler<GetAllConfigsQuery, Paged
         // Filter by environment if specified
         if (!string.IsNullOrWhiteSpace(query.Environment))
         {
-            configs = configs.Where(c => c.Environment == query.Environment || c.Environment == "All").ToList();
+            configs = configs.Where(c => string.Equals(c.Environment, query.Environment, StringComparison.Ordinal) || string.Equals(c.Environment, "All", StringComparison.Ordinal)).ToList();
         }
 
         var total = configs.Count;

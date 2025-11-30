@@ -496,7 +496,7 @@ public class PromptEvaluationService : IPromptEvaluationService
 
         var foundCitations = matches
             .Select(m => m.Groups[1].Value)
-            .ToHashSet();
+            .ToHashSet(StringComparer.Ordinal);
 
         // Check if ANY expected citation is found
         return testCase.ExpectedCitations.Any(expected =>

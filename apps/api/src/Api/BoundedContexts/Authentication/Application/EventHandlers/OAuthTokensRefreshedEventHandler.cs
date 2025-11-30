@@ -30,6 +30,7 @@ public sealed class OAuthTokensRefreshedEventHandler : DomainEventHandlerBase<OA
     protected override Dictionary<string, object?>? GetAuditMetadata(OAuthTokensRefreshedEvent domainEvent)
     {
         return new Dictionary<string, object?>
+(StringComparer.Ordinal)
         {
             ["OAuthAccountId"] = domainEvent.OAuthAccountId,
             ["Provider"] = domainEvent.Provider,

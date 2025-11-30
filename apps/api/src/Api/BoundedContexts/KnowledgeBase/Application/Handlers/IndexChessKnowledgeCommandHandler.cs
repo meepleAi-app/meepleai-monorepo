@@ -119,6 +119,7 @@ public sealed class IndexChessKnowledgeCommandHandler
 
                 // Create metadata for this knowledge item
                 var metadata = new Dictionary<string, string>
+(StringComparer.Ordinal)
                 {
                     ["category"] = ChessCategory,
                     ["subcategory"] = item.Category,

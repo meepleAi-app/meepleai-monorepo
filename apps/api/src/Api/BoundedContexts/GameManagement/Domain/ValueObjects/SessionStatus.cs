@@ -21,8 +21,8 @@ public sealed class SessionStatus : ValueObject
         Value = value;
     }
 
-    public bool IsActive => Value == InProgress.Value || Value == Setup.Value || Value == Paused.Value;
-    public bool IsFinished => Value == Completed.Value || Value == Abandoned.Value;
+    public bool IsActive => string.Equals(Value, InProgress.Value, StringComparison.Ordinal) || string.Equals(Value, Setup.Value, StringComparison.Ordinal) || string.Equals(Value, Paused.Value, StringComparison.Ordinal);
+    public bool IsFinished => string.Equals(Value, Completed.Value, StringComparison.Ordinal) || string.Equals(Value, Abandoned.Value, StringComparison.Ordinal);
 
     protected override IEnumerable<object?> GetEqualityComponents()
     {

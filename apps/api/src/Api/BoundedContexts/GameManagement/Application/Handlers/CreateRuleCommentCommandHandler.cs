@@ -81,7 +81,7 @@ public partial class CreateRuleCommentCommandHandler : IRequestHandler<CreateRul
             var matches = MentionRegex().Matches(text);
             var mentionedUsernames = matches
                 .Select(m => m.Groups[1].Value.ToLowerInvariant())
-                .Distinct()
+                .Distinct(StringComparer.Ordinal)
                 .ToList();
 
             if (!mentionedUsernames.Any())

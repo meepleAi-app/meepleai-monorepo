@@ -36,7 +36,7 @@ public class GetAllUsersQueryHandler : IQueryHandler<GetAllUsersQuery, PagedResu
         }
 
         // Role filter
-        if (!string.IsNullOrWhiteSpace(query.RoleFilter) && query.RoleFilter != "all")
+        if (!string.IsNullOrWhiteSpace(query.RoleFilter) && !string.Equals(query.RoleFilter, "all", StringComparison.Ordinal))
         {
             var normalizedRole = query.RoleFilter.ToLower();
             dbQuery = dbQuery.Where(u => u.Role == normalizedRole);
@@ -45,10 +45,10 @@ public class GetAllUsersQueryHandler : IQueryHandler<GetAllUsersQuery, PagedResu
         // Sorting
         dbQuery = query.SortBy?.ToLower() switch
         {
-            "email" => query.SortOrder == "asc" ? dbQuery.OrderBy(u => u.Email) : dbQuery.OrderByDescending(u => u.Email),
-            "displayname" => query.SortOrder == "asc" ? dbQuery.OrderBy(u => u.DisplayName) : dbQuery.OrderByDescending(u => u.DisplayName),
-            "role" => query.SortOrder == "asc" ? dbQuery.OrderBy(u => u.Role) : dbQuery.OrderByDescending(u => u.Role),
-            _ => query.SortOrder == "asc" ? dbQuery.OrderBy(u => u.CreatedAt) : dbQuery.OrderByDescending(u => u.CreatedAt)
+            "email" => string.Equals(query.SortOrder, "asc", StringComparison.Ordinal) ? dbQuery.OrderBy(u => u.Email) : dbQuery.OrderByDescending(u => u.Email),
+            "displayname" => string.Equals(query.SortOrder, "asc", StringComparison.Ordinal) ? dbQuery.OrderBy(u => u.DisplayName) : dbQuery.OrderByDescending(u => u.DisplayName),
+            "role" => string.Equals(query.SortOrder, "asc", StringComparison.Ordinal) ? dbQuery.OrderBy(u => u.Role) : dbQuery.OrderByDescending(u => u.Role),
+            _ => string.Equals(query.SortOrder, "asc", StringComparison.Ordinal) ? dbQuery.OrderBy(u => u.CreatedAt) : dbQuery.OrderByDescending(u => u.CreatedAt)
         };
 
         var total = await dbQuery.CountAsync(cancellationToken).ConfigureAwait(false);

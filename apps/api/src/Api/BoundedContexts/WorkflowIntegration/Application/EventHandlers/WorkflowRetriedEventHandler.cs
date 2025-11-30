@@ -27,6 +27,7 @@ public sealed class WorkflowRetriedEventHandler : DomainEventHandlerBase<Workflo
     protected override Dictionary<string, object?>? GetAuditMetadata(WorkflowRetriedEvent domainEvent)
     {
         return new Dictionary<string, object?>
+(StringComparer.Ordinal)
         {
             ["ErrorLogId"] = domainEvent.ErrorLogId,
             ["WorkflowId"] = domainEvent.WorkflowId,

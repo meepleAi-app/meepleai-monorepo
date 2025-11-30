@@ -16,14 +16,14 @@ public class RuleSpecDiffDomainService
         var changes = new List<RuleAtomChange>();
 
         // Create dictionaries for faster lookup
-        var fromAtoms = from.rules.ToDictionary(r => r.id);
-        var toAtoms = to.rules.ToDictionary(r => r.id);
+        var fromAtoms = from.rules.ToDictionary(r => r.id, StringComparer.Ordinal);
+        var toAtoms = to.rules.ToDictionary(r => r.id, StringComparer.Ordinal);
 
-        var allAtomIds = fromAtoms.Keys.Union(toAtoms.Keys).ToHashSet();
+        var allAtomIds = fromAtoms.Keys.Union(toAtoms.Keys, StringComparer.Ordinal).ToHashSet(StringComparer.Ordinal);
 
         int added = 0, modified = 0, deleted = 0, unchanged = 0;
 
-        foreach (var atomId in allAtomIds.OrderBy(id => id))
+        foreach (var atomId in allAtomIds.OrderBy(id => id, StringComparer.Ordinal))
         {
             var existsInFrom = fromAtoms.TryGetValue(atomId, out var fromAtom);
             var existsInTo = toAtoms.TryGetValue(atomId, out var toAtom);
@@ -169,22 +169,22 @@ public class RuleSpecDiffDomainService
     {
         var changes = new List<FieldChange>();
 
-        if (from.text != to.text)
+        if (!string.Equals(from.text, to.text, StringComparison.Ordinal))
         {
             changes.Add(new FieldChange("text", from.text, to.text));
         }
 
-        if (from.section != to.section)
+        if (!string.Equals(from.section, to.section, StringComparison.Ordinal))
         {
             changes.Add(new FieldChange("section", from.section, to.section));
         }
 
-        if (from.page != to.page)
+        if (!string.Equals(from.page, to.page, StringComparison.Ordinal))
         {
             changes.Add(new FieldChange("page", from.page, to.page));
         }
 
-        if (from.line != to.line)
+        if (!string.Equals(from.line, to.line, StringComparison.Ordinal))
         {
             changes.Add(new FieldChange("line", from.line, to.line));
         }

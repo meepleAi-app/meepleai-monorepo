@@ -23,6 +23,7 @@ public sealed class ThreadClosedEventHandler : DomainEventHandlerBase<ThreadClos
     protected override Dictionary<string, object?>? GetAuditMetadata(ThreadClosedEvent domainEvent)
     {
         return new Dictionary<string, object?>
+(StringComparer.Ordinal)
         {
             ["Action"] = "ThreadClosed",
             ["ThreadId"] = domainEvent.ThreadId,

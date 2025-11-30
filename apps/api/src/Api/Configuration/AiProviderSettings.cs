@@ -30,7 +30,7 @@ public class AiProviderSettings
     /// <summary>
     /// Per-provider configuration dictionary.
     /// </summary>
-    public Dictionary<string, ProviderConfig> Providers { get; set; } = new();
+    public Dictionary<string, ProviderConfig> Providers { get; set; } = new(StringComparer.Ordinal);
 
     /// <summary>
     /// Provider fallback order for circuit breaker (e.g., ["Ollama", "OpenRouter"]).

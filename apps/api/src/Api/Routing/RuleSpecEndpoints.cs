@@ -312,7 +312,7 @@ public static class RuleSpecEndpoints
             logger.LogInformation("User {UserId} resolving comment {CommentId} (resolveReplies: {ResolveReplies})",
                 userId, commentId, resolveReplies);
 
-            var isAdmin = session!.User.Role == "admin";
+            var isAdmin = string.Equals(session!.User.Role, "admin", StringComparison.Ordinal);
             var command = new ResolveRuleCommentCommand(commentId, userId, isAdmin, resolveReplies);
             var comment = await mediator.Send(command, ct);
             logger.LogInformation("Comment {CommentId} resolved successfully", commentId);
@@ -349,7 +349,7 @@ public static class RuleSpecEndpoints
             logger.LogInformation("User {UserId} unresolving comment {CommentId} (unresolveParent: {UnresolveParent})",
                 userId, commentId, unresolveParent);
 
-            var isAdmin = session!.User.Role == "admin";
+            var isAdmin = string.Equals(session!.User.Role, "admin", StringComparison.Ordinal);
             var command = new UnresolveRuleCommentCommand(commentId, userId, isAdmin, unresolveParent);
             var comment = await mediator.Send(command, ct);
             logger.LogInformation("Comment {CommentId} unresolved successfully", commentId);

@@ -119,7 +119,7 @@ public static partial class PathSecurity
         // Normalize allowed extensions to lowercase
         var normalizedAllowed = allowedExtensions.Select(e => e.ToLowerInvariant()).ToArray();
 
-        if (!normalizedAllowed.Contains(extension))
+        if (!normalizedAllowed.Contains(extension, StringComparer.Ordinal))
         {
             throw new ArgumentException(
                 $"Invalid file extension: '{extension}'. Allowed: {string.Join(", ", allowedExtensions)}");

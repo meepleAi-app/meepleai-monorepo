@@ -38,9 +38,9 @@ public sealed class UserTier : ValueObject
         return new UserTier(normalized);
     }
 
-    public bool IsFree() => Value == "free";
-    public bool IsNormal() => Value == "normal";
-    public bool IsPremium() => Value == "premium";
+    public bool IsFree() => string.Equals(Value, "free", StringComparison.Ordinal);
+    public bool IsNormal() => string.Equals(Value, "normal", StringComparison.Ordinal);
+    public bool IsPremium() => string.Equals(Value, "premium", StringComparison.Ordinal);
 
     /// <summary>
     /// Gets the tier level for comparison (0 = free, 1 = normal, 2 = premium).

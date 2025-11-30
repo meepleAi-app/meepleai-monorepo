@@ -30,6 +30,7 @@ public sealed class OAuthAccountUnlinkedEventHandler : DomainEventHandlerBase<OA
     protected override Dictionary<string, object?>? GetAuditMetadata(OAuthAccountUnlinkedEvent domainEvent)
     {
         return new Dictionary<string, object?>
+(StringComparer.Ordinal)
         {
             ["UserId"] = domainEvent.UserId,
             ["Provider"] = domainEvent.Provider,

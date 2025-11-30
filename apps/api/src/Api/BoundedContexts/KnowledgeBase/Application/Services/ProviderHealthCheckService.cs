@@ -11,7 +11,7 @@ public sealed class ProviderHealthCheckService : BackgroundService, IProviderHea
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<ProviderHealthCheckService> _logger;
-    private readonly Dictionary<string, ProviderHealthStatus> _healthStatuses = new();
+    private readonly Dictionary<string, ProviderHealthStatus> _healthStatuses = new(StringComparer.Ordinal);
 #pragma warning disable MA0158 // Use System.Threading.Lock
     private readonly object _healthLock = new();
 #pragma warning restore MA0158
@@ -208,7 +208,7 @@ public sealed class ProviderHealthCheckService : BackgroundService, IProviderHea
     {
         lock (_healthLock)
         {
-            return new Dictionary<string, ProviderHealthStatus>(_healthStatuses);
+            return new Dictionary<string, ProviderHealthStatus>(_healthStatuses, StringComparer.Ordinal);
         }
     }
 

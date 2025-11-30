@@ -62,6 +62,7 @@ public sealed class TwoFactorDisabledEventHandler : DomainEventHandlerBase<TwoFa
     protected override Dictionary<string, object?>? GetAuditMetadata(TwoFactorDisabledEvent domainEvent)
     {
         return new Dictionary<string, object?>
+(StringComparer.Ordinal)
         {
             ["UserId"] = domainEvent.UserId,
             ["Action"] = "TwoFactorDisabled",

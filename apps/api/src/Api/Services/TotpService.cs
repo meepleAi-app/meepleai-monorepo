@@ -690,6 +690,7 @@ public class TotpService : ITotpService
                 severity: "critical",
                 message: $"Potential brute force attack detected: {failedAttempts} failed {attemptType} attempts for user {userId}",
                 metadata: new Dictionary<string, object>
+(StringComparer.Ordinal)
                 {
                     ["user_id"] = userId.ToString(),
                     ["attempt_type"] = attemptType,

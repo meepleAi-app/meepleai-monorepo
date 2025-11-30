@@ -30,6 +30,7 @@ public sealed class SessionRevokedEventHandler : DomainEventHandlerBase<SessionR
     protected override Dictionary<string, object?>? GetAuditMetadata(SessionRevokedEvent domainEvent)
     {
         return new Dictionary<string, object?>
+(StringComparer.Ordinal)
         {
             ["SessionId"] = domainEvent.SessionId,
             ["UserId"] = domainEvent.UserId,

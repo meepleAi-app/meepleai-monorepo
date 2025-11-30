@@ -90,7 +90,7 @@ public class FeatureFlagRepository : RepositoryBase, IFeatureFlagRepository
     private static FeatureFlag MapToDomain(Api.Infrastructure.Entities.SystemConfigurationEntity entity)
     {
         var name = entity.Key.Substring(FlagPrefix.Length);
-        var isEnabled = entity.Value == "true" && entity.IsActive;
+        var isEnabled = string.Equals(entity.Value, "true", StringComparison.Ordinal) && entity.IsActive;
 
         var flag = new FeatureFlag(
             id: entity.Id,

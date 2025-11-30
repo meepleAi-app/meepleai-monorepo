@@ -30,6 +30,7 @@ public sealed class RoleChangedEventHandler : DomainEventHandlerBase<RoleChanged
     protected override Dictionary<string, object?>? GetAuditMetadata(RoleChangedEvent domainEvent)
     {
         return new Dictionary<string, object?>
+(StringComparer.Ordinal)
         {
             ["UserId"] = domainEvent.UserId,
             ["OldRole"] = domainEvent.OldRole,

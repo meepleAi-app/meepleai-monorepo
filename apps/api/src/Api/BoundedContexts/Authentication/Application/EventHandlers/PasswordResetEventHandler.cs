@@ -30,6 +30,7 @@ public sealed class PasswordResetEventHandler : DomainEventHandlerBase<PasswordR
     protected override Dictionary<string, object?>? GetAuditMetadata(PasswordResetEvent domainEvent)
     {
         return new Dictionary<string, object?>
+(StringComparer.Ordinal)
         {
             ["UserId"] = domainEvent.UserId,
             ["ResetByUserId"] = domainEvent.ResetByUserId,

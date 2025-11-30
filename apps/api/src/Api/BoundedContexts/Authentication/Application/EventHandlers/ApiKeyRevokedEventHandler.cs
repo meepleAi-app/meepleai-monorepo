@@ -30,6 +30,7 @@ public sealed class ApiKeyRevokedEventHandler : DomainEventHandlerBase<ApiKeyRev
     protected override Dictionary<string, object?>? GetAuditMetadata(ApiKeyRevokedEvent domainEvent)
     {
         return new Dictionary<string, object?>
+(StringComparer.Ordinal)
         {
             ["ApiKeyId"] = domainEvent.ApiKeyId,
             ["UserId"] = domainEvent.UserId,

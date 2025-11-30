@@ -103,7 +103,7 @@ public sealed class ApiKey : AggregateRoot<Guid>
         {
             var keyBytes = Convert.FromBase64String(plaintextKey);
             var computedHash = Convert.ToBase64String(SHA256.HashData(keyBytes));
-            return computedHash == KeyHash;
+            return string.Equals(computedHash, KeyHash, StringComparison.Ordinal);
         }
         catch
         {

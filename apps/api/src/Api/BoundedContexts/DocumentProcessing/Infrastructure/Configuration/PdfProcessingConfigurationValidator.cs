@@ -62,7 +62,7 @@ public class PdfProcessingConfigurationValidator : IValidateOptions<PdfProcessin
         }
 
         if (!Uri.TryCreate(options.Extractor.Unstructured.ApiUrl, UriKind.Absolute, out var unstructuredUri) ||
-            (unstructuredUri.Scheme != Uri.UriSchemeHttp && unstructuredUri.Scheme != Uri.UriSchemeHttps))
+            (!string.Equals(unstructuredUri.Scheme, Uri.UriSchemeHttp, StringComparison.Ordinal) && !string.Equals(unstructuredUri.Scheme, Uri.UriSchemeHttps, StringComparison.Ordinal)))
         {
             return ValidateOptionsResult.Fail(
                 $"Extractor.Unstructured.ApiUrl must be a valid absolute URL, got '{options.Extractor.Unstructured.ApiUrl}'");
@@ -89,7 +89,7 @@ public class PdfProcessingConfigurationValidator : IValidateOptions<PdfProcessin
         }
 
         if (!Uri.TryCreate(options.Extractor.SmolDocling.ApiUrl, UriKind.Absolute, out var smolDoclingUri) ||
-            (smolDoclingUri.Scheme != Uri.UriSchemeHttp && smolDoclingUri.Scheme != Uri.UriSchemeHttps))
+            (!string.Equals(smolDoclingUri.Scheme, Uri.UriSchemeHttp, StringComparison.Ordinal) && !string.Equals(smolDoclingUri.Scheme, Uri.UriSchemeHttps, StringComparison.Ordinal)))
         {
             return ValidateOptionsResult.Fail(
                 $"Extractor.SmolDocling.ApiUrl must be a valid absolute URL, got '{options.Extractor.SmolDocling.ApiUrl}'");

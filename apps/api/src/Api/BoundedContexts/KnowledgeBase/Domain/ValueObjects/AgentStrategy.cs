@@ -18,7 +18,7 @@ public sealed record AgentStrategy
             throw new ArgumentException("Strategy name cannot be empty", nameof(name));
 
         Name = name;
-        Parameters = parameters ?? new Dictionary<string, object>();
+        Parameters = parameters ?? new Dictionary<string, object>(StringComparer.Ordinal);
     }
 
     /// <summary>
@@ -31,6 +31,7 @@ public sealed record AgentStrategy
         => new(
             name: "HybridSearch",
             parameters: new Dictionary<string, object>
+(StringComparer.Ordinal)
             {
                 ["VectorWeight"] = vectorWeight,
                 ["KeywordWeight"] = 1.0 - vectorWeight,
@@ -48,6 +49,7 @@ public sealed record AgentStrategy
         => new(
             name: "VectorOnly",
             parameters: new Dictionary<string, object>
+(StringComparer.Ordinal)
             {
                 ["TopK"] = topK,
                 ["MinScore"] = minScore
@@ -63,6 +65,7 @@ public sealed record AgentStrategy
         => new(
             name: "MultiModelConsensus",
             parameters: new Dictionary<string, object>
+(StringComparer.Ordinal)
             {
                 ["Models"] = models ?? new[] { "gpt-4", "claude-3-opus" },
                 ["ConsensusThreshold"] = consensusThreshold
@@ -78,6 +81,7 @@ public sealed record AgentStrategy
         => new(
             name: "CitationValidation",
             parameters: new Dictionary<string, object>
+(StringComparer.Ordinal)
             {
                 ["RequireExactMatch"] = requireExactMatch,
                 ["MaxDistanceWords"] = maxDistanceWords
@@ -93,6 +97,7 @@ public sealed record AgentStrategy
         => new(
             name: "ConfidenceScoring",
             parameters: new Dictionary<string, object>
+(StringComparer.Ordinal)
             {
                 ["MinConfidence"] = minConfidence,
                 ["EnableMultiLayer"] = enableMultiLayer,

@@ -274,7 +274,7 @@ using (var scope = app.Services.CreateScope())
         await EnsureInitialAdminUserAsync(app, db, scope.ServiceProvider);
 
         // K6 Performance Testing: Ensure test user exists in Development/Test environments (Issue #1663)
-        if (app.Environment.IsDevelopment() || app.Environment.EnvironmentName == "Test")
+        if (app.Environment.IsDevelopment() || string.Equals(app.Environment.EnvironmentName, "Test", StringComparison.Ordinal))
         {
             await EnsureTestUserExistsAsync(app, db, scope.ServiceProvider);
         }

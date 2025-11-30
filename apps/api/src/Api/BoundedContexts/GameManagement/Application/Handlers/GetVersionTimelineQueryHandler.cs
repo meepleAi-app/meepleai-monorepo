@@ -116,8 +116,8 @@ public class GetVersionTimelineQueryHandler : IQueryHandler<GetVersionTimelineQu
         // Extract unique authors for filter dropdown
         var authors = versionNodes
             .Select(v => v.Author)
-            .Distinct()
-            .OrderBy(a => a)
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(a => a, StringComparer.Ordinal)
             .ToList();
 
         return new VersionTimelineDto(

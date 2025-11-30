@@ -23,6 +23,7 @@ public sealed class ChatThreadCreatedEventHandler : DomainEventHandlerBase<ChatT
     protected override Dictionary<string, object?>? GetAuditMetadata(ChatThreadCreatedEvent domainEvent)
     {
         return new Dictionary<string, object?>
+(StringComparer.Ordinal)
         {
             ["Action"] = "ChatThreadCreated",
             ["ThreadId"] = domainEvent.ThreadId,

@@ -102,7 +102,7 @@ public record LlmCompletionResult
     public string Response { get; init; } = string.Empty;
     public LlmUsage Usage { get; init; } = LlmUsage.Empty;
     public LlmCost Cost { get; init; } = LlmCost.Empty;
-    public IReadOnlyDictionary<string, string> Metadata { get; init; } = new Dictionary<string, string>();
+    public IReadOnlyDictionary<string, string> Metadata { get; init; } = new Dictionary<string, string>(StringComparer.Ordinal);
 
     public static LlmCompletionResult CreateSuccess(
         string response,
@@ -115,7 +115,7 @@ public record LlmCompletionResult
             Response = response,
             Usage = usage ?? LlmUsage.Empty,
             Cost = cost ?? LlmCost.Empty,
-            Metadata = metadata ?? new Dictionary<string, string>()
+            Metadata = metadata ?? new Dictionary<string, string>(StringComparer.Ordinal)
         };
 
     public static LlmCompletionResult CreateFailure(string error) =>
@@ -125,6 +125,6 @@ public record LlmCompletionResult
             ErrorMessage = error,
             Usage = LlmUsage.Empty,
             Cost = LlmCost.Empty,
-            Metadata = new Dictionary<string, string>()
+            Metadata = new Dictionary<string, string>(StringComparer.Ordinal)
         };
 }

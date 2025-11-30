@@ -286,7 +286,7 @@ public sealed class ChatThread : AggregateRoot<Guid>
         {
             foreach (var message in Messages)
             {
-                var roleLabel = message.Role == ChatMessage.UserRole ? "👤 User" : "🤖 Assistant";
+                var roleLabel = string.Equals(message.Role, ChatMessage.UserRole, StringComparison.Ordinal) ? "👤 User" : "🤖 Assistant";
                 var timestamp = message.Timestamp.ToString("HH:mm:ss");
 
                 sb.AppendLine($"## {roleLabel} ({timestamp})");

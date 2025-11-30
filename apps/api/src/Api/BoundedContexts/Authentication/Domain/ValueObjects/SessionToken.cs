@@ -65,7 +65,7 @@ public sealed class SessionToken : ValueObject
         try
         {
             var computedHash = ComputeHash();
-            return computedHash == storedHash;
+            return string.Equals(computedHash, storedHash, StringComparison.Ordinal);
         }
         catch
         {

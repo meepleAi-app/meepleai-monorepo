@@ -47,7 +47,7 @@ public class PagerDutyAlertChannel : IAlertChannel
         }
 
         // Only send critical alerts to PagerDuty to avoid alert fatigue
-        if (severity.ToUpper() != "CRITICAL")
+        if (!string.Equals(severity.ToUpper(), "CRITICAL", StringComparison.Ordinal))
         {
             _logger.LogDebug(
                 "Skipping PagerDuty for {Severity} alert (only CRITICAL alerts trigger incidents)",
@@ -103,6 +103,7 @@ public class PagerDutyAlertChannel : IAlertChannel
         Dictionary<string, object>? metadata)
     {
         var customDetails = new Dictionary<string, object>
+(StringComparer.Ordinal)
         {
             ["alert_type"] = alertType,
             ["severity"] = severity,

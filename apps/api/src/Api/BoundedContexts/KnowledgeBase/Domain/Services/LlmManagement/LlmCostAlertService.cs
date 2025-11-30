@@ -51,6 +51,7 @@ public class LlmCostAlertService
                 severity: "warning",
                 message: $"Daily LLM cost ${dailyCost:F2} exceeds threshold ${DailyThreshold:F2}. Breakdown: {providerBreakdown}",
                 metadata: new Dictionary<string, object>
+(StringComparer.Ordinal)
                 {
                     ["date"] = today.ToString("yyyy-MM-dd"),
                     ["daily_cost"] = dailyCost,
@@ -87,6 +88,7 @@ public class LlmCostAlertService
                 severity: "warning",
                 message: $"Weekly LLM cost ${weeklyCost:F2} exceeds threshold ${WeeklyThreshold:F2} (Period: {weekStart} to {today})",
                 metadata: new Dictionary<string, object>
+(StringComparer.Ordinal)
                 {
                     ["start_date"] = weekStart.ToString("yyyy-MM-dd"),
                     ["end_date"] = today.ToString("yyyy-MM-dd"),
@@ -122,6 +124,7 @@ public class LlmCostAlertService
                 severity: "warning",
                 message: $"Projected monthly LLM cost ${projectedMonthlyCost:F2} exceeds budget ${MonthlyThreshold:F2}. Current: ${monthCost:F2} ({daysElapsed}/{daysInMonth} days)",
                 metadata: new Dictionary<string, object>
+(StringComparer.Ordinal)
                 {
                     ["month"] = today.ToString("yyyy-MM"),
                     ["current_cost"] = monthCost,

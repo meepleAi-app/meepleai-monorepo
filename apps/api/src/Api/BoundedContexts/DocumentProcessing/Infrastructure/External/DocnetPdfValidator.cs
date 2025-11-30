@@ -51,6 +51,7 @@ public class DocnetPdfValidator : IPdfValidator
         if (pdfStream == null)
         {
             return PdfValidationResult.CreateFailure(new Dictionary<string, string>
+(StringComparer.Ordinal)
             {
                 ["stream"] = "PDF stream cannot be null"
             });
@@ -59,12 +60,13 @@ public class DocnetPdfValidator : IPdfValidator
         if (string.IsNullOrWhiteSpace(fileName))
         {
             return PdfValidationResult.CreateFailure(new Dictionary<string, string>
+(StringComparer.Ordinal)
             {
                 ["fileName"] = "File name cannot be empty"
             });
         }
 
-        var errors = new Dictionary<string, string>();
+        var errors = new Dictionary<string, string>(StringComparer.Ordinal);
         PdfMetadata? metadata = null;
 
         try
@@ -284,7 +286,7 @@ public class DocnetPdfValidator : IPdfValidator
     /// </summary>
     private (Dictionary<string, string> Errors, PdfMetadata? Metadata) ValidatePdfWithDocnet(string filePath)
     {
-        var errors = new Dictionary<string, string>();
+        var errors = new Dictionary<string, string>(StringComparer.Ordinal);
         PdfMetadata? metadata = null;
 
         try

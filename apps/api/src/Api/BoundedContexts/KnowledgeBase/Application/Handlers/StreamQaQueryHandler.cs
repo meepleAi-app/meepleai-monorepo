@@ -188,7 +188,7 @@ public class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagStr
             if (thread != null)
             {
                 // Security: Validate thread belongs to requested game
-                if (thread.GameId.HasValue && thread.GameId.Value.ToString() != query.GameId)
+                if (thread.GameId.HasValue && !string.Equals(thread.GameId.Value.ToString(), query.GameId, StringComparison.Ordinal))
                 {
                     _logger.LogWarning(
                         "Thread {ThreadId} belongs to game {ThreadGameId} but query is for game {QueryGameId}. Ignoring chat history.",

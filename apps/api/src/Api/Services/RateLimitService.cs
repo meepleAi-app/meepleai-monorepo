@@ -247,7 +247,7 @@ public class RateLimitService : IRateLimitService
 
             // Reasonable upper bound to prevent misconfiguration
             const int maxTokensUpperBound = 100000;
-            if (limitType == "MaxTokens" && intValue > maxTokensUpperBound)
+            if (string.Equals(limitType, "MaxTokens", StringComparison.Ordinal) && intValue > maxTokensUpperBound)
             {
                 _logger.LogWarning("Rate limit {LimitType} value {Value} exceeds maximum {MaxLimit}, capping",
                     limitType, intValue, maxTokensUpperBound);
@@ -267,7 +267,7 @@ public class RateLimitService : IRateLimitService
 
             // Reasonable upper bound
             const double refillRateUpperBound = 1000.0;
-            if (limitType == "RefillRate" && doubleValue > refillRateUpperBound)
+            if (string.Equals(limitType, "RefillRate", StringComparison.Ordinal) && doubleValue > refillRateUpperBound)
             {
                 _logger.LogWarning("Rate limit {LimitType} value {Value} exceeds maximum {MaxLimit}, capping",
                     limitType, doubleValue, refillRateUpperBound);
@@ -284,7 +284,7 @@ public class RateLimitService : IRateLimitService
     /// </summary>
     private T ApplyEnvironmentMultiplier<T>(T value, string limitType, string role, string source) where T : struct
     {
-        var isTestEnvironment = _environment.IsDevelopment() || _environment.EnvironmentName == "Test";
+        var isTestEnvironment = _environment.IsDevelopment() || string.Equals(_environment.EnvironmentName, "Test", StringComparison.Ordinal);
         if (!isTestEnvironment)
         {
             return value;

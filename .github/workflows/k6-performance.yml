@@ -107,13 +107,8 @@ jobs:
         env:
           CONNECTIONSTRINGS__POSTGRES: ${{ secrets.TEST_DB_CONNECTION_STRING || 'Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=postgres' }}
 
-      - name: Seed test data
-        working-directory: apps/api/src/Api
-        run: |
-          # Run integration tests that seed the database with test data
-          dotnet test --filter "FullyQualifiedName~SeedTestData" --no-build --configuration Release || echo "Test seed not found, database will be seeded on first request"
-        env:
-          ConnectionStrings__Postgres: ${{ secrets.TEST_DB_CONNECTION_STRING || 'Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=postgres' }}
+      # Issue #1663: Test user is now seeded automatically on API startup via EnsureTestUserExistsAsync
+      # No need for separate seeding step - reduces workflow complexity and eliminates race conditions
 
       - name: Start API server
         working-directory: apps/api/src/Api
@@ -124,7 +119,7 @@ jobs:
           ConnectionStrings__Postgres: ${{ secrets.TEST_DB_CONNECTION_STRING || 'Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=postgres' }}
           ConnectionStrings__Redis: 'localhost:6379'
           ConnectionStrings__Qdrant: 'http://localhost:6333'
-          ASPNETCORE_ENVIRONMENT: Development
+          ASPNETCORE_ENVIRONMENT: Development  # Issue #1663: Dev mode enables test user seeding + relaxed rate limits
           ASPNETCORE_URLS: 'http://0.0.0.0:8080'
 
       - name: Wait for API to be ready
@@ -161,8 +156,9 @@ jobs:
           k6 run --env TEST_TYPE=${TEST_TYPE} scenarios/all.js
         env:
           API_BASE_URL: ${{ env.API_BASE_URL }}
-          TEST_USER_EMAIL: 'test@meepleai.dev'
-          TEST_USER_PASSWORD: 'Test123!'
+          # Issue #1663: Use demo user credentials (auto-seeded by API startup)
+          TEST_USER_EMAIL: 'user@meepleai.dev'
+          TEST_USER_PASSWORD: 'Demo123!'
           TEST_GAME_ID: ${{ env.TEST_GAME_ID }}
           WEBSOCKET_URL: 'ws://localhost:8080/ws'
 

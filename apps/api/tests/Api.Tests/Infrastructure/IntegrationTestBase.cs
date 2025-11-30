@@ -1,5 +1,6 @@
 using Api.Infrastructure;
 using Api.SharedKernel.Application.Services;
+using Api.Tests.Infrastructure;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Moq;
@@ -20,7 +21,7 @@ public abstract class IntegrationTestBase<TRepository> : IAsyncLifetime
 
     protected MeepleAiDbContext DbContext { get; private set; } = null!;
     protected TRepository Repository { get; private set; } = null!;
-    protected TimeProvider TimeProvider { get; } = TimeProvider.System;
+    protected TestTimeProvider TimeProvider { get; private set; } = null!;
     protected Mock<IDomainEventCollector> MockEventCollector { get; private set; } = null!;
 
     /// <summary>
@@ -38,6 +39,8 @@ public abstract class IntegrationTestBase<TRepository> : IAsyncLifetime
     /// </summary>
     public async ValueTask InitializeAsync()
     {
+        TimeProvider = new TestTimeProvider();
+
         _postgresContainer = new PostgreSqlBuilder()
             .WithImage("postgres:16-alpine")
             .WithDatabase(DatabaseName)

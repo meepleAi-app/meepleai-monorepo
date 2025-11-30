@@ -265,24 +265,40 @@ public class PdfUploadQuotaService : IPdfUploadQuotaService
 
     private static string GetWeekKey(DateTime date)
     {
-        // ISO 8601 week: yyyy-Www (e.g., 2025-W47)
+        // ISO 8601 week-numbering year calculation
+        // See: https://en.wikipedia.org/wiki/ISO_week_date
+        // Week 1 is the first week with at least 4 days in the new year (contains Thursday)
+
         var calendar = System.Globalization.CultureInfo.InvariantCulture.Calendar;
         var weekRule = System.Globalization.CalendarWeekRule.FirstFourDayWeek;
         var firstDayOfWeek = DayOfWeek.Monday;
 
-        var year = date.Year;
         var week = calendar.GetWeekOfYear(date, weekRule, firstDayOfWeek);
+        int year = date.Year;
 
-        // Handle ISO 8601 year transitions
-        // Jan 1-3 might be in week 52/53 of previous year
-        if (week >= 52 && date.Month == 1)
+        // ISO 8601 year transitions:
+        // 1. Early January (week >= 52): belongs to previous year's last week
+        if (date.Month == 1 && week >= 52)
         {
-            year--;
+            year = date.Year - 1;
         }
-        // Dec 29-31 might be in week 1 of next year
-        else if (week == 1 && date.Month == 12)
+        // 2. Late December with week 1: GetWeekOfYear already calculated it as week 1 of next year
+        else if (date.Month == 12 && week == 1)
         {
-            year++;
+            year = date.Year + 1;
+        }
+        // 3. Late December (Dec 29-31) on Mon-Wed: might be week 1 of next year
+        //    GetWeekOfYear returns week 53, but ISO 8601 says it's actually week 1 of next year
+        else if (date.Month == 12 && date.Day >= 29)
+        {
+            // Check if this is actually week 1 of next year
+            // If Dec 29-31 falls on Mon-Wed, it's week 1 of next year
+            var dayOfWeek = date.DayOfWeek;
+            if (dayOfWeek >= DayOfWeek.Monday && dayOfWeek <= DayOfWeek.Wednesday)
+            {
+                year = date.Year + 1;
+                week = 1;
+            }
         }
 
         return $"{year}-W{week:D2}";

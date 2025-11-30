@@ -9,7 +9,7 @@
 
 import http from 'k6/http';
 import { check, sleep } from 'k6';
-import { loadConfig, getHeaders, validateResponse, getLoadProfile, getTestType } from '../utils/common.js';
+import { loadConfig, getHeaders, validateResponse, getLoadProfile, getTestType, retryWithBackoff } from '../utils/common.js';
 import { setupTestUser, teardownTestUser } from '../utils/auth.js';
 import getThresholds from '../config/thresholds.js';
 
@@ -37,12 +37,16 @@ export function setup() {
 export default function (data) {
   const headers = getHeaders(data.sessionToken);
 
-  const response = http.get(
-    `${config.apiBaseUrl}/api/v1/auth/sessions`,
-    {
-      headers: headers,
-      tags: { endpoint: 'sessions' },
-    }
+  // Issue #1663: Use retry with exponential backoff for rate limit resilience
+  const response = retryWithBackoff(() =>
+    http.get(
+      `${config.apiBaseUrl}/api/v1/auth/sessions`,
+      {
+        headers: headers,
+        tags: { endpoint: 'sessions' },
+      }
+    ),
+    { maxRetries: 3, initialDelayMs: 1000 }
   );
 
   // Validate response

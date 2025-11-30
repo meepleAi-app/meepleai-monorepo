@@ -10,12 +10,21 @@
  * - load/stress/spike: Comprehensive testing with strict thresholds
  */
 
+// Cache for threshold configuration to prevent duplicate logging
+let cachedThresholds = null;
+let cachedTestType = null;
+
 /**
  * Get thresholds based on test type
  * @param {string} testType - Test type: smoke, load, stress, spike
  * @returns {object} Thresholds configuration for k6
  */
 export function getThresholds(testType = 'load') {
+  // Return cached thresholds if test type hasn't changed
+  if (cachedThresholds && cachedTestType === testType) {
+    return cachedThresholds;
+  }
+
   // Base thresholds for all test types
   const baseThresholds = {
     // RAG Search: < 3s p95 latency
@@ -43,25 +52,33 @@ export function getThresholds(testType = 'load') {
     'cache_hit_rate': ['rate>0.70'],
   };
 
+  let thresholds;
+
   // Smoke tests: Infrastructure validation only
   // Relaxed thresholds as external services (Ollama, n8n) are not required
   if (testType === 'smoke') {
     console.log('🔵 Using SMOKE test thresholds (relaxed, no external services)');
-    return {
+    thresholds = {
       ...baseThresholds,
       'http_req_failed': ['rate<0.10'], // 10% tolerable (external service failures expected)
       // Skip rag_confidence (requires Ollama for embeddings)
     };
+  } else {
+    // Load/Stress/Spike: Comprehensive testing with strict thresholds
+    // Requires all services including Ollama and n8n
+    console.log(`🔴 Using ${testType.toUpperCase()} test thresholds (strict, all services required)`);
+    thresholds = {
+      ...baseThresholds,
+      'http_req_failed': ['rate<0.02'], // < 2% error rate (strict)
+      'rag_confidence': ['avg>0.65'],   // RAG confidence > 65% (strict)
+    };
   }
 
-  // Load/Stress/Spike: Comprehensive testing with strict thresholds
-  // Requires all services including Ollama and n8n
-  console.log(`🔴 Using ${testType.toUpperCase()} test thresholds (strict, all services required)`);
-  return {
-    ...baseThresholds,
-    'http_req_failed': ['rate<0.02'], // < 2% error rate (strict)
-    'rag_confidence': ['avg>0.65'],   // RAG confidence > 65% (strict)
-  };
+  // Cache the result
+  cachedThresholds = thresholds;
+  cachedTestType = testType;
+
+  return thresholds;
 }
 
 /**

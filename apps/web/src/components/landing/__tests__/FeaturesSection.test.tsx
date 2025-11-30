@@ -1,31 +1,65 @@
 /**
- * Tests for FeaturesSection component
- * Auto-generated baseline tests - Issue #992
- * TODO: Enhance with component-specific test cases
+ * FeaturesSection Tests
+ *
+ * Comprehensive unit tests for Features grid section.
+ * Target: 100% coverage
  */
 
 import { render, screen } from '@testing-library/react';
 import { FeaturesSection } from '../FeaturesSection';
 
 describe('FeaturesSection', () => {
-  describe('Rendering', () => {
-    it('should render without crashing', () => {
-      render(<FeaturesSection />);
-      expect(screen.getByRole('region')).toBeInTheDocument();
-    });
+  it('renders section with correct heading', () => {
+    render(<FeaturesSection />);
 
-    it('should render with default props', () => {
-      const { container } = render(<FeaturesSection />);
-      expect(container.firstChild).toBeInTheDocument();
-    });
+    expect(screen.getByRole('heading', { name: /caratteristiche/i })).toBeInTheDocument();
   });
 
-  describe('Accessibility', () => {
-    it('should have accessible role', () => {
-      render(<FeaturesSection />);
-      expect(screen.getByRole('region')).toBeInTheDocument();
-    });
+  it('renders section description', () => {
+    render(<FeaturesSection />);
 
-    // TODO: Add more a11y tests (aria-labels, keyboard navigation, etc.)
+    expect(
+      screen.getByText('Tutto quello che ti serve per giocare senza dubbi')
+    ).toBeInTheDocument();
+  });
+
+  it('renders all three feature cards', () => {
+    render(<FeaturesSection />);
+
+    expect(screen.getByText('AI Intelligente')).toBeInTheDocument();
+    expect(screen.getByText('Catalogo Ampio')).toBeInTheDocument();
+    expect(screen.getByText('Mobile-First')).toBeInTheDocument();
+  });
+
+  it('renders feature descriptions', () => {
+    render(<FeaturesSection />);
+
+    expect(screen.getByText(/risposte immediate con citazioni dal manuale/i)).toBeInTheDocument();
+    expect(screen.getByText(/migliaia di giochi già disponibili/i)).toBeInTheDocument();
+    expect(screen.getByText(/perfetto durante le partite/i)).toBeInTheDocument();
+  });
+
+  it('applies responsive grid classes', () => {
+    const { container } = render(<FeaturesSection />);
+
+    const grid = container.querySelector('.grid');
+    expect(grid).toHaveClass('grid-cols-1', 'md:grid-cols-2', 'lg:grid-cols-3');
+  });
+
+  it('has features section id for scroll navigation', () => {
+    const { container } = render(<FeaturesSection />);
+
+    const section = container.querySelector('#features');
+    expect(section).toBeInTheDocument();
+  });
+
+  it('applies hover transition classes to cards', () => {
+    const { container } = render(<FeaturesSection />);
+
+    const cards = container.querySelectorAll('.group');
+    expect(cards.length).toBe(3);
+    cards.forEach(card => {
+      expect(card).toHaveClass('hover:shadow-lg', 'transition-all');
+    });
   });
 });

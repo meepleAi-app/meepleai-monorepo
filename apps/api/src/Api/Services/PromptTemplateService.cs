@@ -294,7 +294,7 @@ ANSWER:",
         {
             // Step 1: Try Redis cache first (< 10ms target)
             var db = _redis.GetDatabase();
-            var cachedPrompt = await db.StringGetAsync(cacheKey);
+            var cachedPrompt = await db.StringGetAsync(cacheKey).ConfigureAwait(false);
 
             if (cachedPrompt.HasValue)
             {
@@ -476,7 +476,7 @@ ANSWER:",
         catch (DbUpdateException ex)
         {
             // Rollback on any error
-            await transaction.RollbackAsync(ct);
+            await transaction.RollbackAsync(ct).ConfigureAwait(false);
             _logger.LogError(
                 ex,
                 "Database error activating version {VersionId} for template {TemplateId}",

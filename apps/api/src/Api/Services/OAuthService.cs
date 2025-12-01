@@ -8,6 +8,7 @@ using Api.Models;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using System.Globalization;
 
 namespace Api.Services;
 
@@ -92,7 +93,7 @@ public class OAuthService : IOAuthService
             Provider = provider
         };
 
-        var result = await _mediator.Send(command);
+        var result = await _mediator.Send(command).ConfigureAwait(false);
 
         if (!result.Success)
         {
@@ -115,7 +116,7 @@ public class OAuthService : IOAuthService
             UserId = userId
         };
 
-        var result = await _mediator.Send(query);
+        var result = await _mediator.Send(query).ConfigureAwait(false);
 
         // Map from query DTO to service DTO (backward compatibility)
         return result.Accounts
@@ -130,7 +131,7 @@ public class OAuthService : IOAuthService
             return false;
 
         // Delegate to Redis-backed state store (single-use validation)
-        return await _stateStore.ValidateAndRemoveStateAsync(state);
+        return await _stateStore.ValidateAndRemoveStateAsync(state).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -140,7 +141,7 @@ public class OAuthService : IOAuthService
             throw new ArgumentException("State cannot be null or empty", nameof(state));
 
         // Delegate to Redis-backed state store with TTL
-        await _stateStore.StoreStateAsync(state, StateLifetime);
+        await _stateStore.StoreStateAsync(state, StateLifetime).ConfigureAwait(false);
 
         _logger.LogDebug("Stored OAuth state with {Lifetime} expiration", StateLifetime);
     }
@@ -154,7 +155,7 @@ public class OAuthService : IOAuthService
             "google" => "Google",
             "discord" => "Discord",
             "github" => "GitHub",
-            _ => throw new ArgumentException($"Unsupported OAuth provider: {provider}")
+            _ => throw new ArgumentException($"Unsupported OAuth provider: {provider}", nameof(provider))
         };
 
         if (!_config.Providers.TryGetValue(providerKey, out var config))
@@ -213,7 +214,7 @@ public class OAuthService : IOAuthService
         string code)
     {
         var config = GetProviderConfig(provider);
-        return await ExchangeCodeForTokenInternalAsync(config, provider, code);
+        return await ExchangeCodeForTokenInternalAsync(config, provider, code).ConfigureAwait(false);
     }
 
     private async Task<OAuthTokenResponse> ExchangeCodeForTokenInternalAsync(
@@ -252,10 +253,10 @@ public class OAuthService : IOAuthService
 
         try
         {
-            using var response = await httpClient.SendAsync(request);
+            using var response = await httpClient.SendAsync(request).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
 
-            var jsonResponse = await response.Content.ReadAsStringAsync();
+            var jsonResponse = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
             var tokenData = JsonSerializer.Deserialize<JsonElement>(jsonResponse);
 
             var accessToken = tokenData.GetProperty("access_token").GetString()
@@ -280,7 +281,7 @@ public class OAuthService : IOAuthService
         string accessToken)
     {
         var config = GetProviderConfig(provider);
-        return await GetUserInfoInternalAsync(config, provider, accessToken);
+        return await GetUserInfoInternalAsync(config, provider, accessToken).ConfigureAwait(false);
     }
 
     private async Task<OAuthUserInfo> GetUserInfoInternalAsync(
@@ -302,10 +303,10 @@ public class OAuthService : IOAuthService
 
         try
         {
-            using var response = await httpClient.SendAsync(request);
+            using var response = await httpClient.SendAsync(request).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
 
-            var jsonResponse = await response.Content.ReadAsStringAsync();
+            var jsonResponse = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
             var userData = JsonSerializer.Deserialize<JsonElement>(jsonResponse);
 
             // Parse user info based on provider
@@ -347,13 +348,13 @@ public class OAuthService : IOAuthService
         JsonElement userData,
         string accessToken)
     {
-        var id = userData.GetProperty("id").GetInt64().ToString();
+        var id = userData.GetProperty("id").GetInt64().ToString(CultureInfo.InvariantCulture);
         var name = userData.TryGetProperty("name", out var n) ? n.GetString() : null;
 
         // GitHub doesn't always return email in user endpoint, need to fetch from /user/emails
         var email = userData.TryGetProperty("email", out var e) && !e.ValueKind.Equals(JsonValueKind.Null)
             ? e.GetString()
-            : await GetGitHubPrimaryEmailAsync(accessToken);
+            : await GetGitHubPrimaryEmailAsync(accessToken).ConfigureAwait(false);
 
         if (string.IsNullOrEmpty(email))
         {
@@ -372,10 +373,10 @@ public class OAuthService : IOAuthService
         request.Headers.Add("Authorization", $"Bearer {accessToken}");
         request.Headers.Add("User-Agent", "MeepleAI");
 
-        using var response = await httpClient.SendAsync(request);
+        using var response = await httpClient.SendAsync(request).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
 
-        var jsonResponse = await response.Content.ReadAsStringAsync();
+        var jsonResponse = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
         var emails = JsonSerializer.Deserialize<JsonElement>(jsonResponse);
 
         // Find primary verified email
@@ -402,17 +403,17 @@ public class OAuthService : IOAuthService
             ? now.AddSeconds(tokenResponse.ExpiresIn.Value)
             : (DateTime?)null;
 
-        account.AccessTokenEncrypted = await _encryption.EncryptAsync(tokenResponse.AccessToken, EncryptionPurpose);
+        account.AccessTokenEncrypted = await _encryption.EncryptAsync(tokenResponse.AccessToken, EncryptionPurpose).ConfigureAwait(false);
 
         if (tokenResponse.RefreshToken != null)
         {
-            account.RefreshTokenEncrypted = await _encryption.EncryptAsync(tokenResponse.RefreshToken, EncryptionPurpose);
+            account.RefreshTokenEncrypted = await _encryption.EncryptAsync(tokenResponse.RefreshToken, EncryptionPurpose).ConfigureAwait(false);
         }
 
         account.TokenExpiresAt = expiresAt;
         account.UpdatedAt = now;
 
-        await _db.SaveChangesAsync();
+        await _db.SaveChangesAsync().ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -447,7 +448,7 @@ public class OAuthService : IOAuthService
         string refreshToken;
         try
         {
-            refreshToken = await _encryption.DecryptAsync(oauthAccount.RefreshTokenEncrypted, EncryptionPurpose);
+            refreshToken = await _encryption.DecryptAsync(oauthAccount.RefreshTokenEncrypted, EncryptionPurpose).ConfigureAwait(false);
         }
         catch (CryptographicException ex)
         {
@@ -462,7 +463,7 @@ public class OAuthService : IOAuthService
 
         // 3. Exchange refresh token for new access token
         var providerConfig = GetProviderConfig(provider);
-        var newTokenResponse = await ExchangeRefreshTokenAsync(providerConfig, provider, refreshToken);
+        var newTokenResponse = await ExchangeRefreshTokenAsync(providerConfig, provider, refreshToken).ConfigureAwait(false);
 
         if (newTokenResponse == null)
         {
@@ -471,7 +472,7 @@ public class OAuthService : IOAuthService
         }
 
         // 4. Update encrypted tokens in database
-        await UpdateOAuthTokenAsync(oauthAccount, newTokenResponse);
+        await UpdateOAuthTokenAsync(oauthAccount, newTokenResponse).ConfigureAwait(false);
 
         _logger.LogInformation("Token refreshed successfully. UserId: {UserId}, Provider: {Provider}", userId, provider);
         return newTokenResponse;
@@ -511,10 +512,10 @@ public class OAuthService : IOAuthService
 
         try
         {
-            using var response = await httpClient.SendAsync(request);
+            using var response = await httpClient.SendAsync(request).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
 
-            var jsonResponse = await response.Content.ReadAsStringAsync();
+            var jsonResponse = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
             var tokenData = JsonSerializer.Deserialize<JsonElement>(jsonResponse);
 
             var accessToken = tokenData.GetProperty("access_token").GetString()

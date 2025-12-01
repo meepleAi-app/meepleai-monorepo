@@ -28,8 +28,8 @@ public static class OAuthEndpoints
         {
             // AUTH-06-P4: Rate limiting to prevent OAuth abuse (configurable via admin UI)
             var ipAddress = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-            var maxTokens = await configService.GetValueAsync<int?>("RateLimit:OAuth:MaxTokens", 10) ?? 10;
-            var refillRate = await configService.GetValueAsync<double?>("RateLimit:OAuth:RefillRate", 0.16667) ?? 0.16667;
+            var maxTokens = (await configService.GetValueAsync<int?>("RateLimit:OAuth:MaxTokens", 10).ConfigureAwait(false)) ?? 10;
+            var refillRate = (await configService.GetValueAsync<double?>("RateLimit:OAuth:RefillRate", 0.16667).ConfigureAwait(false)) ?? 0.16667;
 
             var rateLimitResult = await rateLimiter.CheckRateLimitAsync(
                 $"oauth:login:{ipAddress}",
@@ -49,7 +49,7 @@ public static class OAuthEndpoints
                 IpAddress = ipAddress
             };
 
-            var result = await mediator.Send(command, ct);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
             if (!result.Success)
             {
@@ -88,8 +88,8 @@ Rate limited to 10 requests per minute per IP address.
         {
             // AUTH-06-P4: Rate limiting on callback to prevent abuse (configurable via admin UI)
             var callbackIp = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-            var maxTokens = await configService.GetValueAsync<int?>("RateLimit:OAuth:MaxTokens", 10) ?? 10;
-            var refillRate = await configService.GetValueAsync<double?>("RateLimit:OAuth:RefillRate", 0.16667) ?? 0.16667;
+            var maxTokens = (await configService.GetValueAsync<int?>("RateLimit:OAuth:MaxTokens", 10).ConfigureAwait(false)) ?? 10;
+            var refillRate = (await configService.GetValueAsync<double?>("RateLimit:OAuth:RefillRate", 0.16667).ConfigureAwait(false)) ?? 0.16667;
 
             var rateLimitResult = await rateLimiter.CheckRateLimitAsync(
                 $"oauth:callback:{callbackIp}",
@@ -115,7 +115,7 @@ Rate limited to 10 requests per minute per IP address.
                 UserAgent = userAgent
             };
 
-            var result = await mediator.Send(command, ct);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
             if (!result.Success)
             {
@@ -128,7 +128,7 @@ Rate limited to 10 requests per minute per IP address.
             }
 
             // Set session cookie - get expiration from configuration
-            var sessionExpirationDays = await configService.GetValueAsync<int?>("Authentication:SessionManagement:SessionExpirationDays", 30) ?? 30;
+            var sessionExpirationDays = (await configService.GetValueAsync<int?>("Authentication:SessionManagement:SessionExpirationDays", 30).ConfigureAwait(false)) ?? 30;
             var expiresAt = DateTime.UtcNow.AddDays(sessionExpirationDays);
             writeSessionCookie(context, result.SessionToken ?? string.Empty, expiresAt);
 
@@ -177,7 +177,7 @@ Rate limited to 10 requests per minute per IP address.
                 Provider = provider
             };
 
-            var result = await mediator.Send(command);
+            var result = await mediator.Send(command).ConfigureAwait(false);
 
             if (!result.Success)
             {
@@ -228,7 +228,7 @@ User must have at least one authentication method remaining (password or another
                 UserId = userId
             };
 
-            var result = await mediator.Send(query);
+            var result = await mediator.Send(query).ConfigureAwait(false);
 
             logger.LogInformation("Retrieved {Count} linked OAuth accounts for user {UserId}",
                 result.Accounts.Count, userId);

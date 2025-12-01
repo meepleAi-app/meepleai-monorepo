@@ -47,7 +47,7 @@
  * - Services: Requires full stack running
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/chromatic';
 import path from 'path';
 import { authenticateViaAPI } from './fixtures/auth';
 import {

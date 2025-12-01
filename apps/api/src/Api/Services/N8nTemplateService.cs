@@ -7,6 +7,7 @@ using Api.Infrastructure.Entities;
 using Api.Infrastructure.Security;
 using Api.Models;
 using Microsoft.EntityFrameworkCore;
+using System.Globalization;
 
 namespace Api.Services;
 
@@ -76,7 +77,7 @@ public class N8nTemplateService
         {
             try
             {
-                var json = await File.ReadAllTextAsync(file, ct);
+                var json = await File.ReadAllTextAsync(file, ct).ConfigureAwait(false);
                 var template = JsonSerializer.Deserialize<WorkflowTemplateFile>(json, new JsonSerializerOptions
                 {
                     PropertyNameCaseInsensitive = true
@@ -152,7 +153,7 @@ public class N8nTemplateService
 
         try
         {
-            var json = await File.ReadAllTextAsync(filePath, ct);
+            var json = await File.ReadAllTextAsync(filePath, ct).ConfigureAwait(false);
             var template = JsonSerializer.Deserialize<WorkflowTemplateFile>(json, new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
@@ -213,7 +214,7 @@ public class N8nTemplateService
         CancellationToken ct = default)
     {
         // Load template
-        var template = await GetTemplateAsync(templateId, ct);
+        var template = await GetTemplateAsync(templateId, ct).ConfigureAwait(false);
         if (template == null)
         {
             throw new InvalidOperationException($"Template '{templateId}' not found");
@@ -363,10 +364,10 @@ public class N8nTemplateService
             if (!providedParams.TryGetValue(param.Name, out var value))
                 continue;
 
-            switch (param.Type.ToLower())
+            switch (param.Type.ToLower(CultureInfo.InvariantCulture))
             {
                 case "number":
-                    if (!int.TryParse(value, out _) && !double.TryParse(value, out _))
+                    if (!int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out _) && !double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out _))
                     {
                         throw new InvalidOperationException(
                             $"Parameter '{param.Name}' must be a number");
@@ -485,8 +486,8 @@ public class N8nTemplateService
 
         try
         {
-            using var response = await httpClient.SendAsync(request, ct);
-            var responseBody = await response.Content.ReadAsStringAsync(ct);
+            using var response = await httpClient.SendAsync(request, ct).ConfigureAwait(false);
+            var responseBody = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
 
             if (!response.IsSuccessStatusCode)
             {

@@ -35,7 +35,7 @@ public sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<
         // Skip validation if no validators are registered for this request type
         if (_validators.Count == 0)
         {
-            return await next();
+            return await next().ConfigureAwait(false);
         }
 
         // Create validation context
@@ -45,7 +45,7 @@ public sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<
         var validationTasks = _validators
             .Select(v => v.ValidateAsync(context, validationToken));
 
-        var validationResults = await Task.WhenAll(validationTasks);
+        var validationResults = await Task.WhenAll(validationTasks).ConfigureAwait(false);
 
         // Collect all validation errors with null-safe iteration (tests may return null results)
         var failures = validationResults
@@ -61,6 +61,6 @@ public sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<
         }
 
         // Validation passed, continue to the handler
-        return await next();
+        return await next().ConfigureAwait(false);
     }
 }

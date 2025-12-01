@@ -20,6 +20,10 @@ export const GameSchema = z.object({
   maxPlayTimeMinutes: z.number().int().positive().nullable(),
   bggId: z.number().int().positive().nullable(),
   createdAt: z.string().datetime(),
+  // Issue #1830: UI-003 GameCard enhancements
+  imageUrl: z.string().url().nullable().optional(),
+  faqCount: z.number().int().nonnegative().nullable().optional(),
+  averageRating: z.number().nullable().optional(),
 });
 
 export type Game = z.infer<typeof GameSchema>;

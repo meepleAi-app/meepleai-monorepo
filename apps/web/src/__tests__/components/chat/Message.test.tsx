@@ -12,6 +12,12 @@ import { render, screen } from '@testing-library/react';
 import { Message } from '../../../components/chat/Message';
 import { Message as MessageType } from '../../../types';
 
+// Mock useAuth hook
+const mockUseAuth = vi.fn();
+vi.mock('@/hooks/useAuth', () => ({
+  useAuth: () => mockUseAuth(),
+}));
+
 // Mock the ChatProvider context
 const mockUseChatContext = vi.fn();
 vi.mock('../../../components/chat/ChatProvider', () => ({
@@ -61,6 +67,18 @@ const createMessage = (overrides?: Partial<MessageType>): MessageType => ({
  * Helper to setup mock context
  */
 const setupMockContext = (overrides?: any) => {
+  // Mock AuthProvider's useAuth
+  mockUseAuth.mockReturnValue({
+    user: { id: '1', email: 'test@example.com', displayName: 'Test User' },
+    loading: false,
+    error: null,
+    login: vi.fn(),
+    register: vi.fn(),
+    logout: vi.fn(),
+    refreshUser: vi.fn(),
+    clearError: vi.fn(),
+  });
+
   mockUseChatContext.mockReturnValue({
     editingMessageId: null,
     startEditMessage: vi.fn(),

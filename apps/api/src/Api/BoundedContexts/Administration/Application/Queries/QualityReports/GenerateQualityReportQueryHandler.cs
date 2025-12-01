@@ -30,7 +30,7 @@ public sealed class GenerateQualityReportQueryHandler : IQueryHandler<GenerateQu
         // Business logic validation
         if (query.EndDate < query.StartDate)
         {
-            throw new ArgumentException("End date must be greater than or equal to start date", nameof(query.EndDate));
+            throw new ArgumentException("End date must be greater than or equal to start date", nameof(query));
         }
 
         _logger.LogInformation(

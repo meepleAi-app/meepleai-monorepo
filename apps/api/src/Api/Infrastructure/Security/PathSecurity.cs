@@ -122,7 +122,8 @@ public static partial class PathSecurity
         if (!normalizedAllowed.Contains(extension, StringComparer.Ordinal))
         {
             throw new ArgumentException(
-                $"Invalid file extension: '{extension}'. Allowed: {string.Join(", ", allowedExtensions)}");
+                $"Invalid file extension: '{extension}'. Allowed: {string.Join(", ", allowedExtensions)}",
+                nameof(filename));
         }
     }
 

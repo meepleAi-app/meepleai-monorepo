@@ -44,7 +44,7 @@ public class BlobStorageService : IBlobStorageService
             // Save file to disk
             using (var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))
             {
-                await stream.CopyToAsync(fileStream, ct);
+                await stream.CopyToAsync(fileStream, ct).ConfigureAwait(false);
             }
 
             var fileSize = new FileInfo(filePath).Length;
@@ -140,7 +140,7 @@ public class BlobStorageService : IBlobStorageService
                 _logger.LogInformation("Deleted file at {FilePath}", file);
             }
 
-            return await Task.FromResult(true);
+            return await Task.FromResult(true).ConfigureAwait(false);
         }
         catch (IOException ex)
         {

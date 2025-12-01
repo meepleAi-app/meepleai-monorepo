@@ -78,15 +78,15 @@ public class PromptEvaluationService : IPromptEvaluationService
 
             // SECURITY: Check file size to prevent resource exhaustion
             var fileInfo = new FileInfo(fullPath);
-            var maxFileSizeMB = await _configService.GetValueAsync<int?>("Evaluation:MaxDatasetFileSizeMB", 10) ?? 10;
+            var maxFileSizeMB = (await _configService.GetValueAsync<int?>("Evaluation:MaxDatasetFileSizeMB", 10).ConfigureAwait(false)) ?? 10;
             var maxFileSizeBytes = maxFileSizeMB * 1024L * 1024L;
             if (fileInfo.Length > maxFileSizeBytes)
             {
-                throw new ArgumentException($"Dataset file exceeds maximum size of {maxFileSizeMB} MB (actual: {fileInfo.Length / 1024 / 1024} MB)");
+                throw new ArgumentException($"Dataset file exceeds maximum size of {maxFileSizeMB} MB (actual: {fileInfo.Length / 1024 / 1024} MB)", nameof(datasetPath));
             }
 
             // Read and deserialize JSON
-            var jsonContent = await File.ReadAllTextAsync(fullPath, ct);
+            var jsonContent = await File.ReadAllTextAsync(fullPath, ct).ConfigureAwait(false);
             var dataset = JsonSerializer.Deserialize<PromptTestDataset>(jsonContent);
 
             if (dataset == null)
@@ -127,47 +127,47 @@ public class PromptEvaluationService : IPromptEvaluationService
         // Validate basic structure
         if (dataset.TestCases == null || dataset.TestCases.Count == 0)
         {
-            throw new ArgumentException("Dataset must contain at least one test case");
+            throw new ArgumentException("Dataset must contain at least one test case", nameof(dataset));
         }
 
         // SECURITY: Limit test case count to prevent resource exhaustion
         const int MaxTestCases = 200;
         if (dataset.TestCases.Count > MaxTestCases)
         {
-            throw new ArgumentException($"Dataset contains {dataset.TestCases.Count} test cases. Maximum allowed: {MaxTestCases}");
+            throw new ArgumentException($"Dataset contains {dataset.TestCases.Count} test cases. Maximum allowed: {MaxTestCases}", nameof(dataset));
         }
 
         // Validate each test case
         foreach (var testCase in dataset.TestCases)
         {
             if (string.IsNullOrWhiteSpace(testCase.Id))
-                throw new ArgumentException("Test case missing required 'Id' field");
+                throw new ArgumentException("Test case missing required 'Id' field", nameof(dataset));
 
             if (string.IsNullOrWhiteSpace(testCase.Query))
-                throw new ArgumentException($"Test case {testCase.Id} missing 'Query' field");
+                throw new ArgumentException($"Test case {testCase.Id} missing 'Query' field", nameof(dataset));
 
             if (testCase.MinConfidence.HasValue && (testCase.MinConfidence < 0.0 || testCase.MinConfidence > 1.0))
-                throw new ArgumentException($"Test case {testCase.Id} has invalid MinConfidence: {testCase.MinConfidence}");
+                throw new ArgumentException($"Test case {testCase.Id} has invalid MinConfidence: {testCase.MinConfidence}", nameof(dataset));
 
             if (testCase.MaxLatencyMs.HasValue && testCase.MaxLatencyMs <= 0)
-                throw new ArgumentException($"Test case {testCase.Id} has invalid MaxLatencyMs: {testCase.MaxLatencyMs}");
+                throw new ArgumentException($"Test case {testCase.Id} has invalid MaxLatencyMs: {testCase.MaxLatencyMs}", nameof(dataset));
         }
 
         // BGAI-041: Validate new 5-metric thresholds
         if (dataset.Thresholds.MinAccuracy < 0.0 || dataset.Thresholds.MinAccuracy > 1.0)
-            throw new ArgumentException($"Invalid MinAccuracy threshold: {dataset.Thresholds.MinAccuracy}");
+            throw new ArgumentException($"Invalid MinAccuracy threshold: {dataset.Thresholds.MinAccuracy}", nameof(dataset));
 
         if (dataset.Thresholds.MinRelevance < 0.0 || dataset.Thresholds.MinRelevance > 1.0)
-            throw new ArgumentException($"Invalid MinRelevance threshold: {dataset.Thresholds.MinRelevance}");
+            throw new ArgumentException($"Invalid MinRelevance threshold: {dataset.Thresholds.MinRelevance}", nameof(dataset));
 
         if (dataset.Thresholds.MinCompleteness < 0.0 || dataset.Thresholds.MinCompleteness > 1.0)
-            throw new ArgumentException($"Invalid MinCompleteness threshold: {dataset.Thresholds.MinCompleteness}");
+            throw new ArgumentException($"Invalid MinCompleteness threshold: {dataset.Thresholds.MinCompleteness}", nameof(dataset));
 
         if (dataset.Thresholds.MinClarity < 0.0 || dataset.Thresholds.MinClarity > 1.0)
-            throw new ArgumentException($"Invalid MinClarity threshold: {dataset.Thresholds.MinClarity}");
+            throw new ArgumentException($"Invalid MinClarity threshold: {dataset.Thresholds.MinClarity}", nameof(dataset));
 
         if (dataset.Thresholds.MinCitationQuality < 0.0 || dataset.Thresholds.MinCitationQuality > 1.0)
-            throw new ArgumentException($"Invalid MinCitationQuality threshold: {dataset.Thresholds.MinCitationQuality}");
+            throw new ArgumentException($"Invalid MinCitationQuality threshold: {dataset.Thresholds.MinCitationQuality}", nameof(dataset));
     }
 
     /// <summary>
@@ -190,7 +190,7 @@ public class PromptEvaluationService : IPromptEvaluationService
         try
         {
             // Step 1: Load dataset
-            var dataset = await LoadDatasetAsync(datasetPath, ct);
+            var dataset = await LoadDatasetAsync(datasetPath, ct).ConfigureAwait(false);
 
             // Step 2: Get prompt content from database
             var version = await _dbContext.PromptVersions
@@ -199,7 +199,7 @@ public class PromptEvaluationService : IPromptEvaluationService
 
             if (version == null)
             {
-                throw new ArgumentException($"Prompt version {versionId} not found");
+                throw new ArgumentException($"Prompt version {versionId} not found", nameof(versionId));
             }
 
             var customPrompt = version.Content;
@@ -220,7 +220,7 @@ public class PromptEvaluationService : IPromptEvaluationService
                 progressCallback?.Invoke(i + 1, totalQueries);
 
                 // Execute single test case
-                var queryResult = await EvaluateSingleQueryAsync(testCase, customPrompt, ct);
+                var queryResult = await EvaluateSingleQueryAsync(testCase, customPrompt, ct).ConfigureAwait(false);
                 queryResults.Add(queryResult);
 
                 _logger.LogDebug(
@@ -773,7 +773,7 @@ public class PromptEvaluationService : IPromptEvaluationService
         {
             ReportFormat.Markdown => GenerateMarkdownReport(result),
             ReportFormat.Json => GenerateJsonReport(result),
-            _ => throw new ArgumentException($"Unsupported format: {format}")
+            _ => throw new ArgumentException($"Unsupported format: {format}", nameof(format))
         };
     }
 
@@ -889,7 +889,7 @@ public class PromptEvaluationService : IPromptEvaluationService
             };
 
             _dbContext.PromptEvaluationResults.Add(entity);
-            await _dbContext.SaveChangesAsync(ct);
+            await _dbContext.SaveChangesAsync(ct).ConfigureAwait(false);
 
             _logger.LogInformation("Successfully stored evaluation result {EvaluationId}", result.EvaluationId);
         }

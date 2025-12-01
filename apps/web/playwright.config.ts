@@ -1,18 +1,23 @@
 import { defineConfig, devices } from '@playwright/test';
+import { ChromaticConfig } from '@chromatic-com/playwright';
 
-export default defineConfig({
+export default defineConfig<ChromaticConfig>({
   testDir: './e2e',
   timeout: 60000, // 60s global timeout for dev mode
   fullyParallel: true, // Issue #843: Enable parallel for better CI performance
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 4 : 2, // Issue #843: 4 workers in CI, 2 local for optimal speed
-  reporter: process.env.CI ? 'dot' : 'html', // Concise output in CI, HTML report locally
+  reporter: process.env.CI ? 'dot' : 'html', // Standard reporters only (Chromatic uses fixture, not reporter)
   use: {
     baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',
     actionTimeout: 10000, // 10s for clicks/fills
     navigationTimeout: 60000, // 60s for page.goto (increased for dev server)
+
+    // Chromatic Playwright fixture options
+    disableAutoSnapshot: false, // Auto-capture at end of test
+    cropToViewport: false, // Capture full page
     launchOptions: {
       args: [
         '--no-sandbox',

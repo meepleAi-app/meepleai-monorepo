@@ -4,7 +4,7 @@
  * @see apps/web/e2e/pages/ - Page Object Model architecture
  */
 
-import { test as base, expect, Page } from '@playwright/test';
+import { test as base, expect, Page } from './fixtures/chromatic';
 import { AuthHelper, USER_FIXTURES } from './pages';
 import { WaitHelper } from './helpers/WaitHelper';
 import {

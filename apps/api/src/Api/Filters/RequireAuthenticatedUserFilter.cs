@@ -61,6 +61,6 @@ public class RequireAuthenticatedUserFilter : IEndpointFilter
         // User is authenticated (either session or API key)
         // Endpoint can check HttpContext.Items[nameof(ActiveSession)] for session
         // or HttpContext.User for API key authentication
-        return await next(context);
+        return await next(context).ConfigureAwait(false);
     }
 }

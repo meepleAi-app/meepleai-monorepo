@@ -1,6 +1,7 @@
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Exceptions;
 using System.Text.RegularExpressions;
+using System.Globalization;
 
 namespace Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 
@@ -41,9 +42,9 @@ public sealed class Version : ValueObject
         if (!match.Success)
             throw new ValidationException($"Invalid version format: {version}. Expected: major.minor.patch (e.g., 1.0.0)");
 
-        Major = int.Parse(match.Groups[1].Value);
-        Minor = int.Parse(match.Groups[2].Value);
-        Patch = int.Parse(match.Groups[3].Value);
+        Major = int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture);
+        Minor = int.Parse(match.Groups[2].Value, CultureInfo.InvariantCulture);
+        Patch = int.Parse(match.Groups[3].Value, CultureInfo.InvariantCulture);
         Value = version.Trim();
     }
 

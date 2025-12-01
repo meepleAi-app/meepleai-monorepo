@@ -14,7 +14,7 @@
  * - Boundary violations in settings
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/chromatic';
 import { AuthHelper, USER_FIXTURES } from './pages';
 
 test.describe('Admin Negative Scenarios - Issue #1494', () => {

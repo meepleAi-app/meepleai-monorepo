@@ -43,8 +43,8 @@ services:
       # OpenRouter key from env (not secret file)
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       # Bootstrap admin (plain password for dev)
-      INITIAL_ADMIN_EMAIL: ${INITIAL_ADMIN_EMAIL:-admin@meepleai.dev}
-      INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD:-Demo123!}
+      INITIAL_ADMIN_EMAIL: ${INITIAL_ADMIN_EMAIL:-admin@example.com}
+      INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD:-ChangeThisPassword123!}
       INITIAL_ADMIN_DISPLAY_NAME: ${INITIAL_ADMIN_DISPLAY_NAME:-Dev Admin}
     env_file:
       - ./env/api.env.dev

@@ -2,22 +2,25 @@
 module.exports = {
   darkMode: ['class'],
   content: [
-    "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
-    "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
-    "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
+    './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/components/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
     extend: {
       // Colors now fully managed via CSS variables in globals.css
       // Brand colors (primary, secondary, accent) use HSL format
       // shadcn/ui semantic tokens also use HSL format
+      fontFamily: {
+        quicksand: ['var(--font-quicksand)', 'sans-serif'],
+      },
       animation: {
         'fade-in': 'fadeIn 0.5s ease-in',
         'slide-up': 'slideUp 0.6s ease-out',
         'slide-down': 'slideDown 0.6s ease-out',
         'scale-in': 'scaleIn 0.4s ease-out',
         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-        'shake': 'shake 0.4s ease-in-out',
+        shake: 'shake 0.4s ease-in-out',
         'bounce-slow': 'bounce 1s infinite',
       },
       keyframes: {
@@ -46,4 +49,4 @@ module.exports = {
     },
   },
   plugins: [],
-}
+};

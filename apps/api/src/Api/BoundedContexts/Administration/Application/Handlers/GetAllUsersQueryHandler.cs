@@ -4,6 +4,7 @@ using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using System.Globalization;
 
 namespace Api.BoundedContexts.Administration.Application.Handlers;
 
@@ -29,21 +30,21 @@ public class GetAllUsersQueryHandler : IQueryHandler<GetAllUsersQuery, PagedResu
         // Search filter (email or display name)
         if (!string.IsNullOrWhiteSpace(query.SearchTerm))
         {
-            var term = query.SearchTerm.ToLower();
+            var term = query.SearchTerm.ToLower(CultureInfo.InvariantCulture);
             dbQuery = dbQuery.Where(u =>
-                (u.Email != null && u.Email.ToLower().Contains(term)) ||
-                (u.DisplayName != null && u.DisplayName.ToLower().Contains(term)));
+                (u.Email != null && u.Email.ToLower(CultureInfo.InvariantCulture).Contains(term)) ||
+                (u.DisplayName != null && u.DisplayName.ToLower(CultureInfo.InvariantCulture).Contains(term)));
         }
 
         // Role filter
         if (!string.IsNullOrWhiteSpace(query.RoleFilter) && !string.Equals(query.RoleFilter, "all", StringComparison.Ordinal))
         {
-            var normalizedRole = query.RoleFilter.ToLower();
+            var normalizedRole = query.RoleFilter.ToLower(CultureInfo.InvariantCulture);
             dbQuery = dbQuery.Where(u => u.Role == normalizedRole);
         }
 
         // Sorting
-        dbQuery = query.SortBy?.ToLower() switch
+        dbQuery = query.SortBy?.ToLower(CultureInfo.InvariantCulture) switch
         {
             "email" => string.Equals(query.SortOrder, "asc", StringComparison.Ordinal) ? dbQuery.OrderBy(u => u.Email) : dbQuery.OrderByDescending(u => u.Email),
             "displayname" => string.Equals(query.SortOrder, "asc", StringComparison.Ordinal) ? dbQuery.OrderBy(u => u.DisplayName) : dbQuery.OrderByDescending(u => u.DisplayName),

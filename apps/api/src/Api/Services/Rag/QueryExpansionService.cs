@@ -27,7 +27,7 @@ public class QueryExpansionService : IQueryExpansionService
         CancellationToken cancellationToken = default)
     {
         // CONFIG-04: Load dynamic max variations configuration
-        var maxVariations = await GetMaxQueryVariationsAsync();
+        var maxVariations = await GetMaxQueryVariationsAsync().ConfigureAwait(false);
 
         var variations = new List<string> { query }; // Always include original query
 
@@ -100,14 +100,14 @@ public class QueryExpansionService : IQueryExpansionService
         _logger.LogDebug("Query expansion: '{Original}' → {Count} variations (max: {Max})",
             query, finalVariations.Count, maxVariations);
 
-        return await Task.FromResult(finalVariations);
+        return await Task.FromResult(finalVariations).ConfigureAwait(false);
     }
 
     private async Task<int> GetMaxQueryVariationsAsync()
     {
         if (_configurationService != null)
         {
-            var dbValue = await _configurationService.GetValueAsync<int?>("RAG.MaxQueryVariations");
+            var dbValue = await _configurationService.GetValueAsync<int?>("RAG.MaxQueryVariations").ConfigureAwait(false);
             if (dbValue.HasValue && dbValue.Value >= 1 && dbValue.Value <= 10)
             {
                 return dbValue.Value;

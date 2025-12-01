@@ -65,7 +65,7 @@ public class TotpService : ITotpService
     /// </summary>
     public async Task<TotpSetupResponse> GenerateSetupAsync(Guid userId, string userEmail, CancellationToken cancellationToken = default)
     {
-        var user = await _dbContext.Users.FindAsync(userId);
+        var user = await _dbContext.Users.FindAsync(userId).ConfigureAwait(false);
         if (user == null)
         {
             _logger.LogWarning("2FA setup failed: User {UserId} not found", userId);
@@ -74,7 +74,7 @@ public class TotpService : ITotpService
 
         // Generate TOTP secret (160-bit)
         var secret = GenerateSecret();
-        var encryptedSecret = await _encryptionService.EncryptAsync(secret, purpose: "TotpSecrets");
+        var encryptedSecret = await _encryptionService.EncryptAsync(secret, purpose: "TotpSecrets").ConfigureAwait(false);
 
         // Generate QR code URL (otpauth:// URI format for authenticator apps)
         var qrCodeUrl = GenerateQrCodeUrl(userEmail, secret);
@@ -85,7 +85,7 @@ public class TotpService : ITotpService
         // Store encrypted secret (not enabled yet - requires verification)
         user.TotpSecretEncrypted = encryptedSecret;
         user.IsTwoFactorEnabled = false; // Not enabled until verified
-        await _dbContext.SaveChangesAsync();
+        await _dbContext.SaveChangesAsync().ConfigureAwait(false);
 
         // Delete existing backup codes if re-enrolling
         var existingCodes = await _dbContext.UserBackupCodes
@@ -109,7 +109,7 @@ public class TotpService : ITotpService
                 CreatedAt = _timeProvider.GetUtcNow().UtcDateTime
             });
         }
-        await _dbContext.SaveChangesAsync();
+        await _dbContext.SaveChangesAsync().ConfigureAwait(false);
 
         await _auditService.LogAsync(userId.ToString(), "TwoFactorSetup", "TwoFactor", userId.ToString(), "Success",
             "User generated 2FA setup");
@@ -131,7 +131,7 @@ public class TotpService : ITotpService
     /// </summary>
     public async Task<bool> EnableTwoFactorAsync(Guid userId, string totpCode, CancellationToken cancellationToken = default)
     {
-        var user = await _dbContext.Users.FindAsync(userId);
+        var user = await _dbContext.Users.FindAsync(userId).ConfigureAwait(false);
         if (user == null)
         {
             _logger.LogWarning("2FA enable failed: User {UserId} not found", userId);
@@ -145,7 +145,7 @@ public class TotpService : ITotpService
         }
 
         // Decrypt secret and verify code
-        var secret = await _encryptionService.DecryptAsync(user.TotpSecretEncrypted, purpose: "TotpSecrets");
+        var secret = await _encryptionService.DecryptAsync(user.TotpSecretEncrypted, purpose: "TotpSecrets").ConfigureAwait(false);
         var isValid = VerifyTotpCode(secret, totpCode, out _); // Discard timeStep during setup
 
         if (!isValid)
@@ -159,7 +159,7 @@ public class TotpService : ITotpService
         // Enable 2FA
         user.IsTwoFactorEnabled = true;
         user.TwoFactorEnabledAt = _timeProvider.GetUtcNow().UtcDateTime;
-        await _dbContext.SaveChangesAsync();
+        await _dbContext.SaveChangesAsync().ConfigureAwait(false);
 
         await _auditService.LogAsync(userId.ToString(), "TwoFactorEnable", "TwoFactor", userId.ToString(), "Success",
             "User enabled 2FA");
@@ -179,7 +179,7 @@ public class TotpService : ITotpService
     /// </summary>
     public async Task<bool> VerifyCodeAsync(Guid userId, string code, CancellationToken cancellationToken = default)
     {
-        var user = await _dbContext.Users.FindAsync(userId);
+        var user = await _dbContext.Users.FindAsync(userId).ConfigureAwait(false);
         if (user == null || !user.IsTwoFactorEnabled || string.IsNullOrEmpty(user.TotpSecretEncrypted))
         {
             _logger.LogWarning("2FA verify failed: Invalid user state for {UserId}", userId);
@@ -202,12 +202,12 @@ public class TotpService : ITotpService
             await _auditService.LogAsync(userId.ToString(), "TotpRateLimitExceeded", "TwoFactor", userId.ToString(), "Blocked",
                 $"Rate limit exceeded. Retry after {rateLimitResult.RetryAfterSeconds}s");
 
-            await CheckAndTriggerSecurityAlertAsync(userId, "TOTP", cancellationToken);
+            await CheckAndTriggerSecurityAlertAsync(userId, "TOTP", cancellationToken).ConfigureAwait(false);
             return false;
         }
 
         // SEC-05: Account lockout check (5 failures = 15min lockout) - LAYER 2
-        var isLockedOut = await IsAccountLockedOutAsync(userId, "totp", cancellationToken);
+        var isLockedOut = await IsAccountLockedOutAsync(userId, "totp", cancellationToken).ConfigureAwait(false);
         if (isLockedOut)
         {
             _logger.LogWarning("🔒 Account locked out for user {UserId} due to excessive failed 2FA attempts", userId);
@@ -237,7 +237,7 @@ public class TotpService : ITotpService
         }
 
         // Decrypt secret and verify code
-        var secret = await _encryptionService.DecryptAsync(user.TotpSecretEncrypted, purpose: "TotpSecrets");
+        var secret = await _encryptionService.DecryptAsync(user.TotpSecretEncrypted, purpose: "TotpSecrets").ConfigureAwait(false);
         var isValid = VerifyTotpCode(secret, code, out long timeStep);
 
         if (!isValid)
@@ -247,8 +247,8 @@ public class TotpService : ITotpService
                 "Failed TOTP code attempt");
 
             // SEC-05: Track failed attempt for lockout
-            await TrackFailedAttemptAsync(userId, "totp", cancellationToken);
-            await CheckAndTriggerSecurityAlertAsync(userId, "TOTP", cancellationToken);
+            await TrackFailedAttemptAsync(userId, "totp", cancellationToken).ConfigureAwait(false);
+            await CheckAndTriggerSecurityAlertAsync(userId, "TOTP", cancellationToken).ConfigureAwait(false);
 
             // SEC-08: Track failed TOTP attempt
             MeepleAiMetrics.Record2FAVerification("totp", success: false, userId: userId.ToString());
@@ -256,7 +256,7 @@ public class TotpService : ITotpService
         else
         {
             // SEC-05: Clear failed attempts on success
-            await ClearFailedAttemptsAsync(userId, "totp", cancellationToken);
+            await ClearFailedAttemptsAsync(userId, "totp", cancellationToken).ConfigureAwait(false);
 
             // SEC-07: Store used code to prevent replay (Issue #1787)
             var expiresAt = _timeProvider.GetUtcNow().UtcDateTime.AddMinutes(2);
@@ -269,7 +269,7 @@ public class TotpService : ITotpService
                 UsedAt = _timeProvider.GetUtcNow().UtcDateTime,
                 ExpiresAt = expiresAt
             }, cancellationToken);
-            await _dbContext.SaveChangesAsync(cancellationToken);
+            await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation("2FA verify success for user {UserId}, code stored for replay prevention", userId);
 
@@ -287,7 +287,7 @@ public class TotpService : ITotpService
     /// </summary>
     public async Task<bool> VerifyBackupCodeAsync(Guid userId, string backupCode, CancellationToken cancellationToken = default)
     {
-        var user = await _dbContext.Users.FindAsync(userId);
+        var user = await _dbContext.Users.FindAsync(userId).ConfigureAwait(false);
         if (user == null || !user.IsTwoFactorEnabled)
         {
             _logger.LogWarning("Backup code verify failed: Invalid user state for {UserId}", userId);
@@ -311,13 +311,13 @@ public class TotpService : ITotpService
                 $"Rate limit exceeded. Retry after {rateLimitResult.RetryAfterSeconds}s");
 
             // Check if we should trigger security alert
-            await CheckAndTriggerSecurityAlertAsync(userId, "BackupCode", cancellationToken);
+            await CheckAndTriggerSecurityAlertAsync(userId, "BackupCode", cancellationToken).ConfigureAwait(false);
 
             return false;
         }
 
         // Check for account lockout (separate from rate limiting)
-        var isLockedOut = await IsAccountLockedOutAsync(userId, "backup", cancellationToken);
+        var isLockedOut = await IsAccountLockedOutAsync(userId, "backup", cancellationToken).ConfigureAwait(false);
         if (isLockedOut)
         {
             _logger.LogWarning("🔒 Account locked out for user {UserId} due to excessive failed backup code attempts", userId);
@@ -327,7 +327,7 @@ public class TotpService : ITotpService
         }
 
         // Use transaction with Serializable isolation to prevent concurrent use of same code
-        using var transaction = await _dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+        using var transaction = await _dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable).ConfigureAwait(false);
         try
         {
             // Get all unused backup codes for user (within transaction)
@@ -352,8 +352,8 @@ public class TotpService : ITotpService
                     // Mark as used (atomic with transaction commit)
                     storedCode.IsUsed = true;
                     storedCode.UsedAt = _timeProvider.GetUtcNow().UtcDateTime;
-                    await _dbContext.SaveChangesAsync();
-                    await transaction.CommitAsync();
+                    await _dbContext.SaveChangesAsync().ConfigureAwait(false);
+                    await transaction.CommitAsync().ConfigureAwait(false);
 
                     var remainingCodes = backupCodes.Count - 1;
                     await _auditService.LogAsync(userId.ToString(), "BackupCodeUsed", "TwoFactor", userId.ToString(), "Success",
@@ -369,7 +369,7 @@ public class TotpService : ITotpService
                     }
 
                     // SEC-05: Clear failed attempts on successful verification
-                    await ClearFailedAttemptsAsync(userId, "backup", cancellationToken);
+                    await ClearFailedAttemptsAsync(userId, "backup", cancellationToken).ConfigureAwait(false);
 
                     // SEC-08: Track successful backup code use
                     MeepleAiMetrics.Record2FAVerification("backup_code", success: true, userId: userId.ToString());
@@ -384,8 +384,8 @@ public class TotpService : ITotpService
                 "Failed backup code attempt");
 
             // SEC-05: Track failed attempt for lockout mechanism
-            await TrackFailedAttemptAsync(userId, "backup", cancellationToken);
-            await CheckAndTriggerSecurityAlertAsync(userId, "BackupCode", cancellationToken);
+            await TrackFailedAttemptAsync(userId, "backup", cancellationToken).ConfigureAwait(false);
+            await CheckAndTriggerSecurityAlertAsync(userId, "BackupCode", cancellationToken).ConfigureAwait(false);
 
             // SEC-08: Track failed backup code attempt
             MeepleAiMetrics.Record2FAVerification("backup_code", success: false, userId: userId.ToString());
@@ -395,13 +395,13 @@ public class TotpService : ITotpService
         catch (DbUpdateException ex)
         {
             _logger.LogError(ex, "Database error during backup code verification for user {UserId}", userId);
-            await transaction.RollbackAsync();
+            await transaction.RollbackAsync().ConfigureAwait(false);
             throw new InvalidOperationException("Failed to verify backup code due to database error", ex);
         }
         catch (CryptographicException ex)
         {
             _logger.LogError(ex, "Cryptographic error during backup code verification for user {UserId}", userId);
-            await transaction.RollbackAsync();
+            await transaction.RollbackAsync().ConfigureAwait(false);
             throw new InvalidOperationException("Failed to verify backup code due to cryptographic error", ex);
         }
     }
@@ -411,7 +411,7 @@ public class TotpService : ITotpService
     /// </summary>
     public async Task DisableTwoFactorAsync(Guid userId, string password, string totpOrBackupCode, CancellationToken cancellationToken = default)
     {
-        var user = await _dbContext.Users.FindAsync(userId);
+        var user = await _dbContext.Users.FindAsync(userId).ConfigureAwait(false);
         if (user == null)
         {
             _logger.LogWarning("2FA disable failed: User {UserId} not found", userId);
@@ -438,8 +438,8 @@ public class TotpService : ITotpService
         }
 
         // Verify TOTP code or backup code
-        var isTotpValid = await VerifyCodeAsync(userId, totpOrBackupCode);
-        var isBackupValid = !isTotpValid && await VerifyBackupCodeAsync(userId, totpOrBackupCode);
+        var isTotpValid = await VerifyCodeAsync(userId, totpOrBackupCode).ConfigureAwait(false);
+        var isBackupValid = !isTotpValid && await VerifyBackupCodeAsync(userId, totpOrBackupCode).ConfigureAwait(false);
 
         if (!isTotpValid && !isBackupValid)
         {
@@ -460,7 +460,7 @@ public class TotpService : ITotpService
             .ToListAsync();
         _dbContext.UserBackupCodes.RemoveRange(allBackupCodes);
 
-        await _dbContext.SaveChangesAsync();
+        await _dbContext.SaveChangesAsync().ConfigureAwait(false);
 
         await _auditService.LogAsync(userId.ToString(), "TwoFactorDisable", "TwoFactor", userId.ToString(), "Success",
             "User disabled 2FA");
@@ -475,7 +475,7 @@ public class TotpService : ITotpService
     /// </summary>
     public async Task<TwoFactorStatusResponse> GetTwoFactorStatusAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        var user = await _dbContext.Users.FindAsync(userId);
+        var user = await _dbContext.Users.FindAsync(userId).ConfigureAwait(false);
         if (user == null)
         {
             throw new InvalidOperationException("User not found");
@@ -632,8 +632,8 @@ public class TotpService : ITotpService
         var lockoutExpiry = TimeSpan.FromMinutes(LockoutDurationMinutes);
 
         // Increment counter with sliding window expiry
-        await redisDb.StringIncrementAsync(redisKey);
-        await redisDb.KeyExpireAsync(redisKey, lockoutExpiry);
+        await redisDb.StringIncrementAsync(redisKey).ConfigureAwait(false);
+        await redisDb.KeyExpireAsync(redisKey, lockoutExpiry).ConfigureAwait(false);
 
         _logger.LogDebug("Tracked failed {AttemptType} attempt for user {UserId}", attemptType, userId);
     }
@@ -646,7 +646,7 @@ public class TotpService : ITotpService
     {
         var redisKey = $"2fa:failed:{attemptType}:{userId}";
         var redisDb = _redis.GetDatabase();
-        var failedAttempts = (int)await redisDb.StringGetAsync(redisKey);
+        var failedAttempts = (int)await redisDb.StringGetAsync(redisKey).ConfigureAwait(false);
 
         var isLockedOut = failedAttempts >= MaxTotpAttempts;
         if (isLockedOut)
@@ -665,7 +665,7 @@ public class TotpService : ITotpService
     {
         var redisKey = $"2fa:failed:{attemptType}:{userId}";
         var redisDb = _redis.GetDatabase();
-        await redisDb.KeyDeleteAsync(redisKey);
+        await redisDb.KeyDeleteAsync(redisKey).ConfigureAwait(false);
 
         _logger.LogDebug("Cleared failed {AttemptType} attempts for user {UserId}", attemptType, userId);
     }
@@ -678,7 +678,7 @@ public class TotpService : ITotpService
     {
         var redisKey = $"2fa:failed:{attemptType.ToLowerInvariant()}:{userId}";
         var redisDb = _redis.GetDatabase();
-        var failedAttempts = (int)await redisDb.StringGetAsync(redisKey);
+        var failedAttempts = (int)await redisDb.StringGetAsync(redisKey).ConfigureAwait(false);
 
         if (failedAttempts >= AlertThresholdAttempts)
         {

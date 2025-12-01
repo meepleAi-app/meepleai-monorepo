@@ -45,7 +45,7 @@ public class RequireAdminSessionFilter : IEndpointFilter
         var httpContext = context.HttpContext;
 
         // Validate session exists and is active
-        var (authorized, session, error) = httpContext.RequireAdminSession();
+        var (authorized, _, error) = httpContext.RequireAdminSession();
 
         if (!authorized)
         {
@@ -54,6 +54,6 @@ public class RequireAdminSessionFilter : IEndpointFilter
 
         // Session is validated and user has Admin role
         // Endpoint can safely retrieve session from HttpContext.Items
-        return await next(context);
+        return await next(context).ConfigureAwait(false);
     }
 }

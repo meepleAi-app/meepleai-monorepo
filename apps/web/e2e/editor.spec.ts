@@ -4,7 +4,7 @@
  * @see apps/web/e2e/pages/
  */
 
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './fixtures/chromatic';
 import { getTextMatcher, t } from './fixtures/i18n';
 
 /**

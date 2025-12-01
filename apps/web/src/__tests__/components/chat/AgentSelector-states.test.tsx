@@ -25,6 +25,21 @@ vi.mock('../../../components/loading/SkeletonLoader', () => ({
   ),
 }));
 
+// Mock AuthProvider
+vi.mock('@/components/auth/AuthProvider', () => ({
+  AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useAuth: () => ({
+    user: { id: '1', email: 'test@example.com', displayName: 'Test User' },
+    loading: false,
+    error: null,
+    login: vi.fn(),
+    register: vi.fn(),
+    logout: vi.fn(),
+    refreshUser: vi.fn(),
+    clearError: vi.fn(),
+  }),
+}));
+
 /**
  * Helper to setup mock context with default values
  */
@@ -198,7 +213,11 @@ describe('AgentSelector - States and Rendering', () => {
     });
 
     it('changes cursor when disabled', () => {
-      setupMockContext({ selectedGameId: 'game-1', agents: sampleAgents.single, loading: { agents: false } });
+      setupMockContext({
+        selectedGameId: 'game-1',
+        agents: sampleAgents.single,
+        loading: { agents: false },
+      });
       render(<AgentSelector />);
 
       const select = screen.getByRole('combobox');
@@ -282,7 +301,11 @@ describe('AgentSelector - States and Rendering', () => {
     it('uses agent.id as option value', async () => {
       const user = userEvent.setup();
       const selectAgent = vi.fn();
-      setupMockContext({ selectedGameId: 'game-1', agents: [{ id: 'agent-123', name: 'Test Agent' }], selectAgent });
+      setupMockContext({
+        selectedGameId: 'game-1',
+        agents: [{ id: 'agent-123', name: 'Test Agent' }],
+        selectAgent,
+      });
       render(<AgentSelector />);
 
       const trigger = screen.getByRole('combobox');
@@ -313,14 +336,22 @@ describe('AgentSelector - States and Rendering', () => {
     });
 
     it('displays empty value when no agent is selected', () => {
-      setupMockContext({ selectedGameId: 'game-1', agents: sampleAgents.single, selectedAgentId: null });
+      setupMockContext({
+        selectedGameId: 'game-1',
+        agents: sampleAgents.single,
+        selectedAgentId: null,
+      });
       render(<AgentSelector />);
 
       expect(screen.getByText('Seleziona un agente')).toBeInTheDocument();
     });
 
     it('handles undefined selectedAgentId', () => {
-      setupMockContext({ selectedGameId: 'game-1', agents: sampleAgents.single, selectedAgentId: undefined });
+      setupMockContext({
+        selectedGameId: 'game-1',
+        agents: sampleAgents.single,
+        selectedAgentId: undefined,
+      });
       render(<AgentSelector />);
 
       expect(screen.getByText('Seleziona un agente')).toBeInTheDocument();
@@ -380,14 +411,22 @@ describe('AgentSelector - States and Rendering', () => {
     });
 
     it('changes cursor style based on loading state', () => {
-      setupMockContext({ selectedGameId: 'game-1', agents: sampleAgents.single, loading: { agents: false } });
+      setupMockContext({
+        selectedGameId: 'game-1',
+        agents: sampleAgents.single,
+        loading: { agents: false },
+      });
       const { rerender } = render(<AgentSelector />);
 
       const select = screen.getByRole('combobox');
       expect(select).not.toHaveClass('cursor-not-allowed');
 
       // Change to loading
-      setupMockContext({ selectedGameId: 'game-1', agents: sampleAgents.single, loading: { agents: true } });
+      setupMockContext({
+        selectedGameId: 'game-1',
+        agents: sampleAgents.single,
+        loading: { agents: true },
+      });
       rerender(<AgentSelector />);
 
       // Select is hidden during loading, check skeleton instead

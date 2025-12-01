@@ -12,7 +12,7 @@
  * @see apps/web/e2e/page-objects/ - Page Object Model architecture
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/chromatic';
 import { Buffer } from 'buffer';
 import { AuthHelper, USER_FIXTURES } from './pages';
 

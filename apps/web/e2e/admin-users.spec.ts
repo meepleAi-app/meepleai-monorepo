@@ -5,7 +5,7 @@
  * @see apps/web/e2e/pages/admin/AdminPage.ts
  */
 
-import { test as base, expect, Page } from '@playwright/test';
+import { test as base, expect, Page } from './fixtures/chromatic';
 import { AdminHelper } from './pages';
 import { getTextMatcher, t } from './fixtures/i18n';
 

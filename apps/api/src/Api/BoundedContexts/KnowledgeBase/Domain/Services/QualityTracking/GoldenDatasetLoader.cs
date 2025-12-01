@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
+using System.Globalization;
 
 namespace Api.BoundedContexts.KnowledgeBase.Domain.Services.QualityTracking;
 
@@ -155,7 +156,7 @@ public class GoldenDatasetLoader : IGoldenDatasetLoader
                         category: testCase.Category,
                         gameId: game.GameId,
                         annotatedBy: testCase.AnnotatedBy,
-                        annotatedAt: DateTime.TryParse(testCase.AnnotatedAt, out var annotatedDate)
+                        annotatedAt: DateTime.TryParse(testCase.AnnotatedAt, CultureInfo.InvariantCulture, out var annotatedDate)
                             ? annotatedDate
                             : DateTime.UtcNow
                     );

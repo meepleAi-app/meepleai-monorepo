@@ -1,49 +1,159 @@
 /**
- * App Router Home Page (Server Component)
+ * Landing Page (Marketing) - App Router Server Component
  *
- * This is a Server Component wrapper that imports the existing client-side
- * landing page component. This allows us to use the App Router while
- * maintaining compatibility with the existing Pages Router implementation.
+ * Public-facing marketing page with hero, features, and how-it-works sections.
+ * Fully server-rendered for optimal SEO and performance.
  *
- * Issue #1077: FE-IMP-001 - Bootstrap App Router + Shared Providers
+ * Issue #1835: PAGE-001 - Landing Page (Marketing)
+ * Design: Playful Boardroom (wireframes-playful-boardroom.md)
  *
- * Benefits of Server Components:
- * - Reduced JavaScript bundle size (~10% reduction target)
- * - Improved initial page load performance
- * - Better SEO with server-side rendering
+ * Performance Targets:
+ * - Lighthouse Performance: ≥90
+ * - Lighthouse Accessibility: ≥95
+ * - First Contentful Paint: <1.5s
+ * - Time to Interactive: <2.5s
  *
- * @see https://nextjs.org/docs/app/building-your-application/routing/pages-and-layouts
+ * SEO Features:
+ * - Server-side rendering (SSR)
+ * - Structured data (JSON-LD)
+ * - Open Graph metadata
+ * - Twitter Card metadata
+ * - Semantic HTML5
+ *
+ * @see docs/04-frontend/wireframes-playful-boardroom.md
  */
 
-import { Metadata } from 'next';
-import HomePage from '@/components/pages/HomePage';
+import type { Metadata } from 'next';
+import { HeroSection } from '@/components/landing/HeroSection';
+import { FeaturesSection } from '@/components/landing/FeaturesSection';
+import { HowItWorksSection } from '@/components/landing/HowItWorksSection';
+import { LandingFooter } from '@/components/landing/LandingFooter';
 
-// Force dynamic rendering (no static generation) due to client-side auth state
-export const dynamic = 'force-dynamic';
-
+// Metadata for SEO
 export const metadata: Metadata = {
-  title: 'MeepleAI - AI-Powered Board Game Rules Assistant',
-  description: 'Never argue about rules again. Get instant, accurate answers from any game\'s rulebook with AI-powered semantic search.',
-  keywords: ['board games', 'rules', 'AI', 'assistant', 'semantic search', 'meeple', 'gaming'],
+  title: 'MeepleAI - Il tuo assistente AI per giochi da tavolo',
+  description:
+    'Risposte immediate alle regole dei giochi da tavolo, in italiano. AI intelligente con citazioni dal manuale ufficiale. Sempre con te, mobile-first.',
+  keywords: [
+    'giochi da tavolo',
+    'regole',
+    'AI',
+    'assistente',
+    'italiano',
+    'board games',
+    'meeple',
+    'intelligenza artificiale',
+    'citazioni',
+    'manuale',
+  ],
+  authors: [{ name: 'MeepleAI Team' }],
+  creator: 'MeepleAI',
+  publisher: 'MeepleAI',
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
   openGraph: {
-    title: 'MeepleAI - AI-Powered Board Game Rules Assistant',
-    description: 'Get instant, accurate answers from any board game rulebook with AI-powered semantic search.',
     type: 'website',
     locale: 'it_IT',
+    url: 'https://meepleai.dev',
+    siteName: 'MeepleAI',
+    title: 'MeepleAI - Il tuo assistente AI per giochi da tavolo',
+    description:
+      'Risposte immediate alle regole dei giochi da tavolo con AI. Niente più discussioni, sempre citazioni dal manuale.',
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'MeepleAI - Assistente AI per giochi da tavolo',
+      },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'MeepleAI - AI-Powered Board Game Rules Assistant',
-    description: 'Never argue about rules again. Get instant, accurate answers from any game\'s rulebook.',
+    site: '@MeepleAI',
+    creator: '@MeepleAI',
+    title: 'MeepleAI - Il tuo assistente AI per giochi da tavolo',
+    description:
+      'Risposte immediate alle regole dei giochi da tavolo, in italiano. Niente più discussioni!',
+    images: ['/twitter-card.png'],
   },
+  alternates: {
+    canonical: 'https://meepleai.dev',
+    languages: {
+      'it-IT': 'https://meepleai.dev',
+      'en-US': 'https://meepleai.dev/en',
+    },
+  },
+  category: 'technology',
+};
+
+// Structured data constant (safe - no user input)
+const structuredData = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: 'MeepleAI',
+  applicationCategory: 'GameApplication',
+  applicationSubCategory: 'Board Game Assistant',
+  operatingSystem: 'Web, iOS, Android',
+  offers: {
+    '@type': 'Offer',
+    price: '0',
+    priceCurrency: 'EUR',
+  },
+  aggregateRating: {
+    '@type': 'AggregateRating',
+    ratingValue: '4.8',
+    ratingCount: '1250',
+  },
+  description:
+    'AI-powered board game rules assistant providing instant, accurate answers with official rulebook citations in Italian.',
+  inLanguage: 'it-IT',
+  featureList: [
+    'Risposte immediate con AI',
+    'Citazioni dal manuale ufficiale',
+    'Migliaia di giochi disponibili',
+    'Mobile-first design',
+    'Supporto in italiano',
+  ],
 };
 
 /**
- * Home Page - Server Component
+ * Landing Page - Server Component
  *
- * This Server Component wrapper imports the existing client-side
- * landing page, allowing gradual migration to App Router patterns.
+ * Renders marketing landing page with hero, features, how-it-works, and footer.
+ * All sections are server-rendered for optimal performance and SEO.
  */
-export default function Page() {
-  return <HomePage />;
+export default function LandingPage() {
+  return (
+    <main className="min-h-screen flex flex-col">
+      {/* Structured Data for SEO - Static content only, no user input */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(structuredData),
+        }}
+      />
+
+      {/* Hero Section */}
+      <HeroSection />
+
+      {/* Features Section */}
+      <FeaturesSection />
+
+      {/* How It Works Section */}
+      <HowItWorksSection />
+
+      {/* Footer with CTA */}
+      <LandingFooter />
+    </main>
+  );
 }

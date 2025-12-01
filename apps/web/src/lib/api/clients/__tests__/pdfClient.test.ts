@@ -275,9 +275,9 @@ describe('createPdfClient', () => {
 
   describe('Integration Tests', () => {
     it('should handle complete progress tracking workflow', async () => {
-      const mockProgress1 = { status: 'processing', progress: 0.3 };
-      const mockProgress2 = { status: 'processing', progress: 0.7 };
-      const mockProgress3 = { status: 'completed', progress: 1.0 };
+      const mockProgress1 = { status: 'Processing', percentComplete: 30 };
+      const mockProgress2 = { status: 'Processing', percentComplete: 70 };
+      const mockProgress3 = { status: 'Completed', percentComplete: 100 };
 
       mockHttpClient.get
         .mockResolvedValueOnce(mockProgress1)

@@ -6,7 +6,7 @@
  * @see apps/web/e2e/pages/ - Page Object Model architecture
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/chromatic';
 import { ChatHelper } from './pages';
 
 test.describe('Chat Citations Display (#859)', () => {

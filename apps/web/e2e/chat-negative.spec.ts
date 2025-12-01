@@ -15,7 +15,7 @@
  * - Rate limiting enforcement
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/chromatic';
 import { AuthHelper, USER_FIXTURES } from './pages';
 
 test.describe('Chat Negative Scenarios - Issue #1494', () => {

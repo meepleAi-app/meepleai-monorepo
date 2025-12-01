@@ -41,7 +41,7 @@ public static class PdfEndpoints
             // Admin and Editor roles automatically bypass quota checks
             // Regular users are subject to tier-based daily/weekly limits
 
-            var form = await context.Request.ReadFormAsync(ct);
+            var form = await context.Request.ReadFormAsync(ct).ConfigureAwait(false);
             var file = form.Files.GetFile("file");
             var gameId = form["gameId"].ToString();
 
@@ -65,7 +65,7 @@ public static class PdfEndpoints
             // PDF-09: Comprehensive validation (DDD adapter)
             // Validates: magic bytes, file size, MIME type, page count, PDF version
             using var stream = file.OpenReadStream();
-            var validation = await pdfValidator.ValidateAsync(stream, file.FileName, ct);
+            var validation = await pdfValidator.ValidateAsync(stream, file.FileName, ct).ConfigureAwait(false);
 
             if (!validation.IsValid)
             {
@@ -76,7 +76,7 @@ public static class PdfEndpoints
             // Reset stream position for processing
             stream.Position = 0;
 
-            var result = await mediator.Send(new UploadPdfCommand(gameId, userId, file!), ct);
+            var result = await mediator.Send(new UploadPdfCommand(gameId, userId, file!), ct).ConfigureAwait(false);
 
             if (!result.Success)
             {
@@ -113,7 +113,7 @@ public static class PdfEndpoints
 
             var validatedQuery = q!;
 
-            var results = await bggService.SearchGamesAsync(validatedQuery, exact, ct);
+            var results = await bggService.SearchGamesAsync(validatedQuery, exact, ct).ConfigureAwait(false);
             logger.LogInformation("BGG search returned {Count} results for query: {Query}", results.Count, validatedQuery);
             return Results.Json(new { results });
         })
@@ -132,7 +132,7 @@ public static class PdfEndpoints
                 return Results.BadRequest(new { error = "Invalid BGG ID. Must be a positive integer." });
             }
 
-            var details = await bggService.GetGameDetailsAsync(bggId, ct);
+            var details = await bggService.GetGameDetailsAsync(bggId, ct).ConfigureAwait(false);
 
             if (details == null)
             {
@@ -147,7 +147,7 @@ public static class PdfEndpoints
 
         group.MapGet("/games/{gameId:guid}/pdfs", async (Guid gameId, HttpContext context, IMediator mediator, CancellationToken ct) =>
         {
-            var pdfs = await mediator.Send(new GetPdfDocumentsByGameQuery(gameId), ct);
+            var pdfs = await mediator.Send(new GetPdfDocumentsByGameQuery(gameId), ct).ConfigureAwait(false);
             return Results.Json(new { pdfs });
         })
         .RequireSession(); // Issue #1446: Automatic session validation
@@ -155,7 +155,7 @@ public static class PdfEndpoints
         group.MapGet("/pdfs/{pdfId:guid}/text", async (Guid pdfId, HttpContext context, IMediator mediator, CancellationToken ct) =>
         {
             // Use CQRS Query to get PDF text
-            var pdf = await mediator.Send(new GetPdfTextQuery(pdfId), ct);
+            var pdf = await mediator.Send(new GetPdfTextQuery(pdfId), ct).ConfigureAwait(false);
 
             if (pdf == null)
             {
@@ -201,7 +201,7 @@ public static class PdfEndpoints
             }
 
             // Retrieve file from blob storage
-            var fileStream = await blobStorageService.RetrieveAsync(pdf.Id.ToString("N"), pdf.GameId.ToString(), ct);
+            var fileStream = await blobStorageService.RetrieveAsync(pdf.Id.ToString("N"), pdf.GameId.ToString(), ct).ConfigureAwait(false);
 
             if (fileStream == null)
             {
@@ -225,7 +225,7 @@ public static class PdfEndpoints
             var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
 
             // Use CQRS Query to check ownership
-            var pdf = await mediator.Send(new GetPdfOwnershipQuery(pdfId), ct);
+            var pdf = await mediator.Send(new GetPdfOwnershipQuery(pdfId), ct).ConfigureAwait(false);
 
             if (pdf == null)
             {
@@ -262,7 +262,7 @@ public static class PdfEndpoints
             }
 
             // Delete PDF
-            var result = await mediator.Send(new DeletePdfCommand(pdfId.ToString()), ct);
+            var result = await mediator.Send(new DeletePdfCommand(pdfId.ToString()), ct).ConfigureAwait(false);
 
             if (!result.Success)
             {
@@ -295,7 +295,7 @@ public static class PdfEndpoints
             var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
 
             // Use CQRS Query to get PDF progress
-            var pdf = await mediator.Send(new GetPdfProgressQuery(pdfId), ct);
+            var pdf = await mediator.Send(new GetPdfProgressQuery(pdfId), ct).ConfigureAwait(false);
 
             if (pdf == null)
             {
@@ -349,7 +349,7 @@ public static class PdfEndpoints
             var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
 
             // Use CQRS Query to check ownership and status
-            var pdf = await mediator.Send(new GetPdfOwnershipQuery(pdfId), ct);
+            var pdf = await mediator.Send(new GetPdfOwnershipQuery(pdfId), ct).ConfigureAwait(false);
 
             if (pdf == null)
             {
@@ -407,7 +407,7 @@ public static class PdfEndpoints
             try
             {
                 var command = new GenerateRuleSpecFromPdfCommand(pdfId);
-                var ruleSpecDto = await mediator.Send(command, ct);
+                var ruleSpecDto = await mediator.Send(command, ct).ConfigureAwait(false);
 
                 // Convert DTO to Model for backward compatibility
                 var atoms = ruleSpecDto.Atoms.Select(a => new RuleAtom(a.Id, a.Text, a.Section, a.Page, a.Line)).ToList();
@@ -438,7 +438,7 @@ public static class PdfEndpoints
 
             logger.LogInformation("User {UserId} indexing PDF {PdfId}", session.User.Id, pdfId);
 
-            var result = await mediator.Send(new IndexPdfCommand(pdfId.ToString()), ct);
+            var result = await mediator.Send(new IndexPdfCommand(pdfId.ToString()), ct).ConfigureAwait(false);
 
             if (!result.Success)
             {

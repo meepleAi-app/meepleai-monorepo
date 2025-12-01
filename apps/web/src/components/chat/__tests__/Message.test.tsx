@@ -1,50 +1,90 @@
 /**
  * Tests for Message component
  * Auto-generated baseline tests - Issue #992
- * TODO: Enhance with component-specific test cases
+ * NOTE: Comprehensive tests are in __tests__/components/chat/Message.test.tsx
  */
 
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { Message } from '../Message';
+import { Message as MessageType } from '../../../types';
+
+// Mock AuthProvider
+vi.mock('../../../components/auth/AuthProvider', () => ({
+  AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useAuth: () => ({
+    user: { id: '1', email: 'test@example.com', displayName: 'Test User' },
+    loading: false,
+    error: null,
+    login: vi.fn(),
+    register: vi.fn(),
+    logout: vi.fn(),
+    refreshUser: vi.fn(),
+    clearError: vi.fn(),
+  }),
+}));
+
+// Mock ChatProvider context
+const mockUseChatContext = vi.fn();
+vi.mock('../../../components/chat/ChatProvider', () => ({
+  useChatContext: () => mockUseChatContext(),
+}));
+
+const createMessage = (overrides?: Partial<MessageType>): MessageType => ({
+  id: 'msg-1',
+  role: 'user',
+  content: 'Test message',
+  timestamp: new Date('2025-01-10T10:00:00Z'),
+  isDeleted: false,
+  ...overrides,
+});
 
 describe('Message', () => {
+  beforeEach(() => {
+    mockUseChatContext.mockReturnValue({
+      editingMessageId: null,
+      startEditMessage: vi.fn(),
+      deleteMessage: vi.fn(),
+      setMessageFeedback: vi.fn(),
+      loading: { sending: false, updating: false, deleting: false },
+      setInputValue: vi.fn(),
+    });
+  });
+
   describe('Rendering', () => {
     it('should render without crashing', () => {
-      render(<Message children={<div>Test Content</div>} />);
-      expect(screen.getByRole('region')).toBeInTheDocument();
+      const message = createMessage();
+      render(<Message message={message} isUser={true} />);
+      expect(screen.getByLabelText('Your message')).toBeInTheDocument();
     });
 
     it('should render with default props', () => {
-      const { container } = render(<Message children={<div>Test Content</div>} />);
+      const message = createMessage();
+      const { container } = render(<Message message={message} isUser={true} />);
       expect(container.firstChild).toBeInTheDocument();
     });
   });
 
   describe('Props', () => {
     it('should accept and render with custom props', () => {
-      // TODO: Add specific prop tests based on MessageProps
-      render(<Message children={<div>Test Content</div>} />);
-      expect(screen.getByRole('region')).toBeInTheDocument();
+      const message = createMessage({ content: 'Custom content' });
+      render(<Message message={message} isUser={false} />);
+      expect(screen.getByText('Custom content')).toBeInTheDocument();
     });
   });
 
   describe('Interactions', () => {
-    it('should handle user interactions', async () => {
-      const user = userEvent.setup();
-      render(<Message children={<div>Test Content</div>} />);
-
-      // TODO: Add interaction tests (click, input, etc.)
-      // Example: await user.click(screen.getByRole('button'));
+    it('should display message content', () => {
+      const message = createMessage({ content: 'Test interaction content' });
+      render(<Message message={message} isUser={true} />);
+      expect(screen.getByText('Test interaction content')).toBeInTheDocument();
     });
   });
 
   describe('Accessibility', () => {
-    it('should have accessible role', () => {
-      render(<Message children={<div>Test Content</div>} />);
-      expect(screen.getByRole('region')).toBeInTheDocument();
+    it('should have accessible label for user messages', () => {
+      const message = createMessage();
+      render(<Message message={message} isUser={true} />);
+      expect(screen.getByLabelText('Your message')).toBeInTheDocument();
     });
-
-    // TODO: Add more a11y tests (aria-labels, keyboard navigation, etc.)
   });
 });

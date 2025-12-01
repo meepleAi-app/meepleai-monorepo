@@ -30,7 +30,7 @@ public static class ApiKeyEndpoints
             var command = new Api.BoundedContexts.Authentication.Application.Commands.CreateApiKeyManagementCommand(
                 session.User.Id,
                 request);
-            var result = await mediator.Send(command, ct);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
             logger.LogInformation("API key '{KeyId}' created for user {UserId}", result.ApiKey.Id, session.User.Id);
 
@@ -48,7 +48,7 @@ public static class ApiKeyEndpoints
                 includeRevoked,
                 page,
                 pageSize);
-            var result = await mediator.Send(query, ct);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
             return Results.Json(result);
         })
         .RequireSession(); // Issue #1446: Automatic session validation
@@ -59,7 +59,7 @@ public static class ApiKeyEndpoints
             var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
 
             var query = new Api.BoundedContexts.Authentication.Application.Queries.GetApiKeyQuery(keyId, session.User.Id);
-            var apiKey = await mediator.Send(query, ct);
+            var apiKey = await mediator.Send(query, ct).ConfigureAwait(false);
 
             if (apiKey == null)
             {
@@ -82,7 +82,7 @@ public static class ApiKeyEndpoints
                 keyId,
                 session.User.Id,
                 request);
-            var updated = await mediator.Send(command, ct);
+            var updated = await mediator.Send(command, ct).ConfigureAwait(false);
 
             if (updated == null)
             {
@@ -103,7 +103,7 @@ public static class ApiKeyEndpoints
             logger.LogInformation("User {UserId} revoking API key {KeyId}", session.User.Id, keyId);
 
             var command = new Api.BoundedContexts.Authentication.Application.Commands.RevokeApiKeyManagementCommand(keyId, session.User.Id);
-            var success = await mediator.Send(command, ct);
+            var success = await mediator.Send(command, ct).ConfigureAwait(false);
 
             if (!success)
             {
@@ -127,7 +127,7 @@ public static class ApiKeyEndpoints
                 keyId,
                 session.User.Id,
                 request ?? new RotateApiKeyRequest());
-            var result = await mediator.Send(command, ct);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
             if (result == null)
             {
@@ -146,7 +146,7 @@ public static class ApiKeyEndpoints
             var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
 
             var query = new Api.BoundedContexts.Authentication.Application.Queries.GetApiKeyUsageQuery(keyId, session.User.Id);
-            var usage = await mediator.Send(query, ct);
+            var usage = await mediator.Send(query, ct).ConfigureAwait(false);
 
             if (usage == null)
             {
@@ -167,7 +167,7 @@ public static class ApiKeyEndpoints
             logger.LogInformation("Admin {AdminId} permanently deleting API key {KeyId}", session.User.Id, keyId);
 
             var command = new Api.BoundedContexts.Authentication.Application.Commands.DeleteApiKeyCommand(keyId, session.User.Id);
-            var success = await mediator.Send(command, ct);
+            var success = await mediator.Send(command, ct).ConfigureAwait(false);
 
             if (!success)
             {

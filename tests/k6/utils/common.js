@@ -15,9 +15,9 @@ export function loadConfig() {
   const defaultConfig = {
     apiBaseUrl: __ENV.API_BASE_URL || 'http://localhost:8080',
     testUser: {
-      // Issue #1663: Use demo user credentials (matches Postman/Newman tests)
-      email: __ENV.TEST_USER_EMAIL || 'user@meepleai.dev',
-      password: __ENV.TEST_USER_PASSWORD || 'Demo123!',
+      // Test credentials - users should be created programmatically in test setup
+      email: __ENV.TEST_USER_EMAIL || 'k6-test-user@example.com',
+      password: __ENV.TEST_USER_PASSWORD || 'K6TestPassword123!',
     },
     testGameId: __ENV.TEST_GAME_ID || '00000000-0000-0000-0000-000000000001',
     reportDir: __ENV.REPORT_DIR || './reports',

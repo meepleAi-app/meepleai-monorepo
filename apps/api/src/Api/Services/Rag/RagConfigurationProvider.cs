@@ -1,6 +1,7 @@
 using Api.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using System.Globalization;
 
 namespace Api.Services.Rag;
 
@@ -33,7 +34,7 @@ public class RagConfigurationProvider : IRagConfigurationProvider
         // 1. Try database via ConfigurationService
         if (_configurationService != null)
         {
-            var dbValue = await _configurationService.GetValueAsync<T?>($"RAG.{configKey}");
+            var dbValue = await _configurationService.GetValueAsync<T?>($"RAG.{configKey}").ConfigureAwait(false);
             if (dbValue.HasValue)
             {
                 var validated = ValidateRagConfig(dbValue.Value, configKey);
@@ -65,7 +66,7 @@ public class RagConfigurationProvider : IRagConfigurationProvider
     /// </summary>
     private T ValidateRagConfig<T>(T value, string configKey) where T : struct
     {
-        var numericValue = Convert.ToDouble(value);
+        var numericValue = Convert.ToDouble(value, CultureInfo.InvariantCulture);
         bool isValid = configKey switch
         {
             "TopK" => numericValue >= 1 && numericValue <= 50,

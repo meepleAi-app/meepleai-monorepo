@@ -20,7 +20,7 @@
  * @see apps/web/e2e/pages/ - Page Object Model architecture
  */
 
-import { test as base, expect, Page, Route } from '@playwright/test';
+import { test as base, expect, Page, Route } from './fixtures/chromatic';
 import { AdminHelper } from './pages';
 import { PromptManagementPage } from './pages/admin/AdminPage';
 

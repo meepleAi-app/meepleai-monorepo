@@ -26,7 +26,7 @@ public static class GameEndpoints
             // User authenticated via session OR API key (RequireAuthenticatedUserFilter)
 
             var query = new GetAllGamesQuery();
-            var result = await mediator.Send(query, ct);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
 
             return Results.Ok(result);
         })
@@ -42,7 +42,7 @@ public static class GameEndpoints
             // User authenticated via session OR API key (RequireAuthenticatedUserFilter)
 
             var query = new GetGameByIdQuery(id);
-            var result = await mediator.Send(query, ct);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
 
             return result != null ? Results.Ok(result) : Results.NotFound();
         })
@@ -59,7 +59,7 @@ public static class GameEndpoints
             // User authenticated via session OR API key (RequireAuthenticatedUserFilter)
 
             var query = new GetGameDetailsQuery(id);
-            var result = await mediator.Send(query, ct);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
 
             return result != null ? Results.Ok(result) : Results.NotFound();
         })
@@ -76,7 +76,7 @@ public static class GameEndpoints
             // User authenticated via session OR API key (RequireAuthenticatedUserFilter)
 
             var query = new GetRuleSpecsQuery(id);
-            var result = await mediator.Send(query, ct);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
 
             return Results.Ok(result);
         })
@@ -104,7 +104,7 @@ public static class GameEndpoints
                 MaxPlayTimeMinutes: request.MaxPlayTimeMinutes
             );
 
-            var result = await mediator.Send(command, ct);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
             logger.LogInformation("Created game {GameId} via DDD/CQRS", result.Id);
             return Results.Created($"/api/v1/games/{result.Id}", result);
         });
@@ -132,7 +132,7 @@ public static class GameEndpoints
                 MaxPlayTimeMinutes: request.MaxPlayTimeMinutes
             );
 
-            var result = await mediator.Send(command, ct);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
             return Results.Ok(result);
         });
 
@@ -155,7 +155,7 @@ public static class GameEndpoints
                 Players: request.Players
             );
 
-            var result = await mediator.Send(command, ct);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
             logger.LogInformation("Started game session {SessionId} for game {GameId}", result.Id, result.GameId);
             return Results.Created($"/api/v1/sessions/{result.Id}", result);
         })
@@ -179,7 +179,7 @@ public static class GameEndpoints
                 Color: request.Color
             );
 
-            var result = await mediator.Send(command, ct);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
             logger.LogInformation("Added player {PlayerName} to session {SessionId}", request.PlayerName, id);
             return Results.Ok(result);
         })
@@ -200,7 +200,7 @@ public static class GameEndpoints
                 WinnerName: request?.WinnerName
             );
 
-            var result = await mediator.Send(command, ct);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
             return Results.Ok(result);
         })
         .RequireSession(); // Issue #1446: Automatic session validation
@@ -219,7 +219,7 @@ public static class GameEndpoints
                 Reason: null
             );
 
-            var result = await mediator.Send(command, ct);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
             return Results.Ok(result);
         })
         .RequireSession(); // Issue #1446: Automatic session validation
@@ -234,7 +234,7 @@ public static class GameEndpoints
             // User authenticated via session OR API key (RequireAuthenticatedUserFilter)
 
             var query = new GetGameSessionByIdQuery(id);
-            var result = await mediator.Send(query, ct);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
 
             return result != null ? Results.Ok(result) : Results.NotFound();
         })
@@ -250,7 +250,7 @@ public static class GameEndpoints
             // User authenticated via session OR API key (RequireAuthenticatedUserFilter)
 
             var query = new GetActiveSessionsByGameQuery(gameId);
-            var result = await mediator.Send(query, ct);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
 
             return Results.Ok(result);
         })
@@ -266,7 +266,7 @@ public static class GameEndpoints
             // Session validated by RequireSessionFilter
 
             var command = new PauseGameSessionCommand(SessionId: id);
-            var result = await mediator.Send(command, ct);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
             return Results.Ok(result);
         })
@@ -282,7 +282,7 @@ public static class GameEndpoints
             // Session validated by RequireSessionFilter
 
             var command = new ResumeGameSessionCommand(SessionId: id);
-            var result = await mediator.Send(command, ct);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
             return Results.Ok(result);
         })
@@ -303,7 +303,7 @@ public static class GameEndpoints
                 WinnerName: request?.WinnerName
             );
 
-            var result = await mediator.Send(command, ct);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
             return Results.Ok(result);
         })
         .RequireSession(); // Issue #1446: Automatic session validation
@@ -319,7 +319,7 @@ public static class GameEndpoints
             // User authenticated via session OR API key (RequireAuthenticatedUserFilter)
 
             var query = new GetActiveSessionsQuery(Limit: limit, Offset: offset);
-            var result = await mediator.Send(query, ct);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
 
             return Results.Ok(result);
         })
@@ -346,7 +346,7 @@ public static class GameEndpoints
                 Offset: offset
             );
 
-            var result = await mediator.Send(query, ct);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
             return Results.Ok(result);
         })
         .RequireAuthenticatedUser(); // Issue #1446: Dual authentication (session OR API key)
@@ -376,7 +376,7 @@ public static class GameEndpoints
                 TopPlayersLimit: topPlayersLimit
             );
 
-            var result = await mediator.Send(query, ct);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
             return Results.Ok(result);
         })
         .RequireAuthenticatedUser(); // Issue #1446: Dual authentication (session OR API key)

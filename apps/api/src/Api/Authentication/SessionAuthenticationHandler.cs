@@ -68,7 +68,7 @@ public class SessionAuthenticationHandler : AuthenticationHandler<Authentication
         {
             // Validate session via DDD CQRS ValidateSessionQuery (same logic as SessionAuthenticationMiddleware)
             var query = new ValidateSessionQuery(SessionToken: token);
-            var result = await _mediator.Send(query);
+            var result = await _mediator.Send(query).ConfigureAwait(false);
 
             if (!result.IsValid || result.User == null)
             {

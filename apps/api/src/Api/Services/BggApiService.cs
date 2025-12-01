@@ -57,7 +57,7 @@ public class BggApiService : IBggApiService
             async cancel =>
             {
                 _logger.LogInformation("BGG search cache miss for query: {Query}", query);
-                return await FetchSearchResultsAsync(query, exact, cancel);
+                return await FetchSearchResultsAsync(query, exact, cancel).ConfigureAwait(false);
             },
             new HybridCacheEntryOptions
             {
@@ -85,7 +85,7 @@ public class BggApiService : IBggApiService
             async cancel =>
             {
                 _logger.LogInformation("BGG game details cache miss for ID: {BggId}", bggId);
-                return await FetchGameDetailsAsync(bggId, cancel);
+                return await FetchGameDetailsAsync(bggId, cancel).ConfigureAwait(false);
             },
             new HybridCacheEntryOptions
             {
@@ -124,10 +124,10 @@ public class BggApiService : IBggApiService
             _logger.LogInformation("Fetching BGG search results from: {Url}", url);
 
             // CODE-01: Dispose HttpResponseMessage to prevent resource leak (CWE-404)
-            using var response = await _httpClient.GetAsync(url, ct);
+            using var response = await _httpClient.GetAsync(url, ct).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
 
-            var xmlContent = await response.Content.ReadAsStringAsync(ct);
+            var xmlContent = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             var doc = XDocument.Parse(xmlContent);
 
             var results = doc.Root?
@@ -180,10 +180,10 @@ public class BggApiService : IBggApiService
             _logger.LogInformation("Fetching BGG game details from: {Url}", url);
 
             // CODE-01: Dispose HttpResponseMessage to prevent resource leak (CWE-404)
-            using var response = await _httpClient.GetAsync(url, ct);
+            using var response = await _httpClient.GetAsync(url, ct).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
 
-            var xmlContent = await response.Content.ReadAsStringAsync(ct);
+            var xmlContent = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             var doc = XDocument.Parse(xmlContent);
 
             var item = doc.Root?.Element("item");

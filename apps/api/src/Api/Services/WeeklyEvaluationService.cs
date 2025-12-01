@@ -114,13 +114,13 @@ public class WeeklyEvaluationService : BackgroundService
         // Wait before first run to allow application to fully start
         var initialDelay = TimeSpan.FromMinutes(_config.InitialDelayMinutes);
         _logger.LogInformation("Waiting {Minutes} minutes before first evaluation", _config.InitialDelayMinutes);
-        await Task.Delay(initialDelay, _timeProvider, stoppingToken);
+        await Task.Delay(initialDelay, _timeProvider, stoppingToken).ConfigureAwait(false);
 
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
-                await RunWeeklyEvaluationAsync(stoppingToken);
+                await RunWeeklyEvaluationAsync(stoppingToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -141,7 +141,7 @@ public class WeeklyEvaluationService : BackgroundService
             // Wait for the configured interval before next run
             var interval = TimeSpan.FromDays(_config.IntervalDays);
             _logger.LogInformation("Next weekly evaluation in {Days} days", _config.IntervalDays);
-            await Task.Delay(interval, _timeProvider, stoppingToken);
+            await Task.Delay(interval, _timeProvider, stoppingToken).ConfigureAwait(false);
         }
 
         _logger.LogInformation("Weekly evaluation service stopped");
@@ -166,17 +166,17 @@ public class WeeklyEvaluationService : BackgroundService
             startDate, endDate);
 
         // 1. Generate quality report using CQRS query
-        var qualityReport = await GenerateQualityReportAsync(mediator, startDate, endDate, cancellationToken);
+        var qualityReport = await GenerateQualityReportAsync(mediator, startDate, endDate, cancellationToken).ConfigureAwait(false);
 
         // 2. Optionally run RAG evaluation if enabled and dataset available
         RagEvaluationReport? ragReport = null;
         if (_config.EnableRagEvaluation && !string.IsNullOrWhiteSpace(_config.RagDatasetPath))
         {
-            ragReport = await RunRagEvaluationAsync(scope.ServiceProvider, cancellationToken);
+            ragReport = await RunRagEvaluationAsync(scope.ServiceProvider, cancellationToken).ConfigureAwait(false);
         }
 
         // 3. Check quality thresholds and generate alerts if needed
-        await CheckQualityThresholdsAsync(mediator, qualityReport, ragReport, cancellationToken);
+        await CheckQualityThresholdsAsync(mediator, qualityReport, ragReport, cancellationToken).ConfigureAwait(false);
 
         // 4. Log summary
         LogEvaluationSummary(qualityReport, ragReport);
@@ -202,7 +202,7 @@ public class WeeklyEvaluationService : BackgroundService
             Days = _config.ReportWindowDays
         };
 
-        var report = await mediator.Send(query, cancellationToken);
+        var report = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Quality report generated: {TotalResponses} responses, {LowQualityPercentage:F2}% low-quality",
@@ -231,7 +231,7 @@ public class WeeklyEvaluationService : BackgroundService
             }
 
             // Load dataset
-            var dataset = await ragService.LoadDatasetAsync(_config.RagDatasetPath!, cancellationToken);
+            var dataset = await ragService.LoadDatasetAsync(_config.RagDatasetPath!, cancellationToken).ConfigureAwait(false);
 
             // Run evaluation
             var report = await ragService.EvaluateAsync(
@@ -316,14 +316,14 @@ public class WeeklyEvaluationService : BackgroundService
                     { "LowQualityPercentage", qualityReport.LowQualityPercentage }
                 }
             );
-            await mediator.Send(alertCommand, cancellationToken);
+            await mediator.Send(alertCommand, cancellationToken).ConfigureAwait(false);
         }
         else
         {
             _logger.LogInformation("All quality thresholds passed");
         }
 
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
     }
 
     /// <summary>

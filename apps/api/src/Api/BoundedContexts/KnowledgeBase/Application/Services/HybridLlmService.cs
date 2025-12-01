@@ -9,6 +9,7 @@ using Api.Configuration;
 using Api.Services;
 using Api.Services.LlmClients;
 using Microsoft.Extensions.Options;
+using System.Globalization;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
 
@@ -83,7 +84,7 @@ public class HybridLlmService : ILlmService
 
         if (!_clients.Any())
         {
-            throw new ArgumentNullException("At least one ILlmClient must be registered");
+            throw new ArgumentException("At least one ILlmClient must be registered", nameof(clients));
         }
 
         // ISSUE-962: Initialize circuit breakers and latency stats for each provider
@@ -487,7 +488,7 @@ public class HybridLlmService : ILlmService
             metadata["routing_decision"] = decision.Reason;
             metadata["selected_provider"] = client.ProviderName;
             metadata["selected_model"] = decision.ModelId;
-            metadata["latency_ms"] = latencyMs.ToString();
+            metadata["latency_ms"] = latencyMs.ToString(CultureInfo.InvariantCulture);
             metadata["circuit_state"] = GetCircuitState(client.ProviderName);
         }
     }

@@ -44,10 +44,10 @@ public abstract class DomainEventHandlerBase<TEvent> : INotificationHandler<TEve
                 notification.OccurredAt);
 
             // Create audit log entry
-            await CreateAuditLogAsync(notification, cancellationToken);
+            await CreateAuditLogAsync(notification, cancellationToken).ConfigureAwait(false);
 
             // Execute derived handler logic
-            await HandleEventAsync(notification, cancellationToken);
+            await HandleEventAsync(notification, cancellationToken).ConfigureAwait(false);
 
             Logger.LogInformation(
                 "Successfully handled domain event {EventType} with ID {EventId}",
@@ -106,6 +106,6 @@ public abstract class DomainEventHandlerBase<TEvent> : INotificationHandler<TEve
         };
 
         _dbContext.AuditLogs.Add(auditLog);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 }

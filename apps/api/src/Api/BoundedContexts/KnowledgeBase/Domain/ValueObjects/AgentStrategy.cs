@@ -1,5 +1,7 @@
 namespace Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 
+using System.Globalization;
+
 /// <summary>
 /// Value object representing the execution strategy for an AI agent.
 /// </summary>
@@ -136,7 +138,7 @@ public sealed record AgentStrategy
         {
             try
             {
-                return (T)Convert.ChangeType(value, typeof(T));
+                return (T)Convert.ChangeType(value, typeof(T), CultureInfo.InvariantCulture);
             }
             catch
             {

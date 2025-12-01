@@ -10,7 +10,7 @@
 import type { Mock } from 'vitest';
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { ExportChatModal } from '../../components/ExportChatModal';
+import { ExportChatModal } from '../../components/modals/ExportChatModal';
 import { api, ExportFormat } from '@/lib/api';
 
 // Mock API
@@ -277,7 +277,9 @@ describe('ExportChatModal Component', () => {
       const exportButton = screen.getByRole('button', { name: /esporta/i });
       fireEvent.click(exportButton);
 
-      expect(await screen.findByText('La data iniziale deve essere precedente alla data finale.')).toBeInTheDocument();
+      expect(
+        await screen.findByText('La data iniziale deve essere precedente alla data finale.')
+      ).toBeInTheDocument();
       expect(mockApi.chat.exportChat).not.toHaveBeenCalled();
     });
 
@@ -298,7 +300,9 @@ describe('ExportChatModal Component', () => {
       const exportButton = screen.getByRole('button', { name: /esporta/i });
       fireEvent.click(exportButton);
 
-      expect(await screen.findByText(/Errore durante l'esportazione della chat/)).toBeInTheDocument();
+      expect(
+        await screen.findByText(/Errore durante l'esportazione della chat/)
+      ).toBeInTheDocument();
     });
 
     it('does not close modal when export fails', async () => {

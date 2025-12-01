@@ -10,6 +10,21 @@ import userEvent from '@testing-library/user-event';
 import { AgentSelector } from '../../../components/chat/AgentSelector';
 import { sampleAgents } from './AgentSelector.test-helpers';
 
+// Mock AuthProvider
+vi.mock('@/components/auth/AuthProvider', () => ({
+  AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useAuth: () => ({
+    user: { id: '1', email: 'test@example.com', displayName: 'Test User' },
+    loading: false,
+    error: null,
+    login: vi.fn(),
+    register: vi.fn(),
+    logout: vi.fn(),
+    refreshUser: vi.fn(),
+    clearError: vi.fn(),
+  }),
+}));
+
 // Mock the ChatProvider context
 const mockUseChatContext = vi.fn();
 vi.mock('../../../components/chat/ChatProvider', () => ({
@@ -95,7 +110,12 @@ describe('AgentSelector - Interactions and Edge Cases', () => {
       await user.click(option1);
 
       // Update context to reflect selection
-      setupMockContext({ selectedGameId: 'game-1', agents, selectAgent, selectedAgentId: 'agent-1' });
+      setupMockContext({
+        selectedGameId: 'game-1',
+        agents,
+        selectAgent,
+        selectedAgentId: 'agent-1',
+      });
       rerender(<AgentSelector />);
 
       // Second selection
@@ -141,7 +161,11 @@ describe('AgentSelector - Interactions and Edge Cases', () => {
     });
 
     it('has correct aria-busy attribute', () => {
-      setupMockContext({ selectedGameId: 'game-1', agents: sampleAgents.single, loading: { agents: false } });
+      setupMockContext({
+        selectedGameId: 'game-1',
+        agents: sampleAgents.single,
+        loading: { agents: false },
+      });
       render(<AgentSelector />);
 
       const select = screen.getByRole('combobox');
@@ -219,7 +243,11 @@ describe('AgentSelector - Interactions and Edge Cases', () => {
       expect(screen.getByTestId('skeleton-loader')).toBeInTheDocument();
 
       // Load agents
-      setupMockContext({ selectedGameId: 'game-1', agents: sampleAgents.single, loading: { agents: false } });
+      setupMockContext({
+        selectedGameId: 'game-1',
+        agents: sampleAgents.single,
+        loading: { agents: false },
+      });
       rerender(<AgentSelector />);
 
       expect(screen.queryByTestId('skeleton-loader')).not.toBeInTheDocument();

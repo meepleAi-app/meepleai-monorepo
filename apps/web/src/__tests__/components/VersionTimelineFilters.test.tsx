@@ -1,6 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { VersionTimelineFilters } from '../../components/VersionTimelineFilters';
+import { VersionTimelineFilters } from '../../components/versioning/VersionTimelineFilters';
 
 describe('VersionTimelineFilters', () => {
   const mockAuthors = ['User One', 'User Two', 'User Three'];

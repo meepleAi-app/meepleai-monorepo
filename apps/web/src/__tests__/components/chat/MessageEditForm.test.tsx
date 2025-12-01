@@ -12,7 +12,22 @@ import React from 'react';
 
 // Mock ChatProvider context
 vi.mock('@/components/chat/ChatProvider', () => ({
-  useChatContext: vi.fn()
+  useChatContext: vi.fn(),
+}));
+
+// Mock AuthProvider
+vi.mock('@/components/auth/AuthProvider', () => ({
+  AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useAuth: () => ({
+    user: { id: '1', email: 'test@example.com', displayName: 'Test User' },
+    loading: false,
+    error: null,
+    login: vi.fn(),
+    register: vi.fn(),
+    logout: vi.fn(),
+    refreshUser: vi.fn(),
+    clearError: vi.fn(),
+  }),
 }));
 
 import { useChatContext } from '@/components/chat/ChatProvider';
@@ -33,8 +48,8 @@ describe('MessageEditForm', () => {
       sending: false,
       creating: false,
       updating: false,
-      deleting: false
-    }
+      deleting: false,
+    },
   };
 
   beforeEach(() => {
@@ -57,7 +72,7 @@ describe('MessageEditForm', () => {
     it('returns null when editingMessageId is null', () => {
       mockUseChatContext.mockReturnValue({
         ...defaultContextValue,
-        editingMessageId: null
+        editingMessageId: null,
       } as ChatContextValue);
 
       const { container } = render(<MessageEditForm />);
@@ -67,7 +82,7 @@ describe('MessageEditForm', () => {
     it('displays current edit content in textarea', () => {
       mockUseChatContext.mockReturnValue({
         ...defaultContextValue,
-        editContent: 'My edited message'
+        editContent: 'My edited message',
       } as ChatContextValue);
 
       render(<MessageEditForm />);
@@ -85,8 +100,8 @@ describe('MessageEditForm', () => {
         ...defaultContextValue,
         loading: {
           ...defaultContextValue.loading!,
-          updating: true
-        }
+          updating: true,
+        },
       } as ChatContextValue);
 
       render(<MessageEditForm />);
@@ -107,7 +122,7 @@ describe('MessageEditForm', () => {
       mockUseChatContext.mockReturnValue({
         ...defaultContextValue,
         setEditContent,
-        editContent: ''
+        editContent: '',
       } as ChatContextValue);
 
       render(<MessageEditForm />);
@@ -123,7 +138,7 @@ describe('MessageEditForm', () => {
 
       mockUseChatContext.mockReturnValue({
         ...defaultContextValue,
-        editContent: 'Updated content'
+        editContent: 'Updated content',
       } as ChatContextValue);
 
       rerender(<MessageEditForm />);
@@ -138,7 +153,7 @@ describe('MessageEditForm', () => {
       mockUseChatContext.mockReturnValue({
         ...defaultContextValue,
         setEditContent,
-        editContent: ''
+        editContent: '',
       } as ChatContextValue);
 
       render(<MessageEditForm />);
@@ -154,8 +169,8 @@ describe('MessageEditForm', () => {
         ...defaultContextValue,
         loading: {
           ...defaultContextValue.loading!,
-          updating: true
-        }
+          updating: true,
+        },
       } as ChatContextValue);
 
       render(<MessageEditForm />);
@@ -170,7 +185,7 @@ describe('MessageEditForm', () => {
       const saveEdit = vi.fn(async () => {});
       mockUseChatContext.mockReturnValue({
         ...defaultContextValue,
-        saveEdit
+        saveEdit,
       } as ChatContextValue);
 
       render(<MessageEditForm />);
@@ -185,7 +200,7 @@ describe('MessageEditForm', () => {
     it('disables save button when content is empty', () => {
       mockUseChatContext.mockReturnValue({
         ...defaultContextValue,
-        editContent: ''
+        editContent: '',
       } as ChatContextValue);
 
       render(<MessageEditForm />);
@@ -196,7 +211,7 @@ describe('MessageEditForm', () => {
     it('disables save button when content is only whitespace', () => {
       mockUseChatContext.mockReturnValue({
         ...defaultContextValue,
-        editContent: '   \n   '
+        editContent: '   \n   ',
       } as ChatContextValue);
 
       render(<MessageEditForm />);
@@ -207,7 +222,7 @@ describe('MessageEditForm', () => {
     it('enables save button when content has non-whitespace characters', () => {
       mockUseChatContext.mockReturnValue({
         ...defaultContextValue,
-        editContent: '  a  '
+        editContent: '  a  ',
       } as ChatContextValue);
 
       render(<MessageEditForm />);
@@ -220,8 +235,8 @@ describe('MessageEditForm', () => {
         ...defaultContextValue,
         loading: {
           ...defaultContextValue.loading!,
-          updating: true
-        }
+          updating: true,
+        },
       } as ChatContextValue);
 
       render(<MessageEditForm />);
@@ -239,7 +254,7 @@ describe('MessageEditForm', () => {
       const cancelEdit = vi.fn();
       mockUseChatContext.mockReturnValue({
         ...defaultContextValue,
-        cancelEdit
+        cancelEdit,
       } as ChatContextValue);
 
       render(<MessageEditForm />);
@@ -254,8 +269,8 @@ describe('MessageEditForm', () => {
         ...defaultContextValue,
         loading: {
           ...defaultContextValue.loading!,
-          updating: true
-        }
+          updating: true,
+        },
       } as ChatContextValue);
 
       render(<MessageEditForm />);
@@ -321,7 +336,7 @@ describe('MessageEditForm', () => {
       mockUseChatContext.mockReturnValue({
         ...defaultContextValue,
         editContent: '',
-        setEditContent
+        setEditContent,
       } as ChatContextValue);
 
       render(<MessageEditForm />);
@@ -336,7 +351,7 @@ describe('MessageEditForm', () => {
       const specialChars = '<script>alert("test")</script>';
       mockUseChatContext.mockReturnValue({
         ...defaultContextValue,
-        editContent: specialChars
+        editContent: specialChars,
       } as ChatContextValue);
 
       render(<MessageEditForm />);
@@ -349,7 +364,7 @@ describe('MessageEditForm', () => {
       const saveEdit = vi.fn(async () => {});
       mockUseChatContext.mockReturnValue({
         ...defaultContextValue,
-        saveEdit
+        saveEdit,
       } as ChatContextValue);
 
       render(<MessageEditForm />);
@@ -368,7 +383,7 @@ describe('MessageEditForm', () => {
       const cancelEdit = vi.fn();
       mockUseChatContext.mockReturnValue({
         ...defaultContextValue,
-        cancelEdit
+        cancelEdit,
       } as ChatContextValue);
 
       render(<MessageEditForm />);

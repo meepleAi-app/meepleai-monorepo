@@ -11,7 +11,7 @@
 
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ErrorModal } from '../ErrorModal';
+import { ErrorModal } from '../modals/ErrorModal';
 import {
   createApiError,
   createNetworkError,
@@ -19,7 +19,7 @@ import {
   HTTP_STATUS,
   isRetryableError,
   createMockCallbacks,
-  defaultModalProps
+  defaultModalProps,
 } from './ErrorModal.test-helpers';
 
 describe('ErrorModal - Interactions and Accessibility', () => {
@@ -134,13 +134,7 @@ describe('ErrorModal - Interactions and Accessibility', () => {
     it('should not show retry button when onRetry is not provided', () => {
       const error = createNetworkError();
 
-      render(
-        <ErrorModal
-          {...defaultModalProps}
-          onClose={mockCallbacks.onClose}
-          error={error}
-        />
-      );
+      render(<ErrorModal {...defaultModalProps} onClose={mockCallbacks.onClose} error={error} />);
 
       expect(screen.queryByRole('button', { name: /retry/i })).not.toBeInTheDocument();
     });
@@ -151,13 +145,7 @@ describe('ErrorModal - Interactions and Accessibility', () => {
       const user = userEvent.setup();
       const error = new Error('Test error');
 
-      render(
-        <ErrorModal
-          {...defaultModalProps}
-          onClose={mockCallbacks.onClose}
-          error={error}
-        />
-      );
+      render(<ErrorModal {...defaultModalProps} onClose={mockCallbacks.onClose} error={error} />);
 
       const closeButton = screen.getByRole('button', { name: /close/i });
       await user.click(closeButton);
@@ -170,11 +158,7 @@ describe('ErrorModal - Interactions and Accessibility', () => {
       const error = new Error('Test error');
 
       const { container } = render(
-        <ErrorModal
-          {...defaultModalProps}
-          onClose={mockCallbacks.onClose}
-          error={error}
-        />
+        <ErrorModal {...defaultModalProps} onClose={mockCallbacks.onClose} error={error} />
       );
 
       // Find backdrop by its class
@@ -190,13 +174,7 @@ describe('ErrorModal - Interactions and Accessibility', () => {
       const user = userEvent.setup();
       const error = new Error('Test error');
 
-      render(
-        <ErrorModal
-          {...defaultModalProps}
-          onClose={mockCallbacks.onClose}
-          error={error}
-        />
-      );
+      render(<ErrorModal {...defaultModalProps} onClose={mockCallbacks.onClose} error={error} />);
 
       await user.keyboard('{Escape}');
 
@@ -206,13 +184,7 @@ describe('ErrorModal - Interactions and Accessibility', () => {
     it('should prevent body scroll when modal is open', () => {
       const error = new Error('Test error');
 
-      render(
-        <ErrorModal
-          {...defaultModalProps}
-          onClose={mockCallbacks.onClose}
-          error={error}
-        />
-      );
+      render(<ErrorModal {...defaultModalProps} onClose={mockCallbacks.onClose} error={error} />);
 
       expect(document.body.style.overflow).toBe('hidden');
     });
@@ -221,22 +193,12 @@ describe('ErrorModal - Interactions and Accessibility', () => {
       const error = new Error('Test error');
 
       const { rerender } = render(
-        <ErrorModal
-          {...defaultModalProps}
-          onClose={mockCallbacks.onClose}
-          error={error}
-        />
+        <ErrorModal {...defaultModalProps} onClose={mockCallbacks.onClose} error={error} />
       );
 
       expect(document.body.style.overflow).toBe('hidden');
 
-      rerender(
-        <ErrorModal
-          isOpen={false}
-          onClose={mockCallbacks.onClose}
-          error={error}
-        />
-      );
+      rerender(<ErrorModal isOpen={false} onClose={mockCallbacks.onClose} error={error} />);
 
       expect(document.body.style.overflow).toBe('unset');
     });
@@ -245,13 +207,7 @@ describe('ErrorModal - Interactions and Accessibility', () => {
       const user = userEvent.setup();
       const error = new Error('Test error');
 
-      render(
-        <ErrorModal
-          {...defaultModalProps}
-          onClose={mockCallbacks.onClose}
-          error={error}
-        />
-      );
+      render(<ErrorModal {...defaultModalProps} onClose={mockCallbacks.onClose} error={error} />);
 
       await user.keyboard('{Escape}');
       await user.keyboard('{Escape}');
@@ -265,11 +221,7 @@ describe('ErrorModal - Interactions and Accessibility', () => {
       const error = new Error('Test error');
 
       const { unmount } = render(
-        <ErrorModal
-          {...defaultModalProps}
-          onClose={mockCallbacks.onClose}
-          error={error}
-        />
+        <ErrorModal {...defaultModalProps} onClose={mockCallbacks.onClose} error={error} />
       );
 
       unmount();
@@ -282,13 +234,7 @@ describe('ErrorModal - Interactions and Accessibility', () => {
     it('should have proper ARIA attributes', () => {
       const error = new Error('Test error');
 
-      render(
-        <ErrorModal
-          {...defaultModalProps}
-          onClose={mockCallbacks.onClose}
-          error={error}
-        />
-      );
+      render(<ErrorModal {...defaultModalProps} onClose={mockCallbacks.onClose} error={error} />);
 
       const dialog = screen.getByRole('dialog');
       expect(dialog).toHaveAttribute('aria-modal', 'true');
@@ -315,11 +261,7 @@ describe('ErrorModal - Interactions and Accessibility', () => {
       const error = new Error('Test error');
 
       const { container } = render(
-        <ErrorModal
-          {...defaultModalProps}
-          onClose={mockCallbacks.onClose}
-          error={error}
-        />
+        <ErrorModal {...defaultModalProps} onClose={mockCallbacks.onClose} error={error} />
       );
 
       const backdrop = container.querySelector('.bg-gray-500');

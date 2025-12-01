@@ -7,23 +7,25 @@ import { render } from '@testing-library/react';
 import { vi } from 'vitest';
 
 // Mock Prism BEFORE importing component
-vi.mock('prismjs', () => ({
-  default: {
-    highlight: vi.fn(code => `<span class="highlighted">${code}</span>`),
-    languages: {
-      json: {},
+vi.mock('prismjs', () => {
+  return {
+    default: {
+      highlight: vi.fn((code: string) => `<span class="highlighted">${code}</span>`),
+      languages: {
+        json: {},
+      },
     },
-  },
-  highlight: vi.fn(code => `<span class="highlighted">${code}</span>`),
-  languages: {
-    json: {},
-  },
-}));
+  };
+});
 
 // Mock the JSON language component
 vi.mock('prismjs/components/prism-json', () => ({}));
 
 import { PrismHighlighter } from '../PrismHighlighter';
+import Prism from 'prismjs';
+
+// Helper to get mocked Prism
+const getMockedPrism = () => vi.mocked(Prism);
 
 describe('PrismHighlighter', () => {
   beforeEach(() => {
@@ -105,12 +107,12 @@ describe('PrismHighlighter', () => {
 
   describe('Syntax Highlighting', () => {
     it('should call Prism.highlight with correct parameters', () => {
-      const Prism = require('prismjs');
+      const mockPrism = getMockedPrism();
       const code = '{ "test": true }';
 
       render(<PrismHighlighter code={code} language="json" lineType="unchanged" />);
 
-      expect(Prism.highlight).toHaveBeenCalledWith(code, Prism.languages.json, 'json');
+      expect(mockPrism.highlight).toHaveBeenCalledWith(code, mockPrism.languages.json, 'json');
     });
 
     it('should use dangerouslySetInnerHTML to render highlighted HTML', () => {
@@ -125,9 +127,9 @@ describe('PrismHighlighter', () => {
     });
 
     it('should fallback to plain text on error', () => {
-      const Prism = require('prismjs');
+      const mockPrism = getMockedPrism();
       const consoleError = vi.spyOn(console, 'error').mockImplementation();
-      Prism.highlight.mockImplementation(() => {
+      mockPrism.highlight.mockImplementation(() => {
         throw new Error('Highlighting error');
       });
 
@@ -145,60 +147,60 @@ describe('PrismHighlighter', () => {
     });
 
     it('should fallback to json language if specified language not found', () => {
-      const Prism = require('prismjs');
-      Prism.languages = { json: {} }; // Only json available
+      const mockPrism = getMockedPrism();
+      mockPrism.languages = { json: {} }; // Only json available
 
       const code = 'test';
       render(<PrismHighlighter code={code} language="json" lineType="unchanged" />);
 
-      expect(Prism.highlight).toHaveBeenCalledWith(code, Prism.languages.json, 'json');
+      expect(mockPrism.highlight).toHaveBeenCalledWith(code, mockPrism.languages.json, 'json');
     });
   });
 
   describe('Memoization', () => {
     it('should use useMemo for highlighting', () => {
-      const Prism = require('prismjs');
+      const mockPrism = getMockedPrism();
       const code = '{ "test": true }';
 
       const { rerender } = render(
         <PrismHighlighter code={code} language="json" lineType="unchanged" />
       );
 
-      expect(Prism.highlight).toHaveBeenCalledTimes(1);
+      expect(mockPrism.highlight).toHaveBeenCalledTimes(1);
 
       // Rerender with same props - should not call highlight again (memoized)
       rerender(<PrismHighlighter code={code} language="json" lineType="unchanged" />);
 
-      expect(Prism.highlight).toHaveBeenCalledTimes(1);
+      expect(mockPrism.highlight).toHaveBeenCalledTimes(1);
     });
 
     it('should re-highlight when code changes', () => {
-      const Prism = require('prismjs');
+      const mockPrism = getMockedPrism();
 
       const { rerender } = render(
         <PrismHighlighter code="first" language="json" lineType="unchanged" />
       );
 
-      expect(Prism.highlight).toHaveBeenCalledTimes(1);
+      expect(mockPrism.highlight).toHaveBeenCalledTimes(1);
 
       rerender(<PrismHighlighter code="second" language="json" lineType="unchanged" />);
 
-      expect(Prism.highlight).toHaveBeenCalledTimes(2);
+      expect(mockPrism.highlight).toHaveBeenCalledTimes(2);
     });
 
     it('should re-highlight when language changes', () => {
-      const Prism = require('prismjs');
+      const mockPrism = getMockedPrism();
 
       const { rerender } = render(
         <PrismHighlighter code="test" language="json" lineType="unchanged" />
       );
 
-      expect(Prism.highlight).toHaveBeenCalledTimes(1);
+      expect(mockPrism.highlight).toHaveBeenCalledTimes(1);
 
       rerender(<PrismHighlighter code="test" language="json" lineType="added" />);
 
       // Language didn't change, so should still be 1
-      expect(Prism.highlight).toHaveBeenCalledTimes(1);
+      expect(mockPrism.highlight).toHaveBeenCalledTimes(1);
     });
   });
 

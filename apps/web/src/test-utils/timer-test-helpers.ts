@@ -67,8 +67,16 @@ export async function advanceTimersAndWaitFor(
   // Advance timers FIRST (critical: do NOT do this inside waitFor callback)
   vi.advanceTimersByTime(ms);
 
-  // THEN wait for assertion to pass
-  return waitFor(assertion);
+  // Temporarily switch to real timers for waitFor to work
+  vi.useRealTimers();
+
+  try {
+    // THEN wait for assertion to pass
+    await waitFor(assertion, { timeout: 1000 });
+  } finally {
+    // Restore fake timers
+    vi.useFakeTimers();
+  }
 }
 
 /**

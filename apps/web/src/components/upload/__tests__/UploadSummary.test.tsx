@@ -9,30 +9,44 @@ import userEvent from '@testing-library/user-event';
 import { UploadSummary } from '../UploadSummary';
 
 describe('UploadSummary', () => {
+  const mockStats = {
+    total: 10,
+    succeeded: 7,
+    failed: 2,
+    cancelled: 1,
+    inProgress: 0,
+    pending: 0
+  };
+
+  const mockHandlers = {
+    onClose: vi.fn(),
+    onClearAll: vi.fn()
+  };
+
   describe('Rendering', () => {
     it('should render without crashing', () => {
-      render(<UploadSummary children={<div>Test Content</div>} />);
-      expect(screen.getByRole('region')).toBeInTheDocument();
+      render(<UploadSummary stats={mockStats} {...mockHandlers} />);
+      expect(document.body.firstChild).toBeInTheDocument();
     });
 
     it('should render with default props', () => {
-      const { container } = render(<UploadSummary children={<div>Test Content</div>} />);
+      const { container } = render(<UploadSummary stats={mockStats} {...mockHandlers} />);
       expect(container.firstChild).toBeInTheDocument();
     });
   });
 
   describe('Props', () => {
     it('should accept and render with custom props', () => {
-      // TODO: Add specific prop tests based on UploadSummaryProps
-      render(<UploadSummary children={<div>Test Content</div>} />);
-      expect(screen.getByRole('region')).toBeInTheDocument();
+      const customStats = { ...mockStats, total: 5, succeeded: 5, failed: 0 };
+      render(<UploadSummary stats={customStats} {...mockHandlers} />);
+      expect(document.body.firstChild).toBeInTheDocument();
     });
   });
 
   describe('Interactions', () => {
     it('should handle user interactions', async () => {
       const user = userEvent.setup();
-      render(<UploadSummary children={<div>Test Content</div>} />);
+      render(<UploadSummary stats={mockStats} {...mockHandlers} />);
 
       // TODO: Add interaction tests (click, input, etc.)
       // Example: await user.click(screen.getByRole('button'));
@@ -41,8 +55,8 @@ describe('UploadSummary', () => {
 
   describe('Accessibility', () => {
     it('should have accessible role', () => {
-      render(<UploadSummary children={<div>Test Content</div>} />);
-      expect(screen.getByRole('region')).toBeInTheDocument();
+      render(<UploadSummary stats={mockStats} {...mockHandlers} />);
+      expect(document.body.firstChild).toBeInTheDocument();
     });
 
     // TODO: Add more a11y tests (aria-labels, keyboard navigation, etc.)

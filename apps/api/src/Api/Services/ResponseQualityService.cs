@@ -73,7 +73,7 @@ public class ResponseQualityService : IResponseQualityService
     /// Calculate RAG confidence as average of search result scores.
     /// Returns 0.0 if no results.
     /// </summary>
-    private double CalculateRagConfidence(List<RagSearchResult> ragResults)
+    private static double CalculateRagConfidence(List<RagSearchResult> ragResults)
     {
         if (ragResults == null || ragResults.Count == 0)
         {
@@ -87,7 +87,7 @@ public class ResponseQualityService : IResponseQualityService
     /// Calculate LLM confidence using heuristics based on response characteristics.
     /// Penalizes very short responses, short responses, and hedging phrases.
     /// </summary>
-    private double CalculateLlmConfidence(string? responseText)
+    private static double CalculateLlmConfidence(string? responseText)
     {
         // Empty or null response gets 0.0
         if (string.IsNullOrWhiteSpace(responseText))
@@ -129,7 +129,7 @@ public class ResponseQualityService : IResponseQualityService
     /// Calculate citation quality as ratio of citations to paragraphs.
     /// Capped at 1.0 (no penalty for over-citing).
     /// </summary>
-    private double CalculateCitationQuality(List<Citation>? citations, string? responseText)
+    private static double CalculateCitationQuality(List<Citation>? citations, string? responseText)
     {
         // Null citations list gets 0.0
         if (citations == null)
@@ -160,7 +160,7 @@ public class ResponseQualityService : IResponseQualityService
     /// Calculate overall confidence as weighted average of all dimensions.
     /// Weights: RAG 40%, LLM 40%, Citation 20%
     /// </summary>
-    private double CalculateOverallConfidence(double ragConfidence, double llmConfidence, double citationQuality)
+    private static double CalculateOverallConfidence(double ragConfidence, double llmConfidence, double citationQuality)
     {
         return (ragConfidence * RagWeight) + (llmConfidence * LlmWeight) + (citationQuality * CitationWeight);
     }

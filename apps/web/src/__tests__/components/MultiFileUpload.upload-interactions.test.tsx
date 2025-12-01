@@ -15,7 +15,7 @@
  */
 
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { MultiFileUpload } from '../../components/MultiFileUpload';
+import { MultiFileUpload } from '../../components/upload/MultiFileUpload';
 import {
   mockAddFiles,
   mockStartUpload,
@@ -27,7 +27,7 @@ import {
   setupAfterEach,
   waitForFileValidation,
   createStats,
-  getLastUploadQueueOptions
+  getLastUploadQueueOptions,
 } from './MultiFileUpload.test-helpers';
 
 // Import mock creation function
@@ -51,15 +51,18 @@ describe('MultiFileUpload - Upload Interactions', () => {
         await waitForFileValidation(100);
       });
 
-      await waitFor(() => {
-        expect(mockAddFiles).toHaveBeenCalledWith(
-          expect.arrayContaining([
-            expect.objectContaining({ name: 'test.pdf', size: 1000, type: 'application/pdf' })
-          ]),
-          'game-123',
-          'en'
-        );
-      }, { timeout: 2000 });
+      await waitFor(
+        () => {
+          expect(mockAddFiles).toHaveBeenCalledWith(
+            expect.arrayContaining([
+              expect.objectContaining({ name: 'test.pdf', size: 1000, type: 'application/pdf' }),
+            ]),
+            'game-123',
+            'en'
+          );
+        },
+        { timeout: 2000 }
+      );
     });
 
     it('handles multiple file selection', async () => {
@@ -69,7 +72,7 @@ describe('MultiFileUpload - Upload Interactions', () => {
       const files = [
         createMockFile('test1.pdf', 1000, 'application/pdf'),
         createMockFile('test2.pdf', 2000, 'application/pdf'),
-        createMockFile('test3.pdf', 3000, 'application/pdf')
+        createMockFile('test3.pdf', 3000, 'application/pdf'),
       ];
       const input = screen.getByLabelText(/File input for PDF upload/i) as HTMLInputElement;
 
@@ -78,17 +81,20 @@ describe('MultiFileUpload - Upload Interactions', () => {
         await waitForFileValidation(150);
       });
 
-      await waitFor(() => {
-        expect(mockAddFiles).toHaveBeenCalledWith(
-          expect.arrayContaining([
-            expect.objectContaining({ name: 'test1.pdf', type: 'application/pdf' }),
-            expect.objectContaining({ name: 'test2.pdf', type: 'application/pdf' }),
-            expect.objectContaining({ name: 'test3.pdf', type: 'application/pdf' })
-          ]),
-          'game-123',
-          'en'
-        );
-      }, { timeout: 2000 });
+      await waitFor(
+        () => {
+          expect(mockAddFiles).toHaveBeenCalledWith(
+            expect.arrayContaining([
+              expect.objectContaining({ name: 'test1.pdf', type: 'application/pdf' }),
+              expect.objectContaining({ name: 'test2.pdf', type: 'application/pdf' }),
+              expect.objectContaining({ name: 'test3.pdf', type: 'application/pdf' }),
+            ]),
+            'game-123',
+            'en'
+          );
+        },
+        { timeout: 2000 }
+      );
     });
 
     it('resets input value after selection', async () => {
@@ -123,7 +129,9 @@ describe('MultiFileUpload - Upload Interactions', () => {
     it('handles drag enter event', () => {
       render(<MultiFileUpload {...defaultProps} />);
 
-      const dropZone = screen.getByRole('button', { name: /Click to browse files or drag and drop PDFs here/i });
+      const dropZone = screen.getByRole('button', {
+        name: /Click to browse files or drag and drop PDFs here/i,
+      });
 
       fireEvent.dragEnter(dropZone);
 
@@ -133,7 +141,9 @@ describe('MultiFileUpload - Upload Interactions', () => {
     it('handles drag leave event', () => {
       render(<MultiFileUpload {...defaultProps} />);
 
-      const dropZone = screen.getByRole('button', { name: /Click to browse files or drag and drop PDFs here/i });
+      const dropZone = screen.getByRole('button', {
+        name: /Click to browse files or drag and drop PDFs here/i,
+      });
 
       fireEvent.dragEnter(dropZone);
       expect(screen.getByText(/Drop files here/i)).toBeInTheDocument();
@@ -146,7 +156,9 @@ describe('MultiFileUpload - Upload Interactions', () => {
     it('handles drag over event', () => {
       render(<MultiFileUpload {...defaultProps} />);
 
-      const dropZone = screen.getByRole('button', { name: /Click to browse files or drag and drop PDFs here/i });
+      const dropZone = screen.getByRole('button', {
+        name: /Click to browse files or drag and drop PDFs here/i,
+      });
       const event = new Event('dragover', { bubbles: true, cancelable: true });
 
       fireEvent(dropZone, event);
@@ -158,32 +170,39 @@ describe('MultiFileUpload - Upload Interactions', () => {
       mockFileReader('%PDF-');
       render(<MultiFileUpload {...defaultProps} />);
 
-      const dropZone = screen.getByRole('button', { name: /Click to browse files or drag and drop PDFs here/i });
+      const dropZone = screen.getByRole('button', {
+        name: /Click to browse files or drag and drop PDFs here/i,
+      });
       const file = createMockFile('dropped.pdf', 1000, 'application/pdf');
 
       await act(async () => {
         fireEvent.drop(dropZone, {
-          dataTransfer: { files: [file] }
+          dataTransfer: { files: [file] },
         });
         await waitForFileValidation(100);
       });
 
-      await waitFor(() => {
-        expect(mockAddFiles).toHaveBeenCalledWith(
-          expect.arrayContaining([
-            expect.objectContaining({ name: 'dropped.pdf', size: 1000, type: 'application/pdf' })
-          ]),
-          'game-123',
-          'en'
-        );
-      }, { timeout: 2000 });
+      await waitFor(
+        () => {
+          expect(mockAddFiles).toHaveBeenCalledWith(
+            expect.arrayContaining([
+              expect.objectContaining({ name: 'dropped.pdf', size: 1000, type: 'application/pdf' }),
+            ]),
+            'game-123',
+            'en'
+          );
+        },
+        { timeout: 2000 }
+      );
     });
 
     it('resets dragging state after drop', async () => {
       mockFileReader('%PDF-');
       render(<MultiFileUpload {...defaultProps} />);
 
-      const dropZone = screen.getByRole('button', { name: /Click to browse files or drag and drop PDFs here/i });
+      const dropZone = screen.getByRole('button', {
+        name: /Click to browse files or drag and drop PDFs here/i,
+      });
 
       fireEvent.dragEnter(dropZone);
       expect(screen.getByText(/Drop files here/i)).toBeInTheDocument();
@@ -192,7 +211,7 @@ describe('MultiFileUpload - Upload Interactions', () => {
 
       await act(async () => {
         fireEvent.drop(dropZone, {
-          dataTransfer: { files: [file] }
+          dataTransfer: { files: [file] },
         });
         await waitForFileValidation(10);
       });
@@ -203,11 +222,13 @@ describe('MultiFileUpload - Upload Interactions', () => {
     it('handles null files in drop event', async () => {
       render(<MultiFileUpload {...defaultProps} />);
 
-      const dropZone = screen.getByRole('button', { name: /Click to browse files or drag and drop PDFs here/i });
+      const dropZone = screen.getByRole('button', {
+        name: /Click to browse files or drag and drop PDFs here/i,
+      });
 
       await act(async () => {
         fireEvent.drop(dropZone, {
-          dataTransfer: { files: null }
+          dataTransfer: { files: null },
         });
         await waitForFileValidation(10);
       });
@@ -219,7 +240,9 @@ describe('MultiFileUpload - Upload Interactions', () => {
   describe('Drag Zone Visual States', () => {
     it('changes drag zone appearance when dragging', () => {
       render(<MultiFileUpload {...defaultProps} />);
-      const dropZone = screen.getByRole('button', { name: /Click to browse files or drag and drop PDFs here/i });
+      const dropZone = screen.getByRole('button', {
+        name: /Click to browse files or drag and drop PDFs here/i,
+      });
 
       expect(dropZone).toBeInTheDocument();
 
@@ -232,7 +255,9 @@ describe('MultiFileUpload - Upload Interactions', () => {
 
     it('shows different text when dragging', () => {
       render(<MultiFileUpload {...defaultProps} />);
-      const dropZone = screen.getByRole('button', { name: /Click to browse files or drag and drop PDFs here/i });
+      const dropZone = screen.getByRole('button', {
+        name: /Click to browse files or drag and drop PDFs here/i,
+      });
 
       expect(screen.getByText('Drag and drop PDF files here')).toBeInTheDocument();
       expect(screen.queryByText('Drop files here')).not.toBeInTheDocument();
@@ -247,7 +272,9 @@ describe('MultiFileUpload - Upload Interactions', () => {
   describe('Drop Zone Click Handling', () => {
     it('triggers file input on drop zone click', () => {
       render(<MultiFileUpload {...defaultProps} />);
-      const dropZone = screen.getByRole('button', { name: /Click to browse files or drag and drop PDFs here/i });
+      const dropZone = screen.getByRole('button', {
+        name: /Click to browse files or drag and drop PDFs here/i,
+      });
       const input = screen.getByLabelText(/File input for PDF upload/i) as HTMLInputElement;
       const clickSpy = vi.spyOn(input, 'click');
 
@@ -304,7 +331,7 @@ describe('MultiFileUpload - Upload Interactions', () => {
         onUploadSuccess: vi.fn(),
         onUploadError: vi.fn(),
         onQueueAdd: vi.fn(),
-        onRetry: vi.fn()
+        onRetry: vi.fn(),
       };
 
       render(<MultiFileUpload {...defaultProps} {...hooks} />);
@@ -323,7 +350,9 @@ describe('MultiFileUpload - Upload Interactions', () => {
     it('supports keyboard navigation for drop zone', () => {
       render(<MultiFileUpload {...defaultProps} />);
 
-      const dropZone = screen.getByRole('button', { name: /Click to browse files or drag and drop PDFs here/i });
+      const dropZone = screen.getByRole('button', {
+        name: /Click to browse files or drag and drop PDFs here/i,
+      });
       const input = screen.getByLabelText(/File input for PDF upload/i) as HTMLInputElement;
       const clickSpy = vi.spyOn(input, 'click');
 
@@ -337,7 +366,9 @@ describe('MultiFileUpload - Upload Interactions', () => {
 
     it('prevents default on Enter key in drop zone', () => {
       render(<MultiFileUpload {...defaultProps} />);
-      const dropZone = screen.getByRole('button', { name: /Click to browse files or drag and drop PDFs here/i });
+      const dropZone = screen.getByRole('button', {
+        name: /Click to browse files or drag and drop PDFs here/i,
+      });
       const input = screen.getByLabelText(/File input for PDF upload/i) as HTMLInputElement;
       const clickSpy = vi.spyOn(input, 'click');
 
@@ -352,7 +383,9 @@ describe('MultiFileUpload - Upload Interactions', () => {
 
     it('prevents default on Space key in drop zone', () => {
       render(<MultiFileUpload {...defaultProps} />);
-      const dropZone = screen.getByRole('button', { name: /Click to browse files or drag and drop PDFs here/i });
+      const dropZone = screen.getByRole('button', {
+        name: /Click to browse files or drag and drop PDFs here/i,
+      });
       const input = screen.getByLabelText(/File input for PDF upload/i) as HTMLInputElement;
       const clickSpy = vi.spyOn(input, 'click');
 
@@ -367,7 +400,9 @@ describe('MultiFileUpload - Upload Interactions', () => {
 
     it('ignores other keys in drop zone', () => {
       render(<MultiFileUpload {...defaultProps} />);
-      const dropZone = screen.getByRole('button', { name: /Click to browse files or drag and drop PDFs here/i });
+      const dropZone = screen.getByRole('button', {
+        name: /Click to browse files or drag and drop PDFs here/i,
+      });
       const input = screen.getByLabelText(/File input for PDF upload/i) as HTMLInputElement;
       const clickSpy = vi.spyOn(input, 'click');
 

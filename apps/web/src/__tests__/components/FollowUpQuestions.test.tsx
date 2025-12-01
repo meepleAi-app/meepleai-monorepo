@@ -9,7 +9,7 @@
 
 import React from 'react';
 import { render, screen, fireEvent, within } from '@testing-library/react';
-import { FollowUpQuestions } from '../../components/FollowUpQuestions';
+import { FollowUpQuestions } from '../../components/chat/FollowUpQuestions';
 
 describe('FollowUpQuestions Component', () => {
   const mockOnQuestionClick = vi.fn();
@@ -133,7 +133,11 @@ describe('FollowUpQuestions Component', () => {
     it('disables buttons when disabled prop is true', () => {
       const questions = ['Question 1', 'Question 2'];
       render(
-        <FollowUpQuestions questions={questions} onQuestionClick={mockOnQuestionClick} disabled={true} />
+        <FollowUpQuestions
+          questions={questions}
+          onQuestionClick={mockOnQuestionClick}
+          disabled={true}
+        />
       );
 
       const buttons = screen.getAllByRole('button');
@@ -145,7 +149,11 @@ describe('FollowUpQuestions Component', () => {
     it('does not call onQuestionClick when disabled', () => {
       const questions = ['Question 1'];
       render(
-        <FollowUpQuestions questions={questions} onQuestionClick={mockOnQuestionClick} disabled={true} />
+        <FollowUpQuestions
+          questions={questions}
+          onQuestionClick={mockOnQuestionClick}
+          disabled={true}
+        />
       );
 
       const button = screen.getByText('Question 1');
@@ -157,7 +165,11 @@ describe('FollowUpQuestions Component', () => {
     it('applies disabled styling when disabled', () => {
       const questions = ['Question 1'];
       render(
-        <FollowUpQuestions questions={questions} onQuestionClick={mockOnQuestionClick} disabled={true} />
+        <FollowUpQuestions
+          questions={questions}
+          onQuestionClick={mockOnQuestionClick}
+          disabled={true}
+        />
       );
 
       const button = screen.getByText('Question 1');
@@ -167,7 +179,11 @@ describe('FollowUpQuestions Component', () => {
     it('applies enabled styling when not disabled', () => {
       const questions = ['Question 1'];
       render(
-        <FollowUpQuestions questions={questions} onQuestionClick={mockOnQuestionClick} disabled={false} />
+        <FollowUpQuestions
+          questions={questions}
+          onQuestionClick={mockOnQuestionClick}
+          disabled={false}
+        />
       );
 
       const button = screen.getByText('Question 1');
@@ -211,7 +227,11 @@ describe('FollowUpQuestions Component', () => {
     it('does not change background on hover when disabled', () => {
       const questions = ['Question 1'];
       render(
-        <FollowUpQuestions questions={questions} onQuestionClick={mockOnQuestionClick} disabled={true} />
+        <FollowUpQuestions
+          questions={questions}
+          onQuestionClick={mockOnQuestionClick}
+          disabled={true}
+        />
       );
 
       const button = screen.getByText('Question 1');
@@ -315,15 +335,21 @@ describe('FollowUpQuestions Component', () => {
       const questions = ['Question 1'];
       render(<FollowUpQuestions questions={questions} onQuestionClick={mockOnQuestionClick} />);
 
-      expect(screen.getByRole('region', { name: 'Suggested follow-up questions' })).toBeInTheDocument();
+      expect(
+        screen.getByRole('region', { name: 'Suggested follow-up questions' })
+      ).toBeInTheDocument();
     });
 
     it('provides aria-label for each button', () => {
       const questions = ['What is castling?', 'How do pawns move?'];
       render(<FollowUpQuestions questions={questions} onQuestionClick={mockOnQuestionClick} />);
 
-      expect(screen.getByLabelText('Ask follow-up question: What is castling?')).toBeInTheDocument();
-      expect(screen.getByLabelText('Ask follow-up question: How do pawns move?')).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('Ask follow-up question: What is castling?')
+      ).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('Ask follow-up question: How do pawns move?')
+      ).toBeInTheDocument();
     });
 
     it('uses semantic button elements', () => {

@@ -1,5 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import SearchModeToggle, { SearchMode } from '../SearchModeToggle';
+import { SearchModeToggle } from '../search/SearchModeToggle';
 
 describe('SearchModeToggle', () => {
   const mockOnChange = vi.fn();
@@ -39,7 +39,9 @@ describe('SearchModeToggle', () => {
     });
 
     it('renders mode buttons in correct order (Semantic, Hybrid, Keyword)', () => {
-      const { container } = render(<SearchModeToggle value={SearchMode.Hybrid} onChange={mockOnChange} />);
+      const { container } = render(
+        <SearchModeToggle value={SearchMode.Hybrid} onChange={mockOnChange} />
+      );
 
       const buttons = container.querySelectorAll('.mode-button');
       expect(buttons).toHaveLength(3);
@@ -62,7 +64,11 @@ describe('SearchModeToggle', () => {
 
     it('applies custom className when provided', () => {
       const { container } = render(
-        <SearchModeToggle value={SearchMode.Hybrid} onChange={mockOnChange} className="custom-class" />
+        <SearchModeToggle
+          value={SearchMode.Hybrid}
+          onChange={mockOnChange}
+          className="custom-class"
+        />
       );
 
       // The custom class is applied to the root div
@@ -153,7 +159,9 @@ describe('SearchModeToggle', () => {
     });
 
     it('handles rapid mode switching', () => {
-      const { rerender } = render(<SearchModeToggle value={SearchMode.Hybrid} onChange={mockOnChange} />);
+      const { rerender } = render(
+        <SearchModeToggle value={SearchMode.Hybrid} onChange={mockOnChange} />
+      );
 
       const semanticButton = getSemanticButton();
 
@@ -201,7 +209,9 @@ describe('SearchModeToggle', () => {
     });
 
     it('enables all buttons when disabled prop is false', () => {
-      render(<SearchModeToggle value={SearchMode.Hybrid} onChange={mockOnChange} disabled={false} />);
+      render(
+        <SearchModeToggle value={SearchMode.Hybrid} onChange={mockOnChange} disabled={false} />
+      );
 
       const semanticButton = getSemanticButton();
       const hybridButton = getHybridButton();
@@ -250,13 +260,24 @@ describe('SearchModeToggle', () => {
     it('displays tooltips with mode descriptions', () => {
       render(<SearchModeToggle value={SearchMode.Hybrid} onChange={mockOnChange} />);
 
-      expect(getSemanticButton()).toHaveAttribute('title', 'Natural language understanding (AI embeddings)');
-      expect(getHybridButton()).toHaveAttribute('title', 'Best of both worlds (default, 70% semantic + 30% keyword)');
-      expect(getKeywordButton()).toHaveAttribute('title', 'Exact term matching (faster, more precise)');
+      expect(getSemanticButton()).toHaveAttribute(
+        'title',
+        'Natural language understanding (AI embeddings)'
+      );
+      expect(getHybridButton()).toHaveAttribute(
+        'title',
+        'Best of both worlds (default, 70% semantic + 30% keyword)'
+      );
+      expect(getKeywordButton()).toHaveAttribute(
+        'title',
+        'Exact term matching (faster, more precise)'
+      );
     });
 
     it('marks icons as aria-hidden', () => {
-      const { container } = render(<SearchModeToggle value={SearchMode.Hybrid} onChange={mockOnChange} />);
+      const { container } = render(
+        <SearchModeToggle value={SearchMode.Hybrid} onChange={mockOnChange} />
+      );
 
       const icons = container.querySelectorAll('.mode-icon');
       icons.forEach(icon => {

@@ -12,7 +12,7 @@
  */
 
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { MultiFileUpload } from '../../components/MultiFileUpload';
+import { MultiFileUpload } from '../../components/upload/MultiFileUpload';
 import {
   mockAddFiles,
   mockClearAll,
@@ -25,7 +25,7 @@ import {
   setupAfterEach,
   waitForFileValidation,
   createStats,
-  getLastUploadQueueOptions
+  getLastUploadQueueOptions,
 } from './MultiFileUpload.test-helpers';
 
 // Import mock creation function
@@ -39,10 +39,12 @@ describe('MultiFileUpload - Queue Operations', () => {
   describe('Upload Summary Display', () => {
     it('shows summary after all uploads complete', async () => {
       mockQueueStateRef.current = [];
-      mockGetStats.mockReturnValue(createStats({
-        total: 3,
-        succeeded: 3
-      }));
+      mockGetStats.mockReturnValue(
+        createStats({
+          total: 3,
+          succeeded: 3,
+        })
+      );
 
       const { rerender } = render(<MultiFileUpload {...defaultProps} />);
 
@@ -55,17 +57,22 @@ describe('MultiFileUpload - Queue Operations', () => {
 
       rerender(<MultiFileUpload {...defaultProps} />);
 
-      await waitFor(() => {
-        expect(screen.getByTestId('upload-summary')).toBeInTheDocument();
-      }, { timeout: 1000 });
+      await waitFor(
+        () => {
+          expect(screen.getByTestId('upload-summary')).toBeInTheDocument();
+        },
+        { timeout: 1000 }
+      );
     });
 
     it('hides summary when closed', async () => {
       mockQueueStateRef.current = [];
-      mockGetStats.mockReturnValue(createStats({
-        total: 3,
-        succeeded: 3
-      }));
+      mockGetStats.mockReturnValue(
+        createStats({
+          total: 3,
+          succeeded: 3,
+        })
+      );
 
       const { rerender } = render(<MultiFileUpload {...defaultProps} />);
 
@@ -78,9 +85,12 @@ describe('MultiFileUpload - Queue Operations', () => {
 
       rerender(<MultiFileUpload {...defaultProps} />);
 
-      await waitFor(() => {
-        expect(screen.getByTestId('upload-summary')).toBeInTheDocument();
-      }, { timeout: 1000 });
+      await waitFor(
+        () => {
+          expect(screen.getByTestId('upload-summary')).toBeInTheDocument();
+        },
+        { timeout: 1000 }
+      );
 
       const closeButton = screen.getByRole('button', { name: /Close upload summary/i });
 
@@ -89,18 +99,23 @@ describe('MultiFileUpload - Queue Operations', () => {
         await new Promise(resolve => setTimeout(resolve, 0));
       });
 
-      await waitFor(() => {
-        expect(screen.queryByTestId('upload-summary')).not.toBeInTheDocument();
-      }, { timeout: 1000 });
+      await waitFor(
+        () => {
+          expect(screen.queryByTestId('upload-summary')).not.toBeInTheDocument();
+        },
+        { timeout: 1000 }
+      );
     });
 
     it('hides summary when new files are added', async () => {
       mockFileReader('%PDF-');
       mockQueueStateRef.current = [];
-      mockGetStats.mockReturnValue(createStats({
-        total: 3,
-        succeeded: 3
-      }));
+      mockGetStats.mockReturnValue(
+        createStats({
+          total: 3,
+          succeeded: 3,
+        })
+      );
 
       const { rerender } = render(<MultiFileUpload {...defaultProps} />);
 
@@ -113,9 +128,12 @@ describe('MultiFileUpload - Queue Operations', () => {
 
       rerender(<MultiFileUpload {...defaultProps} />);
 
-      await waitFor(() => {
-        expect(screen.getByTestId('upload-summary')).toBeInTheDocument();
-      }, { timeout: 1000 });
+      await waitFor(
+        () => {
+          expect(screen.getByTestId('upload-summary')).toBeInTheDocument();
+        },
+        { timeout: 1000 }
+      );
 
       const file = createMockFile('new.pdf', 1000, 'application/pdf');
       const input = screen.getByLabelText(/File input for PDF upload/i) as HTMLInputElement;
@@ -129,19 +147,22 @@ describe('MultiFileUpload - Queue Operations', () => {
         await new Promise(resolve => setTimeout(resolve, 100));
       });
 
-      await waitFor(() => {
-        const summary = screen.queryByTestId('upload-summary');
-        if (summary) {
-          expect(mockAddFiles).toHaveBeenCalled();
-        }
-      }, { timeout: 1000 });
+      await waitFor(
+        () => {
+          const summary = screen.queryByTestId('upload-summary');
+          if (summary) {
+            expect(mockAddFiles).toHaveBeenCalled();
+          }
+        },
+        { timeout: 1000 }
+      );
     });
 
     it('passes stats to UploadSummary', async () => {
       const stats = createStats({
         total: 5,
         succeeded: 4,
-        failed: 1
+        failed: 1,
       });
       mockGetStats.mockReturnValue(stats);
 
@@ -161,10 +182,12 @@ describe('MultiFileUpload - Queue Operations', () => {
     });
 
     it('calls clearAll when UploadSummary Clear Queue clicked', async () => {
-      mockGetStats.mockReturnValue(createStats({
-        total: 3,
-        succeeded: 3
-      }));
+      mockGetStats.mockReturnValue(
+        createStats({
+          total: 3,
+          succeeded: 3,
+        })
+      );
 
       const { rerender } = render(<MultiFileUpload {...defaultProps} />);
 
@@ -193,7 +216,7 @@ describe('MultiFileUpload - Queue Operations', () => {
         total: 10,
         succeeded: 7,
         failed: 2,
-        cancelled: 1
+        cancelled: 1,
       });
       mockGetStats.mockReturnValue(stats);
 
@@ -215,7 +238,7 @@ describe('MultiFileUpload - Queue Operations', () => {
     it('shows summary with all successful uploads', async () => {
       const stats = createStats({
         total: 5,
-        succeeded: 5
+        succeeded: 5,
       });
       mockGetStats.mockReturnValue(stats);
 
@@ -237,7 +260,7 @@ describe('MultiFileUpload - Queue Operations', () => {
     it('shows summary with all failed uploads', async () => {
       const stats = createStats({
         total: 3,
-        failed: 3
+        failed: 3,
       });
       mockGetStats.mockReturnValue(stats);
 
@@ -267,13 +290,15 @@ describe('MultiFileUpload - Queue Operations', () => {
           language: 'en',
           status: 'uploading' as const,
           progress: 50,
-          retryCount: 0
-        }
+          retryCount: 0,
+        },
       ];
-      mockGetStats.mockReturnValue(createStats({
-        total: 1,
-        uploading: 1
-      }));
+      mockGetStats.mockReturnValue(
+        createStats({
+          total: 1,
+          uploading: 1,
+        })
+      );
 
       render(<MultiFileUpload {...defaultProps} />);
 
@@ -336,15 +361,16 @@ describe('MultiFileUpload - Queue Operations', () => {
         await waitForFileValidation(100);
       });
 
-      await waitFor(() => {
-        expect(mockAddFiles).toHaveBeenCalledWith(
-          expect.arrayContaining([
-            expect.objectContaining({ name: 'test.pdf' })
-          ]),
-          'custom-game',
-          'it'
-        );
-      }, { timeout: 2000 });
+      await waitFor(
+        () => {
+          expect(mockAddFiles).toHaveBeenCalledWith(
+            expect.arrayContaining([expect.objectContaining({ name: 'test.pdf' })]),
+            'custom-game',
+            'it'
+          );
+        },
+        { timeout: 2000 }
+      );
     });
   });
 });

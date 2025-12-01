@@ -6,7 +6,7 @@
 
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { VersionTimeline } from '../VersionTimeline';
+import { VersionTimeline } from '../versioning/VersionTimeline';
 
 describe('VersionTimeline', () => {
   describe('Rendering', () => {

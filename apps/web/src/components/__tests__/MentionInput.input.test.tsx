@@ -2,7 +2,7 @@ import type { Mock } from 'vitest';
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MentionInput } from '../MentionInput';
+import { MentionInput } from '../chat/MentionInput';
 import { api, type UserSearchResult } from '@/lib/api';
 
 // Mock the API module
@@ -45,13 +45,7 @@ describe('MentionInput', () => {
     });
 
     it('renders with custom placeholder', () => {
-      render(
-        <MentionInput
-          value=""
-          onChange={mockOnChange}
-          placeholder="Custom placeholder"
-        />
-      );
+      render(<MentionInput value="" onChange={mockOnChange} placeholder="Custom placeholder" />);
       expect(screen.getByPlaceholderText('Custom placeholder')).toBeInTheDocument();
     });
 
@@ -172,7 +166,7 @@ describe('MentionInput', () => {
 
     it('shows loading state during search', async () => {
       mockApiGet.mockImplementation(
-        () => new Promise((resolve) => setTimeout(() => resolve(mockUsers), 100))
+        () => new Promise(resolve => setTimeout(() => resolve(mockUsers), 100))
       );
 
       render(<MentionInput value="" onChange={mockOnChange} />);
@@ -227,10 +221,7 @@ describe('MentionInput', () => {
 
       await waitFor(() => {
         expect(screen.getByText('No users found')).toBeInTheDocument();
-        expect(consoleSpy).toHaveBeenCalledWith(
-          'Failed to search users:',
-          expect.any(Error)
-        );
+        expect(consoleSpy).toHaveBeenCalledWith('Failed to search users:', expect.any(Error));
       });
 
       consoleSpy.mockRestore();

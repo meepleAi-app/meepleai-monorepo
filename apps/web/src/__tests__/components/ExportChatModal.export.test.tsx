@@ -10,7 +10,7 @@
 import type { Mock } from 'vitest';
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { ExportChatModal } from '../../components/ExportChatModal';
+import { ExportChatModal } from '../../components/modals/ExportChatModal';
 import { api, ExportFormat } from '@/lib/api';
 
 // Mock API

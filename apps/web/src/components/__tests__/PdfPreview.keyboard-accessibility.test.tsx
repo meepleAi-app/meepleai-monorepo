@@ -4,33 +4,41 @@ import { vi } from 'vitest';
 vi.mock('react-pdf', () => {
   const React = require('react');
 
-  const MockDocument = React.forwardRef(({ file, onLoadSuccess, onLoadError, children }: any, ref: any) => {
-    // Simulate successful load after a short delay
-    React.useEffect(() => {
-      const timer = setTimeout(() => {
-        if (file && onLoadSuccess) {
-          onLoadSuccess({ numPages: 10 });
-        }
-      }, 100);
-      return () => clearTimeout(timer);
-    }, [file, onLoadSuccess]);
+  const MockDocument = React.forwardRef(
+    ({ file, onLoadSuccess, onLoadError, children }: any, ref: any) => {
+      // Simulate successful load after a short delay
+      React.useEffect(() => {
+        const timer = setTimeout(() => {
+          if (file && onLoadSuccess) {
+            onLoadSuccess({ numPages: 10 });
+          }
+        }, 100);
+        return () => clearTimeout(timer);
+      }, [file, onLoadSuccess]);
 
-    return <div data-testid="pdf-document" ref={ref}>{children}</div>;
-  });
+      return (
+        <div data-testid="pdf-document" ref={ref}>
+          {children}
+        </div>
+      );
+    }
+  );
   MockDocument.displayName = 'MockDocument';
 
-  const MockPage = React.forwardRef(({ pageNumber, width, renderTextLayer, renderAnnotationLayer, loading }: any, ref: any) => (
-    <div
-      ref={ref}
-      data-testid={`pdf-page-${pageNumber}`}
-      data-page-number={pageNumber}
-      data-width={width}
-      data-render-text={renderTextLayer}
-      data-render-annotation={renderAnnotationLayer}
-    >
-      {loading || `Page ${pageNumber}`}
-    </div>
-  ));
+  const MockPage = React.forwardRef(
+    ({ pageNumber, width, renderTextLayer, renderAnnotationLayer, loading }: any, ref: any) => (
+      <div
+        ref={ref}
+        data-testid={`pdf-page-${pageNumber}`}
+        data-page-number={pageNumber}
+        data-width={width}
+        data-render-text={renderTextLayer}
+        data-render-annotation={renderAnnotationLayer}
+      >
+        {loading || `Page ${pageNumber}`}
+      </div>
+    )
+  );
   MockPage.displayName = 'MockPage';
 
   return {
@@ -39,9 +47,9 @@ vi.mock('react-pdf', () => {
     pdfjs: {
       version: '3.11.174',
       GlobalWorkerOptions: {
-        workerSrc: ''
-      }
-    }
+        workerSrc: '',
+      },
+    },
   };
 });
 
@@ -49,47 +57,53 @@ vi.mock('react-pdf', () => {
 vi.mock('react-window', () => {
   const React = require('react');
 
-  const MockList = React.forwardRef(({ rowComponent, rowCount, rowHeight, defaultHeight, listRef }: any, ref: any) => {
-    // Handle listRef callback
-    React.useEffect(() => {
-      if (listRef && typeof listRef === 'function') {
-        const api = { scrollToItem: vi.fn() };
-        listRef(api);
-      } else if (listRef && typeof listRef === 'object') {
-        listRef.current = { scrollToItem: vi.fn() };
-      }
-    }, [listRef]);
+  const MockList = React.forwardRef(
+    ({ rowComponent, rowCount, rowHeight, defaultHeight, listRef }: any, ref: any) => {
+      // Handle listRef callback
+      React.useEffect(() => {
+        if (listRef && typeof listRef === 'function') {
+          const api = { scrollToItem: vi.fn() };
+          listRef(api);
+        } else if (listRef && typeof listRef === 'object') {
+          listRef.current = { scrollToItem: vi.fn() };
+        }
+      }, [listRef]);
 
-    return (
-      <div
-        ref={ref}
-        data-testid="thumbnail-list"
-        data-item-count={rowCount}
-        data-item-size={rowHeight}
-        data-height={defaultHeight}
-      >
-        {Array.from({ length: rowCount }).map((_, index) => {
-          const RowComponent = rowComponent;
-          return <div key={index}><RowComponent index={index} style={{}} /></div>;
-        })}
-      </div>
-    );
-  });
+      return (
+        <div
+          ref={ref}
+          data-testid="thumbnail-list"
+          data-item-count={rowCount}
+          data-item-size={rowHeight}
+          data-height={defaultHeight}
+        >
+          {Array.from({ length: rowCount }).map((_, index) => {
+            const RowComponent = rowComponent;
+            return (
+              <div key={index}>
+                <RowComponent index={index} style={{}} />
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+  );
   MockList.displayName = 'MockList';
 
   return {
-    List: MockList
+    List: MockList,
   };
 });
 
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { PdfPreview } from '../PdfPreview';
+import { PdfPreview } from '../pdf/PdfPreview';
 import '@testing-library/jest-dom';
 import {
   setupGlobalMocks,
   createMockPdfFile,
   setViewportSize,
-  DESKTOP_WIDTH
+  DESKTOP_WIDTH,
 } from './PdfPreview.test-helpers';
 
 // Setup non-module mocks

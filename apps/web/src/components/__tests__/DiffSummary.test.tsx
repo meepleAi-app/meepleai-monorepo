@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { DiffSummary } from '../DiffSummary';
+import { DiffSummary } from '../diff/DiffSummary';
 
 describe('DiffSummary', () => {
   it('visualizza correttamente le statistiche delle modifiche', () => {
@@ -7,7 +7,7 @@ describe('DiffSummary', () => {
       added: 5,
       modified: 3,
       deleted: 2,
-      unchanged: 10
+      unchanged: 10,
     };
 
     render(<DiffSummary summary={summary} />);
@@ -34,7 +34,7 @@ describe('DiffSummary', () => {
       added: 0,
       modified: 0,
       deleted: 0,
-      unchanged: 0
+      unchanged: 0,
     };
 
     render(<DiffSummary summary={summary} />);
@@ -50,7 +50,7 @@ describe('DiffSummary', () => {
       added: 999,
       modified: 123,
       deleted: 456,
-      unchanged: 789
+      unchanged: 789,
     };
 
     render(<DiffSummary summary={summary} />);
@@ -66,7 +66,7 @@ describe('DiffSummary', () => {
       added: 1,
       modified: 1,
       deleted: 1,
-      unchanged: 1
+      unchanged: 1,
     };
 
     render(<DiffSummary summary={summary} />);
@@ -83,7 +83,7 @@ describe('DiffSummary', () => {
       added: 5,
       modified: 0,
       deleted: 3,
-      unchanged: 100
+      unchanged: 100,
     };
 
     render(<DiffSummary summary={summary} />);

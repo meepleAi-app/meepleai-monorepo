@@ -33,7 +33,7 @@ public class OAuthAccountRepositoryTests : IntegrationTestBase<OAuthAccountRepos
         await ResetDatabaseAsync();
         var userId = await CreateTestUserAsync();
         var account = CreateTestOAuthAccount(userId, "google", "google_user_123");
-        await Repository.AddAsync(account, TestCancellationToken, TestContext.Current.CancellationToken);
+        await Repository.AddAsync(account, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act
@@ -53,7 +53,7 @@ public class OAuthAccountRepositoryTests : IntegrationTestBase<OAuthAccountRepos
         await ResetDatabaseAsync();
         var userId = await CreateTestUserAsync();
         var account = CreateTestOAuthAccount(userId, "github", "github_user_456");
-        await Repository.AddAsync(account, TestCancellationToken, TestContext.Current.CancellationToken);
+        await Repository.AddAsync(account, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act - Search with uppercase
@@ -89,7 +89,7 @@ public class OAuthAccountRepositoryTests : IntegrationTestBase<OAuthAccountRepos
         await ResetDatabaseAsync();
         var userId = await CreateTestUserAsync();
         var account = CreateTestOAuthAccount(userId, "discord", "discord_user_789");
-        await Repository.AddAsync(account, TestCancellationToken, TestContext.Current.CancellationToken);
+        await Repository.AddAsync(account, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act
@@ -113,8 +113,8 @@ public class OAuthAccountRepositoryTests : IntegrationTestBase<OAuthAccountRepos
         var account1 = CreateTestOAuthAccount(user1Id, "google", "google_12345");
         var account2 = CreateTestOAuthAccount(user2Id, "google", "google_67890");
 
-        await Repository.AddAsync(account1, TestCancellationToken, TestContext.Current.CancellationToken);
-        await Repository.AddAsync(account2, TestCancellationToken, TestContext.Current.CancellationToken);
+        await Repository.AddAsync(account1, TestCancellationToken);
+        await Repository.AddAsync(account2, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act - OAuth provider returns google_12345
@@ -167,9 +167,9 @@ public class OAuthAccountRepositoryTests : IntegrationTestBase<OAuthAccountRepos
         var githubAccount = CreateTestOAuthAccount(userId, "github", "github_user");
         var discordAccount = CreateTestOAuthAccount(userId, "discord", "discord_user");
 
-        await Repository.AddAsync(googleAccount, TestCancellationToken, TestContext.Current.CancellationToken);
-        await Repository.AddAsync(githubAccount, TestCancellationToken, TestContext.Current.CancellationToken);
-        await Repository.AddAsync(discordAccount, TestCancellationToken, TestContext.Current.CancellationToken);
+        await Repository.AddAsync(googleAccount, TestCancellationToken);
+        await Repository.AddAsync(githubAccount, TestCancellationToken);
+        await Repository.AddAsync(discordAccount, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act
@@ -195,9 +195,9 @@ public class OAuthAccountRepositoryTests : IntegrationTestBase<OAuthAccountRepos
         var user1Github = CreateTestOAuthAccount(user1Id, "github", "user1_github");
         var user2Google = CreateTestOAuthAccount(user2Id, "google", "user2_google");
 
-        await Repository.AddAsync(user1Google, TestCancellationToken, TestContext.Current.CancellationToken);
-        await Repository.AddAsync(user1Github, TestCancellationToken, TestContext.Current.CancellationToken);
-        await Repository.AddAsync(user2Google, TestCancellationToken, TestContext.Current.CancellationToken);
+        await Repository.AddAsync(user1Google, TestCancellationToken);
+        await Repository.AddAsync(user1Github, TestCancellationToken);
+        await Repository.AddAsync(user2Google, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act
@@ -229,7 +229,7 @@ public class OAuthAccountRepositoryTests : IntegrationTestBase<OAuthAccountRepos
         );
 
         // Act
-        await Repository.AddAsync(account, TestCancellationToken, TestContext.Current.CancellationToken);
+        await Repository.AddAsync(account, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Assert
@@ -258,7 +258,7 @@ public class OAuthAccountRepositoryTests : IntegrationTestBase<OAuthAccountRepos
         );
 
         // Act
-        await Repository.AddAsync(account, TestCancellationToken, TestContext.Current.CancellationToken);
+        await Repository.AddAsync(account, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Assert
@@ -278,7 +278,7 @@ public class OAuthAccountRepositoryTests : IntegrationTestBase<OAuthAccountRepos
         await ResetDatabaseAsync();
         var userId = await CreateTestUserAsync();
         var account = CreateTestOAuthAccount(userId, "google", "google_refresh_test");
-        await Repository.AddAsync(account, TestCancellationToken, TestContext.Current.CancellationToken);
+        await Repository.AddAsync(account, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act - Simulate token refresh
@@ -309,7 +309,7 @@ public class OAuthAccountRepositoryTests : IntegrationTestBase<OAuthAccountRepos
         await ResetDatabaseAsync();
         var userId = await CreateTestUserAsync();
         var account = CreateTestOAuthAccount(userId, "discord", "discord_update_test");
-        await Repository.AddAsync(account, TestCancellationToken, TestContext.Current.CancellationToken);
+        await Repository.AddAsync(account, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act
@@ -337,7 +337,7 @@ public class OAuthAccountRepositoryTests : IntegrationTestBase<OAuthAccountRepos
         await ResetDatabaseAsync();
         var userId = await CreateTestUserAsync();
         var account = CreateTestOAuthAccount(userId, "google", "delete_test");
-        await Repository.AddAsync(account, TestCancellationToken, TestContext.Current.CancellationToken);
+        await Repository.AddAsync(account, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act
@@ -383,7 +383,7 @@ public class OAuthAccountRepositoryTests : IntegrationTestBase<OAuthAccountRepos
         );
 
         // Act
-        await Repository.AddAsync(account, TestCancellationToken, TestContext.Current.CancellationToken);
+        await Repository.AddAsync(account, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Assert
@@ -405,7 +405,7 @@ public class OAuthAccountRepositoryTests : IntegrationTestBase<OAuthAccountRepos
         await ResetDatabaseAsync();
         var userId = await CreateTestUserAsync();
         var account = CreateTestOAuthAccount(userId, "discord", "roundtrip_test");
-        await Repository.AddAsync(account, TestCancellationToken, TestContext.Current.CancellationToken);
+        await Repository.AddAsync(account, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act
@@ -436,9 +436,9 @@ public class OAuthAccountRepositoryTests : IntegrationTestBase<OAuthAccountRepos
         var discordAccount = CreateTestOAuthAccount(userId, "discord", "multi_discord");
 
         // Act
-        await Repository.AddAsync(googleAccount, TestCancellationToken, TestContext.Current.CancellationToken);
-        await Repository.AddAsync(githubAccount, TestCancellationToken, TestContext.Current.CancellationToken);
-        await Repository.AddAsync(discordAccount, TestCancellationToken, TestContext.Current.CancellationToken);
+        await Repository.AddAsync(googleAccount, TestCancellationToken);
+        await Repository.AddAsync(githubAccount, TestCancellationToken);
+        await Repository.AddAsync(discordAccount, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Assert

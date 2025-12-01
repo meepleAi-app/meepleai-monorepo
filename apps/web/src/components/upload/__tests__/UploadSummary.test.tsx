@@ -15,12 +15,12 @@ describe('UploadSummary', () => {
     failed: 2,
     cancelled: 1,
     inProgress: 0,
-    pending: 0
+    pending: 0,
   };
 
   const mockHandlers = {
     onClose: vi.fn(),
-    onClearAll: vi.fn()
+    onClearAll: vi.fn(),
   };
 
   describe('Rendering', () => {
@@ -30,8 +30,8 @@ describe('UploadSummary', () => {
     });
 
     it('should render with default props', () => {
-      const { container } = render(<UploadSummary stats={mockStats} {...mockHandlers} />);
-      expect(container.firstChild).toBeInTheDocument();
+      render(<UploadSummary children={<div>Test Content</div>} />);
+      expect(screen.getByRole('region')).toBeInTheDocument();
     });
   });
 

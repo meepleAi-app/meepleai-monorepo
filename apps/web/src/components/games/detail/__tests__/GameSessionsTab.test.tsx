@@ -54,9 +54,7 @@ describe('GameSessionsTab', () => {
     });
 
     it('should render with default props', () => {
-      const game = createMockGame();
-      const sessions: GameSessionDto[] = [];
-      const { container } = render(<GameSessionsTab game={game} sessions={sessions} />);
+      const { container } = render(<GameSessionsTab children={<div>Test Content</div>} />);
       expect(container.firstChild).toBeInTheDocument();
     });
   });

@@ -16,8 +16,8 @@ describe('Form', () => {
     });
 
     it('should render with default props', () => {
-      const { container } = render(<Form onSubmit={vi.fn()} />);
-      expect(container.firstChild).toBeInTheDocument();
+      render(<Form onSubmit={vi.fn()} />);
+      expect(screen.getByRole('form')).toBeInTheDocument();
     });
   });
 

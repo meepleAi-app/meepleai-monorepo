@@ -16,8 +16,8 @@ describe('PdfViewerModal', () => {
     });
 
     it('should render with default props', () => {
-      const { container } = render(<PdfViewerModal isOpen={true} onClose={vi.fn()} />);
-      expect(container.firstChild).toBeInTheDocument();
+      render(<PdfViewerModal isOpen={true} onClose={vi.fn()} />);
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
     });
   });
 

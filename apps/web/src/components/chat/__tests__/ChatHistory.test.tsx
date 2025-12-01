@@ -4,10 +4,11 @@
  * TODO: Enhance with component-specific test cases
  */
 
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ChatHistory } from '../ChatHistory';
 import React from 'react';
+import { renderWithChatStore } from '@/__tests__/utils/zustand-test-utils';
 
 // Mock AuthProvider
 vi.mock('@/components/auth/AuthProvider', () => ({
@@ -24,39 +25,41 @@ vi.mock('@/components/auth/AuthProvider', () => ({
   }),
 }));
 
-// Mock ChatProvider
-vi.mock('@/hooks/useChatContext', () => ({
-  useChatContext: () => ({
-    chats: [],
-    activeChatId: null,
-    selectChat: vi.fn(),
-    deleteChat: vi.fn(),
-    loading: {
-      games: false,
-      agents: false,
-      chats: false,
-      messages: false,
-      sending: false,
-      creating: false,
-      updating: false,
-    },
-  }),
-}));
-
 describe('ChatHistory', () => {
   describe('Rendering', () => {
     it('should render without crashing', () => {
-      render(<ChatHistory />);
+      renderWithChatStore(<ChatHistory />, {
+        initialState: {
+          chatsByGame: {},
+          activeChatIds: {},
+          selectedGameId: null,
+          loading: { chats: false },
+        },
+      });
       expect(screen.getByLabelText('Thread history')).toBeInTheDocument();
     });
 
     it('should render with default props', () => {
-      const { container } = render(<ChatHistory />);
-      expect(container.firstChild).toBeInTheDocument();
+      renderWithChatStore(<ChatHistory />, {
+        initialState: {
+          chatsByGame: {},
+          activeChatIds: {},
+          selectedGameId: null,
+          loading: { chats: false },
+        },
+      });
+      expect(screen.getByLabelText('Thread history')).toBeInTheDocument();
     });
 
     it('should show empty state when no chats', () => {
-      render(<ChatHistory />);
+      renderWithChatStore(<ChatHistory />, {
+        initialState: {
+          chatsByGame: {},
+          activeChatIds: {},
+          selectedGameId: null,
+          loading: { chats: false },
+        },
+      });
       expect(screen.getByText(/Nessun thread/i)).toBeInTheDocument();
     });
   });
@@ -64,7 +67,14 @@ describe('ChatHistory', () => {
   describe('Interactions', () => {
     it('should handle user interactions', async () => {
       const user = userEvent.setup();
-      render(<ChatHistory />);
+      renderWithChatStore(<ChatHistory />, {
+        initialState: {
+          chatsByGame: {},
+          activeChatIds: {},
+          selectedGameId: null,
+          loading: { chats: false },
+        },
+      });
 
       // Verify empty state is displayed
       expect(screen.getByText(/Nessun thread/i)).toBeInTheDocument();
@@ -73,13 +83,29 @@ describe('ChatHistory', () => {
 
   describe('Accessibility', () => {
     it('should have accessible navigation', () => {
-      render(<ChatHistory />);
+      renderWithChatStore(<ChatHistory />, {
+        initialState: {
+          chatsByGame: {},
+          activeChatIds: {},
+          selectedGameId: null,
+          loading: { chats: false },
+        },
+      });
       expect(screen.getByLabelText('Thread history')).toBeInTheDocument();
     });
 
     it('should have accessible empty state message', () => {
-      render(<ChatHistory />);
-      expect(screen.getByText(/Invia un messaggio per iniziare/i)).toBeInTheDocument();
+      renderWithChatStore(<ChatHistory />, {
+        initialState: {
+          chatsByGame: {},
+          activeChatIds: {},
+          selectedGameId: null,
+          loading: { chats: false },
+        },
+      });
+      expect(screen.getByText(/Nessun thread/i)).toBeInTheDocument();
     });
+
+    // TODO: Add more a11y tests (aria-labels, keyboard navigation, etc.)
   });
 });

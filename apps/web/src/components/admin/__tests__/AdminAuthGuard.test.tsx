@@ -38,10 +38,8 @@ describe('AdminAuthGuard', () => {
     });
 
     it('should render with default props', () => {
-      const { container } = render(
-        <AdminAuthGuard loading={false} user={mockUser} children={<div>Test Content</div>} />
-      );
-      expect(container.firstChild).toBeInTheDocument();
+      render(<AdminAuthGuard loading={false} user={mockUser} children={<div>Test Content</div>} />);
+      expect(screen.getByText('Test Content')).toBeInTheDocument();
     });
   });
 

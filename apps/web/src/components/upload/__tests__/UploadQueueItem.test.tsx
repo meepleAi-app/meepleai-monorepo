@@ -16,8 +16,8 @@ describe('UploadQueueItem', () => {
     });
 
     it('should render with default props', () => {
-      const { container } = render(<UploadQueueItem children={<div>Test Content</div>} />);
-      expect(container.firstChild).toBeInTheDocument();
+      render(<UploadQueueItem children={<div>Test Content</div>} />);
+      expect(screen.getByRole('region')).toBeInTheDocument();
     });
   });
 

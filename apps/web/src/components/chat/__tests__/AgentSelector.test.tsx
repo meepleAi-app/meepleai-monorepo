@@ -4,9 +4,10 @@
  * TODO: Enhance with component-specific test cases
  */
 
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AgentSelector } from '../AgentSelector';
+import { renderWithChatStore } from '@/__tests__/utils/zustand-test-utils';
 
 // Mock AuthProvider
 vi.mock('@/components/auth/AuthProvider', () => ({
@@ -26,20 +27,26 @@ vi.mock('@/components/auth/AuthProvider', () => ({
 describe('AgentSelector', () => {
   describe('Rendering', () => {
     it('should render without crashing', () => {
-      render(<AgentSelector />);
+      renderWithChatStore(<AgentSelector />, {
+        initialState: { agents: [], selectedAgentId: null },
+      });
       expect(screen.getByRole('combobox')).toBeInTheDocument();
     });
 
     it('should render with default props', () => {
-      const { container } = render(<AgentSelector />);
-      expect(container.firstChild).toBeInTheDocument();
+      renderWithChatStore(<AgentSelector />, {
+        initialState: { agents: [], selectedAgentId: null },
+      });
+      expect(screen.getByRole('combobox')).toBeInTheDocument();
     });
   });
 
   describe('Interactions', () => {
     it('should handle user interactions', async () => {
       const user = userEvent.setup();
-      render(<AgentSelector />);
+      renderWithChatStore(<AgentSelector />, {
+        initialState: { agents: [], selectedAgentId: null },
+      });
 
       // TODO: Add interaction tests (click, input, etc.)
       // Example: await user.click(screen.getByRole('button'));
@@ -48,7 +55,9 @@ describe('AgentSelector', () => {
 
   describe('Accessibility', () => {
     it('should have accessible role', () => {
-      render(<AgentSelector />);
+      renderWithChatStore(<AgentSelector />, {
+        initialState: { agents: [], selectedAgentId: null },
+      });
       expect(screen.getByRole('combobox')).toBeInTheDocument();
     });
 

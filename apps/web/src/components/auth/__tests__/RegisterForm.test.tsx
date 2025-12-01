@@ -33,7 +33,7 @@ describe('RegisterForm', () => {
 
     it('should render with default props', () => {
       const { container } = render(<RegisterForm onSubmit={vi.fn()} />);
-      expect(container.firstChild).toBeInTheDocument();
+      expect(container.querySelector('form')).toBeInTheDocument();
     });
 
     it('should render registration fields', () => {

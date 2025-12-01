@@ -163,7 +163,7 @@ describe('FeatureFlagsTab', () => {
 
   it('surfaces API errors and keeps toggle state unchanged', async () => {
     const confirmSpy = vi.spyOn(window, 'confirm').mockImplementation(() => true);
-    mockApi.config.updateConfiguration = jest.fn().mockRejectedValue(new Error('API Error'));
+    mockApi.config.updateConfiguration = vi.fn().mockRejectedValue(new Error('API Error'));
 
     render(
       <FeatureFlagsTab configurations={mockConfigurations} onConfigurationChange={mockOnChange} />

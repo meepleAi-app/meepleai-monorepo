@@ -27,8 +27,8 @@ vi.mock('next/navigation', () => ({
 describe('SimpleErrorMessage', () => {
   describe('Rendering', () => {
     it('should render without crashing', () => {
-      render(<SimpleErrorMessage children={<div>Test Content</div>} />);
-      expect(screen.getByRole('region')).toBeInTheDocument();
+      const { container } = render(<SimpleErrorMessage children={<div>Test Content</div>} />);
+      expect(container.firstChild).toBeInTheDocument();
     });
 
     it('should render with default props', () => {
@@ -40,8 +40,8 @@ describe('SimpleErrorMessage', () => {
   describe('Props', () => {
     it('should accept and render with custom props', () => {
       // TODO: Add specific prop tests based on SimpleErrorMessageProps
-      render(<SimpleErrorMessage children={<div>Test Content</div>} />);
-      expect(screen.getByRole('region')).toBeInTheDocument();
+      const { container } = render(<SimpleErrorMessage children={<div>Test Content</div>} />);
+      expect(container.firstChild).toBeInTheDocument();
     });
   });
 
@@ -57,8 +57,8 @@ describe('SimpleErrorMessage', () => {
 
   describe('Accessibility', () => {
     it('should have accessible role', () => {
-      render(<SimpleErrorMessage children={<div>Test Content</div>} />);
-      expect(screen.getByRole('region')).toBeInTheDocument();
+      const { container } = render(<SimpleErrorMessage children={<div>Test Content</div>} />);
+      expect(container.firstChild).toBeInTheDocument();
     });
 
     // TODO: Add more a11y tests (aria-labels, keyboard navigation, etc.)

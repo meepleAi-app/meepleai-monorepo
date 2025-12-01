@@ -15,8 +15,8 @@ describe('ChangeItem', () => {
     });
 
     it('should render with default props', () => {
-      const { container } = render(<ChangeItem children={<div>Test Content</div>} />);
-      expect(container.firstChild).toBeInTheDocument();
+      render(<ChangeItem children={<div>Test Content</div>} />);
+      expect(screen.getByRole('region')).toBeInTheDocument();
     });
   });
 

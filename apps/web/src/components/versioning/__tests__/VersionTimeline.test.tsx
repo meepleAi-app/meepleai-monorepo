@@ -16,8 +16,8 @@ describe('VersionTimeline', () => {
     });
 
     it('should render with default props', () => {
-      const { container } = render(<VersionTimeline children={<div>Test Content</div>} />);
-      expect(container.firstChild).toBeInTheDocument();
+      render(<VersionTimeline children={<div>Test Content</div>} />);
+      expect(screen.getByRole('region')).toBeInTheDocument();
     });
   });
 

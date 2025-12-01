@@ -1,42 +1,37 @@
 /**
- * Tests for ChatProvider component
+ * Tests for ChatProvider component (DEPRECATED)
  * Auto-generated baseline tests - Issue #992
- * TODO: Enhance with component-specific test cases
+ *
+ * NOTE: ChatProvider is deprecated in favor of Zustand ChatStoreProvider
+ * These tests are kept for backwards compatibility but should be removed
+ * in a future cleanup. See Issue #1083 for Zustand migration.
  */
 
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { screen } from '@testing-library/react';
 import { ChatProvider } from '../ChatProvider';
+import { renderWithChatStore } from '@/__tests__/utils/zustand-test-utils';
 
-describe('ChatProvider', () => {
+// Mock GameProvider dependency
+vi.mock('@/components/game/GameProvider', () => ({
+  useGame: () => ({
+    selectedGameId: null,
+    games: [],
+    loading: false,
+  }),
+}));
+
+describe('ChatProvider (DEPRECATED)', () => {
   describe('Rendering', () => {
-    it('should render without crashing', () => {
-      render(<ChatProvider children={<div>Test Content</div>} />);
-      expect(screen.getByRole('region')).toBeInTheDocument();
+    it('should render children', () => {
+      renderWithChatStore(
+        <ChatProvider>
+          <div>Test Content</div>
+        </ChatProvider>,
+        {
+          initialState: {},
+        }
+      );
+      expect(screen.getByText('Test Content')).toBeInTheDocument();
     });
-
-    it('should render with default props', () => {
-      const { container } = render(<ChatProvider children={<div>Test Content</div>} />);
-      expect(container.firstChild).toBeInTheDocument();
-    });
-  });
-
-  describe('Interactions', () => {
-    it('should handle user interactions', async () => {
-      const user = userEvent.setup();
-      render(<ChatProvider children={<div>Test Content</div>} />);
-
-      // TODO: Add interaction tests (click, input, etc.)
-      // Example: await user.click(screen.getByRole('button'));
-    });
-  });
-
-  describe('Accessibility', () => {
-    it('should have accessible role', () => {
-      render(<ChatProvider children={<div>Test Content</div>} />);
-      expect(screen.getByRole('region')).toBeInTheDocument();
-    });
-
-    // TODO: Add more a11y tests (aria-labels, keyboard navigation, etc.)
   });
 });

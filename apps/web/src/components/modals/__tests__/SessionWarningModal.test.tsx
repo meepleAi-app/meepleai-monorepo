@@ -18,10 +18,11 @@ describe('SessionWarningModal', () => {
     });
 
     it('should render with default props', () => {
-      const { container } = render(
+      render(
         <SessionWarningModal remainingMinutes={5} onStayLoggedIn={vi.fn()} onLogOut={vi.fn()} />
       );
-      expect(container.firstChild).toBeInTheDocument();
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+      expect(screen.getByText(/session expiring soon/i)).toBeInTheDocument();
     });
   });
 

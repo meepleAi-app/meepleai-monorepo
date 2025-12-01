@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { CommentItem } from '../comments/CommentItem';
 import type { RuleSpecComment } from '@/lib/api';
@@ -306,7 +306,7 @@ describe('CommentItem', () => {
         />
       );
 
-      const commentDiv = container.firstChild as HTMLElement;
+      const commentDiv = container.querySelector('[data-comment-id="comment-1"]') as HTMLElement;
       expect(commentDiv).toBeInTheDocument(); // Style assertion removed - Shadcn/UI uses Tailwind CSS classes
     });
 
@@ -1710,5 +1710,23 @@ describe('CommentItem', () => {
       expect(screen.getByRole('button', { name: 'Edit comment' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Delete comment' })).toBeInTheDocument();
     });
+  });
+
+  it('should render with default props', () => {
+    render(
+      <CommentItem
+        comment={mockComment}
+        currentUserId="user-1"
+        currentUserRole="User"
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+        onReply={mockOnReply}
+        onResolve={mockOnResolve}
+        onUnresolve={mockOnUnresolve}
+      />
+    );
+    // Query by the comment's data-comment-id attribute instead of role
+    const commentElement = screen.getByText('This is a test comment');
+    expect(commentElement).toBeInTheDocument();
   });
 });

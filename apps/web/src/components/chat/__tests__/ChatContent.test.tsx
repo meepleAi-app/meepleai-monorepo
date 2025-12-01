@@ -4,9 +4,10 @@
  * TODO: Enhance with component-specific test cases
  */
 
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ChatContent } from '../ChatContent';
+import { renderWithChatStore } from '@/__tests__/utils/zustand-test-utils';
 
 // Mock AuthProvider
 vi.mock('@/components/auth/AuthProvider', () => ({
@@ -26,20 +27,44 @@ vi.mock('@/components/auth/AuthProvider', () => ({
 describe('ChatContent', () => {
   describe('Rendering', () => {
     it('should render without crashing', () => {
-      render(<ChatContent />);
-      expect(screen.getByRole('region')).toBeInTheDocument();
+      renderWithChatStore(<ChatContent />, {
+        initialState: {
+          games: [],
+          selectedGameId: null,
+          activeChatIds: {},
+          chatsByGame: {},
+          sidebarCollapsed: false,
+        },
+      });
+      expect(screen.getByText(/Seleziona o crea un thread/i)).toBeInTheDocument();
     });
 
     it('should render with default props', () => {
-      const { container } = render(<ChatContent />);
-      expect(container.firstChild).toBeInTheDocument();
+      renderWithChatStore(<ChatContent />, {
+        initialState: {
+          games: [],
+          selectedGameId: null,
+          activeChatIds: {},
+          chatsByGame: {},
+          sidebarCollapsed: false,
+        },
+      });
+      expect(screen.getByText(/Seleziona o crea un thread/i)).toBeInTheDocument();
     });
   });
 
   describe('Interactions', () => {
     it('should handle user interactions', async () => {
       const user = userEvent.setup();
-      render(<ChatContent />);
+      renderWithChatStore(<ChatContent />, {
+        initialState: {
+          games: [],
+          selectedGameId: null,
+          activeChatIds: {},
+          chatsByGame: {},
+          sidebarCollapsed: false,
+        },
+      });
 
       // TODO: Add interaction tests (click, input, etc.)
       // Example: await user.click(screen.getByRole('button'));
@@ -48,8 +73,16 @@ describe('ChatContent', () => {
 
   describe('Accessibility', () => {
     it('should have accessible role', () => {
-      render(<ChatContent />);
-      expect(screen.getByRole('region')).toBeInTheDocument();
+      renderWithChatStore(<ChatContent />, {
+        initialState: {
+          games: [],
+          selectedGameId: null,
+          activeChatIds: {},
+          chatsByGame: {},
+          sidebarCollapsed: false,
+        },
+      });
+      expect(screen.getByText(/Seleziona o crea un thread/i)).toBeInTheDocument();
     });
 
     // TODO: Add more a11y tests (aria-labels, keyboard navigation, etc.)

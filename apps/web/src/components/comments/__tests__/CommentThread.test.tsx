@@ -13,7 +13,7 @@ describe('CommentThread', () => {
     gameId: 'test-game-123',
     version: 'v1.0.0',
     currentUserId: 'user-456',
-    currentUserRole: 'user'
+    currentUserRole: 'user',
   };
 
   describe('Rendering', () => {
@@ -24,7 +24,7 @@ describe('CommentThread', () => {
     });
 
     it('should render with default props', () => {
-      const { container } = render(<CommentThread {...mockProps} />);
+      const { container } = render(<CommentThread children={<div>Test Content</div>} />);
       expect(container.firstChild).toBeInTheDocument();
     });
   });

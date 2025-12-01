@@ -122,17 +122,13 @@ describe('SkeletonLoader', () => {
 
   describe('Custom className', () => {
     it('should apply custom className', () => {
-      const { container } = render(
-        <SkeletonLoader variant="games" className="custom-skeleton" />
-      );
+      const { container } = render(<SkeletonLoader variant="games" className="custom-skeleton" />);
       const skeleton = container.querySelector('[role="status"]');
       expect(skeleton).toHaveClass('custom-skeleton');
     });
 
     it('should preserve base classes with custom className', () => {
-      const { container } = render(
-        <SkeletonLoader variant="games" className="text-red-500" />
-      );
+      const { container } = render(<SkeletonLoader variant="games" className="text-red-500" />);
       const skeleton = container.querySelector('[role="status"]');
       expect(skeleton).toHaveClass('text-red-500');
       expect(skeleton).toHaveClass('bg-slate-200'); // Base class

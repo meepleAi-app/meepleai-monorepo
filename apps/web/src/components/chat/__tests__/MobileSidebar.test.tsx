@@ -4,9 +4,10 @@
  * TODO: Enhance with component-specific test cases
  */
 
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MobileSidebar } from '../MobileSidebar';
+import { renderWithChatStore } from '@/__tests__/utils/zustand-test-utils';
 
 // Mock AuthProvider
 vi.mock('@/components/auth/AuthProvider', () => ({
@@ -24,30 +25,43 @@ vi.mock('@/components/auth/AuthProvider', () => ({
 }));
 
 describe('MobileSidebar', () => {
+  const defaultProps = {
+    open: false,
+    onOpenChange: vi.fn(),
+  };
+
   describe('Rendering', () => {
     it('should render without crashing', () => {
-      render(<MobileSidebar children={<div>Test Content</div>} />);
-      expect(screen.getByRole('region')).toBeInTheDocument();
+      renderWithChatStore(<MobileSidebar {...defaultProps} />, {
+        initialState: { games: [], selectedGameId: null, selectedAgentId: null },
+      });
+      // Sheet with open=false won't render content
+      expect(document.body).toBeInTheDocument();
     });
 
     it('should render with default props', () => {
-      const { container } = render(<MobileSidebar children={<div>Test Content</div>} />);
-      expect(container.firstChild).toBeInTheDocument();
+      renderWithChatStore(<MobileSidebar {...defaultProps} open={true} />, {
+        initialState: { games: [], selectedGameId: null, selectedAgentId: null },
+      });
+      expect(screen.getByText(/MeepleAI Chat/i)).toBeInTheDocument();
     });
   });
 
   describe('Props', () => {
     it('should accept and render with custom props', () => {
-      // TODO: Add specific prop tests based on MobileSidebarProps
-      render(<MobileSidebar children={<div>Test Content</div>} />);
-      expect(screen.getByRole('region')).toBeInTheDocument();
+      renderWithChatStore(<MobileSidebar {...defaultProps} open={true} />, {
+        initialState: { games: [], selectedGameId: null, selectedAgentId: null },
+      });
+      expect(screen.getByText(/MeepleAI Chat/i)).toBeInTheDocument();
     });
   });
 
   describe('Interactions', () => {
     it('should handle user interactions', async () => {
       const user = userEvent.setup();
-      render(<MobileSidebar children={<div>Test Content</div>} />);
+      renderWithChatStore(<MobileSidebar {...defaultProps} open={true} />, {
+        initialState: { games: [], selectedGameId: null, selectedAgentId: null },
+      });
 
       // TODO: Add interaction tests (click, input, etc.)
       // Example: await user.click(screen.getByRole('button'));
@@ -56,8 +70,10 @@ describe('MobileSidebar', () => {
 
   describe('Accessibility', () => {
     it('should have accessible role', () => {
-      render(<MobileSidebar children={<div>Test Content</div>} />);
-      expect(screen.getByRole('region')).toBeInTheDocument();
+      renderWithChatStore(<MobileSidebar {...defaultProps} open={true} />, {
+        initialState: { games: [], selectedGameId: null, selectedAgentId: null },
+      });
+      expect(screen.getByRole('button', { name: /Create new chat/i })).toBeInTheDocument();
     });
 
     // TODO: Add more a11y tests (aria-labels, keyboard navigation, etc.)

@@ -16,7 +16,7 @@ describe('MentionInput', () => {
     });
 
     it('should render with default props', () => {
-      const { container } = render(<MentionInput value="" onChange={vi.fn()} />);
+      const { container } = render(<MentionInput children={<div>Test Content</div>} />);
       expect(container.firstChild).toBeInTheDocument();
     });
   });

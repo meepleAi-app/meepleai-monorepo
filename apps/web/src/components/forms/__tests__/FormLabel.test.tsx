@@ -15,8 +15,8 @@ describe('FormLabel', () => {
     });
 
     it('should render with default props', () => {
-      const { container } = render(<FormLabel onSubmit={vi.fn()} />);
-      expect(container.firstChild).toBeInTheDocument();
+      render(<FormLabel children={<div>Test Content</div>} />);
+      expect(screen.getByText('Test Content')).toBeInTheDocument();
     });
   });
 

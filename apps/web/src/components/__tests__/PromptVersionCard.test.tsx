@@ -120,11 +120,7 @@ describe('PromptVersionCard', () => {
   describe('Action Buttons', () => {
     it('should show activate button for inactive versions when showActions is true', () => {
       render(
-        <PromptVersionCard
-          version={baseVersion}
-          onActivate={mockOnActivate}
-          showActions={true}
-        />
+        <PromptVersionCard version={baseVersion} onActivate={mockOnActivate} showActions={true} />
       );
 
       expect(screen.getByText('Activate')).toBeInTheDocument();
@@ -132,11 +128,7 @@ describe('PromptVersionCard', () => {
 
     it('should not show activate button for active versions', () => {
       render(
-        <PromptVersionCard
-          version={activeVersion}
-          onActivate={mockOnActivate}
-          showActions={true}
-        />
+        <PromptVersionCard version={activeVersion} onActivate={mockOnActivate} showActions={true} />
       );
 
       expect(screen.queryByText('Activate')).not.toBeInTheDocument();
@@ -144,11 +136,7 @@ describe('PromptVersionCard', () => {
 
     it('should show compare button when onCompare is provided', () => {
       render(
-        <PromptVersionCard
-          version={baseVersion}
-          onCompare={mockOnCompare}
-          showActions={true}
-        />
+        <PromptVersionCard version={baseVersion} onCompare={mockOnCompare} showActions={true} />
       );
 
       expect(screen.getByText('Compare')).toBeInTheDocument();
@@ -187,11 +175,7 @@ describe('PromptVersionCard', () => {
       const user = userEvent.setup();
 
       render(
-        <PromptVersionCard
-          version={baseVersion}
-          onActivate={mockOnActivate}
-          showActions={true}
-        />
+        <PromptVersionCard version={baseVersion} onActivate={mockOnActivate} showActions={true} />
       );
 
       const activateButton = screen.getByText('Activate');
@@ -204,11 +188,7 @@ describe('PromptVersionCard', () => {
       const user = userEvent.setup();
 
       render(
-        <PromptVersionCard
-          version={baseVersion}
-          onCompare={mockOnCompare}
-          showActions={true}
-        />
+        <PromptVersionCard version={baseVersion} onCompare={mockOnCompare} showActions={true} />
       );
 
       const compareButton = screen.getByText('Compare');
@@ -340,11 +320,7 @@ describe('PromptVersionCard', () => {
 
     it('should apply correct button styles for activate button', () => {
       render(
-        <PromptVersionCard
-          version={baseVersion}
-          onActivate={mockOnActivate}
-          showActions={true}
-        />
+        <PromptVersionCard version={baseVersion} onActivate={mockOnActivate} showActions={true} />
       );
 
       const activateButton = screen.getByText('Activate');
@@ -354,11 +330,7 @@ describe('PromptVersionCard', () => {
 
     it('should apply correct button styles for compare button', () => {
       render(
-        <PromptVersionCard
-          version={baseVersion}
-          onCompare={mockOnCompare}
-          showActions={true}
-        />
+        <PromptVersionCard version={baseVersion} onCompare={mockOnCompare} showActions={true} />
       );
 
       const compareButton = screen.getByText('Compare');

@@ -59,7 +59,7 @@ public static class KnowledgeBaseEndpoints
             );
 
             // Execute via MediatR
-            var results = await mediator.Send(query, ct);
+            var results = await mediator.Send(query, ct).ConfigureAwait(false);
 
             logger.LogInformation(
                 "KnowledgeBase search completed: {ResultCount} results found",
@@ -115,7 +115,7 @@ public static class KnowledgeBaseEndpoints
             );
 
             // Execute via MediatR
-            var response = await mediator.Send(query, ct);
+            var response = await mediator.Send(query, ct).ConfigureAwait(false);
 
             logger.LogInformation(
                 "KnowledgeBase Q&A completed: Confidence={Confidence}, IsLowQuality={IsLowQuality}",
@@ -163,7 +163,7 @@ public static class KnowledgeBaseEndpoints
                 InitialMessage: req.InitialMessage
             );
 
-            var result = await mediator.Send(command, ct);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
             return Results.Created($"/api/v1/chat-threads/{result.Id}", result);
         })
         .WithName("CreateChatThread")
@@ -183,7 +183,7 @@ public static class KnowledgeBaseEndpoints
             
 
             var query = new GetChatThreadByIdQuery(threadId);
-            var result = await mediator.Send(query, ct);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
 
             if (result == null)
             {
@@ -228,7 +228,7 @@ public static class KnowledgeBaseEndpoints
                 }
 
                 var query = new GetChatThreadsByGameQuery(gameId.Value, userId);
-                var results = await mediator.Send(query, ct);
+                var results = await mediator.Send(query, ct).ConfigureAwait(false);
 
                 return Results.Ok(new { threads = results, count = results.Count });
             }
@@ -267,7 +267,7 @@ public static class KnowledgeBaseEndpoints
 
             // Verify thread ownership before mutation
             var threadQuery = new GetChatThreadByIdQuery(threadId);
-            var existingThread = await mediator.Send(threadQuery, ct);
+            var existingThread = await mediator.Send(threadQuery, ct).ConfigureAwait(false);
 
             if (existingThread == null)
             {
@@ -288,7 +288,7 @@ public static class KnowledgeBaseEndpoints
                 Role: req.Role
             );
 
-            var result = await mediator.Send(command, ct);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
             return Results.Ok(result);
         })
         .WithName("AddMessageToThread")
@@ -315,7 +315,7 @@ public static class KnowledgeBaseEndpoints
 
             // Verify thread ownership before mutation
             var threadQuery = new GetChatThreadByIdQuery(threadId);
-            var existingThread = await mediator.Send(threadQuery, ct);
+            var existingThread = await mediator.Send(threadQuery, ct).ConfigureAwait(false);
 
             if (existingThread == null)
             {
@@ -331,7 +331,7 @@ public static class KnowledgeBaseEndpoints
             }
 
             var command = new CloseThreadCommand(threadId);
-            var result = await mediator.Send(command, ct);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
             return Results.Ok(result);
         })
         .WithName("CloseThread")
@@ -358,7 +358,7 @@ public static class KnowledgeBaseEndpoints
 
             // Verify thread ownership before mutation
             var threadQuery = new GetChatThreadByIdQuery(threadId);
-            var existingThread = await mediator.Send(threadQuery, ct);
+            var existingThread = await mediator.Send(threadQuery, ct).ConfigureAwait(false);
 
             if (existingThread == null)
             {
@@ -374,7 +374,7 @@ public static class KnowledgeBaseEndpoints
             }
 
             var command = new ReopenThreadCommand(threadId);
-            var result = await mediator.Send(command, ct);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
             return Results.Ok(result);
         })
         .WithName("ReopenThread")
@@ -402,7 +402,7 @@ public static class KnowledgeBaseEndpoints
 
             // Verify thread ownership before export
             var threadQuery = new GetChatThreadByIdQuery(threadId);
-            var existingThread = await mediator.Send(threadQuery, ct);
+            var existingThread = await mediator.Send(threadQuery, ct).ConfigureAwait(false);
 
             if (existingThread == null)
             {
@@ -421,7 +421,7 @@ public static class KnowledgeBaseEndpoints
             var exportFormat = format?.ToLowerInvariant() ?? "json";
 
             var command = new ExportChatCommand(threadId, exportFormat);
-            var result = await mediator.Send(command, ct);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
             // Generate filename
             var threadTitle = existingThread.Title?.Replace(" ", "_") ?? "chat";
@@ -472,7 +472,7 @@ public static class KnowledgeBaseEndpoints
             }
 
             var command = new UpdateMessageCommand(threadId, messageId, req.Content, userId);
-            var result = await mediator.Send(command, ct);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
             logger.LogInformation("User {UserId} updated message {MessageId} in thread {ThreadId}",
                 userId, messageId, threadId);
@@ -504,7 +504,7 @@ public static class KnowledgeBaseEndpoints
             var isAdmin = string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
 
             var command = new DeleteMessageCommand(threadId, messageId, userId, isAdmin);
-            var result = await mediator.Send(command, ct);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
             logger.LogInformation("User {UserId} deleted message {MessageId} from thread {ThreadId} (admin: {IsAdmin})",
                 userId, messageId, threadId, isAdmin);
@@ -533,7 +533,7 @@ public static class KnowledgeBaseEndpoints
             }
 
             var command = new DeleteChatThreadCommand(threadId, userId);
-            await mediator.Send(command, ct);
+            await mediator.Send(command, ct).ConfigureAwait(false);
 
             logger.LogInformation("User {UserId} deleted thread {ThreadId}", userId, threadId);
 

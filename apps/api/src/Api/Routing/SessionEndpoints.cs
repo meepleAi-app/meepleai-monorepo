@@ -23,7 +23,7 @@ public static class SessionEndpoints
                 UserId: string.IsNullOrEmpty(userId) ? null : Guid.Parse(userId),
                 Limit: limit
             );
-            var sessions = await mediator.Send(query, ct);
+            var sessions = await mediator.Send(query, ct).ConfigureAwait(false);
             return Results.Json(sessions);
         });
 
@@ -40,7 +40,7 @@ public static class SessionEndpoints
                 IsRequestingUserAdmin: true,
                 Reason: "Admin revocation"
             );
-            var response = await mediator.Send(command, ct);
+            var response = await mediator.Send(command, ct).ConfigureAwait(false);
             if (!response.Success)
             {
                 return Results.NotFound(new { error = response.ErrorMessage ?? "Session not found or already revoked" });
@@ -58,7 +58,7 @@ public static class SessionEndpoints
             logger.LogInformation("Admin {AdminId} revoking all sessions for user {UserId}", session.User.Id, userId);
 
             var command = new Api.BoundedContexts.Authentication.Application.Commands.RevokeAllUserSessionsCommand(userId);
-            var count = await mediator.Send(command, ct);
+            var count = await mediator.Send(command, ct).ConfigureAwait(false);
 
             logger.LogInformation("Revoked {Count} sessions for user {UserId}", count, userId);
             return Results.Json(new { ok = true, revokedCount = count });

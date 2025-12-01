@@ -30,7 +30,7 @@ public static class UserProfileEndpoints
             var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
 
             var query = new DddGetUserProfileQuery { UserId = Guid.Parse(session.User.Id) };
-            var profile = await mediator.Send(query, ct);
+            var profile = await mediator.Send(query, ct).ConfigureAwait(false);
 
             if (profile == null)
             {
@@ -72,7 +72,7 @@ public static class UserProfileEndpoints
                 Email = payload.Email
             };
 
-            await mediator.Send(command, ct);
+            await mediator.Send(command, ct).ConfigureAwait(false);
             logger.LogInformation("Profile updated for user {UserId}", session.User.Id);
 
             return Results.Json(new { ok = true, message = "Profile updated successfully" });
@@ -116,7 +116,7 @@ public static class UserProfileEndpoints
                 NewPassword = payload.NewPassword
             };
 
-            await mediator.Send(command, ct);
+            await mediator.Send(command, ct).ConfigureAwait(false);
             logger.LogInformation("Password changed for user {UserId}", session.User.Id);
 
             return Results.Json(new { ok = true, message = "Password changed successfully" });
@@ -160,7 +160,7 @@ public static class UserProfileEndpoints
             }
 
             var query = new GetUserUploadQuotaQuery(userId);
-            var quotaInfo = await mediator.Send(query, ct);
+            var quotaInfo = await mediator.Send(query, ct).ConfigureAwait(false);
 
             return Results.Json(quotaInfo);
         })

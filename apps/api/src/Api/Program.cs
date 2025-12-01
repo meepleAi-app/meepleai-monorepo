@@ -25,6 +25,7 @@ using Serilog;
 using Serilog.Events;
 using StackExchange.Redis;
 using System;
+using System.Globalization;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
@@ -106,7 +107,7 @@ if (forwardedHeadersEnabled)
             }
 
             var parts = network.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-            if (parts.Length == 2 && IPAddress.TryParse(parts[0], out var networkAddress) && int.TryParse(parts[1], out var prefixLength))
+            if (parts.Length == 2 && IPAddress.TryParse(parts[0], out var networkAddress) && int.TryParse(parts[1], CultureInfo.InvariantCulture, out var prefixLength))
             {
                 options.KnownNetworks.Add(new AspNetIpNetwork(networkAddress, prefixLength));
             }
@@ -259,7 +260,7 @@ using (var scope = app.Services.CreateScope())
 
         // AI-01: Initialize Qdrant collection
         var qdrant = scope.ServiceProvider.GetRequiredService<IQdrantService>();
-        await qdrant.EnsureCollectionExistsAsync();
+        await qdrant.EnsureCollectionExistsAsync().ConfigureAwait(false);
 
         // Validate embedding configuration consistency
         var embedding = scope.ServiceProvider.GetRequiredService<IEmbeddingService>();
@@ -271,12 +272,12 @@ using (var scope = app.Services.CreateScope())
             provider, model, embeddingDimensions);
 
         // Bootstrap: Create initial admin user if database is empty
-        await EnsureInitialAdminUserAsync(app, db, scope.ServiceProvider);
+        await EnsureInitialAdminUserAsync(app, db, scope.ServiceProvider).ConfigureAwait(false);
 
         // K6 Performance Testing: Ensure test user exists in Development/Test environments (Issue #1663)
         if (app.Environment.IsDevelopment() || string.Equals(app.Environment.EnvironmentName, "Test", StringComparison.Ordinal))
         {
-            await EnsureTestUserExistsAsync(app, db, scope.ServiceProvider);
+            await EnsureTestUserExistsAsync(app, db, scope.ServiceProvider).ConfigureAwait(false);
         }
     }
 }
@@ -306,7 +307,7 @@ app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks
             }),
             totalDuration = report.TotalDuration.TotalMilliseconds
         });
-        await context.Response.WriteAsync(result);
+        await context.Response.WriteAsync(result).ConfigureAwait(false);
     }
 });
 
@@ -427,7 +428,7 @@ static async Task EnsureInitialAdminUserAsync(WebApplication app, MeepleAiDbCont
         };
 
         db.Users.Add(adminUser);
-        await db.SaveChangesAsync();
+        await db.SaveChangesAsync().ConfigureAwait(false);
 
         app.Logger.LogInformation(
             "✅ Initial admin user created successfully: {Email} (ID: {UserId})",
@@ -451,7 +452,7 @@ static async Task EnsureInitialAdminUserAsync(WebApplication app, MeepleAiDbCont
         };
 
         db.AuditLogs.Add(auditLog);
-        await db.SaveChangesAsync();
+        await db.SaveChangesAsync().ConfigureAwait(false);
     }
     catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
     {
@@ -479,7 +480,7 @@ static async Task EnsureInitialAdminUserAsync(WebApplication app, MeepleAiDbCont
     }
 }
 
-// Performance & E2E Testing: Ensure demo users exist for testing (Issue #1663)
+// K6 Performance Testing: Ensure demo test users exist for testing (Issue #1663)
 static async Task EnsureTestUserExistsAsync(WebApplication app, MeepleAiDbContext db, IServiceProvider services)
 {
     var passwordHashingService = services.GetRequiredService<IPasswordHashingService>();
@@ -497,7 +498,7 @@ static async Task EnsureTestUserExistsAsync(WebApplication app, MeepleAiDbContex
     foreach (var userData in demoUsers)
     {
         // Check if user already exists
-        var userExists = await db.Users.AnyAsync(u => u.Email == userData.Email);
+        var userExists = await db.Users.AnyAsync(u => u.Email == userData.Email).ConfigureAwait(false);
 
         if (userExists)
         {
@@ -519,7 +520,7 @@ static async Task EnsureTestUserExistsAsync(WebApplication app, MeepleAiDbContex
             };
 
             db.Users.Add(demoUser);
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync().ConfigureAwait(false);
 
             app.Logger.LogInformation(
                 "✅ Demo user created: {Email} ({Role}) - for Postman/Newman and K6 testing",
@@ -543,7 +544,7 @@ static async Task EnsureTestUserExistsAsync(WebApplication app, MeepleAiDbContex
             };
 
             db.AuditLogs.Add(auditLog);
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync().ConfigureAwait(false);
         }
         catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
         {

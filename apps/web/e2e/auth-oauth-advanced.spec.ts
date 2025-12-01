@@ -4,7 +4,7 @@
  * @see apps/web/e2e/pages/helpers/AuthHelper.ts
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/chromatic';
 import { AuthPage } from './pages/auth/AuthPage';
 
 const API_BASE = 'http://localhost:8080';

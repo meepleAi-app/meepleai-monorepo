@@ -11,7 +11,7 @@
  * Then: Progress bar advances through steps, shows time estimates, and allows cancellation
  */
 
-import { test as base, expect, type Page } from '@playwright/test';
+import { test as base, expect, type Page } from './fixtures/chromatic';
 import { AuthHelper, GamesHelper, USER_FIXTURES } from './pages';
 import { getTextMatcher, t } from './fixtures/i18n';
 

@@ -5,7 +5,7 @@
  * @see apps/web/e2e/pages/admin/AdminPage.ts
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/chromatic';
 
 /**
  * Admin Analytics Quality Metrics Tests (SKIPPED)

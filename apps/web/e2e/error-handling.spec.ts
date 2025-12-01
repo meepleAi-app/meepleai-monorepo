@@ -7,7 +7,7 @@
  * ✅ STATUS: COMPLETE - Enhanced with negative scenarios
  */
 
-import { test, expect, Page } from '@playwright/test';
+import { test, expect, Page } from './fixtures/chromatic';
 import { getTextMatcher, t } from './fixtures/i18n';
 import { WaitHelper } from './helpers/WaitHelper';
 import { AuthHelper, GamesHelper, USER_FIXTURES } from './pages';

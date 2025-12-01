@@ -17,7 +17,7 @@
  * @see apps/web/e2e/pages/ - Page Object Model architecture
  */
 
-import { test as base, expect, Page, Route } from '@playwright/test';
+import { test as base, expect, Page, Route } from './fixtures/chromatic';
 import { AuthHelper, USER_FIXTURES } from './pages';
 import { ChatPage } from './pages/chat/ChatPage';
 

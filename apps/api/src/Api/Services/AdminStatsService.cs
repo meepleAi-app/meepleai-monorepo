@@ -162,7 +162,7 @@ public class AdminStatsService : IAdminStatsService
         // Apply role filter if specified
         if (!string.IsNullOrWhiteSpace(roleFilter) && !string.Equals(roleFilter, "all", StringComparison.Ordinal))
         {
-            var normalizedRole = roleFilter.ToLower();
+            var normalizedRole = roleFilter.ToLower(CultureInfo.InvariantCulture);
             query = query.Where(u => u.Role == normalizedRole);
         }
 
@@ -321,13 +321,13 @@ public class AdminStatsService : IAdminStatsService
             GameId: request.GameId
         );
 
-        var stats = await GetDashboardStatsAsync(queryParams, cancellationToken);
+        var stats = await GetDashboardStatsAsync(queryParams, cancellationToken).ConfigureAwait(false);
 
         return request.Format.ToLowerInvariant() switch
         {
             "csv" => ExportToCsv(stats),
             "json" => ExportToJson(stats),
-            _ => throw new ArgumentException($"Unsupported export format: {request.Format}")
+            _ => throw new ArgumentException($"Unsupported export format: {request.Format}", nameof(request))
         };
     }
 
@@ -340,14 +340,18 @@ public class AdminStatsService : IAdminStatsService
 
         // Metrics section
         sb.AppendLine("Metric,Value");
+#pragma warning disable MA0011 // False positive: Integer values, no culture-sensitive formatting
         sb.AppendLine($"Total Users,{stats.Metrics.TotalUsers}");
         sb.AppendLine($"Active Sessions,{stats.Metrics.ActiveSessions}");
         sb.AppendLine($"API Requests Today,{stats.Metrics.ApiRequestsToday}");
         sb.AppendLine($"Total PDF Documents,{stats.Metrics.TotalPdfDocuments}");
         sb.AppendLine($"Total Chat Messages,{stats.Metrics.TotalChatMessages}");
-        sb.AppendLine($"Average Confidence Score,{stats.Metrics.AverageConfidenceScore:F3}");
+#pragma warning restore MA0011
+        sb.AppendLine($"Average Confidence Score,{stats.Metrics.AverageConfidenceScore.ToString("F3", CultureInfo.InvariantCulture)}");
+#pragma warning disable MA0011 // False positive: Integer values, no culture-sensitive formatting
         sb.AppendLine($"Total RAG Requests,{stats.Metrics.TotalRagRequests}");
         sb.AppendLine($"Total Tokens Used,{stats.Metrics.TotalTokensUsed}");
+#pragma warning restore MA0011
         sb.AppendLine();
 
         // Time series data
@@ -365,9 +369,11 @@ public class AdminStatsService : IAdminStatsService
         sb.AppendLine($"{seriesName} - Date,Count,Average");
         foreach (var point in data)
         {
-            sb.AppendLine($"{point.Date:yyyy-MM-dd},{point.Count},{point.AverageValue?.ToString("F2", CultureInfo.InvariantCulture) ?? "N/A"}");
+            sb.AppendLine($"{point.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)},{point.Count},{point.AverageValue?.ToString("F2", CultureInfo.InvariantCulture) ?? "N/A"}");
         }
+#pragma warning disable MA0011 // AppendLine() with no parameters (blank line) - no IFormatProvider overload exists
         sb.AppendLine();
+#pragma warning restore MA0011
     }
 
     /// <summary>

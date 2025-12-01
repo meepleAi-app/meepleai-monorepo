@@ -8,9 +8,12 @@
  * status before rendering pages.
  *
  * Protected Routes:
+ * - /dashboard - Main dashboard (post-login default)
  * - /chat - Main chat interface
  * - /upload - Document upload page
  * - /admin - Administration panel
+ * - /editor - Editor interface
+ * - /settings - User settings
  *
  * Public Routes:
  * - / - Home page
@@ -33,7 +36,7 @@ import type { NextRequest } from 'next/server';
  * Protected routes that require authentication
  * Unauthenticated users will be redirected to /login
  */
-const PROTECTED_ROUTES = ['/chat', '/upload', '/admin', '/editor', '/settings'];
+const PROTECTED_ROUTES = ['/dashboard', '/chat', '/upload', '/admin', '/editor', '/settings'];
 
 /**
  * Admin-only routes that require admin role
@@ -177,6 +180,7 @@ export async function middleware(request: NextRequest) {
   const isProtectedRoute = PROTECTED_ROUTES.some(route => pathname.startsWith(route));
   const isPublicAuthRoute = PUBLIC_AUTH_ROUTES.some(route => pathname === route);
   const isAdminRoute = ADMIN_ONLY_ROUTES.some(route => pathname.startsWith(route));
+  const isHomePage = pathname === '/';
 
   // Redirect unauthenticated users from protected routes to login
   if (isProtectedRoute && !isAuthenticated) {
@@ -194,15 +198,21 @@ export async function middleware(request: NextRequest) {
     return addSecurityHeaders(response, requestOrigin);
   }
 
-  // Redirect authenticated users from login/register pages to chat
+  // Redirect authenticated users from login/register pages to dashboard
   if (isPublicAuthRoute && isAuthenticated) {
     // Check if there's a 'from' parameter to redirect back to
     const fromParam = request.nextUrl.searchParams.get('from');
     const redirectUrl =
       fromParam && PROTECTED_ROUTES.some(route => fromParam.startsWith(route))
         ? new URL(fromParam, request.url)
-        : new URL('/chat', request.url);
+        : new URL('/dashboard', request.url);
     const response = NextResponse.redirect(redirectUrl);
+    return addSecurityHeaders(response, requestOrigin);
+  }
+
+  // Redirect authenticated users from homepage to dashboard
+  if (isHomePage && isAuthenticated) {
+    const response = NextResponse.redirect(new URL('/dashboard', request.url));
     return addSecurityHeaders(response, requestOrigin);
   }
 

@@ -42,14 +42,14 @@ public class WorkflowErrorLoggingService : IWorkflowErrorLoggingService
             };
 
             _db.WorkflowErrorLogs.Add(entity);
-            await _db.SaveChangesAsync(ct);
+            await _db.SaveChangesAsync(ct).ConfigureAwait(false);
 
             _logger.LogWarning(
                 "Workflow error logged: WorkflowId={WorkflowId}, ExecutionId={ExecutionId}, NodeName={NodeName}, RetryCount={RetryCount}",
                 request.WorkflowId, request.ExecutionId, request.NodeName, request.RetryCount);
 
             // Invalidate cache for workflow errors list
-            await _cache.RemoveAsync($"workflow-errors-list", ct);
+            await _cache.RemoveAsync($"workflow-errors-list", ct).ConfigureAwait(false);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
@@ -96,7 +96,7 @@ public class WorkflowErrorLoggingService : IWorkflowErrorLoggingService
                 }
 
                 // Get total count
-                var totalCount = await query.CountAsync(cancel);
+                var totalCount = await query.CountAsync(cancel).ConfigureAwait(false);
 
                 // Apply pagination and ordering
                 var errors = await query

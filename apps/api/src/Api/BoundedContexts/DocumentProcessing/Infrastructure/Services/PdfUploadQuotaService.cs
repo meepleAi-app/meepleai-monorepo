@@ -2,6 +2,7 @@ using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.Services;
 using StackExchange.Redis;
+using System.Globalization;
 using AuthRole = Api.BoundedContexts.Authentication.Domain.ValueObjects.Role;
 
 namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
@@ -260,7 +261,7 @@ public class PdfUploadQuotaService : IPdfUploadQuotaService
     private static string GetDateKey(DateTime date)
     {
         // Format: yyyy-MM-dd (e.g., 2025-11-22)
-        return date.ToString("yyyy-MM-dd");
+        return date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
     }
 
     private static string GetWeekKey(DateTime date)

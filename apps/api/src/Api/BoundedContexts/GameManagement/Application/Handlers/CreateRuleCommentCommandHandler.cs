@@ -7,6 +7,7 @@ using Api.Infrastructure.Entities;
 using Api.Models;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using System.Globalization;
 
 namespace Api.BoundedContexts.GameManagement.Application.Handlers;
 
@@ -91,8 +92,8 @@ public partial class CreateRuleCommentCommandHandler : IRequestHandler<CreateRul
 
             var users = await _dbContext.Users
                 .AsNoTracking()
-                .Where(u => (u.DisplayName != null && mentionedUsernames.Contains(u.DisplayName.ToLower()))
-                    || (u.Email != null && mentionedUsernames.Any(m => u.Email.ToLower().StartsWith(m))))
+                .Where(u => (u.DisplayName != null && mentionedUsernames.Contains(u.DisplayName.ToLower(CultureInfo.InvariantCulture)))
+                    || (u.Email != null && mentionedUsernames.Any(m => u.Email.ToLower(CultureInfo.InvariantCulture).StartsWith(m))))
                 .Select(u => u.Id.ToString())
                 .Distinct()
                 .ToListAsync(cancellationToken);

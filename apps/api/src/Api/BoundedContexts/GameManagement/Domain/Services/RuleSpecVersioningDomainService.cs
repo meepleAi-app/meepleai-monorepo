@@ -1,3 +1,4 @@
+using System.Globalization;
 using Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using System.Text.RegularExpressions;
@@ -88,6 +89,6 @@ public class RuleSpecVersioningDomainService
             trimmed = trimmed[1..];
         }
 
-        return int.TryParse(trimmed, out var number) ? number : null;
+        return int.TryParse(trimmed, CultureInfo.InvariantCulture, out var number) ? number : null;
     }
 }

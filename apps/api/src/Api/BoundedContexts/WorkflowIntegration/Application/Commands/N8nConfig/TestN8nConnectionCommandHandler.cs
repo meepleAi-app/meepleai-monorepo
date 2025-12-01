@@ -29,7 +29,7 @@ public sealed class TestN8nConnectionCommandHandler : ICommandHandler<TestN8nCon
         // Business logic validation
         if (command.ConfigId == Guid.Empty)
         {
-            throw new ArgumentException("Config ID is required", nameof(command.ConfigId));
+            throw new ArgumentException("Config ID is required", nameof(command));
         }
 
         _logger.LogInformation("Testing n8n connection for config {ConfigId}", command.ConfigId);

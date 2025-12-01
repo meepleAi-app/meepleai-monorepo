@@ -222,7 +222,7 @@ public class TesseractOcrAdapter : IOcrService, IDisposable
 
             if (pageIndex >= docReader.GetPageCount())
             {
-                throw new ArgumentException($"Page index {pageIndex} is out of range. PDF has {docReader.GetPageCount()} pages.");
+                throw new ArgumentException($"Page index {pageIndex} is out of range. PDF has {docReader.GetPageCount()} pages.", nameof(pageIndex));
             }
 
             using var pageReader = docReader.GetPageReader(pageIndex);

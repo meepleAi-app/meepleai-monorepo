@@ -4,7 +4,7 @@
  * @see apps/web/e2e/pages/
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/chromatic';
 import path from 'path';
 import { authenticateViaAPI } from './fixtures/auth';
 import { WaitHelper } from './helpers/WaitHelper';

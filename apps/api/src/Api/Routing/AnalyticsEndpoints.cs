@@ -6,6 +6,7 @@ using Api.Extensions;
 using Api.Models;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using System.Globalization;
 
 namespace Api.Routing;
 
@@ -20,7 +21,7 @@ public static class AnalyticsEndpoints
         // ADM-01: Admin dashboard endpoints
         group.MapGet("/admin/requests", async (HttpContext context, IMediator mediator, int limit = 100, int offset = 0, string? endpoint = null, string? userId = null, string? gameId = null, DateTime? startDate = null, DateTime? endDate = null, CancellationToken ct = default) =>
         {
-            var (authorized, session, error) = context.RequireAdminSession();
+            var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             var query = new Api.BoundedContexts.Administration.Application.Queries.GetAiRequestsQuery(
@@ -31,22 +32,22 @@ public static class AnalyticsEndpoints
                 gameId,
                 startDate,
                 endDate);
-            var result = await mediator.Send(query, ct);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
 
             return Results.Json(new { requests = result.Requests, totalCount = result.TotalCount });
         });
 
         group.MapGet("/admin/stats", async (HttpContext context, IMediator mediator, DateTime? startDate = null, DateTime? endDate = null, string? userId = null, string? gameId = null, CancellationToken ct = default) =>
         {
-            var (authorized, session, error) = context.RequireAdminSession();
+            var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             var query = new Api.BoundedContexts.Administration.Application.Queries.GetAiRequestStatsQuery(startDate, endDate, userId, gameId);
-            var stats = await mediator.Send(query, ct);
+            var stats = await mediator.Send(query, ct).ConfigureAwait(false);
 
             // ISSUE-1695: Feedback stats now available via CQRS
             var feedbackQuery = new GetFeedbackStatsQuery(startDate, endDate);
-            var feedbackStats = await mediator.Send(feedbackQuery, ct);
+            var feedbackStats = await mediator.Send(feedbackQuery, ct).ConfigureAwait(false);
 
             return Results.Json(new
             {
@@ -64,10 +65,10 @@ public static class AnalyticsEndpoints
         // ISSUE-962 (BGAI-020): LLM provider health monitoring
         group.MapGet("/admin/llm/health", async (HttpContext context, IMediator mediator, CancellationToken ct) =>
         {
-            var (authorized, session, error) = context.RequireAdminSession();
+            var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            var healthStatus = await mediator.Send(new GetLlmHealthQuery(), ct);
+            var healthStatus = await mediator.Send(new GetLlmHealthQuery(), ct).ConfigureAwait(false);
             return Results.Json(healthStatus);
         })
         .WithName("GetLlmHealth")
@@ -87,12 +88,12 @@ public static class AnalyticsEndpoints
             DateTime? endDate = null,
             CancellationToken ct = default) =>
         {
-            var (authorized, session, error) = context.RequireAdminSession();
+            var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             // Use CQRS Query to get low-quality responses
             var query = new GetLowQualityResponsesQuery(limit, offset, startDate, endDate);
-            var result = await mediator.Send(query, ct);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
 
             return Results.Ok(result);
         })
@@ -108,7 +109,7 @@ public static class AnalyticsEndpoints
             int days = 7,
             CancellationToken ct = default) =>
         {
-            var (authorized, session, error) = context.RequireAdminSession();
+            var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             var endDate = DateTime.UtcNow;
@@ -120,7 +121,7 @@ public static class AnalyticsEndpoints
                 EndDate = endDate,
                 Days = days
             };
-            var report = await mediator.Send(query, ct);
+            var report = await mediator.Send(query, ct).ConfigureAwait(false);
             return Results.Ok(report);
         })
         .RequireAuthorization()
@@ -140,11 +141,11 @@ public static class AnalyticsEndpoints
             string? roleFilter = null,
             CancellationToken ct = default) =>
         {
-            var (authorized, session, error) = context.RequireAdminSession();
+            var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             var query = new GetAdminStatsQuery(fromDate, toDate, days, gameId, roleFilter);
-            var stats = await mediator.Send(query, ct);
+            var stats = await mediator.Send(query, ct).ConfigureAwait(false);
             return Results.Ok(stats);
         })
         .WithName("GetAnalytics")
@@ -160,11 +161,11 @@ public static class AnalyticsEndpoints
             ExportDataRequest request,
             CancellationToken ct = default) =>
         {
-            var (authorized, session, error) = context.RequireAdminSession();
+            var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             var command = new ExportStatsCommand(request.Format, request.FromDate, request.ToDate, request.GameId);
-            var data = await mediator.Send(command, ct);
+            var data = await mediator.Send(command, ct).ConfigureAwait(false);
             var contentType = request.Format.ToLowerInvariant() switch
             {
                 "csv" => "text/csv",
@@ -195,17 +196,17 @@ public static class AnalyticsEndpoints
             Guid? userId,
             CancellationToken ct) =>
         {
-            var (authorized, session, error) = context.RequireAdminSession();
+            var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             // Default to last 30 days if not specified
             var start = string.IsNullOrWhiteSpace(startDate)
                 ? DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-30))
-                : DateOnly.Parse(startDate);
+                : DateOnly.Parse(startDate, CultureInfo.InvariantCulture);
 
             var end = string.IsNullOrWhiteSpace(endDate)
                 ? DateOnly.FromDateTime(DateTime.UtcNow)
-                : DateOnly.Parse(endDate);
+                : DateOnly.Parse(endDate, CultureInfo.InvariantCulture);
 
             var query = new GetLlmCostReportQuery
             {
@@ -214,7 +215,7 @@ public static class AnalyticsEndpoints
                 UserId = userId
             };
 
-            var report = await mediator.Send(query, ct);
+            var report = await mediator.Send(query, ct).ConfigureAwait(false);
 
             return Results.Json(report);
         })
@@ -227,12 +228,12 @@ public static class AnalyticsEndpoints
             string? date,
             CancellationToken ct) =>
         {
-            var (authorized, session, error) = context.RequireAdminSession();
+            var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             var targetDate = string.IsNullOrWhiteSpace(date)
                 ? DateOnly.FromDateTime(DateTime.UtcNow)
-                : DateOnly.Parse(date);
+                : DateOnly.Parse(date, CultureInfo.InvariantCulture);
 
             var query = new GetLlmCostReportQuery
             {
@@ -240,7 +241,7 @@ public static class AnalyticsEndpoints
                 EndDate = targetDate
             };
 
-            var report = await mediator.Send(query, ct);
+            var report = await mediator.Send(query, ct).ConfigureAwait(false);
 
             return Results.Json(new
             {
@@ -260,11 +261,11 @@ public static class AnalyticsEndpoints
             IMediator mediator,
             CancellationToken ct) =>
         {
-            var (authorized, session, error) = context.RequireAdminSession();
+            var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             // Use CQRS Command to check all thresholds
-            var result = await mediator.Send(new CheckLlmCostAlertsCommand(), ct);
+            var result = await mediator.Send(new CheckLlmCostAlertsCommand(), ct).ConfigureAwait(false);
 
             return Results.Json(new { success = result.Success, message = result.Message });
         })

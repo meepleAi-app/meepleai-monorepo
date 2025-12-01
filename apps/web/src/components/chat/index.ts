@@ -1,6 +1,5 @@
 // Barrel exports for chat module
 export { AgentSelector } from './AgentSelector';
-export { BottomNav } from './BottomNav';
 export { ChatContent } from './ChatContent';
 export { ChatHistory } from './ChatHistory';
 export { ChatHistoryItem } from './ChatHistoryItem';

@@ -32,7 +32,7 @@ public class ApiKeyAuthenticationMiddleware
         // Only process /api/* paths (skip health checks, swagger, etc.)
         if (!context.Request.Path.StartsWithSegments("/api"))
         {
-            await _next(context);
+            await _next(context).ConfigureAwait(false);
             return;
         }
 
@@ -78,7 +78,7 @@ public class ApiKeyAuthenticationMiddleware
         // If we have an API key, validate it
         if (!string.IsNullOrWhiteSpace(apiKey))
         {
-            var result = await apiKeyService.ValidateApiKeyAsync(apiKey);
+            var result = await apiKeyService.ValidateApiKeyAsync(apiKey).ConfigureAwait(false);
 
             if (result.IsValid)
             {
@@ -115,7 +115,7 @@ public class ApiKeyAuthenticationMiddleware
                     result.ApiKeyId,
                     LogValueSanitizer.SanitizePath(context.Request.Path));
 
-                await _next(context);
+                await _next(context).ConfigureAwait(false);
                 return;
             }
             else
@@ -142,7 +142,7 @@ public class ApiKeyAuthenticationMiddleware
         }
 
         // No API key provided - fall through to session cookie authentication
-        await _next(context);
+        await _next(context).ConfigureAwait(false);
     }
 }
 

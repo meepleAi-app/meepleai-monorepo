@@ -20,7 +20,7 @@ public static class CacheEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            var stats = await cacheService.GetCacheStatsAsync(gameId, ct);
+            var stats = await cacheService.GetCacheStatsAsync(gameId, ct).ConfigureAwait(false);
             return Results.Json(stats);
         })
         .WithName("GetCacheStats")
@@ -37,14 +37,14 @@ public static class CacheEndpoints
             if (!authorized) return error!;
 
             // Validate game exists using CQRS Query (but proceed with cache invalidation even if not - idempotent)
-            var game = await mediator.Send(new GetGameByIdQuery(gameId), ct);
+            var game = await mediator.Send(new GetGameByIdQuery(gameId), ct).ConfigureAwait(false);
             if (game == null)
             {
                 logger.LogWarning("Admin {AdminId} invalidating cache for non-existent game {GameId} (idempotent)", session.User.Id, gameId);
             }
 
             logger.LogInformation("Admin {AdminId} invalidating cache for game {GameId}", session.User.Id, gameId);
-            await cacheService.InvalidateGameAsync(gameId.ToString(), ct);
+            await cacheService.InvalidateGameAsync(gameId.ToString(), ct).ConfigureAwait(false);
             logger.LogInformation("Successfully invalidated cache for game {GameId}", gameId);
             return Results.Json(new { ok = true, message = $"Cache invalidated for game '{gameId}'" });
         })
@@ -69,7 +69,7 @@ public static class CacheEndpoints
             }
 
             logger.LogInformation("Admin {AdminId} invalidating cache by tag {Tag}", session.User.Id, tag);
-            await cacheService.InvalidateByCacheTagAsync(tag, ct);
+            await cacheService.InvalidateByCacheTagAsync(tag, ct).ConfigureAwait(false);
             logger.LogInformation("Successfully invalidated cache by tag {Tag}", tag);
             return Results.Json(new { ok = true, message = $"Cache invalidated for tag '{tag}'" });
         })

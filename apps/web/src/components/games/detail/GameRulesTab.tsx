@@ -42,9 +42,17 @@ function getStatusBadge(status: string) {
   const statusLower = status.toLowerCase();
   switch (statusLower) {
     case 'completed':
-      return <Badge variant="default" className="bg-green-600">Completed</Badge>;
+      return (
+        <Badge variant="default" className="bg-green-600">
+          Completed
+        </Badge>
+      );
     case 'processing':
-      return <Badge variant="default" className="bg-blue-600">Processing</Badge>;
+      return (
+        <Badge variant="default" className="bg-blue-600">
+          Processing
+        </Badge>
+      );
     case 'failed':
       return <Badge variant="destructive">Failed</Badge>;
     case 'pending':
@@ -54,8 +62,10 @@ function getStatusBadge(status: string) {
   }
 }
 
-export function GameRulesTab({ game, documents }: GameRulesTabProps) {
-  const completedDocuments = documents.filter(doc => doc.processingStatus.toLowerCase() === 'completed');
+export function GameRulesTab({ game, documents = [] }: GameRulesTabProps) {
+  const completedDocuments = documents.filter(
+    doc => doc.processingStatus.toLowerCase() === 'completed'
+  );
   const processingDocuments = documents.filter(doc =>
     ['processing', 'pending'].includes(doc.processingStatus.toLowerCase())
   );
@@ -70,9 +80,7 @@ export function GameRulesTab({ game, documents }: GameRulesTabProps) {
             <span>Rulebooks & Documents</span>
             <Badge variant="secondary">{documents.length} total</Badge>
           </CardTitle>
-          <CardDescription>
-            Uploaded PDF rulebooks and documentation
-          </CardDescription>
+          <CardDescription>Uploaded PDF rulebooks and documentation</CardDescription>
         </CardHeader>
         <CardContent>
           {documents.length === 0 ? (
@@ -89,7 +97,7 @@ export function GameRulesTab({ game, documents }: GameRulesTabProps) {
                 <div className="space-y-3">
                   <h4 className="font-semibold text-sm text-muted-foreground">Ready to Use</h4>
                   <div className="space-y-2">
-                    {completedDocuments.map((doc) => (
+                    {completedDocuments.map(doc => (
                       <div
                         key={doc.id}
                         className="flex items-center justify-between p-4 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
@@ -131,7 +139,7 @@ export function GameRulesTab({ game, documents }: GameRulesTabProps) {
                 <div className="space-y-3">
                   <h4 className="font-semibold text-sm text-muted-foreground">Processing</h4>
                   <div className="space-y-2">
-                    {processingDocuments.map((doc) => (
+                    {processingDocuments.map(doc => (
                       <div
                         key={doc.id}
                         className="flex items-center justify-between p-4 border border-slate-200 dark:border-slate-700 rounded-lg bg-blue-50 dark:bg-blue-900/10"
@@ -161,7 +169,7 @@ export function GameRulesTab({ game, documents }: GameRulesTabProps) {
                 <div className="space-y-3">
                   <h4 className="font-semibold text-sm text-muted-foreground">Failed</h4>
                   <div className="space-y-2">
-                    {failedDocuments.map((doc) => (
+                    {failedDocuments.map(doc => (
                       <div
                         key={doc.id}
                         className="flex items-center justify-between p-4 border border-red-200 dark:border-red-700 rounded-lg bg-red-50 dark:bg-red-900/10"
@@ -197,15 +205,14 @@ export function GameRulesTab({ game, documents }: GameRulesTabProps) {
       <Card>
         <CardHeader>
           <CardTitle>RuleSpec Versions</CardTitle>
-          <CardDescription>
-            Structured rule specifications and version history
-          </CardDescription>
+          <CardDescription>Structured rule specifications and version history</CardDescription>
         </CardHeader>
         <CardContent>
           <Alert>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              RuleSpec integration coming soon. This will allow you to view and manage structured rule versions.
+              RuleSpec integration coming soon. This will allow you to view and manage structured
+              rule versions.
             </AlertDescription>
           </Alert>
         </CardContent>
@@ -215,16 +222,12 @@ export function GameRulesTab({ game, documents }: GameRulesTabProps) {
       <Card>
         <CardHeader>
           <CardTitle>Upload New Rulebook</CardTitle>
-          <CardDescription>
-            Add PDF rulebooks to this game
-          </CardDescription>
+          <CardDescription>Add PDF rulebooks to this game</CardDescription>
         </CardHeader>
         <CardContent>
           <Alert>
             <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Document upload functionality coming soon.
-            </AlertDescription>
+            <AlertDescription>Document upload functionality coming soon.</AlertDescription>
           </Alert>
         </CardContent>
       </Card>

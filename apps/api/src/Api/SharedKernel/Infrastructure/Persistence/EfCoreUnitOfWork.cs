@@ -19,7 +19,7 @@ public class EfCoreUnitOfWork : IUnitOfWork
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        return await _dbContext.SaveChangesAsync(cancellationToken);
+        return await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public async Task BeginTransactionAsync(CancellationToken cancellationToken = default)
@@ -29,7 +29,7 @@ public class EfCoreUnitOfWork : IUnitOfWork
             throw new InvalidOperationException("A transaction is already in progress.");
         }
 
-        _currentTransaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+        _currentTransaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public async Task CommitTransactionAsync(CancellationToken cancellationToken = default)
@@ -41,19 +41,19 @@ public class EfCoreUnitOfWork : IUnitOfWork
 
         try
         {
-            await _dbContext.SaveChangesAsync(cancellationToken);
-            await _currentTransaction.CommitAsync(cancellationToken);
+            await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            await _currentTransaction.CommitAsync(cancellationToken).ConfigureAwait(false);
         }
         catch
         {
-            await RollbackTransactionAsync(cancellationToken);
+            await RollbackTransactionAsync(cancellationToken).ConfigureAwait(false);
             throw;
         }
         finally
         {
             if (_currentTransaction != null)
             {
-                await _currentTransaction.DisposeAsync();
+                await _currentTransaction.DisposeAsync().ConfigureAwait(false);
                 _currentTransaction = null;
             }
         }
@@ -68,13 +68,13 @@ public class EfCoreUnitOfWork : IUnitOfWork
 
         try
         {
-            await _currentTransaction.RollbackAsync(cancellationToken);
+            await _currentTransaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
         }
         finally
         {
             if (_currentTransaction != null)
             {
-                await _currentTransaction.DisposeAsync();
+                await _currentTransaction.DisposeAsync().ConfigureAwait(false);
                 _currentTransaction = null;
             }
         }

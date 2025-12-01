@@ -29,7 +29,7 @@ public class CreateApiKeyManagementCommandHandler : ICommandHandler<CreateApiKey
     {
         // Validate request
         if (string.IsNullOrWhiteSpace(command.Request.KeyName))
-            throw new ArgumentException("Key name is required", nameof(command.Request));
+            throw new ArgumentException("Key name is required", nameof(command));
 
         // Generate the API key using the authentication service
         var (plaintextKey, entity) = await _authService.GenerateApiKeyAsync(

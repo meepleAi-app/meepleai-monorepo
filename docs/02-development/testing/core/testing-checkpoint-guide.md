@@ -136,8 +136,8 @@ PASS: ☐ Tutti i servizi infrastruttura sono healthy
    ✅ VERIFICA: Errore "Invalid credentials" mostrato
 
 4. Test credenziali corrette:
-   - Email: admin@meepleai.dev
-   - Password: Demo123!
+   - Email: admin-test@example.com
+   - Password: TestPassword123!
    - Click "Login"
    ✅ VERIFICA:
      - Redirect a /games o /dashboard
@@ -240,7 +240,7 @@ PASS: ☐ OAuth authentication funzionante
    - Messaggio: "Save these codes in a safe place"
 
 10. Logout
-11. Login nuovamente con admin@meepleai.dev / Demo123!
+11. Login nuovamente con admin-test@example.com / TestPassword123!
 12. ✅ VERIFICA:
     - Primo step: password accepted
     - Secondo step: richiesta codice 2FA (6 digit)
@@ -488,7 +488,7 @@ PASS: ☐ Multi-turn conversation funzionante
 2. Naviga a /admin/users
 3. ✅ VERIFICA:
    - Lista utenti mostrata
-   - Almeno 3 demo users: admin@, editor@, user@meepleai.dev
+   - Almeno 3 demo users: admin@, editor@, user-test@example.com
 
 4. Click "Create User"
 5. Compila:
@@ -518,7 +518,7 @@ PASS: ☐ User management CRUD funzionante
 2. ✅ VERIFICA: Lista API keys
 
 3. Click "Generate API Key"
-4. Seleziona user: admin@meepleai.dev
+4. Seleziona user: admin-test@example.com
 5. Generate
 6. ✅ VERIFICA:
    - API key creata (mpl_dev_...)
@@ -618,7 +618,7 @@ PASS: ☐ Health & stats funzionanti
    - Nome aggiornato in header/profile
 
 7. Change Password:
-   - Current: Demo123!
+   - Current: TestPassword123!
    - New: NewPass123!
    - Confirm: NewPass123!
 8. Save
@@ -954,7 +954,7 @@ pnpm dev
 #### Scenario 1.1: Streaming Normale
 ```
 1. Apri browser: http://localhost:3000/chat
-2. Login come: admin@meepleai.dev / Demo123!
+2. Login come: admin-test@example.com / TestPassword123!
 3. Invia domanda: "Come si gioca a Catan?"
 4. ✅ VERIFICA:
    - Risposta inizia entro 2 secondi
@@ -1028,7 +1028,7 @@ PASS: ☐ Errori backend gestiti con retry
 
 #### Scenario 2.1: Session Validation
 ```
-1. Login: admin@meepleai.dev / Demo123!
+1. Login: admin-test@example.com / TestPassword123!
 2. Apri DevTools → Application → Cookies
 3. ✅ VERIFICA cookie presente:
    - Nome: meepleai-session
@@ -1100,7 +1100,7 @@ PASS: ☐ IP rate limiting funziona
 
 #### Scenario 2.4: Session Expiration
 ```
-1. Login: admin@meepleai.dev
+1. Login: admin-test@example.com
 2. Naviga a /admin/users (richiede auth)
 3. ✅ VERIFICA: Pagina carica
 
@@ -1450,7 +1450,7 @@ PASS: ☐ P95 <3s RAGGIUNTO
 2. Seed demo user:
    dotnet run --seed-demo-users
 
-3. Login: admin@meepleai.dev / Demo123!
+3. Login: admin-test@example.com / TestPassword123!
 
 4. Upload rulebook:
    - Navigate: /upload

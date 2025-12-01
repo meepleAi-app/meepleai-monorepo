@@ -27,12 +27,12 @@ public sealed class GenerateTotpSetupCommandHandler : ICommandHandler<GenerateTo
         // Business logic validation
         if (command.UserId == Guid.Empty)
         {
-            throw new ArgumentException("User ID is required", nameof(command.UserId));
+            throw new ArgumentException("User ID is required", nameof(command));
         }
 
         if (string.IsNullOrWhiteSpace(command.UserEmail))
         {
-            throw new ArgumentException("User email is required", nameof(command.UserEmail));
+            throw new ArgumentException("User email is required", nameof(command));
         }
 
         // Delegate TOTP setup to infrastructure service

@@ -18,7 +18,7 @@
  * @see apps/web/e2e/pages/helpers/AdminHelper.ts
  */
 
-import { test as base, expect, Page, Route } from '@playwright/test';
+import { test as base, expect, Page, Route } from './fixtures/chromatic';
 import { AdminHelper } from './pages';
 import { BulkExportPage } from './pages/admin/AdminPage';
 

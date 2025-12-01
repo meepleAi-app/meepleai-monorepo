@@ -30,7 +30,7 @@ public static class WorkflowEndpoints
                     statusCode: 403);
             }
 
-            var configs = await mediator.Send(new GetAllN8nConfigsQuery(), ct);
+            var configs = await mediator.Send(new GetAllN8nConfigsQuery(), ct).ConfigureAwait(false);
             return Results.Json(new { configs });
         });
 
@@ -39,7 +39,7 @@ public static class WorkflowEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            var config = await mediator.Send(new GetN8nConfigByIdQuery(configId), ct);
+            var config = await mediator.Send(new GetN8nConfigByIdQuery(configId), ct).ConfigureAwait(false);
 
             if (config == null)
             {
@@ -55,7 +55,7 @@ public static class WorkflowEndpoints
             if (!authorized) return error!;
 
             // Encrypt API key before storing (AUTH-06 pattern)
-            var apiKeyEncrypted = await encryptionService.EncryptAsync(request.ApiKey, "N8nApiKey");
+            var apiKeyEncrypted = await encryptionService.EncryptAsync(request.ApiKey, "N8nApiKey").ConfigureAwait(false);
 
             var command = new CreateN8nConfigCommand(
                 Name: request.Name,
@@ -66,7 +66,7 @@ public static class WorkflowEndpoints
             );
 
             logger.LogInformation("Admin {UserId} creating n8n config: {Name}", session.User.Id, request.Name);
-            var config = await mediator.Send(command, ct);
+            var config = await mediator.Send(command, ct).ConfigureAwait(false);
             logger.LogInformation("n8n config {ConfigId} created successfully", config.Id);
             return Results.Json(config);
         });
@@ -80,7 +80,7 @@ public static class WorkflowEndpoints
             string? apiKeyEncrypted = null;
             if (!string.IsNullOrWhiteSpace(request.ApiKey))
             {
-                apiKeyEncrypted = await encryptionService.EncryptAsync(request.ApiKey, "N8nApiKey");
+                apiKeyEncrypted = await encryptionService.EncryptAsync(request.ApiKey, "N8nApiKey").ConfigureAwait(false);
             }
 
             var command = new UpdateN8nConfigCommand(
@@ -93,7 +93,7 @@ public static class WorkflowEndpoints
             );
 
             logger.LogInformation("Admin {UserId} updating n8n config {ConfigId}", session.User.Id, configId);
-            var config = await mediator.Send(command, ct);
+            var config = await mediator.Send(command, ct).ConfigureAwait(false);
             logger.LogInformation("n8n config {ConfigId} updated successfully", config.Id);
             return Results.Json(config);
         });
@@ -106,7 +106,7 @@ public static class WorkflowEndpoints
             var command = new DeleteN8nConfigCommand(ConfigId: configId);
 
             logger.LogInformation("Admin {UserId} deleting n8n config {ConfigId}", session.User.Id, configId);
-            var deleted = await mediator.Send(command, ct);
+            var deleted = await mediator.Send(command, ct).ConfigureAwait(false);
 
             if (!deleted)
             {
@@ -128,7 +128,7 @@ public static class WorkflowEndpoints
             {
                 ConfigId = configId
             };
-            var result = await mediator.Send(command, ct);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
             logger.LogInformation("n8n config {ConfigId} test result: {Success}", configId, result.Success);
             return Results.Json(result);
@@ -144,7 +144,7 @@ public static class WorkflowEndpoints
             {
                 Category = category
             };
-            var templates = await mediator.Send(query, ct);
+            var templates = await mediator.Send(query, ct).ConfigureAwait(false);
             return Results.Ok(templates);
         })
         .RequireAuthorization()
@@ -161,7 +161,7 @@ public static class WorkflowEndpoints
             {
                 TemplateId = id
             };
-            var template = await mediator.Send(query, ct);
+            var template = await mediator.Send(query, ct).ConfigureAwait(false);
             if (template == null)
             {
                 return Results.NotFound(new { error = $"Template '{id}' not found" });
@@ -193,7 +193,7 @@ public static class WorkflowEndpoints
                 Parameters = request.Parameters,
                 UserId = session.User.Id
             };
-            var result = await mediator.Send(command, ct);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
             logger.LogInformation("Template {TemplateId} imported successfully as workflow {WorkflowId}", id, result.WorkflowId);
             return Results.Ok(result);
@@ -218,7 +218,7 @@ public static class WorkflowEndpoints
             {
                 TemplateJson = request.TemplateJson
             };
-            var result = await mediator.Send(query, ct);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
             return Results.Ok(result);
         })
         .RequireAuthorization()
@@ -243,7 +243,7 @@ public static class WorkflowEndpoints
                 RetryCount = request.RetryCount,
                 StackTrace = request.StackTrace
             };
-            await mediator.Send(command, ct);
+            await mediator.Send(command, ct).ConfigureAwait(false);
             return Results.Ok(new { message = "Error logged successfully" });
         })
         .WithName("LogWorkflowError")
@@ -274,7 +274,7 @@ public static class WorkflowEndpoints
                 Page = page,
                 Limit = limit
             };
-            var errors = await mediator.Send(query, ct);
+            var errors = await mediator.Send(query, ct).ConfigureAwait(false);
             return Results.Ok(errors);
         })
         .WithName("GetWorkflowErrors")
@@ -298,7 +298,7 @@ public static class WorkflowEndpoints
             {
                 ErrorId = id
             };
-            var error = await mediator.Send(query, ct);
+            var error = await mediator.Send(query, ct).ConfigureAwait(false);
 
             if (error == null)
             {

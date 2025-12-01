@@ -33,17 +33,17 @@ public class ActivatePromptVersionCommandHandler : ICommandHandler<ActivatePromp
 
         if (templateId == Guid.Empty)
         {
-            throw new ArgumentException("Template ID is required", nameof(templateId));
+            throw new ArgumentException("Template ID is required", nameof(command));
         }
 
         if (versionId == Guid.Empty)
         {
-            throw new ArgumentException("Version ID is required", nameof(versionId));
+            throw new ArgumentException("Version ID is required", nameof(command));
         }
 
         if (activatedByUserId == Guid.Empty)
         {
-            throw new ArgumentException("Activated by user ID is required", nameof(activatedByUserId));
+            throw new ArgumentException("Activated by user ID is required", nameof(command));
         }
 
         // Check if version exists and belongs to the specified template

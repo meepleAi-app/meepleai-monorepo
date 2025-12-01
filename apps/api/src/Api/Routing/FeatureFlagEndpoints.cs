@@ -33,7 +33,7 @@ public static class FeatureFlagEndpoints
                 Page: 1,
                 PageSize: 100
             );
-            var result = await mediator.Send(query, ct);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
 
             return Results.Json(new
             {
@@ -67,11 +67,11 @@ public static class FeatureFlagEndpoints
             if (!authorized) return error!;
 
             // Use FeatureFlagService to check current status
-            var isEnabled = await featureFlags.IsEnabledAsync(key);
+            var isEnabled = await featureFlags.IsEnabledAsync(key).ConfigureAwait(false);
 
             // Get configuration details
             var query = new GetConfigByKeyQuery(key, Environment: null);
-            var config = await mediator.Send(query, ct);
+            var config = await mediator.Send(query, ct).ConfigureAwait(false);
 
             if (config == null)
             {
@@ -114,7 +114,7 @@ public static class FeatureFlagEndpoints
 
             // Get the configuration for this feature flag
             var configQuery = new GetConfigByKeyQuery(key, Environment: null);
-            var config = await mediator.Send(configQuery, ct);
+            var config = await mediator.Send(configQuery, ct).ConfigureAwait(false);
 
             if (config == null)
             {
@@ -128,13 +128,13 @@ public static class FeatureFlagEndpoints
                 NewValue: enabled.ToString().ToLowerInvariant(),
                 UpdatedByUserId: Guid.Parse(session.User.Id)
             );
-            var updatedConfig = await mediator.Send(updateCommand, ct);
+            var updatedConfig = await mediator.Send(updateCommand, ct).ConfigureAwait(false);
 
             // Also ensure it's active
             if (updatedConfig != null && !updatedConfig.IsActive)
             {
                 var toggleCommand = new ToggleConfigurationCommand(config.Id, IsActive: true);
-                updatedConfig = await mediator.Send(toggleCommand, ct);
+                updatedConfig = await mediator.Send(toggleCommand, ct).ConfigureAwait(false);
             }
 
             logger.LogInformation("Feature flag '{Key}' toggled to {Status}", key, enabled ? "enabled" : "disabled");
@@ -181,7 +181,7 @@ public static class FeatureFlagEndpoints
                 RequiresRestart: request.RequiresRestart
             );
 
-            var config = await mediator.Send(command, ct);
+            var config = await mediator.Send(command, ct).ConfigureAwait(false);
 
             logger.LogInformation("Feature flag '{Key}' created with ID {Id}", request.Key, config.Id);
 

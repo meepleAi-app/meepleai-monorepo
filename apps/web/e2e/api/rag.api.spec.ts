@@ -6,7 +6,7 @@
  * @see apps/api/src/Api/BoundedContexts/KnowledgeBase
  */
 
-import { test, expect, APIRequestContext } from '@playwright/test';
+import { test, expect, APIRequestContext } from './fixtures/chromatic';
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
@@ -19,16 +19,16 @@ test.describe('RAG API (KnowledgeBase)', () => {
     apiContext = await playwright.request.newContext({
       baseURL: BASE_URL,
       extraHTTPHeaders: {
-        'Content-Type': 'application/json'
-      }
+        'Content-Type': 'application/json',
+      },
     });
 
     // Login to get session
     const loginResponse = await apiContext.post('/api/v1/auth/login', {
       data: {
         email: 'demo@meepleai.dev',
-        password: 'Demo123!'
-      }
+        password: 'Demo123!',
+      },
     });
 
     sessionCookie = loginResponse.headers()['set-cookie']?.split(';')[0] || '';
@@ -36,8 +36,8 @@ test.describe('RAG API (KnowledgeBase)', () => {
     // Get a game ID for testing
     const gamesResponse = await apiContext.get('/api/v1/games', {
       headers: {
-        Cookie: sessionCookie
-      }
+        Cookie: sessionCookie,
+      },
     });
 
     const games = await gamesResponse.json();
@@ -58,13 +58,13 @@ test.describe('RAG API (KnowledgeBase)', () => {
 
       const response = await apiContext.post('/api/v1/agents/qa', {
         headers: {
-          Cookie: sessionCookie
+          Cookie: sessionCookie,
         },
         data: {
           gameId: testGameId,
           query: 'How do you win the game?',
-          searchMode: 'Hybrid'
-        }
+          searchMode: 'Hybrid',
+        },
       });
 
       expect(response.status()).toBe(200);
@@ -87,13 +87,13 @@ test.describe('RAG API (KnowledgeBase)', () => {
 
       const response = await apiContext.post('/api/v1/agents/qa', {
         headers: {
-          Cookie: sessionCookie
+          Cookie: sessionCookie,
         },
         data: {
           gameId: testGameId,
           query: 'What are the rules?',
-          searchMode: 'Vector'
-        }
+          searchMode: 'Vector',
+        },
       });
 
       expect(response.status()).toBe(200);
@@ -110,13 +110,13 @@ test.describe('RAG API (KnowledgeBase)', () => {
 
       const response = await apiContext.post('/api/v1/agents/qa', {
         headers: {
-          Cookie: sessionCookie
+          Cookie: sessionCookie,
         },
         data: {
           gameId: testGameId,
           query: 'setup instructions',
-          searchMode: 'Hybrid'
-        }
+          searchMode: 'Hybrid',
+        },
       });
 
       expect(response.status()).toBe(200);
@@ -133,13 +133,13 @@ test.describe('RAG API (KnowledgeBase)', () => {
 
       const response = await apiContext.post('/api/v1/agents/qa?generateFollowUps=true', {
         headers: {
-          Cookie: sessionCookie
+          Cookie: sessionCookie,
         },
         data: {
           gameId: testGameId,
           query: 'How to play?',
-          searchMode: 'Hybrid'
-        }
+          searchMode: 'Hybrid',
+        },
       });
 
       expect(response.status()).toBe(200);
@@ -152,13 +152,13 @@ test.describe('RAG API (KnowledgeBase)', () => {
     test('should fail with invalid gameId', async () => {
       const response = await apiContext.post('/api/v1/agents/qa', {
         headers: {
-          Cookie: sessionCookie
+          Cookie: sessionCookie,
         },
         data: {
           gameId: 'invalid-uuid',
           query: 'How to play?',
-          searchMode: 'Hybrid'
-        }
+          searchMode: 'Hybrid',
+        },
       });
 
       expect(response.status()).toBe(400);
@@ -172,13 +172,13 @@ test.describe('RAG API (KnowledgeBase)', () => {
 
       const response = await apiContext.post('/api/v1/agents/qa', {
         headers: {
-          Cookie: sessionCookie
+          Cookie: sessionCookie,
         },
         data: {
           gameId: testGameId,
           query: '',
-          searchMode: 'Hybrid'
-        }
+          searchMode: 'Hybrid',
+        },
       });
 
       expect(response.status()).toBe(400);
@@ -189,8 +189,8 @@ test.describe('RAG API (KnowledgeBase)', () => {
         data: {
           gameId: testGameId || '00000000-0000-0000-0000-000000000000',
           query: 'test',
-          searchMode: 'Hybrid'
-        }
+          searchMode: 'Hybrid',
+        },
       });
 
       expect(response.status()).toBe(401);
@@ -208,8 +208,8 @@ test.describe('RAG API (KnowledgeBase)', () => {
         `/api/v1/search?gameId=${testGameId}&query=rules&searchMode=Hybrid&topK=5&minScore=0.5`,
         {
           headers: {
-            Cookie: sessionCookie
-          }
+            Cookie: sessionCookie,
+          },
         }
       );
 
@@ -233,8 +233,8 @@ test.describe('RAG API (KnowledgeBase)', () => {
         `/api/v1/search?gameId=${testGameId}&query=setup&searchMode=Hybrid`,
         {
           headers: {
-            Cookie: sessionCookie
-          }
+            Cookie: sessionCookie,
+          },
         }
       );
 
@@ -264,8 +264,8 @@ test.describe('RAG API (KnowledgeBase)', () => {
         `/api/v1/search?gameId=${testGameId}&query=rules&searchMode=Hybrid&minScore=${minScore}`,
         {
           headers: {
-            Cookie: sessionCookie
-          }
+            Cookie: sessionCookie,
+          },
         }
       );
 
@@ -287,8 +287,8 @@ test.describe('RAG API (KnowledgeBase)', () => {
         `/api/v1/search?gameId=${testGameId}&query=game&searchMode=Hybrid&topK=${topK}`,
         {
           headers: {
-            Cookie: sessionCookie
-          }
+            Cookie: sessionCookie,
+          },
         }
       );
 
@@ -306,14 +306,11 @@ test.describe('RAG API (KnowledgeBase)', () => {
 
       const startTime = Date.now();
 
-      await apiContext.get(
-        `/api/v1/search?gameId=${testGameId}&query=rules&searchMode=Hybrid`,
-        {
-          headers: {
-            Cookie: sessionCookie
-          }
-        }
-      );
+      await apiContext.get(`/api/v1/search?gameId=${testGameId}&query=rules&searchMode=Hybrid`, {
+        headers: {
+          Cookie: sessionCookie,
+        },
+      });
 
       const duration = Date.now() - startTime;
       console.log(`Search duration: ${duration}ms`);
@@ -331,13 +328,13 @@ test.describe('RAG API (KnowledgeBase)', () => {
 
       await apiContext.post('/api/v1/agents/qa', {
         headers: {
-          Cookie: sessionCookie
+          Cookie: sessionCookie,
         },
         data: {
           gameId: testGameId,
           query: 'How to win?',
-          searchMode: 'Hybrid'
-        }
+          searchMode: 'Hybrid',
+        },
       });
 
       const duration = Date.now() - startTime;
@@ -356,13 +353,13 @@ test.describe('RAG API (KnowledgeBase)', () => {
 
       const response = await apiContext.post('/api/v1/agents/qa', {
         headers: {
-          Cookie: sessionCookie
+          Cookie: sessionCookie,
         },
         data: {
           gameId: testGameId,
           query: 'What is the objective?',
-          searchMode: 'Hybrid'
-        }
+          searchMode: 'Hybrid',
+        },
       });
 
       const data = await response.json();
@@ -385,13 +382,13 @@ test.describe('RAG API (KnowledgeBase)', () => {
 
       const response = await apiContext.post('/api/v1/agents/qa', {
         headers: {
-          Cookie: sessionCookie
+          Cookie: sessionCookie,
         },
         data: {
           gameId: testGameId,
           query: 'setup instructions',
-          searchMode: 'Hybrid'
-        }
+          searchMode: 'Hybrid',
+        },
       });
 
       const data = await response.json();

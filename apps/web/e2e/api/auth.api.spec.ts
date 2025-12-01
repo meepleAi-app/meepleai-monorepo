@@ -7,7 +7,7 @@
  * @see apps/api/src/Api/BoundedContexts/Authentication
  */
 
-import { test, expect, APIRequestContext } from '@playwright/test';
+import { test, expect, APIRequestContext } from './fixtures/chromatic';
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
@@ -18,8 +18,8 @@ test.describe('Authentication API', () => {
     apiContext = await playwright.request.newContext({
       baseURL: BASE_URL,
       extraHTTPHeaders: {
-        'Content-Type': 'application/json'
-      }
+        'Content-Type': 'application/json',
+      },
     });
   });
 
@@ -32,8 +32,8 @@ test.describe('Authentication API', () => {
       const response = await apiContext.post('/api/v1/auth/login', {
         data: {
           email: 'demo@meepleai.dev',
-          password: 'Demo123!'
-        }
+          password: 'Demo123!',
+        },
       });
 
       expect(response.status()).toBe(200);
@@ -41,7 +41,9 @@ test.describe('Authentication API', () => {
       const data = await response.json();
       expect(data.user).toBeDefined();
       expect(data.user.email).toBe('demo@meepleai.dev');
-      expect(data.user.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+      expect(data.user.id).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+      );
       expect(data.expiresAt).toBeDefined();
 
       // Verify session cookie is set
@@ -54,8 +56,8 @@ test.describe('Authentication API', () => {
       const response = await apiContext.post('/api/v1/auth/login', {
         data: {
           email: 'nonexistent@example.com',
-          password: 'Demo123!'
-        }
+          password: 'Demo123!',
+        },
       });
 
       expect(response.status()).toBe(401);
@@ -68,8 +70,8 @@ test.describe('Authentication API', () => {
       const response = await apiContext.post('/api/v1/auth/login', {
         data: {
           email: 'demo@meepleai.dev',
-          password: 'WrongPassword123!'
-        }
+          password: 'WrongPassword123!',
+        },
       });
 
       expect(response.status()).toBe(401);
@@ -77,7 +79,7 @@ test.describe('Authentication API', () => {
 
     test('should fail with missing credentials', async () => {
       const response = await apiContext.post('/api/v1/auth/login', {
-        data: {}
+        data: {},
       });
 
       expect(response.status()).toBe(400);
@@ -88,8 +90,8 @@ test.describe('Authentication API', () => {
       const response = await apiContext.post('/api/v1/auth/login', {
         data: {
           email: 'admin@meepleai.dev', // Admin might have 2FA
-          password: 'Demo123!'
-        }
+          password: 'Demo123!',
+        },
       });
 
       // Could be 200 (no 2FA) or 200 with requiresTwoFactor flag
@@ -115,8 +117,8 @@ test.describe('Authentication API', () => {
         data: {
           email: `test-${timestamp}@example.com`,
           password: 'SecurePass123!',
-          displayName: `Test User ${timestamp}`
-        }
+          displayName: `Test User ${timestamp}`,
+        },
       });
 
       expect(response.status()).toBe(201);
@@ -132,8 +134,8 @@ test.describe('Authentication API', () => {
         data: {
           email: 'demo@meepleai.dev', // Existing user
           password: 'SecurePass123!',
-          displayName: 'Duplicate User'
-        }
+          displayName: 'Duplicate User',
+        },
       });
 
       expect(response.status()).toBe(409); // Conflict
@@ -144,8 +146,8 @@ test.describe('Authentication API', () => {
         data: {
           email: 'newuser@example.com',
           password: '123', // Too weak
-          displayName: 'New User'
-        }
+          displayName: 'New User',
+        },
       });
 
       expect(response.status()).toBe(400);
@@ -156,8 +158,8 @@ test.describe('Authentication API', () => {
         data: {
           email: 'invalid-email',
           password: 'SecurePass123!',
-          displayName: 'New User'
-        }
+          displayName: 'New User',
+        },
       });
 
       expect(response.status()).toBe(400);
@@ -172,8 +174,8 @@ test.describe('Authentication API', () => {
       const response = await apiContext.post('/api/v1/auth/login', {
         data: {
           email: 'demo@meepleai.dev',
-          password: 'Demo123!'
-        }
+          password: 'Demo123!',
+        },
       });
 
       const cookies = response.headers()['set-cookie'];
@@ -183,8 +185,8 @@ test.describe('Authentication API', () => {
     test('should return current user with valid session', async () => {
       const response = await apiContext.get('/api/v1/auth/me', {
         headers: {
-          Cookie: sessionCookie
-        }
+          Cookie: sessionCookie,
+        },
       });
 
       expect(response.status()).toBe(200);
@@ -207,8 +209,8 @@ test.describe('Authentication API', () => {
       const loginResponse = await apiContext.post('/api/v1/auth/login', {
         data: {
           email: 'demo@meepleai.dev',
-          password: 'Demo123!'
-        }
+          password: 'Demo123!',
+        },
       });
 
       const sessionCookie = loginResponse.headers()['set-cookie']?.split(';')[0] || '';
@@ -216,8 +218,8 @@ test.describe('Authentication API', () => {
       // Logout
       const logoutResponse = await apiContext.post('/api/v1/auth/logout', {
         headers: {
-          Cookie: sessionCookie
-        }
+          Cookie: sessionCookie,
+        },
       });
 
       expect(logoutResponse.status()).toBe(200);
@@ -225,8 +227,8 @@ test.describe('Authentication API', () => {
       // Verify session is invalid
       const meResponse = await apiContext.get('/api/v1/auth/me', {
         headers: {
-          Cookie: sessionCookie
-        }
+          Cookie: sessionCookie,
+        },
       });
 
       expect(meResponse.status()).toBe(401);
@@ -239,8 +241,8 @@ test.describe('Authentication API', () => {
       const loginResponse = await apiContext.post('/api/v1/auth/login', {
         data: {
           email: 'demo@meepleai.dev',
-          password: 'Demo123!'
-        }
+          password: 'Demo123!',
+        },
       });
 
       const sessionCookie = loginResponse.headers()['set-cookie']?.split(';')[0] || '';
@@ -248,8 +250,8 @@ test.describe('Authentication API', () => {
       // Get session status
       const response = await apiContext.get('/api/v1/auth/session/status', {
         headers: {
-          Cookie: sessionCookie
-        }
+          Cookie: sessionCookie,
+        },
       });
 
       expect(response.status()).toBe(200);
@@ -277,8 +279,8 @@ test.describe('Authentication API', () => {
       await apiContext.post('/api/v1/auth/login', {
         data: {
           email: 'demo@meepleai.dev',
-          password: 'Demo123!'
-        }
+          password: 'Demo123!',
+        },
       });
 
       const duration = Date.now() - startTime;

@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using Microsoft.Extensions.Options;
+using System.Globalization;
 
 namespace Api.Services;
 
@@ -47,7 +48,7 @@ public class PagerDutyAlertChannel : IAlertChannel
         }
 
         // Only send critical alerts to PagerDuty to avoid alert fatigue
-        if (!string.Equals(severity.ToUpper(), "CRITICAL", StringComparison.Ordinal))
+        if (!string.Equals(severity.ToUpper(CultureInfo.InvariantCulture), "CRITICAL", StringComparison.Ordinal))
         {
             _logger.LogDebug(
                 "Skipping PagerDuty for {Severity} alert (only CRITICAL alerts trigger incidents)",
@@ -75,7 +76,7 @@ public class PagerDutyAlertChannel : IAlertChannel
                 return true;
             }
 
-            var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+            var errorContent = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
             _logger.LogWarning(
                 "PagerDuty API returned {StatusCode}: {Error}",
                 response.StatusCode,
@@ -126,8 +127,8 @@ public class PagerDutyAlertChannel : IAlertChannel
             dedup_key = $"meepleai-{alertType}", // Group similar alerts
             payload = new
             {
-                summary = $"[{severity.ToUpper()}] {alertType}: {message}",
-                severity = severity.ToLower(), // PagerDuty uses lowercase
+                summary = $"[{severity.ToUpper(CultureInfo.InvariantCulture)}] {alertType}: {message}",
+                severity = severity.ToLower(CultureInfo.InvariantCulture), // PagerDuty uses lowercase
                 source = "meepleai-api",
                 timestamp = DateTime.UtcNow.ToString("O"),
                 custom_details = customDetails

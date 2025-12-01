@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -106,14 +107,14 @@ public class EmbeddingService : IEmbeddingService
     private static int DetermineEmbeddingDimensions(string modelName, IConfiguration config)
     {
         // Try nested config first (Embedding:Dimensions) - matches appsettings.json structure
-        if (int.TryParse(config["Embedding:Dimensions"], out var nestedDimensions) && nestedDimensions > 0)
+        if (int.TryParse(config["Embedding:Dimensions"], CultureInfo.InvariantCulture, out var nestedDimensions) && nestedDimensions > 0)
         {
             return nestedDimensions;
         }
 
         // Try flat config for backward compatibility (EMBEDDING_DIMENSIONS environment variable)
         // IMPORTANT: Only accept positive values to prevent 0 or negative dimensions bug
-        if (int.TryParse(config["EMBEDDING_DIMENSIONS"], out var flatDimensions) && flatDimensions > 0)
+        if (int.TryParse(config["EMBEDDING_DIMENSIONS"], CultureInfo.InvariantCulture, out var flatDimensions) && flatDimensions > 0)
         {
             return flatDimensions;
         }
@@ -153,11 +154,11 @@ public class EmbeddingService : IEmbeddingService
         {
             if (string.Equals(_provider, "ollama", StringComparison.Ordinal))
             {
-                return await GenerateOllamaEmbeddingsAsync(texts, ct);
+                return await GenerateOllamaEmbeddingsAsync(texts, ct).ConfigureAwait(false);
             }
             else // openai
             {
-                return await GenerateOpenAIEmbeddingsAsync(texts, ct);
+                return await GenerateOpenAIEmbeddingsAsync(texts, ct).ConfigureAwait(false);
             }
         }
 #pragma warning disable CA1031 // Do not catch general exception types
@@ -190,8 +191,8 @@ public class EmbeddingService : IEmbeddingService
             using var content = new StringContent(json, Encoding.UTF8, "application/json");
 
             // CODE-01: Dispose HttpResponseMessage to prevent resource leak (CWE-404)
-            using var response = await _httpClient.PostAsync("/api/embeddings", content, ct);
-            var responseBody = await response.Content.ReadAsStringAsync(ct);
+            using var response = await _httpClient.PostAsync("/api/embeddings", content, ct).ConfigureAwait(false);
+            var responseBody = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -228,8 +229,8 @@ public class EmbeddingService : IEmbeddingService
         using var content = new StringContent(json, Encoding.UTF8, "application/json");
 
         // CODE-01: Dispose HttpResponseMessage to prevent resource leak (CWE-404)
-        using var response = await _httpClient.PostAsync("embeddings", content, ct);
-        var responseBody = await response.Content.ReadAsStringAsync(ct);
+        using var response = await _httpClient.PostAsync("embeddings", content, ct).ConfigureAwait(false);
+        var responseBody = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
 
         if (!response.IsSuccessStatusCode)
         {
@@ -258,7 +259,7 @@ public class EmbeddingService : IEmbeddingService
     /// </summary>
     public virtual async Task<EmbeddingResult> GenerateEmbeddingAsync(string text, CancellationToken ct = default)
     {
-        var result = await GenerateEmbeddingsAsync(new List<string> { text }, ct);
+        var result = await GenerateEmbeddingsAsync(new List<string> { text }, ct).ConfigureAwait(false);
         return result;
     }
 
@@ -290,7 +291,7 @@ public class EmbeddingService : IEmbeddingService
             // 1. Try local embedding service first (if configured and enabled)
             if (_embeddingFallbackEnabled && !string.IsNullOrWhiteSpace(_localEmbeddingUrl))
             {
-                var localResult = await TryLocalEmbeddingAsync(texts, language, ct);
+                var localResult = await TryLocalEmbeddingAsync(texts, language, ct).ConfigureAwait(false);
                 if (localResult.Success)
                 {
                     _logger.LogInformation("Successfully generated embeddings using local service for language {Language}", language);
@@ -303,11 +304,11 @@ public class EmbeddingService : IEmbeddingService
             // 2. Fall back to configured provider (Ollama or OpenRouter)
             if (string.Equals(_provider, "ollama", StringComparison.Ordinal))
             {
-                return await GenerateOllamaEmbeddingsAsync(texts, ct);
+                return await GenerateOllamaEmbeddingsAsync(texts, ct).ConfigureAwait(false);
             }
             else // openai/openrouter
             {
-                return await GenerateOpenRouterEmbeddingAsync(texts, language, ct);
+                return await GenerateOpenRouterEmbeddingAsync(texts, language, ct).ConfigureAwait(false);
             }
         }
 #pragma warning disable CA1031 // Do not catch general exception types
@@ -329,7 +330,7 @@ public class EmbeddingService : IEmbeddingService
         string language,
         CancellationToken ct = default)
     {
-        return await GenerateEmbeddingsAsync(new List<string> { text }, language, ct);
+        return await GenerateEmbeddingsAsync(new List<string> { text }, language, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -354,8 +355,8 @@ public class EmbeddingService : IEmbeddingService
             using var content = new StringContent(json, Encoding.UTF8, "application/json");
 
             // CODE-01: Dispose HttpResponseMessage to prevent resource leak (CWE-404)
-            using var response = await _localEmbeddingClient.PostAsync("/embeddings", content, ct);
-            var responseBody = await response.Content.ReadAsStringAsync(ct);
+            using var response = await _localEmbeddingClient.PostAsync("/embeddings", content, ct).ConfigureAwait(false);
+            var responseBody = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -399,7 +400,7 @@ public class EmbeddingService : IEmbeddingService
         _logger.LogInformation("Generating embeddings for {Count} texts in language {Language} using OpenRouter model {Model}",
             texts.Count, language, _embeddingModel);
 
-        return await GenerateOpenAIEmbeddingsAsync(texts, ct);
+        return await GenerateOpenAIEmbeddingsAsync(texts, ct).ConfigureAwait(false);
     }
 
     /// <summary>

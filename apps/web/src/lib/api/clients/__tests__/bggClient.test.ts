@@ -219,15 +219,24 @@ describe('createBggClient', () => {
   describe('Integration Tests', () => {
     it('should handle complete search-to-details workflow', async () => {
       const mockSearchResults = {
-        total: 1,
-        items: [{ id: 13, name: 'Catan', yearPublished: 1995 }],
+        results: [{ bggId: 13, name: 'Catan', yearPublished: 1995 }],
       };
 
       const mockDetails = {
-        id: 13,
+        bggId: 13,
         name: 'Catan',
         yearPublished: 1995,
         description: 'Full details',
+        minPlayers: null,
+        maxPlayers: null,
+        playingTime: null,
+        minPlayTime: null,
+        maxPlayTime: null,
+        minAge: null,
+        averageRating: null,
+        bayesAverageRating: null,
+        usersRated: null,
+        averageWeight: null,
       };
 
       mockHttpClient.get

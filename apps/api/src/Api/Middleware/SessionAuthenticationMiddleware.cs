@@ -34,7 +34,7 @@ public class SessionAuthenticationMiddleware
                 {
                     // Validate session via DDD CQRS ValidateSessionQuery
                     var query = new ValidateSessionQuery(SessionToken: token);
-                    var result = await mediator.Send(query);
+                    var result = await mediator.Send(query).ConfigureAwait(false);
 
                     if (result.IsValid && result.User != null)
                     {
@@ -83,7 +83,7 @@ public class SessionAuthenticationMiddleware
 #pragma warning restore CA1031 // Do not catch general exception types
         }
 
-        await _next(context);
+        await _next(context).ConfigureAwait(false);
     }
 }
 

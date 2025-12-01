@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Options;
+using System.Globalization;
 
 namespace Api.Middleware;
 
@@ -39,7 +40,7 @@ public class SecurityHeadersMiddleware
         // This ensures headers are present in all scenarios (including tests)
         AddSecurityHeaders(context);
 
-        await _next(context);
+        await _next(context).ConfigureAwait(false);
     }
 
     private void AddSecurityHeaders(HttpContext context)
@@ -273,7 +274,7 @@ public class SecurityHeadersOptionsValidator : IValidateOptions<SecurityHeadersO
 
                 if (maxAgeMatch.Success)
                 {
-                    var maxAge = int.Parse(maxAgeMatch.Groups[1].Value);
+                    var maxAge = int.Parse(maxAgeMatch.Groups[1].Value, CultureInfo.InvariantCulture);
                     if (maxAge < 0)
                     {
                         errors.Add("HSTS max-age must be a positive number");

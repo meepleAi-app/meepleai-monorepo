@@ -5,6 +5,7 @@ using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using System.IO.Compression;
 using System.Text.Json;
+using System.Globalization;
 
 namespace Api.BoundedContexts.GameManagement.Application.Handlers;
 
@@ -88,8 +89,8 @@ public class ExportRuleSpecsCommandHandler : ICommandHandler<ExportRuleSpecsComm
                                 id = a.Key,
                                 text = a.Text,
                                 section = a.Section,
-                                page = a.PageNumber?.ToString(),
-                                line = a.LineNumber?.ToString()
+                                page = a.PageNumber?.ToString(CultureInfo.InvariantCulture),
+                                line = a.LineNumber?.ToString(CultureInfo.InvariantCulture)
                             })
                             .ToList()
                     };

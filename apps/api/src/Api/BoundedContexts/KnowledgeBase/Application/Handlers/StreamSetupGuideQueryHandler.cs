@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
@@ -306,9 +307,9 @@ TASK: Generate a step-by-step setup guide for this board game. Focus on the init
                         // Extract step number
                         // FIX MA0009: Add timeout to prevent ReDoS attacks
                         var numberMatch = Regex.Match(stepPart, @"\d+", RegexOptions.None, TimeSpan.FromSeconds(1));
-                        if (numberMatch.Success && int.TryParse(numberMatch.Value, out int stepNum))
+                        if (numberMatch.Success && int.TryParse(numberMatch.Value, CultureInfo.InvariantCulture, out var stepNumber))
                         {
-                            currentStepNumber = stepNum;
+                            currentStepNumber = stepNumber;
                             currentTitle = titlePart;
                             currentInstructionLines.Clear();
                         }

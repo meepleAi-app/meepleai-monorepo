@@ -37,7 +37,7 @@
  * - chat-citations.spec.ts: Citation display tests
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/chromatic';
 import { setupAuthRoutes, waitForAutoSelection } from './helpers/qa-test-utils';
 import {
   verifyCitationDisplay,

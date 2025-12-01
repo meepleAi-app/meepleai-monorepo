@@ -9,7 +9,6 @@
  * Note (FE-IMP-005): Client-side only - AuthModal uses TanStack Query
  */
 
-
 import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AuthModal } from '@/components/auth';
@@ -47,7 +46,6 @@ function LoginPageContent() {
         onClose={handleClose}
         defaultMode="login"
         sessionExpiredMessage={isSessionExpired}
-        showDemoCredentials={true}
       />
     </div>
   );

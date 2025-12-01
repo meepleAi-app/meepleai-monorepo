@@ -17,46 +17,17 @@ public static class AdminMiscEndpoints
 {
     public static RouteGroupBuilder MapAdminMiscEndpoints(this RouteGroupBuilder group)
     {
-        // EDIT-07: Bulk RuleSpec operations
-        group.MapPost("/admin/seed", async (SeedRequest request, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
-        {
-            var sessionResult = context.RequireAdminSession();
-            if (!sessionResult.IsAuthorized) return sessionResult.ErrorResult!;
-            var session = sessionResult.Session;
-            ArgumentNullException.ThrowIfNull(session);
-
-            if (string.IsNullOrWhiteSpace(request.gameId))
-            {
-                return Results.BadRequest(new { error = "gameId is required" });
-            }
-
-            if (!Guid.TryParse(request.gameId, out var gameGuid))
-            {
-                return Results.BadRequest(new { error = "Invalid game ID format" });
-            }
-
-            logger.LogInformation("Admin {UserId} creating demo RuleSpec for game {GameId}", session.User.Id, gameGuid);
-            var command = new CreateDemoRuleSpecCommand(gameGuid);
-            var specDto = await mediator.Send(command, ct);
-
-            // Convert DTO to Model for backward compatibility
-            var atoms = specDto.Atoms.Select(a => new RuleAtom(a.Id, a.Text, a.Section, a.Page, a.Line)).ToList();
-            var spec = new RuleSpec(specDto.GameId.ToString(), specDto.Version, specDto.CreatedAt, atoms);
-
-            return Results.Json(new { ok = true, spec });
-        });
-
         // CHESS-03: Chess knowledge indexing endpoints
         group.MapPost("/chess/index", async (HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             var sessionResult = context.RequireAdminSession();
             if (!sessionResult.IsAuthorized) return sessionResult.ErrorResult!;
             var session = sessionResult.Session;
-            ArgumentNullException.ThrowIfNull(session);
+            if (session == null) throw new InvalidOperationException("Session is required");
 
             logger.LogInformation("Admin {UserId} starting chess knowledge indexing", session.User.Id);
 
-            var result = await mediator.Send(new IndexChessKnowledgeCommand(), ct);
+            var result = await mediator.Send(new IndexChessKnowledgeCommand(), ct).ConfigureAwait(false);
 
             if (!result.Success)
             {
@@ -91,7 +62,7 @@ public static class AdminMiscEndpoints
 
             logger.LogInformation("User {UserId} searching chess knowledge: {Query}", session.User.Id, validatedQuery);
 
-            var searchResult = await mediator.Send(new SearchChessKnowledgeQuery { Query = validatedQuery, Limit = limit ?? 5 }, ct);
+            var searchResult = await mediator.Send(new SearchChessKnowledgeQuery { Query = validatedQuery, Limit = limit ?? 5 }, ct).ConfigureAwait(false);
 
             if (!searchResult.Success)
             {
@@ -122,7 +93,7 @@ public static class AdminMiscEndpoints
 
             logger.LogInformation("Admin {UserId} deleting all chess knowledge", session.User.Id);
 
-            var success = await mediator.Send(new DeleteChessKnowledgeCommand(), ct);
+            var success = await mediator.Send(new DeleteChessKnowledgeCommand(), ct).ConfigureAwait(false);
 
             if (!success)
             {

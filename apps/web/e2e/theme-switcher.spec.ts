@@ -4,7 +4,7 @@
  * @see apps/web/e2e/pages/home/HomePage.ts
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/chromatic';
 
 /**
  * ThemeSwitcher Component Tests

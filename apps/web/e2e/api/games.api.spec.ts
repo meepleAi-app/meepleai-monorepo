@@ -6,7 +6,7 @@
  * @see apps/api/src/Api/BoundedContexts/GameManagement
  */
 
-import { test, expect, APIRequestContext } from '@playwright/test';
+import { test, expect, APIRequestContext } from './fixtures/chromatic';
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
@@ -19,16 +19,16 @@ test.describe('Games API', () => {
     apiContext = await playwright.request.newContext({
       baseURL: BASE_URL,
       extraHTTPHeaders: {
-        'Content-Type': 'application/json'
-      }
+        'Content-Type': 'application/json',
+      },
     });
 
     // Login to get session
     const loginResponse = await apiContext.post('/api/v1/auth/login', {
       data: {
         email: 'demo@meepleai.dev',
-        password: 'Demo123!'
-      }
+        password: 'Demo123!',
+      },
     });
 
     sessionCookie = loginResponse.headers()['set-cookie']?.split(';')[0] || '';
@@ -42,8 +42,8 @@ test.describe('Games API', () => {
     test('should return list of games', async () => {
       const response = await apiContext.get('/api/v1/games', {
         headers: {
-          Cookie: sessionCookie
-        }
+          Cookie: sessionCookie,
+        },
       });
 
       expect(response.status()).toBe(200);
@@ -62,8 +62,8 @@ test.describe('Games API', () => {
     test('should return games with valid schema', async () => {
       const response = await apiContext.get('/api/v1/games', {
         headers: {
-          Cookie: sessionCookie
-        }
+          Cookie: sessionCookie,
+        },
       });
 
       const games = await response.json();
@@ -88,8 +88,8 @@ test.describe('Games API', () => {
 
       await apiContext.get('/api/v1/games', {
         headers: {
-          Cookie: sessionCookie
-        }
+          Cookie: sessionCookie,
+        },
       });
 
       const duration = Date.now() - startTime;
@@ -104,8 +104,8 @@ test.describe('Games API', () => {
       // First get a game ID
       const gamesResponse = await apiContext.get('/api/v1/games', {
         headers: {
-          Cookie: sessionCookie
-        }
+          Cookie: sessionCookie,
+        },
       });
 
       const games = await gamesResponse.json();
@@ -114,8 +114,8 @@ test.describe('Games API', () => {
       // Get game details
       const response = await apiContext.get(`/api/v1/games/${gameId}`, {
         headers: {
-          Cookie: sessionCookie
-        }
+          Cookie: sessionCookie,
+        },
       });
 
       expect(response.status()).toBe(200);
@@ -130,8 +130,8 @@ test.describe('Games API', () => {
       const fakeId = '00000000-0000-0000-0000-000000000000';
       const response = await apiContext.get(`/api/v1/games/${fakeId}`, {
         headers: {
-          Cookie: sessionCookie
-        }
+          Cookie: sessionCookie,
+        },
       });
 
       expect(response.status()).toBe(404);
@@ -140,8 +140,8 @@ test.describe('Games API', () => {
     test('should return 400 for invalid UUID', async () => {
       const response = await apiContext.get('/api/v1/games/invalid-uuid', {
         headers: {
-          Cookie: sessionCookie
-        }
+          Cookie: sessionCookie,
+        },
       });
 
       expect(response.status()).toBe(400);
@@ -154,8 +154,8 @@ test.describe('Games API', () => {
       const adminLoginResponse = await apiContext.post('/api/v1/auth/login', {
         data: {
           email: 'admin@meepleai.dev',
-          password: 'Demo123!'
-        }
+          password: 'Demo123!',
+        },
       });
 
       const adminCookie = adminLoginResponse.headers()['set-cookie']?.split(';')[0] || '';
@@ -163,7 +163,7 @@ test.describe('Games API', () => {
       const timestamp = Date.now();
       const response = await apiContext.post('/api/v1/games', {
         headers: {
-          Cookie: adminCookie
+          Cookie: adminCookie,
         },
         data: {
           title: `Test Game ${timestamp}`,
@@ -172,8 +172,8 @@ test.describe('Games API', () => {
           minPlayers: 2,
           maxPlayers: 4,
           minPlayTimeMinutes: 30,
-          maxPlayTimeMinutes: 60
-        }
+          maxPlayTimeMinutes: 60,
+        },
       });
 
       expect(response.status()).toBe(201);
@@ -186,7 +186,7 @@ test.describe('Games API', () => {
     test('should fail to create game as regular user', async () => {
       const response = await apiContext.post('/api/v1/games', {
         headers: {
-          Cookie: sessionCookie // Regular user
+          Cookie: sessionCookie, // Regular user
         },
         data: {
           title: 'Unauthorized Game',
@@ -195,8 +195,8 @@ test.describe('Games API', () => {
           minPlayers: 2,
           maxPlayers: 4,
           minPlayTimeMinutes: 30,
-          maxPlayTimeMinutes: 60
-        }
+          maxPlayTimeMinutes: 60,
+        },
       });
 
       expect(response.status()).toBe(403); // Forbidden
@@ -207,8 +207,8 @@ test.describe('Games API', () => {
     test('should support query parameters', async () => {
       const response = await apiContext.get('/api/v1/games?search=chess', {
         headers: {
-          Cookie: sessionCookie
-        }
+          Cookie: sessionCookie,
+        },
       });
 
       expect(response.ok()).toBeTruthy();
@@ -220,8 +220,8 @@ test.describe('Games API', () => {
     test('should filter by player count', async () => {
       const response = await apiContext.get('/api/v1/games?minPlayers=2&maxPlayers=4', {
         headers: {
-          Cookie: sessionCookie
-        }
+          Cookie: sessionCookie,
+        },
       });
 
       expect(response.ok()).toBeTruthy();
@@ -240,8 +240,8 @@ test.describe('Games API', () => {
       const startTime1 = Date.now();
       await apiContext.get('/api/v1/games', {
         headers: {
-          Cookie: sessionCookie
-        }
+          Cookie: sessionCookie,
+        },
       });
       const duration1 = Date.now() - startTime1;
 
@@ -249,8 +249,8 @@ test.describe('Games API', () => {
       const startTime2 = Date.now();
       await apiContext.get('/api/v1/games', {
         headers: {
-          Cookie: sessionCookie
-        }
+          Cookie: sessionCookie,
+        },
       });
       const duration2 = Date.now() - startTime2;
 

@@ -115,7 +115,7 @@ public static class ValidationHelpers
     {
         return async value =>
         {
-            var isValid = await predicate(value);
+            var isValid = await predicate(value).ConfigureAwait(false);
             return isValid
                 ? Result<T>.Success(value)
                 : Result<T>.Failure(Error.Validation(errorMessage));

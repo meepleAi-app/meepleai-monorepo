@@ -41,7 +41,7 @@ public class RedisFrequencyTracker : IRedisFrequencyTracker
             var redisKey = GetRedisKey(gameId);
 
             // Atomic increment using Redis ZINCRBY (thread-safe, no race conditions)
-            await db.SortedSetIncrementAsync(redisKey, query, 1.0);
+            await db.SortedSetIncrementAsync(redisKey, query, 1.0).ConfigureAwait(false);
 
             _logger.LogDebug(
                 "Incremented access count for query in game {GameId}: {Query}",
@@ -117,7 +117,7 @@ public class RedisFrequencyTracker : IRedisFrequencyTracker
             var redisKey = GetRedisKey(gameId);
 
             // Get score for specific member (returns null if doesn't exist)
-            var score = await db.SortedSetScoreAsync(redisKey, query);
+            var score = await db.SortedSetScoreAsync(redisKey, query).ConfigureAwait(false);
 
             // Convert null to 0 (query never accessed)
             var frequency = score.HasValue ? (int)score.Value : 0;
@@ -148,7 +148,7 @@ public class RedisFrequencyTracker : IRedisFrequencyTracker
     /// <inheritdoc />
     public async Task<string> ClassifyQueryAsync(Guid gameId, string query)
     {
-        var frequency = await GetFrequencyAsync(gameId, query);
+        var frequency = await GetFrequencyAsync(gameId, query).ConfigureAwait(false);
 
         // Classification logic (boundaries are inclusive, matching DynamicTtlStrategy)
         if (frequency >= _config.HotQueryThreshold)

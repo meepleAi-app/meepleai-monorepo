@@ -46,7 +46,7 @@ public class AuditService
             };
 
             _db.AuditLogs.Add(auditLog);
-            await _db.SaveChangesAsync(ct);
+            await _db.SaveChangesAsync(ct).ConfigureAwait(false);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)

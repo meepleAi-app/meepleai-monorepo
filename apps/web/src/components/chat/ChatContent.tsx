@@ -22,6 +22,7 @@ import { useChatContext } from '@/hooks/useChatContext';
 import { MessageList } from './MessageList';
 import { MessageInput } from './MessageInput';
 import { MobileSidebar } from './MobileSidebar';
+import { ContextChip, type DocumentSource } from './ContextChip';
 import { Game, ChatThread } from '@/types';
 
 export function ChatContent() {
@@ -132,6 +133,17 @@ export function ChatContent() {
           className="m-4 p-3 bg-[#fce8e6] text-[#d93025] rounded text-sm"
         >
           {errorMessage}
+        </div>
+      )}
+
+      {/* Context Chip (Issue #1840) */}
+      {selectedGameId && selectedGame && (
+        <div className="px-4 pt-4">
+          <ContextChip
+            gameName={selectedGame.title}
+            gameEmoji="🎲"
+            sources={[{ type: 'PDF', count: 1 }, { type: 'FAQ', count: 15 }, { type: 'Wiki' }]}
+          />
         </div>
       )}
 

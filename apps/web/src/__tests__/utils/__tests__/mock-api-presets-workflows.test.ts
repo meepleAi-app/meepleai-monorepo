@@ -5,7 +5,11 @@
  */
 
 import { MockApiPresets } from '../mock-api-presets';
-import { createTestRouter, expectFluentApi, expectRoutesRegistered } from './mock-api-presets.test-helpers';
+import {
+  createTestRouter,
+  expectFluentApi,
+  expectRoutesRegistered,
+} from './mock-api-presets.test-helpers';
 
 describe('MockApiPresets - Workflows', () => {
   describe('ingest preset', () => {
@@ -365,7 +369,7 @@ describe('MockApiPresets - Workflows', () => {
 
     it('should return router for chaining', () => {
       const router = createTestRouter();
-      expectFluentApi(MockApiPresets.uploadWorkflow, router);
+      expectFluentApi(MockApiPresets.uploadWorkflow.bind(MockApiPresets), router);
     });
   });
 });

@@ -31,7 +31,7 @@ public static class PasswordEndpoints
 
             // Execute password reset request via CQRS handler
             var command = new RequestPasswordResetCommand { Email = payload.Email };
-            var result = await mediator.Send(command, ct);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
             if (!result.Success)
             {
@@ -55,7 +55,7 @@ public static class PasswordEndpoints
 
             // Execute password reset token validation via CQRS query
             var query = new ValidatePasswordResetTokenQuery { Token = token };
-            var result = await mediator.Send(query, ct);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
 
             if (!result.IsValid)
             {
@@ -89,7 +89,7 @@ public static class PasswordEndpoints
                 NewPassword = payload.NewPassword
             };
 
-            var resetResult = await mediator.Send(resetCommand, ct);
+            var resetResult = await mediator.Send(resetCommand, ct).ConfigureAwait(false);
 
             if (!resetResult.Success || resetResult.UserId == null)
             {
@@ -102,7 +102,7 @@ public static class PasswordEndpoints
                 IpAddress: context.Connection.RemoteIpAddress?.ToString(),
                 UserAgent: context.Request.Headers.UserAgent.ToString());
 
-            var sessionResult = await mediator.Send(sessionCommand, ct);
+            var sessionResult = await mediator.Send(sessionCommand, ct).ConfigureAwait(false);
 
             writeSessionCookie(context, sessionResult.SessionToken, sessionResult.ExpiresAt);
 

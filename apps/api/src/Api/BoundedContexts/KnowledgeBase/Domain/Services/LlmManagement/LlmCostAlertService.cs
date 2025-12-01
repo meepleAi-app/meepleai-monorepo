@@ -1,5 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.Services;
+using System.Globalization;
 
 namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
 
@@ -53,7 +54,7 @@ public class LlmCostAlertService
                 metadata: new Dictionary<string, object>
 (StringComparer.Ordinal)
                 {
-                    ["date"] = today.ToString("yyyy-MM-dd"),
+                    ["date"] = today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
                     ["daily_cost"] = dailyCost,
                     ["threshold"] = DailyThreshold,
                     ["exceeded_by"] = dailyCost - DailyThreshold,
@@ -90,8 +91,8 @@ public class LlmCostAlertService
                 metadata: new Dictionary<string, object>
 (StringComparer.Ordinal)
                 {
-                    ["start_date"] = weekStart.ToString("yyyy-MM-dd"),
-                    ["end_date"] = today.ToString("yyyy-MM-dd"),
+                    ["start_date"] = weekStart.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                    ["end_date"] = today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
                     ["weekly_cost"] = weeklyCost,
                     ["threshold"] = WeeklyThreshold
                 },
@@ -126,7 +127,7 @@ public class LlmCostAlertService
                 metadata: new Dictionary<string, object>
 (StringComparer.Ordinal)
                 {
-                    ["month"] = today.ToString("yyyy-MM"),
+                    ["month"] = today.ToString("yyyy-MM", CultureInfo.InvariantCulture),
                     ["current_cost"] = monthCost,
                     ["projected_cost"] = projectedMonthlyCost,
                     ["threshold"] = MonthlyThreshold,

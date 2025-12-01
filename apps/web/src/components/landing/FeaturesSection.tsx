@@ -1,64 +1,82 @@
-import { motion } from "framer-motion";
-import { useInView } from "react-intersection-observer";
-import { Card } from "@/components/ui/card";
-import { useTranslation } from "@/hooks/useTranslation";
+/**
+ * Features Section - Landing Page
+ *
+ * Three-column grid showcasing key features with icons and descriptions.
+ * Design: Playful Boardroom (wireframes-playful-boardroom.md)
+ *
+ * Features:
+ * - Mobile: Single column stacked
+ * - Tablet: 2 columns
+ * - Desktop: 3 columns
+ * - Icon + Title + Description cards
+ *
+ * @see docs/04-frontend/wireframes-playful-boardroom.md (lines 57-80)
+ */
 
-export default function FeaturesSection() {
-  const { t } = useTranslation();
-  const { ref: featuresRef, inView: featuresInView } = useInView({
-    triggerOnce: true,
-    threshold: [0.1, 0.5, 0.9],
-  });
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Bot, BookOpen, Smartphone } from 'lucide-react';
 
-  const features = [
-    {
-      icon: "📤",
-      title: `1. ${t('home.features.upload.title')}`,
-      description: t('home.features.upload.description'),
-    },
-    {
-      icon: "💬",
-      title: `2. ${t('home.features.ask.title')}`,
-      description: t('home.features.ask.description'),
-    },
-    {
-      icon: "⚡",
-      title: `3. ${t('home.features.play.title')}`,
-      description: t('home.features.play.description'),
-    },
-  ];
+const features = [
+  {
+    icon: Bot,
+    title: 'AI Intelligente',
+    description:
+      'Risposte immediate con citazioni dal manuale. Niente più discussioni sulle regole.',
+    color: 'text-primary',
+  },
+  {
+    icon: BookOpen,
+    title: 'Catalogo Ampio',
+    description: 'Migliaia di giochi già disponibili. Aggiungi i tuoi manuali personalizzati.',
+    color: 'text-secondary',
+  },
+  {
+    icon: Smartphone,
+    title: 'Mobile-First',
+    description: 'Perfetto durante le partite. Risposte rapide senza interrompere il gioco.',
+    color: 'text-accent',
+  },
+];
 
+export function FeaturesSection() {
   return (
-    <section
-      id="features"
-      ref={featuresRef}
-      className="py-20 px-6 bg-gradient-to-b from-slate-950 to-slate-900"
-    >
-      <div className="max-w-6xl mx-auto">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={featuresInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-16"
-        >
-          <h2 className="text-5xl font-bold mb-4">{t('home.features.title')}</h2>
-        </motion.div>
+    <section id="features" className="py-16 md:py-24 px-4 bg-muted/30">
+      <div className="container mx-auto max-w-6xl">
+        {/* Section Header */}
+        <div className="text-center mb-12">
+          <h2 className="font-heading text-3xl md:text-4xl font-bold text-foreground mb-4">
+            ✨ Caratteristiche
+          </h2>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            Tutto quello che ti serve per giocare senza dubbi
+          </p>
+        </div>
 
-        <div className="grid md:grid-cols-3 gap-8">
-          {features.map((feature, index) => (
-            <Card key={index}>
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={featuresInView ? { opacity: 1, y: 0 } : {}}
-                transition={{ duration: 0.6, delay: index * 0.1 }}
-                className="text-center p-8 hover:scale-105 transition-transform"
+        {/* Features Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+          {features.map((feature, index) => {
+            const Icon = feature.icon;
+            return (
+              <Card
+                key={index}
+                className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border-muted bg-card"
               >
-                <div className="text-6xl mb-4">{feature.icon}</div>
-                <h3 className="text-2xl font-semibold mb-3">{feature.title}</h3>
-                <p className="text-slate-50 leading-relaxed">{feature.description}</p>
-              </motion.div>
-            </Card>
-          ))}
+                <CardHeader>
+                  <div
+                    className={`w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors`}
+                  >
+                    <Icon className={`h-6 w-6 ${feature.color}`} />
+                  </div>
+                  <CardTitle className="font-heading text-xl">{feature.title}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <CardDescription className="text-base leading-relaxed">
+                    {feature.description}
+                  </CardDescription>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       </div>
     </section>

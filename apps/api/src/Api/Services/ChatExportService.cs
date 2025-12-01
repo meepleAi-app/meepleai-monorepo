@@ -63,7 +63,7 @@ public class ChatExportService : IChatExportService
             }
 
             // Step 3: Generate export (formatter handles date filtering)
-            var stream = await formatter.FormatAsync(chat, dateFrom, dateTo);
+            var stream = await formatter.FormatAsync(chat, dateFrom, dateTo).ConfigureAwait(false);
 
             // Step 4: Generate safe filename
             var gameName = chat.Game?.Name ?? "Unknown Game";

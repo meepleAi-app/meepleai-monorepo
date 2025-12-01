@@ -156,9 +156,9 @@ jobs:
           k6 run --env TEST_TYPE=${TEST_TYPE} scenarios/all.js
         env:
           API_BASE_URL: ${{ env.API_BASE_URL }}
-          # Issue #1663: Use demo user credentials (auto-seeded by API startup)
-          TEST_USER_EMAIL: 'user@meepleai.dev'
-          TEST_USER_PASSWORD: 'Demo123!'
+          # Test user credentials - create programmatically in test setup
+          TEST_USER_EMAIL: 'k6-test-user@example.com'
+          TEST_USER_PASSWORD: 'K6TestPassword123!'
           TEST_GAME_ID: ${{ env.TEST_GAME_ID }}
           WEBSOCKET_URL: 'ws://localhost:8080/ws'
 

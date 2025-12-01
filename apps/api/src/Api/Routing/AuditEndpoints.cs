@@ -18,7 +18,7 @@ public static class AuditEndpoints
             if (!authorized) return error!;
 
             var query = new Api.BoundedContexts.Administration.Application.Queries.GetAiRequestsQuery(Limit: 100);
-            var result = await mediator.Send(query, ct);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
 
             var response = result.Requests
                 .Select(log =>

@@ -1,6 +1,7 @@
 using Api.Models;
 using Microsoft.Extensions.Logging;
 using System.Text.RegularExpressions;
+using System.Globalization;
 
 namespace Api.Services.Rag;
 
@@ -33,7 +34,7 @@ public class CitationExtractorService : ICitationExtractorService
 
         foreach (Match match in matches)
         {
-            if (int.TryParse(match.Groups[1].Value, out int index))
+            if (int.TryParse(match.Groups[1].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int index))
             {
                 // Citations are 1-indexed
                 if (index < 1 || index > snippets.Count)

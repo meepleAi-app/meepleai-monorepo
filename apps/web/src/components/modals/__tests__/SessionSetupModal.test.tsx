@@ -1,50 +1,110 @@
 /**
- * Tests for SessionSetupModal component
- * Auto-generated baseline tests - Issue #992
- * TODO: Enhance with component-specific test cases
+ * SessionSetupModal Component Tests
+ *
+ * Basic tests for SessionSetupModal (SPRINT-4, Issue #863).
+ * Tests cover rendering and accessibility fundamentals.
+ *
+ * Issue #1887 - Batch 15: Test rewrite with required game prop
+ * TODO: Expand with player management, validation, and submission tests
  */
 
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { SessionSetupModal } from '../SessionSetupModal';
+import type { Game } from '@/lib/api';
+
+// Mocks will be added when expanding test coverage
+
+const createMockGame = (overrides?: Partial<Game>): Game => ({
+  id: 'game-1',
+  title: 'Catan',
+  publisher: 'Catan Studio',
+  yearPublished: 1995,
+  minPlayers: 3,
+  maxPlayers: 4,
+  minPlayTimeMinutes: 60,
+  maxPlayTimeMinutes: 120,
+  bggId: 13,
+  createdAt: new Date().toISOString(),
+  imageUrl: null,
+  faqCount: null,
+  averageRating: null,
+  ...overrides,
+});
 
 describe('SessionSetupModal', () => {
+  const mockOnClose = vi.fn();
+
+  const defaultProps = {
+    isOpen: true,
+    onClose: mockOnClose,
+    game: createMockGame(),
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  /**
+   * RENDERING TESTS
+   */
   describe('Rendering', () => {
-    it('should render without crashing', () => {
-      render(<SessionSetupModal isOpen={true} onClose={vi.fn()} />);
+    it('renders modal when open', () => {
+      render(<SessionSetupModal {...defaultProps} />);
+
       expect(screen.getByRole('dialog')).toBeInTheDocument();
     });
 
-    it('should render with default props', () => {
-      const { container } = render(<SessionSetupModal isOpen={true} onClose={vi.fn()} />);
-      expect(container.firstChild).toBeInTheDocument();
+    it('does not render when closed', () => {
+      render(<SessionSetupModal {...defaultProps} isOpen={false} />);
+
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+
+    it('displays game title', () => {
+      const game = createMockGame({ title: 'Wingspan' });
+      render(<SessionSetupModal {...defaultProps} game={game} />);
+
+      expect(screen.getByText(/wingspan/i)).toBeInTheDocument();
     });
   });
 
-  describe('Props', () => {
-    it('should accept and render with custom props', () => {
-      // TODO: Add specific prop tests based on SessionSetupModalProps
-      render(<SessionSetupModal isOpen={true} onClose={vi.fn()} />);
-      expect(screen.getByRole('dialog')).toBeInTheDocument();
-    });
-  });
-
-  describe('Interactions', () => {
-    it('should handle user interactions', async () => {
-      const user = userEvent.setup();
-      render(<SessionSetupModal isOpen={true} onClose={vi.fn()} />);
-
-      // TODO: Add interaction tests (click, input, etc.)
-      // Example: await user.click(screen.getByRole('button'));
-    });
-  });
-
+  /**
+   * ACCESSIBILITY TESTS
+   */
   describe('Accessibility', () => {
-    it('should have accessible role', () => {
-      render(<SessionSetupModal isOpen={true} onClose={vi.fn()} />);
+    it('has accessible dialog role', () => {
+      render(<SessionSetupModal {...defaultProps} />);
+
       expect(screen.getByRole('dialog')).toBeInTheDocument();
     });
 
-    // TODO: Add more a11y tests (aria-labels, keyboard navigation, etc.)
+    it('has accessible modal structure', () => {
+      render(<SessionSetupModal {...defaultProps} />);
+
+      // Dialog should be accessible
+      const dialog = screen.getByRole('dialog');
+      expect(dialog).toBeInTheDocument();
+    });
+  });
+
+  /**
+   * PROP VALIDATION TESTS
+   */
+  describe('Props', () => {
+    it('accepts game prop with player constraints', () => {
+      const game = createMockGame({ minPlayers: 2, maxPlayers: 6 });
+
+      render(<SessionSetupModal {...defaultProps} game={game} />);
+
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
+
+    it('handles game without player constraints', () => {
+      const game = createMockGame({ minPlayers: null, maxPlayers: null });
+
+      render(<SessionSetupModal {...defaultProps} game={game} />);
+
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
   });
 });

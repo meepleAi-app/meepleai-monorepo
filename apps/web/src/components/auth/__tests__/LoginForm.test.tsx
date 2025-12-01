@@ -33,7 +33,7 @@ describe('LoginForm', () => {
 
     it('should render with default props', () => {
       const { container } = render(<LoginForm onSubmit={vi.fn()} />);
-      expect(container.firstChild).toBeInTheDocument();
+      expect(container.querySelector('form')).toBeInTheDocument();
     });
 
     it('should render email and password fields', () => {

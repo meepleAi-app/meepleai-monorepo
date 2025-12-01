@@ -16,8 +16,8 @@ describe('BggSearchModal', () => {
     });
 
     it('should render with default props', () => {
-      const { container } = render(<BggSearchModal isOpen={true} onClose={vi.fn()} />);
-      expect(container.firstChild).toBeInTheDocument();
+      render(<BggSearchModal isOpen={true} onClose={vi.fn()} />);
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
     });
   });
 

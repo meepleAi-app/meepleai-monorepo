@@ -16,8 +16,8 @@ describe('ErrorModal', () => {
     });
 
     it('should render with default props', () => {
-      const { container } = render(<ErrorModal isOpen={true} onClose={vi.fn()} />);
-      expect(container.firstChild).toBeInTheDocument();
+      render(<ErrorModal isOpen={true} onClose={vi.fn()} />);
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
     });
   });
 

@@ -14,9 +14,7 @@ vi.mock('@/lib/animations', () => ({
 }));
 
 // Mock framer-motion with props tracking
-const mockMotionDiv = vi.fn(({ children, ...props }: any) => (
-  <div {...props}>{children}</div>
-));
+const mockMotionDiv = vi.fn(({ children, ...props }: any) => <div {...props}>{children}</div>);
 
 vi.mock('framer-motion', () => ({
   motion: {

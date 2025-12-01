@@ -178,7 +178,7 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
         var gameSessionRepository = ServiceProvider.GetRequiredService<IGameSessionRepository>();
 
         var user = CreateTestUser("gamer@meepleai.dev", "Test Gamer");
-        await userRepository.AddAsync(user, TestCancellationToken, TestContext.Current.CancellationToken);
+        await userRepository.AddAsync(user, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         var sessionToken = SessionToken.Generate();
@@ -189,7 +189,7 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
             TimeSpan.FromHours(2),
             timeProvider: _timeProvider
         );
-        await sessionRepository.AddAsync(session, TestCancellationToken, TestContext.Current.CancellationToken);
+        await sessionRepository.AddAsync(session, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         var game = new Game(
@@ -198,7 +198,7 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
             playerCount: new PlayerCount(3, 4),
             playTime: new PlayTime(60, 120)
         );
-        await gameRepository.AddAsync(game, TestCancellationToken, TestContext.Current.CancellationToken);
+        await gameRepository.AddAsync(game, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act
@@ -211,7 +211,7 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
         var gameSession = new GameSession(Guid.NewGuid(), game.Id, players);
         gameSession.Start();
 
-        await gameSessionRepository.AddAsync(gameSession, TestCancellationToken, TestContext.Current.CancellationToken);
+        await gameSessionRepository.AddAsync(gameSession, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Assert
@@ -244,7 +244,7 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
         var fakeTimeProvider = new FakeTimeProvider(DateTimeOffset.UtcNow);
 
         var user = CreateTestUser("expired@meepleai.dev", "Expired User");
-        await userRepository.AddAsync(user, TestCancellationToken, TestContext.Current.CancellationToken);
+        await userRepository.AddAsync(user, TestCancellationToken);
 
         var sessionToken = SessionToken.Generate();
         // Create session with 1 hour lifetime using fake time provider
@@ -255,7 +255,7 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
             TimeSpan.FromHours(1),
             timeProvider: fakeTimeProvider
         );
-        await sessionRepository.AddAsync(session, TestCancellationToken, TestContext.Current.CancellationToken);
+        await sessionRepository.AddAsync(session, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Clear change tracker to avoid "already tracked" error when reloading
@@ -267,7 +267,7 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
             playerCount: new PlayerCount(1, 2),
             playTime: new PlayTime(15, 30)
         );
-        await gameRepository.AddAsync(game, TestCancellationToken, TestContext.Current.CancellationToken);
+        await gameRepository.AddAsync(game, TestCancellationToken);
 
         var gameSession = new GameSession(
             Guid.NewGuid(),
@@ -275,7 +275,7 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
             new List<SessionPlayer> { new SessionPlayer("Expired User", 1) }
         );
         gameSession.Start();
-        await gameSessionRepository.AddAsync(gameSession, TestCancellationToken, TestContext.Current.CancellationToken);
+        await gameSessionRepository.AddAsync(gameSession, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Advance time by 2 hours to expire the session
@@ -310,7 +310,7 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
         for (int i = 0; i < userNames.Length; i++)
         {
             var user = CreateTestUser($"{userNames[i].ToLower()}@meepleai.dev", userNames[i]);
-            await userRepository.AddAsync(user, TestCancellationToken, TestContext.Current.CancellationToken);
+            await userRepository.AddAsync(user, TestCancellationToken);
             userIds.Add(user.Id);
 
             var sessionToken = SessionToken.Generate();
@@ -321,7 +321,7 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
                 TimeSpan.FromHours(2),
                 timeProvider: _timeProvider
             );
-            await sessionRepository.AddAsync(session, TestCancellationToken, TestContext.Current.CancellationToken);
+            await sessionRepository.AddAsync(session, TestCancellationToken);
         }
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
@@ -331,7 +331,7 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
             playerCount: new PlayerCount(2, 5),
             playTime: new PlayTime(30, 60)
         );
-        await gameRepository.AddAsync(game, TestCancellationToken, TestContext.Current.CancellationToken);
+        await gameRepository.AddAsync(game, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act
@@ -339,7 +339,7 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
         var gameSession = new GameSession(Guid.NewGuid(), game.Id, players);
         gameSession.Start();
 
-        await gameSessionRepository.AddAsync(gameSession, TestCancellationToken, TestContext.Current.CancellationToken);
+        await gameSessionRepository.AddAsync(gameSession, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Assert
@@ -368,7 +368,7 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
         var gameSessionRepository = ServiceProvider.GetRequiredService<IGameSessionRepository>();
 
         var user = CreateTestUser("revoked@meepleai.dev", "Revoked User");
-        await userRepository.AddAsync(user, TestCancellationToken, TestContext.Current.CancellationToken);
+        await userRepository.AddAsync(user, TestCancellationToken);
 
         var sessionToken = SessionToken.Generate();
         var session = new Session(
@@ -378,7 +378,7 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
             TimeSpan.FromHours(1),
             timeProvider: _timeProvider
         );
-        await sessionRepository.AddAsync(session, TestCancellationToken, TestContext.Current.CancellationToken);
+        await sessionRepository.AddAsync(session, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         var game = new Game(
@@ -387,7 +387,7 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
             playerCount: new PlayerCount(2, 5),
             playTime: new PlayTime(30, 45)
         );
-        await gameRepository.AddAsync(game, TestCancellationToken, TestContext.Current.CancellationToken);
+        await gameRepository.AddAsync(game, TestCancellationToken);
 
         var gameSession = new GameSession(
             Guid.NewGuid(),
@@ -395,7 +395,7 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
             new List<SessionPlayer> { new SessionPlayer("Revoked User", 1) }
         );
         gameSession.Start();
-        await gameSessionRepository.AddAsync(gameSession, TestCancellationToken, TestContext.Current.CancellationToken);
+        await gameSessionRepository.AddAsync(gameSession, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act - Revoke all user sessions after game started

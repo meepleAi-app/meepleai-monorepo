@@ -16,8 +16,8 @@ describe('WizardSteps', () => {
     });
 
     it('should render with default props', () => {
-      const { container } = render(<WizardSteps children={<div>Test Content</div>} />);
-      expect(container.firstChild).toBeInTheDocument();
+      render(<WizardSteps children={<div>Test Content</div>} />);
+      expect(screen.getByRole('region')).toBeInTheDocument();
     });
   });
 

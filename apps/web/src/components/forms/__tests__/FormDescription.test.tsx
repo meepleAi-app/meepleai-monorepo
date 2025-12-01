@@ -1,60 +1,102 @@
 /**
  * Tests for FormDescription component
- * Auto-generated baseline tests - Issue #992
- * TODO: Enhance with component-specific test cases
+ * Requires FormProvider context from react-hook-form
  */
 
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { useForm, FormProvider } from 'react-hook-form';
 import { FormDescription } from '../FormDescription';
+import { FormField } from '../FormField';
+import { FormItem } from '@/components/ui/form';
+
+// Test wrapper with FormProvider
+function TestForm({
+  children,
+  defaultValues = {},
+}: {
+  children: React.ReactNode;
+  defaultValues?: any;
+}) {
+  const methods = useForm({ defaultValues });
+  return <FormProvider {...methods}>{children}</FormProvider>;
+}
 
 describe('FormDescription', () => {
   describe('Rendering', () => {
-    it('should render without crashing', () => {
-      render(<FormDescription />);
-      expect(screen.getByRole('form')).toBeInTheDocument();
+    it('should render description text', () => {
+      render(
+        <TestForm>
+          <FormField
+            name="test"
+            render={({ field }) => (
+              <FormItem>
+                <FormDescription>This is a help text</FormDescription>
+              </FormItem>
+            )}
+          />
+        </TestForm>
+      );
+
+      expect(screen.getByText('This is a help text')).toBeInTheDocument();
     });
 
-    it('should render with default props', () => {
-      const { container } = render(<FormDescription />);
-      expect(container.firstChild).toBeInTheDocument();
-    });
-  });
+    it('should render with custom className', () => {
+      render(
+        <TestForm>
+          <FormField
+            name="test"
+            render={({ field }) => (
+              <FormItem>
+                <FormDescription className="custom-class">Help text</FormDescription>
+              </FormItem>
+            )}
+          />
+        </TestForm>
+      );
 
-  describe('Interactions', () => {
-    it('should handle user interactions', async () => {
-      const user = userEvent.setup();
-      render(<FormDescription />);
-
-      // TODO: Add interaction tests (click, input, etc.)
-      // Example: await user.click(screen.getByRole('button'));
-    });
-  });
-
-  describe('Form Behavior', () => {
-    it('should handle form submission', async () => {
-      const handleSubmit = vi.fn();
-      render(<FormDescription onSubmit={handleSubmit} />);
-
-      // TODO: Fill form fields and submit
-      // const submitButton = screen.getByRole('button', { name: /submit/i });
-      // await user.click(submitButton);
-      // expect(handleSubmit).toHaveBeenCalled();
-    });
-
-    it('should validate form fields', async () => {
-      render(<FormDescription />);
-
-      // TODO: Test validation rules
+      const description = screen.getByText('Help text');
+      expect(description).toHaveClass('custom-class');
     });
   });
 
   describe('Accessibility', () => {
-    it('should have accessible role', () => {
-      render(<FormDescription />);
-      expect(screen.getByRole('form')).toBeInTheDocument();
-    });
+    it('should have proper ID for aria-describedby', () => {
+      render(
+        <TestForm>
+          <FormField
+            name="test"
+            render={({ field }) => (
+              <FormItem>
+                <FormDescription>Help text</FormDescription>
+              </FormItem>
+            )}
+          />
+        </TestForm>
+      );
 
-    // TODO: Add more a11y tests (aria-labels, keyboard navigation, etc.)
+      const description = screen.getByText('Help text');
+      expect(description).toHaveAttribute('id');
+      expect(description.id).toMatch(/-form-item-description$/);
+    });
+  });
+
+  describe('Styling', () => {
+    it('should apply default styles', () => {
+      render(
+        <TestForm>
+          <FormField
+            name="test"
+            render={({ field }) => (
+              <FormItem>
+                <FormDescription>Help text</FormDescription>
+              </FormItem>
+            )}
+          />
+        </TestForm>
+      );
+
+      const description = screen.getByText('Help text');
+      expect(description).toHaveClass('text-xs');
+    });
   });
 });

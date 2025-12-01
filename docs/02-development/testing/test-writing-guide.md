@@ -171,6 +171,39 @@ describe('useToast', () => {
 - Use `jest.useFakeTimers()` for time-based logic
 - Always restore real timers with `jest.useRealTimers()` in cleanup
 
+### ⚠️ AVOID: container.firstChild Anti-Pattern
+
+**NEVER use `container.firstChild`** - it bypasses accessibility and semantics.
+
+```typescript
+// ❌ WRONG - Anti-pattern
+const { container } = render(<Component />);
+expect(container.firstChild).toBeInTheDocument();
+
+// ✅ CORRECT - Semantic query
+render(<Component />);
+expect(screen.getByRole('button')).toBeInTheDocument();
+// OR
+expect(screen.getByText('Submit')).toBeInTheDocument();
+```
+
+**Why avoid container.firstChild?**
+- Bypasses accessibility tree
+- Fragile to DOM structure changes
+- Doesn't reflect how users/assistive tech interact
+- Fails to test semantic HTML
+
+**When is container acceptable?**
+- Snapshot tests: `expect(container.firstChild).toMatchSnapshot()`
+- Specific styling assertions: `container.querySelector('.custom-class')`
+- Complex DOM structure queries as last resort
+
+**Prefer this query priority:**
+1. `getByRole` - Semantic, accessible (button, textbox, alert)
+2. `getByLabelText` - Form fields with labels
+3. `getByText` - Visible text content
+4. `getByTestId` - Last resort for complex cases
+
 ### Context Provider Testing
 
 ```typescript

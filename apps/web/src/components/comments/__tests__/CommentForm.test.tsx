@@ -28,37 +28,43 @@ describe('CommentForm', () => {
   describe('Rendering', () => {
     it('should render without crashing', () => {
       render(<CommentForm onSubmit={vi.fn()} />);
-      expect(screen.getByRole('form')).toBeInTheDocument();
+      // Query by the submit button which is a more reliable indicator
+      expect(screen.getByRole('button', { name: /aggiungi commento/i })).toBeInTheDocument();
     });
 
     it('should render with default props', () => {
-      const { container } = render(<CommentForm onSubmit={vi.fn()} />);
-      expect(container.firstChild).toBeInTheDocument();
+      render(<CommentForm onSubmit={vi.fn()} />);
+      expect(screen.getByRole('textbox')).toBeInTheDocument();
     });
   });
 
   describe('Props', () => {
     it('should accept and render with custom props', () => {
-      // TODO: Add specific prop tests based on CommentFormProps
       render(<CommentForm onSubmit={vi.fn()} />);
-      expect(screen.getByRole('form')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText(/scrivi un commento/i)).toBeInTheDocument();
     });
   });
 
   describe('Interactions', () => {
     it('should handle user interactions', async () => {
       const user = userEvent.setup();
-      render(<CommentForm onSubmit={vi.fn()} />);
+      const onSubmit = vi.fn().mockResolvedValue(undefined);
+      render(<CommentForm onSubmit={onSubmit} />);
 
-      // TODO: Add interaction tests (click, input, etc.)
-      // Example: await user.click(screen.getByRole('button'));
+      const textarea = screen.getByRole('textbox');
+      await user.type(textarea, 'Test comment');
+
+      const submitButton = screen.getByRole('button', { name: /aggiungi commento/i });
+      await user.click(submitButton);
     });
   });
 
   describe('Accessibility', () => {
-    it('should have accessible role', () => {
+    it('should have accessible elements', () => {
       render(<CommentForm onSubmit={vi.fn()} />);
-      expect(screen.getByRole('form')).toBeInTheDocument();
+      // Check for accessible form elements
+      expect(screen.getByRole('textbox')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /aggiungi commento/i })).toBeInTheDocument();
     });
 
     // TODO: Add more a11y tests (aria-labels, keyboard navigation, etc.)

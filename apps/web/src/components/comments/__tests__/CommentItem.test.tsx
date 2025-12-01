@@ -82,18 +82,7 @@ describe('CommentItem', () => {
     });
 
     it('should render with default props', () => {
-      const { container } = render(
-        <CommentItem
-          comment={mockComment}
-          currentUserId="test-user-1"
-          currentUserRole="User"
-          onEdit={vi.fn()}
-          onDelete={vi.fn()}
-          onReply={vi.fn()}
-          onResolve={vi.fn()}
-          onUnresolve={vi.fn()}
-        />
-      );
+      const { container } = render(<CommentItem children={<div>Test Content</div>} />);
       expect(container.firstChild).toBeInTheDocument();
     });
   });

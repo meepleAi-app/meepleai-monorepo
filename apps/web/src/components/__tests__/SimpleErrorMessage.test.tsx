@@ -221,7 +221,7 @@ describe('SimpleErrorMessage', () => {
         message: 'Test',
         variant: 'error',
         onDismiss: vi.fn(),
-        className: 'custom'
+        className: 'custom',
       };
 
       render(<SimpleErrorMessage {...props} />);
@@ -230,7 +230,7 @@ describe('SimpleErrorMessage', () => {
 
     it('should work with minimal props', () => {
       const props: SimpleErrorMessageProps = {
-        message: 'Test'
+        message: 'Test',
       };
 
       render(<SimpleErrorMessage {...props} />);

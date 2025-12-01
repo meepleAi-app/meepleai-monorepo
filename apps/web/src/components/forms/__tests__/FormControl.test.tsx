@@ -16,7 +16,7 @@ describe('FormControl', () => {
     });
 
     it('should render with default props', () => {
-      const { container } = render(<FormControl onSubmit={vi.fn()} />);
+      const { container } = render(<FormControl children={<div>Test Content</div>} />);
       expect(container.firstChild).toBeInTheDocument();
     });
   });

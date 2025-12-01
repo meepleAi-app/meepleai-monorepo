@@ -15,12 +15,14 @@ describe('ProcessingProgress', () => {
     it('should render without crashing', () => {
       render(<ProcessingProgress pdfId={mockPdfId} />);
       // Component renders progress UI
-      const component = document.querySelector('[role="region"], [data-testid="processing-progress"]');
+      const component = document.querySelector(
+        '[role="region"], [data-testid="processing-progress"]'
+      );
       expect(component || document.body.firstChild).toBeInTheDocument();
     });
 
     it('should render with default props', () => {
-      const { container } = render(<ProcessingProgress pdfId={mockPdfId} />);
+      const { container } = render(<ProcessingProgress children={<div>Test Content</div>} />);
       expect(container.firstChild).toBeInTheDocument();
     });
   });

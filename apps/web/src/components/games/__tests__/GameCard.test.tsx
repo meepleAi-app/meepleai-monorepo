@@ -237,7 +237,8 @@ describe('GameCard - Interactions', () => {
   it('is not focusable when onClick is not provided', () => {
     const { container } = render(<GameCard game={mockGameComplete} variant="grid" />);
 
-    const card = container.firstChild as HTMLElement;
+    // Query by the card's aria-label instead of role
+    const card = screen.getByLabelText(/Game: Azul/i);
     expect(card).not.toHaveAttribute('tabindex');
   });
 });
@@ -294,7 +295,8 @@ describe('GameCard - Styling', () => {
   it('applies hover animation classes', () => {
     const { container } = render(<GameCard game={mockGameComplete} variant="grid" />);
 
-    const card = container.firstChild as HTMLElement;
+    // Query by aria-label instead of role
+    const card = screen.getByLabelText(/Game: Azul/i);
     expect(card).toHaveClass('hover:-translate-y-1');
     expect(card).toHaveClass('transition-all');
   });
@@ -302,14 +304,14 @@ describe('GameCard - Styling', () => {
   it('applies grid-specific layout classes', () => {
     const { container } = render(<GameCard game={mockGameComplete} variant="grid" />);
 
-    const card = container.firstChild as HTMLElement;
+    const card = screen.getByLabelText(/Game: Azul/i);
     expect(card).toHaveClass('flex', 'flex-col');
   });
 
   it('applies list-specific layout classes', () => {
     const { container } = render(<GameCard game={mockGameComplete} variant="list" />);
 
-    const card = container.firstChild as HTMLElement;
+    const card = screen.getByLabelText(/Game: Azul/i);
     expect(card).toHaveClass('flex', 'flex-row');
   });
 
@@ -325,7 +327,7 @@ describe('GameCard - Styling', () => {
       <GameCard game={mockGameComplete} variant="grid" className="custom-class" />
     );
 
-    const card = container.firstChild as HTMLElement;
+    const card = screen.getByLabelText(/Game: Azul/i);
     expect(card).toHaveClass('custom-class');
   });
 });

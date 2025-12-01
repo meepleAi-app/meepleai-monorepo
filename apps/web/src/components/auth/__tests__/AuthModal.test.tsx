@@ -16,8 +16,8 @@ describe('AuthModal', () => {
     });
 
     it('should render with default props', () => {
-      const { container } = render(<AuthModal isOpen={true} onClose={vi.fn()} />);
-      expect(container.firstChild).toBeInTheDocument();
+      render(<AuthModal isOpen={true} onClose={vi.fn()} />);
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
     });
   });
 

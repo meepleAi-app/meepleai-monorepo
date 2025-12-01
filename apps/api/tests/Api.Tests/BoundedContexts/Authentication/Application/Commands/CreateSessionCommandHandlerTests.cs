@@ -257,7 +257,7 @@ public class CreateSessionCommandHandlerTests
 
         // Assert
         _userRepositoryMock.Verify(x => x.GetByIdAsync(user.Id, token), Times.Once);
-        _sessionRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Session>(, TestContext.Current.CancellationToken), token), Times.Once);
+        _sessionRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Session>(), token), Times.Once);
         _unitOfWorkMock.Verify(x => x.SaveChangesAsync(token), Times.Once);
     }
 

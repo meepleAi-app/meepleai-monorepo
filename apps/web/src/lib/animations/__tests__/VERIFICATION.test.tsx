@@ -63,7 +63,7 @@ describe('Animation Verification Examples', () => {
 
       render(<AnimatedList items={items} />);
 
-      items.forEach((item) => {
+      items.forEach(item => {
         expect(screen.getByText(item)).toBeInTheDocument();
       });
     });
@@ -155,7 +155,7 @@ describe('Animation Verification Examples', () => {
 
       render(<FastStaggerList items={items} />);
 
-      items.forEach((item) => {
+      items.forEach(item => {
         expect(screen.getByText(item)).toBeInTheDocument();
       });
     });
@@ -271,7 +271,11 @@ describe('Animation Verification Examples', () => {
         render(<AccessibleAnimation />);
         render(<AnimatedList items={items} />);
         render(<LoadingSpinner />);
-        render(<AnimatedModal isOpen={false} onClose={vi.fn()}>Content</AnimatedModal>);
+        render(
+          <AnimatedModal isOpen={false} onClose={vi.fn()}>
+            Content
+          </AnimatedModal>
+        );
         render(<FastStaggerList items={items} />);
         render(<DirectionalAnimations />);
         render(<ScaleAnimations />);

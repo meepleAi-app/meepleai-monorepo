@@ -64,17 +64,13 @@ describe('TypingIndicator', () => {
 
   describe('Dots rendering', () => {
     it('should render 3 dots', () => {
-      const { container } = render(
-        <TypingIndicator visible={true} agentName="AI" />
-      );
+      const { container } = render(<TypingIndicator visible={true} agentName="AI" />);
       const dots = container.querySelectorAll('.w-2.h-2');
       expect(dots).toHaveLength(3);
     });
 
     it('should render dots with rounded-full class', () => {
-      const { container } = render(
-        <TypingIndicator visible={true} agentName="AI" />
-      );
+      const { container } = render(<TypingIndicator visible={true} agentName="AI" />);
       const dots = container.querySelectorAll('.rounded-full');
       expect(dots.length).toBeGreaterThanOrEqual(3);
     });
@@ -83,9 +79,7 @@ describe('TypingIndicator', () => {
   describe('Reduced motion', () => {
     it('should respect prefers-reduced-motion', () => {
       mockUseReducedMotion.mockReturnValue(true);
-      const { container } = render(
-        <TypingIndicator visible={true} agentName="AI" />
-      );
+      const { container } = render(<TypingIndicator visible={true} agentName="AI" />);
       const status = container.querySelector('[role="status"]');
       expect(status).toBeInTheDocument();
       // Component should still render but with no animation variants
@@ -118,11 +112,7 @@ describe('TypingIndicator', () => {
   describe('Custom className', () => {
     it('should apply custom className', () => {
       const { container } = render(
-        <TypingIndicator
-          visible={true}
-          agentName="AI"
-          className="custom-typing-indicator"
-        />
+        <TypingIndicator visible={true} agentName="AI" className="custom-typing-indicator" />
       );
       const wrapper = container.querySelector('[role="status"]');
       expect(wrapper).toHaveClass('custom-typing-indicator');
@@ -140,16 +130,12 @@ describe('TypingIndicator', () => {
 
   describe('Snapshot test', () => {
     it('should match snapshot when visible', () => {
-      const { container } = render(
-        <TypingIndicator visible={true} agentName="AI Assistant" />
-      );
+      const { container } = render(<TypingIndicator visible={true} agentName="AI Assistant" />);
       expect(container.firstChild).toMatchSnapshot();
     });
 
     it('should match snapshot when not visible', () => {
-      const { container } = render(
-        <TypingIndicator visible={false} agentName="AI Assistant" />
-      );
+      const { container } = render(<TypingIndicator visible={false} agentName="AI Assistant" />);
       expect(container.firstChild).toMatchSnapshot();
     });
   });

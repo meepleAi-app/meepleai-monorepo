@@ -171,16 +171,16 @@ describe('ContextChip', () => {
 
   describe('Custom Styling', () => {
     it('should apply custom className', () => {
-      const { container } = render(<ContextChip {...defaultProps} className="custom-class" />);
+      render(<ContextChip {...defaultProps} className="custom-class" />);
 
-      const chip = container.firstChild;
+      const chip = screen.getByRole('region');
       expect(chip).toHaveClass('custom-class');
     });
 
     it('should preserve base classes with custom className', () => {
-      const { container } = render(<ContextChip {...defaultProps} className="custom-class" />);
+      render(<ContextChip {...defaultProps} className="custom-class" />);
 
-      const chip = container.firstChild;
+      const chip = screen.getByRole('region');
       expect(chip).toHaveClass('bg-accent/10', 'border-accent', 'custom-class');
     });
   });

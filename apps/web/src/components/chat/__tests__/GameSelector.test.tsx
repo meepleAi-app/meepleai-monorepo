@@ -4,9 +4,10 @@
  * TODO: Enhance with component-specific test cases
  */
 
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { GameSelector } from '../GameSelector';
+import { renderWithChatStore } from '@/__tests__/utils/zustand-test-utils';
 
 // Mock AuthProvider
 vi.mock('@/components/auth/AuthProvider', () => ({
@@ -26,20 +27,26 @@ vi.mock('@/components/auth/AuthProvider', () => ({
 describe('GameSelector', () => {
   describe('Rendering', () => {
     it('should render without crashing', () => {
-      render(<GameSelector />);
+      renderWithChatStore(<GameSelector />, {
+        initialState: { games: [], selectedGameId: null },
+      });
       expect(screen.getByRole('combobox')).toBeInTheDocument();
     });
 
     it('should render with default props', () => {
-      const { container } = render(<GameSelector />);
-      expect(container.firstChild).toBeInTheDocument();
+      renderWithChatStore(<GameSelector />, {
+        initialState: { games: [], selectedGameId: null },
+      });
+      expect(screen.getByRole('combobox')).toBeInTheDocument();
     });
   });
 
   describe('Interactions', () => {
     it('should handle user interactions', async () => {
       const user = userEvent.setup();
-      render(<GameSelector />);
+      renderWithChatStore(<GameSelector />, {
+        initialState: { games: [], selectedGameId: null },
+      });
 
       // TODO: Add interaction tests (click, input, etc.)
       // Example: await user.click(screen.getByRole('button'));
@@ -48,7 +55,9 @@ describe('GameSelector', () => {
 
   describe('Accessibility', () => {
     it('should have accessible role', () => {
-      render(<GameSelector />);
+      renderWithChatStore(<GameSelector />, {
+        initialState: { games: [], selectedGameId: null },
+      });
       expect(screen.getByRole('combobox')).toBeInTheDocument();
     });
 

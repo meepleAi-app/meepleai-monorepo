@@ -4,9 +4,10 @@
  * TODO: Enhance with component-specific test cases
  */
 
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ChatSidebar } from '../ChatSidebar';
+import { renderWithChatStore } from '@/__tests__/utils/zustand-test-utils';
 
 // Mock AuthProvider
 vi.mock('@/components/auth/AuthProvider', () => ({
@@ -26,20 +27,44 @@ vi.mock('@/components/auth/AuthProvider', () => ({
 describe('ChatSidebar', () => {
   describe('Rendering', () => {
     it('should render without crashing', () => {
-      render(<ChatSidebar />);
-      expect(screen.getByRole('region')).toBeInTheDocument();
+      renderWithChatStore(<ChatSidebar />, {
+        initialState: {
+          games: [],
+          chats: [],
+          selectedGameId: null,
+          selectedAgentId: null,
+          sidebarCollapsed: false,
+        },
+      });
+      expect(screen.getByRole('complementary')).toBeInTheDocument();
     });
 
     it('should render with default props', () => {
-      const { container } = render(<ChatSidebar />);
-      expect(container.firstChild).toBeInTheDocument();
+      renderWithChatStore(<ChatSidebar />, {
+        initialState: {
+          games: [],
+          chats: [],
+          selectedGameId: null,
+          selectedAgentId: null,
+          sidebarCollapsed: false,
+        },
+      });
+      expect(screen.getByRole('complementary')).toBeInTheDocument();
     });
   });
 
   describe('Interactions', () => {
     it('should handle user interactions', async () => {
       const user = userEvent.setup();
-      render(<ChatSidebar />);
+      renderWithChatStore(<ChatSidebar />, {
+        initialState: {
+          games: [],
+          chats: [],
+          selectedGameId: null,
+          selectedAgentId: null,
+          sidebarCollapsed: false,
+        },
+      });
 
       // TODO: Add interaction tests (click, input, etc.)
       // Example: await user.click(screen.getByRole('button'));
@@ -48,8 +73,16 @@ describe('ChatSidebar', () => {
 
   describe('Accessibility', () => {
     it('should have accessible role', () => {
-      render(<ChatSidebar />);
-      expect(screen.getByRole('region')).toBeInTheDocument();
+      renderWithChatStore(<ChatSidebar />, {
+        initialState: {
+          games: [],
+          chats: [],
+          selectedGameId: null,
+          selectedAgentId: null,
+          sidebarCollapsed: false,
+        },
+      });
+      expect(screen.getByRole('complementary')).toBeInTheDocument();
     });
 
     // TODO: Add more a11y tests (aria-labels, keyboard navigation, etc.)

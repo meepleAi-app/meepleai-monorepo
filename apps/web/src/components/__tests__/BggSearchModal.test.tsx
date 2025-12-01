@@ -83,7 +83,7 @@ describe('BggSearchModal', () => {
 
       expect(screen.getByRole('dialog')).toBeInTheDocument();
       expect(screen.getByText('Import from BoardGameGeek')).toBeInTheDocument();
-      expect(screen.getByPlaceholderText('Search for a board game...')).toBeInTheDocument();
+      expect(screen.getByRole('searchbox', { name: /search boardgamegeek/i })).toBeInTheDocument();
     });
 
     it('should render with proper ARIA attributes', () => {
@@ -93,14 +93,14 @@ describe('BggSearchModal', () => {
       expect(dialog).toHaveAttribute('aria-modal', 'true');
       expect(dialog).toHaveAttribute('aria-labelledby', 'bgg-search-title');
 
-      const searchInput = screen.getByPlaceholderText('Search for a board game...');
+      const searchInput = screen.getByRole('searchbox', { name: /search boardgamegeek/i });
       expect(searchInput).toHaveAttribute('aria-label', 'Search BoardGameGeek');
     });
 
     it('should autofocus search input', () => {
       render(<BggSearchModal isOpen={true} onClose={mockOnClose} onSelect={mockOnSelect} />);
 
-      const searchInput = screen.getByPlaceholderText('Search for a board game...');
+      const searchInput = screen.getByRole('searchbox', { name: /search boardgamegeek/i });
       // Check input is rendered (autofocus attribute doesn't affect test DOM)
       expect(searchInput).toBeInTheDocument();
     });
@@ -147,7 +147,7 @@ describe('BggSearchModal', () => {
 
       render(<BggSearchModal isOpen={true} onClose={mockOnClose} onSelect={mockOnSelect} />);
 
-      const searchInput = screen.getByPlaceholderText('Search for a board game...');
+      const searchInput = screen.getByRole('searchbox', { name: /search boardgamegeek/i });
       await user.type(searchInput, 'Catan');
 
       expect(searchInput).toHaveValue('Catan');
@@ -167,7 +167,7 @@ describe('BggSearchModal', () => {
 
       render(<BggSearchModal isOpen={true} onClose={mockOnClose} onSelect={mockOnSelect} />);
 
-      const searchInput = screen.getByPlaceholderText('Search for a board game...');
+      const searchInput = screen.getByRole('searchbox', { name: /search boardgamegeek/i });
       await user.type(searchInput, 'Catan');
 
       await waitFor(() => {
@@ -181,7 +181,7 @@ describe('BggSearchModal', () => {
 
       render(<BggSearchModal isOpen={true} onClose={mockOnClose} onSelect={mockOnSelect} />);
 
-      const searchInput = screen.getByPlaceholderText('Search for a board game...');
+      const searchInput = screen.getByRole('searchbox', { name: /search boardgamegeek/i });
       await user.type(searchInput, 'Test');
 
       await waitFor(() => {
@@ -199,7 +199,7 @@ describe('BggSearchModal', () => {
 
       render(<BggSearchModal isOpen={true} onClose={mockOnClose} onSelect={mockOnSelect} />);
 
-      const searchInput = screen.getByPlaceholderText('Search for a board game...');
+      const searchInput = screen.getByRole('searchbox', { name: /search boardgamegeek/i });
       await user.type(searchInput, 'Test');
 
       await waitFor(() => {
@@ -217,7 +217,7 @@ describe('BggSearchModal', () => {
 
       render(<BggSearchModal isOpen={true} onClose={mockOnClose} onSelect={mockOnSelect} />);
 
-      const searchInput = screen.getByPlaceholderText('Search for a board game...');
+      const searchInput = screen.getByRole('searchbox', { name: /search boardgamegeek/i });
       await user.type(searchInput, 'Test');
 
       expect(screen.getByText('Searching BoardGameGeek...')).toBeInTheDocument();
@@ -229,7 +229,7 @@ describe('BggSearchModal', () => {
 
       render(<BggSearchModal isOpen={true} onClose={mockOnClose} onSelect={mockOnSelect} />);
 
-      const searchInput = screen.getByPlaceholderText('Search for a board game...');
+      const searchInput = screen.getByRole('searchbox', { name: /search boardgamegeek/i });
       await user.type(searchInput, 'NonExistent');
 
       await waitFor(() => {
@@ -245,7 +245,7 @@ describe('BggSearchModal', () => {
 
       render(<BggSearchModal isOpen={true} onClose={mockOnClose} onSelect={mockOnSelect} />);
 
-      const searchInput = screen.getByPlaceholderText('Search for a board game...');
+      const searchInput = screen.getByRole('searchbox', { name: /search boardgamegeek/i });
       await user.type(searchInput, 'Test');
 
       await waitFor(() => {
@@ -261,7 +261,7 @@ describe('BggSearchModal', () => {
 
       render(<BggSearchModal isOpen={true} onClose={mockOnClose} onSelect={mockOnSelect} />);
 
-      const searchInput = screen.getByPlaceholderText('Search for a board game...');
+      const searchInput = screen.getByRole('searchbox', { name: /search boardgamegeek/i });
       await user.type(searchInput, 'Test');
 
       await waitFor(() => {
@@ -283,7 +283,7 @@ describe('BggSearchModal', () => {
 
       render(<BggSearchModal isOpen={true} onClose={mockOnClose} onSelect={mockOnSelect} />);
 
-      const searchInput = screen.getByPlaceholderText('Search for a board game...');
+      const searchInput = screen.getByRole('searchbox', { name: /search boardgamegeek/i });
       await user.type(searchInput, 'Test');
 
       await waitFor(() => {
@@ -309,7 +309,7 @@ describe('BggSearchModal', () => {
 
       render(<BggSearchModal isOpen={true} onClose={mockOnClose} onSelect={mockOnSelect} />);
 
-      const searchInput = screen.getByPlaceholderText('Search for a board game...');
+      const searchInput = screen.getByRole('searchbox', { name: /search boardgamegeek/i });
       await user.type(searchInput, 'Test');
 
       await waitFor(() => {
@@ -333,7 +333,7 @@ describe('BggSearchModal', () => {
 
       render(<BggSearchModal isOpen={true} onClose={mockOnClose} onSelect={mockOnSelect} />);
 
-      const searchInput = screen.getByPlaceholderText('Search for a board game...');
+      const searchInput = screen.getByRole('searchbox', { name: /search boardgamegeek/i });
       await user.type(searchInput, 'Test');
 
       await waitFor(() => {
@@ -362,7 +362,7 @@ describe('BggSearchModal', () => {
 
       render(<BggSearchModal isOpen={true} onClose={mockOnClose} onSelect={mockOnSelect} />);
 
-      const searchInput = screen.getByPlaceholderText('Search for a board game...');
+      const searchInput = screen.getByRole('searchbox', { name: /search boardgamegeek/i });
       await user.type(searchInput, 'Test');
 
       await waitFor(() => {
@@ -385,7 +385,7 @@ describe('BggSearchModal', () => {
         <BggSearchModal isOpen={true} onClose={mockOnClose} onSelect={mockOnSelect} />
       );
 
-      const searchInput = screen.getByPlaceholderText('Search for a board game...');
+      const searchInput = screen.getByRole('searchbox', { name: /search boardgamegeek/i });
       await user.type(searchInput, 'Test');
 
       await waitFor(() => {
@@ -399,7 +399,7 @@ describe('BggSearchModal', () => {
       rerender(<BggSearchModal isOpen={true} onClose={mockOnClose} onSelect={mockOnSelect} />);
 
       // State should be reset
-      const newSearchInput = screen.getByPlaceholderText('Search for a board game...');
+      const newSearchInput = screen.getByRole('searchbox', { name: /search boardgamegeek/i });
       expect(newSearchInput).toHaveValue('');
       expect(screen.queryByText('Found 2 results')).not.toBeInTheDocument();
     });
@@ -414,7 +414,7 @@ describe('BggSearchModal', () => {
 
       render(<BggSearchModal isOpen={true} onClose={mockOnClose} onSelect={mockOnSelect} />);
 
-      const searchInput = screen.getByPlaceholderText('Search for a board game...');
+      const searchInput = screen.getByRole('searchbox', { name: /search boardgamegeek/i });
       await user.type(searchInput, 'Test');
 
       await waitFor(() => {
@@ -429,7 +429,7 @@ describe('BggSearchModal', () => {
 
       render(<BggSearchModal isOpen={true} onClose={mockOnClose} onSelect={mockOnSelect} />);
 
-      const searchInput = screen.getByPlaceholderText('Search for a board game...');
+      const searchInput = screen.getByRole('searchbox', { name: /search boardgamegeek/i });
       await user.type(searchInput, 'Test');
 
       await waitFor(() => {
@@ -445,7 +445,7 @@ describe('BggSearchModal', () => {
 
       render(<BggSearchModal isOpen={true} onClose={mockOnClose} onSelect={mockOnSelect} />);
 
-      const searchInput = screen.getByPlaceholderText('Search for a board game...');
+      const searchInput = screen.getByRole('searchbox', { name: /search boardgamegeek/i });
       await user.type(searchInput, 'Test');
 
       await waitFor(() => {
@@ -463,7 +463,7 @@ describe('BggSearchModal', () => {
 
       render(<BggSearchModal isOpen={true} onClose={mockOnClose} onSelect={mockOnSelect} />);
 
-      const searchInput = screen.getByPlaceholderText('Search for a board game...');
+      const searchInput = screen.getByRole('searchbox', { name: /search boardgamegeek/i });
       await user.type(searchInput, 'Test');
 
       await waitFor(() => {

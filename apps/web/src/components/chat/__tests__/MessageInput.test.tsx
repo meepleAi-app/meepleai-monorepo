@@ -110,7 +110,7 @@ describe('MessageInput', () => {
     it('renders input field', () => {
       render(<MessageInput />);
 
-      const input = screen.getByPlaceholderText(/fai una domanda/i);
+      const input = screen.getByRole('textbox', { name: /message input/i });
       expect(input).toBeInTheDocument();
     });
 
@@ -141,7 +141,7 @@ describe('MessageInput', () => {
       const user = userEvent.setup();
       render(<MessageInput />);
 
-      const input = screen.getByPlaceholderText(/fai una domanda/i);
+      const input = screen.getByRole('textbox', { name: /message input/i });
       await user.type(input, 'Test message');
 
       expect(mockSetInputValue).toHaveBeenCalled();
@@ -155,7 +155,7 @@ describe('MessageInput', () => {
 
       render(<MessageInput />);
 
-      const input = screen.getByPlaceholderText(/fai una domanda/i) as HTMLInputElement;
+      const input = screen.getByRole('textbox', { name: /message input/i }) as HTMLInputElement;
       expect(input.value).toBe('Current message');
     });
   });
@@ -253,7 +253,7 @@ describe('MessageInput', () => {
 
       render(<MessageInput />);
 
-      const input = screen.getByPlaceholderText(/fai una domanda/i);
+      const input = screen.getByRole('textbox', { name: /message input/i });
       expect(input).toBeDisabled();
     });
 
@@ -323,7 +323,7 @@ describe('MessageInput', () => {
 
       render(<MessageInput />);
 
-      const input = screen.getByPlaceholderText(/fai una domanda/i);
+      const input = screen.getByRole('textbox', { name: /message input/i });
       expect(input).toBeDisabled();
     });
   });
@@ -428,7 +428,7 @@ describe('MessageInput', () => {
       const user = userEvent.setup();
       render(<MessageInput />);
 
-      const input = screen.getByPlaceholderText(/fai una domanda/i);
+      const input = screen.getByRole('textbox', { name: /message input/i });
       await user.type(input, 'Special: <>&"\'');
 
       expect(mockSetInputValue).toHaveBeenCalled();
@@ -438,7 +438,7 @@ describe('MessageInput', () => {
       const user = userEvent.setup();
       render(<MessageInput />);
 
-      const input = screen.getByPlaceholderText(/fai una domanda/i);
+      const input = screen.getByRole('textbox', { name: /message input/i });
       await user.type(input, '🎲🎯');
 
       expect(mockSetInputValue).toHaveBeenCalled();

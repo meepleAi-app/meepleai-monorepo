@@ -104,11 +104,11 @@ describe('CategoryConfigTab', () => {
       />
     );
 
-    const editButton = screen.getByText('Edit');
+    const editButton = screen.getByRole('button', { name: /edit/i });
     fireEvent.click(editButton);
 
-    expect(screen.getByText('Save')).toBeInTheDocument();
-    expect(screen.getByText('Cancel')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /save/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /cancel/i })).toBeInTheDocument();
     expect(screen.getByDisplayValue('60')).toBeInTheDocument();
   });
 
@@ -122,13 +122,13 @@ describe('CategoryConfigTab', () => {
       />
     );
 
-    const editButton = screen.getByText('Edit');
+    const editButton = screen.getByRole('button', { name: /edit/i });
     fireEvent.click(editButton);
 
     const input = screen.getByDisplayValue('60');
     fireEvent.change(input, { target: { value: '100' } });
 
-    const saveButton = screen.getByText('Save');
+    const saveButton = screen.getByRole('button', { name: /save/i });
     fireEvent.click(saveButton);
 
     await waitFor(() => {
@@ -159,13 +159,13 @@ describe('CategoryConfigTab', () => {
       />
     );
 
-    const editButton = screen.getByText('Edit');
+    const editButton = screen.getByRole('button', { name: /edit/i });
     fireEvent.click(editButton);
 
     const input = screen.getByDisplayValue('512');
     fireEvent.change(input, { target: { value: '768' } });
 
-    const saveButton = screen.getByText('Save');
+    const saveButton = screen.getByRole('button', { name: /save/i });
     fireEvent.click(saveButton);
 
     expect(confirmSpy).toHaveBeenCalledWith(expect.stringContaining('re-indexing'));

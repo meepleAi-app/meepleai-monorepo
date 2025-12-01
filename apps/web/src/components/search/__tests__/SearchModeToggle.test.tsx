@@ -6,7 +6,7 @@
 
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { SearchModeToggle } from '../SearchModeToggle';
+import SearchModeToggle from '../SearchModeToggle';
 
 describe('SearchModeToggle', () => {
   describe('Rendering', () => {

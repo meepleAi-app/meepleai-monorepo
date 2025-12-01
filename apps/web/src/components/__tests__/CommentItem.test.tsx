@@ -2,6 +2,22 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { CommentItem } from '../comments/CommentItem';
 import type { RuleSpecComment } from '@/lib/api';
+import React from 'react';
+
+// Mock AuthProvider
+vi.mock('@/components/auth/AuthProvider', () => ({
+  AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useAuth: () => ({
+    user: { id: 'test-user-1', email: 'test@example.com', displayName: 'Test User', role: 'User' },
+    loading: false,
+    error: null,
+    login: vi.fn(),
+    register: vi.fn(),
+    logout: vi.fn(),
+    refreshUser: vi.fn(),
+    clearError: vi.fn(),
+  }),
+}));
 
 // Mock MentionInput component
 interface MockMentionInputProps {

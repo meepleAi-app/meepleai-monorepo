@@ -5,7 +5,38 @@
  */
 
 import { render, screen } from '@testing-library/react';
+import { vi } from 'vitest';
 import { RequireRole } from '../RequireRole';
+
+// Mock Next.js navigation (Fix Pattern #5: App Router Mock)
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    prefetch: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    refresh: vi.fn(),
+  }),
+  usePathname: () => '/test-path',
+  useSearchParams: () => new URLSearchParams(),
+  redirect: vi.fn(),
+}));
+
+// Mock getCurrentUser action
+vi.mock('@/actions/auth', () => ({
+  getCurrentUser: vi.fn(() =>
+    Promise.resolve({
+      success: true,
+      user: {
+        id: '1',
+        role: 'Admin',
+        email: 'test@example.com',
+        displayName: 'Test User',
+      },
+    })
+  ),
+}));
 
 describe('RequireRole', () => {
   describe('Rendering', () => {

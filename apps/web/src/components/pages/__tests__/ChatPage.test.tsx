@@ -6,7 +6,7 @@
 
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ChatPage } from '../ChatPage';
+import ChatPage from '../ChatPage';
 
 describe('ChatPage', () => {
   describe('Rendering', () => {

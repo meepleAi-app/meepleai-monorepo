@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { DiffViewerEnhanced } from '../diff/DiffViewerEnhanced';
+import * as diffProcessorModule from '@/lib/diffProcessor';
 
 // Mock child components
 vi.mock('../DiffSummary', () => ({
@@ -56,7 +57,7 @@ vi.mock('../diff/SideBySideDiffView', () => ({
 }));
 
 // Mock diffProcessor
-vi.mock('../../lib/diffProcessor', () => ({
+vi.mock('@/lib/diffProcessor', () => ({
   processDiff: vi.fn((oldJson: string, newJson: string) => ({
     oldLines: [
       { lineNumber: 1, content: 'old line 1', type: 'deleted' },
@@ -309,7 +310,7 @@ describe('DiffViewerEnhanced', () => {
 
     it('should fallback to list view if processing fails', () => {
       // Mock processDiff to return null
-      const diffProcessor = require('../../lib/diffProcessor');
+      const diffProcessor = vi.mocked(diffProcessorModule);
       diffProcessor.processDiff.mockReturnValueOnce(null);
 
       render(
@@ -595,12 +596,12 @@ describe('DiffViewerEnhanced', () => {
         />
       );
 
-      const diffProcessor = require('../../lib/diffProcessor');
+      const diffProcessor = vi.mocked(diffProcessorModule);
       expect(diffProcessor.processDiff).toHaveBeenCalled();
     });
 
     it('should process diff only in side-by-side mode', () => {
-      const diffProcessor = require('../../lib/diffProcessor');
+      const diffProcessor = vi.mocked(diffProcessorModule);
       diffProcessor.processDiff.mockClear();
 
       render(<DiffViewerEnhanced diff={mockDiff} showOnlyChanges={false} defaultViewMode="list" />);

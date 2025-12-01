@@ -7,25 +7,46 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { LoginForm } from '../LoginForm';
+import React from 'react';
+
+// Mock AuthProvider
+vi.mock('@/components/auth/AuthProvider', () => ({
+  AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useAuth: () => ({
+    user: { id: 'test-user-1', email: 'test@example.com', displayName: 'Test User', role: 'User' },
+    loading: false,
+    error: null,
+    login: vi.fn(),
+    register: vi.fn(),
+    logout: vi.fn(),
+    refreshUser: vi.fn(),
+    clearError: vi.fn(),
+  }),
+}));
 
 describe('LoginForm', () => {
   describe('Rendering', () => {
     it('should render without crashing', () => {
-      render(<LoginForm onSubmit={vi.fn()} />);
-      expect(screen.getByRole('form')).toBeInTheDocument();
+      const { container } = render(<LoginForm onSubmit={vi.fn()} />);
+      expect(container.querySelector('form')).toBeInTheDocument();
     });
 
     it('should render with default props', () => {
       const { container } = render(<LoginForm onSubmit={vi.fn()} />);
       expect(container.firstChild).toBeInTheDocument();
     });
+
+    it('should render email and password fields', () => {
+      render(<LoginForm onSubmit={vi.fn()} />);
+      expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
+    });
   });
 
   describe('Props', () => {
     it('should accept and render with custom props', () => {
-      // TODO: Add specific prop tests based on LoginFormProps
-      render(<LoginForm onSubmit={vi.fn()} />);
-      expect(screen.getByRole('form')).toBeInTheDocument();
+      const { container } = render(<LoginForm onSubmit={vi.fn()} />);
+      expect(container.querySelector('form')).toBeInTheDocument();
     });
   });
 
@@ -58,9 +79,11 @@ describe('LoginForm', () => {
   });
 
   describe('Accessibility', () => {
-    it('should have accessible role', () => {
+    it('should have accessible form elements', () => {
       render(<LoginForm onSubmit={vi.fn()} />);
-      expect(screen.getByRole('form')).toBeInTheDocument();
+      expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /accedi/i })).toBeInTheDocument();
     });
 
     // TODO: Add more a11y tests (aria-labels, keyboard navigation, etc.)

@@ -6,7 +6,23 @@
 
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { vi } from 'vitest';
 import { SimpleErrorMessage } from '../SimpleErrorMessage';
+
+// Mock Next.js navigation (Fix Pattern #5: App Router Mock)
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    prefetch: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    refresh: vi.fn(),
+  }),
+  usePathname: () => '/test-path',
+  useSearchParams: () => new URLSearchParams(),
+  redirect: vi.fn(),
+}));
 
 describe('SimpleErrorMessage', () => {
   describe('Rendering', () => {

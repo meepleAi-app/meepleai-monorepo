@@ -5,7 +5,7 @@
  * Tests: Queue management, concurrency, retry logic, progress tracking, cancellation
  */
 
-import { renderHook, waitFor } from '@testing-library/react';
+import { renderHook, waitFor, act } from '@testing-library/react';
 import { useUploadQueue } from '../useUploadQueue';
 import * as retryUtils from '../../lib/retryUtils';
 import * as errorUtils from '../../lib/errorUtils';

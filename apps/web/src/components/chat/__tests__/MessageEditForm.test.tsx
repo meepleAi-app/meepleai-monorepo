@@ -7,12 +7,48 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MessageEditForm } from '../MessageEditForm';
+import React from 'react';
+
+// Mock AuthProvider
+vi.mock('@/components/auth/AuthProvider', () => ({
+  AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useAuth: () => ({
+    user: { id: 'test-user-1', email: 'test@example.com', displayName: 'Test User', role: 'User' },
+    loading: false,
+    error: null,
+    login: vi.fn(),
+    register: vi.fn(),
+    logout: vi.fn(),
+    refreshUser: vi.fn(),
+    clearError: vi.fn(),
+  }),
+}));
+
+// Mock ChatProvider
+vi.mock('@/hooks/useChatContext', () => ({
+  useChatContext: () => ({
+    editingMessageId: 'msg-1',
+    editContent: 'Test message',
+    setEditContent: vi.fn(),
+    saveEdit: vi.fn(),
+    cancelEdit: vi.fn(),
+    loading: {
+      games: false,
+      agents: false,
+      chats: false,
+      messages: false,
+      sending: false,
+      creating: false,
+      updating: false,
+    },
+  }),
+}));
 
 describe('MessageEditForm', () => {
   describe('Rendering', () => {
     it('should render without crashing', () => {
       render(<MessageEditForm />);
-      expect(screen.getByRole('form')).toBeInTheDocument();
+      expect(screen.getByLabelText('Edit message content')).toBeInTheDocument();
     });
 
     it('should render with default props', () => {
@@ -26,17 +62,22 @@ describe('MessageEditForm', () => {
       const user = userEvent.setup();
       render(<MessageEditForm />);
 
-      // TODO: Add interaction tests (click, input, etc.)
-      // Example: await user.click(screen.getByRole('button'));
+      // Find the save button
+      const saveButton = screen.getByLabelText('Save edited message');
+      expect(saveButton).toBeInTheDocument();
     });
   });
 
   describe('Accessibility', () => {
-    it('should have accessible role', () => {
+    it('should have accessible textarea', () => {
       render(<MessageEditForm />);
-      expect(screen.getByRole('form')).toBeInTheDocument();
+      expect(screen.getByLabelText('Edit message content')).toBeInTheDocument();
     });
 
-    // TODO: Add more a11y tests (aria-labels, keyboard navigation, etc.)
+    it('should have accessible buttons', () => {
+      render(<MessageEditForm />);
+      expect(screen.getByLabelText('Save edited message')).toBeInTheDocument();
+      expect(screen.getByLabelText('Cancel editing')).toBeInTheDocument();
+    });
   });
 });

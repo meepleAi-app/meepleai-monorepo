@@ -1,4 +1,5 @@
 import type { RuleSpecComment } from '@/lib/api';
+import React from 'react';
 
 // Mock MentionInput component
 export interface MockMentionInputProps {
@@ -14,6 +15,26 @@ export const mockAlert = vi.fn();
 
 // Mock modules setup
 export function setupMocks() {
+  // Mock AuthProvider
+  vi.mock('@/components/auth/AuthProvider', () => ({
+    AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+    useAuth: () => ({
+      user: {
+        id: 'test-user-1',
+        email: 'test@example.com',
+        displayName: 'Test User',
+        role: 'User',
+      },
+      loading: false,
+      error: null,
+      login: vi.fn(),
+      register: vi.fn(),
+      logout: vi.fn(),
+      refreshUser: vi.fn(),
+      clearError: vi.fn(),
+    }),
+  }));
+
   vi.mock('../chat/MentionInput', () => ({
     MentionInput: ({ value, onChange, placeholder, disabled }: MockMentionInputProps) => (
       <textarea

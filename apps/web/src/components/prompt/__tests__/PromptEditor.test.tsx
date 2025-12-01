@@ -6,7 +6,7 @@
 
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { PromptEditor } from '../PromptEditor';
+import PromptEditor from '../PromptEditor';
 
 describe('PromptEditor', () => {
   describe('Rendering', () => {

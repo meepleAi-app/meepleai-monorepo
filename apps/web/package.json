@@ -155,7 +155,7 @@
     "jest-axe": "^10.0.0",
     "jest-environment-jsdom": "^30.2.0",
     "jsdom": "^25.0.1",
-    "lint-staged": "^15.3.0",
+    "lint-staged": "^16.2.7",
     "msw": "^2.12.3",
     "openapi-zod-client": "^1.18.3",
     "playwright-lighthouse": "^4.0.0",

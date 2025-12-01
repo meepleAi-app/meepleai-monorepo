@@ -97,17 +97,17 @@ describe('OAuthButtons', () => {
 
     it('renders Google OAuth button', () => {
       render(<OAuthButtons />);
-      expect(screen.getByText('Continue with Google')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /continue with google/i })).toBeInTheDocument();
     });
 
     it('renders Discord OAuth button', () => {
       render(<OAuthButtons />);
-      expect(screen.getByText('Continue with Discord')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /continue with discord/i })).toBeInTheDocument();
     });
 
     it('renders GitHub OAuth button', () => {
       render(<OAuthButtons />);
-      expect(screen.getByText('Continue with GitHub')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /continue with github/i })).toBeInTheDocument();
     });
 
     it('renders all three OAuth buttons', () => {
@@ -118,22 +118,22 @@ describe('OAuthButtons', () => {
 
     it('renders Google logo SVG', () => {
       const { container } = render(<OAuthButtons />);
-      const googleButton = screen.getByText('Continue with Google').parentElement;
-      const svg = googleButton?.querySelector('svg');
+      const googleButton = screen.getByRole('button', { name: /continue with google/i });
+      const svg = googleButton.querySelector('svg');
       expect(svg).toBeInTheDocument();
     });
 
     it('renders Discord logo SVG', () => {
       const { container } = render(<OAuthButtons />);
-      const discordButton = screen.getByText('Continue with Discord').parentElement;
-      const svg = discordButton?.querySelector('svg');
+      const discordButton = screen.getByRole('button', { name: /continue with discord/i });
+      const svg = discordButton.querySelector('svg');
       expect(svg).toBeInTheDocument();
     });
 
     it('renders GitHub logo SVG', () => {
       const { container } = render(<OAuthButtons />);
-      const githubButton = screen.getByText('Continue with GitHub').parentElement;
-      const svg = githubButton?.querySelector('svg');
+      const githubButton = screen.getByRole('button', { name: /continue with github/i });
+      const svg = githubButton.querySelector('svg');
       expect(svg).toBeInTheDocument();
     });
   });
@@ -171,7 +171,7 @@ describe('OAuthButtons', () => {
       const onOAuthLogin = vi.fn();
 
       render(<OAuthButtons onOAuthLogin={onOAuthLogin} />);
-      const googleButton = screen.getByText('Continue with Google');
+      const googleButton = screen.getByRole('button', { name: /continue with google/i });
       await user.click(googleButton);
 
       expect(onOAuthLogin).toHaveBeenCalledWith('google');
@@ -183,7 +183,7 @@ describe('OAuthButtons', () => {
       const onOAuthLogin = vi.fn();
 
       render(<OAuthButtons onOAuthLogin={onOAuthLogin} />);
-      const discordButton = screen.getByText('Continue with Discord');
+      const discordButton = screen.getByRole('button', { name: /continue with discord/i });
       await user.click(discordButton);
 
       expect(onOAuthLogin).toHaveBeenCalledWith('discord');
@@ -195,7 +195,7 @@ describe('OAuthButtons', () => {
       const onOAuthLogin = vi.fn();
 
       render(<OAuthButtons onOAuthLogin={onOAuthLogin} />);
-      const githubButton = screen.getByText('Continue with GitHub');
+      const githubButton = screen.getByRole('button', { name: /continue with github/i });
       await user.click(githubButton);
 
       expect(onOAuthLogin).toHaveBeenCalledWith('github');
@@ -207,7 +207,7 @@ describe('OAuthButtons', () => {
       const onOAuthLogin = vi.fn();
 
       render(<OAuthButtons onOAuthLogin={onOAuthLogin} />);
-      await user.click(screen.getByText('Continue with Google'));
+      await user.click(screen.getByRole('button', { name: /continue with google/i }));
 
       // Should call callback instead of redirect
       // (absence of jsdom navigation error proves no redirect occurred)
@@ -219,7 +219,7 @@ describe('OAuthButtons', () => {
       const onOAuthLogin = vi.fn();
 
       render(<OAuthButtons onOAuthLogin={onOAuthLogin} />);
-      await user.click(screen.getByText('Continue with Discord'));
+      await user.click(screen.getByRole('button', { name: /continue with discord/i }));
 
       // Should call callback instead of redirect
       expect(onOAuthLogin).toHaveBeenCalledWith('discord');
@@ -230,7 +230,7 @@ describe('OAuthButtons', () => {
       const onOAuthLogin = vi.fn();
 
       render(<OAuthButtons onOAuthLogin={onOAuthLogin} />);
-      await user.click(screen.getByText('Continue with GitHub'));
+      await user.click(screen.getByRole('button', { name: /continue with github/i }));
 
       // Should call callback instead of redirect
       expect(onOAuthLogin).toHaveBeenCalledWith('github');
@@ -243,13 +243,13 @@ describe('OAuthButtons', () => {
       render(<OAuthButtons onOAuthLogin={onOAuthLogin} />);
 
       // Test all three providers
-      await user.click(screen.getByText('Continue with Google'));
+      await user.click(screen.getByRole('button', { name: /continue with google/i }));
       expect(onOAuthLogin).toHaveBeenLastCalledWith('google');
 
-      await user.click(screen.getByText('Continue with Discord'));
+      await user.click(screen.getByRole('button', { name: /continue with discord/i }));
       expect(onOAuthLogin).toHaveBeenLastCalledWith('discord');
 
-      await user.click(screen.getByText('Continue with GitHub'));
+      await user.click(screen.getByRole('button', { name: /continue with github/i }));
       expect(onOAuthLogin).toHaveBeenLastCalledWith('github');
 
       expect(onOAuthLogin).toHaveBeenCalledTimes(3);
@@ -260,7 +260,7 @@ describe('OAuthButtons', () => {
       const onOAuthLogin = vi.fn();
 
       render(<OAuthButtons onOAuthLogin={onOAuthLogin} />);
-      await user.click(screen.getByText('Continue with Google'));
+      await user.click(screen.getByRole('button', { name: /continue with google/i }));
 
       expect(onOAuthLogin).toHaveBeenCalledTimes(1);
     });
@@ -271,7 +271,7 @@ describe('OAuthButtons', () => {
       process.env.NEXT_PUBLIC_API_BASE = 'https://api.example.com';
 
       render(<OAuthButtons onOAuthLogin={onOAuthLogin} />);
-      await user.click(screen.getByText('Continue with Google'));
+      await user.click(screen.getByRole('button', { name: /continue with google/i }));
 
       // Callback should be used instead of redirect
       // (absence of jsdom navigation error proves no redirect occurred)
@@ -282,7 +282,7 @@ describe('OAuthButtons', () => {
   describe('Styling', () => {
     it('applies correct styling to Google button', () => {
       render(<OAuthButtons />);
-      const googleButton = screen.getByText('Continue with Google').closest('button');
+      const googleButton = screen.getByRole('button', { name: /continue with google/i });
 
       expect(googleButton).toHaveClass('w-full');
       expect(googleButton).toHaveClass('flex');
@@ -292,14 +292,14 @@ describe('OAuthButtons', () => {
 
     it('applies Discord brand color to Discord button', () => {
       render(<OAuthButtons />);
-      const discordButton = screen.getByText('Continue with Discord').closest('button');
+      const discordButton = screen.getByRole('button', { name: /continue with discord/i });
 
       expect(discordButton).toHaveClass('bg-[#5865F2]');
     });
 
     it('applies dark background to GitHub button', () => {
       render(<OAuthButtons />);
-      const githubButton = screen.getByText('Continue with GitHub').closest('button');
+      const githubButton = screen.getByRole('button', { name: /continue with github/i });
 
       expect(githubButton).toHaveClass('bg-slate-900');
     });
@@ -315,7 +315,7 @@ describe('OAuthButtons', () => {
 
     it('applies hover styles to buttons', () => {
       render(<OAuthButtons />);
-      const googleButton = screen.getByText('Continue with Google').closest('button');
+      const googleButton = screen.getByRole('button', { name: /continue with google/i });
 
       expect(googleButton).toHaveClass('hover:bg-slate-50');
     });
@@ -334,9 +334,9 @@ describe('OAuthButtons', () => {
     it('has descriptive text for each provider', () => {
       render(<OAuthButtons />);
 
-      expect(screen.getByText('Continue with Google')).toBeInTheDocument();
-      expect(screen.getByText('Continue with Discord')).toBeInTheDocument();
-      expect(screen.getByText('Continue with GitHub')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /continue with google/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /continue with discord/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /continue with github/i })).toBeInTheDocument();
     });
 
     it('renders SVG icons for visual users', () => {
@@ -371,7 +371,7 @@ describe('OAuthButtons', () => {
       const onOAuthLogin = vi.fn();
 
       render(<OAuthButtons onOAuthLogin={onOAuthLogin} />);
-      const googleButton = screen.getByText('Continue with Google');
+      const googleButton = screen.getByRole('button', { name: /continue with google/i });
 
       await user.click(googleButton);
       await user.click(googleButton);
@@ -387,9 +387,9 @@ describe('OAuthButtons', () => {
 
       render(<OAuthButtons onOAuthLogin={onOAuthLogin} />);
 
-      await user.click(screen.getByText('Continue with Google'));
-      await user.click(screen.getByText('Continue with Discord'));
-      await user.click(screen.getByText('Continue with GitHub'));
+      await user.click(screen.getByRole('button', { name: /continue with google/i }));
+      await user.click(screen.getByRole('button', { name: /continue with discord/i }));
+      await user.click(screen.getByRole('button', { name: /continue with github/i }));
 
       expect(onOAuthLogin).toHaveBeenNthCalledWith(1, 'google');
       expect(onOAuthLogin).toHaveBeenNthCalledWith(2, 'discord');
@@ -438,9 +438,9 @@ describe('OAuthButtons', () => {
 
       render(<OAuthButtons onOAuthLogin={onOAuthLogin} />);
 
-      await user.click(screen.getByText('Continue with Google'));
-      await user.click(screen.getByText('Continue with Discord'));
-      await user.click(screen.getByText('Continue with GitHub'));
+      await user.click(screen.getByRole('button', { name: /continue with google/i }));
+      await user.click(screen.getByRole('button', { name: /continue with discord/i }));
+      await user.click(screen.getByRole('button', { name: /continue with github/i }));
 
       // All calls should have passed the assertion in the callback
       expect(onOAuthLogin).toHaveBeenCalledTimes(3);

@@ -21,7 +21,7 @@ public static class AnalyticsEndpoints
         // ADM-01: Admin dashboard endpoints
         group.MapGet("/admin/requests", async (HttpContext context, IMediator mediator, int limit = 100, int offset = 0, string? endpoint = null, string? userId = null, string? gameId = null, DateTime? startDate = null, DateTime? endDate = null, CancellationToken ct = default) =>
         {
-            var (authorized, session, error) = context.RequireAdminSession();
+            var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             var query = new Api.BoundedContexts.Administration.Application.Queries.GetAiRequestsQuery(
@@ -39,7 +39,7 @@ public static class AnalyticsEndpoints
 
         group.MapGet("/admin/stats", async (HttpContext context, IMediator mediator, DateTime? startDate = null, DateTime? endDate = null, string? userId = null, string? gameId = null, CancellationToken ct = default) =>
         {
-            var (authorized, session, error) = context.RequireAdminSession();
+            var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             var query = new Api.BoundedContexts.Administration.Application.Queries.GetAiRequestStatsQuery(startDate, endDate, userId, gameId);
@@ -65,7 +65,7 @@ public static class AnalyticsEndpoints
         // ISSUE-962 (BGAI-020): LLM provider health monitoring
         group.MapGet("/admin/llm/health", async (HttpContext context, IMediator mediator, CancellationToken ct) =>
         {
-            var (authorized, session, error) = context.RequireAdminSession();
+            var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             var healthStatus = await mediator.Send(new GetLlmHealthQuery(), ct).ConfigureAwait(false);
@@ -88,7 +88,7 @@ public static class AnalyticsEndpoints
             DateTime? endDate = null,
             CancellationToken ct = default) =>
         {
-            var (authorized, session, error) = context.RequireAdminSession();
+            var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             // Use CQRS Query to get low-quality responses
@@ -109,7 +109,7 @@ public static class AnalyticsEndpoints
             int days = 7,
             CancellationToken ct = default) =>
         {
-            var (authorized, session, error) = context.RequireAdminSession();
+            var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             var endDate = DateTime.UtcNow;
@@ -141,7 +141,7 @@ public static class AnalyticsEndpoints
             string? roleFilter = null,
             CancellationToken ct = default) =>
         {
-            var (authorized, session, error) = context.RequireAdminSession();
+            var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             var query = new GetAdminStatsQuery(fromDate, toDate, days, gameId, roleFilter);
@@ -161,7 +161,7 @@ public static class AnalyticsEndpoints
             ExportDataRequest request,
             CancellationToken ct = default) =>
         {
-            var (authorized, session, error) = context.RequireAdminSession();
+            var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             var command = new ExportStatsCommand(request.Format, request.FromDate, request.ToDate, request.GameId);
@@ -196,7 +196,7 @@ public static class AnalyticsEndpoints
             Guid? userId,
             CancellationToken ct) =>
         {
-            var (authorized, session, error) = context.RequireAdminSession();
+            var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             // Default to last 30 days if not specified
@@ -228,7 +228,7 @@ public static class AnalyticsEndpoints
             string? date,
             CancellationToken ct) =>
         {
-            var (authorized, session, error) = context.RequireAdminSession();
+            var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             var targetDate = string.IsNullOrWhiteSpace(date)
@@ -261,7 +261,7 @@ public static class AnalyticsEndpoints
             IMediator mediator,
             CancellationToken ct) =>
         {
-            var (authorized, session, error) = context.RequireAdminSession();
+            var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             // Use CQRS Command to check all thresholds

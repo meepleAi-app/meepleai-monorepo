@@ -3,7 +3,12 @@
  * Shared factories, utilities, and mocks
  */
 
-import type { UploadQueueItem as UploadQueueItemType, UploadQueueStats } from '../../hooks/useUploadQueue';
+import { screen } from '@testing-library/react';
+import { vi, expect } from 'vitest';
+import type {
+  UploadQueueItem as UploadQueueItemType,
+  UploadQueueStats,
+} from '../../hooks/useUploadQueue';
 
 /**
  * Helper to create test upload queue items
@@ -17,7 +22,7 @@ export function createTestItem(overrides: Partial<UploadQueueItemType> = {}): Up
     status: 'pending',
     progress: 0,
     retryCount: 0,
-    ...overrides
+    ...overrides,
   };
 }
 
@@ -33,19 +38,22 @@ export function createTestStats(overrides: Partial<UploadQueueStats> = {}): Uplo
     succeeded: 0,
     failed: 0,
     cancelled: 0,
-    ...overrides
+    ...overrides,
   };
 }
 
 /**
  * Create multiple test items with sequential IDs
  */
-export function createTestItems(count: number, itemOverrides: Partial<UploadQueueItemType> = {}): UploadQueueItemType[] {
+export function createTestItems(
+  count: number,
+  itemOverrides: Partial<UploadQueueItemType> = {}
+): UploadQueueItemType[] {
   return Array.from({ length: count }, (_, i) =>
     createTestItem({
       id: `item-${i}`,
       file: new File([''], `file${i}.pdf`, { type: 'application/pdf' }),
-      ...itemOverrides
+      ...itemOverrides,
     })
   );
 }
@@ -88,7 +96,7 @@ export const testScenarios = {
       createTestItem({ id: '3', status: 'processing' }),
       createTestItem({ id: '4', status: 'success' }),
       createTestItem({ id: '5', status: 'failed' }),
-      createTestItem({ id: '6', status: 'cancelled' })
+      createTestItem({ id: '6', status: 'cancelled' }),
     ],
     stats: createTestStats({
       total: 6,
@@ -97,7 +105,7 @@ export const testScenarios = {
       processing: 1,
       succeeded: 1,
       failed: 1,
-      cancelled: 1
+      cancelled: 1,
     }),
   },
 };
@@ -118,9 +126,11 @@ export const assertionHelpers = {
   },
 
   expectStatCount: (statName: string, count: number) => {
-    expect(screen.getByText((content, element) => {
-      return element?.textContent === `${count} ${statName}`;
-    })).toBeInTheDocument();
+    expect(
+      screen.getByText((content, element) => {
+        return element?.textContent === `${count} ${statName}`;
+      })
+    ).toBeInTheDocument();
   },
 
   expectNoStatDisplayed: (statName: string) => {

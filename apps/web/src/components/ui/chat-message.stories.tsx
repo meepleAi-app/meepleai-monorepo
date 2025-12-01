@@ -1,6 +1,15 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { ChatMessage } from './chat-message';
 
+// Fixed timestamps for consistent Chromatic snapshots
+const FIXED_TIMESTAMP = new Date('2024-01-15T10:00:00Z');
+const FIXED_TIMESTAMPS = {
+  twoMinutesAgo: new Date('2024-01-15T09:58:00Z'),
+  oneMinuteAgo: new Date('2024-01-15T09:59:00Z'),
+  thirtySecondsAgo: new Date('2024-01-15T09:59:30Z'),
+  now: new Date('2024-01-15T10:00:00Z'),
+};
+
 /**
  * ChatMessage displays user and AI messages with role-based layout,
  * confidence badges, citations, and typing indicators.
@@ -83,7 +92,7 @@ export const AIHighConfidence: Story = {
       { id: '1', label: 'Regolamento', page: 5 },
       { id: '2', label: 'FAQ', page: 12 },
     ],
-    timestamp: new Date(),
+    timestamp: FIXED_TIMESTAMP,
   },
 };
 
@@ -98,7 +107,7 @@ export const AIMediumConfidence: Story = {
       "Questa regola potrebbe variare in base all'espansione utilizzata. Controlla il manuale specifico per conferma.",
     confidence: 78,
     citations: [{ id: '3', label: 'Espansioni', page: 23 }],
-    timestamp: new Date(),
+    timestamp: FIXED_TIMESTAMP,
   },
 };
 
@@ -113,7 +122,7 @@ export const AILowConfidence: Story = {
       'Non sono sicuro di questa regola. Ti consiglio di verificare nel manuale ufficiale per evitare errori.',
     confidence: 62,
     citations: [{ id: '4', label: 'Manuale Base', page: 8 }],
-    timestamp: new Date(),
+    timestamp: FIXED_TIMESTAMP,
   },
 };
 
@@ -138,7 +147,7 @@ export const UserMessage: Story = {
     role: 'user',
     content: 'Come si piazzano le risorse in Catan?',
     avatar: { fallback: 'U' },
-    timestamp: new Date(),
+    timestamp: FIXED_TIMESTAMP,
   },
 };
 
@@ -154,7 +163,7 @@ export const UserMessageWithAvatar: Story = {
       src: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix',
       fallback: 'F',
     },
-    timestamp: new Date(),
+    timestamp: FIXED_TIMESTAMP,
   },
 };
 
@@ -167,7 +176,7 @@ export const AINoCitations: Story = {
     role: 'assistant',
     content: 'Catan è un gioco strategico per 3-4 giocatori che dura circa 90 minuti.',
     confidence: 88,
-    timestamp: new Date(),
+    timestamp: FIXED_TIMESTAMP,
   },
 };
 
@@ -188,7 +197,7 @@ export const AIMultipleCitations: Story = {
       { id: '4', label: 'Esempi', page: 28 },
       { id: '5', label: 'Chiarimenti', page: 33 },
     ],
-    timestamp: new Date(),
+    timestamp: FIXED_TIMESTAMP,
   },
 };
 
@@ -203,7 +212,7 @@ export const ConversationFlow: Story = {
         role="user"
         content="Come funziona il ladrone in Catan?"
         avatar={{ fallback: 'U' }}
-        timestamp={new Date(Date.now() - 120000)}
+        timestamp={FIXED_TIMESTAMPS.twoMinutesAgo}
       />
       <ChatMessage
         role="assistant"
@@ -213,20 +222,20 @@ export const ConversationFlow: Story = {
           { id: '1', label: 'Regolamento', page: 7 },
           { id: '2', label: 'FAQ', page: 15 },
         ]}
-        timestamp={new Date(Date.now() - 60000)}
+        timestamp={FIXED_TIMESTAMPS.oneMinuteAgo}
       />
       <ChatMessage
         role="user"
         content="E se nessuno ha carte?"
         avatar={{ fallback: 'U' }}
-        timestamp={new Date(Date.now() - 30000)}
+        timestamp={FIXED_TIMESTAMPS.thirtySecondsAgo}
       />
       <ChatMessage
         role="assistant"
         content="In quel caso, il ladrone viene comunque spostato ma non si ruba alcuna carta. Il blocco del territorio rimane attivo."
         confidence={97}
         citations={[{ id: '3', label: 'FAQ', page: 16 }]}
-        timestamp={new Date()}
+        timestamp={FIXED_TIMESTAMPS.now}
       />
     </div>
   ),
@@ -253,7 +262,7 @@ export const LongContent: Story = {
       { id: '1', label: 'Regolamento', page: 1 },
       { id: '2', label: 'Guida Strategica', page: 3 },
     ],
-    timestamp: new Date(),
+    timestamp: FIXED_TIMESTAMP,
   },
 };
 
@@ -267,7 +276,7 @@ export const DarkTheme: Story = {
     content: 'Il commercio è una parte fondamentale di Catan.',
     confidence: 91,
     citations: [{ id: '1', label: 'Regolamento', page: 10 }],
-    timestamp: new Date(),
+    timestamp: FIXED_TIMESTAMP,
   },
   parameters: {
     backgrounds: { default: 'dark' },

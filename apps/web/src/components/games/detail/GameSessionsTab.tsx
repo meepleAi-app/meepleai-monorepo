@@ -23,9 +23,17 @@ function getStatusBadge(status: string) {
   switch (statusLower) {
     case 'inprogress':
     case 'in progress':
-      return <Badge variant="default" className="bg-blue-600">In Progress</Badge>;
+      return (
+        <Badge variant="default" className="bg-blue-600">
+          In Progress
+        </Badge>
+      );
     case 'completed':
-      return <Badge variant="default" className="bg-green-600">Completed</Badge>;
+      return (
+        <Badge variant="default" className="bg-green-600">
+          Completed
+        </Badge>
+      );
     case 'paused':
       return <Badge variant="secondary">Paused</Badge>;
     case 'abandoned':
@@ -44,7 +52,7 @@ function formatDuration(minutes: number): string {
   return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
 }
 
-export function GameSessionsTab({ game, sessions }: GameSessionsTabProps) {
+export function GameSessionsTab({ game, sessions = [] }: GameSessionsTabProps) {
   const activeSessions = sessions.filter(s =>
     ['inprogress', 'in progress', 'paused', 'setup'].includes(s.status.toLowerCase())
   );
@@ -53,9 +61,13 @@ export function GameSessionsTab({ game, sessions }: GameSessionsTabProps) {
   // Calculate statistics
   const totalSessions = sessions.length;
   const completedCount = completedSessions.length;
-  const averageDuration = completedSessions.length > 0
-    ? Math.round(completedSessions.reduce((sum, s) => sum + s.durationMinutes, 0) / completedSessions.length)
-    : 0;
+  const averageDuration =
+    completedSessions.length > 0
+      ? Math.round(
+          completedSessions.reduce((sum, s) => sum + s.durationMinutes, 0) /
+            completedSessions.length
+        )
+      : 0;
 
   return (
     <div className="space-y-6">
@@ -87,7 +99,9 @@ export function GameSessionsTab({ game, sessions }: GameSessionsTabProps) {
 
             <div className="flex flex-col items-center p-4 bg-slate-100 dark:bg-slate-800 rounded-lg">
               <Clock className="h-5 w-5 text-muted-foreground mb-2" />
-              <div className="text-2xl font-bold">{averageDuration > 0 ? formatDuration(averageDuration) : '—'}</div>
+              <div className="text-2xl font-bold">
+                {averageDuration > 0 ? formatDuration(averageDuration) : '—'}
+              </div>
               <div className="text-xs text-muted-foreground">Avg. Duration</div>
             </div>
           </div>
@@ -101,9 +115,7 @@ export function GameSessionsTab({ game, sessions }: GameSessionsTabProps) {
             <span>Active Sessions</span>
             <Badge variant="secondary">{activeSessions.length}</Badge>
           </CardTitle>
-          <CardDescription>
-            Currently in-progress or paused game sessions
-          </CardDescription>
+          <CardDescription>Currently in-progress or paused game sessions</CardDescription>
         </CardHeader>
         <CardContent>
           {activeSessions.length === 0 ? (
@@ -115,7 +127,7 @@ export function GameSessionsTab({ game, sessions }: GameSessionsTabProps) {
             </Alert>
           ) : (
             <div className="space-y-3">
-              {activeSessions.map((session) => (
+              {activeSessions.map(session => (
                 <div
                   key={session.id}
                   className="p-4 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
@@ -169,9 +181,7 @@ export function GameSessionsTab({ game, sessions }: GameSessionsTabProps) {
             <span>Session History</span>
             <Badge variant="secondary">{completedSessions.length} completed</Badge>
           </CardTitle>
-          <CardDescription>
-            Past gameplay sessions
-          </CardDescription>
+          <CardDescription>Past gameplay sessions</CardDescription>
         </CardHeader>
         <CardContent>
           {completedSessions.length === 0 ? (
@@ -183,7 +193,7 @@ export function GameSessionsTab({ game, sessions }: GameSessionsTabProps) {
             </Alert>
           ) : (
             <div className="space-y-3">
-              {completedSessions.slice(0, 10).map((session) => (
+              {completedSessions.slice(0, 10).map(session => (
                 <div
                   key={session.id}
                   className="p-4 border border-slate-200 dark:border-slate-700 rounded-lg"
@@ -221,7 +231,9 @@ export function GameSessionsTab({ game, sessions }: GameSessionsTabProps) {
                         {session.players.map((player, idx) => (
                           <Badge
                             key={idx}
-                            variant={player.playerName === session.winnerName ? "default" : "outline"}
+                            variant={
+                              player.playerName === session.winnerName ? 'default' : 'outline'
+                            }
                           >
                             {player.playerName}
                           </Badge>
@@ -254,16 +266,12 @@ export function GameSessionsTab({ game, sessions }: GameSessionsTabProps) {
       <Card>
         <CardHeader>
           <CardTitle>Start New Session</CardTitle>
-          <CardDescription>
-            Track a new gameplay session for this game
-          </CardDescription>
+          <CardDescription>Track a new gameplay session for this game</CardDescription>
         </CardHeader>
         <CardContent>
           <Alert>
             <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Session tracking functionality coming soon.
-            </AlertDescription>
+            <AlertDescription>Session tracking functionality coming soon.</AlertDescription>
           </Alert>
         </CardContent>
       </Card>

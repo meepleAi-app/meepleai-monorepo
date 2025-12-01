@@ -4,10 +4,17 @@
  */
 
 import { render } from '@testing-library/react';
+import { vi } from 'vitest';
 
 // Mock Prism BEFORE importing component
 vi.mock('prismjs', () => ({
-  highlight: vi.fn((code) => `<span class="highlighted">${code}</span>`),
+  default: {
+    highlight: vi.fn(code => `<span class="highlighted">${code}</span>`),
+    languages: {
+      json: {},
+    },
+  },
+  highlight: vi.fn(code => `<span class="highlighted">${code}</span>`),
   languages: {
     json: {},
   },
@@ -48,7 +55,12 @@ describe('PrismHighlighter', () => {
 
     it('should apply custom className', () => {
       const { container } = render(
-        <PrismHighlighter code="test" language="json" lineType="unchanged" className="custom-class" />
+        <PrismHighlighter
+          code="test"
+          language="json"
+          lineType="unchanged"
+          className="custom-class"
+        />
       );
 
       const codeElement = container.querySelector('code');
@@ -98,11 +110,7 @@ describe('PrismHighlighter', () => {
 
       render(<PrismHighlighter code={code} language="json" lineType="unchanged" />);
 
-      expect(Prism.highlight).toHaveBeenCalledWith(
-        code,
-        Prism.languages.json,
-        'json'
-      );
+      expect(Prism.highlight).toHaveBeenCalledWith(code, Prism.languages.json, 'json');
     });
 
     it('should use dangerouslySetInnerHTML to render highlighted HTML', () => {
@@ -143,11 +151,7 @@ describe('PrismHighlighter', () => {
       const code = 'test';
       render(<PrismHighlighter code={code} language="json" lineType="unchanged" />);
 
-      expect(Prism.highlight).toHaveBeenCalledWith(
-        code,
-        Prism.languages.json,
-        'json'
-      );
+      expect(Prism.highlight).toHaveBeenCalledWith(code, Prism.languages.json, 'json');
     });
   });
 
@@ -243,12 +247,7 @@ describe('PrismHighlighter', () => {
   describe('CSS Classes Combination', () => {
     it('should combine all CSS classes correctly', () => {
       const { container } = render(
-        <PrismHighlighter
-          code="test"
-          language="json"
-          lineType="added"
-          className="custom"
-        />
+        <PrismHighlighter code="test" language="json" lineType="added" className="custom" />
       );
 
       const codeElement = container.querySelector('code');

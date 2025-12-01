@@ -2,12 +2,12 @@
 // This prevents React from using production builds during testing
 process.env.NODE_ENV = 'test';
 
-const nextJest = require('next/jest')
+const nextJest = require('next/jest');
 
 const createJestConfig = nextJest({
   // Provide the path to your Next.js app to load next.config.js and .env files in your test environment
   dir: './',
-})
+});
 
 // Add any custom config to be passed to Jest
 const customJestConfig = {
@@ -17,15 +17,14 @@ const customJestConfig = {
   testTimeout: 30000, // Global timeout 30s for slow worker/async tests
   coverageProvider: 'v8', // Fix babel-plugin-istanbul schema error (test-exclude@6.0.0)
   // Transform ESM modules from MSW and its dependencies (Issue #1503)
-  transformIgnorePatterns: [
-    'node_modules/(?!(msw|@mswjs|@bundled-es-modules|until-async)/)',
-  ],
+  transformIgnorePatterns: ['node_modules/(?!(msw|@mswjs|@bundled-es-modules|until-async)/)'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
   collectCoverageFrom: [
     'src/**/*.{js,jsx,ts,tsx}',
     '!src/**/*.d.ts',
+    '!src/**/*.stories.{ts,tsx,js,jsx}', // Storybook files (visual testing only)
     '!src/**/__tests__/**',
     '!src/test-utils/**',
     '!src/**/test-utils.{ts,tsx}',
@@ -58,17 +57,14 @@ const customJestConfig = {
   ],
   coverageThreshold: {
     global: {
-      branches: 90,    // ✅ ACHIEVED (90%+)
-      functions: 64,   // Interim target (64.52% achieved, was 67.64%)
-      lines: 60,       // Interim target (60.26% achieved, was 70.4%)
-      statements: 60,  // Interim target (60.26% achieved, was 66.86%)
+      branches: 90, // ✅ ACHIEVED (90%+)
+      functions: 64, // Interim target (64.52% achieved, was 67.64%)
+      lines: 60, // Interim target (60.26% achieved, was 70.4%)
+      statements: 60, // Interim target (60.26% achieved, was 66.86%)
       // TODO Issue #1256: Increase to 90% after writing tests for 123 untested components
     },
   },
-  testMatch: [
-    '**/__tests__/**/*.{test,spec}.[jt]s?(x)',
-    '**/?(*.)+(spec|test).[jt]s?(x)',
-  ],
+  testMatch: ['**/__tests__/**/*.{test,spec}.[jt]s?(x)', '**/?(*.)+(spec|test).[jt]s?(x)'],
   testPathIgnorePatterns: [
     '/node_modules/',
     '/e2e/',
@@ -80,8 +76,9 @@ const customJestConfig = {
     '/async-test-helpers\\.(ts|tsx)$', // Async test helper utility
     '/query-test-utils\\.(ts|tsx)$', // Query test utility
     '/zustand-test-utils\\.(ts|tsx)$', // Zustand test utility
+    '\\.stories\\.(ts|tsx|js|jsx)$', // Storybook files (not Jest tests)
   ],
-}
+};
 
 // createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async
-module.exports = createJestConfig(customJestConfig)
+module.exports = createJestConfig(customJestConfig);

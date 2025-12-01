@@ -11,12 +11,16 @@ import { SessionWarningModal } from '../SessionWarningModal';
 describe('SessionWarningModal', () => {
   describe('Rendering', () => {
     it('should render without crashing', () => {
-      render(<SessionWarningModal isOpen={true} onClose={vi.fn()} />);
+      render(
+        <SessionWarningModal remainingMinutes={5} onStayLoggedIn={vi.fn()} onLogOut={vi.fn()} />
+      );
       expect(screen.getByRole('dialog')).toBeInTheDocument();
     });
 
     it('should render with default props', () => {
-      const { container } = render(<SessionWarningModal isOpen={true} onClose={vi.fn()} />);
+      const { container } = render(
+        <SessionWarningModal remainingMinutes={5} onStayLoggedIn={vi.fn()} onLogOut={vi.fn()} />
+      );
       expect(container.firstChild).toBeInTheDocument();
     });
   });
@@ -24,7 +28,9 @@ describe('SessionWarningModal', () => {
   describe('Props', () => {
     it('should accept and render with custom props', () => {
       // TODO: Add specific prop tests based on SessionWarningModalProps
-      render(<SessionWarningModal isOpen={true} onClose={vi.fn()} />);
+      render(
+        <SessionWarningModal remainingMinutes={3} onStayLoggedIn={vi.fn()} onLogOut={vi.fn()} />
+      );
       expect(screen.getByRole('dialog')).toBeInTheDocument();
     });
   });
@@ -32,7 +38,9 @@ describe('SessionWarningModal', () => {
   describe('Interactions', () => {
     it('should handle user interactions', async () => {
       const user = userEvent.setup();
-      render(<SessionWarningModal isOpen={true} onClose={vi.fn()} />);
+      render(
+        <SessionWarningModal remainingMinutes={5} onStayLoggedIn={vi.fn()} onLogOut={vi.fn()} />
+      );
 
       // TODO: Add interaction tests (click, input, etc.)
       // Example: await user.click(screen.getByRole('button'));
@@ -41,7 +49,9 @@ describe('SessionWarningModal', () => {
 
   describe('Accessibility', () => {
     it('should have accessible role', () => {
-      render(<SessionWarningModal isOpen={true} onClose={vi.fn()} />);
+      render(
+        <SessionWarningModal remainingMinutes={5} onStayLoggedIn={vi.fn()} onLogOut={vi.fn()} />
+      );
       expect(screen.getByRole('dialog')).toBeInTheDocument();
     });
 

@@ -1,0 +1,200 @@
+[22m[39mFailed to load current user: Error: Not authenticated
+[22m[39mLogin failed: Error: Invalid credentials
+[22m[39mRegistration failed: Error: Email already exists
+[22m[39mLogout failed: Error: Logout failed
+[22m[39mLogin failed: Error: Login failed
+[31m     → screen.getByRole is not a function[39m
+[31m     → screen.getByRole is not a function[39m
+[31m     → screen.getByRole is not a function[39m
+[31m     → screen.getByRole is not a function[39m
+[31m     → screen.getByText is not a function[39m
+[31m     → screen.getByText is not a function[39m
+[31m     → screen.getByText is not a function[39m
+[31m     → screen.getByText is not a function[39m
+[31m     → screen.queryByText is not a function[39m
+[31m     → screen.getByRole is not a function[39m
+[31m     → screen.getByText is not a function[39m
+[31m     → screen.getByRole is not a function[39m
+    stack: [32m'NotFoundError: API /api/v1/pdfs/undefined/progress failed with status 404\n'[39m +
+    stack: [32m'NotFoundError: API /api/v1/pdfs/undefined/progress failed with status 404\n'[39m +
+    stack: [32m'NotFoundError: API /api/v1/pdfs/undefined/progress failed with status 404\n'[39m +
+    stack: [32m'NotFoundError: API /api/v1/pdfs/undefined/progress failed with status 404\n'[39m +
+    stack: [32m'NotFoundError: API /api/v1/games/undefined/rulespec/versions/undefined/comments?includeResolved=true failed with status 404\n'[39m +
+    stack: [32m'NotFoundError: API /api/v1/games/undefined/rulespec/versions/undefined/comments?includeResolved=true failed with status 404\n'[39m +
+    stack: [32m'NotFoundError: API /api/v1/games/undefined/rulespec/versions/undefined/comments?includeResolved=true failed with status 404\n'[39m +
+    stack: [32m'NotFoundError: API /api/v1/games/undefined/rulespec/versions/undefined/comments?includeResolved=true failed with status 404\n'[39m +
+[22m[39mPrism highlighting error: Error: [vitest] No "default" export is defined on the "prismjs" mock. Did you forget to return it from "vi.mock"?
+[22m[39mPrism highlighting error: Error: [vitest] No "default" export is defined on the "prismjs" mock. Did you forget to return it from "vi.mock"?
+[22m[39mPrism highlighting error: Error: [vitest] No "default" export is defined on the "prismjs" mock. Did you forget to return it from "vi.mock"?
+[22m[39mPrism highlighting error: Error: [vitest] No "default" export is defined on the "prismjs" mock. Did you forget to return it from "vi.mock"?
+[22m[39mPrism highlighting error: Error: [vitest] No "default" export is defined on the "prismjs" mock. Did you forget to return it from "vi.mock"?
+[22m[39mPrism highlighting error: Error: [vitest] No "default" export is defined on the "prismjs" mock. Did you forget to return it from "vi.mock"?
+[22m[39mPrism highlighting error: Error: [vitest] No "default" export is defined on the "prismjs" mock. Did you forget to return it from "vi.mock"?
+[22m[39mPrism highlighting error: Error: [vitest] No "default" export is defined on the "prismjs" mock. Did you forget to return it from "vi.mock"?
+[22m[39mPrism highlighting error: Error: [vitest] No "default" export is defined on the "prismjs" mock. Did you forget to return it from "vi.mock"?
+[22m[39mPrism highlighting error: Error: [vitest] No "default" export is defined on the "prismjs" mock. Did you forget to return it from "vi.mock"?
+[22m[39mPrism highlighting error: Error: [vitest] No "default" export is defined on the "prismjs" mock. Did you forget to return it from "vi.mock"?
+[22m[39mPrism highlighting error: Error: [vitest] No "default" export is defined on the "prismjs" mock. Did you forget to return it from "vi.mock"?
+[22m[39mPrism highlighting error: Error: [vitest] No "default" export is defined on the "prismjs" mock. Did you forget to return it from "vi.mock"?
+[22m[39mPrism highlighting error: Error: [vitest] No "default" export is defined on the "prismjs" mock. Did you forget to return it from "vi.mock"?
+[22m[39mPrism highlighting error: Error: [vitest] No "default" export is defined on the "prismjs" mock. Did you forget to return it from "vi.mock"?
+[22m[39mPrism highlighting error: Error: [vitest] No "default" export is defined on the "prismjs" mock. Did you forget to return it from "vi.mock"?
+[22m[39mPrism highlighting error: Error: [vitest] No "default" export is defined on the "prismjs" mock. Did you forget to return it from "vi.mock"?
+[22m[39mPrism highlighting error: Error: [vitest] No "default" export is defined on the "prismjs" mock. Did you forget to return it from "vi.mock"?
+[22m[39mPrism highlighting error: Error: [vitest] No "default" export is defined on the "prismjs" mock. Did you forget to return it from "vi.mock"?
+[31m     → Prism.highlight.mockImplementation is not a function[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → expected [Function] to not throw an error but 'Error: useAuth must be used within Au…' was thrown[39m
+[31m     → expected [Function] to not throw an error but 'Error: useAuth must be used within Au…' was thrown[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → Cannot read properties of undefined (reading 'commentText')[39m
+[31m     → Cannot read properties of undefined (reading 'commentText')[39m
+[31m     → Cannot read properties of undefined (reading 'commentText')[39m
+[31m     → Cannot read properties of undefined (reading 'commentText')[39m
+[31m     → Cannot read properties of undefined (reading 'commentText')[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m
+[31m     → useAuth must be used within AuthProvider[39m

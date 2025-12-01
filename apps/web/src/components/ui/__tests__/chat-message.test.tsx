@@ -92,7 +92,7 @@ describe('ChatMessage', () => {
     it('renders high confidence badge (green) for ≥85%', () => {
       render(<ChatMessage role="assistant" content="Test" confidence={95} />);
 
-      const badge = screen.getByLabelText('Confidence: 95%');
+      const badge = screen.getByLabelText('High confidence: 95%');
       expect(badge).toBeInTheDocument();
       expect(badge).toHaveClass('bg-green-500');
       expect(badge).toHaveTextContent('95%');
@@ -101,7 +101,7 @@ describe('ChatMessage', () => {
     it('renders medium confidence badge (yellow) for 70-84%', () => {
       render(<ChatMessage role="assistant" content="Test" confidence={75} />);
 
-      const badge = screen.getByLabelText('Confidence: 75%');
+      const badge = screen.getByLabelText('Medium confidence: 75%');
       expect(badge).toHaveClass('bg-yellow-500');
       expect(badge).toHaveTextContent('75%');
     });
@@ -109,7 +109,7 @@ describe('ChatMessage', () => {
     it('renders low confidence badge (red) for <70%', () => {
       render(<ChatMessage role="assistant" content="Test" confidence={55} />);
 
-      const badge = screen.getByLabelText('Confidence: 55%');
+      const badge = screen.getByLabelText('Low confidence: 55%');
       expect(badge).toHaveClass('bg-red-500');
       expect(badge).toHaveTextContent('55%');
     });
@@ -322,7 +322,7 @@ describe('ConfidenceBadge', () => {
   it('renders high confidence with green color', () => {
     render(<ConfidenceBadge confidence={95} />);
 
-    const badge = screen.getByLabelText('Confidence: 95%');
+    const badge = screen.getByLabelText('High confidence: 95%');
     expect(badge).toHaveClass('bg-green-500');
     expect(badge).toHaveTextContent('95%');
   });
@@ -330,21 +330,21 @@ describe('ConfidenceBadge', () => {
   it('renders medium confidence with yellow color', () => {
     render(<ConfidenceBadge confidence={75} />);
 
-    const badge = screen.getByLabelText('Confidence: 75%');
+    const badge = screen.getByLabelText('Medium confidence: 75%');
     expect(badge).toHaveClass('bg-yellow-500');
   });
 
   it('renders low confidence with red color', () => {
     render(<ConfidenceBadge confidence={55} />);
 
-    const badge = screen.getByLabelText('Confidence: 55%');
+    const badge = screen.getByLabelText('Low confidence: 55%');
     expect(badge).toHaveClass('bg-red-500');
   });
 
   it('applies custom className', () => {
     render(<ConfidenceBadge confidence={90} className="custom-badge" />);
 
-    expect(screen.getByLabelText('Confidence: 90%')).toHaveClass('custom-badge');
+    expect(screen.getByLabelText('High confidence: 90%')).toHaveClass('custom-badge');
   });
 });
 

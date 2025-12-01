@@ -31,8 +31,8 @@ describe('Type Index Exports', () => {
       expect(role).toBeDefined();
     });
 
-    it('should export auth helper functions', () => {
-      const { hasRole, canEdit } = require('../index');
+    it('should export auth helper functions', async () => {
+      const { hasRole, canEdit } = await import('../index');
 
       expect(typeof hasRole).toBe('function');
       expect(typeof canEdit).toBe('function');
@@ -175,8 +175,8 @@ describe('Type Index Exports', () => {
       expect(paginatedResponse).toBeDefined();
     });
 
-    it('should export ApiError class and helper', () => {
-      const { ApiError, createApiError } = require('../index');
+    it('should export ApiError class and helper', async () => {
+      const { ApiError, createApiError } = await import('../index');
 
       expect(typeof ApiError).toBe('function');
       expect(typeof createApiError).toBe('function');
@@ -188,16 +188,16 @@ describe('Type Index Exports', () => {
   });
 
   describe('PDF Processing Types', () => {
-    it('should export ProcessingStep enum', () => {
-      const { ProcessingStep } = require('../index');
+    it('should export ProcessingStep enum', async () => {
+      const { ProcessingStep } = await import('../index');
 
       // ProcessingStep is an enum with string values
       expect(ProcessingStep).toBeDefined();
       expect(typeof ProcessingStep).toBe('object');
     });
 
-    it('should export ProcessingProgress type', () => {
-      const { ProcessingStep } = require('../index');
+    it('should export ProcessingProgress type', async () => {
+      const { ProcessingStep } = await import('../index');
       const progress: import('../index').ProcessingProgress = {
         currentStep: ProcessingStep.Extracting,
         percentComplete: 0.5,
@@ -207,8 +207,8 @@ describe('Type Index Exports', () => {
       expect(progress).toBeDefined();
     });
 
-    it('should export processing helper functions', () => {
-      const { isProcessingComplete, getStepLabel, getStepOrder } = require('../index');
+    it('should export processing helper functions', async () => {
+      const { isProcessingComplete, getStepLabel, getStepOrder } = await import('../index');
 
       expect(typeof isProcessingComplete).toBe('function');
       expect(typeof getStepLabel).toBe('function');
@@ -217,24 +217,24 @@ describe('Type Index Exports', () => {
   });
 
   describe('Integration Test', () => {
-    it('should import all exports without error', () => {
+    it('should import all exports without error', async () => {
       // This test ensures the entire index can be imported successfully
-      const types = require('../index');
+      const types = await import('../index');
 
       expect(types).toBeDefined();
       expect(Object.keys(types).length).toBeGreaterThan(0);
     });
 
-    it('should have no circular dependencies', () => {
+    it('should have no circular dependencies', async () => {
       // Multiple imports should work without circular dependency issues
-      const import1 = require('../index');
-      const import2 = require('../index');
+      const import1 = await import('../index');
+      const import2 = await import('../index');
 
       expect(import1).toBe(import2); // Same module instance
     });
 
-    it('should export both types and functions', () => {
-      const exports = require('../index');
+    it('should export both types and functions', async () => {
+      const exports = await import('../index');
 
       // Check for function exports
       expect(typeof exports.hasRole).toBe('function');

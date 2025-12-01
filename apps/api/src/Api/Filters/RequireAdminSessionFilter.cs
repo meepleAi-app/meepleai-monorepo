@@ -45,7 +45,7 @@ public class RequireAdminSessionFilter : IEndpointFilter
         var httpContext = context.HttpContext;
 
         // Validate session exists and is active
-        var (authorized, session, error) = httpContext.RequireAdminSession();
+        var (authorized, _, error) = httpContext.RequireAdminSession();
 
         if (!authorized)
         {

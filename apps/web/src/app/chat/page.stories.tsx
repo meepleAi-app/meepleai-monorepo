@@ -13,6 +13,9 @@ import type { Meta, StoryObj } from '@storybook/react';
 import ChatPage from '@/components/pages/ChatPage';
 import { Message } from '@/types';
 
+// Fixed base timestamp for consistent Chromatic snapshots
+const BASE_TIMESTAMP = new Date('2024-01-15T10:00:00Z').getTime();
+
 // NOTE: AuthProvider is now provided globally via .storybook/preview.ts
 const meta: Meta<typeof ChatPage> = {
   title: 'Pages/Chat Page',
@@ -30,7 +33,7 @@ const meta: Meta<typeof ChatPage> = {
 export default meta;
 type Story = StoryObj<typeof ChatPage>;
 
-// Mock data generators
+// Mock data generators with fixed values for Chromatic
 const generateMessages = (count: number): Message[] =>
   Array.from({ length: count }, (_, i) => ({
     id: `msg-${i}`,
@@ -39,8 +42,8 @@ const generateMessages = (count: number): Message[] =>
       i % 2 === 0
         ? `User question ${i}: What are the setup rules?`
         : `AI answer ${i}: According to the rulebook, players should place resources...`,
-    timestamp: new Date(Date.now() - (count - i) * 60000),
-    confidence: i % 2 === 0 ? undefined : 0.85 + Math.random() * 0.15,
+    timestamp: new Date(BASE_TIMESTAMP - (count - i) * 60000),
+    confidence: i % 2 === 0 ? undefined : 0.85 + i * 0.015,
     citations:
       i % 2 === 0
         ? undefined

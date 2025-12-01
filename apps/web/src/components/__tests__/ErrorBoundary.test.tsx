@@ -157,8 +157,8 @@ describe('ErrorBoundary', () => {
     const homeButton = screen.getByRole('button', { name: /go to home/i });
     await user.click(homeButton);
 
-    // jsdom sets full URL including protocol/host
-    expect(window.location.href).toMatch(/^https?:\/\/[^/]+\/$/);
+    // In test environment, navigation to root path
+    expect(window.location.href).toBe('/');
   });
 
   it('should show error details when showDetails is true', () => {

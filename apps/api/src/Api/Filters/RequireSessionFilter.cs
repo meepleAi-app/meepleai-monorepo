@@ -48,7 +48,7 @@ public class RequireSessionFilter : IEndpointFilter
         var httpContext = context.HttpContext;
 
         // Use existing validation extension method
-        var (authenticated, session, error) = httpContext.TryGetActiveSession();
+        var (authenticated, _, error) = httpContext.TryGetActiveSession();
 
         if (!authenticated)
         {

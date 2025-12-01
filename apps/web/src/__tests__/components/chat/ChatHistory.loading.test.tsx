@@ -14,6 +14,21 @@ import { ChatHistory } from '../../../components/chat/ChatHistory';
 import { ChatProvider } from '../../../components/chat/ChatProvider';
 import { ChatThread } from '../../../types';
 
+// Mock AuthProvider
+vi.mock('@/components/auth/AuthProvider', () => ({
+  AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useAuth: () => ({
+    user: { id: '1', email: 'test@example.com', displayName: 'Test User' },
+    loading: false,
+    error: null,
+    login: vi.fn(),
+    register: vi.fn(),
+    logout: vi.fn(),
+    refreshUser: vi.fn(),
+    clearError: vi.fn(),
+  }),
+}));
+
 // Mock useChatContext hook
 vi.mock('../../../components/chat/ChatProvider', () => ({
   useChatContext: vi.fn(),

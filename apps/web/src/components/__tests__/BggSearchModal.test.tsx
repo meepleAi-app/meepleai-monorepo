@@ -1,7 +1,7 @@
 import type { Mock } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { BggSearchModal } from '../BggSearchModal';
+import { BggSearchModal } from '../modals/BggSearchModal';
 import * as api from '@/lib/api';
 
 // Mock the API
@@ -17,9 +17,7 @@ vi.mock('@/lib/api', () => ({
 // Mock Next.js Image component
 vi.mock('next/image', () => ({
   __esModule: true,
-  default: ({ src, alt, ...props }: any) => (
-    <img src={src} alt={alt} {...props} />
-  ),
+  default: ({ src, alt, ...props }: any) => <img src={src} alt={alt} {...props} />,
 }));
 
 // Mock useDebounce hook to avoid timing issues in tests
@@ -213,7 +211,8 @@ describe('BggSearchModal', () => {
     it('should show loading state during search', async () => {
       const user = userEvent.setup({ delay: null });
       (api.api.bgg.search as Mock).mockImplementation(
-        () => new Promise((resolve) => setTimeout(() => resolve({ results: mockSearchResults }), 1000))
+        () =>
+          new Promise(resolve => setTimeout(() => resolve({ results: mockSearchResults }), 1000))
       );
 
       render(<BggSearchModal isOpen={true} onClose={mockOnClose} onSelect={mockOnSelect} />);
@@ -234,7 +233,9 @@ describe('BggSearchModal', () => {
       await user.type(searchInput, 'NonExistent');
 
       await waitFor(() => {
-        expect(screen.getByText('No games found. Try a different search term.')).toBeInTheDocument();
+        expect(
+          screen.getByText('No games found. Try a different search term.')
+        ).toBeInTheDocument();
       });
     });
 
@@ -303,7 +304,7 @@ describe('BggSearchModal', () => {
       const user = userEvent.setup({ delay: null });
       (api.api.bgg.search as Mock).mockResolvedValue({ results: mockSearchResults });
       (api.api.bgg.getGameDetails as Mock).mockImplementation(
-        () => new Promise((resolve) => setTimeout(() => resolve(mockGameDetails), 1000))
+        () => new Promise(resolve => setTimeout(() => resolve(mockGameDetails), 1000))
       );
 
       render(<BggSearchModal isOpen={true} onClose={mockOnClose} onSelect={mockOnSelect} />);
@@ -343,7 +344,9 @@ describe('BggSearchModal', () => {
       await user.click(selectButton);
 
       await waitFor(() => {
-        expect(screen.getByText('Failed to fetch game details. Please try again.')).toBeInTheDocument();
+        expect(
+          screen.getByText('Failed to fetch game details. Please try again.')
+        ).toBeInTheDocument();
       });
 
       expect(mockOnSelect).not.toHaveBeenCalled();
@@ -354,7 +357,7 @@ describe('BggSearchModal', () => {
       const user = userEvent.setup({ delay: null });
       (api.api.bgg.search as Mock).mockResolvedValue({ results: mockSearchResults });
       (api.api.bgg.getGameDetails as Mock).mockImplementation(
-        () => new Promise((resolve) => setTimeout(() => resolve(mockGameDetails), 1000))
+        () => new Promise(resolve => setTimeout(() => resolve(mockGameDetails), 1000))
       );
 
       render(<BggSearchModal isOpen={true} onClose={mockOnClose} onSelect={mockOnSelect} />);

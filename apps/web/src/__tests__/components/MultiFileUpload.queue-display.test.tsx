@@ -11,7 +11,7 @@
  */
 
 import { render, screen } from '@testing-library/react';
-import { MultiFileUpload } from '../../components/MultiFileUpload';
+import { MultiFileUpload } from '../../components/upload/MultiFileUpload';
 import {
   mockGetStats,
   mockQueueStateRef,
@@ -19,7 +19,7 @@ import {
   defaultProps,
   setupBeforeEach,
   setupAfterEach,
-  createStats
+  createStats,
 } from './MultiFileUpload.test-helpers';
 
 // Import mock creation function
@@ -40,8 +40,8 @@ describe('MultiFileUpload - Queue Display', () => {
           language: 'en',
           status: 'pending' as const,
           progress: 0,
-          retryCount: 0
-        }
+          retryCount: 0,
+        },
       ];
 
       mockGetStats.mockReturnValue(createStats({ total: 1, pending: 1 }));
@@ -67,7 +67,7 @@ describe('MultiFileUpload - Queue Display', () => {
           language: 'en',
           status: 'pending' as const,
           progress: 0,
-          retryCount: 0
+          retryCount: 0,
         },
         {
           id: '2',
@@ -76,15 +76,17 @@ describe('MultiFileUpload - Queue Display', () => {
           language: 'en',
           status: 'uploading' as const,
           progress: 50,
-          retryCount: 0
-        }
+          retryCount: 0,
+        },
       ];
       mockQueueStateRef.current = queueItems;
-      mockGetStats.mockReturnValue(createStats({
-        total: 2,
-        pending: 1,
-        uploading: 1
-      }));
+      mockGetStats.mockReturnValue(
+        createStats({
+          total: 2,
+          pending: 1,
+          uploading: 1,
+        })
+      );
 
       render(<MultiFileUpload {...defaultProps} />);
 
@@ -93,9 +95,11 @@ describe('MultiFileUpload - Queue Display', () => {
 
     it('does not render UploadQueue when queue is empty with stats', () => {
       mockQueueStateRef.current = [];
-      mockGetStats.mockReturnValue(createStats({
-        total: 0
-      }));
+      mockGetStats.mockReturnValue(
+        createStats({
+          total: 0,
+        })
+      );
 
       render(<MultiFileUpload {...defaultProps} />);
 
@@ -111,7 +115,7 @@ describe('MultiFileUpload - Queue Display', () => {
           language: 'en',
           status: 'pending' as const,
           progress: 0,
-          retryCount: 0
+          retryCount: 0,
         },
         {
           id: '2',
@@ -120,7 +124,7 @@ describe('MultiFileUpload - Queue Display', () => {
           language: 'en',
           status: 'uploading' as const,
           progress: 50,
-          retryCount: 0
+          retryCount: 0,
         },
         {
           id: '3',
@@ -129,15 +133,17 @@ describe('MultiFileUpload - Queue Display', () => {
           language: 'en',
           status: 'succeeded' as const,
           progress: 100,
-          retryCount: 0
-        }
+          retryCount: 0,
+        },
       ];
-      mockGetStats.mockReturnValue(createStats({
-        total: 3,
-        pending: 1,
-        uploading: 1,
-        succeeded: 1
-      }));
+      mockGetStats.mockReturnValue(
+        createStats({
+          total: 3,
+          pending: 1,
+          uploading: 1,
+          succeeded: 1,
+        })
+      );
 
       render(<MultiFileUpload {...defaultProps} />);
 
@@ -155,7 +161,7 @@ describe('MultiFileUpload - Queue Display', () => {
           language: 'en',
           status: 'uploading' as const,
           progress: 30,
-          retryCount: 0
+          retryCount: 0,
         },
         {
           id: '2',
@@ -164,14 +170,16 @@ describe('MultiFileUpload - Queue Display', () => {
           language: 'en',
           status: 'pending' as const,
           progress: 0,
-          retryCount: 0
-        }
+          retryCount: 0,
+        },
       ];
-      mockGetStats.mockReturnValue(createStats({
-        total: 2,
-        pending: 1,
-        uploading: 1
-      }));
+      mockGetStats.mockReturnValue(
+        createStats({
+          total: 2,
+          pending: 1,
+          uploading: 1,
+        })
+      );
 
       render(<MultiFileUpload {...defaultProps} />);
 
@@ -187,8 +195,8 @@ describe('MultiFileUpload - Queue Display', () => {
           language: 'en',
           status: 'pending' as const,
           progress: 0,
-          retryCount: 0
-        }
+          retryCount: 0,
+        },
       ];
       mockGetStats.mockReturnValue(createStats({ total: 1, pending: 1 }));
 
@@ -205,8 +213,8 @@ describe('MultiFileUpload - Queue Display', () => {
           language: 'en',
           status: 'uploading' as const,
           progress: 50,
-          retryCount: 0
-        }
+          retryCount: 0,
+        },
       ];
       mockGetStats.mockReturnValue(createStats({ total: 1, uploading: 1 }));
 
@@ -231,8 +239,8 @@ describe('MultiFileUpload - Queue Display', () => {
           language: 'en',
           status: 'pending' as const,
           progress: 0,
-          retryCount: 0
-        }
+          retryCount: 0,
+        },
       ];
       mockGetStats.mockReturnValue(createStats({ total: 1, pending: 1 }));
 
@@ -250,8 +258,8 @@ describe('MultiFileUpload - Queue Display', () => {
           language: 'en',
           status: 'pending' as const,
           progress: 0,
-          retryCount: 0
-        }
+          retryCount: 0,
+        },
       ];
       mockGetStats.mockReturnValue(createStats({ total: 1, pending: 1 }));
 

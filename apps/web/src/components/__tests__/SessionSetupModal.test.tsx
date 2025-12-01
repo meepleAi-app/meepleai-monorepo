@@ -6,7 +6,7 @@
 
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { SessionSetupModal } from '../SessionSetupModal';
+import { SessionSetupModal } from '../modals/SessionSetupModal';
 
 describe('SessionSetupModal', () => {
   describe('Rendering', () => {

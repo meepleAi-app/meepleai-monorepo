@@ -6,7 +6,7 @@
 
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { VersionTimelineFilters } from '../VersionTimelineFilters';
+import { VersionTimelineFilters } from '../versioning/VersionTimelineFilters';
 
 describe('VersionTimelineFilters', () => {
   describe('Rendering', () => {

@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { ChangeItem } from '../ChangeItem';
+import { ChangeItem } from '../versioning/ChangeItem';
 
 describe('ChangeItem', () => {
   describe('Regola Aggiunta', () => {
@@ -11,8 +11,8 @@ describe('ChangeItem', () => {
           id: 'rule-1',
           text: 'Nuova regola di gioco',
           section: 'Setup',
-          page: '5'
-        }
+          page: '5',
+        },
       };
 
       render(<ChangeItem change={change} />);
@@ -31,8 +31,8 @@ describe('ChangeItem', () => {
         newAtom: 'rule-2',
         newValue: {
           id: 'rule-2',
-          text: 'Regola senza dettagli'
-        }
+          text: 'Regola senza dettagli',
+        },
       };
 
       render(<ChangeItem change={change} />);
@@ -53,14 +53,14 @@ describe('ChangeItem', () => {
           {
             fieldName: 'text',
             oldValue: 'Vecchio testo',
-            newValue: 'Nuovo testo'
+            newValue: 'Nuovo testo',
           },
           {
             fieldName: 'section',
             oldValue: 'Setup',
-            newValue: 'Gameplay'
-          }
-        ]
+            newValue: 'Gameplay',
+          },
+        ],
       };
 
       render(<ChangeItem change={change} />);
@@ -84,9 +84,9 @@ describe('ChangeItem', () => {
           {
             fieldName: 'section',
             oldValue: null,
-            newValue: 'New Section'
-          }
-        ]
+            newValue: 'New Section',
+          },
+        ],
       };
 
       render(<ChangeItem change={change} />);
@@ -105,8 +105,8 @@ describe('ChangeItem', () => {
           id: 'rule-3',
           text: 'Regola rimossa',
           section: 'Endgame',
-          page: '10'
-        }
+          page: '10',
+        },
       };
 
       render(<ChangeItem change={change} />);
@@ -125,8 +125,8 @@ describe('ChangeItem', () => {
         oldAtom: 'rule-4',
         oldValue: {
           id: 'rule-4',
-          text: 'Solo testo'
-        }
+          text: 'Solo testo',
+        },
       };
 
       render(<ChangeItem change={change} />);
@@ -144,8 +144,8 @@ describe('ChangeItem', () => {
         oldAtom: 'rule-5',
         oldValue: {
           id: 'rule-5',
-          text: 'Regola invariata'
-        }
+          text: 'Regola invariata',
+        },
       };
 
       render(<ChangeItem change={change} />);
@@ -158,12 +158,12 @@ describe('ChangeItem', () => {
   });
 
   describe('Stili e Icone', () => {
-    it('applica l\'icona corretta per ogni tipo di change', () => {
+    it("applica l'icona corretta per ogni tipo di change", () => {
       const changes = [
         { type: 'Added' as const, newAtom: 'r1', newValue: { id: 'r1', text: 'Test' } },
         { type: 'Modified' as const, oldAtom: 'r2', fieldChanges: [] },
         { type: 'Deleted' as const, oldAtom: 'r3', oldValue: { id: 'r3', text: 'Test' } },
-        { type: 'Unchanged' as const, oldAtom: 'r4', oldValue: { id: 'r4', text: 'Test' } }
+        { type: 'Unchanged' as const, oldAtom: 'r4', oldValue: { id: 'r4', text: 'Test' } },
       ];
 
       const { rerender } = render(<ChangeItem change={changes[0]} />);
@@ -189,9 +189,9 @@ describe('ChangeItem', () => {
           {
             fieldName: 'text',
             oldValue: undefined,
-            newValue: undefined
-          }
-        ]
+            newValue: undefined,
+          },
+        ],
       };
 
       render(<ChangeItem change={change} />);
@@ -208,8 +208,8 @@ describe('ChangeItem', () => {
         fieldChanges: [
           { fieldName: 'text', oldValue: 'Old 1', newValue: 'New 1' },
           { fieldName: 'section', oldValue: 'Old 2', newValue: 'New 2' },
-          { fieldName: 'page', oldValue: 'Old 3', newValue: 'New 3' }
-        ]
+          { fieldName: 'page', oldValue: 'Old 3', newValue: 'New 3' },
+        ],
       };
 
       render(<ChangeItem change={change} />);

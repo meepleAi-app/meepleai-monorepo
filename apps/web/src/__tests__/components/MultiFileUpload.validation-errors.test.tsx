@@ -11,7 +11,7 @@
  */
 
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { MultiFileUpload } from '../../components/MultiFileUpload';
+import { MultiFileUpload } from '../../components/upload/MultiFileUpload';
 import {
   mockAddFiles,
   createMockFile,
@@ -19,7 +19,7 @@ import {
   defaultProps,
   setupBeforeEach,
   setupAfterEach,
-  waitForFileValidation
+  waitForFileValidation,
 } from './MultiFileUpload.test-helpers';
 
 // Import mock creation function
@@ -38,7 +38,7 @@ describe('MultiFileUpload - Validation Errors', () => {
       const files = [
         createMockFile('valid.pdf', 1000, 'application/pdf'),
         createMockFile('too-big.pdf', 105 * 1024 * 1024, 'application/pdf'),
-        createMockFile('wrong-type.txt', 1000, 'text/plain')
+        createMockFile('wrong-type.txt', 1000, 'text/plain'),
       ];
       const input = screen.getByLabelText(/File input for PDF upload/i) as HTMLInputElement;
 
@@ -62,7 +62,7 @@ describe('MultiFileUpload - Validation Errors', () => {
       const files = [
         createMockFile('valid1.pdf', 1000, 'application/pdf'),
         createMockFile('invalid.txt', 1000, 'text/plain'),
-        createMockFile('valid2.pdf', 2000, 'application/pdf')
+        createMockFile('valid2.pdf', 2000, 'application/pdf'),
       ];
       const input = screen.getByLabelText(/File input for PDF upload/i) as HTMLInputElement;
 
@@ -71,20 +71,23 @@ describe('MultiFileUpload - Validation Errors', () => {
         await waitForFileValidation(150);
       });
 
-      await waitFor(() => {
-        expect(mockAddFiles).toHaveBeenCalledTimes(1);
-        const callArgs = mockAddFiles.mock.calls[0];
-        expect(callArgs[0]).toHaveLength(2);
-        expect(callArgs[0]).toEqual(
-          expect.arrayContaining([
-            expect.objectContaining({ name: 'valid1.pdf', type: 'application/pdf' }),
-            expect.objectContaining({ name: 'valid2.pdf', type: 'application/pdf' })
-          ])
-        );
-        expect(callArgs[1]).toBe('game-123');
-        expect(callArgs[2]).toBe('en');
-        expect(callArgs[0].every((f: File) => f.name !== 'invalid.txt')).toBe(true);
-      }, { timeout: 2000 });
+      await waitFor(
+        () => {
+          expect(mockAddFiles).toHaveBeenCalledTimes(1);
+          const callArgs = mockAddFiles.mock.calls[0];
+          expect(callArgs[0]).toHaveLength(2);
+          expect(callArgs[0]).toEqual(
+            expect.arrayContaining([
+              expect.objectContaining({ name: 'valid1.pdf', type: 'application/pdf' }),
+              expect.objectContaining({ name: 'valid2.pdf', type: 'application/pdf' }),
+            ])
+          );
+          expect(callArgs[1]).toBe('game-123');
+          expect(callArgs[2]).toBe('en');
+          expect(callArgs[0].every((f: File) => f.name !== 'invalid.txt')).toBe(true);
+        },
+        { timeout: 2000 }
+      );
     });
 
     it('shows validation errors even when some files are valid', async () => {
@@ -94,7 +97,7 @@ describe('MultiFileUpload - Validation Errors', () => {
       const files = [
         createMockFile('valid.pdf', 1000, 'application/pdf'),
         createMockFile('invalid.txt', 1000, 'text/plain'),
-        createMockFile('empty.pdf', 0, 'application/pdf')
+        createMockFile('empty.pdf', 0, 'application/pdf'),
       ];
       const input = screen.getByLabelText(/File input for PDF upload/i) as HTMLInputElement;
 
@@ -103,20 +106,21 @@ describe('MultiFileUpload - Validation Errors', () => {
         await waitForFileValidation(50);
       });
 
-      await waitFor(() => {
-        const alert = screen.getByRole('alert');
-        expect(alert).toHaveTextContent(/Validation Errors/i);
-        expect(alert.textContent).toContain('invalid.txt');
-        expect(alert.textContent).toContain('empty.pdf');
-        // Valid file should still be added
-        expect(mockAddFiles).toHaveBeenCalledWith(
-          expect.arrayContaining([
-            expect.objectContaining({ name: 'valid.pdf' })
-          ]),
-          'game-123',
-          'en'
-        );
-      }, { timeout: 2000 });
+      await waitFor(
+        () => {
+          const alert = screen.getByRole('alert');
+          expect(alert).toHaveTextContent(/Validation Errors/i);
+          expect(alert.textContent).toContain('invalid.txt');
+          expect(alert.textContent).toContain('empty.pdf');
+          // Valid file should still be added
+          expect(mockAddFiles).toHaveBeenCalledWith(
+            expect.arrayContaining([expect.objectContaining({ name: 'valid.pdf' })]),
+            'game-123',
+            'en'
+          );
+        },
+        { timeout: 2000 }
+      );
     });
   });
 
@@ -127,7 +131,7 @@ describe('MultiFileUpload - Validation Errors', () => {
 
       const files = [
         createMockFile('invalid1.txt', 1000, 'text/plain'),
-        createMockFile('invalid2.doc', 2000, 'application/msword')
+        createMockFile('invalid2.doc', 2000, 'application/msword'),
       ];
       const input = screen.getByLabelText(/File input for PDF upload/i) as HTMLInputElement;
 
@@ -157,9 +161,12 @@ describe('MultiFileUpload - Validation Errors', () => {
         await waitForFileValidation(10);
       });
 
-      await waitFor(() => {
-        expect(screen.getByRole('alert')).toBeInTheDocument();
-      }, { timeout: 1000 });
+      await waitFor(
+        () => {
+          expect(screen.getByRole('alert')).toBeInTheDocument();
+        },
+        { timeout: 1000 }
+      );
 
       // Then, add valid file with proper PDF header
       mockFileReader('%PDF-');
@@ -170,16 +177,22 @@ describe('MultiFileUpload - Validation Errors', () => {
         await waitForFileValidation(50);
       });
 
-      await waitFor(() => {
-        expect(mockAddFiles).toHaveBeenCalled();
-      }, { timeout: 1000 });
+      await waitFor(
+        () => {
+          expect(mockAddFiles).toHaveBeenCalled();
+        },
+        { timeout: 1000 }
+      );
 
-      await waitFor(() => {
-        const alert = screen.queryByRole('alert');
-        if (alert) {
-          expect(alert.textContent).not.toContain('Invalid PDF format: valid.pdf');
-        }
-      }, { timeout: 1000 });
+      await waitFor(
+        () => {
+          const alert = screen.queryByRole('alert');
+          if (alert) {
+            expect(alert.textContent).not.toContain('Invalid PDF format: valid.pdf');
+          }
+        },
+        { timeout: 1000 }
+      );
     });
 
     it('does not render validation errors initially', () => {
@@ -195,7 +208,7 @@ describe('MultiFileUpload - Validation Errors', () => {
           setTimeout(() => this.onerror?.(new Error('Read failed')), 0);
         }),
         onload: null as any,
-        onerror: null as any
+        onerror: null as any,
       };
       (global as any).FileReader = vi.fn(() => mockReader);
 
@@ -216,7 +229,7 @@ describe('MultiFileUpload - Validation Errors', () => {
 
     it('continues processing other files after FileReader error', async () => {
       let callCount = 0;
-      (global as any).FileReader = vi.fn(function(this: any) {
+      (global as any).FileReader = vi.fn(function (this: any) {
         callCount++;
         const shouldFail = callCount === 1; // First file fails
 
@@ -247,7 +260,7 @@ describe('MultiFileUpload - Validation Errors', () => {
 
       const files = [
         createMockFile('fail.pdf', 1000, 'application/pdf'),
-        createMockFile('success.pdf', 1000, 'application/pdf')
+        createMockFile('success.pdf', 1000, 'application/pdf'),
       ];
       const input = screen.getByLabelText(/File input for PDF upload/i) as HTMLInputElement;
 
@@ -256,18 +269,19 @@ describe('MultiFileUpload - Validation Errors', () => {
         await waitForFileValidation(150);
       });
 
-      await waitFor(() => {
-        // Should have error for failed file
-        expect(screen.getByRole('alert')).toBeInTheDocument();
-        // Should still add the successful file
-        expect(mockAddFiles).toHaveBeenCalledWith(
-          expect.arrayContaining([
-            expect.objectContaining({ name: 'success.pdf' })
-          ]),
-          'game-123',
-          'en'
-        );
-      }, { timeout: 2000 });
+      await waitFor(
+        () => {
+          // Should have error for failed file
+          expect(screen.getByRole('alert')).toBeInTheDocument();
+          // Should still add the successful file
+          expect(mockAddFiles).toHaveBeenCalledWith(
+            expect.arrayContaining([expect.objectContaining({ name: 'success.pdf' })]),
+            'game-123',
+            'en'
+          );
+        },
+        { timeout: 2000 }
+      );
     });
   });
 

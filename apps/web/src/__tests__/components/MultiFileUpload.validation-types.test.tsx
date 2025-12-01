@@ -11,7 +11,7 @@
  */
 
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { MultiFileUpload } from '../../components/MultiFileUpload';
+import { MultiFileUpload } from '../../components/upload/MultiFileUpload';
 import {
   mockAddFiles,
   createMockFile,
@@ -19,7 +19,7 @@ import {
   defaultProps,
   setupBeforeEach,
   setupAfterEach,
-  waitForFileValidation
+  waitForFileValidation,
 } from './MultiFileUpload.test-helpers';
 
 // Import mock creation function
@@ -61,15 +61,18 @@ describe('MultiFileUpload - Validation Types', () => {
         await waitForFileValidation(100);
       });
 
-      await waitFor(() => {
-        expect(mockAddFiles).toHaveBeenCalledWith(
-          expect.arrayContaining([
-            expect.objectContaining({ name: 'test.pdf', type: 'application/pdf' })
-          ]),
-          'game-123',
-          'en'
-        );
-      }, { timeout: 2000 });
+      await waitFor(
+        () => {
+          expect(mockAddFiles).toHaveBeenCalledWith(
+            expect.arrayContaining([
+              expect.objectContaining({ name: 'test.pdf', type: 'application/pdf' }),
+            ]),
+            'game-123',
+            'en'
+          );
+        },
+        { timeout: 2000 }
+      );
     });
   });
 
@@ -123,15 +126,18 @@ describe('MultiFileUpload - Validation Types', () => {
         await waitForFileValidation(100);
       });
 
-      await waitFor(() => {
-        expect(mockAddFiles).toHaveBeenCalledWith(
-          expect.arrayContaining([
-            expect.objectContaining({ name: 'valid.pdf', type: 'application/pdf' })
-          ]),
-          'game-123',
-          'en'
-        );
-      }, { timeout: 2000 });
+      await waitFor(
+        () => {
+          expect(mockAddFiles).toHaveBeenCalledWith(
+            expect.arrayContaining([
+              expect.objectContaining({ name: 'valid.pdf', type: 'application/pdf' }),
+            ]),
+            'game-123',
+            'en'
+          );
+        },
+        { timeout: 2000 }
+      );
     });
   });
 
@@ -166,15 +172,18 @@ describe('MultiFileUpload - Validation Types', () => {
         await waitForFileValidation(100);
       });
 
-      await waitFor(() => {
-        expect(mockAddFiles).toHaveBeenCalledWith(
-          expect.arrayContaining([
-            expect.objectContaining({ name: 'valid.pdf', type: 'application/pdf' })
-          ]),
-          'game-123',
-          'en'
-        );
-      }, { timeout: 2000 });
+      await waitFor(
+        () => {
+          expect(mockAddFiles).toHaveBeenCalledWith(
+            expect.arrayContaining([
+              expect.objectContaining({ name: 'valid.pdf', type: 'application/pdf' }),
+            ]),
+            'game-123',
+            'en'
+          );
+        },
+        { timeout: 2000 }
+      );
     });
 
     it('accepts files with PDF magic bytes variations', async () => {
@@ -189,15 +198,18 @@ describe('MultiFileUpload - Validation Types', () => {
         await waitForFileValidation(100);
       });
 
-      await waitFor(() => {
-        expect(mockAddFiles).toHaveBeenCalledWith(
-          expect.arrayContaining([
-            expect.objectContaining({ name: 'modern.pdf', type: 'application/pdf' })
-          ]),
-          'game-123',
-          'en'
-        );
-      }, { timeout: 2000 });
+      await waitFor(
+        () => {
+          expect(mockAddFiles).toHaveBeenCalledWith(
+            expect.arrayContaining([
+              expect.objectContaining({ name: 'modern.pdf', type: 'application/pdf' }),
+            ]),
+            'game-123',
+            'en'
+          );
+        },
+        { timeout: 2000 }
+      );
     });
   });
 
@@ -237,17 +249,20 @@ describe('MultiFileUpload - Validation Types', () => {
         await waitForFileValidation(150);
       });
 
-      await waitFor(() => {
-        expect(mockAddFiles).toHaveBeenCalledWith(
-          expect.arrayContaining(
-            Array.from({ length: 20 }, (_, i) =>
-              expect.objectContaining({ name: `test${i}.pdf`, type: 'application/pdf' })
-            )
-          ),
-          'game-123',
-          'en'
-        );
-      }, { timeout: 2000 });
+      await waitFor(
+        () => {
+          expect(mockAddFiles).toHaveBeenCalledWith(
+            expect.arrayContaining(
+              Array.from({ length: 20 }, (_, i) =>
+                expect.objectContaining({ name: `test${i}.pdf`, type: 'application/pdf' })
+              )
+            ),
+            'game-123',
+            'en'
+          );
+        },
+        { timeout: 2000 }
+      );
     });
 
     it('accepts batch with fewer than 20 files', async () => {
@@ -264,17 +279,20 @@ describe('MultiFileUpload - Validation Types', () => {
         await waitForFileValidation(100);
       });
 
-      await waitFor(() => {
-        expect(mockAddFiles).toHaveBeenCalledWith(
-          expect.arrayContaining(
-            Array.from({ length: 5 }, (_, i) =>
-              expect.objectContaining({ name: `test${i}.pdf`, type: 'application/pdf' })
-            )
-          ),
-          'game-123',
-          'en'
-        );
-      }, { timeout: 2000 });
+      await waitFor(
+        () => {
+          expect(mockAddFiles).toHaveBeenCalledWith(
+            expect.arrayContaining(
+              Array.from({ length: 5 }, (_, i) =>
+                expect.objectContaining({ name: `test${i}.pdf`, type: 'application/pdf' })
+              )
+            ),
+            'game-123',
+            'en'
+          );
+        },
+        { timeout: 2000 }
+      );
     });
   });
 });

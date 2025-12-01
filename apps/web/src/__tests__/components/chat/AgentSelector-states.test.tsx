@@ -10,6 +10,21 @@ import userEvent from '@testing-library/user-event';
 import { AgentSelector } from '../../../components/chat/AgentSelector';
 import { sampleAgents } from './AgentSelector.test-helpers';
 
+// Mock AuthProvider
+vi.mock('@/components/auth/AuthProvider', () => ({
+  AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useAuth: () => ({
+    user: { id: '1', email: 'test@example.com', displayName: 'Test User' },
+    loading: false,
+    error: null,
+    login: vi.fn(),
+    register: vi.fn(),
+    logout: vi.fn(),
+    refreshUser: vi.fn(),
+    clearError: vi.fn(),
+  }),
+}));
+
 // Mock the ChatProvider context
 const mockUseChatContext = vi.fn();
 vi.mock('../../../components/chat/ChatProvider', () => ({

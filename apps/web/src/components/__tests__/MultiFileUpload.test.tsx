@@ -6,7 +6,7 @@
 
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MultiFileUpload } from '../MultiFileUpload';
+import { MultiFileUpload } from '../upload/MultiFileUpload';
 
 describe('MultiFileUpload', () => {
   describe('Rendering', () => {

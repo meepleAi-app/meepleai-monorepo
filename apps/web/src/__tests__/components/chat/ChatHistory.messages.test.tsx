@@ -14,6 +14,21 @@ import { ChatHistory } from '../../../components/chat/ChatHistory';
 import { ChatProvider } from '../../../components/chat/ChatProvider';
 import { ChatThread } from '../../../types';
 
+// Mock AuthProvider
+vi.mock('@/components/auth/AuthProvider', () => ({
+  AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useAuth: () => ({
+    user: { id: '1', email: 'test@example.com', displayName: 'Test User' },
+    loading: false,
+    error: null,
+    login: vi.fn(),
+    register: vi.fn(),
+    logout: vi.fn(),
+    refreshUser: vi.fn(),
+    clearError: vi.fn(),
+  }),
+}));
+
 // Mock useChatContext hook
 vi.mock('../../../components/chat/ChatProvider', () => ({
   useChatContext: vi.fn(),
@@ -118,7 +133,9 @@ describe('ChatHistory Component', () => {
       render(<ChatHistory />);
 
       // Issue #858: Updated empty state message
-      expect(screen.getByText('Nessun thread. Invia un messaggio per iniziare!')).toBeInTheDocument();
+      expect(
+        screen.getByText('Nessun thread. Invia un messaggio per iniziare!')
+      ).toBeInTheDocument();
     });
 
     it('renders empty state within navigation element', () => {
@@ -126,7 +143,9 @@ describe('ChatHistory Component', () => {
       render(<ChatHistory />);
 
       const nav = screen.getByRole('navigation', { name: 'Thread history' });
-      expect(nav).toContainElement(screen.getByText('Nessun thread. Invia un messaggio per iniziare!'));
+      expect(nav).toContainElement(
+        screen.getByText('Nessun thread. Invia un messaggio per iniziare!')
+      );
     });
 
     it('applies correct styling to empty state', () => {
@@ -296,4 +315,3 @@ describe('ChatHistory Component', () => {
     });
   });
 });
-

@@ -1,12 +1,12 @@
 import type { Mock } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ThemeSwitcher } from '../ThemeSwitcher';
+import { ThemeSwitcher } from '../layout/ThemeSwitcher';
 import { useTheme } from 'next-themes';
 
 vi.mock('next-themes', () => ({
   useTheme: vi.fn(),
-  ThemeProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>
+  ThemeProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
 const mockUseTheme = useTheme as Mock<typeof useTheme>;
@@ -25,7 +25,7 @@ describe('ThemeSwitcher', () => {
       systemTheme: 'light',
       themes: ['light', 'dark', 'system'],
       resolvedTheme: 'light',
-      forcedTheme: undefined
+      forcedTheme: undefined,
     });
 
     const { container } = render(<ThemeSwitcher />);
@@ -42,7 +42,7 @@ describe('ThemeSwitcher', () => {
       systemTheme: 'light',
       themes: ['light', 'dark', 'system'],
       resolvedTheme: 'light',
-      forcedTheme: undefined
+      forcedTheme: undefined,
     });
 
     render(<ThemeSwitcher />);
@@ -62,7 +62,7 @@ describe('ThemeSwitcher', () => {
       systemTheme: 'dark',
       themes: ['light', 'dark', 'system'],
       resolvedTheme: 'dark',
-      forcedTheme: undefined
+      forcedTheme: undefined,
     });
 
     render(<ThemeSwitcher />);
@@ -82,7 +82,7 @@ describe('ThemeSwitcher', () => {
       systemTheme: 'light',
       themes: ['light', 'dark', 'system'],
       resolvedTheme: 'light',
-      forcedTheme: undefined
+      forcedTheme: undefined,
     });
 
     render(<ThemeSwitcher />);
@@ -102,7 +102,7 @@ describe('ThemeSwitcher', () => {
       systemTheme: 'dark',
       themes: ['light', 'dark', 'system'],
       resolvedTheme: 'dark',
-      forcedTheme: undefined
+      forcedTheme: undefined,
     });
 
     render(<ThemeSwitcher />);
@@ -124,7 +124,7 @@ describe('ThemeSwitcher', () => {
       systemTheme: 'dark',
       themes: ['light', 'dark', 'system'],
       resolvedTheme: 'dark',
-      forcedTheme: undefined
+      forcedTheme: undefined,
     });
 
     render(<ThemeSwitcher />);
@@ -151,7 +151,7 @@ describe('ThemeSwitcher', () => {
       systemTheme: 'light',
       themes: ['light', 'dark', 'system'],
       resolvedTheme: 'light',
-      forcedTheme: undefined
+      forcedTheme: undefined,
     });
 
     render(<ThemeSwitcher />);
@@ -178,7 +178,7 @@ describe('ThemeSwitcher', () => {
       systemTheme: 'light',
       themes: ['light', 'dark', 'system'],
       resolvedTheme: 'light',
-      forcedTheme: undefined
+      forcedTheme: undefined,
     });
 
     render(<ThemeSwitcher />);
@@ -205,7 +205,7 @@ describe('ThemeSwitcher', () => {
       systemTheme: 'light',
       themes: ['light', 'dark', 'system'],
       resolvedTheme: 'light',
-      forcedTheme: undefined
+      forcedTheme: undefined,
     });
 
     render(<ThemeSwitcher />);
@@ -231,7 +231,7 @@ describe('ThemeSwitcher', () => {
       systemTheme: 'dark',
       themes: ['light', 'dark', 'system'],
       resolvedTheme: 'dark',
-      forcedTheme: undefined
+      forcedTheme: undefined,
     });
 
     render(<ThemeSwitcher />);
@@ -257,7 +257,7 @@ describe('ThemeSwitcher', () => {
       systemTheme: 'light',
       themes: ['light', 'dark', 'system'],
       resolvedTheme: 'light',
-      forcedTheme: undefined
+      forcedTheme: undefined,
     });
 
     render(<ThemeSwitcher />);

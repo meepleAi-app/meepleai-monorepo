@@ -13,13 +13,13 @@
  */
 
 import { render, screen } from '@testing-library/react';
-import { MultiFileUpload } from '../../components/MultiFileUpload';
+import { MultiFileUpload } from '../../components/upload/MultiFileUpload';
 import {
   mockGetStats,
   defaultProps,
   setupBeforeEach,
   setupAfterEach,
-  createStats
+  createStats,
 } from './MultiFileUpload.test-helpers';
 
 // Import mock creation function
@@ -35,7 +35,9 @@ describe('MultiFileUpload - Upload UI', () => {
       render(<MultiFileUpload {...defaultProps} />);
 
       expect(screen.getByTestId('multi-file-upload')).toBeInTheDocument();
-      expect(screen.getByTestId('game-info-badge')).toHaveTextContent('Target Game: Test Game (game-123)');
+      expect(screen.getByTestId('game-info-badge')).toHaveTextContent(
+        'Target Game: Test Game (game-123)'
+      );
     });
 
     it('renders drag and drop zone with instructions', () => {
@@ -69,7 +71,9 @@ describe('MultiFileUpload - Upload UI', () => {
 
     it('renders drag zone with folder emoji', () => {
       render(<MultiFileUpload {...defaultProps} />);
-      const dropZone = screen.getByRole('button', { name: /Click to browse files or drag and drop PDFs here/i });
+      const dropZone = screen.getByRole('button', {
+        name: /Click to browse files or drag and drop PDFs here/i,
+      });
       expect(dropZone).toBeInTheDocument();
       expect(dropZone.textContent).toContain('📁');
     });
@@ -124,7 +128,9 @@ describe('MultiFileUpload - Upload UI', () => {
     it('has accessible drag and drop zone', () => {
       render(<MultiFileUpload {...defaultProps} />);
 
-      const dropZone = screen.getByRole('button', { name: /Click to browse files or drag and drop PDFs here/i });
+      const dropZone = screen.getByRole('button', {
+        name: /Click to browse files or drag and drop PDFs here/i,
+      });
       expect(dropZone).toHaveAttribute('tabIndex', '0');
       expect(dropZone).toHaveAttribute('aria-label');
     });
@@ -154,7 +160,9 @@ describe('MultiFileUpload - Upload UI', () => {
       render(<MultiFileUpload {...defaultProps} autoUpload={false} />);
 
       expect(screen.getByTestId('start-upload-button')).toBeInTheDocument();
-      expect(screen.getByTestId('start-upload-button')).toHaveTextContent(/Start Upload \(2 files\)/i);
+      expect(screen.getByTestId('start-upload-button')).toHaveTextContent(
+        /Start Upload \(2 files\)/i
+      );
     });
 
     it('shows correct button text with singular file', () => {

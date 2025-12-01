@@ -6,7 +6,7 @@
 
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ExportChatModal } from '../ExportChatModal';
+import { ExportChatModal } from '../modals/ExportChatModal';
 
 describe('ExportChatModal', () => {
   describe('Rendering', () => {

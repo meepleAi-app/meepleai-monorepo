@@ -295,7 +295,7 @@ describe('InlineCommentIndicator', () => {
   });
 
   describe('Tooltip', () => {
-    it('shows tooltip on hover after 500ms delay', async () => {
+    it('shows tooltip on hover after 500ms delay', () => {
       render(
         <InlineCommentIndicator
           lineNumber={10}
@@ -312,17 +312,16 @@ describe('InlineCommentIndicator', () => {
       // Before delay
       expect(screen.queryByText('This is a comment preview')).not.toBeInTheDocument();
 
-      // After delay
+      // After delay - with fake timers, advancement is synchronous
       act(() => {
         vi.advanceTimersByTime(500);
       });
 
-      await waitFor(() => {
-        expect(screen.getByText('This is a comment preview')).toBeInTheDocument();
-      });
+      // No waitFor needed - fake timers make this synchronous
+      expect(screen.getByText('This is a comment preview')).toBeInTheDocument();
     });
 
-    it('hides tooltip when mouse leaves', async () => {
+    it('hides tooltip when mouse leaves', () => {
       render(
         <InlineCommentIndicator
           lineNumber={10}
@@ -335,22 +334,16 @@ describe('InlineCommentIndicator', () => {
 
       const button = screen.getByRole('button');
 
-      // Show tooltip
+      // Show tooltip - synchronous with fake timers
       fireEvent.mouseEnter(button);
       act(() => {
         vi.advanceTimersByTime(500);
       });
+      expect(screen.getByText('This is a comment preview')).toBeInTheDocument();
 
-      await waitFor(() => {
-        expect(screen.getByText('This is a comment preview')).toBeInTheDocument();
-      });
-
-      // Hide tooltip
+      // Hide tooltip - synchronous state update
       fireEvent.mouseLeave(button);
-
-      await waitFor(() => {
-        expect(screen.queryByText('This is a comment preview')).not.toBeInTheDocument();
-      });
+      expect(screen.queryByText('This is a comment preview')).not.toBeInTheDocument();
     });
 
     it('cancels tooltip timer when mouse leaves before delay', async () => {
@@ -378,7 +371,7 @@ describe('InlineCommentIndicator', () => {
       expect(screen.queryByText('This is a comment preview')).not.toBeInTheDocument();
     });
 
-    it('truncates long preview text to 100 characters', async () => {
+    it('truncates long preview text to 100 characters', () => {
       const longText = 'A'.repeat(150);
       render(
         <InlineCommentIndicator
@@ -396,13 +389,12 @@ describe('InlineCommentIndicator', () => {
         vi.advanceTimersByTime(500);
       });
 
-      await waitFor(() => {
-        const tooltip = screen.getByText(/^A+\.\.\.$/);
-        expect(tooltip.textContent?.length).toBe(103); // 100 chars + '...'
-      });
+      // Synchronous with fake timers
+      const tooltip = screen.getByText(/^A+\.\.\.$/);
+      expect(tooltip.textContent?.length).toBe(103); // 100 chars + '...'
     });
 
-    it('does not show tooltip when previewText is empty', async () => {
+    it('does not show tooltip when previewText is empty', () => {
       render(
         <InlineCommentIndicator
           lineNumber={10}
@@ -419,13 +411,12 @@ describe('InlineCommentIndicator', () => {
         vi.advanceTimersByTime(500);
       });
 
-      await waitFor(() => {
-        const tooltipDiv = button.parentElement?.querySelector('div[style*="position: absolute"]');
-        expect(tooltipDiv).not.toBeInTheDocument();
-      });
+      // Synchronous check - no tooltip should appear
+      const tooltipDiv = button.parentElement?.querySelector('div[style*="position: absolute"]');
+      expect(tooltipDiv).not.toBeInTheDocument();
     });
 
-    it('does not show tooltip when previewText is undefined', async () => {
+    it('does not show tooltip when previewText is undefined', () => {
       render(
         <InlineCommentIndicator
           lineNumber={10}
@@ -441,13 +432,12 @@ describe('InlineCommentIndicator', () => {
         vi.advanceTimersByTime(500);
       });
 
-      await waitFor(() => {
-        const tooltipDiv = button.parentElement?.querySelector('div[style*="position: absolute"]');
-        expect(tooltipDiv).not.toBeInTheDocument();
-      });
+      // Synchronous check - no tooltip should appear
+      const tooltipDiv = button.parentElement?.querySelector('div[style*="position: absolute"]');
+      expect(tooltipDiv).not.toBeInTheDocument();
     });
 
-    it('shows tooltip with arrow', async () => {
+    it('shows tooltip with arrow', () => {
       render(
         <InlineCommentIndicator
           lineNumber={10}
@@ -464,12 +454,11 @@ describe('InlineCommentIndicator', () => {
         vi.advanceTimersByTime(500);
       });
 
-      await waitFor(() => {
-        const tooltip = screen.getByText('Preview with arrow');
-        const tooltipContainer = tooltip.parentElement;
-        const arrow = tooltipContainer?.querySelector('div[class*="border-t-"]');
-        expect(arrow).toBeInTheDocument();
-      });
+      // Synchronous with fake timers
+      const tooltip = screen.getByText('Preview with arrow');
+      const tooltipContainer = tooltip.parentElement;
+      const arrow = tooltipContainer?.querySelector('div[class*="border-t-"]');
+      expect(arrow).toBeInTheDocument();
     });
   });
 

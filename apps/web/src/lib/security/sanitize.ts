@@ -23,7 +23,7 @@
  * @module security/sanitize
  */
 
-import DOMPurify from 'dompurify';
+import DOMPurify, { type Config as DOMPurifyConfig } from 'dompurify';
 
 /**
  * Default DOMPurify configuration for MeepleAI
@@ -41,7 +41,7 @@ import DOMPurify from 'dompurify';
  * - Removes data: URLs (except safe image formats)
  * - Removes potentially dangerous tags (script, iframe, object, embed)
  */
-const DEFAULT_CONFIG: DOMPurify.Config = {
+const DEFAULT_CONFIG: DOMPurifyConfig = {
   // Allowed tags
   ALLOWED_TAGS: [
     // Text formatting
@@ -127,7 +127,7 @@ const DEFAULT_CONFIG: DOMPurify.Config = {
  *
  * Use for untrusted user input (comments, forum posts, etc.)
  */
-const STRICT_CONFIG: DOMPurify.Config = {
+const STRICT_CONFIG: DOMPurifyConfig = {
   ALLOWED_TAGS: ['b', 'i', 'u', 'em', 'strong', 'p', 'br', 'ul', 'ol', 'li', 'code', 'pre'],
   ALLOWED_ATTR: ['class'], // Only allow class for styling
   ALLOW_DATA_ATTR: false,
@@ -140,7 +140,7 @@ const STRICT_CONFIG: DOMPurify.Config = {
  *
  * Use when you need to convert HTML to plain text safely
  */
-const PLAIN_TEXT_CONFIG: DOMPurify.Config = {
+const PLAIN_TEXT_CONFIG: DOMPurifyConfig = {
   ALLOWED_TAGS: [], // Remove all tags
   ALLOWED_ATTR: [],
   KEEP_CONTENT: true, // Keep text content
@@ -163,7 +163,7 @@ const PLAIN_TEXT_CONFIG: DOMPurify.Config = {
  * // Result: '<p>Safe content</p>'
  * ```
  */
-export function sanitizeHtml(html: string, config: DOMPurify.Config = DEFAULT_CONFIG): string {
+export function sanitizeHtml(html: string, config: DOMPurifyConfig = DEFAULT_CONFIG): string {
   if (typeof window === 'undefined') {
     // Server-side: return empty string (DOMPurify requires DOM)
     // In production, consider using a server-side sanitization library
@@ -294,7 +294,7 @@ export function htmlToPlainText(html: string): string {
  */
 export function createSafeMarkup(
   html: string,
-  config: DOMPurify.Config = DEFAULT_CONFIG
+  config: DOMPurifyConfig = DEFAULT_CONFIG
 ): { __html: string } {
   return {
     __html: sanitizeHtml(html, config),

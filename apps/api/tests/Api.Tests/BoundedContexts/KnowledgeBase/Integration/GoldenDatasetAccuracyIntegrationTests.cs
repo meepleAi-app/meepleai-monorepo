@@ -40,8 +40,63 @@ public class GoldenDatasetAccuracyIntegrationTests
     {
         _mockLoaderLogger = new Mock<ILogger<GoldenDatasetLoader>>();
         _mockEvaluatorLogger = new Mock<ILogger<RagAccuracyEvaluator>>();
-        _loader = new GoldenDatasetLoader(_mockLoaderLogger.Object);
+        _loader = new GoldenDatasetLoader(_mockLoaderLogger.Object, FindGoldenDatasetPath());
         _evaluator = new RagAccuracyEvaluator(_mockEvaluatorLogger.Object);
+    }
+
+    /// <summary>
+    /// Helper to find golden dataset path from repository root
+    /// </summary>
+    private static string FindGoldenDatasetPath()
+    {
+        // Start from current directory and walk up to find .git
+        var currentDir = Directory.GetCurrentDirectory();
+        var repoRoot = FindRepositoryRoot(currentDir);
+
+        if (repoRoot != null)
+        {
+            var path = Path.Combine(repoRoot, "tests", "data", "golden_dataset.json");
+            if (File.Exists(path))
+                return path;
+        }
+
+        // Fallback: Try multiple levels up to find the file
+        for (int levels = 1; levels <= 10; levels++)
+        {
+            var upPath = string.Join(Path.DirectorySeparatorChar.ToString(),
+                Enumerable.Repeat("..", levels));
+            var testPath = Path.GetFullPath(Path.Combine(currentDir, upPath, "tests", "data", "golden_dataset.json"));
+
+            if (File.Exists(testPath))
+                return testPath;
+        }
+
+        throw new InvalidOperationException(
+            $"Could not find golden_dataset.json searching up from: {currentDir}");
+    }
+
+    /// <summary>
+    /// Find repository root by looking for .git directory
+    /// </summary>
+    private static string? FindRepositoryRoot(string startPath)
+    {
+        var current = new DirectoryInfo(startPath);
+
+        // Walk up maximum 10 levels to prevent infinite loops
+        int maxLevels = 10;
+        int level = 0;
+
+        while (current != null && level < maxLevels)
+        {
+            var gitPath = Path.Combine(current.FullName, ".git");
+            if (Directory.Exists(gitPath))
+                return current.FullName;
+
+            current = current.Parent;
+            level++;
+        }
+
+        return null;
     }
 
     /// <summary>

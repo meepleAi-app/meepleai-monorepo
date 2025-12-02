@@ -7,6 +7,7 @@
     the running RAG API and generates detailed accuracy report.
 
     Issue #999 (BGAI-059): Quality test implementation for accuracy validation
+    Issue #1000 (BGAI-060): Updated to use DDD /knowledge-base/ask endpoint
 
     WARNING: This script makes real LLM API calls (cost: ~$2-5 per run)
              Execution time: ~8-10 minutes
@@ -174,14 +175,15 @@ foreach ($testCase in $testCases) {
     }
 
     try {
-        # Call RAG API
+        # Call RAG API (DDD endpoint - Issue #1000)
         $body = @{
-            question = $testCase.Question
+            query = $testCase.Question  # DDD uses 'query' instead of 'question'
             gameId = $testCase.GameId
             language = "it"
+            bypassCache = $true  # Ensure fresh responses for accuracy testing
         } | ConvertTo-Json
 
-        $response = Invoke-RestMethod -Uri "$ApiBaseUrl/api/v1/chat" -Method Post -Body $body -ContentType "application/json" -TimeoutSec 30
+        $response = Invoke-RestMethod -Uri "$ApiBaseUrl/knowledge-base/ask" -Method Post -Body $body -ContentType "application/json" -TimeoutSec 30
 
         # Evaluate response
         $keywordMatches = 0
@@ -230,7 +232,7 @@ foreach ($testCase in $testCases) {
             KeywordMatchRate = $keywordMatchRate
             CitationValid = $citationValid
             NoForbidden = -not $hasForbidden
-            Confidence = $response.confidence
+            Confidence = $response.overallConfidence  # DDD uses overallConfidence
         }
 
     } catch {

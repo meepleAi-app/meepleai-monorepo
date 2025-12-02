@@ -652,7 +652,7 @@ wc -l pages/upload.tsx  # Target: < 500
 wc -l components/chat/ChatProvider.tsx  # Target: < 250
 
 # Inline styles
-grep -r "style={{" src/ | wc -l  # Target: < 10
+grep -r "style=\{\{" src/ | wc -l  # Target: < 10
 
 # ESLint warnings
 pnpm lint  # Target: 0 warnings

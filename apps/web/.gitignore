@@ -1,1 +1,4 @@
 .env.local
+
+# Storybook build output
+storybook-static/

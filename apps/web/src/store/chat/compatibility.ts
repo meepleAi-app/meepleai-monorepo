@@ -20,13 +20,19 @@
  * 4. Remove compatibility layer when all components migrated
  */
 
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, createContext, useContext } from 'react';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { useChatStore } from './store';
 import { ChatThread, Message, Game, Agent } from '@/types';
 import { AgentDto } from '@/lib/api/schemas/agents.schemas';
 import type { FeedbackOutcome } from '@/lib/constants/feedback';
 import { useStreamingChat } from '@/lib/hooks/useStreamingChat';
+
+/**
+ * ChatContext for Storybook/testing
+ * Allows overriding the Zustand store values in isolated stories
+ */
+export const ChatContext = createContext<ChatContextValue | null>(null);
 
 export interface ChatContextValue {
   // Authentication (from AuthProvider - not migrated)
@@ -131,28 +137,38 @@ export function useChatContext(): ChatContextValue {
       // Optional: Could add custom state update logic here
       // For now, state updates happen automatically via hook
     }, []),
-    onComplete: useCallback((answer: string, citations: import('@/lib/api/schemas/streaming.schemas').Citation[], confidence: number | null) => {
-      // When streaming completes, add assistant message to chat
-      if (!activeChatId) return;
+    onComplete: useCallback(
+      (
+        answer: string,
+        citations: import('@/lib/api/schemas/streaming.schemas').Citation[],
+        confidence: number | null
+      ) => {
+        // When streaming completes, add assistant message to chat
+        if (!activeChatId) return;
 
-      const assistantMessage: Message = {
-        id: `temp-assistant-${Date.now()}`,
-        role: 'assistant',
-        content: answer,
-        timestamp: new Date(),
-        endpoint: 'qa-stream',
-        gameId: selectedGameId || undefined,
-      };
+        const assistantMessage: Message = {
+          id: `temp-assistant-${Date.now()}`,
+          role: 'assistant',
+          content: answer,
+          timestamp: new Date(),
+          endpoint: 'qa-stream',
+          gameId: selectedGameId || undefined,
+        };
 
-      // Add to messages via store
-      store.addOptimisticMessage(assistantMessage, activeChatId);
+        // Add to messages via store
+        store.addOptimisticMessage(assistantMessage, activeChatId);
 
-      // Reload messages to get backend-persisted version
-      void store.loadMessages(activeChatId);
-    }, [activeChatId, selectedGameId, store]),
-    onError: useCallback((err: Error) => {
-      store.setError(err.message || 'Errore durante lo streaming');
-    }, [store]),
+        // Reload messages to get backend-persisted version
+        void store.loadMessages(activeChatId);
+      },
+      [activeChatId, selectedGameId, store]
+    ),
+    onError: useCallback(
+      (err: Error) => {
+        store.setError(err.message || 'Errore durante lo streaming');
+      },
+      [store]
+    ),
   });
 
   // Wrap sendMessage to trigger streaming (Issue #1007)

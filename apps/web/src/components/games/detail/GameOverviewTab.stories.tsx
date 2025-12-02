@@ -21,7 +21,8 @@ const mockBggDetails: BggGameDetails = {
   publishers: ['Catan Studio', 'Kosmos', 'Filosofia'],
 };
 
-(api.bgg.getGameDetails as any) = vi.fn().mockResolvedValue(mockBggDetails);
+// Mock API for Storybook - use plain function instead of vi.fn() which is Vitest-only
+(api.bgg.getGameDetails as unknown) = () => Promise.resolve(mockBggDetails);
 
 const mockGame: Game = {
   id: 'game-1',
@@ -112,7 +113,8 @@ export const BGGError: Story = {
   },
   decorators: [
     () => {
-      (api.bgg.getGameDetails as any) = vi.fn().mockRejectedValue(new Error('Network error'));
+      // Use plain function mock instead of vi.fn() which is Vitest-only
+      (api.bgg.getGameDetails as unknown) = () => Promise.reject(new Error('Network error'));
       return <GameOverviewTab game={mockGame} />;
     },
   ],

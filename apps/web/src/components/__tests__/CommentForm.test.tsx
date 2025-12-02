@@ -3,6 +3,24 @@ import userEvent from '@testing-library/user-event';
 import { CommentForm } from '../comments/CommentForm';
 import React from 'react';
 
+// Mock the logger
+const mockLoggerError = vi.fn();
+vi.mock('@/lib/logger', () => ({
+  logger: {
+    error: (...args: unknown[]) => mockLoggerError(...args),
+    warn: vi.fn(),
+    info: vi.fn(),
+    debug: vi.fn(),
+  },
+}));
+
+// Mock createErrorContext
+vi.mock('@/lib/errors', () => ({
+  createErrorContext: vi
+    .fn()
+    .mockReturnValue({ component: 'CommentForm', operation: 'handleSubmit' }),
+}));
+
 // Mock AuthProvider
 vi.mock('@/components/auth/AuthProvider', () => ({
   AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
@@ -279,16 +297,14 @@ describe('CommentForm', () => {
   });
 
   describe('error handling', () => {
-    let consoleErrorSpy: jest.SpyInstance;
     let alertSpy: jest.SpyInstance;
 
     beforeEach(() => {
-      consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+      mockLoggerError.mockClear();
     });
 
     afterEach(() => {
-      consoleErrorSpy.mockRestore();
       alertSpy.mockRestore();
     });
 
@@ -310,7 +326,7 @@ describe('CommentForm', () => {
       });
     });
 
-    it('logs error to console when submission fails', async () => {
+    it('logs error to logger when submission fails', async () => {
       const error = new Error('Network error');
       mockOnSubmit.mockRejectedValue(error);
 
@@ -325,7 +341,11 @@ describe('CommentForm', () => {
       await user.click(submitButton);
 
       await waitFor(() => {
-        expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to create comment:', error);
+        expect(mockLoggerError).toHaveBeenCalledWith(
+          'Failed to create comment',
+          error,
+          expect.any(Object)
+        );
       });
     });
 

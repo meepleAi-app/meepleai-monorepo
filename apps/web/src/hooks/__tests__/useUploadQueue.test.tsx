@@ -299,10 +299,16 @@ describe('useUploadQueue', () => {
         result.current.cancelUpload(itemId);
       });
 
+      // Switch to real timers for waitFor to work properly
+      vi.useRealTimers();
+
       await waitFor(() => {
         const item = result.current.queue.find(i => i.id === itemId);
         expect(item?.status).toBe('cancelled');
       });
+
+      // Restore fake timers for cleanup
+      vi.useFakeTimers();
     });
 
     it('should set progress to 0 on cancel', () => {

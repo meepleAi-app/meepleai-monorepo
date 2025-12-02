@@ -1,6 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { GamePicker } from './GamePicker';
 
+// Mock function for onClick handlers in Storybook (avoids Vitest/Jest dependency)
+const fn = <T extends unknown[], R>(implementation?: (...args: T) => R) =>
+  implementation ?? ((() => {}) as unknown as (...args: T) => R);
+
 /**
  * GamePicker - Game selection and creation component
  *

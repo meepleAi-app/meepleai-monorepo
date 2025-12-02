@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { CollapsibleUnchangedSection } from '../CollapsibleUnchangedSection';
 import { CollapsibleSection } from '../../../lib/diffProcessor';
@@ -24,6 +24,12 @@ describe('CollapsibleUnchangedSection', () => {
     vi.clearAllMocks();
   });
 
+  afterEach(async () => {
+    // Wait for the component's animation timeout (300ms) to complete
+    // to prevent "window is not defined" errors after test teardown
+    await new Promise(resolve => setTimeout(resolve, 350));
+  });
+
   describe('Rendering', () => {
     it('should render collapsed state', () => {
       render(
@@ -34,18 +40,12 @@ describe('CollapsibleUnchangedSection', () => {
         />
       );
 
-      expect(
-        screen.getByText(/Expand 40 unchanged lines \(10-50\)/)
-      ).toBeInTheDocument();
+      expect(screen.getByText(/Expand 40 unchanged lines \(10-50\)/)).toBeInTheDocument();
     });
 
     it('should render expanded state', () => {
       render(
-        <CollapsibleUnchangedSection
-          section={expandedSection}
-          onToggle={mockOnToggle}
-          side="old"
-        />
+        <CollapsibleUnchangedSection section={expandedSection} onToggle={mockOnToggle} side="old" />
       );
 
       expect(screen.getByText(/Collapse 40 unchanged lines/)).toBeInTheDocument();
@@ -65,11 +65,7 @@ describe('CollapsibleUnchangedSection', () => {
 
     it('should show correct icon for expanded state', () => {
       render(
-        <CollapsibleUnchangedSection
-          section={expandedSection}
-          onToggle={mockOnToggle}
-          side="old"
-        />
+        <CollapsibleUnchangedSection section={expandedSection} onToggle={mockOnToggle} side="old" />
       );
 
       expect(screen.getByText('⬆')).toBeInTheDocument();
@@ -102,7 +98,7 @@ describe('CollapsibleUnchangedSection', () => {
 
   describe('User Interactions', () => {
     it('should call onToggle when button is clicked', async () => {
-      const user = userEvent.setup({ delay: null });
+      const user = userEvent.setup();
 
       render(
         <CollapsibleUnchangedSection
@@ -119,7 +115,7 @@ describe('CollapsibleUnchangedSection', () => {
     });
 
     it('should add animating class when toggled', async () => {
-      const user = userEvent.setup({ delay: null });
+      const user = userEvent.setup();
 
       render(
         <CollapsibleUnchangedSection
@@ -136,7 +132,8 @@ describe('CollapsibleUnchangedSection', () => {
     });
 
     it('should remove animating class after animation completes', async () => {
-      const user = userEvent.setup({ delay: null });
+      // Use fake timers only for this specific test
+      vi.useFakeTimers();
 
       render(
         <CollapsibleUnchangedSection
@@ -147,20 +144,27 @@ describe('CollapsibleUnchangedSection', () => {
       );
 
       const button = screen.getByRole('button');
-      await user.click(button);
+
+      // Use act to wrap the click and state update
+      await act(async () => {
+        button.click();
+      });
 
       expect(button).toHaveClass('animating');
 
-      // Wait for animation timeout (300ms) + small buffer
-      await new Promise(resolve => setTimeout(resolve, 350));
-
-      await waitFor(() => {
-        expect(button).not.toHaveClass('animating');
+      // Advance past animation timeout (300ms)
+      await act(async () => {
+        vi.advanceTimersByTime(350);
       });
+
+      expect(button).not.toHaveClass('animating');
+
+      // Cleanup fake timers
+      vi.useRealTimers();
     });
 
     it('should handle multiple rapid clicks', async () => {
-      const user = userEvent.setup({ delay: null });
+      const user = userEvent.setup();
 
       render(
         <CollapsibleUnchangedSection
@@ -197,11 +201,7 @@ describe('CollapsibleUnchangedSection', () => {
 
     it('should have proper ARIA attributes for expanded state', () => {
       render(
-        <CollapsibleUnchangedSection
-          section={expandedSection}
-          onToggle={mockOnToggle}
-          side="old"
-        />
+        <CollapsibleUnchangedSection section={expandedSection} onToggle={mockOnToggle} side="old" />
       );
 
       const button = screen.getByRole('button');
@@ -210,7 +210,7 @@ describe('CollapsibleUnchangedSection', () => {
     });
 
     it('should be keyboard accessible', async () => {
-      const user = userEvent.setup({ delay: null });
+      const user = userEvent.setup();
 
       render(
         <CollapsibleUnchangedSection
@@ -256,11 +256,7 @@ describe('CollapsibleUnchangedSection', () => {
 
     it('should not display line range when expanded', () => {
       render(
-        <CollapsibleUnchangedSection
-          section={expandedSection}
-          onToggle={mockOnToggle}
-          side="old"
-        />
+        <CollapsibleUnchangedSection section={expandedSection} onToggle={mockOnToggle} side="old" />
       );
 
       expect(screen.queryByText(/\(10-50\)/)).not.toBeInTheDocument();
@@ -295,11 +291,7 @@ describe('CollapsibleUnchangedSection', () => {
       };
 
       render(
-        <CollapsibleUnchangedSection
-          section={largeSection}
-          onToggle={mockOnToggle}
-          side="old"
-        />
+        <CollapsibleUnchangedSection section={largeSection} onToggle={mockOnToggle} side="old" />
       );
 
       expect(screen.getByText(/4900 unchanged lines/)).toBeInTheDocument();
@@ -317,11 +309,7 @@ describe('CollapsibleUnchangedSection', () => {
       };
 
       render(
-        <CollapsibleUnchangedSection
-          section={emptySection}
-          onToggle={mockOnToggle}
-          side="old"
-        />
+        <CollapsibleUnchangedSection section={emptySection} onToggle={mockOnToggle} side="old" />
       );
 
       expect(screen.getByText(/0 unchanged lines/)).toBeInTheDocument();

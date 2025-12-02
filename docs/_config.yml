@@ -1,0 +1,59 @@
+# Jekyll configuration for GitHub Pages
+# Disable Liquid processing for files containing JSX/React code patterns
+
+# Exclude files with JSX syntax that conflicts with Liquid
+exclude:
+  - "node_modules"
+  - "vendor"
+
+# Files to skip Liquid processing (contain style={{ }}, {{ $var }}, etc.)
+# These files contain React/JSX or Prometheus query syntax
+defaults:
+  - scope:
+      path: "04-frontend/improvements"
+    values:
+      render_with_liquid: false
+  - scope:
+      path: "04-frontend/design-system.md"
+    values:
+      render_with_liquid: false
+  - scope:
+      path: "04-frontend/animations-examples.md"
+    values:
+      render_with_liquid: false
+  - scope:
+      path: "02-development/testing/frontend/KNOWN_TEST_ISSUES.md"
+    values:
+      render_with_liquid: false
+  - scope:
+      path: "01-architecture/overview/system-architecture.md"
+    values:
+      render_with_liquid: false
+  - scope:
+      path: "02-development/code-review/INFRASTRUCTURE-COMPREHENSIVE-REVIEW-2025-11-22.md"
+    values:
+      render_with_liquid: false
+  - scope:
+      path: "02-development/frontend/GUIDA-SVILUPPATORE-FRONTEND.md"
+    values:
+      render_with_liquid: false
+  - scope:
+      path: "02-development/guides/codebase-maintenance.md"
+    values:
+      render_with_liquid: false
+  - scope:
+      path: "02-development/guides/local-debugging-guide.md"
+    values:
+      render_with_liquid: false
+  - scope:
+      path: "02-development/testing/specialized/bgai-039-validation-accuracy-baseline.md"
+    values:
+      render_with_liquid: false
+  - scope:
+      path: "02-development/testing/test-automation-pipeline-guide.md"
+    values:
+      render_with_liquid: false
+  - scope:
+      path: "04-frontend/improvement-roadmap-2025.md"
+    values:
+      render_with_liquid: false

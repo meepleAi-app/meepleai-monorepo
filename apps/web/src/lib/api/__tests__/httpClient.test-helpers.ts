@@ -157,8 +157,9 @@ export function setupDownloadMocks() {
   };
 
   const mockCreateElement = vi.spyOn(document, 'createElement').mockReturnValue(mockLink as any);
-  const mockAppendChild = vi.spyOn(document.body, 'appendChild').mockImplementation();
-  const mockRemoveChild = vi.spyOn(document.body, 'removeChild').mockImplementation();
+  // jsdom 27+ requires appendChild/removeChild to return the node passed as argument
+  const mockAppendChild = vi.spyOn(document.body, 'appendChild').mockImplementation(node => node);
+  const mockRemoveChild = vi.spyOn(document.body, 'removeChild').mockImplementation(node => node);
   const mockCreateObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:test-url');
   const mockRevokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation();
 

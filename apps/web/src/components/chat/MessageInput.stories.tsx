@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { MessageInput } from './MessageInput';
-import { useChatContext } from '@/hooks/useChatContext';
+import { ChatContext } from '@/store/chat/compatibility';
 
 /**
  * MessageInput component for sending chat messages.
@@ -22,6 +22,57 @@ import { useChatContext } from '@/hooks/useChatContext';
  * - Search mode variations (Vector, Hybrid)
  * - Dark theme variant
  */
+
+// Helper to create mock context value
+const createMockContext = (overrides: Record<string, unknown> = {}) => ({
+  inputValue: '',
+  setInputValue: () => {},
+  sendMessage: async () => {},
+  selectedGameId: 'game-123',
+  selectedAgentId: 'agent-456',
+  loading: {
+    games: false,
+    agents: false,
+    chats: false,
+    messages: false,
+    sending: false,
+    creating: false,
+    updating: false,
+    deleting: false,
+  },
+  searchMode: 'vector' as const,
+  setSearchMode: () => {},
+  isStreaming: false,
+  streamingAnswer: '',
+  streamingState: 'idle' as const,
+  streamingCitations: [],
+  stopStreaming: () => {},
+  authUser: null,
+  games: [],
+  agents: [],
+  selectGame: () => {},
+  selectAgent: () => {},
+  chats: [],
+  activeChatId: null,
+  messages: [],
+  createChat: async () => {},
+  deleteChat: async () => {},
+  selectChat: async () => {},
+  setMessageFeedback: async () => {},
+  editMessage: async () => {},
+  deleteMessage: async () => {},
+  errorMessage: '',
+  sidebarCollapsed: false,
+  toggleSidebar: () => {},
+  editingMessageId: null,
+  editContent: '',
+  setEditContent: () => {},
+  startEditMessage: () => {},
+  cancelEdit: () => {},
+  saveEdit: async () => {},
+  ...overrides,
+});
+
 const meta = {
   title: 'Chat/MessageInput',
   component: MessageInput,
@@ -37,61 +88,14 @@ const meta = {
   tags: ['autodocs'],
   decorators: [
     Story => {
-      // Mock useChatContext for Storybook
-      const mockContext = {
-        inputValue: '',
-        setInputValue: () => {},
-        sendMessage: async () => {},
-        selectedGameId: 'game-123',
-        selectedAgentId: 'agent-456',
-        loading: {
-          games: false,
-          agents: false,
-          chats: false,
-          messages: false,
-          sending: false,
-          creating: false,
-          updating: false,
-          deleting: false,
-        },
-        searchMode: 'vector',
-        setSearchMode: () => {},
-        isStreaming: false,
-        streamingAnswer: '',
-        streamingState: 'idle',
-        streamingCitations: [],
-        stopStreaming: () => {},
-        authUser: null,
-        games: [],
-        agents: [],
-        selectGame: () => {},
-        selectAgent: () => {},
-        chats: [],
-        activeChatId: null,
-        messages: [],
-        createChat: async () => {},
-        deleteChat: async () => {},
-        selectChat: async () => {},
-        setMessageFeedback: async () => {},
-        editMessage: async () => {},
-        deleteMessage: async () => {},
-        errorMessage: '',
-        sidebarCollapsed: false,
-        toggleSidebar: () => {},
-        editingMessageId: null,
-        editContent: '',
-        setEditContent: () => {},
-        startEditMessage: () => {},
-        cancelEdit: () => {},
-        saveEdit: async () => {},
-      };
-
-      (useChatContext as any) = () => mockContext;
+      const mockContext = createMockContext();
 
       return (
-        <div className="w-full max-w-2xl">
-          <Story />
-        </div>
+        <ChatContext.Provider value={mockContext as never}>
+          <div className="w-full max-w-2xl">
+            <Story />
+          </div>
+        </ChatContext.Provider>
       );
     },
   ],
@@ -113,37 +117,16 @@ export const Default: Story = {};
 export const WithInput: Story = {
   decorators: [
     Story => {
-      const mockContext = {
+      const mockContext = createMockContext({
         inputValue: 'What are the rules for building settlements?',
-        setInputValue: () => {},
-        sendMessage: async () => {},
-        selectedGameId: 'game-123',
-        selectedAgentId: 'agent-456',
-        loading: {
-          games: false,
-          agents: false,
-          chats: false,
-          messages: false,
-          sending: false,
-          creating: false,
-          updating: false,
-          deleting: false,
-        },
-        searchMode: 'vector',
-        setSearchMode: () => {},
-        isStreaming: false,
-        streamingAnswer: '',
-        streamingState: 'idle',
-        streamingCitations: [],
-        stopStreaming: () => {},
-      } as any;
-
-      (useChatContext as any) = () => mockContext;
+      });
 
       return (
-        <div className="w-full max-w-2xl">
-          <Story />
-        </div>
+        <ChatContext.Provider value={mockContext as never}>
+          <div className="w-full max-w-2xl">
+            <Story />
+          </div>
+        </ChatContext.Provider>
       );
     },
   ],
@@ -156,12 +139,8 @@ export const WithInput: Story = {
 export const LoadingState: Story = {
   decorators: [
     Story => {
-      const mockContext = {
+      const mockContext = createMockContext({
         inputValue: 'How many victory points do I need?',
-        setInputValue: () => {},
-        sendMessage: async () => {},
-        selectedGameId: 'game-123',
-        selectedAgentId: 'agent-456',
         loading: {
           games: false,
           agents: false,
@@ -172,21 +151,14 @@ export const LoadingState: Story = {
           updating: false,
           deleting: false,
         },
-        searchMode: 'vector',
-        setSearchMode: () => {},
-        isStreaming: false,
-        streamingAnswer: '',
-        streamingState: 'idle',
-        streamingCitations: [],
-        stopStreaming: () => {},
-      } as any;
-
-      (useChatContext as any) = () => mockContext;
+      });
 
       return (
-        <div className="w-full max-w-2xl">
-          <Story />
-        </div>
+        <ChatContext.Provider value={mockContext as never}>
+          <div className="w-full max-w-2xl">
+            <Story />
+          </div>
+        </ChatContext.Provider>
       );
     },
   ],
@@ -199,37 +171,20 @@ export const LoadingState: Story = {
 export const StreamingState: Story = {
   decorators: [
     Story => {
-      const mockContext = {
+      const mockContext = createMockContext({
         inputValue: 'Can I trade resources with the bank?',
-        setInputValue: () => {},
-        sendMessage: async () => {},
-        selectedGameId: 'game-123',
-        selectedAgentId: 'agent-456',
-        loading: {
-          games: false,
-          agents: false,
-          chats: false,
-          messages: false,
-          sending: false,
-          creating: false,
-          updating: false,
-          deleting: false,
-        },
         searchMode: 'hybrid',
-        setSearchMode: () => {},
         isStreaming: true,
         streamingAnswer: 'Yes, you can trade with the bank...',
         streamingState: 'streaming',
-        streamingCitations: [],
-        stopStreaming: () => {},
-      } as any;
-
-      (useChatContext as any) = () => mockContext;
+      });
 
       return (
-        <div className="w-full max-w-2xl">
-          <Story />
-        </div>
+        <ChatContext.Provider value={mockContext as never}>
+          <div className="w-full max-w-2xl">
+            <Story />
+          </div>
+        </ChatContext.Provider>
       );
     },
   ],
@@ -250,37 +205,16 @@ export const StreamingState: Story = {
 export const HybridSearchMode: Story = {
   decorators: [
     Story => {
-      const mockContext = {
-        inputValue: '',
-        setInputValue: () => {},
-        sendMessage: async () => {},
-        selectedGameId: 'game-123',
-        selectedAgentId: 'agent-456',
-        loading: {
-          games: false,
-          agents: false,
-          chats: false,
-          messages: false,
-          sending: false,
-          creating: false,
-          updating: false,
-          deleting: false,
-        },
+      const mockContext = createMockContext({
         searchMode: 'hybrid',
-        setSearchMode: () => {},
-        isStreaming: false,
-        streamingAnswer: '',
-        streamingState: 'idle',
-        streamingCitations: [],
-        stopStreaming: () => {},
-      } as any;
-
-      (useChatContext as any) = () => mockContext;
+      });
 
       return (
-        <div className="w-full max-w-2xl">
-          <Story />
-        </div>
+        <ChatContext.Provider value={mockContext as never}>
+          <div className="w-full max-w-2xl">
+            <Story />
+          </div>
+        </ChatContext.Provider>
       );
     },
   ],
@@ -300,37 +234,17 @@ export const HybridSearchMode: Story = {
 export const DisabledState: Story = {
   decorators: [
     Story => {
-      const mockContext = {
-        inputValue: '',
-        setInputValue: () => {},
-        sendMessage: async () => {},
+      const mockContext = createMockContext({
         selectedGameId: null,
         selectedAgentId: null,
-        loading: {
-          games: false,
-          agents: false,
-          chats: false,
-          messages: false,
-          sending: false,
-          creating: false,
-          updating: false,
-          deleting: false,
-        },
-        searchMode: 'vector',
-        setSearchMode: () => {},
-        isStreaming: false,
-        streamingAnswer: '',
-        streamingState: 'idle',
-        streamingCitations: [],
-        stopStreaming: () => {},
-      } as any;
-
-      (useChatContext as any) = () => mockContext;
+      });
 
       return (
-        <div className="w-full max-w-2xl">
-          <Story />
-        </div>
+        <ChatContext.Provider value={mockContext as never}>
+          <div className="w-full max-w-2xl">
+            <Story />
+          </div>
+        </ChatContext.Provider>
       );
     },
   ],
@@ -350,39 +264,18 @@ export const DisabledState: Story = {
 export const DarkTheme: Story = {
   decorators: [
     Story => {
-      const mockContext = {
+      const mockContext = createMockContext({
         inputValue: 'Come si costruisce una strada?',
-        setInputValue: () => {},
-        sendMessage: async () => {},
-        selectedGameId: 'game-123',
-        selectedAgentId: 'agent-456',
-        loading: {
-          games: false,
-          agents: false,
-          chats: false,
-          messages: false,
-          sending: false,
-          creating: false,
-          updating: false,
-          deleting: false,
-        },
-        searchMode: 'vector',
-        setSearchMode: () => {},
-        isStreaming: false,
-        streamingAnswer: '',
-        streamingState: 'idle',
-        streamingCitations: [],
-        stopStreaming: () => {},
-      } as any;
-
-      (useChatContext as any) = () => mockContext;
+      });
 
       return (
-        <div className="dark">
-          <div className="w-full max-w-2xl bg-background">
-            <Story />
+        <ChatContext.Provider value={mockContext as never}>
+          <div className="dark">
+            <div className="w-full max-w-2xl bg-background">
+              <Story />
+            </div>
           </div>
-        </div>
+        </ChatContext.Provider>
       );
     },
   ],

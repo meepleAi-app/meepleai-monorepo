@@ -18,6 +18,7 @@ export default [
       "out/**",
       "build/**",
       "public/**",
+      "storybook-static/**", // Storybook build output - not source code
       "*.config.js",
       "*.config.mjs",
       "playwright-report/**",

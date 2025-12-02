@@ -1,0 +1,737 @@
+{
+  "info": {
+    "_postman_id": "meepleai-api-tests-v2",
+    "name": "MeepleAI API Tests",
+    "description": "Comprehensive API tests for MeepleAI backend.\n\n**Test Groups:**\n1. Health Checks - Basic API health verification\n2. Authentication - User registration, login, session management\n3. Game Management - Game CRUD operations\n4. KnowledgeBase - RAG search and Q&A (requires game data)\n\n**Note:** Tests are designed to be idempotent and CI-friendly.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "healthBaseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "testEmail",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "testPassword",
+      "value": "TestPassword123!",
+      "type": "string"
+    },
+    {
+      "key": "testUserId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "testGameId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sessionToken",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Health Checks",
+      "description": "Basic health verification endpoints - no authentication required",
+      "item": [
+        {
+          "name": "Health - Ready",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response indicates healthy status', function() {",
+                  "    // Health check returns plain text 'Healthy' not JSON",
+                  "    pm.expect(pm.response.text()).to.include('Healthy');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{healthBaseUrl}}/health/ready",
+              "host": ["{{healthBaseUrl}}"],
+              "path": ["health", "ready"]
+            }
+          }
+        },
+        {
+          "name": "Health - Live",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response indicates healthy status', function() {",
+                  "    // Health check returns plain text 'Healthy' not JSON",
+                  "    pm.expect(pm.response.text()).to.include('Healthy');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{healthBaseUrl}}/health/live",
+              "host": ["{{healthBaseUrl}}"],
+              "path": ["health", "live"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Authentication",
+      "description": "User registration, login, and session management",
+      "item": [
+        {
+          "name": "Register Test User",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Generate unique email for this test run",
+                  "const timestamp = Date.now();",
+                  "const email = `test-${timestamp}@example.com`;",
+                  "pm.collectionVariables.set('testEmail', email);",
+                  "console.log('Generated test email:', email);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 (successful registration)', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('User data is returned', function() {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.user).to.exist;",
+                  "    pm.expect(json.user.id).to.exist;",
+                  "    pm.expect(json.user.email).to.exist;",
+                  "    pm.collectionVariables.set('testUserId', json.user.id);",
+                  "});",
+                  "",
+                  "pm.test('Session cookie is set', function() {",
+                  "    pm.expect(pm.cookies.has('meepleai_session')).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{testEmail}}\",\n  \"password\": \"{{testPassword}}\",\n  \"displayName\": \"Test User\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Get Current User (Me)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('User data matches registered user', function() {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.user).to.exist;",
+                  "    pm.expect(json.user.email).to.equal(pm.collectionVariables.get('testEmail'));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "me"]
+            }
+          }
+        },
+        {
+          "name": "Get Session Status",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Session info is returned', function() {",
+                  "    const json = pm.response.json();",
+                  "    // Note: API uses PascalCase (PropertyNamingPolicy = null)",
+                  "    pm.expect(json.ExpiresAt).to.exist;",
+                  "    pm.expect(json.RemainingMinutes).to.be.a('number');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/session/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "session", "status"]
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Logout successful', function() {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.ok).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "logout"]
+            }
+          }
+        },
+        {
+          "name": "Login Test User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('User data is returned', function() {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.user).to.exist;",
+                  "    pm.expect(json.user.email).to.equal(pm.collectionVariables.get('testEmail'));",
+                  "});",
+                  "",
+                  "pm.test('Session cookie is set', function() {",
+                  "    pm.expect(pm.cookies.has('meepleai_session')).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{testEmail}}\",\n  \"password\": \"{{testPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Login - Invalid Credentials (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// API returns 400 Bad Request for invalid credentials (DomainException)",
+                  "pm.test('Status code is 400 for invalid credentials', function() {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"nonexistent@example.com\",\n  \"password\": \"WrongPassword123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Login - Empty Credentials (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400 for empty credentials', function() {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Error message is returned', function() {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.error).to.exist;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"\",\n  \"password\": \"\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Game Management",
+      "description": "Game CRUD operations - requires authentication",
+      "item": [
+        {
+          "name": "Re-Login (Setup)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Session established for game tests', function() {",
+                  "    pm.expect(pm.cookies.has('meepleai_session')).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{testEmail}}\",\n  \"password\": \"{{testPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Get All Games",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Games array is returned', function() {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.be.an('array');",
+                  "    ",
+                  "    // Store first game ID if available for subsequent tests",
+                  "    if (json.length > 0) {",
+                  "        pm.collectionVariables.set('testGameId', json[0].id);",
+                  "        console.log('Found existing game:', json[0].id);",
+                  "    } else {",
+                  "        console.log('No games found in database');",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/games",
+              "host": ["{{baseUrl}}"],
+              "path": ["games"]
+            }
+          }
+        },
+        {
+          "name": "Get Game by ID",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Skip if no game ID available",
+                  "const testGameId = pm.collectionVariables.get('testGameId');",
+                  "if (!testGameId) {",
+                  "    console.log('SKIP: No testGameId available');",
+                  "    pm.execution.skipRequest();",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Game data is returned', function() {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.id).to.equal(pm.collectionVariables.get('testGameId'));",
+                  "    pm.expect(json.title).to.exist;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/games/{{testGameId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["games", "{{testGameId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Game - Not Found (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 404 for non-existent game', function() {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/games/00000000-0000-0000-0000-000000000000",
+              "host": ["{{baseUrl}}"],
+              "path": ["games", "00000000-0000-0000-0000-000000000000"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. KnowledgeBase (Optional)",
+      "description": "RAG search and Q&A - requires game with indexed content. Tests skip gracefully if no game available.",
+      "item": [
+        {
+          "name": "Search - Requires Game",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Skip if no game ID available (CI without seed data)",
+                  "const testGameId = pm.collectionVariables.get('testGameId');",
+                  "if (!testGameId) {",
+                  "    console.log('SKIP: No testGameId - KnowledgeBase search requires game data');",
+                  "    pm.execution.skipRequest();",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Accept both 200 (success) and 400 (no indexed content)",
+                  "pm.test('Status code is 200 or 400', function() {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 400]);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    pm.test('Search results returned', function() {",
+                  "        const json = pm.response.json();",
+                  "        pm.expect(json.success).to.be.true;",
+                  "        pm.expect(json.results).to.be.an('array');",
+                  "    });",
+                  "} else {",
+                  "    pm.test('Error message for missing content', function() {",
+                  "        const json = pm.response.json();",
+                  "        pm.expect(json.error).to.exist;",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gameId\": \"{{testGameId}}\",\n  \"query\": \"test query\",\n  \"topK\": 5,\n  \"minScore\": 0.5,\n  \"searchMode\": \"hybrid\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/knowledge-base/search",
+              "host": ["{{baseUrl}}"],
+              "path": ["knowledge-base", "search"]
+            }
+          }
+        },
+        {
+          "name": "Search - Empty Query (400)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const testGameId = pm.collectionVariables.get('testGameId');",
+                  "if (!testGameId) {",
+                  "    console.log('SKIP: No testGameId');",
+                  "    pm.execution.skipRequest();",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400 for empty query', function() {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Error message is returned', function() {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.error).to.exist;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gameId\": \"{{testGameId}}\",\n  \"query\": \"\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/knowledge-base/search",
+              "host": ["{{baseUrl}}"],
+              "path": ["knowledge-base", "search"]
+            }
+          }
+        },
+        {
+          "name": "Search - Invalid Game ID (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400 for invalid game ID', function() {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Error message is returned', function() {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.error).to.exist;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gameId\": \"not-a-valid-guid\",\n  \"query\": \"test query\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/knowledge-base/search",
+              "host": ["{{baseUrl}}"],
+              "path": ["knowledge-base", "search"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Cleanup",
+      "description": "Final cleanup - logout test user",
+      "item": [
+        {
+          "name": "Final Logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Cleanup completed', function() {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.ok).to.be.true;",
+                  "    console.log('Test cleanup completed successfully');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "logout"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

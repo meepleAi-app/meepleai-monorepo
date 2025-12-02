@@ -12,6 +12,18 @@ vi.mock('@/lib/api', () => ({
   },
 }));
 
+// Mock the logger
+const mockLoggerError = vi.fn();
+vi.mock('@/lib/logger', () => ({
+  logger: {
+    error: (...args: unknown[]) => mockLoggerError(...args),
+    warn: vi.fn(),
+    info: vi.fn(),
+    debug: vi.fn(),
+  },
+  createErrorContext: vi.fn().mockReturnValue({}),
+}));
+
 // Mock useDebounce hook
 vi.mock('@/hooks/useDebounce', () => ({
   useDebounce: (value: string, delay: number) => value,
@@ -212,7 +224,7 @@ describe('MentionInput', () => {
 
     it('handles API errors gracefully', async () => {
       mockApiGet.mockRejectedValue(new Error('Network error'));
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      mockLoggerError.mockClear();
 
       render(<MentionInput value="" onChange={mockOnChange} />);
       const textarea = screen.getByRole('combobox');
@@ -221,10 +233,12 @@ describe('MentionInput', () => {
 
       await waitFor(() => {
         expect(screen.getByText('No users found')).toBeInTheDocument();
-        expect(consoleSpy).toHaveBeenCalledWith('Failed to search users:', expect.any(Error));
+        expect(mockLoggerError).toHaveBeenCalledWith(
+          'Failed to search users',
+          expect.any(Error),
+          expect.any(Object)
+        );
       });
-
-      consoleSpy.mockRestore();
     });
   });
 

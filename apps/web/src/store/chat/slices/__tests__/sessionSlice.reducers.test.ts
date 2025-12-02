@@ -1,14 +1,7 @@
 /**
- * sessionSlice.test.ts
- * Comprehensive tests for Session Slice (Issue #1083)
- *
- * Coverage targets:
- * - State initialization
- * - selectGame action and agent reset behavior
- * - selectAgent action
- * - toggleSidebar action
- * - setSidebarCollapsed action
- * - State transitions and edge cases
+ * sessionSlice.reducers.test.ts
+ * Tests for Session Slice reducers: toggleSidebar, setSidebarCollapsed
+ * (Split from sessionSlice.test.ts - Issue #1504)
  */
 
 import { create } from 'zustand';
@@ -17,8 +10,74 @@ import { subscribeWithSelector } from 'zustand/middleware';
 import { createSessionSlice } from '../sessionSlice';
 import { ChatStore } from '../../types';
 
-      expect(store.getState().selectedAgentId).toBe(agentId);
-    });
+describe('sessionSlice reducers', () => {
+  let store: ReturnType<typeof createTestStore>;
+
+  // Helper to create a test store with session slice
+  const createTestStore = () => {
+    return create<ChatStore>()(
+      subscribeWithSelector(
+        immer((...args) => ({
+          ...createSessionSlice(...args),
+          // Mock other slices
+          games: [],
+          agents: [],
+          setGames: vi.fn(),
+          setAgents: vi.fn(),
+          loadGames: vi.fn(),
+          loadAgents: vi.fn(),
+          chatsByGame: {},
+          activeChatIds: {},
+          loadChats: vi.fn(),
+          createChat: vi.fn(),
+          deleteChat: vi.fn(),
+          selectChat: vi.fn(),
+          updateChatTitle: vi.fn(),
+          messagesByChat: {},
+          loadMessages: vi.fn(),
+          sendMessage: vi.fn(),
+          editMessage: vi.fn(),
+          deleteMessage: vi.fn(),
+          setMessageFeedback: vi.fn(),
+          addOptimisticMessage: vi.fn(),
+          removeOptimisticMessage: vi.fn(),
+          updateMessageInThread: vi.fn(),
+          loading: {
+            chats: false,
+            messages: false,
+            sending: false,
+            creating: false,
+            updating: false,
+            deleting: false,
+            games: false,
+            agents: false,
+          },
+          error: null,
+          inputValue: '',
+          editingMessageId: null,
+          editContent: '',
+          searchMode: 'hybrid',
+          setLoading: vi.fn(),
+          setError: vi.fn(),
+          clearError: vi.fn(),
+          setInputValue: vi.fn(),
+          startEdit: vi.fn(),
+          cancelEdit: vi.fn(),
+          saveEdit: vi.fn(),
+          setEditContent: vi.fn(),
+          setSearchMode: vi.fn(),
+        }))
+      )
+    );
+  };
+
+  beforeEach(() => {
+    store = createTestStore();
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   // ============================================================================

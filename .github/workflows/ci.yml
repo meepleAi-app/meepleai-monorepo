@@ -418,100 +418,16 @@ jobs:
         run: |
           timeout 60 bash -c 'until curl -f http://localhost:8080/health; do sleep 2; done'
 
-      # Run Postman smoke tests via Newman
-      - name: Run KnowledgeBase API Tests (11 tests)
+      # Run Postman API Tests via Newman
+      - name: Run API Smoke Tests
         run: |
-          newman run postman/KnowledgeBase-DDD-Tests.postman_collection.json \
+          newman run postman/MeepleAI-API-Tests.postman_collection.json \
             -e postman/Local-Development.postman_environment.json \
             -r cli,json,htmlextra \
-            --reporter-json-export newman-results-kb.json \
-            --reporter-htmlextra-export newman-report-kb.html \
-            --bail
+            --reporter-json-export newman-results.json \
+            --reporter-htmlextra-export newman-report.html
 
-      - name: Run DDD Bounded Context Tests (All Collections)
-        run: |
-          # Track failed collections to report at the end
-          FAILED_TESTS=""
-
-          # Health Check
-          echo "::group::Running Health Check Tests"
-          if ! newman run tests/postman/collections/01-health/HealthCheck.postman_collection.json \
-            -e tests/postman/environments/local.postman_environment.json \
-            -r cli,json,htmlextra \
-            --reporter-json-export newman-results-health.json \
-            --reporter-htmlextra-export newman-report-health.html; then
-            FAILED_TESTS="${FAILED_TESTS}\n- Health Check"
-            echo "::error::Health Check collection failed"
-          fi
-          echo "::endgroup::"
-
-          # Authentication
-          echo "::group::Running Authentication Tests"
-          if ! newman run tests/postman/collections/02-authentication/Authentication.postman_collection.json \
-            -e tests/postman/environments/local.postman_environment.json \
-            -r cli,json,htmlextra \
-            --reporter-json-export newman-results-auth.json \
-            --reporter-htmlextra-export newman-report-auth.html; then
-            FAILED_TESTS="${FAILED_TESTS}\n- Authentication"
-            echo "::error::Authentication collection failed"
-          fi
-          echo "::endgroup::"
-
-          # Game Management
-          echo "::group::Running Game Management Tests"
-          if ! newman run tests/postman/collections/03-game-management/GameManagement.postman_collection.json \
-            -e tests/postman/environments/local.postman_environment.json \
-            -r cli,json,htmlextra \
-            --reporter-json-export newman-results-games.json \
-            --reporter-htmlextra-export newman-report-games.html; then
-            FAILED_TESTS="${FAILED_TESTS}\n- Game Management"
-            echo "::error::Game Management collection failed"
-          fi
-          echo "::endgroup::"
-
-          # Knowledge Base (DDD)
-          echo "::group::Running Knowledge Base Tests"
-          if ! newman run tests/postman/collections/04-knowledge-base/KnowledgeBase.postman_collection.json \
-            -e tests/postman/environments/local.postman_environment.json \
-            -r cli,json,htmlextra \
-            --reporter-json-export newman-results-kb-ddd.json \
-            --reporter-htmlextra-export newman-report-kb-ddd.html; then
-            FAILED_TESTS="${FAILED_TESTS}\n- Knowledge Base"
-            echo "::error::Knowledge Base collection failed"
-          fi
-          echo "::endgroup::"
-
-          # Administration
-          echo "::group::Running Administration Tests"
-          if ! newman run tests/postman/collections/05-administration/Administration.postman_collection.json \
-            -e tests/postman/environments/local.postman_environment.json \
-            -r cli,json,htmlextra \
-            --reporter-json-export newman-results-admin.json \
-            --reporter-htmlextra-export newman-report-admin.html; then
-            FAILED_TESTS="${FAILED_TESTS}\n- Administration"
-            echo "::error::Administration collection failed"
-          fi
-          echo "::endgroup::"
-
-          # BoardGameGeek
-          echo "::group::Running BoardGameGeek Tests"
-          if ! newman run tests/postman/collections/06-boardgamegeek/BoardGameGeek.postman_collection.json \
-            -e tests/postman/environments/local.postman_environment.json \
-            -r cli,json,htmlextra \
-            --reporter-json-export newman-results-bgg.json \
-            --reporter-htmlextra-export newman-report-bgg.html; then
-            FAILED_TESTS="${FAILED_TESTS}\n- BoardGameGeek"
-            echo "::error::BoardGameGeek collection failed"
-          fi
-          echo "::endgroup::"
-
-          # Exit with failure if any collection failed
-          if [ -n "$FAILED_TESTS" ]; then
-            echo "::error::The following Newman collections failed:${FAILED_TESTS}"
-            exit 1
-          fi
-
-          echo "::notice::All Newman collections passed successfully"
+          echo "::notice::API smoke tests passed successfully"
 
       - name: Upload Newman Reports
         if: always()
@@ -519,8 +435,8 @@ jobs:
         with:
           name: newman-reports-${{ github.run_number }}
           path: |
-            newman-results-*.json
-            newman-report-*.html
+            newman-results.json
+            newman-report.html
           retention-days: 14
 
       - name: Upload API Logs

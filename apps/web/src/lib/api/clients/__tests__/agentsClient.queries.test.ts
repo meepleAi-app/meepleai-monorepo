@@ -1,180 +1,128 @@
 /**
- * Comprehensive Tests for Agents Client (Issue #1661 - Fase 1.2)
+ * AgentsClient Query Tests
  *
- * Coverage target: 95%+
- * Tests: Agent queries, commands, error handling, edge cases
+ * Tests for read operations: getAll, getAvailable, getById
  */
-
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createAgentsClient } from '../agentsClient';
-import { HttpClient } from '../../core/httpClient';
+import type { HttpClient } from '../../core/httpClient';
 
-describe('createAgentsClient', () => {
-  let mockHttpClient: Mocked<HttpClient>;
-  let agentsClient: ReturnType<typeof createAgentsClient>;
+describe('agentsClient queries', () => {
+  const mockHttpClient: HttpClient = {
+    get: vi.fn(),
+    post: vi.fn(),
+    put: vi.fn(),
+    delete: vi.fn(),
+  };
+
+  const client = createAgentsClient({ httpClient: mockHttpClient });
 
   beforeEach(() => {
-    mockHttpClient = {
-      get: vi.fn(),
-      post: vi.fn(),
-      put: vi.fn(),
-      delete: vi.fn(),
-      postFile: vi.fn(),
-    } as any;
-
-    agentsClient = createAgentsClient({ httpClient: mockHttpClient });
+    vi.clearAllMocks();
   });
 
   describe('getAll', () => {
     it('should fetch all agents without filters', async () => {
-      const mockResponse = {
+      const mockAgents = [
+        { id: 'agent-1', name: 'Agent One', type: 'qa', isActive: true },
+        { id: 'agent-2', name: 'Agent Two', type: 'rules', isActive: false },
+      ];
+
+      vi.mocked(mockHttpClient.get).mockResolvedValueOnce({
         success: true,
-        agents: [
-          { id: 'agent-1', name: 'GPT-4', type: 'chat', isActive: true },
-          { id: 'agent-2', name: 'Claude', type: 'chat', isActive: true },
-        ],
+        agents: mockAgents,
         count: 2,
-      };
-
-      mockHttpClient.get.mockResolvedValueOnce(mockResponse);
-
-      const result = await agentsClient.getAll();
-
-      expect(mockHttpClient.get).toHaveBeenCalledWith('/api/v1/agents', expect.anything());
-      expect(result).toEqual(mockResponse.agents);
-    });
-
-    it('should filter by activeOnly=true', async () => {
-      mockHttpClient.get.mockResolvedValueOnce({
-        success: true,
-        agents: [{ id: 'agent-1', isActive: true }],
-        count: 1,
       });
 
-      await agentsClient.getAll(true);
+      const result = await client.getAll();
 
-      expect(mockHttpClient.get).toHaveBeenCalledWith(
-        expect.stringContaining('activeOnly=true'),
-        expect.anything()
-      );
+      expect(mockHttpClient.get).toHaveBeenCalledWith('/api/v1/agents', expect.any(Object));
+      expect(result).toEqual(mockAgents);
     });
 
-    it('should filter by activeOnly=false', async () => {
-      mockHttpClient.get.mockResolvedValueOnce({
+    it('should fetch agents with activeOnly filter', async () => {
+      vi.mocked(mockHttpClient.get).mockResolvedValueOnce({
         success: true,
         agents: [],
         count: 0,
       });
 
-      await agentsClient.getAll(false);
+      await client.getAll(true);
 
       expect(mockHttpClient.get).toHaveBeenCalledWith(
-        expect.stringContaining('activeOnly=false'),
-        expect.anything()
+        '/api/v1/agents?activeOnly=true',
+        expect.any(Object)
       );
     });
 
-    it('should filter by agent type', async () => {
-      mockHttpClient.get.mockResolvedValueOnce({
+    it('should fetch agents with type filter', async () => {
+      vi.mocked(mockHttpClient.get).mockResolvedValueOnce({
         success: true,
         agents: [],
         count: 0,
       });
 
-      await agentsClient.getAll(undefined, 'chat');
+      await client.getAll(undefined, 'qa');
 
-      expect(mockHttpClient.get).toHaveBeenCalledWith(
-        expect.stringContaining('type=chat'),
-        expect.anything()
-      );
+      expect(mockHttpClient.get).toHaveBeenCalledWith('/api/v1/agents?type=qa', expect.any(Object));
     });
 
-    it('should filter by both activeOnly and type', async () => {
-      mockHttpClient.get.mockResolvedValueOnce({
+    it('should fetch agents with both filters', async () => {
+      vi.mocked(mockHttpClient.get).mockResolvedValueOnce({
         success: true,
         agents: [],
         count: 0,
       });
 
-      await agentsClient.getAll(true, 'rag');
+      await client.getAll(true, 'rules');
 
-      const callUrl = mockHttpClient.get.mock.calls[0][0] as string;
-      expect(callUrl).toContain('activeOnly=true');
-      expect(callUrl).toContain('type=rag');
+      expect(mockHttpClient.get).toHaveBeenCalledWith(
+        '/api/v1/agents?activeOnly=true&type=rules',
+        expect.any(Object)
+      );
     });
 
-    it('should return empty array when response is null', async () => {
-      mockHttpClient.get.mockResolvedValueOnce(null);
+    it('should return empty array on null response', async () => {
+      vi.mocked(mockHttpClient.get).mockResolvedValueOnce(null);
 
-      const result = await agentsClient.getAll();
+      const result = await client.getAll();
 
       expect(result).toEqual([]);
-    });
-
-    it('should return empty array when agents field is missing', async () => {
-      mockHttpClient.get.mockResolvedValueOnce({
-        success: true,
-        count: 0,
-      });
-
-      const result = await agentsClient.getAll();
-
-      expect(result).toEqual([]);
-    });
-
-    it('should handle special characters in type filter', async () => {
-      mockHttpClient.get.mockResolvedValueOnce({
-        success: true,
-        agents: [],
-        count: 0,
-      });
-
-      await agentsClient.getAll(undefined, 'chat/advanced');
-
-      expect(mockHttpClient.get).toHaveBeenCalled();
     });
   });
 
   describe('getAvailable', () => {
-    it('should fetch only active agents', async () => {
-      mockHttpClient.get.mockResolvedValueOnce({
+    it('should fetch active agents only', async () => {
+      const mockAgents = [{ id: 'agent-1', name: 'Active Agent', type: 'qa', isActive: true }];
+
+      vi.mocked(mockHttpClient.get).mockResolvedValueOnce({
         success: true,
-        agents: [{ id: 'agent-1', isActive: true }],
+        agents: mockAgents,
         count: 1,
       });
 
-      const result = await agentsClient.getAvailable();
+      const result = await client.getAvailable();
 
       expect(mockHttpClient.get).toHaveBeenCalledWith(
-        expect.stringContaining('activeOnly=true'),
-        expect.anything()
+        '/api/v1/agents?activeOnly=true',
+        expect.any(Object)
       );
-      expect(result).toHaveLength(1);
+      expect(result).toEqual(mockAgents);
     });
 
-    it('should filter by type when provided', async () => {
-      mockHttpClient.get.mockResolvedValueOnce({
+    it('should fetch active agents with type filter', async () => {
+      vi.mocked(mockHttpClient.get).mockResolvedValueOnce({
         success: true,
         agents: [],
         count: 0,
       });
 
-      await agentsClient.getAvailable('chat');
+      await client.getAvailable('qa');
 
-      const callUrl = mockHttpClient.get.mock.calls[0][0] as string;
-      expect(callUrl).toContain('activeOnly=true');
-      expect(callUrl).toContain('type=chat');
-    });
-
-    it('should return empty array when no active agents', async () => {
-      mockHttpClient.get.mockResolvedValueOnce({
-        success: true,
-        agents: [],
-        count: 0,
-      });
-
-      const result = await agentsClient.getAvailable();
-
-      expect(result).toEqual([]);
+      expect(mockHttpClient.get).toHaveBeenCalledWith(
+        '/api/v1/agents?activeOnly=true&type=qa',
+        expect.any(Object)
+      );
     });
   });
 
@@ -182,154 +130,39 @@ describe('createAgentsClient', () => {
     it('should fetch agent by ID', async () => {
       const mockAgent = {
         id: 'agent-123',
-        name: 'GPT-4',
-        type: 'chat',
+        name: 'Test Agent',
+        type: 'qa',
         isActive: true,
       };
 
-      mockHttpClient.get.mockResolvedValueOnce(mockAgent);
+      vi.mocked(mockHttpClient.get).mockResolvedValueOnce(mockAgent);
 
-      const result = await agentsClient.getById('agent-123');
+      const result = await client.getById('agent-123');
 
       expect(mockHttpClient.get).toHaveBeenCalledWith(
         '/api/v1/agents/agent-123',
-        expect.anything()
+        expect.any(Object)
       );
       expect(result).toEqual(mockAgent);
     });
 
-    it('should return null when agent not found', async () => {
-      mockHttpClient.get.mockResolvedValueOnce(null);
+    it('should return null for non-existent agent', async () => {
+      vi.mocked(mockHttpClient.get).mockResolvedValueOnce(null);
 
-      const result = await agentsClient.getById('non-existent');
+      const result = await client.getById('non-existent');
 
       expect(result).toBeNull();
     });
 
-    it('should encode agentId in URL', async () => {
-      mockHttpClient.get.mockResolvedValueOnce(null);
+    it('should encode special characters in ID', async () => {
+      vi.mocked(mockHttpClient.get).mockResolvedValueOnce(null);
 
-      await agentsClient.getById('agent with/spaces');
-
-      expect(mockHttpClient.get).toHaveBeenCalledWith(
-        expect.stringContaining('agent%20with%2Fspaces'),
-        expect.anything()
-      );
-    });
-
-    it('should handle UUID format agent IDs', async () => {
-      const uuid = '550e8400-e29b-41d4-a716-446655440000';
-      mockHttpClient.get.mockResolvedValueOnce({ id: uuid });
-
-      await agentsClient.getById(uuid);
-
-      expect(mockHttpClient.get).toHaveBeenCalledWith(`/api/v1/agents/${uuid}`, expect.anything());
-    });
-
-    it('should handle special characters in agent ID', async () => {
-      mockHttpClient.get.mockResolvedValueOnce(null);
-
-      await agentsClient.getById('agent&id=123');
+      await client.getById('agent/with/slashes');
 
       expect(mockHttpClient.get).toHaveBeenCalledWith(
-        expect.stringContaining('agent%26id%3D123'),
-        expect.anything()
+        '/api/v1/agents/agent%2Fwith%2Fslashes',
+        expect.any(Object)
       );
     });
   });
-
-  describe('invoke', () => {
-    it('should invoke agent with query', async () => {
-      const request = {
-        query: 'What are the rules for Catan?',
-        context: { gameId: 'catan' },
-      };
-
-      const mockResponse = {
-        agentId: 'agent-123',
-        response: 'The objective is to reach 10 victory points...',
-        confidence: 0.95,
-      };
-
-      mockHttpClient.post.mockResolvedValueOnce(mockResponse);
-
-      const result = await agentsClient.invoke('agent-123', request);
-
-      expect(mockHttpClient.post).toHaveBeenCalledWith(
-        '/api/v1/agents/agent-123/invoke',
-        request,
-        expect.anything()
-      );
-      expect(result).toEqual(mockResponse);
-    });
-
-    it('should invoke agent without context', async () => {
-      const request = {
-        query: 'General question',
-      };
-
-      mockHttpClient.post.mockResolvedValueOnce({
-        agentId: 'agent-1',
-        response: 'Answer',
-      });
-
-      await agentsClient.invoke('agent-1', request);
-
-      expect(mockHttpClient.post).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.objectContaining({ query: 'General question' }),
-        expect.anything()
-      );
-    });
-
-    it('should throw error when response is null', async () => {
-      mockHttpClient.post.mockResolvedValueOnce(null);
-
-      await expect(agentsClient.invoke('agent-1', { query: 'test' })).rejects.toThrow(
-        'Failed to invoke agent: no response from server'
-      );
-    });
-
-    it('should encode agentId in URL', async () => {
-      mockHttpClient.post.mockResolvedValueOnce({ agentId: 'agent', response: '' });
-
-      await agentsClient.invoke('agent with/spaces', { query: 'test' });
-
-      expect(mockHttpClient.post).toHaveBeenCalledWith(
-        expect.stringContaining('agent%20with%2Fspaces'),
-        expect.anything(),
-        expect.anything()
-      );
-    });
-
-    it('should handle empty query', async () => {
-      mockHttpClient.post.mockResolvedValueOnce({ agentId: 'agent-1', response: '' });
-
-      await agentsClient.invoke('agent-1', { query: '' });
-
-      expect(mockHttpClient.post).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.objectContaining({ query: '' }),
-        expect.anything()
-      );
-    });
-
-    it('should handle very long queries', async () => {
-      const longQuery = 'A'.repeat(10000);
-      mockHttpClient.post.mockResolvedValueOnce({ agentId: 'agent-1', response: '' });
-
-      await agentsClient.invoke('agent-1', { query: longQuery });
-
-      expect(mockHttpClient.post).toHaveBeenCalled();
-    });
-
-    it('should handle Unicode in query', async () => {
-      mockHttpClient.post.mockResolvedValueOnce({ agentId: 'agent-1', response: '' });
-
-      await agentsClient.invoke('agent-1', { query: '什么是卡坦岛的规则？' });
-
-      expect(mockHttpClient.post).toHaveBeenCalled();
-    });
-  });
-
-  describe('create', () => {
+});

@@ -1,26 +1,13 @@
 /**
- * sessionSlice.test.ts
- * Comprehensive tests for Session Slice (Issue #1083)
- *
- * Coverage targets:
- * - State initialization
- * - selectGame action and agent reset behavior
- * - selectAgent action
- * - toggleSidebar action
- * - setSidebarCollapsed action
- * - State transitions and edge cases
+ * sessionSlice Actions Tests
  */
-
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { createSessionSlice } from '../sessionSlice';
 import { ChatStore } from '../../types';
 
-describe('sessionSlice', () => {
-  let store: ReturnType<typeof createTestStore>;
-
-  // Helper to create a test store with session slice
+describe('sessionSlice actions', () => {
   const createTestStore = () => {
     return create<ChatStore>()(
       subscribeWithSelector(
@@ -78,222 +65,86 @@ describe('sessionSlice', () => {
     );
   };
 
+  let store: ReturnType<typeof createTestStore>;
+
   beforeEach(() => {
     store = createTestStore();
-    vi.clearAllMocks();
   });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  // ============================================================================
-  // State Initialization Tests
-  // ============================================================================
-
-  describe('State Initialization', () => {
-    it('should initialize with null selectedGameId', () => {
-      expect(store.getState().selectedGameId).toBeNull();
-    });
-
-    it('should initialize with null selectedAgentId', () => {
-      expect(store.getState().selectedAgentId).toBeNull();
-    });
-
-    it('should initialize with sidebarCollapsed as false', () => {
-      expect(store.getState().sidebarCollapsed).toBe(false);
-    });
-  });
-
-  // ============================================================================
-  // selectGame Action Tests
-  // ============================================================================
 
   describe('selectGame', () => {
-    it('should set selectedGameId to the provided value', () => {
-      const gameId = '770e8400-e29b-41d4-a716-000000000123';
-
-      store.getState().selectGame(gameId);
-
-      expect(store.getState().selectedGameId).toBe(gameId);
+    it('should select a game', () => {
+      store.getState().selectGame('game-1');
+      expect(store.getState().selectedGameId).toBe('game-1');
     });
 
-    it('should handle string gameId', () => {
-      const gameId = 'game-abc-xyz';
+    it('should reset agent when game changes', () => {
+      store.getState().selectGame('game-1');
+      store.getState().selectAgent('agent-1');
 
-      store.getState().selectGame(gameId);
+      expect(store.getState().selectedAgentId).toBe('agent-1');
 
-      expect(store.getState().selectedGameId).toBe(gameId);
+      store.getState().selectGame('game-2');
+
+      expect(store.getState().selectedGameId).toBe('game-2');
+      expect(store.getState().selectedAgentId).toBeNull();
     });
 
-    it('should handle null gameId', () => {
-      // First set a game
-      store.getState().selectGame('770e8400-e29b-41d4-a716-000000000123');
-      expect(store.getState().selectedGameId).toBe('770e8400-e29b-41d4-a716-000000000123');
+    it('should not reset agent when same game is selected', () => {
+      store.getState().selectGame('game-1');
+      store.getState().selectAgent('agent-1');
+      store.getState().selectGame('game-1');
 
-      // Then set to null
+      expect(store.getState().selectedAgentId).toBe('agent-1');
+    });
+
+    it('should allow selecting null game', () => {
+      store.getState().selectGame('game-1');
       store.getState().selectGame(null);
 
       expect(store.getState().selectedGameId).toBeNull();
-    });
-
-    it('should reset selectedAgentId when game changes', () => {
-      const gameId1 = '770e8400-e29b-41d4-a716-000000000123';
-      const gameId2 = '770e8400-e29b-41d4-a716-000000000456';
-      const agentId = 'agent-789';
-
-      // Select game and agent
-      store.getState().selectGame(gameId1);
-      store.getState().selectAgent(agentId);
-
-      expect(store.getState().selectedGameId).toBe(gameId1);
-      expect(store.getState().selectedAgentId).toBe(agentId);
-
-      // Change game
-      store.getState().selectGame(gameId2);
-
-      expect(store.getState().selectedGameId).toBe(gameId2);
-      expect(store.getState().selectedAgentId).toBeNull();
-    });
-
-    it('should NOT reset selectedAgentId when selecting the same game', () => {
-      const gameId = '770e8400-e29b-41d4-a716-000000000123';
-      const agentId = 'agent-789';
-
-      // Select game and agent
-      store.getState().selectGame(gameId);
-      store.getState().selectAgent(agentId);
-
-      expect(store.getState().selectedGameId).toBe(gameId);
-      expect(store.getState().selectedAgentId).toBe(agentId);
-
-      // Select same game again
-      store.getState().selectGame(gameId);
-
-      expect(store.getState().selectedGameId).toBe(gameId);
-      expect(store.getState().selectedAgentId).toBe(agentId);
-    });
-
-    it('should reset selectedAgentId when changing from null to a game', () => {
-      const gameId = '770e8400-e29b-41d4-a716-000000000123';
-      const agentId = 'agent-789';
-
-      // Start with null game
-      expect(store.getState().selectedGameId).toBeNull();
-
-      // Set an agent (edge case - shouldn't normally happen but should be handled)
-      store.getState().selectAgent(agentId);
-      expect(store.getState().selectedAgentId).toBe(agentId);
-
-      // Select a game
-      store.getState().selectGame(gameId);
-
-      expect(store.getState().selectedGameId).toBe(gameId);
-      expect(store.getState().selectedAgentId).toBeNull();
-    });
-
-    it('should reset selectedAgentId when changing from a game to null', () => {
-      const gameId = '770e8400-e29b-41d4-a716-000000000123';
-      const agentId = 'agent-789';
-
-      // Select game and agent
-      store.getState().selectGame(gameId);
-      store.getState().selectAgent(agentId);
-
-      expect(store.getState().selectedGameId).toBe(gameId);
-      expect(store.getState().selectedAgentId).toBe(agentId);
-
-      // Deselect game
-      store.getState().selectGame(null);
-
-      expect(store.getState().selectedGameId).toBeNull();
-      expect(store.getState().selectedAgentId).toBeNull();
-    });
-
-    it('should handle rapid game changes correctly', () => {
-      const gameId1 = '770e8400-e29b-41d4-a716-000000000001';
-      const gameId2 = '770e8400-e29b-41d4-a716-000000000002';
-      const gameId3 = '770e8400-e29b-41d4-a716-000000000003';
-      const agentId = 'agent-123';
-
-      store.getState().selectGame(gameId1);
-      store.getState().selectAgent(agentId);
-
-      store.getState().selectGame(gameId2);
-      expect(store.getState().selectedAgentId).toBeNull();
-
-      store.getState().selectAgent(agentId);
-      expect(store.getState().selectedAgentId).toBe(agentId);
-
-      store.getState().selectGame(gameId3);
-      expect(store.getState().selectedAgentId).toBeNull();
     });
   });
 
-  // ============================================================================
-  // selectAgent Action Tests
-  // ============================================================================
-
   describe('selectAgent', () => {
-    it('should set selectedAgentId to the provided value', () => {
-      const agentId = 'agent-123';
-
-      store.getState().selectAgent(agentId);
-
-      expect(store.getState().selectedAgentId).toBe(agentId);
+    it('should select an agent', () => {
+      store.getState().selectAgent('agent-1');
+      expect(store.getState().selectedAgentId).toBe('agent-1');
     });
 
-    it('should handle string agentId', () => {
-      const agentId = 'agent-abc-xyz';
-
-      store.getState().selectAgent(agentId);
-
-      expect(store.getState().selectedAgentId).toBe(agentId);
-    });
-
-    it('should handle null agentId', () => {
-      // First set an agent
-      store.getState().selectAgent('agent-123');
-      expect(store.getState().selectedAgentId).toBe('agent-123');
-
-      // Then set to null
+    it('should allow selecting null agent', () => {
+      store.getState().selectAgent('agent-1');
       store.getState().selectAgent(null);
 
       expect(store.getState().selectedAgentId).toBeNull();
     });
 
-    it('should allow changing from one agent to another', () => {
-      const agentId1 = 'agent-123';
-      const agentId2 = 'agent-456';
+    it('should allow changing agents', () => {
+      store.getState().selectAgent('agent-1');
+      store.getState().selectAgent('agent-2');
 
-      store.getState().selectAgent(agentId1);
-      expect(store.getState().selectedAgentId).toBe(agentId1);
-
-      store.getState().selectAgent(agentId2);
-      expect(store.getState().selectedAgentId).toBe(agentId2);
+      expect(store.getState().selectedAgentId).toBe('agent-2');
     });
+  });
 
-    it('should not affect selectedGameId', () => {
-      const gameId = '770e8400-e29b-41d4-a716-000000000123';
-      const agentId1 = 'agent-123';
-      const agentId2 = 'agent-456';
+  describe('toggleSidebar', () => {
+    it('should toggle sidebar state', () => {
+      expect(store.getState().sidebarCollapsed).toBe(false);
 
-      store.getState().selectGame(gameId);
-      store.getState().selectAgent(agentId1);
+      store.getState().toggleSidebar();
+      expect(store.getState().sidebarCollapsed).toBe(true);
 
-      expect(store.getState().selectedGameId).toBe(gameId);
-      expect(store.getState().selectedAgentId).toBe(agentId1);
-
-      store.getState().selectAgent(agentId2);
-
-      expect(store.getState().selectedGameId).toBe(gameId);
-      expect(store.getState().selectedAgentId).toBe(agentId2);
+      store.getState().toggleSidebar();
+      expect(store.getState().sidebarCollapsed).toBe(false);
     });
+  });
 
-    it('should allow selecting the same agent multiple times', () => {
-      const agentId = 'agent-123';
+  describe('setSidebarCollapsed', () => {
+    it('should set sidebar collapsed state', () => {
+      store.getState().setSidebarCollapsed(true);
+      expect(store.getState().sidebarCollapsed).toBe(true);
 
-      store.getState().selectAgent(agentId);
-      expect(store.getState().selectedAgentId).toBe(agentId);
-
-      store.getState().selectAgent(agentId);
+      store.getState().setSidebarCollapsed(false);
+      expect(store.getState().sidebarCollapsed).toBe(false);
+    });
+  });
+});

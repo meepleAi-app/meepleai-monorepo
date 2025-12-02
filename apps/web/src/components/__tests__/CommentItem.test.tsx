@@ -91,6 +91,11 @@ describe('CommentItem', () => {
     mockAlert.mockResolvedValue(undefined);
   });
 
+  afterEach(async () => {
+    // Wait for any pending state updates to complete
+    await new Promise(resolve => setTimeout(resolve, 0));
+  });
+
   describe('Rendering', () => {
     it('renders comment with author name', () => {
       render(
@@ -306,8 +311,12 @@ describe('CommentItem', () => {
         />
       );
 
-      const commentDiv = container.querySelector('[data-comment-id="comment-1"]') as HTMLElement;
-      expect(commentDiv).toBeInTheDocument(); // Style assertion removed - Shadcn/UI uses Tailwind CSS classes
+      // Verify resolved styling is applied - Shadcn/UI uses Tailwind CSS classes
+      // The component applies "bg-gray-100 opacity-70" for resolved comments
+      const commentWrapper = container.firstChild as HTMLElement;
+      expect(commentWrapper).toBeInTheDocument();
+      expect(commentWrapper).toHaveClass('bg-gray-100');
+      expect(commentWrapper).toHaveClass('opacity-70');
     });
 
     it('displays mentioned users count', () => {

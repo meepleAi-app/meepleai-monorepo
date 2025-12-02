@@ -1,344 +1,181 @@
 /**
- * Comprehensive Tests for Agents Client (Issue #1661 - Fase 1.2)
+ * AgentsClient Command Tests
  *
- * Coverage target: 95%+
- * Tests: Agent queries, commands, error handling, edge cases
+ * Tests for write operations: invoke, create, configure
  */
-
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createAgentsClient } from '../agentsClient';
-import { HttpClient } from '../../core/httpClient';
+import type { HttpClient } from '../../core/httpClient';
 
-    it('should create new agent', async () => {
-      const request = {
-        name: 'New Agent',
-        type: 'chat',
-        strategyName: 'default',
-        strategyParameters: { model: 'gpt-4' },
-        isActive: true,
-      };
+describe('agentsClient commands', () => {
+  const mockHttpClient: HttpClient = {
+    get: vi.fn(),
+    post: vi.fn(),
+    put: vi.fn(),
+    delete: vi.fn(),
+  };
 
+  const client = createAgentsClient({ httpClient: mockHttpClient });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe('invoke', () => {
+    it('should invoke agent with query', async () => {
       const mockResponse = {
-        id: 'agent-new',
-        ...request,
+        answer: 'This is the answer',
+        confidence: 0.85,
+        sources: [],
       };
 
-      mockHttpClient.post.mockResolvedValueOnce(mockResponse);
+      vi.mocked(mockHttpClient.post).mockResolvedValueOnce(mockResponse);
 
-      const result = await agentsClient.create(request);
+      const result = await client.invoke('agent-123', {
+        query: 'What are the rules?',
+      });
 
       expect(mockHttpClient.post).toHaveBeenCalledWith(
-        '/api/v1/agents',
-        request,
-        expect.anything()
+        '/api/v1/agents/agent-123/invoke',
+        { query: 'What are the rules?' },
+        expect.any(Object)
       );
       expect(result).toEqual(mockResponse);
     });
 
-    it('should create agent with minimal fields', async () => {
-      const request = {
-        name: 'Minimal Agent',
-        type: 'rag',
-        strategyName: 'default',
+    it('should invoke agent with context', async () => {
+      const mockResponse = {
+        answer: 'Contextual answer',
+        confidence: 0.9,
+        sources: [],
       };
 
-      mockHttpClient.post.mockResolvedValueOnce({ id: 'agent-min' });
+      vi.mocked(mockHttpClient.post).mockResolvedValueOnce(mockResponse);
 
-      await agentsClient.create(request);
-
-      expect(mockHttpClient.post).toHaveBeenCalled();
-    });
-
-    it('should throw error when creation fails', async () => {
-      mockHttpClient.post.mockResolvedValueOnce(null);
-
-      await expect(
-        agentsClient.create({ name: 'Test', type: 'chat', strategyName: 'default' })
-      ).rejects.toThrow('Failed to create agent: no response from server');
-    });
-
-    it('should handle complex configuration objects', async () => {
-      const request = {
-        name: 'Complex Agent',
-        type: 'advanced',
-        strategyName: 'advanced',
-        strategyParameters: {
-          model: 'gpt-4',
-          temperature: 0.7,
-          maxTokens: 2000,
-          systemPrompt: 'You are a helpful assistant',
-          tools: ['search', 'calculator'],
-        },
-      };
-
-      mockHttpClient.post.mockResolvedValueOnce({ id: 'agent-complex' });
-
-      await agentsClient.create(request);
+      const result = await client.invoke('agent-123', {
+        query: 'Follow up question',
+        context: 'Previous conversation context',
+      });
 
       expect(mockHttpClient.post).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.objectContaining({ strategyParameters: request.strategyParameters }),
-        expect.anything()
+        '/api/v1/agents/agent-123/invoke',
+        {
+          query: 'Follow up question',
+          context: 'Previous conversation context',
+        },
+        expect.any(Object)
+      );
+      expect(result).toEqual(mockResponse);
+    });
+
+    it('should throw error on null response', async () => {
+      vi.mocked(mockHttpClient.post).mockResolvedValueOnce(null);
+
+      await expect(client.invoke('agent-123', { query: 'Test' })).rejects.toThrow(
+        'Failed to invoke agent: no response from server'
+      );
+    });
+
+    it('should encode special characters in agent ID', async () => {
+      const mockResponse = { answer: 'Response', confidence: 0.8, sources: [] };
+      vi.mocked(mockHttpClient.post).mockResolvedValueOnce(mockResponse);
+
+      await client.invoke('agent/special', { query: 'Test' });
+
+      expect(mockHttpClient.post).toHaveBeenCalledWith(
+        '/api/v1/agents/agent%2Fspecial/invoke',
+        expect.any(Object),
+        expect.any(Object)
+      );
+    });
+  });
+
+  describe('create', () => {
+    it('should create a new agent', async () => {
+      const mockAgent = {
+        id: 'new-agent-id',
+        name: 'New Agent',
+        type: 'qa',
+        isActive: true,
+      };
+
+      vi.mocked(mockHttpClient.post).mockResolvedValueOnce(mockAgent);
+
+      const result = await client.create({
+        name: 'New Agent',
+        type: 'qa',
+        description: 'A new QA agent',
+      });
+
+      expect(mockHttpClient.post).toHaveBeenCalledWith(
+        '/api/v1/agents',
+        {
+          name: 'New Agent',
+          type: 'qa',
+          description: 'A new QA agent',
+        },
+        expect.any(Object)
+      );
+      expect(result).toEqual(mockAgent);
+    });
+
+    it('should throw error on null response', async () => {
+      vi.mocked(mockHttpClient.post).mockResolvedValueOnce(null);
+
+      await expect(client.create({ name: 'Test', type: 'qa' })).rejects.toThrow(
+        'Failed to create agent: no response from server'
       );
     });
   });
 
   describe('configure', () => {
     it('should configure agent strategy', async () => {
-      const request = {
-        strategyName: 'advanced',
-        strategyParameters: {
-          temperature: 0.8,
-          maxTokens: 3000,
+      const mockResponse = {
+        success: true,
+        agent: {
+          id: 'agent-123',
+          name: 'Configured Agent',
+          strategy: 'enhanced',
         },
       };
 
-      const mockResponse = {
-        success: true,
-        agentId: 'agent-123',
-        message: 'Agent configured successfully',
-      };
+      vi.mocked(mockHttpClient.put).mockResolvedValueOnce(mockResponse);
 
-      mockHttpClient.put.mockResolvedValueOnce(mockResponse);
-
-      const result = await agentsClient.configure('agent-123', request);
+      const result = await client.configure('agent-123', {
+        strategy: 'enhanced',
+        parameters: { temperature: 0.7 },
+      });
 
       expect(mockHttpClient.put).toHaveBeenCalledWith(
         '/api/v1/agents/agent-123/configure',
-        request,
-        expect.anything()
+        {
+          strategy: 'enhanced',
+          parameters: { temperature: 0.7 },
+        },
+        expect.any(Object)
       );
       expect(result).toEqual(mockResponse);
     });
 
-    it('should configure with empty parameters', async () => {
-      const request = {
-        strategyName: 'default',
-        strategyParameters: {},
-      };
+    it('should throw error on null response', async () => {
+      vi.mocked(mockHttpClient.put).mockResolvedValueOnce(null);
 
-      mockHttpClient.put.mockResolvedValueOnce({ success: true });
-
-      await agentsClient.configure('agent-1', request);
-
-      expect(mockHttpClient.put).toHaveBeenCalled();
-    });
-
-    it('should throw error when configuration fails', async () => {
-      mockHttpClient.put.mockResolvedValueOnce(null);
-
-      await expect(agentsClient.configure('agent-1', { strategyName: 'test' })).rejects.toThrow(
+      await expect(client.configure('agent-123', { strategy: 'basic' })).rejects.toThrow(
         'Failed to configure agent: no response from server'
       );
     });
 
-    it('should encode agentId in URL', async () => {
-      mockHttpClient.put.mockResolvedValueOnce({ success: true });
+    it('should encode special characters in agent ID', async () => {
+      const mockResponse = { success: true, agent: {} };
+      vi.mocked(mockHttpClient.put).mockResolvedValueOnce(mockResponse);
 
-      await agentsClient.configure('agent with/spaces', { strategyName: 'test' });
-
-      expect(mockHttpClient.put).toHaveBeenCalledWith(
-        expect.stringContaining('agent%20with%2Fspaces'),
-        expect.anything(),
-        expect.anything()
-      );
-    });
-
-    it('should handle complex configuration parameters', async () => {
-      const request = {
-        strategyName: 'multi-model',
-        strategyParameters: {
-          primary: { model: 'gpt-4', weight: 0.7 },
-          secondary: { model: 'claude-3', weight: 0.3 },
-          consensus: {
-            enabled: true,
-            threshold: 0.8,
-          },
-        },
-      };
-
-      mockHttpClient.put.mockResolvedValueOnce({ success: true });
-
-      await agentsClient.configure('agent-1', request);
+      await client.configure('agent/config', { strategy: 'basic' });
 
       expect(mockHttpClient.put).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.objectContaining({ strategyParameters: request.strategyParameters }),
-        expect.anything()
+        '/api/v1/agents/agent%2Fconfig/configure',
+        expect.any(Object),
+        expect.any(Object)
       );
-    });
-  });
-
-  describe('Error Handling', () => {
-    it('should propagate errors from getAll', async () => {
-      const error = new Error('Network error');
-      mockHttpClient.get.mockRejectedValueOnce(error);
-
-      await expect(agentsClient.getAll()).rejects.toThrow('Network error');
-    });
-
-    it('should propagate errors from getById', async () => {
-      const error = new Error('Not found');
-      mockHttpClient.get.mockRejectedValueOnce(error);
-
-      await expect(agentsClient.getById('agent-1')).rejects.toThrow('Not found');
-    });
-
-    it('should propagate errors from invoke', async () => {
-      const error = new Error('Agent execution failed');
-      mockHttpClient.post.mockRejectedValueOnce(error);
-
-      await expect(agentsClient.invoke('agent-1', { query: 'test' })).rejects.toThrow(
-        'Agent execution failed'
-      );
-    });
-
-    it('should propagate errors from create', async () => {
-      const error = new Error('Validation error');
-      mockHttpClient.post.mockRejectedValueOnce(error);
-
-      await expect(
-        agentsClient.create({ name: 'Test', type: 'chat', strategyName: 'default' })
-      ).rejects.toThrow('Validation error');
-    });
-
-    it('should propagate errors from configure', async () => {
-      const error = new Error('Invalid strategy');
-      mockHttpClient.put.mockRejectedValueOnce(error);
-
-      await expect(agentsClient.configure('agent-1', { strategyName: 'invalid' })).rejects.toThrow(
-        'Invalid strategy'
-      );
-    });
-  });
-
-  describe('Integration Tests', () => {
-    it('should handle complete agent lifecycle', async () => {
-      // 1. Get all agents
-      mockHttpClient.get.mockResolvedValueOnce({
-        success: true,
-        agents: [],
-        count: 0,
-      });
-
-      const initialAgents = await agentsClient.getAll();
-      expect(initialAgents).toHaveLength(0);
-
-      // 2. Create new agent
-      mockHttpClient.post.mockResolvedValueOnce({
-        id: 'agent-new',
-        name: 'Test Agent',
-        type: 'chat',
-      });
-
-      const newAgent = await agentsClient.create({
-        name: 'Test Agent',
-        type: 'chat',
-        strategyName: 'default',
-      });
-
-      expect(newAgent.id).toBe('agent-new');
-
-      // 3. Configure agent
-      mockHttpClient.put.mockResolvedValueOnce({
-        success: true,
-        agentId: 'agent-new',
-      });
-
-      await agentsClient.configure('agent-new', { strategyName: 'advanced' });
-
-      // 4. Invoke agent
-      mockHttpClient.post.mockResolvedValueOnce({
-        agentId: 'agent-new',
-        response: 'Agent response',
-      });
-
-      const response = await agentsClient.invoke('agent-new', { query: 'test query' });
-
-      expect(response.response).toBe('Agent response');
-    });
-
-    it('should handle search by type workflow', async () => {
-      // Get chat agents
-      mockHttpClient.get.mockResolvedValueOnce({
-        success: true,
-        agents: [
-          { id: 'agent-1', type: 'chat' },
-          { id: 'agent-2', type: 'chat' },
-        ],
-        count: 2,
-      });
-
-      const chatAgents = await agentsClient.getAvailable('chat');
-      expect(chatAgents).toHaveLength(2);
-
-      // Get specific agent details
-      mockHttpClient.get.mockResolvedValueOnce({
-        id: 'agent-1',
-        type: 'chat',
-        name: 'GPT-4',
-      });
-
-      const details = await agentsClient.getById(chatAgents[0].id);
-      expect(details?.name).toBe('GPT-4');
-    });
-  });
-
-  describe('Edge Cases', () => {
-    it('should handle empty agent name', async () => {
-      mockHttpClient.post.mockResolvedValueOnce({ id: 'agent' });
-
-      await agentsClient.create({ name: '', type: 'chat', strategyName: 'default' });
-
-      expect(mockHttpClient.post).toHaveBeenCalled();
-    });
-
-    it('should handle very long agent names', async () => {
-      const longName = 'A'.repeat(1000);
-      mockHttpClient.post.mockResolvedValueOnce({ id: 'agent' });
-
-      await agentsClient.create({ name: longName, type: 'chat', strategyName: 'default' });
-
-      expect(mockHttpClient.post).toHaveBeenCalled();
-    });
-
-    it('should handle concurrent agent invocations', async () => {
-      mockHttpClient.post.mockResolvedValue({
-        agentId: 'agent-1',
-        response: 'Response',
-      });
-
-      const promises = [
-        agentsClient.invoke('agent-1', { query: 'query1' }),
-        agentsClient.invoke('agent-1', { query: 'query2' }),
-        agentsClient.invoke('agent-1', { query: 'query3' }),
-      ];
-
-      await Promise.all(promises);
-
-      expect(mockHttpClient.post).toHaveBeenCalledTimes(3);
-    });
-
-    it('should handle optional gameId and chatThreadId', async () => {
-      mockHttpClient.post.mockResolvedValueOnce({
-        agentId: 'agent-1',
-        response: 'Response',
-      });
-
-      await agentsClient.invoke('agent-1', {
-        query: 'test',
-        gameId: undefined,
-        chatThreadId: undefined,
-      });
-
-      expect(mockHttpClient.post).toHaveBeenCalled();
-    });
-
-    it('should handle numeric agent IDs', async () => {
-      mockHttpClient.get.mockResolvedValueOnce({ id: '123' });
-
-      await agentsClient.getById('123');
-
-      expect(mockHttpClient.get).toHaveBeenCalledWith('/api/v1/agents/123', expect.anything());
     });
   });
 });

@@ -18,7 +18,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Integration;
 ///
 /// Test Strategy:
 /// - Load 50 expert-annotated test cases (excludes template-generated)
-/// - Call live RAG API at http://localhost:8080/api/v1/chat for each question
+/// - Call live RAG API at http://localhost:8080/knowledge-base/ask for each question (DDD endpoint)
 /// - Evaluate actual responses against expected criteria
 /// - Calculate accuracy metrics and verify ≥80% threshold
 /// - Generate detailed report with per-game and per-difficulty breakdowns
@@ -60,9 +60,74 @@ public class FirstAccuracyBaselineTest
         _output = output;
         _mockLoaderLogger = new Mock<ILogger<GoldenDatasetLoader>>();
         _mockEvaluatorLogger = new Mock<ILogger<RagAccuracyEvaluator>>();
-        _loader = new GoldenDatasetLoader(_mockLoaderLogger.Object);
+        _loader = new GoldenDatasetLoader(_mockLoaderLogger.Object, FindGoldenDatasetPath());
         _evaluator = new RagAccuracyEvaluator(_mockEvaluatorLogger.Object);
-        _httpClient = new HttpClient { BaseAddress = new Uri(ApiBaseUrl) };
+
+        // Use HttpClientHandler with CookieContainer to preserve session cookies
+        // Note: CheckCertificateRevocationList disabled for localhost testing
+#pragma warning disable CA5399 // HttpClient is created for localhost test, cert revocation not needed
+        var handler = new HttpClientHandler
+        {
+            UseCookies = true,
+            CookieContainer = new System.Net.CookieContainer()
+        };
+        _httpClient = new HttpClient(handler) { BaseAddress = new Uri(ApiBaseUrl) };
+#pragma warning restore CA5399
+    }
+
+    /// <summary>
+    /// Helper to find golden dataset path from repository root
+    /// </summary>
+    private static string FindGoldenDatasetPath()
+    {
+        // Start from current directory and walk up to find .git
+        var currentDir = Directory.GetCurrentDirectory();
+        var repoRoot = FindRepositoryRoot(currentDir);
+
+        if (repoRoot != null)
+        {
+            var path = Path.Combine(repoRoot, "tests", "data", "golden_dataset.json");
+            if (File.Exists(path))
+                return path;
+        }
+
+        // Fallback: Try multiple levels up to find the file
+        for (int levels = 1; levels <= 10; levels++)
+        {
+            var upPath = string.Join(Path.DirectorySeparatorChar.ToString(),
+                Enumerable.Repeat("..", levels));
+            var testPath = Path.GetFullPath(Path.Combine(currentDir, upPath, "tests", "data", "golden_dataset.json"));
+
+            if (File.Exists(testPath))
+                return testPath;
+        }
+
+        throw new InvalidOperationException(
+            $"Could not find golden_dataset.json searching up from: {currentDir}");
+    }
+
+    /// <summary>
+    /// Find repository root by looking for .git directory
+    /// </summary>
+    private static string? FindRepositoryRoot(string startPath)
+    {
+        var current = new DirectoryInfo(startPath);
+
+        // Walk up maximum 10 levels to prevent infinite loops
+        int maxLevels = 10;
+        int level = 0;
+
+        while (current != null && level < maxLevels)
+        {
+            var gitPath = Path.Combine(current.FullName, ".git");
+            if (Directory.Exists(gitPath))
+                return current.FullName;
+
+            current = current.Parent;
+            level++;
+        }
+
+        return null;
     }
 
     /// <summary>
@@ -207,26 +272,58 @@ public class FirstAccuracyBaselineTest
             _output.WriteLine("  2. Ensure services running: docker compose up postgres qdrant redis");
             throw new InvalidOperationException($"API not available at {ApiBaseUrl}. Ensure services are running.", ex);
         }
+
+        // Authenticate for subsequent API calls
+        await AuthenticateAsync();
+    }
+
+    /// <summary>
+    /// Authenticates with the API to get a session cookie
+    /// Uses credentials from environment variables or defaults to test user
+    /// </summary>
+    private async Task AuthenticateAsync()
+    {
+        var email = Environment.GetEnvironmentVariable("BASELINE_TEST_EMAIL") ?? "admin@meepleai.com";
+        var password = Environment.GetEnvironmentVariable("BASELINE_TEST_PASSWORD") ?? "admin123";
+
+        var loginRequest = new { email, password };
+
+        try
+        {
+            var response = await _httpClient.PostAsJsonAsync("/api/v1/auth/login", loginRequest);
+            response.EnsureSuccessStatusCode();
+            _output.WriteLine($"✅ Authenticated as {email}");
+        }
+        catch (HttpRequestException ex)
+        {
+            _output.WriteLine($"❌ Authentication failed for {email}: {ex.Message}");
+            _output.WriteLine("Prerequisites:");
+            _output.WriteLine("  - Set BASELINE_TEST_EMAIL and BASELINE_TEST_PASSWORD environment variables");
+            _output.WriteLine("  - Or ensure admin@meepleai.com/admin123 user exists");
+            throw new InvalidOperationException($"Authentication failed. Ensure valid credentials are configured.", ex);
+        }
     }
 
     /// <summary>
     /// Calls the RAG API to get an answer for a question
+    /// Uses the DDD /knowledge-base/ask endpoint (Issue #1000)
     /// </summary>
     private async Task<QaResponse> CallRagApi(string gameId, string question)
     {
+        // DDD endpoint uses 'query' instead of 'question'
         var request = new
         {
-            question,
+            query = question,
             gameId,
             language = "it",
-            streaming = false // Non-streaming for easier testing
+            bypassCache = true // Ensure fresh responses for accuracy testing
         };
 
-        var response = await _httpClient.PostAsJsonAsync("/api/v1/chat", request);
+        var response = await _httpClient.PostAsJsonAsync("/api/v1/knowledge-base/ask", request);
         response.EnsureSuccessStatusCode();
 
         var content = await response.Content.ReadAsStringAsync();
-        var result = JsonSerializer.Deserialize<ChatApiResponse>(content, new JsonSerializerOptions
+        var result = JsonSerializer.Deserialize<KnowledgeBaseAskResponse>(content, new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true
         });
@@ -248,17 +345,22 @@ public class FirstAccuracyBaselineTest
         return new QaResponse(
             answer: result.Answer,
             snippets: snippets,
-            confidence: result.Confidence
+            confidence: result.OverallConfidence
         );
     }
 
     /// <summary>
-    /// API response model for /api/v1/chat
+    /// API response model for /knowledge-base/ask (DDD endpoint)
+    /// Issue #1000: Updated to match actual DDD response structure
     /// </summary>
-    private class ChatApiResponse
+    private class KnowledgeBaseAskResponse
     {
+        public bool Success { get; set; }
         public string Answer { get; set; } = string.Empty;
-        public double Confidence { get; set; }
+        public double SearchConfidence { get; set; }
+        public double LlmConfidence { get; set; }
+        public double OverallConfidence { get; set; }
+        public bool IsLowQuality { get; set; }
         public List<CitationDto>? Citations { get; set; }
         public List<string>? Sources { get; set; }
     }

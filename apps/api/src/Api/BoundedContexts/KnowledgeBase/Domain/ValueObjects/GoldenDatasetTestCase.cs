@@ -85,7 +85,7 @@ public record GoldenDatasetTestCase
             throw new ArgumentException($"Invalid difficulty: {difficulty}. Must be 'easy', 'medium', or 'hard'", nameof(difficulty));
 
         if (!IsValidCategory(category))
-            throw new ArgumentException($"Invalid category: {category}. Must be 'gameplay', 'setup', 'endgame', or 'edge_cases'", nameof(category));
+            throw new ArgumentException($"Invalid category: {category}. Must be one of: gameplay, setup, endgame, edge_cases, scoring, cards, turn_structure, resources", nameof(category));
 
         return new GoldenDatasetTestCase
         {
@@ -110,7 +110,12 @@ public record GoldenDatasetTestCase
 
     private static bool IsValidCategory(string category)
     {
-        var valid = new[] { "gameplay", "setup", "endgame", "edge_case", "edge_cases" }; // Accept both singular and plural
+        // Accept all categories from golden dataset (generated + expert-annotated)
+        var valid = new[]
+        {
+            "gameplay", "setup", "endgame", "edge_case", "edge_cases",
+            "scoring", "cards", "turn_structure", "resources" // Additional categories from dataset
+        };
         return valid.Contains(category?.ToLowerInvariant(), StringComparer.Ordinal);
     }
 }

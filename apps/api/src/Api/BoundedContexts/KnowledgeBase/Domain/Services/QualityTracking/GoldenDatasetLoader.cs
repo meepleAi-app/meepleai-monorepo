@@ -71,22 +71,80 @@ public class GoldenDatasetLoader : IGoldenDatasetLoader
         }
         else
         {
-            // Find repository root by looking for .git directory or solution file
-            var currentDir = Directory.GetCurrentDirectory();
-            var repoRoot = FindRepositoryRoot(currentDir);
-
-            if (repoRoot == null)
-            {
-                _logger.LogWarning("Could not find repository root, using fallback path");
-                _datasetPath = Path.Combine(currentDir, "tests", "data", "golden_dataset.json");
-            }
-            else
-            {
-                _datasetPath = Path.Combine(repoRoot, "tests", "data", "golden_dataset.json");
-            }
+            // Try multiple strategies to find the dataset
+            _datasetPath = FindDatasetPath();
         }
 
         _logger.LogDebug("GoldenDatasetLoader initialized with path: {Path}", _datasetPath);
+    }
+
+    private string FindDatasetPath()
+    {
+        // Strategy 1: Environment variable (for CI/testing)
+        var envPath = Environment.GetEnvironmentVariable("GOLDEN_DATASET_PATH");
+        if (!string.IsNullOrEmpty(envPath) && File.Exists(envPath))
+        {
+            return envPath;
+        }
+
+        // Strategy 2: Find repository root from current directory
+        var currentDir = Directory.GetCurrentDirectory();
+        var repoRoot = FindRepositoryRoot(currentDir);
+
+        if (repoRoot != null)
+        {
+            var repoPath = Path.Combine(repoRoot, "tests", "data", "golden_dataset.json");
+            if (File.Exists(repoPath))
+            {
+                return repoPath;
+            }
+        }
+
+        // Strategy 3: Try from assembly location (for test execution)
+        var assemblyLocation = Path.GetDirectoryName(typeof(GoldenDatasetLoader).Assembly.Location);
+        if (assemblyLocation != null)
+        {
+            var assemblyRoot = FindRepositoryRoot(assemblyLocation);
+            if (assemblyRoot != null)
+            {
+                var assemblyPath = Path.Combine(assemblyRoot, "tests", "data", "golden_dataset.json");
+                if (File.Exists(assemblyPath))
+                {
+                    return assemblyPath;
+                }
+            }
+        }
+
+        // Strategy 4: Common development paths (Windows/Linux)
+        // Try from both currentDir and assemblyLocation
+        var searchDirs = new[] { currentDir, assemblyLocation ?? currentDir };
+        foreach (var searchDir in searchDirs.Where(d => !string.IsNullOrEmpty(d)))
+        {
+            var commonPaths = new[]
+            {
+                Path.Combine(searchDir, "..", "..", "..", "..", "..", "..", "..", "tests", "data", "golden_dataset.json"), // 7 levels from bin/Debug/net9.0
+                Path.Combine(searchDir, "..", "..", "..", "..", "..", "..", "tests", "data", "golden_dataset.json"), // 6 levels
+                Path.Combine(searchDir, "..", "..", "..", "..", "..", "tests", "data", "golden_dataset.json"),
+                Path.Combine(searchDir, "..", "..", "..", "..", "tests", "data", "golden_dataset.json"),
+                Path.Combine(searchDir, "..", "..", "..", "tests", "data", "golden_dataset.json"),
+                Path.Combine(searchDir, "..", "..", "tests", "data", "golden_dataset.json"),
+                Path.Combine(searchDir, "..", "tests", "data", "golden_dataset.json"),
+                Path.Combine(searchDir, "tests", "data", "golden_dataset.json"),
+            };
+
+            foreach (var path in commonPaths)
+            {
+                var fullPath = Path.GetFullPath(path);
+                if (File.Exists(fullPath))
+                {
+                    return fullPath;
+                }
+            }
+        }
+
+        // Fallback: use relative path (will fail gracefully if not found)
+        _logger.LogWarning("Could not find golden dataset, using fallback path from {CurrentDir}", currentDir);
+        return Path.Combine(currentDir, "tests", "data", "golden_dataset.json");
     }
 
     private static string? FindRepositoryRoot(string startPath)
@@ -97,7 +155,12 @@ public class GoldenDatasetLoader : IGoldenDatasetLoader
         {
             // Check for .git directory - this marks the true repository root
             var gitPath = Path.Combine(current.FullName, ".git");
-            if (Directory.Exists(gitPath))
+            if (Directory.Exists(gitPath) || File.Exists(gitPath)) // .git can be a file in worktrees
+                return current.FullName;
+
+            // Fallback: Check for tests/data directory structure (monorepo pattern)
+            var testsDataPath = Path.Combine(current.FullName, "tests", "data", "golden_dataset.json");
+            if (File.Exists(testsDataPath))
                 return current.FullName;
 
             current = current.Parent;

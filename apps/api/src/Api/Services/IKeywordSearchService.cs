@@ -3,6 +3,7 @@ namespace Api.Services;
 /// <summary>
 /// Interface for PostgreSQL full-text keyword search service.
 /// Part of AI-14 hybrid search implementation for BM25-style keyword matching.
+/// ADR-016 Phase 3: Supports Italian (meepleai_italian) and English FTS configurations.
 /// </summary>
 public interface IKeywordSearchService
 {
@@ -14,6 +15,7 @@ public interface IKeywordSearchService
     /// <param name="limit">Maximum number of results to return</param>
     /// <param name="phraseSearch">Enable exact phrase matching with proximity operators</param>
     /// <param name="boostTerms">Optional list of terms to boost in ranking (e.g., game-specific terminology)</param>
+    /// <param name="language">Language code for FTS configuration: "it" → meepleai_italian, "en" → english (default: "it")</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>List of keyword search results with BM25-style relevance scores</returns>
     Task<List<KeywordSearchResult>> SearchAsync(
@@ -22,6 +24,7 @@ public interface IKeywordSearchService
         int limit = 10,
         bool phraseSearch = false,
         List<string>? boostTerms = null,
+        string language = "it",
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -31,12 +34,14 @@ public interface IKeywordSearchService
     /// <param name="query">Search query</param>
     /// <param name="gameId">Game ID to filter results</param>
     /// <param name="limit">Maximum number of results</param>
+    /// <param name="language">Language code for FTS configuration: "it" → meepleai_italian, "en" → english (default: "it")</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>List of PDF document search results</returns>
     Task<List<KeywordDocumentResult>> SearchDocumentsAsync(
         string query,
         Guid gameId,
         int limit = 10,
+        string language = "it",
         CancellationToken cancellationToken = default);
 }
 

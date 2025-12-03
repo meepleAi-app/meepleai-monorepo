@@ -12,6 +12,31 @@ public interface IQdrantClientAdapter
         string collectionName,
         VectorParams vectorsConfig,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// ADR-016 Phase 3: Creates a collection with optimized HNSW and quantization configuration.
+    /// </summary>
+    /// <param name="collectionName">Name of the collection</param>
+    /// <param name="vectorsConfig">Vector parameters (size, distance)</param>
+    /// <param name="hnswConfig">HNSW index configuration (m, ef_construct, full_scan_threshold)</param>
+    /// <param name="quantizationConfig">Scalar quantization configuration (int8, quantile, always_ram)</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    Task CreateCollectionWithConfigAsync(
+        string collectionName,
+        VectorParams vectorsConfig,
+        HnswConfigDiff? hnswConfig = null,
+        QuantizationConfig? quantizationConfig = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// ADR-016 Phase 3: Updates an existing collection's HNSW and quantization configuration.
+    /// </summary>
+    Task UpdateCollectionConfigAsync(
+        string collectionName,
+        HnswConfigDiff? hnswConfig = null,
+        QuantizationConfigDiff? quantizationConfig = null,
+        CancellationToken cancellationToken = default);
+
     Task CreatePayloadIndexAsync(
         string collectionName,
         string fieldName,

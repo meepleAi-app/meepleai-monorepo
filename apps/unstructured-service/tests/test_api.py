@@ -17,7 +17,7 @@ def client():
 class TestExtractEndpoint:
     """Test /api/v1/extract endpoint"""
 
-    @patch("src.main.pdf_service.extract_async")
+    @patch("src.main.pdf_service.extract")
     def test_extract_success(self, mock_extract, client, mock_pdf_content):
         """Test successful PDF extraction"""
         # Arrange
@@ -81,10 +81,11 @@ class TestExtractEndpoint:
         # Assert
         assert response.status_code == 415
         data = response.json()
-        assert "error" in data
-        assert data["error"]["code"] == "UNSUPPORTED_MEDIA_TYPE"
+        # Errors are wrapped under detail.error in current implementation
+        assert "detail" in data and "error" in data["detail"]
+        assert data["detail"]["error"]["code"] == "UNSUPPORTED_MEDIA_TYPE"
 
-    @patch("src.main.pdf_service.extract_async")
+    @patch("src.main.pdf_service.extract")
     def test_extract_file_too_large(self, mock_extract, client):
         """Test extraction with file exceeding size limit returns 413"""
         # Arrange
@@ -100,10 +101,10 @@ class TestExtractEndpoint:
         # Assert
         assert response.status_code == 413
         data = response.json()
-        assert "error" in data
-        assert data["error"]["code"] == "FILE_TOO_LARGE"
+        assert "detail" in data and "error" in data["detail"]
+        assert data["detail"]["error"]["code"] == "FILE_TOO_LARGE"
 
-    @patch("src.main.pdf_service.extract_async")
+    @patch("src.main.pdf_service.extract")
     def test_extract_service_error(self, mock_extract, client, mock_pdf_content):
         """Test extraction service error returns 500"""
         # Arrange
@@ -119,8 +120,8 @@ class TestExtractEndpoint:
         # Assert
         assert response.status_code == 500
         data = response.json()
-        assert "error" in data
-        assert data["error"]["code"] == "EXTRACTION_FAILED"
+        assert "detail" in data and "error" in data["detail"]
+        assert data["detail"]["error"]["code"] == "EXTRACTION_FAILED"
 
 
 class TestHealthEndpoint:

@@ -48,7 +48,7 @@ metrics = {
 # Request/Response models
 class EmbeddingRequest(BaseModel):
     """Request model for embedding generation"""
-    texts: List[str] = Field(..., min_items=1, max_items=100, description="Texts to embed (1-100)")
+    texts: List[str] = Field(..., min_length=1, max_length=100, description="Texts to embed (1-100)")
     language: str = Field(..., pattern="^(en|it|de|fr|es)$", description="ISO 639-1 language code")
 
 

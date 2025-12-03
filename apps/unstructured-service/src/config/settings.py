@@ -1,5 +1,5 @@
 """Application configuration settings"""
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from pathlib import Path
 from typing import Literal
 
@@ -36,9 +36,10 @@ class Settings(BaseSettings):
     enable_metrics: bool = True
     enable_structured_logging: bool = True
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+    )
 
 
 # Singleton instance

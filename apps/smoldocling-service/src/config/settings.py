@@ -1,5 +1,5 @@
 """Application configuration settings for SmolDocling service"""
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from pathlib import Path
 from typing import Literal
 
@@ -45,9 +45,10 @@ class Settings(BaseSettings):
     batch_processing: bool = False  # Batch multiple pages (experimental)
     test_mode: bool = False  # Shortcut pipeline for integration tests
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+    )
 
 
 # Singleton instance

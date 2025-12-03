@@ -11,7 +11,13 @@ program
 
 program.action(async (opts) => {
   const cfg = loadConfig();
-  const plays = await fetchPlays(opts.gameId, opts.mindate, cfg);
+  let plays;
+  try {
+    plays = await fetchPlays(opts.gameId, opts.mindate, cfg);
+  } catch (err: any) {
+    console.error(`Failed to fetch plays for ${opts.gameId}:`, err?.message ?? err);
+    process.exit(1);
+  }
   const outFile = resolveOut("bgg", "plays", `${opts.gameId}.jsonl`);
   await fs.ensureDir(path.dirname(outFile));
 

@@ -4,8 +4,14 @@ import { type NextRequest, NextResponse } from 'next/server';
 
 const dataRoot = process.env.SCRAPER_OUTPUT_DIR ?? path.resolve(process.cwd(), '../../data');
 
-export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const { id: gameId } = await params;
+type ParamShape = { id: string } | Promise<{ id: string }>;
+
+export async function GET(_: NextRequest, { params }: { params: ParamShape }) {
+  const resolved = params instanceof Promise ? await params : params;
+  const gameId = resolved.id;
+  if (!dataRoot) {
+    return NextResponse.json({ error: 'SCRAPER_OUTPUT_DIR not configured' }, { status: 500 });
+  }
   const qaPath = path.join(dataRoot, 'rulebooks', 'qa', `${gameId}.jsonl`);
   try {
     const content = await fs.readFile(qaPath, 'utf8');

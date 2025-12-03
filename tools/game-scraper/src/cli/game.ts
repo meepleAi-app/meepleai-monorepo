@@ -12,7 +12,13 @@ program.action(async (opts) => {
   const cfg = loadConfig();
   const outFile = resolveOut("bgg", "games.jsonl");
   await fs.ensureDir(path.dirname(outFile));
-  const thing = await fetchThing(opts.gameId, cfg);
+  let thing;
+  try {
+    thing = await fetchThing(opts.gameId, cfg);
+  } catch (err: any) {
+    console.error(`Failed to fetch game ${opts.gameId}:`, err?.message ?? err);
+    process.exit(1);
+  }
   if (!thing) {
     console.error(`No thing found for id ${opts.gameId}`);
     process.exit(1);

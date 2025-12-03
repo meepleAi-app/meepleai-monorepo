@@ -1,11 +1,11 @@
-﻿import fs from 'node:fs/promises';
+import fs from 'node:fs/promises';
 import path from 'node:path';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 
 const dataRoot = process.env.SCRAPER_OUTPUT_DIR ?? path.resolve(process.cwd(), '../../data');
 
-export async function GET(_: Request, { params }: { params: { id: string } }) {
-  const gameId = params.id;
+export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id: gameId } = await params;
   const qaPath = path.join(dataRoot, 'rulebooks', 'qa', `${gameId}.jsonl`);
   try {
     const content = await fs.readFile(qaPath, 'utf8');

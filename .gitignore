@@ -58,6 +58,20 @@ coverage/
 .pytest_cache/
 TestResults/
 
+# Python
+.venv/
+.venv*/
+**/.venv/
+**/.venv*/
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+
 # Temporary
 tmp/
 temp/

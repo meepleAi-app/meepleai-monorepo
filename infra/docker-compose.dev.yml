@@ -5,9 +5,6 @@
 #   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
 #   docker compose -f docker-compose.yml -f docker-compose.dev.yml down
 #
-# For MCP servers, use:
-#   docker compose -f ../docker/mcp/docker-compose.yml up -d
-#
 # Note: This file uses plain environment variables instead of secrets for easier local development
 
 services:

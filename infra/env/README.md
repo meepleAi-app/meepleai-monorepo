@@ -139,34 +139,7 @@ The rest of the SMTP fields live in `infra/alertmanager.yml`; no need to duplica
 
 ---
 
-## 5. MCP Environment (docker/mcp/.env)
-
-**Location**: `../../docker/mcp/.env.example`
-
-Each MCP service has its own API key:
-
-| Section | Variable | How to get it |
-|---------|----------|---------------|
-| GitHub MCP | `GITHUB_TOKEN` | Personal Access Token with `repo`, `workflow`, `admin:org` scopes ([GitHub → Settings → Developer settings → Personal access tokens](https://github.com/settings/tokens)) |
-| | `GITHUB_OWNER` / `GITHUB_REPO` | Repository owner/name (`DegrassiAaron`, `meepleai-monorepo`) |
-| n8n MCP | `N8N_BASE_URL`, `N8N_API_KEY` | Create an API key inside the n8n UI (Settings → API Keys) |
-| Magic MCP | `MAGIC_API_KEY`, `TWENTYFIRST_API_KEY` | 21st.dev console (https://21st.dev/magic/console) |
-| Context7 MCP | `CONTEXT7_API_KEY` | Upstash Context7 console (https://console.upstash.com/context7) |
-| Knowledge Graph MCP | `KG_QDRANT_URL` | Default `http://qdrant:6333`; no API key required |
-
-**Setup**:
-```bash
-cd docker/mcp
-cp .env.example .env
-# Edit .env with your API keys
-docker compose up -d
-```
-
-Note: `.gitignore` already covers `.env` files.
-
----
-
-## 6. `infisical.env` (Experimental)
+## 5. `infisical.env` (Experimental)
 
 **Location**: `../experimental/infisical.env.example`
 
@@ -189,7 +162,7 @@ docker compose -f docker-compose.infisical.yml up -d
 
 ---
 
-## 7. `api.env.ci`, `web.env.ci`, `n8n.env.ci`
+## 6. `api.env.ci`, `web.env.ci`, `n8n.env.ci`
 These `.example` files are templates for your CI/CD platform. Recommended workflow:
 
 1. Copy the desired `.example` into your secret manager (GitHub Actions → Repository Settings → Secrets and variables).
@@ -201,7 +174,7 @@ These `.example` files are templates for your CI/CD platform. Recommended workfl
 ## Verification Checklist
 - [ ] `infra/secrets/*.txt` populated (see secrets README)
 - [ ] `api.env.dev`, `web.env.dev`, `n8n.env.dev`, `alertmanager.env` exist
-- [ ] All required API keys (OpenRouter, GitHub, n8n, Magic, Context7) created and stored safely
+- [ ] All required API keys (OpenRouter) created and stored safely
 - [ ] Optional: `../experimental/infisical.env` if you plan to run the Infisical POC
 
 Once the files are in place you can start the stack:

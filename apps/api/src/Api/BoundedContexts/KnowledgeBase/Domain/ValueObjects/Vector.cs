@@ -24,6 +24,16 @@ public sealed class Vector : ValueObject
     }
 
     /// <summary>
+    /// Creates a placeholder vector for search results where the actual vector values are not needed.
+    /// Use this when mapping Qdrant search results that don't include vector data.
+    /// </summary>
+    /// <param name="dimensions">The vector dimensions (default: 768 for nomic-embed-text)</param>
+    public static Vector CreatePlaceholder(int dimensions = 768)
+    {
+        return new Vector(new float[dimensions]);
+    }
+
+    /// <summary>
     /// Calculates cosine similarity between this vector and another.
     /// Returns value between -1 (opposite) and 1 (identical).
     /// </summary>

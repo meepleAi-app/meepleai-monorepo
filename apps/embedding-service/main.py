@@ -12,8 +12,10 @@ from contextlib import asynccontextmanager
 from typing import List
 
 import torch
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import JSONResponse
+import threading
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse, PlainTextResponse
+import uuid, time
 from pydantic import BaseModel, Field
 from sentence_transformers import SentenceTransformer
 
@@ -28,9 +30,19 @@ logger = logging.getLogger(__name__)
 MODEL_NAME = "intfloat/multilingual-e5-large"
 SUPPORTED_LANGUAGES = ["en", "it", "de", "fr", "es"]
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+# Hard guard to prevent runaway memory use on very long inputs
+MAX_TEXT_CHARS = 4096
+MAX_TOTAL_CHARS = 200_000
 
 # Global model instance
 model: SentenceTransformer | None = None
+metrics_lock = threading.Lock()
+metrics = {
+    "embed_requests_total": 0,
+    "embed_failures_total": 0,
+    "embed_duration_ms_sum": 0.0,
+    "embed_total_chars_sum": 0.0,
+}
 
 
 # Request/Response models
@@ -130,7 +142,21 @@ async def generate_embeddings(request: EmbeddingRequest):
             detail=f"Unsupported language: {request.language}. Supported: {SUPPORTED_LANGUAGES}"
         )
 
+    start = time.time()
     try:
+        # Validate text lengths (defense-in-depth; pydantic only limits count)
+        total_chars = sum(len(t) for t in request.texts)
+        if any(len(t) > MAX_TEXT_CHARS for t in request.texts):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Each text must be <= {MAX_TEXT_CHARS} characters"
+            )
+        if total_chars > MAX_TOTAL_CHARS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Total payload too large ({total_chars} chars > {MAX_TOTAL_CHARS})"
+            )
+
         logger.info(f"Generating embeddings for {len(request.texts)} texts in language: {request.language}")
 
         # Generate embeddings
@@ -149,7 +175,12 @@ async def generate_embeddings(request: EmbeddingRequest):
         # Convert to list of lists for JSON serialization
         embeddings_list = embeddings.tolist()
 
-        logger.info(f"Successfully generated {len(embeddings_list)} embeddings")
+        duration_ms = int((time.time() - start) * 1000)
+        logger.info(f"Successfully generated {len(embeddings_list)} embeddings in {duration_ms}ms")
+        with metrics_lock:
+            metrics["embed_requests_total"] += 1
+            metrics["embed_duration_ms_sum"] += duration_ms
+            metrics["embed_total_chars_sum"] += total_chars
 
         return EmbeddingResponse(
             embeddings=embeddings_list,
@@ -160,7 +191,43 @@ async def generate_embeddings(request: EmbeddingRequest):
 
     except Exception as e:
         logger.error(f"Error generating embeddings: {e}")
-        raise HTTPException(status_code=500, detail=f"Error generating embeddings: {str(e)}")
+        request_id = str(uuid.uuid4())
+        with metrics_lock:
+            metrics["embed_requests_total"] += 1
+            metrics["embed_failures_total"] += 1
+        return JSONResponse(
+            status_code=500,
+            content=ErrorResponse(
+                error={
+                    "code": "EMBEDDING_FAILED",
+                    "message": str(e),
+                    "request_id": request_id,
+                }
+            ).model_dump(),
+        )
+
+
+@app.get("/metrics", tags=["Metrics"])
+async def metrics_endpoint():
+    """
+    Minimal Prometheus-style metrics (text format).
+    """
+    with metrics_lock:
+        lines = [
+            "# HELP embed_requests_total Total embedding requests",
+            "# TYPE embed_requests_total counter",
+            f"embed_requests_total {metrics['embed_requests_total']}",
+            "# HELP embed_failures_total Total embedding failures",
+            "# TYPE embed_failures_total counter",
+            f"embed_failures_total {metrics['embed_failures_total']}",
+            "# HELP embed_duration_ms_sum Cumulative embedding latency in ms",
+            "# TYPE embed_duration_ms_sum counter",
+            f"embed_duration_ms_sum {metrics['embed_duration_ms_sum']}",
+            "# HELP embed_total_chars_sum Cumulative characters processed",
+            "# TYPE embed_total_chars_sum counter",
+            f"embed_total_chars_sum {metrics['embed_total_chars_sum']}",
+        ]
+    return PlainTextResponse("\n".join(lines) + "\n")
 
 
 @app.get("/", tags=["Info"])
@@ -182,3 +249,23 @@ async def root():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")
+# Error schema
+class ErrorResponse(BaseModel):
+    error: dict
+
+
+# Unified error handler
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    request_id = str(uuid.uuid4())
+    logger.error(f"Unhandled error [{request_id}]: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content=ErrorResponse(
+            error={
+                "code": "INTERNAL_ERROR",
+                "message": "Unexpected error",
+                "request_id": request_id,
+            }
+        ).model_dump(),
+    )

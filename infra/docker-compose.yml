@@ -369,9 +369,12 @@ services:
       OLLAMA_URL: http://ollama:11434
       EMBEDDING_PROVIDER: ollama
       EMBEDDING_MODEL: nomic-embed-text
+      EMBEDDING_DIMENSIONS: 768
+      # Override nested config from appsettings.json (ASP.NET Core uses __ for nesting)
+      Embedding__Dimensions: 768
       # AI-09: Local embedding service configuration
       LOCAL_EMBEDDING_URL: http://embedding-service:8000
-      EMBEDDING_FALLBACK_ENABLED: "true"
+      EMBEDDING_FALLBACK_ENABLED: "false"
       # SEC-708: OpenRouter API key from secret file
       OPENROUTER_API_KEY_FILE: /run/secrets/openrouter-api-key
       # Bootstrap: Initial admin user configuration (password from secret)
@@ -383,7 +386,7 @@ services:
       - openrouter-api-key
       - initial-admin-password
     ports:
-      - "8080:8080"
+      - "5080:8080"
     depends_on:
       postgres:
         condition: service_healthy

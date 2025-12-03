@@ -16,7 +16,14 @@ import { useState, useCallback, useRef } from 'react';
 import type { Citation } from '@/types';
 
 // Event types that match the backend
-type StreamingEventType = 'token' | 'stateUpdate' | 'citations' | 'complete' | 'error' | 'heartbeat' | 'followUpQuestions';
+type StreamingEventType =
+  | 'token'
+  | 'stateUpdate'
+  | 'citations'
+  | 'complete'
+  | 'error'
+  | 'heartbeat'
+  | 'followUpQuestions';
 
 type Snippet = {
   text: string;
@@ -56,7 +63,14 @@ type FollowUpQuestionsData = {
 
 type StreamingEvent = {
   type: StreamingEventType;
-  data: StateUpdateData | CitationsData | TokenData | CompleteData | ErrorData | FollowUpQuestionsData | null;
+  data:
+    | StateUpdateData
+    | CitationsData
+    | TokenData
+    | CompleteData
+    | ErrorData
+    | FollowUpQuestionsData
+    | null;
 };
 
 /**
@@ -87,7 +101,16 @@ export interface RealStreamingControls {
  * Real streaming callbacks
  */
 export interface RealStreamingCallbacks {
-  onComplete?: (answer: string, snippets: Snippet[], metadata: { totalTokens: number; confidence: number | null; followUpQuestions?: string[]; citations?: Citation[] }) => void;
+  onComplete?: (
+    answer: string,
+    snippets: Snippet[],
+    metadata: {
+      totalTokens: number;
+      confidence: number | null;
+      followUpQuestions?: string[];
+      citations?: Citation[];
+    }
+  ) => void;
   onError?: (error: string) => void;
 }
 
@@ -137,7 +160,7 @@ export function useRealStreaming(
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
     }
-    setState((prev) => ({ ...prev, isStreaming: false }));
+    setState(prev => ({ ...prev, isStreaming: false }));
   }, []);
 
   const reset = useCallback(() => {
@@ -161,7 +184,7 @@ export function useRealStreaming(
       abortControllerRef.current = abortController;
 
       // Build URL with query parameters
-      const baseUrl = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5080';
       const url = new URL('/api/v1/agents/qa/stream', baseUrl);
 
       // EventSource doesn't support POST, so we use fetch with ReadableStream
@@ -176,7 +199,7 @@ export function useRealStreaming(
         credentials: 'include', // Include cookies for authentication
         signal: abortController.signal,
       })
-        .then(async (response) => {
+        .then(async response => {
           if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
           }
@@ -224,7 +247,7 @@ export function useRealStreaming(
                 // Handle different event types
                 switch (eventType) {
                   case 'stateUpdate':
-                    setState((prev) => ({
+                    setState(prev => ({
                       ...prev,
                       state: (eventData as StateUpdateData)?.state || null,
                     }));
@@ -232,7 +255,7 @@ export function useRealStreaming(
 
                   case 'citations': {
                     const citationsData = eventData as CitationsData;
-                    setState((prev) => ({
+                    setState(prev => ({
                       ...prev,
                       snippets: citationsData?.snippets || prev.snippets,
                       citations: citationsData?.citations || prev.citations,
@@ -241,7 +264,7 @@ export function useRealStreaming(
                   }
 
                   case 'token':
-                    setState((prev) => ({
+                    setState(prev => ({
                       ...prev,
                       currentAnswer: prev.currentAnswer + ((eventData as TokenData)?.token || ''),
                     }));
@@ -249,7 +272,7 @@ export function useRealStreaming(
 
                   case 'followUpQuestions': {
                     const followUpData = eventData as FollowUpQuestionsData;
-                    setState((prev) => ({
+                    setState(prev => ({
                       ...prev,
                       followUpQuestions: followUpData?.questions || [],
                     }));
@@ -258,7 +281,7 @@ export function useRealStreaming(
 
                   case 'complete': {
                     const completeData = eventData as CompleteData;
-                    setState((prev) => {
+                    setState(prev => {
                       const finalState = {
                         ...prev,
                         totalTokens: completeData?.totalTokens || 0,
@@ -271,12 +294,20 @@ export function useRealStreaming(
 
                       // Call completion callback
                       if (callbacksRef.current?.onComplete) {
-                        callbacksRef.current.onComplete(finalState.currentAnswer, finalState.snippets, {
-                          totalTokens: finalState.totalTokens,
-                          confidence: finalState.confidence,
-                          followUpQuestions: prev.followUpQuestions.length > 0 ? prev.followUpQuestions : undefined,
-                          citations: finalState.citations.length > 0 ? finalState.citations : undefined,
-                        });
+                        callbacksRef.current.onComplete(
+                          finalState.currentAnswer,
+                          finalState.snippets,
+                          {
+                            totalTokens: finalState.totalTokens,
+                            confidence: finalState.confidence,
+                            followUpQuestions:
+                              prev.followUpQuestions.length > 0
+                                ? prev.followUpQuestions
+                                : undefined,
+                            citations:
+                              finalState.citations.length > 0 ? finalState.citations : undefined,
+                          }
+                        );
                       }
 
                       return finalState;
@@ -287,7 +318,7 @@ export function useRealStreaming(
                   case 'error': {
                     const errorData = eventData as ErrorData;
                     const errorMessage = errorData?.message || 'Unknown error occurred';
-                    setState((prev) => ({
+                    setState(prev => ({
                       ...prev,
                       error: errorMessage,
                       isStreaming: false,
@@ -310,10 +341,10 @@ export function useRealStreaming(
             }
           }
         })
-        .catch((error) => {
+        .catch(error => {
           // Don't treat abort as an error
           if (error.name === 'AbortError') {
-            setState((prev) => ({
+            setState(prev => ({
               ...prev,
               isStreaming: false,
               state: null,
@@ -322,7 +353,7 @@ export function useRealStreaming(
           }
 
           const errorMessage = error instanceof Error ? error.message : 'Failed to stream response';
-          setState((prev) => ({
+          setState(prev => ({
             ...prev,
             error: errorMessage,
             isStreaming: false,

@@ -2,11 +2,13 @@
 import logging
 import uuid
 import torch
+import threading
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Optional
 from fastapi import FastAPI, File, UploadFile, HTTPException, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
+from starlette.concurrency import run_in_threadpool
 from PIL import Image
 
 from .config import settings
@@ -30,6 +32,13 @@ logger = logging.getLogger(__name__)
 
 # Global service instance (initialized in lifespan)
 pdf_service: Optional[PdfExtractionService] = None
+metrics_lock = threading.Lock()
+metrics = {
+    "extract_requests_total": 0,
+    "extract_failures_total": 0,
+    "extract_duration_ms_sum": 0.0,
+    "extract_payload_bytes_sum": 0.0,
+}
 
 
 # Lifespan context manager
@@ -167,6 +176,7 @@ async def extract_pdf(
     request_id = str(uuid.uuid4())
     logger.info(f"Extraction request [{request_id}]: file={file.filename}")
 
+    start_time = datetime.utcnow()
     try:
         # Validate file type
         if not file.content_type or "pdf" not in file.content_type.lower():
@@ -204,9 +214,12 @@ async def extract_pdf(
 
         file_io = BytesIO(file_content)
 
-        # Extract text
-        result = await pdf_service.extract_async(
-            file_content=file_io, filename=file.filename or "document.pdf", language="ita"
+        # Extract text off the event loop (CPU/GPU bound)
+        result = await run_in_threadpool(
+            pdf_service.extract,
+            file_io,
+            file.filename or "document.pdf",
+            "ita",
         )
 
         # Build response
@@ -245,12 +258,23 @@ async def extract_pdf(
             f"Extraction completed [{request_id}]: pages={result.page_count}, "
             f"chunks={len(result.chunks)}, quality={result.quality_score.total_score:.2f}"
         )
+        duration_ms = (datetime.utcnow() - start_time).total_seconds() * 1000
+        with metrics_lock:
+            metrics["extract_requests_total"] += 1
+            metrics["extract_duration_ms_sum"] += duration_ms
+            metrics["extract_payload_bytes_sum"] += file_size
 
         return response
 
     except HTTPException:
+        with metrics_lock:
+            metrics["extract_requests_total"] += 1
+            metrics["extract_failures_total"] += 1
         raise
     except ValueError as e:
+        with metrics_lock:
+            metrics["extract_requests_total"] += 1
+            metrics["extract_failures_total"] += 1
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=ErrorResponse(
@@ -264,6 +288,9 @@ async def extract_pdf(
         )
     except Exception as e:
         logger.error(f"Extraction failed [{request_id}]: {e}", exc_info=True)
+        with metrics_lock:
+            metrics["extract_requests_total"] += 1
+            metrics["extract_failures_total"] += 1
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=ErrorResponse(
@@ -357,6 +384,26 @@ async def root():
         "status": "running",
         "docs": "/docs",
     }
+
+
+@app.get("/metrics", summary="Prometheus metrics")
+async def metrics_endpoint():
+    with metrics_lock:
+        lines = [
+            "# HELP extract_requests_total Total extract requests",
+            "# TYPE extract_requests_total counter",
+            f"extract_requests_total {metrics['extract_requests_total']}",
+            "# HELP extract_failures_total Total extract failures",
+            "# TYPE extract_failures_total counter",
+            f"extract_failures_total {metrics['extract_failures_total']}",
+            "# HELP extract_duration_ms_sum Cumulative extract latency in ms",
+            "# TYPE extract_duration_ms_sum counter",
+            f"extract_duration_ms_sum {metrics['extract_duration_ms_sum']}",
+            "# HELP extract_payload_bytes_sum Cumulative payload bytes processed",
+            "# TYPE extract_payload_bytes_sum counter",
+            f"extract_payload_bytes_sum {metrics['extract_payload_bytes_sum']}",
+        ]
+    return PlainTextResponse("\n".join(lines) + "\n")
 
 
 if __name__ == "__main__":

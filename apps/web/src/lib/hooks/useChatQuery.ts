@@ -92,7 +92,7 @@ export function useChatQuery(callbacks?: {
 
       try {
         // Build URL
-        const baseUrl = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
+        const baseUrl = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5080';
         const url = new URL('/api/v1/knowledge-base/ask', baseUrl);
 
         // Make POST request

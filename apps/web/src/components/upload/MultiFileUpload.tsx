@@ -67,7 +67,7 @@ async function validatePdfFile(file: File): Promise<string | null> {
 async function readFileHeader(file: File, bytesToRead: number): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = e => {
       if (e.target?.result) {
         const bytes = new Uint8Array(e.target.result as ArrayBuffer);
         const header = String.fromCharCode(...Array.from(bytes));
@@ -91,7 +91,7 @@ export function MultiFileUpload({
   onUploadSuccess,
   onUploadError,
   onQueueAdd,
-  onRetry
+  onRetry,
 }: MultiFileUploadProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
@@ -107,20 +107,31 @@ export function MultiFileUpload({
     clearCompleted,
     clearAll,
     getStats,
-    startUpload
+    startUpload,
   } = useUploadQueue({
-    onUploadComplete: () => {
-      onUploadComplete?.();
+    autoUpload,
+    onUploadComplete: item => {
+      // Per-item completion callback - call the success handler
+      onUploadSuccess?.(item);
     },
     onUploadError: (item, error) => {
       onUploadError?.(item, error);
     },
-    onAllComplete: (stats) => {
+    onUploadStart: item => {
+      onUploadStart?.(item);
+    },
+    onQueueAdd: items => {
+      onQueueAdd?.(items);
+    },
+    onRetry: (item, attempt, error) => {
+      onRetry?.(item, attempt, error);
+    },
+    onAllComplete: stats => {
       setShowSummary(true);
       if (stats.succeeded > 0) {
         onUploadComplete?.();
       }
-    }
+    },
   });
 
   const stats = getStats();
@@ -128,50 +139,58 @@ export function MultiFileUpload({
   /**
    * Validates and adds files to the queue
    */
-  const handleFilesSelected = useCallback(async (files: FileList | File[]) => {
-    const fileArray = Array.from(files);
+  const handleFilesSelected = useCallback(
+    async (files: FileList | File[]) => {
+      const fileArray = Array.from(files);
 
-    // Check batch size limit
-    if (fileArray.length > MAX_FILES_PER_BATCH) {
-      setValidationErrors([`Too many files selected. Maximum ${MAX_FILES_PER_BATCH} files allowed per batch.`]);
-      return;
-    }
-
-    setValidationErrors([]);
-    const errors: string[] = [];
-    const validFiles: File[] = [];
-
-    // Validate each file
-    for (const file of fileArray) {
-      const error = await validatePdfFile(file);
-      if (error) {
-        errors.push(error);
-      } else {
-        validFiles.push(file);
+      // Check batch size limit
+      if (fileArray.length > MAX_FILES_PER_BATCH) {
+        setValidationErrors([
+          `Too many files selected. Maximum ${MAX_FILES_PER_BATCH} files allowed per batch.`,
+        ]);
+        return;
       }
-    }
 
-    if (errors.length > 0) {
-      setValidationErrors(errors);
-    }
+      setValidationErrors([]);
+      const errors: string[] = [];
+      const validFiles: File[] = [];
 
-    if (validFiles.length > 0) {
-      await addFiles(validFiles, gameId, language);
-      setShowSummary(false);
-    }
-  }, [gameId, language, addFiles]);
+      // Validate each file
+      for (const file of fileArray) {
+        const error = await validatePdfFile(file);
+        if (error) {
+          errors.push(error);
+        } else {
+          validFiles.push(file);
+        }
+      }
+
+      if (errors.length > 0) {
+        setValidationErrors(errors);
+      }
+
+      if (validFiles.length > 0) {
+        await addFiles(validFiles, gameId, language);
+        setShowSummary(false);
+      }
+    },
+    [gameId, language, addFiles]
+  );
 
   /**
    * Handle file input change
    */
-  const handleFileInputChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (files && files.length > 0) {
-      void handleFilesSelected(files);
-    }
-    // Reset input to allow selecting the same files again
-    event.target.value = '';
-  }, [handleFilesSelected]);
+  const handleFileInputChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      const files = event.target.files;
+      if (files && files.length > 0) {
+        void handleFilesSelected(files);
+      }
+      // Reset input to allow selecting the same files again
+      event.target.value = '';
+    },
+    [handleFilesSelected]
+  );
 
   /**
    * Handle drag enter
@@ -205,16 +224,19 @@ export function MultiFileUpload({
   /**
    * Handle drop
    */
-  const handleDrop = useCallback((e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
+  const handleDrop = useCallback(
+    (e: DragEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDragging(false);
 
-    const files = e.dataTransfer.files;
-    if (files && files.length > 0) {
-      void handleFilesSelected(files);
-    }
-  }, [handleFilesSelected]);
+      const files = e.dataTransfer.files;
+      if (files && files.length > 0) {
+        void handleFilesSelected(files);
+      }
+    },
+    [handleFilesSelected]
+  );
 
   /**
    * Trigger file input click
@@ -224,16 +246,16 @@ export function MultiFileUpload({
   }, []);
 
   return (
-    <div data-testid="multi-file-upload" data-game-id={gameId} data-game-name={gameName} className="mt-6">
-      <h3 className="mb-4 text-lg font-semibold">
-        Multi-File Upload
-      </h3>
+    <div
+      data-testid="multi-file-upload"
+      data-game-id={gameId}
+      data-game-name={gameName}
+      className="mt-6"
+    >
+      <h3 className="mb-4 text-lg font-semibold">Multi-File Upload</h3>
 
       {/* Game Info */}
-      <div
-        data-testid="game-info-badge"
-        className="p-3 mb-4"
-      >
+      <div data-testid="game-info-badge" className="p-3 mb-4">
         <Badge variant="default" className="text-sm px-4 py-2">
           Target Game: {gameName} ({gameId})
         </Badge>
@@ -243,13 +265,8 @@ export function MultiFileUpload({
 
       {/* Validation Errors */}
       {validationErrors.length > 0 && (
-        <div
-          role="alert"
-          className="p-3 bg-red-50 border border-red-600 rounded-md mb-4"
-        >
-          <div className="text-sm font-semibold text-red-600 mb-2">
-            Validation Errors:
-          </div>
+        <div role="alert" className="p-3 bg-red-50 border border-red-600 rounded-md mb-4">
+          <div className="text-sm font-semibold text-red-600 mb-2">Validation Errors:</div>
           <ul className="m-0 pl-5 text-xs text-red-600">
             {validationErrors.map((error, index) => (
               <li key={index}>{error}</li>
@@ -267,13 +284,13 @@ export function MultiFileUpload({
         className="p-10 border-2 border-dashed rounded-lg text-center cursor-pointer transition-all mb-6"
         style={{
           borderColor: isDragging ? '#0070f3' : '#dadce0',
-          backgroundColor: isDragging ? '#e3f2fd' : '#fafafa'
+          backgroundColor: isDragging ? '#e3f2fd' : '#fafafa',
         }}
         onClick={handleBrowseClick}
         role="button"
         tabIndex={0}
         aria-label="Click to browse files or drag and drop PDFs here"
-        onKeyDown={(e) => {
+        onKeyDown={e => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
             handleBrowseClick();
@@ -283,7 +300,7 @@ export function MultiFileUpload({
         <div
           className="text-5xl mb-4"
           style={{
-            color: isDragging ? '#0070f3' : '#5f6368'
+            color: isDragging ? '#0070f3' : '#5f6368',
           }}
           aria-hidden="true"
         >
@@ -297,7 +314,7 @@ export function MultiFileUpload({
         </div>
         <Button
           type="button"
-          onClick={(e) => {
+          onClick={e => {
             e.stopPropagation();
             handleBrowseClick();
           }}
@@ -332,11 +349,7 @@ export function MultiFileUpload({
 
       {/* Upload Summary (shown after all complete) */}
       {showSummary && (
-        <UploadSummary
-          stats={stats}
-          onClose={() => setShowSummary(false)}
-          onClearAll={clearAll}
-        />
+        <UploadSummary stats={stats} onClose={() => setShowSummary(false)} onClearAll={clearAll} />
       )}
 
       {/* Upload Queue */}

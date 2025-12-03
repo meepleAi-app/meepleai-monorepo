@@ -56,37 +56,28 @@ public class RrfFusionDomainService
             .Select(g => g.First()) // Take first occurrence of each document
             .ToList();
 
-        var fusedResults = allResults
-            .Select(result =>
+        // First, calculate RRF scores and sort by score
+        var scoredResults = allResults
+            .Select(result => new
             {
-                var rrfScore = rrfScores[result.VectorDocumentId];
-                var normalizedScore = NormalizeRrfScore(rrfScore);
-                var confidence = new Confidence(normalizedScore);
+                Result = result,
+                RrfScore = rrfScores[result.VectorDocumentId],
+                NormalizedScore = NormalizeRrfScore(rrfScores[result.VectorDocumentId])
+            })
+            .OrderByDescending(x => x.NormalizedScore)
+            .ToList();
 
-                return new SearchResult(
-                    id: Guid.NewGuid(),
-                    vectorDocumentId: result.VectorDocumentId,
-                    textContent: result.TextContent,
-                    pageNumber: result.PageNumber,
-                    relevanceScore: confidence,
-                    rank: 0, // Will be set after sorting
-                    searchMethod: "hybrid"
-                );
-            })
-            .OrderByDescending(r => r.RelevanceScore.Value)
-            .Select((r, index) =>
-            {
-                // Update rank after sorting
-                return new SearchResult(
-                    id: r.Id,
-                    vectorDocumentId: r.VectorDocumentId,
-                    textContent: r.TextContent,
-                    pageNumber: r.PageNumber,
-                    relevanceScore: r.RelevanceScore,
-                    rank: index + 1,
-                    searchMethod: "hybrid"
-                );
-            })
+        // Then create SearchResult objects with correct rank (1-based, assigned after sorting)
+        var fusedResults = scoredResults
+            .Select((item, index) => new SearchResult(
+                id: Guid.NewGuid(),
+                vectorDocumentId: item.Result.VectorDocumentId,
+                textContent: item.Result.TextContent,
+                pageNumber: item.Result.PageNumber,
+                relevanceScore: new Confidence(item.NormalizedScore),
+                rank: index + 1, // Rank assigned after sorting
+                searchMethod: "hybrid"
+            ))
             .ToList();
 
         return fusedResults;

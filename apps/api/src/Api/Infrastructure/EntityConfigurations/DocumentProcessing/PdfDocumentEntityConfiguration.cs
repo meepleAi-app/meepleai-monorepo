@@ -33,5 +33,9 @@ public class PdfDocumentEntityConfiguration : IEntityTypeConfiguration<PdfDocume
             .HasForeignKey(e => e.UploadedByUserId)
             .OnDelete(DeleteBehavior.Restrict);
         builder.HasIndex(e => new { e.GameId, e.UploadedAt });
+
+        // AI-14: Hybrid search - PostgreSQL tsvector column managed by trigger
+        // Ignore in EF Core since it's managed by database trigger, not application
+        builder.Ignore(e => e.SearchVector);
     }
 }

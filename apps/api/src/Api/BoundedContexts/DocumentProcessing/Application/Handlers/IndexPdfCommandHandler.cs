@@ -200,6 +200,35 @@ public class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, IndexingR
             existingVectorDoc.IndexedAt = _timeProvider.GetUtcNow().UtcDateTime;
             existingVectorDoc.IndexingError = null;
 
+            // 9. Save text chunks to PostgreSQL for hybrid search (FTS)
+            // pdfGuid is already defined above (line 82)
+            var existingChunks = await _db.TextChunks
+                .Where(tc => tc.PdfDocumentId == pdfGuid)
+                .ToListAsync(cancellationToken).ConfigureAwait(false);
+            if (existingChunks.Count > 0)
+            {
+                _db.TextChunks.RemoveRange(existingChunks);
+            }
+
+            var textChunkEntities = new List<TextChunkEntity>();
+            for (int i = 0; i < textChunks.Count; i++)
+            {
+                textChunkEntities.Add(new TextChunkEntity
+                {
+                    Id = Guid.NewGuid(),
+                    GameId = pdf.GameId,
+                    PdfDocumentId = pdfGuid,
+                    Content = textChunks[i].Text,
+                    ChunkIndex = i,
+                    PageNumber = textChunks[i].Page,
+                    CharacterCount = textChunks[i].Text.Length,
+                    CreatedAt = _timeProvider.GetUtcNow().UtcDateTime
+                });
+            }
+            _db.TextChunks.AddRange(textChunkEntities);
+            _logger.LogInformation("Saved {ChunkCount} text chunks to PostgreSQL for hybrid search (PDF {PdfId})",
+                textChunkEntities.Count, pdfId);
+
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation("Successfully indexed PDF {PdfId}: {ChunkCount} chunks, {TotalChars} characters",

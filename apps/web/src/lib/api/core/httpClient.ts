@@ -10,11 +10,7 @@ import { createApiError, NetworkError, SchemaValidationError, ApiError } from '.
 import { logApiError } from './logger';
 import { getStoredApiKeySync } from './apiKeyStore';
 import { withRetry, RetryOptions, parseRetryAfter } from './retryPolicy';
-import {
-  recordRetryAttempt,
-  recordRetrySuccess,
-  recordRetryFailure,
-} from './metrics';
+import { recordRetryAttempt, recordRetrySuccess, recordRetryFailure } from './metrics';
 import {
   canExecute as canExecuteCircuit,
   recordSuccess as recordCircuitSuccess,
@@ -48,7 +44,7 @@ export function getApiBase(): string {
   if (envBase && envBase !== 'undefined' && envBase !== 'null') {
     return envBase;
   }
-  return 'http://localhost:8080';
+  return 'http://localhost:5080';
 }
 
 /**
@@ -61,18 +57,14 @@ export class HttpClient {
   constructor(config?: Partial<HttpClientConfig>) {
     this.baseUrl = config?.baseUrl || getApiBase();
     // Bind fetch to prevent "Illegal invocation" error (client-side only)
-    this.fetchImpl = config?.fetchImpl || (typeof window !== 'undefined' ? fetch.bind(window) : fetch);
+    this.fetchImpl =
+      config?.fetchImpl || (typeof window !== 'undefined' ? fetch.bind(window) : fetch);
   }
-
 
   /**
    * GET request with optional Zod validation, automatic retry, and circuit breaker
    */
-  async get<T>(
-    path: string,
-    schema?: z.ZodSchema<T>,
-    options?: RequestOptions
-  ): Promise<T | null> {
+  async get<T>(path: string, schema?: z.ZodSchema<T>, options?: RequestOptions): Promise<T | null> {
     // Generate cache key for deduplication (opt-in by default for GET)
     const cacheKey = globalRequestCache.generateKey(
       'GET',
@@ -83,9 +75,10 @@ export class HttpClient {
     );
 
     // Force skipDedup if custom onRetry callback is present
-    const skipDedup = options?.retry?.onRetry !== undefined
-      ? true  // Force skipDedup when custom onRetry callback is present
-      : (options?.skipDedup ?? false);  // Otherwise use explicit value or default to false for GET
+    const skipDedup =
+      options?.retry?.onRetry !== undefined
+        ? true // Force skipDedup when custom onRetry callback is present
+        : (options?.skipDedup ?? false); // Otherwise use explicit value or default to false for GET
 
     // Use request cache for deduplication (wraps retry logic)
     return globalRequestCache.dedupe(
@@ -93,7 +86,9 @@ export class HttpClient {
       async () => {
         // Check circuit breaker before attempting request
         if (!options?.skipCircuitBreaker && !canExecuteCircuit(path)) {
-          const error = new Error(`Circuit breaker is OPEN for ${path}. Request denied to prevent cascading failures.`);
+          const error = new Error(
+            `Circuit breaker is OPEN for ${path}. Request denied to prevent cascading failures.`
+          );
           error.name = 'CircuitBreakerError';
           throw error;
         }
@@ -187,7 +182,7 @@ export class HttpClient {
               }
             },
           }
-        ).catch((error) => {
+        ).catch(error => {
           // Track failure after all retries exhausted
           if (retryCount > 0) {
             recordRetryFailure();
@@ -226,9 +221,10 @@ export class HttpClient {
     );
 
     // Force skipDedup if custom onRetry callback is present
-    const skipDedup = options?.retry?.onRetry !== undefined
-      ? true  // Force skipDedup when custom onRetry callback is present
-      : (options?.skipDedup ?? true);  // Otherwise use explicit value or default to true for POST
+    const skipDedup =
+      options?.retry?.onRetry !== undefined
+        ? true // Force skipDedup when custom onRetry callback is present
+        : (options?.skipDedup ?? true); // Otherwise use explicit value or default to true for POST
 
     // Use request cache for deduplication (wraps retry logic)
     return globalRequestCache.dedupe(
@@ -236,7 +232,9 @@ export class HttpClient {
       async () => {
         // Check circuit breaker before attempting request
         if (!options?.skipCircuitBreaker && !canExecuteCircuit(path)) {
-          const error = new Error(`Circuit breaker is OPEN for ${path}. Request denied to prevent cascading failures.`);
+          const error = new Error(
+            `Circuit breaker is OPEN for ${path}. Request denied to prevent cascading failures.`
+          );
           error.name = 'CircuitBreakerError';
           throw error;
         }
@@ -334,7 +332,7 @@ export class HttpClient {
               }
             },
           }
-        ).catch((error) => {
+        ).catch(error => {
           // Track failure after all retries exhausted
           if (retryCount > 0) {
             recordRetryFailure();
@@ -373,9 +371,10 @@ export class HttpClient {
     );
 
     // Force skipDedup if custom onRetry callback is present
-    const skipDedup = options?.retry?.onRetry !== undefined
-      ? true  // Force skipDedup when custom onRetry callback is present
-      : (options?.skipDedup ?? true);  // Otherwise use explicit value or default to true for PUT
+    const skipDedup =
+      options?.retry?.onRetry !== undefined
+        ? true // Force skipDedup when custom onRetry callback is present
+        : (options?.skipDedup ?? true); // Otherwise use explicit value or default to true for PUT
 
     // Use request cache for deduplication (wraps retry logic)
     return globalRequestCache.dedupe(
@@ -383,7 +382,9 @@ export class HttpClient {
       async () => {
         // Check circuit breaker before attempting request
         if (!options?.skipCircuitBreaker && !canExecuteCircuit(path)) {
-          const error = new Error(`Circuit breaker is OPEN for ${path}. Request denied to prevent cascading failures.`);
+          const error = new Error(
+            `Circuit breaker is OPEN for ${path}. Request denied to prevent cascading failures.`
+          );
           error.name = 'CircuitBreakerError';
           throw error;
         }
@@ -468,7 +469,7 @@ export class HttpClient {
               }
             },
           }
-        ).catch((error) => {
+        ).catch(error => {
           // Track failure after all retries exhausted
           if (retryCount > 0) {
             recordRetryFailure();
@@ -502,9 +503,10 @@ export class HttpClient {
     );
 
     // Force skipDedup if custom onRetry callback is present
-    const skipDedup = options?.retry?.onRetry !== undefined
-      ? true  // Force skipDedup when custom onRetry callback is present
-      : (options?.skipDedup ?? true);  // Otherwise use explicit value or default to true for DELETE
+    const skipDedup =
+      options?.retry?.onRetry !== undefined
+        ? true // Force skipDedup when custom onRetry callback is present
+        : (options?.skipDedup ?? true); // Otherwise use explicit value or default to true for DELETE
 
     // Use request cache for deduplication (wraps retry logic)
     return globalRequestCache.dedupe(
@@ -512,7 +514,9 @@ export class HttpClient {
       async () => {
         // Check circuit breaker before attempting request
         if (!options?.skipCircuitBreaker && !canExecuteCircuit(path)) {
-          const error = new Error(`Circuit breaker is OPEN for ${path}. Request denied to prevent cascading failures.`);
+          const error = new Error(
+            `Circuit breaker is OPEN for ${path}. Request denied to prevent cascading failures.`
+          );
           error.name = 'CircuitBreakerError';
           throw error;
         }
@@ -577,7 +581,7 @@ export class HttpClient {
               }
             },
           }
-        ).catch((error) => {
+        ).catch(error => {
           // Track failure after all retries exhausted
           if (retryCount > 0) {
             recordRetryFailure();
@@ -605,7 +609,9 @@ export class HttpClient {
   ): Promise<{ blob: Blob; filename: string }> {
     // Check circuit breaker before attempting request
     if (!options?.skipCircuitBreaker && !canExecuteCircuit(path)) {
-      const error = new Error(`Circuit breaker is OPEN for ${path}. Request denied to prevent cascading failures.`);
+      const error = new Error(
+        `Circuit breaker is OPEN for ${path}. Request denied to prevent cascading failures.`
+      );
       error.name = 'CircuitBreakerError';
       throw error;
     }
@@ -643,7 +649,9 @@ export class HttpClient {
           let filename = `download-${Date.now()}`;
 
           if (contentDisposition) {
-            const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+            const filenameMatch = contentDisposition.match(
+              /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/
+            );
             if (filenameMatch && filenameMatch[1]) {
               filename = filenameMatch[1].replace(/['"]/g, '');
             }
@@ -687,7 +695,7 @@ export class HttpClient {
           }
         },
       }
-    ).catch((error) => {
+    ).catch(error => {
       // Track failure after all retries exhausted
       if (retryCount > 0) {
         recordRetryFailure();
@@ -806,11 +814,7 @@ export class HttpClient {
   /**
    * Validate response data against Zod schema
    */
-  private validateResponse<T>(
-    path: string,
-    data: unknown,
-    schema: z.ZodSchema<T>
-  ): T {
+  private validateResponse<T>(path: string, data: unknown, schema: z.ZodSchema<T>): T {
     const result = schema.safeParse(data);
 
     if (!result.success) {

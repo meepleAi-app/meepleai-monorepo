@@ -72,12 +72,12 @@ public class KeywordSearchService : IKeywordSearchService
                     ""GameId"",
                     ""ChunkIndex"",
                     ""PageNumber"",
-                    ts_rank_cd(search_vector, to_tsquery(@textSearchConfig, @tsQuery), @normalization) AS relevance_score
+                    ts_rank_cd(search_vector, to_tsquery(@textSearchConfig::regconfig, @tsQuery), @normalization) AS ""RelevanceScore""
                 FROM text_chunks
                 WHERE
-                    ""GameId"" = @gameId
-                    AND search_vector @@ to_tsquery(@textSearchConfig, @tsQuery)
-                ORDER BY relevance_score DESC
+                    ""GameId"" = @gameId::uuid
+                    AND search_vector @@ to_tsquery(@textSearchConfig::regconfig, @tsQuery)
+                ORDER BY ""RelevanceScore"" DESC
                 LIMIT @limit";
 
             // Security: Set query timeout to prevent long-running queries (DoS protection)
@@ -166,12 +166,12 @@ public class KeywordSearchService : IKeywordSearchService
                     ""FileName"",
                     ""GameId"",
                     ""PageCount"",
-                    ts_rank_cd(search_vector, to_tsquery(@textSearchConfig, @tsQuery), @normalization) AS relevance_score
+                    ts_rank_cd(search_vector, to_tsquery(@textSearchConfig::regconfig, @tsQuery), @normalization) AS ""RelevanceScore""
                 FROM pdf_documents
                 WHERE
-                    ""GameId"" = @gameId
-                    AND search_vector @@ to_tsquery(@textSearchConfig, @tsQuery)
-                ORDER BY relevance_score DESC
+                    ""GameId"" = @gameId::uuid
+                    AND search_vector @@ to_tsquery(@textSearchConfig::regconfig, @tsQuery)
+                ORDER BY ""RelevanceScore"" DESC
                 LIMIT @limit";
 
             var results = await _dbContext.Database

@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
@@ -185,7 +186,7 @@ public class GoldenDatasetLoader : IGoldenDatasetLoader
 
         try
         {
-            var json = await File.ReadAllTextAsync(_datasetPath, cancellationToken).ConfigureAwait(false);
+            var json = await File.ReadAllTextAsync(_datasetPath, Encoding.UTF8, cancellationToken).ConfigureAwait(false);
             var dataset = JsonSerializer.Deserialize<GoldenDatasetFile>(json, new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true

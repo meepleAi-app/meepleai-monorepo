@@ -8,7 +8,13 @@ import { retryWithBackoff, isRetryableError } from '../lib/retryUtils';
 import { extractCorrelationId } from '../lib/errorUtils';
 import { ApiError } from '../lib/api';
 
-export type UploadStatus = 'pending' | 'uploading' | 'processing' | 'success' | 'failed' | 'cancelled';
+export type UploadStatus =
+  | 'pending'
+  | 'uploading'
+  | 'processing'
+  | 'success'
+  | 'failed'
+  | 'cancelled';
 
 export interface UploadQueueItem {
   id: string;
@@ -52,9 +58,119 @@ interface UploadOperation {
   abortController: AbortController;
 }
 
-const API_BASE = typeof window !== 'undefined'
-  ? (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080')
-  : '';
+const API_BASE =
+  typeof window !== 'undefined' ? process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5080' : '';
+
+/**
+ * Processing step enum matching backend ProcessingStep
+ */
+export type ProcessingStep =
+  | 'Uploading'
+  | 'Extracting'
+  | 'Chunking'
+  | 'Embedding'
+  | 'Indexing'
+  | 'Completed'
+  | 'Failed';
+
+/**
+ * Processing progress response from backend
+ */
+export interface ProcessingProgress {
+  currentStep: ProcessingStep;
+  percentComplete: number;
+  elapsedTime: string; // TimeSpan as ISO 8601 duration
+  estimatedTimeRemaining?: string;
+  pagesProcessed: number;
+  totalPages: number;
+  startedAt: string;
+  completedAt?: string;
+  errorMessage?: string;
+}
+
+/**
+ * Polling configuration constants
+ */
+const POLL_INTERVAL_MS = 1000; // Poll every second
+const MAX_POLL_ATTEMPTS = 300; // Max 5 minutes of polling (300 * 1s)
+
+/**
+ * Polls the processing status endpoint until completion or failure
+ *
+ * @param documentId - The PDF document ID to poll
+ * @param signal - AbortSignal for cancellation
+ * @param onProgress - Callback for progress updates
+ * @returns Final ProcessingProgress when complete or failed
+ * @throws Error if polling times out or encounters an unrecoverable error
+ */
+async function pollProcessingStatus(
+  documentId: string,
+  signal: AbortSignal,
+  onProgress?: (progress: ProcessingProgress) => void
+): Promise<ProcessingProgress> {
+  let attempts = 0;
+
+  while (attempts < MAX_POLL_ATTEMPTS) {
+    // Check if cancelled
+    if (signal.aborted) {
+      throw new DOMException('Polling cancelled', 'AbortError');
+    }
+
+    try {
+      const response = await fetch(`${API_BASE}/api/v1/pdfs/${documentId}/progress`, {
+        method: 'GET',
+        credentials: 'include',
+        signal,
+      });
+
+      if (!response.ok) {
+        // If 404, the document may not exist yet or was deleted
+        if (response.status === 404) {
+          // Wait and retry - document might not be ready yet
+          await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL_MS));
+          attempts++;
+          continue;
+        }
+        throw new Error(`Failed to get progress: ${response.status}`);
+      }
+
+      const progress = (await response.json()) as ProcessingProgress;
+
+      // Notify progress callback
+      onProgress?.(progress);
+
+      // Check for terminal states
+      if (progress.currentStep === 'Completed' || progress.currentStep === 'Failed') {
+        return progress;
+      }
+
+      // Wait before next poll
+      await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL_MS));
+      attempts++;
+    } catch (error) {
+      // Re-throw abort errors
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        throw error;
+      }
+
+      // For network errors, wait and retry
+      console.warn(`Polling attempt ${attempts + 1} failed:`, error);
+      await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL_MS));
+      attempts++;
+    }
+  }
+
+  // Timeout - return a failed status
+  return {
+    currentStep: 'Failed',
+    percentComplete: 0,
+    elapsedTime: '',
+    pagesProcessed: 0,
+    totalPages: 0,
+    startedAt: new Date().toISOString(),
+    errorMessage: 'Processing timed out after 5 minutes',
+  };
+}
 
 /**
  * Custom hook for managing multi-file PDF uploads with concurrency control
@@ -70,7 +186,7 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
     onUploadStart,
     onUploadSuccess,
     onQueueAdd,
-    onRetry
+    onRetry,
   } = options;
 
   const [queue, setQueue] = useState<UploadQueueItem[]>([]);
@@ -81,23 +197,26 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
   /**
    * Adds files to the upload queue
    */
-  const addFiles = useCallback((files: File[], gameId: string, language: string) => {
-    const newItems: UploadQueueItem[] = files.map(file => ({
-      id: `${Date.now()}-${Math.random().toString(36).substring(7)}`,
-      file,
-      gameId,
-      language,
-      status: 'pending',
-      progress: 0,
-      retryCount: 0
-    }));
+  const addFiles = useCallback(
+    (files: File[], gameId: string, language: string) => {
+      const newItems: UploadQueueItem[] = files.map(file => ({
+        id: `${Date.now()}-${Math.random().toString(36).substring(7)}`,
+        file,
+        gameId,
+        language,
+        status: 'pending',
+        progress: 0,
+        retryCount: 0,
+      }));
 
-    setQueue(prev => [...prev, ...newItems]);
-    allCompleteNotifiedRef.current = false;
+      setQueue(prev => [...prev, ...newItems]);
+      allCompleteNotifiedRef.current = false;
 
-    // Test observability: notify immediately after queue update (synchronous)
-    onQueueAdd?.(newItems);
-  }, [onQueueAdd]);
+      // Test observability: notify immediately after queue update (synchronous)
+      onQueueAdd?.(newItems);
+    },
+    [onQueueAdd]
+  );
 
   /**
    * Removes a file from the queue (only if not uploading)
@@ -125,9 +244,7 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
 
     setQueue(prev =>
       prev.map(item =>
-        item.id === id
-          ? { ...item, status: 'cancelled' as UploadStatus, progress: 0 }
-          : item
+        item.id === id ? { ...item, status: 'cancelled' as UploadStatus, progress: 0 } : item
       )
     );
   }, []);
@@ -138,9 +255,7 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
   const retryUpload = useCallback((id: string) => {
     setQueue(prev =>
       prev.map(item =>
-        item.id === id
-          ? { ...item, status: 'pending', progress: 0, error: undefined }
-          : item
+        item.id === id ? { ...item, status: 'pending', progress: 0, error: undefined } : item
       )
     );
     allCompleteNotifiedRef.current = false;
@@ -151,8 +266,8 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
    */
   const clearCompleted = useCallback(() => {
     setQueue(prev =>
-      prev.filter(item =>
-        item.status !== 'success' && item.status !== 'failed' && item.status !== 'cancelled'
+      prev.filter(
+        item => item.status !== 'success' && item.status !== 'failed' && item.status !== 'cancelled'
       )
     );
   }, []);
@@ -193,7 +308,7 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
         processing: 0,
         succeeded: 0,
         failed: 0,
-        cancelled: 0
+        cancelled: 0,
       }
     );
 
@@ -215,11 +330,7 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
       try {
         // Update status to uploading
         setQueue(prev =>
-          prev.map(i =>
-            i.id === item.id
-              ? { ...i, status: 'uploading', progress: 10 }
-              : i
-          )
+          prev.map(i => (i.id === item.id ? { ...i, status: 'uploading', progress: 10 } : i))
         );
 
         const formData = new FormData();
@@ -234,7 +345,7 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
               method: 'POST',
               body: formData,
               credentials: 'include',
-              signal: abortController.signal
+              signal: abortController.signal,
             });
 
             if (!res.ok) {
@@ -255,7 +366,7 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
           },
           {
             maxAttempts: maxRetries,
-            shouldRetry: (error) => {
+            shouldRetry: error => {
               // Don't retry if aborted
               if (error instanceof DOMException && error.name === 'AbortError') {
                 return false;
@@ -271,17 +382,13 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
               }
 
               setQueue(prev =>
-                prev.map(i =>
-                  i.id === item.id
-                    ? { ...i, retryCount: attempt }
-                    : i
-                )
+                prev.map(i => (i.id === item.id ? { ...i, retryCount: attempt } : i))
               );
-            }
+            },
           }
         );
 
-        const data = await response.json() as { documentId: string };
+        const data = (await response.json()) as { documentId: string };
 
         // Update to processing status
         setQueue(prev =>
@@ -291,31 +398,77 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
                   ...i,
                   status: 'processing',
                   progress: 50,
-                  pdfId: data.documentId
+                  pdfId: data.documentId,
                 }
               : i
           )
         );
 
-        // Simulate processing completion (in real app, would poll status)
-        // For now, mark as success after a short delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        setQueue(prev =>
-          prev.map(i =>
-            i.id === item.id
-              ? { ...i, status: 'success', progress: 100 }
-              : i
-          )
+        // Poll processing status until complete or failed
+        const pollResult = await pollProcessingStatus(
+          data.documentId,
+          abortController.signal,
+          progress => {
+            // Update progress during polling
+            setQueue(prev =>
+              prev.map(i =>
+                i.id === item.id
+                  ? {
+                      ...i,
+                      status: 'processing',
+                      progress: Math.max(
+                        50,
+                        Math.min(99, 50 + Math.floor(progress.percentComplete / 2))
+                      ),
+                    }
+                  : i
+              )
+            );
+          }
         );
 
-        const completedItem = { ...item, status: 'success' as UploadStatus, progress: 100, pdfId: data.documentId };
+        if (pollResult.currentStep === 'Failed') {
+          // Processing failed on the backend
+          const errorMessage = pollResult.errorMessage || 'Processing failed';
+          const failedItem = {
+            ...item,
+            status: 'failed' as UploadStatus,
+            error: errorMessage,
+            pdfId: data.documentId,
+          };
+          onUploadError?.(failedItem, errorMessage);
+
+          setQueue(prev =>
+            prev.map(i =>
+              i.id === item.id
+                ? {
+                    ...i,
+                    status: 'failed',
+                    progress: 0,
+                    error: errorMessage,
+                    pdfId: data.documentId,
+                  }
+                : i
+            )
+          );
+          return;
+        }
+
+        setQueue(prev =>
+          prev.map(i => (i.id === item.id ? { ...i, status: 'success', progress: 100 } : i))
+        );
+
+        const completedItem = {
+          ...item,
+          status: 'success' as UploadStatus,
+          progress: 100,
+          pdfId: data.documentId,
+        };
 
         // Test observability: notify immediately after successful upload (synchronous)
         onUploadSuccess?.(completedItem);
 
         onUploadComplete?.(completedItem);
-
       } catch (error: unknown) {
         // Check if it was cancelled
         if (error instanceof DOMException && error.name === 'AbortError') {
@@ -326,7 +479,12 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
         const errorMessage = error instanceof Error ? error.message : 'Upload failed';
         const correlationId = error instanceof ApiError ? error.correlationId : undefined;
 
-        const failedItem = { ...item, status: 'failed' as UploadStatus, error: errorMessage, correlationId };
+        const failedItem = {
+          ...item,
+          status: 'failed' as UploadStatus,
+          error: errorMessage,
+          correlationId,
+        };
 
         // Test observability: notify immediately about error (synchronous, before state update)
         onUploadError?.(failedItem, errorMessage);
@@ -339,12 +497,11 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
                   status: 'failed',
                   progress: 0,
                   error: errorMessage,
-                  correlationId
+                  correlationId,
                 }
               : i
           )
         );
-
       } finally {
         activeUploadsRef.current.delete(item.id);
       }
@@ -375,8 +532,8 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
         }
 
         // Find next pending item that's not already being uploaded
-        const nextItem = queue.find(item =>
-          item.status === 'pending' && !activeUploadsRef.current.has(item.id)
+        const nextItem = queue.find(
+          item => item.status === 'pending' && !activeUploadsRef.current.has(item.id)
         );
         if (!nextItem) {
           break;
@@ -429,6 +586,6 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
     clearCompleted,
     clearAll,
     getStats,
-    startUpload: processQueue // Expose manual upload trigger for testing
+    startUpload: processQueue, // Expose manual upload trigger for testing
   };
 }

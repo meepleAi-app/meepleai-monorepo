@@ -183,20 +183,21 @@ receivers:
         send_resolved: true
 
     # SLACK: Enable for Slack notifications (requires SLACK_WEBHOOK_URL env var)
-    slack_configs:
-      - api_url: '${SLACK_WEBHOOK_URL}'
-        channel: '#security-alerts'
-        username: 'MeepleAI Security'
-        icon_emoji: ':shield:'
-        title: '🔐 {{ .GroupLabels.severity | toUpper }}: {{ .GroupLabels.alertname }}'
-        text: |
-          {{ range .Alerts }}
-          *Attack Type*: {{ .Labels.attack_type }}
-          *Summary*: {{ .Annotations.summary }}
-          *Description*: {{ .Annotations.description }}
-          *Dashboard*: {{ .Annotations.dashboard_url }}
-          {{ end }}
-        send_resolved: true
+    # Uncomment and set SLACK_WEBHOOK_URL environment variable to enable
+    # slack_configs:
+    #   - api_url: '${SLACK_WEBHOOK_URL}'
+    #     channel: '#security-alerts'
+    #     username: 'MeepleAI Security'
+    #     icon_emoji: ':shield:'
+    #     title: '🔐 {{ .GroupLabels.severity | toUpper }}: {{ .GroupLabels.alertname }}'
+    #     text: |
+    #       {{ range .Alerts }}
+    #       *Attack Type*: {{ .Labels.attack_type }}
+    #       *Summary*: {{ .Annotations.summary }}
+    #       *Description*: {{ .Annotations.description }}
+    #       *Dashboard*: {{ .Annotations.dashboard_url }}
+    #       {{ end }}
+    #     send_resolved: true
 
 # Inhibition rules - suppress certain alerts when others are firing
 inhibit_rules:

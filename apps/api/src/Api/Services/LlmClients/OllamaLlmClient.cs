@@ -9,7 +9,7 @@ using Api.Infrastructure.Security;
 namespace Api.Services.LlmClients;
 
 /// <summary>
-/// LLM client for Ollama local models (http://meepleai-ollama:11434)
+/// LLM client for Ollama local models (default: http://ollama:11434)
 /// ISSUE-958: Hybrid LLM architecture - Ollama provider for cost-effective inference
 /// </summary>
 /// <remarks>
@@ -38,8 +38,9 @@ public class OllamaLlmClient : ILlmClient
         _logger = logger;
         _costCalculator = costCalculator;
 
-        // Configure Ollama endpoint (http://meepleai-ollama:11434)
-        var ollamaUrl = config["OllamaUrl"] ?? "http://meepleai-ollama:11434";
+        // Configure Ollama endpoint - check multiple config keys for flexibility
+        // Docker uses OLLAMA_URL env var, appsettings.json may use OllamaUrl
+        var ollamaUrl = config["OLLAMA_URL"] ?? config["OllamaUrl"] ?? "http://ollama:11434";
         _httpClient.BaseAddress = new Uri(ollamaUrl);
         _httpClient.Timeout = TimeSpan.FromSeconds(DefaultTimeoutSeconds);
 

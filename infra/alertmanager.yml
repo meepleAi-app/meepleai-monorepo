@@ -7,8 +7,8 @@ global:
 
   # SMTP configuration for email notifications
   smtp_smarthost: 'smtp.gmail.com:587'
-  smtp_from: 'alertmanager@meepleai.dev'
-  smtp_auth_username: 'badsworm@gmail.com'
+  smtp_from: '${SMTP_FROM}'
+  smtp_auth_username: '${SMTP_USERNAME}'
   smtp_auth_password: '${GMAIL_APP_PASSWORD}'
   smtp_require_tls: true
 

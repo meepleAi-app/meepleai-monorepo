@@ -39,9 +39,11 @@ services:
 
   redis:
     restart: always
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+    command: ["sh","-c","redis-server --appendonly yes --requirepass $(cat /run/secrets/redis-password)"]
     volumes:
       - redisdata-prod:/data
+    secrets:
+      - redis-password
     deploy:
       resources:
         limits:
@@ -73,6 +75,8 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: https://+:8080;http://+:8081
+      ASPNETCORE_Kestrel__Certificates__Default__Path: /run/secrets/api-cert.pfx
+      ASPNETCORE_Kestrel__Certificates__Default__Password__FILE: /run/secrets/api-cert-password
       # Connection string using secrets
       POSTGRES_USER: ${POSTGRES_USER:-meeple}
       POSTGRES_DB: ${POSTGRES_DB:-meepleai_prod}
@@ -274,6 +278,8 @@ secrets:
     file: ./secrets/prod/postgres-password.txt
   openrouter-api-key:
     file: ./secrets/prod/openrouter-api-key.txt
+  redis-password:
+    file: ./secrets/prod/redis-password.txt
   n8n-encryption-key:
     file: ./secrets/prod/n8n-encryption-key.txt
   n8n-basic-auth-password:
@@ -282,3 +288,7 @@ secrets:
     file: ./secrets/prod/gmail-app-password.txt
   initial-admin-password:
     file: ./secrets/prod/initial-admin-password.txt
+  api-cert-password:
+    file: ./secrets/prod/api-cert-password.txt
+  api-cert.pfx:
+    file: ./secrets/prod/api-cert.pfx

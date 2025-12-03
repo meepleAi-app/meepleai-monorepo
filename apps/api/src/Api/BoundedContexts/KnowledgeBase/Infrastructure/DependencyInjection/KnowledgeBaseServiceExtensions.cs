@@ -3,9 +3,12 @@ using Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Services.Chunking;
+using Api.BoundedContexts.KnowledgeBase.Application.Services.Reranking;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.QualityTracking;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
+using Api.BoundedContexts.KnowledgeBase.Infrastructure.External.Reranking;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence.Chunking;
 using Api.Services;
@@ -19,7 +22,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.DependencyInjection;
 /// </summary>
 public static class KnowledgeBaseServiceExtensions
 {
-    public static IServiceCollection AddKnowledgeBaseServices(this IServiceCollection services)
+    public static IServiceCollection AddKnowledgeBaseServices(this IServiceCollection services, IConfiguration? configuration = null)
     {
         // Domain Services (stateless, can be Singleton for performance)
         services.AddSingleton<VectorSearchDomainService>();
@@ -104,6 +107,37 @@ public static class KnowledgeBaseServiceExtensions
         services.AddScoped<LoadDatasetCommandHandler>();
         services.AddScoped<GetEvaluationResultsQueryHandler>();
         services.AddScoped<GetBaselineMetricsQueryHandler>();
+
+        // ISSUE-1906: ADR-016 Phase 4 - Cross-Encoder Reranking Pipeline
+        // Domain Services
+        services.AddScoped<IParentChunkResolver, ParentChunkResolver>();
+
+        // Infrastructure - HTTP Client for Reranker Service
+        services.AddHttpClient<ICrossEncoderReranker, CrossEncoderRerankerClient>((sp, client) =>
+        {
+            var config = sp.GetRequiredService<IConfiguration>();
+            var baseUrl = config["Reranking:BaseUrl"] ?? "http://localhost:8003";
+            client.BaseAddress = new Uri(baseUrl);
+            client.Timeout = TimeSpan.FromSeconds(10);
+        });
+
+        // Options configuration - use provided configuration or defer to runtime resolution
+        if (configuration != null)
+        {
+            services.Configure<RerankerClientOptions>(configuration.GetSection("Reranking"));
+            services.Configure<ResilientRetrievalOptions>(configuration.GetSection("ResilientRetrieval"));
+        }
+        else
+        {
+            // Fallback: configure with defaults via lambda (resolved at runtime)
+            services.AddOptions<RerankerClientOptions>()
+                .Configure<IConfiguration>((opts, cfg) => cfg.GetSection("Reranking").Bind(opts));
+            services.AddOptions<ResilientRetrievalOptions>()
+                .Configure<IConfiguration>((opts, cfg) => cfg.GetSection("ResilientRetrieval").Bind(opts));
+        }
+
+        // Application Services - Resilient Retrieval with Reranking
+        services.AddScoped<IRerankedRetrievalService, ResilientRetrievalService>();
 
         return services;
     }

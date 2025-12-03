@@ -37,7 +37,7 @@ import {
 const { getMockWorkerInstance } = setupGlobalMocks();
 const { storage: localStorageMock, clearStorage } = setupLocalStorage();
 
-describe.skip('FE-TEST-010b: Persistence Layer Tests', () => {
+describe('FE-TEST-010b: Persistence Layer Tests', () => {
   let mockWorkerInstance: ReturnType<typeof getMockWorkerInstance>;
 
   beforeEach(async () => {

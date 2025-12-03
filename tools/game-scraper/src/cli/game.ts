@@ -32,7 +32,11 @@ program.action(async (opts) => {
   }
 
   existing.set(thing.id, { game_id: thing.id, ...thing, fetched_at: new Date().toISOString() });
-  const newLines = Array.from(existing.values()).map((o) => JSON.stringify(o)).join("\n") + "\n";
+  const newLines =
+    Array.from(existing.values())
+      .sort((a, b) => Number(a.game_id) - Number(b.game_id))
+      .map((o) => JSON.stringify(o))
+      .join("\n") + "\n";
   await fs.writeFile(outFile, newLines);
   console.log(`Saved metadata for id ${thing.id} to ${outFile}`);
 });

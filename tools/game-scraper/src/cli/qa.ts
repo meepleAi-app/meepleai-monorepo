@@ -1,5 +1,5 @@
 ﻿import { program } from "commander";
-import { extractPdfText } from "../lib/pdf.js";
+import { extractPdfText, splitIntoPages } from "../lib/pdf.js";
 import { resolveOut } from "../lib/config.js";
 import fs from "fs-extra";
 import path from "node:path";
@@ -17,24 +17,23 @@ program
 
 program.action(async (opts) => {
   const pdfPath = path.resolve(opts.rulebook);
-  const { text } = await extractPdfText(pdfPath);
-  const pages = text.split(/\f/); // pdf-parse inserts form feed per page
+  const { text, pages: numPages } = await extractPdfText(pdfPath);
+  const pages = splitIntoPages(text, numPages);
   const qa = [] as any[];
-  for (let i = 0; i < pages.length && qa.length < opts.max; i++) {
-    const pageText = pages[i].trim();
-    if (!pageText) continue;
+  pages.forEach((pageText, idx) => {
+    if (qa.length >= opts.max) return;
     const lines = pageText.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-    if (lines.length === 0) continue;
+    if (lines.length === 0) return;
     const sentence = firstSentence(lines.join(" "));
-    if (!sentence) continue;
+    if (!sentence) return;
     qa.push({
       game_id: opts.gameId,
-      question: `Cosa afferma il manuale a pagina ${i + 1}?`,
+      question: `Cosa dice il manuale a pagina ${idx + 1} riguardo alle regole?`,
       answer: sentence.slice(0, 400),
-      page: i + 1,
+      page: idx + 1,
       source: opts.rulebook,
     });
-  }
+  });
 
   const outFile = resolveOut("rulebooks", "qa", `${opts.gameId}.jsonl`);
   await fs.ensureDir(path.dirname(outFile));

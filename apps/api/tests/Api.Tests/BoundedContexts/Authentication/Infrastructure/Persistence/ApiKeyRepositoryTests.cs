@@ -1,3 +1,4 @@
+using System.Threading;
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.Infrastructure;
@@ -13,9 +14,11 @@ namespace Api.Tests.BoundedContexts.Authentication.Infrastructure.Persistence;
 /// </summary>
 public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
 {
+    private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
+
     protected override string DatabaseName => "meepleai_apikey_test";
-    
-    protected override ApiKeyRepository CreateRepository(MeepleAiDbContext dbContext) 
+
+    protected override ApiKeyRepository CreateRepository(MeepleAiDbContext dbContext)
         => new ApiKeyRepository(dbContext, MockEventCollector.Object);
 
     private async Task<Guid> CreateTestUserAsync(string email = "test@example.com")
@@ -50,11 +53,11 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
             scopes: "read,write"
         );
 
-        await Repository.AddAsync(apiKey);
+        await Repository.AddAsync(apiKey, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Act
-        var result = await Repository.GetByKeyPrefixAsync(apiKey.KeyPrefix);
+        var result = await Repository.GetByKeyPrefixAsync(apiKey.KeyPrefix, TestCancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -70,7 +73,7 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
         var nonExistentPrefix = "NONEXIST";
 
         // Act
-        var result = await Repository.GetByKeyPrefixAsync(nonExistentPrefix);
+        var result = await Repository.GetByKeyPrefixAsync(nonExistentPrefix, TestCancellationToken);
 
         // Assert
         Assert.Null(result);
@@ -88,7 +91,7 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
         var userId = await CreateTestUserAsync();
 
         // Act
-        var keys = await Repository.GetByUserIdAsync(userId);
+        var keys = await Repository.GetByUserIdAsync(userId, TestCancellationToken);
 
         // Assert
         Assert.Empty(keys);
@@ -107,13 +110,13 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
         await Task.Delay(TestConstants.Timing.TinyDelay);
         var (key3, _) = ApiKey.Create(Guid.NewGuid(), userId, "Key 3", "admin");
 
-        await Repository.AddAsync(key1);
-        await Repository.AddAsync(key2);
-        await Repository.AddAsync(key3);
+        await Repository.AddAsync(key1, TestCancellationToken);
+        await Repository.AddAsync(key2, TestCancellationToken);
+        await Repository.AddAsync(key3, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Act
-        var keys = await Repository.GetByUserIdAsync(userId);
+        var keys = await Repository.GetByUserIdAsync(userId, TestCancellationToken);
 
         // Assert
         Assert.Equal(3, keys.Count);
@@ -134,14 +137,14 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
         var (key2, _) = ApiKey.Create(Guid.NewGuid(), user1Id, "User1 Key2", "write");
         var (key3, _) = ApiKey.Create(Guid.NewGuid(), user2Id, "User2 Key1", "admin");
 
-        await Repository.AddAsync(key1);
-        await Repository.AddAsync(key2);
-        await Repository.AddAsync(key3);
+        await Repository.AddAsync(key1, TestCancellationToken);
+        await Repository.AddAsync(key2, TestCancellationToken);
+        await Repository.AddAsync(key3, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Act
-        var user1Keys = await Repository.GetByUserIdAsync(user1Id);
-        var user2Keys = await Repository.GetByUserIdAsync(user2Id);
+        var user1Keys = await Repository.GetByUserIdAsync(user1Id, TestCancellationToken);
+        var user2Keys = await Repository.GetByUserIdAsync(user2Id, TestCancellationToken);
 
         // Assert
         Assert.Equal(2, user1Keys.Count);
@@ -162,12 +165,12 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
         var (key1, _) = ApiKey.Create(Guid.NewGuid(), userId, "Active Key 1", "read");
         var (key2, _) = ApiKey.Create(Guid.NewGuid(), userId, "Active Key 2", "write");
 
-        await Repository.AddAsync(key1);
-        await Repository.AddAsync(key2);
+        await Repository.AddAsync(key1, TestCancellationToken);
+        await Repository.AddAsync(key2, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Act
-        var activeKeys = await Repository.GetActiveKeysByUserIdAsync(userId);
+        var activeKeys = await Repository.GetActiveKeysByUserIdAsync(userId, TestCancellationToken);
 
         // Assert
         Assert.Equal(2, activeKeys.Count);
@@ -185,12 +188,12 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
         var (revokedKey, _) = ApiKey.Create(Guid.NewGuid(), userId, "Revoked Key", "write");
         revokedKey.Revoke(revokerId);
 
-        await Repository.AddAsync(activeKey);
-        await Repository.AddAsync(revokedKey);
+        await Repository.AddAsync(activeKey, TestCancellationToken);
+        await Repository.AddAsync(revokedKey, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Act
-        var activeKeys = await Repository.GetActiveKeysByUserIdAsync(userId);
+        var activeKeys = await Repository.GetActiveKeysByUserIdAsync(userId, TestCancellationToken);
 
         // Assert
         Assert.Single(activeKeys);
@@ -207,12 +210,12 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
         var (activeKey, _) = ApiKey.Create(Guid.NewGuid(), userId, "Active Key", "read", expiresAt: DateTime.UtcNow.AddDays(30));
         var (expiredKey, _) = ApiKey.Create(Guid.NewGuid(), userId, "Expired Key", "write", expiresAt: DateTime.UtcNow.AddDays(-1));
 
-        await Repository.AddAsync(activeKey);
-        await Repository.AddAsync(expiredKey);
+        await Repository.AddAsync(activeKey, TestCancellationToken);
+        await Repository.AddAsync(expiredKey, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Act
-        var activeKeys = await Repository.GetActiveKeysByUserIdAsync(userId);
+        var activeKeys = await Repository.GetActiveKeysByUserIdAsync(userId, TestCancellationToken);
 
         // Assert
         Assert.Single(activeKeys);
@@ -231,12 +234,12 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
         var (inactiveKey, _) = ApiKey.Create(Guid.NewGuid(), userId, "Inactive Key", "write");
         inactiveKey.Revoke(revokerId); // Makes IsActive = false
 
-        await Repository.AddAsync(activeKey);
-        await Repository.AddAsync(inactiveKey);
+        await Repository.AddAsync(activeKey, TestCancellationToken);
+        await Repository.AddAsync(inactiveKey, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Act
-        var activeKeys = await Repository.GetActiveKeysByUserIdAsync(userId);
+        var activeKeys = await Repository.GetActiveKeysByUserIdAsync(userId, TestCancellationToken);
 
         // Assert
         Assert.Single(activeKeys);
@@ -257,14 +260,14 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
         var (revoked, _) = ApiKey.Create(Guid.NewGuid(), userId, "Revoked", "read");
         revoked.Revoke(revokerId);
 
-        await Repository.AddAsync(active1);
-        await Repository.AddAsync(active2);
-        await Repository.AddAsync(expired);
-        await Repository.AddAsync(revoked);
+        await Repository.AddAsync(active1, TestCancellationToken);
+        await Repository.AddAsync(active2, TestCancellationToken);
+        await Repository.AddAsync(expired, TestCancellationToken);
+        await Repository.AddAsync(revoked, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Act
-        var activeKeys = await Repository.GetActiveKeysByUserIdAsync(userId);
+        var activeKeys = await Repository.GetActiveKeysByUserIdAsync(userId, TestCancellationToken);
 
         // Assert
         Assert.Equal(2, activeKeys.Count);
@@ -292,11 +295,11 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
         );
 
         // Act
-        await Repository.AddAsync(apiKey);
+        await Repository.AddAsync(apiKey, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Assert
-        var persisted = await DbContext.ApiKeys.FirstOrDefaultAsync(k => k.Id == apiKey.Id);
+        var persisted = await DbContext.ApiKeys.FirstOrDefaultAsync(k => k.Id == apiKey.Id, TestContext.Current.CancellationToken);
         Assert.NotNull(persisted);
         Assert.Equal(userId, persisted.UserId);
         Assert.Equal("Production Key", persisted.KeyName);
@@ -321,11 +324,11 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
         );
 
         // Act
-        await Repository.AddAsync(apiKey);
+        await Repository.AddAsync(apiKey, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Assert
-        var persisted = await DbContext.ApiKeys.FirstOrDefaultAsync(k => k.Id == apiKey.Id);
+        var persisted = await DbContext.ApiKeys.FirstOrDefaultAsync(k => k.Id == apiKey.Id, TestContext.Current.CancellationToken);
         Assert.NotNull(persisted);
         Assert.Null(persisted.ExpiresAt);
     }
@@ -341,18 +344,18 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
         await ResetDatabaseAsync();
         var userId = await CreateTestUserAsync();
         var (apiKey, _) = ApiKey.Create(Guid.NewGuid(), userId, "Test Key", "read");
-        await Repository.AddAsync(apiKey);
+        await Repository.AddAsync(apiKey, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         DbContext.ChangeTracker.Clear();
 
         // Act
         apiKey.MarkAsUsed();
-        await Repository.UpdateAsync(apiKey);
+        await Repository.UpdateAsync(apiKey, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Assert
-        var updated = await DbContext.ApiKeys.FirstOrDefaultAsync(k => k.Id == apiKey.Id);
+        var updated = await DbContext.ApiKeys.FirstOrDefaultAsync(k => k.Id == apiKey.Id, TestContext.Current.CancellationToken);
         Assert.NotNull(updated);
         Assert.NotNull(updated.LastUsedAt);
     }
@@ -365,18 +368,18 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
         var userId = await CreateTestUserAsync();
         var revokerId = await CreateTestUserAsync("revoker@example.com");
         var (apiKey, _) = ApiKey.Create(Guid.NewGuid(), userId, "Test Key", "read");
-        await Repository.AddAsync(apiKey);
+        await Repository.AddAsync(apiKey, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         DbContext.ChangeTracker.Clear();
 
         // Act
         apiKey.Revoke(revokerId);
-        await Repository.UpdateAsync(apiKey);
+        await Repository.UpdateAsync(apiKey, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Assert
-        var updated = await DbContext.ApiKeys.FirstOrDefaultAsync(k => k.Id == apiKey.Id);
+        var updated = await DbContext.ApiKeys.FirstOrDefaultAsync(k => k.Id == apiKey.Id, TestContext.Current.CancellationToken);
         Assert.NotNull(updated);
         Assert.NotNull(updated.RevokedAt);
         Assert.Equal(revokerId, updated.RevokedBy);
@@ -403,11 +406,11 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
         );
 
         // Act
-        await Repository.AddAsync(apiKey);
+        await Repository.AddAsync(apiKey, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Assert
-        var persisted = await DbContext.ApiKeys.FirstOrDefaultAsync(k => k.Id == apiKey.Id);
+        var persisted = await DbContext.ApiKeys.FirstOrDefaultAsync(k => k.Id == apiKey.Id, TestContext.Current.CancellationToken);
         Assert.NotNull(persisted);
         Assert.Equal(apiKey.Id, persisted.Id);
         Assert.Equal(apiKey.UserId, persisted.UserId);
@@ -426,11 +429,11 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
         await ResetDatabaseAsync();
         var userId = await CreateTestUserAsync();
         var (apiKey, _) = ApiKey.Create(Guid.NewGuid(), userId, "Round Trip Test", "admin");
-        await Repository.AddAsync(apiKey);
+        await Repository.AddAsync(apiKey, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Act
-        var retrieved = await Repository.GetByKeyPrefixAsync(apiKey.KeyPrefix);
+        var retrieved = await Repository.GetByKeyPrefixAsync(apiKey.KeyPrefix, TestCancellationToken);
 
         // Assert
         Assert.NotNull(retrieved);
@@ -455,11 +458,11 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
         var (apiKey, _) = ApiKey.Create(Guid.NewGuid(), userId, "Single Scope Key", "read");
 
         // Act
-        await Repository.AddAsync(apiKey);
+        await Repository.AddAsync(apiKey, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Assert
-        var persisted = await DbContext.ApiKeys.FirstOrDefaultAsync(k => k.Id == apiKey.Id);
+        var persisted = await DbContext.ApiKeys.FirstOrDefaultAsync(k => k.Id == apiKey.Id, TestContext.Current.CancellationToken);
         Assert.NotNull(persisted);
         Assert.Equal("read", persisted.Scopes);
     }
@@ -473,11 +476,11 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
         var (apiKey, _) = ApiKey.Create(Guid.NewGuid(), userId, "Multi Scope Key", "read,write,admin");
 
         // Act
-        await Repository.AddAsync(apiKey);
+        await Repository.AddAsync(apiKey, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Assert
-        var persisted = await DbContext.ApiKeys.FirstOrDefaultAsync(k => k.Id == apiKey.Id);
+        var persisted = await DbContext.ApiKeys.FirstOrDefaultAsync(k => k.Id == apiKey.Id, TestContext.Current.CancellationToken);
         Assert.NotNull(persisted);
         Assert.Equal("read,write,admin", persisted.Scopes);
     }
@@ -493,14 +496,14 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
         await ResetDatabaseAsync();
         var userId = await CreateTestUserAsync();
         var (apiKey, _) = ApiKey.Create(Guid.NewGuid(), userId, "Concurrent Key", "read");
-        await Repository.AddAsync(apiKey);
+        await Repository.AddAsync(apiKey, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Act - Multiple concurrent prefix lookups using independent repositories
         var tasks = Enumerable.Range(0, 10).Select(async _ =>
         {
             var independentRepo = CreateIndependentRepository();
-            return await independentRepo.GetByKeyPrefixAsync(apiKey.KeyPrefix);
+            return await independentRepo.GetByKeyPrefixAsync(apiKey.KeyPrefix, TestCancellationToken);
         }).ToArray();
 
         var results = await Task.WhenAll(tasks);
@@ -520,7 +523,7 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
         await ResetDatabaseAsync();
         var userId = await CreateTestUserAsync();
         var (apiKey, _) = ApiKey.Create(Guid.NewGuid(), userId, "Usage Key", "read");
-        await Repository.AddAsync(apiKey);
+        await Repository.AddAsync(apiKey, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Act - Multiple concurrent usage updates using independent repositories
@@ -530,11 +533,11 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
             var independentDbContext = CreateIndependentDbContext();
             var independentRepo = CreateRepository(independentDbContext);
 
-            var key = await independentRepo.GetByKeyPrefixAsync(apiKey.KeyPrefix);
+            var key = await independentRepo.GetByKeyPrefixAsync(apiKey.KeyPrefix, TestCancellationToken);
             if (key != null)
             {
                 key.MarkAsUsed();
-                await independentRepo.UpdateAsync(key);
+                await independentRepo.UpdateAsync(key, TestCancellationToken);
                 await independentDbContext.SaveChangesAsync(TestContext.Current.CancellationToken); // Now saves on correct context
             }
 
@@ -545,7 +548,7 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
 
         // Assert - Should have LastUsedAt updated
         DbContext.ChangeTracker.Clear();
-        var updated = await DbContext.ApiKeys.FirstOrDefaultAsync(k => k.Id == apiKey.Id);
+        var updated = await DbContext.ApiKeys.FirstOrDefaultAsync(k => k.Id == apiKey.Id, TestContext.Current.CancellationToken);
         Assert.NotNull(updated);
         Assert.NotNull(updated.LastUsedAt);
     }
@@ -563,11 +566,11 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
         var (apiKey, _) = ApiKey.Create(Guid.NewGuid(), userId, "No Metadata Key", "read", metadata: null);
 
         // Act
-        await Repository.AddAsync(apiKey);
+        await Repository.AddAsync(apiKey, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Assert
-        var persisted = await DbContext.ApiKeys.FirstOrDefaultAsync(k => k.Id == apiKey.Id);
+        var persisted = await DbContext.ApiKeys.FirstOrDefaultAsync(k => k.Id == apiKey.Id, TestContext.Current.CancellationToken);
         Assert.NotNull(persisted);
         Assert.Null(persisted.Metadata);
     }
@@ -579,11 +582,11 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
         await ResetDatabaseAsync();
         var userId = await CreateTestUserAsync();
         var (apiKey, _) = ApiKey.Create(Guid.NewGuid(), userId, "No Tracking Key", "read");
-        await Repository.AddAsync(apiKey);
+        await Repository.AddAsync(apiKey, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Act
-        var retrieved = await Repository.GetByKeyPrefixAsync(apiKey.KeyPrefix);
+        var retrieved = await Repository.GetByKeyPrefixAsync(apiKey.KeyPrefix, TestCancellationToken);
 
         // Modify retrieved object
         retrieved!.MarkAsUsed();
@@ -592,7 +595,7 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
         await DbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Assert - Changes should NOT be persisted (AsNoTracking)
-        var reloaded = await DbContext.ApiKeys.FirstOrDefaultAsync(k => k.Id == apiKey.Id);
+        var reloaded = await DbContext.ApiKeys.FirstOrDefaultAsync(k => k.Id == apiKey.Id, TestContext.Current.CancellationToken);
         Assert.Null(reloaded!.LastUsedAt); // Should remain null
     }
 

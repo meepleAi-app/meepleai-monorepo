@@ -20,7 +20,7 @@ export function createMockUploadQueueItem(
       name: 'test.pdf',
       size: 1024000, // 1 MB
       type: 'application/pdf',
-      lastModified: Date.now()
+      lastModified: Date.now(),
     },
     gameId: 'game-123',
     language: 'en',
@@ -28,7 +28,7 @@ export function createMockUploadQueueItem(
     progress: 0,
     retryCount: 0,
     createdAt: Date.now(),
-    ...overrides
+    ...overrides,
   };
 
   return defaultItem;
@@ -48,9 +48,9 @@ export function createMockUploadQueueItems(
         name: `test-${i}.pdf`,
         size: 1024000,
         type: 'application/pdf',
-        lastModified: Date.now()
+        lastModified: Date.now(),
       },
-      ...overrides
+      ...overrides,
     })
   );
 }
@@ -59,7 +59,7 @@ import type {
   WorkerRequest,
   WorkerResponse,
   UploadQueueState,
-  FileData
+  FileData,
 } from '../../workers/uploadQueue.worker';
 
 /**
@@ -84,7 +84,10 @@ export class MockUploadWorker {
   }
 
   set onmessage(handler: ((event: MessageEvent) => void) | null) {
-    console.log('[MockWorker] onmessage setter called, pending messages:', this._pendingMessages.length);
+    console.log(
+      '[MockWorker] onmessage setter called, pending messages:',
+      this._pendingMessages.length
+    );
     this._onmessage = handler;
 
     // Flush any pending messages that were queued before handler was set
@@ -107,11 +110,12 @@ export class MockUploadWorker {
       successfulUploads: 0,
       failedUploads: 0,
       cancelledUploads: 0,
-      totalBytesUploaded: 0
-    }
+      totalBytesUploaded: 0,
+    },
   };
   private activeUploads = new Map<string, boolean>();
   private fileDataCache = new Map<string, ArrayBuffer>();
+  private clearedItemIds = new Set<string>();
 
   // Configuration for mock behavior
   private config: {
@@ -127,7 +131,7 @@ export class MockUploadWorker {
       uploadDelay: 10,
       simulateErrors: {},
       apiBase: 'http://localhost:8080',
-      ...config
+      ...config,
     };
 
     // Send WORKER_READY immediately after construction
@@ -175,7 +179,11 @@ export class MockUploadWorker {
   private handleMessage(message: WorkerRequest): void {
     switch (message.type) {
       case 'ADD_FILES':
-        this.handleAddFiles(message.payload.files, message.payload.gameId, message.payload.language);
+        this.handleAddFiles(
+          message.payload.files,
+          message.payload.gameId,
+          message.payload.language
+        );
         break;
       case 'CANCEL_UPLOAD':
         this.handleCancelUpload(message.payload.id);
@@ -205,7 +213,7 @@ export class MockUploadWorker {
   }
 
   private handleAddFiles(files: FileData[], gameId: string, language: string): void {
-    files.forEach((fileData) => {
+    files.forEach(fileData => {
       const id = `upload-${Date.now()}-${Math.random().toString(36).substring(7)}`;
 
       const item: UploadQueueItem = {
@@ -214,14 +222,14 @@ export class MockUploadWorker {
           name: fileData.name,
           size: fileData.size,
           type: fileData.type,
-          lastModified: fileData.lastModified
+          lastModified: fileData.lastModified,
         },
         gameId,
         language,
         status: 'pending',
         progress: 0,
         retryCount: 0,
-        createdAt: Date.now()
+        createdAt: Date.now(),
       };
 
       this.state.items.push(item);
@@ -279,10 +287,23 @@ export class MockUploadWorker {
   }
 
   private handleClearCompleted(): void {
-    this.state.items = this.state.items.filter(
-      item => item.status !== 'success' && item.status !== 'cancelled'
-    );
+    const completedIds = this.state.items
+      .filter(
+        item => item.status === 'success' || item.status === 'failed' || item.status === 'cancelled'
+      )
+      .map(item => item.id);
+
+    this.clearedItemIds.clear();
+    completedIds.forEach(id => this.clearedItemIds.add(id));
+
+    this.state.items = this.state.items.filter(item => !completedIds.includes(item.id));
+    completedIds.forEach(id => this.fileDataCache.delete(id));
+
     this.emitStateUpdate();
+    this.emit({
+      type: 'CLEAR_COMPLETED_DONE',
+      payload: { clearedIds: completedIds },
+    });
     this.emitPersistRequest();
   }
 
@@ -331,8 +352,8 @@ export class MockUploadWorker {
         payload: {
           id: item.id,
           error,
-          correlationId: item.correlationId
-        }
+          correlationId: item.correlationId,
+        },
       });
 
       this.emitStateUpdate();
@@ -345,7 +366,7 @@ export class MockUploadWorker {
       item.progress = progress;
       this.emit({
         type: 'UPLOAD_PROGRESS',
-        payload: { id: item.id, progress }
+        payload: { id: item.id, progress },
       });
 
       if (progress < 100) {
@@ -369,7 +390,7 @@ export class MockUploadWorker {
       const response = await fetch(`${this.config.apiBase}/api/v1/ingest/pdf`, {
         method: 'POST',
         body: formData,
-        credentials: 'include'
+        credentials: 'include',
       });
 
       if (!response.ok) {
@@ -390,7 +411,7 @@ export class MockUploadWorker {
 
       this.emit({
         type: 'UPLOAD_SUCCESS',
-        payload: { id: item.id, pdfId }
+        payload: { id: item.id, pdfId },
       });
 
       this.emitStateUpdate();
@@ -409,8 +430,8 @@ export class MockUploadWorker {
         payload: {
           id: item.id,
           error: errorMessage,
-          correlationId: item.correlationId
-        }
+          correlationId: item.correlationId,
+        },
       });
 
       this.emitStateUpdate();
@@ -421,7 +442,14 @@ export class MockUploadWorker {
   private emit(response: WorkerResponse): void {
     const event = new MessageEvent('message', { data: response });
 
-    console.log('[MockWorker] Emitting:', response.type, 'handler attached:', !!this._onmessage, 'queued:', this._pendingMessages.length);
+    console.log(
+      '[MockWorker] Emitting:',
+      response.type,
+      'handler attached:',
+      !!this._onmessage,
+      'queued:',
+      this._pendingMessages.length
+    );
 
     if (this._onmessage) {
       this._onmessage(event);
@@ -437,7 +465,7 @@ export class MockUploadWorker {
   private emitStateUpdate(): void {
     this.emit({
       type: 'STATE_UPDATED',
-      payload: this.state
+      payload: this.state,
     });
   }
 
@@ -446,8 +474,8 @@ export class MockUploadWorker {
       type: 'PERSIST_REQUEST',
       payload: {
         items: this.state.items,
-        metrics: this.state.metrics
-      }
+        metrics: this.state.metrics,
+      },
     });
   }
 
@@ -489,7 +517,7 @@ export class MockUploadWorker {
   public simulateCrash(): void {
     const errorEvent = new ErrorEvent('error', {
       message: 'Simulated worker crash',
-      error: new Error('Simulated worker crash')
+      error: new Error('Simulated worker crash'),
     });
 
     if (this.onerror) {

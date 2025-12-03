@@ -264,6 +264,9 @@ public sealed class ChunkPayload : ValueObject
         yield return TokenCount;
     }
 
-    public override string ToString() =>
-        $"Payload(game={GameId[..8]}..., page={PageNumber}, level={Level}, children={ChildChunkIds.Count})";
+    public override string ToString()
+    {
+        var gameIdDisplay = GameId.Length >= 8 ? $"{GameId[..8]}..." : GameId;
+        return $"Payload(game={gameIdDisplay}, page={PageNumber}, level={Level}, children={ChildChunkIds.Count})";
+    }
 }

@@ -193,6 +193,14 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
   const activeUploadsRef = useRef<Map<string, UploadOperation>>(new Map());
   const processingRef = useRef(false);
   const allCompleteNotifiedRef = useRef(false);
+  const isMountedRef = useRef(true);
+
+  const safeSetQueue = useCallback((updater: (prev: UploadQueueItem[]) => UploadQueueItem[]) => {
+    if (!isMountedRef.current) {
+      return;
+    }
+    setQueue(updater);
+  }, []);
 
   /**
    * Adds files to the upload queue
@@ -209,7 +217,7 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
         retryCount: 0,
       }));
 
-      setQueue(prev => [...prev, ...newItems]);
+      safeSetQueue(prev => [...prev, ...newItems]);
       allCompleteNotifiedRef.current = false;
 
       // Test observability: notify immediately after queue update (synchronous)
@@ -222,7 +230,7 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
    * Removes a file from the queue (only if not uploading)
    */
   const removeFile = useCallback((id: string) => {
-    setQueue(prev => {
+    safeSetQueue(prev => {
       const item = prev.find(i => i.id === id);
       if (item && item.status === 'uploading') {
         // Can't remove while uploading, must cancel first
@@ -242,7 +250,7 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
       activeUploadsRef.current.delete(id);
     }
 
-    setQueue(prev =>
+    safeSetQueue(prev =>
       prev.map(item =>
         item.id === id ? { ...item, status: 'cancelled' as UploadStatus, progress: 0 } : item
       )
@@ -253,7 +261,7 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
    * Retries a failed upload
    */
   const retryUpload = useCallback((id: string) => {
-    setQueue(prev =>
+    safeSetQueue(prev =>
       prev.map(item =>
         item.id === id ? { ...item, status: 'pending', progress: 0, error: undefined } : item
       )
@@ -265,7 +273,7 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
    * Clears all completed uploads from the queue
    */
   const clearCompleted = useCallback(() => {
-    setQueue(prev =>
+    safeSetQueue(prev =>
       prev.filter(
         item => item.status !== 'success' && item.status !== 'failed' && item.status !== 'cancelled'
       )
@@ -282,7 +290,7 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
     });
     activeUploadsRef.current.clear();
 
-    setQueue([]);
+    safeSetQueue(() => []);
     allCompleteNotifiedRef.current = false;
   }, []);
 
@@ -329,7 +337,7 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
 
       try {
         // Update status to uploading
-        setQueue(prev =>
+        safeSetQueue(prev =>
           prev.map(i => (i.id === item.id ? { ...i, status: 'uploading', progress: 10 } : i))
         );
 
@@ -381,7 +389,7 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
                 onRetry(currentItem, attempt, errorObj);
               }
 
-              setQueue(prev =>
+              safeSetQueue(prev =>
                 prev.map(i => (i.id === item.id ? { ...i, retryCount: attempt } : i))
               );
             },
@@ -391,7 +399,7 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
         const data = (await response.json()) as { documentId: string };
 
         // Update to processing status
-        setQueue(prev =>
+        safeSetQueue(prev =>
           prev.map(i =>
             i.id === item.id
               ? {
@@ -410,7 +418,7 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
           abortController.signal,
           progress => {
             // Update progress during polling
-            setQueue(prev =>
+            safeSetQueue(prev =>
               prev.map(i =>
                 i.id === item.id
                   ? {
@@ -438,7 +446,7 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
           };
           onUploadError?.(failedItem, errorMessage);
 
-          setQueue(prev =>
+          safeSetQueue(prev =>
             prev.map(i =>
               i.id === item.id
                 ? {
@@ -454,7 +462,7 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
           return;
         }
 
-        setQueue(prev =>
+        safeSetQueue(prev =>
           prev.map(i => (i.id === item.id ? { ...i, status: 'success', progress: 100 } : i))
         );
 
@@ -489,7 +497,7 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
         // Test observability: notify immediately about error (synchronous, before state update)
         onUploadError?.(failedItem, errorMessage);
 
-        setQueue(prev =>
+        safeSetQueue(prev =>
           prev.map(i =>
             i.id === item.id
               ? {
@@ -576,6 +584,16 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
       onAllComplete(stats);
     }
   }, [queue, getStats, onAllComplete]);
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+      activeUploadsRef.current.forEach(operation => {
+        operation.abortController.abort();
+      });
+      activeUploadsRef.current.clear();
+    };
+  }, []);
 
   return {
     queue,

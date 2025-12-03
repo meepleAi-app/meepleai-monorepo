@@ -47,7 +47,7 @@ const { storage: localStorageMock, clearStorage } = setupLocalStorage();
  * Type errors are expected until worker integration is complete
  * Use UseUploadQueueWithWorker type for assertions in this test suite
  */
-describe.skip('FE-TEST-010a: Message Protocol Tests', () => {
+describe('FE-TEST-010a: Message Protocol Tests', () => {
   let mockWorkerInstance: ReturnType<typeof getMockWorkerInstance>;
 
   beforeEach(async () => {

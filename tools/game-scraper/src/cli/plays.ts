@@ -10,13 +10,33 @@ program
   .option("--mindate <date>", "Minimum date YYYY-MM-DD");
 
 program.action(async (opts) => {
-  const cfg = loadConfig();
-  const plays = await fetchPlays(opts.gameId, opts.mindate, cfg);
+  loadConfig();
+  const plays = await fetchPlays(opts.gameId, opts.mindate);
   const outFile = resolveOut("bgg", "plays", `${opts.gameId}.jsonl`);
   await fs.ensureDir(path.dirname(outFile));
-  const lines = plays.map((p) => JSON.stringify(p)).join("\n");
-  await fs.writeFile(outFile, lines + (lines ? "\n" : ""));
-  console.log(`Saved ${plays.length} plays to ${outFile}`);
+
+  const existingIds = new Set<number>();
+  if (await fs.pathExists(outFile)) {
+    const lines = (await fs.readFile(outFile, "utf8")).split(/\r?\n/).filter(Boolean);
+    lines.forEach((l) => {
+      try {
+        const obj = JSON.parse(l);
+        if (obj.id) existingIds.add(Number(obj.id));
+      } catch {
+        /* ignore bad lines */
+      }
+    });
+  }
+
+  const fresh = plays.filter((p) => !existingIds.has(p.id));
+  if (fresh.length === 0) {
+    console.log("No new plays to append");
+    return;
+  }
+
+  const lines = fresh.map((p) => JSON.stringify(p)).join("\n");
+  await fs.appendFile(outFile, lines + "\n");
+  console.log(`Appended ${fresh.length} plays to ${outFile}`);
 });
 
 program.parseAsync();

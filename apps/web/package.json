@@ -32,6 +32,9 @@
     "test:visual": "chromatic --exit-zero-on-changes",
     "test:visual:ci": "chromatic --exit-zero-on-changes --exit-once-uploaded",
     "test:visual:debug": "chromatic --debug",
+    "scraper:game": "pnpm --dir ../../tools/game-scraper run scraper:game --",
+    "scraper:plays": "pnpm --dir ../../tools/game-scraper run scraper:plays --",
+    "scraper:qa": "pnpm --dir ../../tools/game-scraper run scraper:qa --",
     "prepare": "cd ../.. && husky || true"
   },
   "lint-staged": {

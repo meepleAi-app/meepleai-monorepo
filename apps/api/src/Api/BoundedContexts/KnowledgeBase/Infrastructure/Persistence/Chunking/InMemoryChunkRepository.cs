@@ -32,10 +32,15 @@ public sealed class InMemoryChunkRepository : IChunkRepository
     {
         ct.ThrowIfCancellationRequested();
 
-        var result = ids
-            .Where(id => _chunks.ContainsKey(id))
-            .Select(id => _chunks[id])
-            .ToList();
+        // Thread-safe: Use TryGetValue to avoid race condition between ContainsKey and indexer
+        var result = new List<HierarchicalChunk>();
+        foreach (var id in ids)
+        {
+            if (_chunks.TryGetValue(id, out var chunk))
+            {
+                result.Add(chunk);
+            }
+        }
 
         return Task.FromResult(result);
     }

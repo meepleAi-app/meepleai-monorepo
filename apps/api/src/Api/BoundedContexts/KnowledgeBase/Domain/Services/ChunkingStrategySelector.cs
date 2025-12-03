@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Api.BoundedContexts.KnowledgeBase.Domain.Chunking;
 
 namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
@@ -13,6 +14,13 @@ public sealed class ChunkingStrategySelector
     private const double ListDensityThreshold = 0.20;  // 20% of lines have list patterns
     private const int ShortContentThreshold = 500;     // Characters
     private const int MinTablePatternCount = 6;        // Minimum patterns to trigger dense
+
+    // Pre-compiled regex patterns for list detection (thread-safe, with timeout for ReDoS protection)
+    private static readonly TimeSpan RegexTimeout = TimeSpan.FromMilliseconds(100);
+    private static readonly Regex BulletPointRegex = new(@"^\s*[-*•]\s+", RegexOptions.Compiled, RegexTimeout);
+    private static readonly Regex NumberedListRegex = new(@"^\s*\d+[.):]\s+", RegexOptions.Compiled, RegexTimeout);
+    private static readonly Regex LetterListRegex = new(@"^\s*[a-zA-Z][.):]\s+", RegexOptions.Compiled, RegexTimeout);
+    private static readonly Regex CheckboxRegex = new(@"^\s*\[.?\]\s+", RegexOptions.Compiled, RegexTimeout);
 
     /// <summary>
     /// Selects the optimal chunking configuration based on content analysis.
@@ -120,21 +128,24 @@ public sealed class ChunkingStrategySelector
 
     private static int CountListPatterns(IEnumerable<string> lines)
     {
-        var bulletPatterns = new[]
-        {
-            "^\\s*[-*•]\\s+",           // Bullet points
-            "^\\s*\\d+[.):]\\s+",       // Numbered lists
-            "^\\s*[a-zA-Z][.):]\\s+",   // Letter lists
-            "^\\s*\\[.?\\]\\s+"         // Checkbox patterns
-        };
-
         var count = 0;
         foreach (var line in lines)
         {
-            if (bulletPatterns.Any(pattern =>
-                System.Text.RegularExpressions.Regex.IsMatch(line, pattern)))
+            try
             {
-                count++;
+                // Use pre-compiled regex patterns for performance and security
+                if (BulletPointRegex.IsMatch(line) ||
+                    NumberedListRegex.IsMatch(line) ||
+                    LetterListRegex.IsMatch(line) ||
+                    CheckboxRegex.IsMatch(line))
+                {
+                    count++;
+                }
+            }
+            catch (RegexMatchTimeoutException)
+            {
+                // Regex timed out - skip this line to prevent ReDoS
+                continue;
             }
         }
 

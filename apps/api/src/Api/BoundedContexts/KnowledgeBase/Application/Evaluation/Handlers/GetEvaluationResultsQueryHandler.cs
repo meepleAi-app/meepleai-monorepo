@@ -7,15 +7,17 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Handlers;
 
 /// <summary>
 /// Handler for GetEvaluationResultsQuery.
-/// Note: This is a placeholder implementation. In production, results would be persisted to database.
+/// Uses thread-safe in-memory cache with bounded size.
+/// TODO: In production, consider persisting to database for durability.
 /// </summary>
 public sealed class GetEvaluationResultsQueryHandler : IRequestHandler<GetEvaluationResultsQuery, IReadOnlyList<EvaluationResult>>
 {
     private readonly ILogger<GetEvaluationResultsQueryHandler> _logger;
 
-    // In-memory cache for demonstration. In production, use database persistence.
-    // Internal to allow GetBaselineMetricsQueryHandler to access.
-    internal static readonly List<EvaluationResult> CachedResults = [];
+    // Thread-safe in-memory cache with bounded size (max 100 results).
+    private static readonly List<EvaluationResult> CachedResults = [];
+    private static readonly object CacheLock = new();
+    private const int MaxCacheSize = 100;
 
     public GetEvaluationResultsQueryHandler(ILogger<GetEvaluationResultsQueryHandler> logger)
     {
@@ -24,7 +26,13 @@ public sealed class GetEvaluationResultsQueryHandler : IRequestHandler<GetEvalua
 
     public Task<IReadOnlyList<EvaluationResult>> Handle(GetEvaluationResultsQuery request, CancellationToken cancellationToken)
     {
-        var query = CachedResults.AsEnumerable();
+        List<EvaluationResult> snapshot;
+        lock (CacheLock)
+        {
+            snapshot = CachedResults.ToList();
+        }
+
+        var query = snapshot.AsEnumerable();
 
         if (!string.IsNullOrEmpty(request.DatasetName))
         {
@@ -48,16 +56,32 @@ public sealed class GetEvaluationResultsQueryHandler : IRequestHandler<GetEvalua
     }
 
     /// <summary>
-    /// Adds a result to the cache. Called by evaluation service after completion.
+    /// Adds a result to the cache. Thread-safe with bounded eviction.
     /// </summary>
     public static void CacheResult(EvaluationResult result)
     {
-        CachedResults.Add(result);
+        ArgumentNullException.ThrowIfNull(result);
 
-        // Keep only last 100 results
-        if (CachedResults.Count > 100)
+        lock (CacheLock)
         {
-            CachedResults.RemoveAt(0);
+            CachedResults.Add(result);
+
+            // Evict oldest results when exceeding max size
+            while (CachedResults.Count > MaxCacheSize)
+            {
+                CachedResults.RemoveAt(0);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Gets a snapshot of cached results for internal use. Thread-safe.
+    /// </summary>
+    internal static IReadOnlyList<EvaluationResult> GetCachedResultsSnapshot()
+    {
+        lock (CacheLock)
+        {
+            return CachedResults.ToList().AsReadOnly();
         }
     }
 }
@@ -76,7 +100,8 @@ public sealed class GetBaselineMetricsQueryHandler : IRequestHandler<GetBaseline
 
     public Task<EvaluationMetrics?> Handle(GetBaselineMetricsQuery request, CancellationToken cancellationToken)
     {
-        var query = GetEvaluationResultsQueryHandler.CachedResults
+        // Use thread-safe snapshot to avoid race conditions
+        var query = GetEvaluationResultsQueryHandler.GetCachedResultsSnapshot()
             .Where(r => r.Configuration.Equals("baseline", StringComparison.OrdinalIgnoreCase));
 
         if (!string.IsNullOrEmpty(request.DatasetName))

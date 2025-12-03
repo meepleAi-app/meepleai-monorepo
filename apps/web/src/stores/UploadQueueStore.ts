@@ -20,17 +20,14 @@ import type {
   WorkerRequest,
   WorkerResponse,
   UploadQueueState,
-  FileData
+  FileData,
 } from '../workers/uploadQueue.worker';
 import type { UploadQueueItem as WorkerUploadQueueItem } from '../workers/uploadQueue.worker';
 import { logger } from '@/lib/logger';
 import { createErrorContext } from '@/lib/errors';
 
 // Re-export types for public API
-export type {
-  UploadStatus,
-  UploadQueueState
-} from '../workers/uploadQueue.worker';
+export type { UploadStatus, UploadQueueState } from '../workers/uploadQueue.worker';
 
 // Public-facing UploadQueueItem type
 export type UploadQueueItem = WorkerUploadQueueItem;
@@ -63,8 +60,8 @@ class UploadQueueStore {
       successfulUploads: 0,
       failedUploads: 0,
       cancelledUploads: 0,
-      totalBytesUploaded: 0
-    }
+      totalBytesUploaded: 0,
+    },
   };
   private listeners = new Set<() => void>();
   private isReady = false;
@@ -72,6 +69,9 @@ class UploadQueueStore {
   private workerError: Error | null = null;
   private restartCount = 0;
   private readonly MAX_RESTARTS = 3;
+  private pendingClearCompleted = false;
+  private clearCompletedIds = new Set<string>();
+  private clearCompletedApplied = false;
 
   // Callbacks
   private options: UseUploadQueueOptions = {};
@@ -123,14 +123,13 @@ class UploadQueueStore {
     this.isInitializing = true;
 
     try {
-      this.worker = new Worker(
-        new URL('../workers/uploadQueue.worker.ts', import.meta.url),
-        { type: 'module', name: 'upload-queue-worker' }
-      );
+      this.worker = new Worker(new URL('../workers/uploadQueue.worker.ts', import.meta.url), {
+        type: 'module',
+        name: 'upload-queue-worker',
+      });
 
       this.setupWorkerListeners();
       this.isReady = false; // Will be set to true on WORKER_READY message
-
     } catch (error) {
       logger.error(
         'Failed to initialize worker',
@@ -167,11 +166,27 @@ class UploadQueueStore {
           this.processPendingFileRequests();
           break;
 
-        case 'STATE_UPDATED':
-          this.state = response.payload;
+        case 'STATE_UPDATED': {
+          if (this.pendingClearCompleted && this.clearCompletedApplied) {
+            return;
+          }
+
+          if (this.pendingClearCompleted && !this.clearCompletedApplied) {
+            this.clearCompletedApplied = true;
+          }
+
+          const filteredItems = response.payload.items.filter(
+            item => !this.clearCompletedIds.has(item.id)
+          );
+          this.state = {
+            ...response.payload,
+            items: filteredItems,
+          };
+
           this.notifyListeners();
           this.checkForCompletions();
           break;
+        }
 
         case 'UPLOAD_PROGRESS':
           // Progress updates are handled within STATE_UPDATED
@@ -194,7 +209,7 @@ class UploadQueueStore {
             'Worker error',
             new Error(response.payload.message),
             createErrorContext('UploadQueueStore', 'setupWorkerListeners', {
-              errorMessage: response.payload.message
+              errorMessage: response.payload.message,
             })
           );
           this.workerError = new Error(response.payload.message);
@@ -205,10 +220,16 @@ class UploadQueueStore {
           // Worker requests persistence - save to localStorage
           this.saveToLocalStorage(response.payload.items, response.payload.metrics);
           break;
+
+        case 'CLEAR_COMPLETED_DONE':
+          this.pendingClearCompleted = false;
+          this.clearCompletedIds.clear();
+          this.clearCompletedApplied = false;
+          break;
       }
     };
 
-    this.worker.onerror = (error) => {
+    this.worker.onerror = error => {
       logger.error(
         'Worker uncaught error',
         error instanceof Error ? error : new Error(String(error)),
@@ -217,7 +238,7 @@ class UploadQueueStore {
       this.handleWorkerCrash();
     };
 
-    this.worker.onmessageerror = (error) => {
+    this.worker.onmessageerror = error => {
       logger.error(
         'Worker message deserialization error',
         error instanceof Error ? error : new Error(String(error)),
@@ -235,7 +256,7 @@ class UploadQueueStore {
         new Error(`Worker crashed ${this.MAX_RESTARTS} times. Please reload the page.`),
         createErrorContext('UploadQueueStore', 'handleWorkerCrash', {
           restartCount: this.restartCount,
-          maxRestarts: this.MAX_RESTARTS
+          maxRestarts: this.MAX_RESTARTS,
         })
       );
       this.workerError = new Error(
@@ -285,9 +306,7 @@ class UploadQueueStore {
 
   private checkForCompletions(): void {
     const currentCompletedIds = new Set(
-      this.state.items
-        .filter(item => item.status === 'success')
-        .map(item => item.id)
+      this.state.items.filter(item => item.status === 'success').map(item => item.id)
     );
 
     // Check if all uploads are complete
@@ -332,8 +351,8 @@ class UploadQueueStore {
         successfulUploads: 0,
         failedUploads: 0,
         cancelledUploads: 0,
-        totalBytesUploaded: 0
-      }
+        totalBytesUploaded: 0,
+      },
     };
   };
 
@@ -347,7 +366,9 @@ class UploadQueueStore {
     }
 
     // eslint-disable-next-line no-console
-    console.log(`[UploadQueueStore] Processing ${this.pendingFileRequests.length} buffered file requests`);
+    console.log(
+      `[UploadQueueStore] Processing ${this.pendingFileRequests.length} buffered file requests`
+    );
 
     // Process all buffered requests
     const requests = [...this.pendingFileRequests];
@@ -363,7 +384,7 @@ class UploadQueueStore {
           createErrorContext('UploadQueueStore', 'processPendingFileRequests', {
             gameId: request.gameId,
             language: request.language,
-            fileCount: request.files.length
+            fileCount: request.files.length,
           })
         );
       }
@@ -375,14 +396,15 @@ class UploadQueueStore {
   // ============================================================================
   // Workers cannot access localStorage - main thread handles persistence
 
-  private saveToLocalStorage(items: WorkerUploadQueueItem[], metrics: UploadQueueState['metrics']): void {
+  private saveToLocalStorage(
+    items: WorkerUploadQueueItem[],
+    metrics: UploadQueueState['metrics']
+  ): void {
     try {
       const serializable = {
-        items: items.filter(
-          item => item.status === 'pending' || item.status === 'failed'
-        ),
+        items: items.filter(item => item.status === 'pending' || item.status === 'failed'),
         metrics,
-        savedAt: Date.now()
+        savedAt: Date.now(),
       };
 
       localStorage.setItem(STORAGE_KEY, JSON.stringify(serializable));
@@ -391,13 +413,16 @@ class UploadQueueStore {
         'Failed to save to localStorage',
         error instanceof Error ? error : new Error(String(error)),
         createErrorContext('UploadQueueStore', 'saveToLocalStorage', {
-          itemCount: items.length
+          itemCount: items.length,
         })
       );
     }
   }
 
-  private loadFromLocalStorage(): { items: WorkerUploadQueueItem[]; metrics: UploadQueueState['metrics'] } | null {
+  private loadFromLocalStorage(): {
+    items: WorkerUploadQueueItem[];
+    metrics: UploadQueueState['metrics'];
+  } | null {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
@@ -409,8 +434,8 @@ class UploadQueueStore {
             successfulUploads: 0,
             failedUploads: 0,
             cancelledUploads: 0,
-            totalBytesUploaded: 0
-          }
+            totalBytesUploaded: 0,
+          },
         };
       }
     } catch (error) {
@@ -433,8 +458,8 @@ class UploadQueueStore {
         type: 'RESTORE_STATE',
         payload: {
           items: saved.items,
-          metrics: saved.metrics
-        }
+          metrics: saved.metrics,
+        },
       });
     }
   }
@@ -479,7 +504,7 @@ class UploadQueueStore {
         size: file.size,
         type: file.type,
         lastModified: file.lastModified,
-        arrayBuffer
+        arrayBuffer,
       };
     });
 
@@ -491,7 +516,7 @@ class UploadQueueStore {
     this.postMessage(
       {
         type: 'ADD_FILES',
-        payload: { files: filesData, gameId, language }
+        payload: { files: filesData, gameId, language },
       },
       transferables
     );
@@ -514,6 +539,19 @@ class UploadQueueStore {
 
   clearCompleted(): void {
     this.ensureWorkerInitialized();
+
+    const completedIds = this.state.items
+      .filter(
+        item => item.status === 'success' || item.status === 'failed' || item.status === 'cancelled'
+      )
+      .map(item => item.id);
+
+    if (completedIds.length > 0) {
+      this.pendingClearCompleted = true;
+      this.clearCompletedApplied = false;
+      completedIds.forEach(id => this.clearCompletedIds.add(id));
+    }
+
     this.postMessage({ type: 'CLEAR_COMPLETED' });
     this.lastCompletedIds.clear();
   }
@@ -549,7 +587,7 @@ class UploadQueueStore {
         processing: 0,
         succeeded: 0,
         failed: 0,
-        cancelled: 0
+        cancelled: 0,
       }
     );
   }
@@ -568,7 +606,7 @@ class UploadQueueStore {
         'Worker not initialized',
         new Error('Worker not initialized'),
         createErrorContext('UploadQueueStore', 'postMessage', {
-          messageType: message.type
+          messageType: message.type,
         })
       );
       return;
@@ -589,10 +627,11 @@ class UploadQueueStore {
         'Failed to post message to worker',
         error instanceof Error ? error : new Error(String(error)),
         createErrorContext('UploadQueueStore', 'postMessage', {
-          messageType: message.type
+          messageType: message.type,
         })
       );
-      this.workerError = error instanceof Error ? error : new Error('Failed to communicate with worker');
+      this.workerError =
+        error instanceof Error ? error : new Error('Failed to communicate with worker');
       this.notifyListeners();
     }
   }
@@ -604,15 +643,18 @@ class UploadQueueStore {
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) {
         // Tab hidden - set idle timeout (5 minutes)
-        this.idleTimeout = setTimeout(() => {
-          const stats = this.getStats();
-          // Only cleanup if queue is empty and no active uploads
-          if (stats.total === 0 || (stats.pending === 0 && stats.uploading === 0)) {
-            // eslint-disable-next-line no-console
-            console.log('[UploadQueueStore] Idle cleanup - terminating worker');
-            this.destroy();
-          }
-        }, 5 * 60 * 1000); // 5 minutes
+        this.idleTimeout = setTimeout(
+          () => {
+            const stats = this.getStats();
+            // Only cleanup if queue is empty and no active uploads
+            if (stats.total === 0 || (stats.pending === 0 && stats.uploading === 0)) {
+              // eslint-disable-next-line no-console
+              console.log('[UploadQueueStore] Idle cleanup - terminating worker');
+              this.destroy();
+            }
+          },
+          5 * 60 * 1000
+        ); // 5 minutes
       } else {
         // Tab visible again - cancel idle timeout
         if (this.idleTimeout) {

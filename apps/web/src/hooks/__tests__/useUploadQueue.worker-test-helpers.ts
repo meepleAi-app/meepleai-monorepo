@@ -16,7 +16,9 @@ import { MockUploadWorker, MockBroadcastChannel } from '../../__tests__/helpers/
  * These properties are planned for future worker implementation
  * @see Issue #TBD - Web Worker Integration for Upload Queue
  */
-export type UseUploadQueueWithWorker = ReturnType<typeof import('../useUploadQueue').useUploadQueue> & {
+export type UseUploadQueueWithWorker = ReturnType<
+  typeof import('../useUploadQueue').useUploadQueue
+> & {
   isWorkerReady?: boolean;
   workerError?: Error | null;
 };
@@ -92,11 +94,31 @@ export const setupWorkerTestEnvironment = async (
   // Reset mock worker instance
   (global.Worker as Mock).mockClear();
 
-  (global.fetch as Mock).mockResolvedValue({
-    ok: true,
-    json: async () => ({ documentId: 'pdf-123' }),
-    headers: new Headers(),
+  const mockFetch = vi.fn((url: string, options?: any) => {
+    if (typeof url === 'string' && url.includes('/progress')) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          currentStep: 'Completed',
+          percentComplete: 100,
+          elapsedTime: 'PT0S',
+          pagesProcessed: 1,
+          totalPages: 1,
+          startedAt: new Date().toISOString(),
+          completedAt: new Date().toISOString(),
+        }),
+        headers: new Headers(),
+      });
+    }
+
+    return Promise.resolve({
+      ok: true,
+      json: async () => ({ documentId: 'pdf-123' }),
+      headers: new Headers(),
+    });
   });
+
+  global.fetch = mockFetch as any;
 
   // Clear the queue using the store's clearAll method
   const { uploadQueueStore } = await import('../../stores/UploadQueueStore');
@@ -174,7 +196,11 @@ export const waitForItemStatus = async (
 /**
  * Wait for queue length
  */
-export const waitForQueueLength = async (result: any, expectedLength: number, timeout: number = 5000) => {
+export const waitForQueueLength = async (
+  result: any,
+  expectedLength: number,
+  timeout: number = 5000
+) => {
   const { waitFor } = await import('@testing-library/react');
 
   await waitFor(

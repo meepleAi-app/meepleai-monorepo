@@ -86,7 +86,8 @@ export type WorkerResponse =
   | {
       type: 'PERSIST_REQUEST';
       payload: { items: UploadQueueItem[]; metrics: UploadQueueState['metrics'] };
-    };
+    }
+  | { type: 'CLEAR_COMPLETED_DONE'; payload: { clearedIds: string[] } };
 
 export type BroadcastMessage =
   | { type: 'QUEUE_SYNC'; payload: UploadQueueState; tabId: string }
@@ -124,6 +125,8 @@ const state: UploadQueueState = {
     totalBytesUploaded: 0,
   },
 };
+
+const clearedItemIds = new Set<string>();
 
 const activeUploads = new Map<string, AbortController>();
 let broadcastChannel: BroadcastChannel;
@@ -216,6 +219,10 @@ function mergeQueueState(otherState: UploadQueueState): void {
   const activeIds = new Set(activeUploads.keys());
 
   otherState.items.forEach(otherItem => {
+    if (clearedItemIds.has(otherItem.id)) {
+      return;
+    }
+
     const existingIndex = state.items.findIndex(item => item.id === otherItem.id);
 
     if (existingIndex === -1) {
@@ -540,11 +547,19 @@ function handleClearCompleted(): void {
     )
     .map(item => item.id);
 
+  clearedItemIds.clear();
+  completedIds.forEach(id => clearedItemIds.add(id));
+
   state.items = state.items.filter(item => !completedIds.includes(item.id));
   completedIds.forEach(id => fileDataCache.delete(id));
 
   notifyStateUpdate();
+  self.postMessage({
+    type: 'CLEAR_COMPLETED_DONE',
+    payload: { clearedIds: completedIds },
+  });
   requestPersistence(); // Request main thread to persist
+  broadcastQueueUpdate();
 }
 
 function handleClearAll(): void {

@@ -77,6 +77,14 @@ docs/                Architecture, ADRs, guides
 - **Validation**: 5-layer (confidence ≥0.70, citation verify, forbidden keywords)
 - **Quality**: P@10, MRR, confidence tracking, <3% hallucination target
 
+### RAG Evaluation Pipeline (ADR-016 Phase 5)
+- **Grid Search**: 12 configurations (3 chunking × 2 quantization × 2 reranking)
+- **Metrics**: Recall@5, Recall@10, nDCG@10, MRR, P95 latency
+- **Phase 5 Targets**: Recall@10 ≥ 70%, P95 < 1500ms
+- **Dashboard**: Grafana (`infra/dashboards/rag-evaluation.json`)
+- **Runbook**: [RAG Evaluation Runbook](docs/05-operations/runbooks/rag-evaluation-pipeline.md)
+- **Components**: `RunGridSearchHandler`, `GridSearchConfiguration`, `BenchmarkReport`, `ReportGeneratorService`
+
 ### Auth (Dual + 2FA)
 - **Cookie**: Session-based (httpOnly, secure)
 - **API Key**: `mpl_{env}_{base64}` format, PBKDF2 (210k iter)
@@ -294,6 +302,8 @@ cd apps/web && pnpm dev                                        # T3 (3000)
 | **API Spec** | `docs/03-api/board-game-ai-api-specification.md` |
 | **ADR Hybrid RAG** | `docs/01-architecture/adr/adr-001-hybrid-rag.md` |
 | **ADR PDF Processing** | `docs/01-architecture/adr/adr-003b-unstructured-pdf.md` |
+| **ADR Embedding Pipeline** | `docs/01-architecture/adr/adr-016-advanced-pdf-embedding-pipeline.md` |
+| **RAG Eval Runbook** | `docs/05-operations/runbooks/rag-evaluation-pipeline.md` |
 | **Security** | `SECURITY.md`, `docs/06-security/code-scanning-remediation-summary.md` |
 | **Environment Variables** | `docs/06-security/environment-variables-production.md` |
 | **OAuth Security** | `docs/06-security/oauth-security.md` |
@@ -355,8 +365,8 @@ bash tools/cleanup-caches.sh                # Run
 ---
 
 **Version**: 1.0-rc (DDD 99%)
-**Last Updated**: 2025-11-15
-**Last Verified**: 2025-11-15 (against codebase)
+**Last Updated**: 2025-12-03
+**Last Verified**: 2025-12-03 (against codebase)
 **Owner**: Engineering Lead
 
 ---

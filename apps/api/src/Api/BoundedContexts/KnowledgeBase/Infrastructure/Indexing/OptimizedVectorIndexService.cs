@@ -57,17 +57,17 @@ public class OptimizedVectorIndexService : IOptimizedVectorIndexService
             "Ensuring optimized collection {CollectionName} exists with {VectorDimension}D vectors, {HnswConfig}, {QuantizationConfig}",
             collectionName, vectorDimension, hnswConfig, quantizationConfig);
 
-        var collections = await _clientAdapter.ListCollectionsAsync(cancellationToken);
+        var collections = await _clientAdapter.ListCollectionsAsync(cancellationToken).ConfigureAwait(false);
 
         if (collections.Contains(collectionName))
         {
             _logger.LogInformation("Collection {CollectionName} already exists, updating configuration", collectionName);
-            await UpdateCollectionConfigurationAsync(collectionName, hnswConfig, quantizationConfig, cancellationToken);
+            await UpdateCollectionConfigurationAsync(collectionName, hnswConfig, quantizationConfig, cancellationToken).ConfigureAwait(false);
             return;
         }
 
         await CreateOptimizedCollectionAsync(
-            collectionName, vectorDimension, hnswConfig, quantizationConfig, cancellationToken);
+            collectionName, vectorDimension, hnswConfig, quantizationConfig, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -95,10 +95,10 @@ public class OptimizedVectorIndexService : IOptimizedVectorIndexService
             vectorParams,
             hnswConfigDiff,
             qdrantQuantizationConfig,
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
 
         // Create payload indexes for filtering (ADR-016 Phase 3)
-        await CreatePayloadIndexesAsync(collectionName, cancellationToken);
+        await CreatePayloadIndexesAsync(collectionName, cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Created optimized collection {CollectionName} with {Dimensions}D vectors, HNSW(m={M}, ef={EfConstruct}), Quantization({Type})",
@@ -121,7 +121,7 @@ public class OptimizedVectorIndexService : IOptimizedVectorIndexService
             collectionName,
             hnswConfigDiff,
             quantizationConfigDiff,
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Updated collection {CollectionName} configuration: HNSW(m={M}, ef={EfConstruct}), Quantization({Type})",
@@ -130,20 +130,26 @@ public class OptimizedVectorIndexService : IOptimizedVectorIndexService
 
     /// <summary>
     /// Creates payload indexes for efficient filtering.
+    /// Uses parallel execution for improved performance.
     /// </summary>
     private async Task CreatePayloadIndexesAsync(string collectionName, CancellationToken cancellationToken)
     {
-        // Core indexes from existing implementation
-        await _clientAdapter.CreatePayloadIndexAsync(collectionName, "game_id", PayloadSchemaType.Keyword, cancellationToken);
-        await _clientAdapter.CreatePayloadIndexAsync(collectionName, "pdf_id", PayloadSchemaType.Keyword, cancellationToken);
-        await _clientAdapter.CreatePayloadIndexAsync(collectionName, "category", PayloadSchemaType.Keyword, cancellationToken);
-        await _clientAdapter.CreatePayloadIndexAsync(collectionName, "language", PayloadSchemaType.Keyword, cancellationToken);
+        // Create all indexes in parallel for better performance
+        var indexTasks = new[]
+        {
+            // Core indexes from existing implementation
+            _clientAdapter.CreatePayloadIndexAsync(collectionName, "game_id", PayloadSchemaType.Keyword, cancellationToken),
+            _clientAdapter.CreatePayloadIndexAsync(collectionName, "pdf_id", PayloadSchemaType.Keyword, cancellationToken),
+            _clientAdapter.CreatePayloadIndexAsync(collectionName, "category", PayloadSchemaType.Keyword, cancellationToken),
+            _clientAdapter.CreatePayloadIndexAsync(collectionName, "language", PayloadSchemaType.Keyword, cancellationToken),
+            // ADR-016 Phase 3: Additional indexes for hierarchical chunks
+            _clientAdapter.CreatePayloadIndexAsync(collectionName, "level", PayloadSchemaType.Integer, cancellationToken),
+            _clientAdapter.CreatePayloadIndexAsync(collectionName, "parent_chunk_id", PayloadSchemaType.Keyword, cancellationToken),
+            _clientAdapter.CreatePayloadIndexAsync(collectionName, "page_number", PayloadSchemaType.Integer, cancellationToken),
+            _clientAdapter.CreatePayloadIndexAsync(collectionName, "element_type", PayloadSchemaType.Keyword, cancellationToken)
+        };
 
-        // ADR-016 Phase 3: Additional indexes for hierarchical chunks
-        await _clientAdapter.CreatePayloadIndexAsync(collectionName, "level", PayloadSchemaType.Integer, cancellationToken);
-        await _clientAdapter.CreatePayloadIndexAsync(collectionName, "parent_chunk_id", PayloadSchemaType.Keyword, cancellationToken);
-        await _clientAdapter.CreatePayloadIndexAsync(collectionName, "page_number", PayloadSchemaType.Integer, cancellationToken);
-        await _clientAdapter.CreatePayloadIndexAsync(collectionName, "element_type", PayloadSchemaType.Keyword, cancellationToken);
+        await Task.WhenAll(indexTasks).ConfigureAwait(false);
 
         _logger.LogInformation("Created payload indexes for collection {CollectionName}", collectionName);
     }

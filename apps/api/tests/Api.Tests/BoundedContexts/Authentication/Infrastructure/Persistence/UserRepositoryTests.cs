@@ -284,7 +284,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Assert
-        var persisted = await DbContext.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
+        var persisted = await DbContext.Users.FirstOrDefaultAsync(u => u.Id == user.Id, TestContext.Current.CancellationToken);
         Assert.NotNull(persisted);
         Assert.Equal("newuser@example.com", persisted.Email);
         Assert.Equal(Role.User.Value, persisted.Role);
@@ -303,7 +303,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Assert
-        var persisted = await DbContext.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
+        var persisted = await DbContext.Users.FirstOrDefaultAsync(u => u.Id == user.Id, TestContext.Current.CancellationToken);
         Assert.NotNull(persisted);
         Assert.True(persisted.IsTwoFactorEnabled);
         Assert.Equal("encrypted_totp_secret_123", persisted.TotpSecretEncrypted);
@@ -330,11 +330,11 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         user.UpdateRole(Role.Admin);
 
         // Act
-        await Repository.UpdateAsync(user);
+        await Repository.UpdateAsync(user, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Assert
-        var updated = await DbContext.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
+        var updated = await DbContext.Users.FirstOrDefaultAsync(u => u.Id == user.Id, TestContext.Current.CancellationToken);
         Assert.NotNull(updated);
         Assert.Equal("Updated Name", updated.DisplayName);
         Assert.Equal(Role.Admin.Value, updated.Role);
@@ -353,11 +353,11 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         user.Enable2FA(TotpSecret.FromEncrypted("new_encrypted_secret"));
 
         // Act
-        await Repository.UpdateAsync(user);
+        await Repository.UpdateAsync(user, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Assert
-        var updated = await DbContext.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
+        var updated = await DbContext.Users.FirstOrDefaultAsync(u => u.Id == user.Id, TestContext.Current.CancellationToken);
         Assert.NotNull(updated);
         Assert.True(updated.IsTwoFactorEnabled);
         Assert.Equal("new_encrypted_secret", updated.TotpSecretEncrypted);
@@ -377,11 +377,11 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act
-        await Repository.DeleteAsync(user);
+        await Repository.DeleteAsync(user, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Assert
-        var deleted = await DbContext.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
+        var deleted = await DbContext.Users.FirstOrDefaultAsync(u => u.Id == user.Id, TestContext.Current.CancellationToken);
         Assert.Null(deleted);
     }
 
@@ -393,7 +393,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         var user = CreateTestUser("nonexistent@example.com", Role.User);
 
         // Act & Assert - Should not throw
-        await Repository.DeleteAsync(user);
+        await Repository.DeleteAsync(user, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
     }
 
@@ -411,7 +411,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act
-        var exists = await Repository.ExistsAsync(user.Id);
+        var exists = await Repository.ExistsAsync(user.Id, TestCancellationToken);
 
         // Assert
         Assert.True(exists);
@@ -425,7 +425,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         var nonExistentId = Guid.NewGuid();
 
         // Act
-        var exists = await Repository.ExistsAsync(nonExistentId);
+        var exists = await Repository.ExistsAsync(nonExistentId, TestCancellationToken);
 
         // Assert
         Assert.False(exists);
@@ -448,7 +448,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Assert
-        var persisted = await DbContext.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
+        var persisted = await DbContext.Users.FirstOrDefaultAsync(u => u.Id == user.Id, TestContext.Current.CancellationToken);
         Assert.NotNull(persisted);
         Assert.Equal(user.Id, persisted.Id);
         Assert.Equal(user.Email.Value, persisted.Email);
@@ -517,7 +517,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         var tasks = Enumerable.Range(0, 10).Select(async _ =>
         {
             var repo = CreateIndependentRepository();
-            return await repo.GetByIdAsync(user.Id);
+            return await repo.GetByIdAsync(user.Id, TestCancellationToken);
         }).ToArray();
 
         var results = await Task.WhenAll(tasks);
@@ -546,7 +546,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         var tasks = Enumerable.Range(0, 10).Select(async _ =>
         {
             var repo = CreateIndependentRepository();
-            return await repo.GetByEmailAsync(email);
+            return await repo.GetByEmailAsync(email, TestCancellationToken);
         }).ToArray();
 
         var results = await Task.WhenAll(tasks);
@@ -575,7 +575,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         // DO NOT call SaveChangesAsync - simulates rollback
 
         // Assert
-        var notPersisted = await DbContext.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
+        var notPersisted = await DbContext.Users.FirstOrDefaultAsync(u => u.Id == user.Id, TestContext.Current.CancellationToken);
         Assert.Null(notPersisted);
     }
 
@@ -678,7 +678,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Assert - Changes should NOT be persisted (AsNoTracking)
-        var reloaded = await DbContext.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
+        var reloaded = await DbContext.Users.FirstOrDefaultAsync(u => u.Id == user.Id, TestContext.Current.CancellationToken);
         Assert.NotEqual("Modified", reloaded!.DisplayName);
     }
 

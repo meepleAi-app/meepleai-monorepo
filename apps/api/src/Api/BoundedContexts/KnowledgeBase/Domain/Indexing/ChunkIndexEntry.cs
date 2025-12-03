@@ -138,6 +138,9 @@ public sealed class ChunkIndexEntry
         if (newVector == null || newVector.Length == 0)
             throw new ArgumentException("Vector cannot be empty", nameof(newVector));
 
+        if (string.IsNullOrWhiteSpace(model))
+            throw new ArgumentException("Model cannot be empty", nameof(model));
+
         Vector = newVector;
         EmbeddingModel = model;
         IndexedAt = DateTime.UtcNow;

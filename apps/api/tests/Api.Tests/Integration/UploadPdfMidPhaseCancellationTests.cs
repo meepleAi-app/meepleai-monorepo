@@ -326,7 +326,7 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
 
         var midWriteProvider = services.BuildServiceProvider();
         var testDbContext = midWriteProvider.GetRequiredService<MeepleAiDbContext>();
-        await testDbContext.Database.EnsureCreatedAsync();
+        await testDbContext.Database.EnsureCreatedAsync(TestCancellationToken);
         await PdfUploadTestHelpers.CleanDatabaseAsync(testDbContext);
 
         var testUser = await PdfUploadTestHelpers.SeedTestUserAsync(testDbContext);
@@ -386,7 +386,7 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
 
         var midExtractionProvider = services.BuildServiceProvider();
         var testDbContext = midExtractionProvider.GetRequiredService<MeepleAiDbContext>();
-        await testDbContext.Database.EnsureCreatedAsync();
+        await testDbContext.Database.EnsureCreatedAsync(TestCancellationToken);
 
         var testUser = await PdfUploadTestHelpers.SeedTestUserAsync(testDbContext);
         var testGame = await PdfUploadTestHelpers.SeedTestGameAsync(testDbContext);
@@ -604,8 +604,8 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
         }
 
         // Final verification
-        var userStillExists = await _dbContext.Users.AnyAsync(u => u.Id == testUser.Id);
-        var gameStillExists = await _dbContext.Games.AnyAsync(g => g.Id == testGame.Id);
+        var userStillExists = await _dbContext.Users.AnyAsync(u => u.Id == testUser.Id, TestCancellationToken);
+        var gameStillExists = await _dbContext.Games.AnyAsync(g => g.Id == testGame.Id, TestCancellationToken);
 
         userStillExists.Should().BeTrue("user should survive all cancellation scenarios");
         gameStillExists.Should().BeTrue("game should survive all cancellation scenarios");

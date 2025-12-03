@@ -9,6 +9,7 @@ namespace Api.Services;
 /// PostgreSQL full-text keyword search service using tsvector and ts_rank_cd.
 /// Implements BM25-style ranking with phrase search and terminology boosting.
 /// Part of AI-14 hybrid search implementation.
+/// ADR-016 Phase 3: Supports Italian (meepleai_italian) and English FTS configurations.
 /// </summary>
 public class KeywordSearchService : IKeywordSearchService
 {
@@ -16,8 +17,22 @@ public class KeywordSearchService : IKeywordSearchService
     private readonly ILogger<KeywordSearchService> _logger;
 
     // PostgreSQL full-text search configuration
-    private const string TextSearchConfig = "english"; // Language configuration for stemming
+    // ADR-016 Phase 3: Default to Italian for MeepleAI board game rules
+    private const string DefaultTextSearchConfig = "meepleai_italian";
+    private const string EnglishTextSearchConfig = "english";
     private const int DefaultNormalization = 1; // ts_rank_cd normalization method (1 = divide by document length)
+
+    /// <summary>
+    /// Mapping of language codes to PostgreSQL text search configurations.
+    /// ADR-016 Phase 3: meepleai_italian uses game-specific synonyms.
+    /// </summary>
+    private static readonly Dictionary<string, string> LanguageToFtsConfig = new(StringComparer.OrdinalIgnoreCase)
+    {
+        { "it", "meepleai_italian" },
+        { "italian", "meepleai_italian" },
+        { "en", "english" },
+        { "english", "english" }
+    };
 
     public KeywordSearchService(
         MeepleAiDbContext dbContext,
@@ -33,6 +48,7 @@ public class KeywordSearchService : IKeywordSearchService
         int limit = 10,
         bool phraseSearch = false,
         List<string>? boostTerms = null,
+        string language = "it",
         CancellationToken cancellationToken = default)
     {
         // Issue #1445: Use centralized query validation
@@ -53,14 +69,17 @@ public class KeywordSearchService : IKeywordSearchService
 
         var gameIdString = gameId.ToString();
 
+        // ADR-016 Phase 3: Resolve language to FTS configuration
+        var textSearchConfig = ResolveFtsConfig(language);
+
         try
         {
             // Build tsquery for full-text search
             var tsQuery = BuildTsQuery(query, phraseSearch, boostTerms);
 
             _logger.LogInformation(
-                "Keyword search: query='{Query}', gameId={GameId}, phraseSearch={PhraseSearch}, boostTerms={BoostTerms}, limit={Limit}",
-                query, gameId, phraseSearch, boostTerms?.Count ?? 0, limit);
+                "Keyword search: query='{Query}', gameId={GameId}, phraseSearch={PhraseSearch}, boostTerms={BoostTerms}, limit={Limit}, ftsConfig={FtsConfig}",
+                query, gameId, phraseSearch, boostTerms?.Count ?? 0, limit, textSearchConfig);
 
             // Execute PostgreSQL full-text search with ts_rank_cd scoring
             // Using FromSqlRaw for complex tsvector queries (EF Core limitation with tsvector operators)
@@ -87,7 +106,7 @@ public class KeywordSearchService : IKeywordSearchService
             var results = await _dbContext.Database
                 .SqlQueryRaw<KeywordSearchRawResult>(
                     sql,
-                    new NpgsqlParameter("@textSearchConfig", TextSearchConfig),
+                    new NpgsqlParameter("@textSearchConfig", textSearchConfig),
                     new NpgsqlParameter("@tsQuery", tsQuery),
                     new NpgsqlParameter("@normalization", DefaultNormalization),
                     new NpgsqlParameter("@gameId", gameIdString),
@@ -137,6 +156,7 @@ public class KeywordSearchService : IKeywordSearchService
         string query,
         Guid gameId,
         int limit = 10,
+        string language = "it",
         CancellationToken cancellationToken = default)
     {
         // Issue #1445: Use centralized query validation
@@ -151,6 +171,9 @@ public class KeywordSearchService : IKeywordSearchService
         var safeLimit = Math.Min(Math.Max(limit, 1), 100);
 
         var gameIdString = gameId.ToString();
+
+        // ADR-016 Phase 3: Resolve language to FTS configuration
+        var textSearchConfig = ResolveFtsConfig(language);
 
         try
         {
@@ -177,7 +200,7 @@ public class KeywordSearchService : IKeywordSearchService
             var results = await _dbContext.Database
                 .SqlQueryRaw<KeywordDocumentRawResult>(
                     sql,
-                    new NpgsqlParameter("@textSearchConfig", TextSearchConfig),
+                    new NpgsqlParameter("@textSearchConfig", textSearchConfig),
                     new NpgsqlParameter("@tsQuery", tsQuery),
                     new NpgsqlParameter("@normalization", DefaultNormalization),
                     new NpgsqlParameter("@gameId", gameIdString),
@@ -280,6 +303,31 @@ public class KeywordSearchService : IKeywordSearchService
         }
 
         return sanitized;
+    }
+
+    /// <summary>
+    /// Resolves a language code to the corresponding PostgreSQL FTS configuration.
+    /// ADR-016 Phase 3: Maps "it" → meepleai_italian (with game synonyms), "en" → english.
+    /// </summary>
+    /// <param name="language">Language code (e.g., "it", "en", "italian", "english")</param>
+    /// <returns>PostgreSQL text search configuration name</returns>
+    private string ResolveFtsConfig(string language)
+    {
+        if (string.IsNullOrWhiteSpace(language))
+        {
+            _logger.LogDebug("Empty language provided, using default FTS config: {Config}", DefaultTextSearchConfig);
+            return DefaultTextSearchConfig;
+        }
+
+        if (LanguageToFtsConfig.TryGetValue(language, out var ftsConfig))
+        {
+            return ftsConfig;
+        }
+
+        _logger.LogWarning(
+            "Unknown language '{Language}' for FTS config, falling back to English",
+            language);
+        return EnglishTextSearchConfig;
     }
 
     /// <summary>

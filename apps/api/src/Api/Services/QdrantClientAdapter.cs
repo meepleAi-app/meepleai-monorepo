@@ -82,6 +82,65 @@ public class QdrantClientAdapter : IQdrantClientAdapter
         return _client.CreateCollectionAsync(collectionName, vectorsConfig, cancellationToken: cancellationToken);
     }
 
+    /// <summary>
+    /// ADR-016 Phase 3: Creates a collection with optimized HNSW and quantization configuration.
+    /// </summary>
+    public async Task CreateCollectionWithConfigAsync(
+        string collectionName,
+        VectorParams vectorsConfig,
+        HnswConfigDiff? hnswConfig = null,
+        QuantizationConfig? quantizationConfig = null,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation(
+            "Creating collection {CollectionName} with HNSW config: m={M}, ef_construct={EfConstruct}",
+            collectionName,
+            hnswConfig?.M,
+            hnswConfig?.EfConstruct);
+
+        // Apply HNSW and quantization config to vector params if provided
+        if (hnswConfig != null)
+        {
+            vectorsConfig.HnswConfig = hnswConfig;
+        }
+
+        if (quantizationConfig != null)
+        {
+            vectorsConfig.QuantizationConfig = quantizationConfig;
+        }
+
+        await _client.CreateCollectionAsync(
+            collectionName,
+            vectorsConfig,
+            hnswConfig: hnswConfig,
+            quantizationConfig: quantizationConfig,
+            cancellationToken: cancellationToken);
+
+        _logger.LogInformation("Collection {CollectionName} created successfully with optimized indexing", collectionName);
+    }
+
+    /// <summary>
+    /// ADR-016 Phase 3: Updates an existing collection's HNSW and quantization configuration.
+    /// </summary>
+    public async Task UpdateCollectionConfigAsync(
+        string collectionName,
+        HnswConfigDiff? hnswConfig = null,
+        QuantizationConfigDiff? quantizationConfig = null,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation(
+            "Updating collection {CollectionName} configuration",
+            collectionName);
+
+        await _client.UpdateCollectionAsync(
+            collectionName,
+            hnswConfig: hnswConfig,
+            quantizationConfig: quantizationConfig,
+            cancellationToken: cancellationToken);
+
+        _logger.LogInformation("Collection {CollectionName} configuration updated successfully", collectionName);
+    }
+
     public Task CreatePayloadIndexAsync(
         string collectionName,
         string fieldName,

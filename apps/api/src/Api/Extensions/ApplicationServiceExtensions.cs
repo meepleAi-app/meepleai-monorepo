@@ -3,6 +3,7 @@ using Api.BoundedContexts.Authentication.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.GameManagement.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.DependencyInjection;
+using Api.BoundedContexts.KnowledgeBase.Infrastructure.EmbeddingProviders;
 using Api.BoundedContexts.SystemConfiguration.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.WorkflowIntegration.Infrastructure.DependencyInjection;
 using Api.Helpers;
@@ -21,7 +22,7 @@ public static class ApplicationServiceExtensions
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        services.AddVectorSearchServices();
+        services.AddVectorSearchServices(configuration);
         services.AddDomainServices();
         services.AddAiServices();
         services.AddPdfServices();
@@ -55,7 +56,9 @@ public static class ApplicationServiceExtensions
         return services;
     }
 
-    private static IServiceCollection AddVectorSearchServices(this IServiceCollection services)
+    private static IServiceCollection AddVectorSearchServices(
+        this IServiceCollection services,
+        IConfiguration configuration)
     {
         // AI-01: Vector search services
         services.AddSingleton<IQdrantClientAdapter, QdrantClientAdapter>();
@@ -67,6 +70,12 @@ public static class ApplicationServiceExtensions
 
         // Qdrant facade service (Scoped to match specialized services lifetime)
         services.AddScoped<IQdrantService, QdrantService>();
+
+        // ADR-016 Phase 2: Multi-provider embedding configuration
+        services.Configure<EmbeddingConfiguration>(configuration.GetSection("Embedding"));
+
+        // ADR-016 Phase 2: Embedding provider factory for multi-provider support
+        services.AddScoped<IEmbeddingProviderFactory, EmbeddingProviderFactory>();
 
         services.AddScoped<IEmbeddingService, EmbeddingService>();
         services.AddScoped<ITextChunkingService, TextChunkingService>();

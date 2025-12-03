@@ -210,6 +210,21 @@ public static class InfrastructureServiceExtensions
             EnableMultipleHttp2Connections = true
         });
 
+        // ADR-016 Phase 2: HuggingFace embedding client
+        services.AddHttpClient("HuggingFace", client =>
+        {
+            // Base address will be set by HuggingFaceEmbeddingProvider based on config
+            var timeoutSeconds = configuration.GetValue<int>("Embedding:TimeoutSeconds", 60);
+            client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
+        })
+        .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+        {
+            PooledConnectionLifetime = TimeSpan.FromMinutes(5),
+            PooledConnectionIdleTimeout = TimeSpan.FromMinutes(2),
+            MaxConnectionsPerServer = 10,
+            EnableMultipleHttp2Connections = true
+        });
+
         // AI-13: BoardGameGeek API client with retry logic and connection pooling
         services.Configure<BggConfiguration>(configuration.GetSection("Bgg"));
         services.AddHttpClient("BggApi", (serviceProvider, client) =>

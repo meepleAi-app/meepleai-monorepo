@@ -1,145 +1,52 @@
-using System.Globalization;
-using System.Text;
-using System.Text.Json;
-using System.Text.Json.Serialization;
+using Api.BoundedContexts.KnowledgeBase.Infrastructure.EmbeddingProviders;
 using Api.Helpers;
+using Microsoft.Extensions.Options;
 
 namespace Api.Services;
 
 /// <summary>
-/// Service for generating text embeddings via Ollama (local) or OpenRouter API
+/// Service for generating text embeddings using multi-provider abstraction.
+/// Supports OpenRouter, Ollama, and HuggingFace with fallback chain.
+/// Refactored per ADR-016 Phase 2 to use IEmbeddingProvider abstraction.
 /// </summary>
 public class EmbeddingService : IEmbeddingService
 {
-    private readonly HttpClient _httpClient;
-    private readonly HttpClient _localEmbeddingClient; // AI-09: Local embedding service
+    private readonly IEmbeddingProviderFactory _providerFactory;
+    private readonly IEmbeddingProvider _primaryProvider;
+    private readonly IEmbeddingProvider? _fallbackProvider;
     private readonly ILogger<EmbeddingService> _logger;
-    private readonly string? _apiKey;
-    private readonly string _embeddingModel;
-    private readonly string _provider;
-    private readonly string? _localEmbeddingUrl; // AI-09: Local embedding service URL
-    private readonly bool _embeddingFallbackEnabled; // AI-09: Enable fallback chain
-    private readonly int _embeddingDimensions; // Configured based on model
+    private readonly EmbeddingConfiguration _config;
 
-    public EmbeddingService(IHttpClientFactory httpClientFactory, IConfiguration config, ILogger<EmbeddingService> logger)
+    public EmbeddingService(
+        IEmbeddingProviderFactory providerFactory,
+        IOptions<EmbeddingConfiguration> config,
+        ILogger<EmbeddingService> logger)
     {
-        _logger = logger;
+        _providerFactory = providerFactory ?? throw new ArgumentNullException(nameof(providerFactory));
+        _config = config?.Value ?? throw new ArgumentNullException(nameof(config));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-        // AI-09: Local embedding service configuration
-        _localEmbeddingUrl = config["LOCAL_EMBEDDING_URL"];
-        _embeddingFallbackEnabled = bool.TryParse(config["EMBEDDING_FALLBACK_ENABLED"], out var fallback) && fallback;
+        // Initialize providers
+        _primaryProvider = _providerFactory.GetPrimaryProvider();
+        _fallbackProvider = _providerFactory.GetFallbackProvider();
 
-        // Create HTTP client for local embedding service
-        if (!string.IsNullOrWhiteSpace(_localEmbeddingUrl))
-        {
-            _localEmbeddingClient = httpClientFactory.CreateClient("LocalEmbedding");
-            _localEmbeddingClient.BaseAddress = new Uri(_localEmbeddingUrl);
-            _localEmbeddingClient.Timeout = TimeSpan.FromSeconds(30);
-            _logger.LogInformation("Local embedding service configured at {Url}", _localEmbeddingUrl);
-        }
-        else
-        {
-            _localEmbeddingClient = httpClientFactory.CreateClient();
-            _logger.LogInformation("Local embedding service not configured");
-        }
-
-        // Check for embedding provider configuration (default: ollama)
-        // Support both nested (Embedding:Provider) and flat (EMBEDDING_PROVIDER) configuration keys
-        _provider = config["Embedding:Provider"]?.ToLowerInvariant()
-                    ?? config["EMBEDDING_PROVIDER"]?.ToLowerInvariant()
-                    ?? "ollama";
-
-        if (string.Equals(_provider, "ollama", StringComparison.Ordinal))
-        {
-            // Use Ollama for local embeddings (no API key needed)
-            _httpClient = httpClientFactory.CreateClient("Ollama");
-            var ollamaUrl = config["OLLAMA_URL"] ?? "http://localhost:11434";
-            _httpClient.BaseAddress = new Uri(ollamaUrl);
-
-            // Support both nested (Embedding:Model) and flat (EMBEDDING_MODEL) configuration keys
-            _embeddingModel = config["Embedding:Model"] ?? config["EMBEDDING_MODEL"] ?? "nomic-embed-text";
-            _httpClient.Timeout = TimeSpan.FromSeconds(60);
-
-            // Determine dimensions based on model
-            _embeddingDimensions = DetermineEmbeddingDimensions(_embeddingModel, config);
-
-            _logger.LogInformation("Using Ollama for embeddings at {Url} with model {Model} ({Dimensions} dimensions)",
-                ollamaUrl, _embeddingModel, _embeddingDimensions);
-        }
-        else if (string.Equals(_provider, "openrouter", StringComparison.Ordinal))
-        {
-            // Use OpenRouter API (OpenAI-compatible)
-            _httpClient = httpClientFactory.CreateClient("OpenRouter");
-            _httpClient.BaseAddress = new Uri("https://openrouter.ai/api/v1/");
-            _apiKey = config["OPENROUTER_API_KEY"] ?? throw new InvalidOperationException("OPENROUTER_API_KEY not configured for OpenRouter provider");
-            _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {_apiKey}");
-
-            // Support both nested (Embedding:Model) and flat (EMBEDDING_MODEL) configuration keys
-            _embeddingModel = config["Embedding:Model"] ?? config["EMBEDDING_MODEL"] ?? "text-embedding-3-small";
-            _httpClient.Timeout = TimeSpan.FromSeconds(30);
-
-            // Determine dimensions based on model
-            _embeddingDimensions = DetermineEmbeddingDimensions(_embeddingModel, config);
-
-            _logger.LogInformation("Using OpenRouter for embeddings with model {Model} ({Dimensions} dimensions)",
-                _embeddingModel, _embeddingDimensions);
-        }
-        else
-        {
-            throw new InvalidOperationException($"Unsupported embedding provider: {_provider}. Use 'ollama' or 'openrouter'");
-        }
+        _logger.LogInformation(
+            "EmbeddingService initialized with primary provider {Primary} ({Model}, {Dimensions}d){Fallback}",
+            _primaryProvider.ProviderName,
+            _primaryProvider.ModelName,
+            _primaryProvider.Dimensions,
+            _fallbackProvider != null ? $", fallback: {_fallbackProvider.ProviderName}" : "");
     }
 
     /// <summary>
-    /// Get the configured embedding dimensions
+    /// Get the configured embedding dimensions for the current model
     /// </summary>
-    public int GetEmbeddingDimensions() => _embeddingDimensions;
-
-    public string GetModelName()
-    {
-        // Return provider/model format (e.g., "openai/text-embedding-3-small")
-        return $"{_provider}/{_embeddingModel}";
-    }
+    public int GetEmbeddingDimensions() => _primaryProvider.Dimensions;
 
     /// <summary>
-    /// Determine embedding dimensions based on model name and configuration
+    /// Get the configured embedding model name
     /// </summary>
-    private static int DetermineEmbeddingDimensions(string modelName, IConfiguration config)
-    {
-        // Try nested config first (Embedding:Dimensions) - matches appsettings.json structure
-        if (int.TryParse(config["Embedding:Dimensions"], CultureInfo.InvariantCulture, out var nestedDimensions) && nestedDimensions > 0)
-        {
-            return nestedDimensions;
-        }
-
-        // Try flat config for backward compatibility (EMBEDDING_DIMENSIONS environment variable)
-        // IMPORTANT: Only accept positive values to prevent 0 or negative dimensions bug
-        if (int.TryParse(config["EMBEDDING_DIMENSIONS"], CultureInfo.InvariantCulture, out var flatDimensions) && flatDimensions > 0)
-        {
-            return flatDimensions;
-        }
-
-        // Infer from model name as fallback
-        return modelName.ToLowerInvariant() switch
-        {
-            // Cloud models (via OpenRouter)
-            "text-embedding-ada-002" => 1536,
-            "text-embedding-3-small" => 1536,
-            "text-embedding-3-large" => 3072,
-            // Ollama models
-            "nomic-embed-text" => 768,
-            "all-minilm" => 384,
-            "mxbai-embed-large" => 1024,
-            // Multilingual models (local embedding service)
-            "multilingual-e5-large" => 1024,
-            "intfloat/multilingual-e5-large" => 1024,
-            // Sentence transformers
-            "all-minilm-l6-v2" => 384,
-            "all-mpnet-base-v2" => 768,
-            // Default to 768 for unknown models (Ollama default)
-            _ => 768
-        };
-    }
+    public string GetModelName() => $"{_primaryProvider.ProviderName.ToLowerInvariant()}/{_primaryProvider.ModelName}";
 
     /// <summary>
     /// Generate embeddings for a list of text chunks
@@ -155,17 +62,48 @@ public class EmbeddingService : IEmbeddingService
 
         try
         {
-            if (string.Equals(_provider, "ollama", StringComparison.Ordinal))
+            // Try primary provider
+            var result = await _primaryProvider.GenerateBatchEmbeddingsAsync(texts, ct).ConfigureAwait(false);
+
+            if (result.Success)
             {
-                return await GenerateOllamaEmbeddingsAsync(texts, ct).ConfigureAwait(false);
+                return EmbeddingResult.CreateSuccess(result.Embeddings.ToList());
             }
-            else // openrouter
+
+            // Try fallback if configured and primary failed
+            if (_fallbackProvider != null && _config.EnableFallback)
             {
-                return await GenerateOpenRouterEmbeddingsAsync(texts, ct).ConfigureAwait(false);
+                // FIX: Check cancellation before attempting fallback to avoid unnecessary work
+                ct.ThrowIfCancellationRequested();
+
+                _logger.LogWarning(
+                    "Primary provider {Primary} failed: {Error}. Trying fallback {Fallback}",
+                    _primaryProvider.ProviderName,
+                    result.ErrorMessage,
+                    _fallbackProvider.ProviderName);
+
+                var fallbackResult = await _fallbackProvider.GenerateBatchEmbeddingsAsync(texts, ct).ConfigureAwait(false);
+
+                if (fallbackResult.Success)
+                {
+                    _logger.LogInformation("Fallback provider {Provider} succeeded", _fallbackProvider.ProviderName);
+                    return EmbeddingResult.CreateSuccess(fallbackResult.Embeddings.ToList());
+                }
+
+                _logger.LogError(
+                    "Fallback provider {Provider} also failed: {Error}",
+                    _fallbackProvider.ProviderName,
+                    fallbackResult.ErrorMessage);
+
+                // FIX: Include both error messages when both providers fail
+                return EmbeddingResult.CreateFailure(
+                    $"Primary ({_primaryProvider.ProviderName}): {result.ErrorMessage}; " +
+                    $"Fallback ({_fallbackProvider.ProviderName}): {fallbackResult.ErrorMessage}");
             }
+
+            return EmbeddingResult.CreateFailure(result.ErrorMessage ?? "Embedding generation failed");
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Issue #1444: Use centralized exception handling for Result pattern
         catch (Exception ex)
         {
             return RagExceptionHandler.HandleServiceException(
@@ -173,88 +111,6 @@ public class EmbeddingService : IEmbeddingService
                 errorMessage => EmbeddingResult.CreateFailure(errorMessage));
         }
 #pragma warning restore CA1031
-    }
-
-    private async Task<EmbeddingResult> GenerateOllamaEmbeddingsAsync(List<string> texts, CancellationToken ct)
-    {
-        _logger.LogInformation("Generating embeddings for {Count} texts using Ollama model {Model}", texts.Count, _embeddingModel);
-
-        var embeddings = new List<float[]>();
-
-        // Ollama /api/embeddings endpoint processes one text at a time
-        foreach (var text in texts)
-        {
-            var request = new
-            {
-                model = _embeddingModel,
-                prompt = text
-            };
-
-            var json = JsonSerializer.Serialize(request);
-            using var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-            // CODE-01: Dispose HttpResponseMessage to prevent resource leak (CWE-404)
-            using var response = await _httpClient.PostAsync("/api/embeddings", content, ct).ConfigureAwait(false);
-            var responseBody = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
-
-            if (!response.IsSuccessStatusCode)
-            {
-                _logger.LogError("Ollama embeddings API error: {Status} - {Body}", response.StatusCode, responseBody);
-                return EmbeddingResult.CreateFailure($"API error: {(int)response.StatusCode}");
-            }
-
-            var ollamaResponse = JsonSerializer.Deserialize<OllamaEmbeddingResponse>(responseBody);
-
-            if (ollamaResponse?.Embedding == null || ollamaResponse.Embedding.Length == 0)
-            {
-                return EmbeddingResult.CreateFailure("No embedding returned from Ollama");
-            }
-
-            embeddings.Add(ollamaResponse.Embedding);
-        }
-
-        _logger.LogInformation("Successfully generated {Count} embeddings via Ollama", embeddings.Count);
-        return EmbeddingResult.CreateSuccess(embeddings);
-    }
-
-    private async Task<EmbeddingResult> GenerateOpenRouterEmbeddingsAsync(List<string> texts, CancellationToken ct)
-    {
-        _logger.LogInformation("Generating embeddings for {Count} texts using OpenRouter model {Model}", texts.Count, _embeddingModel);
-
-        var request = new
-        {
-            model = _embeddingModel,
-            input = texts,
-            encoding_format = "float"
-        };
-
-        var json = JsonSerializer.Serialize(request);
-        using var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-        // CODE-01: Dispose HttpResponseMessage to prevent resource leak (CWE-404)
-        using var response = await _httpClient.PostAsync("embeddings", content, ct).ConfigureAwait(false);
-        var responseBody = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
-
-        if (!response.IsSuccessStatusCode)
-        {
-            _logger.LogError("OpenRouter embeddings API error: {Status} - {Body}", response.StatusCode, responseBody);
-            return EmbeddingResult.CreateFailure($"API error: {(int)response.StatusCode}");
-        }
-
-        var embeddingResponse = JsonSerializer.Deserialize<OpenRouterEmbeddingResponse>(responseBody);
-
-        if (embeddingResponse?.Data == null || embeddingResponse.Data.Count == 0)
-        {
-            return EmbeddingResult.CreateFailure("No embeddings returned from OpenRouter");
-        }
-
-        var embeddings = embeddingResponse.Data
-            .OrderBy(d => d.Index)
-            .Select(d => d.Embedding)
-            .ToList();
-
-        _logger.LogInformation("Successfully generated {Count} embeddings via OpenRouter", embeddings.Count);
-        return EmbeddingResult.CreateSuccess(embeddings);
     }
 
     /// <summary>
@@ -266,11 +122,9 @@ public class EmbeddingService : IEmbeddingService
         return result;
     }
 
-    // AI-09: Multi-language embedding support with fallback chain
-
     /// <summary>
-    /// Generate embeddings for texts with language-specific model selection and fallback chain
-    /// Fallback order: Local → Ollama → OpenRouter
+    /// Generate embeddings for texts with language-specific model selection and fallback chain.
+    /// AI-09: Multi-language embedding support.
     /// </summary>
     public async Task<EmbeddingResult> GenerateEmbeddingsAsync(
         List<string> texts,
@@ -291,31 +145,19 @@ public class EmbeddingService : IEmbeddingService
 
         try
         {
-            // 1. Try local embedding service first (if configured and enabled)
-            if (_embeddingFallbackEnabled && !string.IsNullOrWhiteSpace(_localEmbeddingUrl))
+            // For multilingual support, prefer HuggingFace BGE-M3 if available
+            if (_config.Provider == EmbeddingProviderType.HuggingFaceBgeM3 ||
+                _config.FallbackProvider == EmbeddingProviderType.HuggingFaceBgeM3)
             {
-                var localResult = await TryLocalEmbeddingAsync(texts, language, ct).ConfigureAwait(false);
-                if (localResult.Success)
-                {
-                    _logger.LogInformation("Successfully generated embeddings using local service for language {Language}", language);
-                    return localResult;
-                }
-
-                _logger.LogWarning("Local embedding service failed, falling back to {Provider}", _provider);
+                _logger.LogInformation(
+                    "Using multilingual-aware provider for language {Language}",
+                    language);
             }
 
-            // 2. Fall back to configured provider (Ollama or OpenRouter)
-            if (string.Equals(_provider, "ollama", StringComparison.Ordinal))
-            {
-                return await GenerateOllamaEmbeddingsAsync(texts, ct).ConfigureAwait(false);
-            }
-            else // openrouter
-            {
-                return await GenerateOpenRouterEmbeddingAsync(texts, language, ct).ConfigureAwait(false);
-            }
+            // Use standard embedding generation (providers handle language internally if supported)
+            return await GenerateEmbeddingsAsync(texts, ct).ConfigureAwait(false);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Issue #1444: Use centralized exception handling for Result pattern
         catch (Exception ex)
         {
             return RagExceptionHandler.HandleServiceException(
@@ -334,76 +176,6 @@ public class EmbeddingService : IEmbeddingService
         CancellationToken ct = default)
     {
         return await GenerateEmbeddingsAsync(new List<string> { text }, language, ct).ConfigureAwait(false);
-    }
-
-    /// <summary>
-    /// Try to generate embeddings using local Python service
-    /// </summary>
-    private async Task<EmbeddingResult> TryLocalEmbeddingAsync(
-        List<string> texts,
-        string language,
-        CancellationToken ct)
-    {
-        try
-        {
-            _logger.LogInformation("Attempting local embedding service for {Count} texts in language {Language}", texts.Count, language);
-
-            var request = new LocalEmbeddingRequest
-            {
-                Texts = texts,
-                Language = language
-            };
-
-            var json = JsonSerializer.Serialize(request);
-            using var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-            // CODE-01: Dispose HttpResponseMessage to prevent resource leak (CWE-404)
-            using var response = await _localEmbeddingClient.PostAsync("/embeddings", content, ct).ConfigureAwait(false);
-            var responseBody = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
-
-            if (!response.IsSuccessStatusCode)
-            {
-                _logger.LogWarning("Local embedding service returned error: {Status} - {Body}", response.StatusCode, responseBody);
-                return EmbeddingResult.CreateFailure($"Local service error: {(int)response.StatusCode}");
-            }
-
-            var embeddingResponse = JsonSerializer.Deserialize<LocalEmbeddingResponse>(responseBody);
-
-            if (embeddingResponse?.Embeddings == null || embeddingResponse.Embeddings.Count == 0)
-            {
-                return EmbeddingResult.CreateFailure("No embeddings returned from local service");
-            }
-
-            _logger.LogInformation("Successfully generated {Count} embeddings via local service (dimension: {Dim})",
-                embeddingResponse.Count, embeddingResponse.Dimension);
-
-            return EmbeddingResult.CreateSuccess(embeddingResponse.Embeddings);
-        }
-#pragma warning disable CA1031 // Do not catch general exception types
-        // Issue #1444: Use centralized exception handling for Result pattern (fallback chain)
-        catch (Exception ex)
-        {
-            return RagExceptionHandler.HandleServiceException(
-                ex, _logger, "local embedding service",
-                errorMessage => EmbeddingResult.CreateFailure(errorMessage));
-        }
-#pragma warning restore CA1031
-    }
-
-    /// <summary>
-    /// Generate embeddings via OpenRouter with language-specific model selection
-    /// </summary>
-    private async Task<EmbeddingResult> GenerateOpenRouterEmbeddingAsync(
-        List<string> texts,
-        string language,
-        CancellationToken ct)
-    {
-        // For now, use the same model for all languages
-        // Future: AI-09.2 will add language-specific model selection via config
-        _logger.LogInformation("Generating embeddings for {Count} texts in language {Language} using OpenRouter model {Model}",
-            texts.Count, language, _embeddingModel);
-
-        return await GenerateOpenRouterEmbeddingsAsync(texts, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -433,70 +205,4 @@ public record EmbeddingResult
 
     public static EmbeddingResult CreateFailure(string error) =>
         new() { Success = false, ErrorMessage = error };
-}
-
-// Ollama API response model
-internal record OllamaEmbeddingResponse
-{
-    [JsonPropertyName("embedding")]
-    public float[] Embedding { get; init; } = Array.Empty<float>();
-}
-
-// OpenRouter API response models
-internal record OpenRouterEmbeddingResponse
-{
-    [JsonPropertyName("data")]
-    public List<EmbeddingData> Data { get; init; } = new();
-
-    [JsonPropertyName("model")]
-    public string Model { get; init; } = string.Empty;
-
-    [JsonPropertyName("usage")]
-    public Usage? Usage { get; init; }
-}
-
-internal record EmbeddingData
-{
-    [JsonPropertyName("object")]
-    public string Object { get; init; } = string.Empty;
-
-    [JsonPropertyName("embedding")]
-    public float[] Embedding { get; init; } = Array.Empty<float>();
-
-    [JsonPropertyName("index")]
-    public int Index { get; init; }
-}
-
-internal record Usage
-{
-    [JsonPropertyName("prompt_tokens")]
-    public int PromptTokens { get; init; }
-
-    [JsonPropertyName("total_tokens")]
-    public int TotalTokens { get; init; }
-}
-
-// AI-09: Local embedding service request/response models
-internal record LocalEmbeddingRequest
-{
-    [JsonPropertyName("texts")]
-    public List<string> Texts { get; init; } = new();
-
-    [JsonPropertyName("language")]
-    public string Language { get; init; } = "en";
-}
-
-internal record LocalEmbeddingResponse
-{
-    [JsonPropertyName("embeddings")]
-    public List<float[]> Embeddings { get; init; } = new();
-
-    [JsonPropertyName("model")]
-    public string Model { get; init; } = string.Empty;
-
-    [JsonPropertyName("dimension")]
-    public int Dimension { get; init; }
-
-    [JsonPropertyName("count")]
-    public int Count { get; init; }
 }

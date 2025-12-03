@@ -1,3 +1,5 @@
+using Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Handlers;
+using Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
@@ -85,6 +87,14 @@ public static class KnowledgeBaseServiceExtensions
         services.AddScoped<AskQuestionQueryHandler>();
         services.AddScoped<GetLlmCostReportQueryHandler>(); // ISSUE-960: Cost reporting
         services.AddScoped<InvokeAgentCommandHandler>(); // Issue #867: Agent invocation
+
+        // ISSUE-1902: ADR-016 Phase 0 - Dataset Evaluation Service
+        // Named IDatasetEvaluationService to avoid conflict with Api.Services.IRagEvaluationService
+        services.AddScoped<IDatasetEvaluationService, DatasetEvaluationService>();
+        services.AddScoped<RunEvaluationCommandHandler>();
+        services.AddScoped<LoadDatasetCommandHandler>();
+        services.AddScoped<GetEvaluationResultsQueryHandler>();
+        services.AddScoped<GetBaselineMetricsQueryHandler>();
 
         return services;
     }

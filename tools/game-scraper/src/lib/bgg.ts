@@ -1,4 +1,4 @@
-﻿import axios from "axios";
+import axios, { type AxiosRequestConfig } from "axios";
 import xml2js from "xml2js";
 import { setTimeout as sleep } from "node:timers/promises";
 import type { ScraperConfig } from "./config.js";
@@ -32,9 +32,10 @@ export async function fetchPlays(gameId: number, mindate?: string, cfg?: Scraper
   const plays: BggPlay[] = [];
   let page = 1;
   const parser = new xml2js.Parser({ explicitArray: false, mergeAttrs: true });
+  const auth = buildAuth(cfg);
   while (true) {
     const url = `https://boardgamegeek.com/xmlapi2/plays?id=${gameId}&type=thing&page=${page}${mindate ? `&mindate=${mindate}` : ""}`;
-    const res = await axios.get(url, { responseType: "text" });
+    const res = await axios.get(url, { responseType: "text", headers: auth.headers });
     const json = await parser.parseStringPromise(res.data);
     const playNodes = json?.plays?.play;
     if (!playNodes || (Array.isArray(playNodes) && playNodes.length === 0)) break;
@@ -59,10 +60,11 @@ export async function fetchPlays(gameId: number, mindate?: string, cfg?: Scraper
   return plays;
 }
 
-export async function fetchThing(gameId: number): Promise<BggThing | undefined> {
+export async function fetchThing(gameId: number, cfg?: ScraperConfig): Promise<BggThing | undefined> {
   const parser = new xml2js.Parser({ explicitArray: false, mergeAttrs: true });
   const url = `https://boardgamegeek.com/xmlapi2/thing?id=${gameId}&stats=1`;
-  const res = await axios.get(url, { responseType: "text" });
+  const auth = buildAuth(cfg);
+  const res = await axios.get(url, { responseType: "text", headers: auth.headers });
   const json = await parser.parseStringPromise(res.data);
   const thing = json?.items?.item;
   if (!thing) return undefined;
@@ -96,4 +98,10 @@ export async function fetchThing(gameId: number): Promise<BggThing | undefined> 
 function num(v: any): number | undefined {
   const n = Number(v);
   return Number.isFinite(n) ? n : undefined;
+}
+
+function buildAuth(cfg?: ScraperConfig): AxiosRequestConfig {
+  const token = cfg?.bggToken ?? process.env.BGG_TOKEN;
+  if (!token) return { headers: {} };
+  return { headers: { Authorization: `Bearer ${token}` } };
 }

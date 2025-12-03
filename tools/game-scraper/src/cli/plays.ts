@@ -10,8 +10,8 @@ program
   .option("--mindate <date>", "Minimum date YYYY-MM-DD");
 
 program.action(async (opts) => {
-  loadConfig();
-  const plays = await fetchPlays(opts.gameId, opts.mindate);
+  const cfg = loadConfig();
+  const plays = await fetchPlays(opts.gameId, opts.mindate, cfg);
   const outFile = resolveOut("bgg", "plays", `${opts.gameId}.jsonl`);
   await fs.ensureDir(path.dirname(outFile));
 

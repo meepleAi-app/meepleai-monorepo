@@ -12,7 +12,7 @@ program.action(async (opts) => {
   const cfg = loadConfig();
   const outFile = resolveOut("bgg", "games.jsonl");
   await fs.ensureDir(path.dirname(outFile));
-  const thing = await fetchThing(opts.gameId);
+  const thing = await fetchThing(opts.gameId, cfg);
   if (!thing) {
     console.error(`No thing found for id ${opts.gameId}`);
     process.exit(1);

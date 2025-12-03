@@ -2,7 +2,7 @@ import types
 import pytest
 from fastapi.testclient import TestClient
 
-import main
+import src.main as main
 
 
 @pytest.fixture(autouse=True)

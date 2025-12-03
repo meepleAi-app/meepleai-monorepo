@@ -1,6 +1,6 @@
 """API request/response schemas (DTOs)"""
 from typing import List, Dict, Any, Optional, Literal
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
 
 
@@ -44,8 +44,8 @@ class PdfExtractionResponse(BaseModel):
     page_count: int = Field(description="Number of pages", ge=1)
     metadata: Dict[str, Any] = Field(description="Extraction metadata")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "text": "Terraforming Mars is a board game...",
                 "chunks": [
@@ -73,6 +73,7 @@ class PdfExtractionResponse(BaseModel):
                 },
             }
         }
+    )
 
 
 # Error Schemas
@@ -91,8 +92,8 @@ class ErrorResponse(BaseModel):
 
     error: ErrorDetail
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "error": {
                     "code": "EXTRACTION_FAILED",
@@ -103,6 +104,7 @@ class ErrorResponse(BaseModel):
                 }
             }
         }
+    )
 
 
 # Health Check Schema
@@ -113,8 +115,8 @@ class HealthCheckResponse(BaseModel):
     timestamp: str = Field(description="Check timestamp (ISO 8601)")
     checks: Dict[str, str] = Field(description="Individual health checks")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "status": "healthy",
                 "timestamp": "2025-01-15T10:30:00Z",
@@ -125,3 +127,4 @@ class HealthCheckResponse(BaseModel):
                 },
             }
         }
+    )

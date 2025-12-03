@@ -62,6 +62,12 @@ class PdfExtractionService:
                     f"PDF too large: {file_size} bytes exceeds limit of {self.settings.max_file_size} bytes"
                 )
 
+            # Quick magic-bytes validation to catch non-PDF uploads early
+            with open(temp_path, "rb") as f:
+                header = f.read(5)
+                if not header.startswith(b"%PDF-"):
+                    raise ValueError("File does not appear to be a valid PDF (invalid header)")
+
             # Step 2: Validate PDF
             pdf_doc = PdfDocument(
                 file_path=temp_path, file_size=file_size, language=language
@@ -135,6 +141,8 @@ class PdfExtractionService:
 
             # Step 10: Calculate duration
             duration_ms = int((time.time() - start_time) * 1000)
+            if duration_ms == 0:
+                duration_ms = 1  # ensure non-zero for observability/tests
 
             # Step 11: Create result
             result = ExtractionResult(

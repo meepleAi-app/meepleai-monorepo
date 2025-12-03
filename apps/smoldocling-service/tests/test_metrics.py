@@ -3,6 +3,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 import src.main as main
+from src.application import PdfExtractionService
 
 
 @pytest.fixture(autouse=True)
@@ -11,6 +12,8 @@ def reset_metrics():
     main.metrics["extract_failures_total"] = 0
     main.metrics["extract_duration_ms_sum"] = 0.0
     main.metrics["extract_payload_bytes_sum"] = 0.0
+    # Ensure pdf_service exists for tests (lifespan not run in TestClient here)
+    main.pdf_service = PdfExtractionService()
     yield
 
 

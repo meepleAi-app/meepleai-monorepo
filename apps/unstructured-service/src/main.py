@@ -3,7 +3,7 @@ import logging
 import uuid
 import threading
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException, status
 from fastapi.responses import JSONResponse, PlainTextResponse
 from starlette.concurrency import run_in_threadpool
@@ -69,7 +69,7 @@ async def value_error_handler(request, exc: ValueError):
             error=ErrorDetail(
                 code="INVALID_REQUEST",
                 message=str(exc),
-                timestamp=datetime.utcnow().isoformat(),
+                timestamp=datetime.now(timezone.utc).isoformat(),
                 request_id=request_id,
             )
         ).model_dump(),
@@ -88,7 +88,7 @@ async def file_not_found_handler(request, exc: FileNotFoundError):
             error=ErrorDetail(
                 code="FILE_NOT_FOUND",
                 message=str(exc),
-                timestamp=datetime.utcnow().isoformat(),
+                timestamp=datetime.now(timezone.utc).isoformat(),
                 request_id=request_id,
             )
         ).model_dump(),
@@ -108,7 +108,7 @@ async def general_exception_handler(request, exc: Exception):
                 code="INTERNAL_ERROR",
                 message="An internal error occurred during PDF extraction",
                 details={"error_type": type(exc).__name__},
-                timestamp=datetime.utcnow().isoformat(),
+                timestamp=datetime.now(timezone.utc).isoformat(),
                 request_id=request_id,
             )
         ).model_dump(),
@@ -153,7 +153,7 @@ async def extract_pdf(
     request_id = str(uuid.uuid4())
     logger.info(f"Extraction request [{request_id}]: file={file.filename}, strategy={strategy}, language={language}")
 
-    start_time = datetime.utcnow()
+    start_time = datetime.now(timezone.utc)
     try:
         # Validate file type
         if not file.content_type or "pdf" not in file.content_type.lower():
@@ -163,7 +163,7 @@ async def extract_pdf(
                     error=ErrorDetail(
                         code="UNSUPPORTED_MEDIA_TYPE",
                         message=f"File type not supported: {file.content_type}. Expected application/pdf",
-                        timestamp=datetime.utcnow().isoformat(),
+                        timestamp=datetime.now(timezone.utc).isoformat(),
                         request_id=request_id,
                     )
                 ).model_dump(),
@@ -175,12 +175,12 @@ async def extract_pdf(
 
         if file_size > settings.max_file_size:
             raise HTTPException(
-                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                status_code=status.HTTP_413_CONTENT_TOO_LARGE,
                 detail=ErrorResponse(
                     error=ErrorDetail(
                         code="FILE_TOO_LARGE",
                         message=f"File size {file_size} bytes exceeds maximum {settings.max_file_size} bytes",
-                        timestamp=datetime.utcnow().isoformat(),
+                        timestamp=datetime.now(timezone.utc).isoformat(),
                         request_id=request_id,
                     )
                 ).model_dump(),
@@ -228,7 +228,7 @@ async def extract_pdf(
             f"Extraction completed [{request_id}]: pages={result.page_count}, "
             f"chunks={len(result.chunks)}, quality={result.quality_score.total_score:.2f}"
         )
-        duration_ms = (datetime.utcnow() - start_time).total_seconds() * 1000
+        duration_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
         with metrics_lock:
             metrics["extract_requests_total"] += 1
             metrics["extract_duration_ms_sum"] += duration_ms
@@ -251,7 +251,7 @@ async def extract_pdf(
                 error=ErrorDetail(
                     code="CORRUPTED_PDF",
                     message=str(e),
-                    timestamp=datetime.utcnow().isoformat(),
+                    timestamp=datetime.now(timezone.utc).isoformat(),
                     request_id=request_id,
                 )
             ).model_dump(),
@@ -268,7 +268,7 @@ async def extract_pdf(
                     code="EXTRACTION_FAILED",
                     message="Failed to extract text from PDF",
                     details={"error": str(e)},
-                    timestamp=datetime.utcnow().isoformat(),
+                    timestamp=datetime.now(timezone.utc).isoformat(),
                     request_id=request_id,
                 )
             ).model_dump(),
@@ -323,7 +323,7 @@ async def health_check():
 
         return HealthCheckResponse(
             status=overall_status,
-            timestamp=datetime.utcnow().isoformat(),
+            timestamp=datetime.now(timezone.utc).isoformat(),
             checks={
                 "unstructured_library": unstructured_status,
                 "disk_space": disk_status,
@@ -335,7 +335,7 @@ async def health_check():
         logger.error(f"Health check failed: {e}", exc_info=True)
         return HealthCheckResponse(
             status="unhealthy",
-            timestamp=datetime.utcnow().isoformat(),
+            timestamp=datetime.now(timezone.utc).isoformat(),
             checks={
                 "unstructured_library": "error",
                 "disk_space": "error",

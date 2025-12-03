@@ -126,7 +126,7 @@ Developer → Development (locale) → Staging (test) → Production (live) ✅
 | Data Anonymization | N/A | ✅ Required | N/A (real data) |
 | GDPR Compliance | N/A | Simulated | ✅ Enforced |
 | **AI/ML Services** |
-| Embedding Provider | Ollama (local, free) | Ollama or OpenAI | OpenAI (reliable) |
+| Embedding Provider | Ollama (local, free) | Ollama or OpenRouter | OpenRouter (reliable) |
 | LLM Provider | OpenRouter (optional) | OpenRouter (budget) | OpenRouter (premium models) |
 | Model Selection | Free models | Free/cheap models | Premium models (user-tier) |
 | API Cost | $0 | $50-100/month | $500-1000/month |
@@ -446,8 +446,8 @@ CACHE_HOT_QUERY_TTL_HOURS=24
 
 #### 5. **AI Premium**
 ```bash
-EMBEDDING_PROVIDER=openai  # Reliable, managed
-EMBEDDING_MODEL=text-embedding-3-small
+EMBEDDING_PROVIDER=openrouter  # Reliable, managed via OpenRouter
+EMBEDDING_MODEL=mxbai-embed-large
 
 # LLM routing per user tier
 LLM_ROUTING_ADMIN_MODEL=anthropic/claude-3.5-sonnet  # Best

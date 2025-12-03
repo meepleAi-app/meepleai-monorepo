@@ -374,17 +374,17 @@ Questa guida fornisce un elenco completo di tutte le variabili d'ambiente da val
 - **Dove**: Variabile d'ambiente API
 - **Obbligatorio**: ✅ Sì
 - **Default**: `ollama`
-- **Esempio**: `EMBEDDING_PROVIDER=openai` oppure `ollama`
-- **Note**: Valori: `ollama` (locale, free), `openai` (cloud, paid)
+- **Esempio**: `EMBEDDING_PROVIDER=openrouter` oppure `ollama`
+- **Note**: Valori: `ollama` (locale, free), `openrouter` (cloud, paid via OpenRouter)
 
 ### `EMBEDDING_MODEL`
 - **Descrizione**: Nome modello per embeddings
 - **Dove**: Variabile d'ambiente API, `appsettings.json`
 - **Obbligatorio**: ✅ Sì
-- **Default**: `nomic-embed-text`
+- **Default**: `mxbai-embed-large`
 - **Esempio**:
-  - Ollama: `EMBEDDING_MODEL=nomic-embed-text`
-  - OpenAI: `EMBEDDING_MODEL=text-embedding-3-small`
+  - Ollama: `EMBEDDING_MODEL=mxbai-embed-large`
+  - OpenRouter: `EMBEDDING_MODEL=mxbai-embed-large`
 
 ### `OLLAMA_URL`
 - **Descrizione**: URL server Ollama (per embeddings e LLM locali)
@@ -395,24 +395,17 @@ Questa guida fornisce un elenco completo di tutte le variabili d'ambiente da val
   - Docker: `OLLAMA_URL=http://ollama:11434`
   - Remote: `OLLAMA_URL=https://ollama.meepleai.internal`
 
-### `OPENAI_API_KEY`
-- **Descrizione**: API key OpenAI (se si usa OpenAI per embeddings)
-- **Dove**: Docker Secret `infra/secrets/openai-api-key.txt` o variabile d'ambiente
-- **Obbligatorio**: ⚠️ Sì se `EMBEDDING_PROVIDER=openai`
-- **Default**: Nessuno
-- **Esempio**: `OPENAI_API_KEY=sk-proj-abc123xyz456...`
-- **Note**: Ottenibile da https://platform.openai.com/api-keys
-
 ### `OPENROUTER_API_KEY`
-- **Descrizione**: API key OpenRouter (per LLM chat completions multi-model)
+- **Descrizione**: API key OpenRouter (per LLM chat completions, embeddings cloud, e modelli AI multi-provider)
 - **Dove**: Docker Secret `infra/secrets/openrouter-api-key.txt`
-- **Obbligatorio**: ✅ Sì (core feature: RAG chat)
+- **Obbligatorio**: ✅ Sì (core feature: RAG chat, cloud embeddings)
 - **Default**: Nessuno
 - **Esempio**: File contiene: `sk-or-v1-abc123xyz456...`
 - **Note**:
   - Ottenibile da https://openrouter.ai/keys
   - Gestire via Docker Secret: `OPENROUTER_API_KEY_FILE=/run/secrets/openrouter-api-key`
   - Monitorare crediti/quota
+  - Usato per embeddings quando `EMBEDDING_PROVIDER=openrouter`
 
 ### `LOCAL_EMBEDDING_URL`
 - **Descrizione**: URL servizio embedding locale custom (AI-09)
@@ -850,13 +843,12 @@ cd infra
 | Secret File | Descrizione | Obbligatorio | Tool Generazione |
 |-------------|-------------|--------------|------------------|
 | `postgres-password.txt` | Password PostgreSQL | ✅ Sì | `init-secrets.sh` |
-| `openrouter-api-key.txt` | API key OpenRouter | ✅ Sì | Manuale (da OpenRouter) |
+| `openrouter-api-key.txt` | API key OpenRouter (LLM + embeddings cloud) | ✅ Sì | Manuale (da OpenRouter) |
 | `initial-admin-password.txt` | Password admin iniziale | ✅ Sì | `init-secrets.sh` |
 | `n8n-encryption-key.txt` | Chiave crittografia n8n | ✅ Sì | `init-secrets.sh` |
 | `n8n-basic-auth-password.txt` | Password n8n UI | ✅ Sì | `init-secrets.sh` |
 | `grafana-admin-password.txt` | Password admin Grafana | ✅ Sì | `init-secrets.sh` |
 | `gmail-app-password.txt` | App Password Gmail | ⚠️ Per email | Manuale (Google) |
-| `openai-api-key.txt` | API key OpenAI | ⚠️ Opzionale | Manuale (OpenAI) |
 | `google-oauth-secret.txt` | Client Secret Google OAuth | ⚠️ Per OAuth | Manuale (Google Cloud) |
 | `discord-oauth-secret.txt` | Client Secret Discord OAuth | ⚠️ Per OAuth | Manuale (Discord) |
 | `github-oauth-secret.txt` | Client Secret GitHub OAuth | ⚠️ Per OAuth | Manuale (GitHub) |

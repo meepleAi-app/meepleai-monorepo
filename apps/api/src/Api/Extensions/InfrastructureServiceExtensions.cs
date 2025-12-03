@@ -179,22 +179,7 @@ public static class InfrastructureServiceExtensions
             EnableMultipleHttp2Connections = true // Enable HTTP/2 multiplexing
         });
 
-        // OpenAI client with optimized settings
-        services.AddHttpClient("OpenAI", client =>
-        {
-            client.BaseAddress = new Uri("https://api.openai.com/v1/");
-            var timeoutSeconds = configuration.GetValue<int>("AIAgents:DefaultTimeoutSeconds", 30);
-            client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
-        })
-        .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
-        {
-            PooledConnectionLifetime = TimeSpan.FromMinutes(5),
-            PooledConnectionIdleTimeout = TimeSpan.FromMinutes(2),
-            MaxConnectionsPerServer = 10,
-            EnableMultipleHttp2Connections = true
-        });
-
-        // OpenRouter client with optimized settings
+        // OpenRouter client with optimized settings (unified gateway for cloud AI models)
         services.AddHttpClient("OpenRouter", client =>
         {
             client.BaseAddress = new Uri("https://openrouter.ai/api/v1/");

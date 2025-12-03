@@ -84,8 +84,8 @@ Below you’ll find the variables that require manual input and how to obtain ea
 ## 1. `api.env.dev`
 | Key | Description | How to set |
 |-----|-------------|-----------|
-| `EMBEDDING_PROVIDER` | `ollama` for the local container or `openai` for cloud embeddings | Leave `ollama` for local dev |
-| `OLLAMA_URL` / `EMBEDDING_MODEL` | Endpoint + model for embeddings | Default `http://ollama:11434` / `nomic-embed-text` |
+| `EMBEDDING_PROVIDER` | `ollama` for the local container or `openrouter` for cloud embeddings (via OpenRouter) | Leave `ollama` for local dev |
+| `OLLAMA_URL` / `EMBEDDING_MODEL` | Endpoint + model for embeddings | Default `http://ollama:11434` / `mxbai-embed-large` |
 | `JWT_ISSUER` | Token issuer used by the API | Usually `http://localhost:8080` |
 | `ALLOW_ORIGIN` | Allowed origin for CORS | `http://localhost:3000` when running Next.js locally |
 | `SEQ_URL` | Seq ingestion URL | `http://seq:5341` inside Docker; use `http://localhost:8081` when hitting from host |

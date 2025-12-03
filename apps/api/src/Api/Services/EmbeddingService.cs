@@ -7,7 +7,7 @@ using Api.Helpers;
 namespace Api.Services;
 
 /// <summary>
-/// Service for generating text embeddings via Ollama (local) or OpenAI API
+/// Service for generating text embeddings via Ollama (local) or OpenRouter API
 /// </summary>
 public class EmbeddingService : IEmbeddingService
 {
@@ -66,12 +66,12 @@ public class EmbeddingService : IEmbeddingService
             _logger.LogInformation("Using Ollama for embeddings at {Url} with model {Model} ({Dimensions} dimensions)",
                 ollamaUrl, _embeddingModel, _embeddingDimensions);
         }
-        else if (string.Equals(_provider, "openai", StringComparison.Ordinal))
+        else if (string.Equals(_provider, "openrouter", StringComparison.Ordinal))
         {
             // Use OpenRouter API (OpenAI-compatible)
             _httpClient = httpClientFactory.CreateClient("OpenRouter");
             _httpClient.BaseAddress = new Uri("https://openrouter.ai/api/v1/");
-            _apiKey = config["OPENAI_API_KEY"] ?? throw new InvalidOperationException("OPENAI_API_KEY not configured for OpenAI provider");
+            _apiKey = config["OPENROUTER_API_KEY"] ?? throw new InvalidOperationException("OPENROUTER_API_KEY not configured for OpenRouter provider");
             _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {_apiKey}");
 
             // Support both nested (Embedding:Model) and flat (EMBEDDING_MODEL) configuration keys
@@ -86,7 +86,7 @@ public class EmbeddingService : IEmbeddingService
         }
         else
         {
-            throw new InvalidOperationException($"Unsupported embedding provider: {_provider}. Use 'ollama' or 'openai'");
+            throw new InvalidOperationException($"Unsupported embedding provider: {_provider}. Use 'ollama' or 'openrouter'");
         }
     }
 
@@ -122,7 +122,7 @@ public class EmbeddingService : IEmbeddingService
         // Infer from model name as fallback
         return modelName.ToLowerInvariant() switch
         {
-            // OpenAI models
+            // Cloud models (via OpenRouter)
             "text-embedding-ada-002" => 1536,
             "text-embedding-3-small" => 1536,
             "text-embedding-3-large" => 3072,
@@ -159,9 +159,9 @@ public class EmbeddingService : IEmbeddingService
             {
                 return await GenerateOllamaEmbeddingsAsync(texts, ct).ConfigureAwait(false);
             }
-            else // openai
+            else // openrouter
             {
-                return await GenerateOpenAIEmbeddingsAsync(texts, ct).ConfigureAwait(false);
+                return await GenerateOpenRouterEmbeddingsAsync(texts, ct).ConfigureAwait(false);
             }
         }
 #pragma warning disable CA1031 // Do not catch general exception types
@@ -217,9 +217,9 @@ public class EmbeddingService : IEmbeddingService
         return EmbeddingResult.CreateSuccess(embeddings);
     }
 
-    private async Task<EmbeddingResult> GenerateOpenAIEmbeddingsAsync(List<string> texts, CancellationToken ct)
+    private async Task<EmbeddingResult> GenerateOpenRouterEmbeddingsAsync(List<string> texts, CancellationToken ct)
     {
-        _logger.LogInformation("Generating embeddings for {Count} texts using OpenAI model {Model}", texts.Count, _embeddingModel);
+        _logger.LogInformation("Generating embeddings for {Count} texts using OpenRouter model {Model}", texts.Count, _embeddingModel);
 
         var request = new
         {
@@ -237,15 +237,15 @@ public class EmbeddingService : IEmbeddingService
 
         if (!response.IsSuccessStatusCode)
         {
-            _logger.LogError("OpenAI embeddings API error: {Status} - {Body}", response.StatusCode, responseBody);
+            _logger.LogError("OpenRouter embeddings API error: {Status} - {Body}", response.StatusCode, responseBody);
             return EmbeddingResult.CreateFailure($"API error: {(int)response.StatusCode}");
         }
 
-        var embeddingResponse = JsonSerializer.Deserialize<OpenAIEmbeddingResponse>(responseBody);
+        var embeddingResponse = JsonSerializer.Deserialize<OpenRouterEmbeddingResponse>(responseBody);
 
         if (embeddingResponse?.Data == null || embeddingResponse.Data.Count == 0)
         {
-            return EmbeddingResult.CreateFailure("No embeddings returned from OpenAI");
+            return EmbeddingResult.CreateFailure("No embeddings returned from OpenRouter");
         }
 
         var embeddings = embeddingResponse.Data
@@ -253,7 +253,7 @@ public class EmbeddingService : IEmbeddingService
             .Select(d => d.Embedding)
             .ToList();
 
-        _logger.LogInformation("Successfully generated {Count} embeddings via OpenAI", embeddings.Count);
+        _logger.LogInformation("Successfully generated {Count} embeddings via OpenRouter", embeddings.Count);
         return EmbeddingResult.CreateSuccess(embeddings);
     }
 
@@ -309,7 +309,7 @@ public class EmbeddingService : IEmbeddingService
             {
                 return await GenerateOllamaEmbeddingsAsync(texts, ct).ConfigureAwait(false);
             }
-            else // openai/openrouter
+            else // openrouter
             {
                 return await GenerateOpenRouterEmbeddingAsync(texts, language, ct).ConfigureAwait(false);
             }
@@ -403,7 +403,7 @@ public class EmbeddingService : IEmbeddingService
         _logger.LogInformation("Generating embeddings for {Count} texts in language {Language} using OpenRouter model {Model}",
             texts.Count, language, _embeddingModel);
 
-        return await GenerateOpenAIEmbeddingsAsync(texts, ct).ConfigureAwait(false);
+        return await GenerateOpenRouterEmbeddingsAsync(texts, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -442,8 +442,8 @@ internal record OllamaEmbeddingResponse
     public float[] Embedding { get; init; } = Array.Empty<float>();
 }
 
-// OpenAI API response models
-internal record OpenAIEmbeddingResponse
+// OpenRouter API response models
+internal record OpenRouterEmbeddingResponse
 {
     [JsonPropertyName("data")]
     public List<EmbeddingData> Data { get; init; } = new();

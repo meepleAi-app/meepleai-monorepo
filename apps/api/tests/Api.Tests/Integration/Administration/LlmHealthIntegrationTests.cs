@@ -89,7 +89,7 @@ public sealed class LlmHealthIntegrationTests
 
         var providerHealth = new Dictionary<string, ProviderHealthStatus>
         {
-            ["openai"] = openaiHealth,
+            ["openrouter"] = openaiHealth,
             ["anthropic"] = anthropicHealth
         };
 
@@ -97,7 +97,7 @@ public sealed class LlmHealthIntegrationTests
 
         var monitoringStatus = new Dictionary<string, (string, string)>
         {
-            ["openai"] = ("closed", "avg: 150ms"),
+            ["openrouter"] = ("closed", "avg: 150ms"),
             ["anthropic"] = ("closed", "avg: 200ms")
         };
 
@@ -113,7 +113,7 @@ public sealed class LlmHealthIntegrationTests
         result.Providers.Should().HaveCount(2);
         result.Summary.ShouldIndicateProvidersHealthy();
 
-        result.Providers.Should().ContainKey("openai");
+        result.Providers.Should().ContainKey("openrouter");
         result.Providers.Should().ContainKey("anthropic");
     }
 
@@ -138,7 +138,7 @@ public sealed class LlmHealthIntegrationTests
 
         var providerHealth = new Dictionary<string, ProviderHealthStatus>
         {
-            ["openai"] = healthyProvider,
+            ["openrouter"] = healthyProvider,
             ["anthropic"] = unhealthyProvider
         };
 
@@ -146,7 +146,7 @@ public sealed class LlmHealthIntegrationTests
 
         var monitoringStatus = new Dictionary<string, (string, string)>
         {
-            ["openai"] = ("closed", "avg: 150ms"),
+            ["openrouter"] = ("closed", "avg: 150ms"),
             ["anthropic"] = ("open", "timeout")
         };
 
@@ -159,7 +159,7 @@ public sealed class LlmHealthIntegrationTests
 
         // Assert
         result.Should().NotBeNull();
-        result.Providers["openai"].Status.ShouldIndicateHealthy();
+        result.Providers["openrouter"].Status.ShouldIndicateHealthy();
         result.Providers["anthropic"].CircuitState.ShouldIndicateCircuitOpen();
         result.Providers["anthropic"].LatencyStats.ShouldIndicateTimeout();
     }
@@ -244,7 +244,7 @@ public sealed class LlmHealthIntegrationTests
 
         var providerHealth = new Dictionary<string, ProviderHealthStatus>
         {
-            ["openai"] = provider1,
+            ["openrouter"] = provider1,
             ["anthropic"] = provider2
         };
 
@@ -252,7 +252,7 @@ public sealed class LlmHealthIntegrationTests
 
         var monitoringStatus = new Dictionary<string, (string, string)>
         {
-            ["openai"] = ("closed", "avg: 150ms"),
+            ["openrouter"] = ("closed", "avg: 150ms"),
             ["anthropic"] = ("closed", "avg: 200ms")
         };
 
@@ -275,11 +275,10 @@ public sealed class LlmHealthIntegrationTests
         // All results should contain both providers
         foreach (var result in results)
         {
-            result.Providers.Should().ContainKey("openai");
+            result.Providers.Should().ContainKey("openrouter");
             result.Providers.Should().ContainKey("anthropic");
         }
     }
 
     #endregion
 }
-

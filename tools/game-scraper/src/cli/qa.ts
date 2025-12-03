@@ -24,13 +24,15 @@ program.action(async (opts) => {
     if (qa.length >= opts.max) return;
     const lines = pageText.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
     if (lines.length === 0) return;
-    const sentence = firstSentence(lines.join(" "));
-    if (!sentence) return;
+    const pageBody = lines.join(" ");
+    const sentence = firstSentence(pageBody);
+    if (!sentence || sentence.length < 15) return;
     qa.push({
       game_id: opts.gameId,
       question: `Cosa dice il manuale a pagina ${idx + 1} riguardo alle regole?`,
       answer: sentence.slice(0, 400),
       page: idx + 1,
+      context: pageBody.slice(0, 800),
       source: opts.rulebook,
     });
   });

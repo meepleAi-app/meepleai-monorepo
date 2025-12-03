@@ -35,7 +35,7 @@ export async function fetchPlays(gameId: number, mindate?: string, cfg?: Scraper
   const auth = buildAuth(cfg);
   while (true) {
     const url = `https://boardgamegeek.com/xmlapi2/plays?id=${gameId}&type=thing&page=${page}${mindate ? `&mindate=${mindate}` : ""}`;
-    const res = await axios.get(url, { responseType: "text", headers: auth.headers });
+    const res = await fetchWithRetry(url, { responseType: "text", headers: auth.headers });
     const json = await parser.parseStringPromise(res.data);
     const playNodes = json?.plays?.play;
     if (!playNodes || (Array.isArray(playNodes) && playNodes.length === 0)) break;
@@ -64,7 +64,7 @@ export async function fetchThing(gameId: number, cfg?: ScraperConfig): Promise<B
   const parser = new xml2js.Parser({ explicitArray: false, mergeAttrs: true });
   const url = `https://boardgamegeek.com/xmlapi2/thing?id=${gameId}&stats=1`;
   const auth = buildAuth(cfg);
-  const res = await axios.get(url, { responseType: "text", headers: auth.headers });
+  const res = await fetchWithRetry(url, { responseType: "text", headers: auth.headers });
   const json = await parser.parseStringPromise(res.data);
   const thing = json?.items?.item;
   if (!thing) return undefined;
@@ -104,4 +104,19 @@ function buildAuth(cfg?: ScraperConfig): AxiosRequestConfig {
   const token = cfg?.bggToken ?? process.env.BGG_TOKEN;
   if (!token) return { headers: {} };
   return { headers: { Authorization: `Bearer ${token}` } };
+}
+
+async function fetchWithRetry(url: string, config: AxiosRequestConfig, attempts = 3, delayMs = 3000) {
+  let lastErr: any;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await axios.get(url, config);
+    } catch (err: any) {
+      lastErr = err;
+      const status = err?.response?.status;
+      if (status && status < 500 && status !== 429) break; // don't retry on 4xx except 429
+      await sleep(delayMs);
+    }
+  }
+  throw lastErr;
 }

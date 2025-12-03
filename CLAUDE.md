@@ -65,7 +65,7 @@ docs/                Architecture, ADRs, guides
 - **AI/ML**: ollama:11434, embedding:8000, unstructured:8001, smoldocling:8002
 - **Observability**: seq:8081, jaeger:16686, prometheus:9090, alertmanager:9093, grafana:3001
 - **Workflow**: n8n:5678
-- **App**: api:5080, web:3000
+- **App**: api:8080, web:3000
 
 ---
 
@@ -246,7 +246,7 @@ PDF Upload → EnhancedPdfProcessingOrchestrator
 - `INITIAL_ADMIN_EMAIL`, `INITIAL_ADMIN_PASSWORD` (bootstrap)
 
 **Web**:
-- `NEXT_PUBLIC_API_BASE=http://localhost:5080`
+- `NEXT_PUBLIC_API_BASE=http://localhost:8080`
 
 **Never commit** `.env.dev/local/prod`
 
@@ -267,7 +267,7 @@ PDF → PdfTextExtractor → TextChunking → Embedding → Qdrant → RagServic
 **Local Stack**:
 ```bash
 cd infra && docker compose up postgres qdrant redis n8n seq    # T1
-cd apps/api/src/Api && dotnet run                              # T2 (5080)
+cd apps/api/src/Api && dotnet run                              # T2 (8080)
 cd apps/web && pnpm dev                                        # T3 (3000)
 ```
 
@@ -313,7 +313,7 @@ cd apps/web && pnpm dev                                        # T3 (3000)
 | Auth issues | Check cookies, sessions table |
 | CI failures | Verify Docker/Linux, env vars |
 
-**Health Check**: `curl http://localhost:5080/health`
+**Health Check**: `curl http://localhost:8080/health`
 
 ---
 

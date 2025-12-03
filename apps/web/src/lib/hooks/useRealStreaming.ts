@@ -184,7 +184,7 @@ export function useRealStreaming(
       abortControllerRef.current = abortController;
 
       // Build URL with query parameters
-      const baseUrl = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5080';
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
       const url = new URL('/api/v1/agents/qa/stream', baseUrl);
 
       // EventSource doesn't support POST, so we use fetch with ReadableStream

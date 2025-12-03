@@ -59,7 +59,7 @@ interface UploadOperation {
 }
 
 const API_BASE =
-  typeof window !== 'undefined' ? process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5080' : '';
+  typeof window !== 'undefined' ? process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080' : '';
 
 /**
  * Processing step enum matching backend ProcessingStep

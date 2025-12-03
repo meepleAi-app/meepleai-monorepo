@@ -18,7 +18,7 @@
 import { test, expect } from './fixtures/chromatic';
 import { LoginPage, AuthHelper, USER_FIXTURES } from './pages';
 
-const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5080';
+const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
 test.describe('Authentication Flows', () => {
   test('should successfully login with valid credentials', async ({ page }) => {

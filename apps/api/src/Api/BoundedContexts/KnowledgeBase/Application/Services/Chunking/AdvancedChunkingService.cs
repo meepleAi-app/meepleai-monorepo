@@ -140,6 +140,7 @@ public sealed class AdvancedChunkingService : IAdvancedChunkingService
     /// <summary>
     /// Processes plain text without section information.
     /// Creates synthetic sections based on paragraph breaks.
+    /// Handles both Unix (\n\n) and Windows (\r\n\r\n) line endings correctly.
     /// </summary>
     private List<HierarchicalChunk> ProcessPlainText(
         string text,
@@ -149,6 +150,9 @@ public sealed class AdvancedChunkingService : IAdvancedChunkingService
     {
         var allChunks = new List<HierarchicalChunk>();
 
+        // Detect paragraph separator length (Windows \r\n\r\n = 4, Unix \n\n = 2)
+        var paragraphSeparatorLength = text.Contains("\r\n\r\n") ? 4 : 2;
+
         // Split into paragraphs as synthetic sections
         var paragraphs = SplitIntoParagraphs(text);
         var charPosition = 0;
@@ -157,8 +161,15 @@ public sealed class AdvancedChunkingService : IAdvancedChunkingService
         {
             if (string.IsNullOrWhiteSpace(paragraph))
             {
-                charPosition += paragraph.Length + 2; // Account for \n\n
+                charPosition += paragraph.Length + paragraphSeparatorLength;
                 continue;
+            }
+
+            // Find actual position in original text for accurate char tracking
+            var actualStart = text.IndexOf(paragraph, charPosition, StringComparison.Ordinal);
+            if (actualStart >= 0)
+            {
+                charPosition = actualStart;
             }
 
             var paragraphStart = charPosition;
@@ -200,7 +211,7 @@ public sealed class AdvancedChunkingService : IAdvancedChunkingService
                 allChunks.AddRange(childChunks);
             }
 
-            charPosition = paragraphEnd + 2; // Account for paragraph separator
+            charPosition = paragraphEnd + paragraphSeparatorLength;
         }
 
         return allChunks;
@@ -270,10 +281,13 @@ public sealed class AdvancedChunkingService : IAdvancedChunkingService
 
     /// <summary>
     /// Estimates page number based on character position.
+    /// Uses long arithmetic to prevent integer overflow with large documents.
     /// </summary>
     private static int EstimatePageNumber(int charPosition, int totalLength)
     {
-        const int charsPerPage = 2000;
-        return (charPosition / charsPerPage) + 1;
+        const long charsPerPage = 2000L;
+        // Use long division to prevent overflow, then safely cast result
+        var pageNumber = ((long)charPosition / charsPerPage) + 1;
+        return (int)Math.Min(pageNumber, int.MaxValue);
     }
 }

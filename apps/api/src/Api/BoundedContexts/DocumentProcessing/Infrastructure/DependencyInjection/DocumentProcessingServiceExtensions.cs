@@ -39,6 +39,7 @@ public static class DocumentProcessingServiceExtensions
 
         // Domain Layer
         services.AddScoped<IPdfDocumentRepository, PdfDocumentRepository>();
+        services.AddScoped<IChunkedUploadSessionRepository, ChunkedUploadSessionRepository>();
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
 
         // Domain Services (stateless, can be singleton for performance)

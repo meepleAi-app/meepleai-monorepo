@@ -1,6 +1,6 @@
 import { type ChangeEvent, type FormEvent, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Upload } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -12,10 +12,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Progress } from '@/components/ui/progress';
 import { LoadingButton } from '@/components/loading';
 import { retryWithBackoff, isRetryableError } from '@/lib/retryUtils';
 import { categorizeError, type CategorizedError, extractCorrelationId } from '@/lib/errorUtils';
 import { ApiError } from '@/lib/api';
+import { useChunkedUpload, CHUNKED_UPLOAD_THRESHOLD } from '@/hooks/useChunkedUpload';
 
 // Dynamic import to prevent SSR issues with react-pdf
 const PdfPreview = dynamic(
@@ -120,17 +122,31 @@ export function PdfUploadForm({
 
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
+  // Chunked upload hook for large files
+  const {
+    progress: chunkedProgress,
+    uploadChunked,
+    shouldUseChunkedUpload,
+    isUploading: isChunkedUploading,
+    reset: resetChunkedUpload,
+  } = useChunkedUpload(API_BASE);
+
+  // Determine if current file needs chunked upload
+  const needsChunkedUpload = file ? shouldUseChunkedUpload(file) : false;
+
   const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) {
       setFile(null);
       setValidationErrors({});
+      resetChunkedUpload();
       return;
     }
 
     setValidating(true);
     setValidationErrors({});
     setRetryMessage(null);
+    resetChunkedUpload();
 
     try {
       const validation = await validatePdfFile(selectedFile);
@@ -157,10 +173,24 @@ export function PdfUploadForm({
     e.preventDefault();
     if (!file) return;
 
+    onUploadStart?.();
+
+    // Use chunked upload for large files
+    if (needsChunkedUpload) {
+      const result = await uploadChunked(file, gameId);
+
+      if (result.success && result.documentId) {
+        onUploadSuccess(result.documentId);
+      } else {
+        onUploadError(categorizeError(new Error(result.error || 'Chunked upload failed')));
+      }
+      return;
+    }
+
+    // Standard upload for smaller files
     setUploading(true);
     setRetryMessage(null);
     setRetryCount(0);
-    onUploadStart?.();
 
     try {
       const formData = new FormData();
@@ -231,14 +261,22 @@ export function PdfUploadForm({
             type="file"
             accept="application/pdf"
             onChange={handleFileChange}
-            disabled={uploading || validating}
+            disabled={uploading || validating || isChunkedUploading}
             className={hasErrors ? 'border-destructive' : ''}
           />
           {validating && <p className="text-sm text-muted-foreground mt-1">Validating file...</p>}
           {file && !hasErrors && (
-            <p className="text-sm text-green-600 mt-1">
-              ✓ {file.name} ({formatFileSize(file.size)})
-            </p>
+            <div className="mt-1">
+              <p className="text-sm text-green-600">
+                ✓ {file.name} ({formatFileSize(file.size)})
+              </p>
+              {needsChunkedUpload && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  <Upload className="inline h-3 w-3 mr-1" />
+                  Large file - will use chunked upload
+                </p>
+              )}
+            </div>
           )}
           {hasErrors && (
             <Alert variant="destructive" className="mt-2">
@@ -257,7 +295,11 @@ export function PdfUploadForm({
 
         <div>
           <Label htmlFor="language">Document Language</Label>
-          <Select value={language} onValueChange={setLanguage} disabled={uploading}>
+          <Select
+            value={language}
+            onValueChange={setLanguage}
+            disabled={uploading || isChunkedUploading}
+          >
             <SelectTrigger id="language">
               <SelectValue />
             </SelectTrigger>
@@ -287,17 +329,49 @@ export function PdfUploadForm({
           </Alert>
         )}
 
+        {/* Chunked upload progress */}
+        {isChunkedUploading && (
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">
+                {chunkedProgress.status === 'initializing' && 'Initializing upload...'}
+                {chunkedProgress.status === 'uploading' &&
+                  `Uploading chunk ${chunkedProgress.currentChunk}/${chunkedProgress.totalChunks}`}
+                {chunkedProgress.status === 'completing' && 'Finalizing upload...'}
+              </span>
+              <span className="font-medium">{chunkedProgress.progressPercentage.toFixed(0)}%</span>
+            </div>
+            <Progress value={chunkedProgress.progressPercentage} className="h-2" />
+            <p className="text-xs text-muted-foreground">
+              {formatFileSize(chunkedProgress.uploadedBytes)} /{' '}
+              {formatFileSize(chunkedProgress.totalBytes)}
+            </p>
+          </div>
+        )}
+
+        {chunkedProgress.status === 'error' && chunkedProgress.error && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Upload Failed</AlertTitle>
+            <AlertDescription>{chunkedProgress.error}</AlertDescription>
+          </Alert>
+        )}
+
         <LoadingButton
           type="submit"
-          isLoading={uploading}
-          disabled={!file || hasErrors || validating}
+          isLoading={uploading || isChunkedUploading}
+          disabled={!file || hasErrors || validating || isChunkedUploading}
           className="w-full"
         >
-          {uploading
-            ? retryCount > 0
-              ? `Uploading (retry ${retryCount}/3)...`
-              : 'Uploading...'
-            : 'Upload PDF'}
+          {isChunkedUploading
+            ? chunkedProgress.status === 'completing'
+              ? 'Finalizing...'
+              : `Uploading ${chunkedProgress.progressPercentage.toFixed(0)}%`
+            : uploading
+              ? retryCount > 0
+                ? `Uploading (retry ${retryCount}/3)...`
+                : 'Uploading...'
+              : 'Upload PDF'}
         </LoadingButton>
       </form>
     </Card>

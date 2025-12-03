@@ -93,12 +93,41 @@ public class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResultDt
         double minScore,
         CancellationToken cancellationToken)
     {
-        // Get candidate embeddings from repository
+        // Get candidate embeddings from repository (already filtered and ranked by Qdrant)
         var embeddings = await _embeddingRepository.SearchByVectorAsync(
             gameId, queryVector, topK, minScore, cancellationToken);
 
-        // Use domain service to rank results
-        return _vectorSearchService.Search(queryVector, embeddings, topK, minScore);
+        _logger.LogInformation(
+            "Vector search returned {Count} embeddings for gameId={GameId}",
+            embeddings.Count, gameId);
+
+        // Convert embeddings to SearchResults directly
+        // Note: Qdrant already scored and filtered results by minScore, so we use rank-based scoring
+        // This avoids recalculating cosine similarity with placeholder vectors (which would always be 0)
+        var results = embeddings.Select((embedding, index) =>
+        {
+            // Calculate a score based on rank (first result gets highest score, decays with rank)
+            // This preserves Qdrant's ranking while providing a meaningful confidence value
+            var rankBasedScore = 1.0 - (index * 0.05); // First = 1.0, Second = 0.95, etc.
+            var clampedScore = Math.Max(minScore, Math.Min(1.0, rankBasedScore));
+            var confidence = new Confidence(clampedScore);
+
+            return new Domain.Entities.SearchResult(
+                id: Guid.NewGuid(),
+                vectorDocumentId: embedding.VectorDocumentId,
+                textContent: embedding.TextContent,
+                pageNumber: embedding.PageNumber,
+                relevanceScore: confidence,
+                rank: index + 1,
+                searchMethod: "vector"
+            );
+        }).ToList();
+
+        _logger.LogInformation(
+            "Converted {Count} embeddings to SearchResults with rank-based scoring",
+            results.Count);
+
+        return results;
     }
 
     private async Task<List<Domain.Entities.SearchResult>> PerformHybridSearchAsync(

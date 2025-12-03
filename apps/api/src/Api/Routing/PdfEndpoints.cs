@@ -463,6 +463,219 @@ public static class PdfEndpoints
             });
         });
 
+        // ============================================
+        // Chunked Upload Endpoints (for large PDFs > 30 MB)
+        // ============================================
+
+        // Initialize chunked upload session
+        group.MapPost("/ingest/pdf/chunked/init", async (
+            HttpContext context,
+            [FromBody] InitChunkedUploadRequest request,
+            IMediator mediator,
+            IFeatureFlagService featureFlags,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            // Check if PDF upload feature is enabled
+            if (!await featureFlags.IsEnabledAsync("Features.PdfUpload"))
+            {
+                return Results.Json(
+                    new { error = "feature_disabled", message = "PDF uploads are currently disabled" },
+                    statusCode: 403);
+            }
+
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
+
+            if (!Guid.TryParse(session.User.Id, out var userId))
+            {
+                return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
+            }
+
+            logger.LogInformation(
+                "User {UserId} initializing chunked upload for game {GameId}, file {FileName} ({FileSize} bytes)",
+                userId, request.GameId, request.FileName, request.TotalFileSize);
+
+            var command = new InitChunkedUploadCommand(
+                request.GameId,
+                userId,
+                request.FileName,
+                request.TotalFileSize);
+
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+            if (!result.Success)
+            {
+                logger.LogWarning("Failed to initialize chunked upload: {Error}", result.ErrorMessage);
+                return Results.BadRequest(new { error = result.ErrorMessage });
+            }
+
+            return Results.Json(new
+            {
+                sessionId = result.SessionId,
+                totalChunks = result.TotalChunks,
+                chunkSizeBytes = result.ChunkSizeBytes,
+                expiresAt = result.ExpiresAt
+            });
+        })
+        .RequireSession();
+
+        // Upload a single chunk
+        group.MapPost("/ingest/pdf/chunked/chunk", async (
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
+
+            if (!Guid.TryParse(session.User.Id, out var userId))
+            {
+                return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
+            }
+
+            var form = await context.Request.ReadFormAsync(ct).ConfigureAwait(false);
+
+            if (!Guid.TryParse(form["sessionId"].ToString(), out var sessionId))
+            {
+                return Results.BadRequest(new { error = "invalid_session_id", message = "Invalid or missing session ID" });
+            }
+
+            if (!int.TryParse(form["chunkIndex"].ToString(), out var chunkIndex))
+            {
+                return Results.BadRequest(new { error = "invalid_chunk_index", message = "Invalid or missing chunk index" });
+            }
+
+            var file = form.Files.GetFile("chunk");
+            if (file == null || file.Length == 0)
+            {
+                return Results.BadRequest(new { error = "missing_chunk", message = "No chunk data provided" });
+            }
+
+            // Read chunk data
+            using var memoryStream = new MemoryStream();
+            await file.CopyToAsync(memoryStream, ct).ConfigureAwait(false);
+            var chunkData = memoryStream.ToArray();
+
+            logger.LogDebug("Received chunk {ChunkIndex} for session {SessionId} ({Size} bytes)",
+                chunkIndex, sessionId, chunkData.Length);
+
+            var command = new UploadChunkCommand(sessionId, userId, chunkIndex, chunkData);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+            if (!result.Success)
+            {
+                logger.LogWarning("Failed to upload chunk {ChunkIndex} for session {SessionId}: {Error}",
+                    chunkIndex, sessionId, result.ErrorMessage);
+                return Results.BadRequest(new { error = result.ErrorMessage });
+            }
+
+            return Results.Json(new
+            {
+                success = true,
+                receivedChunks = result.ReceivedChunks,
+                totalChunks = result.TotalChunks,
+                progressPercentage = result.ProgressPercentage,
+                isComplete = result.IsComplete
+            });
+        })
+        .RequireSession();
+
+        // Complete chunked upload and trigger processing
+        group.MapPost("/ingest/pdf/chunked/complete", async (
+            HttpContext context,
+            [FromBody] CompleteChunkedUploadRequest request,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
+
+            if (!Guid.TryParse(session.User.Id, out var userId))
+            {
+                return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
+            }
+
+            logger.LogInformation("User {UserId} completing chunked upload session {SessionId}",
+                userId, request.SessionId);
+
+            var command = new CompleteChunkedUploadCommand(request.SessionId, userId);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+            if (!result.Success)
+            {
+                logger.LogWarning("Failed to complete chunked upload {SessionId}: {Error}",
+                    request.SessionId, result.ErrorMessage);
+
+                if (result.MissingChunks != null && result.MissingChunks.Count > 0)
+                {
+                    return Results.BadRequest(new
+                    {
+                        error = result.ErrorMessage,
+                        missingChunks = result.MissingChunks
+                    });
+                }
+
+                return Results.BadRequest(new { error = result.ErrorMessage });
+            }
+
+            logger.LogInformation("Chunked upload completed: Document {DocumentId}", result.DocumentId);
+
+            return Results.Json(new
+            {
+                success = true,
+                documentId = result.DocumentId,
+                fileName = result.FileName
+            });
+        })
+        .RequireSession();
+
+        // Get chunked upload session status
+        group.MapGet("/ingest/pdf/chunked/{sessionId:guid}/status", async (
+            Guid sessionId,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
+
+            if (!Guid.TryParse(session.User.Id, out var userId))
+            {
+                return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
+            }
+
+            var query = new GetChunkedUploadStatusQuery(sessionId, userId);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+            if (result == null)
+            {
+                return Results.NotFound(new { error = "Session not found or access denied" });
+            }
+
+            return Results.Json(result);
+        })
+        .RequireSession();
+
         return group;
     }
 }
+
+/// <summary>
+/// Request model for initializing a chunked upload session.
+/// </summary>
+public record InitChunkedUploadRequest(
+    Guid GameId,
+    string FileName,
+    long TotalFileSize
+);
+
+/// <summary>
+/// Request model for completing a chunked upload.
+/// </summary>
+public record CompleteChunkedUploadRequest(
+    Guid SessionId
+);

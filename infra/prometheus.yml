@@ -57,6 +57,36 @@ scrape_configs:
           service: 'grafana'
           component: 'visualization'
 
+  # Embedding service (local multilingual embeddings)
+  - job_name: 'embedding-service'
+    scrape_interval: 15s
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['embedding-service:8000']
+        labels:
+          service: 'embedding-service'
+          component: 'ml'
+
+  # Unstructured PDF extraction service (stage 1)
+  - job_name: 'unstructured-service'
+    scrape_interval: 15s
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['unstructured-service:8001']
+        labels:
+          service: 'unstructured-service'
+          component: 'ingestion'
+
+  # SmolDocling VLM extraction service (stage 2)
+  - job_name: 'smoldocling-service'
+    scrape_interval: 15s
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['smoldocling-service:8002']
+        labels:
+          service: 'smoldocling-service'
+          component: 'ingestion'
+
   # OPS-05: Scrape Alertmanager metrics
   - job_name: 'alertmanager'
     static_configs:

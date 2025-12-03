@@ -25,7 +25,7 @@ import type { AuthUser } from '@/types/auth';
  * Backend API base URL for server-to-server calls
  * Uses internal Docker service name in production, localhost in dev
  */
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5080';
 
 /**
  * Session cookie name (matches middleware.ts and backend CookieHelpers.cs)
@@ -138,5 +138,5 @@ export function hasRole(user: AuthUser, role: string): boolean {
  */
 export function hasAnyRole(user: AuthUser, roles: string[]): boolean {
   const userRole = user.role.toLowerCase();
-  return roles.some((role) => role.toLowerCase() === userRole);
+  return roles.some(role => role.toLowerCase() === userRole);
 }

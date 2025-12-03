@@ -42,15 +42,34 @@ public class QdrantVectorStoreAdapter : IQdrantVectorStoreAdapter
             return new List<Embedding>();
         }
 
+        // DIAGNOSTIC: Log raw Qdrant results before filtering
+        _logger.LogInformation(
+            "Qdrant returned {TotalResults} results for gameId={GameId}. MinScore threshold={MinScore}",
+            searchResult.Results.Count, gameId, minScore);
+
+        foreach (var r in searchResult.Results)
+        {
+            _logger.LogInformation(
+                "  - Score={Score:F4}, Text={TextPreview}...",
+                r.Score, r.Text.Substring(0, Math.Min(50, r.Text.Length)));
+        }
+
         // Map SearchResultItems to domain Embedding entities
-        var embeddings = searchResult.Results
+        var filteredResults = searchResult.Results
             .Where(r => r.Score >= minScore) // Apply min score filter
+            .ToList();
+
+        _logger.LogInformation(
+            "After minScore filter: {FilteredCount}/{TotalCount} results passed (threshold={MinScore})",
+            filteredResults.Count, searchResult.Results.Count, minScore);
+
+        var embeddings = filteredResults
             .Select((result, index) => KnowledgeBaseMappers.CreateEmbeddingFromQdrant(
                 embeddingId: Guid.NewGuid(),
                 vectorDocumentId: Guid.Parse(result.PdfId),
                 textContent: result.Text,
                 pageNumber: result.Page,
-                vectorArray: Array.Empty<float>(), // Vector not returned in search results
+                vectorArray: new float[768], // Placeholder vector (search results don't include actual vectors)
                 model: "nomic-embed-text", // Default model
                 chunkIndex: result.ChunkIndex
             ))

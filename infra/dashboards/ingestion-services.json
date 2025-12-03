@@ -1,0 +1,46 @@
+{
+  "id": null,
+  "uid": "ingestion-services",
+  "title": "Ingestion Services",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-6h", "to": "now" },
+  "panels": [
+    {
+      "type": "graph",
+      "title": "Request Rate (rps)",
+      "targets": [
+        { "expr": "rate(extract_requests_total[5m])", "legendFormat": "{{job}}" },
+        { "expr": "rate(embed_requests_total[5m])", "legendFormat": "{{job}}" }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 }
+    },
+    {
+      "type": "graph",
+      "title": "Failure Rate (rps)",
+      "targets": [
+        { "expr": "rate(extract_failures_total[5m])", "legendFormat": "{{job}}" },
+        { "expr": "rate(embed_failures_total[5m])", "legendFormat": "{{job}}" }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 }
+    },
+    {
+      "type": "graph",
+      "title": "Avg Latency (ms)",
+      "targets": [
+        { "expr": "rate(extract_duration_ms_sum[5m]) / rate(extract_requests_total[5m])", "legendFormat": "{{job}}" },
+        { "expr": "rate(embed_duration_ms_sum[5m]) / rate(embed_requests_total[5m])", "legendFormat": "{{job}}" }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 }
+    },
+    {
+      "type": "graph",
+      "title": "Payload Volume (bytes/s)",
+      "targets": [
+        { "expr": "rate(extract_payload_bytes_sum[5m])", "legendFormat": "{{job}}" }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 }
+    }
+  ]
+}

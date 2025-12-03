@@ -1,4 +1,4 @@
-# MeepleAI Documentation
+﻿# MeepleAI Documentation
 
 **Welcome to the MeepleAI documentation!** This directory contains comprehensive documentation for the MeepleAI monorepo, organized by audience and purpose.
 
@@ -6,28 +6,29 @@
 
 ---
 
-## 📁 Documentation Structure
+## Documentation Structure
 
 The documentation is organized into **numbered folders** for consistent ordering:
 
 ```
 docs/
-├── 00-getting-started/          # Start here! Quick start & onboarding
-├── 01-architecture/              # System architecture, ADRs, diagrams
-├── 02-development/               # Developer guides, refactoring, testing
-├── 03-api/                       # API specification & integration
-├── 04-frontend/                  # Frontend architecture & guides
-├── 05-operations/                # DevOps, deployment, runbooks
-├── 06-security/                  # Security audits & best practices
-├── 07-project-management/        # Planning, roadmap, organization
-├── 08-business/                  # Business plan & strategy
-├── 09-research/                  # Research findings & analysis
-└── 10-knowledge-base/            # External references & wiki
+|- 00-getting-started/          # Start here! Quick start & onboarding
+|- 01-architecture/             # System architecture, ADRs, diagrams
+|- 02-development/              # Developer guides, refactoring, testing
+|- 03-api/                      # API specification & integration (legacy index; use 04-frontend for FE)
+|- 04-frontend/                 # Frontend architecture & guides (active)
+|- 05-operations/               # DevOps, deployment, runbooks
+|- 06-security/                 # Security audits & best practices
+|- 07-project-management/       # Planning, roadmap, organization
+|- 08-business/                 # Business plan & strategy
+|- 09-research/                 # Research findings & analysis
+\\- 10-knowledge-base/           # External references & wiki
 ```
 
 ---
 
-## 🚀 Quick Start
+
+## Quick Start
 
 ### New to MeepleAI?
 
@@ -372,3 +373,5 @@ Content...
 **Last Updated**: 2025-11-13
 **Maintainer**: Documentation Team
 **Total Documents**: 115 files
+
+

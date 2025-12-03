@@ -38,7 +38,7 @@ import { useGames } from '@/hooks/wizard/useGames';
 import { usePdfs, type PdfDocument } from '@/hooks/wizard/usePdfs';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { LoadingButton } from '@/components/loading';
+import { LoadingButton, Spinner } from '@/components/loading';
 import { useAuthUser } from '@/hooks/useAuthUser';
 
 // Types
@@ -68,17 +68,22 @@ interface UploadClientProps {
 export function UploadClient({
   autoUpload = true,
   onUploadStart,
-  onUploadError
+  onUploadError,
 }: UploadClientProps = {}) {
-  const { user } = useAuthUser();
+  const { user, loading: authLoading } = useAuthUser();
 
   // Wizard state management
   const { state: wizardState, dispatch: wizardDispatch } = useWizard();
 
-  // Data fetching hooks - use user from hook
-  const { games, loading: loadingGames, createGame } = useGames(user!);
+  // Data fetching hooks - use user from hook (user may be null while auth loads)
+  const { games, loading: loadingGames, createGame } = useGames(user ?? undefined);
   const [confirmedGameId, setConfirmedGameId] = useState<string | null>(null);
-  const { pdfs, loading: loadingPdfs, error: pdfsError, refetch: refetchPdfs } = usePdfs(confirmedGameId);
+  const {
+    pdfs,
+    loading: loadingPdfs,
+    error: pdfsError,
+    refetch: refetchPdfs,
+  } = usePdfs(confirmedGameId);
 
   // Local state
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
@@ -101,12 +106,15 @@ export function UploadClient({
   }, [games]);
 
   // Wizard steps configuration (memoized for performance - PERF #1093)
-  const wizardSteps = useMemo(() => [
-    { id: 'upload', label: '1. Upload', description: 'Select PDF file' },
-    { id: 'parse', label: '2. Parse', description: 'Extract rules' },
-    { id: 'review', label: '3. Review', description: 'Edit rules' },
-    { id: 'publish', label: '4. Publish', description: 'Finalize' }
-  ], []);
+  const wizardSteps = useMemo(
+    () => [
+      { id: 'upload', label: '1. Upload', description: 'Select PDF file' },
+      { id: 'parse', label: '2. Parse', description: 'Extract rules' },
+      { id: 'review', label: '3. Review', description: 'Edit rules' },
+      { id: 'publish', label: '4. Publish', description: 'Finalize' },
+    ],
+    []
+  );
 
   // Handlers
   const handleGameSelect = useCallback((gameId: string) => {
@@ -114,13 +122,16 @@ export function UploadClient({
     setConfirmedGameId(null);
   }, []);
 
-  const handleGameCreate = useCallback(async (name: string) => {
-    const newGame = await createGame(name);
-    if (newGame) {
-      setSelectedGameId(newGame.id);
-      setConfirmedGameId(null);
-    }
-  }, [createGame]);
+  const handleGameCreate = useCallback(
+    async (name: string) => {
+      const newGame = await createGame(name);
+      if (newGame) {
+        setSelectedGameId(newGame.id);
+        setConfirmedGameId(null);
+      }
+    },
+    [createGame]
+  );
 
   const confirmSelectedGame = useCallback(() => {
     if (selectedGameId) {
@@ -128,30 +139,39 @@ export function UploadClient({
     }
   }, [selectedGameId]);
 
-  const handleUploadSuccess = useCallback((documentId: string) => {
-    wizardDispatch({ type: 'UPLOAD_SUCCESS', documentId });
-    if (enableProcessingProgress) {
-      setShowProcessingProgress(true);
-    }
-    setUploadError(null);
-    setAutoAdvanceTriggered(false);
-    setRuleSpec(null);
-  }, [wizardDispatch]);
+  const handleUploadSuccess = useCallback(
+    (documentId: string) => {
+      wizardDispatch({ type: 'UPLOAD_SUCCESS', documentId });
+      if (enableProcessingProgress) {
+        setShowProcessingProgress(true);
+      }
+      setUploadError(null);
+      setAutoAdvanceTriggered(false);
+      setRuleSpec(null);
+    },
+    [wizardDispatch]
+  );
 
-  const handleUploadError = useCallback((error: CategorizedError) => {
-    setUploadError(error);
-    onUploadError?.();
-  }, [onUploadError]);
+  const handleUploadError = useCallback(
+    (error: CategorizedError) => {
+      setUploadError(error);
+      onUploadError?.();
+    },
+    [onUploadError]
+  );
 
   const handleProcessingComplete = useCallback(() => {
     setShowProcessingProgress(false);
     wizardDispatch({ type: 'PROCESSING_UPDATE', status: 'completed' });
   }, [wizardDispatch]);
 
-  const handleProcessingError = useCallback((error: string) => {
-    setShowProcessingProgress(false);
-    wizardDispatch({ type: 'PROCESSING_ERROR', error });
-  }, [wizardDispatch]);
+  const handleProcessingError = useCallback(
+    (error: string) => {
+      setShowProcessingProgress(false);
+      wizardDispatch({ type: 'PROCESSING_ERROR', error });
+    },
+    [wizardDispatch]
+  );
 
   const handleParse = useCallback(async () => {
     if (!confirmedGameId || !wizardState.documentId) return;
@@ -171,9 +191,10 @@ export function UploadClient({
       wizardDispatch({ type: 'PARSING_COMPLETE' });
       await refetchPdfs();
     } catch (error) {
-      const errorMessage = error instanceof ApiError
-        ? `Parse failed: ${error.message}`
-        : `Parse failed: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      const errorMessage =
+        error instanceof ApiError
+          ? `Parse failed: ${error.message}`
+          : `Parse failed: ${error instanceof Error ? error.message : 'Unknown error'}`;
       wizardDispatch({ type: 'ERROR', error: errorMessage });
     } finally {
       setParsing(false);
@@ -190,7 +211,13 @@ export function UploadClient({
     ) {
       void handleParse();
     }
-  }, [autoAdvanceTriggered, wizardState.currentStep, wizardState.documentId, wizardState.processingStatus, handleParse]);
+  }, [
+    autoAdvanceTriggered,
+    wizardState.currentStep,
+    wizardState.documentId,
+    wizardState.processingStatus,
+    handleParse,
+  ]);
 
   const handlePublish = useCallback(async () => {
     if (!ruleSpec || !confirmedGameId) return;
@@ -202,12 +229,15 @@ export function UploadClient({
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify(ruleSpec)
+        body: JSON.stringify(ruleSpec),
       });
 
       if (!response.ok) {
         const error = await response.json().catch(() => ({}));
-        wizardDispatch({ type: 'ERROR', error: `Publish failed: ${error.error ?? response.statusText}` });
+        wizardDispatch({
+          type: 'ERROR',
+          error: `Publish failed: ${error.error ?? response.statusText}`,
+        });
         return;
       }
 
@@ -215,25 +245,31 @@ export function UploadClient({
     } catch (error) {
       wizardDispatch({
         type: 'ERROR',
-        error: `Publish failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+        error: `Publish failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
       });
     } finally {
       setPublishing(false);
     }
   }, [ruleSpec, confirmedGameId, API_BASE, wizardDispatch]);
 
-  const updateRuleAtom = useCallback((index: number, field: keyof RuleAtom, value: string) => {
-    if (!ruleSpec) return;
-    const updatedRules = [...ruleSpec.rules];
-    updatedRules[index] = { ...updatedRules[index], [field]: value };
-    setRuleSpec({ ...ruleSpec, rules: updatedRules });
-  }, [ruleSpec]);
+  const updateRuleAtom = useCallback(
+    (index: number, field: keyof RuleAtom, value: string) => {
+      if (!ruleSpec) return;
+      const updatedRules = [...ruleSpec.rules];
+      updatedRules[index] = { ...updatedRules[index], [field]: value };
+      setRuleSpec({ ...ruleSpec, rules: updatedRules });
+    },
+    [ruleSpec]
+  );
 
-  const deleteRuleAtom = useCallback((index: number) => {
-    if (!ruleSpec) return;
-    const updatedRules = ruleSpec.rules.filter((_, i) => i !== index);
-    setRuleSpec({ ...ruleSpec, rules: updatedRules });
-  }, [ruleSpec]);
+  const deleteRuleAtom = useCallback(
+    (index: number) => {
+      if (!ruleSpec) return;
+      const updatedRules = ruleSpec.rules.filter((_, i) => i !== index);
+      setRuleSpec({ ...ruleSpec, rules: updatedRules });
+    },
+    [ruleSpec]
+  );
 
   const addRuleAtom = useCallback(() => {
     if (!ruleSpec) return;
@@ -242,7 +278,7 @@ export function UploadClient({
       text: '',
       section: null,
       page: null,
-      line: null
+      line: null,
     };
     setRuleSpec({ ...ruleSpec, rules: [...ruleSpec.rules, newRule] });
   }, [ruleSpec]);
@@ -255,16 +291,19 @@ export function UploadClient({
     setAutoAdvanceTriggered(false);
   }, [wizardDispatch]);
 
-  const handleRetryParsing = useCallback(async (pdf: PdfDocument) => {
-    setRetryingPdfId(pdf.id);
-    try {
-      // Retry logic would go here
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      await refetchPdfs();
-    } finally {
-      setRetryingPdfId(null);
-    }
-  }, [refetchPdfs]);
+  const handleRetryParsing = useCallback(
+    async (pdf: PdfDocument) => {
+      setRetryingPdfId(pdf.id);
+      try {
+        // Retry logic would go here
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        await refetchPdfs();
+      } finally {
+        setRetryingPdfId(null);
+      }
+    },
+    [refetchPdfs]
+  );
 
   const handleOpenLog = useCallback((pdf: PdfDocument) => {
     if (pdf.logUrl) {
@@ -272,7 +311,17 @@ export function UploadClient({
     }
   }, []);
 
-  const confirmedGame = games.find((g) => g.id === confirmedGameId);
+  // Show loading state while auth is initializing (after all hooks)
+  if (authLoading) {
+    return (
+      <div className="p-10 max-w-4xl mx-auto flex flex-col items-center justify-center min-h-[400px]">
+        <Spinner size="lg" />
+        <p className="mt-4 text-muted-foreground">Loading...</p>
+      </div>
+    );
+  }
+
+  const confirmedGame = games.find(g => g.id === confirmedGameId);
 
   return (
     <div className="p-10 max-w-4xl mx-auto">
@@ -337,8 +386,14 @@ export function UploadClient({
                     language="en"
                     autoUpload={autoUpload}
                     onUploadComplete={refetchPdfs}
-                    onUploadStart={onUploadStart}
-                    onUploadError={onUploadError}
+                    onUploadStart={() => onUploadStart?.()}
+                    onUploadSuccess={item => {
+                      // When an individual file upload succeeds, trigger the wizard flow
+                      if (item.pdfId) {
+                        handleUploadSuccess(item.pdfId);
+                      }
+                    }}
+                    onUploadError={() => onUploadError?.()}
                   />
                 </div>
 
@@ -394,9 +449,15 @@ export function UploadClient({
             <h2 className="text-2xl font-semibold mb-4">Step 3: Review & Edit Rules</h2>
 
             <div className="bg-muted p-4 rounded-md mb-6 space-y-1 text-sm">
-              <p><strong>Game ID:</strong> {ruleSpec.gameId}</p>
-              <p><strong>Version:</strong> {ruleSpec.version}</p>
-              <p><strong>Total Rules:</strong> {ruleSpec.rules?.length || 0}</p>
+              <p>
+                <strong>Game ID:</strong> {ruleSpec.gameId}
+              </p>
+              <p>
+                <strong>Version:</strong> {ruleSpec.version}
+              </p>
+              <p>
+                <strong>Total Rules:</strong> {ruleSpec.rules?.length || 0}
+              </p>
             </div>
 
             <div className="space-y-4 mb-6 max-h-96 overflow-y-auto">
@@ -404,11 +465,7 @@ export function UploadClient({
                 <Card key={rule.id ?? index} className="p-4">
                   <div className="flex justify-between items-center mb-3">
                     <h4 className="font-semibold">Rule {index + 1}</h4>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => deleteRuleAtom(index)}
-                    >
+                    <Button variant="destructive" size="sm" onClick={() => deleteRuleAtom(index)}>
                       Delete
                     </Button>
                   </div>
@@ -417,7 +474,7 @@ export function UploadClient({
                       <label className="block text-sm font-medium mb-1">Text</label>
                       <textarea
                         value={rule.text}
-                        onChange={(e) => updateRuleAtom(index, 'text', e.target.value)}
+                        onChange={e => updateRuleAtom(index, 'text', e.target.value)}
                         className="w-full p-2 border rounded-md min-h-[60px] text-sm"
                       />
                     </div>
@@ -426,7 +483,7 @@ export function UploadClient({
                         <label className="block text-sm font-medium mb-1">Section</label>
                         <input
                           value={rule.section ?? ''}
-                          onChange={(e) => updateRuleAtom(index, 'section', e.target.value)}
+                          onChange={e => updateRuleAtom(index, 'section', e.target.value)}
                           className="w-full p-2 border rounded-md text-sm"
                         />
                       </div>
@@ -434,7 +491,7 @@ export function UploadClient({
                         <label className="block text-sm font-medium mb-1">Page</label>
                         <input
                           value={rule.page ?? ''}
-                          onChange={(e) => updateRuleAtom(index, 'page', e.target.value)}
+                          onChange={e => updateRuleAtom(index, 'page', e.target.value)}
                           className="w-full p-2 border rounded-md text-sm"
                         />
                       </div>
@@ -442,7 +499,7 @@ export function UploadClient({
                         <label className="block text-sm font-medium mb-1">Line</label>
                         <input
                           value={rule.line ?? ''}
-                          onChange={(e) => updateRuleAtom(index, 'line', e.target.value)}
+                          onChange={e => updateRuleAtom(index, 'line', e.target.value)}
                           className="w-full p-2 border rounded-md text-sm"
                         />
                       </div>
@@ -478,12 +535,12 @@ export function UploadClient({
           <Card className="p-6 text-center">
             <h2 className="text-2xl font-semibold mb-4">Step 4: Published Successfully! ✅</h2>
             <p className="text-muted-foreground mb-6">
-              Your RuleSpec for <strong>{ruleSpec?.gameId ?? confirmedGameId ?? 'unknown game'}</strong> has been published successfully!
+              Your RuleSpec for{' '}
+              <strong>{ruleSpec?.gameId ?? confirmedGameId ?? 'unknown game'}</strong> has been
+              published successfully!
             </p>
             <div className="flex gap-3 justify-center">
-              <Button onClick={resetWizard}>
-                Import Another PDF
-              </Button>
+              <Button onClick={resetWizard}>Import Another PDF</Button>
               <Button asChild variant="secondary">
                 <Link href={`/editor?gameId=${ruleSpec?.gameId ?? confirmedGameId ?? ''}`}>
                   Edit in RuleSpec Editor

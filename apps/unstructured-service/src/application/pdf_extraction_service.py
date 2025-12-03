@@ -25,7 +25,7 @@ class PdfExtractionService:
         self.quality_calculator = QualityScoreCalculator()
         self.settings = settings
 
-    async def extract_async(
+    def extract(
         self,
         file_content: BinaryIO,
         filename: str,
@@ -55,6 +55,12 @@ class PdfExtractionService:
             # Step 1: Save to temporary storage
             temp_path = self.file_storage.save_temp_file(file_content, filename)
             file_size = self.file_storage.get_file_size(temp_path)
+
+            # Enforce configured max file size before any heavy work
+            if file_size > self.settings.max_file_size:
+                raise ValueError(
+                    f"PDF too large: {file_size} bytes exceeds limit of {self.settings.max_file_size} bytes"
+                )
 
             # Step 2: Validate PDF
             pdf_doc = PdfDocument(

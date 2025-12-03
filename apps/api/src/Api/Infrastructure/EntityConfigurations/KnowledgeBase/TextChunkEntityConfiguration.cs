@@ -19,7 +19,11 @@ public class TextChunkEntityConfiguration : IEntityTypeConfiguration<TextChunkEn
         builder.Property(e => e.PageNumber);
         builder.Property(e => e.CharacterCount).IsRequired();
         builder.Property(e => e.CreatedAt).IsRequired();
-        // SearchVector column is managed by PostgreSQL trigger, no need to configure here
+
+        // AI-14: Hybrid search - PostgreSQL tsvector column managed by trigger
+        // Ignore in EF Core since it's managed by database trigger, not application
+        builder.Ignore(e => e.SearchVector);
+
         builder.HasOne(e => e.Game)
             .WithMany()
             .HasForeignKey(e => e.GameId)

@@ -130,6 +130,9 @@ public class EmbeddingService : IEmbeddingService
             "nomic-embed-text" => 768,
             "all-minilm" => 384,
             "mxbai-embed-large" => 1024,
+            // Multilingual models (local embedding service)
+            "multilingual-e5-large" => 1024,
+            "intfloat/multilingual-e5-large" => 1024,
             // Sentence transformers
             "all-minilm-l6-v2" => 384,
             "all-mpnet-base-v2" => 768,

@@ -28,9 +28,11 @@ services:
 
   redis:
     restart: unless-stopped
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-stagingredis}
+    command: ["sh","-c","redis-server --appendonly yes --requirepass $(cat /run/secrets/redis-password)"]
     volumes:
       - redisdata-staging:/data
+    secrets:
+      - redis-password
 
   qdrant:
     restart: unless-stopped
@@ -123,3 +125,7 @@ volumes:
     name: meepleai-prometheus-staging
   grafana-staging:
     name: meepleai-grafana-staging
+
+secrets:
+  redis-password:
+    file: ./secrets/staging/redis-password.txt

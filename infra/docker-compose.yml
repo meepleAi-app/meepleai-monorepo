@@ -7,7 +7,7 @@ services:
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
       POSTGRES_DB: ${POSTGRES_DB:-meepleai}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./init/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
@@ -25,8 +25,8 @@ services:
     image: qdrant/qdrant:v1.12.4
     restart: unless-stopped
     ports:
-      - "6333:6333"  # HTTP REST API
-      - "6334:6334"  # gRPC API
+      - "127.0.0.1:6333:6333"  # HTTP REST API
+      - "127.0.0.1:6334:6334"  # gRPC API
     volumes:
       - qdrantdata:/qdrant/storage
     healthcheck:
@@ -41,8 +41,9 @@ services:
   redis:
     image: redis:7.4.1-alpine3.20
     restart: unless-stopped
+    command: ["sh","-c","redis-server --appendonly yes --requirepass $(cat /run/secrets/redis-password)"]
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -50,9 +51,11 @@ services:
       retries: 5
     networks:
       - meepleai
+    secrets:
+      - redis-password
 
   ollama:
-    image: ollama/ollama:latest
+    image: ollama/ollama:0.3.14
     restart: unless-stopped
     ports:
       - "11434:11434"
@@ -76,7 +79,7 @@ services:
     #           capabilities: [gpu]
 
   ollama-pull:
-    image: curlimages/curl:latest
+    image: curlimages/curl:8.12.1
     container_name: ollama-pull
     depends_on:
       ollama:
@@ -199,8 +202,8 @@ services:
     environment:
       ACCEPT_EULA: "Y"
     ports:
-      - "5341:5341"  # Ingestion port
-      - "8081:80"    # Web UI port
+      - "127.0.0.1:5341:5341"  # Ingestion port
+      - "127.0.0.1:8081:80"    # Web UI port
     volumes:
       - seqdata:/data
     networks:
@@ -215,9 +218,9 @@ services:
       SPAN_STORAGE_TYPE: "badger"
       BADGER_EPHEMERAL: "true"  # Use in-memory storage for development (no persistence needed)
     ports:
-      - "16686:16686"  # Jaeger UI
-      - "4318:4318"    # OTLP HTTP receiver
-      - "4317:4317"    # OTLP gRPC receiver (optional)
+      - "127.0.0.1:16686:16686"  # Jaeger UI
+      - "127.0.0.1:4318:4318"    # OTLP HTTP receiver
+      - "127.0.0.1:4317:4317"    # OTLP gRPC receiver (optional)
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:16686"]
       interval: 10s
@@ -234,13 +237,14 @@ services:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
       - '--storage.tsdb.retention.time=30d'
+      - '--storage.tsdb.retention.size=5GB'
       - '--web.enable-lifecycle'
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./prometheus-rules.yml:/etc/prometheus/prometheus-rules.yml:ro
       - prometheusdata:/prometheus
     ports:
-      - "9090:9090"
+      - "127.0.0.1:9090:9090"
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
       interval: 10s
@@ -268,7 +272,7 @@ services:
       - '--storage.path=/alertmanager'
       - '--web.external-url=http://localhost:9093'
     ports:
-      - "9093:9093"
+      - "127.0.0.1:9093:9093"
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:9093/-/healthy"]
       interval: 10s
@@ -315,7 +319,7 @@ services:
     secrets:
       - grafana-admin-password
     ports:
-      - "3001:3000"
+      - "127.0.0.1:3001:3000"
     depends_on:
       - prometheus
       - jaeger
@@ -342,7 +346,7 @@ services:
     entrypoint: ["/scripts/load-secrets-env.sh"]
     command: ["n8n"]
     ports:
-      - "5678:5678"
+      - "127.0.0.1:5678:5678"
     depends_on:
       postgres:
         condition: service_healthy
@@ -368,10 +372,10 @@ services:
       REDIS_URL: redis:6379
       OLLAMA_URL: http://ollama:11434
       EMBEDDING_PROVIDER: ollama
-      EMBEDDING_MODEL: nomic-embed-text
-      EMBEDDING_DIMENSIONS: 768
+      EMBEDDING_MODEL: mxbai-embed-large
+      EMBEDDING_DIMENSIONS: 1024
       # Override nested config from appsettings.json (ASP.NET Core uses __ for nesting)
-      Embedding__Dimensions: 768
+      Embedding__Dimensions: 1024
       # AI-09: Local embedding service configuration
       LOCAL_EMBEDDING_URL: http://embedding-service:8000
       EMBEDDING_FALLBACK_ENABLED: "false"
@@ -386,7 +390,7 @@ services:
       - openrouter-api-key
       - initial-admin-password
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     depends_on:
       postgres:
         condition: service_healthy
@@ -413,7 +417,7 @@ services:
     env_file:
       - ./env/web.env.dev
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     depends_on:
       api:
         condition: service_healthy
@@ -453,6 +457,8 @@ networks:
 secrets:
   postgres-password:
     file: ./secrets/postgres-password.txt
+  redis-password:
+    file: ./secrets/redis-password.txt
   openrouter-api-key:
     file: ./secrets/openrouter-api-key.txt
   n8n-encryption-key:

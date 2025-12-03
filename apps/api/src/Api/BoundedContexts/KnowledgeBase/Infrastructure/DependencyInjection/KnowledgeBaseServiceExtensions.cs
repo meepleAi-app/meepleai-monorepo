@@ -1,6 +1,8 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Handlers;
 using Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Services;
+using Api.BoundedContexts.KnowledgeBase.Application.GridSearch.Handlers;
 using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
+using Api.BoundedContexts.KnowledgeBase.Application.Reports.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Services.Chunking;
 using Api.BoundedContexts.KnowledgeBase.Application.Services.Reranking;
@@ -138,6 +140,10 @@ public static class KnowledgeBaseServiceExtensions
 
         // Application Services - Resilient Retrieval with Reranking
         services.AddScoped<IRerankedRetrievalService, ResilientRetrievalService>();
+
+        // ISSUE-1907: ADR-016 Phase 5 - Grid Search and Benchmark Reports
+        services.AddScoped<RunGridSearchHandler>();
+        services.AddSingleton<IReportGeneratorService, ReportGeneratorService>();
 
         return services;
     }

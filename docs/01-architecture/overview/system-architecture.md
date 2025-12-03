@@ -754,7 +754,7 @@ services:
       - POSTGRES_URL=postgresql://user:pass@postgres:5432/meepleai
       - REDIS_URL=redis://redis:6379
       - WEAVIATE_URL=http://weaviate:8080
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
 
   frontend:
     build: ./frontend
@@ -822,11 +822,11 @@ spec:
             secretKeyRef:
               name: meepleai-secrets
               key: postgres-url
-        - name: OPENAI_API_KEY
+        - name: OPENROUTER_API_KEY
           valueFrom:
             secretKeyRef:
               name: meepleai-secrets
-              key: openai-api-key
+              key: openrouter-api-key
         resources:
           requests:
             memory: "512Mi"

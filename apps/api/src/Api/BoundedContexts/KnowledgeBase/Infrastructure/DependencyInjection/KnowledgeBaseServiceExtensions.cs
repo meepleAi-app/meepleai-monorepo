@@ -2,10 +2,12 @@ using Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Handlers;
 using Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
+using Api.BoundedContexts.KnowledgeBase.Application.Services.Chunking;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.QualityTracking;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
+using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence.Chunking;
 using Api.Services;
 using Api.Services.LlmClients;
 
@@ -25,6 +27,7 @@ public static class KnowledgeBaseServiceExtensions
         services.AddSingleton<QualityTrackingDomainService>();
         services.AddSingleton<ChatContextDomainService>(); // Issue #857: Chat history context
         services.AddSingleton<AgentOrchestrationService>(); // Issue #867: Agent invocation orchestration
+        services.AddSingleton<ChunkingStrategySelector>(); // ISSUE-1903: ADR-016 Phase 1 - Chunking strategy selection
 
         // ISSUE-970: BGAI-028 - Confidence Validation (threshold >= 0.70)
         services.AddSingleton<IConfidenceValidationService, ConfidenceValidationService>();
@@ -87,6 +90,12 @@ public static class KnowledgeBaseServiceExtensions
         services.AddScoped<AskQuestionQueryHandler>();
         services.AddScoped<GetLlmCostReportQueryHandler>(); // ISSUE-960: Cost reporting
         services.AddScoped<InvokeAgentCommandHandler>(); // Issue #867: Agent invocation
+
+        // ISSUE-1903: ADR-016 Phase 1 - Advanced Chunking
+        // Application Service (Scoped - uses ITextChunkingService)
+        services.AddScoped<IAdvancedChunkingService, AdvancedChunkingService>();
+        // Infrastructure - In-Memory Repository (Singleton - shared in-memory store)
+        services.AddSingleton<IChunkRepository, InMemoryChunkRepository>();
 
         // ISSUE-1902: ADR-016 Phase 0 - Dataset Evaluation Service
         // Named IDatasetEvaluationService to avoid conflict with Api.Services.IRagEvaluationService

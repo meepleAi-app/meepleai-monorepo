@@ -196,6 +196,39 @@ services:
     #           count: 1
     #           capabilities: [gpu]
 
+  # ADR-016 Phase 4: Cross-encoder reranking service for RAG pipeline
+  reranker-service:
+    build:
+      context: ../apps/reranker-service
+      dockerfile: ./Dockerfile
+    container_name: meepleai-reranker
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8003:8003"  # Bind to localhost only for security
+    environment:
+      - MODEL_NAME=BAAI/bge-reranker-v2-m3
+      - BATCH_SIZE=32
+      - LOG_LEVEL=INFO
+      - ENABLE_MODEL_WARMUP=true
+    volumes:
+      - reranker-models:/root/.cache/huggingface
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s  # Long startup for model download
+    networks:
+      - meepleai
+    # Uncomment for GPU support (requires NVIDIA Docker runtime)
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
   seq:
     image: datalust/seq:2025.1
     restart: unless-stopped
@@ -379,6 +412,8 @@ services:
       # AI-09: Local embedding service configuration
       LOCAL_EMBEDDING_URL: http://embedding-service:8000
       EMBEDDING_FALLBACK_ENABLED: "false"
+      # ADR-016 Phase 4: Reranker service configuration
+      RERANKER_SERVICE_URL: http://reranker-service:8003
       # SEC-708: OpenRouter API key from secret file
       OPENROUTER_API_KEY_FILE: /run/secrets/openrouter-api-key
       # Bootstrap: Initial admin user configuration (password from secret)
@@ -446,6 +481,8 @@ volumes:
   # BGAI-005: SmolDocling VLM service storage
   smoldocling-temp:
   smoldocling-models:  # Hugging Face model cache
+  # ADR-016 Phase 4: Reranker service model cache
+  reranker-models:
 
 networks:
   meepleai:

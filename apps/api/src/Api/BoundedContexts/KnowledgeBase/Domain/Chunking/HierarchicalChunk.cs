@@ -66,6 +66,8 @@ public sealed class HierarchicalChunk
         if (level < 0 || level > 2)
             throw new ArgumentOutOfRangeException(nameof(level), "Level must be 0, 1, or 2");
 
+        ArgumentNullException.ThrowIfNull(metadata, nameof(metadata));
+
         return new HierarchicalChunk
         {
             Id = Guid.NewGuid().ToString("N"),

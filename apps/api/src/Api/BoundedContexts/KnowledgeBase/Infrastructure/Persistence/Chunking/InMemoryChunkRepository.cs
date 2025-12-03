@@ -8,6 +8,13 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence.Chunking;
 /// ADR-016 Phase 1: In-memory implementation of IChunkRepository.
 /// Used for development and testing. Will be replaced with EF Core implementation in later phases.
 /// </summary>
+/// <remarks>
+/// <para><b>DI Lifetime Warning:</b> This repository is registered as Singleton but stores mutable
+/// HierarchicalChunk entities. While ConcurrentDictionary provides thread-safe operations on the
+/// dictionary itself, the HierarchicalChunk.ChildIds list is mutable and not thread-safe.</para>
+/// <para>This is acceptable for Phase 1 (development/testing) but the EF Core implementation
+/// in Phase 2 will use proper scoped lifetime with database-level concurrency control.</para>
+/// </remarks>
 public sealed class InMemoryChunkRepository : IChunkRepository
 {
     private readonly ConcurrentDictionary<string, HierarchicalChunk> _chunks = new();

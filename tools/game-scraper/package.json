@@ -1,0 +1,25 @@
+﻿{
+  "name": "@meepleai/game-scraper",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "scraper:game": "tsx src/cli/game.ts",
+    "scraper:plays": "tsx src/cli/plays.ts",
+    "scraper:qa": "tsx src/cli/qa.ts",
+    "scraper:validate": "tsx src/cli/validate.ts"
+  },
+  "dependencies": {
+    "axios": "^1.7.9",
+    "commander": "^12.1.0",
+    "dotenv": "^16.4.5",
+    "fs-extra": "^11.2.0",
+    "p-limit": "^4.0.0",
+    "pdf-parse": "^1.1.1",
+    "xml2js": "^0.6.2"
+  },
+  "devDependencies": {
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}

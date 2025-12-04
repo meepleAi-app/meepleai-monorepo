@@ -1,0 +1,377 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ErrorDisplay > Snapshot tests > should match snapshot for generic variant 1`] = `
+<div
+  aria-live="assertive"
+  class="flex flex-col items-center justify-center py-8 px-6 text-center rounded-xl border bg-red-50 dark:bg-red-950/30 border-current/10"
+  data-testid="error-display"
+  data-variant="generic"
+  role="alert"
+>
+  <div
+    aria-hidden="true"
+    class="mb-4 p-4 rounded-full bg-white/80 dark:bg-slate-800/80 shadow-sm transition-transform duration-300"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-circle-alert w-8 h-8 text-red-500 dark:text-red-400"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="1.5"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <circle
+        cx="12"
+        cy="12"
+        r="10"
+      />
+      <line
+        x1="12"
+        x2="12"
+        y1="8"
+        y2="12"
+      />
+      <line
+        x1="12"
+        x2="12.01"
+        y1="16"
+        y2="16"
+      />
+    </svg>
+  </div>
+  <h3
+    class="text-lg font-semibold text-slate-900 dark:text-slate-100 font-quicksand mb-2"
+  >
+    Errore imprevisto
+  </h3>
+  <p
+    class="text-sm text-slate-600 dark:text-slate-400 max-w-sm mb-4"
+  >
+    Si è verificato un errore
+  </p>
+  <span
+    class="sr-only"
+  >
+    Errore: 
+    Errore imprevisto
+    . 
+    Si è verificato un errore
+  </span>
+</div>
+`;
+
+exports[`ErrorDisplay > Snapshot tests > should match snapshot for network variant 1`] = `
+<div
+  aria-live="assertive"
+  class="flex flex-col items-center justify-center py-8 px-6 text-center rounded-xl border bg-yellow-50 dark:bg-yellow-950/30 border-current/10"
+  data-testid="error-display"
+  data-variant="network"
+  role="alert"
+>
+  <div
+    aria-hidden="true"
+    class="mb-4 p-4 rounded-full bg-white/80 dark:bg-slate-800/80 shadow-sm transition-transform duration-300 animate-pulse"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-wifi-off w-8 h-8 text-yellow-500 dark:text-yellow-400"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="1.5"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M12 20h.01"
+      />
+      <path
+        d="M8.5 16.429a5 5 0 0 1 7 0"
+      />
+      <path
+        d="M5 12.859a10 10 0 0 1 5.17-2.69"
+      />
+      <path
+        d="M19 12.859a10 10 0 0 0-2.007-1.523"
+      />
+      <path
+        d="M2 8.82a15 15 0 0 1 4.177-2.643"
+      />
+      <path
+        d="M22 8.82a15 15 0 0 0-11.288-3.764"
+      />
+      <path
+        d="m2 2 20 20"
+      />
+    </svg>
+  </div>
+  <h3
+    class="text-lg font-semibold text-slate-900 dark:text-slate-100 font-quicksand mb-2"
+  >
+    Errore di connessione
+  </h3>
+  <p
+    class="text-sm text-slate-600 dark:text-slate-400 max-w-sm mb-4"
+  >
+    Verifica la tua connessione
+  </p>
+  <button
+    aria-label="Riprova"
+    class="inline-flex items-center justify-center whitespace-nowrap rounded-lg font-quicksand font-semibold text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 shadow-sm hover:-translate-y-0.5 active:translate-y-0 motion-reduce:transform-none [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 motion-safe:hover:animate-bounce-subtle h-11 px-6 gap-2 bg-primary hover:bg-primary/90 text-primary-foreground transition-all duration-200 hover:shadow-md active:scale-95"
+    type="button"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-refresh-cw h-4 w-4"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"
+      />
+      <path
+        d="M21 3v5h-5"
+      />
+      <path
+        d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"
+      />
+      <path
+        d="M8 16H3v5"
+      />
+    </svg>
+    <span>
+      Riprova
+    </span>
+  </button>
+  <span
+    class="sr-only"
+  >
+    Errore: 
+    Errore di connessione
+    . 
+    Verifica la tua connessione
+     Premi il pulsante per riprovare.
+  </span>
+</div>
+`;
+
+exports[`ErrorDisplay > Snapshot tests > should match snapshot for rateLimit variant with countdown 1`] = `
+<div
+  aria-live="assertive"
+  class="flex flex-col items-center justify-center py-8 px-6 text-center rounded-xl border bg-purple-50 dark:bg-purple-950/30 border-current/10"
+  data-testid="error-display"
+  data-variant="rateLimit"
+  role="alert"
+>
+  <div
+    aria-hidden="true"
+    class="mb-4 p-4 rounded-full bg-white/80 dark:bg-slate-800/80 shadow-sm transition-transform duration-300"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-clock w-8 h-8 text-purple-500 dark:text-purple-400"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="1.5"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M12 6v6l4 2"
+      />
+      <circle
+        cx="12"
+        cy="12"
+        r="10"
+      />
+    </svg>
+  </div>
+  <h3
+    class="text-lg font-semibold text-slate-900 dark:text-slate-100 font-quicksand mb-2"
+  >
+    Troppe richieste
+  </h3>
+  <p
+    class="text-sm text-slate-600 dark:text-slate-400 max-w-sm mb-4"
+  >
+    Hai effettuato troppe richieste. Attendi prima di riprovare.
+  </p>
+  <div
+    aria-atomic="true"
+    aria-live="polite"
+    class="mb-4 px-4 py-2 rounded-lg bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 font-mono text-sm font-medium"
+  >
+    Attendi 
+    1m
+  </div>
+  <button
+    aria-label="Riprova tra 1m"
+    class="inline-flex items-center justify-center whitespace-nowrap rounded-lg font-quicksand font-semibold text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 shadow-sm hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 motion-reduce:transform-none [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 motion-safe:hover:animate-bounce-subtle h-11 px-6 gap-2 bg-primary hover:bg-primary/90 text-primary-foreground transition-all duration-200"
+    disabled=""
+    type="button"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-refresh-cw h-4 w-4"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"
+      />
+      <path
+        d="M21 3v5h-5"
+      />
+      <path
+        d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"
+      />
+      <path
+        d="M8 16H3v5"
+      />
+    </svg>
+    <span>
+      Attendi 1m
+    </span>
+  </button>
+  <span
+    class="sr-only"
+  >
+    Errore: 
+    Troppe richieste
+    . 
+    Hai effettuato troppe richieste. Attendi prima di riprovare.
+     Attendi 1m prima di riprovare.
+  </span>
+</div>
+`;
+
+exports[`ErrorDisplay > Snapshot tests > should match snapshot for server variant with correlation ID 1`] = `
+<div
+  aria-live="assertive"
+  class="flex flex-col items-center justify-center py-8 px-6 text-center rounded-xl border bg-orange-50 dark:bg-orange-950/30 border-current/10"
+  data-testid="error-display"
+  data-variant="server"
+  role="alert"
+>
+  <div
+    aria-hidden="true"
+    class="mb-4 p-4 rounded-full bg-white/80 dark:bg-slate-800/80 shadow-sm transition-transform duration-300"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-server-crash w-8 h-8 text-orange-500 dark:text-orange-400"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="1.5"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M6 10H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2"
+      />
+      <path
+        d="M6 14H4a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-4a2 2 0 0 0-2-2h-2"
+      />
+      <path
+        d="M6 6h.01"
+      />
+      <path
+        d="M6 18h.01"
+      />
+      <path
+        d="m13 6-4 6h6l-4 6"
+      />
+    </svg>
+  </div>
+  <h3
+    class="text-lg font-semibold text-slate-900 dark:text-slate-100 font-quicksand mb-2"
+  >
+    Errore del server
+  </h3>
+  <p
+    class="text-sm text-slate-600 dark:text-slate-400 max-w-sm mb-4"
+  >
+    Internal server error
+  </p>
+  <button
+    aria-label="Riprova"
+    class="inline-flex items-center justify-center whitespace-nowrap rounded-lg font-quicksand font-semibold text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 shadow-sm hover:-translate-y-0.5 active:translate-y-0 motion-reduce:transform-none [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 motion-safe:hover:animate-bounce-subtle h-11 px-6 gap-2 bg-primary hover:bg-primary/90 text-primary-foreground transition-all duration-200 hover:shadow-md active:scale-95"
+    type="button"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-refresh-cw h-4 w-4"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"
+      />
+      <path
+        d="M21 3v5h-5"
+      />
+      <path
+        d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"
+      />
+      <path
+        d="M8 16H3v5"
+      />
+    </svg>
+    <span>
+      Riprova
+    </span>
+  </button>
+  <p
+    class="mt-4 text-xs text-slate-400 dark:text-slate-500 font-mono"
+  >
+    ID: 
+    test-123
+  </p>
+  <span
+    class="sr-only"
+  >
+    Errore: 
+    Errore del server
+    . 
+    Internal server error
+     Premi il pulsante per riprovare.
+  </span>
+</div>
+`;

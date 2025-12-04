@@ -13,6 +13,7 @@
   --animate-fade-in: fadeIn 0.5s ease-in;
   --animate-slide-up: slideUp 0.6s ease-out;
   --animate-scale-in: scaleIn 0.4s ease-out;
+  --animate-bounce-subtle: bounceSubtle 0.35s ease-out;
   --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
@@ -43,13 +44,24 @@
   }
 }
 
+@keyframes bounceSubtle {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
 @layer base {
-  body {
-    @apply bg-slate-950 text-white antialiased;
+  * {
+    @apply border-border outline-ring/50;
   }
 
-  * {
-    @apply border-slate-800;
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: var(--font-body, var(--font-sans));
   }
 }
 
@@ -187,6 +199,50 @@
   --sidebar-accent-foreground: 30 15% 15%;
   --sidebar-border: 30 15% 82%;
   --sidebar-ring: 25 95% 53%;
+
+  /* Playful Boardroom alias tokens for redesigned components */
+  --color-primary-200: hsl(25 92% 88%);
+  --color-primary-300: hsl(25 92% 75%);
+  --color-primary-500: hsl(var(--primary));
+  --color-primary-600: hsl(25 95% 45%);
+  --color-primary-700: hsl(25 95% 38%);
+  --color-secondary-200: hsl(142 45% 82%);
+  --color-secondary-500: hsl(var(--secondary));
+  --color-secondary-600: hsl(142 76% 30%);
+  --color-blue: hsl(221 83% 53%);
+  --color-green: hsl(142 76% 36%);
+  --color-yellow: hsl(45 93% 47%);
+  --color-red: hsl(var(--destructive));
+  --color-neutral-300: hsl(30 15% 85%);
+  --color-neutral-400: hsl(30 12% 72%);
+  --color-neutral-600: hsl(30 12% 45%);
+
+  --bg-primary: hsl(var(--background));
+  --bg-secondary: hsl(30 20% 94%);
+  --bg-tertiary: hsl(30 18% 90%);
+  --bg-elevated: hsl(var(--card));
+
+  --border-primary: hsl(var(--border));
+  --border-secondary: hsl(30 12% 75%);
+
+  --text-primary: hsl(var(--foreground));
+  --text-secondary: hsl(var(--muted-foreground));
+  --text-tertiary: hsl(30 10% 55%);
+  --text-inverse: hsl(var(--primary-foreground));
+
+  --font-display: var(--font-quicksand, var(--font-sans));
+  --font-body: var(--font-inter, var(--font-sans));
+  --font-size-xs: var(--text-xs);
+  --font-size-sm: var(--text-sm);
+  --font-size-base: var(--text-base);
+  --font-size-lg: var(--text-lg);
+  --font-size-xl: var(--text-xl);
+  --font-size-2xl: var(--text-2xl);
+  --font-size-3xl: var(--text-3xl);
+  --font-size-4xl: var(--text-4xl);
+  --font-weight-medium: var(--font-medium);
+  --font-weight-semibold: var(--font-semibold);
+  --font-weight-bold: var(--font-bold);
 }
 
 .dark {
@@ -227,13 +283,47 @@
   --sidebar-accent-foreground: 30 5% 90%;
   --sidebar-border: 30 8% 25%;
   --sidebar-ring: 25 95% 60%;
-}
 
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
+  --color-primary-200: hsl(25 92% 70%);
+  --color-primary-300: hsl(25 92% 62%);
+  --color-primary-500: hsl(var(--primary));
+  --color-primary-600: hsl(25 95% 52%);
+  --color-primary-700: hsl(25 95% 45%);
+  --color-secondary-200: hsl(142 35% 65%);
+  --color-secondary-500: hsl(var(--secondary));
+  --color-secondary-600: hsl(142 76% 38%);
+  --color-blue: hsl(221 83% 65%);
+  --color-green: hsl(142 76% 50%);
+  --color-yellow: hsl(45 93% 55%);
+  --color-red: hsl(0 72% 60%);
+  --color-neutral-300: hsl(30 8% 26%);
+  --color-neutral-400: hsl(30 8% 34%);
+  --color-neutral-600: hsl(30 8% 46%);
+
+  --bg-primary: hsl(var(--background));
+  --bg-secondary: hsl(30 8% 20%);
+  --bg-tertiary: hsl(30 8% 24%);
+  --bg-elevated: hsl(var(--card));
+
+  --border-primary: hsl(var(--border));
+  --border-secondary: hsl(30 8% 30%);
+
+  --text-primary: hsl(var(--foreground));
+  --text-secondary: hsl(30 5% 70%);
+  --text-tertiary: hsl(30 5% 60%);
+  --text-inverse: hsl(var(--primary-foreground));
+
+  --font-display: var(--font-quicksand, var(--font-sans));
+  --font-body: var(--font-inter, var(--font-sans));
+  --font-size-xs: var(--text-xs);
+  --font-size-sm: var(--text-sm);
+  --font-size-base: var(--text-base);
+  --font-size-lg: var(--text-lg);
+  --font-size-xl: var(--text-xl);
+  --font-size-2xl: var(--text-2xl);
+  --font-size-3xl: var(--text-3xl);
+  --font-size-4xl: var(--text-4xl);
+  --font-weight-medium: var(--font-medium);
+  --font-weight-semibold: var(--font-semibold);
+  --font-weight-bold: var(--font-bold);
 }

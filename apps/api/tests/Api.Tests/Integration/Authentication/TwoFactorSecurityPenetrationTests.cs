@@ -52,6 +52,7 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
     private ITotpService? _totpService;
     private IUserRepository? _userRepository;
     private IUnitOfWork? _unitOfWork;
+    private Mock<IAlertingService>? _mockAlertingService; // ISSUE-1674: Store for alert verification
     private readonly Action<string> _output;
 
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
@@ -134,8 +135,8 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
         services.AddSingleton(mockRateLimitService.Object);
 
         // SEC-05: Mock alerting service for security tests
-        var mockAlertingService = new Mock<IAlertingService>();
-        mockAlertingService
+        _mockAlertingService = new Mock<IAlertingService>(); // ISSUE-1674: Store in field for verification
+        _mockAlertingService
             .Setup(x => x.SendAlertAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
                 It.IsAny<Dictionary<string, object>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new AlertDto(
@@ -149,7 +150,7 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
                 IsActive: true,
                 ChannelSent: null
             ));
-        services.AddSingleton(mockAlertingService.Object);
+        services.AddSingleton(_mockAlertingService.Object);
 
         // SEC-05: Mock Redis connection for lockout tracking
         var mockRedis = new Mock<StackExchange.Redis.IConnectionMultiplexer>();
@@ -431,8 +432,17 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
         _output("❌ VULNERABILITY: No security alerts generated after 15 failed attempts");
         _output("📋 RECOMMENDATION: Generate alert after 10 failed attempts within 5 minutes");
 
-        // TODO: Verify alert was sent (requires IAlertingService mock)
-        // Assert.True(alertGenerated, "Security alert should be sent after repeated failures");
+        // ISSUE-1674: Verify security alert was sent after repeated failures
+        // Note: TotpService calls IAlertingService.SendAlertAsync on lockout events
+        _mockAlertingService!.Verify(
+            x => x.SendAlertAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.Is<string>(msg => msg.Contains("failed") || msg.Contains("lockout") || msg.Contains("attempt")),
+                It.IsAny<Dictionary<string, object>>(),
+                It.IsAny<CancellationToken>()),
+            Times.AtLeastOnce(),
+            "Security alert should be sent after repeated 2FA failures");
     }
 
     #endregion

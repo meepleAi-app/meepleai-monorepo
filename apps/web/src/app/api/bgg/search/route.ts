@@ -4,7 +4,37 @@ const ITEM_REGEX = /<item[^>]*id="(\d+)"[^>]*>([\s\S]*?)<\/item>/g;
 const NAME_REGEX = /<name[^>]*value="([^"]+)"/i;
 const YEAR_REGEX = /<yearpublished[^>]*value="(\d{4})"/i;
 
-const HTML_CARD_REGEX = /data-objectid="(\d+)"[\s\S]*?primary"[^>]*>([^<]+)<\/a>[\s\S]*?(\d{4})?/g;
+// Safe HTML parsing helper - extracts game cards without vulnerable regex
+function parseHtmlCards(html: string): { id: number; name: string; year?: number }[] {
+  const items: { id: number; name: string; year?: number }[] = [];
+
+  // Split by data-objectid to get individual card chunks
+  const chunks = html.split(/data-objectid="/);
+
+  for (let i = 1; i < chunks.length && items.length < 20; i++) {
+    const chunk = chunks[i];
+
+    // Extract ID from start of chunk
+    const idMatch = chunk.match(/^(\d+)"/);
+    if (!idMatch) continue;
+    const id = Number(idMatch[1]);
+
+    // Extract name - look for primary link text (bounded search)
+    const nameSection = chunk.slice(0, 2000); // Limit search area
+    const nameMatch = nameSection.match(/primary"[^>]*>([^<]+)<\/a>/);
+    const name = nameMatch?.[1]?.trim() ?? '';
+
+    // Extract year - look for 4-digit year
+    const yearMatch = nameSection.match(/\((\d{4})\)/);
+    const year = yearMatch ? Number(yearMatch[1]) : undefined;
+
+    if (name) {
+      items.push({ id, name, year });
+    }
+  }
+
+  return items;
+}
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -54,15 +84,6 @@ export async function GET(req: Request) {
   const resHtml = await fetch(htmlUrl, { cache: 'no-store' });
   if (!resHtml.ok) return NextResponse.json({ error: 'BGG search unavailable' }, { status: 502 });
   const html = await resHtml.text();
-  const items: { id: number; name: string; year?: number }[] = [];
-  let match: RegExpExecArray | null;
-  while ((match = HTML_CARD_REGEX.exec(html)) !== null) {
-    const [, idStr, nameRaw, yearRaw] = match;
-    const id = Number(idStr);
-    const name = nameRaw?.trim() ?? '';
-    const year = yearRaw && /^\d{4}$/.test(yearRaw) ? Number(yearRaw) : undefined;
-    items.push({ id, name, year });
-    if (items.length >= 20) break;
-  }
+  const items = parseHtmlCards(html);
   return NextResponse.json({ count: items.length, items, source: 'html' });
 }

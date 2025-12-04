@@ -343,7 +343,8 @@ describe('PromptVersionCard', () => {
 
       const viewButton = screen.getByText('View');
       expect(viewButton).toHaveClass('border');
-      expect(viewButton).toHaveClass('bg-background');
+      // Note: View button uses outline variant which has bg-card class
+      expect(viewButton).toHaveClass('bg-card');
     });
   });
 });

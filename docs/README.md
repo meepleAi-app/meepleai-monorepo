@@ -30,7 +30,15 @@ docs/
 
 ## Quick Start
 
-### New to MeepleAI?
+### I'm a Player (End User)
+
+- **User Guide**: [Guida Utente (IT)](./00-getting-started/user-guide.md) - Complete guide in Italian for players
+  - How to upload rulebooks
+  - How to ask questions during gameplay
+  - Chat interface and advanced features
+  - FAQ and support
+
+### New to MeepleAI (Developers)?
 
 1. **[Quick Start Guide](./00-getting-started/quick-start.md)** - Get MeepleAI running locally in 15 minutes
 2. **[Executive Summary](./00-getting-started/executive-summary.md)** - High-level overview of the project
@@ -81,7 +89,9 @@ docs/
 
 | Document | Description |
 |----------|-------------|
+| [User Guide (IT)](./00-getting-started/user-guide.md) | **NEW** Guida completa per giocatori (italiano) |
 | [Quick Start](./00-getting-started/quick-start.md) | Step-by-step local setup (Docker, API, Web) |
+| [Guida Setup Locale (IT)](./00-getting-started/guida-setup-locale.md) | Setup dettagliato in italiano |
 | [Executive Summary](./00-getting-started/executive-summary.md) | High-level project overview |
 | [Overview](./00-getting-started/overview.md) | Documentation overview |
 

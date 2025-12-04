@@ -19,6 +19,24 @@ MeepleAI helps players quickly find answers to gameplay questions by processing 
 - **Chat Interface**: Interactive chat for asking gameplay questions
 - **Admin Dashboard**: Statistics, logs, and system monitoring
 
+## 🎮 Per gli Utenti (Giocatori)
+
+**Sei un giocatore e vuoi usare MeepleAI?** Consulta la nostra guida utente:
+
+- **[Guida Utente (IT)](./docs/00-getting-started/user-guide.md)** - Guida completa in italiano per iniziare
+  - Come caricare i regolamenti dei tuoi giochi
+  - Come fare domande durante le partite
+  - Interfaccia chat e funzionalita avanzate
+  - FAQ e supporto
+
+**Quick Start per Giocatori**:
+1. Accedi su [meepleai.dev](https://meepleai.dev)
+2. Carica il PDF del regolamento del tuo gioco
+3. Inizia a fare domande in linguaggio naturale
+4. Ricevi risposte con citazioni dal regolamento
+
+> **Nota**: MeepleAI e ottimizzato per il mercato italiano con interfaccia e risposte in italiano.
+
 ## 🏗️ Architecture
 
 **Domain-Driven Design (DDD) - 99% Complete**:
@@ -383,4 +401,4 @@ See [LICENSE](./LICENSE) for full terms.
 
 **Maintained by**: MeepleAI Team
 **Version**: 1.0-rc (DDD 99%)
-**Last Updated**: 2025-11-13
+**Last Updated**: 2025-12-04

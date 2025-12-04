@@ -12,7 +12,7 @@ namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 /// Tests for GetAllUsersQueryHandler.
 /// Tests user listing with pagination, filtering, and sorting.
 /// NOTE: Uses DbContext directly - simplified tests due to mocking complexity.
-/// TODO: Add integration tests for full pagination/filtering workflow.
+/// ISSUE-1674: Add integration tests for full pagination/filtering workflow.
 /// ISSUE-1500: TEST-002 - Fixed test isolation (fresh context per test)
 /// </summary>
 public class GetAllUsersQueryHandlerTests
@@ -147,4 +147,3 @@ public class GetAllUsersQueryHandlerTests
     // 7. Empty result sets
     // 8. LastSeenAt calculation from active sessions
 }
-

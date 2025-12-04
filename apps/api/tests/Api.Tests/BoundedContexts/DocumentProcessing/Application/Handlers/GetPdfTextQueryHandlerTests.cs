@@ -14,8 +14,7 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Handlers;
 /// ISSUE-1818: Migrated to FluentAssertions for improved readability.
 /// Tests PDF extracted text retrieval.
 /// NOTE: Uses DbContext directly - simplified tests due to mocking complexity.
-/// TODO: Convert to integration tests or refactor handler to use repository.
-/// ISSUE-1818: Migrated to FluentAssertions for improved readability.
+/// ISSUE-1674: Convert to integration tests or refactor handler to use repository.
 /// </summary>
 public class GetPdfTextQueryHandlerTests
 {

@@ -68,7 +68,7 @@ public class MeepleAiDbContext : DbContext
         // Rationale: We're in alpha with no production data. TokenUsage is a value object
         // used only in-memory (method parameters, domain events), not persisted to DB.
         // EF Core incorrectly detects it as a model change.
-        // TODO: Remove this suppression when moving to Beta/Production with real data.
+        // ISSUE-1694: Remove this suppression when moving to Beta/Production with real data.
         optionsBuilder.ConfigureWarnings(warnings =>
             warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
     }

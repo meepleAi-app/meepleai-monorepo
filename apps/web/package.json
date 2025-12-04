@@ -4,6 +4,7 @@
   "scripts": {
     "dev": "node ./node_modules/next/dist/bin/next dev -p 3000",
     "build": "node ./node_modules/next/dist/bin/next build",
+    "build:analyze": "cross-env ANALYZE=true node ./node_modules/next/dist/bin/next build",
     "start": "node ./node_modules/next/dist/bin/next start -p 3000",
     "generate:api": "tsx scripts/generate-api-client.ts",
     "test": "vitest run",
@@ -114,6 +115,7 @@
     "@chromatic-com/storybook": "4.1.3",
     "@eslint/eslintrc": "^3.3.3",
     "@eslint/js": "^9.39.1",
+    "@next/bundle-analyzer": "^16.0.7",
     "@next/swc-linux-x64-gnu": "^16.0.1",
     "@playwright/test": "^1.57.0",
     "@storybook/addon-a11y": "10.1.2",
@@ -144,6 +146,7 @@
     "autoprefixer": "^10.4.22",
     "axe-core": "^4.11.0",
     "chromatic": "^13.3.4",
+    "cross-env": "^10.1.0",
     "dotenv": "^17.2.3",
     "dotenv-cli": "^11.0.0",
     "eslint": "9.39.1",

@@ -2,9 +2,9 @@
   "metadata": {
     "version": "1.0",
     "created_at": "2025-11-30T11:36:18.6961455Z",
-    "description": "Golden dataset for RAG quality testing - 1000 Q&A pairs across 10 popular board games (template-generated for alpha testing) + 20 expert-annotated Terraforming Mars Q&A (BGAI-056) + 15 expert-annotated Wingspan Q&A (BGAI-057) + 15 expert-annotated Azul Q&A (BGAI-058)",
-    "total_test_cases": 1050,
-    "games_count": 10,
+    "description": "Golden dataset for RAG quality testing - 1000 Q&A pairs across 10 popular board games (template-generated for alpha testing) + 20 expert-annotated Terraforming Mars Q&A (BGAI-056) + 15 expert-annotated Wingspan Q&A (BGAI-057) + 15 expert-annotated Azul Q&A (BGAI-058) + 15 expert-annotated Catan Q&A (BGAI-070) + 15 expert-annotated Ticket to Ride Q&A (BGAI-070)",
+    "total_test_cases": 1080,
+    "games_count": 12,
     "annotators": [
       "template_generated_alpha",
       "needs_expert_validation_post_alpha"
@@ -25094,19 +25094,779 @@
           "annotated_at": "2025-11-30T11:36:18.6997632Z"
         }
       ]
+    },
+    {
+      "game_id": "catan",
+      "game_name": "Catan",
+      "language": "it",
+      "test_cases": [
+        {
+          "id": "catan_expert_001",
+          "question": "Quanti punti vittoria servono per vincere a Catan?",
+          "expected_answer_keywords": [
+            "10",
+            "punti",
+            "vittoria"
+          ],
+          "expected_citations": [
+            {
+              "page": 5,
+              "snippet_contains": "10 victory points"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "easy",
+          "category": "endgame",
+          "annotated_by": "expert_bgai070",
+          "annotated_at": "2025-12-04T10:00:00Z"
+        },
+        {
+          "id": "catan_expert_002",
+          "question": "Cosa succede quando si tira un 7 ai dadi in Catan?",
+          "expected_answer_keywords": [
+            "7",
+            "ladro",
+            "robber",
+            "scartare",
+            "metà"
+          ],
+          "expected_citations": [
+            {
+              "page": 5,
+              "snippet_contains": "Rolling a 7"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "medium",
+          "category": "gameplay",
+          "annotated_by": "expert_bgai070",
+          "annotated_at": "2025-12-04T10:00:00Z"
+        },
+        {
+          "id": "catan_expert_003",
+          "question": "Quanto costa costruire una strada in Catan?",
+          "expected_answer_keywords": [
+            "mattone",
+            "legno",
+            "brick",
+            "lumber"
+          ],
+          "expected_citations": [
+            {
+              "page": 4,
+              "snippet_contains": "Brick & Lumber"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "easy",
+          "category": "gameplay",
+          "annotated_by": "expert_bgai070",
+          "annotated_at": "2025-12-04T10:00:00Z"
+        },
+        {
+          "id": "catan_expert_004",
+          "question": "Quanti punti vale la carta Strada più Lunga in Catan?",
+          "expected_answer_keywords": [
+            "2",
+            "punti",
+            "vittoria",
+            "strada"
+          ],
+          "expected_citations": [
+            {
+              "page": 9,
+              "snippet_contains": "Longest Road"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "easy",
+          "category": "scoring",
+          "annotated_by": "expert_bgai070",
+          "annotated_at": "2025-12-04T10:00:00Z"
+        },
+        {
+          "id": "catan_expert_005",
+          "question": "Qual è la distanza minima tra due insediamenti in Catan?",
+          "expected_answer_keywords": [
+            "distanza",
+            "2",
+            "intersezioni",
+            "distance rule"
+          ],
+          "expected_citations": [
+            {
+              "page": 7,
+              "snippet_contains": "Distance Rule"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "medium",
+          "category": "gameplay",
+          "annotated_by": "expert_bgai070",
+          "annotated_at": "2025-12-04T10:00:00Z"
+        },
+        {
+          "id": "catan_expert_006",
+          "question": "Quante risorse produce una città rispetto a un insediamento in Catan?",
+          "expected_answer_keywords": [
+            "2",
+            "risorse",
+            "città",
+            "doppio"
+          ],
+          "expected_citations": [
+            {
+              "page": 6,
+              "snippet_contains": "Cities produce twice"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "easy",
+          "category": "gameplay",
+          "annotated_by": "expert_bgai070",
+          "annotated_at": "2025-12-04T10:00:00Z"
+        },
+        {
+          "id": "catan_expert_007",
+          "question": "Quanto costa una carta sviluppo in Catan?",
+          "expected_answer_keywords": [
+            "minerale",
+            "ore",
+            "lana",
+            "wool",
+            "grano",
+            "grain"
+          ],
+          "expected_citations": [
+            {
+              "page": 5,
+              "snippet_contains": "Ore, Wool, & Grain"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "easy",
+          "category": "gameplay",
+          "annotated_by": "expert_bgai070",
+          "annotated_at": "2025-12-04T10:00:00Z"
+        },
+        {
+          "id": "catan_expert_008",
+          "question": "Quanti insediamenti e città può avere un giocatore al massimo in Catan?",
+          "expected_answer_keywords": [
+            "5",
+            "insediamenti",
+            "4",
+            "città"
+          ],
+          "expected_citations": [
+            {
+              "page": 3,
+              "snippet_contains": "5 settlements, 4 cities"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "medium",
+          "category": "setup",
+          "annotated_by": "expert_bgai070",
+          "annotated_at": "2025-12-04T10:00:00Z"
+        },
+        {
+          "id": "catan_expert_009",
+          "question": "Quante carte Cavaliere servono per ottenere l'Armata più Grande in Catan?",
+          "expected_answer_keywords": [
+            "3",
+            "cavaliere",
+            "knight",
+            "armata"
+          ],
+          "expected_citations": [
+            {
+              "page": 8,
+              "snippet_contains": "3 knight cards"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "medium",
+          "category": "gameplay",
+          "annotated_by": "expert_bgai070",
+          "annotated_at": "2025-12-04T10:00:00Z"
+        },
+        {
+          "id": "catan_expert_010",
+          "question": "Cosa fa la carta Monopolio in Catan?",
+          "expected_answer_keywords": [
+            "monopolio",
+            "risorsa",
+            "tutti",
+            "giocatori"
+          ],
+          "expected_citations": [
+            {
+              "page": 10,
+              "snippet_contains": "MONOPOLY"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "medium",
+          "category": "gameplay",
+          "annotated_by": "expert_bgai070",
+          "annotated_at": "2025-12-04T10:00:00Z"
+        },
+        {
+          "id": "catan_expert_011",
+          "question": "Quante strade servono minimo per la carta Strada più Lunga in Catan?",
+          "expected_answer_keywords": [
+            "5",
+            "strade",
+            "segmenti",
+            "continua"
+          ],
+          "expected_citations": [
+            {
+              "page": 9,
+              "snippet_contains": "at least 5 road segments"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "medium",
+          "category": "scoring",
+          "annotated_by": "expert_bgai070",
+          "annotated_at": "2025-12-04T10:00:00Z"
+        },
+        {
+          "id": "catan_expert_012",
+          "question": "Qual è il rapporto di scambio base con la banca in Catan senza porti?",
+          "expected_answer_keywords": [
+            "4",
+            "1",
+            "scambio",
+            "banca"
+          ],
+          "expected_citations": [
+            {
+              "page": 4,
+              "snippet_contains": "4:1"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "easy",
+          "category": "gameplay",
+          "annotated_by": "expert_bgai070",
+          "annotated_at": "2025-12-04T10:00:00Z"
+        },
+        {
+          "id": "catan_expert_013",
+          "question": "Si può giocare una carta sviluppo nello stesso turno in cui è stata acquistata in Catan?",
+          "expected_answer_keywords": [
+            "no",
+            "stesso",
+            "turno",
+            "acquistata"
+          ],
+          "expected_citations": [
+            {
+              "page": 7,
+              "snippet_contains": "may not play a card that you bought during the same turn"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "hard",
+          "category": "edge_cases",
+          "annotated_by": "expert_bgai070",
+          "annotated_at": "2025-12-04T10:00:00Z"
+        },
+        {
+          "id": "catan_expert_014",
+          "question": "Cosa succede se un insediamento avversario interrompe la tua strada in Catan?",
+          "expected_answer_keywords": [
+            "interrompe",
+            "strada",
+            "spezzata",
+            "divide"
+          ],
+          "expected_citations": [
+            {
+              "page": 9,
+              "snippet_contains": "break an opponent's road"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "hard",
+          "category": "edge_cases",
+          "annotated_by": "expert_bgai070",
+          "annotated_at": "2025-12-04T10:00:00Z"
+        },
+        {
+          "id": "catan_expert_015",
+          "question": "Quante carte risorsa si devono scartare quando si supera il limite di 7 carte in Catan?",
+          "expected_answer_keywords": [
+            "metà",
+            "arrotondato",
+            "basso",
+            "scartare"
+          ],
+          "expected_citations": [
+            {
+              "page": 11,
+              "snippet_contains": "half (rounded down)"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "medium",
+          "category": "gameplay",
+          "annotated_by": "expert_bgai070",
+          "annotated_at": "2025-12-04T10:00:00Z"
+        }
+      ]
+    },
+    {
+      "game_id": "ticket-to-ride",
+      "game_name": "Ticket to Ride",
+      "language": "it",
+      "test_cases": [
+        {
+          "id": "ttr_expert_001",
+          "question": "Quanti vagoni riceve ogni giocatore all'inizio di Ticket to Ride?",
+          "expected_answer_keywords": [
+            "45",
+            "vagoni",
+            "inizio"
+          ],
+          "expected_citations": [
+            {
+              "page": 2,
+              "snippet_contains": "45 Vagoni Colorati"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "easy",
+          "category": "setup",
+          "annotated_by": "expert_bgai070",
+          "annotated_at": "2025-12-04T10:00:00Z"
+        },
+        {
+          "id": "ttr_expert_002",
+          "question": "Quante carte Treno riceve ogni giocatore all'inizio di Ticket to Ride?",
+          "expected_answer_keywords": [
+            "4",
+            "carte",
+            "treno",
+            "inizio"
+          ],
+          "expected_citations": [
+            {
+              "page": 2,
+              "snippet_contains": "mano di partenza di 4 carte"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "easy",
+          "category": "setup",
+          "annotated_by": "expert_bgai070",
+          "annotated_at": "2025-12-04T10:00:00Z"
+        },
+        {
+          "id": "ttr_expert_003",
+          "question": "Quanti Biglietti Destinazione deve tenere un giocatore all'inizio di Ticket to Ride?",
+          "expected_answer_keywords": [
+            "almeno",
+            "2",
+            "biglietti",
+            "destinazione"
+          ],
+          "expected_citations": [
+            {
+              "page": 2,
+              "snippet_contains": "almeno due"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "easy",
+          "category": "setup",
+          "annotated_by": "expert_bgai070",
+          "annotated_at": "2025-12-04T10:00:00Z"
+        },
+        {
+          "id": "ttr_expert_004",
+          "question": "Quante carte si possono pescare dal mazzo in un turno in Ticket to Ride?",
+          "expected_answer_keywords": [
+            "2",
+            "carte",
+            "pescare"
+          ],
+          "expected_citations": [
+            {
+              "page": 3,
+              "snippet_contains": "pescare due carte"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "easy",
+          "category": "gameplay",
+          "annotated_by": "expert_bgai070",
+          "annotated_at": "2025-12-04T10:00:00Z"
+        },
+        {
+          "id": "ttr_expert_005",
+          "question": "Cosa succede se si pesca una Locomotiva scoperta in Ticket to Ride?",
+          "expected_answer_keywords": [
+            "locomotiva",
+            "una",
+            "sola",
+            "carta"
+          ],
+          "expected_citations": [
+            {
+              "page": 3,
+              "snippet_contains": "solo una carta"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "medium",
+          "category": "gameplay",
+          "annotated_by": "expert_bgai070",
+          "annotated_at": "2025-12-04T10:00:00Z"
+        },
+        {
+          "id": "ttr_expert_006",
+          "question": "Quanti punti vale una linea di 6 caselle in Ticket to Ride?",
+          "expected_answer_keywords": [
+            "15",
+            "punti",
+            "6"
+          ],
+          "expected_citations": [
+            {
+              "page": 4,
+              "snippet_contains": "6 - 15"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "medium",
+          "category": "scoring",
+          "annotated_by": "expert_bgai070",
+          "annotated_at": "2025-12-04T10:00:00Z"
+        },
+        {
+          "id": "ttr_expert_007",
+          "question": "Quanti punti vale il bonus Percorso Continuo Più Lungo in Ticket to Ride?",
+          "expected_answer_keywords": [
+            "10",
+            "punti",
+            "percorso",
+            "lungo"
+          ],
+          "expected_citations": [
+            {
+              "page": 4,
+              "snippet_contains": "10 punti"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "easy",
+          "category": "scoring",
+          "annotated_by": "expert_bgai070",
+          "annotated_at": "2025-12-04T10:00:00Z"
+        },
+        {
+          "id": "ttr_expert_008",
+          "question": "Cosa succede ai Biglietti Destinazione non completati alla fine di Ticket to Ride?",
+          "expected_answer_keywords": [
+            "sottrae",
+            "punti",
+            "incompleti"
+          ],
+          "expected_citations": [
+            {
+              "page": 4,
+              "snippet_contains": "sottratto al loro punteggio"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "medium",
+          "category": "endgame",
+          "annotated_by": "expert_bgai070",
+          "annotated_at": "2025-12-04T10:00:00Z"
+        },
+        {
+          "id": "ttr_expert_009",
+          "question": "Quando termina la partita di Ticket to Ride?",
+          "expected_answer_keywords": [
+            "2",
+            "vagoni",
+            "meno",
+            "fine"
+          ],
+          "expected_citations": [
+            {
+              "page": 4,
+              "snippet_contains": "scende a due vagoni o meno"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "medium",
+          "category": "endgame",
+          "annotated_by": "expert_bgai070",
+          "annotated_at": "2025-12-04T10:00:00Z"
+        },
+        {
+          "id": "ttr_expert_010",
+          "question": "Quante carte Locomotiva ci sono nel mazzo di Ticket to Ride?",
+          "expected_answer_keywords": [
+            "14",
+            "locomotive"
+          ],
+          "expected_citations": [
+            {
+              "page": 2,
+              "snippet_contains": "14 Locomotive"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "easy",
+          "category": "setup",
+          "annotated_by": "expert_bgai070",
+          "annotated_at": "2025-12-04T10:00:00Z"
+        },
+        {
+          "id": "ttr_expert_011",
+          "question": "Cosa succede se 3 Locomotive sono scoperte tra le carte disponibili in Ticket to Ride?",
+          "expected_answer_keywords": [
+            "3",
+            "locomotive",
+            "scartate",
+            "sostituite"
+          ],
+          "expected_citations": [
+            {
+              "page": 3,
+              "snippet_contains": "tre delle cinque carte"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "hard",
+          "category": "edge_cases",
+          "annotated_by": "expert_bgai070",
+          "annotated_at": "2025-12-04T10:00:00Z"
+        },
+        {
+          "id": "ttr_expert_012",
+          "question": "Quanti Biglietti Destinazione si pescano quando si sceglie l'azione corrispondente in Ticket to Ride?",
+          "expected_answer_keywords": [
+            "3",
+            "biglietti",
+            "almeno",
+            "1"
+          ],
+          "expected_citations": [
+            {
+              "page": 4,
+              "snippet_contains": "tre nuove carte"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "easy",
+          "category": "gameplay",
+          "annotated_by": "expert_bgai070",
+          "annotated_at": "2025-12-04T10:00:00Z"
+        },
+        {
+          "id": "ttr_expert_013",
+          "question": "Le linee grigie in Ticket to Ride possono essere controllate con carte di qualsiasi colore?",
+          "expected_answer_keywords": [
+            "grigio",
+            "qualsiasi",
+            "colore",
+            "stesso"
+          ],
+          "expected_citations": [
+            {
+              "page": 3,
+              "snippet_contains": "colore qualsiasi"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "medium",
+          "category": "gameplay",
+          "annotated_by": "expert_bgai070",
+          "annotated_at": "2025-12-04T10:00:00Z"
+        },
+        {
+          "id": "ttr_expert_014",
+          "question": "In una partita a 2 o 3 giocatori, si possono usare entrambe le doppie linee in Ticket to Ride?",
+          "expected_answer_keywords": [
+            "no",
+            "una",
+            "sola",
+            "chiusa"
+          ],
+          "expected_citations": [
+            {
+              "page": 3,
+              "snippet_contains": "solo una delle Doppie Linee"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "hard",
+          "category": "edge_cases",
+          "annotated_by": "expert_bgai070",
+          "annotated_at": "2025-12-04T10:00:00Z"
+        },
+        {
+          "id": "ttr_expert_015",
+          "question": "Come si risolve il pareggio nel punteggio finale di Ticket to Ride?",
+          "expected_answer_keywords": [
+            "pareggio",
+            "biglietti",
+            "completati",
+            "percorso"
+          ],
+          "expected_citations": [
+            {
+              "page": 4,
+              "snippet_contains": "completato più Biglietti Destinazione"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "hard",
+          "category": "endgame",
+          "annotated_by": "expert_bgai070",
+          "annotated_at": "2025-12-04T10:00:00Z"
+        }
+      ]
     }
   ],
   "statistics": {
     "difficulty_distribution": {
-      "easy": 550,
-      "medium": 250,
-      "hard": 200
+      "easy": 582,
+      "medium": 305,
+      "hard": 193
     },
     "category_distribution": {
-      "gameplay": 400,
-      "setup": 250,
-      "endgame": 200,
-      "edge_cases": 150
+      "gameplay": 396,
+      "setup": 285,
+      "endgame": 186,
+      "edge_cases": 191
     }
   },
   "quality_thresholds": {

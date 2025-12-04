@@ -56,13 +56,8 @@ public class FirstAccuracyBaselineTest
     private const string ApiBaseUrl = "http://localhost:8080";
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
-    // Game slug → GUID mapping (matches games inserted in database)
-    private static readonly Dictionary<string, string> GameSlugToGuidMap = new()
-    {
-        ["terraforming-mars"] = "11111111-1111-1111-1111-111111111111",
-        ["wingspan"] = "22222222-2222-2222-2222-222222222222",
-        ["azul"] = "33333333-3333-3333-3333-333333333333"
-    };
+    // Game slug → GUID mapping (dynamically loaded from API)
+    private Dictionary<string, string> _gameSlugToGuidMap = new();
 
     public FirstAccuracyBaselineTest(Xunit.ITestOutputHelper output)
     {
@@ -393,6 +388,62 @@ public class FirstAccuracyBaselineTest
 
         // Authenticate for subsequent API calls
         await AuthenticateAsync();
+
+        // Load game mappings dynamically from API
+        await LoadGameMappingsAsync();
+    }
+
+    /// <summary>
+    /// Loads game slug to GUID mappings from the API
+    /// Issue #1000: Dynamic mapping instead of hardcoded UUIDs
+    /// </summary>
+    private async Task LoadGameMappingsAsync()
+    {
+        try
+        {
+            var requestMessage = new HttpRequestMessage(HttpMethod.Get, "/api/v1/games");
+            if (!string.IsNullOrEmpty(_sessionCookie))
+            {
+                requestMessage.Headers.Add("Cookie", _sessionCookie);
+            }
+
+            var response = await _httpClient.SendAsync(requestMessage);
+            response.EnsureSuccessStatusCode();
+
+            var content = await response.Content.ReadAsStringAsync();
+            var games = JsonSerializer.Deserialize<List<GameDto>>(content, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            if (games != null)
+            {
+                _gameSlugToGuidMap.Clear();
+                foreach (var game in games)
+                {
+                    // Create slug from name (lowercase, replace spaces with hyphens)
+                    var slug = game.Name.ToLowerInvariant().Replace(" ", "-");
+                    _gameSlugToGuidMap[slug] = game.Id;
+                    _output.WriteLine($"  Loaded game: {slug} → {game.Id}");
+                }
+            }
+
+            _output.WriteLine($"✅ Loaded {_gameSlugToGuidMap.Count} game mappings from API");
+        }
+        catch (Exception ex)
+        {
+            _output.WriteLine($"⚠️ Failed to load game mappings: {ex.Message}");
+            _output.WriteLine("  Using empty mapping - tests may fail for unknown games");
+        }
+    }
+
+    /// <summary>
+    /// Game DTO for API response
+    /// </summary>
+    private class GameDto
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
     }
 
     /// <summary>
@@ -449,9 +500,10 @@ public class FirstAccuracyBaselineTest
     private async Task<QaResponse> CallRagApi(string gameSlug, string question)
     {
         // Map game slug to GUID (API requires GUID format)
-        if (!GameSlugToGuidMap.TryGetValue(gameSlug, out var gameGuid))
+        // Issue #1000: Now uses dynamically loaded mapping from API
+        if (!_gameSlugToGuidMap.TryGetValue(gameSlug, out var gameGuid))
         {
-            throw new InvalidOperationException($"Unknown game slug: {gameSlug}. Add it to GameSlugToGuidMap.");
+            throw new InvalidOperationException($"Unknown game slug: {gameSlug}. Available games: {string.Join(", ", _gameSlugToGuidMap.Keys)}");
         }
 
         // DDD endpoint uses 'query' instead of 'question'

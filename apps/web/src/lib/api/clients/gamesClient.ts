@@ -30,7 +30,13 @@ export interface GameFilters {
   bggOnly?: boolean;
 }
 
-export type GameSortField = 'title' | 'yearPublished' | 'minPlayers' | 'maxPlayers' | 'minPlayTimeMinutes' | 'maxPlayTimeMinutes';
+export type GameSortField =
+  | 'title'
+  | 'yearPublished'
+  | 'minPlayers'
+  | 'maxPlayers'
+  | 'minPlayTimeMinutes'
+  | 'maxPlayTimeMinutes';
 export type SortDirection = 'asc' | 'desc';
 
 export interface GameSortOptions {
@@ -60,8 +66,24 @@ export function createGamesClient({ httpClient }: CreateGamesClientParams) {
       pageSize: number = 20
     ): Promise<PaginatedGamesResponse> {
       // Fetch all games from backend
-      const allGamesRaw = await httpClient.get<Game[]>('/api/v1/games');
-      const allGames = allGamesRaw ?? [];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const allGamesRaw = await httpClient.get<any[]>('/api/v1/games');
+      // Normalize response to handle both PascalCase (API) and camelCase (expected)
+      const allGames: Game[] = (allGamesRaw ?? []).map(g => ({
+        id: g.id ?? g.Id,
+        title: g.title ?? g.Title,
+        publisher: g.publisher ?? g.Publisher ?? null,
+        yearPublished: g.yearPublished ?? g.YearPublished ?? null,
+        minPlayers: g.minPlayers ?? g.MinPlayers ?? null,
+        maxPlayers: g.maxPlayers ?? g.MaxPlayers ?? null,
+        minPlayTimeMinutes: g.minPlayTimeMinutes ?? g.MinPlayTimeMinutes ?? null,
+        maxPlayTimeMinutes: g.maxPlayTimeMinutes ?? g.MaxPlayTimeMinutes ?? null,
+        bggId: g.bggId ?? g.BggId ?? null,
+        createdAt: g.createdAt ?? g.CreatedAt,
+        imageUrl: g.imageUrl ?? g.ImageUrl ?? null,
+        faqCount: g.faqCount ?? g.FaqCount ?? null,
+        averageRating: g.averageRating ?? g.AverageRating ?? null,
+      }));
 
       // Client-side filtering
       let filtered = allGames;
@@ -79,26 +101,50 @@ export function createGamesClient({ httpClient }: CreateGamesClientParams) {
           }
 
           // Player count filters
-          if (filters.minPlayers !== undefined && game.maxPlayers !== null && game.maxPlayers < filters.minPlayers) {
+          if (
+            filters.minPlayers !== undefined &&
+            game.maxPlayers !== null &&
+            game.maxPlayers < filters.minPlayers
+          ) {
             return false;
           }
-          if (filters.maxPlayers !== undefined && game.minPlayers !== null && game.minPlayers > filters.maxPlayers) {
+          if (
+            filters.maxPlayers !== undefined &&
+            game.minPlayers !== null &&
+            game.minPlayers > filters.maxPlayers
+          ) {
             return false;
           }
 
           // Play time filters
-          if (filters.minPlayTime !== undefined && game.maxPlayTimeMinutes !== null && game.maxPlayTimeMinutes < filters.minPlayTime) {
+          if (
+            filters.minPlayTime !== undefined &&
+            game.maxPlayTimeMinutes !== null &&
+            game.maxPlayTimeMinutes < filters.minPlayTime
+          ) {
             return false;
           }
-          if (filters.maxPlayTime !== undefined && game.minPlayTimeMinutes !== null && game.minPlayTimeMinutes > filters.maxPlayTime) {
+          if (
+            filters.maxPlayTime !== undefined &&
+            game.minPlayTimeMinutes !== null &&
+            game.minPlayTimeMinutes > filters.maxPlayTime
+          ) {
             return false;
           }
 
           // Year filters
-          if (filters.yearFrom !== undefined && game.yearPublished !== null && game.yearPublished < filters.yearFrom) {
+          if (
+            filters.yearFrom !== undefined &&
+            game.yearPublished !== null &&
+            game.yearPublished < filters.yearFrom
+          ) {
             return false;
           }
-          if (filters.yearTo !== undefined && game.yearPublished !== null && game.yearPublished > filters.yearTo) {
+          if (
+            filters.yearTo !== undefined &&
+            game.yearPublished !== null &&
+            game.yearPublished > filters.yearTo
+          ) {
             return false;
           }
 

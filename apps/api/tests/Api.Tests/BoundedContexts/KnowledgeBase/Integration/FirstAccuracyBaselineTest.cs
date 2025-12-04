@@ -243,6 +243,184 @@ public class FirstAccuracyBaselineTest
     }
 
     /// <summary>
+    /// BGAI-081: Run accuracy validation on 100+ expert-annotated Q&A pairs
+    /// Target: Accuracy ≥80% on complete expert dataset (110 pairs)
+    /// Reference: Issue #1019
+    /// </summary>
+    /// <remarks>
+    /// Uses all expert-annotated cases from golden_dataset.json:
+    /// - Terraforming Mars: 20 (BGAI-056)
+    /// - Wingspan: 15 (BGAI-057)
+    /// - Azul: 15 (BGAI-058)
+    /// - Catan: 15 (BGAI-070)
+    /// - Ticket to Ride: 15 (BGAI-070)
+    /// - 7 Wonders: 10 (BGAI-071)
+    /// - Agricola: 10 (BGAI-071)
+    /// - Splendor: 10 (BGAI-071)
+    /// Total: 110 expert-annotated pairs
+    ///
+    /// Execution:
+    /// dotnet test --filter "FullyQualifiedName~RunAccuracyValidation_AllExpertAnnotated_MeetsThreshold"
+    ///
+    /// Cost estimate: ~$0.50-0.75 (OpenRouter API calls)
+    /// Execution time: ~15-20 minutes
+    /// </remarks>
+    [Fact(Timeout = 1200000)] // 20 min timeout for 110 questions
+    [Trait("Issue", "1019")]
+    [Trait("Category", "Manual")]
+    [Trait("BoundedContext", "KnowledgeBase")]
+    [Trait("Priority", "P1")]
+    public async Task RunAccuracyValidation_AllExpertAnnotated_MeetsThreshold()
+    {
+        // Arrange - Verify API is available
+        _output.WriteLine("=== BGAI-081: Accuracy Validation on 100+ Expert Q&A ===");
+        _output.WriteLine($"API Base URL: {ApiBaseUrl}");
+        _output.WriteLine("Target: ≥80% accuracy on 110 expert-annotated Q&A pairs");
+
+        await VerifyApiAvailability();
+
+        // Load ALL expert-annotated test cases (exclude template-generated)
+        _output.WriteLine("\n--- Loading Expert-Annotated Test Cases (All 110) ---");
+        var testCases = await _loader.LoadByAnnotatorAsync(
+            annotator: "template_generator_alpha",
+            exclude: true, // Exclude template, include only expert-annotated
+            cancellationToken: TestCancellationToken);
+
+        _output.WriteLine($"Loaded {testCases.Count} expert-annotated test cases");
+
+        // Verify we have at least 100 expert-annotated cases (should be 110)
+        Assert.True(testCases.Count >= 100,
+            $"Expected at least 100 expert-annotated test cases, got {testCases.Count}");
+
+        // Group by game for reporting
+        var byGame = testCases.GroupBy(tc => tc.GameId).ToDictionary(g => g.Key, g => g.Count());
+        foreach (var game in byGame.OrderByDescending(kv => kv.Value))
+        {
+            _output.WriteLine($"  - {game.Key}: {game.Value} cases");
+        }
+
+        // Group by annotator for quality verification
+        _output.WriteLine("\n--- Annotator Distribution ---");
+        var byAnnotator = testCases.GroupBy(tc => tc.AnnotatedBy).ToDictionary(g => g.Key, g => g.Count());
+        foreach (var annotator in byAnnotator.OrderByDescending(kv => kv.Value))
+        {
+            _output.WriteLine($"  - {annotator.Key}: {annotator.Value} cases");
+        }
+
+        // Act - Execute accuracy test
+        _output.WriteLine("\n--- Running Accuracy Validation on Live RAG API ---");
+        var results = new List<AccuracyEvaluationResult>();
+        int processedCount = 0;
+        int correctCount = 0;
+        var startTime = DateTime.UtcNow;
+
+        foreach (var testCase in testCases)
+        {
+            processedCount++;
+            _output.WriteLine($"\n[{processedCount}/{testCases.Count}] Testing: {testCase.Id}");
+            _output.WriteLine($"  Question: {testCase.Question}");
+            _output.WriteLine($"  Game: {testCase.GameId} | Difficulty: {testCase.Difficulty} | Category: {testCase.Category}");
+
+            try
+            {
+                // Call RAG API
+                var ragResponse = await CallRagApi(testCase.GameId, testCase.Question);
+
+                _output.WriteLine($"  RAG Answer: {ragResponse.answer.Substring(0, Math.Min(100, ragResponse.answer.Length))}...");
+                _output.WriteLine($"  Confidence: {ragResponse.confidence:F2}");
+
+                // Evaluate response
+                var evaluation = await _evaluator.EvaluateTestCaseAsync(testCase, ragResponse, TestCancellationToken);
+                results.Add(evaluation);
+
+                if (evaluation.IsCorrect) correctCount++;
+
+                _output.WriteLine($"  {(evaluation.IsCorrect ? "✅" : "❌")} Evaluation: {(evaluation.IsCorrect ? "CORRECT" : "INCORRECT")}");
+                _output.WriteLine($"     - Keywords Match: {evaluation.KeywordMatchRate:P0}");
+                _output.WriteLine($"     - Citations Valid: {evaluation.CitationsValid}");
+                _output.WriteLine($"     - No Hallucinations: {evaluation.NoForbiddenKeywords}");
+
+                // Progress indicator every 10 questions
+                if (processedCount % 10 == 0)
+                {
+                    var elapsed = DateTime.UtcNow - startTime;
+                    var estimatedTotal = elapsed * (testCases.Count / (double)processedCount);
+                    var remaining = estimatedTotal - elapsed;
+                    _output.WriteLine($"\n  📊 Progress: {processedCount}/{testCases.Count} ({correctCount} correct so far)");
+                    _output.WriteLine($"     Elapsed: {elapsed:mm\\:ss}, Estimated remaining: {remaining:mm\\:ss}");
+                }
+            }
+            catch (Exception ex)
+            {
+                _output.WriteLine($"  ❌ Error: {ex.Message}");
+                throw; // Fail test on any error
+            }
+        }
+
+        // Assert - Calculate and verify accuracy metrics
+        var totalTime = DateTime.UtcNow - startTime;
+        _output.WriteLine($"\n=== BGAI-081: ACCURACY VALIDATION RESULTS ===");
+        _output.WriteLine($"Total execution time: {totalTime:mm\\:ss}");
+        _output.WriteLine($"Questions processed: {processedCount}");
+
+        var overallMetrics = _evaluator.CalculateAggregatedMetrics(results);
+
+        _output.WriteLine($"\n--- Overall Metrics ---");
+        _output.WriteLine($"Overall Accuracy: {overallMetrics.Accuracy:P2}");
+        _output.WriteLine($"True Positives: {overallMetrics.TruePositives}");
+        _output.WriteLine($"True Negatives: {overallMetrics.TrueNegatives}");
+        _output.WriteLine($"False Positives: {overallMetrics.FalsePositives}");
+        _output.WriteLine($"False Negatives: {overallMetrics.FalseNegatives}");
+        _output.WriteLine($"Precision: {overallMetrics.Precision:P2}");
+        _output.WriteLine($"Recall: {overallMetrics.Recall:P2}");
+        _output.WriteLine($"F1-Score: {overallMetrics.F1Score:P2}");
+        _output.WriteLine($"Meets Baseline (≥80%): {overallMetrics.MeetsBaselineThreshold}");
+        _output.WriteLine($"Quality Level: {overallMetrics.QualityLevel}");
+
+        // Breakdown by difficulty
+        _output.WriteLine("\n--- Accuracy by Difficulty ---");
+        var byDifficulty = _evaluator.CalculateMetricsByDifficulty(results);
+        foreach (var (difficulty, metrics) in byDifficulty.OrderBy(kv => kv.Key))
+        {
+            _output.WriteLine($"{difficulty}: {metrics.Accuracy:P2} ({metrics.TruePositives}/{metrics.TruePositives + metrics.FalseNegatives} correct)");
+        }
+
+        // Breakdown by game
+        _output.WriteLine("\n--- Accuracy by Game ---");
+        var byGameMetrics = _evaluator.CalculateMetricsByGame(results);
+        foreach (var (game, metrics) in byGameMetrics.OrderByDescending(kv => kv.Value.Accuracy))
+        {
+            _output.WriteLine($"{game}: {metrics.Accuracy:P2} ({metrics.TruePositives}/{metrics.TruePositives + metrics.FalseNegatives} correct)");
+        }
+
+        // Breakdown by category
+        _output.WriteLine("\n--- Accuracy by Category ---");
+        var byCategory = _evaluator.CalculateMetricsByCategory(results);
+        foreach (var (category, metrics) in byCategory.OrderByDescending(kv => kv.Value.Accuracy))
+        {
+            _output.WriteLine($"{category}: {metrics.Accuracy:P2} ({metrics.TruePositives}/{metrics.TruePositives + metrics.FalseNegatives} correct)");
+        }
+
+        // Final assertion
+        _output.WriteLine("\n=== BGAI-081 TEST RESULT ===");
+        if (overallMetrics.MeetsBaselineThreshold)
+        {
+            _output.WriteLine($"✅ PASSED: Accuracy {overallMetrics.Accuracy:P2} meets ≥80% threshold");
+            _output.WriteLine($"   {overallMetrics.TruePositives}/{testCases.Count} questions answered correctly");
+        }
+        else
+        {
+            _output.WriteLine($"❌ FAILED: Accuracy {overallMetrics.Accuracy:P2} below 80% threshold");
+            _output.WriteLine($"   Only {overallMetrics.TruePositives}/{testCases.Count} questions answered correctly");
+            _output.WriteLine($"   Need at least {(int)Math.Ceiling(testCases.Count * 0.8)} correct for 80% threshold");
+        }
+
+        Assert.True(overallMetrics.MeetsBaselineThreshold,
+            $"BGAI-081 Accuracy {overallMetrics.Accuracy:P2} below 80% threshold. " +
+            $"Got {overallMetrics.TruePositives}/{testCases.Count} correct, need {(int)Math.Ceiling(testCases.Count * 0.8)}.");
+    }
+
+    /// <summary>
     /// BGAI-060: Run first accuracy baseline test on 50 expert-annotated Q&A pairs
     /// Target: Accuracy ≥80%
     /// Note: Requires all 3 games indexed (Azul, Wingspan, Terraforming Mars)

@@ -17,7 +17,15 @@
  * Nested under GameProvider in provider hierarchy
  */
 
-import React, { createContext, useContext, useState, useCallback, useMemo, useEffect, PropsWithChildren } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useMemo,
+  useEffect,
+  PropsWithChildren,
+} from 'react';
 import { ChatThread, Message } from '@/types';
 import { api } from '@/lib/api';
 import { useGame } from '@/components/game/GameProvider';
@@ -38,7 +46,7 @@ const MAX_THREADS_PER_GAME = 5;
  * SPRINT-3 #858: Using ChatThread from DDD KnowledgeBase
  */
 interface ChatState {
-  chatsByGame: Record<string, ChatThread[]>;  // ChatThreads indexed by gameId
+  chatsByGame: Record<string, ChatThread[]>; // ChatThreads indexed by gameId
   activeChatIds: Record<string, string | null>; // Active thread per game (nullable)
   messagesByChat: Record<string, Message[]>; // Messages indexed by threadId (UI format)
 }
@@ -73,7 +81,10 @@ export interface ChatContextValue {
   sendMessage: (content: string) => Promise<void>;
   editMessage: (messageId: string, content: string) => Promise<void>;
   deleteMessage: (messageId: string) => Promise<void>;
-  setMessageFeedback: (messageId: string, feedback: import('@/lib/constants/feedback').FeedbackOutcome) => Promise<void>;
+  setMessageFeedback: (
+    messageId: string,
+    feedback: import('@/lib/constants/feedback').FeedbackOutcome
+  ) => Promise<void>;
 
   // Streaming state (Issue #1007)
   isStreaming: boolean;
@@ -152,11 +163,13 @@ export function ChatProvider({ children }: PropsWithChildren) {
   // Load initial state from localStorage
   const [state, setState] = useState<ChatState>(() => {
     const stored = loadStateFromStorage();
-    return stored ?? {
-      chatsByGame: {},
-      activeChatIds: {},
-      messagesByChat: {},
-    };
+    return (
+      stored ?? {
+        chatsByGame: {},
+        activeChatIds: {},
+        messagesByChat: {},
+      }
+    );
   });
 
   const [loading, setLoading] = useState<LoadingState>({
@@ -175,28 +188,25 @@ export function ChatProvider({ children }: PropsWithChildren) {
   }, [state]);
 
   // Derived values for current game
-  const chats = useMemo(
-    () => {
-      if (!selectedGameId) return [];
-      const gameChats = state.chatsByGame[selectedGameId];
-      // Defensive: ensure gameChats is an array (protect against corrupted localStorage)
-      return Array.isArray(gameChats) ? gameChats : [];
-    },
-    [state.chatsByGame, selectedGameId]
-  );
+  const chats = useMemo(() => {
+    if (!selectedGameId) return [];
+    const gameChats = state.chatsByGame[selectedGameId];
+    // Defensive: ensure gameChats is an array (protect against corrupted localStorage)
+    return Array.isArray(gameChats) ? gameChats : [];
+  }, [state.chatsByGame, selectedGameId]);
 
   const activeChatId = useMemo(
-    () => (selectedGameId ? state.activeChatIds[selectedGameId] ?? null : null),
+    () => (selectedGameId ? (state.activeChatIds[selectedGameId] ?? null) : null),
     [state.activeChatIds, selectedGameId]
   );
 
   const activeChat = useMemo(
-    () => chats.find((c) => c.id === activeChatId) ?? null,
+    () => chats.find(c => c.id === activeChatId) ?? null,
     [chats, activeChatId]
   );
 
   const messages = useMemo(
-    () => (activeChatId ? state.messagesByChat[activeChatId] ?? [] : []),
+    () => (activeChatId ? (state.messagesByChat[activeChatId] ?? []) : []),
     [state.messagesByChat, activeChatId]
   );
 
@@ -205,12 +215,12 @@ export function ChatProvider({ children }: PropsWithChildren) {
   // ============================================================================
 
   const loadChats = useCallback(async (gameId: string) => {
-    setLoading((prev) => ({ ...prev, chats: true }));
+    setLoading(prev => ({ ...prev, chats: true }));
     setError(null);
     try {
       // SPRINT-3 #858: Use DDD KnowledgeBase ChatThread API
       const chatThreads = await api.chat.getThreadsByGame(gameId);
-      setState((prev) => ({
+      setState(prev => ({
         ...prev,
         chatsByGame: {
           ...prev.chatsByGame,
@@ -220,7 +230,7 @@ export function ChatProvider({ children }: PropsWithChildren) {
     } catch (err) {
       console.error('Failed to load chat threads:', err);
       setError('Failed to load chats');
-      setState((prev) => ({
+      setState(prev => ({
         ...prev,
         chatsByGame: {
           ...prev.chatsByGame,
@@ -228,12 +238,12 @@ export function ChatProvider({ children }: PropsWithChildren) {
         },
       }));
     } finally {
-      setLoading((prev) => ({ ...prev, chats: false }));
+      setLoading(prev => ({ ...prev, chats: false }));
     }
   }, []);
 
   const loadMessages = useCallback(async (threadId: string) => {
-    setLoading((prev) => ({ ...prev, messages: true }));
+    setLoading(prev => ({ ...prev, messages: true }));
     setError(null);
     try {
       // SPRINT-3 #858: Messages come with ChatThread, convert to UI format
@@ -250,7 +260,7 @@ export function ChatProvider({ children }: PropsWithChildren) {
           gameId: msg.gameId,
           feedback: msg.feedback ?? null,
         }));
-        setState((prev) => ({
+        setState(prev => ({
           ...prev,
           messagesByChat: {
             ...prev.messagesByChat,
@@ -258,7 +268,7 @@ export function ChatProvider({ children }: PropsWithChildren) {
           },
         }));
       } else {
-        setState((prev) => ({
+        setState(prev => ({
           ...prev,
           messagesByChat: {
             ...prev.messagesByChat,
@@ -269,7 +279,7 @@ export function ChatProvider({ children }: PropsWithChildren) {
     } catch (err) {
       console.error('Failed to load messages:', err);
       setError('Failed to load messages');
-      setState((prev) => ({
+      setState(prev => ({
         ...prev,
         messagesByChat: {
           ...prev.messagesByChat,
@@ -277,7 +287,7 @@ export function ChatProvider({ children }: PropsWithChildren) {
         },
       }));
     } finally {
-      setLoading((prev) => ({ ...prev, messages: false }));
+      setLoading(prev => ({ ...prev, messages: false }));
     }
   }, []);
 
@@ -303,34 +313,38 @@ export function ChatProvider({ children }: PropsWithChildren) {
    * Enforce thread limit per game (Issue #858)
    * Archives oldest inactive thread when limit is exceeded
    */
-  const enforceThreadLimit = useCallback(async (gameId: string, threads: ChatThread[]) => {
-    const activeThreads = threads.filter(t => t.status === 'Active');
+  const enforceThreadLimit = useCallback(
+    async (gameId: string, threads: ChatThread[]) => {
+      const activeThreads = threads.filter(t => t.status === 'Active');
 
-    if (activeThreads.length > MAX_THREADS_PER_GAME) {
-      // Sort by lastMessageAt (oldest first)
-      const sortedThreads = [...activeThreads].sort((a, b) =>
-        new Date(a.lastMessageAt ?? a.createdAt).getTime() -
-        new Date(b.lastMessageAt ?? b.createdAt).getTime()
-      );
+      if (activeThreads.length > MAX_THREADS_PER_GAME) {
+        // Sort by lastMessageAt (oldest first)
+        const sortedThreads = [...activeThreads].sort(
+          (a, b) =>
+            new Date(a.lastMessageAt ?? a.createdAt).getTime() -
+            new Date(b.lastMessageAt ?? b.createdAt).getTime()
+        );
 
-      // Find oldest thread that's not currently active
-      const currentActiveId = state.activeChatIds[gameId];
-      const threadToArchive = sortedThreads.find(t => t.id !== currentActiveId);
+        // Find oldest thread that's not currently active
+        const currentActiveId = state.activeChatIds[gameId];
+        const threadToArchive = sortedThreads.find(t => t.id !== currentActiveId);
 
-      if (threadToArchive) {
-        try {
-          console.log(`Auto-archiving oldest thread: ${threadToArchive.id}`);
-          await api.chat.closeThread(threadToArchive.id);
+        if (threadToArchive) {
+          try {
+            console.warn(`Auto-archiving oldest thread: ${threadToArchive.id}`);
+            await api.chat.closeThread(threadToArchive.id);
 
-          // Reload threads to reflect archived state
-          await loadChats(gameId);
-        } catch (err) {
-          console.error('Failed to auto-archive thread:', err);
-          // Non-critical error, continue anyway
+            // Reload threads to reflect archived state
+            await loadChats(gameId);
+          } catch (err) {
+            console.error('Failed to auto-archive thread:', err);
+            // Non-critical error, continue anyway
+          }
         }
       }
-    }
-  }, [state.activeChatIds, loadChats]);
+    },
+    [state.activeChatIds, loadChats]
+  );
 
   /**
    * Generate thread title from first message (Issue #858)
@@ -347,31 +361,41 @@ export function ChatProvider({ children }: PropsWithChildren) {
 
   // Streaming state hook
   const [streamingState, streamingControls] = useStreamingChat({
-    onComplete: useCallback((answer: string, citations: import('@/lib/api/schemas/streaming.schemas').Citation[], confidence: number | null) => {
-      // When streaming completes, add assistant message to thread
-      const currentActiveChatId = selectedGameId ? state.activeChatIds[selectedGameId] : null;
-      if (!currentActiveChatId) return;
+    onComplete: useCallback(
+      (
+        answer: string,
+        citations: import('@/lib/api/schemas/streaming.schemas').Citation[],
+        confidence: number | null
+      ) => {
+        // When streaming completes, add assistant message to thread
+        const currentActiveChatId = selectedGameId ? state.activeChatIds[selectedGameId] : null;
+        if (!currentActiveChatId) return;
 
-      const assistantMessage: Message = {
-        id: `temp-assistant-${Date.now()}`,
-        role: 'assistant',
-        content: answer,
-        timestamp: new Date(),
-        endpoint: 'qa-stream',
-        gameId: selectedGameId || undefined,
-      };
+        const assistantMessage: Message = {
+          id: `temp-assistant-${Date.now()}`,
+          role: 'assistant',
+          content: answer,
+          timestamp: new Date(),
+          endpoint: 'qa-stream',
+          gameId: selectedGameId || undefined,
+        };
 
-      setState((prev) => ({
-        ...prev,
-        messagesByChat: {
-          ...prev.messagesByChat,
-          [currentActiveChatId]: [...(prev.messagesByChat[currentActiveChatId] ?? []), assistantMessage],
-        },
-      }));
+        setState(prev => ({
+          ...prev,
+          messagesByChat: {
+            ...prev.messagesByChat,
+            [currentActiveChatId]: [
+              ...(prev.messagesByChat[currentActiveChatId] ?? []),
+              assistantMessage,
+            ],
+          },
+        }));
 
-      // Reload thread to get backend-persisted message
-      void loadMessages(currentActiveChatId);
-    }, [selectedGameId, state.activeChatIds, loadMessages]),
+        // Reload thread to get backend-persisted message
+        void loadMessages(currentActiveChatId);
+      },
+      [selectedGameId, state.activeChatIds, loadMessages]
+    ),
     onError: useCallback((err: Error) => {
       setError(err.message || 'Errore durante lo streaming');
     }, []),
@@ -384,7 +408,7 @@ export function ChatProvider({ children }: PropsWithChildren) {
   const createChat = useCallback(async () => {
     if (!selectedGameId || !selectedAgentId) return;
 
-    setLoading((prev) => ({ ...prev, creating: true }));
+    setLoading(prev => ({ ...prev, creating: true }));
     setError(null);
 
     try {
@@ -396,7 +420,7 @@ export function ChatProvider({ children }: PropsWithChildren) {
       });
 
       if (newThread) {
-        setState((prev) => ({
+        setState(prev => ({
           ...prev,
           chatsByGame: {
             ...prev.chatsByGame,
@@ -416,7 +440,7 @@ export function ChatProvider({ children }: PropsWithChildren) {
       console.error('Failed to create chat thread:', err);
       setError('Errore nella creazione della chat.');
     } finally {
-      setLoading((prev) => ({ ...prev, creating: false }));
+      setLoading(prev => ({ ...prev, creating: false }));
     }
   }, [selectedGameId, selectedAgentId]);
 
@@ -425,14 +449,16 @@ export function ChatProvider({ children }: PropsWithChildren) {
       if (!selectedGameId) return;
       if (!confirm('Sei sicuro di voler eliminare questa chat?')) return;
 
-      setLoading((prev) => ({ ...prev, deleting: true }));
+      setLoading(prev => ({ ...prev, deleting: true }));
       setError(null);
 
       try {
         await api.delete(`/api/v1/chats/${chatId}`);
 
-        setState((prev) => {
-          const updatedChats = (prev.chatsByGame[selectedGameId] ?? []).filter((c) => c.id !== chatId);
+        setState(prev => {
+          const updatedChats = (prev.chatsByGame[selectedGameId] ?? []).filter(
+            c => c.id !== chatId
+          );
           const updatedActiveChatIds = { ...prev.activeChatIds };
           if (updatedActiveChatIds[selectedGameId] === chatId) {
             updatedActiveChatIds[selectedGameId] = null;
@@ -455,7 +481,7 @@ export function ChatProvider({ children }: PropsWithChildren) {
         console.error('Failed to delete chat:', err);
         setError("Errore nell'eliminazione della chat.");
       } finally {
-        setLoading((prev) => ({ ...prev, deleting: false }));
+        setLoading(prev => ({ ...prev, deleting: false }));
       }
     },
     [selectedGameId]
@@ -465,7 +491,7 @@ export function ChatProvider({ children }: PropsWithChildren) {
     async (chatId: string) => {
       if (!selectedGameId) return;
 
-      setState((prev) => ({
+      setState(prev => ({
         ...prev,
         activeChatIds: {
           ...prev.activeChatIds,
@@ -495,7 +521,7 @@ export function ChatProvider({ children }: PropsWithChildren) {
       };
 
       setError(null);
-      setLoading((prev) => ({ ...prev, sending: true }));
+      setLoading(prev => ({ ...prev, sending: true }));
 
       try {
         // Create thread if none exists (Hybrid approach - Issue #858)
@@ -518,7 +544,7 @@ export function ChatProvider({ children }: PropsWithChildren) {
           threadId = newThread.id;
           isNewThread = true;
 
-          setState((prev) => ({
+          setState(prev => ({
             ...prev,
             chatsByGame: {
               ...prev.chatsByGame,
@@ -540,7 +566,7 @@ export function ChatProvider({ children }: PropsWithChildren) {
         }
 
         // Optimistic update
-        setState((prev) => ({
+        setState(prev => ({
           ...prev,
           messagesByChat: {
             ...prev.messagesByChat,
@@ -568,26 +594,37 @@ export function ChatProvider({ children }: PropsWithChildren) {
 
         // Rollback optimistic update
         if (activeChatId) {
-          setState((prev) => ({
+          setState(prev => ({
             ...prev,
             messagesByChat: {
               ...prev.messagesByChat,
-              [activeChatId]: (prev.messagesByChat[activeChatId] ?? []).filter((m) => m.id !== tempUserId),
+              [activeChatId]: (prev.messagesByChat[activeChatId] ?? []).filter(
+                m => m.id !== tempUserId
+              ),
             },
           }));
         }
       } finally {
-        setLoading((prev) => ({ ...prev, sending: false }));
+        setLoading(prev => ({ ...prev, sending: false }));
       }
     },
-    [selectedGameId, selectedAgentId, activeChatId, streamingControls, enforceThreadLimit, generateTitleFromMessage, loadChats, state.chatsByGame]
+    [
+      selectedGameId,
+      selectedAgentId,
+      activeChatId,
+      streamingControls,
+      enforceThreadLimit,
+      generateTitleFromMessage,
+      loadChats,
+      state.chatsByGame,
+    ]
   );
 
   const editMessage = useCallback(
     async (messageId: string, content: string) => {
       if (!activeChatId || !content.trim()) return;
 
-      setLoading((prev) => ({ ...prev, updating: true }));
+      setLoading(prev => ({ ...prev, updating: true }));
       setError(null);
 
       try {
@@ -599,7 +636,7 @@ export function ChatProvider({ children }: PropsWithChildren) {
         console.error('Failed to edit message:', err);
         setError("Errore nell'aggiornamento del messaggio.");
       } finally {
-        setLoading((prev) => ({ ...prev, updating: false }));
+        setLoading(prev => ({ ...prev, updating: false }));
       }
     },
     [activeChatId, loadMessages]
@@ -610,7 +647,7 @@ export function ChatProvider({ children }: PropsWithChildren) {
       if (!activeChatId) return;
       if (!confirm('Sei sicuro di voler eliminare questo messaggio?')) return;
 
-      setLoading((prev) => ({ ...prev, deleting: true }));
+      setLoading(prev => ({ ...prev, deleting: true }));
       setError(null);
 
       try {
@@ -622,7 +659,7 @@ export function ChatProvider({ children }: PropsWithChildren) {
         console.error('Failed to delete message:', err);
         setError("Errore nell'eliminazione del messaggio.");
       } finally {
-        setLoading((prev) => ({ ...prev, deleting: false }));
+        setLoading(prev => ({ ...prev, deleting: false }));
       }
     },
     [activeChatId, loadMessages]
@@ -632,7 +669,7 @@ export function ChatProvider({ children }: PropsWithChildren) {
     async (messageId: string, feedback: import('@/lib/constants/feedback').FeedbackOutcome) => {
       if (!activeChatId) return;
 
-      const targetMessage = messages.find((msg) => msg.id === messageId);
+      const targetMessage = messages.find(msg => msg.id === messageId);
       if (!targetMessage) return;
 
       const previousFeedback = targetMessage.feedback ?? null;
@@ -642,11 +679,11 @@ export function ChatProvider({ children }: PropsWithChildren) {
       const feedbackMessageId = targetMessage.backendMessageId ?? messageId;
 
       // Optimistic update
-      setState((prev) => ({
+      setState(prev => ({
         ...prev,
         messagesByChat: {
           ...prev.messagesByChat,
-          [activeChatId]: (prev.messagesByChat[activeChatId] ?? []).map((msg) =>
+          [activeChatId]: (prev.messagesByChat[activeChatId] ?? []).map(msg =>
             msg.id === messageId ? { ...msg, feedback: nextFeedback } : msg
           ),
         },
@@ -664,11 +701,11 @@ export function ChatProvider({ children }: PropsWithChildren) {
         setError("Errore nell'invio del feedback.");
 
         // Revert on error
-        setState((prev) => ({
+        setState(prev => ({
           ...prev,
           messagesByChat: {
             ...prev.messagesByChat,
-            [activeChatId]: (prev.messagesByChat[activeChatId] ?? []).map((msg) =>
+            [activeChatId]: (prev.messagesByChat[activeChatId] ?? []).map(msg =>
               msg.id === messageId ? { ...msg, feedback: previousFeedback } : msg
             ),
           },

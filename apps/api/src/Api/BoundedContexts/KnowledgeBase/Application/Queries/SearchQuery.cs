@@ -10,7 +10,7 @@ public record SearchQuery(
     Guid GameId,
     string Query,
     int TopK = 5,
-    double MinScore = 0.7,
+    double MinScore = 0.55, // Adjusted for mxbai-embed-large
     string SearchMode = "hybrid", // "vector", "keyword", "hybrid"
     string Language = "en"
 ) : IQuery<List<SearchResultDto>>;

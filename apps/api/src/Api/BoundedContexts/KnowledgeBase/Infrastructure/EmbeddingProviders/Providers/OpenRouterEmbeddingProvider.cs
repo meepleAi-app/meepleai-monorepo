@@ -33,7 +33,8 @@ public sealed class OpenRouterEmbeddingProvider : EmbeddingProviderBase
         }
 
         _providerType = providerType;
-        _modelName = config.Model ?? providerType.GetModelName();
+        // BGAI-081: Handle both null and empty string from config binding
+        _modelName = !string.IsNullOrWhiteSpace(config.Model) ? config.Model : providerType.GetModelName();
         _dimensions = config.Dimensions ?? providerType.GetDimensions();
         _apiKey = config.OpenRouterApiKey;
 

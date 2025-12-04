@@ -102,7 +102,7 @@ public sealed class InvokeAgentCommandHandler
             // 5. Perform vector search using agent strategy parameters
             // Direct search via repository (delegates to Qdrant)
             var topK = agent.Strategy.GetParameter("TopK", 10);
-            var minScore = agent.Strategy.GetParameter("MinScore", 0.70);
+            var minScore = agent.Strategy.GetParameter("MinScore", 0.55);
 
             _logger.LogDebug(
                 "Performing vector search: GameId={GameId}, TopK={TopK}, MinScore={MinScore}",

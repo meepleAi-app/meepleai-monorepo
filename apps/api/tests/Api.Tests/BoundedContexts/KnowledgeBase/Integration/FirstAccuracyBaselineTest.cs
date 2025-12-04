@@ -57,7 +57,7 @@ public class FirstAccuracyBaselineTest
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
     // Game slug → GUID mapping (dynamically loaded from API)
-    private Dictionary<string, string> _gameSlugToGuidMap = new();
+    private Dictionary<string, Guid> _gameSlugToGuidMap = new();
 
     public FirstAccuracyBaselineTest(Xunit.ITestOutputHelper output)
     {
@@ -599,8 +599,8 @@ public class FirstAccuracyBaselineTest
                 _gameSlugToGuidMap.Clear();
                 foreach (var game in games)
                 {
-                    // Create slug from name (lowercase, replace spaces with hyphens)
-                    var slug = game.Name.ToLowerInvariant().Replace(" ", "-");
+                    // Create slug from title (lowercase, replace spaces with hyphens)
+                    var slug = game.Title.ToLowerInvariant().Replace(" ", "-");
                     _gameSlugToGuidMap[slug] = game.Id;
                     _output.WriteLine($"  Loaded game: {slug} → {game.Id}");
                 }
@@ -617,11 +617,12 @@ public class FirstAccuracyBaselineTest
 
     /// <summary>
     /// Game DTO for API response
+    /// Maps to Api.BoundedContexts.GameManagement.Application.DTOs.GameDto
     /// </summary>
     private class GameDto
     {
-        public string Id { get; set; } = string.Empty;
-        public string Name { get; set; } = string.Empty;
+        public Guid Id { get; set; }
+        public string Title { get; set; } = string.Empty;
     }
 
     /// <summary>

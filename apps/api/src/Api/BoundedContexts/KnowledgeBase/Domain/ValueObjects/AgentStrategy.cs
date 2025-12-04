@@ -29,7 +29,7 @@ public sealed record AgentStrategy
     public static AgentStrategy HybridSearch(
         double vectorWeight = 0.7,
         int topK = 10,
-        double minScore = 0.70)
+        double minScore = 0.55)
         => new(
             name: "HybridSearch",
             parameters: new Dictionary<string, object>

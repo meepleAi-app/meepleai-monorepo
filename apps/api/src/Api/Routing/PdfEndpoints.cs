@@ -463,6 +463,41 @@ public static class PdfEndpoints
             });
         });
 
+        // BGAI-081: Extract text from existing PDF (reprocess stuck PDFs)
+        group.MapPost("/ingest/pdf/{pdfId:guid}/extract", async (Guid pdfId, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
+
+            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(session.User.Role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
+            {
+                logger.LogWarning("User {UserId} with role {Role} attempted to extract PDF text without permission", session.User.Id, session.User.Role);
+                return Results.StatusCode(StatusCodes.Status403Forbidden);
+            }
+
+            logger.LogInformation("User {UserId} extracting text from PDF {PdfId}", session.User.Id, pdfId);
+
+            var result = await mediator.Send(new ExtractPdfTextCommand(pdfId), ct).ConfigureAwait(false);
+
+            if (!result.Success)
+            {
+                logger.LogWarning("PDF text extraction failed for {PdfId}: {Error}", pdfId, result.ErrorMessage);
+                return Results.BadRequest(new { error = result.ErrorMessage });
+            }
+
+            logger.LogInformation("PDF {PdfId} text extracted successfully: {PageCount} pages, {CharCount} characters",
+                pdfId, result.PageCount, result.CharacterCount);
+
+            return Results.Json(new
+            {
+                success = true,
+                characterCount = result.CharacterCount,
+                pageCount = result.PageCount,
+                processingStatus = result.ProcessingStatus
+            });
+        });
+
         // ============================================
         // Chunked Upload Endpoints (for large PDFs > 30 MB)
         // ============================================

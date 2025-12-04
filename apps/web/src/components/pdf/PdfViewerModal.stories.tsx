@@ -185,3 +185,70 @@ export const DarkTheme: Story = {
     ),
   ],
 };
+
+/**
+ * Citation click workflow (BGAI-074).
+ * Simulates the complete user flow: click citation → open PDF at specific page.
+ * This demonstrates the integration between CitationLink and PdfViewerModal.
+ */
+export const CitationClickWorkflow: Story = {
+  render: () => {
+    const [open, setOpen] = useState(false);
+    const [targetPage, setTargetPage] = useState(1);
+
+    // Simulate citation click handler from ChatContent
+    const handleCitationClick = (pageNumber: number) => {
+      setTargetPage(pageNumber);
+      setOpen(true);
+    };
+
+    return (
+      <div className="flex flex-col gap-6 items-center p-6 max-w-lg">
+        <div className="text-center">
+          <h3 className="font-semibold mb-2">Citation Click → Jump to Page</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            Click any citation below to open the PDF at that page
+          </p>
+        </div>
+
+        {/* Simulated chat message with citations */}
+        <div className="bg-slate-50 rounded-lg p-4 w-full">
+          <p className="text-sm mb-3">
+            According to the rulebook, setup requires 5 steps. See{' '}
+            <button
+              onClick={() => handleCitationClick(3)}
+              className="inline-flex items-center px-2 py-0.5 bg-orange-100 text-orange-800 rounded text-xs font-medium hover:bg-orange-200 transition-colors cursor-pointer"
+            >
+              p.3
+            </button>{' '}
+            for initial placement and{' '}
+            <button
+              onClick={() => handleCitationClick(7)}
+              className="inline-flex items-center px-2 py-0.5 bg-orange-100 text-orange-800 rounded text-xs font-medium hover:bg-orange-200 transition-colors cursor-pointer"
+            >
+              p.7
+            </button>{' '}
+            for advanced rules.
+          </p>
+        </div>
+
+        <PdfViewerModal
+          open={open}
+          onOpenChange={setOpen}
+          pdfUrl={SAMPLE_PDF_URL}
+          initialPage={targetPage}
+          documentName="Game Rulebook"
+        />
+      </div>
+    );
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Complete citation click workflow: User clicks citation badge in chat → PDF viewer opens at referenced page. ' +
+          'This is the primary use case implemented in BGAI-074.',
+      },
+    },
+  },
+};

@@ -1,23 +1,58 @@
 {
   "accessibility": {
     "close": "Close",
+    "closeNotification": "Close notification",
+    "dismissBanner": "Dismiss banner",
     "errorOccurred": "An error occurred",
     "loading": "Loading, please wait",
+    "mainNavigation": "Main navigation",
     "menu": "Menu",
     "openInNewTab": "Open in new tab",
+    "quickActions": "Quick actions",
+    "recentGames": "Recent games",
+    "selectAllUsers": "Select all users",
     "skipToMain": "Skip to main content"
   },
   "admin": {
     "analytics": {
+      "activeSessions": "Active Sessions",
+      "apiRequests": "API Requests",
+      "apiRequestsToday": "API Requests Today",
+      "avgConfidence": "Avg Confidence Score",
+      "backToUsers": "Back to Users",
+      "chatMessages": "Chat Messages",
       "dashboard": "Analytics Dashboard",
-      "backToUsers": "Back to Users"
+      "pdfDocuments": "Total PDF Documents",
+      "pdfUploads": "PDF Uploads",
+      "ragRequests": "Total RAG Requests",
+      "sessionCreations": "Session Creations",
+      "tokensUsed": "Total Tokens Used",
+      "totalUsers": "Total Users",
+      "userRegistrations": "User Registrations"
     },
-    "cache": "Cache",
-    "configuration": "Configuration",
+    "cache": {
+      "hitRate": "Cache hit rate",
+      "invalidateByTag": "Invalidate cache by tag",
+      "refreshStats": "Refresh cache statistics",
+      "tagPlaceholder": "Enter tag (e.g., qa, setup)",
+      "tagToInvalidate": "Tag to invalidate",
+      "title": "Cache"
+    },
+    "configuration": {
+      "aiLlm": "AI / LLM Configuration",
+      "rag": "RAG Configuration",
+      "rateLimit": "Rate Limiting Configuration",
+      "tabs": "Configuration tabs",
+      "title": "Configuration"
+    },
     "games": "Games",
-    "logs": "Logs",
+    "logs": {
+      "filterPlaceholder": "Filter by query, endpoint, user ID, or game ID...",
+      "title": "Logs"
+    },
     "title": "Admin panel",
     "users": {
+      "closeNotification": "Close notification",
       "createUser": "Create User",
       "deleteConfirm": "Are you sure you want to delete",
       "deleteMultiple": "Delete Multiple Users",
@@ -33,6 +68,7 @@
       "role": "Role *",
       "saveChanges": "Save Changes",
       "searchPlaceholder": "Search by email or name...",
+      "selectAll": "Select all users",
       "showing": "Showing",
       "to": "to",
       "users": "users",
@@ -49,6 +85,12 @@
   },
   "auth": {
     "login": {
+      "emailLabel": "Email",
+      "emailPlaceholder": "you@example.com",
+      "loggingIn": "Logging in...",
+      "loginButton": "Login",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "••••••••",
       "signInTo": "Sign in to MeepleAI"
     },
     "oauth": {
@@ -59,11 +101,21 @@
     },
     "register": {
       "confirmPassword": "Confirm password",
+      "confirmPasswordPlaceholder": "••••••••",
+      "createAccount": "Create Account",
+      "creatingAccount": "Creating account...",
       "displayName": "Display name",
+      "displayNameOptional": "Display Name (Optional)",
+      "displayNamePlaceholder": "John Doe",
       "email": "Email",
+      "emailPlaceholder": "you@example.com",
       "error": "Registration failed. Please try again.",
       "hasAccount": "Already have an account?",
       "password": "Password",
+      "passwordHelp": "Must contain uppercase, lowercase, and number (min 8 characters)",
+      "passwordPlaceholder": "••••••••",
+      "role": "Role",
+      "selectRole": "Select a role",
       "signIn": "Login",
       "submit": "Sign Up",
       "success": "Registration complete! You can now login.",
@@ -80,6 +132,8 @@
       "expired": "Your session has expired. Please login again.",
       "expiringSoon": "Your session will expire in {minutes} minutes.",
       "logOut": "Logout",
+      "pause": "Pause session",
+      "resume": "Resume session",
       "stayLoggedIn": "Stay logged in"
     },
     "twoFactor": {
@@ -91,12 +145,15 @@
     }
   },
   "chat": {
+    "askAdvice": "Ask for advice or analysis of the position...",
+    "chatHistory": "Chat history",
     "citation": "Citation",
     "clearHistory": "Clear history",
     "confidence": "Confidence",
     "error": "An error occurred. Please try again.",
     "gameSelected": "Game selected: {gameName}",
     "goToLogin": "Go to Login",
+    "greeting": "Greeting",
     "history": "History",
     "loginRequired": "Login required",
     "loginRequiredMessage": "You must be logged in to use the chat",
@@ -137,6 +194,8 @@
     "ok": "OK",
     "paste": "Paste",
     "permissionDenied": "Access denied. You do not have permission.",
+    "previous": "Previous",
+    "refresh": "Refresh",
     "reset": "Reset",
     "save": "Save",
     "search": "Search",
@@ -146,6 +205,15 @@
     "success": "Success",
     "upload": "Upload",
     "yes": "Yes"
+  },
+  "dashboard": {
+    "greeting": {
+      "afternoon": "Good afternoon",
+      "evening": "Good evening",
+      "morning": "Good morning"
+    },
+    "quickActions": "Quick actions",
+    "recentGames": "Recent games"
   },
   "dates": {
     "ago": "{time} ago",
@@ -170,8 +238,10 @@
   "editor": {
     "missingGameId": "Missing gameId query parameter.",
     "notFound": "RuleSpec not found.",
+    "redo": "Redo (Ctrl+Y)",
     "ruleCount": "Rules",
     "save": "Save",
+    "undo": "Undo (Ctrl+Z)",
     "validJson": "JSON looks valid"
   },
   "errors": {
@@ -245,6 +315,10 @@
       "title": "Your AI-Powered Board Game Rules Assistant"
     }
   },
+  "n8n": {
+    "namePlaceholder": "Production n8n",
+    "title": "n8n Workflows"
+  },
   "nav": {
     "home": "Home"
   },
@@ -255,10 +329,16 @@
     "home": "Home",
     "login": "Login",
     "logout": "Logout",
+    "logoutFrom": "Logout from MeepleAI",
     "profile": "Profile",
     "register": "Sign Up",
     "settings": "Settings",
     "upload": "Upload"
+  },
+  "roles": {
+    "admin": "Admin",
+    "editor": "Editor",
+    "user": "User"
   },
   "settings": {
     "advanced": {
@@ -318,9 +398,11 @@
     "aiConfidence": "AI Confidence:",
     "backToHome": "← Back to Home",
     "closeButton": "Close",
+    "closeReferences": "Close references modal",
     "estimatedTime": "Estimated setup time:",
     "gameLabel": "Game:",
     "generateButton": "Generate Setup Guide",
+    "generateForGame": "Generate setup guide for selected game",
     "generating": "Generating...",
     "generatingMessage": "Generating your setup guide...",
     "generatingSubMessage": "This may take a few moments",
@@ -380,10 +462,16 @@
   },
   "validation": {
     "email": "Enter a valid email",
+    "emailRequired": "Email is required",
+    "invalidEmail": "Please enter a valid email address",
     "invalidFormat": "Invalid format",
     "maxLength": "Cannot exceed {max} characters",
     "minLength": "Must contain at least {min} characters",
+    "passwordComplexity": "Password must contain at least one uppercase letter, one lowercase letter, and one number",
+    "passwordConfirmRequired": "Please confirm your password",
     "passwordMatch": "Passwords do not match",
+    "passwordMax": "Password must not exceed 100 characters",
+    "passwordMin": "Password must be at least 8 characters",
     "required": "This field is required"
   },
   "wizard": {

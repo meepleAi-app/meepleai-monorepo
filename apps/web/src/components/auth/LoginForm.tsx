@@ -7,6 +7,7 @@
  * - Accessible form controls
  * - Loading states
  * - Custom error display
+ * - i18n support
  */
 
 import { useForm } from 'react-hook-form';
@@ -15,23 +16,16 @@ import * as z from 'zod';
 import { Input } from '@/components/ui/input';
 import { AccessibleFormInput } from '@/components/accessible';
 import { LoadingButton } from '@/components/loading/LoadingButton';
+import { useTranslation } from '@/hooks/useTranslation';
 
 // ============================================================================
-// Validation Schema
+// Types
 // ============================================================================
 
-const loginSchema = z.object({
-  email: z
-    .string()
-    .min(1, 'Email is required')
-    .email('Please enter a valid email address'),
-  password: z
-    .string()
-    .min(8, 'Password must be at least 8 characters')
-    .max(100, 'Password must not exceed 100 characters'),
-});
-
-export type LoginFormData = z.infer<typeof loginSchema>;
+export interface LoginFormData {
+  email: string;
+  password: string;
+}
 
 // ============================================================================
 // Component Props
@@ -48,12 +42,15 @@ export interface LoginFormProps {
 // Component
 // ============================================================================
 
-export function LoginForm({
-  onSubmit,
-  loading = false,
-  error,
-  onErrorDismiss
-}: LoginFormProps) {
+export function LoginForm({ onSubmit, loading = false, error, onErrorDismiss }: LoginFormProps) {
+  const { t } = useTranslation();
+
+  // Validation Schema with i18n
+  const loginSchema = z.object({
+    email: z.string().min(1, t('validation.emailRequired')).email(t('validation.invalidEmail')),
+    password: z.string().min(8, t('validation.passwordMin')).max(100, t('validation.passwordMax')),
+  });
+
   const {
     register,
     handleSubmit,
@@ -80,10 +77,10 @@ export function LoginForm({
       {/* Email Field */}
       <div className="space-y-2">
         <AccessibleFormInput
-          label="Email"
+          label={t('auth.login.emailLabel')}
           id="login-email"
           type="email"
-          placeholder="you@example.com"
+          placeholder={t('auth.login.emailPlaceholder')}
           autoComplete="email"
           error={errors.email?.message}
           required
@@ -95,10 +92,10 @@ export function LoginForm({
       {/* Password Field */}
       <div className="space-y-2">
         <AccessibleFormInput
-          label="Password"
+          label={t('auth.login.passwordLabel')}
           id="login-password"
           type="password"
-          placeholder="••••••••"
+          placeholder={t('auth.login.passwordPlaceholder')}
           autoComplete="current-password"
           error={errors.password?.message}
           required
@@ -123,9 +120,9 @@ export function LoginForm({
         type="submit"
         className="w-full"
         isLoading={isLoading}
-        loadingText="Accesso in corso..."
+        loadingText={t('auth.login.loggingIn')}
       >
-        Accedi
+        {t('auth.login.loginButton')}
       </LoadingButton>
     </form>
   );

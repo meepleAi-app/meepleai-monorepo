@@ -74,7 +74,7 @@ groups:
         labels:
           service: meepleai-api
 
-      # API response time p95 by endpoint
+      # API response time p95 by endpoint (global)
       - record: meepleai:api:response_time_p95:5m
         expr: |
           histogram_quantile(
@@ -83,6 +83,42 @@ groups:
           )
         labels:
           service: meepleai-api
+
+      # BGAI-082: P95 latency for RAG chat endpoint (primary target)
+      - record: meepleai:rag:chat:p95:5m
+        expr: |
+          histogram_quantile(
+            0.95,
+            rate(http_server_request_duration_bucket{http_route=~"/api/v1/chat.*"}[5m])
+          )
+        labels:
+          service: meepleai-api
+          category: rag
+          endpoint: chat
+
+      # BGAI-082: P95 latency for search endpoint
+      - record: meepleai:rag:search:p95:5m
+        expr: |
+          histogram_quantile(
+            0.95,
+            rate(http_server_request_duration_bucket{http_route=~"/api/v1/search.*"}[5m])
+          )
+        labels:
+          service: meepleai-api
+          category: rag
+          endpoint: search
+
+      # BGAI-082: P95 latency for game explain endpoint
+      - record: meepleai:rag:explain:p95:5m
+        expr: |
+          histogram_quantile(
+            0.95,
+            rate(http_server_request_duration_bucket{http_route=~"/api/v1/games/.*/explain.*"}[5m])
+          )
+        labels:
+          service: meepleai-api
+          category: rag
+          endpoint: explain
 
   # ========================================
   # Alert Rules
@@ -220,10 +256,10 @@ groups:
           runbook_url: "https://docs.meepleai.dev/runbooks/rag-errors"
           dashboard_url: "http://localhost:3001/d/ai-rag-operations"
 
-      # WARNING: Slow API response times
+      # WARNING: Slow API response times (BGAI-082: P95 <3s target)
       - alert: SlowResponseTime
         expr: |
-          meepleai:api:response_time_p95:5m > 5
+          meepleai:api:response_time_p95:5m > 3
         for: 5m
         labels:
           severity: warning
@@ -232,9 +268,27 @@ groups:
         annotations:
           summary: "API response time is degraded"
           description: |
-            P95 response time: {{ $value | humanize }}s (threshold: 5s).
-            Users are experiencing slow responses.
-            Check database query performance and external API latency.
+            P95 response time: {{ $value | humanize }}s (threshold: 3s).
+            Users are experiencing slow responses. BGAI-082 target: P95 <3s.
+            Check database query performance, RAG pipeline, and LLM API latency.
+          runbook_url: "https://docs.meepleai.dev/runbooks/slow-performance"
+          dashboard_url: "http://localhost:3001/d/api-performance"
+
+      # WARNING: Slow RAG chat endpoint (BGAI-082: P95 <3s)
+      - alert: SlowRagChatEndpoint
+        expr: |
+          meepleai:rag:chat:p95:5m > 3
+        for: 5m
+        labels:
+          severity: warning
+          service: meepleai-api
+          category: performance
+          endpoint: chat
+        annotations:
+          summary: "RAG chat endpoint P95 latency exceeds 3s"
+          description: |
+            Chat endpoint P95: {{ $value | humanize }}s (BGAI-082 target: <3s).
+            This is the primary RAG endpoint - check LLM API, vector search, and embedding service.
           runbook_url: "https://docs.meepleai.dev/runbooks/slow-performance"
           dashboard_url: "http://localhost:3001/d/api-performance"
 

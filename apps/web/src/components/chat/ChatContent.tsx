@@ -1,5 +1,5 @@
 /**
- * ChatContent - Main chat content area (Issue #858)
+ * ChatContent - Main chat content area (Issue #858, BGAI-074)
  *
  * Composes the message list and input form.
  * Displays thread header with title, game info, message count, and status.
@@ -9,6 +9,10 @@
  * - Shows archived thread indicator
  * - Better mobile spacing (prevents bottom nav overlap)
  *
+ * Updated for BGAI-074:
+ * - Citation click → PDF page jump functionality
+ * - PdfViewerModal integration for viewing PDF at specific page
+ *
  * Will be enhanced in Phase 4 with:
  * - Export thread button
  * - Streaming response display with stop button
@@ -16,14 +20,33 @@
  * - Full integration with useChatStreaming hook
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useChatContext } from '@/hooks/useChatContext';
 import { MessageList } from './MessageList';
 import { MessageInput } from './MessageInput';
 import { MobileSidebar } from './MobileSidebar';
 import { ContextChip, type DocumentSource } from './ContextChip';
-import { Game, ChatThread } from '@/types';
+import { PdfViewerModal } from '@/components/pdf/PdfViewerModal';
+import { api } from '@/lib/api';
+import { Game, ChatThread, Citation } from '@/types';
+
+/**
+ * PDF modal state for citation click → jump to page (BGAI-074)
+ */
+interface PdfModalState {
+  open: boolean;
+  pdfUrl: string;
+  pageNumber: number;
+  documentName: string;
+}
+
+const INITIAL_PDF_MODAL_STATE: PdfModalState = {
+  open: false,
+  pdfUrl: '',
+  pageNumber: 1,
+  documentName: '',
+};
 
 export function ChatContent() {
   const {
@@ -31,6 +54,7 @@ export function ChatContent() {
     selectedGameId,
     activeChatId,
     chats,
+    messages,
     errorMessage,
     sidebarCollapsed,
     toggleSidebar,
@@ -39,9 +63,57 @@ export function ChatContent() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
+  // PDF modal state for citation click → jump to page (BGAI-074)
+  const [pdfModal, setPdfModal] = useState<PdfModalState>(INITIAL_PDF_MODAL_STATE);
+
   const selectedGame = games.find((g: Game) => g.id === selectedGameId);
   const activeThread = chats.find((c: ChatThread) => c.id === activeChatId);
   const isArchived = activeThread?.status === 'Closed';
+
+  /**
+   * Handle citation click → open PDF at specific page (BGAI-074)
+   *
+   * Looks up the citation from messages to get documentId and pageNumber,
+   * then opens PdfViewerModal at that page.
+   */
+  const handleCitationClick = useCallback(
+    (citationId: string) => {
+      // Find the citation in messages to get document details
+      // CitationId format from VirtualizedMessageList: documentId
+      for (const message of messages) {
+        const citation = message.citations?.find(c => c.documentId === citationId);
+        if (citation) {
+          const pdfUrl = api.pdf.getPdfDownloadUrl(citation.documentId);
+          setPdfModal({
+            open: true,
+            pdfUrl,
+            pageNumber: citation.pageNumber,
+            documentName: selectedGame?.title || 'PDF Document',
+          });
+          return;
+        }
+      }
+
+      // Fallback: If no citation found, try opening by documentId directly
+      const pdfUrl = api.pdf.getPdfDownloadUrl(citationId);
+      setPdfModal({
+        open: true,
+        pdfUrl,
+        pageNumber: 1,
+        documentName: selectedGame?.title || 'PDF Document',
+      });
+    },
+    [messages, selectedGame?.title]
+  );
+
+  /**
+   * Close PDF modal (BGAI-074)
+   */
+  const handlePdfModalClose = useCallback((open: boolean) => {
+    if (!open) {
+      setPdfModal(INITIAL_PDF_MODAL_STATE);
+    }
+  }, []);
 
   // Track mobile viewport with matchMedia
   useEffect(() => {
@@ -148,10 +220,19 @@ export function ChatContent() {
       )}
 
       {/* Messages Area */}
-      <MessageList />
+      <MessageList onCitationClick={handleCitationClick} />
 
       {/* Message Input */}
       <MessageInput />
+
+      {/* PDF Viewer Modal (BGAI-074) */}
+      <PdfViewerModal
+        open={pdfModal.open}
+        onOpenChange={handlePdfModalClose}
+        pdfUrl={pdfModal.pdfUrl}
+        initialPage={pdfModal.pageNumber}
+        documentName={pdfModal.documentName}
+      />
     </div>
   );
 }

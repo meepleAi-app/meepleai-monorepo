@@ -9,6 +9,9 @@
  * - ChatMessage component (Issue #1831)
  * - Auto-scroll to bottom on new messages
  * - Efficient rendering for large message lists (>50 messages)
+ *
+ * Updated for BGAI-074:
+ * - Citation click handler for jump-to-PDF-page functionality
  */
 
 import React from 'react';
@@ -16,7 +19,12 @@ import { useChatContext } from '@/hooks/useChatContext';
 import { VirtualizedMessageList } from './VirtualizedMessageList';
 import { SkeletonLoader } from '../loading/SkeletonLoader';
 
-export function MessageList() {
+export interface MessageListProps {
+  /** Citation click handler for PDF page jump (BGAI-074) */
+  onCitationClick?: (citationId: string) => void;
+}
+
+export function MessageList({ onCitationClick }: MessageListProps) {
   const {
     messages,
     activeChatId,
@@ -71,6 +79,7 @@ export function MessageList() {
         messages={messages}
         streamingMessage={streamingMessage}
         isStreaming={isStreaming}
+        onCitationClick={onCitationClick}
         className="h-full"
       />
     </div>

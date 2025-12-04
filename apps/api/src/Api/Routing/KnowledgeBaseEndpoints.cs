@@ -53,7 +53,7 @@ public static class KnowledgeBaseEndpoints
                 GameId: gameId,
                 Query: req.query,
                 TopK: req.topK ?? 5,
-                MinScore: req.minScore ?? 0.7,
+                MinScore: req.minScore ?? 0.55,
                 SearchMode: req.searchMode ?? "hybrid",
                 Language: req.language ?? "en"
             );

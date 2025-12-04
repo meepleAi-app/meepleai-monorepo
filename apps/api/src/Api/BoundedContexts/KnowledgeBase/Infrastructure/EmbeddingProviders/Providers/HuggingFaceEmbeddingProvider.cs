@@ -22,7 +22,8 @@ public sealed class HuggingFaceEmbeddingProvider : EmbeddingProviderBase
         EmbeddingConfiguration config)
         : base(httpClient, logger, config)
     {
-        _modelName = config.Model ?? EmbeddingProviderType.HuggingFaceBgeM3.GetModelName();
+        // BGAI-081: Handle both null and empty string from config binding
+        _modelName = !string.IsNullOrWhiteSpace(config.Model) ? config.Model : EmbeddingProviderType.HuggingFaceBgeM3.GetModelName();
         _dimensions = config.Dimensions ?? EmbeddingProviderType.HuggingFaceBgeM3.GetDimensions();
         _apiKey = config.HuggingFaceApiKey;
 

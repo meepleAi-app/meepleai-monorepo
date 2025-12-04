@@ -101,7 +101,7 @@ public class AgentOrchestrationService
         // Extract strategy parameters
         var strategy = agent.Strategy;
         var topK = strategy.GetParameter("TopK", 10);
-        var minScore = strategy.GetParameter("MinScore", 0.70);
+        var minScore = strategy.GetParameter("MinScore", 0.55);
 
         // Perform vector search using domain service
         var searchResults = vectorSearch.Search(

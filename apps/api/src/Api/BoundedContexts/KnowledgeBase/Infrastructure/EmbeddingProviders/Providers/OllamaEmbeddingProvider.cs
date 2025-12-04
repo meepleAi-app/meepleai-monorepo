@@ -31,7 +31,8 @@ public sealed class OllamaEmbeddingProvider : EmbeddingProviderBase
         }
 
         _providerType = providerType;
-        _modelName = config.Model ?? providerType.GetModelName();
+        // BGAI-081: Handle both null and empty string from config binding
+        _modelName = !string.IsNullOrWhiteSpace(config.Model) ? config.Model : providerType.GetModelName();
         _dimensions = config.Dimensions ?? providerType.GetDimensions();
 
         // Configure HttpClient for Ollama

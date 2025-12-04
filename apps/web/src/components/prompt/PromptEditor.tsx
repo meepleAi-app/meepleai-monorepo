@@ -1,7 +1,7 @@
 import React from 'react';
 import Editor from '@monaco-editor/react';
 
-interface PromptEditorProps {
+export interface PromptEditorProps {
   value: string;
   onChange?: (value: string | undefined) => void;
   readonly?: boolean;

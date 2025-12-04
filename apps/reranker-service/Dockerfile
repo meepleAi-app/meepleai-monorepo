@@ -20,7 +20,7 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Create non-root user for security
-RUN groupadd -r reranker && useradd -r -g reranker reranker
+RUN groupadd -r reranker && useradd -r -g reranker -m -d /home/reranker reranker && mkdir -p /home/reranker/.cache/huggingface && chown -R reranker:reranker /home/reranker
 
 # Install runtime dependencies only
 RUN apt-get update && apt-get install -y --no-install-recommends \

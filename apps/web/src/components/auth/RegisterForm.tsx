@@ -7,6 +7,7 @@
  * - Accessible form controls
  * - Loading states
  * - Custom error display
+ * - i18n support
  */
 
 import { useForm } from 'react-hook-form';
@@ -14,42 +15,26 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { AccessibleFormInput } from '@/components/accessible';
 import { LoadingButton } from '@/components/loading/LoadingButton';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { useTranslation } from '@/hooks/useTranslation';
 
 // ============================================================================
-// Validation Schema
+// Types
 // ============================================================================
 
-const registerSchema = z.object({
-  email: z
-    .string()
-    .min(1, 'Email is required')
-    .email('Please enter a valid email address'),
-  password: z
-    .string()
-    .min(8, 'Password must be at least 8 characters')
-    .max(100, 'Password must not exceed 100 characters')
-    .regex(
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-      'Password must contain at least one uppercase letter, one lowercase letter, and one number'
-    ),
-  confirmPassword: z
-    .string()
-    .min(1, 'Please confirm your password'),
-  displayName: z
-    .string()
-    .min(2, 'Display name must be at least 2 characters')
-    .max(50, 'Display name must not exceed 50 characters')
-    .optional()
-    .or(z.literal('')),
-  role: z
-    .enum(['User', 'Editor', 'Admin']),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: 'Passwords do not match',
-  path: ['confirmPassword'],
-});
-
-export type RegisterFormData = z.infer<typeof registerSchema>;
+export interface RegisterFormData {
+  email: string;
+  password: string;
+  confirmPassword: string;
+  displayName?: string;
+  role: 'User' | 'Editor' | 'Admin';
+}
 
 // ============================================================================
 // Component Props
@@ -72,8 +57,33 @@ export function RegisterForm({
   loading = false,
   error,
   onErrorDismiss,
-  showRoleSelector = false
+  showRoleSelector = false,
 }: RegisterFormProps) {
+  const { t } = useTranslation();
+
+  // Validation Schema with i18n
+  const registerSchema = z
+    .object({
+      email: z.string().min(1, t('validation.emailRequired')).email(t('validation.invalidEmail')),
+      password: z
+        .string()
+        .min(8, t('validation.passwordMin'))
+        .max(100, t('validation.passwordMax'))
+        .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, t('validation.passwordComplexity')),
+      confirmPassword: z.string().min(1, t('validation.passwordConfirmRequired')),
+      displayName: z
+        .string()
+        .min(2, t('validation.minLength', { min: 2 }))
+        .max(50, t('validation.maxLength', { max: 50 }))
+        .optional()
+        .or(z.literal('')),
+      role: z.enum(['User', 'Editor', 'Admin']),
+    })
+    .refine(data => data.password === data.confirmPassword, {
+      message: t('validation.passwordMatch'),
+      path: ['confirmPassword'],
+    });
+
   const {
     register,
     handleSubmit,
@@ -109,10 +119,10 @@ export function RegisterForm({
       {/* Email Field */}
       <div className="space-y-2">
         <AccessibleFormInput
-          label="Email"
+          label={t('auth.register.email')}
           id="register-email"
           type="email"
-          placeholder="you@example.com"
+          placeholder={t('auth.register.emailPlaceholder')}
           autoComplete="email"
           error={errors.email?.message}
           required
@@ -124,10 +134,10 @@ export function RegisterForm({
       {/* Display Name Field (Optional) */}
       <div className="space-y-2">
         <AccessibleFormInput
-          label="Display Name (Optional)"
+          label={t('auth.register.displayNameOptional')}
           id="register-displayName"
           type="text"
-          placeholder="John Doe"
+          placeholder={t('auth.register.displayNamePlaceholder')}
           autoComplete="name"
           error={errors.displayName?.message}
           disabled={isLoading}
@@ -138,10 +148,10 @@ export function RegisterForm({
       {/* Password Field */}
       <div className="space-y-2">
         <AccessibleFormInput
-          label="Password"
+          label={t('auth.register.password')}
           id="register-password"
           type="password"
-          placeholder="••••••••"
+          placeholder={t('auth.register.passwordPlaceholder')}
           autoComplete="new-password"
           error={errors.password?.message}
           required
@@ -149,17 +159,17 @@ export function RegisterForm({
           {...register('password')}
         />
         <p className="text-xs text-slate-500 dark:text-slate-400">
-          Must contain uppercase, lowercase, and number (min 8 characters)
+          {t('auth.register.passwordHelp')}
         </p>
       </div>
 
       {/* Confirm Password Field */}
       <div className="space-y-2">
         <AccessibleFormInput
-          label="Confirm Password"
+          label={t('auth.register.confirmPassword')}
           id="register-confirmPassword"
           type="password"
-          placeholder="••••••••"
+          placeholder={t('auth.register.confirmPasswordPlaceholder')}
           autoComplete="new-password"
           error={errors.confirmPassword?.message}
           required
@@ -171,21 +181,24 @@ export function RegisterForm({
       {/* Role Selector (Conditional) */}
       {showRoleSelector && (
         <div className="space-y-2">
-          <label htmlFor="register-role" className="block text-sm font-medium text-slate-900 dark:text-slate-100">
-            Role
+          <label
+            htmlFor="register-role"
+            className="block text-sm font-medium text-slate-900 dark:text-slate-100"
+          >
+            {t('auth.register.role')}
           </label>
           <Select
             value={selectedRole}
-            onValueChange={(value) => setValue('role', value as 'User' | 'Editor' | 'Admin')}
+            onValueChange={value => setValue('role', value as 'User' | 'Editor' | 'Admin')}
             disabled={isLoading}
           >
             <SelectTrigger id="register-role">
-              <SelectValue placeholder="Select a role" />
+              <SelectValue placeholder={t('auth.register.selectRole')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="User">User</SelectItem>
-              <SelectItem value="Editor">Editor</SelectItem>
-              <SelectItem value="Admin">Admin</SelectItem>
+              <SelectItem value="User">{t('roles.user')}</SelectItem>
+              <SelectItem value="Editor">{t('roles.editor')}</SelectItem>
+              <SelectItem value="Admin">{t('roles.admin')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -207,9 +220,9 @@ export function RegisterForm({
         type="submit"
         className="w-full"
         isLoading={isLoading}
-        loadingText="Creating account..."
+        loadingText={t('auth.register.creatingAccount')}
       >
-        Create Account
+        {t('auth.register.createAccount')}
       </LoadingButton>
     </form>
   );

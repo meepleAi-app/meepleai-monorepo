@@ -194,9 +194,9 @@ builder.Services.ConfigureHttpJsonOptions(options =>
     // Allow trailing commas in JSON for tolerant parsing (e.g., {"a":1,} is valid)
     options.SerializerOptions.AllowTrailingCommas = true;
 
-    // Preserve property names as-is (don't auto-convert to camelCase)
-    // Frontend sends camelCase, backend uses PascalCase, PropertyNameCaseInsensitive handles both
-    options.SerializerOptions.PropertyNamingPolicy = null;
+    // Use camelCase for JSON serialization (JavaScript convention)
+    // PropertyNameCaseInsensitive handles deserialization, this handles serialization
+    options.SerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
 });
 
 builder.Services.AddCors(options =>

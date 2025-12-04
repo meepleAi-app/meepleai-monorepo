@@ -22,10 +22,12 @@
 ## Documentation Categories
 
 ### [00 - Getting Started](./00-getting-started/)
-**Audience**: All users, new team members
-**Purpose**: Quick start guides, onboarding, project overview
+**Audience**: All users, new team members, players
+**Purpose**: Quick start guides, onboarding, project overview, user documentation
 
+- [User Guide (IT)](./00-getting-started/user-guide.md) ⭐ **NEW** - Guida completa per giocatori (italiano)
 - [Quick Start](./00-getting-started/quick-start.md) - Local setup in 15 minutes
+- [Guida Setup Locale (IT)](./00-getting-started/guida-setup-locale.md) - Setup dettagliato in italiano
 - [Executive Summary](./00-getting-started/executive-summary.md) - Project overview
 - [Overview](./00-getting-started/overview.md) - Documentation structure
 
@@ -358,11 +360,11 @@ See [README.md - Contributing Documentation](./README.md#-contributing-documenta
 **Legend**: ⭐ = Essential reading, highly recommended
 
 **Index Metadata**:
-- **Version**: 2.1
+- **Version**: 2.2
 - **Maintainer**: Documentation Team
-- **Last Updated**: 2025-12-02
-- **Next Review**: 2025-12-22
-- **Recent Changes**: Major documentation consolidation - removed duplicates, reorganized structure
+- **Last Updated**: 2025-12-04
+- **Next Review**: 2025-12-24
+- **Recent Changes**: Added User Guide (Italian) for end users (BGAI-084)
 
 
 

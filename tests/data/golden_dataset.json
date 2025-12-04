@@ -2,9 +2,9 @@
   "metadata": {
     "version": "1.0",
     "created_at": "2025-11-30T11:36:18.6961455Z",
-    "description": "Golden dataset for RAG quality testing - 1000 Q&A pairs across 10 popular board games (template-generated for alpha testing) + 20 expert-annotated Terraforming Mars Q&A (BGAI-056) + 15 expert-annotated Wingspan Q&A (BGAI-057) + 15 expert-annotated Azul Q&A (BGAI-058) + 15 expert-annotated Catan Q&A (BGAI-070) + 15 expert-annotated Ticket to Ride Q&A (BGAI-070)",
-    "total_test_cases": 1080,
-    "games_count": 12,
+    "description": "Golden dataset for RAG quality testing - 1000 Q&A pairs across 10 popular board games (template-generated for alpha testing) + 20 expert-annotated Terraforming Mars Q&A (BGAI-056) + 15 expert-annotated Wingspan Q&A (BGAI-057) + 15 expert-annotated Azul Q&A (BGAI-058) + 15 expert-annotated Catan Q&A (BGAI-070) + 15 expert-annotated Ticket to Ride Q&A (BGAI-070) + 10 expert-annotated 7 Wonders Q&A (BGAI-071) + 10 expert-annotated Agricola Q&A (BGAI-071) + 10 expert-annotated Splendor Q&A (BGAI-071)",
+    "total_test_cases": 1110,
+    "games_count": 15,
     "annotators": [
       "template_generated_alpha",
       "needs_expert_validation_post_alpha"
@@ -25854,19 +25854,798 @@
           "annotated_at": "2025-12-04T10:00:00Z"
         }
       ]
+    },
+    {
+      "game_id": "7-wonders",
+      "game_name": "7 Wonders",
+      "language": "it",
+      "test_cases": [
+        {
+          "id": "7wonders_expert_001",
+          "question": "Quante Ere ci sono in una partita di 7 Wonders?",
+          "expected_answer_keywords": [
+            "tre",
+            "3",
+            "ere",
+            "età"
+          ],
+          "expected_citations": [
+            {
+              "page": 2,
+              "snippet_contains": "3 Ages"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "easy",
+          "category": "gameplay",
+          "annotated_by": "expert_bgai071",
+          "annotated_at": "2025-12-04T12:00:00Z"
+        },
+        {
+          "id": "7wonders_expert_002",
+          "question": "Quante monete riceve ogni giocatore all'inizio di 7 Wonders?",
+          "expected_answer_keywords": [
+            "tre",
+            "3",
+            "monete"
+          ],
+          "expected_citations": [
+            {
+              "page": 3,
+              "snippet_contains": "3 coins"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "easy",
+          "category": "setup",
+          "annotated_by": "expert_bgai071",
+          "annotated_at": "2025-12-04T12:00:00Z"
+        },
+        {
+          "id": "7wonders_expert_003",
+          "question": "Come funziona il passaggio delle carte in 7 Wonders?",
+          "expected_answer_keywords": [
+            "draftare",
+            "passare",
+            "vicino",
+            "sinistra",
+            "destra"
+          ],
+          "expected_citations": [
+            {
+              "page": 4,
+              "snippet_contains": "pass the remaining cards"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "medium",
+          "category": "gameplay",
+          "annotated_by": "expert_bgai071",
+          "annotated_at": "2025-12-04T12:00:00Z"
+        },
+        {
+          "id": "7wonders_expert_004",
+          "question": "Cosa sono le carte marroni in 7 Wonders e cosa producono?",
+          "expected_answer_keywords": [
+            "materie",
+            "prime",
+            "risorse",
+            "legno",
+            "pietra",
+            "argilla",
+            "minerale"
+          ],
+          "expected_citations": [
+            {
+              "page": 5,
+              "snippet_contains": "raw materials"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "easy",
+          "category": "gameplay",
+          "annotated_by": "expert_bgai071",
+          "annotated_at": "2025-12-04T12:00:00Z"
+        },
+        {
+          "id": "7wonders_expert_005",
+          "question": "Come si risolve il conflitto militare in 7 Wonders?",
+          "expected_answer_keywords": [
+            "scudi",
+            "confronto",
+            "vicini",
+            "vittoria",
+            "sconfitta"
+          ],
+          "expected_citations": [
+            {
+              "page": 6,
+              "snippet_contains": "military conflict"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "medium",
+          "category": "gameplay",
+          "annotated_by": "expert_bgai071",
+          "annotated_at": "2025-12-04T12:00:00Z"
+        },
+        {
+          "id": "7wonders_expert_006",
+          "question": "Quanti punti vittoria vale una sconfitta militare in 7 Wonders?",
+          "expected_answer_keywords": [
+            "-1",
+            "meno",
+            "uno",
+            "negativo"
+          ],
+          "expected_citations": [
+            {
+              "page": 6,
+              "snippet_contains": "-1 victory point"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "medium",
+          "category": "endgame",
+          "annotated_by": "expert_bgai071",
+          "annotated_at": "2025-12-04T12:00:00Z"
+        },
+        {
+          "id": "7wonders_expert_007",
+          "question": "Cosa succede se non posso pagare per costruire una carta in 7 Wonders?",
+          "expected_answer_keywords": [
+            "scartare",
+            "monete",
+            "3",
+            "tre"
+          ],
+          "expected_citations": [
+            {
+              "page": 4,
+              "snippet_contains": "discard for 3 coins"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "medium",
+          "category": "edge_cases",
+          "annotated_by": "expert_bgai071",
+          "annotated_at": "2025-12-04T12:00:00Z"
+        },
+        {
+          "id": "7wonders_expert_008",
+          "question": "Posso comprare risorse dai vicini in 7 Wonders?",
+          "expected_answer_keywords": [
+            "sì",
+            "comprare",
+            "2",
+            "monete",
+            "vicini"
+          ],
+          "expected_citations": [
+            {
+              "page": 5,
+              "snippet_contains": "2 coins to neighbor"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "medium",
+          "category": "gameplay",
+          "annotated_by": "expert_bgai071",
+          "annotated_at": "2025-12-04T12:00:00Z"
+        },
+        {
+          "id": "7wonders_expert_009",
+          "question": "Come funzionano le catene di costruzione gratuite in 7 Wonders?",
+          "expected_answer_keywords": [
+            "simbolo",
+            "gratuito",
+            "catena",
+            "prerequisito"
+          ],
+          "expected_citations": [
+            {
+              "page": 7,
+              "snippet_contains": "chain building"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "hard",
+          "category": "edge_cases",
+          "annotated_by": "expert_bgai071",
+          "annotated_at": "2025-12-04T12:00:00Z"
+        },
+        {
+          "id": "7wonders_expert_010",
+          "question": "Quante carte rimangono alla fine di ogni Era in 7 Wonders?",
+          "expected_answer_keywords": [
+            "una",
+            "1",
+            "scartata"
+          ],
+          "expected_citations": [
+            {
+              "page": 4,
+              "snippet_contains": "last card is discarded"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "hard",
+          "category": "edge_cases",
+          "annotated_by": "expert_bgai071",
+          "annotated_at": "2025-12-04T12:00:00Z"
+        }
+      ]
+    },
+    {
+      "game_id": "agricola",
+      "game_name": "Agricola",
+      "language": "it",
+      "test_cases": [
+        {
+          "id": "agricola_expert_001",
+          "question": "Quanti membri della famiglia ha ogni giocatore all'inizio di Agricola?",
+          "expected_answer_keywords": [
+            "due",
+            "2",
+            "famiglia",
+            "membri"
+          ],
+          "expected_citations": [
+            {
+              "page": 3,
+              "snippet_contains": "2 family members"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "easy",
+          "category": "setup",
+          "annotated_by": "expert_bgai071",
+          "annotated_at": "2025-12-04T12:00:00Z"
+        },
+        {
+          "id": "agricola_expert_002",
+          "question": "Quanti round ci sono in una partita completa di Agricola?",
+          "expected_answer_keywords": [
+            "14",
+            "quattordici",
+            "round"
+          ],
+          "expected_citations": [
+            {
+              "page": 4,
+              "snippet_contains": "14 rounds"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "easy",
+          "category": "gameplay",
+          "annotated_by": "expert_bgai071",
+          "annotated_at": "2025-12-04T12:00:00Z"
+        },
+        {
+          "id": "agricola_expert_003",
+          "question": "Cosa succede durante la fase di raccolto in Agricola?",
+          "expected_answer_keywords": [
+            "raccolto",
+            "cibo",
+            "nutrire",
+            "famiglia"
+          ],
+          "expected_citations": [
+            {
+              "page": 6,
+              "snippet_contains": "harvest phase"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "medium",
+          "category": "gameplay",
+          "annotated_by": "expert_bgai071",
+          "annotated_at": "2025-12-04T12:00:00Z"
+        },
+        {
+          "id": "agricola_expert_004",
+          "question": "Quanti punti cibo servono per nutrire ogni membro della famiglia in Agricola?",
+          "expected_answer_keywords": [
+            "2",
+            "due",
+            "cibo",
+            "membro"
+          ],
+          "expected_citations": [
+            {
+              "page": 6,
+              "snippet_contains": "2 food per family member"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "easy",
+          "category": "gameplay",
+          "annotated_by": "expert_bgai071",
+          "annotated_at": "2025-12-04T12:00:00Z"
+        },
+        {
+          "id": "agricola_expert_005",
+          "question": "Cosa sono le carte mendicante in Agricola e quando si ricevono?",
+          "expected_answer_keywords": [
+            "mendicante",
+            "punti",
+            "negativi",
+            "-3",
+            "cibo"
+          ],
+          "expected_citations": [
+            {
+              "page": 7,
+              "snippet_contains": "begging card"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "medium",
+          "category": "edge_cases",
+          "annotated_by": "expert_bgai071",
+          "annotated_at": "2025-12-04T12:00:00Z"
+        },
+        {
+          "id": "agricola_expert_006",
+          "question": "Come si può espandere la propria famiglia in Agricola?",
+          "expected_answer_keywords": [
+            "stanza",
+            "crescita",
+            "famiglia",
+            "azione"
+          ],
+          "expected_citations": [
+            {
+              "page": 5,
+              "snippet_contains": "family growth"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "medium",
+          "category": "gameplay",
+          "annotated_by": "expert_bgai071",
+          "annotated_at": "2025-12-04T12:00:00Z"
+        },
+        {
+          "id": "agricola_expert_007",
+          "question": "Quanti spazi ha la fattoria iniziale di ogni giocatore in Agricola?",
+          "expected_answer_keywords": [
+            "15",
+            "quindici",
+            "spazi",
+            "3x5"
+          ],
+          "expected_citations": [
+            {
+              "page": 3,
+              "snippet_contains": "15 spaces"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "easy",
+          "category": "setup",
+          "annotated_by": "expert_bgai071",
+          "annotated_at": "2025-12-04T12:00:00Z"
+        },
+        {
+          "id": "agricola_expert_008",
+          "question": "Cosa succede se un campo non viene recintato in Agricola al termine della partita?",
+          "expected_answer_keywords": [
+            "punti",
+            "negativi",
+            "spazi",
+            "vuoti"
+          ],
+          "expected_citations": [
+            {
+              "page": 8,
+              "snippet_contains": "unused spaces"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "hard",
+          "category": "endgame",
+          "annotated_by": "expert_bgai071",
+          "annotated_at": "2025-12-04T12:00:00Z"
+        },
+        {
+          "id": "agricola_expert_009",
+          "question": "Quante stanze contiene la casa iniziale in Agricola?",
+          "expected_answer_keywords": [
+            "due",
+            "2",
+            "stanze",
+            "legno"
+          ],
+          "expected_citations": [
+            {
+              "page": 3,
+              "snippet_contains": "2 wooden rooms"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "easy",
+          "category": "setup",
+          "annotated_by": "expert_bgai071",
+          "annotated_at": "2025-12-04T12:00:00Z"
+        },
+        {
+          "id": "agricola_expert_010",
+          "question": "Come funziona la riproduzione degli animali in Agricola?",
+          "expected_answer_keywords": [
+            "coppia",
+            "cucciolo",
+            "raccolto",
+            "animali"
+          ],
+          "expected_citations": [
+            {
+              "page": 7,
+              "snippet_contains": "animal breeding"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "hard",
+          "category": "gameplay",
+          "annotated_by": "expert_bgai071",
+          "annotated_at": "2025-12-04T12:00:00Z"
+        }
+      ]
+    },
+    {
+      "game_id": "splendor",
+      "game_name": "Splendor",
+      "language": "it",
+      "test_cases": [
+        {
+          "id": "splendor_expert_001",
+          "question": "Quanti punti prestigio servono per vincere a Splendor?",
+          "expected_answer_keywords": [
+            "15",
+            "quindici",
+            "punti",
+            "prestigio"
+          ],
+          "expected_citations": [
+            {
+              "page": 2,
+              "snippet_contains": "15 prestige points"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "easy",
+          "category": "endgame",
+          "annotated_by": "expert_bgai071",
+          "annotated_at": "2025-12-04T12:00:00Z"
+        },
+        {
+          "id": "splendor_expert_002",
+          "question": "Quante gemme può prendere un giocatore in un turno in Splendor?",
+          "expected_answer_keywords": [
+            "tre",
+            "3",
+            "diverse",
+            "due",
+            "2",
+            "uguali"
+          ],
+          "expected_citations": [
+            {
+              "page": 3,
+              "snippet_contains": "3 different gems"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "easy",
+          "category": "gameplay",
+          "annotated_by": "expert_bgai071",
+          "annotated_at": "2025-12-04T12:00:00Z"
+        },
+        {
+          "id": "splendor_expert_003",
+          "question": "Quante gemme massime può avere un giocatore in mano in Splendor?",
+          "expected_answer_keywords": [
+            "10",
+            "dieci",
+            "massimo"
+          ],
+          "expected_citations": [
+            {
+              "page": 3,
+              "snippet_contains": "maximum of 10 tokens"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "medium",
+          "category": "edge_cases",
+          "annotated_by": "expert_bgai071",
+          "annotated_at": "2025-12-04T12:00:00Z"
+        },
+        {
+          "id": "splendor_expert_004",
+          "question": "Come funziona la riserva di una carta in Splendor?",
+          "expected_answer_keywords": [
+            "riservare",
+            "oro",
+            "jolly",
+            "mano"
+          ],
+          "expected_citations": [
+            {
+              "page": 4,
+              "snippet_contains": "reserve a card"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "medium",
+          "category": "gameplay",
+          "annotated_by": "expert_bgai071",
+          "annotated_at": "2025-12-04T12:00:00Z"
+        },
+        {
+          "id": "splendor_expert_005",
+          "question": "Le carte riservate in Splendor forniscono bonus mentre sono in mano?",
+          "expected_answer_keywords": [
+            "no",
+            "mano",
+            "bonus",
+            "solo",
+            "acquistate"
+          ],
+          "expected_citations": [
+            {
+              "page": 4,
+              "snippet_contains": "reserved cards do not provide bonuses"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "hard",
+          "category": "edge_cases",
+          "annotated_by": "expert_bgai071",
+          "annotated_at": "2025-12-04T12:00:00Z"
+        },
+        {
+          "id": "splendor_expert_006",
+          "question": "Come si ottiene la visita di un nobile in Splendor?",
+          "expected_answer_keywords": [
+            "bonus",
+            "carte",
+            "requisiti",
+            "automatico"
+          ],
+          "expected_citations": [
+            {
+              "page": 5,
+              "snippet_contains": "noble visit"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "medium",
+          "category": "gameplay",
+          "annotated_by": "expert_bgai071",
+          "annotated_at": "2025-12-04T12:00:00Z"
+        },
+        {
+          "id": "splendor_expert_007",
+          "question": "Quanti punti prestigio vale ogni tessera nobile in Splendor?",
+          "expected_answer_keywords": [
+            "3",
+            "tre",
+            "punti",
+            "nobile"
+          ],
+          "expected_citations": [
+            {
+              "page": 5,
+              "snippet_contains": "3 prestige points"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "easy",
+          "category": "endgame",
+          "annotated_by": "expert_bgai071",
+          "annotated_at": "2025-12-04T12:00:00Z"
+        },
+        {
+          "id": "splendor_expert_008",
+          "question": "Quando si possono prendere 2 gemme dello stesso colore in Splendor?",
+          "expected_answer_keywords": [
+            "4",
+            "quattro",
+            "disponibili",
+            "stesso",
+            "colore"
+          ],
+          "expected_citations": [
+            {
+              "page": 3,
+              "snippet_contains": "at least 4 tokens"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "medium",
+          "category": "edge_cases",
+          "annotated_by": "expert_bgai071",
+          "annotated_at": "2025-12-04T12:00:00Z"
+        },
+        {
+          "id": "splendor_expert_009",
+          "question": "Quante carte può riservare un giocatore in Splendor?",
+          "expected_answer_keywords": [
+            "3",
+            "tre",
+            "massimo",
+            "riservate"
+          ],
+          "expected_citations": [
+            {
+              "page": 4,
+              "snippet_contains": "maximum of 3 reserved cards"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "medium",
+          "category": "edge_cases",
+          "annotated_by": "expert_bgai071",
+          "annotated_at": "2025-12-04T12:00:00Z"
+        },
+        {
+          "id": "splendor_expert_010",
+          "question": "Come si conclude la partita di Splendor quando un giocatore raggiunge 15 punti?",
+          "expected_answer_keywords": [
+            "round",
+            "completa",
+            "tutti",
+            "giocatori",
+            "turno"
+          ],
+          "expected_citations": [
+            {
+              "page": 6,
+              "snippet_contains": "end of the round"
+            }
+          ],
+          "forbidden_keywords": [
+            "inventato",
+            "probabilmente",
+            "suppongo"
+          ],
+          "difficulty": "hard",
+          "category": "endgame",
+          "annotated_by": "expert_bgai071",
+          "annotated_at": "2025-12-04T12:00:00Z"
+        }
+      ]
     }
   ],
   "statistics": {
     "difficulty_distribution": {
-      "easy": 582,
-      "medium": 305,
-      "hard": 193
+      "easy": 594,
+      "medium": 319,
+      "hard": 197
     },
     "category_distribution": {
-      "gameplay": 396,
-      "setup": 285,
-      "endgame": 186,
-      "edge_cases": 191
+      "gameplay": 408,
+      "setup": 290,
+      "endgame": 192,
+      "edge_cases": 200
     }
   },
   "quality_thresholds": {

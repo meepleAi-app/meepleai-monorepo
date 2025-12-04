@@ -66,7 +66,11 @@ export function createAuthClient({ httpClient }: CreateAuthClientParams) {
      * Validate API key and store it for header-based auth
      */
     async loginWithApiKey(apiKey: string): Promise<ApiKeyLoginResponse> {
-      const response = await httpClient.post('/api/v1/auth/apikey/login', { apiKey }, ApiKeyLoginResponseSchema);
+      const response = await httpClient.post(
+        '/api/v1/auth/apikey/login',
+        { apiKey },
+        ApiKeyLoginResponseSchema
+      );
       await setStoredApiKey(apiKey.trim());
       return response;
     },
@@ -75,7 +79,10 @@ export function createAuthClient({ httpClient }: CreateAuthClientParams) {
      * Logout API key authentication (clears stored key)
      */
     async logoutApiKey(): Promise<{ ok: boolean; message: string }> {
-      const response = await httpClient.post<{ ok: boolean; message: string }>('/api/v1/auth/apikey/logout', {});
+      const response = await httpClient.post<{ ok: boolean; message: string }>(
+        '/api/v1/auth/apikey/logout',
+        {}
+      );
       clearStoredApiKey();
       return response;
     },
@@ -86,21 +93,14 @@ export function createAuthClient({ httpClient }: CreateAuthClientParams) {
      * Get current session status
      */
     async getSessionStatus(): Promise<SessionStatusResponse | null> {
-      return httpClient.get(
-        '/api/v1/auth/session/status',
-        SessionStatusResponseSchema
-      );
+      return httpClient.get('/api/v1/auth/session/status', SessionStatusResponseSchema);
     },
 
     /**
      * Extend current session
      */
     async extendSession(): Promise<SessionStatusResponse> {
-      return httpClient.post(
-        '/api/v1/auth/session/extend',
-        {},
-        SessionStatusResponseSchema
-      );
+      return httpClient.post('/api/v1/auth/session/extend', {}, SessionStatusResponseSchema);
     },
 
     /**
@@ -146,22 +146,14 @@ export function createAuthClient({ httpClient }: CreateAuthClientParams) {
      * Setup 2FA (get QR code and backup codes)
      */
     async setup2FA(): Promise<TotpSetupResponse> {
-      return httpClient.post(
-        '/api/v1/auth/2fa/setup',
-        {},
-        TotpSetupResponseSchema
-      );
+      return httpClient.post('/api/v1/auth/2fa/setup', {}, TotpSetupResponseSchema);
     },
 
     /**
      * Enable 2FA with verification code
      */
     async enable2FA(code: string): Promise<Enable2FAResult> {
-      return httpClient.post(
-        '/api/v1/auth/2fa/enable',
-        { code },
-        Enable2FAResultSchema
-      );
+      return httpClient.post('/api/v1/auth/2fa/enable', { code }, Enable2FAResultSchema);
     },
 
     /**
@@ -175,10 +167,10 @@ export function createAuthClient({ httpClient }: CreateAuthClientParams) {
      * Disable 2FA
      */
     async disable2FA(password: string, code: string): Promise<Disable2FAResult> {
-      const response = await httpClient.post<{ message: string }>(
-        '/api/v1/auth/2fa/disable',
-        { password, code }
-      );
+      const response = await httpClient.post<{ message: string }>('/api/v1/auth/2fa/disable', {
+        password,
+        code,
+      });
 
       return {
         Success: true,
@@ -198,22 +190,14 @@ export function createAuthClient({ httpClient }: CreateAuthClientParams) {
     /**
      * Update user profile
      */
-    async updateProfile(
-      payload: UpdateProfileRequest
-    ): Promise<UpdateProfileResponse> {
-      return httpClient.put(
-        '/api/v1/users/profile',
-        payload,
-        UpdateProfileResponseSchema
-      );
+    async updateProfile(payload: UpdateProfileRequest): Promise<UpdateProfileResponse> {
+      return httpClient.put('/api/v1/users/profile', payload, UpdateProfileResponseSchema);
     },
 
     /**
      * Change user password
      */
-    async changePassword(
-      request: ChangePasswordRequest
-    ): Promise<ChangePasswordResponse> {
+    async changePassword(request: ChangePasswordRequest): Promise<ChangePasswordResponse> {
       return httpClient.put(
         '/api/v1/users/profile/password',
         request,
@@ -231,16 +215,12 @@ export function createAuthClient({ httpClient }: CreateAuthClientParams) {
     },
 
     /**
-     * Update user preferences
+     * Update user preferences (Issue #1675)
      */
     async updatePreferences(
       payload: UpdatePreferencesRequest
-    ): Promise<UserPreferences> {
-      return httpClient.put(
-        '/api/v1/users/preferences',
-        payload,
-        UserPreferencesSchema
-      );
+    ): Promise<{ ok: boolean; message: string }> {
+      return httpClient.patch('/api/v1/users/preferences', payload, UpdateProfileResponseSchema);
     },
   };
 }

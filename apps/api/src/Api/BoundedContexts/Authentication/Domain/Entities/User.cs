@@ -19,6 +19,12 @@ public sealed class User : AggregateRoot<Guid>
     public DateTime CreatedAt { get; private set; }
     public bool IsDemoAccount { get; private set; }
 
+    // User preferences
+    public string Language { get; private set; }
+    public bool EmailNotifications { get; private set; }
+    public string Theme { get; private set; }
+    public int DataRetentionDays { get; private set; }
+
     // 2FA properties (DDD Value Objects)
     public TotpSecret? TotpSecret { get; private set; }
     public bool IsTwoFactorEnabled { get; private set; }
@@ -62,6 +68,12 @@ public sealed class User : AggregateRoot<Guid>
         Role = role ?? throw new ArgumentNullException(nameof(role));
         Tier = tier ?? UserTier.Free; // Default to Free tier
         CreatedAt = DateTime.UtcNow;
+
+        // Default preferences
+        Language = "en";
+        EmailNotifications = true;
+        Theme = "system";
+        DataRetentionDays = 90;
 
         IsTwoFactorEnabled = false;
     }
@@ -373,5 +385,29 @@ public sealed class User : AggregateRoot<Guid>
         var oldTier = Tier;
         Tier = newTier;
         AddDomainEvent(new UserTierChangedEvent(Id, oldTier, newTier));
+    }
+
+    /// <summary>
+    /// Updates the user's preferences (language, theme, notifications, data retention).
+    /// </summary>
+    public void UpdatePreferences(string language, string theme, bool emailNotifications, int dataRetentionDays)
+    {
+        if (string.IsNullOrWhiteSpace(language))
+            throw new ValidationException(nameof(language), "Language cannot be empty");
+
+        if (string.IsNullOrWhiteSpace(theme))
+            throw new ValidationException(nameof(theme), "Theme cannot be empty");
+
+        var validThemes = new[] { "light", "dark", "system" };
+        if (!validThemes.Contains(theme))
+            throw new ValidationException(nameof(theme), $"Theme must be one of: {string.Join(", ", validThemes)}");
+
+        if (dataRetentionDays <= 0)
+            throw new ValidationException(nameof(dataRetentionDays), "Data retention days must be positive");
+
+        Language = language;
+        Theme = theme;
+        EmailNotifications = emailNotifications;
+        DataRetentionDays = dataRetentionDays;
     }
 }

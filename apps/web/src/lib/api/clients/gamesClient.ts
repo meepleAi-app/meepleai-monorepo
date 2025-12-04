@@ -6,11 +6,14 @@
  */
 
 import type { HttpClient } from '../core/httpClient';
+import { z } from 'zod';
 import {
   GameSchema,
+  GameSessionDtoSchema,
   PaginatedGamesResponseSchema,
   PdfDocumentDtoSchema,
   type Game,
+  type GameSessionDto,
   type PaginatedGamesResponse,
   type PdfDocumentDto,
 } from '../schemas';
@@ -202,6 +205,27 @@ export function createGamesClient({ httpClient }: CreateGamesClientParams) {
      */
     async getById(id: string): Promise<Game | null> {
       return httpClient.get(`/api/v1/games/${encodeURIComponent(id)}`, GameSchema);
+    },
+
+    /**
+     * Get all sessions for a specific game with optional pagination
+     * Issue #1675: FE-IMP-005 - Connect frontend to backend sessions API
+     * @param gameId Game ID (GUID format)
+     * @param pageNumber Optional page number (1-indexed)
+     * @param pageSize Optional page size (default determined by backend)
+     */
+    async getSessions(
+      gameId: string,
+      pageNumber?: number,
+      pageSize?: number
+    ): Promise<GameSessionDto[]> {
+      const params = new URLSearchParams();
+      if (pageNumber) params.append('pageNumber', pageNumber.toString());
+      if (pageSize) params.append('pageSize', pageSize.toString());
+      const queryString = params.toString() ? `?${params.toString()}` : '';
+      const url = `/api/v1/games/${encodeURIComponent(gameId)}/sessions${queryString}`;
+      const response = await httpClient.get(url, z.array(GameSessionDtoSchema));
+      return response ?? [];
     },
 
     /**

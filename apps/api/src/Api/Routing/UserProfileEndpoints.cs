@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 // DDD CQRS imports
 using DddUpdateUserProfileCommand = Api.BoundedContexts.Authentication.Application.Commands.UpdateUserProfileCommand;
 using DddChangePasswordCommand = Api.BoundedContexts.Authentication.Application.Commands.ChangePasswordCommand;
+using DddUpdatePreferencesCommand = Api.BoundedContexts.Authentication.Application.Commands.UpdatePreferencesCommand;
 using DddGetUserProfileQuery = Api.BoundedContexts.Authentication.Application.Queries.GetUserProfileQuery;
 using Api.BoundedContexts.DocumentProcessing.Application.Queries;
 
@@ -188,6 +189,47 @@ public static class UserProfileEndpoints
         .Produces(400)
         .Produces(401);
 
+        // Update user preferences (AUTH-PROFILE-04)
+        group.MapPatch("/users/preferences", async (
+            [FromBody] UpdatePreferencesPayload payload,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            // Session validated by RequireSessionFilter
+            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+
+            var command = new DddUpdatePreferencesCommand
+            {
+                UserId = Guid.Parse(session.User.Id),
+                Language = payload.Language,
+                Theme = payload.Theme,
+                EmailNotifications = payload.EmailNotifications,
+                DataRetentionDays = payload.DataRetentionDays
+            };
+
+            await mediator.Send(command, ct).ConfigureAwait(false);
+            logger.LogInformation("Preferences updated for user {UserId}", session.User.Id);
+
+            return Results.Json(new { ok = true, message = "Preferences updated successfully" });
+        })
+        .RequireSession()
+        .RequireAuthorization()
+        .WithName("UpdateUserPreferences")
+        .WithTags("User Profile")
+        .WithSummary("Update user preferences")
+        .WithDescription(@"Updates user preferences including language, theme, email notifications, and data retention settings.
+
+**Authorization**: Requires active session (cookie-based authentication).
+
+**Request Body**: UpdatePreferencesPayload with language, theme, emailNotifications, dataRetentionDays.
+
+**Response**: Success confirmation message.")
+        .Produces(200)
+        .Produces(400)
+        .Produces(401);
+
         return group;
     }
 }
@@ -201,3 +243,12 @@ public record UpdateProfilePayload(string? DisplayName, string? Email);
 /// Payload for changing password.
 /// </summary>
 public record ChangePasswordPayload(string CurrentPassword, string NewPassword);
+
+/// <summary>
+/// Payload for updating user preferences.
+/// </summary>
+public record UpdatePreferencesPayload(
+    string Language,
+    string Theme,
+    bool EmailNotifications,
+    int DataRetentionDays);

@@ -270,15 +270,28 @@ export default function SettingsPage() {
     }
   };
 
-  // Preferences update handler (mock - backend not implemented)
+  // Preferences update handler
   const handleUpdatePreferences = async () => {
     setSuccess(null);
     setError(null);
 
-    // Mock success for now
-    setSuccess('Preferences saved successfully (mock - backend pending)');
-
-    // TODO: Implement UpdatePreferencesCommand when backend is ready
+    try {
+      setLoading(true);
+      const result = await api.auth.updatePreferences(preferences);
+      setSuccess(result.message || 'Preferences saved successfully');
+    } catch (err) {
+      const errorMsg = getErrorMessage(err);
+      logger.error(
+        'Failed to update preferences',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('SettingsPage', 'handleUpdatePreferences', {
+          operation: 'update_preferences',
+        })
+      );
+      setError(errorMsg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // 2FA handlers

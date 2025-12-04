@@ -63,7 +63,7 @@ public class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespons
             GameId: query.GameId,
             Query: query.Question,
             TopK: 5,
-            MinScore: 0.7,
+            MinScore: 0.55, // mxbai-embed-large
             SearchMode: query.SearchMode ?? "hybrid", // Default to hybrid if not specified
             Language: query.Language
         );
@@ -75,7 +75,7 @@ public class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespons
             id: Guid.NewGuid(),
             vectorDocumentId: Guid.Parse(sr.VectorDocumentId),
             textContent: sr.TextContent,
-            pageNumber: sr.PageNumber,
+            pageNumber: Math.Max(1, sr.PageNumber),
             relevanceScore: new Confidence(sr.RelevanceScore),
             rank: sr.Rank,
             searchMethod: sr.SearchMethod ?? "unknown"

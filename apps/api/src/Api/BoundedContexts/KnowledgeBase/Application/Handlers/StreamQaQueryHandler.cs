@@ -139,7 +139,7 @@ public class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagStr
             GameId: Guid.Parse(query.GameId),
             Query: query.Query,
             TopK: 5,
-            MinScore: 0.7,
+            MinScore: 0.55, // mxbai-embed-large
             SearchMode: "hybrid",
             Language: "en"
         );
@@ -159,7 +159,7 @@ public class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagStr
             id: Guid.NewGuid(),
             vectorDocumentId: Guid.Parse(sr.VectorDocumentId),
             textContent: sr.TextContent,
-            pageNumber: sr.PageNumber,
+            pageNumber: Math.Max(1, sr.PageNumber),
             relevanceScore: new Confidence(sr.RelevanceScore),
             rank: sr.Rank,
             searchMethod: sr.SearchMethod ?? "hybrid"

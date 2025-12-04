@@ -112,7 +112,7 @@ public static class KnowledgeBaseMappers
             vector: vector,
             model: model,
             chunkIndex: chunkIndex,
-            pageNumber: pageNumber
+            pageNumber: Math.Max(1, pageNumber)
         );
     }
 

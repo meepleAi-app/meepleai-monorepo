@@ -11,6 +11,7 @@
     "test:ui": "vitest --ui",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:performance": "vitest run -t \"Performance\"",
     "test:jest": "jest --passWithNoTests",
     "posttest:jest": "node -e \"try { require('child_process').execSync('powershell.exe -ExecutionPolicy Bypass -File ../../tools/cleanup-test-processes.ps1', { stdio: 'inherit' }); } catch (e) { console.log('Cleanup skipped (Windows-only)'); }\"",
     "test:jest:watch": "jest --watch",

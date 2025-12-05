@@ -15,14 +15,28 @@
 
 'use client';
 
-import ChatPage from '@/components/pages/ChatPage';
+import dynamic from 'next/dynamic';
+
+// Issue #1817: Dynamic import with ssr:false to prevent DOMMatrix SSR errors
+// pdfjs-dist (dependency) → @napi-rs/canvas uses DOMMatrix which isn't available in Node.js
+// This prevents Next.js from attempting static generation during build
+const ChatPage = dynamic(() => import('@/components/pages/ChatPage'), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-screen items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+        <p>Loading chat...</p>
+      </div>
+    </div>
+  ),
+});
 
 /**
  * Chat Page - Client Component
  *
- * This Client Component wrapper imports the existing chat interface,
- * allowing us to use the App Router while maintaining compatibility
- * with client-side state management.
+ * This Client Component wrapper dynamically imports the chat interface
+ * to prevent SSR issues with pdfjs-dist's DOMMatrix dependency.
  *
  * Future optimization opportunities:
  * - Implement streaming for chat responses

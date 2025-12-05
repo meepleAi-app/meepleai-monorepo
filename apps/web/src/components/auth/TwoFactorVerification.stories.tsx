@@ -9,7 +9,7 @@
  */
 
 import type { Meta, StoryObj } from '@storybook/react';
-import { fn } from '@storybook/test';
+import { fn } from 'storybook/test';
 
 // Placeholder component (will be replaced with real component)
 const TwoFactorVerification = ({ onVerify, onUseBackupCode, loading, error }: any) => (

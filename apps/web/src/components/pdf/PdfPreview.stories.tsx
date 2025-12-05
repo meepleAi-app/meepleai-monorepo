@@ -6,7 +6,7 @@
  */
 
 import type { Meta, StoryObj } from '@storybook/react';
-import { fn } from '@storybook/test';
+import { fn } from 'storybook/test';
 import { PdfPreview } from './PdfPreview';
 
 // Mock PDF file - minimal valid PDF structure for react-pdf/pdfjs

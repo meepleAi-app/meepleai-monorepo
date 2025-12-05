@@ -6,7 +6,7 @@
  */
 
 import type { Meta, StoryObj } from '@storybook/react';
-import { fn } from '@storybook/test';
+import { fn } from 'storybook/test';
 import { PdfUploadForm } from './PdfUploadForm';
 
 const meta = {

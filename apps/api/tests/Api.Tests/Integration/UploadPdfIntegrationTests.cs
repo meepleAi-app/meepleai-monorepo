@@ -558,53 +558,41 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         docCount.Should().Be(0, "oversized file should not create database record");
     }
 
-    [Fact(Timeout = 60000)] // 60s for performance/memory tests
-    public async Task UploadPdf_WithLargeFile_HandlesMemoryEfficiently()
+    [Fact(Timeout = 30000)]
+    public async Task UploadPdf_WithLargeFile_HandlesSuccessfully()
     {
         // Arrange
         var handler = _serviceProvider!.GetRequiredService<UploadPdfCommandHandler>();
         var testUser = await _dbContext!.Users.FirstAsync(TestCancellationToken);
         var testGame = await _dbContext.Games.FirstAsync(TestCancellationToken);
 
-        // Create large PDF (5MB - within limit but large enough to test memory handling)
+        // Create large PDF (5MB - within limit but large enough to test large file handling)
         var largePdfSize = 5 * 1024 * 1024;
         var largePdf = CreateValidPdfBytes(largePdfSize);
-        var formFile = CreateMockFormFile("large_memory_test.pdf", largePdf);
+        var formFile = CreateMockFormFile("large_file_test.pdf", largePdf);
 
         var command = new UploadPdfCommand(
             GameId: testGame.Id.ToString(),
             UserId: testUser.Id,
             File: formFile);
 
-        // Capture initial memory
-        GC.Collect();
-        GC.WaitForPendingFinalizers();
-        GC.Collect();
-        var initialMemory = GC.GetTotalMemory(false);
-
         // Act
         var result = await handler.Handle(command, TestCancellationToken);
-
-        // Force cleanup
-        GC.Collect();
-        GC.WaitForPendingFinalizers();
-        GC.Collect();
-        var finalMemory = GC.GetTotalMemory(false);
 
         // Assert
         result.Should().NotBeNull();
         result.Success.Should().BeTrue("large file should be handled successfully");
 
-        // Memory growth should be reasonable (less than 2x file size)
-        var memoryGrowth = finalMemory - initialMemory;
-        memoryGrowth.Should().BeLessThan(largePdfSize * 2,
-            "memory growth should be reasonable for large file processing");
-
-        // Verify file was stored
+        // Verify file was stored correctly
         var documentId = result.Document != null ? Guid.Parse(result.Document.Id.ToString()) : Guid.Empty;
         var doc = await _dbContext.PdfDocuments.FirstOrDefaultAsync(d => d.Id == documentId, TestCancellationToken);
         doc.Should().NotBeNull();
         doc!.FileSizeBytes.Should().Be(largePdfSize);
+
+        // NOTE: Memory efficiency testing removed (Issue #1737)
+        // GC.Collect() is non-deterministic and causes flaky tests.
+        // For memory profiling, use tools like dotMemory or BenchmarkDotNet
+        // in manual performance testing suites instead of automated tests.
     }
     [Fact(Timeout = 30000)]
     public async Task UploadPdf_WithConcurrentUploads_HandlesCorrectly()

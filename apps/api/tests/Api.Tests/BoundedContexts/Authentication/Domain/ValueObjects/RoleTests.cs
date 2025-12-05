@@ -57,76 +57,39 @@ public class RoleTests
         Assert.Contains("Valid roles are: user, editor, admin", exception.Message);
     }
 
-    [Fact]
-    public void IsAdmin_WithAdminRole_ReturnsTrue()
+    [Theory]
+    [InlineData("admin", true, false, false)]
+    [InlineData("editor", false, true, false)]
+    [InlineData("user", false, false, true)]
+    public void IsRoleType_ReturnsCorrectValue(string roleValue, bool expectedIsAdmin, bool expectedIsEditor, bool expectedIsUser)
     {
         // Arrange
-        var role = Role.Admin;
+        var role = Role.Parse(roleValue);
 
         // Act & Assert
-        Assert.True(role.IsAdmin());
-        Assert.False(role.IsEditor());
-        Assert.False(role.IsUser());
+        Assert.Equal(expectedIsAdmin, role.IsAdmin());
+        Assert.Equal(expectedIsEditor, role.IsEditor());
+        Assert.Equal(expectedIsUser, role.IsUser());
     }
 
-    [Fact]
-    public void IsEditor_WithEditorRole_ReturnsTrue()
+    [Theory]
+    [InlineData("admin", "admin", true)]     // Admin has Admin permission
+    [InlineData("admin", "editor", true)]    // Admin has Editor permission
+    [InlineData("admin", "user", true)]      // Admin has User permission
+    [InlineData("editor", "admin", false)]   // Editor doesn't have Admin permission
+    [InlineData("editor", "editor", true)]   // Editor has Editor permission
+    [InlineData("editor", "user", true)]     // Editor has User permission
+    [InlineData("user", "admin", false)]     // User doesn't have Admin permission
+    [InlineData("user", "editor", false)]    // User doesn't have Editor permission
+    [InlineData("user", "user", true)]       // User has User permission
+    public void HasPermission_ReturnsCorrectPermissionHierarchy(string roleValue, string requiredPermission, bool expected)
     {
         // Arrange
-        var role = Role.Editor;
+        var role = Role.Parse(roleValue);
+        var permissionRole = Role.Parse(requiredPermission);
 
         // Act & Assert
-        Assert.False(role.IsAdmin());
-        Assert.True(role.IsEditor());
-        Assert.False(role.IsUser());
-    }
-
-    [Fact]
-    public void IsUser_WithUserRole_ReturnsTrue()
-    {
-        // Arrange
-        var role = Role.User;
-
-        // Act & Assert
-        Assert.False(role.IsAdmin());
-        Assert.False(role.IsEditor());
-        Assert.True(role.IsUser());
-    }
-
-    [Fact]
-    public void HasPermission_AdminRole_HasAllPermissions()
-    {
-        // Arrange
-        var adminRole = Role.Admin;
-
-        // Act & Assert
-        Assert.True(adminRole.HasPermission(Role.Admin));
-        Assert.True(adminRole.HasPermission(Role.Editor));
-        Assert.True(adminRole.HasPermission(Role.User));
-    }
-
-    [Fact]
-    public void HasPermission_EditorRole_HasEditorAndUserPermissions()
-    {
-        // Arrange
-        var editorRole = Role.Editor;
-
-        // Act & Assert
-        Assert.False(editorRole.HasPermission(Role.Admin));
-        Assert.True(editorRole.HasPermission(Role.Editor));
-        Assert.True(editorRole.HasPermission(Role.User));
-    }
-
-    [Fact]
-    public void HasPermission_UserRole_HasUserPermissionsOnly()
-    {
-        // Arrange
-        var userRole = Role.User;
-
-        // Act & Assert
-        Assert.False(userRole.HasPermission(Role.Admin));
-        Assert.False(userRole.HasPermission(Role.Editor));
-        Assert.True(userRole.HasPermission(Role.User));
+        Assert.Equal(expected, role.HasPermission(permissionRole));
     }
 
     [Fact]
@@ -195,4 +158,3 @@ public class RoleTests
         Assert.Equal(Role.Admin.Value, roleString);
     }
 }
-

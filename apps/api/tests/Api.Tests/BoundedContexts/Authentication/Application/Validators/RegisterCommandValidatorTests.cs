@@ -156,13 +156,17 @@ public sealed class RegisterCommandValidatorTests
             .WithErrorMessage("Password must not exceed 128 characters");
     }
 
-    [Fact]
-    public void Should_Fail_When_Password_Has_No_Uppercase()
+    [Theory]
+    [InlineData("password123!", "Password must contain at least one uppercase letter")]
+    [InlineData("PASSWORD123!", "Password must contain at least one lowercase letter")]
+    [InlineData("PasswordTest!", "Password must contain at least one digit")]
+    [InlineData("PasswordTest123", "Password must contain at least one special character")]
+    public void Should_Fail_When_Password_Missing_Requirement(string password, string expectedError)
     {
         // Arrange
         var command = new RegisterCommand(
             Email: "test@example.com",
-            Password: "password123!",
+            Password: password,
             DisplayName: "Test User"
         );
 
@@ -171,61 +175,7 @@ public sealed class RegisterCommandValidatorTests
 
         // Assert
         result.ShouldHaveValidationErrorFor(x => x.Password)
-            .WithErrorMessage("Password must contain at least one uppercase letter");
-    }
-
-    [Fact]
-    public void Should_Fail_When_Password_Has_No_Lowercase()
-    {
-        // Arrange
-        var command = new RegisterCommand(
-            Email: "test@example.com",
-            Password: "PASSWORD123!",
-            DisplayName: "Test User"
-        );
-
-        // Act
-        var result = _validator.TestValidate(command);
-
-        // Assert
-        result.ShouldHaveValidationErrorFor(x => x.Password)
-            .WithErrorMessage("Password must contain at least one lowercase letter");
-    }
-
-    [Fact]
-    public void Should_Fail_When_Password_Has_No_Digit()
-    {
-        // Arrange
-        var command = new RegisterCommand(
-            Email: "test@example.com",
-            Password: "PasswordTest!",
-            DisplayName: "Test User"
-        );
-
-        // Act
-        var result = _validator.TestValidate(command);
-
-        // Assert
-        result.ShouldHaveValidationErrorFor(x => x.Password)
-            .WithErrorMessage("Password must contain at least one digit");
-    }
-
-    [Fact]
-    public void Should_Fail_When_Password_Has_No_Special_Character()
-    {
-        // Arrange
-        var command = new RegisterCommand(
-            Email: "test@example.com",
-            Password: "PasswordTest123",
-            DisplayName: "Test User"
-        );
-
-        // Act
-        var result = _validator.TestValidate(command);
-
-        // Assert
-        result.ShouldHaveValidationErrorFor(x => x.Password)
-            .WithErrorMessage("Password must contain at least one special character");
+            .WithErrorMessage(expectedError);
     }
 
     #endregion
@@ -423,4 +373,3 @@ public sealed class RegisterCommandValidatorTests
         result.ShouldHaveValidationErrorFor(x => x.DisplayName);
     }
 }
-

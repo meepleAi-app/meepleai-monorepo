@@ -8,7 +8,7 @@
  */
 
 import type { Meta, StoryObj } from '@storybook/react';
-import { fn } from '@storybook/test';
+import { fn } from 'storybook/test';
 import { ErrorDisplay } from './ErrorDisplay';
 import { NetworkError, ServerError, RateLimitError, ApiError } from '@/lib/api/core/errors';
 

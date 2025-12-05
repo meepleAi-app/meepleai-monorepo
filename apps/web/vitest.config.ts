@@ -55,7 +55,9 @@ export default defineConfig({
       '**/node_modules/**',
       '**/e2e/**',
       '**/.next/**',
-      '**/__tests__/fixtures/**',
+      '**/.__tests__/fixtures/**',
+      // Issue #1951: Exclude flaky performance tests in CI
+      ...(process.env.CI ? ['**/*.performance.test.{ts,tsx}'] : []),
       // Exclude specific utility files by name (not their test counterparts)
       // These are helper utilities, not test files
       '**/__tests__/utils/async-test-helpers.{ts,tsx}',

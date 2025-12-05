@@ -130,8 +130,9 @@ export default defineConfig<ChromaticConfig>({
 
   webServer: {
     // Issue #1868: Use production server in CI (after pnpm build), dev server locally
+    // Issue #1951: Use standalone server in CI (compatible with output: 'standalone')
     command: process.env.CI
-      ? 'node ./node_modules/next/dist/bin/next start -p 3000'
+      ? 'PORT=3000 node .next/standalone/server.js'
       : 'node --max-old-space-size=4096 ./node_modules/next/dist/bin/next dev -p 3000',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,

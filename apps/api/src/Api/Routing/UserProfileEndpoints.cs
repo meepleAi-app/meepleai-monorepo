@@ -190,7 +190,7 @@ public static class UserProfileEndpoints
         .Produces(401);
 
         // Update user preferences (AUTH-PROFILE-04)
-        group.MapPatch("/users/preferences", async (
+        group.MapPut("/users/preferences", async (
             [FromBody] UpdatePreferencesPayload payload,
             HttpContext context,
             IMediator mediator,
@@ -209,10 +209,10 @@ public static class UserProfileEndpoints
                 DataRetentionDays = payload.DataRetentionDays
             };
 
-            await mediator.Send(command, ct).ConfigureAwait(false);
+            var updatedProfile = await mediator.Send(command, ct).ConfigureAwait(false);
             logger.LogInformation("Preferences updated for user {UserId}", session.User.Id);
 
-            return Results.Json(new { ok = true, message = "Preferences updated successfully" });
+            return Results.Json(updatedProfile);
         })
         .RequireSession()
         .RequireAuthorization()
@@ -225,8 +225,8 @@ public static class UserProfileEndpoints
 
 **Request Body**: UpdatePreferencesPayload with language, theme, emailNotifications, dataRetentionDays.
 
-**Response**: Success confirmation message.")
-        .Produces(200)
+**Response**: Updated UserProfileDto with all profile information including new preferences.")
+        .Produces<UserProfileDto>(200)
         .Produces(400)
         .Produces(401);
 

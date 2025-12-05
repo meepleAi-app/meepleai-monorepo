@@ -81,6 +81,11 @@ export const UserProfileSchema = z.object({
   CreatedAt: z.string().datetime(),
   IsTwoFactorEnabled: z.boolean(),
   TwoFactorEnabledAt: z.string().datetime().nullable(),
+  // User preferences (included in profile after Issue #1675)
+  Language: z.string().min(1),
+  Theme: z.string().min(1),
+  EmailNotifications: z.boolean(),
+  DataRetentionDays: z.number().int().positive(),
 });
 
 export type UserProfile = z.infer<typeof UserProfileSchema>;

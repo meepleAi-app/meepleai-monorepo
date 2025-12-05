@@ -67,6 +67,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [error, setError] = useState<string | null>(null);
 
   const loadCurrentUser = useCallback(async () => {
+    setLoading(true);
     setInitialLoading(true);
     setError(null);
     try {
@@ -76,6 +77,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       console.error('Failed to load current user:', err);
       setUser(null);
     } finally {
+      setLoading(false);
       setInitialLoading(false);
     }
   }, []);

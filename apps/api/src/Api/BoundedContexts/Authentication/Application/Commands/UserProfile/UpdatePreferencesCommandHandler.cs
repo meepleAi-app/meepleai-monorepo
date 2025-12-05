@@ -51,7 +51,7 @@ public class UpdatePreferencesCommandHandler : ICommandHandler<UpdatePreferences
             user.DisplayName,
             user.Role.ToString(),
             user.CreatedAt,
-            user.TwoFactorSecret != null,
+            user.TotpSecret != null,
             user.TwoFactorEnabledAt,
             user.Language,
             user.Theme,

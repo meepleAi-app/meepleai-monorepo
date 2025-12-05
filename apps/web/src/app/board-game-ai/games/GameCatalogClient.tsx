@@ -16,7 +16,7 @@
  * @see docs/04-frontend/wireframes-playful-boardroom.md
  */
 
-import { useCallback, useEffect, useState, useTransition } from 'react';
+import { useCallback, useEffect, useState, useTransition, useRef } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Search, X, LayoutGrid, List, MessageSquare } from 'lucide-react';
@@ -77,6 +77,7 @@ export function GameCatalogClient({
   const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const previousSearchRef = useRef(initialSearch);
 
   // ============================================================================
   // Data Fetching
@@ -155,7 +156,8 @@ export function GameCatalogClient({
   // Debounced search
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (searchInput !== initialSearch) {
+      if (searchInput !== previousSearchRef.current) {
+        previousSearchRef.current = searchInput;
         updateUrl({ search: searchInput });
         setCurrentPage(1);
         void fetchGames(searchInput, 1);
@@ -163,7 +165,7 @@ export function GameCatalogClient({
     }, DEBOUNCE_MS);
 
     return () => clearTimeout(timer);
-  }, [searchInput, initialSearch, updateUrl, fetchGames]);
+  }, [searchInput, updateUrl, fetchGames]);
 
   // ============================================================================
   // Event Handlers

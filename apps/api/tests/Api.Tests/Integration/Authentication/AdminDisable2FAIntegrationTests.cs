@@ -51,11 +51,6 @@ public class AdminDisable2FAIntegrationTests : IAsyncLifetime
 
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
-    // Test data constants
-    private const string AdminEmail = "admin@test.meepleai.dev";
-    private const string TargetUserEmail = "locked-out-user@test.meepleai.dev";
-    private const string NonAdminEmail = "editor@test.meepleai.dev";
-
     public AdminDisable2FAIntegrationTests()
     {
         _output = Console.WriteLine;
@@ -188,7 +183,7 @@ public class AdminDisable2FAIntegrationTests : IAsyncLifetime
         // Verify email notification was triggered
         _mockEmailService!.Verify(
             x => x.SendTwoFactorDisabledEmailAsync(
-                TargetUserEmail,
+                targetUser.Email.Value,
                 It.IsAny<string>(),
                 true, // wasAdminOverride should be true
                 It.IsAny<CancellationToken>()),
@@ -361,7 +356,7 @@ public class AdminDisable2FAIntegrationTests : IAsyncLifetime
         var unitOfWork = _serviceProvider!.GetRequiredService<IUnitOfWork>();
 
         var adminUser = new UserBuilder()
-            .WithEmail(AdminEmail)
+            .WithEmail($"admin-{Guid.NewGuid()}@test.meepleai.dev")
             .AsAdmin()
             .With2FA()
             .Build();
@@ -386,7 +381,7 @@ public class AdminDisable2FAIntegrationTests : IAsyncLifetime
         // Email should be sent to admin
         _mockEmailService!.Verify(
             x => x.SendTwoFactorDisabledEmailAsync(
-                AdminEmail,
+                adminUser.Email.Value,
                 It.IsAny<string>(),
                 true,
                 It.IsAny<CancellationToken>()),
@@ -408,12 +403,12 @@ public class AdminDisable2FAIntegrationTests : IAsyncLifetime
         var unitOfWork = _serviceProvider!.GetRequiredService<IUnitOfWork>();
 
         var adminUser = new UserBuilder()
-            .WithEmail(AdminEmail)
+            .WithEmail($"admin-{Guid.NewGuid()}@test.meepleai.dev")
             .AsAdmin()
             .Build();
 
         var targetUser = new UserBuilder()
-            .WithEmail(TargetUserEmail)
+            .WithEmail($"target-{Guid.NewGuid()}@test.meepleai.dev")
             .With2FA()
             .Build();
 
@@ -435,12 +430,12 @@ public class AdminDisable2FAIntegrationTests : IAsyncLifetime
         var unitOfWork = _serviceProvider!.GetRequiredService<IUnitOfWork>();
 
         var editorUser = new UserBuilder()
-            .WithEmail(NonAdminEmail)
+            .WithEmail($"editor-{Guid.NewGuid()}@test.meepleai.dev")
             .AsEditor()
             .Build();
 
         var targetUser = new UserBuilder()
-            .WithEmail(TargetUserEmail)
+            .WithEmail($"target-{Guid.NewGuid()}@test.meepleai.dev")
             .With2FA()
             .Build();
 

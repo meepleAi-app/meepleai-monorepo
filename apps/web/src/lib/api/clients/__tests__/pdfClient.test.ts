@@ -10,8 +10,8 @@ import { createPdfClient } from '../pdfClient';
 import { HttpClient } from '../../core/httpClient';
 import { getApiBase } from '../../core/httpClient';
 
-vi.mock('../../core/httpClient', () => ({
-  ...vi.importActual('../../core/httpClient'),
+vi.mock('../../core/httpClient', async () => ({
+  ...(await vi.importActual('../../core/httpClient')),
   getApiBase: vi.fn(),
 }));
 

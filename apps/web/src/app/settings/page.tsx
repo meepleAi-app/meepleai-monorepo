@@ -140,6 +140,13 @@ export default function SettingsPage() {
       setProfile(user);
       setDisplayName(user.DisplayName);
       setEmail(user.Email);
+      // Hydrate preferences from profile
+      setPreferences({
+        language: user.Language,
+        theme: (user.Theme as 'light' | 'dark' | 'system') || 'system',
+        emailNotifications: user.EmailNotifications,
+        dataRetentionDays: user.DataRetentionDays,
+      });
       setError(null);
     } catch (err) {
       logger.error(

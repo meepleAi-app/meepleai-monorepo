@@ -16,28 +16,17 @@ public class YearPublishedTests
         Assert.Equal(2020, year.Value);
     }
 
-    [Fact]
-    public void YearPublished_IsClassic_Before2000()
+    [Theory]
+    [InlineData(1995, true, false)]   // Classic game
+    [InlineData(2010, false, true)]   // Modern game
+    public void YearCategory_ReturnsCorrectClassification(int year, bool expectedIsClassic, bool expectedIsModern)
     {
         // Arrange
-        var classic = new YearPublished(1995);
-        var modern = new YearPublished(2010);
+        var yearPublished = new YearPublished(year);
 
         // Act & Assert
-        Assert.True(classic.IsClassic);
-        Assert.False(modern.IsClassic);
-    }
-
-    [Fact]
-    public void YearPublished_IsModern_From2000Onwards()
-    {
-        // Arrange
-        var modern = new YearPublished(2020);
-        var classic = new YearPublished(1999);
-
-        // Act & Assert
-        Assert.True(modern.IsModern);
-        Assert.False(classic.IsModern);
+        Assert.Equal(expectedIsClassic, yearPublished.IsClassic);
+        Assert.Equal(expectedIsModern, yearPublished.IsModern);
     }
 
     [Fact]
@@ -112,4 +101,3 @@ public class YearPublishedTests
         Assert.NotEqual(year1, year3);
     }
 }
-

@@ -118,8 +118,15 @@ describe('BoardGameAskClient', () => {
     it('should display games in select dropdown', async () => {
       render(<BoardGameAskClient />);
 
+      // Wait for games to load and first game to be auto-selected
+      const selectTrigger = screen.getByLabelText(/select game/i);
       await waitFor(() => {
-        expect(screen.getByText('Catan')).toBeInTheDocument();
+        expect(selectTrigger).not.toHaveTextContent('Loading games...');
+      });
+
+      // Verify the selected game is displayed in the trigger (auto-selected first game)
+      await waitFor(() => {
+        expect(selectTrigger).toHaveTextContent('Catan');
       });
     });
 

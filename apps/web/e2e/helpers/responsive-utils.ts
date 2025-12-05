@@ -29,8 +29,8 @@ export async function getViewportInfo(page: Page): Promise<ViewportInfo> {
     width: viewport.width,
     height: viewport.height,
     isMobile: viewport.width < 640,
-    isTablet: viewport.width >= 640 && viewport.width < 1024,
-    isDesktop: viewport.width >= 1024,
+    isTablet: viewport.width >= 640 && viewport.width <= 1024,
+    isDesktop: viewport.width > 1024,
   };
 }
 

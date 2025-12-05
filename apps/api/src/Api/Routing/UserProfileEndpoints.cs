@@ -8,6 +8,7 @@ using DddUpdateUserProfileCommand = Api.BoundedContexts.Authentication.Applicati
 using DddChangePasswordCommand = Api.BoundedContexts.Authentication.Application.Commands.ChangePasswordCommand;
 using DddUpdatePreferencesCommand = Api.BoundedContexts.Authentication.Application.Commands.UpdatePreferencesCommand;
 using DddGetUserProfileQuery = Api.BoundedContexts.Authentication.Application.Queries.GetUserProfileQuery;
+using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Application.Queries;
 
 namespace Api.Routing;
@@ -228,6 +229,48 @@ public static class UserProfileEndpoints
 **Response**: Updated UserProfileDto with all profile information including new preferences.")
         .Produces<UserProfileDto>(200)
         .Produces(400)
+        .Produces(401);
+
+        // Get user preferences (AUTH-PROFILE-05)
+        group.MapGet("/users/preferences", async (
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            // Session validated by RequireSessionFilter
+            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+
+            var query = new DddGetUserProfileQuery
+            {
+                UserId = Guid.Parse(session.User.Id)
+            };
+
+            var userProfile = await mediator.Send(query, ct).ConfigureAwait(false);
+            logger.LogInformation("Preferences retrieved for user {UserId}", session.User.Id);
+
+            // Extract preferences from full profile
+            var preferences = new
+            {
+                language = userProfile.Language,
+                theme = userProfile.Theme,
+                emailNotifications = userProfile.EmailNotifications,
+                dataRetentionDays = userProfile.DataRetentionDays
+            };
+
+            return Results.Json(preferences);
+        })
+        .RequireSession()
+        .RequireAuthorization()
+        .WithName("GetUserPreferences")
+        .WithTags("User Profile")
+        .WithSummary("Get user preferences")
+        .WithDescription(@"Retrieves user preferences including language, theme, email notifications, and data retention settings.
+
+**Authorization**: Requires active session (cookie-based authentication).
+
+**Response**: UserPreferences object with current settings.")
+        .Produces(200)
         .Produces(401);
 
         return group;

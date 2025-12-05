@@ -31,10 +31,10 @@ runs:
       if: steps.playwright-cache.outputs.cache-hit != 'true'
       shell: bash
       working-directory: ${{ inputs.working-directory }}
-      run: pnpm exec playwright install --with-deps chromium
+      run: pnpm exec playwright install --with-deps chromium firefox webkit
 
     - name: Install Playwright system dependencies
       if: steps.playwright-cache.outputs.cache-hit == 'true'
       shell: bash
       working-directory: ${{ inputs.working-directory }}
-      run: pnpm exec playwright install-deps chromium
+      run: pnpm exec playwright install-deps chromium firefox webkit

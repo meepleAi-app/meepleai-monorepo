@@ -42,9 +42,6 @@ public class RagValidationPipelineServiceTests
             _mockAccuracyTracking.Object,
             _mockLogger.Object);
     }
-
-    #region ValidateResponseAsync Tests (Standard Mode - 3 Layers)
-
     [Fact]
     public async Task ValidateResponseAsync_AllLayersPass_ReturnsValid()
     {
@@ -269,11 +266,6 @@ public class RagValidationPipelineServiceTests
             x => x.DetectHallucinationsAsync(It.IsAny<string>(), "en", default),
             Times.Once);
     }
-
-    #endregion
-
-    #region ValidateWithMultiModelAsync Tests (Multi-Model Mode - 4 Layers)
-
     [Fact]
     public async Task ValidateWithMultiModelAsync_AllLayersPass_ReturnsValid()
     {
@@ -560,11 +552,6 @@ public class RagValidationPipelineServiceTests
         Assert.Equal(RagValidationSeverity.Critical, result.Severity);
         Assert.Equal(HallucinationSeverity.High, result.HallucinationDetection.Severity);
     }
-
-    #endregion
-
-    #region Helper Methods
-
     private QaResponse CreateQaResponse(double confidence)
     {
         return new QaResponse(
@@ -667,7 +654,5 @@ public class RagValidationPipelineServiceTests
                 });
         }
     }
-
-    #endregion
 }
 

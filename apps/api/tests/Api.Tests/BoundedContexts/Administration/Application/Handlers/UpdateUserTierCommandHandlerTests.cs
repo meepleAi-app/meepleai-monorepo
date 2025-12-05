@@ -193,9 +193,6 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
                 firstException);
         }
     }
-
-    #region Happy Path Tests
-
     [Fact]
     public async Task Handle_UpdateUserTier_PersistsChangesToDatabase()
     {
@@ -315,11 +312,6 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
         Assert.NotNull(persistedUser);
         Assert.Equal(UserTier.Free.Value, persistedUser.Tier);
     }
-
-    #endregion
-
-    #region Authorization Tests
-
     [Fact]
     public async Task Handle_NonAdminRequester_ThrowsDomainException()
     {
@@ -367,11 +359,6 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
         Assert.NotNull(persistedUser);
         Assert.Equal(UserTier.Free.Value, persistedUser.Tier); // Should still be Free
     }
-
-    #endregion
-
-    #region Validation Tests
-
     [Fact]
     public async Task Handle_InvalidTierValue_ThrowsDomainException()
     {
@@ -431,11 +418,6 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
         // NOTE: Testing exact error message intentionally - this is user-facing validation text
         Assert.Contains("not found", exception.Message);
     }
-
-    #endregion
-
-    #region Edge Cases Tests
-
     [Fact]
     public async Task Handle_NonExistentRequester_ThrowsDomainException()
     {
@@ -598,9 +580,6 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
         Assert.NotNull(persistedUser);
         Assert.Equal(UserTier.Free.Value, persistedUser.Tier); // Should still be Free
     }
-
-    #endregion
-
     private static async Task MigrateWithRetry(MeepleAiDbContext context)
     {
         const int maxAttempts = 3;

@@ -6,8 +6,6 @@ namespace Api.Tests.SharedKernel.Domain.Validation;
 
 public class ValidationExtensionsTests
 {
-    #region String Validations
-
     [Fact]
     public void NotNullOrWhiteSpace_WithValidString_ReturnsSuccess()
     {
@@ -123,11 +121,6 @@ public class ValidationExtensionsTests
         Assert.NotNull(result.Error);
         Assert.Contains("does not match", result.Error.Message);
     }
-
-    #endregion
-
-    #region GUID Validations
-
     [Fact]
     public void NotEmpty_WithValidGuid_ReturnsSuccess()
     {
@@ -182,11 +175,6 @@ public class ValidationExtensionsTests
         Assert.True(result.IsFailure);
         Assert.NotNull(result.Error);
     }
-
-    #endregion
-
-    #region Numeric Validations
-
     [Fact]
     public void GreaterThan_WithValidValue_ReturnsSuccess()
     {
@@ -244,11 +232,6 @@ public class ValidationExtensionsTests
         Assert.NotNull(result.Error);
         Assert.Contains("between 1 and 10", result.Error.Message);
     }
-
-    #endregion
-
-    #region Collection Validations
-
     [Fact]
     public void NotNullOrEmpty_Collection_WithValidCollection_ReturnsSuccess()
     {
@@ -304,11 +287,6 @@ public class ValidationExtensionsTests
         Assert.NotNull(result.Error);
         Assert.Contains("exactly 5", result.Error.Message);
     }
-
-    #endregion
-
-    #region Object Validations
-
     [Fact]
     public void NotNull_WithValidObject_ReturnsSuccess()
     {
@@ -336,11 +314,6 @@ public class ValidationExtensionsTests
         Assert.True(result.IsFailure);
         Assert.NotNull(result.Error);
     }
-
-    #endregion
-
-    #region Chaining
-
     [Fact]
     public void Then_WithSuccessfulValidations_ReturnsSuccess()
     {
@@ -403,7 +376,5 @@ public class ValidationExtensionsTests
         Assert.NotNull(result.Error);
         Assert.Contains("Must contain 'xyz'", result.Error.Message);
     }
-
-    #endregion
 }
 

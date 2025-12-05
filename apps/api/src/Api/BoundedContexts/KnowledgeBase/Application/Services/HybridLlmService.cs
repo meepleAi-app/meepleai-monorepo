@@ -45,8 +45,6 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
 /// </remarks>
 public class HybridLlmService : ILlmService
 {
-    #region Fields & Constants
-
     private readonly IEnumerable<ILlmClient> _clients;
     private readonly ILlmRoutingStrategy _routingStrategy;
     private readonly ILlmCostLogRepository _costLogRepository;
@@ -62,11 +60,6 @@ public class HybridLlmService : ILlmService
     // Default LLM parameters
     private const double DefaultTemperature = 0.3;
     private const int DefaultMaxTokens = 500;
-
-    #endregion
-
-    #region Constructor
-
     public HybridLlmService(
         IEnumerable<ILlmClient> clients,
         ILlmRoutingStrategy routingStrategy,
@@ -101,11 +94,6 @@ public class HybridLlmService : ILlmService
             string.Join(", ", _clients.Select(c => c.ProviderName)),
             healthCheckStatus);
     }
-
-    #endregion
-
-    #region Public Methods - Completion
-
     /// <inheritdoc/>
     public async Task<LlmCompletionResult> GenerateCompletionAsync(
         string systemPrompt,
@@ -224,11 +212,6 @@ public class HybridLlmService : ILlmService
 
         return lastFailure ?? LlmCompletionResult.CreateFailure("Provider error: No providers available");
     }
-
-    #endregion
-
-    #region Public Methods - Streaming
-
     /// <inheritdoc/>
     public IAsyncEnumerable<string> GenerateCompletionStreamAsync(
         string systemPrompt,
@@ -427,11 +410,6 @@ public class HybridLlmService : ILlmService
 
         return client;
     }
-
-    #endregion
-
-    #region Circuit Breaker & Monitoring
-
     /// <summary>
     /// ISSUE-962: Check if provider is available (circuit breaker + health check)
     /// BGAI-022: Enhanced with Enabled flag check
@@ -727,6 +705,4 @@ public class HybridLlmService : ILlmService
             _ => "llama3.3:70b" // Safe default
         };
     }
-
-    #endregion
 }

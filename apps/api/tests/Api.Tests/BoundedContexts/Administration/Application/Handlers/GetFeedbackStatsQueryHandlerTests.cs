@@ -32,9 +32,6 @@ public class GetFeedbackStatsQueryHandlerTests
     {
         return DbContextHelper.CreateInMemoryDbContext();
     }
-
-    #region Construction Tests
-
     [Fact]
     public void Constructor_WithValidParameters_CreatesInstance()
     {
@@ -66,11 +63,6 @@ public class GetFeedbackStatsQueryHandlerTests
         Assert.Throws<ArgumentNullException>(() =>
             new GetFeedbackStatsQueryHandler(context, null!));
     }
-
-    #endregion
-
-    #region Query Tests
-
     [Fact]
     public void Query_WithDefaultParameters_ConstructsCorrectly()
     {
@@ -107,11 +99,6 @@ public class GetFeedbackStatsQueryHandlerTests
         // Assert
         Assert.Equal("/api/v1/chat", query.Endpoint);
     }
-
-    #endregion
-
-    #region Handler Execution Tests
-
     [Fact]
     public async Task Handle_WithNoFeedback_ReturnsEmptyStats()
     {
@@ -388,7 +375,5 @@ public class GetFeedbackStatsQueryHandlerTests
         var result = await handler.Handle(query, cts.Token);
         Assert.NotNull(result);
     }
-
-    #endregion
 }
 

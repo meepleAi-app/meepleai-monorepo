@@ -65,9 +65,6 @@ public class DocnetPdfTextExtractorTests : IDisposable
             }
         }
     }
-
-    #region ExtractTextAsync Tests
-
     [Fact]
     public async Task ExtractTextAsync_ValidPdf_ReturnsSuccess()
     {
@@ -182,11 +179,6 @@ public class DocnetPdfTextExtractorTests : IDisposable
         result.Success.Should().BeFalse();
         result.ErrorMessage.Should().NotBeNull();
     }
-
-    #endregion
-
-    #region ExtractPagedTextAsync Tests
-
     [Fact]
     public async Task ExtractPagedTextAsync_ValidPdf_ReturnsPageChunks()
     {
@@ -244,11 +236,6 @@ public class DocnetPdfTextExtractorTests : IDisposable
         result.Success.Should().BeFalse();
         result.ErrorMessage.Should().NotBeNull();
     }
-
-    #endregion
-
-    #region Concurrent Access Tests
-
     [Fact]
     public async Task ExtractTextAsync_ConcurrentCalls_HandlesSemaphoreCorrectly()
     {
@@ -267,11 +254,6 @@ public class DocnetPdfTextExtractorTests : IDisposable
         results.Should().AllSatisfy(result => result.Success.Should().BeTrue());
         results.Length.Should().Be(10);
     }
-
-    #endregion
-
-    #region Helper Methods
-
     /// <summary>
     /// Creates a simple test PDF with substantial text content
     /// </summary>
@@ -480,6 +462,4 @@ startxref
 
         return new MemoryStream(System.Text.Encoding.ASCII.GetBytes(pdfContent));
     }
-
-    #endregion
 }

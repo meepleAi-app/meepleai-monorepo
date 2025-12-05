@@ -52,9 +52,6 @@ public class DatasetEvaluationServiceTests
             snippets: snippets ?? [],
             confidence: confidence);
     }
-
-    #region Constructor Tests
-
     [Fact]
     public void Constructor_WithNullRagService_ThrowsArgumentNullException()
     {
@@ -70,11 +67,6 @@ public class DatasetEvaluationServiceTests
         Assert.Throws<ArgumentNullException>(() =>
             new DatasetEvaluationService(_mockRagService.Object, null!));
     }
-
-    #endregion
-
-    #region CalculateRecallAtK Tests
-
     [Fact]
     public void CalculateRecallAtK_WithAllRelevantInTopK_ReturnsOne()
     {
@@ -158,11 +150,6 @@ public class DatasetEvaluationServiceTests
         // Assert
         Assert.Equal(1.0, recall);
     }
-
-    #endregion
-
-    #region CalculateNdcgAtK Tests
-
     [Fact]
     public void CalculateNdcgAtK_WithPerfectRanking_ReturnsOne()
     {
@@ -221,11 +208,6 @@ public class DatasetEvaluationServiceTests
         // Assert
         Assert.True(perfectNdcg > worstNdcg);
     }
-
-    #endregion
-
-    #region CalculateMrr Tests
-
     [Fact]
     public void CalculateMrr_WithFirstPositionRelevant_ReturnsOne()
     {
@@ -309,11 +291,6 @@ public class DatasetEvaluationServiceTests
         // Assert
         Assert.Equal(1.0, mrr);
     }
-
-    #endregion
-
-    #region ComputeMetrics Tests
-
     [Fact]
     public void ComputeMetrics_WithEmptyResults_ReturnsEmptyMetrics()
     {
@@ -428,11 +405,6 @@ public class DatasetEvaluationServiceTests
         Assert.True(metrics.P95LatencyMs >= 950); // Should be around 950
         Assert.True(metrics.P95LatencyMs <= 1000);
     }
-
-    #endregion
-
-    #region EvaluateSampleAsync Tests
-
     [Fact]
     public async Task EvaluateSampleAsync_WithSuccessfulRagResponse_ReturnsResult()
     {
@@ -509,11 +481,6 @@ public class DatasetEvaluationServiceTests
         await Assert.ThrowsAsync<ArgumentNullException>(() =>
             _service.EvaluateSampleAsync(null!, options));
     }
-
-    #endregion
-
-    #region EvaluateDatasetAsync Tests
-
     [Fact]
     public async Task EvaluateDatasetAsync_EvaluatesAllSamples()
     {
@@ -640,6 +607,4 @@ public class DatasetEvaluationServiceTests
         await Assert.ThrowsAsync<ArgumentNullException>(() =>
             _service.EvaluateDatasetAsync(dataset, null!));
     }
-
-    #endregion
 }

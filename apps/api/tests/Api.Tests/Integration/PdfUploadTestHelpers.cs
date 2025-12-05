@@ -21,8 +21,6 @@ namespace Api.Tests.Integration;
 /// </summary>
 internal static class PdfUploadTestHelpers
 {
-    #region File Generation Helpers
-
     /// <summary>
     /// Creates a minimal valid PDF byte array with specified size.
     ///
@@ -72,11 +70,6 @@ internal static class PdfUploadTestHelpers
         formFile.Setup(f => f.OpenReadStream()).Returns(() => new MemoryStream(content));
         return formFile.Object;
     }
-
-    #endregion
-
-    #region Cancellation Helpers
-
     /// <summary>
     /// Creates a CancellationTokenSource that cancels after specified delay.
     ///
@@ -105,11 +98,6 @@ internal static class PdfUploadTestHelpers
 
         return await action(cts.Token);
     }
-
-    #endregion
-
-    #region Database Verification Helpers
-
     /// <summary>
     /// Verifies no PDF documents exist in database (cleanup verification).
     ///
@@ -176,11 +164,6 @@ internal static class PdfUploadTestHelpers
         context.Users.RemoveRange(await context.Users.ToListAsync(ct));
         await context.SaveChangesAsync(ct);
     }
-
-    #endregion
-
-    #region Test Data Seeding Helpers
-
     /// <summary>
     /// Seeds a unique test user in database context.
     ///
@@ -233,6 +216,4 @@ internal static class PdfUploadTestHelpers
         await context.SaveChangesAsync(ct);
         return game;
     }
-
-    #endregion
 }

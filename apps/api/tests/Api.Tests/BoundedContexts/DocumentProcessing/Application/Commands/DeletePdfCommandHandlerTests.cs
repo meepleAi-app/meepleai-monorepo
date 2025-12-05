@@ -40,9 +40,6 @@ public class DeletePdfCommandHandlerTests
 
         return (scopeFactoryMock, blobStorageServiceMock, cacheServiceMock, loggerMock);
     }
-
-    #region Construction Tests
-
     [Fact]
     public void Constructor_WithValidDependencies_CreatesInstance()
     {
@@ -160,11 +157,6 @@ public class DeletePdfCommandHandlerTests
         act.Should().Throw<ArgumentNullException>()
             .WithParameterName("logger");
     }
-
-    #endregion
-
-    #region Command Tests
-
     [Fact]
     public void DeletePdfCommand_ConstructsCorrectly()
     {
@@ -177,11 +169,6 @@ public class DeletePdfCommandHandlerTests
         // Assert
         command.PdfId.Should().Be(pdfId);
     }
-
-    #endregion
-
-    #region Result Tests
-
     [Fact]
     public void PdfDeleteResult_WithSuccess_ConstructsCorrectly()
     {
@@ -208,9 +195,6 @@ public class DeletePdfCommandHandlerTests
         result.Message.Should().Be("PDF not found");
         result.GameId.Should().BeNull();
     }
-
-    #endregion
-
     // NOTE: Full workflow tests (cascade deletion, blob storage cleanup, vector deletion)
     // should be in integration test suite due to DbContext and multi-service complexity.
     // See integration-tests.yml workflow.

@@ -148,9 +148,6 @@ public class AdminDisable2FAIntegrationTests : IAsyncLifetime
 
         _output("Test infrastructure disposed");
     }
-
-    #region Happy Path Tests
-
     [Fact]
     public async Task AdminDisable2FA_ValidFlow_DisablesSuccessfullyAndSendsEmail()
     {
@@ -219,11 +216,6 @@ public class AdminDisable2FAIntegrationTests : IAsyncLifetime
 
         _output("✓ Test passed: Domain event processed with correct admin override flag");
     }
-
-    #endregion
-
-    #region Authorization Tests
-
     [Fact]
     public async Task AdminDisable2FA_NonAdminUser_ReturnsUnauthorizedError()
     {
@@ -285,11 +277,6 @@ public class AdminDisable2FAIntegrationTests : IAsyncLifetime
 
         _output("✓ Test passed: Non-existent admin user handled correctly");
     }
-
-    #endregion
-
-    #region Business Rule Tests
-
     [Fact]
     public async Task AdminDisable2FA_TargetUserNotFound_ReturnsError()
     {
@@ -389,11 +376,6 @@ public class AdminDisable2FAIntegrationTests : IAsyncLifetime
 
         _output("✓ Test passed: Admin can disable their own 2FA");
     }
-
-    #endregion
-
-    #region Helper Methods
-
     /// <summary>
     /// Seeds database with admin user (with admin role) and target user (with 2FA enabled).
     /// </summary>
@@ -447,6 +429,4 @@ public class AdminDisable2FAIntegrationTests : IAsyncLifetime
 
         return (editorUser, targetUser);
     }
-
-    #endregion
 }

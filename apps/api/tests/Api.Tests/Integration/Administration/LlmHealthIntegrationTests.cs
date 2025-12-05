@@ -31,8 +31,6 @@ namespace Api.Tests.Integration.Administration;
 /// </summary>
 public sealed class LlmHealthIntegrationTests
 {
-    #region Test Infrastructure
-
     private static GetLlmHealthQueryHandler CreateHandler(
         IProviderHealthCheckService healthCheckService,
         HybridLlmService hybridLlmService)
@@ -67,11 +65,6 @@ public sealed class LlmHealthIntegrationTests
 
         return hybridServiceMock;
     }
-
-    #endregion
-
-    #region 1. Health Check Aggregation Tests
-
     [Fact]
     public async Task GetLlmHealth_WithMultipleProviders_ReturnsAggregatedStatus()
     {
@@ -116,11 +109,6 @@ public sealed class LlmHealthIntegrationTests
         result.Providers.Should().ContainKey("openrouter");
         result.Providers.Should().ContainKey("anthropic");
     }
-
-    #endregion
-
-    #region 2. Provider Down Scenarios
-
     [Fact]
     public async Task GetLlmHealth_WithUnhealthyProvider_ReportsCorrectly()
     {
@@ -163,11 +151,6 @@ public sealed class LlmHealthIntegrationTests
         result.Providers["anthropic"].CircuitState.ShouldIndicateCircuitOpen();
         result.Providers["anthropic"].LatencyStats.ShouldIndicateTimeout();
     }
-
-    #endregion
-
-    #region 3. Empty Provider List
-
     [Fact]
     public async Task GetLlmHealth_WithNoProviders_ReturnsEmptyResult()
     {
@@ -189,11 +172,6 @@ public sealed class LlmHealthIntegrationTests
         result.Providers.Should().BeEmpty();
         result.Summary.ShouldIndicateZeroProviders();
     }
-
-    #endregion
-
-    #region 4. Missing Monitoring Data
-
     [Fact]
     public async Task GetLlmHealth_WithMissingMonitoringData_HandlesGracefully()
     {
@@ -225,11 +203,6 @@ public sealed class LlmHealthIntegrationTests
         result.Providers["new-provider"].CircuitState.ShouldIndicateCircuitUnknown();
         result.Providers["new-provider"].LatencyStats.ShouldIndicateNoData();
     }
-
-    #endregion
-
-    #region 5. Concurrent Access
-
     [Fact]
     public async Task GetLlmHealth_ConcurrentCalls_ReturnsConsistentResults()
     {
@@ -279,6 +252,4 @@ public sealed class LlmHealthIntegrationTests
             result.Providers.Should().ContainKey("anthropic");
         }
     }
-
-    #endregion
 }

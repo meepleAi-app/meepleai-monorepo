@@ -32,9 +32,6 @@ public class PdfValidationDomainServiceTests
 
         _service = new PdfValidationDomainService(configuration);
     }
-
-    #region File Size Validation Tests
-
     [Fact]
     public void ValidateFileSize_ValidSize_ReturnsSuccess()
     {
@@ -92,11 +89,6 @@ public class PdfValidationDomainServiceTests
         // Assert
         result.IsSuccess.Should().BeTrue();
     }
-
-    #endregion
-
-    #region Page Count Validation Tests
-
     [Fact]
     public void ValidatePageCount_ValidCount_ReturnsSuccess()
     {
@@ -176,11 +168,6 @@ public class PdfValidationDomainServiceTests
         result.Error.Should().Contain("150 pages");
         result.Error.Should().Contain("maximum allowed is 100");
     }
-
-    #endregion
-
-    #region PDF Version Validation Tests
-
     [Fact]
     public void ValidatePdfVersion_ValidVersion_ReturnsSuccess()
     {
@@ -244,11 +231,6 @@ public class PdfValidationDomainServiceTests
         result.Error.Should().Contain("1.3");
         result.Error.Should().Contain("Minimum version required is 1.4");
     }
-
-    #endregion
-
-    #region MIME Type Validation Tests
-
     [Fact]
     public void ValidateMimeType_StandardPdfType_ReturnsSuccess()
     {
@@ -334,11 +316,6 @@ public class PdfValidationDomainServiceTests
         result.IsSuccess.Should().BeFalse();
         result.FieldName.Should().Be("fileType");
     }
-
-    #endregion
-
-    #region Configuration Edge Cases
-
     [Fact]
     public void ValidateFileSize_DefaultConfiguration_UsesDefaultLimit()
     {
@@ -368,7 +345,5 @@ public class PdfValidationDomainServiceTests
         // Assert
         result.IsSuccess.Should().BeTrue();
     }
-
-    #endregion
 }
 

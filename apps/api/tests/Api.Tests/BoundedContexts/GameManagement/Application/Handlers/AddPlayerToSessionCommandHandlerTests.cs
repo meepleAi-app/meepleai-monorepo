@@ -28,9 +28,6 @@ public class AddPlayerToSessionCommandHandlerTests
             _sessionRepositoryMock.Object,
             _unitOfWorkMock.Object);
     }
-
-    #region Happy Path Tests
-
     [Fact]
     public async Task Handle_SetupSession_AddsPlayerSuccessfully()
     {
@@ -221,11 +218,6 @@ public class AddPlayerToSessionCommandHandlerTests
         // Assert
         Assert.Equal(4, result.Players.Count);
     }
-
-    #endregion
-
-    #region Edge Cases
-
     [Fact]
     public async Task Handle_NonExistentSession_ThrowsInvalidOperationException()
     {
@@ -358,11 +350,6 @@ public class AddPlayerToSessionCommandHandlerTests
 
         Assert.Contains("already in this session", exception.Message);
     }
-
-    #endregion
-
-    #region Player Limit Tests
-
     [Fact]
     public async Task Handle_SessionWith99Players_CanAddOneMore()
     {
@@ -422,11 +409,6 @@ public class AddPlayerToSessionCommandHandlerTests
 
         Assert.Contains("Player order cannot exceed 100", exception.Message);
     }
-
-    #endregion
-
-    #region Domain Behavior Tests
-
     [Fact]
     public async Task Handle_PreservesSessionMetadata()
     {
@@ -460,11 +442,6 @@ public class AddPlayerToSessionCommandHandlerTests
         Assert.Equal(originalStartedAt, result.StartedAt);
         Assert.Equal(originalStatus, result.Status);
     }
-
-    #endregion
-
-    #region Cancellation Tests
-
     [Fact]
     public async Task Handle_WithCancellationToken_PassesToRepository()
     {
@@ -501,7 +478,5 @@ public class AddPlayerToSessionCommandHandlerTests
             u => u.SaveChangesAsync(cancellationToken),
             Times.Once);
     }
-
-    #endregion
 }
 

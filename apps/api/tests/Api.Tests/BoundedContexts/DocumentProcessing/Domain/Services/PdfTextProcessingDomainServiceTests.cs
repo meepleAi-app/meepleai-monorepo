@@ -27,9 +27,6 @@ public class PdfTextProcessingDomainServiceTests
 
         _sut = new PdfTextProcessingDomainService(_configuration);
     }
-
-    #region ShouldTriggerOcr Tests
-
     [Fact]
     public void ShouldTriggerOcr_BelowThreshold_ReturnsTrue()
     {
@@ -85,11 +82,6 @@ public class PdfTextProcessingDomainServiceTests
         // Assert
         result.Should().BeTrue("Should trigger OCR for empty text (likely scanned PDF)");
     }
-
-    #endregion
-
-    #region NormalizeText Tests
-
     [Fact]
     public void NormalizeText_EmptyString_ReturnsEmpty()
     {
@@ -181,11 +173,6 @@ public class PdfTextProcessingDomainServiceTests
         // Assert: Should normalize to composed form (NFC)
         result.Should().Be("café");
     }
-
-    #endregion
-
-    #region AssessQuality Tests
-
     [Fact]
     public void AssessQuality_VeryLowQuality_ReturnsVeryLow()
     {
@@ -269,7 +256,5 @@ public class PdfTextProcessingDomainServiceTests
         // Assert
         result.Should().Be(ExtractionQuality.VeryLow);
     }
-
-    #endregion
 }
 

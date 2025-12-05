@@ -28,9 +28,6 @@ public sealed class Enable2FACommandValidatorTests
         // Assert
         result.ShouldNotHaveAnyValidationErrors();
     }
-
-    #region UserId Validation
-
     [Fact]
     public void Should_Fail_When_UserId_Is_Empty()
     {
@@ -47,11 +44,6 @@ public sealed class Enable2FACommandValidatorTests
         result.ShouldHaveValidationErrorFor(x => x.UserId)
             .WithErrorMessage("User ID is required");
     }
-
-    #endregion
-
-    #region TotpCode Validation
-
     [Theory]
     [InlineData(null)]
     [InlineData("")]
@@ -150,9 +142,6 @@ public sealed class Enable2FACommandValidatorTests
         // Assert
         result.ShouldNotHaveAnyValidationErrors();
     }
-
-    #endregion
-
     [Fact]
     public void Should_Fail_With_Multiple_Validation_Errors()
     {

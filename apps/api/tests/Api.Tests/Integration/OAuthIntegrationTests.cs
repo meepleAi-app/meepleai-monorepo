@@ -173,9 +173,6 @@ public class OAuthIntegrationTests : IAsyncLifetime
 
         _output("✓ Cleanup complete");
     }
-
-    #region Test 1: OAuthCallback_NewUser_CreatesUserAndLinksAccount
-
     [Fact]
     public async Task OAuthCallback_NewUser_CreatesUserAndLinksAccount()
     {
@@ -229,11 +226,6 @@ public class OAuthIntegrationTests : IAsyncLifetime
 
         _output("✓ Test 1 passed: OAuth callback created new user with linked account");
     }
-
-    #endregion
-
-    #region Test 2: OAuthCallback_ExistingUser_LinksAccount
-
     [Fact]
     public async Task OAuthCallback_ExistingUser_LinksAccount()
     {
@@ -288,11 +280,6 @@ public class OAuthIntegrationTests : IAsyncLifetime
 
         _output("✓ Test 2 passed: OAuth callback linked account to existing user");
     }
-
-    #endregion
-
-    #region Test 3: UnlinkOAuthAccount_ValidProvider_RemovesAccount
-
     [Fact]
     public async Task UnlinkOAuthAccount_ValidProvider_RemovesAccount()
     {
@@ -367,11 +354,6 @@ public class OAuthIntegrationTests : IAsyncLifetime
 
         _output("✓ Test 3 passed: OAuth account successfully unlinked");
     }
-
-    #endregion
-
-    #region Test 4: UnlinkOAuthAccount_WithPasswordFallback_Succeeds
-
     [Fact]
     public async Task UnlinkOAuthAccount_WithPasswordFallback_Succeeds()
     {
@@ -428,11 +410,6 @@ public class OAuthIntegrationTests : IAsyncLifetime
 
         _output("✓ Test 4 passed: OAuth account can be unlinked when user has password as fallback");
     }
-
-    #endregion
-
-    #region Test 5: GetLinkedOAuthAccounts_ReturnsAllAccounts
-
     [Fact]
     public async Task GetLinkedOAuthAccounts_ReturnsAllAccounts()
     {
@@ -527,11 +504,6 @@ public class OAuthIntegrationTests : IAsyncLifetime
 
         _output("✓ Test 5 passed: Retrieved all linked OAuth accounts with correct metadata");
     }
-
-    #endregion
-
-    #region Test 6: MultipleOAuthAccounts_UserManagement
-
     [Fact]
     public async Task MultipleOAuthAccounts_UserManagement()
     {
@@ -605,11 +577,6 @@ public class OAuthIntegrationTests : IAsyncLifetime
 
         _output("✓ Test 6 passed: Progressive OAuth account management");
     }
-
-    #endregion
-
-    #region Test 7: OAuthAccount_ProviderValidation
-
     [Fact]
     public void OAuthAccount_ProviderValidation()
     {
@@ -634,11 +601,6 @@ public class OAuthIntegrationTests : IAsyncLifetime
 
         _output("✓ Test 7 passed: OAuth provider validation enforced");
     }
-
-    #endregion
-
-    #region Helper Methods
-
     private async Task CreateTestDataAsync()
     {
         // Use a new scope to avoid entity tracking conflicts
@@ -729,5 +691,3 @@ public class OAuthIntegrationTests : IAsyncLifetime
         return identifier;
     }
 }
-#endregion
-

@@ -33,8 +33,6 @@ namespace Api.Tests.Integration.GameManagement;
 [Collection("UpdateRuleCommentIntegration")]
 public sealed class UpdateRuleCommentIntegrationTests : IAsyncLifetime
 {
-    #region Test Infrastructure
-
     private IContainer? _postgresContainer;
     private MeepleAiDbContext? _dbContext;
     private IServiceProvider? _serviceProvider;
@@ -209,11 +207,6 @@ public sealed class UpdateRuleCommentIntegrationTests : IAsyncLifetime
         _dbContext!.RuleSpecComments.RemoveRange(_dbContext.RuleSpecComments);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
     }
-
-    #endregion
-
-    #region 1. Happy Path Tests
-
     [Fact]
     public async Task UpdateOwnComment_Success()
     {
@@ -261,11 +254,6 @@ public sealed class UpdateRuleCommentIntegrationTests : IAsyncLifetime
         result.GameId.Should().Be(originalGameId.ToString());
         result.Version.Should().Be(originalVersion);
     }
-
-    #endregion
-
-    #region 2. Authorization Error Tests
-
     [Fact]
     public async Task UpdateOtherUserComment_ThrowsUnauthorized()
     {
@@ -287,11 +275,6 @@ public sealed class UpdateRuleCommentIntegrationTests : IAsyncLifetime
         comment.Should().NotBeNull();
         comment!.CommentText.Should().Be("Original");
     }
-
-    #endregion
-
-    #region 3. Validation Error Tests
-
     [Fact]
     public async Task UpdateComment_WithEmptyText_ThrowsInvalidOperation()
     {
@@ -343,11 +326,6 @@ public sealed class UpdateRuleCommentIntegrationTests : IAsyncLifetime
         await act.Should().ThrowAsync<InvalidOperationException>()
             .WithMessage("*exceeds maximum length*");
     }
-
-    #endregion
-
-    #region 4. Not Found Tests
-
     [Fact]
     public async Task UpdateNonExistentComment_ThrowsInvalidOperation()
     {
@@ -364,11 +342,6 @@ public sealed class UpdateRuleCommentIntegrationTests : IAsyncLifetime
         await act.Should().ThrowAsync<InvalidOperationException>()
             .WithMessage("*not found*");
     }
-
-    #endregion
-
-    #region 5. Long Comment Tests
-
     [Fact]
     public async Task UpdateComment_WithMaxLength_Success()
     {
@@ -386,11 +359,6 @@ public sealed class UpdateRuleCommentIntegrationTests : IAsyncLifetime
         result.Should().NotBeNull();
         result.CommentText.Should().HaveLength(2000);
     }
-
-    #endregion
-
-    #region 6. Concurrent Operations Tests
-
     [Fact]
     public async Task ConcurrentUpdate_LastWriteWins()
     {
@@ -431,7 +399,5 @@ public sealed class UpdateRuleCommentIntegrationTests : IAsyncLifetime
 
         return new UpdateRuleCommentCommandHandler(dbContext, timeProvider, logger);
     }
-
-    #endregion
 }
 

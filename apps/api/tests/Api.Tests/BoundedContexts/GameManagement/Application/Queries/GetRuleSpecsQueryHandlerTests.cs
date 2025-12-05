@@ -42,9 +42,6 @@ public class GetRuleSpecsQueryHandlerTests
     {
         return new GetRuleSpecsQueryHandler(context);
     }
-
-    #region Happy Path Tests
-
     [Fact]
     public async Task Handle_WithExistingRuleSpecs_ReturnsOrderedByCreatedAt()
     {
@@ -207,11 +204,6 @@ public class GetRuleSpecsQueryHandlerTests
         var parent = result.First(r => r.Version == "1.0");
         Assert.Null(parent.ParentVersionId);
     }
-
-    #endregion
-
-    #region Edge Cases
-
     [Fact]
     public async Task Handle_WithCancellationToken_Cancels()
     {
@@ -271,11 +263,6 @@ public class GetRuleSpecsQueryHandlerTests
         Assert.Null(atomDto.Page);
         Assert.Null(atomDto.Line);
     }
-
-    #endregion
-
-    #region Helper Methods
-
     private static RuleSpecEntity CreateRuleSpec(Guid gameId, string version, DateTime createdAt)
     {
         return new RuleSpecEntity
@@ -289,7 +276,5 @@ public class GetRuleSpecsQueryHandlerTests
             Atoms = new List<RuleAtomEntity>()
         };
     }
-
-    #endregion
 }
 

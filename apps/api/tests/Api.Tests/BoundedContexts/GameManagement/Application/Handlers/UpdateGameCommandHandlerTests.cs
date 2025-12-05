@@ -28,9 +28,6 @@ public class UpdateGameCommandHandlerTests
             _gameRepositoryMock.Object,
             _unitOfWorkMock.Object);
     }
-
-    #region Happy Path Tests
-
     [Fact]
     public async Task Handle_WithAllProperties_UpdatesGameAndReturnsDto()
     {
@@ -218,11 +215,6 @@ public class UpdateGameCommandHandlerTests
         // Assert
         Assert.Equal(2025, result.YearPublished);
     }
-
-    #endregion
-
-    #region Edge Cases
-
     [Fact]
     public async Task Handle_NonExistentGame_ThrowsInvalidOperationException()
     {
@@ -331,11 +323,6 @@ public class UpdateGameCommandHandlerTests
         Assert.Equal(30, result.MinPlayTimeMinutes);
         Assert.Equal(45, result.MaxPlayTimeMinutes);
     }
-
-    #endregion
-
-    #region Cancellation Tests
-
     [Fact]
     public async Task Handle_WithCancellationToken_PassesToRepository()
     {
@@ -371,11 +358,6 @@ public class UpdateGameCommandHandlerTests
             u => u.SaveChangesAsync(cancellationToken),
             Times.Once);
     }
-
-    #endregion
-
-    #region Domain Behavior Tests
-
     [Fact]
     public async Task Handle_UpdatePreservesCreatedAt()
     {
@@ -429,7 +411,5 @@ public class UpdateGameCommandHandlerTests
         Assert.Equal(13, result.BggId);
         Assert.Equal("Settlers of Catan", result.Title);
     }
-
-    #endregion
 }
 

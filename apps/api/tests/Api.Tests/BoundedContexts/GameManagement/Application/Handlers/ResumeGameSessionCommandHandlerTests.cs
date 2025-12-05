@@ -27,9 +27,6 @@ public class ResumeGameSessionCommandHandlerTests
             _sessionRepositoryMock.Object,
             _unitOfWorkMock.Object);
     }
-
-    #region Happy Path Tests
-
     [Fact]
     public async Task Handle_PausedSession_ResumesSuccessfully()
     {
@@ -177,11 +174,6 @@ public class ResumeGameSessionCommandHandlerTests
         // Assert
         Assert.Equal("InProgress", result.Status);
     }
-
-    #endregion
-
-    #region Edge Cases
-
     [Fact]
     public async Task Handle_NonExistentSession_ThrowsInvalidOperationException()
     {
@@ -278,11 +270,6 @@ public class ResumeGameSessionCommandHandlerTests
 
         Assert.Contains("Cannot resume session in Completed status", exception.Message);
     }
-
-    #endregion
-
-    #region Domain Behavior Tests
-
     [Fact]
     public async Task Handle_PreservesSessionMetadata()
     {
@@ -317,11 +304,6 @@ public class ResumeGameSessionCommandHandlerTests
         Assert.Null(result.CompletedAt); // Still not completed
         Assert.Null(result.WinnerName);
     }
-
-    #endregion
-
-    #region Cancellation Tests
-
     [Fact]
     public async Task Handle_WithCancellationToken_PassesToRepository()
     {
@@ -357,7 +339,5 @@ public class ResumeGameSessionCommandHandlerTests
             u => u.SaveChangesAsync(cancellationToken),
             Times.Once);
     }
-
-    #endregion
 }
 

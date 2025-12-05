@@ -27,9 +27,6 @@ public class PauseGameSessionCommandHandlerTests
             _sessionRepositoryMock.Object,
             _unitOfWorkMock.Object);
     }
-
-    #region Happy Path Tests
-
     [Fact]
     public async Task Handle_InProgressSession_PausesSuccessfully()
     {
@@ -138,11 +135,6 @@ public class PauseGameSessionCommandHandlerTests
         Assert.Equal("Paused", result.Status);
         Assert.Contains("Game is going well!", result.Notes);
     }
-
-    #endregion
-
-    #region Edge Cases
-
     [Fact]
     public async Task Handle_NonExistentSession_ThrowsInvalidOperationException()
     {
@@ -242,11 +234,6 @@ public class PauseGameSessionCommandHandlerTests
 
         Assert.Contains("Cannot pause session in Paused status", exception.Message);
     }
-
-    #endregion
-
-    #region Domain Behavior Tests
-
     [Fact]
     public async Task Handle_PreservesSessionMetadata()
     {
@@ -279,11 +266,6 @@ public class PauseGameSessionCommandHandlerTests
         Assert.Null(result.CompletedAt); // Still not completed
         Assert.Null(result.WinnerName);
     }
-
-    #endregion
-
-    #region Cancellation Tests
-
     [Fact]
     public async Task Handle_WithCancellationToken_PassesToRepository()
     {
@@ -317,7 +299,5 @@ public class PauseGameSessionCommandHandlerTests
             u => u.SaveChangesAsync(cancellationToken),
             Times.Once);
     }
-
-    #endregion
 }
 

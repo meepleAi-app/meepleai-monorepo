@@ -26,9 +26,6 @@ public class CreateGameCommandHandlerTests
             _gameRepositoryMock.Object,
             _unitOfWorkMock.Object);
     }
-
-    #region Happy Path Tests
-
     [Fact]
     public async Task Handle_WithAllProperties_CreatesGameAndReturnsDto()
     {
@@ -202,11 +199,6 @@ public class CreateGameCommandHandlerTests
         Assert.Null(result.MinPlayers);
         Assert.Null(result.MinPlayTimeMinutes);
     }
-
-    #endregion
-
-    #region Edge Cases
-
     [Fact]
     public async Task Handle_WithVeryLongTitle_CreatesGame()
     {
@@ -290,11 +282,6 @@ public class CreateGameCommandHandlerTests
         Assert.NotNull(result);
         Assert.Equal(currentYear, result.YearPublished);
     }
-
-    #endregion
-
-    #region Cancellation Tests
-
     [Fact]
     public async Task Handle_WithCancellationToken_PassesToRepository()
     {
@@ -314,11 +301,6 @@ public class CreateGameCommandHandlerTests
             u => u.SaveChangesAsync(cancellationToken),
             Times.Once);
     }
-
-    #endregion
-
-    #region Generated ID Tests
-
     [Fact]
     public async Task Handle_MultipleGames_GeneratesDifferentIds()
     {
@@ -333,11 +315,6 @@ public class CreateGameCommandHandlerTests
         // Assert
         Assert.NotEqual(result1.Id, result2.Id);
     }
-
-    #endregion
-
-    #region DTO Mapping Tests
-
     [Fact]
     public async Task Handle_MapsAllPropertiesToDto()
     {
@@ -367,7 +344,5 @@ public class CreateGameCommandHandlerTests
         Assert.True(result.CreatedAt <= DateTime.UtcNow);
         Assert.True(result.CreatedAt >= DateTime.UtcNow.AddSeconds(-5)); // Created within last 5 seconds
     }
-
-    #endregion
 }
 

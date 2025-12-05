@@ -401,9 +401,6 @@ public class EnhancedPdfProcessingOrchestratorTests
             }
         }
     }
-
-    #region BGAI-088: Defense in Depth - File Size Validation Tests
-
     [Theory]
     [InlineData(52428800, true)]     // 50 MB - under limit (50 * 1024 * 1024)
     [InlineData(104857600, true)]    // 100 MB - at limit (boundary) (100 * 1024 * 1024)
@@ -513,11 +510,6 @@ public class EnhancedPdfProcessingOrchestratorTests
         result.ErrorMessage.Should().Contain("exceeds maximum");
         result.ErrorMessage.Should().Contain("115"); // Should show actual size (115343360 bytes = 110 MB = 115.3 in decimal MB)
     }
-
-    #endregion
-
-    #region Helper: Fake Extractor
-
     /// <summary>
     /// Fake PDF extractor for testing orchestrator logic without real HTTP calls
     /// Implements IPdfTextExtractor directly to avoid virtual method issues
@@ -611,11 +603,6 @@ public class EnhancedPdfProcessingOrchestratorTests
             return Task.FromResult(PagedTextExtractionResult.CreateFailure(_errorMsg ?? "Fake paged extraction failed"));
         }
     }
-
-    #endregion
-
-    #region Helper Methods
-
     private static MemoryStream CreateDummyPdfStream()
     {
         // Minimal PDF header
@@ -682,6 +669,4 @@ public class EnhancedPdfProcessingOrchestratorTests
             await base.DisposeAsync();
         }
     }
-
-    #endregion
 }

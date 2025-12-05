@@ -46,9 +46,6 @@ public class MoveValidationDomainServiceTests
         var loggerMock = new Mock<ILogger<MoveValidationDomainService>>();
         return new MoveValidationDomainService(context, loggerMock.Object);
     }
-
-    #region Constructor Tests
-
     [Fact]
     public void Constructor_WithNullDbContext_ThrowsArgumentNullException()
     {
@@ -70,11 +67,6 @@ public class MoveValidationDomainServiceTests
         Assert.Throws<ArgumentNullException>(() =>
             new MoveValidationDomainService(context, null!));
     }
-
-    #endregion
-
-    #region ValidateMoveAsync - Basic Validation Tests
-
     [Fact]
     public async Task ValidateMoveAsync_WithNullSession_ThrowsArgumentNullException()
     {
@@ -139,11 +131,6 @@ public class MoveValidationDomainServiceTests
         Assert.Contains("not in this session", result.Errors[0]);
         Assert.Equal(1.0, result.ConfidenceScore);
     }
-
-    #endregion
-
-    #region ValidateMoveAsync - RuleSpec Integration Tests
-
     [Fact]
     public async Task ValidateMoveAsync_WithNoRuleSpec_ReturnsUncertain()
     {
@@ -223,11 +210,6 @@ public class MoveValidationDomainServiceTests
         Assert.Single(result.ApplicableRules);
         Assert.Contains("Old dice rule", result.ApplicableRules[0].text);
     }
-
-    #endregion
-
-    #region ValidateMoveAsync - Keyword Matching Tests
-
     [Fact]
     public async Task ValidateMoveAsync_WithComplexAction_FindsRelevantRules()
     {
@@ -284,11 +266,6 @@ public class MoveValidationDomainServiceTests
         Assert.True(result.IsValid);
         Assert.Contains(result.ApplicableRules, r => r.text.Contains("center"));
     }
-
-    #endregion
-
-    #region ValidateMoveAsync - Confidence Scoring Tests
-
     [Fact]
     public async Task ValidateMoveAsync_WithNoApplicableRules_ReturnsLowConfidence()
     {
@@ -342,11 +319,6 @@ public class MoveValidationDomainServiceTests
         Assert.True(result.IsValid);
         Assert.True(result.ConfidenceScore >= 0.7); // High confidence with multiple specific rules
     }
-
-    #endregion
-
-    #region ValidateMoveAsync - Session State Tests
-
     [Fact]
     public async Task ValidateMoveAsync_DuringSetup_ProvidesSuggestions()
     {
@@ -373,11 +345,6 @@ public class MoveValidationDomainServiceTests
             Assert.Contains(result.Suggestions, s => s.Contains("setup"));
         }
     }
-
-    #endregion
-
-    #region ValidateMoveAsync - Restriction Detection Tests
-
     [Fact]
     public async Task ValidateMoveAsync_WithRestrictiveRules_ProvidesSuggestions()
     {
@@ -407,11 +374,6 @@ public class MoveValidationDomainServiceTests
                 s.Contains("restriction", StringComparison.OrdinalIgnoreCase));
         }
     }
-
-    #endregion
-
-    #region Helper Methods
-
     private static GameSession CreateDefaultSession(Guid? gameId = null)
     {
         var players = new List<SessionPlayer>
@@ -460,7 +422,5 @@ public class MoveValidationDomainServiceTests
 
         return int.TryParse(value, out var parsed) ? parsed : null;
     }
-
-    #endregion
 }
 

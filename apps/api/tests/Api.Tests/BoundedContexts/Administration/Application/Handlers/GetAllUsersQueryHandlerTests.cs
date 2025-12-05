@@ -24,9 +24,6 @@ public class GetAllUsersQueryHandlerTests
     {
         return DbContextHelper.CreateInMemoryDbContext();
     }
-
-    #region Construction Tests
-
     [Fact]
     public void Constructor_WithValidDbContext_CreatesInstance()
     {
@@ -47,11 +44,6 @@ public class GetAllUsersQueryHandlerTests
         Assert.Throws<ArgumentNullException>(() =>
             new GetAllUsersQueryHandler(null!));
     }
-
-    #endregion
-
-    #region Query Tests
-
     [Fact]
     public void Query_WithDefaultPagination_ConstructsCorrectly()
     {
@@ -130,9 +122,6 @@ public class GetAllUsersQueryHandlerTests
         Assert.Equal("displayname", query.SortBy);
         Assert.Equal("asc", query.SortOrder);
     }
-
-    #endregion
-
     // NOTE: Full integration tests for Handle method (pagination, filtering, sorting)
     // should be in integration test suite due to DbContext complexity.
     // See integration-tests.yml workflow.

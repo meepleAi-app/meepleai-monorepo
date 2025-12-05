@@ -16,9 +16,6 @@ public class TableToAtomicRuleConverterTests
     {
         _converter = new TableToAtomicRuleConverter();
     }
-
-    #region ConvertTableToAtomicRules Tests
-
     [Fact]
     public void ConvertTableToAtomicRules_WithValidTable_ReturnsAtomicRules()
     {
@@ -182,11 +179,6 @@ public class TableToAtomicRuleConverterTests
         Assert.Single(rules);
         Assert.Contains("[Table on page 42]", rules[0]);
     }
-
-    #endregion
-
-    #region IsHeaderRow Tests
-
     [Fact]
     public void IsHeaderRow_WithExplicitHeaderKeyword_ReturnsTrue()
     {
@@ -268,11 +260,6 @@ public class TableToAtomicRuleConverterTests
         // Assert
         Assert.False(isHeader);
     }
-
-    #endregion
-
-    #region CategorizeAtomicRule Tests
-
     [Fact]
     public void CategorizeAtomicRule_WithSetupTerms_ReturnsSetupCategory()
     {
@@ -383,11 +370,6 @@ public class TableToAtomicRuleConverterTests
         Assert.Equal("Action", category2);
         Assert.Equal("Action", category3);
     }
-
-    #endregion
-
-    #region Edge Cases and Business Rules
-
     [Fact]
     public void ConvertTableToAtomicRules_WithComplexTableData_PreservesBusinnessLogic()
     {
@@ -439,7 +421,5 @@ public class TableToAtomicRuleConverterTests
         Assert.Contains("🛡️", rules[1]);
         Assert.Contains("&", rules[1]); // Special characters preserved
     }
-
-    #endregion
 }
 

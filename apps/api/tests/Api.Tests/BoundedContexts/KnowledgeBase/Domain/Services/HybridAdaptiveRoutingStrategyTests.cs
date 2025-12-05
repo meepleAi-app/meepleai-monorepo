@@ -307,9 +307,6 @@ public class HybridAdaptiveRoutingStrategyTests
             Assert.Equal("OpenRouter", d.ProviderName);
         });
     }
-
-    #region BGAI-022: AI Provider Configuration Integration Tests
-
     [Fact]
     public void PreferredProvider_OverridesUserTierRouting()
     {
@@ -447,11 +444,6 @@ public class HybridAdaptiveRoutingStrategyTests
             decision.ModelId == "meta-llama/llama-3.3-70b-instruct:free" ||
             decision.ModelId == "openai/gpt-4o-mini");
     }
-
-    #endregion
-
-    #region ISSUE-1159: Missing Provider Fallback Tests
-
     [Fact]
     public void BothProvidersMissing_UsesDefaults()
     {
@@ -653,11 +645,6 @@ public class HybridAdaptiveRoutingStrategyTests
         Assert.Equal("Ollama", decision.ProviderName);
         Assert.Equal("llama3:8b", decision.ModelId); // Ollama default
     }
-
-    #endregion
-
-    #region Helper Methods
-
     private static AuthUser CreateUser(Role role)
     {
         var email = Email.Parse($"test.{role.Value}@meepleai.dev");
@@ -670,7 +657,5 @@ public class HybridAdaptiveRoutingStrategyTests
             password,
             role);
     }
-
-    #endregion
 }
 

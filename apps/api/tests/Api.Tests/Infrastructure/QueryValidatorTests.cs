@@ -10,8 +10,6 @@ namespace Api.Tests.Infrastructure;
 /// </summary>
 public class QueryValidatorTests
 {
-    #region ValidateQuery Tests
-
     [Fact]
     public void ValidateQuery_ValidQuery_ReturnsNull()
     {
@@ -143,11 +141,6 @@ public class QueryValidatorTests
         // Assert
         Assert.Equal(QueryValidator.QueryRequiredMessage, result);
     }
-
-    #endregion
-
-    #region ValidateQueryOrThrow Tests
-
     [Fact]
     public void ValidateQueryOrThrow_ValidQuery_DoesNotThrow()
     {
@@ -225,11 +218,6 @@ public class QueryValidatorTests
 
         Assert.Contains(customParamName.ToLower(), exception.Message.ToLower());
     }
-
-    #endregion
-
-    #region TryValidateQuery Tests
-
     [Fact]
     public void TryValidateQuery_ValidQuery_ReturnsTrue()
     {
@@ -328,11 +316,6 @@ public class QueryValidatorTests
         Assert.True(isValid);
         Assert.Null(errorMessage);
     }
-
-    #endregion
-
-    #region Constants Tests
-
     [Fact]
     public void Constants_MinQueryLength_Is3()
     {
@@ -353,11 +336,6 @@ public class QueryValidatorTests
         // Assert
         Assert.Equal("Please provide a question", QueryValidator.QueryRequiredMessage);
     }
-
-    #endregion
-
-    #region Real-World Query Examples
-
     [Theory]
     [InlineData("How do I win?")]
     [InlineData("What is the setup?")]
@@ -390,7 +368,5 @@ public class QueryValidatorTests
         // Assert
         Assert.NotNull(result);
     }
-
-    #endregion
 }
 

@@ -47,9 +47,6 @@ public class EmbeddingServiceTests
         _providerFactoryMock.Setup(x => x.GetPrimaryProvider()).Returns(_primaryProviderMock.Object);
         _providerFactoryMock.Setup(x => x.GetFallbackProvider()).Returns(_fallbackProviderMock.Object);
     }
-
-    #region Constructor Tests
-
     [Fact]
     public void Constructor_WithValidDependencies_CreatesInstance()
     {
@@ -113,11 +110,6 @@ public class EmbeddingServiceTests
         act.Should().Throw<ArgumentNullException>()
             .WithParameterName("logger");
     }
-
-    #endregion
-
-    #region GetEmbeddingDimensions Tests
-
     [Fact]
     public void GetEmbeddingDimensions_ReturnsPrimaryProviderDimensions()
     {
@@ -135,11 +127,6 @@ public class EmbeddingServiceTests
         // Assert
         dimensions.Should().Be(1024);
     }
-
-    #endregion
-
-    #region GetModelName Tests
-
     [Fact]
     public void GetModelName_ReturnsCombinedProviderAndModelName()
     {
@@ -158,11 +145,6 @@ public class EmbeddingServiceTests
         // Assert
         modelName.Should().Be("openrouter/text-embedding-3-large");
     }
-
-    #endregion
-
-    #region GenerateEmbeddingsAsync Tests
-
     [Fact]
     public async Task GenerateEmbeddingsAsync_WithEmptyList_ReturnsFailure()
     {
@@ -364,11 +346,6 @@ public class EmbeddingServiceTests
         result.Success.Should().BeFalse();
         result.ErrorMessage.Should().Contain("Primary failed");
     }
-
-    #endregion
-
-    #region GenerateEmbeddingAsync (single text) Tests
-
     [Fact]
     public async Task GenerateEmbeddingAsync_WithValidText_ReturnsEmbedding()
     {
@@ -396,11 +373,6 @@ public class EmbeddingServiceTests
         result.Embeddings.Should().HaveCount(1);
         result.Embeddings[0].Should().BeEquivalentTo(expectedEmbedding);
     }
-
-    #endregion
-
-    #region Language-Specific Embedding Tests
-
     [Theory]
     [InlineData("en")]
     [InlineData("it")]
@@ -485,11 +457,6 @@ public class EmbeddingServiceTests
         // Assert
         result.Success.Should().BeTrue();
     }
-
-    #endregion
-
-    #region Exception Handling Tests
-
     [Fact]
     public async Task GenerateEmbeddingsAsync_WhenProviderThrowsException_ReturnsFailure()
     {
@@ -546,6 +513,4 @@ public class EmbeddingServiceTests
         // Assert
         result.Success.Should().BeFalse();
     }
-
-    #endregion
 }

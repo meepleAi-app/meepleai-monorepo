@@ -83,9 +83,6 @@ public class AuthenticationFlowTests : IAsyncLifetime
             }
         }
     }
-
-    #region Registration Tests
-
     [Fact(DisplayName = "POST /auth/register with valid credentials should return 201 Created")]
     public async Task Register_WithValidCredentials_Returns201Created()
     {
@@ -167,11 +164,6 @@ public class AuthenticationFlowTests : IAsyncLifetime
 
         // Frontend SDK should display password requirements error
     }
-
-    #endregion
-
-    #region Login Tests
-
     [Fact(DisplayName = "POST /auth/login with valid credentials should return session cookie")]
     public async Task Login_WithValidCredentials_ReturnsSessionCookie()
     {
@@ -261,11 +253,6 @@ public class AuthenticationFlowTests : IAsyncLifetime
 
         // Frontend SDK should redirect to login page
     }
-
-    #endregion
-
-    #region Logout Tests
-
     [Fact(DisplayName = "POST /auth/logout should clear session cookie")]
     public async Task Logout_WithValidSession_ClearsSessionCookie()
     {
@@ -288,11 +275,6 @@ public class AuthenticationFlowTests : IAsyncLifetime
 
         // Frontend SDK should clear local state and redirect to login
     }
-
-    #endregion
-
-    #region API Key Authentication Tests
-
     [Fact(DisplayName = "GET with valid API key should authenticate successfully")]
     public async Task Get_WithValidApiKey_AuthenticatesSuccessfully()
     {
@@ -337,11 +319,6 @@ public class AuthenticationFlowTests : IAsyncLifetime
 
         // Frontend SDK should handle invalid API key gracefully
     }
-
-    #endregion
-
-    #region Session Management Tests
-
     [Fact(DisplayName = "Concurrent requests with same session should work correctly")]
     public async Task ConcurrentRequests_WithSameSession_WorkCorrectly()
     {
@@ -386,11 +363,6 @@ public class AuthenticationFlowTests : IAsyncLifetime
         // Frontend SDK can display active sessions to user
         // (404 is acceptable if sessions endpoint doesn't exist yet)
     }
-
-    #endregion
-
-    #region Error Handling Tests
-
     [Fact(DisplayName = "POST /auth/login with missing fields should return 400 Bad Request")]
     public async Task Login_WithMissingFields_Returns400BadRequest()
     {
@@ -425,11 +397,6 @@ public class AuthenticationFlowTests : IAsyncLifetime
 
         // Frontend SDK should display "Invalid email format" error
     }
-
-    #endregion
-
-    #region Security Headers Tests
-
     [Fact(DisplayName = "Auth responses should include security headers")]
     public async Task AuthResponses_IncludeSecurityHeaders()
     {
@@ -457,6 +424,4 @@ public class AuthenticationFlowTests : IAsyncLifetime
             cookieHeader.Should().Contain("httponly"); // Case-insensitive check
         }
     }
-
-    #endregion
 }

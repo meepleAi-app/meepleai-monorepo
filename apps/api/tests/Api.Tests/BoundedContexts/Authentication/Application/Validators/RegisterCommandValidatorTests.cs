@@ -29,9 +29,6 @@ public sealed class RegisterCommandValidatorTests
         // Assert
         result.ShouldNotHaveAnyValidationErrors();
     }
-
-    #region Email Validation
-
     [Theory]
     [InlineData(null)]
     [InlineData("")]
@@ -91,11 +88,6 @@ public sealed class RegisterCommandValidatorTests
         // Assert
         result.ShouldHaveValidationErrorFor(x => x.Email);
     }
-
-    #endregion
-
-    #region Password Validation
-
     [Theory]
     [InlineData(null)]
     [InlineData("")]
@@ -177,11 +169,6 @@ public sealed class RegisterCommandValidatorTests
         result.ShouldHaveValidationErrorFor(x => x.Password)
             .WithErrorMessage(expectedError);
     }
-
-    #endregion
-
-    #region DisplayName Validation
-
     [Theory]
     [InlineData(null)]
     [InlineData("")]
@@ -283,11 +270,6 @@ public sealed class RegisterCommandValidatorTests
         result.ShouldHaveValidationErrorFor(x => x.DisplayName)
             .WithErrorMessage("Display name can only contain letters, numbers, spaces, hyphens, underscores, and periods");
     }
-
-    #endregion
-
-    #region Role Validation
-
     [Theory]
     [InlineData("user")]
     [InlineData("editor")]
@@ -351,9 +333,6 @@ public sealed class RegisterCommandValidatorTests
         result.ShouldHaveValidationErrorFor(x => x.Role)
             .WithErrorMessage("Role must be one of: user, editor, admin");
     }
-
-    #endregion
-
     [Fact]
     public void Should_Fail_With_Multiple_Validation_Errors()
     {

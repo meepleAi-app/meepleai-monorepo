@@ -5,8 +5,6 @@ namespace Api.Tests.BoundedContexts.GameManagement.Domain;
 
 public class MoveTests
 {
-    #region Constructor Tests
-
     [Fact]
     public void Move_WithValidParameters_CreatesSuccessfully()
     {
@@ -115,11 +113,6 @@ public class MoveTests
         var after = DateTime.UtcNow;
         Assert.InRange(move.Timestamp, before, after.AddSeconds(1));
     }
-
-    #endregion
-
-    #region ToString Tests
-
     [Theory]
     [InlineData("Alice", "roll dice", null, "Alice: roll dice")]
     [InlineData("Bob", "move piece", "A5", "Bob: move piece at A5")]
@@ -136,11 +129,6 @@ public class MoveTests
         // Assert
         Assert.Equal(expected, result);
     }
-
-    #endregion
-
-    #region Record Equality Tests
-
     [Fact]
     public void Move_EqualityByValue_WorksCorrectly()
     {
@@ -168,6 +156,4 @@ public class MoveTests
         // Act & Assert
         Assert.NotEqual(move1, move2);
     }
-
-    #endregion
 }

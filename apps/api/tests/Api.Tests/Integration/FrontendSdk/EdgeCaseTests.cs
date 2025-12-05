@@ -83,9 +83,6 @@ public class EdgeCaseTests : IAsyncLifetime
             }
         }
     }
-
-    #region Streaming Response Tests (SSE)
-
     [Fact(DisplayName = "POST /chat with streaming should accept SSE request")]
     public async Task Chat_WithStreaming_AcceptsSSERequest()
     {
@@ -167,11 +164,6 @@ public class EdgeCaseTests : IAsyncLifetime
         // Assert - API should handle cancellation without crashes
         // (Server should cleanup resources properly)
     }
-
-    #endregion
-
-    #region File Upload Tests
-
     [Fact(DisplayName = "POST /pdf with multipart should accept file upload")]
     public async Task PdfUpload_WithMultipart_AcceptsFileUpload()
     {
@@ -279,11 +271,6 @@ public class EdgeCaseTests : IAsyncLifetime
 
         // Frontend SDK should validate file type before upload
     }
-
-    #endregion
-
-    #region Large Payload Tests
-
     [Fact(DisplayName = "POST with large JSON payload should handle appropriately")]
     public async Task Post_WithLargeJsonPayload_HandlesAppropriately()
     {
@@ -330,11 +317,6 @@ public class EdgeCaseTests : IAsyncLifetime
             content.Should().StartWith("[");
         }
     }
-
-    #endregion
-
-    #region Special Characters and Encoding Tests
-
     [Fact(DisplayName = "POST with Unicode characters should handle correctly")]
     public async Task Post_WithUnicodeCharacters_HandlesCorrectly()
     {
@@ -404,11 +386,6 @@ public class EdgeCaseTests : IAsyncLifetime
         // API should protect against XSS attacks
         // Frontend SDK should also sanitize user input
     }
-
-    #endregion
-
-    #region Rate Limiting Tests
-
     [Fact(DisplayName = "Multiple rapid requests should handle rate limiting")]
     public async Task MultipleRapidRequests_HandlesRateLimiting()
     {
@@ -437,11 +414,6 @@ public class EdgeCaseTests : IAsyncLifetime
 
         // Frontend SDK should handle rate limiting gracefully
     }
-
-    #endregion
-
-    #region Request Cancellation Tests
-
     [Fact(DisplayName = "Long request with cancellation should cleanup properly")]
     public async Task LongRequest_WithCancellation_CleansupProperly()
     {
@@ -470,11 +442,6 @@ public class EdgeCaseTests : IAsyncLifetime
         // API should cleanup resources when client cancels
         // Frontend SDK should cancel requests when user navigates away
     }
-
-    #endregion
-
-    #region Content Negotiation Tests
-
     [Fact(DisplayName = "GET with Accept: application/json should return JSON")]
     public async Task Get_WithJsonAccept_ReturnsJson()
     {
@@ -512,6 +479,4 @@ public class EdgeCaseTests : IAsyncLifetime
 
         // API should default to JSON for REST endpoints
     }
-
-    #endregion
 }

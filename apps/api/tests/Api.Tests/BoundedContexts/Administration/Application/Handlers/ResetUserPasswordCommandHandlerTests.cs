@@ -28,9 +28,6 @@ public class ResetUserPasswordCommandHandlerTests
             _userRepositoryMock.Object,
             _unitOfWorkMock.Object);
     }
-
-    #region Happy Path Tests
-
     [Fact]
     public async Task Handle_ValidPassword_ResetsSuccessfully()
     {
@@ -115,11 +112,6 @@ public class ResetUserPasswordCommandHandlerTests
             u => u.SaveChangesAsync(It.IsAny<CancellationToken>()),
             Times.Once);
     }
-
-    #endregion
-
-    #region Edge Cases
-
     [Fact]
     public async Task Handle_NonExistentUser_ThrowsDomainException()
     {
@@ -174,11 +166,6 @@ public class ResetUserPasswordCommandHandlerTests
             u => u.SaveChangesAsync(It.IsAny<CancellationToken>()),
             Times.Once);
     }
-
-    #endregion
-
-    #region Domain Behavior Tests
-
     [Fact]
     public async Task Handle_PreservesUserIdentity()
     {
@@ -212,11 +199,6 @@ public class ResetUserPasswordCommandHandlerTests
         Assert.Equal(originalDisplayName, user.DisplayName);
         Assert.Equal(originalRole, user.Role.Value);
     }
-
-    #endregion
-
-    #region Cancellation Tests
-
     [Fact]
     public async Task Handle_WithCancellationToken_PassesToRepository()
     {
@@ -248,7 +230,5 @@ public class ResetUserPasswordCommandHandlerTests
             u => u.SaveChangesAsync(cancellationToken),
             Times.Once);
     }
-
-    #endregion
 }
 

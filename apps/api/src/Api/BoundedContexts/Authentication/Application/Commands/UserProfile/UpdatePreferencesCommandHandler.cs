@@ -1,3 +1,4 @@
+using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Domain.Exceptions;
@@ -8,8 +9,9 @@ namespace Api.BoundedContexts.Authentication.Application.Commands;
 /// <summary>
 /// Handles updating user preferences.
 /// Updates language, theme, email notifications, and data retention settings.
+/// Returns updated UserProfileDto with all profile information.
 /// </summary>
-public class UpdatePreferencesCommandHandler : ICommandHandler<UpdatePreferencesCommand>
+public class UpdatePreferencesCommandHandler : ICommandHandler<UpdatePreferencesCommand, UserProfileDto>
 {
     private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -22,7 +24,7 @@ public class UpdatePreferencesCommandHandler : ICommandHandler<UpdatePreferences
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
 
-    public async Task Handle(UpdatePreferencesCommand command, CancellationToken cancellationToken)
+    public async Task<UserProfileDto> Handle(UpdatePreferencesCommand command, CancellationToken cancellationToken)
     {
         // Retrieve user
         var user = await _userRepository.GetByIdAsync(command.UserId, cancellationToken).ConfigureAwait(false);
@@ -41,5 +43,20 @@ public class UpdatePreferencesCommandHandler : ICommandHandler<UpdatePreferences
         // Persist updates
         await _userRepository.UpdateAsync(user, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // Return updated profile with preferences
+        return new UserProfileDto(
+            user.Id,
+            user.Email,
+            user.DisplayName,
+            user.Role.ToString(),
+            user.CreatedAt,
+            user.TwoFactorSecret != null,
+            user.TwoFactorEnabledAt,
+            user.Language,
+            user.Theme,
+            user.EmailNotifications,
+            user.DataRetentionDays
+        );
     }
 }

@@ -277,8 +277,8 @@ export default function SettingsPage() {
 
     try {
       setLoading(true);
-      const result = await api.auth.updatePreferences(preferences);
-      setSuccess(result.message || 'Preferences saved successfully');
+      await api.auth.updatePreferences(preferences);
+      setSuccess('Preferences saved successfully');
     } catch (err) {
       const errorMsg = getErrorMessage(err);
       logger.error(

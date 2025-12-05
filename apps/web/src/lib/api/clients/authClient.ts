@@ -216,11 +216,10 @@ export function createAuthClient({ httpClient }: CreateAuthClientParams) {
 
     /**
      * Update user preferences (Issue #1675)
+     * Returns updated UserProfile with new preferences
      */
-    async updatePreferences(
-      payload: UpdatePreferencesRequest
-    ): Promise<{ ok: boolean; message: string }> {
-      return httpClient.patch('/api/v1/users/preferences', payload, UpdateProfileResponseSchema);
+    async updatePreferences(payload: UpdatePreferencesRequest): Promise<UserProfile> {
+      return httpClient.put('/api/v1/users/preferences', payload, UserProfileSchema);
     },
   };
 }

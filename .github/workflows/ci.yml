@@ -329,6 +329,24 @@ jobs:
         timeout-minutes: 20
         run: pnpm test:e2e:groups
 
+      # Issue #1498: E2E Code Coverage (Chromium only)
+      # Runs subset of E2E tests on Chromium browsers to generate coverage report
+      - name: Run E2E Tests with Coverage (Chromium)
+        timeout-minutes: 15
+        run: pnpm test:e2e:coverage
+        continue-on-error: true  # Don't fail CI if coverage tests fail
+
+      - name: Upload E2E Coverage Report
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: e2e-coverage-report-${{ github.run_number }}
+          path: |
+            apps/web/coverage-e2e/html/
+            apps/web/coverage-e2e/lcov.info
+            apps/web/coverage-e2e/coverage.json
+          retention-days: 30
+
       - name: Upload Playwright Report
         if: failure()
         uses: actions/upload-artifact@v5

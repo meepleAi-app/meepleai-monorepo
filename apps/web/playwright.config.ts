@@ -1,5 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 import { ChromaticConfig } from '@chromatic-com/playwright';
+import { defineCoverageReporterConfig } from '@bgotink/playwright-coverage';
+import path from 'path';
 
 export default defineConfig<ChromaticConfig>({
   testDir: './e2e',
@@ -8,7 +10,51 @@ export default defineConfig<ChromaticConfig>({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : 2, // Issue #1868: Single worker in CI for stability, 2 local for speed
-  reporter: process.env.CI ? 'dot' : 'html', // Standard reporters only (Chromatic uses fixture, not reporter)
+  // Issue #1498: E2E Code Coverage Reporting
+  reporter: [
+    [process.env.CI ? 'dot' : 'html'], // Standard reporters
+    [
+      '@bgotink/playwright-coverage',
+      defineCoverageReporterConfig({
+        // Path to the root files should be resolved from (repository root)
+        sourceRoot: path.resolve(__dirname, '../..'),
+        // Files to ignore in coverage
+        exclude: [
+          // Test files
+          '**/e2e/**',
+          '**/__tests__/**',
+          '**/*.test.{ts,tsx}',
+          '**/*.spec.{ts,tsx}',
+          // Generated files
+          '**/generated/**',
+          '**/.next/**',
+          '**/node_modules/**',
+          // Build artifacts
+          '**/dist/**',
+          '**/build/**',
+          '**/coverage/**',
+          '**/playwright-report/**',
+          // Configuration files
+          '**/*.config.{js,ts}',
+          '**/scripts/**',
+          // Storybook
+          '**/.storybook/**',
+          '**/*.stories.{ts,tsx}',
+        ],
+        // Directory in which to write coverage reports
+        resultDir: path.resolve(__dirname, 'coverage-e2e'),
+        // Istanbul reporters to use
+        reports: ['lcov', 'html', 'json', 'text-summary'],
+        // Watermarks for coverage thresholds (issue #1498: start conservative)
+        watermarks: {
+          statements: [30, 60],
+          functions: [30, 60],
+          branches: [30, 60],
+          lines: [30, 60],
+        },
+      }),
+    ],
+  ],
   use: {
     baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',

@@ -3,9 +3,10 @@
  *
  * @see apps/web/e2e/fixtures/auth.ts - setupUserPage fixture
  * @see apps/web/e2e/pages/ - Page Object Model architecture
+ * @see apps/web/e2e/test.ts - Coverage-enabled test (Issue #1498)
  */
 
-import { test, expect } from './fixtures/auth';
+import { test, expect } from './test';
 import { getTextMatcher, t } from './fixtures/i18n';
 
 test.describe('Setup Guide Page', () => {

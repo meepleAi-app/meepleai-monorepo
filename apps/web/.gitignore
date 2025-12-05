@@ -2,3 +2,6 @@
 
 # Storybook build output
 storybook-static/
+
+# E2E Coverage Reports (Issue #1498)
+coverage-e2e/

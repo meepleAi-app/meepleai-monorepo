@@ -16,6 +16,7 @@
     "node_modules/**",
     "storybook-static/**",
     "coverage/**",
+    "coverage-e2e/**",
     ".storybook/public/**"
   ],
   "zip": true

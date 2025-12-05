@@ -1,4 +1,77 @@
 /** @type {import('next').NextConfig} */
+
+// Issue #1817: DOMMatrix polyfill for pdfjs-dist SSR compatibility
+// Must be loaded BEFORE any bundler operations
+if (typeof window === 'undefined' && typeof global !== 'undefined') {
+  global.DOMMatrix = class DOMMatrix {
+    constructor(init) {
+      this.m11 = 1;
+      this.m12 = 0;
+      this.m13 = 0;
+      this.m14 = 0;
+      this.m21 = 0;
+      this.m22 = 1;
+      this.m23 = 0;
+      this.m24 = 0;
+      this.m31 = 0;
+      this.m32 = 0;
+      this.m33 = 1;
+      this.m34 = 0;
+      this.m41 = 0;
+      this.m42 = 0;
+      this.m43 = 0;
+      this.m44 = 1;
+      this.a = 1;
+      this.b = 0;
+      this.c = 0;
+      this.d = 1;
+      this.e = 0;
+      this.f = 0;
+      this.is2D = true;
+      this.isIdentity = true;
+
+      if (Array.isArray(init) && init.length === 16) {
+        [
+          this.m11,
+          this.m12,
+          this.m13,
+          this.m14,
+          this.m21,
+          this.m22,
+          this.m23,
+          this.m24,
+          this.m31,
+          this.m32,
+          this.m33,
+          this.m34,
+          this.m41,
+          this.m42,
+          this.m43,
+          this.m44,
+        ] = init;
+      }
+    }
+
+    translate() {
+      return this;
+    }
+    scale() {
+      return this;
+    }
+    rotate() {
+      return this;
+    }
+    multiply() {
+      return this;
+    }
+    toString() {
+      return '[object DOMMatrix]';
+    }
+  };
+
+  console.log('[Polyfill] DOMMatrix polyfill loaded in next.config.js');
+}
+
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
   enabled: process.env.ANALYZE === 'true',
 });
@@ -28,6 +101,11 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
  * - optimizePackageImports for tree-shaking heavy libraries
  * - Lazy loading for Monaco Editor (PromptEditor)
  *
+ * Issue #1817: DOM API Polyfills for pdfjs-dist SSR
+ * -------------------------------------------------
+ * - instrumentation.ts provides DOMMatrix polyfill for Node.js SSR
+ * - Enables pdfjs-dist to work during Next.js static generation
+ *
  * Directory Structure:
  * - app/: All application pages and layouts (App Router)
  * - pages/api/: API routes only (standard Next.js practice)
@@ -39,9 +117,10 @@ const nextConfig = {
   reactStrictMode: true,
   output: 'standalone', // Enable Docker-optimized output
 
-  // Experimental optimizations for package imports (Issue #994)
+  // Issue #1817: instrumentation.ts provides DOM polyfills for pdfjs-dist SSR
+  // Note: Instrumentation is enabled by default in Next.js 16, no experimental flag needed
   experimental: {
-    // Tree-shake specific packages for smaller bundles
+    // Tree-shake specific packages for smaller bundles (Issue #994)
     optimizePackageImports: ['lucide-react', '@radix-ui/react-icons', 'date-fns', 'lodash'],
   },
 

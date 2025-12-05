@@ -100,12 +100,20 @@ jobs:
         run: |
           PGPASSWORD="${{ secrets.TEST_POSTGRES_PASSWORD || 'postgres' }}" psql -h localhost -U "${{ secrets.TEST_POSTGRES_USER || 'postgres' }}" -c "CREATE DATABASE meepleai_test;" || true
 
+      # Issue #1817: Add database connectivity validation before migrations
+      - name: Verify database connectivity
+        run: |
+          echo "🔍 Testing PostgreSQL connection..."
+          PGPASSWORD="${{ secrets.TEST_POSTGRES_PASSWORD || 'postgres' }}" psql -h localhost -U "${{ secrets.TEST_POSTGRES_USER || 'postgres' }}" -d meepleai_test -c "SELECT version();"
+          echo "✅ Database connection successful"
+
+      # Issue #1817: Use --connection flag to explicitly pass connection string
+      # This prevents EF Core from defaulting to incorrect 'root' user
       - name: Apply migrations
         working-directory: apps/api/src/Api
         run: |
-          dotnet ef database update --configuration Release
-        env:
-          CONNECTIONSTRINGS__POSTGRES: ${{ secrets.TEST_DB_CONNECTION_STRING || 'Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=postgres' }}
+          dotnet ef database update --configuration Release \
+            --connection "${{ secrets.TEST_DB_CONNECTION_STRING || 'Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=postgres' }}"
 
       # Issue #1663: Test user is now seeded automatically on API startup via EnsureTestUserExistsAsync
       # No need for separate seeding step - reduces workflow complexity and eliminates race conditions

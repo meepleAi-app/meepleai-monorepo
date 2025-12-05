@@ -22,9 +22,6 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
 
     protected override SessionRepository CreateRepository(MeepleAiDbContext dbContext)
         => new SessionRepository(dbContext, MockEventCollector.Object, TimeProvider);
-
-    #region GetByTokenHashAsync Tests
-
     [Fact]
     public async Task GetByTokenHashAsync_ExistingSession_ReturnsSession()
     {
@@ -58,11 +55,6 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
         // Assert
         Assert.Null(result);
     }
-
-    #endregion
-
-    #region GetByUserIdAsync Tests
-
     [Fact]
     public async Task GetByUserIdAsync_NoSessions_ReturnsEmptyList()
     {
@@ -129,11 +121,6 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
         Assert.Equal(2, user1Sessions.Count);
         Assert.Single(user2Sessions);
     }
-
-    #endregion
-
-    #region GetActiveSessionsByUserIdAsync Tests
-
     [Fact]
     public async Task GetActiveSessionsByUserIdAsync_OnlyActiveSessions_ReturnsAll()
     {
@@ -223,11 +210,6 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
         Assert.Contains(activeSessions, s => s.Id == active1.Id);
         Assert.Contains(activeSessions, s => s.Id == active2.Id);
     }
-
-    #endregion
-
-    #region AddAsync Tests
-
     [Fact]
     public async Task AddAsync_NewSession_PersistsSuccessfully()
     {
@@ -273,11 +255,6 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
         Assert.NotNull(persisted.CreatedAt);
         Assert.NotNull(persisted.ExpiresAt);
     }
-
-    #endregion
-
-    #region UpdateAsync Tests
-
     [Fact]
     public async Task UpdateAsync_LastSeenAt_UpdatesCorrectly()
     {
@@ -323,11 +300,6 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
         Assert.NotNull(updated);
         Assert.NotNull(updated.RevokedAt);
     }
-
-    #endregion
-
-    #region RevokeAllUserSessionsAsync Tests
-
     [Fact]
     public async Task RevokeAllUserSessionsAsync_MultipleSessions_RevokesAll()
     {
@@ -409,11 +381,6 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
         Assert.All(user1Sessions, s => Assert.NotNull(s.RevokedAt));
         Assert.All(user2Sessions, s => Assert.Null(s.RevokedAt));
     }
-
-    #endregion
-
-    #region Mapping Tests
-
     [Fact]
     public async Task Mapping_DomainToPersistence_AllFieldsCorrect()
     {
@@ -463,11 +430,6 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
         Assert.Equal(session.IpAddress, retrieved.IpAddress);
         Assert.Equal(session.UserAgent, retrieved.UserAgent);
     }
-
-    #endregion
-
-    #region Expiration Query Tests
-
     [Fact]
     public async Task ExpirationQuery_EdgeCase_ExactExpirationTime()
     {
@@ -509,11 +471,6 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
         // Assert
         Assert.Single(activeSessions);
     }
-
-    #endregion
-
-    #region Concurrent Access Tests
-
     [Fact]
     public async Task ConcurrentTokenLookups_NoConflicts()
     {
@@ -565,11 +522,6 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
         Assert.NotNull(revokedSession);
         Assert.NotNull(revokedSession.RevokedAt);
     }
-
-    #endregion
-
-    #region Edge Cases
-
     [Fact]
     public async Task NullableFields_IpAddress_HandledCorrectly()
     {
@@ -649,11 +601,6 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
         var reloaded = await DbContext.UserSessions.FirstOrDefaultAsync(s => s.Id == session.Id, TestCancellationToken);
         Assert.Null(reloaded!.LastSeenAt); // Should remain null
     }
-
-    #endregion
-
-    #region Helper Methods
-
     private async Task<Guid> CreateTestUserAsync(string email = "test@example.com")
     {
         var userId = Guid.NewGuid();
@@ -699,7 +646,5 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
             timeProvider: TimeProvider  // Use TestTimeProvider from base class
         );
     }
-
-    #endregion
 }
 

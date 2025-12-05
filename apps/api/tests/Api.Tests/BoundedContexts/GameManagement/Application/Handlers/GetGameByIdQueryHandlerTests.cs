@@ -22,9 +22,6 @@ public class GetGameByIdQueryHandlerTests
         _gameRepositoryMock = new Mock<IGameRepository>();
         _handler = new GetGameByIdQueryHandler(_gameRepositoryMock.Object);
     }
-
-    #region Happy Path Tests
-
     [Fact]
     public async Task Handle_ExistingGame_ReturnsMappedDto()
     {
@@ -152,11 +149,6 @@ public class GetGameByIdQueryHandlerTests
         Assert.NotNull(result.MaxPlayTimeMinutes);
         Assert.NotNull(result.BggId);
     }
-
-    #endregion
-
-    #region Edge Cases
-
     [Fact]
     public async Task Handle_NonExistentGame_ReturnsNull()
     {
@@ -198,11 +190,6 @@ public class GetGameByIdQueryHandlerTests
         // Assert
         Assert.Null(result);
     }
-
-    #endregion
-
-    #region Cancellation Tests
-
     [Fact]
     public async Task Handle_WithCancellationToken_PassesToRepository()
     {
@@ -231,11 +218,6 @@ public class GetGameByIdQueryHandlerTests
             r => r.GetByIdAsync(gameId, cancellationToken),
             Times.Once);
     }
-
-    #endregion
-
-    #region DTO Mapping Tests
-
     [Fact]
     public async Task Handle_PreservesCreatedAt()
     {
@@ -261,7 +243,5 @@ public class GetGameByIdQueryHandlerTests
         Assert.NotEqual(default(DateTime), result.CreatedAt);
         Assert.Equal(game.CreatedAt, result.CreatedAt);
     }
-
-    #endregion
 }
 

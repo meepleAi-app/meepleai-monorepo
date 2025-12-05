@@ -35,9 +35,6 @@ public class ProvideAgentFeedbackCommandHandlerTests
     {
         return DbContextHelper.CreateInMemoryDbContext();
     }
-
-    #region Validation Tests
-
     [Fact]
     public async Task Handle_WithValidHelpfulOutcome_Succeeds()
     {
@@ -215,11 +212,6 @@ public class ProvideAgentFeedbackCommandHandlerTests
         var feedback = await context.AgentFeedbacks.FirstOrDefaultAsync(TestCancellationToken);
         Assert.Null(feedback);
     }
-
-    #endregion
-
-    #region Required Field Validation Tests
-
     [Fact]
     public async Task Handle_WithNullMessageId_ThrowsArgumentException()
     {
@@ -295,11 +287,6 @@ public class ProvideAgentFeedbackCommandHandlerTests
         await Assert.ThrowsAsync<ArgumentException>(
             () => handler.Handle(command, TestContext.Current.CancellationToken));
     }
-
-    #endregion
-
-    #region Update Tests
-
     [Fact]
     public async Task Handle_WithExistingFeedback_UpdatesOutcome()
     {
@@ -339,7 +326,5 @@ public class ProvideAgentFeedbackCommandHandlerTests
         Assert.Equal("not-helpful", feedback.Outcome);
         Assert.Equal("/api/v1/search", feedback.Endpoint);
     }
-
-    #endregion
 }
 

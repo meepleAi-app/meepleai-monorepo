@@ -234,9 +234,6 @@ public class LargePdfStreamingTests
         result.Success.Should().BeTrue();
         // Temp file should be cleaned up automatically after extraction
     }
-
-    #region Helper Methods
-
     private static Stream CreateTestPdfStream(long size)
     {
         var stream = new MemoryStream();
@@ -258,8 +255,6 @@ public class LargePdfStreamingTests
         stream.Position = 0;
         return stream;
     }
-
-    #endregion
 }
 
 /// <summary>

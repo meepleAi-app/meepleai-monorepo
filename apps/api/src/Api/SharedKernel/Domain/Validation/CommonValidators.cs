@@ -8,8 +8,6 @@ namespace Api.SharedKernel.Domain.Validation;
 /// </summary>
 public static class CommonValidators
 {
-    #region Email Validation
-
     // Email validation regex (RFC 5322 simplified) - matches Email.cs implementation
     // FIX MA0009: Add timeout to prevent ReDoS attacks
     private static readonly Regex EmailRegex = new(
@@ -43,11 +41,6 @@ public static class CommonValidators
 
         return Result<string>.Success(value);
     }
-
-    #endregion
-
-    #region URL Validation
-
     /// <summary>
     /// Validates that a string is a valid URL.
     /// </summary>
@@ -102,11 +95,6 @@ public static class CommonValidators
 
         return Result<string>.Success(value);
     }
-
-    #endregion
-
-    #region API Key Validation
-
     // FIX MA0009: Add timeout to prevent ReDoS attacks
     private static readonly Regex ApiKeyRegex = new(
         @"^mpl_(dev|staging|prod)_[A-Za-z0-9+/]{32,}={0,2}$",
@@ -139,11 +127,6 @@ public static class CommonValidators
 
         return Result<string>.Success(value);
     }
-
-    #endregion
-
-    #region Password Validation
-
     /// <summary>
     /// Validates that a password meets basic security requirements.
     /// </summary>
@@ -184,11 +167,6 @@ public static class CommonValidators
 
         return Result<string>.Success(value);
     }
-
-    #endregion
-
-    #region File Validation
-
     // Cross-platform invalid filename characters (union of Windows and Unix restrictions)
     // Windows: \ / : * ? " < > | (plus control chars)
     // Unix: / and \0 (null character)
@@ -284,11 +262,6 @@ public static class CommonValidators
 
         return Result<string>.Success(value);
     }
-
-    #endregion
-
-    #region JSON Validation
-
     /// <summary>
     /// Validates that a string is valid JSON.
     /// </summary>
@@ -318,11 +291,6 @@ public static class CommonValidators
                 message ?? $"{parameterName} must be valid JSON: {ex.Message}"));
         }
     }
-
-    #endregion
-
-    #region Version Validation
-
     // FIX MA0009: Add timeout to prevent ReDoS attacks
     private static readonly Regex VersionRegex = new(
         @"^\d+\.\d+(\.\d+)?$",
@@ -355,11 +323,6 @@ public static class CommonValidators
 
         return Result<string>.Success(value);
     }
-
-    #endregion
-
-    #region Configuration Key Validation
-
     // FIX MA0009: Add timeout to prevent ReDoS attacks
     private static readonly Regex ConfigKeyRegex = new(
         @"^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)*$",
@@ -392,11 +355,6 @@ public static class CommonValidators
 
         return Result<string>.Success(value);
     }
-
-    #endregion
-
-    #region DateTime Validation
-
     /// <summary>
     /// Validates that a DateTime is not in the future.
     /// </summary>
@@ -463,11 +421,6 @@ public static class CommonValidators
 
         return Result<DateTime>.Success(value);
     }
-
-    #endregion
-
-    #region Enum Validation
-
     /// <summary>
     /// Validates that a string is a valid enum value.
     /// </summary>
@@ -496,6 +449,4 @@ public static class CommonValidators
 
         return Result<TEnum>.Success(enumValue);
     }
-
-    #endregion
 }

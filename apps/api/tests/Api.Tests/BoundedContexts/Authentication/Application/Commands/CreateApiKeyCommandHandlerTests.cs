@@ -28,9 +28,6 @@ public class CreateApiKeyCommandHandlerTests
             _unitOfWorkMock.Object
         );
     }
-
-    #region Happy Path Tests
-
     [Fact]
     public async Task Handle_WithValidData_CreatesApiKey()
     {
@@ -183,11 +180,6 @@ public class CreateApiKeyCommandHandlerTests
         Assert.NotNull(capturedApiKey);
         Assert.Equal(metadata, capturedApiKey.Metadata);
     }
-
-    #endregion
-
-    #region Key Name Validation Tests
-
     [Fact]
     public async Task Handle_WithEmptyKeyName_ThrowsValidationException()
     {
@@ -228,11 +220,6 @@ public class CreateApiKeyCommandHandlerTests
             () => _handler.Handle(command, TestContext.Current.CancellationToken)
         );
     }
-
-    #endregion
-
-    #region Scopes Validation Tests
-
     [Fact]
     public async Task Handle_WithEmptyScopes_ThrowsValidationException()
     {
@@ -272,11 +259,6 @@ public class CreateApiKeyCommandHandlerTests
             () => _handler.Handle(command, TestContext.Current.CancellationToken)
         );
     }
-
-    #endregion
-
-    #region Expiration Tests
-
     [Fact]
     public async Task Handle_WithFutureExpiration_CreatesKeyCorrectly()
     {
@@ -322,11 +304,6 @@ public class CreateApiKeyCommandHandlerTests
         Assert.True(result.ExpiresAt.HasValue);
         Assert.True(result.ExpiresAt.Value < DateTime.UtcNow);
     }
-
-    #endregion
-
-    #region Response DTO Tests
-
     [Fact]
     public async Task Handle_ResponseContainsAllRequiredFields()
     {
@@ -372,11 +349,6 @@ public class CreateApiKeyCommandHandlerTests
         var isValidBase64 = TryParseBase64(result.PlaintextKey);
         Assert.True(isValidBase64);
     }
-
-    #endregion
-
-    #region Transaction Tests
-
     [Fact]
     public async Task Handle_CallsSaveChangesOnce()
     {
@@ -416,11 +388,6 @@ public class CreateApiKeyCommandHandlerTests
         Assert.Equal("add", callOrder[0]);
         Assert.Equal("save", callOrder[1]);
     }
-
-    #endregion
-
-    #region Edge Cases
-
     [Fact]
     public async Task Handle_WithCancellationToken_PassesToRepositories()
     {
@@ -473,11 +440,6 @@ public class CreateApiKeyCommandHandlerTests
         Assert.NotNull(capturedApiKey);
         Assert.Equal(userId, capturedApiKey.UserId);
     }
-
-    #endregion
-
-    #region Helper Methods
-
     private bool TryParseBase64(string value)
     {
         try
@@ -490,7 +452,5 @@ public class CreateApiKeyCommandHandlerTests
             return false;
         }
     }
-
-    #endregion
 }
 

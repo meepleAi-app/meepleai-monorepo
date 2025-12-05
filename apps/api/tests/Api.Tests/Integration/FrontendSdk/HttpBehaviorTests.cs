@@ -80,9 +80,6 @@ public class HttpBehaviorTests : IAsyncLifetime
             }
         }
     }
-
-    #region Retry Behavior Tests
-
     [Fact(DisplayName = "GET /health should return health status (200 or 503)")]
     public async Task Health_ReturnsHealthStatus()
     {
@@ -145,11 +142,6 @@ public class HttpBehaviorTests : IAsyncLifetime
         // Frontend SDK should NOT retry 400 (client error)
         response.StatusCode.Should().BeOneOf(HttpStatusCode.BadRequest, HttpStatusCode.OK, HttpStatusCode.Unauthorized, HttpStatusCode.UnprocessableEntity);
     }
-
-    #endregion
-
-    #region Request Headers and CORS
-
     [Fact(DisplayName = "OPTIONS request should return CORS headers for preflight")]
     public async Task Options_ForPreflightRequest_ReturnsCorsHeaders()
     {
@@ -186,11 +178,6 @@ public class HttpBehaviorTests : IAsyncLifetime
         response.StatusCode.Should().BeOneOf(HttpStatusCode.OK, HttpStatusCode.Unauthorized);
         response.Content.Headers.ContentType?.MediaType.Should().Be("application/json");
     }
-
-    #endregion
-
-    #region Timeout and Connection Handling
-
     [Fact(DisplayName = "GET with reasonable timeout should complete successfully")]
     public async Task Get_WithReasonableTimeout_CompletesWithinTimeout()
     {
@@ -226,11 +213,6 @@ public class HttpBehaviorTests : IAsyncLifetime
             HttpStatusCode.BadRequest,
             HttpStatusCode.Unauthorized);
     }
-
-    #endregion
-
-    #region Request/Response Validation
-
     [Fact(DisplayName = "GET response should include Content-Type header")]
     public async Task Get_Response_IncludesContentTypeHeader()
     {
@@ -295,11 +277,6 @@ public class HttpBehaviorTests : IAsyncLifetime
             HttpStatusCode.UnprocessableEntity,
             HttpStatusCode.InternalServerError); // May occur if service dependencies fail
     }
-
-    #endregion
-
-    #region Concurrent Requests
-
     [Fact(DisplayName = "Multiple concurrent GET requests should handle gracefully")]
     public async Task Get_WithConcurrentRequests_HandlesAllSuccessfully()
     {
@@ -357,6 +334,4 @@ public class HttpBehaviorTests : IAsyncLifetime
                 HttpStatusCode.InternalServerError); // May occur if dependencies fail
         }
     }
-
-    #endregion
 }

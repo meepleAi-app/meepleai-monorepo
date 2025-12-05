@@ -28,9 +28,6 @@ public class UpdateRuleCommentCommandHandlerTests
         timeProviderMock.Setup(t => t.GetUtcNow()).Returns(new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero));
         return timeProviderMock;
     }
-
-    #region Construction Tests
-
     [Fact]
     public void Constructor_WithValidDependencies_CreatesInstance()
     {
@@ -93,11 +90,6 @@ public class UpdateRuleCommentCommandHandlerTests
                 timeProviderMock.Object,
                 null!));
     }
-
-    #endregion
-
-    #region Command Tests
-
     [Fact]
     public void Command_WithValidProperties_ConstructsCorrectly()
     {
@@ -156,9 +148,6 @@ public class UpdateRuleCommentCommandHandlerTests
         Assert.Contains("🎲", command.CommentText);
         Assert.Contains("émojis", command.CommentText);
     }
-
-    #endregion
-
     // NOTE: Full integration tests for Handle method (comment update, ownership validation,
     // UpdatedAt timestamp, navigation property reloading) should be in integration test suite
     // due to DbContext complexity and EF Core Include/ThenInclude chains.

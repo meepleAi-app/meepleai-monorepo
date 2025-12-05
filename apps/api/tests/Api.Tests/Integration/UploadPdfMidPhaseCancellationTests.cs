@@ -242,9 +242,6 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
         var testUser = await PdfUploadTestHelpers.SeedTestUserAsync(_dbContext!);
         var testGame = await PdfUploadTestHelpers.SeedTestGameAsync(_dbContext!);
     }
-
-    #region Mid-Phase Cancellation Tests
-
     /// <summary>
     /// Tests cancellation that occurs MID-WAY through database query execution.
     ///
@@ -610,6 +607,4 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
         userStillExists.Should().BeTrue("user should survive all cancellation scenarios");
         gameStillExists.Should().BeTrue("game should survive all cancellation scenarios");
     }
-
-    #endregion
 }

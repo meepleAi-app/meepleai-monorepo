@@ -37,9 +37,6 @@ public class StreamExplainQueryHandlerTests
             _fakeTimeProvider
         );
     }
-
-    #region Happy Path Tests
-
     [Fact]
     public async Task Handle_ValidInput_StreamsCorrectEvents()
     {
@@ -246,11 +243,6 @@ public class StreamExplainQueryHandlerTests
             Assert.Equal(scriptChunks.Count, chunk.totalChunks);
         }
     }
-
-    #endregion
-
-    #region Validation Tests
-
     [Fact]
     public async Task Handle_EmptyTopic_ReturnsError()
     {
@@ -307,11 +299,6 @@ public class StreamExplainQueryHandlerTests
         Assert.Single(events);
         Assert.Equal(StreamingEventType.Error, events[0].Type);
     }
-
-    #endregion
-
-    #region Error Handling Tests
-
     [Fact]
     public async Task Handle_EmbeddingServiceFails_ReturnsError()
     {
@@ -433,11 +420,6 @@ public class StreamExplainQueryHandlerTests
         var error = Assert.IsType<StreamingError>(errorEvent.Data);
         Assert.Equal("NO_RESULTS", error.errorCode);
     }
-
-    #endregion
-
-    #region Cancellation Tests
-
     [Fact]
     public async Task Handle_CancellationRequested_StopsStreaming()
     {
@@ -516,11 +498,6 @@ public class StreamExplainQueryHandlerTests
             }
         });
     }
-
-    #endregion
-
-    #region Data Integrity Tests
-
     [Fact]
     public async Task Handle_CitationsIncludeCorrectMetadata()
     {
@@ -648,11 +625,6 @@ public class StreamExplainQueryHandlerTests
         Assert.Equal(0, complete.completionTokens);
         Assert.Equal(0, complete.totalTokens);
     }
-
-    #endregion
-
-    #region Helper Methods
-
     private void SetupHappyPathMocks()
     {
         SetupEmbeddingMock("test topic");
@@ -693,7 +665,5 @@ public class StreamExplainQueryHandlerTests
                 Results = results
             });
     }
-
-    #endregion
 }
 

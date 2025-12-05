@@ -27,9 +27,6 @@ public class GetLinkedOAuthAccountsQueryHandlerTests
             _oauthAccountRepositoryMock.Object,
             _loggerMock.Object);
     }
-
-    #region Success Cases
-
     [Fact]
     public async Task Handle_NoLinkedAccounts_ReturnsEmptyList()
     {
@@ -204,11 +201,6 @@ public class GetLinkedOAuthAccountsQueryHandlerTests
         var githubDto = result.Accounts.First(a => a.Provider == "github");
         Assert.False(githubDto.SupportsRefresh);
     }
-
-    #endregion
-
-    #region Error Handling
-
     [Fact]
     public async Task Handle_ExceptionThrown_ReturnsEmptyList()
     {
@@ -253,11 +245,6 @@ public class GetLinkedOAuthAccountsQueryHandlerTests
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
     }
-
-    #endregion
-
-    #region Helper Methods
-
     private static OAuthAccount CreateTestOAuthAccount(Guid userId, string provider)
     {
         return new OAuthAccount(
@@ -270,7 +257,5 @@ public class GetLinkedOAuthAccountsQueryHandlerTests
             tokenExpiresAt: DateTime.UtcNow.AddHours(1)
         );
     }
-
-    #endregion
 }
 

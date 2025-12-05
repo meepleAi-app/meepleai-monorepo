@@ -24,9 +24,6 @@ public class DeleteRuleCommentCommandHandlerTests
     {
         return DbContextHelper.CreateInMemoryDbContext();
     }
-
-    #region Construction Tests
-
     [Fact]
     public void Constructor_WithValidDependencies_CreatesInstance()
     {
@@ -68,11 +65,6 @@ public class DeleteRuleCommentCommandHandlerTests
                 context,
                 null!));
     }
-
-    #endregion
-
-    #region Command Tests
-
     [Fact]
     public void Command_AsOwner_ConstructsCorrectly()
     {
@@ -133,9 +125,6 @@ public class DeleteRuleCommentCommandHandlerTests
         Assert.NotEqual(command1.UserId, command2.UserId);
         Assert.NotEqual(command1.IsAdmin, command2.IsAdmin);
     }
-
-    #endregion
-
     // NOTE: Full integration tests for Handle method (comment deletion, ownership validation,
     // admin authorization, cascade deletion of replies) should be in integration test suite
     // due to DbContext complexity.

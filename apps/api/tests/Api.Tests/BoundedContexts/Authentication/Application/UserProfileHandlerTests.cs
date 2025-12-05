@@ -24,9 +24,6 @@ public class UserProfileHandlerTests
         _userRepositoryMock = new Mock<IUserRepository>();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
     }
-
-    #region GetUserProfileQueryHandler Tests
-
     [Fact]
     public async Task GetUserProfile_UserExists_ReturnsProfileDto()
     {
@@ -69,11 +66,6 @@ public class UserProfileHandlerTests
         // Assert
         Assert.Null(result);
     }
-
-    #endregion
-
-    #region UpdateUserProfileCommandHandler Tests
-
     [Fact]
     public async Task UpdateProfile_DisplayNameOnly_UpdatesSuccessfully()
     {
@@ -180,11 +172,6 @@ public class UserProfileHandlerTests
             handler.Handle(command, TestContext.Current.CancellationToken));
         Assert.Contains("User not found", exception.Message);
     }
-
-    #endregion
-
-    #region ChangePasswordCommandHandler Tests
-
     [Fact]
     public async Task ChangePassword_CorrectCurrentPassword_ChangesSuccessfully()
     {
@@ -285,9 +272,6 @@ public class UserProfileHandlerTests
             handler.Handle(command, TestContext.Current.CancellationToken));
         Assert.Contains("User not found", exception.Message);
     }
-
-    #endregion
-
     private static User CreateTestUser(Guid? userId = null, string password = "TestPassword123!")
     {
         return new User(

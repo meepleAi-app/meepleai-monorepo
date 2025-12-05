@@ -6,8 +6,6 @@ namespace Api.Tests.BoundedContexts.GameManagement.Domain;
 
 public class MoveValidationResultTests
 {
-    #region Valid() Factory Method Tests
-
     [Fact]
     public void Valid_WithValidParameters_CreatesValidResult()
     {
@@ -70,11 +68,6 @@ public class MoveValidationResultTests
             MoveValidationResult.Valid(Array.Empty<RuleAtom>(), confidence));
         Assert.Contains("between 0.0 and 1.0", exception.Message);
     }
-
-    #endregion
-
-    #region Invalid() Factory Method Tests
-
     [Fact]
     public void Invalid_WithValidParameters_CreatesInvalidResult()
     {
@@ -161,11 +154,6 @@ public class MoveValidationResultTests
         Assert.False(result.IsValid);
         Assert.Single(result.Suggestions!);
     }
-
-    #endregion
-
-    #region Uncertain() Factory Method Tests
-
     [Fact]
     public void Uncertain_WithValidParameters_CreatesUncertainResult()
     {
@@ -210,11 +198,6 @@ public class MoveValidationResultTests
             MoveValidationResult.Uncertain("Test reason", Array.Empty<RuleAtom>(), confidence));
         Assert.Contains("between 0.0 and 1.0", exception.Message);
     }
-
-    #endregion
-
-    #region Record Equality Tests
-
     [Fact]
     public void MoveValidationResult_EqualityByValue_WorksCorrectly()
     {
@@ -241,7 +224,5 @@ public class MoveValidationResultTests
         // Act & Assert
         Assert.NotEqual(result1, result2);
     }
-
-    #endregion
 }
 

@@ -54,9 +54,6 @@ public class EmbeddingProviderFactoryTests : IDisposable
             _disposed = true;
         }
     }
-
-    #region Constructor Tests
-
     [Fact]
     public void Constructor_WithValidDependencies_CreatesInstance()
     {
@@ -120,11 +117,6 @@ public class EmbeddingProviderFactoryTests : IDisposable
         act.Should().Throw<ArgumentNullException>()
             .WithParameterName("config");
     }
-
-    #endregion
-
-    #region GetPrimaryProvider Tests
-
     [Theory]
     [InlineData(EmbeddingProviderType.OpenRouterLarge)]
     [InlineData(EmbeddingProviderType.OpenRouterSmall)]
@@ -213,11 +205,6 @@ public class EmbeddingProviderFactoryTests : IDisposable
         provider1.ModelName.Should().Be(provider2.ModelName);
         provider1.Dimensions.Should().Be(provider2.Dimensions);
     }
-
-    #endregion
-
-    #region GetFallbackProvider Tests
-
     [Fact]
     public void GetFallbackProvider_WithFallbackConfigured_ReturnsFallbackProvider()
     {
@@ -280,11 +267,6 @@ public class EmbeddingProviderFactoryTests : IDisposable
         // Assert
         fallbackProvider.Should().BeNull();
     }
-
-    #endregion
-
-    #region Provider Properties Tests
-
     [Theory]
     [InlineData(EmbeddingProviderType.OpenRouterLarge, 3072)]
     [InlineData(EmbeddingProviderType.OpenRouterSmall, 1536)]
@@ -340,11 +322,6 @@ public class EmbeddingProviderFactoryTests : IDisposable
         // Assert
         provider.ModelName.Should().Be(expectedModelName);
     }
-
-    #endregion
-
-    #region Configuration Override Tests
-
     [Fact]
     public void GetPrimaryProvider_WithCustomDimensions_UsesConfiguredDimensions()
     {
@@ -386,11 +363,6 @@ public class EmbeddingProviderFactoryTests : IDisposable
         // Assert
         provider.ModelName.Should().Be("custom-model-name");
     }
-
-    #endregion
-
-    #region Helper Methods
-
     private static EmbeddingConfiguration CreateDefaultConfiguration()
     {
         return new EmbeddingConfiguration
@@ -403,6 +375,4 @@ public class EmbeddingProviderFactoryTests : IDisposable
             OllamaUrl = "http://localhost:11434"
         };
     }
-
-    #endregion
 }

@@ -13,8 +13,6 @@ namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
 /// </summary>
 public class PdfUploadQuotaService : IPdfUploadQuotaService
 {
-    #region Constants
-
     /// <summary>
     /// Default upload quotas for each tier.
     /// </summary>
@@ -32,8 +30,6 @@ public class PdfUploadQuotaService : IPdfUploadQuotaService
         public const int PremiumDailyLimit = 100;
         public const int PremiumWeeklyLimit = 500;
     }
-
-    #endregion
     private readonly IConnectionMultiplexer _redis;
     private readonly IConfigurationService _configService;
     private readonly TimeProvider _timeProvider;
@@ -208,9 +204,6 @@ public class PdfUploadQuotaService : IPdfUploadQuotaService
             throw;
         }
     }
-
-    #region Private Helper Methods
-
     private async Task<(int dailyLimit, int weeklyLimit)> GetLimitsForTierAsync(UserTier tier, CancellationToken ct)
     {
         var tierValue = tier.Value;
@@ -321,6 +314,4 @@ public class PdfUploadQuotaService : IPdfUploadQuotaService
         }
         return now.Date.AddDays(daysUntilMonday);
     }
-
-    #endregion
 }

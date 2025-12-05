@@ -332,9 +332,6 @@ public class N8nTemplateService
             return new ValidateTemplateResponse(false, errors);
         }
     }
-
-    #region Private Helper Methods
-
     private void ValidateParameters(
         List<TemplateParameterDto> templateParams,
         Dictionary<string, string> providedParams)
@@ -555,11 +552,6 @@ public class N8nTemplateService
 
         return CryptographyHelper.ComputeSha256HashBytes(key);
     }
-
-    #endregion
-
-    #region Internal Template File Models
-
     // Internal model for deserializing template JSON files
     private class WorkflowTemplateFile
     {
@@ -588,6 +580,4 @@ public class N8nTemplateService
         public List<string>? Options { get; set; }
         public bool Sensitive { get; set; }
     }
-
-    #endregion
 }

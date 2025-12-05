@@ -35,9 +35,6 @@ public class CreateSessionCommandHandlerTests
             _timeProvider
         );
     }
-
-    #region Happy Path Tests
-
     [Fact]
     public async Task Handle_WithValidUserId_CreatesSession()
     {
@@ -140,11 +137,6 @@ public class CreateSessionCommandHandlerTests
         // Assert
         Assert.NotNull(result);
     }
-
-    #endregion
-
-    #region User Not Found Tests
-
     [Fact]
     public async Task Handle_WithNonExistentUser_ThrowsDomainException()
     {
@@ -171,11 +163,6 @@ public class CreateSessionCommandHandlerTests
         _sessionRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Session>(), It.IsAny<CancellationToken>()), Times.Never);
         _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
-
-    #endregion
-
-    #region DTO Mapping Tests
-
     [Fact]
     public async Task Handle_MapsDtoCorrectly()
     {
@@ -203,11 +190,6 @@ public class CreateSessionCommandHandlerTests
         Assert.False(result.User.IsTwoFactorEnabled);
         Assert.Null(result.User.TwoFactorEnabledAt);
     }
-
-    #endregion
-
-    #region Transaction Tests
-
     [Fact]
     public async Task Handle_CallsSaveChangesOnce()
     {
@@ -229,11 +211,6 @@ public class CreateSessionCommandHandlerTests
         // Assert
         _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
-
-    #endregion
-
-    #region Edge Cases
-
     [Fact]
     public async Task Handle_WithCancellationToken_PassesToRepositories()
     {
@@ -260,11 +237,6 @@ public class CreateSessionCommandHandlerTests
         _sessionRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Session>(), token), Times.Once);
         _unitOfWorkMock.Verify(x => x.SaveChangesAsync(token), Times.Once);
     }
-
-    #endregion
-
-    #region Helper Methods
-
     private User CreateTestUser(string email)
     {
         return new User(
@@ -275,7 +247,5 @@ public class CreateSessionCommandHandlerTests
             role: Role.User
         );
     }
-
-    #endregion
 }
 

@@ -22,9 +22,6 @@ public class GetSessionHistoryQueryHandlerTests
         _sessionRepositoryMock = new Mock<IGameSessionRepository>();
         _handler = new GetSessionHistoryQueryHandler(_sessionRepositoryMock.Object);
     }
-
-    #region Happy Path Tests
-
     [Fact]
     public async Task Handle_WithNoFilters_ReturnsAllHistoricalSessions()
     {
@@ -198,11 +195,6 @@ public class GetSessionHistoryQueryHandlerTests
             r => r.FindHistoryAsync(gameId, startDate, endDate, limit, offset, It.IsAny<CancellationToken>()),
             Times.Once);
     }
-
-    #endregion
-
-    #region Edge Cases
-
     [Fact]
     public async Task Handle_WithEmptyResult_ReturnsEmptyList()
     {
@@ -221,11 +213,6 @@ public class GetSessionHistoryQueryHandlerTests
         Assert.NotNull(result);
         Assert.Empty(result);
     }
-
-    #endregion
-
-    #region Validation Tests
-
     [Fact]
     public async Task Handle_WithNegativeLimit_ThrowsArgumentException()
     {
@@ -312,11 +299,6 @@ public class GetSessionHistoryQueryHandlerTests
         Assert.NotNull(result);
         Assert.Single(result);
     }
-
-    #endregion
-
-    #region DTO Mapping Tests
-
     [Fact]
     public async Task Handle_MapsSessionsToDtosCorrectly()
     {
@@ -353,7 +335,5 @@ public class GetSessionHistoryQueryHandlerTests
         Assert.Equal(session.Players.Count, dto.PlayerCount);
         Assert.Equal(session.Players.Count, dto.Players.Count);
     }
-
-    #endregion
 }
 

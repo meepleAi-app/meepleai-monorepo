@@ -236,9 +236,6 @@ ANSWER:",
         // Default to General if no keywords match
         return QuestionType.General;
     }
-
-    #region Private Helper Methods
-
     private bool ContainsAny(string text, string[] keywords)
     {
         return keywords.Any(keyword => text.Contains(keyword, StringComparison.OrdinalIgnoreCase));
@@ -272,11 +269,6 @@ ANSWER:",
             QuestionType = questionType
         };
     }
-
-    #endregion
-
-    #region ADMIN-01: Database-Driven Prompt Management with Redis Caching
-
     /// <summary>
     /// ADMIN-01: Gets active prompt from cache-first architecture
     /// Flow: Redis cache → PostgreSQL → Configuration fallback
@@ -514,6 +506,4 @@ ANSWER:",
             "Cache invalidation for template {TemplateName}: {Result}",
             templateName, deleted ? "SUCCESS" : "KEY_NOT_FOUND");
     }
-
-    #endregion
 }

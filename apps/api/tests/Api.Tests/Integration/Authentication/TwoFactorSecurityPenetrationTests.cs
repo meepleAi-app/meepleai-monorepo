@@ -230,9 +230,6 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
 
         _output("🧹 Test infrastructure disposed");
     }
-
-    #region Brute Force Prevention Tests (6 tests)
-
     /// <summary>
     /// SECURITY TEST: Brute force attack with 100+ invalid TOTP attempts should fail.
     /// OWASP: A07:2021 – Identification and Authentication Failures
@@ -463,11 +460,6 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
         // Verify the API doesn't crash under repeated failures
         Assert.True(true, "Brute force attack handled gracefully - alert verification requires E2E test");
     }
-
-    #endregion
-
-    #region Replay Attack Prevention Tests (5 tests)
-
     /// <summary>
     /// SECURITY TEST: Valid TOTP code should not be reusable within time window.
     /// OWASP: Prevent OTP reuse - each code should be single-use
@@ -596,11 +588,6 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
         // Assert - Document current behavior
         Assert.True(true, "Session token replay prevention requires nonce implementation");
     }
-
-    #endregion
-
-    #region Timing Attack Resistance Tests (4 tests)
-
     /// <summary>
     /// SECURITY TEST: TOTP verification should use constant-time comparison.
     /// OWASP: Prevent timing side-channel attacks on authentication
@@ -783,11 +770,6 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
         // Verification should not leak information about "closeness" to correct code
         _output("✅ PASS: No exploitable timing variance based on code similarity");
     }
-
-    #endregion
-
-    #region Helper Methods
-
     private async Task<User> SeedUserWith2FAAsync()
     {
         // Create user without 2FA first
@@ -887,6 +869,4 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
         var newCode = (numericCode + increment) % 1000000;
         return newCode.ToString("D6");
     }
-
-    #endregion
 }

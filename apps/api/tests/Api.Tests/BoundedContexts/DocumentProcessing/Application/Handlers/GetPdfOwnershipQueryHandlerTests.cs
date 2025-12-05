@@ -29,9 +29,6 @@ public class GetPdfOwnershipQueryHandlerTests
             _documentRepositoryMock.Object,
             _loggerMock.Object);
     }
-
-    #region Happy Path Tests
-
     [Fact]
     public async Task Handle_ExistingDocument_ReturnsOwnershipResult()
     {
@@ -149,11 +146,6 @@ public class GetPdfOwnershipQueryHandlerTests
         result.Should().NotBeNull();
         result.ProcessingStatus.Should().Be("failed");
     }
-
-    #endregion
-
-    #region Edge Cases
-
     [Fact]
     public async Task Handle_NonExistentDocument_ReturnsNull()
     {
@@ -201,11 +193,6 @@ public class GetPdfOwnershipQueryHandlerTests
         // Assert
         result.Should().BeNull();
     }
-
-    #endregion
-
-    #region Exception Handling
-
     [Fact]
     public async Task Handle_RepositoryThrowsException_ReturnsNullAndLogsError()
     {
@@ -235,11 +222,6 @@ public class GetPdfOwnershipQueryHandlerTests
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
     }
-
-    #endregion
-
-    #region Cancellation Tests
-
     [Fact]
     public async Task Handle_WithCancellationToken_PassesToRepository()
     {
@@ -267,6 +249,4 @@ public class GetPdfOwnershipQueryHandlerTests
             r => r.GetByIdAsync(pdfId, cancellationToken),
             Times.Once);
     }
-
-    #endregion
 }

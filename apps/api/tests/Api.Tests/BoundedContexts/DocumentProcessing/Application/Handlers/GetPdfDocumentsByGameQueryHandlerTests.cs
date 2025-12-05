@@ -25,9 +25,6 @@ public class GetPdfDocumentsByGameQueryHandlerTests
         _documentRepositoryMock = new Mock<IPdfDocumentRepository>();
         _handler = new GetPdfDocumentsByGameQueryHandler(_documentRepositoryMock.Object);
     }
-
-    #region Happy Path Tests
-
     [Fact]
     public async Task Handle_WithMultipleDocuments_ReturnsAllMappedDtos()
     {
@@ -217,11 +214,6 @@ public class GetPdfDocumentsByGameQueryHandlerTests
         result[0].FileSizeBytes.Should().Be(100 * 1024); // 100 KB
         result[1].FileSizeBytes.Should().Be(PdfUploadTestConstants.FileSizes.TestMaxBytes); // 10 MB
     }
-
-    #endregion
-
-    #region Edge Cases
-
     [Fact]
     public async Task Handle_WithEmptyGameId_ReturnsEmptyList()
     {
@@ -263,11 +255,6 @@ public class GetPdfDocumentsByGameQueryHandlerTests
         result.Should().NotBeNull();
         result.Should().BeEmpty();
     }
-
-    #endregion
-
-    #region Cancellation Tests
-
     [Fact]
     public async Task Handle_WithCancellationToken_PassesToRepository()
     {
@@ -300,6 +287,4 @@ public class GetPdfDocumentsByGameQueryHandlerTests
             r => r.FindByGameIdAsync(gameId, cancellationToken),
             Times.Once);
     }
-
-    #endregion
 }

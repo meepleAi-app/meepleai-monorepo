@@ -202,9 +202,6 @@ public class RagValidationPipelineIntegrationTests : IAsyncLifetime
 
         _output("✓ Test infrastructure disposed");
     }
-
-    #region Test 1: Full Pipeline - All 5 Layers (Mocked Multi-Model)
-
     [Fact]
     public async Task FullPipeline_AllFiveLayers_WithMockedMultiModel()
     {
@@ -256,11 +253,6 @@ public class RagValidationPipelineIntegrationTests : IAsyncLifetime
         _output($"  IsValid: {result.IsValid}, Message: {result.Message}");
         _output($"  Duration: {sw.ElapsedMilliseconds}ms");
     }
-
-    #endregion
-
-    #region Test 2: Standard Validation - 3 Layers
-
     [Fact]
     public async Task StandardValidation_ThreeLayers_Success()
     {
@@ -301,11 +293,6 @@ public class RagValidationPipelineIntegrationTests : IAsyncLifetime
         _output($"✓ Test 2 passed: Standard validation executed");
         _output($"  Result: IsValid={result.IsValid}, Layers={result.LayersPassed}/3");
     }
-
-    #endregion
-
-    #region Test 3: Low Confidence - Validation Fails
-
     [Fact]
     public async Task LowConfidence_BelowThreshold_Fails()
     {
@@ -341,11 +328,6 @@ public class RagValidationPipelineIntegrationTests : IAsyncLifetime
 
         _output($"✓ Test 3 passed: Low confidence rejected");
     }
-
-    #endregion
-
-    #region Test 4: Hallucination Detection
-
     [Fact]
     public async Task HallucinationDetection_ForbiddenKeywords_Fails()
     {
@@ -379,11 +361,6 @@ public class RagValidationPipelineIntegrationTests : IAsyncLifetime
         Assert.False(result.IsValid);
         _output($"✓ Test 4 passed: Hallucination detected");
     }
-
-    #endregion
-
-    #region Test 5: Citation Validation
-
     [Fact]
     public async Task CitationValidation_InvalidSource_Fails()
     {
@@ -417,11 +394,6 @@ public class RagValidationPipelineIntegrationTests : IAsyncLifetime
         Assert.False(result.IsValid);
         _output($"✓ Test 5 passed: Invalid citation detected");
     }
-
-    #endregion
-
-    #region Helper Methods
-
     private async Task SeedTestDataAsync()
     {
         _output("Seeding test data...");
@@ -476,6 +448,4 @@ public class RagValidationPipelineIntegrationTests : IAsyncLifetime
 
         _output($"✓ Test data seeded");
     }
-
-    #endregion
 }

@@ -20,9 +20,6 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         => new UserRepository(dbContext, MockEventCollector.Object);
 
     private CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
-
-    #region GetByIdAsync Tests
-
     [Fact]
     public async Task GetByIdAsync_ExistingUser_ReturnsUser()
     {
@@ -55,11 +52,6 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         // Assert
         Assert.Null(result);
     }
-
-    #endregion
-
-    #region GetByEmailAsync Tests
-
     [Fact]
     public async Task GetByEmailAsync_ExistingUser_ReturnsUser()
     {
@@ -112,11 +104,6 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         // Assert
         Assert.Null(result);
     }
-
-    #endregion
-
-    #region ExistsByEmailAsync Tests
-
     [Fact]
     public async Task ExistsByEmailAsync_ExistingUser_ReturnsTrue()
     {
@@ -148,11 +135,6 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         // Assert
         Assert.False(exists);
     }
-
-    #endregion
-
-    #region HasAnyUsersAsync Tests
-
     [Fact]
     public async Task HasAnyUsersAsync_EmptyDatabase_ReturnsFalse()
     {
@@ -181,11 +163,6 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         // Assert
         Assert.True(hasUsers);
     }
-
-    #endregion
-
-    #region CountAdminsAsync Tests
-
     [Fact]
     public async Task CountAdminsAsync_NoAdmins_ReturnsZero()
     {
@@ -226,11 +203,6 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         // Assert
         Assert.Equal(2, adminCount);
     }
-
-    #endregion
-
-    #region GetAllAsync Tests
-
     [Fact]
     public async Task GetAllAsync_EmptyDatabase_ReturnsEmptyList()
     {
@@ -267,11 +239,6 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         Assert.Contains(users, u => u.Email.Value == "user2@example.com");
         Assert.Contains(users, u => u.Email.Value == "user3@example.com");
     }
-
-    #endregion
-
-    #region AddAsync Tests
-
     [Fact]
     public async Task AddAsync_NewUser_PersistsSuccessfully()
     {
@@ -309,11 +276,6 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         Assert.Equal("encrypted_totp_secret_123", persisted.TotpSecretEncrypted);
         Assert.NotNull(persisted.TwoFactorEnabledAt);
     }
-
-    #endregion
-
-    #region UpdateAsync Tests
-
     [Fact]
     public async Task UpdateAsync_ModifiedUser_PersistsChanges()
     {
@@ -362,11 +324,6 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         Assert.True(updated.IsTwoFactorEnabled);
         Assert.Equal("new_encrypted_secret", updated.TotpSecretEncrypted);
     }
-
-    #endregion
-
-    #region DeleteAsync Tests
-
     [Fact]
     public async Task DeleteAsync_ExistingUser_RemovesFromDatabase()
     {
@@ -396,11 +353,6 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         await Repository.DeleteAsync(user, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
     }
-
-    #endregion
-
-    #region ExistsAsync Tests
-
     [Fact]
     public async Task ExistsAsync_ExistingUser_ReturnsTrue()
     {
@@ -430,11 +382,6 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         // Assert
         Assert.False(exists);
     }
-
-    #endregion
-
-    #region Mapping Tests
-
     [Fact]
     public async Task Mapping_DomainToPersistence_AllFieldsCorrect()
     {
@@ -499,11 +446,6 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         Assert.Equal("secret_123", retrieved.TotpSecret?.EncryptedValue);
         Assert.NotNull(retrieved.TwoFactorEnabledAt);
     }
-
-    #endregion
-
-    #region Concurrent Access Tests
-
     [Fact]
     public async Task ConcurrentReads_NoConflicts()
     {
@@ -558,11 +500,6 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
             Assert.Equal(user.Id, result.Id);
         });
     }
-
-    #endregion
-
-    #region Transaction Tests
-
     [Fact]
     public async Task Transaction_Rollback_NoDataPersisted()
     {
@@ -596,11 +533,6 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         var count = await DbContext.Users.CountAsync(TestContext.Current.CancellationToken);
         Assert.Equal(2, count);
     }
-
-    #endregion
-
-    #region Edge Cases
-
     [Fact]
     public async Task NullableFields_HandledCorrectly()
     {
@@ -681,11 +613,6 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         var reloaded = await DbContext.Users.FirstOrDefaultAsync(u => u.Id == user.Id, TestContext.Current.CancellationToken);
         Assert.NotEqual("Modified", reloaded!.DisplayName);
     }
-
-    #endregion
-
-    #region Helper Methods
-
     private static User CreateTestUser(string email, Role role)
     {
         var emailVo = new Email(email);
@@ -700,7 +627,5 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
             role: role
         );
     }
-
-    #endregion
 }
 

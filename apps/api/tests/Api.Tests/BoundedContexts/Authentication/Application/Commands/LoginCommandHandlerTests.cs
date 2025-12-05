@@ -39,9 +39,6 @@ public class LoginCommandHandlerTests
             _timeProvider
         );
     }
-
-    #region Happy Path Tests
-
     [Fact]
     public async Task Handle_WithValidCredentials_No2FA_ReturnsFullSession()
     {
@@ -171,11 +168,6 @@ public class LoginCommandHandlerTests
         Assert.NotNull(capturedSession);
         Assert.Equal(user.Id, capturedSession.UserId);
     }
-
-    #endregion
-
-    #region Invalid Credentials Tests
-
     [Fact]
     public async Task Handle_WithNonExistentEmail_ThrowsDomainException()
     {
@@ -253,11 +245,6 @@ public class LoginCommandHandlerTests
         // Generic error message prevents user enumeration attacks
         Assert.Equal("Invalid email or password", exception.Message);
     }
-
-    #endregion
-
-    #region Email Validation Tests
-
     [Fact]
     public async Task Handle_WithInvalidEmail_ThrowsValidationException()
     {
@@ -293,11 +280,6 @@ public class LoginCommandHandlerTests
             () => _handler.Handle(command, TestContext.Current.CancellationToken)
         );
     }
-
-    #endregion
-
-    #region 2FA Flow Tests
-
     [Fact]
     public async Task Handle_With2FAEnabled_PassesCorrectIpToTempSession()
     {
@@ -355,11 +337,6 @@ public class LoginCommandHandlerTests
         // Assert
         _tempSessionServiceMock.Verify(x => x.CreateTempSessionAsync(user.Id, null), Times.Once);
     }
-
-    #endregion
-
-    #region DTO Mapping Tests
-
     [Fact]
     public async Task Handle_MapsDtoCorrectly()
     {
@@ -420,11 +397,6 @@ public class LoginCommandHandlerTests
         Assert.Null(result.User);
         Assert.True(result.RequiresTwoFactor);
     }
-
-    #endregion
-
-    #region Transaction Tests
-
     [Fact]
     public async Task Handle_No2FA_CallsSaveChangesOnce()
     {
@@ -478,11 +450,6 @@ public class LoginCommandHandlerTests
         // Assert
         _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
-
-    #endregion
-
-    #region Edge Cases
-
     [Fact]
     public async Task Handle_WithNullIpAddress_Succeeds()
     {
@@ -563,11 +530,6 @@ public class LoginCommandHandlerTests
         _sessionRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Session>(), token), Times.Once);
         _unitOfWorkMock.Verify(x => x.SaveChangesAsync(token), Times.Once);
     }
-
-    #endregion
-
-    #region Helper Methods
-
     private User CreateTestUser(string email, string password, bool is2FAEnabled)
     {
         var user = new User(
@@ -585,7 +547,5 @@ public class LoginCommandHandlerTests
 
         return user;
     }
-
-    #endregion
 }
 

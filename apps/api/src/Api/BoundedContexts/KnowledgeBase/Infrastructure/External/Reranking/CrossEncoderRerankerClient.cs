@@ -154,9 +154,6 @@ public sealed class CrossEncoderRerankerClient : ICrossEncoderReranker
             return false;
         }
     }
-
-    #region DTOs
-
     private sealed class RerankRequestDto
     {
         public string Query { get; set; } = string.Empty;
@@ -196,8 +193,6 @@ public sealed class CrossEncoderRerankerClient : ICrossEncoderReranker
         public string Device { get; set; } = string.Empty;
         public double? UptimeSeconds { get; set; }
     }
-
-    #endregion
 }
 
 /// <summary>

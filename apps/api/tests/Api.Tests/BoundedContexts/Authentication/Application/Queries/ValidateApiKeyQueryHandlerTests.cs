@@ -27,9 +27,6 @@ public class ValidateApiKeyQueryHandlerTests
             _userRepositoryMock.Object
         );
     }
-
-    #region Happy Path Tests
-
     [Fact]
     public async Task Handle_WithValidApiKey_ReturnsUserDto()
     {
@@ -98,11 +95,6 @@ public class ValidateApiKeyQueryHandlerTests
 
         _apiKeyRepositoryMock.Verify(x => x.UpdateAsync(apiKey, It.IsAny<CancellationToken>()), Times.Once);
     }
-
-    #endregion
-
-    #region Invalid API Key Tests
-
     [Fact]
     public async Task Handle_WithKeyTooShort_ReturnsNull()
     {
@@ -235,11 +227,6 @@ public class ValidateApiKeyQueryHandlerTests
 
         _apiKeyRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<ApiKey>(), It.IsAny<CancellationToken>()), Times.Never);
     }
-
-    #endregion
-
-    #region User Not Found Tests
-
     [Fact]
     public async Task Handle_WithDeletedUser_ReturnsNull()
     {
@@ -270,11 +257,6 @@ public class ValidateApiKeyQueryHandlerTests
 
         _apiKeyRepositoryMock.Verify(x => x.UpdateAsync(apiKey, It.IsAny<CancellationToken>()), Times.Once);
     }
-
-    #endregion
-
-    #region Key Prefix Tests
-
     [Fact]
     public async Task Handle_ExtractsKeyPrefix()
     {
@@ -307,11 +289,6 @@ public class ValidateApiKeyQueryHandlerTests
             Times.Once
         );
     }
-
-    #endregion
-
-    #region DTO Mapping Tests
-
     [Fact]
     public async Task Handle_MapsDtoCorrectly()
     {
@@ -346,11 +323,6 @@ public class ValidateApiKeyQueryHandlerTests
         Assert.False(result.IsTwoFactorEnabled);
         Assert.Null(result.TwoFactorEnabledAt);
     }
-
-    #endregion
-
-    #region Edge Cases
-
     [Fact]
     public async Task Handle_WithEmptyKey_ReturnsNull()
     {
@@ -465,11 +437,6 @@ public class ValidateApiKeyQueryHandlerTests
         // Assert - Query handlers don't call SaveChanges, but they do call UpdateAsync
         _apiKeyRepositoryMock.Verify(x => x.UpdateAsync(apiKey, It.IsAny<CancellationToken>()), Times.Once);
     }
-
-    #endregion
-
-    #region Helper Methods
-
     private User CreateTestUser(string email)
     {
         return new User(
@@ -480,7 +447,5 @@ public class ValidateApiKeyQueryHandlerTests
             role: Role.User
         );
     }
-
-    #endregion
 }
 

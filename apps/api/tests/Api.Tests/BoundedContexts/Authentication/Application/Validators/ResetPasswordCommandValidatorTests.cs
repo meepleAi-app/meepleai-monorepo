@@ -29,9 +29,6 @@ public sealed class ResetPasswordCommandValidatorTests
         // Assert
         result.ShouldNotHaveAnyValidationErrors();
     }
-
-    #region Token Validation
-
     [Theory]
     [InlineData(null)]
     [InlineData("")]
@@ -108,11 +105,6 @@ public sealed class ResetPasswordCommandValidatorTests
         // Assert
         result.ShouldNotHaveValidationErrorFor(x => x.Token);
     }
-
-    #endregion
-
-    #region NewPassword Validation
-
     [Theory]
     [InlineData(null)]
     [InlineData("")]
@@ -244,9 +236,6 @@ public sealed class ResetPasswordCommandValidatorTests
         result.ShouldHaveValidationErrorFor(x => x.NewPassword)
             .WithErrorMessage("New password must contain at least one special character");
     }
-
-    #endregion
-
     [Fact]
     public void Should_Fail_With_Multiple_Validation_Errors()
     {

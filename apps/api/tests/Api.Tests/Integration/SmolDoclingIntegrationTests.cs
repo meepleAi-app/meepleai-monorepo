@@ -179,9 +179,6 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
 
         _output("Cleanup complete");
     }
-
-    #region Test Case 1: Successful PDF extraction via service
-
     [Fact(Timeout = 180000)] // 3 minutes
     public async Task SuccessfulPdfExtraction_ViaSmolDoclingService()
     {
@@ -212,11 +209,6 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
 
         _output($"✓ Extraction successful: {result.PageCount} pages, {result.CharacterCount} chars, Quality: {result.Quality}");
     }
-
-    #endregion
-
-    #region Test Case 2: Service timeout handling
-
     [Fact]
     public async Task ServiceTimeout_HandledGracefully()
     {
@@ -259,11 +251,6 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
 
         _output("✓ User cancellation propagated correctly");
     }
-
-    #endregion
-
-    #region Test Case 3: Service unavailable (circuit breaker)
-
     [Fact]
     public async Task ServiceUnavailable_CircuitBreakerHandling()
     {
@@ -307,11 +294,6 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
 
         unavailableClient.Dispose();
     }
-
-    #endregion
-
-    #region Test Case 4: Invalid PDF error from service
-
     [Fact(Timeout = 60000)] // 1 minute
     public async Task InvalidPdf_ErrorHandling()
     {
@@ -355,11 +337,6 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
             _output($"✓ Invalid PDF processed with degraded result: Quality={result.Quality}, Chars={result.CharacterCount}");
         }
     }
-
-    #endregion
-
-    #region Test Case 5: Large file processing
-
     [Fact(Timeout = 300000)] // 5 minutes (large file processing)
     public async Task LargeFilePdf_ProcessesSuccessfully()
     {
@@ -390,11 +367,6 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
 
         _output($"✓ Large PDF processed: {result.PageCount} pages, {result.CharacterCount:N0} chars, Quality: {result.Quality}");
     }
-
-    #endregion
-
-    #region Test Case 6: Concurrent requests
-
     [Fact(Timeout = 300000)] // 5 minutes (concurrent processing)
     public async Task ConcurrentRequests_HandleMultipleSimultaneously()
     {
@@ -429,11 +401,6 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
 
         _output($"✓ All {concurrentRequests} concurrent requests completed successfully");
     }
-
-    #endregion
-
-    #region Test Case 7: Service restart recovery
-
     [Fact(Timeout = 300000)] // 5 minutes (includes container restart)
     public async Task ServiceRestart_RecoveryAfterTemporaryFailure()
     {
@@ -505,11 +472,6 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
 
         _output($"✓ Service recovery validated: {result2.PageCount} pages extracted after restart");
     }
-
-    #endregion
-
-    #region Helper: Test HttpClientFactory
-
     /// <summary>
     /// Simple HttpClientFactory for testing
     /// </summary>
@@ -527,7 +489,5 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
             return _client;
         }
     }
-
-    #endregion
 }
 

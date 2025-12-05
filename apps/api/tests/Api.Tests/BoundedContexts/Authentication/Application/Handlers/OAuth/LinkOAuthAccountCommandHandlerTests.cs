@@ -35,9 +35,6 @@ public class LinkOAuthAccountCommandHandlerTests
             _unitOfWorkMock.Object,
             _loggerMock.Object);
     }
-
-    #region Success Cases
-
     [Fact]
     public async Task Handle_ValidCommand_LinksOAuthAccountSuccessfully()
     {
@@ -123,11 +120,6 @@ public class LinkOAuthAccountCommandHandlerTests
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
     }
-
-    #endregion
-
-    #region Error Cases
-
     [Fact]
     public async Task Handle_UserNotFound_ReturnsErrorResult()
     {
@@ -270,11 +262,6 @@ public class LinkOAuthAccountCommandHandlerTests
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
     }
-
-    #endregion
-
-    #region Helper Methods
-
     private static User CreateTestUser(Guid userId)
     {
         return new User(
@@ -311,7 +298,5 @@ public class LinkOAuthAccountCommandHandlerTests
             TokenExpiresAt = DateTime.UtcNow.AddHours(1)
         };
     }
-
-    #endregion
 }
 

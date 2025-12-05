@@ -29,9 +29,6 @@ public class AdminDisable2FACommandHandlerTests
             _unitOfWorkMock.Object,
             _loggerMock.Object);
     }
-
-    #region Happy Path Tests
-
     [Fact]
     public async Task Handle_ValidAdminAndTarget_DisablesSuccessfully()
     {
@@ -78,11 +75,6 @@ public class AdminDisable2FACommandHandlerTests
             u => u.SaveChangesAsync(It.IsAny<CancellationToken>()),
             Times.Once);
     }
-
-    #endregion
-
-    #region Authorization Tests
-
     [Fact]
     public async Task Handle_AdminUserNotFound_ReturnsError()
     {
@@ -168,11 +160,6 @@ public class AdminDisable2FACommandHandlerTests
         Assert.False(result.Success);
         Assert.Contains("Unauthorized", result.ErrorMessage);
     }
-
-    #endregion
-
-    #region Business Rule Tests
-
     [Fact]
     public async Task Handle_TargetUserNotFound_ReturnsError()
     {
@@ -279,11 +266,6 @@ public class AdminDisable2FACommandHandlerTests
             r => r.UpdateAsync(adminUser, It.IsAny<CancellationToken>()),
             Times.Once);
     }
-
-    #endregion
-
-    #region Domain Event Tests
-
     [Fact]
     public async Task Handle_Success_RaisesTwoFactorDisabledEvent()
     {
@@ -325,11 +307,6 @@ public class AdminDisable2FACommandHandlerTests
         Assert.Equal(targetUserId, twoFactorEvent.UserId);
         Assert.True(twoFactorEvent.WasAdminOverride); // Should be marked as admin override
     }
-
-    #endregion
-
-    #region Cancellation Tests
-
     [Fact]
     public async Task Handle_WithCancellationToken_PassesToRepository()
     {
@@ -379,7 +356,5 @@ public class AdminDisable2FACommandHandlerTests
             u => u.SaveChangesAsync(cancellationToken),
             Times.Once);
     }
-
-    #endregion
 }
 

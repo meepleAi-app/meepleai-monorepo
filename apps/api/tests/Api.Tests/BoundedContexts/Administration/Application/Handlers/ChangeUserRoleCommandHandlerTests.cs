@@ -29,9 +29,6 @@ public class ChangeUserRoleCommandHandlerTests
             _userRepositoryMock.Object,
             _unitOfWorkMock.Object);
     }
-
-    #region Happy Path Tests
-
     [Fact]
     public async Task Handle_PromoteUserToAdmin_UpdatesRoleAndReturnsDto()
     {
@@ -154,11 +151,6 @@ public class ChangeUserRoleCommandHandlerTests
             r => r.UpdateAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
-
-    #endregion
-
-    #region Edge Cases
-
     [Fact]
     public async Task Handle_NonExistentUser_ThrowsDomainException()
     {
@@ -218,11 +210,6 @@ public class ChangeUserRoleCommandHandlerTests
             u => u.SaveChangesAsync(It.IsAny<CancellationToken>()),
             Times.Once);
     }
-
-    #endregion
-
-    #region DTO Mapping Tests
-
     [Fact]
     public async Task Handle_PreservesUserDetails()
     {
@@ -254,11 +241,6 @@ public class ChangeUserRoleCommandHandlerTests
         Assert.Equal(Role.Editor.Value, result.Role);
         Assert.Equal(originalCreatedAt, result.CreatedAt);
     }
-
-    #endregion
-
-    #region Cancellation Tests
-
     [Fact]
     public async Task Handle_WithCancellationToken_PassesToRepository()
     {
@@ -293,7 +275,5 @@ public class ChangeUserRoleCommandHandlerTests
             u => u.SaveChangesAsync(cancellationToken),
             Times.Once);
     }
-
-    #endregion
 }
 

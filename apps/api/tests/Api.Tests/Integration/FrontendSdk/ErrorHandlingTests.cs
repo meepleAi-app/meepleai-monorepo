@@ -78,9 +78,6 @@ public class ErrorHandlingTests : IAsyncLifetime
             }
         }
     }
-
-    #region 4xx Client Error Tests
-
     [Fact(DisplayName = "400 Bad Request should include validation error details")]
     public async Task BadRequest_IncludesValidationErrors()
     {
@@ -228,11 +225,6 @@ public class ErrorHandlingTests : IAsyncLifetime
 
         // Frontend SDK should display semantic error (e.g., "Game not found")
     }
-
-    #endregion
-
-    #region 5xx Server Error Tests
-
     [Fact(DisplayName = "500 Internal Server Error should not expose implementation details")]
     public async Task InternalServerError_DoesNotExposeImplementationDetails()
     {
@@ -263,11 +255,6 @@ public class ErrorHandlingTests : IAsyncLifetime
 
         // Frontend SDK should display generic "Something went wrong" message
     }
-
-    #endregion
-
-    #region Content Type Error Tests
-
     [Fact(DisplayName = "POST with invalid Content-Type should return 415 Unsupported Media Type")]
     public async Task Post_WithInvalidContentType_Returns415UnsupportedMediaType()
     {
@@ -301,11 +288,6 @@ public class ErrorHandlingTests : IAsyncLifetime
 
         // Frontend SDK should validate JSON before sending
     }
-
-    #endregion
-
-    #region Request Validation Tests
-
     [Fact(DisplayName = "POST with missing required fields should return field-specific errors")]
     public async Task Post_WithMissingRequiredFields_ReturnsFieldSpecificErrors()
     {
@@ -359,11 +341,6 @@ public class ErrorHandlingTests : IAsyncLifetime
 
         // Frontend SDK should validate query parameters before sending
     }
-
-    #endregion
-
-    #region Error Response Format Tests
-
     [Fact(DisplayName = "Error responses should be valid JSON")]
     public async Task ErrorResponses_AreValidJson()
     {
@@ -406,11 +383,6 @@ public class ErrorHandlingTests : IAsyncLifetime
         // Error responses may or may not have Content-Type depending on error type
         // Frontend SDK should handle both cases
     }
-
-    #endregion
-
-    #region Timeout and Network Error Simulation
-
     [Fact(DisplayName = "Request cancellation should handle gracefully")]
     public async Task Request_WhenCancelled_HandlesGracefully()
     {
@@ -452,6 +424,4 @@ public class ErrorHandlingTests : IAsyncLifetime
             Assert.True(true, "Request timed out as expected");
         }
     }
-
-    #endregion
 }

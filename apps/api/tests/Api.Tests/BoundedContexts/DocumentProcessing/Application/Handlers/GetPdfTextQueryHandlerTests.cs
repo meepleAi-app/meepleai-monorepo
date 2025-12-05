@@ -24,9 +24,6 @@ public class GetPdfTextQueryHandlerTests
     {
         _loggerMock = new Mock<ILogger<GetPdfTextQueryHandler>>();
     }
-
-    #region Construction Tests
-
     [Fact]
     public void Constructor_WithValidDependencies_CreatesInstance()
     {
@@ -68,11 +65,6 @@ public class GetPdfTextQueryHandlerTests
         
         act.Should().Throw<ArgumentNullException>();
     }
-
-    #endregion
-
-    #region Query Tests
-
     [Fact]
     public void Query_HasCorrectPdfIdProperty()
     {
@@ -85,11 +77,6 @@ public class GetPdfTextQueryHandlerTests
         // Assert
         query.PdfId.Should().Be(pdfId);
     }
-
-    #endregion
-
-    #region Result Tests
-
     [Fact]
     public void PdfTextResult_ConstructsCorrectly()
     {
@@ -175,9 +162,6 @@ public class GetPdfTextQueryHandlerTests
         result.CharacterCount.Should().BeNull();
         result.ProcessingError.Should().BeNull();
     }
-
-    #endregion
-
     // NOTE: Full integration tests for Handle method should be in integration test suite
     // due to DbContext dependency complexity. See integration-tests.yml workflow.
 }

@@ -49,8 +49,6 @@ namespace Api.Tests.Integration;
 [Collection("PdfUploadIntegration")]
 public sealed class UploadPdfIntegrationTests : IAsyncLifetime
 {
-    #region Test Infrastructure
-
     private IContainer? _postgresContainer;
     private IContainer? _redisContainer;
     private MeepleAiDbContext? _dbContext;
@@ -297,11 +295,6 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
 
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
-
-    #endregion
-
-    #region Helper Methods
-
     private IFormFile CreateMockFormFile(string fileName, byte[] content, string contentType = "application/pdf")
     {
         var formFile = new Mock<IFormFile>();
@@ -379,11 +372,6 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         return game;
     }
-
-    #endregion
-
-    #region 1. Invalid PDF Scenarios Tests
-
     [Fact(Timeout = 30000)] // 30s for Testcontainers integration tests
     public async Task UploadPdf_WithCorruptedPdf_ReturnsError()
     {
@@ -504,11 +492,6 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         var docCount = await _dbContext.PdfDocuments.CountAsync(TestContext.Current.CancellationToken);
         docCount.Should().Be(0, "malformed PDF should not create database record");
     }
-
-    #endregion
-
-    #region 2. Large File Handling Tests
-
     [Fact(Timeout = 30000)]
     public async Task UploadPdf_WithFileNearSizeLimit_Succeeds()
     {
@@ -623,11 +606,6 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         doc.Should().NotBeNull();
         doc!.FileSizeBytes.Should().Be(largePdfSize);
     }
-
-    #endregion
-
-    #region 3. Concurrent Upload Tests
-
     [Fact(Timeout = 30000)]
     public async Task UploadPdf_WithConcurrentUploads_HandlesCorrectly()
     {
@@ -731,11 +709,6 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
             dbDocIds.Should().Contain(successId, "all successful uploads should have database records");
         }
     }
-
-    #endregion
-
-    #region 4. Storage Failure Scenarios Tests (PostgreSQL with Testcontainers - Issue #1733)
-
     [Fact(Timeout = 30000)]
     public async Task UploadPdf_WhenBlobStorageFails_ReturnsErrorAndRollsBackTransaction()
     {
@@ -1094,11 +1067,6 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         var docCount = await testDbContext.PdfDocuments.CountAsync(TestContext.Current.CancellationToken);
         docCount.Should().Be(0, "PostgreSQL transaction rollback should prevent database records on permission failure");
     }
-
-    #endregion
-
-    #region 5. Integration Points Tests
-
     [Fact(Timeout = 30000)]
     public async Task UploadPdf_SuccessfulUpload_PersistsToDatabase()
     {
@@ -1337,7 +1305,5 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         doc.ProcessingStatus.Should().Be("pending", "newly uploaded document should be in pending status");
         doc.UploadedAt.Should().NotBe(default(DateTime), "upload timestamp should be set");
     }
-
-    #endregion
 }
 

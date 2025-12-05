@@ -23,8 +23,6 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 
 public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUploadResult>
 {
-    #region Fields & Constants
-
     private readonly MeepleAiDbContext _db;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<UploadPdfCommandHandler> _logger;
@@ -38,11 +36,6 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
     private readonly long _maxFileSizeBytes;
 
     private static readonly HashSet<string> AllowedContentTypes = new(StringComparer.Ordinal) { "application/pdf" };
-
-    #endregion
-
-    #region Constructor
-
     public UploadPdfCommandHandler(
         MeepleAiDbContext db,
         IServiceScopeFactory scopeFactory,
@@ -69,11 +62,6 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
         _maxFileSizeBytes = pdfOptions.Value.MaxFileSizeBytes;
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
-
-    #endregion
-
-    #region Public Methods
-
     public async Task<PdfUploadResult> Handle(UploadPdfCommand command, CancellationToken cancellationToken)
     {
         var file = command.File;
@@ -363,11 +351,6 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
             return (false, $"Failed to validate PDF structure: {ex.Message}");
         }
     }
-
-    #endregion
-
-    #region Background Processing
-
     private async Task ProcessPdfAsync(string pdfId, string filePath, CancellationToken ct)
     {
         using var scope = _scopeFactory.CreateScope();
@@ -729,11 +712,6 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
         }
 #pragma warning restore CA1031
     }
-
-    #endregion
-
-    #region Helper Methods
-
     private async Task UpdateProgressAsync(
         MeepleAiDbContext db,
         string pdfId,
@@ -866,8 +844,6 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
             }
         });
     }
-
-    #endregion
 }
 
 // Helper class for document chunk input

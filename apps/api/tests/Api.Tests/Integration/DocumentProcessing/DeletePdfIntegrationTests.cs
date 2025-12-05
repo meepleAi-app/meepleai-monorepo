@@ -45,8 +45,6 @@ namespace Api.Tests.Integration.DocumentProcessing;
 [Collection("DeletePdfIntegration")]
 public sealed class DeletePdfIntegrationTests : IAsyncLifetime
 {
-    #region Test Infrastructure
-
     private IContainer? _postgresContainer;
     private MeepleAiDbContext? _dbContext;
     private IServiceProvider? _serviceProvider;
@@ -234,11 +232,6 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
         // Re-seed base data
         await SeedTestDataAsync();
     }
-
-    #endregion
-
-    #region 1. Happy Path Tests
-
     [Fact]
     public async Task DeleteExistingPdf_WithoutVectors_Success()
     {
@@ -261,11 +254,6 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
         var pdfExists = await _dbContext!.PdfDocuments.AnyAsync(p => p.Id == pdfId, TestCancellationToken);
         pdfExists.Should().BeFalse();
     }
-
-    #endregion
-
-    #region 2. Not Found Tests
-
     [Fact]
     public async Task DeleteNonExistentPdf_Returns404Message()
     {
@@ -300,11 +288,6 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
         // Assert
         await act.Should().ThrowAsync<PdfStorageException>();
     }
-
-    #endregion
-
-    #region 3. Cascade Delete Tests
-
     [Fact]
     public async Task DeletePdfWithVectorEmbeddings_CascadeDeletesVectors()
     {
@@ -378,11 +361,6 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
         result.Success.Should().BeTrue();
         deleteCallCount.Should().BeGreaterThan(0, "Qdrant delete should be called for vector documents");
     }
-
-    #endregion
-
-    #region 4. Concurrency Tests
-
     [Fact]
     public async Task ConcurrentDeletion_HandlesRaceConditionGracefully()
     {
@@ -426,11 +404,6 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
 
         return new DeletePdfCommandHandler(dbContext, scopeFactory, blobStorage, cache, logger);
     }
-
-    #endregion
-
-    #region 5. Rollback/Transaction Tests
-
     [Fact]
     public async Task DeleteWithDbUpdateException_ThrowsPdfStorageException()
     {
@@ -461,11 +434,6 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
         await act.Should().ThrowAsync<Exception>()
             .WithMessage("*disposed*", "disposed context should cause exception");
     }
-
-    #endregion
-
-    #region 6. Service Failure Resilience Tests
-
     [Fact]
     public async Task DeleteWithQdrantFailure_StillSucceedsWithWarningLogged()
     {
@@ -544,9 +512,6 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
         var pdfExists = await _dbContext!.PdfDocuments.AnyAsync(p => p.Id == pdfId, TestCancellationToken);
         pdfExists.Should().BeFalse();
     }
-
-    #endregion
-
     private static async Task EnsureCreatedWithRetry(MeepleAiDbContext context)
     {
         const int maxAttempts = 3;

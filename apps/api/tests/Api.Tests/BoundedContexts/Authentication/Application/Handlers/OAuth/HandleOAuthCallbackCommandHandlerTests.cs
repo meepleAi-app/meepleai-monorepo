@@ -80,9 +80,6 @@ public class HandleOAuthCallbackCommandHandlerTests : IDisposable
     {
         _dbContext.Dispose();
     }
-
-    #region Success Cases - New User
-
     [Fact]
     public async Task Handle_NewUser_CreatesUserLinksOAuthAndCreatesSession()
     {
@@ -350,11 +347,6 @@ public class HandleOAuthCallbackCommandHandlerTests : IDisposable
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
     }
-
-    #endregion
-
-    #region Error Cases
-
     [Fact]
     public async Task Handle_InvalidState_ReturnsErrorResult()
     {
@@ -535,11 +527,6 @@ public class HandleOAuthCallbackCommandHandlerTests : IDisposable
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
     }
-
-    #endregion
-
-    #region Helper Methods
-
     private static HandleOAuthCallbackCommand CreateTestCommand(
         string provider,
         string? ipAddress = null,
@@ -613,7 +600,5 @@ public class HandleOAuthCallbackCommandHandlerTests : IDisposable
             .Setup(s => s.GetUserInfoAsync(command.Provider, tokenResponse.AccessToken))
             .ReturnsAsync(userInfo);
     }
-
-    #endregion
 }
 

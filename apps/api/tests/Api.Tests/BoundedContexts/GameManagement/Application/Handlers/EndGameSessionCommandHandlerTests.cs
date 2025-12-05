@@ -27,9 +27,6 @@ public class EndGameSessionCommandHandlerTests
             _sessionRepositoryMock.Object,
             _unitOfWorkMock.Object);
     }
-
-    #region Happy Path Tests
-
     [Fact]
     public async Task Handle_WithWinner_CompletesSessionAndRecordsWinner()
     {
@@ -156,11 +153,6 @@ public class EndGameSessionCommandHandlerTests
         Assert.NotNull(result.CompletedAt);
         Assert.True(result.CompletedAt >= result.StartedAt); // EndedAt should be after StartedAt
     }
-
-    #endregion
-
-    #region Edge Cases
-
     [Fact]
     public async Task Handle_NonExistentSession_ThrowsInvalidOperationException()
     {
@@ -186,11 +178,6 @@ public class EndGameSessionCommandHandlerTests
             r => r.UpdateAsync(It.IsAny<GameSession>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
-
-    #endregion
-
-    #region Cancellation Tests
-
     [Fact]
     public async Task Handle_WithCancellationToken_PassesToRepositories()
     {
@@ -227,11 +214,6 @@ public class EndGameSessionCommandHandlerTests
             u => u.SaveChangesAsync(cancellationToken),
             Times.Once);
     }
-
-    #endregion
-
-    #region Domain Behavior Tests
-
     [Fact]
     public async Task Handle_PreservesGameId()
     {
@@ -288,7 +270,5 @@ public class EndGameSessionCommandHandlerTests
         Assert.Equal("Bob", result.Players[1].PlayerName);
         Assert.Equal("Charlie", result.Players[2].PlayerName);
     }
-
-    #endregion
 }
 

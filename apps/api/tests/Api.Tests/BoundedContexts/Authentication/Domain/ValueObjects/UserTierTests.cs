@@ -10,8 +10,6 @@ namespace Api.Tests.BoundedContexts.Authentication.Domain.ValueObjects;
 /// </summary>
 public class UserTierTests
 {
-    #region Parse Tests
-
     [Theory]
     [InlineData("free")]
     [InlineData("normal")]
@@ -63,11 +61,6 @@ public class UserTierTests
         Assert.Contains("Invalid user tier", exception.Message);
         Assert.Contains("free, normal, premium", exception.Message);
     }
-
-    #endregion
-
-    #region Static Tier Constants
-
     [Theory]
     [InlineData("free")]
     [InlineData("normal")]
@@ -86,11 +79,6 @@ public class UserTierTests
         // Assert
         Assert.Equal(expectedValue, tier.Value);
     }
-
-    #endregion
-
-    #region Is* Methods
-
     [Theory]
     [InlineData("free", true, false, false)]
     [InlineData("normal", false, true, false)]
@@ -105,11 +93,6 @@ public class UserTierTests
         Assert.Equal(expectedIsNormal, tier.IsNormal());
         Assert.Equal(expectedIsPremium, tier.IsPremium());
     }
-
-    #endregion
-
-    #region GetLevel Tests
-
     [Theory]
     [InlineData("free", 0)]
     [InlineData("normal", 1)]
@@ -139,11 +122,6 @@ public class UserTierTests
         Assert.True(normal.GetLevel() < premium.GetLevel());
         Assert.True(free.GetLevel() < premium.GetLevel());
     }
-
-    #endregion
-
-    #region HasLevel Tests
-
     [Theory]
     [InlineData("premium", "normal", true)]    // Premium has Normal level
     [InlineData("premium", "free", true)]      // Premium has Free level
@@ -163,11 +141,6 @@ public class UserTierTests
         // Assert
         Assert.Equal(expected, hasLevel);
     }
-
-    #endregion
-
-    #region Equality Tests
-
     [Fact]
     public void Equals_SameTierValues_ReturnsTrue()
     {
@@ -200,11 +173,6 @@ public class UserTierTests
         // Act & Assert
         Assert.Equal(tier1, tier2);
     }
-
-    #endregion
-
-    #region ToString Tests
-
     [Theory]
     [InlineData("free")]
     [InlineData("normal")]
@@ -220,11 +188,6 @@ public class UserTierTests
         // Assert
         Assert.Equal(tierValue, result);
     }
-
-    #endregion
-
-    #region Implicit String Conversion
-
     [Fact]
     public void ImplicitStringConversion_WorksCorrectly()
     {
@@ -237,6 +200,4 @@ public class UserTierTests
         // Assert
         Assert.Equal("premium", tierString);
     }
-
-    #endregion
 }

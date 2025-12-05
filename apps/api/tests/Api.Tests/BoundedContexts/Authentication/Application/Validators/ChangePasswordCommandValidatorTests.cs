@@ -30,9 +30,6 @@ public sealed class ChangePasswordCommandValidatorTests
         // Assert
         result.ShouldNotHaveAnyValidationErrors();
     }
-
-    #region UserId Validation
-
     [Fact]
     public void Should_Fail_When_UserId_Is_Empty()
     {
@@ -51,11 +48,6 @@ public sealed class ChangePasswordCommandValidatorTests
         result.ShouldHaveValidationErrorFor(x => x.UserId)
             .WithErrorMessage("User ID is required");
     }
-
-    #endregion
-
-    #region CurrentPassword Validation
-
     [Theory]
     [InlineData(null)]
     [InlineData("")]
@@ -98,11 +90,6 @@ public sealed class ChangePasswordCommandValidatorTests
         result.ShouldHaveValidationErrorFor(x => x.CurrentPassword)
             .WithErrorMessage("Current password must be at least 8 characters");
     }
-
-    #endregion
-
-    #region NewPassword Validation
-
     [Theory]
     [InlineData(null)]
     [InlineData("")]
@@ -241,11 +228,6 @@ public sealed class ChangePasswordCommandValidatorTests
         result.ShouldHaveValidationErrorFor(x => x.NewPassword)
             .WithErrorMessage("New password must contain at least one special character");
     }
-
-    #endregion
-
-    #region Password Differentiation Validation
-
     [Fact]
     public void Should_Fail_When_NewPassword_Is_Same_As_CurrentPassword()
     {
@@ -283,9 +265,6 @@ public sealed class ChangePasswordCommandValidatorTests
         // Assert
         result.ShouldNotHaveAnyValidationErrors();
     }
-
-    #endregion
-
     [Fact]
     public void Should_Fail_With_Multiple_Validation_Errors()
     {

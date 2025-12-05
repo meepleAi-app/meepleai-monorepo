@@ -81,9 +81,6 @@ public class StreamQaQueryHandlerTests
             _fakeTimeProvider
         );
     }
-
-    #region Happy Path Tests
-
     [Fact]
     public async Task Handle_ValidQuery_StreamsCorrectEvents()
     {
@@ -246,11 +243,6 @@ public class StreamQaQueryHandlerTests
             Times.Never
         );
     }
-
-    #endregion
-
-    #region Chat Context Integration Tests
-
     [Fact]
     public async Task Handle_WithThreadId_IncludesChatHistory()
     {
@@ -364,11 +356,6 @@ public class StreamQaQueryHandlerTests
         var completeEvent = events.LastOrDefault(e => e.Type == StreamingEventType.Complete);
         Assert.NotNull(completeEvent);
     }
-
-    #endregion
-
-    #region Validation Tests
-
     [Fact]
     public async Task Handle_EmptyQuery_ReturnsError()
     {
@@ -425,11 +412,6 @@ public class StreamQaQueryHandlerTests
         Assert.Single(events);
         Assert.Equal(StreamingEventType.Error, events[0].Type);
     }
-
-    #endregion
-
-    #region Error Handling Tests
-
     [Fact]
     public async Task Handle_SearchReturnsNoResults_ReturnsError()
     {
@@ -474,11 +456,6 @@ public class StreamQaQueryHandlerTests
             Times.Never
         );
     }
-
-    #endregion
-
-    #region Cancellation Tests
-
     [Fact]
     public async Task Handle_CancellationRequested_StopsStreaming()
     {
@@ -526,11 +503,6 @@ public class StreamQaQueryHandlerTests
         Assert.True(events.Count < 100); // Should stop before all tokens
         Assert.True(cts.IsCancellationRequested);
     }
-
-    #endregion
-
-    #region Quality Tracking Tests
-
     [Fact]
     public async Task Handle_CalculatesConfidenceScores()
     {
@@ -575,11 +547,6 @@ public class StreamQaQueryHandlerTests
         _qualityTrackingServiceMock.Verify(x => x.CalculateLlmConfidence(It.IsAny<string>(), It.IsAny<List<DomainSearchResult>>()), Times.Once);
         _qualityTrackingServiceMock.Verify(x => x.CalculateOverallConfidence(searchConfidence, llmConfidence), Times.Once);
     }
-
-    #endregion
-
-    #region Helper Methods
-
     private void SetupHappyPathMocks(string gameId, string userQuery)
     {
         _cacheMock
@@ -760,7 +727,5 @@ public class StreamQaQueryHandlerTests
 
         return thread;
     }
-
-    #endregion
 }
 

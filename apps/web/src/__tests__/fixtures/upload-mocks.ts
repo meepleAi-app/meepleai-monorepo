@@ -14,6 +14,7 @@ import {
   createMockGame,
   createMockPdfDocument,
   createMockRuleSpec,
+  createMockRuleAtom,
   type MockUser,
   type MockPdfDocument,
   type MockRuleSpec,
@@ -89,7 +90,7 @@ export function createAuthMock(options: AuthMockOptions = {}) {
     id: options.userId ?? 'user-1',
     email: options.email ?? 'user@example.com',
     role: (options.role ?? 'Admin') as MockUser['role'],
-    displayName: options.displayName ?? 'Test User'
+    displayName: options.displayName ?? 'Test User',
   });
 }
 
@@ -101,7 +102,7 @@ export function createGameMock(options: GameMockOptions = {}) {
   return createMockGame({
     id: options.id ?? 'game-1',
     title: options.title ?? 'Test Game',
-    createdAt: options.createdAt ?? new Date().toISOString()
+    createdAt: options.createdAt ?? new Date().toISOString(),
   });
 }
 
@@ -126,6 +127,9 @@ export function createPdfMock(options: PdfMockOptions = {}): MockPdfDocument {
 /**
  * Creates a mock RuleSpec object
  * @deprecated - Now wraps common-fixtures createMockRuleSpec for consistency
+ *
+ * Issue #1951: Maintains backward compatibility with 1 rule default
+ * (common-fixtures has 2 rules default for broader use cases)
  */
 export function createRuleSpecMock(options: RuleSpecMockOptions = {}): MockRuleSpec {
   // Convert rules format if provided in options
@@ -135,7 +139,10 @@ export function createRuleSpecMock(options: RuleSpecMockOptions = {}): MockRuleS
     section: rule.section,
     page: rule.page,
     line: rule.line,
-  }));
+  })) || [
+    // Default: 1 rule (upload-mocks.test.ts expects this)
+    createMockRuleAtom({ id: 'r1', text: 'Test rule' }),
+  ];
 
   return createMockRuleSpec({
     gameId: options.gameId,
@@ -170,7 +177,7 @@ export function setupUploadMocks(config: UploadMocksConfig = {}) {
     retryParseResponse,
     retryParseError,
     onUploadCapture, // Callback to capture FormData
-    pollingDelayMs = 0 // NEW: Default 0ms (instant), tests can override for realistic timing
+    pollingDelayMs = 0, // NEW: Default 0ms (instant), tests can override for realistic timing
   } = config;
 
   const router = new MockApiRouter();
@@ -191,7 +198,10 @@ export function setupUploadMocks(config: UploadMocksConfig = {}) {
     );
   } else {
     router.post('/api/v1/games', () =>
-      createJsonResponse(createGameResponse ?? createGameMock({ id: 'game-new', title: 'New Game' }), 201)
+      createJsonResponse(
+        createGameResponse ?? createGameMock({ id: 'game-new', title: 'New Game' }),
+        201
+      )
     );
   }
 
@@ -231,7 +241,8 @@ export function setupUploadMocks(config: UploadMocksConfig = {}) {
     }
 
     if (pdfStatusSequence.length > 0) {
-      const nextStatus = pdfStatusSequence[statusIndex] ?? pdfStatusSequence[pdfStatusSequence.length - 1];
+      const nextStatus =
+        pdfStatusSequence[statusIndex] ?? pdfStatusSequence[pdfStatusSequence.length - 1];
       if (statusIndex < pdfStatusSequence.length - 1) {
         statusIndex++;
       }
@@ -239,7 +250,7 @@ export function setupUploadMocks(config: UploadMocksConfig = {}) {
         id: params.documentId,
         fileName: uploadResponse.fileName ?? 'test.pdf',
         processingStatus: nextStatus.processingStatus,
-        processingError: nextStatus.processingError ?? null
+        processingError: nextStatus.processingError ?? null,
       });
     }
     // Default: return completed status
@@ -247,7 +258,7 @@ export function setupUploadMocks(config: UploadMocksConfig = {}) {
       id: params.documentId,
       fileName: uploadResponse.fileName ?? 'test.pdf',
       processingStatus: 'completed',
-      processingError: null
+      processingError: null,
     });
   });
 

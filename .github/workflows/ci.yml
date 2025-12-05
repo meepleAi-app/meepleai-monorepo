@@ -432,9 +432,60 @@ jobs:
           nohup dotnet run --no-build > api.log 2>&1 &
           echo $! > api.pid
 
+      # Issue #1951: Improved health check with longer timeout, logging, and process validation
       - name: Wait for API Health
+        working-directory: apps/api/src/Api
         run: |
-          timeout 60 bash -c 'until curl -f http://localhost:8080/health; do sleep 2; done'
+          echo "::notice::Waiting for API server to be ready..."
+
+          # Verify API process is running
+          if [ -f api.pid ]; then
+            PID=$(cat api.pid)
+            if ps -p $PID > /dev/null 2>&1; then
+              echo "✓ API process is running (PID: $PID)"
+            else
+              echo "::error::API process not found (PID: $PID)"
+              cat api.log || echo "No logs available"
+              exit 1
+            fi
+          else
+            echo "::error::api.pid file not found"
+            exit 1
+          fi
+
+          # Wait for health endpoint with robust retry logic (120s timeout)
+          MAX_ATTEMPTS=60  # 60 attempts × 2s = 120s total
+          ATTEMPT=1
+
+          while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
+            echo "::debug::Health check attempt $ATTEMPT/$MAX_ATTEMPTS..."
+
+            # Check if API process is still alive
+            if ! ps -p $PID > /dev/null 2>&1; then
+              echo "::error::API process died during startup"
+              cat api.log || echo "No logs available"
+              exit 1
+            fi
+
+            # Try health endpoint
+            if curl -f -s http://localhost:8080/health > /dev/null 2>&1; then
+              echo "::notice::✓ API server is ready after $ATTEMPT attempts ($(($ATTEMPT * 2))s)"
+
+              # Verify health response content
+              HEALTH_RESPONSE=$(curl -s http://localhost:8080/health)
+              echo "::notice::Health response: $HEALTH_RESPONSE"
+              exit 0
+            fi
+
+            ATTEMPT=$((ATTEMPT + 1))
+            sleep 2
+          done
+
+          # Timeout reached
+          echo "::error::API health check timeout after 120s"
+          echo "::error::Last 50 lines of API logs:"
+          tail -50 api.log || echo "No logs available"
+          exit 1
 
       # Run Postman API Tests via Newman
       - name: Run API Smoke Tests
@@ -504,7 +555,25 @@ jobs:
         run: cp .env.test.example .env.test
       - name: Build Next.js for E2E
         run: pnpm build
+
+      # Issue #1951: Start mock API server for SSR (prevents ECONNREFUSED)
+      - name: Start Mock API Server
+        run: |
+          nohup node e2e/mock-api-server.js > mock-api.log 2>&1 &
+          echo $! > mock-api.pid
+
+          # Wait for mock API to be ready
+          for i in {1..10}; do
+            if curl -f -s http://localhost:8081/health > /dev/null 2>&1; then
+              echo "✓ Mock API server ready on port 8081"
+              break
+            fi
+            sleep 1
+          done
+
       - name: Run Playwright Accessibility Tests
+        env:
+          NEXT_PUBLIC_API_BASE: http://localhost:8081
         run: pnpm test:e2e e2e/accessibility.spec.ts
       - name: Upload Playwright Report
         if: failure()
@@ -513,6 +582,15 @@ jobs:
           name: playwright-a11y-report-${{ github.run_number }}
           path: apps/web/playwright-report/
           retention-days: 7
+
+      # Issue #1951: Stop mock API server
+      - name: Stop Mock API Server
+        if: always()
+        run: |
+          if [ -f mock-api.pid ]; then
+            kill $(cat mock-api.pid) || true
+            rm mock-api.pid
+          fi
 
   ci-api-unit-integration:
     needs: changes

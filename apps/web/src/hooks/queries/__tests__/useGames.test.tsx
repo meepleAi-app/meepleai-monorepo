@@ -8,13 +8,7 @@
 
 import type { Mock } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
-import {
-  useGames,
-  useGame,
-  useGameSessions,
-  useGameDocuments,
-  gamesKeys,
-} from '../useGames';
+import { useGames, useGame, useGameSessions, useGameDocuments, gamesKeys } from '../useGames';
 import { createTestQueryClient } from '@/__tests__/utils/query-test-utils';
 import { api } from '@/lib/api';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -63,9 +57,21 @@ describe('useGames hooks', () => {
           pageSize: undefined,
         },
       ]);
-      expect(gamesKeys.detail('770e8400-e29b-41d4-a716-000000000001')).toEqual(['games', 'detail', '770e8400-e29b-41d4-a716-000000000001']);
-      expect(gamesKeys.sessions('770e8400-e29b-41d4-a716-000000000001')).toEqual(['games', 'sessions', '770e8400-e29b-41d4-a716-000000000001']);
-      expect(gamesKeys.documents('770e8400-e29b-41d4-a716-000000000001')).toEqual(['games', 'documents', '770e8400-e29b-41d4-a716-000000000001']);
+      expect(gamesKeys.detail('770e8400-e29b-41d4-a716-000000000001')).toEqual([
+        'games',
+        'detail',
+        '770e8400-e29b-41d4-a716-000000000001',
+      ]);
+      expect(gamesKeys.sessions('770e8400-e29b-41d4-a716-000000000001')).toEqual([
+        'games',
+        'sessions',
+        '770e8400-e29b-41d4-a716-000000000001',
+      ]);
+      expect(gamesKeys.documents('770e8400-e29b-41d4-a716-000000000001')).toEqual([
+        'games',
+        'documents',
+        '770e8400-e29b-41d4-a716-000000000001',
+      ]);
     });
 
     it('generates unique keys for different filters', () => {
@@ -172,10 +178,16 @@ describe('useGames hooks', () => {
 
   describe('useGame', () => {
     it('fetches a single game by ID', async () => {
-      const mockGame = { id: '770e8400-e29b-41d4-a716-000000000001', title: 'Catan', players: '3-4' };
+      const mockGame = {
+        id: '770e8400-e29b-41d4-a716-000000000001',
+        title: 'Catan',
+        players: '3-4',
+      };
       (api.games.getById as Mock).mockResolvedValue(mockGame);
 
-      const { result } = renderHook(() => useGame('770e8400-e29b-41d4-a716-000000000001'), { wrapper });
+      const { result } = renderHook(() => useGame('770e8400-e29b-41d4-a716-000000000001'), {
+        wrapper,
+      });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
@@ -184,7 +196,9 @@ describe('useGames hooks', () => {
     });
 
     it('does not fetch when disabled', () => {
-      const { result } = renderHook(() => useGame('770e8400-e29b-41d4-a716-000000000001', false), { wrapper });
+      const { result } = renderHook(() => useGame('770e8400-e29b-41d4-a716-000000000001', false), {
+        wrapper,
+      });
 
       expect(result.current.isFetching).toBe(false);
       expect(api.games.getById).not.toHaveBeenCalled();
@@ -204,7 +218,9 @@ describe('useGames hooks', () => {
       const error = new Error('Network error');
       (api.games.getById as Mock).mockRejectedValue(error);
 
-      const { result } = renderHook(() => useGame('770e8400-e29b-41d4-a716-000000000001'), { wrapper });
+      const { result } = renderHook(() => useGame('770e8400-e29b-41d4-a716-000000000001'), {
+        wrapper,
+      });
 
       await waitFor(() => expect(result.current.isError).toBe(true));
 
@@ -213,16 +229,26 @@ describe('useGames hooks', () => {
   });
 
   describe('useGameSessions', () => {
-    it('is not implemented yet', async () => {
-      const { result } = renderHook(() => useGameSessions('770e8400-e29b-41d4-a716-000000000001'), { wrapper });
+    // Issue #1951: getSessions is now implemented, mock API properly
+    it('fetches game sessions successfully with empty data', async () => {
+      const mockSessions: any[] = [];
+      (api.games.getSessions as Mock).mockResolvedValue(mockSessions);
 
-      await waitFor(() => expect(result.current.isError).toBe(true));
+      const { result } = renderHook(() => useGameSessions('770e8400-e29b-41d4-a716-000000000001'), {
+        wrapper,
+      });
 
-      expect(result.current.error).toEqual(new Error('Not implemented'));
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+      expect(result.current.data).toEqual([]);
+      expect(api.games.getSessions).toHaveBeenCalledWith('770e8400-e29b-41d4-a716-000000000001');
     });
 
     it('does not fetch when disabled', () => {
-      const { result } = renderHook(() => useGameSessions('770e8400-e29b-41d4-a716-000000000001', false), { wrapper });
+      const { result } = renderHook(
+        () => useGameSessions('770e8400-e29b-41d4-a716-000000000001', false),
+        { wrapper }
+      );
 
       expect(result.current.isFetching).toBe(false);
     });
@@ -231,12 +257,23 @@ describe('useGames hooks', () => {
   describe('useGameDocuments', () => {
     it('fetches documents for a game', async () => {
       const mockDocuments = [
-        { id: '880e8400-e29b-41d4-a716-000000000001', title: 'Rulebook.pdf', gameId: '770e8400-e29b-41d4-a716-000000000001' },
-        { id: '880e8400-e29b-41d4-a716-000000000002', title: 'Reference.pdf', gameId: '770e8400-e29b-41d4-a716-000000000001' },
+        {
+          id: '880e8400-e29b-41d4-a716-000000000001',
+          title: 'Rulebook.pdf',
+          gameId: '770e8400-e29b-41d4-a716-000000000001',
+        },
+        {
+          id: '880e8400-e29b-41d4-a716-000000000002',
+          title: 'Reference.pdf',
+          gameId: '770e8400-e29b-41d4-a716-000000000001',
+        },
       ];
       (api.games.getDocuments as Mock).mockResolvedValue(mockDocuments);
 
-      const { result } = renderHook(() => useGameDocuments('770e8400-e29b-41d4-a716-000000000001'), { wrapper });
+      const { result } = renderHook(
+        () => useGameDocuments('770e8400-e29b-41d4-a716-000000000001'),
+        { wrapper }
+      );
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
@@ -245,7 +282,10 @@ describe('useGames hooks', () => {
     });
 
     it('does not fetch when disabled', () => {
-      const { result } = renderHook(() => useGameDocuments('770e8400-e29b-41d4-a716-000000000001', false), { wrapper });
+      const { result } = renderHook(
+        () => useGameDocuments('770e8400-e29b-41d4-a716-000000000001', false),
+        { wrapper }
+      );
 
       expect(result.current.isFetching).toBe(false);
       expect(api.games.getDocuments).not.toHaveBeenCalled();
@@ -255,7 +295,10 @@ describe('useGames hooks', () => {
       const error = new Error('Failed to fetch documents');
       (api.games.getDocuments as Mock).mockRejectedValue(error);
 
-      const { result } = renderHook(() => useGameDocuments('770e8400-e29b-41d4-a716-000000000001'), { wrapper });
+      const { result } = renderHook(
+        () => useGameDocuments('770e8400-e29b-41d4-a716-000000000001'),
+        { wrapper }
+      );
 
       await waitFor(() => expect(result.current.isError).toBe(true));
 
@@ -265,7 +308,10 @@ describe('useGames hooks', () => {
     it('returns empty array for game with no documents', async () => {
       (api.games.getDocuments as Mock).mockResolvedValue([]);
 
-      const { result } = renderHook(() => useGameDocuments('770e8400-e29b-41d4-a716-000000000001'), { wrapper });
+      const { result } = renderHook(
+        () => useGameDocuments('770e8400-e29b-41d4-a716-000000000001'),
+        { wrapper }
+      );
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 

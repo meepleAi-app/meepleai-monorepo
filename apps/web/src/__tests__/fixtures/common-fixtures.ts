@@ -11,7 +11,10 @@
  * const router = createMockRouter({ query: { gameId: 'demo-chess' } });
  */
 
+import React from 'react';
 import type { NextRouter } from 'next/router';
+import { render, type RenderOptions } from '@testing-library/react';
+import { IntlProvider } from 'react-intl';
 
 // =============================================================================
 // AUTH FIXTURES
@@ -283,7 +286,7 @@ export const createMockRuleAtom = (overrides?: Partial<MockRuleAtom>): MockRuleA
  */
 export const createMockRuleSpec = (overrides?: Partial<MockRuleSpec>): MockRuleSpec => ({
   gameId: overrides?.gameId || 'game-1',
-  version: overrides?.version || '1.0.0',
+  version: overrides?.version || 'v1', // Issue #1951: Changed from '1.0.0' to 'v1' to match test expectations
   createdAt: overrides?.createdAt || new Date().toISOString(),
   rules: overrides?.rules || [
     createMockRuleAtom({ id: 'rule-1', text: 'Default rule 1' }),
@@ -678,4 +681,52 @@ export const validateMockData = <T>(
         `Received: ${JSON.stringify(data, null, 2)}`
     );
   }
+};
+
+// =============================================================================
+// INTERNATIONALIZATION (i18n) FIXTURES
+// =============================================================================
+
+/**
+ * English messages for IntlProvider in tests
+ * Issue #1951: Minimal message set to support OAuthButtons and other i18n components
+ */
+const testMessages = {
+  'auth.oauth.separator': 'Or continue with',
+  'auth.oauth.google': 'Continue with Google',
+  'auth.oauth.discord': 'Continue with Discord',
+  'auth.oauth.github': 'Continue with GitHub',
+};
+
+/**
+ * Renders a component wrapped with IntlProvider for testing i18n components
+ *
+ * Issue #1951: Fix OAuthButtons test failures (34 tests) due to missing IntlProvider
+ *
+ * @param ui - React component to render
+ * @param options - Optional render options (from @testing-library/react)
+ * @param messages - Optional custom messages (defaults to testMessages)
+ * @returns RenderResult with IntlProvider wrapper
+ *
+ * @example
+ * // Test i18n component
+ * import { renderWithIntl } from '../fixtures/common-fixtures';
+ * const { getByText } = renderWithIntl(<OAuthButtons />);
+ * expect(getByText('Or continue with')).toBeInTheDocument();
+ *
+ * @example
+ * // With custom messages
+ * const customMessages = { 'custom.key': 'Custom value' };
+ * renderWithIntl(<Component />, {}, customMessages);
+ */
+export const renderWithIntl = (
+  ui: Parameters<typeof render>[0],
+  options?: Parameters<typeof render>[1],
+  messages: Record<string, string> = testMessages
+) => {
+  // Create wrapper component using createElement to avoid JSX in .ts file
+  const Wrapper = ({ children }: { children: React.ReactNode }) =>
+    React.createElement(IntlProvider, { locale: 'en', messages }, children);
+
+  return render(ui, { ...options, wrapper: Wrapper });
 };

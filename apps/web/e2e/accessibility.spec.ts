@@ -52,6 +52,39 @@ const KNOWN_A11Y_ISSUES = ['color-contrast', 'aria-allowed-attr'];
 const isCI = process.env.CI === 'true';
 
 /**
+ * Issue #1951: Global API mocks to prevent ECONNREFUSED during SSR
+ *
+ * CRITICAL: In CI, webServer starts mock API server on localhost:8081
+ * Next.js SSR will fetch from this mock server (configured via NEXT_PUBLIC_API_BASE)
+ *
+ * These page.route() mocks provide additional client-side interception
+ * for any browser-based API calls (complement mock-api-server.js for SSR)
+ */
+test.beforeEach(async ({ page }) => {
+  // In CI: localhost:8081 (mock-api-server.js)
+  // Locally: localhost:8080 (real API if available, or mocked here)
+  const API_BASE = process.env.CI ? 'http://localhost:8081' : 'http://localhost:8080';
+
+  // Mock games endpoint (client-side fetch + fallback for SSR)
+  await page.route(`${API_BASE}/api/v1/games**`, async route => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([]),
+    });
+  });
+
+  // Mock auth/me endpoint (client-side auth checks)
+  await page.route(`${API_BASE}/api/v1/auth/me`, async route => {
+    await route.fulfill({
+      status: 401,
+      contentType: 'application/json',
+      body: JSON.stringify({ error: 'Unauthorized' }),
+    });
+  });
+});
+
+/**
  * Helper function to test page accessibility (Issue #841 - reduce code duplication)
  *
  * @param page - Playwright page object

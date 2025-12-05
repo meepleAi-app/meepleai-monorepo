@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ErrorBoundary, useErrorHandler } from '../errors/ErrorBoundary';
 
@@ -251,5 +251,205 @@ describe('useErrorHandler', () => {
     );
 
     expect(screen.getByText('Content')).toBeInTheDocument();
+  });
+});
+
+describe('ErrorBoundary - Enhanced Coverage', () => {
+  // Suppress console.error for these tests
+  const originalError = console.error;
+  const mockLogger = { error: vi.fn() };
+
+  beforeAll(() => {
+    console.error = vi.fn();
+    global.fetch = vi.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({}),
+      } as Response)
+    );
+  });
+
+  afterAll(() => {
+    console.error = originalError;
+    delete (global as any).fetch;
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('should log error with correct error and context parameters', () => {
+    const error = new Error('Test error with context');
+    const componentName = 'TestComponent';
+
+    render(
+      <ErrorBoundary componentName={componentName}>
+        <ThrowError error={error} />
+      </ErrorBoundary>
+    );
+
+    expect(screen.getByText('Something went wrong')).toBeInTheDocument();
+  });
+
+  it('should log error with componentStack in errorInfo', () => {
+    const error = new Error('Test error for componentStack');
+    const onError = vi.fn();
+
+    render(
+      <ErrorBoundary onError={onError}>
+        <ThrowError error={error} />
+      </ErrorBoundary>
+    );
+
+    expect(onError).toHaveBeenCalledWith(
+      error,
+      expect.objectContaining({
+        componentStack: expect.stringContaining('ThrowError'),
+      })
+    );
+  });
+
+  it('should handle multiple consecutive errors without breaking', async () => {
+    let shouldThrow = true;
+    const user = userEvent.setup();
+
+    function MultiError() {
+      if (shouldThrow) {
+        throw new Error('First error');
+      }
+      return <div>Content</div>;
+    }
+
+    render(
+      <ErrorBoundary>
+        <MultiError />
+      </ErrorBoundary>
+    );
+
+    expect(screen.getByText('Something went wrong')).toBeInTheDocument();
+
+    // Reset error boundary
+    shouldThrow = false;
+    const tryAgainButton = screen.getByRole('button', { name: /try again/i });
+    await user.click(tryAgainButton);
+
+    expect(screen.getByText('Content')).toBeInTheDocument();
+  });
+
+  it('should handle async errors from useEffect', async () => {
+    function ComponentWithAsyncError() {
+      const { handleError } = useErrorHandler();
+
+      React.useEffect(() => {
+        // Simulate async error
+        setTimeout(() => {
+          handleError(new Error('Async error from useEffect'));
+        }, 0);
+      }, [handleError]);
+
+      return <div>Component content</div>;
+    }
+
+    render(
+      <ErrorBoundary>
+        <ComponentWithAsyncError />
+      </ErrorBoundary>
+    );
+
+    // Wait for async error to propagate
+    await waitFor(() => {
+      expect(screen.getByText('Something went wrong')).toBeInTheDocument();
+    });
+  });
+
+  it('should not catch errors from outside its tree', () => {
+    const error = new Error('Outside error');
+    let shouldThrowOutside = false;
+
+    function OutsideComponent() {
+      if (shouldThrowOutside) {
+        throw error;
+      }
+      return <div>Outside content</div>;
+    }
+
+    function InsideComponent() {
+      return <div>Inside content</div>;
+    }
+
+    const { rerender } = render(
+      <>
+        <OutsideComponent />
+        <ErrorBoundary>
+          <InsideComponent />
+        </ErrorBoundary>
+      </>
+    );
+
+    expect(screen.getByText('Inside content')).toBeInTheDocument();
+    expect(screen.getByText('Outside content')).toBeInTheDocument();
+
+    // Error outside boundary should not be caught
+    shouldThrowOutside = true;
+    expect(() => {
+      rerender(
+        <>
+          <OutsideComponent />
+          <ErrorBoundary>
+            <InsideComponent />
+          </ErrorBoundary>
+        </>
+      );
+    }).toThrow('Outside error');
+  });
+
+  it('should include componentName in error context', () => {
+    const error = new Error('Test error');
+    const componentName = 'MyCustomComponent';
+    const onError = vi.fn();
+
+    render(
+      <ErrorBoundary componentName={componentName} onError={onError}>
+        <ThrowError error={error} />
+      </ErrorBoundary>
+    );
+
+    expect(onError).toHaveBeenCalled();
+    expect(screen.getByText('Something went wrong')).toBeInTheDocument();
+  });
+
+  it('should pass full errorInfo to custom onError handler', () => {
+    const error = new Error('Test error');
+    const onError = vi.fn();
+
+    render(
+      <ErrorBoundary onError={onError}>
+        <ThrowError error={error} />
+      </ErrorBoundary>
+    );
+
+    expect(onError).toHaveBeenCalledWith(
+      error,
+      expect.objectContaining({
+        componentStack: expect.any(String),
+      })
+    );
+
+    const errorInfo = onError.mock.calls[0][1];
+    expect(errorInfo.componentStack).toBeTruthy();
+  });
+
+  it('should handle errors with very long stack traces', () => {
+    const error = new Error('Error with long stack');
+    error.stack = 'Error: Test\n' + '  at Component.tsx:10:15\n'.repeat(100);
+
+    render(
+      <ErrorBoundary showDetails={true}>
+        <ThrowError error={error} />
+      </ErrorBoundary>
+    );
+
+    expect(screen.getByText('Something went wrong')).toBeInTheDocument();
+    expect(screen.getByText('Error Details')).toBeInTheDocument();
   });
 });

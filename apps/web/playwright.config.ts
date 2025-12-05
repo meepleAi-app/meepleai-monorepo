@@ -31,27 +31,53 @@ export default defineConfig<ChromaticConfig>({
   },
 
   projects: [
+    // Desktop - Multi-browser (Chrome, Firefox, Safari)
+    // Issue #1497: Added Firefox and Safari for comprehensive desktop testing
     {
-      name: 'mobile',
+      name: 'desktop-chrome',
       use: {
-        // Use Chromium with mobile viewport (avoids WebKit dependency in CI)
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1920, height: 1080 },
+      },
+    },
+    {
+      name: 'desktop-firefox',
+      use: {
+        ...devices['Desktop Firefox'],
+        viewport: { width: 1920, height: 1080 },
+      },
+    },
+    {
+      name: 'desktop-safari',
+      use: {
+        ...devices['Desktop Safari'],
+        viewport: { width: 1920, height: 1080 },
+      },
+    },
+
+    // Mobile - Chrome + Safari (iOS simulation critical for market coverage)
+    // Issue #1497: Added Safari for iOS browser testing
+    {
+      name: 'mobile-chrome',
+      use: {
         ...devices['Pixel 5'],
         viewport: { width: 390, height: 844 },
       },
     },
     {
-      name: 'tablet',
+      name: 'mobile-safari',
       use: {
-        // Use Chromium with tablet viewport (avoids WebKit dependency in CI)
-        ...devices['Galaxy Tab S4'],
-        viewport: { width: 1024, height: 1366 },
+        ...devices['iPhone 13'],
+        viewport: { width: 390, height: 844 },
       },
     },
+
+    // Tablet - Chrome only (cost optimization, diminishing returns for tablet multi-browser)
     {
-      name: 'desktop',
+      name: 'tablet-chrome',
       use: {
-        ...devices['Desktop Chrome'],
-        viewport: { width: 1920, height: 1080 },
+        ...devices['Galaxy Tab S4'],
+        viewport: { width: 1024, height: 1366 },
       },
     },
   ],

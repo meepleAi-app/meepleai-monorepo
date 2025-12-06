@@ -20,6 +20,7 @@ namespace Api.Tests.Integration.FrontendSdk;
 /// These tests validate that the API returns appropriate error responses
 /// with meaningful error messages for the frontend SDK to display to users.
 /// </summary>
+[Collection(nameof(FrontendSdkTestCollection))]
 [Trait("Category", TestCategories.Integration)]
 public class ErrorHandlingTests : IAsyncLifetime
 {

@@ -19,6 +19,7 @@ namespace Api.Tests.Integration.FrontendSdk;
 /// These tests validate that the API returns appropriate responses
 /// that trigger correct behavior in the frontend SDK's retry logic.
 /// </summary>
+[Collection(nameof(FrontendSdkTestCollection))]
 [Trait("Category", TestCategories.Integration)]
 public class HttpBehaviorTests : IAsyncLifetime
 {

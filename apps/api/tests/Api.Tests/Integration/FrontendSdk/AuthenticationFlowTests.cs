@@ -25,6 +25,7 @@ namespace Api.Tests.Integration.FrontendSdk;
 /// These tests validate that the API returns correct authentication responses
 /// and handles security scenarios properly for the frontend SDK.
 /// </summary>
+[Collection(nameof(FrontendSdkTestCollection))]
 [Trait("Category", TestCategories.Integration)]
 public class AuthenticationFlowTests : IAsyncLifetime
 {

@@ -69,9 +69,8 @@ public static class RuleSpecEndpoints
             var updated = await mediator.Send(command, ct).ConfigureAwait(false);
             logger.LogInformation("RuleSpec updated successfully for game {GameId}, version {Version}", gameId, updated.Version);
 
-            // Convert DTO back to Model for backward compatibility
-            var modelResult = ToModel(updated);
-            return Results.Json(modelResult);
+            // Issue #1676 Phase 2: Return RuleSpecDto directly (no legacy conversion)
+            return Results.Json(updated);
         });
 
         // RULE-02: Get version history
@@ -402,12 +401,5 @@ public static class RuleSpecEndpoints
         return group;
     }
 
-    /// <summary>
-    /// Converts RuleSpecDto to legacy RuleSpec Model for backward compatibility.
-    /// </summary>
-    private static RuleSpec ToModel(RuleSpecDto dto)
-    {
-        var atoms = dto.Atoms.Select(a => new RuleAtom(a.Id, a.Text, a.Section, a.Page, a.Line)).ToList();
-        return new RuleSpec(dto.GameId.ToString(), dto.Version, dto.CreatedAt, atoms);
-    }
+    // Issue #1676 Phase 2: ToModel() helper removed (no longer needed, return RuleSpecDto directly)
 }

@@ -64,6 +64,37 @@ public interface IPdfUploadQuotaService
         UserTier userTier,
         Role userRole,
         CancellationToken ct = default);
+
+    /// <summary>
+    /// Reserves quota for a PDF upload (Two-Phase Commit - Phase 1).
+    /// Creates a temporary reservation that expires if not confirmed within TTL.
+    /// </summary>
+    /// <param name="userId">User ID reserving quota</param>
+    /// <param name="pdfId">PDF document ID for tracking</param>
+    /// <param name="ct">Cancellation token</param>
+    /// <returns>Result indicating if reservation was successful and expiration time</returns>
+    Task<QuotaReservationResult> ReserveQuotaAsync(
+        Guid userId,
+        string pdfId,
+        CancellationToken ct = default);
+
+    /// <summary>
+    /// Confirms a reserved quota after successful PDF processing (Two-Phase Commit - Phase 2).
+    /// Makes the quota consumption permanent and removes the reservation.
+    /// </summary>
+    /// <param name="userId">User ID that reserved quota</param>
+    /// <param name="pdfId">PDF document ID</param>
+    /// <param name="ct">Cancellation token</param>
+    Task ConfirmQuotaAsync(Guid userId, string pdfId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Releases a reserved quota if PDF processing fails (Two-Phase Commit - Rollback).
+    /// Decrements the upload count and removes the reservation.
+    /// </summary>
+    /// <param name="userId">User ID that reserved quota</param>
+    /// <param name="pdfId">PDF document ID</param>
+    /// <param name="ct">Cancellation token</param>
+    Task ReleaseQuotaAsync(Guid userId, string pdfId, CancellationToken ct = default);
 }
 
 /// <summary>
@@ -138,4 +169,34 @@ public record PdfUploadQuotaInfo
     public DateTime DailyResetAt { get; init; }
     public DateTime WeeklyResetAt { get; init; }
     public bool IsUnlimited { get; init; }
+}
+
+/// <summary>
+/// Result of quota reservation operation (Two-Phase Commit Phase 1).
+/// </summary>
+public record QuotaReservationResult
+{
+    public bool Reserved { get; init; }
+    public string? ErrorMessage { get; init; }
+    public DateTime? ExpiresAt { get; init; }
+
+    public static QuotaReservationResult Success(DateTime expiresAt)
+    {
+        return new QuotaReservationResult
+        {
+            Reserved = true,
+            ErrorMessage = null,
+            ExpiresAt = expiresAt
+        };
+    }
+
+    public static QuotaReservationResult Failed(string errorMessage)
+    {
+        return new QuotaReservationResult
+        {
+            Reserved = false,
+            ErrorMessage = errorMessage,
+            ExpiresAt = null
+        };
+    }
 }

@@ -152,6 +152,134 @@ public class PdfUploadQuotaService : IPdfUploadQuotaService
         }
     }
 
+    public async Task<QuotaReservationResult> ReserveQuotaAsync(
+        Guid userId,
+        string pdfId,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            var db = _redis.GetDatabase();
+            var now = _timeProvider.GetUtcNow().UtcDateTime;
+            var expiresAt = now.AddMinutes(30);
+
+            var reservationKey = $"pdf:quota:reservation:{userId}:{pdfId}";
+            var reservationData = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                UserId = userId,
+                PdfId = pdfId,
+                ReservedAt = now,
+                ExpiresAt = expiresAt
+            });
+
+            var ttl = TimeSpan.FromMinutes(30);
+            await db.StringSetAsync(reservationKey, reservationData, ttl).ConfigureAwait(false);
+            await IncrementUploadCountAsync(userId, ct).ConfigureAwait(false);
+
+            _logger.LogInformation(
+                "Quota reserved for user {UserId}, PDF {PdfId}, expires at {ExpiresAt}",
+                userId, pdfId, expiresAt);
+
+            return QuotaReservationResult.Success(expiresAt);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to reserve quota for user {UserId}, PDF {PdfId}", userId, pdfId);
+            return QuotaReservationResult.Failed($"Failed to reserve quota: {ex.Message}");
+        }
+    }
+
+    public async Task ConfirmQuotaAsync(Guid userId, string pdfId, CancellationToken ct = default)
+    {
+        try
+        {
+            var db = _redis.GetDatabase();
+            var reservationKey = $"pdf:quota:reservation:{userId}:{pdfId}";
+
+            var reservationExists = await db.KeyExistsAsync(reservationKey).ConfigureAwait(false);
+            if (!reservationExists)
+            {
+                _logger.LogWarning(
+                    "No reservation found for user {UserId}, PDF {PdfId} - may have expired",
+                    userId, pdfId);
+                return;
+            }
+
+            await db.KeyDeleteAsync(reservationKey).ConfigureAwait(false);
+
+            _logger.LogInformation(
+                "Quota confirmed for user {UserId}, PDF {PdfId}",
+                userId, pdfId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to confirm quota for user {UserId}, PDF {PdfId}", userId, pdfId);
+        }
+    }
+
+    public async Task ReleaseQuotaAsync(Guid userId, string pdfId, CancellationToken ct = default)
+    {
+        try
+        {
+            var db = _redis.GetDatabase();
+            var reservationKey = $"pdf:quota:reservation:{userId}:{pdfId}";
+
+            var reservationExists = await db.KeyExistsAsync(reservationKey).ConfigureAwait(false);
+            if (!reservationExists)
+            {
+                _logger.LogWarning(
+                    "No reservation found for user {UserId}, PDF {PdfId} - may have already expired or been released",
+                    userId, pdfId);
+                return;
+            }
+
+            await DecrementUploadCountAsync(userId, ct).ConfigureAwait(false);
+            await db.KeyDeleteAsync(reservationKey).ConfigureAwait(false);
+
+            _logger.LogInformation(
+                "Quota released for user {UserId}, PDF {PdfId}",
+                userId, pdfId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to release quota for user {UserId}, PDF {PdfId}", userId, pdfId);
+        }
+    }
+
+    private async Task DecrementUploadCountAsync(Guid userId, CancellationToken ct = default)
+    {
+        try
+        {
+            var db = _redis.GetDatabase();
+            var now = _timeProvider.GetUtcNow().UtcDateTime;
+
+            var dailyKey = $"pdf:upload:daily:{userId}:{GetDateKey(now)}";
+            var weeklyKey = $"pdf:upload:weekly:{userId}:{GetWeekKey(now)}";
+
+            var script = @"
+                local key = KEYS[1]
+                local current = redis.call('GET', key)
+                if current and tonumber(current) > 0 then
+                    return redis.call('DECR', key)
+                else
+                    return 0
+                end
+            ";
+
+            var dailyKeys = new RedisKey[] { dailyKey };
+            await db.ScriptEvaluateAsync(script, dailyKeys).ConfigureAwait(false);
+
+            var weeklyKeys = new RedisKey[] { weeklyKey };
+            await db.ScriptEvaluateAsync(script, weeklyKeys).ConfigureAwait(false);
+
+            _logger.LogDebug("Decremented PDF upload count for user {UserId}", userId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to decrement upload count for user {UserId}", userId);
+        }
+    }
+
     public async Task<PdfUploadQuotaInfo> GetQuotaInfoAsync(
         Guid userId,
         UserTier userTier,

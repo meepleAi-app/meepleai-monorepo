@@ -303,15 +303,55 @@ export const CitationInteraction: Story = {
       { id: 'cite-1', label: 'Doc A', page: 5 },
       { id: 'cite-2', label: 'Doc B', page: 12 },
     ],
-    onCitationClick: (citationId: string) => {
-      console.log('Citation clicked:', citationId);
-      alert(`Citation clicked: ${citationId}`);
+    onCitationClick: (documentId: string, pageNumber: number) => {
+      console.log('Citation clicked:', documentId, 'page:', pageNumber);
+      alert(`Citation clicked: ${documentId} (page ${pageNumber})`);
     },
   },
   parameters: {
     docs: {
       description: {
         story: 'Click on citation badges to test the onCitationClick handler.',
+      },
+    },
+  },
+};
+
+/**
+ * Multiple citations to same PDF (Issue #1940 fix verification).
+ * Visual regression test for citation page preservation.
+ *
+ * Tests that each citation badge correctly passes its specific page number,
+ * even when multiple citations reference the same document.
+ *
+ * @see https://github.com/meepleai/monorepo/issues/1940
+ */
+export const MultipleCitationsSameDocument: Story = {
+  args: {
+    role: 'assistant',
+    content:
+      'Le regole del setup sono a pagina 3. Le condizioni di vittoria sono a pagina 7. Il turno di gioco è spiegato a pagina 12. Tutti questi riferimenti sono allo stesso manuale.',
+    confidence: 92,
+    citations: [
+      { id: 'rulebook-pdf', label: 'Manuale', page: 3 },
+      { id: 'rulebook-pdf', label: 'Manuale', page: 7 },
+      { id: 'rulebook-pdf', label: 'Manuale', page: 12 },
+    ],
+    timestamp: FIXED_TIMESTAMP,
+    onCitationClick: (documentId: string, pageNumber: number) => {
+      console.log(`Citation clicked: ${documentId} → page ${pageNumber}`);
+      alert(`Opening ${documentId} at page ${pageNumber}`);
+    },
+  },
+  parameters: {
+    chromatic: {
+      // Disable Chromatic snapshot for interactive test
+      disableSnapshot: false,
+    },
+    docs: {
+      description: {
+        story:
+          'Test for Issue #1940: Verifies that clicking different citations to the same PDF opens the correct page. Each citation badge should pass its specific page number (3, 7, 12) despite having the same document ID.',
       },
     },
   },

@@ -38,7 +38,7 @@ export interface VirtualizedMessageListProps {
   /** Is streaming active */
   isStreaming?: boolean;
   /** Citation click handler */
-  onCitationClick?: (citationId: string) => void;
+  onCitationClick?: (documentId: string, pageNumber: number) => void;
   /** User avatar config */
   userAvatar?: {
     src?: string;
@@ -183,7 +183,7 @@ export function VirtualizedMessageList({
 
 interface MessageRowProps {
   message: MessageType;
-  onCitationClick?: (citationId: string) => void;
+  onCitationClick?: (documentId: string, pageNumber: number) => void;
   userAvatar?: {
     src?: string;
     fallback: string;

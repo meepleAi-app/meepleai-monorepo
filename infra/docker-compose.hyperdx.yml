@@ -12,7 +12,10 @@
 
 services:
   meepleai-hyperdx:
-    image: docker.hyperdx.io/hyperdx/hyperdx-local:2-beta
+    # Issue #1567: Using v1 stable instead of v2-beta due to OpAMP supervisor issues
+    # v2-beta has a bug where the collector supervisor fails to connect to OpAMP server
+    # causing telemetry data to be accepted but not written to ClickHouse
+    image: docker.hyperdx.io/hyperdx/hyperdx-local:latest
     container_name: meepleai-hyperdx
     restart: unless-stopped
 

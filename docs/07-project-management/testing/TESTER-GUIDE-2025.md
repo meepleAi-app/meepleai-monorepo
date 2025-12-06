@@ -171,12 +171,12 @@ pnpm dev
    docker exec -it redis redis-cli PING
    ✅ VERIFICA: Response "PONG"
 
-4. Seq (Logging):
-   curl http://localhost:8081/api
+4. HyperDX (Logging):
+   curl http://localhost:8180/api
    ✅ VERIFICA: HTTP 200
 
-5. Jaeger (Tracing):
-   curl http://localhost:16686
+5. HyperDX (Tracing):
+   curl http://localhost:8180
    ✅ VERIFICA: HTML page loads
 
 6. Prometheus (Metrics):
@@ -365,7 +365,7 @@ PASS: ☐ Games CRUD operations OK
 6. ✅ VERIFICA status progression:
    - "Queued" → "Processing" → "Completed" (30-60s)
 
-7. Apri Seq logs: http://localhost:8081
+7. Apri HyperDX logs: http://localhost:8180
 8. ✅ VERIFICA sequenza log:
    - "Stage 1: Unstructured extraction"
    - Successo OPPURE fallback Stage 2/3
@@ -444,7 +444,7 @@ PASS: ☐ User management CRUD OK
 4. Save
 5. ✅ VERIFICA:
    - Valore aggiornato
-   - Seq log: "Configuration updated"
+   - HyperDX log: "Configuration updated"
 
 6. Test rollback:
    - Click "History"
@@ -510,11 +510,11 @@ PASS: ☐ Settings 4 tabs OK
 ### Test B0.8: Observability Stack
 
 ```
-1. Seq (http://localhost:8081):
+1. HyperDX (http://localhost:8180):
    ✅ Log entries presenti
    ✅ NO errori critici (24h)
 
-2. Jaeger (http://localhost:16686):
+2. HyperDX (http://localhost:8180):
    ✅ Traces presenti
    ✅ Timing info disponibile
 
@@ -561,8 +561,8 @@ PASS: ☐ Build + tests OK
 - ☐ PostgreSQL healthy
 - ☐ Qdrant healthy
 - ☐ Redis healthy
-- ☐ Seq logs collecting
-- ☐ Jaeger traces working
+- ☐ HyperDX logs collecting
+- ☐ HyperDX traces working
 - ☐ Prometheus scraping
 - ☐ Grafana dashboards visible
 - ☐ n8n workflows ready
@@ -599,8 +599,8 @@ PASS: ☐ Build + tests OK
 - ☐ Advanced tab OK
 
 **Observability**:
-- ☐ Seq logs OK
-- ☐ Jaeger tracing OK
+- ☐ HyperDX logs OK
+- ☐ HyperDX tracing OK
 - ☐ Prometheus metrics OK
 - ☐ Grafana dashboards OK
 
@@ -745,7 +745,7 @@ cd ../../../web && pnpm dev
    - Risposta inizia entro 2s
    - Testo appare progressivamente (streaming)
    - NO errori in console browser (F12)
-   - NO errori in Seq (http://localhost:8081)
+   - NO errori in HyperDX (http://localhost:8180)
 
 PASS: ☐ Streaming funziona senza errori
 ```
@@ -756,7 +756,7 @@ PASS: ☐ Streaming funziona senza errori
    "Spiegami tutte le regole di Catan in dettaglio"
 2. DURANTE lo streaming (dopo 2-3s):
    - Chiudi tab browser (simula disconnessione)
-3. Apri Seq: http://localhost:8081
+3. Apri HyperDX: http://localhost:8180
 4. ✅ VERIFICA:
    - Log: "Client disconnected" o "SSE connection closed"
    - NO stack trace di errori non gestiti
@@ -820,7 +820,7 @@ PASS: ☐ Backend failure gestito con retry
 
 **Criteri di Successo Test C0.1**:
 - ✅ 4/4 scenari passano
-- ✅ Zero errori non gestiti in Seq
+- ✅ Zero errori non gestiti in HyperDX
 - ✅ Frontend non crasha in nessuno scenario
 - ✅ Recovery automatico funziona
 
@@ -916,7 +916,7 @@ PASS: ☐ Session security implementata
 - ✅ Rate limiting per-user attivo
 - ✅ Rate limiting IP attivo
 - ✅ Session security funzionante
-- ✅ Seq logs mostrano rate limit enforcement
+- ✅ HyperDX logs mostrano rate limit enforcement
 
 ---
 
@@ -1041,7 +1041,7 @@ PASS: ☐ Web Worker upload non blocca UI
 **Code Quality**:
 - ☐ `dotnet test` → All pass (162+ tests)
 - ☐ `pnpm test` → All pass, coverage ≥90%
-- ☐ Seq logs: Zero errori critici
+- ☐ HyperDX logs: Zero errori critici
 
 **DECISIONE**:
 - ✅ **GO**: 4/4 test critici passati → Procedi a CHECKPOINT 1 (MVP Quality)
@@ -1252,7 +1252,7 @@ dotnet run --no-build --configuration Release
 
 **Verifica Bottlenecks Comuni**:
 ```
-✅ VERIFICA tempi componenti (da Seq logs):
+✅ VERIFICA tempi componenti (da HyperDX logs):
    - PostgreSQL query: <50ms
    - Qdrant vector search: <200ms
    - LLM API call: <1500ms
@@ -1613,7 +1613,7 @@ PASS: ☐ README aggiornato
    ☐ Backend test coverage ≥90%
    ☐ Frontend test coverage ≥90%
    ☐ CI pipeline green
-   ☐ Zero critical bugs in Seq logs
+   ☐ Zero critical bugs in HyperDX logs
 
 ✅ Deployment Readiness
    ☐ Health checks operational
@@ -1648,7 +1648,7 @@ PASS: ☐ README aggiornato
 - ☐ `dotnet test` → All pass (162+ tests)
 - ☐ `pnpm test` → All pass, coverage ≥90%
 - ☐ `pnpm test:e2e` → All critical paths pass
-- ☐ Seq logs: Zero critical errors (48h window)
+- ☐ HyperDX logs: Zero critical errors (48h window)
 
 **DECISIONE FINALE**:
 - ✅ **GO TO PRODUCTION**: Tutti MVP blockers + 80%+ features complete
@@ -1716,7 +1716,7 @@ Date: [Data]
 1. Apri /chat
 2. Invia domanda: "Come si vince a Catan?"
 
-3. Apri Seq: http://localhost:8081
+3. Apri HyperDX: http://localhost:8180
 4. Filtra log: @Message contains "Validation"
 
 ✅ VERIFICA log sequenza:
@@ -1792,7 +1792,7 @@ k6 run load-test-bgai.js
 
      ✓ http_reqs....................: 15000 (50 req/s)
 
-✅ VERIFICA Seq logs (during load test):
+✅ VERIFICA HyperDX logs (during load test):
    - "Parallel validation: GPT-4 + Claude" (simultaneous)
    - "Validation completed in XXms"
    - Tempo validation parallela <500ms (vs >1000ms sequenziale)
@@ -1960,7 +1960,7 @@ PASS: ☐ ADR completi e aggiornati
 
 **Code Quality**:
 - ☐ Integration test suite passing
-- ☐ Seq logs clean (no errors during tests)
+- ☐ HyperDX logs clean (no errors during tests)
 - ☐ Regression suite operational
 
 **DECISIONE**:
@@ -2151,7 +2151,7 @@ PASS: ☐ Alert rules operative
 
 **Post-Deployment (48h monitoring)**:
 - ☐ Sentry: Zero critical errors
-- ☐ Seq: Normal log patterns
+- ☐ HyperDX: Normal log patterns
 - ☐ Grafana: All metrics green
 - ☐ User feedback: No blockers reported
 

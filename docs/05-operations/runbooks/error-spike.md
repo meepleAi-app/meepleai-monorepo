@@ -108,7 +108,7 @@ Dashboard → Exception Type Distribution
 
 **Which users**:
 ```
-Seq: @Level = 'Error' and @Timestamp > DateTimeOffset.Now.AddMinutes(-10)
+HyperDX: level:error AND @timestamp:[now-10m TO now]
 Group by: UserId
 ```
 

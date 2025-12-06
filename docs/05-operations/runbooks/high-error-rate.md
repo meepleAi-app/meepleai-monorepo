@@ -48,7 +48,7 @@ If error rate is < 1/sec:
 **Questions to answer**:
 1. **When did it start?** (check dashboard time range)
 2. **Which endpoints?** (Top 10 Endpoints panel)
-3. **All users or specific users?** (check Seq logs for UserIds)
+3. **All users or specific users?** (check HyperDX logs for UserIds)
 4. **Error types?** (500, 502, 503, 504?)
 
 **Prometheus queries**:
@@ -131,10 +131,10 @@ docker compose logs qdrant --tail 50
 
 ### 5. Analyze Logs (2 minutes)
 
-**Seq - Error logs**:
+**HyperDX - Error logs**:
 ```
-http://localhost:8081
-Filter: @Level = 'Error' and @Timestamp > DateTimeOffset.Now.AddMinutes(-10)
+http://localhost:8180
+Filter: level:error AND @timestamp:[now-10m TO now]
 ```
 
 **Look for**:
@@ -142,11 +142,12 @@ Filter: @Level = 'Error' and @Timestamp > DateTimeOffset.Now.AddMinutes(-10)
 - Stack traces pointing to specific code
 - Error messages indicating root cause
 
-**Seq - By endpoint**:
+**HyperDX - By endpoint**:
 ```
-RequestPath = '<affected_endpoint>' and @Level = 'Error'
-Example: RequestPath = '/api/v1/games' and @Level = 'Error'
-```sql
+http_route:"<affected_endpoint>" AND level:error
+Example: http_route:"/api/v1/games" AND level:error
+```
+
 **Get correlation IDs** from error logs, example:
 ```
 RequestId: 0HN6G8QJ9KL0M:00000001
@@ -154,9 +155,9 @@ RequestId: 0HN6G8QJ9KL0M:00000001
 
 ### 6. Check Traces (1 minute)
 
-**Jaeger**:
+**HyperDX**:
 ```
-http://localhost:16686
+http://localhost:8180
 Service: meepleai-api
 Operation: <affected_endpoint>
 Tags: error=true
@@ -365,7 +366,7 @@ docker service scale meepleai_api=3
 3. **Verify fix**:
    - Check error rate drops in dashboard
    - Test affected endpoint manually
-   - Check Seq logs for no new errors
+   - Check HyperDX logs for no new errors
 
 4. **Update incident channel**:
    - Post resolution: "Fixed by restarting Redis, errors resolved"

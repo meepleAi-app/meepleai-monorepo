@@ -147,7 +147,7 @@ curl -X PUT http://localhost:8080/api/v1/admin/configuration \
 
 **Debug**:
 ```bash
-# Check background task service logs (Seq)
+# Check background task service logs (HyperDX)
 # Search for: "Starting PDF processing for document {PdfId}"
 
 # If no logs found: Background task not registered
@@ -190,7 +190,7 @@ docker compose logs unstructured-service --tail=100 | grep "ERROR"
 # Check SmolDocling logs
 docker compose logs smoldocling-service --tail=100 | grep "ERROR"
 
-# Check API logs (Seq) for timeout errors
+# Check API logs (HyperDX) for timeout errors
 ```
 
 **Solutions**:
@@ -440,7 +440,7 @@ docker compose exec embedding-service ls -la /models
 # Check which stage is used
 curl http://localhost:8080/api/v1/pdfs/{id}/text | jq '.processingStage'
 
-# Check stage timings (Seq logs)
+# Check stage timings (HyperDX logs)
 # Search for: "[RequestId] Stage X (StageName) succeeded in {DurationMs}ms"
 ```
 
@@ -532,8 +532,8 @@ services:
       "Default": "Information"
     }
   },
-  "Seq": {
-    "ServerUrl": "http://localhost:8081",
+  "HyperDX": {
+    "ServerUrl": "http://localhost:8180",
     "ApiKey": ""
   }
 }
@@ -544,9 +544,9 @@ services:
 dotnet run --environment Development
 ```
 
-**View Logs** (Seq):
+**View Logs** (HyperDX):
 ```
-Navigate: http://localhost:8081
+Navigate: http://localhost:8180
 Filter: RequestId = "<guid-from-upload-response>"
 ```
 
@@ -559,7 +559,7 @@ Filter: RequestId = "<guid-from-upload-response>"
 Upload response includes document ID, use it to find logs:
 
 ```
-Seq Query: @RequestId = "<document-id>" OR PdfId = "<document-id>"
+HyperDX Query: @RequestId = "<document-id>" OR PdfId = "<document-id>"
 ```
 
 **Step 2: Analyze Log Timeline**
@@ -582,7 +582,7 @@ Expected log sequence:
 **Step 3: Identify Failure Point**
 
 Look for:
-- `LogError`: Exceptions (red in Seq)
+- `LogError`: Exceptions (red in HyperDX)
 - `LogWarning`: Fallbacks, quality issues (yellow)
 - `LogInformation`: Normal flow (white)
 
@@ -684,7 +684,7 @@ docker compose logs unstructured-service
 # Check configured timeout
 cat appsettings.json | jq '.PdfProcessing.Extractor.TimeoutSeconds'
 
-# Check actual processing time (Seq logs)
+# Check actual processing time (HyperDX logs)
 # Search for: "Stage X succeeded in {DurationMs}ms"
 ```
 
@@ -912,7 +912,7 @@ curl http://localhost:8002/health
 curl http://localhost:6333/healthz
 
 # 3. Recent errors (last 24h)
-# Seq query: @Level = 'Error' AND @Timestamp > Now()-1d
+# HyperDX query: @Level = 'Error' AND @Timestamp > Now()-1d
 
 # 4. Performance metrics
 # Grafana dashboard: PDF Processing Overview

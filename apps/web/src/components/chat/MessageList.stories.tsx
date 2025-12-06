@@ -1,7 +1,63 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { MessageList } from './MessageList';
-import { ChatProvider } from './ChatProvider';
+import { ChatContext, type ChatContextValue } from '@/store/chat/StorybookContext';
 import { fn } from 'storybook/test';
+
+/**
+ * Message List - Scrollable list of chat messages
+ * Issue #1676 Phase 3: Migrated from ChatProvider to ChatContext mock
+ */
+
+// Helper to create mock context
+const createMockContext = (overrides: Partial<ChatContextValue> = {}): ChatContextValue => ({
+  messages: [],
+  activeChatId: null,
+  loading: {
+    games: false,
+    agents: false,
+    chats: false,
+    messages: false,
+    sending: false,
+    creating: false,
+    updating: false,
+    deleting: false,
+  },
+  // Required defaults
+  authUser: null,
+  games: [],
+  selectedGameId: null,
+  agents: [],
+  selectedAgentId: null,
+  selectGame: () => {},
+  selectAgent: () => {},
+  chats: [],
+  createChat: async () => {},
+  deleteChat: async () => {},
+  selectChat: async () => {},
+  sendMessage: async () => {},
+  setMessageFeedback: async () => {},
+  editMessage: async () => {},
+  deleteMessage: async () => {},
+  errorMessage: '',
+  sidebarCollapsed: false,
+  toggleSidebar: () => {},
+  editingMessageId: null,
+  editContent: '',
+  setEditContent: () => {},
+  startEditMessage: () => {},
+  cancelEdit: () => {},
+  saveEdit: async () => {},
+  inputValue: '',
+  setInputValue: () => {},
+  searchMode: 'vector',
+  setSearchMode: () => {},
+  isStreaming: false,
+  streamingAnswer: '',
+  streamingState: 'idle',
+  streamingCitations: [],
+  stopStreaming: () => {},
+  ...overrides,
+});
 
 /**
  * Message List - Scrollable list of chat messages
@@ -99,15 +155,17 @@ export const Default: Story = {
   },
   decorators: [
     Story => (
-      <ChatProvider
-        initialMessages={mockMessages}
-        activeChatId="thread-1"
-        loading={{ chats: false, messages: false, submit: false }}
+      <ChatContext.Provider
+        value={createMockContext({
+          initialMessages: mockMessages,
+          activeChatId: 'thread-1',
+          loading: { chats: false, messages: false, submit: false },
+        })}
       >
         <div className="h-[600px] border border-gray-200 rounded-lg overflow-hidden">
           <Story />
         </div>
-      </ChatProvider>
+      </ChatContext.Provider>
     ),
   ],
 };
@@ -118,11 +176,16 @@ export const Default: Story = {
 export const Loading: Story = {
   decorators: [
     Story => (
-      <ChatProvider initialMessages={[]} loading={{ chats: false, messages: true, submit: false }}>
+      <ChatContext.Provider
+        value={createMockContext({
+          initialMessages: [],
+          loading: { chats: false, messages: true, submit: false },
+        })}
+      >
         <div className="h-[600px] border border-gray-200 rounded-lg overflow-hidden">
           <Story />
         </div>
-      </ChatProvider>
+      </ChatContext.Provider>
     ),
   ],
 };
@@ -133,15 +196,17 @@ export const Loading: Story = {
 export const Empty: Story = {
   decorators: [
     Story => (
-      <ChatProvider
-        initialMessages={[]}
-        activeChatId="thread-1"
-        loading={{ chats: false, messages: false, submit: false }}
+      <ChatContext.Provider
+        value={createMockContext({
+          initialMessages: [],
+          activeChatId: 'thread-1',
+          loading: { chats: false, messages: false, submit: false },
+        })}
       >
         <div className="h-[600px] border border-gray-200 rounded-lg overflow-hidden">
           <Story />
         </div>
-      </ChatProvider>
+      </ChatContext.Provider>
     ),
   ],
 };
@@ -155,18 +220,20 @@ export const Streaming: Story = {
   },
   decorators: [
     Story => (
-      <ChatProvider
-        initialMessages={mockMessages}
-        activeChatId="thread-1"
-        loading={{ chats: false, messages: false, submit: false }}
-        isStreaming={true}
-        streamingAnswer="This is a streaming answer being generated in real-time..."
-        streamingState="Generating response..."
+      <ChatContext.Provider
+        value={createMockContext({
+          initialMessages: mockMessages,
+          activeChatId: 'thread-1',
+          loading: { chats: false, messages: false, submit: false },
+          isStreaming: true,
+          streamingAnswer: 'This is a streaming answer being generated in real-time...',
+          streamingState: 'Generating response...',
+        })}
       >
         <div className="h-[600px] border border-gray-200 rounded-lg overflow-hidden">
           <Story />
         </div>
-      </ChatProvider>
+      </ChatContext.Provider>
     ),
   ],
 };
@@ -193,15 +260,17 @@ export const LongConversation: Story = {
       }));
 
       return (
-        <ChatProvider
-          initialMessages={manyMessages}
-          activeChatId="thread-1"
-          loading={{ chats: false, messages: false, submit: false }}
+        <ChatContext.Provider
+          value={createMockContext({
+            initialMessages: manyMessages,
+            activeChatId: 'thread-1',
+            loading: { chats: false, messages: false, submit: false },
+          })}
         >
           <div className="h-[600px] border border-gray-200 rounded-lg overflow-hidden">
             <Story />
           </div>
-        </ChatProvider>
+        </ChatContext.Provider>
       );
     },
   ],
@@ -216,15 +285,17 @@ export const WithCitations: Story = {
   },
   decorators: [
     Story => (
-      <ChatProvider
-        initialMessages={mockMessages}
-        activeChatId="thread-1"
-        loading={{ chats: false, messages: false, submit: false }}
+      <ChatContext.Provider
+        value={createMockContext({
+          initialMessages: mockMessages,
+          activeChatId: 'thread-1',
+          loading: { chats: false, messages: false, submit: false },
+        })}
       >
         <div className="h-[600px] border border-gray-200 rounded-lg overflow-hidden">
           <Story />
         </div>
-      </ChatProvider>
+      </ChatContext.Provider>
     ),
   ],
 };
@@ -242,15 +313,17 @@ export const Mobile: Story = {
   },
   decorators: [
     Story => (
-      <ChatProvider
-        initialMessages={mockMessages}
-        activeChatId="thread-1"
-        loading={{ chats: false, messages: false, submit: false }}
+      <ChatContext.Provider
+        value={createMockContext({
+          initialMessages: mockMessages,
+          activeChatId: 'thread-1',
+          loading: { chats: false, messages: false, submit: false },
+        })}
       >
         <div className="h-[600px] border border-gray-200 rounded-lg overflow-hidden">
           <Story />
         </div>
-      </ChatProvider>
+      </ChatContext.Provider>
     ),
   ],
 };
@@ -268,15 +341,17 @@ export const Tablet: Story = {
   },
   decorators: [
     Story => (
-      <ChatProvider
-        initialMessages={mockMessages}
-        activeChatId="thread-1"
-        loading={{ chats: false, messages: false, submit: false }}
+      <ChatContext.Provider
+        value={createMockContext({
+          initialMessages: mockMessages,
+          activeChatId: 'thread-1',
+          loading: { chats: false, messages: false, submit: false },
+        })}
       >
         <div className="h-[600px] border border-gray-200 rounded-lg overflow-hidden">
           <Story />
         </div>
-      </ChatProvider>
+      </ChatContext.Provider>
     ),
   ],
 };
@@ -294,15 +369,17 @@ export const Desktop: Story = {
   },
   decorators: [
     Story => (
-      <ChatProvider
-        initialMessages={mockMessages}
-        activeChatId="thread-1"
-        loading={{ chats: false, messages: false, submit: false }}
+      <ChatContext.Provider
+        value={createMockContext({
+          initialMessages: mockMessages,
+          activeChatId: 'thread-1',
+          loading: { chats: false, messages: false, submit: false },
+        })}
       >
         <div className="h-[600px] border border-gray-200 rounded-lg overflow-hidden">
           <Story />
         </div>
-      </ChatProvider>
+      </ChatContext.Provider>
     ),
   ],
 };
@@ -320,15 +397,17 @@ export const DarkTheme: Story = {
   decorators: [
     Story => (
       <div className="dark">
-        <ChatProvider
-          initialMessages={mockMessages}
-          activeChatId="thread-1"
-          loading={{ chats: false, messages: false, submit: false }}
+        <ChatContext.Provider
+          value={createMockContext({
+            initialMessages: mockMessages,
+            activeChatId: 'thread-1',
+            loading: { chats: false, messages: false, submit: false },
+          })}
         >
           <div className="h-[600px] border border-gray-700 rounded-lg overflow-hidden bg-background">
             <Story />
           </div>
-        </ChatProvider>
+        </ChatContext.Provider>
       </div>
     ),
   ],

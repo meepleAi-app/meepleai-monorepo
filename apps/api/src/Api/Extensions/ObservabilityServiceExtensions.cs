@@ -3,7 +3,9 @@ using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Api.Observability;
 using Api.Infrastructure;
+using Api.Infrastructure.Telemetry;
 using Microsoft.OpenApi.Models;
+using System.Diagnostics;
 
 namespace Api.Extensions;
 
@@ -26,17 +28,27 @@ public static class ObservabilityServiceExtensions
         IConfiguration configuration,
         IWebHostEnvironment environment)
     {
-        // OPS-02: OpenTelemetry configuration
-        var otlpEndpoint = configuration["OTEL_EXPORTER_OTLP_ENDPOINT"] ?? "http://jaeger:4318";
-        var serviceName = "MeepleAI.Api";
+        // Issue #1563: HyperDX OpenTelemetry configuration
+        var hyperDxEndpoint = configuration["HYPERDX_OTLP_ENDPOINT"] ?? "http://meepleai-hyperdx:14317";
+        var serviceName = "meepleai-api";
         var serviceVersion = "1.0.0";
+
+        // Determine batch sizes based on environment
+        var isDevelopment = environment.IsDevelopment();
+        var maxQueueSize = isDevelopment ? 512 : 2048;
+        var maxExportBatchSize = isDevelopment ? 128 : 512;
 
         services.AddOpenTelemetry()
             .ConfigureResource(resource => resource
                 .AddService(
                     serviceName: serviceName,
                     serviceVersion: serviceVersion,
-                    serviceInstanceId: Environment.MachineName))
+                    serviceInstanceId: Environment.MachineName)
+                .AddAttributes(new Dictionary<string, object>
+                {
+                    ["deployment.environment"] = environment.EnvironmentName,
+                    ["service.namespace"] = "meepleai"
+                }))
             .WithTracing(tracing => tracing
                 .SetSampler(new AlwaysOnSampler())
                 .AddAspNetCoreInstrumentation(options =>
@@ -53,6 +65,10 @@ public static class ObservabilityServiceExtensions
                 {
                     options.RecordException = true;
                 })
+                .AddEntityFrameworkCoreInstrumentation(options =>
+                {
+                    options.SetDbStatementForText = true;
+                })
                 // Add explicit Activity Sources for tracing (not Meter sources)
                 .AddSource("Microsoft.AspNetCore")  // ASP.NET Core framework traces
                 .AddSource("System.Net.Http")       // HTTP client traces
@@ -62,17 +78,36 @@ public static class ObservabilityServiceExtensions
                 .AddSource(MeepleAiActivitySources.VectorSearchSourceName)
                 .AddSource(MeepleAiActivitySources.PdfProcessingSourceName)
                 .AddSource(MeepleAiActivitySources.CacheSourceName)
+                // Issue #1563: Add sensitive data processor (P1-SEC3)
+                .AddProcessor(new SensitiveDataProcessor())
+                // Issue #1563: HyperDX OTLP Exporter (gRPC)
                 .AddOtlpExporter(options =>
                 {
-                    options.Endpoint = new Uri(otlpEndpoint);
-                    options.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.HttpProtobuf;
+                    options.Endpoint = new Uri(hyperDxEndpoint);
+                    options.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.Grpc;
+                    options.ExportProcessorType = OpenTelemetry.ExportProcessorType.Batch;
+                    options.BatchExportProcessorOptions = new OpenTelemetry.BatchExportProcessorOptions<Activity>
+                    {
+                        MaxQueueSize = maxQueueSize,
+                        ScheduledDelayMilliseconds = 5000,
+                        ExporterTimeoutMilliseconds = 30000,
+                        MaxExportBatchSize = maxExportBatchSize
+                    };
                 }))
             .WithMetrics(metrics => metrics
                 .AddAspNetCoreInstrumentation()
                 .AddHttpClientInstrumentation()
                 .AddRuntimeInstrumentation()
                 .AddMeter(MeepleAiMetrics.MeterName)
-                .AddPrometheusExporter());
+                // Keep Prometheus exporter for Grafana infrastructure metrics
+                .AddPrometheusExporter()
+                // Issue #1563: Add HyperDX OTLP Exporter for metrics
+                // Note: Metrics use PeriodicExportingMetricReader, not BatchProcessor like traces
+                .AddOtlpExporter(options =>
+                {
+                    options.Endpoint = new Uri(hyperDxEndpoint);
+                    options.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.Grpc;
+                }));
 
         return services;
     }

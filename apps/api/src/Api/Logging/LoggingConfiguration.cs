@@ -1,5 +1,6 @@
 using Serilog;
 using Serilog.Events;
+using Serilog.Sinks.OpenTelemetry;
 
 namespace Api.Logging;
 
@@ -24,9 +25,8 @@ public static class LoggingConfiguration
         var aspNetCoreLogLevel = GetLogLevel(configuration, "Logging:LogLevel:Microsoft.AspNetCore", LogEventLevel.Warning);
         var efCoreLogLevel = GetLogLevel(configuration, "Logging:LogLevel:Microsoft.EntityFrameworkCore", LogEventLevel.Warning);
 
-        // Seq configuration
-        var seqUrl = configuration["SEQ_URL"] ?? "http://seq:5341";
-        var seqApiKey = configuration["SEQ_API_KEY"];
+        // Issue #1563: HyperDX OTLP configuration
+        var hyperDxLogsEndpoint = configuration["HYPERDX_LOGS_ENDPOINT"] ?? "http://meepleai-hyperdx:14318/v1/logs";
 
         // Build logger configuration
         var loggerConfig = new LoggerConfiguration()
@@ -37,7 +37,7 @@ public static class LoggingConfiguration
             .Enrich.FromLogContext()
             .Enrich.WithMachineName()
             .Enrich.WithEnvironmentName()
-            .Enrich.WithProperty("Application", "MeepleAI")
+            .Enrich.WithProperty("Application", "meepleai-api")
             .Enrich.WithProperty("Environment", environment.EnvironmentName);
 
         // Add sensitive data redaction (objects + scalar strings)
@@ -60,14 +60,19 @@ public static class LoggingConfiguration
             outputTemplate: consoleTemplate,
             restrictedToMinimumLevel: GetConsoleLogLevel(environment.EnvironmentName));
 
-        // Add Seq sink if configured
-        if (!string.IsNullOrWhiteSpace(seqUrl))
+        // Issue #1563: Add HyperDX OTLP sink (replaces Seq)
+        loggerConfig.WriteTo.OpenTelemetry(options =>
         {
-            loggerConfig.WriteTo.Seq(
-                serverUrl: seqUrl,
-                apiKey: seqApiKey,
-                restrictedToMinimumLevel: GetSeqLogLevel(environment.EnvironmentName, configuration));
-        }
+            options.Endpoint = hyperDxLogsEndpoint;
+            options.Protocol = OtlpProtocol.HttpProtobuf;
+            options.ResourceAttributes = new Dictionary<string, object>
+            {
+                ["service.name"] = "meepleai-api",
+                ["deployment.environment"] = environment.EnvironmentName,
+                ["service.namespace"] = "meepleai"
+            };
+            options.RestrictedToMinimumLevel = GetHyperDxLogLevel(environment.EnvironmentName, configuration);
+        });
 
         return loggerConfig;
     }
@@ -125,20 +130,20 @@ public static class LoggingConfiguration
     }
 
     /// <summary>
-    /// Gets the Seq log level based on environment and configuration.
-    /// All environments should log to Seq, but threshold may vary.
+    /// Gets the HyperDX log level based on environment and configuration.
+    /// Issue #1563: All environments should log to HyperDX, but threshold may vary.
     /// </summary>
-    private static LogEventLevel GetSeqLogLevel(string environmentName, IConfiguration configuration)
+    private static LogEventLevel GetHyperDxLogLevel(string environmentName, IConfiguration configuration)
     {
-        // Check for explicit Seq log level configuration
-        var configuredLevel = configuration["Logging:LogLevel:Seq"];
+        // Check for explicit HyperDX log level configuration
+        var configuredLevel = configuration["Logging:LogLevel:HyperDX"];
         if (!string.IsNullOrWhiteSpace(configuredLevel) &&
             Enum.TryParse<LogEventLevel>(configuredLevel, true, out var level))
         {
             return level;
         }
 
-        // Default: log everything to Seq (centralized aggregation)
+        // Default: log everything to HyperDX (centralized aggregation)
         return LogEventLevel.Debug;
     }
 }

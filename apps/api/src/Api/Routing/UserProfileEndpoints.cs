@@ -252,7 +252,7 @@ public static class UserProfileEndpoints
             // Extract preferences from full profile
             var preferences = new
             {
-                language = userProfile.Language,
+                language = userProfile!.Language,
                 theme = userProfile.Theme,
                 emailNotifications = userProfile.EmailNotifications,
                 dataRetentionDays = userProfile.DataRetentionDays

@@ -60,13 +60,8 @@ public static class AuthenticationEndpoints
             writeUserRoleCookie(context, result.User.Role, result.ExpiresAt);
             logger.LogInformation("User {UserId} registered successfully with role {Role}", result.User.Id, result.User.Role);
 
-            // Map to legacy AuthResponse for backward compatibility
-            var legacyUser = new AuthUser(
-                Id: result.User.Id.ToString(),
-                Email: result.User.Email,
-                DisplayName: result.User.DisplayName,
-                Role: result.User.Role);
-            return Results.Json(new AuthResponse(legacyUser, result.ExpiresAt));
+            // Issue #1676 Phase 2: Return UserDto directly (no legacy conversion)
+            return Results.Json(new { user = result.User, expiresAt = result.ExpiresAt });
         });
 
         // User login with 2FA support (AUTH-07) - DDD CQRS
@@ -121,14 +116,8 @@ public static class AuthenticationEndpoints
             writeUserRoleCookie(context, result.User.Role, expiresAt);
             logger.LogInformation("User {UserId} logged in successfully", result.User.Id);
 
-            // Map to legacy AuthResponse for backward compatibility
-            var legacyUser = new AuthUser(
-                Id: result.User.Id.ToString(),
-                Email: result.User.Email,
-                DisplayName: result.User.DisplayName,
-                Role: result.User.Role);
-
-            return Results.Json(new AuthResponse(legacyUser, expiresAt));
+            // Issue #1676 Phase 2: Return UserDto directly (no legacy conversion)
+            return Results.Json(new { user = result.User, expiresAt });
         });
 
         // User logout - DDD CQRS
@@ -174,16 +163,10 @@ public static class AuthenticationEndpoints
             writeUserRoleCookie(context, result.User.Role, DateTime.UtcNow.AddDays(90));
             logger.LogInformation("User {UserId} validated API key {ApiKeyId} and cookie issued", result.User.Id, result.ApiKeyId);
 
-            // Map to legacy format for backward compatibility
-            var legacyUser = new AuthUser(
-                Id: result.User.Id.ToString(),
-                Email: result.User.Email,
-                DisplayName: result.User.DisplayName,
-                Role: result.User.Role);
-
+            // Issue #1676 Phase 2: Return UserDto directly (no legacy conversion)
             return Results.Json(new
             {
-                user = legacyUser,
+                user = result.User,
                 message = "API key verified. You can keep using the secure cookie or send Authorization: ApiKey <value> on API calls."
             });
         })
@@ -242,14 +225,16 @@ Clients can also store the key securely and send it via the `Authorization: ApiK
                     return Results.Unauthorized();
                 }
 
-                var user = new AuthUser(userId, email, displayName ?? email, role ?? UserRole.User.ToString());
-                return Results.Json(new AuthResponse(user, null)); // API keys don't have session expiration
+                // Issue #1676 Phase 2: Construct UserDto inline (API key auth doesn't have full UserDto)
+                var user = new { id = userId, email, displayName = displayName ?? email, role = role ?? UserRole.User.ToString() };
+                return Results.Json(new { user, expiresAt = (DateTime?)null }); // API keys don't have session expiration
             }
 
             // Fall back to cookie-based session auth
+            // Issue #1676 Phase 2: Return session user directly (ActiveSession.User is already AuthUser for compatibility)
             if (context.Items.TryGetValue(nameof(ActiveSession), out var value) && value is ActiveSession session)
             {
-                return Results.Json(new AuthResponse(session.User, session.ExpiresAt));
+                return Results.Json(new { user = session.User, expiresAt = session.ExpiresAt });
             }
 
             return Results.Unauthorized();

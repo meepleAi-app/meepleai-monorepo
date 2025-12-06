@@ -409,11 +409,8 @@ public static class PdfEndpoints
                 var command = new GenerateRuleSpecFromPdfCommand(pdfId);
                 var ruleSpecDto = await mediator.Send(command, ct).ConfigureAwait(false);
 
-                // Convert DTO to Model for backward compatibility
-                var atoms = ruleSpecDto.Atoms.Select(a => new RuleAtom(a.Id, a.Text, a.Section, a.Page, a.Line)).ToList();
-                var ruleSpec = new RuleSpec(ruleSpecDto.GameId.ToString(), ruleSpecDto.Version, ruleSpecDto.CreatedAt, atoms);
-
-                return Results.Json(ruleSpec);
+                // Issue #1676 Phase 2: Return RuleSpecDto directly (no legacy conversion)
+                return Results.Json(ruleSpecDto);
             }
             catch (InvalidOperationException ex)
             {

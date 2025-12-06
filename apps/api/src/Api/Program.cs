@@ -235,7 +235,9 @@ builder.Services.AddCors(options =>
                 "X-API-Key"
             )
             .AllowAnyMethod()
-            .AllowCredentials();
+            .AllowCredentials()
+            // Issue #1563 (P0-3): Expose trace headers for frontend correlation
+            .WithExposedHeaders("X-Trace-Id", "X-Span-Id");
     });
 });
 

@@ -999,11 +999,8 @@ jobs:
         image: ollama/ollama:latest
         ports:
           - 11434:11434
-        options: >-
-          --health-cmd "curl -f http://localhost:11434/api/tags || exit 1"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+        # Note: No health check - Ollama container doesn't have curl/wget installed
+        # Health is verified in "Wait for Ollama" step instead
     defaults:
       run:
         working-directory: apps/api

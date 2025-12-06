@@ -21,7 +21,7 @@ import { SkeletonLoader } from '../loading/SkeletonLoader';
 
 export interface MessageListProps {
   /** Citation click handler for PDF page jump (BGAI-074) */
-  onCitationClick?: (citationId: string) => void;
+  onCitationClick?: (documentId: string, pageNumber: number) => void;
 }
 
 export function MessageList({ onCitationClick }: MessageListProps) {

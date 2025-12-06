@@ -46,7 +46,7 @@ export interface ChatMessageProps {
   /** Additional CSS classes */
   className?: string;
   /** Citation click handler */
-  onCitationClick?: (citationId: string) => void;
+  onCitationClick?: (documentId: string, pageNumber: number) => void;
 }
 
 // ============================================================================
@@ -86,19 +86,19 @@ function formatTimestamp(timestamp?: string | Date): string {
  */
 interface CitationLinkProps {
   citation: Citation;
-  onClick?: (citationId: string) => void;
+  onClick?: (documentId: string, pageNumber: number) => void;
   className?: string;
 }
 
 const CitationLink = React.memo<CitationLinkProps>(({ citation, onClick, className }) => {
   const handleClick = () => {
-    onClick?.(citation.id);
+    onClick?.(citation.id, citation.page ?? 1);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      onClick?.(citation.id);
+      onClick?.(citation.id, citation.page ?? 1);
     }
   };
 

@@ -5,6 +5,7 @@
  * - User authentication state
  * - Login/logout/register operations
  * - Session management
+ * - HyperDX user identification (Issue #1566)
  *
  * Designed to wrap the entire app in _app.tsx for global auth availability
  */
@@ -20,6 +21,7 @@ import React, {
 } from 'react';
 import { AuthUser } from '@/types';
 import { api } from '@/lib/api';
+import { identifyUser } from '@/lib/hyperdx';
 
 // ============================================================================
 // Types
@@ -86,6 +88,15 @@ export function AuthProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     void loadCurrentUser();
   }, [loadCurrentUser]);
+
+  // Issue #1566: Identify user in HyperDX for session tracking
+  // This connects user sessions to telemetry data for better debugging
+  // Note: Only user ID is sent (GDPR-compliant), not email
+  useEffect(() => {
+    if (user) {
+      identifyUser(user.id);
+    }
+  }, [user]);
 
   const login = useCallback(async (email: string, password: string): Promise<AuthUser> => {
     setLoading(true);

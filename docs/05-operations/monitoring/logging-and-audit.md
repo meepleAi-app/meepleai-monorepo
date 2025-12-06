@@ -35,12 +35,12 @@ cd apps/api/src/Api && dotnet run
 
 **Log Format**: `[HH:mm:ss LEVEL] Message {Properties}`
 
-#### Seq Dashboard (Centralized Logs)
-**URL**: http://localhost:8081 (or configured SEQ_URL)
+#### HyperDX Dashboard (Centralized Logs)
+**URL**: http://localhost:8180 (or configured SEQ_URL)
 
-Seq provides a powerful web interface for searching and analyzing logs:
+HyperDX provides a powerful web interface for searching and analyzing logs:
 
-1. **Open Seq**: Navigate to http://localhost:8081
+1. **Open HyperDX**: Navigate to http://localhost:8180
 2. **Search Logs**: Use the search bar with filters
    - By level: `@Level = 'Error'`
    - By user: `UserId = '...'`
@@ -58,18 +58,18 @@ Seq provides a powerful web interface for searching and analyzing logs:
 
 ### 2. Staging/Production Environment
 
-#### Seq (Centralized Logging)
+#### HyperDX (Centralized Logging)
 **Production URL**: Configured via `SEQ_URL` environment variable
 
 ```bash
-# Check Seq configuration
+# Check HyperDX configuration
 echo $SEQ_URL
 
 # Example: https://logs.meepleai.dev
 ```
 
 **Access Requirements**:
-- Admin credentials for Seq dashboard
+- Admin credentials for HyperDX dashboard
 - API key for programmatic access (if needed)
 
 #### Container Logs (Docker)
@@ -125,13 +125,13 @@ psql -h localhost -U postgres -d meepleai
 # Use CONNECTIONSTRINGS__POSTGRES from environment
 ```
 
-### 4. OpenTelemetry Traces (Jaeger)
+### 4. OpenTelemetry Traces (HyperDX)
 
-**URL**: http://localhost:16686 (or configured OTEL endpoint)
+**URL**: http://localhost:8180 (or configured OTEL endpoint)
 
 **Purpose**: Distributed tracing for request flow analysis
 
-1. **Open Jaeger UI**: Navigate to http://localhost:16686
+1. **Open HyperDX UI**: Navigate to http://localhost:8180
 2. **Select Service**: Choose "MeepleAI.Api"
 3. **Find Traces**: Search by:
    - Operation name (e.g., "POST /api/v1/chat")
@@ -192,7 +192,7 @@ psql -h localhost -U postgres -d meepleai
         │                            │
         ▼                            ▼
 ┌─────────────────┐      ┌────────────────────┐
-│  Console Sink   │      │    Seq Sink        │
+│  Console Sink   │      │    HyperDX Sink        │
 │  (Development)  │      │  (All Envs)        │
 │                 │      │                    │
 │ Format:         │      │ - Structured JSON  │
@@ -209,24 +209,24 @@ psql -h localhost -U postgres -d meepleai
 **Responsibilities**:
 - Environment-based log level configuration
 - Serilog pipeline setup
-- Sink configuration (Console + Seq)
+- Sink configuration (Console + HyperDX)
 
 **Log Levels by Environment**:
 ```csharp
 Development:
   Default: Debug
   Console: Debug
-  Seq: Debug
+  HyperDX: Debug
 
 Staging:
   Default: Information
   Console: Information
-  Seq: Debug
+  HyperDX: Debug
 
 Production:
   Default: Information
   Console: Warning (reduced verbosity)
-  Seq: Debug (full centralized logging)
+  HyperDX: Debug (full centralized logging)
 ```
 
 **Configuration**:
@@ -309,7 +309,7 @@ INFO: Admin deleted all users  // ← Fake log entry!
 [10:30:47 INF] [CorrelationId: 3fa85f64-5717-4562-b3fc-2c963f66afa6] Request completed in 1234ms
 ```
 
-**Seq Query**: `CorrelationId = '3fa85f64-5717-4562-b3fc-2c963f66afa6'`
+**HyperDX Query**: `CorrelationId = '3fa85f64-5717-4562-b3fc-2c963f66afa6'`
 
 ### Structured Logging Standards
 
@@ -658,7 +658,7 @@ LIMIT 30;
 ### Phase 3: Advanced Logging (Q2 2025)
 
 #### 1. Log Sampling (Cost Optimization)
-**Purpose**: Reduce log volume and Seq costs in production
+**Purpose**: Reduce log volume and HyperDX costs in production
 
 **Strategy**:
 - Sample non-error logs at 10% rate (errors always logged)
@@ -668,7 +668,7 @@ LIMIT 30;
 **Expected Savings**: 50-70% reduction in log storage costs
 
 #### 2. Distributed Tracing Improvements
-**Current**: OpenTelemetry → Jaeger (basic tracing)
+**Current**: OpenTelemetry → HyperDX (basic tracing)
 
 **Planned Enhancements**:
 - Custom spans for RAG pipeline stages (retrieval, generation, validation)
@@ -765,7 +765,7 @@ _logger.LogInformation($"User {userId} performed {action}");
 **Why**: Structured logging enables:
 - Automatic sensitive data redaction
 - Log forging prevention
-- Queryable logs in Seq
+- Queryable logs in HyperDX
 - Better performance (less string allocation)
 
 #### 2. Use Appropriate Log Levels
@@ -837,7 +837,7 @@ rate(log_entries_total[5m]) > 1000
 **Alert**: Error rate >5% of total requests
 
 ```
-Seq Query:
+HyperDX Query:
 @Level = 'Error'
 | group by $time span=5m
 | aggregate count()
@@ -859,7 +859,7 @@ HAVING COUNT(*) > 10;
 **Weekly Task**: Ensure all requests have correlation IDs
 
 ```
-Seq Query:
+HyperDX Query:
 @Level = 'Information'
 | where CorrelationId == null
 | group by RequestPath
@@ -883,31 +883,31 @@ WHERE LAG("Id") OVER (ORDER BY "CreatedAt") IS NOT NULL
 
 ## Troubleshooting
 
-### Issue 1: Logs Not Appearing in Seq
+### Issue 1: Logs Not Appearing in HyperDX
 
-**Symptoms**: Console logs work, but Seq dashboard is empty
+**Symptoms**: Console logs work, but HyperDX dashboard is empty
 
 **Diagnosis**:
 ```bash
-# Check Seq container is running
+# Check HyperDX container is running
 docker compose ps seq
 
-# Check Seq logs
+# Check HyperDX logs
 docker compose logs seq
 
-# Test Seq endpoint
+# Test HyperDX endpoint
 curl http://localhost:5341/api/events
 ```
 
 **Solutions**:
-1. **Seq not running**: `docker compose up -d seq`
+1. **HyperDX not running**: `docker compose up -d seq`
 2. **Wrong URL**: Check `SEQ_URL` in `appsettings.json` or env var
-3. **Network issue**: Ensure API container can reach Seq (`docker compose network`)
-4. **Seq API key**: If configured, verify `SEQ_API_KEY` is correct
+3. **Network issue**: Ensure API container can reach HyperDX (`docker compose network`)
+4. **HyperDX API key**: If configured, verify `SEQ_API_KEY` is correct
 
 ### Issue 2: Sensitive Data Exposed in Logs
 
-**Symptoms**: Passwords/API keys visible in Seq or console
+**Symptoms**: Passwords/API keys visible in HyperDX or console
 
 **Diagnosis**:
 ```bash
@@ -933,11 +933,11 @@ private static readonly HashSet<string> SensitivePropertyNames = new()
 
 ### Issue 3: Log Forging Attack Detected
 
-**Symptoms**: Seq shows suspicious log entries with unusual formatting
+**Symptoms**: HyperDX shows suspicious log entries with unusual formatting
 
 **Diagnosis**:
 ```
-Seq Query:
+HyperDX Query:
 @Message like '%\n%' or @Message like '%\r%'
 ```
 
@@ -952,7 +952,7 @@ Seq Query:
 
 **Diagnosis**:
 ```
-Seq Query:
+HyperDX Query:
 CorrelationId == null
 | group by RequestPath
 ```
@@ -981,13 +981,13 @@ psql -h localhost -U postgres -d meepleai -c "SELECT COUNT(*) FROM \"AuditLogs\"
 3. **AuditService not injected**: Check DI registration in `Program.cs`
 4. **Exception swallowed**: Check application logs for error details
 
-### Issue 6: High Seq Storage Usage
+### Issue 6: High HyperDX Storage Usage
 
-**Symptoms**: Seq database consuming excessive disk space
+**Symptoms**: HyperDX database consuming excessive disk space
 
 **Diagnosis**:
 ```bash
-# Check Seq storage
+# Check HyperDX storage
 docker compose exec seq du -sh /data
 
 # Check log retention settings
@@ -995,10 +995,10 @@ curl http://localhost:5341/api/settings
 ```
 
 **Solutions**:
-1. **Configure retention**: Set retention policy in Seq settings (e.g., 30 days)
+1. **Configure retention**: Set retention policy in HyperDX settings (e.g., 30 days)
 2. **Reduce log volume**: Increase minimum log level to `Information` or `Warning`
 3. **Enable sampling**: Implement log sampling for non-error logs (Phase 3)
-4. **Manual cleanup**: Delete old logs via Seq UI (Settings → Retention)
+4. **Manual cleanup**: Delete old logs via HyperDX UI (Settings → Retention)
 
 ---
 
@@ -1006,10 +1006,10 @@ curl http://localhost:5341/api/settings
 
 ### Key Log Locations
 
-| Environment | Console Logs | Seq UI | Jaeger Traces | Metrics |
+| Environment | Console Logs | HyperDX UI | HyperDX Traces | Metrics |
 |-------------|--------------|--------|---------------|---------|
-| **Development** | Terminal output | http://localhost:8081 | http://localhost:16686 | http://localhost:9090/metrics |
-| **Docker** | `docker compose logs api` | http://localhost:8081 | http://localhost:16686 | http://localhost:9090/metrics |
+| **Development** | Terminal output | http://localhost:8180 | http://localhost:8180 | http://localhost:9090/metrics |
+| **Docker** | `docker compose logs api` | http://localhost:8180 | http://localhost:8180 | http://localhost:9090/metrics |
 | **Production** | CloudWatch/Azure Logs | https://logs.meepleai.dev | https://traces.meepleai.dev | https://metrics.meepleai.dev |
 
 ### Key Configuration Files
@@ -1021,7 +1021,7 @@ curl http://localhost:5341/api/settings
 | `apps/api/src/Api/Logging/LogForgingSanitizationPolicy.cs` | Log forging prevention |
 | `apps/api/src/Api/Services/AuditService.cs` | Audit logging implementation |
 | `apps/api/src/Api/Extensions/ObservabilityServiceExtensions.cs` | OpenTelemetry + Health checks |
-| `appsettings.json` | Log levels, Seq URL |
+| `appsettings.json` | Log levels, HyperDX URL |
 
 ### Common Commands
 
@@ -1029,8 +1029,8 @@ curl http://localhost:5341/api/settings
 # View live API logs (Docker)
 docker compose logs -f api
 
-# Search logs in Seq
-# Navigate to http://localhost:8081 and use query syntax:
+# Search logs in HyperDX
+# Navigate to http://localhost:8180 and use query syntax:
 # @Level = 'Error'
 # UserId = 'your-guid'
 # CorrelationId = 'your-correlation-id'
@@ -1039,8 +1039,8 @@ docker compose logs -f api
 psql -h localhost -U postgres -d meepleai -c \
   "SELECT * FROM \"AuditLogs\" ORDER BY \"CreatedAt\" DESC LIMIT 10;"
 
-# Check OpenTelemetry traces (Jaeger)
-# Navigate to http://localhost:16686
+# Check OpenTelemetry traces (HyperDX)
+# Navigate to http://localhost:8180
 # Select service: MeepleAI.Api
 # Search by operation or tags
 
@@ -1061,7 +1061,7 @@ curl http://localhost:9090/metrics
 
 **Emergency Contacts**:
 - On-call: PagerDuty (configured in production)
-- Seq support: https://docs.datalust.co/docs
+- HyperDX support: https://docs.datalust.co/docs
 
 ---
 

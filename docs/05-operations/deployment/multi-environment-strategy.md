@@ -260,7 +260,7 @@ docker compose -f compose.staging.yml --env-file .env.staging up -d
 
 #### 1. **HTTPS Preferito** (ma HTTP tollerato)
 ```bash
-ASPNETCORE_URLS=https://+:8080;http://+:8081
+ASPNETCORE_URLS=https://+:8080;http://+:8180
 SSL Mode=Prefer  # Non Require (per debugging)
 ```
 **Perché**: Simula produzione ma permette debugging

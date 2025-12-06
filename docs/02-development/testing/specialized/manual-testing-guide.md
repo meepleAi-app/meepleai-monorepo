@@ -44,8 +44,8 @@ pnpm dev
 - ✅ Qdrant: porta 6333 (http://localhost:6333/dashboard)
 - ✅ Redis: porta 6379
 - ✅ n8n: porta 5678 (http://localhost:5678)
-- ✅ Seq: porta 8081 (http://localhost:8081)
-- ✅ Jaeger: porta 16686 (http://localhost:16686)
+- ✅ HyperDX: porta 8081 (http://localhost:8180)
+- ✅ HyperDX: porta 16686 (http://localhost:8180)
 - ✅ API Backend: porta 8080 (http://localhost:8080/health)
 - ✅ Frontend Next.js: porta 3000 (http://localhost:3000)
 
@@ -89,7 +89,7 @@ curl http://localhost:8080/health
 - ✅ Session valida per 7 giorni
 
 **Verifica Backend**:
-- Logs in Seq: `User {UserId} registered successfully`
+- Logs in HyperDX: `User {UserId} registered successfully`
 - Database: nuovo record in `users` table
 
 ### 2.2 Login con Credenziali Esistenti
@@ -129,7 +129,7 @@ curl http://localhost:8080/health
 **Risultato Atteso**:
 - ✅ Messaggio: "Reset link sent to your email"
 - ✅ In produzione: email inviata
-- ✅ In dev: token visibile nei logs di Seq
+- ✅ In dev: token visibile nei logs di HyperDX
 
 **Completamento Reset**:
 1. Copia il token dai logs
@@ -327,7 +327,7 @@ curl -X POST http://localhost:8080/api/v1/sessions \
 ```
 
 **Verifica Backend**:
-- Logs in Seq:
+- Logs in HyperDX:
   - `PDF uploaded successfully: {PdfId}`
   - `Stage 1 (Unstructured) extraction completed with quality 0.85`
 - Database:
@@ -1323,9 +1323,9 @@ done
 ### 13.4 Observability
 
 - [ ] Health endpoint funzionante
-- [ ] Logs strutturati in Seq
+- [ ] Logs strutturati in HyperDX
 - [ ] Correlation IDs in tutti i logs
-- [ ] OpenTelemetry traces in Jaeger
+- [ ] OpenTelemetry traces in HyperDX
 - [ ] Metrics Prometheus `/metrics`
 - [ ] Grafana dashboards (opzionale)
 - [ ] Alerting via email/Slack
@@ -1368,7 +1368,7 @@ done
 - **Environment**: Browser, OS, versione
 - **Severity**: Critical / High / Medium / Low
 - **Screenshots**: (se applicabile)
-- **Logs**: (copia da Seq se disponibile)
+- **Logs**: (copia da HyperDX se disponibile)
 
 **Esempio**:
 ```

@@ -694,8 +694,8 @@ mkdir -p docs/05-operations/runbooks
 - HTTP 5xx errors > 1/sec for 5+ minutes
 
 ### Investigation
-1. Check Seq logs: http://localhost:8081
-2. Check Jaeger traces: http://localhost:16686
+1. Check Seq logs: http://localhost:8180
+2. Check Jaeger traces: http://localhost:8180
 3. Verify database connectivity
 4. Check API container logs: `docker logs meepleai-api`
 

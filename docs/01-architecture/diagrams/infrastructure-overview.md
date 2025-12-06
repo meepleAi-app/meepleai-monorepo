@@ -31,8 +31,7 @@ graph TB
     end
 
     subgraph "Observability Layer"
-        Seq[Seq<br/>:8081<br/>Logging]
-        Jaeger[Jaeger<br/>:16686<br/>Tracing]
+        HyperDX[HyperDX<br/>:8180<br/>Logs + Traces + Session Replay]
         Prometheus[Prometheus<br/>:9090<br/>Metrics]
         Grafana[Grafana<br/>:3001<br/>Dashboards]
     end

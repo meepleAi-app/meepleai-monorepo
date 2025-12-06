@@ -95,12 +95,12 @@ pnpm dev
    docker exec -it redis redis-cli PING
    ✅ VERIFICA: Response "PONG"
 
-4. Verifica Seq (logs):
-   curl http://localhost:8081/api
+4. Verifica HyperDX (logs):
+   curl http://localhost:8180/api
    ✅ VERIFICA: HTTP 200
 
-5. Verifica Jaeger (tracing):
-   curl http://localhost:16686
+5. Verifica HyperDX (tracing):
+   curl http://localhost:8180
    ✅ VERIFICA: HTML page loads
 
 6. Verifica Prometheus:
@@ -177,7 +177,7 @@ PASS: ☐ Cookie-based authentication funzionante
 8. ✅ VERIFICA:
    - HTTP 200
    - Response JSON con lista games
-   - Seq logs mostrano richiesta autenticata via API key
+   - HyperDX logs mostrano richiesta autenticata via API key
 
 9. Test API key invalida:
    curl -X GET http://localhost:8080/api/v1/games \
@@ -352,7 +352,7 @@ PASS: ☐ Upload funzionante
    - "Queued" → "Processing" → "Completed"
    - Può richiedere 30-60 secondi
 
-4. Apri Seq logs: http://localhost:8081
+4. Apri HyperDX logs: http://localhost:8180
 5. Cerca log del PDF processing
 6. ✅ VERIFICA sequenza:
    - "Starting PDF processing for [filename]"
@@ -430,7 +430,7 @@ PASS: ☐ Chat streaming funzionante
    - Risposta menziona "punti vittoria" explicitamente
    - Keyword match incluso
 
-5. Apri Seq, cerca log "RRF fusion"
+5. Apri HyperDX, cerca log "RRF fusion"
 6. ✅ VERIFICA log mostra:
    - Vector search results: X documents
    - Keyword search results: Y documents
@@ -558,7 +558,7 @@ PASS: ☐ API Keys management funzionante
 7. ✅ VERIFICA:
    - Valore aggiornato
    - Success message
-   - Seq log: "Configuration updated"
+   - HyperDX log: "Configuration updated"
 
 8. Test rollback:
    - Click "History" su config appena modificata
@@ -696,9 +696,9 @@ PASS: ☐ Advanced tab funzionante
 
 ### Test B0.8: Observability Stack
 
-#### Scenario B0.8.1: Seq Logs
+#### Scenario B0.8.1: HyperDX Logs
 ```
-1. Apri Seq: http://localhost:8081
+1. Apri HyperDX: http://localhost:8180
 2. ✅ VERIFICA:
    - Dashboard carica
    - Log entries presenti
@@ -714,12 +714,12 @@ PASS: ☐ Advanced tab funzionante
    - Log di chat messages presenti (se chat testata)
    - Correlation ID presente
 
-PASS: ☐ Seq logging funzionante
+PASS: ☐ HyperDX logging funzionante
 ```
 
-#### Scenario B0.8.2: Jaeger Tracing
+#### Scenario B0.8.2: HyperDX Tracing
 ```
-1. Apri Jaeger: http://localhost:16686
+1. Apri HyperDX: http://localhost:8180
 2. Service dropdown: Seleziona "meepleai-api"
 3. Click "Find Traces"
 4. ✅ VERIFICA:
@@ -727,7 +727,7 @@ PASS: ☐ Seq logging funzionante
    - Click su trace → Spans dettagliati
    - Timing info presente
 
-PASS: ☐ Jaeger tracing funzionante
+PASS: ☐ HyperDX tracing funzionante
 ```
 
 #### Scenario B0.8.3: Prometheus Metrics
@@ -770,8 +770,8 @@ PASS: ☐ Grafana dashboards funzionanti
 - ☐ Embedding service running
 - ☐ Unstructured API running
 - ☐ SmolDocling running
-- ☐ Seq logs collecting
-- ☐ Jaeger traces collecting
+- ☐ HyperDX logs collecting
+- ☐ HyperDX traces collecting
 - ☐ Prometheus scraping
 - ☐ Alertmanager configured
 - ☐ Grafana dashboards visible
@@ -821,8 +821,8 @@ PASS: ☐ Grafana dashboards funzionanti
 - ☐ Advanced tab OK
 
 **Observability**:
-- ☐ Seq logs OK
-- ☐ Jaeger tracing OK
+- ☐ HyperDX logs OK
+- ☐ HyperDX tracing OK
 - ☐ Prometheus metrics OK
 - ☐ Grafana dashboards OK
 
@@ -960,7 +960,7 @@ pnpm dev
    - Risposta inizia entro 2 secondi
    - Testo appare progressivamente (streaming)
    - No errori in console browser (F12)
-   - No errori in Seq (http://localhost:8081)
+   - No errori in HyperDX (http://localhost:8180)
 
 PASS: ☐ Streaming funziona correttamente
 ```
@@ -971,7 +971,7 @@ PASS: ☐ Streaming funziona correttamente
 2. Invia domanda lunga: "Spiegami tutte le regole di Catan in dettaglio"
 3. DURANTE lo streaming (dopo 2-3 secondi):
    - Chiudi tab del browser (simula disconnessione)
-4. Apri Seq logs: http://localhost:8081
+4. Apri HyperDX logs: http://localhost:8180
 5. ✅ VERIFICA:
    - Log contiene "Client disconnected" o simile
    - NO stack trace di errori non gestiti
@@ -1104,7 +1104,7 @@ PASS: ☐ IP rate limiting funziona
 2. Naviga a /admin/users (richiede auth)
 3. ✅ VERIFICA: Pagina carica
 
-4. Apri Seq: http://localhost:8081
+4. Apri HyperDX: http://localhost:8180
 5. Cerca log: "Session validation"
 6. ✅ VERIFICA: Log mostra session valida
 
@@ -1139,7 +1139,7 @@ PASS: ☐ Session expiration gestita
 - ☐ Test 2.4: Session expiration OK
 
 **Logs & Monitoring**:
-- ☐ Seq logs: Zero errori non gestiti
+- ☐ HyperDX logs: Zero errori non gestiti
 - ☐ Browser console: Zero errori
 - ☐ Performance: P95 latency <5s
 
@@ -1572,7 +1572,7 @@ PASS: ☐ Security audit passed
 
 **Post-Deployment (48h monitoring)**:
 - ☐ Sentry: Zero critical errors
-- ☐ Seq: Normal log patterns
+- ☐ HyperDX: Normal log patterns
 - ☐ Grafana: All metrics green
 - ☐ User reports: No critical issues
 

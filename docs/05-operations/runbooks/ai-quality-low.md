@@ -74,8 +74,8 @@ Access the dashboards and logs:
 # View quality dashboard
 open http://localhost:3001/d/quality-metrics
 
-# Check Seq logs for quality scoring events
-open http://localhost:8081
+# Check HyperDX logs for quality scoring events
+open http://localhost:8180
 # Filter: QualityScores, IsLowQuality=true
 
 # View Prometheus alerts

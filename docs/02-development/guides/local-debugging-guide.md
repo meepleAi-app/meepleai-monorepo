@@ -104,8 +104,8 @@ curl http://localhost:6333/healthz
 # Redis
 docker exec meepleai-redis redis-cli ping
 
-# Seq (Logs)
-curl http://localhost:8081/
+# HyperDX (Logs)
+curl http://localhost:8180/
 ```
 
 ---
@@ -296,7 +296,7 @@ public async Task<TResponse> Handle(
 ```
 
 **Watch SQL in Debug Console**:
-- Check **Seq** (http://localhost:8081) for real-time logs
+- Check **HyperDX** (http://localhost:8180) for real-time logs
 - Use **Debug Console** to inspect `DbContext.ChangeTracker`
 
 ```csharp
@@ -1272,8 +1272,8 @@ _dbContext.ChangeTracker.Entries().Count()
 
 #### Trace HTTP Requests
 
-**Backend** (Seq logs):
-- Open http://localhost:8081
+**Backend** (HyperDX logs):
+- Open http://localhost:8180
 - Filter by request correlation ID
 - View distributed trace
 
@@ -1480,9 +1480,9 @@ process.env.NEXT_PUBLIC_API_BASE
 DEBUG=* pnpm dev
 ```
 
-#### Check Seq Logs
+#### Check HyperDX Logs
 
-1. Open http://localhost:8081
+1. Open http://localhost:8180
 2. Search for correlation ID or error message
 3. View structured logs with request context
 

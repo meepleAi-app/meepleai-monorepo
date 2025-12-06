@@ -23,6 +23,7 @@ namespace Api.Tests.Integration.FrontendSdk;
 ///
 /// These tests validate API behavior in complex real-world scenarios.
 /// </summary>
+[Collection(nameof(FrontendSdkTestCollection))]
 [Trait("Category", TestCategories.Integration)]
 public class EdgeCaseTests : IAsyncLifetime
 {

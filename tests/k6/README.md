@@ -86,6 +86,24 @@ npm run test:spike
 - **Target**: 1000+ concurrent connections
 - **Tests**: Connection stability, message throughput
 
+### 8. HyperDX Load Testing (`hyperdx-ingestion-test.js`)
+- **Purpose**: Comprehensive HyperDX performance validation (Issues #1565, #1568)
+- **Scenarios**: 
+  - Telemetry ingestion (100 users peak)
+  - Business endpoints load (100 users sustained 3 min)
+  - Stress test (1000 logs/sec for 1 min)
+  - Spike test (bulk operations)
+- **Endpoints**: `/api/v1/games`, `/api/v1/chat`, `/api/v1/search` + telemetry endpoints
+- **Performance Targets**:
+  - API response: P95 < 500ms
+  - Log search: P95 < 1s
+  - Trace query: P95 < 500ms
+  - HyperDX resource: < 4GB RAM
+  - ClickHouse storage: < 5GB
+- **Duration**: ~17 minutes total
+- **Run**: `k6 run hyperdx-ingestion-test.js`
+- **Validation**: Follow teardown checklist for manual verification
+
 ## Test Types
 
 ### Smoke Test

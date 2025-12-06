@@ -38,6 +38,14 @@ public static class ObservabilityServiceExtensions
         var maxQueueSize = isDevelopment ? 512 : 2048;
         var maxExportBatchSize = isDevelopment ? 128 : 512;
 
+        // Issue #1567: Add logging for OpenTelemetry debugging
+        services.AddLogging(logging =>
+        {
+            logging.AddConsole();
+            logging.AddFilter("OpenTelemetry", LogLevel.Debug);
+            logging.AddFilter("System.Net.Http", LogLevel.Debug);
+        });
+
         services.AddOpenTelemetry()
             .ConfigureResource(resource => resource
                 .AddService(
@@ -72,6 +80,7 @@ public static class ObservabilityServiceExtensions
                 // Add explicit Activity Sources for tracing (not Meter sources)
                 .AddSource("Microsoft.AspNetCore")  // ASP.NET Core framework traces
                 .AddSource("System.Net.Http")       // HTTP client traces
+                .AddSource("test-telemetry")        // Issue #1567: Manual test spans
                                                     // Add custom MeepleAI Activity Sources for domain-specific tracing
                 .AddSource(MeepleAiActivitySources.ApiSourceName)
                 .AddSource(MeepleAiActivitySources.RagSourceName)
@@ -80,11 +89,20 @@ public static class ObservabilityServiceExtensions
                 .AddSource(MeepleAiActivitySources.CacheSourceName)
                 // Issue #1563: Add sensitive data processor (P1-SEC3)
                 .AddProcessor(new SensitiveDataProcessor())
-                // Issue #1563: HyperDX OTLP Exporter (gRPC)
+                // Issue #1567: HyperDX OTLP Exporter (HTTP instead of gRPC for compatibility)
+                // gRPC in .NET has issues with insecure connections even with AppContext switch
+                // Using HTTP/Protobuf as more reliable alternative for local development
                 .AddOtlpExporter(options =>
                 {
-                    options.Endpoint = new Uri(hyperDxEndpoint);
-                    options.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.Grpc;
+                    // Use HTTP endpoint (4318) instead of gRPC (4317)
+                    // HTTP/Protobuf requires explicit /v1/traces path for traces
+                    var httpEndpoint = hyperDxEndpoint.Replace(":4317", ":4318");
+                    if (!httpEndpoint.EndsWith("/v1/traces"))
+                    {
+                        httpEndpoint = httpEndpoint.TrimEnd('/') + "/v1/traces";
+                    }
+                    options.Endpoint = new Uri(httpEndpoint);
+                    options.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.HttpProtobuf;
                     options.ExportProcessorType = OpenTelemetry.ExportProcessorType.Batch;
                     options.BatchExportProcessorOptions = new OpenTelemetry.BatchExportProcessorOptions<Activity>
                     {
@@ -101,12 +119,18 @@ public static class ObservabilityServiceExtensions
                 .AddMeter(MeepleAiMetrics.MeterName)
                 // Keep Prometheus exporter for Grafana infrastructure metrics
                 .AddPrometheusExporter()
-                // Issue #1563: Add HyperDX OTLP Exporter for metrics
+                // Issue #1567: Add HyperDX OTLP Exporter for metrics (HTTP for compatibility)
                 // Note: Metrics use PeriodicExportingMetricReader, not BatchProcessor like traces
                 .AddOtlpExporter(options =>
                 {
-                    options.Endpoint = new Uri(hyperDxEndpoint);
-                    options.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.Grpc;
+                    // HTTP/Protobuf requires explicit /v1/metrics path for metrics
+                    var httpEndpoint = hyperDxEndpoint.Replace(":4317", ":4318");
+                    if (!httpEndpoint.EndsWith("/v1/metrics"))
+                    {
+                        httpEndpoint = httpEndpoint.TrimEnd('/') + "/v1/metrics";
+                    }
+                    options.Endpoint = new Uri(httpEndpoint);
+                    options.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.HttpProtobuf;
                 }));
 
         return services;

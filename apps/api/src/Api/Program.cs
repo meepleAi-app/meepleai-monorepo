@@ -32,6 +32,11 @@ using System.Net;
 using System.Security.Claims;
 using AspNetIpNetwork = Microsoft.AspNetCore.HttpOverrides.IPNetwork;
 
+// Issue #1567: Enable HTTP/2 for gRPC without TLS (required for OpenTelemetry OTLP exporter)
+// This allows gRPC connections over http:// (insecure) instead of requiring https://
+// Required for local development with HyperDX
+AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
+
 var builder = WebApplication.CreateBuilder(args);
 
 // OPS-04: Configure Serilog with environment-based settings and sensitive data redaction
@@ -355,6 +360,7 @@ v1Api.MapAgentEndpoints();
 
 // Issue #1565: Telemetry test endpoints for HyperDX integration testing
 v1Api.MapTelemetryTestEndpoints();
+v1Api.MapTestTelemetryEndpoints(); // Issue #1567: Manual span test endpoint
 
 app.Run();
 

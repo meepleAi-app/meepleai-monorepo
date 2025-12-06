@@ -96,16 +96,31 @@ jobs:
       - name: Install EF Core tools
         run: dotnet tool install --global dotnet-ef --version 9.0.11
 
+      # Issue #1954: Properly handle database creation with explicit error handling
       - name: Create test database
         run: |
-          PGPASSWORD="${{ secrets.TEST_POSTGRES_PASSWORD || 'postgres' }}" psql -h localhost -U "${{ secrets.TEST_POSTGRES_USER || 'postgres' }}" -c "CREATE DATABASE meepleai_test;" || true
+          echo "🗄️  Creating test database..."
+          PGPASSWORD="${{ secrets.TEST_POSTGRES_PASSWORD || 'postgres' }}" psql -h localhost -U "${{ secrets.TEST_POSTGRES_USER || 'postgres' }}" -d postgres <<-EOSQL
+            SELECT 'CREATE DATABASE meepleai_test'
+            WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'meepleai_test')\gexec
+          EOSQL
+          echo "✅ Database ready"
 
       # Issue #1817: Add database connectivity validation before migrations
+      # Issue #1954: Connect to default 'postgres' database first, then verify meepleai_test exists
       - name: Verify database connectivity
         run: |
           echo "🔍 Testing PostgreSQL connection..."
-          PGPASSWORD="${{ secrets.TEST_POSTGRES_PASSWORD || 'postgres' }}" psql -h localhost -U "${{ secrets.TEST_POSTGRES_USER || 'postgres' }}" -d meepleai_test -c "SELECT version();"
+          PGPASSWORD="${{ secrets.TEST_POSTGRES_PASSWORD || 'postgres' }}" psql -h localhost -U "${{ secrets.TEST_POSTGRES_USER || 'postgres' }}" -d postgres -c "SELECT version();"
           echo "✅ Database connection successful"
+
+          echo "🔍 Verifying test database exists..."
+          DB_EXISTS=$(PGPASSWORD="${{ secrets.TEST_POSTGRES_PASSWORD || 'postgres' }}" psql -h localhost -U "${{ secrets.TEST_POSTGRES_USER || 'postgres' }}" -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='meepleai_test'")
+          if [ "$DB_EXISTS" != "1" ]; then
+            echo "❌ Database meepleai_test does not exist!"
+            exit 1
+          fi
+          echo "✅ Test database verified"
 
       # Issue #1817: Use --connection flag to explicitly pass connection string
       # This prevents EF Core from defaulting to incorrect 'root' user

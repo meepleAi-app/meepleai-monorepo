@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { ChatHistory } from './ChatHistory';
-import { ChatProvider } from './ChatProvider';
+import { ChatContext, type ChatContextValue } from '@/store/chat/StorybookContext';
 import { fn } from 'storybook/test';
 
 /**
@@ -32,11 +32,16 @@ const meta = {
   },
   tags: ['autodocs'],
   decorators: [
-    Story => (
-      <div className="h-[600px] w-[300px] border border-gray-200 rounded-lg overflow-hidden">
-        <Story />
-      </div>
-    ),
+    Story => {
+      const mockContext = createMockContext();
+      return (
+        <ChatContext.Provider value={mockContext}>
+          <div className="h-[600px] w-[300px] border border-gray-200 rounded-lg overflow-hidden">
+            <Story />
+          </div>
+        </ChatContext.Provider>
+      );
+    },
   ],
 } satisfies Meta<typeof ChatHistory>;
 
@@ -84,18 +89,19 @@ const mockThreads = [
  */
 export const Default: Story = {
   decorators: [
-    Story => (
-      <ChatProvider
-        initialChats={mockThreads}
-        activeChatId="thread-1"
-        selectChat={fn()}
-        deleteChat={fn()}
-      >
-        <div className="h-[600px] w-[300px] border border-gray-200 rounded-lg overflow-hidden">
-          <Story />
-        </div>
-      </ChatProvider>
-    ),
+    Story => {
+      const mockContext = createMockContext({
+        chats: mockThreads as any,
+        activeChatId: 'thread-1',
+      });
+      return (
+        <ChatContext.Provider value={mockContext}>
+          <div className="h-[600px] w-[300px] border border-gray-200 rounded-lg overflow-hidden">
+            <Story />
+          </div>
+        </ChatContext.Provider>
+      );
+    },
   ],
 };
 
@@ -104,13 +110,18 @@ export const Default: Story = {
  */
 export const Loading: Story = {
   decorators: [
-    Story => (
-      <ChatProvider initialChats={[]} loading={{ chats: true, messages: false, submit: false }}>
-        <div className="h-[600px] w-[300px] border border-gray-200 rounded-lg overflow-hidden">
-          <Story />
-        </div>
-      </ChatProvider>
-    ),
+    Story => {
+      const mockContext = createMockContext({
+        loading: { ...createMockContext().loading, chats: true },
+      });
+      return (
+        <ChatContext.Provider value={mockContext}>
+          <div className="h-[600px] w-[300px] border border-gray-200 rounded-lg overflow-hidden">
+            <Story />
+          </div>
+        </ChatContext.Provider>
+      );
+    },
   ],
 };
 
@@ -119,13 +130,16 @@ export const Loading: Story = {
  */
 export const Empty: Story = {
   decorators: [
-    Story => (
-      <ChatProvider initialChats={[]} loading={{ chats: false, messages: false, submit: false }}>
-        <div className="h-[600px] w-[300px] border border-gray-200 rounded-lg overflow-hidden">
-          <Story />
-        </div>
-      </ChatProvider>
-    ),
+    Story => {
+      const mockContext = createMockContext({ chats: [] });
+      return (
+        <ChatContext.Provider value={mockContext}>
+          <div className="h-[600px] w-[300px] border border-gray-200 rounded-lg overflow-hidden">
+            <Story />
+          </div>
+        </ChatContext.Provider>
+      );
+    },
   ],
 };
 
@@ -134,18 +148,20 @@ export const Empty: Story = {
  */
 export const OnlyActive: Story = {
   decorators: [
-    Story => (
-      <ChatProvider
-        initialChats={mockThreads.filter(t => t.status === 'Active')}
-        activeChatId="thread-1"
-        selectChat={fn()}
-        deleteChat={fn()}
-      >
-        <div className="h-[600px] w-[300px] border border-gray-200 rounded-lg overflow-hidden">
-          <Story />
-        </div>
-      </ChatProvider>
-    ),
+    Story => {
+      const activeThreads = mockThreads.filter(t => t.status === 'Active');
+      const mockContext = createMockContext({
+        chats: activeThreads as any,
+        activeChatId: 'thread-1',
+      });
+      return (
+        <ChatContext.Provider value={mockContext}>
+          <div className="h-[600px] w-[300px] border border-gray-200 rounded-lg overflow-hidden">
+            <Story />
+          </div>
+        </ChatContext.Provider>
+      );
+    },
   ],
 };
 
@@ -154,18 +170,19 @@ export const OnlyActive: Story = {
  */
 export const SelectedThread: Story = {
   decorators: [
-    Story => (
-      <ChatProvider
-        initialChats={mockThreads}
-        activeChatId="thread-2"
-        selectChat={fn()}
-        deleteChat={fn()}
-      >
-        <div className="h-[600px] w-[300px] border border-gray-200 rounded-lg overflow-hidden">
-          <Story />
-        </div>
-      </ChatProvider>
-    ),
+    Story => {
+      const mockContext = createMockContext({
+        chats: mockThreads as any,
+        activeChatId: 'thread-2',
+      });
+      return (
+        <ChatContext.Provider value={mockContext}>
+          <div className="h-[600px] w-[300px] border border-gray-200 rounded-lg overflow-hidden">
+            <Story />
+          </div>
+        </ChatContext.Provider>
+      );
+    },
   ],
 };
 
@@ -184,17 +201,16 @@ export const LongList: Story = {
         updatedAt: new Date(2025, 11, 5 - i).toISOString(),
       }));
 
+      const mockContext = createMockContext({
+        chats: manyThreads as any,
+        activeChatId: 'thread-1',
+      });
       return (
-        <ChatProvider
-          initialChats={manyThreads}
-          activeChatId="thread-1"
-          selectChat={fn()}
-          deleteChat={fn()}
-        >
+        <ChatContext.Provider value={mockContext}>
           <div className="h-[600px] w-[300px] border border-gray-200 rounded-lg overflow-hidden">
             <Story />
           </div>
-        </ChatProvider>
+        </ChatContext.Provider>
       );
     },
   ],
@@ -209,18 +225,19 @@ export const Mobile: Story = {
     chromatic: { viewports: [375] },
   },
   decorators: [
-    Story => (
-      <ChatProvider
-        initialChats={mockThreads}
-        activeChatId="thread-1"
-        selectChat={fn()}
-        deleteChat={fn()}
-      >
-        <div className="h-[600px] w-full border border-gray-200 rounded-lg overflow-hidden">
-          <Story />
-        </div>
-      </ChatProvider>
-    ),
+    Story => {
+      const mockContext = createMockContext({
+        chats: mockThreads as any,
+        activeChatId: 'thread-1',
+      });
+      return (
+        <ChatContext.Provider value={mockContext}>
+          <div className="h-[600px] w-full border border-gray-200 rounded-lg overflow-hidden">
+            <Story />
+          </div>
+        </ChatContext.Provider>
+      );
+    },
   ],
 };
 
@@ -233,18 +250,19 @@ export const Tablet: Story = {
     chromatic: { viewports: [768] },
   },
   decorators: [
-    Story => (
-      <ChatProvider
-        initialChats={mockThreads}
-        activeChatId="thread-1"
-        selectChat={fn()}
-        deleteChat={fn()}
-      >
-        <div className="h-[600px] w-[300px] border border-gray-200 rounded-lg overflow-hidden">
-          <Story />
-        </div>
-      </ChatProvider>
-    ),
+    Story => {
+      const mockContext = createMockContext({
+        chats: mockThreads as any,
+        activeChatId: 'thread-1',
+      });
+      return (
+        <ChatContext.Provider value={mockContext}>
+          <div className="h-[600px] w-[300px] border border-gray-200 rounded-lg overflow-hidden">
+            <Story />
+          </div>
+        </ChatContext.Provider>
+      );
+    },
   ],
 };
 
@@ -257,18 +275,19 @@ export const Desktop: Story = {
     chromatic: { viewports: [1024] },
   },
   decorators: [
-    Story => (
-      <ChatProvider
-        initialChats={mockThreads}
-        activeChatId="thread-1"
-        selectChat={fn()}
-        deleteChat={fn()}
-      >
-        <div className="h-[600px] w-[300px] border border-gray-200 rounded-lg overflow-hidden">
-          <Story />
-        </div>
-      </ChatProvider>
-    ),
+    Story => {
+      const mockContext = createMockContext({
+        chats: mockThreads as any,
+        activeChatId: 'thread-1',
+      });
+      return (
+        <ChatContext.Provider value={mockContext}>
+          <div className="h-[600px] w-[300px] border border-gray-200 rounded-lg overflow-hidden">
+            <Story />
+          </div>
+        </ChatContext.Provider>
+      );
+    },
   ],
 };
 
@@ -280,19 +299,20 @@ export const DarkTheme: Story = {
     backgrounds: { default: 'dark' },
   },
   decorators: [
-    Story => (
-      <div className="dark">
-        <ChatProvider
-          initialChats={mockThreads}
-          activeChatId="thread-1"
-          selectChat={fn()}
-          deleteChat={fn()}
-        >
-          <div className="h-[600px] w-[300px] border border-gray-700 rounded-lg overflow-hidden bg-background">
-            <Story />
-          </div>
-        </ChatProvider>
-      </div>
-    ),
+    Story => {
+      const mockContext = createMockContext({
+        chats: mockThreads as any,
+        activeChatId: 'thread-1',
+      });
+      return (
+        <div className="dark">
+          <ChatContext.Provider value={mockContext}>
+            <div className="h-[600px] w-[300px] border border-gray-700 rounded-lg overflow-hidden bg-background">
+              <Story />
+            </div>
+          </ChatContext.Provider>
+        </div>
+      );
+    },
   ],
 };

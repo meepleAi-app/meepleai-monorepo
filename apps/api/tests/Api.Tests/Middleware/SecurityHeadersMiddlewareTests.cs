@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Middleware;
 
@@ -13,6 +14,7 @@ namespace Api.Tests.Middleware;
 /// Tests for SecurityHeadersMiddleware (Issue #1447).
 /// Validates that all 7 security headers are correctly added to responses.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class SecurityHeadersMiddlewareTests
 {
     private readonly Mock<ILogger<SecurityHeadersMiddleware>> _loggerMock;

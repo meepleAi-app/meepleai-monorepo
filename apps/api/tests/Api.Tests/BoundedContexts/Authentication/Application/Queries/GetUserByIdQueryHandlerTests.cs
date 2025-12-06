@@ -4,6 +4,7 @@ using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Application.Queries;
 
@@ -11,6 +12,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Application.Queries;
 /// Comprehensive tests for GetUserByIdQueryHandler.
 /// Tests user retrieval by ID and DTO mapping.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class GetUserByIdQueryHandlerTests
 {
     private readonly Mock<IUserRepository> _userRepositoryMock;
@@ -233,4 +235,3 @@ public class GetUserByIdQueryHandlerTests
         );
     }
 }
-

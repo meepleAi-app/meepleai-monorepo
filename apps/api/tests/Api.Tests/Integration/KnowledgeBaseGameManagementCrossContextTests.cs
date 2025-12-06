@@ -18,6 +18,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Integration;
 
@@ -25,7 +26,7 @@ namespace Api.Tests.Integration;
 /// Cross-context integration tests: KnowledgeBase ↔ GameManagement.
 /// Tests game-specific chat threads and contextual Q&A during gameplay.
 /// </summary>
-[Collection("KBGame")]
+[Trait("Category", TestCategories.Integration)]
 public sealed class KnowledgeBaseGameManagementCrossContextTests : IAsyncLifetime
 {
     private IContainer? _postgresContainer;
@@ -389,4 +390,3 @@ public sealed class KnowledgeBaseGameManagementCrossContextTests : IAsyncLifetim
         }
     }
 }
-

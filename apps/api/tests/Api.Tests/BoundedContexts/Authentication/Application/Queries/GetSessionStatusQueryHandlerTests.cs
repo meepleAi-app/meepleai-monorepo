@@ -10,12 +10,14 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Application.Queries;
 
 /// <summary>
 /// Tests for GetSessionStatusQueryHandler focusing on authorization.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class GetSessionStatusQueryHandlerTests : IDisposable
 {
     private readonly MeepleAiDbContext _dbContext;
@@ -180,4 +182,3 @@ public class GetSessionStatusQueryHandlerTests : IDisposable
         GC.SuppressFinalize(this);
     }
 }
-

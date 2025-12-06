@@ -7,6 +7,7 @@ using Api.Tests.BoundedContexts.Authentication.TestHelpers;
 using Api.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Infrastructure.Persistence;
 
@@ -14,6 +15,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Infrastructure.Persistence;
 /// Integration tests for SessionRepository using Testcontainers with real PostgreSQL.
 /// Tests session lifecycle, expiration queries, and token-based lookups.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
 {
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;

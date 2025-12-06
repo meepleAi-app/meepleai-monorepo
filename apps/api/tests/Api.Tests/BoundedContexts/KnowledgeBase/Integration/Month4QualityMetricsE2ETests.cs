@@ -41,13 +41,12 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Integration;
 ///
 /// Infrastructure: Postgres (for data), mocked LLM (no OpenRouter dependency)
 /// </remarks>
-[Collection("Month4QualityMetricsE2E")]
 [Trait("Category", "Integration")]
 [Trait("Dependency", "Testcontainers")]
 [Trait("BoundedContext", "KnowledgeBase")]
 [Trait("Issue", "995")]
 [Trait("Month", "4")]
-public class Month4QualityMetricsE2ETests : IAsyncLifetime
+public sealed class Month4QualityMetricsE2ETests : IAsyncLifetime
 {
     private IContainer? _postgresContainer;
     private MeepleAiDbContext? _dbContext;

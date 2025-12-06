@@ -1,5 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services;
 
@@ -7,6 +8,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services;
 /// Unit tests for CosineSimilarityCalculator
 /// ISSUE-975: BGAI-033 - Consensus similarity calculation using cosine ≥0.90
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class CosineSimilarityCalculatorTests
 {
     private readonly CosineSimilarityCalculator _calculator;

@@ -1,6 +1,7 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.Services.Pdf;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Domain.Services;
 
@@ -8,6 +9,7 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Domain.Services;
 /// Domain service tests for TableToAtomicRuleConverter
 /// Tests pure business logic without infrastructure dependencies
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class TableToAtomicRuleConverterTests
 {
     private readonly TableToAtomicRuleConverter _converter;
@@ -422,4 +424,3 @@ public class TableToAtomicRuleConverterTests
         Assert.Contains("&", rules[1]); // Special characters preserved
     }
 }
-

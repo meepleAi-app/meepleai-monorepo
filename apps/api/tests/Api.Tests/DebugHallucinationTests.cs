@@ -2,12 +2,14 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services;
 
 /// <summary>
 /// Debug tests for hallucination detection issues
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class DebugHallucinationTests
 {
     private readonly HallucinationDetectionService _service;

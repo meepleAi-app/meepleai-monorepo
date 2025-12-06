@@ -37,7 +37,6 @@ namespace Api.Tests.Integration.Authentication;
 ///
 /// Pattern: Testcontainers (PostgreSQL), AAA Testing, Security-First Design
 /// </remarks>
-[Collection("TwoFactorSecurity")]
 [Trait("Category", "Security")]
 [Trait("Category", "Integration")]
 [Trait("Dependency", "PostgreSQL")]
@@ -54,6 +53,7 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
     private IUnitOfWork? _unitOfWork;
     private Mock<IAlertingService>? _mockAlertingService; // ISSUE-1674: Store for alert verification
     private readonly Action<string> _output;
+    private readonly string _redisKeyPrefix = $"test:{Guid.NewGuid()}:";
 
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 

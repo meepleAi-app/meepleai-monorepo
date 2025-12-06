@@ -31,7 +31,6 @@ namespace Api.Tests.Integration;
 ///
 /// Dependencies: BGAI-020, BGAI-021
 /// </remarks>
-[Collection("LlmRouting")]
 [Trait("Category", "Integration")]
 public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
 {
@@ -636,4 +635,3 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
             role);
     }
 }
-

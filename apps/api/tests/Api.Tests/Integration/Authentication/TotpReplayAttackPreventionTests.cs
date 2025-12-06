@@ -36,20 +36,20 @@ namespace Api.Tests.Integration.Authentication;
 ///
 /// Pattern: AAA (Arrange-Act-Assert), Testcontainers for PostgreSQL
 /// </remarks>
-[Collection("TotpReplayAttackPrevention")]
 [Trait("Category", "Integration")]
 [Trait("Category", "Security")]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "Authentication")]
 [Trait("Issue", "1787")]
 [Trait("OWASP", "ASVS-2.8.3")]
-public class TotpReplayAttackPreventionTests : IAsyncLifetime
+public sealed class TotpReplayAttackPreventionTests : IAsyncLifetime
 {
     private IContainer? _postgresContainer;
     private MeepleAiDbContext? _dbContext;
     private IServiceProvider? _serviceProvider;
     private ITotpService? _totpService;
     private readonly Action<string> _output;
+    private readonly string _redisKeyPrefix = $"test:{Guid.NewGuid()}:";
 
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 

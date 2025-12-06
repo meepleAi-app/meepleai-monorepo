@@ -2,6 +2,7 @@ using Api.BoundedContexts.Authentication.Application.Commands.PasswordReset;
 using Api.BoundedContexts.Authentication.Application.Validators;
 using FluentValidation.TestHelper;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Application.Validators;
 
@@ -9,6 +10,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Application.Validators;
 /// Unit tests for ResetPasswordCommandValidator.
 /// Issue #1449: FluentValidation for Authentication CQRS pipeline
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public sealed class ResetPasswordCommandValidatorTests
 {
     private readonly ResetPasswordCommandValidator _validator = new();
@@ -254,4 +256,3 @@ public sealed class ResetPasswordCommandValidatorTests
         result.ShouldHaveValidationErrorFor(x => x.NewPassword);
     }
 }
-

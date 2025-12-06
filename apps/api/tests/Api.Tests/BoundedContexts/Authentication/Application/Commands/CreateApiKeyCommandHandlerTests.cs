@@ -5,6 +5,7 @@ using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Application.Commands;
 
@@ -12,6 +13,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Application.Commands;
 /// Comprehensive tests for CreateApiKeyCommandHandler.
 /// Tests API key creation, validation, security requirements, and business rules.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class CreateApiKeyCommandHandlerTests
 {
     private readonly Mock<IApiKeyRepository> _apiKeyRepositoryMock;
@@ -453,4 +455,3 @@ public class CreateApiKeyCommandHandlerTests
         }
     }
 }
-

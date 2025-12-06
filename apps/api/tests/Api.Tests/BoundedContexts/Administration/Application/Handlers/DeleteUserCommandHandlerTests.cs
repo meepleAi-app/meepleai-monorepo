@@ -7,6 +7,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.BoundedContexts.Authentication.TestHelpers;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 
@@ -14,6 +15,7 @@ namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 /// Comprehensive tests for DeleteUserCommandHandler.
 /// Tests user deletion with business rules: no self-deletion, preserve last admin.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class DeleteUserCommandHandlerTests
 {
     private readonly Mock<IUserRepository> _userRepositoryMock;
@@ -331,4 +333,3 @@ public class DeleteUserCommandHandlerTests
             Times.Once);
     }
 }
-

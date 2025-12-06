@@ -2,6 +2,7 @@ using Api.BoundedContexts.Authentication.Application.Commands;
 using Api.BoundedContexts.Authentication.Application.Validators;
 using FluentValidation.TestHelper;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Application.Validators;
 
@@ -9,6 +10,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Application.Validators;
 /// Unit tests for ChangePasswordCommandValidator.
 /// Issue #1449: FluentValidation for Authentication CQRS pipeline
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public sealed class ChangePasswordCommandValidatorTests
 {
     private readonly ChangePasswordCommandValidator _validator = new();
@@ -285,4 +287,3 @@ public sealed class ChangePasswordCommandValidatorTests
         result.ShouldHaveValidationErrorFor(x => x.NewPassword);
     }
 }
-

@@ -2,12 +2,14 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Chunking;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using FluentAssertions;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services;
 
 /// <summary>
 /// Unit tests for ChunkingStrategySelector domain service.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class ChunkingStrategySelectorTests
 {
     private readonly ChunkingStrategySelector _selector = new();

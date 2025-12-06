@@ -2,6 +2,7 @@ using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.Tests.BoundedContexts.Authentication.TestHelpers;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Domain.Entities;
 
@@ -9,6 +10,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Domain.Entities;
 /// Comprehensive domain tests for ApiKey entity.
 /// Tests key generation, verification, scopes, expiration, revocation, and security.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class ApiKeyEntityTests
 {
     [Fact]
@@ -630,4 +632,3 @@ public class ApiKeyEntityTests
         Assert.True(apiKey.HasScope("admin"));
     }
 }
-

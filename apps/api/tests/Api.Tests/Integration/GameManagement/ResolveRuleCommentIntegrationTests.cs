@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Integration.GameManagement;
 
@@ -31,7 +32,7 @@ namespace Api.Tests.Integration.GameManagement;
 /// Coverage Target: ≥90% for ResolveRuleCommentCommandHandler
 /// Execution Time Target: <60s
 /// </summary>
-[Collection("ResolveRuleCommentIntegration")]
+[Trait("Category", TestCategories.Integration)]
 public sealed class ResolveRuleCommentIntegrationTests : IAsyncLifetime
 {
     private IContainer? _postgresContainer;
@@ -437,4 +438,3 @@ public sealed class ResolveRuleCommentIntegrationTests : IAsyncLifetime
             .WithMessage("*not found*");
     }
 }
-

@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using StackExchange.Redis;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Infrastructure;
 
@@ -14,6 +15,7 @@ namespace Api.Tests.Infrastructure;
 /// Unit tests for RedisBackgroundTaskOrchestrator.
 /// Tests background task scheduling, execution, cancellation, and distributed locking.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class RedisBackgroundTaskOrchestratorTests
 {
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;

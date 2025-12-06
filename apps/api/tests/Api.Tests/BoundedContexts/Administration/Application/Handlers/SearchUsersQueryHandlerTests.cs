@@ -8,6 +8,7 @@ using Api.Tests.TestHelpers;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 
@@ -15,6 +16,7 @@ namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 /// Comprehensive tests for SearchUsersQueryHandler.
 /// Tests user search for autocomplete scenarios with minimum query length validation.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class SearchUsersQueryHandlerTests
 {
     private readonly Mock<IUserRepository> _userRepositoryMock;
@@ -314,4 +316,3 @@ public class SearchUsersQueryHandlerTests
             Times.Once);
     }
 }
-

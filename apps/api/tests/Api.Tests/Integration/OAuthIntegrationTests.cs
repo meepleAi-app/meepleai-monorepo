@@ -36,10 +36,8 @@ namespace Api.Tests.Integration;
 ///
 /// Pattern: AAA (Arrange-Act-Assert), Testcontainers for PostgreSQL, transaction rollback between tests
 /// </remarks>
-[Collection("OAuth")]
 [Trait("Category", "Integration")]
 [Trait("Dependency", "PostgreSQL")]
-[Trait("BoundedContext", "Authentication")]
 public class OAuthIntegrationTests : IAsyncLifetime
 {
     private IContainer? _postgresContainer;

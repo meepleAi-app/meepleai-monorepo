@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using System.Net;
 using System.Net.Http.Json;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Integration.FrontendSdk;
 
@@ -20,6 +21,7 @@ namespace Api.Tests.Integration.FrontendSdk;
 /// with meaningful error messages for the frontend SDK to display to users.
 /// </summary>
 [Collection(nameof(FrontendSdkTestCollection))]
+[Trait("Category", TestCategories.Integration)]
 public class ErrorHandlingTests : IAsyncLifetime
 {
     private readonly FrontendSdkTestFactory _factory;

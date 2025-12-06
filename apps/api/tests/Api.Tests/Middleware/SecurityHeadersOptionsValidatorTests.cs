@@ -1,6 +1,7 @@
 using Api.Middleware;
 using Microsoft.Extensions.Options;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Middleware;
 
@@ -8,6 +9,7 @@ namespace Api.Tests.Middleware;
 /// Tests for SecurityHeadersOptionsValidator (Issue #1447).
 /// Validates configuration validation at startup.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class SecurityHeadersOptionsValidatorTests
 {
     private readonly SecurityHeadersOptionsValidator _validator;

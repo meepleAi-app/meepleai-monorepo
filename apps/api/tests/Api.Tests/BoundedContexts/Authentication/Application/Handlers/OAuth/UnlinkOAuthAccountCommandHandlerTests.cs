@@ -7,6 +7,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Application.Handlers.OAuth;
 
@@ -14,6 +15,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Application.Handlers.OAuth;
 /// Tests for UnlinkOAuthAccountCommandHandler.
 /// Validates OAuth account unlinking logic with lockout prevention.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class UnlinkOAuthAccountCommandHandlerTests
 {
     private readonly Mock<IUserRepository> _userRepositoryMock;
@@ -281,4 +283,3 @@ public class UnlinkOAuthAccountCommandHandlerTests
         );
     }
 }
-

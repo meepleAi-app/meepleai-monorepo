@@ -5,6 +5,7 @@ using Api.Infrastructure;
 using Api.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Infrastructure.Persistence;
 
@@ -12,6 +13,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Infrastructure.Persistence;
 /// Integration tests for ApiKeyRepository using Testcontainers with real PostgreSQL.
 /// Tests API key management, scoping, expiration, and revocation logic.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
 {
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;

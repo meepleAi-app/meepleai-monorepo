@@ -1,8 +1,11 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Exceptions;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain;
+
+[Trait("Category", TestCategories.Unit)]
 
 public class ConfidenceTests
 {

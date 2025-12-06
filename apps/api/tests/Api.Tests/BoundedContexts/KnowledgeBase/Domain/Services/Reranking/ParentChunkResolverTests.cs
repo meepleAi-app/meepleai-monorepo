@@ -5,6 +5,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
 
@@ -12,6 +13,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
 /// Unit tests for ParentChunkResolver.
 /// ADR-016 Phase 4: Parent chunk resolution for hierarchical retrieval.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class ParentChunkResolverTests
 {
     private readonly Mock<IChunkRepository> _chunkRepositoryMock;

@@ -5,6 +5,7 @@ using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
 using Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.SystemConfiguration.Application.Handlers;
 
@@ -12,6 +13,7 @@ namespace Api.Tests.BoundedContexts.SystemConfiguration.Application.Handlers;
 /// Tests for GetAllConfigsQueryHandler.
 /// Tests retrieval of configurations with filtering and pagination.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class GetAllConfigsQueryHandlerTests
 {
     private readonly Mock<IConfigurationRepository> _mockConfigRepository;

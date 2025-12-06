@@ -29,6 +29,7 @@ using Moq;
 using Npgsql;
 using StackExchange.Redis;
 using Xunit;
+using Api.Tests.Constants;
 using AuthRole = Api.BoundedContexts.Authentication.Domain.ValueObjects.Role;
 
 namespace Api.Tests.Integration;
@@ -46,7 +47,7 @@ namespace Api.Tests.Integration;
 ///
 /// Infrastructure: PostgreSQL (real DB), Redis (real cache), Qdrant (mocked for now)
 /// </summary>
-[Collection("PdfUploadIntegration")]
+[Trait("Category", TestCategories.Integration)]
 public sealed class UploadPdfIntegrationTests : IAsyncLifetime
 {
     private IContainer? _postgresContainer;
@@ -1294,4 +1295,3 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         doc.UploadedAt.Should().NotBe(default(DateTime), "upload timestamp should be set");
     }
 }
-

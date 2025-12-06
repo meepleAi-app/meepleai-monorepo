@@ -15,6 +15,7 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Handlers;
 /// Tests document retrieval by game ID, list mapping, and filtering.
 /// ISSUE-1818: Migrated to FluentAssertions for improved readability.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class GetPdfDocumentsByGameQueryHandlerTests
 {
     private readonly Mock<IPdfDocumentRepository> _documentRepositoryMock;

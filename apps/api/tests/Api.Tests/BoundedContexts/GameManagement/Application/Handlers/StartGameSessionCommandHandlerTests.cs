@@ -6,6 +6,7 @@ using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 
@@ -13,6 +14,7 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 /// Comprehensive tests for StartGameSessionCommandHandler.
 /// Tests game session creation and lifecycle management.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class StartGameSessionCommandHandlerTests
 {
     private readonly Mock<IGameSessionRepository> _sessionRepositoryMock;

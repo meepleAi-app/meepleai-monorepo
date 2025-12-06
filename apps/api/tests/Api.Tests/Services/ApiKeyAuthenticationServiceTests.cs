@@ -9,8 +9,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Services;
+
+[Trait("Category", TestCategories.Unit)]
 
 public class ApiKeyAuthenticationServiceTests
 {

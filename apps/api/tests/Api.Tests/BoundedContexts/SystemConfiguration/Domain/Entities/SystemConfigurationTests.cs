@@ -1,5 +1,6 @@
 using Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
 using Xunit;
+using Api.Tests.Constants;
 using SystemConfigEntity = Api.BoundedContexts.SystemConfiguration.Domain.Entities.SystemConfiguration;
 
 namespace Api.Tests.BoundedContexts.SystemConfiguration.Domain.Entities;
@@ -8,6 +9,7 @@ namespace Api.Tests.BoundedContexts.SystemConfiguration.Domain.Entities;
 /// Domain tests for SystemConfiguration aggregate.
 /// Tests configuration creation, updates, and lifecycle.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class SystemConfigurationTests
 {
     [Fact]

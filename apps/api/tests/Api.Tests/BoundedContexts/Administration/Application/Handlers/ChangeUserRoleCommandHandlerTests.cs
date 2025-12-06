@@ -8,6 +8,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.BoundedContexts.Authentication.TestHelpers;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 
@@ -15,6 +16,7 @@ namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 /// Comprehensive tests for ChangeUserRoleCommandHandler.
 /// Tests role assignment and updates.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class ChangeUserRoleCommandHandlerTests
 {
     private readonly Mock<IUserRepository> _userRepositoryMock;
@@ -276,4 +278,3 @@ public class ChangeUserRoleCommandHandlerTests
             Times.Once);
     }
 }
-

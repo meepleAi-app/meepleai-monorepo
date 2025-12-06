@@ -6,6 +6,7 @@ using Api.Tests.Helpers;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 
@@ -14,6 +15,7 @@ namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 /// Tests agent feedback statistics aggregation for analytics dashboard.
 /// ISSUE-1695: CQRS migration for AgentFeedbackService
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class GetFeedbackStatsQueryHandlerTests
 {
     private readonly Mock<ILogger<GetFeedbackStatsQueryHandler>> _mockLogger;
@@ -376,4 +378,3 @@ public class GetFeedbackStatsQueryHandlerTests
         Assert.NotNull(result);
     }
 }
-

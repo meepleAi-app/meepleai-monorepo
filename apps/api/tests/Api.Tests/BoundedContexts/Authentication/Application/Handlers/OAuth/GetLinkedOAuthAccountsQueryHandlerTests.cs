@@ -5,6 +5,7 @@ using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Application.Handlers.OAuth;
 
@@ -12,6 +13,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Application.Handlers.OAuth;
 /// Tests for GetLinkedOAuthAccountsQueryHandler.
 /// Validates retrieval and mapping of OAuth accounts to DTOs.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class GetLinkedOAuthAccountsQueryHandlerTests
 {
     private readonly Mock<IOAuthAccountRepository> _oauthAccountRepositoryMock;
@@ -258,4 +260,3 @@ public class GetLinkedOAuthAccountsQueryHandlerTests
         );
     }
 }
-

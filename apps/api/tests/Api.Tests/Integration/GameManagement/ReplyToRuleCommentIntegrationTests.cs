@@ -11,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Integration.GameManagement;
 
@@ -30,7 +31,7 @@ namespace Api.Tests.Integration.GameManagement;
 /// Coverage Target: ≥90% for ReplyToRuleCommentCommandHandler
 /// Execution Time Target: <60s
 /// </summary>
-[Collection("ReplyToRuleCommentIntegration")]
+[Trait("Category", TestCategories.Integration)]
 public sealed class ReplyToRuleCommentIntegrationTests : IAsyncLifetime
 {
     private IContainer? _postgresContainer;
@@ -416,4 +417,3 @@ public sealed class ReplyToRuleCommentIntegrationTests : IAsyncLifetime
         result.MentionedUserIds.Should().Contain(_testUserId.ToString());
     }
 }
-

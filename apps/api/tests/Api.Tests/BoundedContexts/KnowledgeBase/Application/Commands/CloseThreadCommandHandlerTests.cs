@@ -5,12 +5,14 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Commands;
 
 /// <summary>
 /// Tests for CloseThreadCommandHandler.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class CloseThreadCommandHandlerTests
 {
     private readonly Mock<IChatThreadRepository> _mockRepository;

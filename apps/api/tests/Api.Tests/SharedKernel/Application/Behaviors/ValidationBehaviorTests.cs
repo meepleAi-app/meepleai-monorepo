@@ -5,6 +5,7 @@ using FluentValidation.Results;
 using MediatR;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.SharedKernel.Application.Behaviors;
 
@@ -12,6 +13,7 @@ namespace Api.Tests.SharedKernel.Application.Behaviors;
 /// Integration tests for ValidationBehavior.
 /// Issue #1449: FluentValidation for Authentication CQRS pipeline
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public sealed class ValidationBehaviorTests
 {
     [Fact]

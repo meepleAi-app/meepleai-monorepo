@@ -2,6 +2,7 @@ using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.Tests.BoundedContexts.Authentication.TestHelpers;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Domain.Entities;
 
@@ -9,6 +10,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Domain.Entities;
 /// Comprehensive domain tests for OAuthAccount entity.
 /// Tests OAuth provider linking, token management, expiration, and provider-specific behavior.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class OAuthAccountEntityTests
 {
     [Fact]
@@ -594,4 +596,3 @@ public class OAuthAccountEntityTests
         Assert.Contains("github", OAuthAccount.SupportedProviders);
     }
 }
-

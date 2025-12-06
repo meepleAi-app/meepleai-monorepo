@@ -3,6 +3,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Evaluation;
 using Api.BoundedContexts.KnowledgeBase.Domain.GridSearch;
 using Api.BoundedContexts.KnowledgeBase.Domain.Reports;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Reports.Services;
 
@@ -10,6 +11,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Reports.Services;
 /// Unit tests for ReportGeneratorService.
 /// ADR-016 Phase 5: Validates markdown report generation.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class ReportGeneratorServiceTests
 {
     private readonly ReportGeneratorService _service;

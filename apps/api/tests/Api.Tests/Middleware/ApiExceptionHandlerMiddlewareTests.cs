@@ -10,6 +10,7 @@ using Moq;
 using System.Text.Json;
 using System.Threading;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Middleware;
 
@@ -17,6 +18,7 @@ namespace Api.Tests.Middleware;
 /// Tests for ApiExceptionHandlerMiddleware (Issue #1194).
 /// Validates centralized error handling for all exception types.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class ApiExceptionHandlerMiddlewareTests
 {
     private readonly Mock<ILogger<ApiExceptionHandlerMiddleware>> _loggerMock;

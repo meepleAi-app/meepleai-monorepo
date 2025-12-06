@@ -5,6 +5,7 @@ using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.Tests.Infrastructure;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Application.Queries;
 
@@ -12,6 +13,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Application.Queries;
 /// Comprehensive tests for ValidateSessionQueryHandler.
 /// Tests session validation, expiration, revocation, and user retrieval.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class ValidateSessionQueryHandlerTests
 {
     private readonly Mock<ISessionRepository> _sessionRepositoryMock;
@@ -532,4 +534,3 @@ public class ValidateSessionQueryHandlerTests
         );
     }
 }
-

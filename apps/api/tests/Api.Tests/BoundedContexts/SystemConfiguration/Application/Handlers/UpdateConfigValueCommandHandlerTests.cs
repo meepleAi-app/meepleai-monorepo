@@ -8,6 +8,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.BoundedContexts.SystemConfiguration.TestHelpers;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.SystemConfiguration.Application.Handlers;
 
@@ -15,6 +16,7 @@ namespace Api.Tests.BoundedContexts.SystemConfiguration.Application.Handlers;
 /// Tests for UpdateConfigValueCommandHandler.
 /// Tests configuration value updates with version tracking.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class UpdateConfigValueCommandHandlerTests
 {
     private readonly Mock<IConfigurationRepository> _mockConfigRepository;

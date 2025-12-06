@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure.EmbeddingProviders;
 
@@ -13,6 +14,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure.EmbeddingProvid
 /// ADR-016 Phase 2: Multi-provider embedding abstraction.
 /// Tests factory creation, primary/fallback provider selection, and error handling.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class EmbeddingProviderFactoryTests : IDisposable
 {
     private readonly Mock<IHttpClientFactory> _httpClientFactoryMock;

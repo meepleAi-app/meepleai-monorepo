@@ -10,6 +10,7 @@ using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Text;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Integration.FrontendSdk;
 
@@ -24,7 +25,7 @@ namespace Api.Tests.Integration.FrontendSdk;
 /// These tests validate that the API returns correct authentication responses
 /// and handles security scenarios properly for the frontend SDK.
 /// </summary>
-[Collection(nameof(FrontendSdkTestCollection))]
+[Trait("Category", TestCategories.Integration)]
 public class AuthenticationFlowTests : IAsyncLifetime
 {
     private readonly FrontendSdkTestFactory _factory;

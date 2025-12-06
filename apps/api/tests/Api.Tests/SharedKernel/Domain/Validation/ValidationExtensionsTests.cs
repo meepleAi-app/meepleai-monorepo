@@ -1,8 +1,11 @@
 using Api.SharedKernel.Domain.Results;
 using Api.SharedKernel.Domain.Validation;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.SharedKernel.Domain.Validation;
+
+[Trait("Category", TestCategories.Unit)]
 
 public class ValidationExtensionsTests
 {

@@ -6,6 +6,7 @@ using Api.Tests.BoundedContexts.DocumentProcessing.TestHelpers;
 using FluentAssertions;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Handlers;
 
@@ -14,6 +15,7 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Handlers;
 /// Tests document retrieval, mapping to DTO, and null handling.
 /// ISSUE-1818: Migrated to FluentAssertions for improved readability.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class GetPdfDocumentByIdQueryHandlerTests
 {
     private readonly Mock<IPdfDocumentRepository> _documentRepositoryMock;

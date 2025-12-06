@@ -3,6 +3,7 @@ using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Microsoft.Extensions.Configuration;
 using Xunit;
 using FluentAssertions;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Domain.Services;
 
@@ -11,6 +12,7 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Domain.Services;
 /// Covers: file size, page count, PDF version, MIME type validation.
 /// ISSUE-1818: Migrated to FluentAssertions
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class PdfValidationDomainServiceTests
 {
     private readonly PdfValidationDomainService _service;
@@ -346,4 +348,3 @@ public class PdfValidationDomainServiceTests
         result.IsSuccess.Should().BeTrue();
     }
 }
-

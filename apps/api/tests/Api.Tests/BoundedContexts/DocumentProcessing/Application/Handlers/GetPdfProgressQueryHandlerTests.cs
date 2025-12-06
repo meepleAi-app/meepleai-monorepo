@@ -6,6 +6,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Handlers;
 
@@ -16,6 +17,7 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Handlers;
 /// NOTE: Uses DbContext directly - simplified tests due to mocking complexity.
 /// ISSUE-1674: Convert to integration tests or refactor handler to use repository.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class GetPdfProgressQueryHandlerTests
 {
     private readonly Mock<ILogger<GetPdfProgressQueryHandler>> _loggerMock;

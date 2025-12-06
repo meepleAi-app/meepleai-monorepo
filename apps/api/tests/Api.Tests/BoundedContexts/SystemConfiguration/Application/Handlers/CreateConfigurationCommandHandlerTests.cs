@@ -5,6 +5,7 @@ using SystemConfig = Api.BoundedContexts.SystemConfiguration.Domain.Entities.Sys
 using Api.SharedKernel.Infrastructure.Persistence;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.SystemConfiguration.Application.Handlers;
 
@@ -12,6 +13,7 @@ namespace Api.Tests.BoundedContexts.SystemConfiguration.Application.Handlers;
 /// Tests for CreateConfigurationCommandHandler.
 /// Tests creation of system configuration entries.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class CreateConfigurationCommandHandlerTests
 {
     private readonly Mock<IConfigurationRepository> _mockConfigRepository;

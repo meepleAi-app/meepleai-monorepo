@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Services.Rag;
 
@@ -11,6 +12,7 @@ namespace Api.Tests.Services.Rag;
 /// Unit tests for RagConfigurationProvider (Issue #1441).
 /// Verifies 3-tier configuration fallback: Database → appsettings.json → Hardcoded defaults
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class RagConfigurationProviderTests
 {
     private readonly Mock<ILogger<RagConfigurationProvider>> _mockLogger;

@@ -19,6 +19,7 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Services;
 /// Issue #949: BGAI-010 - Tests quality-based fallback, performance tracking, error handling
 /// Architecture: Stage1(Unstructured ≥0.80) → Stage2(SmolDocling ≥0.70) → Stage3(Docnet)
 /// </remarks>
+[Trait("Category", TestCategories.Unit)]
 public class EnhancedPdfProcessingOrchestratorTests
 {
     private readonly ILogger<EnhancedPdfProcessingOrchestrator> _logger;

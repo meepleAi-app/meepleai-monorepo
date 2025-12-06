@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Administration.Domain.Entities;
 using Api.Tests.BoundedContexts.Administration.TestHelpers;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Administration.Domain.Entities;
 
@@ -8,6 +9,7 @@ namespace Api.Tests.BoundedContexts.Administration.Domain.Entities;
 /// Domain tests for AuditLog aggregate.
 /// Tests audit log creation and validation.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class AuditLogTests
 {
     [Fact]
@@ -102,4 +104,3 @@ public class AuditLogTests
         Assert.True(auditLog.CreatedAt <= DateTime.UtcNow.AddSeconds(1));
     }
 }
-

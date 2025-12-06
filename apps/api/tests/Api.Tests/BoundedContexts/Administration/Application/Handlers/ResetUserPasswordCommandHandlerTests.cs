@@ -7,6 +7,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.BoundedContexts.Authentication.TestHelpers;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 
@@ -14,6 +15,7 @@ namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 /// Comprehensive tests for ResetUserPasswordCommandHandler.
 /// Tests administrative password reset functionality.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class ResetUserPasswordCommandHandlerTests
 {
     private readonly Mock<IUserRepository> _userRepositoryMock;
@@ -231,4 +233,3 @@ public class ResetUserPasswordCommandHandlerTests
             Times.Once);
     }
 }
-

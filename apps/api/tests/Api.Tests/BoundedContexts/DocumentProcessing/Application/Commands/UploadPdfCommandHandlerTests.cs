@@ -15,6 +15,7 @@ using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
 using FluentAssertions;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Commands;
 
@@ -23,6 +24,7 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Commands;
 /// Tests PDF upload, validation, storage, and background processing orchestration.
 /// ISSUE-1818: Migrating to FluentAssertions for improved readability.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class UploadPdfCommandHandlerTests
 {
     /// <summary>

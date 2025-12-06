@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Integration.GameManagement;
 
@@ -30,7 +31,7 @@ namespace Api.Tests.Integration.GameManagement;
 /// Coverage Target: ≥90% for DeleteRuleCommentCommandHandler
 /// Execution Time Target: <60s
 /// </summary>
-[Collection("DeleteRuleCommentIntegration")]
+[Trait("Category", TestCategories.Integration)]
 public sealed class DeleteRuleCommentIntegrationTests : IAsyncLifetime
 {
     private IContainer? _postgresContainer;
@@ -378,4 +379,3 @@ public sealed class DeleteRuleCommentIntegrationTests : IAsyncLifetime
         return new DeleteRuleCommentCommandHandler(dbContext, logger);
     }
 }
-

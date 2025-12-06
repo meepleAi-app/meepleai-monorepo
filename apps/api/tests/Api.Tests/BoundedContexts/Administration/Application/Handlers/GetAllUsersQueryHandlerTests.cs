@@ -5,6 +5,7 @@ using Api.Tests.Helpers;
 using Moq;
 using Xunit;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 
@@ -15,6 +16,7 @@ namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 /// ISSUE-1674: Add integration tests for full pagination/filtering workflow.
 /// ISSUE-1500: TEST-002 - Fixed test isolation (fresh context per test)
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class GetAllUsersQueryHandlerTests
 {
     /// <summary>

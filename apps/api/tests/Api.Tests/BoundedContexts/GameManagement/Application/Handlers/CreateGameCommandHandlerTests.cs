@@ -5,6 +5,7 @@ using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 
@@ -12,6 +13,7 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 /// Comprehensive tests for CreateGameCommandHandler.
 /// Tests game creation with value object validation and DTO mapping.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class CreateGameCommandHandlerTests
 {
     private readonly Mock<IGameRepository> _gameRepositoryMock;

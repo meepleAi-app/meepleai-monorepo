@@ -5,6 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Infrastructure.External;
 
@@ -14,6 +15,7 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Infrastructure.External;
 /// Tests both technical validation (magic bytes, Docnet parsing) and business rule delegation.
 /// ISSUE-1818: Migrated to FluentAssertions for improved readability.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class DocnetPdfValidatorTests : IDisposable
 {
     private readonly Mock<ILogger<DocnetPdfValidator>> _mockLogger;

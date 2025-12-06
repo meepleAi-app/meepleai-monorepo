@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Integration.GameManagement;
 
@@ -30,7 +31,7 @@ namespace Api.Tests.Integration.GameManagement;
 /// Coverage Target: ≥90% for UpdateRuleCommentCommandHandler
 /// Execution Time Target: <60s
 /// </summary>
-[Collection("UpdateRuleCommentIntegration")]
+[Trait("Category", TestCategories.Integration)]
 public sealed class UpdateRuleCommentIntegrationTests : IAsyncLifetime
 {
     private IContainer? _postgresContainer;
@@ -400,4 +401,3 @@ public sealed class UpdateRuleCommentIntegrationTests : IAsyncLifetime
         return new UpdateRuleCommentCommandHandler(dbContext, timeProvider, logger);
     }
 }
-

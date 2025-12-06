@@ -6,12 +6,14 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Chunking;
 
 /// <summary>
 /// Unit tests for AdvancedChunkingService.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class AdvancedChunkingServiceTests
 {
     private readonly Mock<ITextChunkingService> _textChunkingServiceMock;

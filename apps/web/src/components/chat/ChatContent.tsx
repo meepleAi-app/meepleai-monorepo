@@ -22,7 +22,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { useChatContext } from '@/hooks/useChatContext';
+import { useChatStore } from '@/store/chat/store';
 import { MessageList } from './MessageList';
 import { MessageInput } from './MessageInput';
 import { MobileSidebar } from './MobileSidebar';
@@ -49,16 +49,31 @@ const INITIAL_PDF_MODAL_STATE: PdfModalState = {
 };
 
 export function ChatContent() {
+  // Issue #1676: Migrated from useChatContext to direct Zustand store
   const {
     games,
     selectedGameId,
-    activeChatId,
-    chats,
-    messages,
+    chatsByGame,
+    activeChatIds,
+    messagesByChat,
     errorMessage,
     sidebarCollapsed,
     toggleSidebar,
-  } = useChatContext();
+  } = useChatStore(state => ({
+    games: state.games,
+    selectedGameId: state.selectedGameId,
+    chatsByGame: state.chatsByGame,
+    activeChatIds: state.activeChatIds,
+    messagesByChat: state.messagesByChat,
+    errorMessage: state.error ?? '',
+    sidebarCollapsed: state.sidebarCollapsed,
+    toggleSidebar: state.toggleSidebar,
+  }));
+
+  // Derived values
+  const activeChatId = selectedGameId ? activeChatIds[selectedGameId] : null;
+  const chats = selectedGameId ? (chatsByGame[selectedGameId] ?? []) : [];
+  const messages = activeChatId ? (messagesByChat[activeChatId] ?? []) : [];
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);

@@ -353,6 +353,9 @@ v1Api.MapKnowledgeBaseEndpoints();
 // Issue #866: Agent management endpoints
 v1Api.MapAgentEndpoints();
 
+// Issue #1565: Telemetry test endpoints for HyperDX integration testing
+v1Api.MapTelemetryTestEndpoints();
+
 app.Run();
 
 // Bootstrap: Create initial admin user if database is empty

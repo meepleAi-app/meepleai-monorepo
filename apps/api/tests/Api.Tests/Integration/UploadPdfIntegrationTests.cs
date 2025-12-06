@@ -30,7 +30,6 @@ using Moq;
 using Npgsql;
 using StackExchange.Redis;
 using Xunit;
-using Api.Tests.Constants;
 using AuthRole = Api.BoundedContexts.Authentication.Domain.ValueObjects.Role;
 
 namespace Api.Tests.Integration;

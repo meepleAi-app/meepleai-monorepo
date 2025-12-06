@@ -80,5 +80,5 @@ volumes:
 
 networks:
   meepleai:
+    external: true
     name: meepleai
-    driver: bridge

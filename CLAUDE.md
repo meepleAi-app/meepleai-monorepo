@@ -63,7 +63,7 @@ docs/                Architecture, ADRs, guides
 **Services**:
 - **Core**: postgres:5432, qdrant:6333, redis:6379
 - **AI/ML**: ollama:11434, embedding:8000, unstructured:8001, smoldocling:8002
-- **Observability**: seq:8081, jaeger:16686, prometheus:9090, alertmanager:9093, grafana:3001
+- **Observability**: hyperdx:8180, prometheus:9090, alertmanager:9093, grafana:3001
 - **Workflow**: n8n:5678
 - **App**: api:8080, web:3000
 
@@ -110,8 +110,9 @@ docs/                Architecture, ADRs, guides
 
 ### Observability
 - **Health**: `/health` (ready/live), checks PG/Redis/Qdrant
-- **Logs**: Serilog → Seq, correlation IDs
-- **Traces**: OpenTelemetry → Jaeger (W3C)
+- **Unified Platform**: HyperDX (logs, traces, session replay)
+- **Logs**: Serilog → HyperDX OTLP, correlation IDs
+- **Traces**: OpenTelemetry → HyperDX (W3C)
 - **Metrics**: Prometheus `/metrics`, Grafana dashboards
 - **Alerts**: Email/Slack/PagerDuty (OPS-07)
 
@@ -250,7 +251,7 @@ PDF Upload → EnhancedPdfProcessingOrchestrator
 **API** (.env in `infra/env/`):
 - `OPENROUTER_API_KEY` (LLM)
 - `ConnectionStrings__Postgres`
-- `QDRANT_URL`, `REDIS_URL`, `SEQ_URL`
+- `QDRANT_URL`, `REDIS_URL`, `HYPERDX_OTLP_ENDPOINT`
 - `INITIAL_ADMIN_EMAIL`, `INITIAL_ADMIN_PASSWORD` (bootstrap)
 
 **Web**:
@@ -274,7 +275,7 @@ PDF → PdfTextExtractor → TextChunking → Embedding → Qdrant → RagServic
 
 **Local Stack**:
 ```bash
-cd infra && docker compose up postgres qdrant redis n8n seq    # T1
+cd infra && docker compose -f docker-compose.yml -f docker-compose.hyperdx.yml up -d postgres qdrant redis hyperdx    # T1
 cd apps/api/src/Api && dotnet run                              # T2 (8080)
 cd apps/web && pnpm dev                                        # T3 (3000)
 ```

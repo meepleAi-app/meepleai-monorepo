@@ -57,7 +57,9 @@ services:
       - HYPERDX_ALERT_SLACK_WEBHOOK=${SLACK_WEBHOOK_URL:-}
 
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1"]
+      # Issue #1570: Fixed health check to use correct API endpoint (port 8000 instead of 8080)
+      # Port 8080 is the Next.js app, port 8000 is the HyperDX API
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8000/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3

@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { MessageInput } from './MessageInput';
-import { ChatContext } from '@/store/chat/compatibility';
+import { ChatContext, type ChatContextValue } from '@/store/chat/StorybookContext';
 
 /**
  * MessageInput component for sending chat messages.
@@ -23,8 +23,11 @@ import { ChatContext } from '@/store/chat/compatibility';
  * - Dark theme variant
  */
 
-// Helper to create mock context value
-const createMockContext = (overrides: Record<string, unknown> = {}) => ({
+/**
+ * Issue #1676: Mock context helper for Storybook isolation
+ * Uses StorybookContext (temporary, will migrate to ChatStoreProvider in PR #3)
+ */
+const createMockContext = (overrides: Record<string, unknown> = {}): ChatContextValue => ({
   inputValue: '',
   setInputValue: () => {},
   sendMessage: async () => {},
@@ -40,11 +43,11 @@ const createMockContext = (overrides: Record<string, unknown> = {}) => ({
     updating: false,
     deleting: false,
   },
-  searchMode: 'vector' as const,
+  searchMode: 'vector',
   setSearchMode: () => {},
   isStreaming: false,
   streamingAnswer: '',
-  streamingState: 'idle' as const,
+  streamingState: 'idle',
   streamingCitations: [],
   stopStreaming: () => {},
   authUser: null,
@@ -81,7 +84,14 @@ const meta = {
     docs: {
       description: {
         component:
-          'Message input form with send button and search mode toggle. Integrates with ChatProvider for state management.',
+          'Message input form with send button and search mode toggle. Uses Zustand store for state management.',
+      },
+    },
+    chromatic: {
+      viewports: [375, 768, 1024],
+      modes: {
+        light: {},
+        dark: {},
       },
     },
   },
@@ -89,9 +99,8 @@ const meta = {
   decorators: [
     Story => {
       const mockContext = createMockContext();
-
       return (
-        <ChatContext.Provider value={mockContext as never}>
+        <ChatContext.Provider value={mockContext}>
           <div className="w-full max-w-2xl">
             <Story />
           </div>

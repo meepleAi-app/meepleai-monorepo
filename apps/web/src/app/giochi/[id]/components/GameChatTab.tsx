@@ -14,7 +14,7 @@
 'use client';
 
 import React, { useEffect } from 'react';
-import { useChatContext } from '@/hooks/useChatContext';
+import { useChatStore } from '@/store/chat/store';
 import { ChatContent } from '@/components/chat/ChatContent';
 import { ChatStoreProvider } from '@/store/chat/ChatStoreProvider';
 import { Badge } from '@/components/ui/badge';
@@ -54,7 +54,11 @@ const QUICK_QUESTIONS: QuickQuestion[] = [
 // ============================================================================
 
 function GameChatTabInternal({ gameId, gameTitle }: GameChatTabProps) {
-  const { selectGame, sendMessage } = useChatContext();
+  // Issue #1676: Migrated from useChatContext to direct Zustand store
+  const { selectGame, sendMessage } = useChatStore(state => ({
+    selectGame: state.selectGame,
+    sendMessage: state.sendMessage,
+  }));
 
   // Set selected game on mount
   useEffect(() => {

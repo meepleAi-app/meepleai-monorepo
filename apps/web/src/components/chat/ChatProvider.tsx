@@ -1,20 +1,19 @@
 /**
- * ChatProvider - Chat state management (DDD INTEGRATED - SPRINT-3 #858)
+ * ChatProvider - DEPRECATED (Issue #1676)
  *
- * Manages:
+ * @deprecated This legacy provider is only kept for Storybook/test compatibility.
+ * All production components now use Zustand store directly (useChatStore).
+ * Will be removed in PR #3 (Final Cleanup) after Storybook migration.
+ *
+ * Legacy state management for:
  * - ChatThread sessions per game (DDD KnowledgeBase)
  * - Messages per thread
  * - Message operations (send, edit, delete, feedback)
  *
- * Key improvements:
- * - Integrated with DDD KnowledgeBase.Application (Issue #858)
- * - Uses ChatThread endpoints (Backend #1126)
- * - Normalized state structure (no Map, serializable)
- * - localStorage persistence
- * - No useRef anti-patterns
- * - No disabled ESLint rules
- *
- * Nested under GameProvider in provider hierarchy
+ * Migration path (PR #3):
+ * 1. Update Storybook decorators to use ChatStoreProvider
+ * 2. Update test-providers.tsx to use Zustand mocks
+ * 3. Remove this file completely
  */
 
 import React, {

@@ -1,12 +1,14 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Chunking;
 using FluentAssertions;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Chunking;
 
 /// <summary>
 /// Unit tests for HierarchicalChunk entity.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class HierarchicalChunkTests
 {
     [Fact]

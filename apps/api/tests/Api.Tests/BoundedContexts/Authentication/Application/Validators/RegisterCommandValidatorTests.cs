@@ -2,6 +2,7 @@ using Api.BoundedContexts.Authentication.Application.Commands;
 using Api.BoundedContexts.Authentication.Application.Validators;
 using FluentValidation.TestHelper;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Application.Validators;
 
@@ -9,6 +10,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Application.Validators;
 /// Unit tests for RegisterCommandValidator.
 /// Issue #1449: FluentValidation for Authentication CQRS pipeline
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public sealed class RegisterCommandValidatorTests
 {
     private readonly RegisterCommandValidator _validator = new();

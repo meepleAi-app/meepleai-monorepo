@@ -5,6 +5,7 @@ using Api.Models;
 using Api.Services;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 
@@ -12,6 +13,7 @@ namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 /// Tests for SendAlertCommandHandler.
 /// Tests handler delegation to AlertingService.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class SendAlertCommandHandlerTests
 {
     private readonly Mock<IAlertingService> _mockAlertingService;
@@ -319,4 +321,3 @@ public class SendAlertCommandHandlerTests
             Times.Once);
     }
 }
-

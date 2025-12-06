@@ -9,6 +9,7 @@ using Microsoft.Extensions.Options;
 using Moq;
 using Moq.Protected;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure.Reranking;
 
@@ -16,6 +17,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure.Reranking;
 /// Unit tests for CrossEncoderRerankerClient.
 /// ADR-016 Phase 4: Cross-encoder reranking HTTP client.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class CrossEncoderRerankerClientTests
 {
     private readonly Mock<ILogger<CrossEncoderRerankerClient>> _loggerMock;

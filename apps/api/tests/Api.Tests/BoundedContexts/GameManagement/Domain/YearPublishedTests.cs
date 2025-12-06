@@ -1,8 +1,11 @@
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Exceptions;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Domain;
+
+[Trait("Category", TestCategories.Unit)]
 
 public class YearPublishedTests
 {

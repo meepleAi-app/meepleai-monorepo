@@ -7,6 +7,7 @@ using Api.Tests.Helpers;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 
@@ -17,6 +18,7 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 /// ✅ RESOLVED: Integration tests added in CreateRuleCommentIntegrationTests.cs (Issue #1691)
 /// ISSUE-1500: TEST-002 - Fixed test isolation (fresh context per test)
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class CreateRuleCommentCommandHandlerTests
 {
     /// <summary>

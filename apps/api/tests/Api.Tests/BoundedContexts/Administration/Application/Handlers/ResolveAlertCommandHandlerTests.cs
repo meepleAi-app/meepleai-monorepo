@@ -3,6 +3,7 @@ using Api.BoundedContexts.Administration.Application.Handlers;
 using Api.Services;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 
@@ -10,6 +11,7 @@ namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 /// Tests for ResolveAlertCommandHandler.
 /// Tests handler delegation to AlertingService for resolving alerts.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class ResolveAlertCommandHandlerTests
 {
     private readonly Mock<IAlertingService> _mockAlertingService;
@@ -80,4 +82,3 @@ public class ResolveAlertCommandHandlerTests
             Times.Once);
     }
 }
-

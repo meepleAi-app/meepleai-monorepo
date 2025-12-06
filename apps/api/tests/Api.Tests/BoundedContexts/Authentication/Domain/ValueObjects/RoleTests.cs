@@ -1,9 +1,11 @@
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Exceptions;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Domain.ValueObjects;
 
+[Trait("Category", TestCategories.Unit)]
 public class RoleTests
 {
     [Theory]

@@ -8,12 +8,14 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Application.Commands;
 
 /// <summary>
 /// Tests for ExtendSessionCommandHandler focusing on rate limiting and authorization.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class ExtendSessionCommandHandlerTests
 {
     private readonly Mock<ISessionRepository> _sessionRepositoryMock;
@@ -143,4 +145,3 @@ public class ExtendSessionCommandHandlerTests
         _sessionRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<Session>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 }
-

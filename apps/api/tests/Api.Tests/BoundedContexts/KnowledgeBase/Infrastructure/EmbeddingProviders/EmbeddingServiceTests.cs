@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure.EmbeddingProviders;
 
@@ -13,6 +14,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure.EmbeddingProvid
 /// ADR-016 Phase 2: Tests the refactored EmbeddingService that uses IEmbeddingProviderFactory.
 /// Tests embedding generation, fallback behavior, and error handling.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class EmbeddingServiceTests
 {
     private readonly Mock<IEmbeddingProviderFactory> _providerFactoryMock;

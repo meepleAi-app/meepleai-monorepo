@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using System.Linq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services;
 
@@ -18,6 +19,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services;
 /// ISSUE-971: BGAI-029 - Citation validation (verify source references)
 /// ISSUE-1500: TEST-002 - Fixed test isolation (fresh context per test)
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class CitationValidationServiceTests
 {
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;

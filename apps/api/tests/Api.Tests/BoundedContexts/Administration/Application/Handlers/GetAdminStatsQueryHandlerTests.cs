@@ -4,6 +4,7 @@ using Api.Models;
 using Api.Services;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 
@@ -11,6 +12,7 @@ namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 /// Tests for GetAdminStatsQueryHandler.
 /// Tests delegation to AdminStatsService for dashboard statistics.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class GetAdminStatsQueryHandlerTests
 {
     private readonly Mock<IAdminStatsService> _mockAdminStatsService;
@@ -303,4 +305,3 @@ public class GetAdminStatsQueryHandlerTests
             Times.Once);
     }
 }
-

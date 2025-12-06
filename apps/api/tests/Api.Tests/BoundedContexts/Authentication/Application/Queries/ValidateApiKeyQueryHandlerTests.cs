@@ -4,6 +4,7 @@ using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Application.Queries;
 
@@ -11,6 +12,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Application.Queries;
 /// Comprehensive tests for ValidateApiKeyQueryHandler.
 /// Tests API key validation, verification, expiration, and user retrieval.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class ValidateApiKeyQueryHandlerTests
 {
     private readonly Mock<IApiKeyRepository> _apiKeyRepositoryMock;
@@ -448,4 +450,3 @@ public class ValidateApiKeyQueryHandlerTests
         );
     }
 }
-

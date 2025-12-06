@@ -18,6 +18,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Application.Handlers.OAuth;
 
@@ -26,6 +27,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Application.Handlers.OAuth;
 /// Validates OAuth callback processing with full business logic in handler.
 /// Uses real InMemoryDatabase for DbContext operations.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class HandleOAuthCallbackCommandHandlerTests : IDisposable
 {
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
@@ -601,4 +603,3 @@ public class HandleOAuthCallbackCommandHandlerTests : IDisposable
             .ReturnsAsync(userInfo);
     }
 }
-

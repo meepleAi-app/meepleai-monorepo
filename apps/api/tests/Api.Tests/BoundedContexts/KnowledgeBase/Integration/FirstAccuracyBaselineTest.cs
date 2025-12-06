@@ -39,11 +39,8 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Integration;
 /// - Typical execution time: ~8-10 minutes (depending on LLM latency)
 /// - Cost estimate: ~$0.25-0.50 (OpenRouter API calls)
 /// </remarks>
-[Collection("FirstAccuracyBaseline")]
 [Trait("Category", "Manual")]
 [Trait("BoundedContext", "KnowledgeBase")]
-[Trait("Issue", "1000")]
-[Trait("Priority", "P1")]
 public class FirstAccuracyBaselineTest
 {
     private readonly Xunit.ITestOutputHelper _output;

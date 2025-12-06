@@ -1,5 +1,6 @@
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
 using Xunit;
+using Api.Tests.Constants;
 using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Infrastructure.Validation;
@@ -8,6 +9,7 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Infrastructure.Validation
 /// BGAI-086: Unit tests for PDF processing configuration validation
 /// Tests all validation rules for startup configuration
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class PdfProcessingConfigurationValidatorTests
 {
     private readonly PdfProcessingConfigurationValidator _validator = new();

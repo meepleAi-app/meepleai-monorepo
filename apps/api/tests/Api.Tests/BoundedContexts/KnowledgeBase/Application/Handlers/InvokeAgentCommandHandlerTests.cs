@@ -8,6 +8,7 @@ using Api.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 
@@ -15,6 +16,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// Integration tests for InvokeAgentCommandHandler.
 /// Tests the complete agent invocation flow.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class InvokeAgentCommandHandlerTests
 {
     private readonly Mock<IAgentRepository> _mockAgentRepo;

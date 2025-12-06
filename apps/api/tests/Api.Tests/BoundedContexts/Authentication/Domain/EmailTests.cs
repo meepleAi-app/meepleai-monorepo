@@ -1,9 +1,11 @@
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Exceptions;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Domain;
 
+[Trait("Category", TestCategories.Unit)]
 public class EmailTests
 {
     [Fact]
@@ -62,4 +64,3 @@ public class EmailTests
         Assert.NotEqual(email1, email3);
     }
 }
-

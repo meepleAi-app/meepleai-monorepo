@@ -7,6 +7,7 @@ using Api.Infrastructure.Entities;
 using Api.Tests.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
+using Api.Tests.Constants;
 using System.Threading;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
@@ -16,6 +17,7 @@ namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 /// Tests user retrieval by ID with session tracking.
 /// ISSUE-1500: TEST-002 - Fixed test isolation (fresh context per test)
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class GetUserByIdQueryHandlerTests
 {
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
@@ -262,4 +264,3 @@ public class GetUserByIdQueryHandlerTests
         Assert.Equal(string.Empty, result.DisplayName);
     }
 }
-

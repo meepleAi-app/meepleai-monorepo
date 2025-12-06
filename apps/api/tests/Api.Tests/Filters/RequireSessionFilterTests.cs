@@ -4,6 +4,7 @@ using Api.Models;
 using Microsoft.AspNetCore.Http;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Filters;
 
@@ -11,6 +12,7 @@ namespace Api.Tests.Filters;
 /// Tests for RequireSessionFilter (Issue #1446).
 /// Validates automatic session validation via endpoint filter.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class RequireSessionFilterTests
 {
     private readonly Mock<EndpointFilterDelegate> _nextMock;

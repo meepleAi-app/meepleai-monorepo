@@ -7,6 +7,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Queries;
 
@@ -16,6 +17,7 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.Queries;
 /// Note: Uses in-memory database since RuleSpec is in infrastructure layer.
 /// ISSUE-1500: TEST-002 - Fixed test isolation (fresh context per test)
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class GetRuleSpecsQueryHandlerTests
 {
     /// <summary>

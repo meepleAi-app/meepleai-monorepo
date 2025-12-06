@@ -4,6 +4,7 @@ using Api.Models;
 using Microsoft.AspNetCore.Http;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Filters;
 
@@ -11,6 +12,7 @@ namespace Api.Tests.Filters;
 /// Tests for RequireAdminSessionFilter (Issue #1446 - Future Enhancement).
 /// Validates automatic session validation with Admin role requirement.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class RequireAdminSessionFilterTests
 {
     private readonly Mock<EndpointFilterDelegate> _nextMock;

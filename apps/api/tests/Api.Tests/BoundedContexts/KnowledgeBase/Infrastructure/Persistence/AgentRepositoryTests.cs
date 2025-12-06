@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Moq;
 using Testcontainers.PostgreSql;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 
@@ -15,6 +16,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 /// Integration tests for AgentRepository using Testcontainers.
 /// Issue #866: AI Agents Entity & Configuration
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class AgentRepositoryTests : IAsyncLifetime
 {
     private PostgreSqlContainer? _postgresContainer;

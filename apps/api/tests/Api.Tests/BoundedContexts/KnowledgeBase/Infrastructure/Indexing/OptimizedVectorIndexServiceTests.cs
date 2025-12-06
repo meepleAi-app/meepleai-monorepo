@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Qdrant.Client.Grpc;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure.Indexing;
 
@@ -12,6 +13,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure.Indexing;
 /// ADR-016 Phase 3: Unit tests for OptimizedVectorIndexService.
 /// Tests HNSW and quantization configuration management.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class OptimizedVectorIndexServiceTests
 {
     private readonly Mock<IQdrantClientAdapter> _mockClientAdapter;

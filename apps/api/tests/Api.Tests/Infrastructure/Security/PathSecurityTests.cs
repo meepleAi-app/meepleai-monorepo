@@ -2,6 +2,7 @@ using Api.Infrastructure.Security;
 using FluentAssertions;
 using System.Security;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Infrastructure.Security;
 
@@ -18,6 +19,7 @@ namespace Api.Tests.Infrastructure.Security;
 /// <para><b>Security Standard:</b> OWASP Top 10 2021 - A01 Broken Access Control</para>
 /// <para><b>Acceptance Criteria:</b> Issue #1819 (#1746) - PathSecurity.SanitizeFilename verified</para>
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public sealed class PathSecurityTests
 {
     /// <summary>

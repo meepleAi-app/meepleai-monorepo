@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Xunit;
 using FluentAssertions;
 using static Api.BoundedContexts.DocumentProcessing.Infrastructure.DependencyInjection.DocumentProcessingServiceExtensions;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Infrastructure.DI;
 
@@ -14,6 +15,7 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Infrastructure.DI;
 /// ISSUE-1174: Tests for orchestrator DI circular dependency fix using keyed services
 /// POST-MERGE: Updated to use PdfExtractorKeys constants for compile-time safety
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class OrchestratorDICircularDependencyTests
 {
     [Fact]
@@ -206,4 +208,3 @@ public class OrchestratorDICircularDependencyTests
         Assert.IsType<DocnetPdfTextExtractor>(docnetExtractor);
     }
 }
-

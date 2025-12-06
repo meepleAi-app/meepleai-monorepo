@@ -7,6 +7,7 @@ using Api.Tests.BoundedContexts.GameManagement.TestHelpers;
 using Api.Tests.TestHelpers;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 
@@ -14,6 +15,7 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 /// Comprehensive tests for UpdateGameCommandHandler.
 /// Tests game updates with partial updates and value object validation.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class UpdateGameCommandHandlerTests
 {
     private readonly Mock<IGameRepository> _gameRepositoryMock;

@@ -35,12 +35,11 @@ namespace Api.Tests.Integration.Authentication;
 ///
 /// Pattern: AAA (Arrange-Act-Assert), Testcontainers for PostgreSQL
 /// </remarks>
-[Collection("AdminDisable2FA")]
 [Trait("Category", "Integration")]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "Authentication")]
 [Trait("Issue", "575")]
-public class AdminDisable2FAIntegrationTests : IAsyncLifetime
+public sealed class AdminDisable2FAIntegrationTests : IAsyncLifetime
 {
     private IContainer? _postgresContainer;
     private MeepleAiDbContext? _dbContext;

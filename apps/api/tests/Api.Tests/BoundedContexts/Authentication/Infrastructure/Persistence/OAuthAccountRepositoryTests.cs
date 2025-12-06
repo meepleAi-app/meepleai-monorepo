@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Infrastructure.Persistence;
 
@@ -15,6 +16,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Infrastructure.Persistence;
 /// Integration tests for OAuthAccountRepository using Testcontainers with real PostgreSQL.
 /// Tests OAuth provider linking, token management, and multi-provider scenarios.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class OAuthAccountRepositoryTests : IntegrationTestBase<OAuthAccountRepository>
 {
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;

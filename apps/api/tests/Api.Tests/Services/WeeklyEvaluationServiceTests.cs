@@ -9,6 +9,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Services;
 
@@ -16,6 +17,7 @@ namespace Api.Tests.Services;
 /// Unit tests for WeeklyEvaluationService.
 /// BGAI-042: Weekly automated quality evaluation job.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class WeeklyEvaluationServiceTests : IDisposable
 {
     private readonly Mock<IServiceScopeFactory> _scopeFactoryMock;

@@ -6,6 +6,7 @@ using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Application.Commands;
 
@@ -13,6 +14,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Application.Commands;
 /// Comprehensive tests for RegisterCommandHandler.
 /// Tests user registration, role assignment, session creation, and business rules.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class RegisterCommandHandlerTests
 {
     private readonly Mock<IUserRepository> _userRepositoryMock;
@@ -707,4 +709,3 @@ public class RegisterCommandHandlerTests
         );
     }
 }
-

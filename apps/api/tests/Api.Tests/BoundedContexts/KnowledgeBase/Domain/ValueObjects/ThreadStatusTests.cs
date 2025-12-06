@@ -1,12 +1,14 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Exceptions;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 
 /// <summary>
 /// Tests for ThreadStatus value object.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class ThreadStatusTests
 {
     [Theory]

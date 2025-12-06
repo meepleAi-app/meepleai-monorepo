@@ -7,6 +7,7 @@ using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Application;
 
@@ -14,6 +15,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Application;
 /// Application layer tests for user profile management handlers.
 /// Tests handler logic with mocked dependencies.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class UserProfileHandlerTests
 {
     private readonly Mock<IUserRepository> _userRepositoryMock;
@@ -283,4 +285,3 @@ public class UserProfileHandlerTests
         );
     }
 }
-

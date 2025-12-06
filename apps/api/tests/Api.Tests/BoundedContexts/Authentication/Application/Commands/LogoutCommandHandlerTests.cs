@@ -6,6 +6,7 @@ using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Application.Commands;
 
@@ -13,6 +14,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Application.Commands;
 /// Comprehensive tests for LogoutCommandHandler.
 /// Tests session revocation, token validation, and error handling.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class LogoutCommandHandlerTests
 {
     private readonly Mock<ISessionRepository> _sessionRepositoryMock;
@@ -335,4 +337,3 @@ public class LogoutCommandHandlerTests
         Assert.True(session.RevokedAt <= afterRevoke);
     }
 }
-

@@ -5,6 +5,7 @@ using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Queries;
 
@@ -12,6 +13,7 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.Queries;
 /// Comprehensive tests for GetGameDetailsQueryHandler.
 /// Tests game detail retrieval with extended metadata and statistics.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class GetGameDetailsQueryHandlerTests
 {
     private readonly Mock<IGameRepository> _gameRepositoryMock;

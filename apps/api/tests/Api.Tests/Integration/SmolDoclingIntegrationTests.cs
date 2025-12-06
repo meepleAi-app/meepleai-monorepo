@@ -23,7 +23,7 @@ namespace Api.Tests.Integration;
 /// Requirements: 7 test cases, Testcontainers, real service interaction, ≥90% coverage
 /// Dependencies: #946 (Docker), #947 (C# client)
 /// </remarks>
-[Collection("PdfPipeline")]
+[Trait("Category", TestCategories.Integration)]
 public class SmolDoclingIntegrationTests : IAsyncLifetime
 {
     private readonly Action<string> _output;
@@ -490,4 +490,3 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
         }
     }
 }
-

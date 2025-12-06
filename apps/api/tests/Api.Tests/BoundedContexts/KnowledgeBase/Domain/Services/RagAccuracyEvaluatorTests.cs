@@ -4,6 +4,7 @@ using Api.Models;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services;
 
@@ -11,6 +12,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services;
 /// Unit tests for RagAccuracyEvaluator.
 /// BGAI-059: RAG accuracy evaluation logic validation (keywords, citations, forbidden keywords).
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class RagAccuracyEvaluatorTests
 {
     private readonly Mock<ILogger<RagAccuracyEvaluator>> _mockLogger;

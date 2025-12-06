@@ -1,6 +1,7 @@
 using Api.Helpers;
 using Api.SharedKernel.Domain.Exceptions;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Infrastructure;
 
@@ -8,6 +9,7 @@ namespace Api.Tests.Infrastructure;
 /// Tests for QueryValidator helper (Issue #1445).
 /// Validates the centralized query validation logic that consolidates 50+ validation blocks.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class QueryValidatorTests
 {
     [Fact]

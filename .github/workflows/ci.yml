@@ -659,6 +659,7 @@ jobs:
       # Unit Tests: <5s execution target
       # Integration Tests: <2min execution target
       # Combined: 90% of test suite (70% unit + 20% integration)
+      # Issue #1820: Optimized with category-based execution (fast tests first)
       - name: Unit & Integration Tests with Coverage (Target >=90%)
         timeout-minutes: 20
         env:
@@ -669,26 +670,46 @@ jobs:
           ConnectionStrings__Postgres: ${{ secrets.TEST_DB_CONNECTION_STRING || 'Host=127.0.0.1;Port=5432;Database=meepleai_test;Username=meeple;Password=meeplepass;Maximum Pool Size=100' }}
           OTEL_EXPORTER_OTLP_ENDPOINT: http://localhost:4318
         run: |
-          # Test Pyramid: 70% Unit Tests (<5s) + 20% Integration Tests (<2min)
-          # Reference: docs/02-development/testing/testing-strategy.md
-          # Note: xUnit v3 AssemblyFixture automatically runs cleanup after all tests
-          # Timeout: 20min (Issue #829: increased from 15min for xUnit v3 + ExecuteDeleteAsync overhead)
-          # With optimizations, expected completion: ~12-14min
-          # SECURITY NOTE: TwoFactorSecurityPenetrationTests excluded (5-8min) - runs in dedicated workflow
-          echo "::notice::Running unit and integration tests (90% of test suite) with 90% coverage threshold"
-          echo "::notice::Excluding TwoFactorSecurityPenetrationTests (runs in security-penetration-tests.yml)"
+          # Issue #1820: Category-based execution for performance optimization
+          # Step 1: Run Unit tests first (fast, ~2-3 min)
+          echo "::notice::Step 1/3 - Running Unit tests (fast, <5s per test)"
           dotnet test \
-            --filter "FullyQualifiedName!~TwoFactorSecurityPenetrationTests" \
+            --filter "Category=Unit" \
+            --logger "console;verbosity=minimal" \
+            --no-build \
+            --blame-hang-timeout 5m \
+            -p:CollectCoverage=true \
+            -p:CoverletOutputFormat=cobertura \
+            -p:CoverletOutput=./tests/Api.Tests/coverage/unit-coverage.cobertura.xml
+          
+          # Step 2: Run Security tests (fast, <30s total)
+          echo "::notice::Step 2/3 - Running Security tests"
+          dotnet test \
+            --filter "Category=Security&FullyQualifiedName!~TwoFactorSecurityPenetrationTests" \
+            --logger "console;verbosity=minimal" \
+            --no-build \
+            --blame-hang-timeout 5m \
+            -p:CollectCoverage=true \
+            -p:CoverletOutputFormat=cobertura \
+            -p:CoverletOutput=./tests/Api.Tests/coverage/security-coverage.cobertura.xml \
+            -p:MergeWith=./tests/Api.Tests/coverage/unit-coverage.cobertura.xml
+          
+          # Step 3: Run Integration tests (slower, ~3-4 min with parallel execution)
+          echo "::notice::Step 3/3 - Running Integration tests (parallel execution enabled)"
+          dotnet test \
+            --filter "Category=Integration" \
             --logger "console;verbosity=normal" \
             --no-build \
             --blame-hang-timeout 5m \
             -p:CollectCoverage=true \
             -p:CoverletOutputFormat=cobertura \
             -p:CoverletOutput=./tests/Api.Tests/coverage/ \
+            -p:MergeWith=./tests/Api.Tests/coverage/security-coverage.cobertura.xml \
             -p:Threshold=90 \
             -p:ThresholdType=line \
-            -p:Exclude="[*]Api.Migrations.*" \
-            -- xUnit.Parallelization.MaxParallelThreads=2
+            -p:Exclude="[*]Api.Migrations.*"
+          
+          echo "::notice::All test categories completed successfully"
 
       # TEST-002: Validate test isolation by running tests in random order (Issue #1500)
       # This ensures tests don't depend on shared state or execution order

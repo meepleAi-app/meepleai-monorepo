@@ -2,6 +2,7 @@ using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Microsoft.Extensions.Configuration;
 using Xunit;
 using FluentAssertions;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Domain.Services;
 
@@ -9,6 +10,7 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Domain.Services;
 /// Tests for PdfTextProcessingDomainService
 /// ISSUE-1818: Migrated to FluentAssertions
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class PdfTextProcessingDomainServiceTests
 {
     private readonly PdfTextProcessingDomainService _sut;
@@ -257,4 +259,3 @@ public class PdfTextProcessingDomainServiceTests
         result.Should().Be(ExtractionQuality.VeryLow);
     }
 }
-

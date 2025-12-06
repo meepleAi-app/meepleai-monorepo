@@ -9,9 +9,11 @@ using Xunit;
 using FluentAssertions;
 using AuthRole = Api.BoundedContexts.Authentication.Domain.ValueObjects.Role;
 using UserTier = Api.BoundedContexts.Authentication.Domain.ValueObjects.UserTier;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Infrastructure.Services;
 
+[Trait("Category", TestCategories.Unit)]
 public class PdfUploadQuotaServiceTests
 {
     private readonly Mock<IConnectionMultiplexer> _redisMock;
@@ -638,4 +640,3 @@ public class PdfUploadQuotaServiceTests
     }
     // FakeTimeProvider removed - now using TestTimeProvider from Api.Tests.Infrastructure
 }
-

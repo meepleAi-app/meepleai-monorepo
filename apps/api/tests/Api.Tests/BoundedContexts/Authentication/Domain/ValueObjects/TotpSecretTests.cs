@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Exceptions;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Domain.ValueObjects;
 
@@ -8,6 +9,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Domain.ValueObjects;
 /// Tests for TotpSecret value object.
 /// Validates encrypted TOTP secret creation and business rules.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class TotpSecretTests
 {
     [Fact]
@@ -92,4 +94,3 @@ public class TotpSecretTests
         Assert.True(secret1 != secret2);
     }
 }
-

@@ -29,12 +29,9 @@ namespace Api.Tests.BoundedContexts.Administration.Integration;
 /// Note: Full execution flow (CQRS queries, alerts) tested separately
 /// This focuses on BackgroundService lifecycle and configuration
 /// </remarks>
-[Collection("WeeklyEvaluationServiceE2E")]
 [Trait("Category", "Integration")]
 [Trait("BoundedContext", "Administration")]
-[Trait("Issue", "995")]
-[Trait("Month", "4")]
-public class WeeklyEvaluationServiceE2ETests
+public sealed class WeeklyEvaluationServiceE2ETests
 {
     private readonly Action<string> _output;
 

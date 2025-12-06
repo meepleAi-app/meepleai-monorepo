@@ -5,6 +5,7 @@ using Api.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services;
 
@@ -13,6 +14,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services;
 /// ISSUE-977: BGAI-035 - Wire all 5 validation layers in RAG pipeline
 /// ISSUE-979: BGAI-037 - Performance optimization (parallel validation)
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class RagValidationPipelineServiceTests
 {
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;

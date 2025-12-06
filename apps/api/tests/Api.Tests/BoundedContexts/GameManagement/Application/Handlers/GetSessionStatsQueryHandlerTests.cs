@@ -5,6 +5,7 @@ using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Tests.BoundedContexts.GameManagement.TestHelpers;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 
@@ -12,6 +13,7 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 /// Comprehensive tests for GetSessionStatsQueryHandler.
 /// Tests session statistics aggregation, filtering, and win rate calculations.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class GetSessionStatsQueryHandlerTests
 {
     private readonly Mock<IGameSessionRepository> _sessionRepositoryMock;

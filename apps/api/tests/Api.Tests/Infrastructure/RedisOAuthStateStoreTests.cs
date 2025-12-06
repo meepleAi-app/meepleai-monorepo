@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using StackExchange.Redis;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Infrastructure;
 
@@ -12,6 +13,7 @@ namespace Api.Tests.Infrastructure;
 /// Unit tests for RedisOAuthStateStore.
 /// Tests OAuth state storage, validation, and expiration using Redis.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class RedisOAuthStateStoreTests
 {
     private readonly Mock<IConnectionMultiplexer> _mockRedis;

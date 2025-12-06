@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 
@@ -14,6 +15,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// Tests streaming RAG explain flow with progressive SSE events.
 /// Coverage: validation, embedding, search, citations, outline, script chunking, cancellation, errors.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class StreamExplainQueryHandlerTests
 {
     private readonly Mock<IEmbeddingService> _embeddingServiceMock;

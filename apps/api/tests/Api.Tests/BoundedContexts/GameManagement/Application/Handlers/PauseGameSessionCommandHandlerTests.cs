@@ -6,6 +6,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.BoundedContexts.GameManagement.TestHelpers;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 
@@ -13,6 +14,7 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 /// Comprehensive tests for PauseGameSessionCommandHandler.
 /// Tests session pause functionality with state transition validation.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class PauseGameSessionCommandHandlerTests
 {
     private readonly Mock<IGameSessionRepository> _sessionRepositoryMock;

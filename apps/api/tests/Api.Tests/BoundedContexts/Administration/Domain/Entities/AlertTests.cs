@@ -2,6 +2,7 @@ using Api.BoundedContexts.Administration.Domain.Entities;
 using Api.BoundedContexts.Administration.Domain.ValueObjects;
 using Api.Tests.BoundedContexts.Administration.TestHelpers;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Administration.Domain.Entities;
 
@@ -9,6 +10,7 @@ namespace Api.Tests.BoundedContexts.Administration.Domain.Entities;
 /// Domain tests for Alert aggregate.
 /// Tests alert creation, lifecycle, and business rules.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class AlertTests
 {
     [Fact]
@@ -107,4 +109,3 @@ public class AlertTests
         Assert.True(alert.TriggeredAt <= DateTime.UtcNow.AddSeconds(1));
     }
 }
-

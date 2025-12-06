@@ -7,6 +7,7 @@ using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 
@@ -14,6 +15,7 @@ namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 /// Tests for CreateUserCommandHandler.
 /// Tests admin user creation with role assignment.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class CreateUserCommandHandlerTests
 {
     private readonly Mock<IUserRepository> _mockUserRepository;
@@ -178,4 +180,3 @@ public class CreateUserCommandHandlerTests
         Assert.Equal("Test User", result.DisplayName);
     }
 }
-

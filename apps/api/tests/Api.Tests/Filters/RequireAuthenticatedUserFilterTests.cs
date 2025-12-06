@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Moq;
 using System.Security.Claims;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Filters;
 
@@ -12,6 +13,7 @@ namespace Api.Tests.Filters;
 /// Tests for RequireAuthenticatedUserFilter (Issue #1446 - Future Enhancement).
 /// Validates authentication via session OR API key.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class RequireAuthenticatedUserFilterTests
 {
     private readonly Mock<EndpointFilterDelegate> _nextMock;

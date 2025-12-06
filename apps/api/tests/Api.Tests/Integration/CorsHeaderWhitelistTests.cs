@@ -12,6 +12,7 @@ using StackExchange.Redis;
 using System.Net;
 using System.Threading;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Integration;
 
@@ -112,7 +113,7 @@ public class CorsTestFactory : WebApplicationFactory<Program>
 ///
 /// Pattern: AAA (Arrange-Act-Assert), Custom WebApplicationFactory with Testing environment
 /// </remarks>
-[Collection("CORS")]
+[Trait("Category", TestCategories.Integration)]
 public class CorsHeaderWhitelistTests : IClassFixture<CorsTestFactory>
 {
     private readonly CorsTestFactory _factory;
@@ -346,4 +347,3 @@ public class CorsHeaderWhitelistTests : IClassFixture<CorsTestFactory>
         }
     }
 }
-

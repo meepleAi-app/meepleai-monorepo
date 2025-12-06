@@ -2,6 +2,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services;
 
@@ -9,6 +10,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services;
 /// Unit tests for ConfidenceValidationService
 /// ISSUE-970: BGAI-028 - Confidence validation layer (threshold ≥0.70)
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class ConfidenceValidationServiceTests
 {
     private readonly ConfidenceValidationService _service;

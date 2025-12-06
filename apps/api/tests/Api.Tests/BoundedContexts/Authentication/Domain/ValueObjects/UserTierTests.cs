@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Exceptions;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Domain.ValueObjects;
 
@@ -8,6 +9,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Domain.ValueObjects;
 /// Unit tests for UserTier Value Object.
 /// Tests tier parsing, validation, and comparison logic.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class UserTierTests
 {
     [Theory]

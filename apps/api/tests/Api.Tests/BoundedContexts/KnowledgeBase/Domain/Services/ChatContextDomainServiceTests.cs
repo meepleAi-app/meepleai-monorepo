@@ -1,8 +1,11 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services;
+
+[Trait("Category", TestCategories.Unit)]
 
 public class ChatContextDomainServiceTests
 {

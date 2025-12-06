@@ -5,6 +5,7 @@ using Api.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Evaluation.Services;
 
@@ -12,6 +13,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Evaluation.Service
 /// Unit tests for DatasetEvaluationService.
 /// ADR-016 Phase 0: Validates Recall@K, nDCG@K, MRR calculations and dataset evaluation.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class DatasetEvaluationServiceTests
 {
     private readonly Mock<IRagService> _mockRagService;

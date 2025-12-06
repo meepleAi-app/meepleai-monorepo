@@ -4,6 +4,7 @@ using Api.SharedKernel.Domain.Exceptions;
 using Api.Tests.BoundedContexts.Authentication.TestHelpers;
 using Microsoft.Extensions.Time.Testing;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Domain.Entities;
 
@@ -11,6 +12,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Domain.Entities;
 /// Comprehensive domain tests for Session entity.
 /// Tests session lifecycle, validation, expiration, revocation, and edge cases.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class SessionEntityTests
 {
     [Fact]
@@ -418,4 +420,3 @@ public class SessionEntityTests
         Assert.True(session.IsExpired(timeProvider));
     }
 }
-

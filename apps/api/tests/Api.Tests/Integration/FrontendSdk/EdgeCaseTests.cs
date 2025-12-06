@@ -7,6 +7,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Integration.FrontendSdk;
 
@@ -23,6 +24,7 @@ namespace Api.Tests.Integration.FrontendSdk;
 /// These tests validate API behavior in complex real-world scenarios.
 /// </summary>
 [Collection(nameof(FrontendSdkTestCollection))]
+[Trait("Category", TestCategories.Integration)]
 public class EdgeCaseTests : IAsyncLifetime
 {
     private readonly FrontendSdkTestFactory _factory;

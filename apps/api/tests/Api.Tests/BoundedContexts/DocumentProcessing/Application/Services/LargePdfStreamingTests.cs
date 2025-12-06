@@ -17,6 +17,7 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Services;
 /// Verifies temp file strategy for PDFs ≥50MB to reduce memory pressure
 /// ISSUE-1818: Migrated to FluentAssertions for improved readability.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class LargePdfStreamingTests
 {
     private readonly ILogger<EnhancedPdfProcessingOrchestrator> _logger;

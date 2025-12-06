@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 using AuthUser = Api.BoundedContexts.Authentication.Domain.Entities.User;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services;
@@ -16,6 +17,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services;
 /// ISSUE-958: Validates user-tier routing and traffic split logic
 /// BGAI-022: Validates AI:Provider configuration integration
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class HybridAdaptiveRoutingStrategyTests
 {
     private readonly ILogger<HybridAdaptiveRoutingStrategy> _logger;

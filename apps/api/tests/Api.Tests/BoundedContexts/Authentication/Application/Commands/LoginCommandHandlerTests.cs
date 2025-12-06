@@ -7,6 +7,7 @@ using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Application.Commands;
 
@@ -14,6 +15,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Application.Commands;
 /// Comprehensive tests for LoginCommandHandler.
 /// Tests authentication, 2FA flow, session creation, and error cases.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class LoginCommandHandlerTests
 {
     private readonly Mock<IUserRepository> _userRepositoryMock;
@@ -548,4 +550,3 @@ public class LoginCommandHandlerTests
         return user;
     }
 }
-

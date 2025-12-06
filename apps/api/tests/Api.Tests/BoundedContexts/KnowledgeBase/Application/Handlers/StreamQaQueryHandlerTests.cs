@@ -12,6 +12,7 @@ using Microsoft.Extensions.Time.Testing;
 using Moq;
 using System.Text;
 using Xunit;
+using Api.Tests.Constants;
 using DomainSearchResult = Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
@@ -21,6 +22,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// Tests streaming RAG Q&A with token-by-token delivery, chat context, and caching.
 /// Coverage: validation, search, LLM streaming, cache hit/miss, chat context, confidence tracking, errors, cancellation.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class StreamQaQueryHandlerTests
 {
     private readonly Mock<IEmbeddingRepository> _embeddingRepositoryMock;

@@ -2,6 +2,7 @@ using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Exceptions;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Domain.Entities;
 
@@ -10,6 +11,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Domain.Entities;
 /// Tests business rules, validation logic, and authentication method management.
 /// Target: 90%+ coverage for OAuth-related methods.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class UserOAuthTests
 {
     [Fact]
@@ -502,4 +504,3 @@ public class UserOAuthTests
         );
     }
 }
-

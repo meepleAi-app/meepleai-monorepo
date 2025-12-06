@@ -6,6 +6,7 @@ using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Application.Commands;
 
@@ -13,6 +14,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Application.Commands;
 /// Comprehensive tests for CreateSessionCommandHandler.
 /// Tests session creation after OAuth callback or 2FA verification.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class CreateSessionCommandHandlerTests
 {
     private readonly Mock<IUserRepository> _userRepositoryMock;
@@ -248,4 +250,3 @@ public class CreateSessionCommandHandlerTests
         );
     }
 }
-

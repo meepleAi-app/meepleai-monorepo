@@ -35,7 +35,6 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Integration;
 ///
 /// Note: Real OpenRouter integration tests deferred to Issue #979 (requires complex DI setup)
 /// </remarks>
-[Collection("RagValidationPipelineIntegration")]
 [Trait("Category", "Integration")]
 [Trait("Dependency", "Testcontainers")]
 [Trait("BoundedContext", "KnowledgeBase")]

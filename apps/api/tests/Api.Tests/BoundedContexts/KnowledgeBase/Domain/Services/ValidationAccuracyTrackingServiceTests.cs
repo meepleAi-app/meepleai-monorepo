@@ -2,6 +2,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Models;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services;
 
@@ -9,6 +10,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services;
 /// Unit tests for ValidationAccuracyTrackingService.
 /// BGAI-039: Validation accuracy baseline measurement.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class ValidationAccuracyTrackingServiceTests
 {
     private readonly ValidationAccuracyTrackingService _service;

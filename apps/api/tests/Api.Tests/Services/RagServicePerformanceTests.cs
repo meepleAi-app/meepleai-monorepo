@@ -12,6 +12,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Services;
 
@@ -27,6 +28,7 @@ namespace Api.Tests.Services;
 /// not for cryptographic purposes. This is safe and acceptable for test code.
 /// </remarks>
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Security", "CA5394:Do not use insecure randomness", Justification = "Random.Shared used for test latency simulation only, not cryptographic purposes")]
+[Trait("Category", TestCategories.Unit)]
 public class RagServicePerformanceTests : IDisposable
 {
     private readonly MeepleAiDbContext _dbContext;

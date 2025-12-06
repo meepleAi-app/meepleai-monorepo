@@ -1,11 +1,13 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Indexing;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Indexing;
 
 /// <summary>
 /// ADR-016 Phase 3: Unit tests for HnswConfiguration value object.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class HnswConfigurationTests
 {
     [Fact]

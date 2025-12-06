@@ -1,5 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Evaluation;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Evaluation;
 
@@ -7,6 +8,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Evaluation;
 /// Unit tests for EvaluationSample.
 /// ADR-016 Phase 0: Validates sample creation for both Mozilla and MeepleAI formats.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class EvaluationSampleTests
 {
     [Fact]

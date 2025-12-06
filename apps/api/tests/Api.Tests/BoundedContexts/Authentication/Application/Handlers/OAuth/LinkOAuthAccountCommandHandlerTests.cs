@@ -7,6 +7,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Application.Handlers.OAuth;
 
@@ -14,6 +15,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Application.Handlers.OAuth;
 /// Tests for LinkOAuthAccountCommandHandler.
 /// Validates OAuth account linking logic with domain validation.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class LinkOAuthAccountCommandHandlerTests
 {
     private readonly Mock<IUserRepository> _userRepositoryMock;
@@ -299,4 +301,3 @@ public class LinkOAuthAccountCommandHandlerTests
         };
     }
 }
-

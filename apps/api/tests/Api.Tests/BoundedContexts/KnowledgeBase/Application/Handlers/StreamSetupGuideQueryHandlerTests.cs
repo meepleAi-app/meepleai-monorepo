@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 
@@ -15,6 +16,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// Tests streaming setup guide generation with progressive step delivery, LLM integration, and fallback behavior.
 /// Coverage: validation, embedding, search, LLM generation, step parsing, default fallback, errors, cancellation.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class StreamSetupGuideQueryHandlerTests
 {
     private readonly Mock<IEmbeddingService> _embeddingServiceMock;

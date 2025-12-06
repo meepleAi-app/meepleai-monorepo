@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 
@@ -15,6 +16,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// Tests for ProvideAgentFeedbackCommandHandler.
 /// Tests feedback submission validation and storage.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class ProvideAgentFeedbackCommandHandlerTests
 {
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;

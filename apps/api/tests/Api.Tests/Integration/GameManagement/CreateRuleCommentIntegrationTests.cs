@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Integration.GameManagement;
 
@@ -30,7 +31,7 @@ namespace Api.Tests.Integration.GameManagement;
 /// Coverage Target: ≥90% for CreateRuleCommentCommandHandler
 /// Execution Time Target: <60s
 /// </summary>
-[Collection("CreateRuleCommentIntegration")]
+[Trait("Category", TestCategories.Integration)]
 public sealed class CreateRuleCommentIntegrationTests : IAsyncLifetime
 {
     private IContainer? _postgresContainer;
@@ -420,4 +421,3 @@ public sealed class CreateRuleCommentIntegrationTests : IAsyncLifetime
             .WithMessage("*exceeds maximum length*");
     }
 }
-

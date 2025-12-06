@@ -9,12 +9,14 @@ using Microsoft.Extensions.Options;
 using Moq;
 using StackExchange.Redis;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Services;
 
 /// <summary>
 /// Tests for RateLimitService, focusing on Issue #1663: Dev/Test environment multiplier.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class RateLimitServiceTests
 {
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;

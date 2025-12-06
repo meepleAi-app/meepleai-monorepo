@@ -1,12 +1,14 @@
 using Api.Configuration;
 using Microsoft.Extensions.Options;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Configuration;
 
 /// <summary>
 /// Tests for AI provider configuration validation (BGAI-021, Issue #963).
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class AiProviderSettingsTests
 {
     private readonly AiProviderValidator _validator = new();

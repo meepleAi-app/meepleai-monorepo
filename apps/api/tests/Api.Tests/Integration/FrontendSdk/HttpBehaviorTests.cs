@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using System.Net;
 using System.Net.Http.Json;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Integration.FrontendSdk;
 
@@ -19,6 +20,7 @@ namespace Api.Tests.Integration.FrontendSdk;
 /// that trigger correct behavior in the frontend SDK's retry logic.
 /// </summary>
 [Collection(nameof(FrontendSdkTestCollection))]
+[Trait("Category", TestCategories.Integration)]
 public class HttpBehaviorTests : IAsyncLifetime
 {
     private readonly FrontendSdkTestFactory _factory;

@@ -5,6 +5,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.BoundedContexts.Authentication.TestHelpers;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Application.Commands.TwoFactor;
 
@@ -12,6 +13,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Application.Commands.TwoFacto
 /// Comprehensive tests for AdminDisable2FACommandHandler.
 /// Tests admin override to disable 2FA for locked-out users.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class AdminDisable2FACommandHandlerTests
 {
     private readonly Mock<IUserRepository> _userRepositoryMock;
@@ -357,4 +359,3 @@ public class AdminDisable2FACommandHandlerTests
             Times.Once);
     }
 }
-

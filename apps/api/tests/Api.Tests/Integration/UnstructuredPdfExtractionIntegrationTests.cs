@@ -20,7 +20,7 @@ namespace Api.Tests.Integration;
 /// Issue #954: BGAI-003-v2 - Integration tests for Unstructured service
 /// Requirements: 12 test cases, Testcontainers, real Italian PDFs, ≥90% coverage
 /// </remarks>
-[Collection("PdfPipeline")]
+[Trait("Category", TestCategories.Integration)]
 public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
 {
     private readonly Action<string> _output;
@@ -502,4 +502,3 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
         }
     }
 }
-

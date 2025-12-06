@@ -22,6 +22,7 @@ using Moq;
 using Npgsql;
 using Testcontainers.Qdrant;
 using Xunit;
+using Api.Tests.Constants;
 using AuthRole = Api.BoundedContexts.Authentication.Domain.ValueObjects.Role;
 
 namespace Api.Tests.Integration.DocumentProcessing;
@@ -43,7 +44,7 @@ namespace Api.Tests.Integration.DocumentProcessing;
 /// Coverage Target: ≥90% for IndexPdfCommandHandler
 /// Execution Time Target: <20s
 /// </summary>
-[Collection("IndexPdfIntegration")]
+[Trait("Category", TestCategories.Integration)]
 public sealed class IndexPdfIntegrationTests : IAsyncLifetime
 {
     private IContainer? _postgresContainer;
@@ -598,4 +599,3 @@ public sealed class IndexPdfIntegrationTests : IAsyncLifetime
         updatedVectorDoc.IndexingStatus.Should().Be("completed");
     }
 }
-

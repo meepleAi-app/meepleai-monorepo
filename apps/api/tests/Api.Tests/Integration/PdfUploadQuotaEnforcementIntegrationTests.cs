@@ -23,6 +23,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using StackExchange.Redis;
 using Xunit;
+using Api.Tests.Constants;
 using AuthRole = Api.BoundedContexts.Authentication.Domain.ValueObjects.Role;
 
 namespace Api.Tests.Integration;
@@ -37,9 +38,10 @@ namespace Api.Tests.Integration;
 /// persists within a single container lifecycle, so parallel execution could cause
 /// unpredictable quota counts.
 /// </summary>
-[Collection("QuotaEnforcement")]
+[Trait("Category", TestCategories.Integration)]
 public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
 {
+    private readonly string _redisKeyPrefix = $"test:{Guid.NewGuid()}:";
     private IContainer? _postgresContainer;
     private IContainer? _redisContainer;
     private MeepleAiDbContext? _dbContext;
@@ -568,4 +570,3 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         (info.WeeklyLimit - info.WeeklyUploadsUsed).Should().Be(17); // WeeklyRemaining computed
     }
 }
-

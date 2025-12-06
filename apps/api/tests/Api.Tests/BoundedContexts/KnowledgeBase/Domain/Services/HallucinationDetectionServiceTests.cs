@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using System.Linq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services;
 
@@ -10,6 +11,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services;
 /// Unit tests for HallucinationDetectionService
 /// ISSUE-972: BGAI-030 - Hallucination detection (forbidden keywords)
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class HallucinationDetectionServiceTests
 {
     private readonly HallucinationDetectionService _service;

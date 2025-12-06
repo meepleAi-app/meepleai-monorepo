@@ -229,39 +229,11 @@ services:
     #           count: 1
     #           capabilities: [gpu]
 
-  seq:
-    image: datalust/seq:2025.1
-    restart: unless-stopped
-    environment:
-      ACCEPT_EULA: "Y"
-    ports:
-      - "127.0.0.1:5341:5341"  # Ingestion port
-      - "127.0.0.1:8081:80"    # Web UI port
-    volumes:
-      - seqdata:/data
-    networks:
-      - meepleai
-
   # OPS-02: OpenTelemetry Observability Stack
-  jaeger:
-    image: jaegertracing/all-in-one:1.74.0
-    restart: unless-stopped
-    environment:
-      COLLECTOR_OTLP_ENABLED: "true"
-      SPAN_STORAGE_TYPE: "badger"
-      BADGER_EPHEMERAL: "true"  # Use in-memory storage for development (no persistence needed)
-    ports:
-      - "127.0.0.1:16686:16686"  # Jaeger UI
-      - "127.0.0.1:4318:4318"    # OTLP HTTP receiver
-      - "127.0.0.1:4317:4317"    # OTLP gRPC receiver (optional)
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:16686"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-    networks:
-      - meepleai
+  # Seq and Jaeger removed - replaced by HyperDX unified observability (see docker-compose.hyperdx.yml)
+  # Migration: Issue #1564 - HyperDX provides logs, traces, and session replay in one platform
+  # HyperDX UI: http://localhost:8180
+  # OTLP endpoints: gRPC :14317, HTTP :14318
 
   prometheus:
     image: prom/prometheus:v3.7.0
@@ -355,7 +327,7 @@ services:
       - "127.0.0.1:3001:3000"
     depends_on:
       - prometheus
-      - jaeger
+      # jaeger dependency removed - replaced by HyperDX (Issue #1564)
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
       interval: 10s
@@ -468,10 +440,11 @@ services:
 volumes:
   pgdata:
   qdrantdata:
-  seqdata:
+  # seqdata removed - replaced by HyperDX (Issue #1564)
   ollamadata:
   # OPS-02: OpenTelemetry volumes
   # jaegerdata removed - using ephemeral storage for development
+  # Seq and Jaeger replaced by HyperDX unified observability
   prometheusdata:
   grafanadata:
   # OPS-05: Error Monitoring & Alerting volumes

@@ -1,6 +1,6 @@
+using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.Filters;
 using Api.Infrastructure.Entities;
-using Api.Models;
 using Microsoft.AspNetCore.Http;
 using Moq;
 using Xunit;
@@ -99,11 +99,11 @@ public class RequireSessionFilterTests
         Assert.Equal(expectedResult, result);
 
         // Verify that the session in HttpContext.Items is the same one we set
-        Assert.True(context.HttpContext.Items.ContainsKey(nameof(ActiveSession)));
-        var sessionInContext = context.HttpContext.Items[nameof(ActiveSession)] as ActiveSession;
+        Assert.True(context.HttpContext.Items.ContainsKey(nameof(SessionStatusDto)));
+        var sessionInContext = context.HttpContext.Items[nameof(SessionStatusDto)] as SessionStatusDto;
         Assert.NotNull(sessionInContext);
-        Assert.Equal(testSession.User.Id, sessionInContext.User.Id);
-        Assert.Equal(testSession.User.Id, sessionInContext.User.Id);
+        Assert.NotNull(sessionInContext.User);
+        Assert.Equal(testSession.User!.Id, sessionInContext.User.Id);
     }
 
     [Fact]
@@ -113,7 +113,7 @@ public class RequireSessionFilterTests
         var filter = new RequireSessionFilter();
         var httpContext = new DefaultHttpContext();
         // Set session key with null value
-        httpContext.Items[nameof(ActiveSession)] = null;
+        httpContext.Items[nameof(SessionStatusDto)] = null;
 
         var context = new TestEndpointFilterInvocationContext(httpContext);
 
@@ -133,8 +133,8 @@ public class RequireSessionFilterTests
         // Arrange
         var filter = new RequireSessionFilter();
         var httpContext = new DefaultHttpContext();
-        // Set session key with wrong type (string instead of ActiveSession)
-        httpContext.Items[nameof(ActiveSession)] = "not a session";
+        // Set session key with wrong type (string instead of SessionStatusDto)
+        httpContext.Items[nameof(SessionStatusDto)] = "not a session";
 
         var context = new TestEndpointFilterInvocationContext(httpContext);
 
@@ -148,29 +148,33 @@ public class RequireSessionFilterTests
         _nextMock.Verify(next => next(It.IsAny<EndpointFilterInvocationContext>()), Times.Never);
     }
 
-    private EndpointFilterInvocationContext CreateFilterContext(bool includeSession, ActiveSession? session = null)
+    private EndpointFilterInvocationContext CreateFilterContext(bool includeSession, SessionStatusDto? session = null)
     {
         var httpContext = new DefaultHttpContext();
 
         if (includeSession)
         {
             var testSession = session ?? CreateTestSession();
-            httpContext.Items[nameof(ActiveSession)] = testSession;
+            httpContext.Items[nameof(SessionStatusDto)] = testSession;
         }
 
         return new TestEndpointFilterInvocationContext(httpContext);
     }
 
-    private ActiveSession CreateTestSession()
+    private SessionStatusDto CreateTestSession()
     {
-        var authUser = new AuthUser(
-            Id: "test-user-id",
+        var userDto = new UserDto(
+            Id: Guid.NewGuid(),
             Email: "test@example.com",
             DisplayName: "Test User",
-            Role: "User"
+            Role: "User",
+            CreatedAt: DateTime.UtcNow,
+            IsTwoFactorEnabled: false,
+            TwoFactorEnabledAt: null
         );
-        return new ActiveSession(
-            User: authUser,
+        return new SessionStatusDto(
+            IsValid: true,
+            User: userDto,
             ExpiresAt: DateTime.UtcNow.AddHours(1),
             LastSeenAt: DateTime.UtcNow
         );

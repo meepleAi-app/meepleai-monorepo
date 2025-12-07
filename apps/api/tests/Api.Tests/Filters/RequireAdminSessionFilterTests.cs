@@ -1,6 +1,6 @@
+using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.Filters;
 using Api.Infrastructure.Entities;
-using Api.Models;
 using Microsoft.AspNetCore.Http;
 using Moq;
 using Xunit;
@@ -91,8 +91,8 @@ public class RequireAdminSessionFilterTests
         Assert.Equal(expectedResult, result);
 
         // Verify that the session in HttpContext.Items is the admin session
-        Assert.True(context.HttpContext.Items.ContainsKey(nameof(ActiveSession)));
-        var sessionInContext = context.HttpContext.Items[nameof(ActiveSession)] as ActiveSession;
+        Assert.True(context.HttpContext.Items.ContainsKey(nameof(SessionStatusDto)));
+        var sessionInContext = context.HttpContext.Items[nameof(SessionStatusDto)] as SessionStatusDto;
         Assert.NotNull(sessionInContext);
         Assert.Equal("Admin", sessionInContext.User.Role);
         Assert.Equal(adminSession.User.Id, sessionInContext.User.Id);
@@ -114,29 +114,33 @@ public class RequireAdminSessionFilterTests
         _nextMock.Verify(next => next(It.IsAny<EndpointFilterInvocationContext>()), Times.Never);
     }
 
-    private EndpointFilterInvocationContext CreateFilterContext(bool includeSession, ActiveSession? session = null)
+    private EndpointFilterInvocationContext CreateFilterContext(bool includeSession, SessionStatusDto? session = null)
     {
         var httpContext = new DefaultHttpContext();
 
         if (includeSession)
         {
             var testSession = session ?? CreateTestSession();
-            httpContext.Items[nameof(ActiveSession)] = testSession;
+            httpContext.Items[nameof(SessionStatusDto)] = testSession;
         }
 
         return new DefaultEndpointFilterInvocationContext(httpContext);
     }
 
-    private ActiveSession CreateTestSession(string role = "User")
+    private SessionStatusDto CreateTestSession(string role = "User")
     {
-        var authUser = new AuthUser(
-            Id: "test-user-id",
+        var userDto = new UserDto(
+            Id: Guid.NewGuid(),
             Email: "test@example.com",
             DisplayName: "Test User",
-            Role: role
+            Role: role,
+            CreatedAt: DateTime.UtcNow,
+            IsTwoFactorEnabled: false,
+            TwoFactorEnabledAt: null
         );
-        return new ActiveSession(
-            User: authUser,
+        return new SessionStatusDto(
+            IsValid: true,
+            User: userDto,
             ExpiresAt: DateTime.UtcNow.AddHours(1),
             LastSeenAt: DateTime.UtcNow
         );

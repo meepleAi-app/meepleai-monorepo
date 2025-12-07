@@ -1,3 +1,4 @@
+using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.Extensions;
@@ -26,7 +27,7 @@ public static class AgentEndpoints
             CancellationToken ct = default) =>
         {
             // Session validated AND Admin role checked by RequireAdminSessionFilter
-            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
             var command = new CreateAgentCommand(
                 Name: req.Name,
@@ -59,7 +60,7 @@ public static class AgentEndpoints
             CancellationToken ct = default) =>
         {
             // Session validated by RequireSessionFilter
-            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
             var query = new GetAgentByIdQuery(id);
             var result = await mediator.Send(query, ct).ConfigureAwait(false);
@@ -87,7 +88,7 @@ public static class AgentEndpoints
             CancellationToken ct = default) =>
         {
             // Session validated by RequireSessionFilter
-            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
             var query = new GetAllAgentsQuery(activeOnly, type);
             var results = await mediator.Send(query, ct).ConfigureAwait(false);
@@ -118,7 +119,7 @@ public static class AgentEndpoints
             CancellationToken ct = default) =>
         {
             // Session validated AND Admin role checked by RequireAdminSessionFilter
-            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
             var command = new ConfigureAgentCommand(
                 AgentId: id,
@@ -164,14 +165,14 @@ public static class AgentEndpoints
             CancellationToken ct = default) =>
         {
             // Session validated by RequireSessionFilter
-            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
             var command = new InvokeAgentCommand(
                 AgentId: id,
                 Query: req.Query,
                 GameId: req.GameId,
                 ChatThreadId: req.ChatThreadId,
-                UserId: Guid.Parse(session.User.Id)
+                UserId: session.User.Id
             );
 
             var result = await mediator.Send(command, ct).ConfigureAwait(false);

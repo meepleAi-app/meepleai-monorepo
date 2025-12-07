@@ -1,5 +1,5 @@
+using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.Extensions;
-using Api.Models;
 
 namespace Api.Filters;
 
@@ -12,21 +12,21 @@ namespace Api.Filters;
 /// Pattern:
 /// - Validates session exists and is active (401 Unauthorized if not)
 /// - Validates user has Admin role (403 Forbidden if not)
-/// - Stores validated ActiveSession in HttpContext.Items for endpoint access
+/// - Stores validated SessionStatusDto in HttpContext.Items for endpoint access
 ///
 /// Example:
 /// <code>
 /// group.MapPost("/admin/endpoint", async (HttpContext context) =>
 /// {
 ///     // Session is validated AND user is Admin
-///     var session = context.Items[nameof(ActiveSession)] as ActiveSession;
+///     var session = context.Items[nameof(SessionStatusDto)] as SessionStatusDto;
 ///     // Perform admin operations...
 /// })
 /// .RequireAdminSession();
 /// </code>
 ///
 /// Related: RequireSessionFilter, SessionValidationExtensions
-/// Issue: #1446 (Future Enhancement)
+/// Issue: #1446, #1676 Phase 3
 /// </summary>
 public class RequireAdminSessionFilter : IEndpointFilter
 {

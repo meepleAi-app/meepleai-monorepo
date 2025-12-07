@@ -1,6 +1,7 @@
 using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.GameManagement.Application.DTOs;
 using Api.BoundedContexts.GameManagement.Application.Queries;
+using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.Extensions;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
@@ -23,7 +24,7 @@ public static class RuleSpecEndpoints
         group.MapGet("/games/{gameId:guid}/rulespec", async (Guid gameId, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             // Session validated by RequireSessionFilter
-            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
             logger.LogInformation("Fetching RuleSpec for game {GameId}", gameId);
             var ruleSpec = await mediator.Send(new GetRuleSpecQuery(gameId), ct).ConfigureAwait(false);
@@ -48,10 +49,7 @@ public static class RuleSpecEndpoints
                 return Results.BadRequest(new { error = "gameId in URL does not match gameId in RuleSpec" });
             }
 
-            if (!Guid.TryParse(session!.User.Id, out var userId))
-            {
-                throw new BadRequestException("Invalid user ID");
-            }
+            var userId = session!.User.Id;
 
             // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
             logger.LogInformation("User {UserId} updating RuleSpec for game {GameId}", userId, gameId);
@@ -175,12 +173,9 @@ public static class RuleSpecEndpoints
             CancellationToken ct) =>
         {
             // Session validated by RequireSessionFilter
-            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
-            if (!Guid.TryParse(session.User.Id, out var userId))
-            {
-                throw new BadRequestException("Invalid user ID format");
-            }
+            var userId = session.User.Id;
 
             // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
             logger.LogInformation("User {UserId} creating comment on RuleSpec {GameId} version {Version}", userId, gameId, version);
@@ -208,12 +203,9 @@ public static class RuleSpecEndpoints
             CancellationToken ct) =>
         {
             // Session validated by RequireSessionFilter
-            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
-            if (!Guid.TryParse(session.User.Id, out var userId))
-            {
-                throw new BadRequestException("Invalid user ID format");
-            }
+            var userId = session.User.Id;
 
             // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
             logger.LogInformation("User {UserId} replying to comment {CommentId}", userId, commentId);
@@ -243,7 +235,7 @@ public static class RuleSpecEndpoints
             CancellationToken ct) =>
         {
             // Session validated by RequireSessionFilter
-            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
             var userId = session.User.Id;
 
             logger.LogInformation("User {UserId} fetching comments for RuleSpec {GameId} version {Version} (includeResolved: {IncludeResolved})",
@@ -272,7 +264,7 @@ public static class RuleSpecEndpoints
             CancellationToken ct) =>
         {
             // Session validated by RequireSessionFilter
-            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
             var userId = session.User.Id;
 
             logger.LogInformation("User {UserId} fetching comments for RuleSpec {GameId} version {Version} line {LineNumber}",
@@ -302,10 +294,7 @@ public static class RuleSpecEndpoints
             var (authorized, session, error) = context.RequireAdminOrEditorSession();
             if (!authorized) return error!;
 
-            if (!Guid.TryParse(session!.User.Id, out var userId))
-            {
-                throw new BadRequestException("Invalid user ID format");
-            }
+            var userId = session!.User.Id;
 
             // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
             logger.LogInformation("User {UserId} resolving comment {CommentId} (resolveReplies: {ResolveReplies})",
@@ -339,10 +328,7 @@ public static class RuleSpecEndpoints
             var (authorized, session, error) = context.RequireAdminOrEditorSession();
             if (!authorized) return error!;
 
-            if (!Guid.TryParse(session!.User.Id, out var userId))
-            {
-                throw new BadRequestException("Invalid user ID format");
-            }
+            var userId = session!.User.Id;
 
             // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
             logger.LogInformation("User {UserId} unresolving comment {CommentId} (unresolveParent: {UnresolveParent})",

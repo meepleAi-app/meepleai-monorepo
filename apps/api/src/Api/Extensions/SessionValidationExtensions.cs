@@ -1,5 +1,5 @@
+using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.Infrastructure.Entities;
-using Api.Models;
 
 namespace Api.Extensions;
 
@@ -9,8 +9,10 @@ namespace Api.Extensions;
 ///
 /// Pattern: Extension methods on HttpContext that return tuples with:
 /// - Authentication/Authorization status (bool)
-/// - Session object if authenticated (ActiveSession?)
+/// - Session object if authenticated (SessionStatusDto?)
 /// - Error result if validation failed (IResult?)
+///
+/// Issue #1676 Phase 3: Migrated from ActiveSession (legacy) to SessionStatusDto (DDD)
 ///
 /// Usage:
 /// <code>
@@ -28,7 +30,7 @@ public static class SessionValidationExtensions
     /// <returns>
     /// A tuple containing:
     /// - IsAuthenticated: true if session exists and is valid
-    /// - Session: The ActiveSession object if authenticated, null otherwise
+    /// - Session: The SessionStatusDto object if authenticated, null otherwise
     /// - ErrorResult: IResult to return if not authenticated (Unauthorized), null if successful
     /// </returns>
     /// <example>
@@ -36,11 +38,13 @@ public static class SessionValidationExtensions
     /// if (!authenticated) return error!;
     /// // Use session...
     /// </example>
-    public static (bool IsAuthenticated, ActiveSession Session, IResult? ErrorResult)
+    public static (bool IsAuthenticated, SessionStatusDto Session, IResult? ErrorResult)
         TryGetActiveSession(this HttpContext context)
     {
-        if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) ||
-            value is not ActiveSession session)
+        if (!context.Items.TryGetValue(nameof(SessionStatusDto), out var value) ||
+            value is not SessionStatusDto session ||
+            !session.IsValid ||
+            session.User == null)
         {
             return (false, default!, Results.Unauthorized());
         }
@@ -56,7 +60,7 @@ public static class SessionValidationExtensions
     /// <returns>
     /// A tuple containing:
     /// - IsAuthenticated: true if either session or API key is valid
-    /// - Session: The ActiveSession if session auth used, null if API key auth
+    /// - Session: The SessionStatusDto if session auth used, null if API key auth
     /// - ErrorResult: IResult to return if neither auth method valid, null if successful
     /// </returns>
     /// <example>
@@ -64,11 +68,13 @@ public static class SessionValidationExtensions
     /// if (!authenticated) return error!;
     /// // session may be null if API key auth was used
     /// </example>
-    public static (bool IsAuthenticated, ActiveSession? Session, IResult? ErrorResult)
+    public static (bool IsAuthenticated, SessionStatusDto? Session, IResult? ErrorResult)
         TryGetAuthenticatedUser(this HttpContext context)
     {
-        var hasSession = context.Items.TryGetValue(nameof(ActiveSession), out var value) &&
-                        value is ActiveSession session;
+        var hasSession = context.Items.TryGetValue(nameof(SessionStatusDto), out var value) &&
+                        value is SessionStatusDto session &&
+                        session.IsValid &&
+                        session.User != null;
         var hasApiKey = context.User.Identity?.IsAuthenticated == true;
 
         if (!hasSession && !hasApiKey)
@@ -76,13 +82,13 @@ public static class SessionValidationExtensions
             return (false, null, Results.Unauthorized());
         }
 
-        return (true, hasSession ? (ActiveSession)value! : null, null);
+        return (true, hasSession ? (SessionStatusDto)value! : null, null);
     }
 
     /// <summary>
     /// Validates that the authenticated user has a specific role.
     /// </summary>
-    /// <param name="session">The active session containing user information.</param>
+    /// <param name="session">The session status containing user information.</param>
     /// <param name="requiredRole">The role required for authorization.</param>
     /// <returns>
     /// A tuple containing:
@@ -96,9 +102,10 @@ public static class SessionValidationExtensions
     /// if (!authorized) return forbidResult!;
     /// </example>
     public static (bool IsAuthorized, IResult? ErrorResult)
-        RequireRole(this ActiveSession session, UserRole requiredRole)
+        RequireRole(this SessionStatusDto session, UserRole requiredRole)
     {
-        if (!string.Equals(session.User.Role, requiredRole.ToString(), StringComparison.OrdinalIgnoreCase))
+        if (session.User == null ||
+            !string.Equals(session.User.Role, requiredRole.ToString(), StringComparison.OrdinalIgnoreCase))
         {
             return (false, Results.StatusCode(StatusCodes.Status403Forbidden));
         }
@@ -110,7 +117,7 @@ public static class SessionValidationExtensions
     /// Validates that the authenticated user has Admin role.
     /// Convenience method for the most common role check.
     /// </summary>
-    /// <param name="session">The active session containing user information.</param>
+    /// <param name="session">The session status containing user information.</param>
     /// <returns>
     /// A tuple containing:
     /// - IsAuthorized: true if user is Admin
@@ -123,7 +130,7 @@ public static class SessionValidationExtensions
     /// if (!authorized) return forbidResult!;
     /// </example>
     public static (bool IsAuthorized, IResult? ErrorResult)
-        RequireAdminRole(this ActiveSession session)
+        RequireAdminRole(this SessionStatusDto session)
     {
         return session.RequireRole(UserRole.Admin);
     }
@@ -132,7 +139,7 @@ public static class SessionValidationExtensions
     /// Validates that the authenticated user has either Admin or Editor role.
     /// Common pattern for content management endpoints.
     /// </summary>
-    /// <param name="session">The active session containing user information.</param>
+    /// <param name="session">The session status containing user information.</param>
     /// <returns>
     /// A tuple containing:
     /// - IsAuthorized: true if user is Admin or Editor
@@ -145,8 +152,13 @@ public static class SessionValidationExtensions
     /// if (!authorized) return forbidResult!;
     /// </example>
     public static (bool IsAuthorized, IResult? ErrorResult)
-        RequireAdminOrEditorRole(this ActiveSession session)
+        RequireAdminOrEditorRole(this SessionStatusDto session)
     {
+        if (session.User == null)
+        {
+            return (false, Results.Forbid());
+        }
+
         var isAdmin = string.Equals(session.User.Role, UserRole.Admin.ToString(),
             StringComparison.OrdinalIgnoreCase);
         var isEditor = string.Equals(session.User.Role, UserRole.Editor.ToString(),
@@ -169,7 +181,7 @@ public static class SessionValidationExtensions
     /// <returns>
     /// A tuple containing:
     /// - IsAuthorized: true if session exists and user has required role
-    /// - Session: The ActiveSession if authorized, null otherwise
+    /// - Session: The SessionStatusDto if authorized, null otherwise
     /// - ErrorResult: IResult to return if not authorized (Unauthorized or Forbidden), null if successful
     /// </returns>
     /// <example>
@@ -177,7 +189,7 @@ public static class SessionValidationExtensions
     /// if (!authorized) return error!;
     /// // Use session...
     /// </example>
-    public static (bool IsAuthorized, ActiveSession Session, IResult? ErrorResult)
+    public static (bool IsAuthorized, SessionStatusDto Session, IResult? ErrorResult)
         RequireSessionWithRole(this HttpContext context, UserRole requiredRole)
     {
         var (authenticated, session, authError) = context.TryGetActiveSession();
@@ -197,7 +209,7 @@ public static class SessionValidationExtensions
     /// <returns>
     /// A tuple containing:
     /// - IsAuthorized: true if session exists and user is Admin
-    /// - Session: The ActiveSession if authorized, null otherwise
+    /// - Session: The SessionStatusDto if authorized, null otherwise
     /// - ErrorResult: IResult to return if not authorized, null if successful
     /// </returns>
     /// <example>
@@ -205,7 +217,7 @@ public static class SessionValidationExtensions
     /// if (!authorized) return error!;
     /// // Use session...
     /// </example>
-    public static (bool IsAuthorized, ActiveSession Session, IResult? ErrorResult)
+    public static (bool IsAuthorized, SessionStatusDto Session, IResult? ErrorResult)
         RequireAdminSession(this HttpContext context)
     {
         return context.RequireSessionWithRole(UserRole.Admin);
@@ -219,7 +231,7 @@ public static class SessionValidationExtensions
     /// <returns>
     /// A tuple containing:
     /// - IsAuthorized: true if session exists and user is Admin or Editor
-    /// - Session: The ActiveSession if authorized, null otherwise
+    /// - Session: The SessionStatusDto if authorized, null otherwise
     /// - ErrorResult: IResult to return if not authorized, null if successful
     /// </returns>
     /// <example>
@@ -227,7 +239,7 @@ public static class SessionValidationExtensions
     /// if (!authorized) return error!;
     /// // Use session...
     /// </example>
-    public static (bool IsAuthorized, ActiveSession Session, IResult? ErrorResult)
+    public static (bool IsAuthorized, SessionStatusDto Session, IResult? ErrorResult)
         RequireAdminOrEditorSession(this HttpContext context)
     {
         var (authenticated, session, authError) = context.TryGetActiveSession();

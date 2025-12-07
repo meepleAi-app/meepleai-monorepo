@@ -1,4 +1,5 @@
 using Api.BoundedContexts.Administration.Application.Commands;
+using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
@@ -50,7 +51,7 @@ public static class AdminMiscEndpoints
         group.MapGet("/chess/search", async (string? q, int? limit, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             // Session validated by RequireSessionFilter
-            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
             // Issue #1445: Use centralized query validation
             var queryError = QueryValidator.ValidateQuery(q);

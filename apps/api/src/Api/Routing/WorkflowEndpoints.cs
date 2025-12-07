@@ -1,5 +1,6 @@
 using Api.BoundedContexts.WorkflowIntegration.Application.Commands;
 using Api.BoundedContexts.WorkflowIntegration.Application.Queries;
+using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.Extensions;
 using Api.Models;
 using Api.Services;
@@ -61,7 +62,7 @@ public static class WorkflowEndpoints
                 Name: request.Name,
                 BaseUrl: request.BaseUrl,
                 ApiKeyEncrypted: apiKeyEncrypted,
-                CreatedByUserId: Guid.Parse(session.User.Id),
+                CreatedByUserId: session.User.Id,
                 WebhookUrl: request.WebhookUrl
             );
 
@@ -183,7 +184,7 @@ public static class WorkflowEndpoints
             CancellationToken ct) =>
         {
             // Session validated by RequireSessionFilter
-            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
             logger.LogInformation("User {UserId} importing n8n template {TemplateId}", session.User.Id, id);
 
@@ -191,7 +192,7 @@ public static class WorkflowEndpoints
             {
                 TemplateId = id,
                 Parameters = request.Parameters,
-                UserId = session.User.Id
+                UserId = session.User.Id.ToString()
             };
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
 

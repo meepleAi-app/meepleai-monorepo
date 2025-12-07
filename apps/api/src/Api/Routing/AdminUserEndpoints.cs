@@ -1,5 +1,7 @@
 using Api.BoundedContexts.Administration.Application.Commands;
+using Api.BoundedContexts.Administration.Application.DTOs;
 using Api.BoundedContexts.Administration.Application.Queries;
+using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.Extensions;
 using Api.Models;
 using Api.SharedKernel.Domain.Exceptions;
@@ -24,7 +26,7 @@ public static class AdminUserEndpoints
             CancellationToken ct) =>
         {
             // Session validated by RequireSessionFilter
-            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
             logger.LogInformation("User {UserId} searching for users with query: {Query}", session.User.Id, query);
 
@@ -113,7 +115,7 @@ public static class AdminUserEndpoints
             if (!authorized) return error!;
 
             logger.LogInformation("Admin {AdminId} deleting user {UserId}", session.User.Id, id);
-            var command = new DeleteUserCommand(id, session.User.Id);
+            var command = new DeleteUserCommand(id, session.User.Id.ToString());
             await mediator.Send(command, ct).ConfigureAwait(false);
             logger.LogInformation("User {UserId} deleted successfully", id);
             return Results.NoContent();
@@ -142,7 +144,7 @@ public static class AdminUserEndpoints
             }
 
             // Validate requester ID format
-            if (!Guid.TryParse(session.User.Id, out var requesterId))
+            if (!Guid.TryParse(session.User.Id.ToString(), out var requesterId))
             {
                 logger.LogError("Invalid requester ID format in session: {RequesterId}", session.User.Id);
                 return Results.BadRequest(new { error = "invalid_session", message = "Invalid session user ID format" });
@@ -191,7 +193,7 @@ public static class AdminUserEndpoints
 **Authorization**: Admin only
 
 **Request Body**: UpdateUserTierRequest with tier field")
-        .Produces<UserDto>(StatusCodes.Status200OK)
+        .Produces<Api.BoundedContexts.Authentication.Application.DTOs.UserDto>(StatusCodes.Status200OK)
         .Produces(StatusCodes.Status400BadRequest)
         .Produces(StatusCodes.Status401Unauthorized)
         .Produces(StatusCodes.Status403Forbidden);

@@ -126,7 +126,7 @@ public static class FeatureFlagEndpoints
             var updateCommand = new UpdateConfigValueCommand(
                 ConfigId: config.Id,
                 NewValue: enabled.ToString().ToLowerInvariant(),
-                UpdatedByUserId: Guid.Parse(session.User.Id)
+                UpdatedByUserId: session.User.Id
             );
             var updatedConfig = await mediator.Send(updateCommand, ct).ConfigureAwait(false);
 
@@ -174,7 +174,7 @@ public static class FeatureFlagEndpoints
                 Key: request.Key,
                 Value: request.Enabled.ToString().ToLowerInvariant(),
                 ValueType: "bool",
-                CreatedByUserId: Guid.Parse(session.User.Id),
+                CreatedByUserId: session.User.Id,
                 Description: request.Description,
                 Category: "Features",
                 Environment: environment,

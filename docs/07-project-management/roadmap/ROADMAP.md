@@ -216,7 +216,7 @@
 
 **Backend Issues** (4 issues):
 - [#904](https://github.com/DegrassiAaron/meepleai-monorepo/issues/904) - ApiKeyManagementService
-- [#905](https://github.com/DegrassiAaron/meepleai-monorepo/issues/905) - UserManagementService - Bulk operations
+- [#905](https://github.com/DegrassiAaron/meepleai-monorepo/issues/905) - ~~UserManagementService~~ Administration handlers - Bulk operations
 - [#906](https://github.com/DegrassiAaron/meepleai-monorepo/issues/906) - CSV import/export utility
 - [#907](https://github.com/DegrassiAaron/meepleai-monorepo/issues/907) - Unit tests bulk operations
 

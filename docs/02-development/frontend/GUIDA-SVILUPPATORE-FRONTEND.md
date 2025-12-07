@@ -1431,15 +1431,15 @@ export function createAuthClient(httpClient: HttpClient) {
 
     // Profile Management
     async getProfile() {
-      return await httpClient.get('/api/v1/auth/me', userProfileSchema);
+      return await httpClient.get('/api/v1/users/profile', userProfileSchema);
     },
 
     async updateProfile(payload: UpdateProfilePayload) {
-      return await httpClient.put('/api/v1/auth/profile', payload);
+      return await httpClient.put('/api/v1/users/profile', payload);
     },
 
     async changePassword(request: ChangePasswordRequest) {
-      await httpClient.post('/api/v1/auth/password/change', request);
+      await httpClient.put('/api/v1/users/profile/password', request);
     },
 
     // Preferences

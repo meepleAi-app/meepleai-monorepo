@@ -2721,9 +2721,9 @@ pie title Legacy Code Removal (5,387 linee)
     "Streaming Services (old)" : 940
     "RuleSpec Comment/Diff Services" : 700
     "Error Handling (53 try-catch blocks)" : 1677
-    "AuthService" : 346
-    "UserManagementService" : 243
-    "GameService" : 181
+    "AuthService" : 346       // LEGACY - removed in DDD migration
+    "UserManagementService" : 243  // LEGACY - removed in DDD migration
+    "GameService" : 181       // LEGACY - removed in DDD migration
 ```
 
 ### 7.5 Test Coverage

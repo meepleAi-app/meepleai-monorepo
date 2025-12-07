@@ -200,7 +200,9 @@ var users = await _dbContext.Users
 
 ### 5. UserManagementService.cs - Nullable Email in Search Filter 📧
 
-**File**: `apps/api/src/Api/Services/UserManagementService.cs`
+> **NOTE**: UserManagementService was removed in DDD migration (Issue #1676). This fix was preserved in Administration bounded context.
+
+**File**: `apps/api/src/Api/Services/UserManagementService.cs` (LEGACY - removed)
 **Line**: 55
 **Severity**: CRITICAL
 

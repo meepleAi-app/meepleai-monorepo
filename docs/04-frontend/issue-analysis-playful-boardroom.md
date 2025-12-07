@@ -213,8 +213,7 @@ const navItems = [
   { icon: Home, label: 'Home', href: '/dashboard' },
   { icon: Dices, label: 'Giochi', href: '/giochi' },
   { icon: MessageCircle, label: 'Chat', href: '/chat' },
-  { icon: Settings, label: 'Config', href: '/settings' },
-  { icon: User, label: 'Profilo', href: '/profile' },
+  { icon: Settings, label: 'Impostazioni', href: '/settings' },
 ];
 ```
 

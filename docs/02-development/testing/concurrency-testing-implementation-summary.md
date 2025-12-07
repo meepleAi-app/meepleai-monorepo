@@ -266,6 +266,7 @@ Create Testcontainers-based concurrency tests for:
 - **Production path**: Testcontainers + PostgreSQL required (ConfigurationConcurrencyTests pattern)
 - **API-discovery approach**: Validated and effective (Serena MCP)
 - **Time saved**: Future developers won't waste effort on SQLite concurrency tests
+- **NOTE**: Some services referenced in this document were removed in DDD migration (GameService, AuthService, UserManagementService - see Issue #1676)
 
 ### For Future Concurrency Testing (MUST-FOLLOW)
 1. ✅ **Use Testcontainers + PostgreSQL** (NOT SQLite in-memory)

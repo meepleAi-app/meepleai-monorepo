@@ -22,7 +22,7 @@ Esempi pratici di comandi personalizzati e workflow automatizzati per accelerare
 **Pattern Analysis** (from existing services):
 Read these files for pattern reference:
 - apps/api/src/Api/Services/RagService.cs
-- apps/api/src/Api/Services/GameService.cs
+- apps/api/src/Api/Services/GameService.cs (LEGACY - removed in DDD migration - use CQRS handlers instead)
 - apps/api/tests/Api.Tests/Unit/RagServiceTests.cs
 
 **Generation Steps**:

@@ -118,7 +118,7 @@ Same as Login endpoint.
 }
 ```
 
-## Change Password Endpoint (`PUT /api/v1/auth/profile/password`)
+## Change Password Endpoint (`PUT /api/v1/users/profile/password`)
 
 ### User ID Validation Errors
 

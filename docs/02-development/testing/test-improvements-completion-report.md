@@ -149,11 +149,11 @@ public void Test()
 
 **Manual Fixes** (2):
 1. `AgentFeedbackServiceTests.cs` - 10 tests now passing
-2. `GameServiceTests.cs` - 6 tests now passing
+2. `GameServiceTests.cs` (LEGACY - removed in DDD migration) - 6 tests now passing
 
 **Agent-Automated Fixes** (6):
 3. `N8nConfigServiceTests.cs`
-4. `AuthServiceTests.cs`
+4. `AuthServiceTests.cs` (LEGACY - removed in DDD migration)
 5. `RagServiceTests.cs`
 6. `AiRequestLogServiceTests.cs`
 7. `SnippetHandlingTests.cs` (formerly Ai04ComprehensiveTests)
@@ -266,9 +266,9 @@ Assert.Equal(plaintext, decrypted);
 
 **SQLite Connection Fix**:
 - `AgentFeedbackServiceTests.cs` (+IDisposable, connection lifetime)
-- `GameServiceTests.cs` (+IDisposable, connection lifetime)
+- `GameServiceTests.cs` (LEGACY - removed in DDD migration) (+IDisposable, connection lifetime)
 - `N8nConfigServiceTests.cs` (+IDisposable, connection lifetime)
-- `AuthServiceTests.cs` (+IDisposable, connection lifetime)
+- `AuthServiceTests.cs` (LEGACY - removed in DDD migration) (+IDisposable, connection lifetime)
 - `RagServiceTests.cs` (+IDisposable, connection lifetime)
 - `AiRequestLogServiceTests.cs` (+IDisposable, connection lifetime)
 

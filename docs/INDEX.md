@@ -2,7 +2,7 @@
 
 **Project**: Italian Board Game Rules AI Assistant
 **Version**: 2.1
-**Last Updated**: 2025-12-02
+**Last Updated**: 2025-12-07
 
 ---
 

@@ -1380,12 +1380,12 @@ mockRepo.Verify(r => r.AddAsync(It.IsAny<Game>(), It.IsAny<CancellationToken>())
 ### CQRS Migration Status
 
 ```
-✅ GameManagement      - 100% (12 handlers)
-✅ Authentication      - 100% (8 handlers)
-✅ DocumentProcessing  - 100% (6 handlers)
+✅ GameManagement      - 100% (12 handlers) (LEGACY - GameService removed)
+✅ Authentication      - 100% (8 handlers) (LEGACY - AuthService removed)
+✅ DocumentProcessing  - 100% (6 handlers) (LEGACY - PDF Services removed)
 ✅ WorkflowIntegration - 100% (4 handlers)
 ✅ SystemConfiguration - 100% (5 handlers)
-✅ Administration      - 100% (7 handlers)
+✅ Administration      - 100% (7 handlers) (LEGACY - UserManagementService removed)
 ✅ KnowledgeBase       - 95%  (10+ handlers)
 
 TOTALE: 99% completo
@@ -1394,10 +1394,10 @@ TOTALE: 99% completo
 ### Services Eliminati (2,070 LOC)
 
 ```
-❌ GameService (181 LOC)             → Commands/Queries
-❌ AuthService (346 LOC)             → Commands/Queries
-❌ PDF Services (1,300 LOC)          → Commands/Queries
-❌ UserManagementService (243 LOC)   → Commands/Queries
+❌ GameService (181 LOC) (LEGACY - removed in DDD migration)             → Commands/Queries
+❌ AuthService (346 LOC) (LEGACY - removed in DDD migration)             → Commands/Queries
+❌ PDF Services (1,300 LOC) (LEGACY - removed in DDD migration)          → Commands/Queries
+❌ UserManagementService (243 LOC) (LEGACY - removed in DDD migration)   → Commands/Queries
 ```
 
 ### Services Mantenuti (Orchestrazione/Infrastructure)

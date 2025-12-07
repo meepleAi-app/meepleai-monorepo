@@ -273,7 +273,7 @@ Since NSwag doesn't natively generate Zod schemas, we'll use a two-step process:
 2. ✅ Create `nswag.json` configuration
 3. ✅ Generate initial TypeScript client
 4. ✅ Validate output matches manual types
-5. ✅ Test with one endpoint (e.g., `/api/v1/users/profile`)
+5. ✅ Test with one endpoint (e.g., `/api/v1/games`)
 
 ### Phase 2: Parallel Mode (Week 2-3)
 6. ✅ Generate all types (keep manual as deprecated)

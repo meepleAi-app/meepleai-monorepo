@@ -146,8 +146,8 @@ curl http://localhost:8080/health
 
 **Azione**:
 1. Login come `admin@meepleai.dev`
-2. Vai a `/profile`
-3. Modifica:
+2. Vai a `/settings`
+3. Modifica (tab Profile):
    - Display Name: `Admin Updated`
    - Email: lascia invariata
 4. Clicca "Save Changes"
@@ -818,7 +818,7 @@ DELETE FROM configuration WHERE key = 'RAG.Validation.MinConfidence';
 
 **Azione**:
 1. Login come qualsiasi utente
-2. Vai a `/settings` o `/profile`
+2. Vai a `/settings`
 3. Sezione "API Keys"
 4. Clicca "Generate New API Key"
 5. Inserisci nome: "Test Key"

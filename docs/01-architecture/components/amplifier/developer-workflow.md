@@ -474,7 +474,7 @@ Deploy animation-choreographer for page transitions
 # Name: GetGamesByCategory
 # Method: GET
 # Route: /api/v1/games/category/{category}
-# Service: IGameService
+# Handler: GetGamesByCategoryQuery (CQRS)
 # Response: List<GameDto>
 
 # Output:

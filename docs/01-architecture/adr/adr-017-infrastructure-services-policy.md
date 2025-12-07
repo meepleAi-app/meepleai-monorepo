@@ -9,7 +9,7 @@
 
 ## Context
 
-After the DDD migration (99% complete, 2,070 lines of legacy services removed), **39 infrastructure services** remain in `apps/api/src/Api/Services/`. We need clear guidelines for:
+After the DDD migration (100% complete, 2,070 lines of legacy services removed), **39 infrastructure services** remain in `apps/api/src/Api/Services/`. We need clear guidelines for:
 
 1. **When** to create infrastructure services vs domain/application services
 2. **How** to classify existing services (keep, consolidate, migrate)

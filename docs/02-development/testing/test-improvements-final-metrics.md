@@ -299,7 +299,7 @@ _mockService
 - Documentation: 5 files (guides, summaries, reports)
 
 ### Modified Files (17)
-- SQLite fixes: 13 files
+- SQLite fixes: 13 files (includes LEGACY GameServiceTests.cs and AuthServiceTests.cs from DDD migration)
 - Mocking improvements: 2 files
 - Renamed: 2 files (Ai04 → Snippet*)
 

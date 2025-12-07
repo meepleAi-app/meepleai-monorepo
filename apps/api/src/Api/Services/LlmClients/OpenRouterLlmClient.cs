@@ -212,7 +212,7 @@ public class OpenRouterLlmClient : ILlmClient
     }
 
     /// <inheritdoc/>
-    public async IAsyncEnumerable<string> GenerateCompletionStreamAsync(
+    public async IAsyncEnumerable<StreamChunk> GenerateCompletionStreamAsync(
         string model,
         string systemPrompt,
         string userPrompt,
@@ -235,13 +235,15 @@ public class OpenRouterLlmClient : ILlmClient
 
         messages.Add(new { role = "user", content = userPrompt });
 
+        // ISSUE-1725: Enable usage metadata in SSE stream
         var request = new
         {
             model = model,
             messages = messages,
             temperature = temperature,
             max_tokens = maxTokens,
-            stream = true
+            stream = true,
+            usage = new { include = true } // Request usage metadata in final chunk
         };
 
         var json = JsonSerializer.Serialize(request);
@@ -338,10 +340,57 @@ public class OpenRouterLlmClient : ILlmClient
                         continue;
                     }
 
+                    // Regular content chunk (may be present even with usage)
                     var delta = chunk?.Choices?[0]?.Delta?.Content;
-                    if (!string.IsNullOrEmpty(delta))
+                    var hasContent = !string.IsNullOrEmpty(delta);
+
+                    // ISSUE-1725: Check for usage metadata in chunk (final chunk)
+                    var hasUsage = chunk?.Usage != null;
+
+                    if (hasContent && !hasUsage)
                     {
-                        yield return delta;
+                        // Pure content chunk
+                        yield return new StreamChunk(Content: delta);
+                    }
+                    else if (hasUsage)
+                    {
+                        // Final chunk with usage metadata (may also have content)
+                        if (hasContent)
+                        {
+                            // Yield content first
+                            yield return new StreamChunk(Content: delta);
+                        }
+
+                        // Then yield usage metadata
+                        var usage = new LlmUsage(
+                            chunk!.Usage!.PromptTokens,
+                            chunk.Usage.CompletionTokens,
+                            chunk.Usage.TotalTokens);
+
+                        var cost = _costCalculator.CalculateCost(
+                            chunk.Model,
+                            ProviderName,
+                            usage.PromptTokens,
+                            usage.CompletionTokens);
+
+                        var llmCost = new LlmCost
+                        {
+                            InputCost = cost.InputCost,
+                            OutputCost = cost.OutputCost,
+                            ModelId = chunk.Model,
+                            Provider = ProviderName
+                        };
+
+                        _logger.LogInformation(
+                            "OpenRouter streaming usage: {PromptTokens}p + {CompletionTokens}c = {TotalTokens}t (${TotalCost:F6})",
+                            usage.PromptTokens, usage.CompletionTokens, usage.TotalTokens, llmCost.TotalCost);
+
+                        yield return new StreamChunk(
+                            Content: null,
+                            Usage: usage,
+                            Cost: llmCost,
+                            IsFinal: true);
+                        break; // Usage signals end of stream
                     }
                 }
             }
@@ -406,6 +455,12 @@ internal record OpenRouterStreamChunk
 
     [JsonPropertyName("model")]
     public string Model { get; init; } = string.Empty;
+
+    /// <summary>
+    /// ISSUE-1725: Usage metadata in final SSE chunk (when usage.include=true)
+    /// </summary>
+    [JsonPropertyName("usage")]
+    public ChatUsage? Usage { get; init; }
 }
 
 internal record StreamChoice

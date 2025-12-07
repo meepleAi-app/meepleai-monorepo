@@ -720,6 +720,7 @@ public static class MeepleAiMetrics
     /// <summary>
     /// Records LLM token usage following OpenTelemetry GenAI semantic conventions.
     /// Issue #1694: Track actual token usage from LLM calls with cost calculation.
+    /// Issue #1725: Enhanced with per-user cost attribution (low-cardinality)
     /// </summary>
     /// <param name="promptTokens">Number of tokens in the prompt/input</param>
     /// <param name="completionTokens">Number of tokens in the completion/output</param>
@@ -728,6 +729,8 @@ public static class MeepleAiMetrics
     /// <param name="provider">Provider name (e.g., "OpenRouter", "Ollama")</param>
     /// <param name="operationDurationMs">Optional LLM operation duration in milliseconds</param>
     /// <param name="costUsd">Optional estimated cost in USD</param>
+    /// <param name="userSegment">Optional user segment (free, pro, enterprise, admin) - LOW CARDINALITY</param>
+    /// <param name="userIdHash">Optional user ID hash (first 8 chars) - LOW CARDINALITY for privacy</param>
     public static void RecordLlmTokenUsage(
         int promptTokens,
         int completionTokens,
@@ -735,7 +738,9 @@ public static class MeepleAiMetrics
         string modelId,
         string provider,
         double? operationDurationMs = null,
-        decimal? costUsd = null)
+        decimal? costUsd = null,
+        string? userSegment = null,
+        string? userIdHash = null)
     {
         // OpenTelemetry GenAI Semantic Convention: gen_ai.client.token.usage
         var baseTags = new TagList
@@ -778,6 +783,18 @@ public static class MeepleAiMetrics
                 { "model_id", modelId },
                 { "provider", provider.ToLowerInvariant() }
             };
+
+            // ISSUE-1725: Add user attribution tags (low-cardinality for Prometheus)
+            if (!string.IsNullOrEmpty(userSegment))
+            {
+                costTags.Add("user_segment", userSegment);
+            }
+
+            if (!string.IsNullOrEmpty(userIdHash))
+            {
+                costTags.Add("user_id_hash", userIdHash);
+            }
+
             LlmCostUsd.Record((double)costUsd.Value, costTags);
         }
     }

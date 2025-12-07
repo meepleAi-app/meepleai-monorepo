@@ -11,7 +11,7 @@ namespace Api.Filters;
 /// Pattern:
 /// - Validates authentication via session cookie OR API key header
 /// - Returns 401 Unauthorized if neither authentication method is valid
-/// - Session is available in HttpContext.Items[nameof(ActiveSession)] if session auth
+/// - Session is available in HttpContext.Items[nameof(SessionStatusDto)] if session auth
 /// - User claims are available via HttpContext.User if API key auth
 ///
 /// Example:
@@ -19,7 +19,7 @@ namespace Api.Filters;
 /// group.MapGet("/endpoint", async (HttpContext context) =>
 /// {
 ///     // User is authenticated (either session or API key)
-///     var session = context.Items[nameof(ActiveSession)] as ActiveSession;
+///     var session = context.Items[nameof(SessionStatusDto)] as SessionStatusDto;
 ///     if (session != null)
 ///     {
 ///         // Session authentication
@@ -33,7 +33,7 @@ namespace Api.Filters;
 /// </code>
 ///
 /// Related: RequireSessionFilter, SessionValidationExtensions
-/// Issue: #1446 (Future Enhancement)
+/// Issue: #1446, #1676 Phase 3
 /// </summary>
 public class RequireAuthenticatedUserFilter : IEndpointFilter
 {
@@ -59,7 +59,7 @@ public class RequireAuthenticatedUserFilter : IEndpointFilter
         }
 
         // User is authenticated (either session or API key)
-        // Endpoint can check HttpContext.Items[nameof(ActiveSession)] for session
+        // Endpoint can check HttpContext.Items[nameof(SessionStatusDto)] for session
         // or HttpContext.User for API key authentication
         return await next(context).ConfigureAwait(false);
     }

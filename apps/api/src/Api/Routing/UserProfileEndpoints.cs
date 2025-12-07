@@ -29,9 +29,9 @@ public static class UserProfileEndpoints
             CancellationToken ct) =>
         {
             // Session validated by RequireSessionFilter
-            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
-            var query = new DddGetUserProfileQuery { UserId = Guid.Parse(session.User.Id) };
+            var query = new DddGetUserProfileQuery { UserId = session.User.Id };
             var profile = await mediator.Send(query, ct).ConfigureAwait(false);
 
             if (profile == null)
@@ -65,11 +65,11 @@ public static class UserProfileEndpoints
             CancellationToken ct) =>
         {
             // Session validated by RequireSessionFilter
-            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
             var command = new DddUpdateUserProfileCommand
             {
-                UserId = Guid.Parse(session.User.Id),
+                UserId = session.User.Id,
                 DisplayName = payload.DisplayName,
                 Email = payload.Email
             };
@@ -109,11 +109,11 @@ public static class UserProfileEndpoints
             CancellationToken ct) =>
         {
             // Session validated by RequireSessionFilter
-            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
             var command = new DddChangePasswordCommand
             {
-                UserId = Guid.Parse(session.User.Id),
+                UserId = session.User.Id,
                 CurrentPassword = payload.CurrentPassword,
                 NewPassword = payload.NewPassword
             };
@@ -154,12 +154,10 @@ public static class UserProfileEndpoints
             CancellationToken ct) =>
         {
             // Session validated by RequireSessionFilter
-            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
-            if (!Guid.TryParse(session.User.Id, out var userId))
-            {
-                return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
-            }
+            // session.User.Id is already a Guid from SessionStatusDto
+            var userId = session.User.Id;
 
             var query = new GetUserUploadQuotaQuery(userId);
             var quotaInfo = await mediator.Send(query, ct).ConfigureAwait(false);
@@ -199,11 +197,11 @@ public static class UserProfileEndpoints
             CancellationToken ct) =>
         {
             // Session validated by RequireSessionFilter
-            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
             var command = new DddUpdatePreferencesCommand
             {
-                UserId = Guid.Parse(session.User.Id),
+                UserId = session.User.Id,
                 Language = payload.Language,
                 Theme = payload.Theme,
                 EmailNotifications = payload.EmailNotifications,
@@ -239,11 +237,11 @@ public static class UserProfileEndpoints
             CancellationToken ct) =>
         {
             // Session validated by RequireSessionFilter
-            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
             var query = new DddGetUserProfileQuery
             {
-                UserId = Guid.Parse(session.User.Id)
+                UserId = session.User.Id
             };
 
             var userProfile = await mediator.Send(query, ct).ConfigureAwait(false);

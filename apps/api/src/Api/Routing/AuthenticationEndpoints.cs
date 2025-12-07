@@ -267,12 +267,12 @@ Clients can also store the key securely and send it via the `Authorization: ApiK
             // Calculate remaining time
             var now = DateTime.UtcNow;
             var remainingTime = session.ExpiresAt - now;
-            var remainingMinutes = (int)Math.Max(0, remainingTime.TotalMinutes);
+            var remainingMinutes = (int)Math.Max(0, remainingTime?.TotalMinutes ?? 0);
 
             // Return session status from already-authenticated session
             var response = new SessionStatusResponse(
-                session.ExpiresAt,
-                session.LastSeenAt,
+                session.ExpiresAt ?? DateTime.UtcNow.AddDays(30),
+                session.LastSeenAt ?? DateTime.UtcNow,
                 remainingMinutes
             );
 
@@ -313,7 +313,7 @@ Clients can also store the key securely and send it via the `Authorization: ApiK
             // Use CQRS Command to extend session (default 30 days extension)
             var command = new ExtendSessionCommand(
                 dbSession.Id,
-                Guid.Parse(session.User.Id),
+                session.User.Id,
                 ExtensionDuration: null  // Use default from Session.DefaultLifetime
             );
             var response = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -331,7 +331,7 @@ Clients can also store the key securely and send it via the `Authorization: ApiK
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            var query = new GetUserSessionsQuery(Guid.Parse(session.User.Id));
+            var query = new GetUserSessionsQuery(session.User.Id);
             var sessions = await mediator.Send(query, ct).ConfigureAwait(false);
             return Results.Json(sessions);
         });

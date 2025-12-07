@@ -1,6 +1,6 @@
 using System.Security.Claims;
+using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.Authentication.Application.Queries;
-using Api.Models;
 using Api.Routing;
 using MediatR;
 
@@ -8,8 +8,10 @@ namespace Api.Middleware;
 
 /// <summary>
 /// Middleware that authenticates requests using the session cookie written by auth endpoints.
-/// When a valid session token is found, stores an ActiveSession in HttpContext.Items
+/// When a valid session token is found, stores a SessionStatusDto in HttpContext.Items
 /// and enriches HttpContext.User with basic identity claims.
+///
+/// Issue #1676 Phase 3: Migrated from ActiveSession (legacy) to SessionStatusDto (DDD)
 /// </summary>
 public class SessionAuthenticationMiddleware
 {
@@ -38,17 +40,9 @@ public class SessionAuthenticationMiddleware
 
                     if (result.IsValid && result.User != null)
                     {
-                        // Convert DDD DTO to legacy ActiveSession for backward compatibility
-                        var legacyUser = new AuthUser(
-                            Id: result.User.Id.ToString(),
-                            Email: result.User.Email,
-                            DisplayName: result.User.DisplayName,
-                            Role: result.User.Role);
-
-                        var activeSession = new ActiveSession(legacyUser, result.ExpiresAt!.Value, result.LastSeenAt);
-
-                        // Make session available to endpoints expecting it
-                        context.Items[nameof(ActiveSession)] = activeSession;
+                        // Store session status in HttpContext.Items for endpoints (DDD DTO format)
+                        // Issue #1676 Phase 3: Migrated from ActiveSession to SessionStatusDto
+                        context.Items[nameof(SessionStatusDto)] = result;
 
                         // If no authenticated user is set, populate ClaimsPrincipal for observability and helpers
                         if (context.User?.Identity?.IsAuthenticated != true)

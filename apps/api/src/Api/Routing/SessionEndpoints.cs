@@ -36,7 +36,7 @@ public static class SessionEndpoints
 
             var command = new Api.BoundedContexts.Authentication.Application.Commands.RevokeSessionCommand(
                 sessionId,
-                Guid.Parse(session.User.Id),
+                session.User.Id,
                 IsRequestingUserAdmin: true,
                 Reason: "Admin revocation"
             );

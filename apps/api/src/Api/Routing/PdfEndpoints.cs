@@ -3,6 +3,7 @@ using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Application.Queries;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.BoundedContexts.GameManagement.Application.Commands;
+using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.Extensions;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
@@ -55,10 +56,7 @@ public static class PdfEndpoints
                 return Results.BadRequest(new { error = "validation_failed", details = new Dictionary<string, string>(StringComparer.Ordinal) { ["file"] = "No file provided" } });
             }
 
-            if (!Guid.TryParse(session.User.Id, out var userId))
-            {
-                return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
-            }
+            var userId = session.User.Id;
 
             logger.LogInformation("User {UserId} uploading PDF for game {GameId}", userId, gameId);
 
@@ -170,7 +168,7 @@ public static class PdfEndpoints
         group.MapGet("/pdfs/{pdfId:guid}/download", async (Guid pdfId, HttpContext context, MeepleAiDbContext db, IBlobStorageService blobStorageService, ILogger<Program> logger, CancellationToken ct) =>
         {
             // Session validated by RequireSessionFilter
-            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
             // Get PDF metadata from database
             var pdf = await db.PdfDocuments
@@ -184,10 +182,7 @@ public static class PdfEndpoints
                 return Results.NotFound(new { error = "PDF not found" });
             }
 
-            if (!Guid.TryParse(session.User.Id, out var userId))
-            {
-                return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
-            }
+            var userId = session.User.Id;
 
             // Authorization: User can only download their own PDFs unless admin
             bool isAdmin = string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
@@ -222,7 +217,7 @@ public static class PdfEndpoints
         group.MapDelete("/pdf/{pdfId:guid}", async (Guid pdfId, HttpContext context, AuditService auditService, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             // Session validated by RequireSessionFilter
-            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
             // Use CQRS Query to check ownership
             var pdf = await mediator.Send(new GetPdfOwnershipQuery(pdfId), ct).ConfigureAwait(false);
@@ -232,10 +227,7 @@ public static class PdfEndpoints
                 return Results.NotFound(new { error = "PDF not found" });
             }
 
-            if (!Guid.TryParse(session.User.Id, out var userId))
-            {
-                return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
-            }
+            var userId = session.User.Id;
 
             // RLS: Check permissions
             bool isAdmin = string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
@@ -245,7 +237,7 @@ public static class PdfEndpoints
             {
                 // Audit log access denial
                 await auditService.LogAsync(
-                    session.User.Id,
+                    session.User.Id.ToString(),
                     "ACCESS_DENIED",
                     "PdfDocument",
                     pdfId.ToString(),
@@ -274,7 +266,7 @@ public static class PdfEndpoints
 
             // Audit log successful deletion
             await auditService.LogAsync(
-                session.User.Id,
+                session.User.Id.ToString(),
                 "DELETE",
                 "PdfDocument",
                 pdfId.ToString(),
@@ -292,7 +284,7 @@ public static class PdfEndpoints
         group.MapGet("/pdfs/{pdfId:guid}/progress", async (Guid pdfId, HttpContext context, IMediator mediator, CancellationToken ct) =>
         {
             // Session validated by RequireSessionFilter
-            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
             // Use CQRS Query to get PDF progress
             var pdf = await mediator.Send(new GetPdfProgressQuery(pdfId), ct).ConfigureAwait(false);
@@ -302,10 +294,7 @@ public static class PdfEndpoints
                 return Results.NotFound(new { error = "PDF not found" });
             }
 
-            if (!Guid.TryParse(session.User.Id, out var userId))
-            {
-                return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
-            }
+            var userId = session.User.Id;
 
             // Authorization: User can only view their own PDFs unless admin
             if (pdf.UploadedByUserId != userId &&
@@ -346,7 +335,7 @@ public static class PdfEndpoints
         group.MapDelete("/pdfs/{pdfId:guid}/processing", async (Guid pdfId, HttpContext context, IMediator mediator, IBackgroundTaskService backgroundTaskService, ILogger<Program> logger, CancellationToken ct) =>
         {
             // Session validated by RequireSessionFilter
-            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
             // Use CQRS Query to check ownership and status
             var pdf = await mediator.Send(new GetPdfOwnershipQuery(pdfId), ct).ConfigureAwait(false);
@@ -356,10 +345,7 @@ public static class PdfEndpoints
                 return Results.NotFound(new { error = "PDF not found" });
             }
 
-            if (!Guid.TryParse(session.User.Id, out var userId))
-            {
-                return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
-            }
+            var userId = session.User.Id;
 
             // Authorization: User can only cancel their own PDFs unless admin
             if (pdf.UploadedByUserId != userId &&
@@ -519,10 +505,7 @@ public static class PdfEndpoints
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            if (!Guid.TryParse(session.User.Id, out var userId))
-            {
-                return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
-            }
+            var userId = session.User.Id;
 
             logger.LogInformation(
                 "User {UserId} initializing chunked upload for game {GameId}, file {FileName} ({FileSize} bytes)",
@@ -562,10 +545,7 @@ public static class PdfEndpoints
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            if (!Guid.TryParse(session.User.Id, out var userId))
-            {
-                return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
-            }
+            var userId = session.User.Id;
 
             var form = await context.Request.ReadFormAsync(ct).ConfigureAwait(false);
 
@@ -625,10 +605,7 @@ public static class PdfEndpoints
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            if (!Guid.TryParse(session.User.Id, out var userId))
-            {
-                return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
-            }
+            var userId = session.User.Id;
 
             logger.LogInformation("User {UserId} completing chunked upload session {SessionId}",
                 userId, request.SessionId);
@@ -675,10 +652,7 @@ public static class PdfEndpoints
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            if (!Guid.TryParse(session.User.Id, out var userId))
-            {
-                return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
-            }
+            var userId = session.User.Id;
 
             var query = new GetChunkedUploadStatusQuery(sessionId, userId);
             var result = await mediator.Send(query, ct).ConfigureAwait(false);

@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.Administration.Application.Queries;
+using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.Extensions;
 using Api.Models;
 using Api.Services;
@@ -60,7 +61,7 @@ public static class PromptManagementEndpoints
                     request.Category,
                     request.InitialContent,
                     request.Metadata,
-                    Guid.Parse(session.User.Id)),
+                    session.User.Id),
                 ct);
 
             return Results.Created(
@@ -120,7 +121,7 @@ public static class PromptManagementEndpoints
                     id,
                     request.Content,
                     request.Metadata,
-                    Guid.Parse(session.User.Id)),
+                    session.User.Id),
                 ct);
 
             return Results.Created(
@@ -174,7 +175,7 @@ public static class PromptManagementEndpoints
             var command = new ActivatePromptVersionCommand(
                 TemplateId: id,
                 VersionId: versionId,
-                ActivatedByUserId: Guid.Parse(session.User.Id),
+                ActivatedByUserId: session.User.Id,
                 Reason: "Admin activation via UI"
             );
 
@@ -358,7 +359,7 @@ public static class PromptManagementEndpoints
         group.MapGet("/prompts/{templateId:guid}/versions/active", async (Guid templateId, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             // Session validated by RequireSessionFilter
-            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
             // Get template to retrieve name
             var templateQuery = new Api.BoundedContexts.Administration.Application.Queries.GetPromptTemplateQuery(templateId.ToString());
@@ -386,7 +387,7 @@ public static class PromptManagementEndpoints
             if (!authorized) return error!;
 
             logger.LogInformation("Admin {AdminId} activating version {VersionId} for template {TemplateId}", session.User.Id, versionId, templateId);
-            var command = new Api.BoundedContexts.Administration.Application.Commands.ActivatePromptVersionCommand(templateId, versionId, Guid.Parse(session.User.Id), request.Reason);
+            var command = new Api.BoundedContexts.Administration.Application.Commands.ActivatePromptVersionCommand(templateId, versionId, session.User.Id, request.Reason);
             var activatedVersion = await mediator.Send(command, ct).ConfigureAwait(false);
             logger.LogInformation("Version {VersionId} (v{VersionNumber}) activated successfully", activatedVersion.Id, activatedVersion.VersionNumber);
             return Results.Json(activatedVersion);

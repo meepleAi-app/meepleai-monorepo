@@ -9,7 +9,15 @@
  * Nested under AuthProvider in provider hierarchy
  */
 
-import React, { createContext, useContext, useState, useCallback, useMemo, useEffect, PropsWithChildren } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useMemo,
+  useEffect,
+  PropsWithChildren,
+} from 'react';
 import { Game, Agent } from '@/types';
 import { api } from '@/lib/api';
 
@@ -65,27 +73,27 @@ export function GameProvider({ children }: PropsWithChildren) {
 
   // Derived values
   const selectedGame = useMemo(
-    () => (Array.isArray(games) ? games.find((g) => g.id === selectedGameId) : null) ?? null,
+    () => (Array.isArray(games) ? games.find(g => g.id === selectedGameId) : null) ?? null,
     [games, selectedGameId]
   );
 
   const selectedAgent = useMemo(
-    () => (Array.isArray(agents) ? agents.find((a) => a.id === selectedAgentId) : null) ?? null,
+    () => (Array.isArray(agents) ? agents.find(a => a.id === selectedAgentId) : null) ?? null,
     [agents, selectedAgentId]
   );
 
   // Define functions before using them in useEffect
   const loadGames = useCallback(async () => {
-    setLoading((prev) => ({ ...prev, games: true }));
+    setLoading(prev => ({ ...prev, games: true }));
     setError(null);
     try {
-      const gamesList = await api.get<Game[]>('/api/v1/games');
-      const games = gamesList ?? [];
+      const response = await api.games.getAll();
+      const games = response.games ?? [];
       setGames(games);
 
       // Auto-select first game if available and no game currently selected
       // We check the current selectedGameId value directly without dependency
-      setSelectedGameId((currentId) => {
+      setSelectedGameId(currentId => {
         if (games.length > 0 && !currentId) {
           return games[0].id;
         }
@@ -96,15 +104,15 @@ export function GameProvider({ children }: PropsWithChildren) {
       setError('Failed to load games');
       setGames([]);
     } finally {
-      setLoading((prev) => ({ ...prev, games: false }));
+      setLoading(prev => ({ ...prev, games: false }));
     }
   }, []);
 
   const loadAgents = useCallback(async (gameId: string) => {
-    setLoading((prev) => ({ ...prev, agents: true }));
+    setLoading(prev => ({ ...prev, agents: true }));
     setError(null);
     try {
-      const agentsList = await api.get<Agent[]>(`/api/v1/games/${gameId}/agents`);
+      const agentsList = await api.games.getAgents(gameId);
       setAgents(Array.isArray(agentsList) ? agentsList : []);
 
       // Auto-select first agent if available
@@ -119,7 +127,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       setAgents([]);
       setSelectedAgentId(null);
     } finally {
-      setLoading((prev) => ({ ...prev, agents: false }));
+      setLoading(prev => ({ ...prev, agents: false }));
     }
   }, []);
 
@@ -150,8 +158,13 @@ export function GameProvider({ children }: PropsWithChildren) {
   const createGame = useCallback(async (name: string): Promise<Game> => {
     setError(null);
     try {
-      const newGame = await api.post<Game>('/api/v1/games', { name });
-      setGames((prev) => {
+      const created = await api.games.create(name);
+      const newGame = {
+        id: created.id,
+        title: created.title,
+        createdAt: created.createdAt,
+      } as Game;
+      setGames(prev => {
         const prevGames = Array.isArray(prev) ? prev : [];
         return [...prevGames, newGame];
       });

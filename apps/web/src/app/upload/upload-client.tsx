@@ -180,13 +180,7 @@ export function UploadClient({
     setAutoAdvanceTriggered(true);
 
     try {
-      const fetchedRuleSpec = await api.get<RuleSpec>(`/api/v1/games/${confirmedGameId}/rulespec`);
-
-      if (!fetchedRuleSpec) {
-        wizardDispatch({ type: 'ERROR', error: 'Unable to load RuleSpec' });
-        return;
-      }
-
+      const fetchedRuleSpec = await api.games.getRuleSpec(confirmedGameId);
       setRuleSpec(fetchedRuleSpec);
       wizardDispatch({ type: 'PARSING_COMPLETE' });
       await refetchPdfs();

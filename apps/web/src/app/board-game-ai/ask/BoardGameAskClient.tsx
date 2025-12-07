@@ -52,7 +52,7 @@ export default function BoardGameAskClient() {
   const [queryState, queryControls] = useChatQuery({
     onComplete: (answer, citations, metadata) => {
       // Add assistant response to conversation history
-      setConversationHistory((prev) => [
+      setConversationHistory(prev => [
         ...prev,
         {
           role: 'assistant',
@@ -62,7 +62,7 @@ export default function BoardGameAskClient() {
       ]);
       setQuestion(''); // Clear input after successful response
     },
-    onError: (error) => {
+    onError: error => {
       logger.error(
         'Query error occurred',
         new Error(error),
@@ -78,16 +78,16 @@ export default function BoardGameAskClient() {
     const fetchGames = async () => {
       try {
         setLoadingGames(true);
-        const response = await api.get<Game[]>('/api/v1/games');
+        const response = await api.games.getAll();
 
         // Check if component is still mounted
         if (abortController.signal.aborted) return;
 
-        if (response && Array.isArray(response)) {
-          setGames(response);
+        if (response && Array.isArray(response.games)) {
+          setGames(response.games as any);
           // Auto-select first game if available
-          if (response.length > 0 && !selectedGameId) {
-            setSelectedGameId(response[0].id);
+          if (response.games.length > 0 && !selectedGameId) {
+            setSelectedGameId(response.games[0].id);
           }
         }
       } catch (err) {
@@ -126,10 +126,7 @@ export default function BoardGameAskClient() {
     }
 
     // Add user question to history
-    setConversationHistory((prev) => [
-      ...prev,
-      { role: 'user', content: question },
-    ]);
+    setConversationHistory(prev => [...prev, { role: 'user', content: question }]);
 
     // Ask question via backend API
     await queryControls.askQuestion(selectedGameId, question);
@@ -143,7 +140,7 @@ export default function BoardGameAskClient() {
     }
   };
 
-  const selectedGame = games.find((g) => g.id === selectedGameId);
+  const selectedGame = games.find(g => g.id === selectedGameId);
 
   return (
     <div className="min-h-dvh bg-slate-950 text-white">
@@ -179,7 +176,8 @@ export default function BoardGameAskClient() {
             <div>
               <h1 className="text-3xl font-bold mb-2">Ask a Question</h1>
               <p className="text-slate-400">
-                Select a game and ask any rule question. Our AI will provide an answer with citations.
+                Select a game and ask any rule question. Our AI will provide an answer with
+                citations.
               </p>
             </div>
 
@@ -197,12 +195,10 @@ export default function BoardGameAskClient() {
                 disabled={loadingGames || queryState.isLoading}
               >
                 <SelectTrigger id="game-select" className="w-full">
-                  <SelectValue
-                    placeholder={loadingGames ? 'Loading games...' : 'Select a game'}
-                  />
+                  <SelectValue placeholder={loadingGames ? 'Loading games...' : 'Select a game'} />
                 </SelectTrigger>
                 <SelectContent>
-                  {games.map((game) => (
+                  {games.map(game => (
                     <SelectItem key={game.id} value={game.id}>
                       {game.title}
                     </SelectItem>
@@ -219,7 +215,7 @@ export default function BoardGameAskClient() {
               <Textarea
                 id="question-input"
                 value={question}
-                onChange={(e) => setQuestion(e.target.value)}
+                onChange={e => setQuestion(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="e.g., Can I play a development card on the same turn I bought it in Catan?"
                 rows={4}

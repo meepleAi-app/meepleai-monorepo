@@ -7,6 +7,80 @@
 
 import { z } from 'zod';
 
+// ========== Core Authentication ==========
+
+/**
+ * Schema for AuthUser (simplified user data for authentication)
+ */
+export const AuthUserSchema = z.object({
+  id: z.string().uuid(),
+  email: z.string().email(),
+  displayName: z.string().nullable().optional(),
+  role: z.string().min(1),
+});
+
+export type AuthUser = z.infer<typeof AuthUserSchema>;
+
+/**
+ * Schema for login response
+ */
+export const LoginResponseSchema = z.object({
+  user: AuthUserSchema,
+});
+
+export type LoginResponse = z.infer<typeof LoginResponseSchema>;
+
+/**
+ * Schema for register response
+ */
+export const RegisterResponseSchema = z.object({
+  user: AuthUserSchema,
+});
+
+export type RegisterResponse = z.infer<typeof RegisterResponseSchema>;
+
+/**
+ * Schema for logout response
+ */
+export const LogoutResponseSchema = z.object({
+  ok: z.boolean().optional(),
+  message: z.string().optional(),
+});
+
+export type LogoutResponse = z.infer<typeof LogoutResponseSchema>;
+
+/**
+ * Schema for current user (GET /api/v1/auth/me)
+ */
+export const CurrentUserResponseSchema = z.object({
+  user: AuthUserSchema,
+});
+
+export type CurrentUserResponse = z.infer<typeof CurrentUserResponseSchema>;
+
+// ========== Password Reset ==========
+
+export const VerifyResetTokenResponseSchema = z.object({
+  ok: z.boolean(),
+  message: z.string().optional(),
+});
+
+export type VerifyResetTokenResponse = z.infer<typeof VerifyResetTokenResponseSchema>;
+
+export const RequestPasswordResetResponseSchema = z.object({
+  ok: z.boolean(),
+  message: z.string(),
+});
+
+export type RequestPasswordResetResponse = z.infer<typeof RequestPasswordResetResponseSchema>;
+
+export const ConfirmPasswordResetResponseSchema = z.object({
+  ok: z.boolean(),
+  message: z.string(),
+});
+
+export type ConfirmPasswordResetResponse = z.infer<typeof ConfirmPasswordResetResponseSchema>;
+
 // ========== Session Management ==========
 
 export const SessionStatusResponseSchema = z.object({

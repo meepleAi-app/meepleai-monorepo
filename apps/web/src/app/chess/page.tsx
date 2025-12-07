@@ -1,12 +1,11 @@
 'use client';
 
-
-import { FormEvent, useEffect, useState } from "react";
-import Link from "next/link";
-import { Chessboard, type PieceDropHandlerArgs } from "react-chessboard";
-import { Chess } from "chess.js";
-import { api } from "@/lib/api";
-import { cn } from "@/lib/utils";
+import { FormEvent, useEffect, useState } from 'react';
+import Link from 'next/link';
+import { Chessboard, type PieceDropHandlerArgs } from 'react-chessboard';
+import { Chess } from 'chess.js';
+import { api } from '@/lib/api';
+import { cn } from '@/lib/utils';
 import { logger } from '@/lib/logger';
 import { createErrorContext } from '@/lib/errors';
 
@@ -25,7 +24,7 @@ type AuthResponse = {
 
 type Message = {
   id: string;
-  role: "user" | "assistant";
+  role: 'user' | 'assistant';
   content: string;
   fen?: string; // FEN position from AI response
   suggestedMoves?: string[]; // Moves in algebraic notation (e.g., ["e2-e4", "Nf3"])
@@ -49,12 +48,12 @@ export default function ChessPage() {
 
   // Chat state
   const [messages, setMessages] = useState<Message[]>([]);
-  const [inputValue, setInputValue] = useState<string>("");
-  const [errorMessage, setErrorMessage] = useState<string>("");
+  const [inputValue, setInputValue] = useState<string>('');
+  const [errorMessage, setErrorMessage] = useState<string>('');
   const [isSendingMessage, setIsSendingMessage] = useState(false);
 
   // UI state
-  const [boardOrientation, setBoardOrientation] = useState<"white" | "black">("white");
+  const [boardOrientation, setBoardOrientation] = useState<'white' | 'black'>('white');
 
   // Load current user on mount
   useEffect(() => {
@@ -63,12 +62,8 @@ export default function ChessPage() {
 
   const loadCurrentUser = async () => {
     try {
-      const res = await api.get<AuthResponse>("/api/v1/auth/me");
-      if (res) {
-        setAuthUser(res.user);
-      } else {
-        setAuthUser(null);
-      }
+      const user = await api.auth.getMe();
+      setAuthUser(user);
     } catch {
       setAuthUser(null);
     }
@@ -80,8 +75,8 @@ export default function ChessPage() {
     setCurrentPosition(newGame.fen());
     setHighlightedSquares({});
     setMessages([]);
-    setInputValue("");
-    setErrorMessage("");
+    setInputValue('');
+    setErrorMessage('');
   };
 
   const loadFenPosition = (fen: string) => {
@@ -96,14 +91,14 @@ export default function ChessPage() {
         error instanceof Error ? error : new Error(String(error)),
         createErrorContext('ChessPage', 'loadFenPosition', { fen, operation: 'load_fen' })
       );
-      setErrorMessage("Posizione FEN non valida.");
+      setErrorMessage('Posizione FEN non valida.');
     }
   };
 
   const highlightMoves = (moves: string[]) => {
     const highlights: Record<string, object> = {};
 
-    moves.forEach((move) => {
+    moves.forEach(move => {
       // Parse move notation (e.g., "e2-e4", "Nf3", "O-O")
       try {
         // Try to validate the move
@@ -113,12 +108,12 @@ export default function ChessPage() {
         if (result) {
           // Highlight both from and to squares
           highlights[result.from] = {
-            background: "rgba(255, 255, 0, 0.4)",
-            borderRadius: "50%"
+            background: 'rgba(255, 255, 0, 0.4)',
+            borderRadius: '50%',
           };
           highlights[result.to] = {
-            background: "rgba(0, 255, 0, 0.4)",
-            borderRadius: "50%"
+            background: 'rgba(0, 255, 0, 0.4)',
+            borderRadius: '50%',
           };
         }
       } catch (error) {
@@ -150,35 +145,35 @@ export default function ChessPage() {
 
     const userMessage: Message = {
       id: tempUserId,
-      role: "user",
+      role: 'user',
       content: userMessageContent,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
 
-    setMessages((prev) => [...prev, userMessage]);
-    setInputValue("");
-    setErrorMessage("");
+    setMessages(prev => [...prev, userMessage]);
+    setInputValue('');
+    setErrorMessage('');
     setIsSendingMessage(true);
 
     try {
       // Send question with current FEN position
-      const res = await api.post<ChessResponse>("/api/v1/agents/chess", {
+      const res = await api.agents.invokeChess({
         question: userMessageContent,
-        fenPosition: currentPosition
+        fenPosition: currentPosition,
       });
 
       const tempAssistantId = `temp-assistant-${Date.now()}`;
 
       const assistantMessage: Message = {
         id: tempAssistantId,
-        role: "assistant",
+        role: 'assistant',
         content: res.answer,
         fen: res.fen,
         suggestedMoves: res.suggestedMoves,
-        timestamp: new Date()
+        timestamp: new Date(),
       };
 
-      setMessages((prev) => [...prev, assistantMessage]);
+      setMessages(prev => [...prev, assistantMessage]);
 
       // Update board if FEN position is provided
       if (res.fen) {
@@ -193,12 +188,16 @@ export default function ChessPage() {
       logger.error(
         'Failed to send chess message',
         err instanceof Error ? err : new Error(String(err)),
-        createErrorContext('ChessPage', 'sendMessage', { question: userMessageContent, position: currentPosition, operation: 'send_chess_message' })
+        createErrorContext('ChessPage', 'sendMessage', {
+          question: userMessageContent,
+          position: currentPosition,
+          operation: 'send_chess_message',
+        })
       );
       setErrorMessage("Errore nella comunicazione con l'agente scacchi. Riprova.");
 
       // Remove the user message if the request failed
-      setMessages((prev) => prev.filter((m) => m.id !== tempUserId));
+      setMessages(prev => prev.filter(m => m.id !== tempUserId));
     } finally {
       setIsSendingMessage(false);
     }
@@ -212,7 +211,7 @@ export default function ChessPage() {
       const move = game.move({
         from: sourceSquare,
         to: targetSquare,
-        promotion: "q" // Always promote to queen for simplicity
+        promotion: 'q', // Always promote to queen for simplicity
       });
 
       // Invalid move
@@ -224,20 +223,24 @@ export default function ChessPage() {
       // Add a system message about the move
       const moveMessage: Message = {
         id: `move-${Date.now()}`,
-        role: "assistant",
+        role: 'assistant',
         content: `Mossa eseguita: ${move.san}`,
         fen: game.fen(),
-        timestamp: new Date()
+        timestamp: new Date(),
       };
 
-      setMessages((prev) => [...prev, moveMessage]);
+      setMessages(prev => [...prev, moveMessage]);
 
       return true;
     } catch (error) {
       logger.error(
         'Failed to make chess move',
         error instanceof Error ? error : new Error(String(error)),
-        createErrorContext('ChessPage', 'onDrop', { from: sourceSquare, to: targetSquare, operation: 'make_move' })
+        createErrorContext('ChessPage', 'onDrop', {
+          from: sourceSquare,
+          to: targetSquare,
+          operation: 'make_move',
+        })
       );
       return false;
     }
@@ -286,9 +289,7 @@ export default function ChessPage() {
             Nuova Partita
           </button>
           <button
-            onClick={() =>
-              setBoardOrientation((prev) => (prev === "white" ? "black" : "white"))
-            }
+            onClick={() => setBoardOrientation(prev => (prev === 'white' ? 'black' : 'white'))}
             className="px-4 py-2 bg-gray-100 text-gray-800 border border-gray-300 rounded text-sm font-medium cursor-pointer hover:bg-gray-200"
           >
             Ruota Scacchiera
@@ -308,7 +309,7 @@ export default function ChessPage() {
               position: currentPosition,
               onPieceDrop: onDrop,
               boardOrientation: boardOrientation,
-              squareStyles: highlightedSquares
+              squareStyles: highlightedSquares,
             }}
           />
         </div>
@@ -316,19 +317,19 @@ export default function ChessPage() {
         {/* Game Status */}
         <div className="mt-4 p-3 bg-gray-100 rounded text-sm">
           <div className="mb-1">
-            <strong>Turno:</strong> {game.turn() === "w" ? "Bianco" : "Nero"}
+            <strong>Turno:</strong> {game.turn() === 'w' ? 'Bianco' : 'Nero'}
           </div>
           <div className="mb-1">
-            <strong>Stato:</strong>{" "}
+            <strong>Stato:</strong>{' '}
             {game.isCheckmate()
-              ? "Scacco Matto!"
+              ? 'Scacco Matto!'
               : game.isCheck()
-                ? "Scacco!"
+                ? 'Scacco!'
                 : game.isDraw()
-                  ? "Patta"
+                  ? 'Patta'
                   : game.isStalemate()
-                    ? "Stallo"
-                    : "In corso"}
+                    ? 'Stallo'
+                    : 'In corso'}
           </div>
           <div className="text-xs text-slate-600 mt-2">
             <strong>FEN:</strong> {currentPosition}
@@ -348,9 +349,7 @@ export default function ChessPage() {
 
         {/* Error Message */}
         {errorMessage && (
-          <div className="m-4 p-3 bg-red-50 text-red-600 rounded text-sm">
-            {errorMessage}
-          </div>
+          <div className="m-4 p-3 bg-red-50 text-red-600 rounded text-sm">{errorMessage}</div>
         )}
 
         {/* Messages Area */}
@@ -370,23 +369,23 @@ export default function ChessPage() {
               </ul>
             </div>
           ) : (
-            messages.map((msg) => (
+            messages.map(msg => (
               <div
                 key={msg.id}
                 className={cn(
-                  "mb-6 flex flex-col",
-                  msg.role === "user" ? "items-end" : "items-start"
+                  'mb-6 flex flex-col',
+                  msg.role === 'user' ? 'items-end' : 'items-start'
                 )}
               >
                 {/* Message Bubble */}
                 <div
                   className="max-w-[80%] p-3 rounded-lg text-sm leading-normal"
                   style={{
-                    background: msg.role === "user" ? "#e3f2fd" : "#f1f3f4"
+                    background: msg.role === 'user' ? '#e3f2fd' : '#f1f3f4',
                   }}
                 >
                   <div className="font-medium mb-1 text-xs text-slate-600">
-                    {msg.role === "user" ? "Tu" : "Chess AI"}
+                    {msg.role === 'user' ? 'Tu' : 'Chess AI'}
                   </div>
                   <div className="whitespace-pre-wrap">{msg.content}</div>
 
@@ -428,9 +427,7 @@ export default function ChessPage() {
           {isSendingMessage && (
             <div className="flex items-start mb-6">
               <div className="max-w-[80%] p-3 rounded-lg bg-gray-100 text-sm">
-                <div className="font-medium mb-1 text-xs text-slate-600">
-                  Chess AI
-                </div>
+                <div className="font-medium mb-1 text-xs text-slate-600">Chess AI</div>
                 <div className="text-slate-600">Sto analizzando...</div>
               </div>
             </div>
@@ -438,14 +435,11 @@ export default function ChessPage() {
         </div>
 
         {/* Input Form */}
-        <form
-          onSubmit={sendMessage}
-          className="p-4 border-t border-gray-300 bg-white flex gap-2"
-        >
+        <form onSubmit={sendMessage} className="p-4 border-t border-gray-300 bg-white flex gap-2">
           <input
             type="text"
             value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
+            onChange={e => setInputValue(e.target.value)}
             placeholder="Chiedi consigli o analisi della posizione..."
             disabled={isSendingMessage}
             className="flex-1 p-3 text-sm border border-gray-300 rounded"
@@ -454,13 +448,13 @@ export default function ChessPage() {
             type="submit"
             disabled={isSendingMessage || !inputValue.trim()}
             className={cn(
-              "px-6 py-3 text-white border-0 rounded text-sm font-medium",
+              'px-6 py-3 text-white border-0 rounded text-sm font-medium',
               isSendingMessage || !inputValue.trim()
-                ? "bg-gray-300 cursor-not-allowed"
-                : "bg-green-600 cursor-pointer hover:bg-green-700"
+                ? 'bg-gray-300 cursor-not-allowed'
+                : 'bg-green-600 cursor-pointer hover:bg-green-700'
             )}
           >
-            {isSendingMessage ? "Invio..." : "Invia"}
+            {isSendingMessage ? 'Invio...' : 'Invia'}
           </button>
         </form>
       </div>

@@ -1,14 +1,14 @@
 'use client';
 
 import type { AuthUser } from '@/types/auth';
-import React, { useState, useEffect, useCallback } from "react";
-import { useRouter, useParams } from "next/navigation";
-import Link from "next/link";
-import { api } from "@/lib/api";
-import { cn } from "@/lib/utils";
-import { PromptEditor } from "@/components/prompt";
-import { ErrorDisplay } from "@/components/errors";
-import { categorizeError } from "@/lib/errorUtils";
+import React, { useState, useEffect, useCallback } from 'react';
+import { useRouter, useParams } from 'next/navigation';
+import Link from 'next/link';
+import { api } from '@/lib/api';
+import { cn } from '@/lib/utils';
+import { PromptEditor } from '@/components/prompt';
+import { ErrorDisplay } from '@/components/errors';
+import { categorizeError } from '@/lib/errorUtils';
 import { getErrorMessage } from '@/lib/utils/errorHandler';
 
 type PromptVersion = {
@@ -26,10 +26,12 @@ type PromptVersion = {
 type ToastState = {
   show: boolean;
   message: string;
-  type: "success" | "error";
+  type: 'success' | 'error';
 };
 
-interface AdminPageClientProps { user: AuthUser; }
+interface AdminPageClientProps {
+  user: AuthUser;
+}
 
 export function AdminPageClient({ user }: AdminPageClientProps) {
   const router = useRouter();
@@ -40,12 +42,15 @@ export function AdminPageClient({ user }: AdminPageClientProps) {
   const [version, setVersion] = useState<PromptVersion | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [toast, setToast] = useState<ToastState>({ show: false, message: "", type: "success" });
+  const [toast, setToast] = useState<ToastState>({ show: false, message: '', type: 'success' });
 
   // Handle missing IDs
   if (!id || !versionId) {
     return (
-      <div className="min-h-screen" style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
+      <div
+        className="min-h-screen"
+        style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
+      >
         <div className="max-w-[1400px] mx-auto p-8">
           <div className="bg-white rounded-xl shadow-[0_20px_60px_rgba(0,0,0,0.3)] overflow-hidden p-8">
             <h1 className="text-2xl font-bold mb-4">Invalid Version ID</h1>
@@ -61,9 +66,9 @@ export function AdminPageClient({ user }: AdminPageClientProps) {
     );
   }
 
-  const showToast = useCallback((message: string, type: "success" | "error") => {
+  const showToast = useCallback((message: string, type: 'success' | 'error') => {
     setToast({ show: true, message, type });
-    setTimeout(() => setToast({ show: false, message: "", type: "success" }), 5000);
+    setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 5000);
   }, []);
 
   const fetchVersion = useCallback(async () => {
@@ -73,13 +78,12 @@ export function AdminPageClient({ user }: AdminPageClientProps) {
     setError(null);
 
     try {
-      const result = await api.get<PromptVersion>(`/api/v1/admin/prompts/${id}/versions/${versionId}`);
-      if (!result) throw new Error("Unauthorized");
+      const result = await api.admin.getPromptVersion(id, versionId);
 
-      setVersion(result);
+      setVersion(result as any);
     } catch (err) {
-      setError(getErrorMessage(err, "Failed to fetch version"));
-      showToast("Failed to fetch version", "error");
+      setError(getErrorMessage(err, 'Failed to fetch version'));
+      showToast('Failed to fetch version', 'error');
     } finally {
       setLoading(false);
     }
@@ -93,11 +97,11 @@ export function AdminPageClient({ user }: AdminPageClientProps) {
     if (!id || !versionId) return;
 
     try {
-      await api.post(`/api/v1/admin/prompts/${id}/versions/${versionId}/activate`, {});
-      showToast("Version activated successfully", "success");
+      await api.admin.activatePromptVersion(id, versionId);
+      showToast('Version activated successfully', 'success');
       fetchVersion();
     } catch (err) {
-      showToast(getErrorMessage(err, "Failed to activate version"), "error");
+      showToast(getErrorMessage(err, 'Failed to activate version'), 'error');
     }
   };
 
@@ -114,7 +118,7 @@ export function AdminPageClient({ user }: AdminPageClientProps) {
       <div className="min-h-screen flex items-center justify-center">
         <div className="max-w-2xl w-full p-8">
           <ErrorDisplay
-            error={categorizeError(new Error(error || "Version not found"))}
+            error={categorizeError(new Error(error || 'Version not found'))}
             onRetry={fetchVersion}
             showTechnicalDetails={process.env.NODE_ENV === 'development'}
           />
@@ -131,11 +135,17 @@ export function AdminPageClient({ user }: AdminPageClientProps) {
   }
 
   return (
-    <div className="min-h-screen" style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
+    <div
+      className="min-h-screen"
+      style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
+    >
       <div className="max-w-[1400px] mx-auto p-8">
         <div className="bg-white rounded-xl shadow-[0_20px_60px_rgba(0,0,0,0.3)] overflow-hidden">
           {/* Header */}
-          <div className="p-8 text-white" style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
+          <div
+            className="p-8 text-white"
+            style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
+          >
             <div className="flex items-center justify-between mb-4">
               <Link href={`/admin/prompts/${id}`}>
                 <button className="px-4 py-2 bg-white/20 text-white border-none rounded-lg cursor-pointer">
@@ -167,8 +177,12 @@ export function AdminPageClient({ user }: AdminPageClientProps) {
               )}
             </div>
             <div className="flex gap-8 mt-4 text-sm opacity-90">
-              <span>Created by: <strong>{version.createdByEmail}</strong></span>
-              <span>Created: <strong>{new Date(version.createdAt).toLocaleString()}</strong></span>
+              <span>
+                Created by: <strong>{version.createdByEmail}</strong>
+              </span>
+              <span>
+                Created: <strong>{new Date(version.createdAt).toLocaleString()}</strong>
+              </span>
             </div>
           </div>
 
@@ -176,11 +190,7 @@ export function AdminPageClient({ user }: AdminPageClientProps) {
           <div className="p-8">
             <div className="mb-8">
               <h2 className="text-xl font-semibold mb-4">Prompt Content</h2>
-              <PromptEditor
-                value={version.content}
-                readonly={true}
-                height="600px"
-              />
+              <PromptEditor value={version.content} readonly={true} height="600px" />
             </div>
 
             {version.metadata && Object.keys(version.metadata).length > 0 && (
@@ -199,8 +209,8 @@ export function AdminPageClient({ user }: AdminPageClientProps) {
       {toast.show && (
         <div
           className={cn(
-            "fixed bottom-8 right-8 px-6 py-4 text-white rounded-lg shadow-[0_10px_40px_rgba(0,0,0,0.3)] z-[100] font-medium",
-            toast.type === "success" ? "bg-emerald-500" : "bg-red-500"
+            'fixed bottom-8 right-8 px-6 py-4 text-white rounded-lg shadow-[0_10px_40px_rgba(0,0,0,0.3)] z-[100] font-medium',
+            toast.type === 'success' ? 'bg-emerald-500' : 'bg-red-500'
           )}
         >
           {toast.message}

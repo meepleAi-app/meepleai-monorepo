@@ -1,16 +1,15 @@
 'use client';
 
-
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import { useInView } from "react-intersection-observer";
-import { api } from "@/lib/api";
-import { AccessibleButton } from "@/components/accessible";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { LoadingButton } from "@/components/loading/LoadingButton";
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
+import { useInView } from 'react-intersection-observer';
+import { api } from '@/lib/api';
+import { AccessibleButton } from '@/components/accessible';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { LoadingButton } from '@/components/loading/LoadingButton';
 import { logger } from '@/lib/logger';
 import { createErrorContext } from '@/lib/errors';
 
@@ -43,10 +42,8 @@ export default function BoardGameAI() {
 
   const loadCurrentUser = async () => {
     try {
-      const res = await api.get<AuthResponse>("/api/v1/auth/me");
-      if (res) {
-        setAuthUser(res.user);
-      }
+      const user = await api.auth.getMe();
+      setAuthUser(user);
     } catch {
       setAuthUser(null);
     } finally {
@@ -56,7 +53,7 @@ export default function BoardGameAI() {
 
   const logout = async () => {
     try {
-      await api.post("/api/v1/auth/logout");
+      await api.auth.logout();
     } catch (err) {
       logger.error(
         'Logout failed',
@@ -70,9 +67,9 @@ export default function BoardGameAI() {
 
   const handleGetStarted = () => {
     if (authUser) {
-      void router.push("/board-game-ai/ask");
+      void router.push('/board-game-ai/ask');
     } else {
-      void router.push("/login?redirect=/board-game-ai/ask");
+      void router.push('/login?redirect=/board-game-ai/ask');
     }
   };
 
@@ -97,7 +94,7 @@ export default function BoardGameAI() {
                 <Link href="/upload" className="text-slate-300 hover:text-white transition-colors">
                   Upload
                 </Link>
-                {authUser.role === "Admin" && (
+                {authUser.role === 'Admin' && (
                   <Link href="/admin" className="text-slate-300 hover:text-white transition-colors">
                     Admin
                   </Link>
@@ -113,9 +110,7 @@ export default function BoardGameAI() {
               </>
             ) : (
               <Button asChild>
-                <Link href="/login">
-                  Login
-                </Link>
+                <Link href="/login">Login</Link>
               </Button>
             )}
           </nav>
@@ -142,7 +137,8 @@ export default function BoardGameAI() {
                 Expert
               </h1>
               <p className="text-xl text-slate-50 leading-relaxed">
-                Get instant, accurate answers to any board game rule question. Our AI understands complex rule interactions and provides precise citations from official rulebooks.
+                Get instant, accurate answers to any board game rule question. Our AI understands
+                complex rule interactions and provides precise citations from official rulebooks.
               </p>
               <div className="flex flex-wrap gap-4">
                 <LoadingButton
@@ -152,13 +148,9 @@ export default function BoardGameAI() {
                   className="text-lg"
                   data-testid="hero-get-started"
                 >
-                  {authUser ? "Ask a Question" : "Get Started Free"}
+                  {authUser ? 'Ask a Question' : 'Get Started Free'}
                 </LoadingButton>
-                <Button
-                  asChild
-                  variant="outline"
-                  className="text-lg"
-                >
+                <Button asChild variant="outline" className="text-lg">
                   <motion.a
                     href="#features"
                     whileHover={{ scale: 1.05 }}
@@ -186,7 +178,8 @@ export default function BoardGameAI() {
                     className="flex justify-end"
                   >
                     <div className="bg-primary text-primary-foreground px-4 py-3 rounded-2xl max-w-[80%]">
-                      In Terraforming Mars, can I use a Standard Project during the production phase?
+                      In Terraforming Mars, can I use a Standard Project during the production
+                      phase?
                     </div>
                   </motion.div>
                   <motion.div
@@ -197,13 +190,18 @@ export default function BoardGameAI() {
                   >
                     <Card className="p-4">
                       <p className="text-sm">
-                        <strong>🤖 Board Game AI:</strong> No, Standard Projects can only be performed during the Action Phase, not during the Production Phase. The Production Phase is exclusively for generating resources and moving the production track markers.
+                        <strong>🤖 Board Game AI:</strong> No, Standard Projects can only be
+                        performed during the Action Phase, not during the Production Phase. The
+                        Production Phase is exclusively for generating resources and moving the
+                        production track markers.
                       </p>
                       <p className="text-xs text-slate-300 mt-2 italic">
                         📖 Sources: Terraforming Mars Rulebook - Page 5, Section "Game Phases"
                       </p>
                       <div className="mt-2 flex items-center gap-2 text-xs">
-                        <span className="bg-green-500/20 text-green-400 px-2 py-1 rounded">Confidence: 95%</span>
+                        <span className="bg-green-500/20 text-green-400 px-2 py-1 rounded">
+                          Confidence: 95%
+                        </span>
                       </div>
                     </Card>
                   </motion.div>
@@ -218,14 +216,26 @@ export default function BoardGameAI() {
             animate={{ y: [0, 10, 0] }}
             transition={{ duration: 2, repeat: Infinity }}
           >
-            <svg className="w-6 h-6 text-slate-300" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
+            <svg
+              className="w-6 h-6 text-slate-300"
+              fill="none"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
               <path d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
             </svg>
           </motion.div>
         </section>
 
         {/* Features Section */}
-        <section id="features" ref={featuresRef} className="py-20 px-6 bg-gradient-to-b from-slate-950 to-slate-900">
+        <section
+          id="features"
+          ref={featuresRef}
+          className="py-20 px-6 bg-gradient-to-b from-slate-950 to-slate-900"
+        >
           <div className="max-w-6xl mx-auto">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -234,41 +244,49 @@ export default function BoardGameAI() {
               className="text-center mb-16"
             >
               <h2 className="text-5xl font-bold mb-4">Why Board Game AI?</h2>
-              <p className="text-xl text-slate-50">Advanced AI trained specifically for board game rules</p>
+              <p className="text-xl text-slate-50">
+                Advanced AI trained specifically for board game rules
+              </p>
             </motion.div>
 
             <div className="grid md:grid-cols-2 gap-6">
               {[
                 {
-                  icon: "🎯",
-                  title: "Multi-Model Consensus",
-                  description: "We use multiple AI models (GPT-4, Claude) to validate answers, ensuring 95%+ accuracy on complex rule interactions."
+                  icon: '🎯',
+                  title: 'Multi-Model Consensus',
+                  description:
+                    'We use multiple AI models (GPT-4, Claude) to validate answers, ensuring 95%+ accuracy on complex rule interactions.',
                 },
                 {
-                  icon: "📚",
-                  title: "100+ Games Supported",
-                  description: "From Catan to Terraforming Mars, Wingspan to Scythe. We support popular modern board games with official rulebook integration."
+                  icon: '📚',
+                  title: '100+ Games Supported',
+                  description:
+                    'From Catan to Terraforming Mars, Wingspan to Scythe. We support popular modern board games with official rulebook integration.',
                 },
                 {
-                  icon: "🔍",
-                  title: "Precise Citations",
-                  description: "Every answer includes exact page numbers and rule sections. Click to jump directly to the relevant section in the PDF."
+                  icon: '🔍',
+                  title: 'Precise Citations',
+                  description:
+                    'Every answer includes exact page numbers and rule sections. Click to jump directly to the relevant section in the PDF.',
                 },
                 {
-                  icon: "⚡",
-                  title: "Lightning Fast",
-                  description: "Hybrid search combining vector similarity and keyword matching delivers answers in under 3 seconds."
+                  icon: '⚡',
+                  title: 'Lightning Fast',
+                  description:
+                    'Hybrid search combining vector similarity and keyword matching delivers answers in under 3 seconds.',
                 },
                 {
-                  icon: "🌐",
-                  title: "Multilingual Support",
-                  description: "Ask questions in Italian or English. Our AI understands context in multiple languages."
+                  icon: '🌐',
+                  title: 'Multilingual Support',
+                  description:
+                    'Ask questions in Italian or English. Our AI understands context in multiple languages.',
                 },
                 {
-                  icon: "🛡️",
-                  title: "5-Layer Validation",
-                  description: "Confidence scoring, citation verification, multi-model consensus, and forbidden keyword detection ensure quality."
-                }
+                  icon: '🛡️',
+                  title: '5-Layer Validation',
+                  description:
+                    'Confidence scoring, citation verification, multi-model consensus, and forbidden keyword detection ensure quality.',
+                },
               ].map((feature, index) => (
                 <Card key={index}>
                   <motion.div
@@ -305,20 +323,23 @@ export default function BoardGameAI() {
             <div className="grid md:grid-cols-3 gap-8">
               {[
                 {
-                  icon: "1️⃣",
-                  title: "Select Your Game",
-                  description: "Choose from our library of 100+ board games, or upload your own PDF rulebook."
+                  icon: '1️⃣',
+                  title: 'Select Your Game',
+                  description:
+                    'Choose from our library of 100+ board games, or upload your own PDF rulebook.',
                 },
                 {
-                  icon: "2️⃣",
-                  title: "Ask Your Question",
-                  description: "Type your rule question in natural language. No need for exact keywords or search terms."
+                  icon: '2️⃣',
+                  title: 'Ask Your Question',
+                  description:
+                    'Type your rule question in natural language. No need for exact keywords or search terms.',
                 },
                 {
-                  icon: "3️⃣",
-                  title: "Get Verified Answer",
-                  description: "Receive an AI-generated answer with confidence score, citations, and the option to view the source PDF."
-                }
+                  icon: '3️⃣',
+                  title: 'Get Verified Answer',
+                  description:
+                    'Receive an AI-generated answer with confidence score, citations, and the option to view the source PDF.',
+                },
               ].map((step, index) => (
                 <Card key={index}>
                   <motion.div
@@ -356,7 +377,7 @@ export default function BoardGameAI() {
               className="text-lg bg-white text-primary hover:bg-slate-100"
               data-testid="cta-get-started"
             >
-              {authUser ? "Ask Your First Question" : "Get Started Free"}
+              {authUser ? 'Ask Your First Question' : 'Get Started Free'}
             </LoadingButton>
             <p className="text-sm text-slate-50 mt-4">
               💡 No credit card required • 95%+ accuracy • Instant answers
@@ -379,26 +400,53 @@ export default function BoardGameAI() {
           <div className="space-y-3">
             <h4 className="font-semibold">Product</h4>
             <div className="flex flex-col gap-2 text-sm">
-              <Link href="/board-game-ai" className="text-slate-300 hover:text-white transition-colors">Board Game AI</Link>
-              <Link href="/board-game-ai/games" className="text-slate-300 hover:text-white transition-colors">Game Catalog</Link>
-              <Link href="/upload" className="text-slate-300 hover:text-white transition-colors">Upload PDF</Link>
+              <Link
+                href="/board-game-ai"
+                className="text-slate-300 hover:text-white transition-colors"
+              >
+                Board Game AI
+              </Link>
+              <Link
+                href="/board-game-ai/games"
+                className="text-slate-300 hover:text-white transition-colors"
+              >
+                Game Catalog
+              </Link>
+              <Link href="/upload" className="text-slate-300 hover:text-white transition-colors">
+                Upload PDF
+              </Link>
             </div>
           </div>
 
           <div className="space-y-3">
             <h4 className="font-semibold">Resources</h4>
             <div className="flex flex-col gap-2 text-sm">
-              <a href="https://github.com/yourusername/meepleai" target="_blank" rel="noopener noreferrer" className="text-slate-300 hover:text-white transition-colors">GitHub</a>
-              <Link href="/docs" className="text-slate-300 hover:text-white transition-colors">Documentation</Link>
-              <Link href="/logs" className="text-slate-300 hover:text-white transition-colors">API Logs</Link>
+              <a
+                href="https://github.com/yourusername/meepleai"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-slate-300 hover:text-white transition-colors"
+              >
+                GitHub
+              </a>
+              <Link href="/docs" className="text-slate-300 hover:text-white transition-colors">
+                Documentation
+              </Link>
+              <Link href="/logs" className="text-slate-300 hover:text-white transition-colors">
+                API Logs
+              </Link>
             </div>
           </div>
 
           <div className="space-y-3">
             <h4 className="font-semibold">Support</h4>
             <div className="flex flex-col gap-2 text-sm">
-              <Link href="/chat" className="text-slate-300 hover:text-white transition-colors">General Chat</Link>
-              <Link href="/settings" className="text-slate-300 hover:text-white transition-colors">Settings</Link>
+              <Link href="/chat" className="text-slate-300 hover:text-white transition-colors">
+                General Chat
+              </Link>
+              <Link href="/settings" className="text-slate-300 hover:text-white transition-colors">
+                Settings
+              </Link>
             </div>
           </div>
         </div>
@@ -410,4 +458,3 @@ export default function BoardGameAI() {
     </div>
   );
 }
-

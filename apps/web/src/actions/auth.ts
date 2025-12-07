@@ -41,10 +41,6 @@ export interface SessionActionState {
   message?: string;
 }
 
-interface AuthResponse {
-  user: AuthUser;
-}
-
 // ============================================================================
 // Login Action
 // ============================================================================
@@ -74,30 +70,20 @@ export async function loginAction(
         success: false,
         error: {
           type: 'validation',
-          message: 'Email e password sono obbligatori.'
-        }
+          message: 'Email e password sono obbligatori.',
+        },
       };
     }
 
-    const response = await api.post<AuthResponse>('/api/v1/auth/login', {
+    const authUser = await api.auth.login({
       email,
-      password
+      password,
     });
-
-    if (!response?.user) {
-      return {
-        success: false,
-        error: {
-          type: 'server',
-          message: 'Risposta del server non valida.'
-        }
-      };
-    }
 
     return {
       success: true,
-      user: response.user,
-      message: successMessages.loginSuccess
+      user: authUser,
+      message: successMessages.loginSuccess,
     };
   } catch (error) {
     logger.error(
@@ -109,7 +95,7 @@ export async function loginAction(
     if (error instanceof ApiError) {
       return {
         success: false,
-        error: getLocalizedError(error.statusCode, error.message)
+        error: getLocalizedError(error.statusCode, error.message),
       };
     }
 
@@ -117,8 +103,8 @@ export async function loginAction(
       success: false,
       error: {
         type: 'network',
-        message: 'Impossibile connettersi al server.'
-      }
+        message: 'Impossibile connettersi al server.',
+      },
     };
   }
 }
@@ -154,32 +140,22 @@ export async function registerAction(
         success: false,
         error: {
           type: 'validation',
-          message: 'Email e password sono obbligatori.'
-        }
+          message: 'Email e password sono obbligatori.',
+        },
       };
     }
 
-    const response = await api.post<AuthResponse>('/api/v1/auth/register', {
+    const authUser = await api.auth.register({
       email,
       password,
       displayName: displayName || undefined,
-      role: 'User' // Default role
+      role: 'User', // Default role
     });
-
-    if (!response?.user) {
-      return {
-        success: false,
-        error: {
-          type: 'server',
-          message: 'Risposta del server non valida.'
-        }
-      };
-    }
 
     return {
       success: true,
-      user: response.user,
-      message: successMessages.registrationSuccess
+      user: authUser,
+      message: successMessages.registrationSuccess,
     };
   } catch (error) {
     logger.error(
@@ -193,13 +169,13 @@ export async function registerAction(
       if (error.statusCode === 409) {
         return {
           success: false,
-          error: getLocalizedError(409, error.message, 'email')
+          error: getLocalizedError(409, error.message, 'email'),
         };
       }
 
       return {
         success: false,
-        error: getLocalizedError(error.statusCode, error.message)
+        error: getLocalizedError(error.statusCode, error.message),
       };
     }
 
@@ -207,8 +183,8 @@ export async function registerAction(
       success: false,
       error: {
         type: 'network',
-        message: 'Impossibile connettersi al server.'
-      }
+        message: 'Impossibile connettersi al server.',
+      },
     };
   }
 }
@@ -234,11 +210,11 @@ export async function registerAction(
  */
 export async function logoutAction(): Promise<AuthActionState> {
   try {
-    await api.post('/api/v1/auth/logout');
+    await api.auth.logout();
 
     return {
       success: true,
-      message: successMessages.logoutSuccess
+      message: successMessages.logoutSuccess,
     };
   } catch (error) {
     logger.error(
@@ -251,7 +227,7 @@ export async function logoutAction(): Promise<AuthActionState> {
     // User can't remain logged in if server rejected logout
     return {
       success: true,
-      message: successMessages.logoutSuccess
+      message: successMessages.logoutSuccess,
     };
   }
 }
@@ -283,7 +259,7 @@ export async function extendSessionAction(): Promise<SessionActionState> {
       success: true,
       expiresAt: response.ExpiresAt,
       remainingMinutes: response.RemainingMinutes,
-      message: successMessages.sessionExtended
+      message: successMessages.sessionExtended,
     };
   } catch (error) {
     logger.error(
@@ -295,7 +271,7 @@ export async function extendSessionAction(): Promise<SessionActionState> {
     if (error instanceof ApiError) {
       return {
         success: false,
-        error: getLocalizedError(error.statusCode, error.message)
+        error: getLocalizedError(error.statusCode, error.message),
       };
     }
 
@@ -303,8 +279,8 @@ export async function extendSessionAction(): Promise<SessionActionState> {
       success: false,
       error: {
         type: 'network',
-        message: 'Impossibile estendere la sessione.'
-      }
+        message: 'Impossibile estendere la sessione.',
+      },
     };
   }
 }
@@ -319,18 +295,18 @@ export async function extendSessionAction(): Promise<SessionActionState> {
  */
 export async function getCurrentUser(): Promise<AuthActionState> {
   try {
-    const response = await api.get<AuthResponse>('/api/v1/auth/me');
+    const authUser = await api.auth.getMe();
 
-    if (!response?.user) {
+    if (!authUser) {
       return {
         success: false,
-        user: undefined
+        user: undefined,
       };
     }
 
     return {
       success: true,
-      user: response.user
+      user: authUser,
     };
   } catch (error) {
     logger.error(
@@ -341,12 +317,13 @@ export async function getCurrentUser(): Promise<AuthActionState> {
 
     return {
       success: false,
-      error: error instanceof ApiError
-        ? getLocalizedError(error.statusCode, error.message)
-        : {
-          type: 'network',
-          message: 'Impossibile caricare i dati utente.'
-        }
+      error:
+        error instanceof ApiError
+          ? getLocalizedError(error.statusCode, error.message)
+          : {
+              type: 'network',
+              message: 'Impossibile caricare i dati utente.',
+            },
     };
   }
 }

@@ -8,6 +8,14 @@
 import type { HttpClient } from '../core/httpClient';
 import { setStoredApiKey, clearStoredApiKey } from '../core/apiKeyStore';
 import {
+  AuthUserSchema,
+  LoginResponseSchema,
+  RegisterResponseSchema,
+  LogoutResponseSchema,
+  CurrentUserResponseSchema,
+  VerifyResetTokenResponseSchema,
+  RequestPasswordResetResponseSchema,
+  ConfirmPasswordResetResponseSchema,
   SessionStatusResponseSchema,
   UserSessionInfoSchema,
   RevokeSessionResponseSchema,
@@ -20,6 +28,14 @@ import {
   ChangePasswordResponseSchema,
   UserPreferencesSchema,
   ApiKeyLoginResponseSchema,
+  type AuthUser,
+  type LoginResponse,
+  type RegisterResponse,
+  type LogoutResponse,
+  type CurrentUserResponse,
+  type VerifyResetTokenResponse,
+  type RequestPasswordResetResponse,
+  type ConfirmPasswordResetResponse,
   type SessionStatusResponse,
   type UserSessionInfo,
   type RevokeSessionResponse,
@@ -36,6 +52,18 @@ import {
 
 export interface CreateAuthClientParams {
   httpClient: HttpClient;
+}
+
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface RegisterRequest {
+  email: string;
+  password: string;
+  displayName?: string;
+  role?: string;
 }
 
 export interface UpdateProfileRequest {
@@ -60,6 +88,97 @@ export interface ChangePasswordRequest {
  */
 export function createAuthClient({ httpClient }: CreateAuthClientParams) {
   return {
+    // ========== Core Authentication ==========
+
+    /**
+     * Login with email and password
+     * POST /api/v1/auth/login
+     */
+    async login(request: LoginRequest): Promise<AuthUser> {
+      const response = await httpClient.post('/api/v1/auth/login', request, LoginResponseSchema);
+      return response.user;
+    },
+
+    /**
+     * Register new user account
+     * POST /api/v1/auth/register
+     */
+    async register(request: RegisterRequest): Promise<AuthUser> {
+      const response = await httpClient.post(
+        '/api/v1/auth/register',
+        request,
+        RegisterResponseSchema
+      );
+      return response.user;
+    },
+
+    /**
+     * Logout current user
+     * POST /api/v1/auth/logout
+     */
+    async logout(): Promise<void> {
+      await httpClient.post('/api/v1/auth/logout', {}, LogoutResponseSchema);
+    },
+
+    /**
+     * Get current authenticated user
+     * GET /api/v1/auth/me
+     */
+    async getMe(): Promise<AuthUser | null> {
+      const response = await httpClient.get('/api/v1/auth/me', CurrentUserResponseSchema);
+      return response?.user ?? null;
+    },
+
+    // ========== Password Reset ==========
+
+    /**
+     * Verify password reset token validity
+     * GET /api/v1/auth/password-reset/verify?token={token}
+     */
+    async verifyResetToken(token: string): Promise<void> {
+      await httpClient.get(`/api/v1/auth/password-reset/verify?token=${encodeURIComponent(token)}`);
+    },
+
+    /**
+     * Request password reset email
+     * POST /api/v1/auth/password-reset/request
+     */
+    async requestPasswordReset(email: string): Promise<RequestPasswordResetResponse> {
+      return httpClient.post(
+        '/api/v1/auth/password-reset/request',
+        { email },
+        RequestPasswordResetResponseSchema
+      );
+    },
+
+    /**
+     * Confirm password reset with token and new password
+     * PUT /api/v1/auth/password-reset/confirm
+     */
+    async confirmPasswordReset(
+      token: string,
+      newPassword: string
+    ): Promise<ConfirmPasswordResetResponse> {
+      return httpClient.put(
+        '/api/v1/auth/password-reset/confirm',
+        { token, newPassword },
+        ConfirmPasswordResetResponseSchema
+      );
+    },
+
+    // ========== User Search ==========
+
+    /**
+     * Search users by query
+     * GET /api/v1/users/search?query={query}
+     */
+    async searchUsers(query: string): Promise<any[]> {
+      const result = await httpClient.get<any[]>(
+        `/api/v1/users/search?query=${encodeURIComponent(query)}`
+      );
+      return result ?? [];
+    },
+
     // ========== API Key Authentication ==========
 
     /**
@@ -167,15 +286,11 @@ export function createAuthClient({ httpClient }: CreateAuthClientParams) {
      * Disable 2FA
      */
     async disable2FA(password: string, code: string): Promise<Disable2FAResult> {
-      const response = await httpClient.post<{ message: string }>('/api/v1/auth/2fa/disable', {
-        password,
-        code,
-      });
-
-      return {
-        Success: true,
-        ErrorMessage: null,
-      };
+      return httpClient.post(
+        '/api/v1/auth/2fa/disable',
+        { password, code },
+        Disable2FAResultSchema
+      );
     },
 
     // ========== User Profile ==========

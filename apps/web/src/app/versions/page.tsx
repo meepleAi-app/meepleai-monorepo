@@ -1,15 +1,14 @@
 'use client';
 
-
-import { Suspense, useCallback, useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
-import Link from "next/link";
-import { api } from "@/lib/api";
-import { CommentThread } from "@/components/comments";
-import { DiffViewerEnhanced } from "@/components/diff";
-import { VersionTimeline, VersionTimelineFilters } from "@/components/versioning";
-import { cn } from "@/lib/utils";
-import { getErrorMessage } from "@/lib/utils/errorHandler";
+import { Suspense, useCallback, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import { api } from '@/lib/api';
+import { CommentThread } from '@/components/comments';
+import { DiffViewerEnhanced } from '@/components/diff';
+import { VersionTimeline, VersionTimelineFilters } from '@/components/versioning';
+import { cn } from '@/lib/utils';
+import { getErrorMessage } from '@/lib/utils/errorHandler';
 import { logger } from '@/lib/logger';
 import { createErrorContext } from '@/lib/errors';
 
@@ -59,7 +58,7 @@ type FieldChange = {
   newValue?: string | null;
 };
 
-type ChangeType = "Added" | "Modified" | "Deleted" | "Unchanged";
+type ChangeType = 'Added' | 'Modified' | 'Deleted' | 'Unchanged';
 
 type RuleAtomChange = {
   type: ChangeType;
@@ -94,28 +93,24 @@ function VersionHistoryContent() {
 
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [history, setHistory] = useState<RuleSpecHistory | null>(null);
-  const [selectedFromVersion, setSelectedFromVersion] = useState<string>("");
-  const [selectedToVersion, setSelectedToVersion] = useState<string>("");
+  const [selectedFromVersion, setSelectedFromVersion] = useState<string>('');
+  const [selectedToVersion, setSelectedToVersion] = useState<string>('');
   const [diff, setDiff] = useState<RuleSpecDiff | null>(null);
   const [isLoadingHistory, setIsLoadingHistory] = useState<boolean>(false);
   const [isLoadingDiff, setIsLoadingDiff] = useState<boolean>(false);
   const [isRestoring, setIsRestoring] = useState<boolean>(false);
-  const [errorMessage, setErrorMessage] = useState<string>("");
-  const [statusMessage, setStatusMessage] = useState<string>("");
+  const [errorMessage, setErrorMessage] = useState<string>('');
+  const [statusMessage, setStatusMessage] = useState<string>('');
   const [showOnlyChanges, setShowOnlyChanges] = useState<boolean>(true);
   // EDIT-06: Timeline view toggle
-  const [viewMode, setViewMode] = useState<"list" | "timeline">("list");
+  const [viewMode, setViewMode] = useState<'list' | 'timeline'>('list');
   const [timelineFilters, setTimelineFilters] = useState({});
   const [timelineAuthors, setTimelineAuthors] = useState<string[]>([]);
 
   const loadCurrentUser = useCallback(async () => {
     try {
-      const res = await api.get<AuthResponse>("/api/v1/auth/me");
-      if (res) {
-        setAuthUser(res.user);
-      } else {
-        setAuthUser(null);
-      }
+      const user = await api.auth.getMe();
+      setAuthUser(user);
     } catch {
       setAuthUser(null);
     }
@@ -123,24 +118,25 @@ function VersionHistoryContent() {
 
   const loadHistory = useCallback(async (gId: string) => {
     setIsLoadingHistory(true);
-    setErrorMessage("");
+    setErrorMessage('');
     try {
-      const historyData = await api.get<RuleSpecHistory>(`/api/v1/games/${gId}/rulespec/history`);
-      if (historyData) {
-        setHistory(historyData);
-        // Auto-select the two most recent versions for diff
-        if (historyData.versions.length >= 2) {
-          setSelectedFromVersion(historyData.versions[1].version);
-          setSelectedToVersion(historyData.versions[0].version);
-        }
+      const historyData = await api.games.getRuleSpecHistory(gId);
+      setHistory(historyData);
+      // Auto-select the two most recent versions for diff
+      if (historyData.versions.length >= 2) {
+        setSelectedFromVersion(historyData.versions[1].version);
+        setSelectedToVersion(historyData.versions[0].version);
       }
     } catch (err) {
       logger.error(
         'Failed to load version history',
         err instanceof Error ? err : new Error(String(err)),
-        createErrorContext('VersionHistoryPage', 'loadHistory', { gameId: gId, operation: 'load_history' })
+        createErrorContext('VersionHistoryPage', 'loadHistory', {
+          gameId: gId,
+          operation: 'load_history',
+        })
       );
-      setErrorMessage(getErrorMessage(err, "Impossibile caricare lo storico versioni."));
+      setErrorMessage(getErrorMessage(err, 'Impossibile caricare lo storico versioni.'));
     } finally {
       setIsLoadingHistory(false);
     }
@@ -149,7 +145,7 @@ function VersionHistoryContent() {
   // EDIT-06: Load timeline authors for filters
   const loadTimelineAuthors = useCallback(async (gId: string) => {
     try {
-      const response = await api.get<{ authors?: string[] }>(`/api/v1/games/${gId}/rulespec/versions/timeline`);
+      const response = await api.games.getRuleSpecTimeline(gId);
       if (response && response.authors) {
         setTimelineAuthors(response.authors);
       }
@@ -157,33 +153,41 @@ function VersionHistoryContent() {
       logger.error(
         'Failed to load timeline authors',
         err instanceof Error ? err : new Error(String(err)),
-        createErrorContext('VersionHistoryPage', 'loadTimelineAuthors', { gameId: gId, operation: 'load_timeline_authors' })
+        createErrorContext('VersionHistoryPage', 'loadTimelineAuthors', {
+          gameId: gId,
+          operation: 'load_timeline_authors',
+        })
       );
     }
   }, []);
 
   const loadDiff = useCallback(async () => {
-    if (!gameId || typeof gameId !== "string" || !selectedFromVersion || !selectedToVersion) {
+    if (!gameId || typeof gameId !== 'string' || !selectedFromVersion || !selectedToVersion) {
       return;
     }
 
     setIsLoadingDiff(true);
-    setErrorMessage("");
+    setErrorMessage('');
     setDiff(null);
     try {
-      const diffData = await api.get<RuleSpecDiff>(
-        `/api/v1/games/${gameId}/rulespec/diff?from=${encodeURIComponent(selectedFromVersion)}&to=${encodeURIComponent(selectedToVersion)}`
+      const diffData = await api.games.getRuleSpecDiff(
+        gameId,
+        selectedFromVersion,
+        selectedToVersion
       );
-      if (diffData) {
-        setDiff(diffData);
-      }
+      setDiff(diffData);
     } catch (err) {
       logger.error(
         'Failed to load version diff',
         err instanceof Error ? err : new Error(String(err)),
-        createErrorContext('VersionHistoryPage', 'loadDiff', { gameId, fromVersion: selectedFromVersion, toVersion: selectedToVersion, operation: 'load_diff' })
+        createErrorContext('VersionHistoryPage', 'loadDiff', {
+          gameId,
+          fromVersion: selectedFromVersion,
+          toVersion: selectedToVersion,
+          operation: 'load_diff',
+        })
       );
-      setErrorMessage(getErrorMessage(err, "Impossibile caricare il diff."));
+      setErrorMessage(getErrorMessage(err, 'Impossibile caricare il diff.'));
     } finally {
       setIsLoadingDiff(false);
     }
@@ -194,7 +198,7 @@ function VersionHistoryContent() {
   }, [loadCurrentUser]);
 
   useEffect(() => {
-    if (authUser && gameId && typeof gameId === "string") {
+    if (authUser && gameId && typeof gameId === 'string') {
       void loadHistory(gameId);
       // EDIT-06: Load timeline authors
       void loadTimelineAuthors(gameId);
@@ -202,29 +206,30 @@ function VersionHistoryContent() {
   }, [authUser, gameId, loadHistory, loadTimelineAuthors]);
 
   const handleRestoreVersion = async (version: string) => {
-    if (!gameId || typeof gameId !== "string") {
-      setErrorMessage("gameId mancante");
+    if (!gameId || typeof gameId !== 'string') {
+      setErrorMessage('gameId mancante');
       return;
     }
 
-    const confirmed = confirm(`Sei sicuro di voler ripristinare la versione ${version}? Questo creerà una nuova versione.`);
+    const confirmed = confirm(
+      `Sei sicuro di voler ripristinare la versione ${version}? Questo creerà una nuova versione.`
+    );
     if (!confirmed) {
       return;
     }
 
     setIsRestoring(true);
-    setErrorMessage("");
-    setStatusMessage("");
+    setErrorMessage('');
+    setStatusMessage('');
     try {
       // Get the version to restore
-      const versionData = await api.get<RuleSpec>(`/api/v1/games/${gameId}/rulespec/versions/${version}`);
-      if (!versionData) {
-        throw new Error("Versione non trovata");
-      }
+      const versionData = await api.games.getRuleSpecVersion(gameId, Number(version));
 
       // Save it as a new version
-      const updated = await api.put<RuleSpec>(`/api/v1/games/${gameId}/rulespec`, versionData);
-      setStatusMessage(`Versione ${version} ripristinata con successo come versione ${updated.version}`);
+      const updated = await api.games.updateRuleSpec(gameId, versionData);
+      setStatusMessage(
+        `Versione ${version} ripristinata con successo come versione ${updated.version}`
+      );
 
       // Reload history
       await loadHistory(gameId);
@@ -232,9 +237,13 @@ function VersionHistoryContent() {
       logger.error(
         'Failed to restore version',
         err instanceof Error ? err : new Error(String(err)),
-        createErrorContext('VersionHistoryPage', 'handleRestoreVersion', { gameId, version, operation: 'restore_version' })
+        createErrorContext('VersionHistoryPage', 'handleRestoreVersion', {
+          gameId,
+          version,
+          operation: 'restore_version',
+        })
       );
-      setErrorMessage(getErrorMessage(err, "Impossibile ripristinare la versione"));
+      setErrorMessage(getErrorMessage(err, 'Impossibile ripristinare la versione'));
     } finally {
       setIsRestoring(false);
     }
@@ -286,48 +295,41 @@ function VersionHistoryContent() {
           >
             Editor
           </Link>
-          <Link
-            href="/"
-            className="px-4 py-2 bg-gray-600 text-white no-underline rounded text-sm"
-          >
+          <Link href="/" className="px-4 py-2 bg-gray-600 text-white no-underline rounded text-sm">
             Home
           </Link>
         </div>
       </div>
 
       {statusMessage && (
-        <div className="p-3 bg-green-50 border border-green-600 rounded mb-4">
-          {statusMessage}
-        </div>
+        <div className="p-3 bg-green-50 border border-green-600 rounded mb-4">{statusMessage}</div>
       )}
 
       {errorMessage && (
-        <div className="p-3 bg-red-50 border border-red-600 rounded mb-4">
-          {errorMessage}
-        </div>
+        <div className="p-3 bg-red-50 border border-red-600 rounded mb-4">{errorMessage}</div>
       )}
 
       {/* View mode toggle */}
       <div className="mb-4 border-b-2 border-gray-300">
         <div className="flex gap-0">
           <button
-            onClick={() => setViewMode("list")}
+            onClick={() => setViewMode('list')}
             className={cn(
-              "px-6 py-3 border-none cursor-pointer text-sm transition-all duration-200",
-              viewMode === "list"
-                ? "bg-blue-600 text-white border-b-2 border-blue-600 font-bold"
-                : "bg-transparent text-gray-600 border-b-2 border-transparent"
+              'px-6 py-3 border-none cursor-pointer text-sm transition-all duration-200',
+              viewMode === 'list'
+                ? 'bg-blue-600 text-white border-b-2 border-blue-600 font-bold'
+                : 'bg-transparent text-gray-600 border-b-2 border-transparent'
             )}
           >
             📋 List View
           </button>
           <button
-            onClick={() => setViewMode("timeline")}
+            onClick={() => setViewMode('timeline')}
             className={cn(
-              "px-6 py-3 border-none cursor-pointer text-sm transition-all duration-200",
-              viewMode === "timeline"
-                ? "bg-blue-600 text-white border-b-2 border-blue-600 font-bold"
-                : "bg-transparent text-gray-600 border-b-2 border-transparent"
+              'px-6 py-3 border-none cursor-pointer text-sm transition-all duration-200',
+              viewMode === 'timeline'
+                ? 'bg-blue-600 text-white border-b-2 border-blue-600 font-bold'
+                : 'bg-transparent text-gray-600 border-b-2 border-transparent'
             )}
           >
             🕒 Timeline View
@@ -337,7 +339,7 @@ function VersionHistoryContent() {
 
       {isLoadingHistory ? (
         <p>Caricamento storico...</p>
-      ) : viewMode === "timeline" ? (
+      ) : viewMode === 'timeline' ? (
         // Timeline view
         <div>
           <VersionTimelineFilters
@@ -348,9 +350,9 @@ function VersionHistoryContent() {
           />
           <VersionTimeline
             gameId={gameId as string}
-            onVersionClick={(version) => {
+            onVersionClick={version => {
               setSelectedToVersion(version);
-              setViewMode("list");
+              setViewMode('list');
             }}
           />
         </div>
@@ -366,29 +368,29 @@ function VersionHistoryContent() {
                   className="p-3 bg-white border border-gray-300 rounded text-sm"
                 >
                   <div className="flex justify-between items-center mb-2">
-                    <strong className={index === 0 ? "text-green-600" : "text-gray-900"}>
+                    <strong className={index === 0 ? 'text-green-600' : 'text-gray-900'}>
                       {version.version}
-                      {index === 0 && <span className="ml-2 text-xs text-green-600">(corrente)</span>}
+                      {index === 0 && (
+                        <span className="ml-2 text-xs text-green-600">(corrente)</span>
+                      )}
                     </strong>
                   </div>
                   <div className="text-xs text-gray-600 mb-2">
                     {new Date(version.createdAt).toLocaleString()}
                   </div>
-                  <div className="text-xs text-gray-600 mb-2">
-                    {version.ruleCount} regole
-                  </div>
-                  {authUser.role === "Admin" || authUser.role === "Editor" ? (
+                  <div className="text-xs text-gray-600 mb-2">{version.ruleCount} regole</div>
+                  {authUser.role === 'Admin' || authUser.role === 'Editor' ? (
                     <button
                       onClick={() => handleRestoreVersion(version.version)}
                       disabled={isRestoring || index === 0}
                       className={cn(
-                        "w-full px-3 py-1.5 text-white border-none rounded text-xs",
+                        'w-full px-3 py-1.5 text-white border-none rounded text-xs',
                         index === 0 || isRestoring
-                          ? "bg-gray-300 cursor-not-allowed"
-                          : "bg-orange-500 cursor-pointer"
+                          ? 'bg-gray-300 cursor-not-allowed'
+                          : 'bg-orange-500 cursor-pointer'
                       )}
                     >
-                      {isRestoring ? "Ripristino..." : "Ripristina"}
+                      {isRestoring ? 'Ripristino...' : 'Ripristina'}
                     </button>
                   ) : null}
                 </div>
@@ -408,11 +410,11 @@ function VersionHistoryContent() {
                   <select
                     id="from-version"
                     value={selectedFromVersion}
-                    onChange={(e) => setSelectedFromVersion(e.target.value)}
+                    onChange={e => setSelectedFromVersion(e.target.value)}
                     className="w-full p-2 border border-gray-300 rounded text-sm"
                   >
                     <option value="">Seleziona versione</option>
-                    {history?.versions.map((version) => (
+                    {history?.versions.map(version => (
                       <option key={version.version} value={version.version}>
                         {version.version} - {new Date(version.createdAt).toLocaleString()}
                       </option>
@@ -426,11 +428,11 @@ function VersionHistoryContent() {
                   <select
                     id="to-version"
                     value={selectedToVersion}
-                    onChange={(e) => setSelectedToVersion(e.target.value)}
+                    onChange={e => setSelectedToVersion(e.target.value)}
                     className="w-full p-2 border border-gray-300 rounded text-sm"
                   >
                     <option value="">Seleziona versione</option>
-                    {history?.versions.map((version) => (
+                    {history?.versions.map(version => (
                       <option key={version.version} value={version.version}>
                         {version.version} - {new Date(version.createdAt).toLocaleString()}
                       </option>
@@ -443,7 +445,7 @@ function VersionHistoryContent() {
                   <input
                     type="checkbox"
                     checked={showOnlyChanges}
-                    onChange={(e) => setShowOnlyChanges(e.target.checked)}
+                    onChange={e => setShowOnlyChanges(e.target.checked)}
                   />
                   Mostra solo modifiche
                 </label>
@@ -454,7 +456,11 @@ function VersionHistoryContent() {
               <p>Caricamento diff...</p>
             ) : diff ? (
               <>
-                <DiffViewerEnhanced diff={diff} showOnlyChanges={showOnlyChanges} defaultViewMode="side-by-side" />
+                <DiffViewerEnhanced
+                  diff={diff}
+                  showOnlyChanges={showOnlyChanges}
+                  defaultViewMode="side-by-side"
+                />
 
                 {/* Comments section for the selected "to" version */}
                 {selectedToVersion && authUser && (

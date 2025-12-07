@@ -1,10 +1,9 @@
 'use client';
 
-
-import { FormEvent, useEffect, useState } from "react";
-import Link from "next/link";
-import { api } from "@/lib/api";
-import { cn } from "@/lib/utils";
+import { FormEvent, useEffect, useState } from 'react';
+import Link from 'next/link';
+import { api } from '@/lib/api';
+import { cn } from '@/lib/utils';
 import { logger } from '@/lib/logger';
 import { createErrorContext } from '@/lib/errors';
 
@@ -52,13 +51,7 @@ type SetupGuideResponse = {
 };
 
 // Component for viewing citations in a modal
-function CitationModal({
-  snippets,
-  onClose
-}: {
-  snippets: Snippet[];
-  onClose: () => void;
-}) {
+function CitationModal({ snippets, onClose }: { snippets: Snippet[]; onClose: () => void }) {
   return (
     <div
       className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-6"
@@ -66,7 +59,7 @@ function CitationModal({
     >
       <div
         className="bg-white rounded-lg max-w-[800px] max-h-[80vh] overflow-auto p-6 shadow-[0_4px_24px_rgba(0,0,0,0.15)]"
-        onClick={(e) => e.stopPropagation()}
+        onClick={e => e.stopPropagation()}
       >
         <div className="flex justify-between items-center mb-4">
           <h3 className="m-0 text-lg font-semibold">References</h3>
@@ -82,17 +75,10 @@ function CitationModal({
 
         <div className="flex flex-col gap-3">
           {snippets.map((snippet, idx) => (
-            <div
-              key={idx}
-              className="p-3 border border-border rounded-md bg-muted"
-            >
+            <div key={idx} className="p-3 border border-border rounded-md bg-muted">
               <div className="flex justify-between mb-2">
-                <span className="font-medium text-sm text-foreground">
-                  {snippet.source}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  Page {snippet.page}
-                </span>
+                <span className="font-medium text-sm text-foreground">{snippet.source}</span>
+                <span className="text-xs text-muted-foreground">Page {snippet.page}</span>
               </div>
               <div className="text-[13px] text-muted-foreground leading-relaxed">
                 {snippet.text}
@@ -110,7 +96,7 @@ function SetupStepCard({
   step,
   isCompleted,
   onToggleComplete,
-  onViewReferences
+  onViewReferences,
 }: {
   step: SetupGuideStep;
   isCompleted: boolean;
@@ -120,8 +106,8 @@ function SetupStepCard({
   return (
     <div
       className={cn(
-        "border border-border rounded-lg p-5 transition-all duration-200 shadow-sm bg-card",
-        isCompleted && "bg-secondary/10"
+        'border border-border rounded-lg p-5 transition-all duration-200 shadow-sm bg-card',
+        isCompleted && 'bg-secondary/10'
       )}
     >
       <div className="flex items-start gap-4">
@@ -131,8 +117,8 @@ function SetupStepCard({
           checked={isCompleted}
           onChange={onToggleComplete}
           className="w-5 h-5 mt-0.5 cursor-pointer"
-          style={{ accentColor: "#34a853" }}
-          aria-label={`Mark step ${step.stepNumber} as ${isCompleted ? "incomplete" : "complete"}`}
+          style={{ accentColor: '#34a853' }}
+          aria-label={`Mark step ${step.stepNumber} as ${isCompleted ? 'incomplete' : 'complete'}`}
         />
 
         {/* Content */}
@@ -152,8 +138,8 @@ function SetupStepCard({
           {/* Instruction */}
           <div
             className={cn(
-              "text-sm text-muted-foreground leading-relaxed mb-3",
-              isCompleted && "line-through opacity-70"
+              'text-sm text-muted-foreground leading-relaxed mb-3',
+              isCompleted && 'line-through opacity-70'
             )}
           >
             {step.instruction}
@@ -167,7 +153,9 @@ function SetupStepCard({
               aria-label={`View ${step.references.length} references for step ${step.stepNumber}`}
             >
               <span>📖</span>
-              <span>View {step.references.length} Reference{step.references.length > 1 ? "s" : ""}</span>
+              <span>
+                View {step.references.length} Reference{step.references.length > 1 ? 's' : ''}
+              </span>
             </button>
           )}
         </div>
@@ -190,7 +178,7 @@ export default function SetupPage() {
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
 
   // UI state
-  const [errorMessage, setErrorMessage] = useState<string>("");
+  const [errorMessage, setErrorMessage] = useState<string>('');
   const [selectedStepReferences, setSelectedStepReferences] = useState<Snippet[] | null>(null);
 
   // Loading states
@@ -207,17 +195,12 @@ export default function SetupPage() {
     if (authUser) {
       void loadGames();
     }
-     
   }, [authUser]);
 
   const loadCurrentUser = async () => {
     try {
-      const res = await api.get<AuthResponse>("/api/v1/auth/me");
-      if (res) {
-        setAuthUser(res.user);
-      } else {
-        setAuthUser(null);
-      }
+      const user = await api.auth.getMe();
+      setAuthUser(user);
     } catch {
       setAuthUser(null);
     }
@@ -225,14 +208,14 @@ export default function SetupPage() {
 
   const loadGames = async () => {
     setIsLoadingGames(true);
-    setErrorMessage("");
+    setErrorMessage('');
     try {
-      const gamesList = await api.get<Game[]>("/api/v1/games");
-      setGames(gamesList ?? []);
+      const response = await api.games.getAll();
+      setGames(response.games ?? []);
 
       // Auto-select first game if available
-      if (gamesList && gamesList.length > 0 && !selectedGameId) {
-        setSelectedGameId(gamesList[0].id);
+      if (response.games && response.games.length > 0 && !selectedGameId) {
+        setSelectedGameId(response.games[0].id);
       }
     } catch (err) {
       logger.error(
@@ -240,7 +223,7 @@ export default function SetupPage() {
         err instanceof Error ? err : new Error(String(err)),
         createErrorContext('SetupPage', 'loadGames', { operation: 'load_games' })
       );
-      setErrorMessage("Error loading games.");
+      setErrorMessage('Error loading games.');
       setGames([]);
     } finally {
       setIsLoadingGames(false);
@@ -251,38 +234,39 @@ export default function SetupPage() {
     e?.preventDefault();
 
     if (!selectedGameId) {
-      setErrorMessage("Please select a game first.");
+      setErrorMessage('Please select a game first.');
       return;
     }
 
     setIsLoadingGuide(true);
-    setErrorMessage("");
+    setErrorMessage('');
     setSetupGuide(null);
     setCompletedSteps(new Set());
 
     try {
-      const guide = await api.post<SetupGuideResponse>("/api/v1/agents/setup", {
+      const guide = await api.agents.generateSetupGuide({
         gameId: selectedGameId,
-        chatId: null
+        chatId: null,
       });
 
-      if (guide) {
-        setSetupGuide(guide);
-      }
+      setSetupGuide(guide);
     } catch (err) {
       logger.error(
         'Failed to load setup guide',
         err instanceof Error ? err : new Error(String(err)),
-        createErrorContext('SetupPage', 'loadSetupGuide', { gameId: selectedGameId, operation: 'load_setup_guide' })
+        createErrorContext('SetupPage', 'loadSetupGuide', {
+          gameId: selectedGameId,
+          operation: 'load_setup_guide',
+        })
       );
-      setErrorMessage("Error generating setup guide. Please try again.");
+      setErrorMessage('Error generating setup guide. Please try again.');
     } finally {
       setIsLoadingGuide(false);
     }
   };
 
   const toggleStepCompletion = (stepNumber: number) => {
-    setCompletedSteps((prev) => {
+    setCompletedSteps(prev => {
       const next = new Set(prev);
       if (next.has(stepNumber)) {
         next.delete(stepNumber);
@@ -294,7 +278,7 @@ export default function SetupPage() {
   };
 
   const resetProgress = () => {
-    if (confirm("Are you sure you want to reset all progress?")) {
+    if (confirm('Are you sure you want to reset all progress?')) {
       setCompletedSteps(new Set());
     }
   };
@@ -356,13 +340,13 @@ export default function SetupPage() {
               </label>
               <select
                 id="gameSelect"
-                value={selectedGameId ?? ""}
-                onChange={(e) => setSelectedGameId(e.target.value || null)}
+                value={selectedGameId ?? ''}
+                onChange={e => setSelectedGameId(e.target.value || null)}
                 disabled={isLoadingGames || isLoadingGuide}
                 className="w-full p-3 text-sm border border-border rounded bg-white"
               >
                 <option value="">Select a game...</option>
-                {games.map((game) => (
+                {games.map(game => (
                   <option key={game.id} value={game.id}>
                     {game.title}
                   </option>
@@ -374,14 +358,14 @@ export default function SetupPage() {
               type="submit"
               disabled={!selectedGameId || isLoadingGuide}
               className={cn(
-                "px-6 py-3 border-none rounded text-sm font-medium transition-opacity",
+                'px-6 py-3 border-none rounded text-sm font-medium transition-opacity',
                 !selectedGameId || isLoadingGuide
-                  ? "bg-muted text-muted-foreground cursor-not-allowed"
-                  : "bg-secondary text-secondary-foreground cursor-pointer hover:opacity-90"
+                  ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                  : 'bg-secondary text-secondary-foreground cursor-pointer hover:opacity-90'
               )}
               aria-label="Generate setup guide for selected game"
             >
-              {isLoadingGuide ? "Generating..." : "Generate Setup Guide"}
+              {isLoadingGuide ? 'Generating...' : 'Generate Setup Guide'}
             </button>
           </form>
         </div>
@@ -412,9 +396,7 @@ export default function SetupPage() {
             <div className="bg-white border border-border rounded-lg p-6 mb-6">
               <div className="flex justify-between items-center mb-4">
                 <div>
-                  <h2 className="m-0 mb-2 text-xl font-semibold">
-                    {setupGuide.gameTitle}
-                  </h2>
+                  <h2 className="m-0 mb-2 text-xl font-semibold">{setupGuide.gameTitle}</h2>
                   <div className="text-sm text-muted-foreground">
                     Estimated setup time: {setupGuide.estimatedSetupTimeMinutes} minutes
                   </div>
@@ -423,10 +405,10 @@ export default function SetupPage() {
                   onClick={resetProgress}
                   disabled={completedSteps.size === 0}
                   className={cn(
-                    "px-4 py-2 border-none rounded text-[13px] font-medium",
+                    'px-4 py-2 border-none rounded text-[13px] font-medium',
                     completedSteps.size === 0
-                      ? "bg-muted text-muted-foreground cursor-not-allowed"
-                      : "bg-red-600 text-white cursor-pointer"
+                      ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                      : 'bg-red-600 text-white cursor-pointer'
                   )}
                 >
                   Reset Progress
@@ -439,16 +421,14 @@ export default function SetupPage() {
                   <span className="text-sm font-medium text-foreground">
                     Progress: {completedSteps.size} / {setupGuide.steps.length} steps
                   </span>
-                  <span className="text-sm font-medium text-green-600">
-                    {progressPercentage}%
-                  </span>
+                  <span className="text-sm font-medium text-green-600">{progressPercentage}%</span>
                 </div>
                 <div className="w-full h-2 bg-muted rounded overflow-hidden">
                   <div
                     className="h-full transition-all duration-300"
                     style={{
                       width: `${progressPercentage}%`,
-                      background: progressPercentage === 100 ? "#34a853" : "#1a73e8"
+                      background: progressPercentage === 100 ? '#34a853' : '#1a73e8',
                     }}
                   />
                 </div>
@@ -456,7 +436,11 @@ export default function SetupPage() {
 
               {/* Completion Message */}
               {progressPercentage === 100 && (
-                <div className="mt-4 p-4 bg-secondary/10 border border-secondary rounded-md text-sm text-secondary flex items-center gap-3" role="status" aria-live="polite">
+                <div
+                  className="mt-4 p-4 bg-secondary/10 border border-secondary rounded-md text-sm text-secondary flex items-center gap-3"
+                  role="status"
+                  aria-live="polite"
+                >
                   <span className="text-2xl">🎉</span>
                   <span>
                     <strong>Setup Complete!</strong> Your game is ready to play. Have fun!
@@ -474,7 +458,7 @@ export default function SetupPage() {
 
             {/* Steps List */}
             <div className="flex flex-col gap-4">
-              {setupGuide.steps.map((step) => (
+              {setupGuide.steps.map(step => (
                 <SetupStepCard
                   key={step.stepNumber}
                   step={step}
@@ -491,11 +475,10 @@ export default function SetupPage() {
         {!setupGuide && !isLoadingGuide && !errorMessage && (
           <div className="bg-white border border-dashed border-border rounded-lg p-12 text-center">
             <div className="text-5xl mb-4">🎲</div>
-            <h3 className="m-0 mb-2 text-lg text-foreground">
-              No Setup Guide Yet
-            </h3>
+            <h3 className="m-0 mb-2 text-lg text-foreground">No Setup Guide Yet</h3>
             <p className="m-0 text-sm text-muted-foreground">
-              Select a game and click &quot;Generate Setup Guide&quot; to get started with step-by-step instructions.
+              Select a game and click &quot;Generate Setup Guide&quot; to get started with
+              step-by-step instructions.
             </p>
           </div>
         )}

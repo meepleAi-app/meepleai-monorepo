@@ -27,10 +27,6 @@ import { identifyUser } from '@/lib/hyperdx';
 // Types
 // ============================================================================
 
-interface AuthResponse {
-  user: AuthUser;
-}
-
 export interface RegisterData {
   email: string;
   password: string;
@@ -73,8 +69,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setInitialLoading(true);
     setError(null);
     try {
-      const res = await api.get<AuthResponse>('/api/v1/auth/me');
-      setUser(res?.user ?? null);
+      const user = await api.auth.getMe();
+      setUser(user);
     } catch (err) {
       console.error('Failed to load current user:', err);
       setUser(null);
@@ -102,10 +98,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.post<AuthResponse>('/api/v1/auth/login', { email, password });
-      const authUser = res?.user ?? null;
+      const authUser = await api.auth.login({ email, password });
       setUser(authUser);
-      if (!authUser) throw new Error('Login response missing user data');
       return authUser;
     } catch (err) {
       console.error('Login failed:', err);
@@ -120,10 +114,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.post<AuthResponse>('/api/v1/auth/register', data);
-      const authUser = res?.user ?? null;
+      const authUser = await api.auth.register(data);
       setUser(authUser);
-      if (!authUser) throw new Error('Registration response missing user data');
       return authUser;
     } catch (err) {
       console.error('Registration failed:', err);
@@ -138,7 +130,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setLoading(true);
     setError(null);
     try {
-      await api.post('/api/v1/auth/logout');
+      await api.auth.logout();
     } catch (err) {
       console.error('Logout failed:', err);
       setError(err instanceof Error ? err.message : 'Logout failed');

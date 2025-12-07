@@ -97,13 +97,9 @@ export function AdminPageClient() {
         queryParams.set('roleFilter', roleFilter);
       }
 
-      const data = await api.get<DashboardStatsDto>(
-        `/api/v1/admin/analytics?${queryParams.toString()}`
-      );
-
-      if (!data) {
-        throw new Error('Unauthorized or no data returned');
-      }
+      const data = await api.admin.getAnalytics({
+        roleFilter: roleFilter !== 'all' ? roleFilter : undefined,
+      });
 
       setStats(data);
       setLastUpdate(new Date());

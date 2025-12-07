@@ -244,4 +244,51 @@ export const ImportWorkflowResponseSchema = z.object({
 
 export type ImportWorkflowResponse = z.infer<typeof ImportWorkflowResponseSchema>;
 
+// ========== Analytics Dashboard (Issue #1977) ==========
+
+/**
+ * Time Series Data Point Schema
+ * Matches TimeSeriesDataPoint from backend Contracts
+ */
+export const TimeSeriesDataPointSchema = z.object({
+  date: z.string().datetime(),
+  count: z.number().int().nonnegative(),
+  averageValue: z.number().nullable().optional(),
+});
+
+export type TimeSeriesDataPoint = z.infer<typeof TimeSeriesDataPointSchema>;
+
+/**
+ * Dashboard Metrics Schema
+ * Matches DashboardMetrics from backend Contracts
+ */
+export const DashboardMetricsSchema = z.object({
+  totalUsers: z.number().int().nonnegative(),
+  activeSessions: z.number().int().nonnegative(),
+  apiRequestsToday: z.number().int().nonnegative(),
+  totalPdfDocuments: z.number().int().nonnegative(),
+  totalChatMessages: z.number().int().nonnegative(),
+  averageConfidenceScore: z.number(),
+  totalRagRequests: z.number().int().nonnegative(),
+  totalTokensUsed: z.number().int().nonnegative(),
+});
+
+export type DashboardMetrics = z.infer<typeof DashboardMetricsSchema>;
+
+/**
+ * Dashboard Stats DTO Schema (Issue #1977)
+ * Matches DashboardStatsDto from backend Contracts
+ */
+export const DashboardStatsSchema = z.object({
+  metrics: DashboardMetricsSchema,
+  userTrend: z.array(TimeSeriesDataPointSchema),
+  sessionTrend: z.array(TimeSeriesDataPointSchema),
+  apiRequestTrend: z.array(TimeSeriesDataPointSchema),
+  pdfUploadTrend: z.array(TimeSeriesDataPointSchema),
+  chatMessageTrend: z.array(TimeSeriesDataPointSchema),
+  generatedAt: z.string().datetime(),
+});
+
+export type DashboardStats = z.infer<typeof DashboardStatsSchema>;
+
 // Note: PagedResult is defined in config.schemas.ts and re-exported via index.ts

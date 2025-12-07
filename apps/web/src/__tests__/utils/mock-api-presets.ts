@@ -69,10 +69,13 @@ export interface IngestPresetOptions {
 export interface RuleSpecPresetOptions {
   gameId?: string;
   ruleSpec?: {
+    id?: string;
     gameId: string;
     version: string;
     createdAt?: string;
-    rules: Array<{
+    createdByUserId?: string | null;
+    parentVersionId?: string | null;
+    atoms: Array<{
       id: string;
       text: string;
       section?: string | null;
@@ -102,7 +105,7 @@ export class MockApiPresets {
       role = 'Admin',
       displayName = 'Test User',
       expiresAt = new Date(Date.now() + 86400000).toISOString(),
-      unauthorized = false
+      unauthorized = false,
     } = options;
 
     if (unauthorized) {
@@ -114,9 +117,9 @@ export class MockApiPresets {
             id: userId,
             email,
             role,
-            displayName
+            displayName,
           },
-          expiresAt
+          expiresAt,
         })
       );
     }
@@ -135,7 +138,7 @@ export class MockApiPresets {
     const {
       games = [],
       createResponse = { id: 'game-new', title: 'New Game', createdAt: new Date().toISOString() },
-      createError
+      createError,
     } = options;
 
     // List games
@@ -181,7 +184,7 @@ export class MockApiPresets {
       uploadError,
       statusResponses = [],
       retrySuccess = true,
-      retryError
+      retryError,
     } = options;
 
     // Upload PDF
@@ -197,13 +200,14 @@ export class MockApiPresets {
     let statusIndex = 0;
     router.get('/pdfs/:documentId/text', ({ params }) => {
       if (statusResponses.length > 0) {
-        const response = statusResponses[statusIndex] ?? statusResponses[statusResponses.length - 1];
+        const response =
+          statusResponses[statusIndex] ?? statusResponses[statusResponses.length - 1];
         if (statusIndex < statusResponses.length - 1) {
           statusIndex++;
         }
         return createJsonResponse({
           ...response,
-          id: params.documentId
+          id: params.documentId,
         });
       }
 
@@ -212,7 +216,7 @@ export class MockApiPresets {
         id: params.documentId,
         fileName: uploadResponse.fileName ?? 'test.pdf',
         processingStatus: 'completed',
-        processingError: null
+        processingError: null,
       });
     });
 
@@ -243,13 +247,11 @@ export class MockApiPresets {
         gameId: 'game-1',
         version: 'v1',
         createdAt: new Date().toISOString(),
-        rules: [
-          { id: 'r1', text: 'Test rule', section: null, page: null, line: null }
-        ]
+        rules: [{ id: 'r1', text: 'Test rule', section: null, page: null, line: null }],
       },
       ruleSpecError,
       publishSuccess = true,
-      publishError
+      publishError,
     } = options;
 
     // Get RuleSpec
@@ -268,7 +270,10 @@ export class MockApiPresets {
       );
     } else {
       router.put('/games/:gameId/rulespec', () =>
-        createJsonResponse(publishSuccess ? ruleSpec : { success: false }, publishSuccess ? 200 : 500)
+        createJsonResponse(
+          publishSuccess ? ruleSpec : { success: false },
+          publishSuccess ? 200 : 500
+        )
       );
     }
 
@@ -326,9 +331,7 @@ export class MockApiPresets {
         createErrorResponse(exportError.status, { error: exportError.message })
       );
     } else {
-      router.post('/admin/export', () =>
-        createJsonResponse({ url: 'blob:mock-csv-url' })
-      );
+      router.post('/admin/export', () => createJsonResponse({ url: 'blob:mock-csv-url' }));
     }
 
     return router;
@@ -357,7 +360,7 @@ export class MockApiPresets {
       explainResponse = { answer: 'Test explanation', snippets: [] },
       qaError,
       explainError,
-      feedbackSuccess = true
+      feedbackSuccess = true,
     } = options;
 
     // Q&A endpoint
@@ -379,9 +382,7 @@ export class MockApiPresets {
     }
 
     // Feedback endpoint
-    router.post('/agents/feedback', () =>
-      createJsonResponse({ success: feedbackSuccess })
-    );
+    router.post('/agents/feedback', () => createJsonResponse({ success: feedbackSuccess }));
 
     return router;
   }

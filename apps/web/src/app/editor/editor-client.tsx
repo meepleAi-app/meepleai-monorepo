@@ -29,21 +29,7 @@ import { getErrorMessage } from '@/lib/utils/errorHandler';
 import { logger } from '@/lib/logger';
 import { createErrorContext } from '@/lib/errors';
 import { useAuthUser } from '@/hooks/useAuthUser';
-
-type RuleAtom = {
-  id: string;
-  text: string;
-  section?: string | null;
-  page?: string | null;
-  line?: string | null;
-};
-
-type RuleSpec = {
-  gameId: string;
-  version: string;
-  createdAt: string;
-  rules: RuleAtom[];
-};
+import type { RuleAtom, RuleSpec } from '@/lib/api/schemas';
 
 type AuthResponse = {
   user: AuthUser;
@@ -151,18 +137,18 @@ export function EditorClient() {
       if (!parsed.createdAt || typeof parsed.createdAt !== 'string') {
         throw new Error('createdAt è richiesto e deve essere una stringa');
       }
-      if (!Array.isArray(parsed.rules)) {
-        throw new Error('rules deve essere un array');
+      if (!Array.isArray(parsed.atoms)) {
+        throw new Error('atoms deve essere un array');
       }
 
       // Validate each rule atom
-      for (let i = 0; i < parsed.rules.length; i++) {
-        const rule = parsed.rules[i];
+      for (let i = 0; i < parsed.atoms.length; i++) {
+        const rule = parsed.atoms[i];
         if (!rule.id || typeof rule.id !== 'string') {
-          throw new Error(`rules[${i}].id è richiesto e deve essere una stringa`);
+          throw new Error(`atoms[${i}].id è richiesto e deve essere una stringa`);
         }
         if (!rule.text || typeof rule.text !== 'string') {
-          throw new Error(`rules[${i}].text è richiesto e deve essere una stringa`);
+          throw new Error(`atoms[${i}].text è richiesto e deve essere una stringa`);
         }
       }
 
@@ -573,7 +559,7 @@ function RuleSpecPreview({ ruleSpec }: { ruleSpec: RuleSpec }) {
             </tr>
             <tr>
               <td className="p-1 px-2 font-bold">N. Regole:</td>
-              <td className="p-1 px-2">{ruleSpec.rules.length}</td>
+              <td className="p-1 px-2">{ruleSpec.atoms.length}</td>
             </tr>
           </tbody>
         </table>
@@ -581,7 +567,7 @@ function RuleSpecPreview({ ruleSpec }: { ruleSpec: RuleSpec }) {
 
       <div>
         <h3 className="mb-3">Regole</h3>
-        {ruleSpec.rules.map((rule, index) => (
+        {ruleSpec.atoms.map((rule, index) => (
           <div key={rule.id} className="mb-4 p-3 bg-white border border-gray-300 rounded">
             <div className="flex justify-between mb-2">
               <strong className="text-blue-600">

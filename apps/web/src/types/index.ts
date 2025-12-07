@@ -7,19 +7,12 @@
  */
 
 // Authentication & Session Types
-export type {
-  AuthUser,
-  AuthResponse,
-  SessionStatusResponse,
-  UserRole
-} from './auth';
+export type { AuthUser, AuthResponse, SessionStatusResponse, UserRole } from './auth';
 
-export {
-  hasRole,
-  canEdit
-} from './auth';
+export { hasRole, canEdit } from './auth';
 
 // Core Domain Types
+// Issue #1977: RuleAtom, RuleSpec, SetupStep, SetupGuideResponse moved to @/lib/api/schemas
 export type {
   Game,
   Agent,
@@ -28,15 +21,11 @@ export type {
   ChatThread,
   ChatThreadMessage,
   ChatWithHistory,
-  RuleAtom,
-  RuleSpec,
   RuleSpecComment,
   Snippet,
   Citation,
   Message,
   QaResponse,
-  SetupStep,
-  SetupGuideResponse
 } from './domain';
 
 // API Contract Types
@@ -52,25 +41,15 @@ export type {
   ValidationResult,
   PdfValidationError,
   ApiResponse,
-  PaginatedResponse
+  PaginatedResponse,
 } from './api';
 
-export {
-  ApiError,
-  createApiError
-} from './api';
+export { ApiError, createApiError } from './api';
 
 // PDF Processing Types
-export {
-  ProcessingStep,
-  isProcessingComplete,
-  getStepLabel,
-  getStepOrder
-} from './pdf';
+export { ProcessingStep, isProcessingComplete, getStepLabel, getStepOrder } from './pdf';
 
-export type {
-  ProcessingProgress
-} from './pdf';
+export type { ProcessingProgress } from './pdf';
 
 // Search Types
 export type {
@@ -84,5 +63,5 @@ export type {
   PdfSearchResult,
   SearchOptions,
   RecentSearch,
-  SearchState
+  SearchState,
 } from './search';

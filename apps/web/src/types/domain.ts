@@ -16,13 +16,20 @@ export interface Game {
 
 /**
  * Agent entity (AI assistant for a specific game)
+ * Issue #1977: Aligned with backend AgentDto (removed gameId)
  */
 export interface Agent {
   id: string;
-  gameId: string;
   name: string;
-  type: string; // Changed from 'kind' to match backend AgentDto
+  type: string;
+  strategyName: string;
+  strategyParameters: Record<string, unknown>;
+  isActive: boolean;
   createdAt: string;
+  lastInvokedAt: string | null;
+  invocationCount: number;
+  isRecentlyUsed: boolean;
+  isIdle: boolean;
 }
 
 /**
@@ -90,25 +97,10 @@ export interface ChatWithHistory extends Chat {
 }
 
 /**
- * Rule atom - individual rule from a rulebook
+ * NOTE (Issue #1977): RuleAtom and RuleSpec are now defined
+ * in games.schemas.ts and should be imported from there, not from this file.
+ * Use: import { RuleAtom, RuleSpec } from '@/lib/api/schemas'
  */
-export interface RuleAtom {
-  id: string;
-  text: string;
-  section?: string | null;
-  page?: string | null;
-  line?: string | null;
-}
-
-/**
- * RuleSpec - complete game rules specification
- */
-export interface RuleSpec {
-  gameId: string;
-  version: string;
-  createdAt: string;
-  rules: RuleAtom[];
-}
 
 /**
  * RuleSpec comment (for collaborative editing)
@@ -147,6 +139,7 @@ export interface Citation {
 
 /**
  * Message in chat UI (combines user/assistant messages)
+ * Issue #1977: Removed fen (use analysis.fenPosition from ChessAgentResponse)
  */
 export interface Message {
   id: string;
@@ -155,6 +148,12 @@ export interface Message {
   snippets?: Snippet[];
   citations?: Citation[]; // Issue #859: RAG citations with relevance scoring
   followUpQuestions?: string[];
+  suggestedMoves?: string[]; // Chess agent suggested moves
+  analysis?: {
+    fenPosition?: string | null;
+    evaluationSummary?: string | null;
+    keyConsiderations?: string[];
+  }; // Chess analysis data
   feedback?: FeedbackOutcome | null;
   endpoint?: string;
   gameId?: string;
@@ -188,22 +187,7 @@ export interface QaResponse {
 }
 
 /**
- * Setup guide step
+ * NOTE (Issue #1977): SetupGuideResponseStep and SetupGuideResponse are now defined
+ * in agents.schemas.ts and should be imported from there, not from this file.
+ * Use: import { SetupGuideResponse, SetupGuideResponseStep } from '@/lib/api/schemas'
  */
-export interface SetupStep {
-  stepNumber: number;
-  description: string;
-  isOptional: boolean;
-  estimatedTimeMinutes?: number;
-  citations?: Snippet[];
-}
-
-/**
- * Setup guide response
- */
-export interface SetupGuideResponse {
-  steps: SetupStep[];
-  totalSteps: number;
-  estimatedTimeMinutes: number;
-  confidence?: number;
-}

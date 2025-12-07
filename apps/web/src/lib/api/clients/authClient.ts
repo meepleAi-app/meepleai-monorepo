@@ -28,6 +28,7 @@ import {
   ChangePasswordResponseSchema,
   UserPreferencesSchema,
   ApiKeyLoginResponseSchema,
+  UserSearchResultSchema,
   type AuthUser,
   type LoginResponse,
   type RegisterResponse,
@@ -48,6 +49,7 @@ import {
   type ChangePasswordResponse,
   type UserPreferences,
   type ApiKeyLoginResponse,
+  type UserSearchResult,
 } from '../schemas';
 
 export interface CreateAuthClientParams {
@@ -171,10 +173,13 @@ export function createAuthClient({ httpClient }: CreateAuthClientParams) {
     /**
      * Search users by query
      * GET /api/v1/users/search?query={query}
+     *
+     * Issue #1977: Added UserSearchResultSchema validation
      */
-    async searchUsers(query: string): Promise<any[]> {
-      const result = await httpClient.get<any[]>(
-        `/api/v1/users/search?query=${encodeURIComponent(query)}`
+    async searchUsers(query: string): Promise<UserSearchResult[]> {
+      const result = await httpClient.get(
+        `/api/v1/users/search?query=${encodeURIComponent(query)}`,
+        UserSearchResultSchema.array()
       );
       return result ?? [];
     },

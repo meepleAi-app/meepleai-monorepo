@@ -6,6 +6,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.Services;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -20,6 +21,9 @@ public class LlmBudgetMonitoringServiceTests
     private readonly Mock<ILlmCostLogRepository> _costLogRepositoryMock;
     private readonly Mock<IAlertingService> _alertingServiceMock;
     private readonly Mock<ILogger<LlmBudgetMonitoringService>> _loggerMock;
+    private readonly Mock<IServiceScopeFactory> _scopeFactoryMock;
+    private readonly Mock<IServiceScope> _scopeMock;
+    private readonly Mock<IServiceProvider> _serviceProviderMock;
     private readonly IConfiguration _config;
 
     public LlmBudgetMonitoringServiceTests()
@@ -27,6 +31,20 @@ public class LlmBudgetMonitoringServiceTests
         _costLogRepositoryMock = new Mock<ILlmCostLogRepository>();
         _alertingServiceMock = new Mock<IAlertingService>();
         _loggerMock = new Mock<ILogger<LlmBudgetMonitoringService>>();
+        _scopeFactoryMock = new Mock<IServiceScopeFactory>();
+        _scopeMock = new Mock<IServiceScope>();
+        _serviceProviderMock = new Mock<IServiceProvider>();
+
+        // Setup service scope factory
+        _serviceProviderMock
+            .Setup(sp => sp.GetService(typeof(ILlmCostLogRepository)))
+            .Returns(_costLogRepositoryMock.Object);
+        _serviceProviderMock
+            .Setup(sp => sp.GetService(typeof(IAlertingService)))
+            .Returns(_alertingServiceMock.Object);
+
+        _scopeMock.Setup(s => s.ServiceProvider).Returns(_serviceProviderMock.Object);
+        _scopeFactoryMock.Setup(f => f.CreateScope()).Returns(_scopeMock.Object);
 
         var configData = new Dictionary<string, string?>
         {
@@ -46,8 +64,7 @@ public class LlmBudgetMonitoringServiceTests
     {
         // Act
         var sut = new LlmBudgetMonitoringService(
-            _costLogRepositoryMock.Object,
-            _alertingServiceMock.Object,
+            _scopeFactoryMock.Object,
             _config,
             _loggerMock.Object);
 
@@ -60,8 +77,7 @@ public class LlmBudgetMonitoringServiceTests
     {
         // Arrange
         var sut = new LlmBudgetMonitoringService(
-            _costLogRepositoryMock.Object,
-            _alertingServiceMock.Object,
+            _scopeFactoryMock.Object,
             _config,
             _loggerMock.Object);
 
@@ -92,8 +108,7 @@ public class LlmBudgetMonitoringServiceTests
     {
         // Arrange
         var sut = new LlmBudgetMonitoringService(
-            _costLogRepositoryMock.Object,
-            _alertingServiceMock.Object,
+            _scopeFactoryMock.Object,
             _config,
             _loggerMock.Object);
 
@@ -125,8 +140,7 @@ public class LlmBudgetMonitoringServiceTests
     {
         // Arrange
         var sut = new LlmBudgetMonitoringService(
-            _costLogRepositoryMock.Object,
-            _alertingServiceMock.Object,
+            _scopeFactoryMock.Object,
             _config,
             _loggerMock.Object);
 

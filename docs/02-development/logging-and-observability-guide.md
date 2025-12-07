@@ -1427,12 +1427,92 @@ var history = await _mediator.Send(query);
 
 ---
 
+## 💰 LLM Cost Monitoring (Issue #1725)
+
+### Quick Start
+
+**Dashboard**: http://localhost:3001/d/llm-cost-monitoring
+
+**Metriche Chiave**:
+- `meepleai_llm_cost_usd` - Costo per richiesta LLM
+- `gen_ai.client.token.usage` - Token usage (prompt + completion)
+- `gen_ai.client.operation.duration` - Latenza LLM
+
+### Registrare Token Usage (Streaming)
+
+```csharp
+// Issue #1725: StreamChunk pattern per streaming con usage metadata
+await foreach (var chunk in llmService.GenerateCompletionStreamAsync(...))
+{
+    if (!string.IsNullOrEmpty(chunk.Content))
+    {
+        // Processa contenuto
+        yield return chunk.Content;
+    }
+
+    if (chunk.IsFinal && chunk.Usage != null && chunk.Cost != null)
+    {
+        // Registra metriche OTel
+        MeepleAiMetrics.RecordLlmTokenUsage(
+            promptTokens: chunk.Usage.PromptTokens,
+            completionTokens: chunk.Usage.CompletionTokens,
+            totalTokens: chunk.Usage.TotalTokens,
+            modelId: chunk.Cost.ModelId,
+            provider: chunk.Cost.Provider,
+            costUsd: chunk.Cost.TotalCost,
+            userSegment: "pro",           // Opzionale: segmento utente
+            userIdHash: "a1b2c3d4");      // Opzionale: hash privacy-safe
+    }
+}
+```
+
+### Query Prometheus Utili
+
+**Costo giornaliero**:
+```promql
+sum(increase(meepleai_llm_cost_usd[1d])) by (model_id)
+```
+
+**Token rate (ultimi 5min)**:
+```promql
+sum(rate(gen_ai_client_token_usage{gen_ai_token_type="input"}[5m])) by (gen_ai_request_model)
+```
+
+**Costo per query**:
+```promql
+sum(rate(meepleai_llm_cost_usd[5m])) / sum(rate(meepleai_agent_invocations_total[5m]))
+```
+
+**Costo per segmento utente**:
+```promql
+sum(meepleai_llm_cost_usd) by (user_segment)
+```
+
+### Budget Alerts
+
+**Configurazione** (`appsettings.json`):
+```json
+"LlmBudgetAlerts": {
+  "DailyBudgetUsd": 50.00,
+  "MonthlyBudgetUsd": 1000.00,
+  "Thresholds": { "Warning": 0.80, "Critical": 0.95 },
+  "CheckIntervalMinutes": 60
+}
+```
+
+**Runbook**: [LLM Budget Alerts](../05-operations/runbooks/llm-budget-alerts.md)
+
+**Dashboard**: [Grafana LLM Cost Monitoring](../05-operations/monitoring/grafana-llm-cost-dashboard.md)
+
+---
+
 ## 📚 Risorse Aggiuntive
 
 ### Documentazione
 
 - [Serilog Documentation](https://github.com/serilog/serilog/wiki)
 - [OpenTelemetry .NET](https://opentelemetry.io/docs/instrumentation/net/)
+- [OpenTelemetry GenAI Semantic Conventions](https://opentelemetry.io/docs/specs/semconv/gen-ai/)
 - [Prometheus Query Language](https://prometheus.io/docs/prometheus/latest/querying/basics/)
 - [HyperDX Tracing](https://www.jaegertracing.io/docs/)
 - [HyperDX Query Language](https://docs.datalust.co/docs/the-seq-query-language)

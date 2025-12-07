@@ -49,7 +49,7 @@ public static class RuleSpecEndpoints
                 return Results.BadRequest(new { error = "gameId in URL does not match gameId in RuleSpec" });
             }
 
-            var userId = session!.User.Id;
+            var userId = session!.User!.Id;
 
             // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
             logger.LogInformation("User {UserId} updating RuleSpec for game {GameId}", userId, gameId);
@@ -294,7 +294,7 @@ public static class RuleSpecEndpoints
             var (authorized, session, error) = context.RequireAdminOrEditorSession();
             if (!authorized) return error!;
 
-            var userId = session!.User.Id;
+            var userId = session!.User!.Id;
 
             // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
             logger.LogInformation("User {UserId} resolving comment {CommentId} (resolveReplies: {ResolveReplies})",
@@ -328,7 +328,7 @@ public static class RuleSpecEndpoints
             var (authorized, session, error) = context.RequireAdminOrEditorSession();
             if (!authorized) return error!;
 
-            var userId = session!.User.Id;
+            var userId = session!.User!.Id;
 
             // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
             logger.LogInformation("User {UserId} unresolving comment {CommentId} (unresolveParent: {UnresolveParent})",
@@ -362,7 +362,7 @@ public static class RuleSpecEndpoints
             }
 
             // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
-            logger.LogInformation("User {UserId} exporting {Count} rule specs", session!.User.Id, request.RuleSpecIds.Count);
+            logger.LogInformation("User {UserId} exporting {Count} rule specs", session!.User!.Id, request.RuleSpecIds.Count);
 
             // Convert List<string> to List<Guid>
             var gameIds = new List<Guid>();

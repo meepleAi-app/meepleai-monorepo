@@ -26,7 +26,7 @@ public static class AdminMiscEndpoints
             var session = sessionResult.Session;
             if (session == null) throw new InvalidOperationException("Session is required");
 
-            logger.LogInformation("Admin {UserId} starting chess knowledge indexing", session!.User.Id);
+            logger.LogInformation("Admin {UserId} starting chess knowledge indexing", session!.User!.Id);
 
             var result = await mediator.Send(new IndexChessKnowledgeCommand(), ct).ConfigureAwait(false);
 
@@ -61,7 +61,7 @@ public static class AdminMiscEndpoints
             }
             var validatedQuery = q!;
 
-            logger.LogInformation("User {UserId} searching chess knowledge: {Query}", session!.User.Id, validatedQuery);
+            logger.LogInformation("User {UserId} searching chess knowledge: {Query}", session!.User!.Id, validatedQuery);
 
             var searchResult = await mediator.Send(new SearchChessKnowledgeQuery { Query = validatedQuery, Limit = limit ?? 5 }, ct).ConfigureAwait(false);
 
@@ -92,7 +92,7 @@ public static class AdminMiscEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            logger.LogInformation("Admin {UserId} deleting all chess knowledge", session!.User.Id);
+            logger.LogInformation("Admin {UserId} deleting all chess knowledge", session!.User!.Id);
 
             var success = await mediator.Send(new DeleteChessKnowledgeCommand(), ct).ConfigureAwait(false);
 

@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
 using Api.Configuration;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -63,7 +64,7 @@ public class HybridAdaptiveRoutingStrategyTests
     public void AnonymousUser_RoutesFreeModel()
     {
         // Arrange
-        var strategy = new HybridAdaptiveRoutingStrategy(_logger, _configuration, _aiSettings);
+        var strategy = new HybridAdaptiveRoutingStrategy(_configuration, _aiSettings, _logger);
 
         // Act - Run multiple times to test traffic split
         var decisions = Enumerable.Range(0, 100)
@@ -98,7 +99,7 @@ public class HybridAdaptiveRoutingStrategyTests
     public void UserRole_Routes80PercentFree()
     {
         // Arrange
-        var strategy = new HybridAdaptiveRoutingStrategy(_logger, _configuration, _aiSettings);
+        var strategy = new HybridAdaptiveRoutingStrategy(_configuration, _aiSettings, _logger);
         var user = CreateUser(Role.User);
 
         // Act - Run 100 times
@@ -118,7 +119,7 @@ public class HybridAdaptiveRoutingStrategyTests
     public void EditorRole_Routes50PercentOpenRouter()
     {
         // Arrange
-        var strategy = new HybridAdaptiveRoutingStrategy(_logger, _configuration, _aiSettings);
+        var strategy = new HybridAdaptiveRoutingStrategy(_configuration, _aiSettings, _logger);
         var editor = CreateUser(Role.Editor);
 
         // Act - Run 100 times
@@ -142,7 +143,7 @@ public class HybridAdaptiveRoutingStrategyTests
     public void AdminRole_Routes80PercentPremium()
     {
         // Arrange
-        var strategy = new HybridAdaptiveRoutingStrategy(_logger, _configuration, _aiSettings);
+        var strategy = new HybridAdaptiveRoutingStrategy(_configuration, _aiSettings, _logger);
         var admin = CreateUser(Role.Admin);
 
         // Act - Run 100 times
@@ -166,7 +167,7 @@ public class HybridAdaptiveRoutingStrategyTests
     public void RoutingDecision_ContainsReason()
     {
         // Arrange
-        var strategy = new HybridAdaptiveRoutingStrategy(_logger, _configuration, _aiSettings);
+        var strategy = new HybridAdaptiveRoutingStrategy(_configuration, _aiSettings, _logger);
         var user = CreateUser(Role.User);
 
         // Act
@@ -184,7 +185,7 @@ public class HybridAdaptiveRoutingStrategyTests
     public void FreeModelSelection_UsesOpenRouterProvider()
     {
         // Arrange
-        var strategy = new HybridAdaptiveRoutingStrategy(_logger, _configuration, _aiSettings);
+        var strategy = new HybridAdaptiveRoutingStrategy(_configuration, _aiSettings, _logger);
         var user = CreateUser(Role.User);
 
         // Act - Get 50 decisions
@@ -206,7 +207,7 @@ public class HybridAdaptiveRoutingStrategyTests
     public void LocalOllamaModel_UsesOllamaProvider()
     {
         // Arrange
-        var strategy = new HybridAdaptiveRoutingStrategy(_logger, _configuration, _aiSettings);
+        var strategy = new HybridAdaptiveRoutingStrategy(_configuration, _aiSettings, _logger);
         var editor = CreateUser(Role.Editor);
 
         // Act - Get 50 decisions
@@ -238,7 +239,7 @@ public class HybridAdaptiveRoutingStrategyTests
             .AddInMemoryCollection(customConfig!)
             .Build();
 
-        var strategy = new HybridAdaptiveRoutingStrategy(_logger, config, _aiSettings);
+        var strategy = new HybridAdaptiveRoutingStrategy(config, _aiSettings, _logger);
         var user = CreateUser(Role.User);
 
         // Act
@@ -263,7 +264,7 @@ public class HybridAdaptiveRoutingStrategyTests
             .AddInMemoryCollection(zeroConfig!)
             .Build();
 
-        var strategy = new HybridAdaptiveRoutingStrategy(_logger, config, _aiSettings);
+        var strategy = new HybridAdaptiveRoutingStrategy(config, _aiSettings, _logger);
         var user = CreateUser(Role.User);
 
         // Act - Run 20 times
@@ -294,7 +295,7 @@ public class HybridAdaptiveRoutingStrategyTests
             .AddInMemoryCollection(fullConfig!)
             .Build();
 
-        var strategy = new HybridAdaptiveRoutingStrategy(_logger, config, _aiSettings);
+        var strategy = new HybridAdaptiveRoutingStrategy(config, _aiSettings, _logger);
         var editor = CreateUser(Role.Editor);
 
         // Act - Run 20 times
@@ -323,7 +324,7 @@ public class HybridAdaptiveRoutingStrategyTests
             }
         });
 
-        var strategy = new HybridAdaptiveRoutingStrategy(_logger, _configuration, preferredSettings);
+        var strategy = new HybridAdaptiveRoutingStrategy(_configuration, preferredSettings, _logger);
         var admin = CreateUser(Role.Admin); // Admin would normally get 80% OpenRouter
 
         // Act
@@ -360,7 +361,7 @@ public class HybridAdaptiveRoutingStrategyTests
             }
         });
 
-        var strategy = new HybridAdaptiveRoutingStrategy(_logger, config, disabledSettings);
+        var strategy = new HybridAdaptiveRoutingStrategy(config, disabledSettings, _logger);
         var editor = CreateUser(Role.Editor);
 
         // Act - Run 20 times
@@ -389,7 +390,7 @@ public class HybridAdaptiveRoutingStrategyTests
             }
         });
 
-        var strategy = new HybridAdaptiveRoutingStrategy(_logger, _configuration, allDisabledSettings);
+        var strategy = new HybridAdaptiveRoutingStrategy(_configuration, allDisabledSettings, _logger);
         var user = CreateUser(Role.User);
 
         // Act & Assert - Should throw when all providers disabled
@@ -411,7 +412,7 @@ public class HybridAdaptiveRoutingStrategyTests
             }
         });
 
-        var strategy = new HybridAdaptiveRoutingStrategy(_logger, _configuration, emptyPreferredSettings);
+        var strategy = new HybridAdaptiveRoutingStrategy(_configuration, emptyPreferredSettings, _logger);
         var admin = CreateUser(Role.Admin);
 
         // Act - Run 100 times to test traffic split
@@ -434,7 +435,7 @@ public class HybridAdaptiveRoutingStrategyTests
             Providers = new Dictionary<string, ProviderConfig>() // Empty
         });
 
-        var strategy = new HybridAdaptiveRoutingStrategy(_logger, _configuration, emptySettings);
+        var strategy = new HybridAdaptiveRoutingStrategy(_configuration, emptySettings, _logger);
         var user = CreateUser(Role.User);
 
         // Act
@@ -455,7 +456,7 @@ public class HybridAdaptiveRoutingStrategyTests
             Providers = new Dictionary<string, ProviderConfig>() // Both missing
         });
 
-        var strategy = new HybridAdaptiveRoutingStrategy(_logger, _configuration, emptySettings);
+        var strategy = new HybridAdaptiveRoutingStrategy(_configuration, emptySettings, _logger);
         var user = CreateUser(Role.User);
 
         // Act
@@ -491,7 +492,7 @@ public class HybridAdaptiveRoutingStrategyTests
             }
         });
 
-        var strategy = new HybridAdaptiveRoutingStrategy(_logger, config, oneDisabledSettings);
+        var strategy = new HybridAdaptiveRoutingStrategy(config, oneDisabledSettings, _logger);
         var editor = CreateUser(Role.Editor);
 
         // Act - Run 10 times
@@ -531,7 +532,7 @@ public class HybridAdaptiveRoutingStrategyTests
             }
         });
 
-        var strategy = new HybridAdaptiveRoutingStrategy(_logger, config, bothDisabledSettings);
+        var strategy = new HybridAdaptiveRoutingStrategy(config, bothDisabledSettings, _logger);
         var user = CreateUser(Role.User);
 
         // Act & Assert - Should throw when both providers explicitly disabled
@@ -562,7 +563,7 @@ public class HybridAdaptiveRoutingStrategyTests
             }
         });
 
-        var strategy = new HybridAdaptiveRoutingStrategy(_logger, config, oneEnabledSettings);
+        var strategy = new HybridAdaptiveRoutingStrategy(config, oneEnabledSettings, _logger);
         var editor = CreateUser(Role.Editor);
 
         // Act - Run 10 times
@@ -602,7 +603,7 @@ public class HybridAdaptiveRoutingStrategyTests
             }
         });
 
-        var strategy = new HybridAdaptiveRoutingStrategy(_logger, config, partialSettings);
+        var strategy = new HybridAdaptiveRoutingStrategy(config, partialSettings, _logger);
         var user = CreateUser(Role.User);
 
         // Act
@@ -637,7 +638,7 @@ public class HybridAdaptiveRoutingStrategyTests
             }
         });
 
-        var strategy = new HybridAdaptiveRoutingStrategy(_logger, config, adminFallbackSettings);
+        var strategy = new HybridAdaptiveRoutingStrategy(config, adminFallbackSettings, _logger);
         var admin = CreateUser(Role.Admin);
 
         // Act
@@ -646,6 +647,94 @@ public class HybridAdaptiveRoutingStrategyTests
         // Assert - Admin fallback to Ollama should still use admin-tier model
         Assert.Equal("Ollama", decision.ProviderName);
         Assert.Equal("llama3:8b", decision.ModelId); // Ollama default
+    }
+
+    // ISSUE-1725: Budget Mode Override Tests
+
+    [Fact]
+    public void SelectProvider_BudgetModeActive_DowngradesExpensiveModel()
+    {
+        // Arrange - Force 100% OpenRouter to ensure expensive model selection
+        var customConfig = new Dictionary<string, string>
+        {
+            ["LlmRouting:AdminOpenRouterPercent"] = "100", // Force OpenRouter
+            ["LlmRouting:PremiumModel"] = "anthropic/claude-3.5-haiku"
+        };
+
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(customConfig!)
+            .Build();
+
+        var overrideServiceMock = new Mock<ILlmModelOverrideService>(MockBehavior.Strict);
+        overrideServiceMock.Setup(s => s.IsInBudgetMode()).Returns(true);
+        // Mock GetOverrideModel to return free tier for Claude
+        overrideServiceMock.Setup(s => s.GetOverrideModel("anthropic/claude-3.5-haiku"))
+            .Returns("meta-llama/llama-3.3-70b-instruct:free");
+
+        var strategy = new HybridAdaptiveRoutingStrategy(
+            config,
+            _aiSettings,
+            _logger,
+            overrideServiceMock.Object);
+
+        var user = CreateUser(Role.Admin);
+
+        // Act
+        var decision = strategy.SelectProvider(user);
+
+        // Assert - Model should be downgraded to free tier
+        Assert.Equal("meta-llama/llama-3.3-70b-instruct:free", decision.ModelId);
+        Assert.Contains("Budget mode", decision.Reason);
+
+        // Verify methods were called
+        overrideServiceMock.Verify(s => s.IsInBudgetMode(), Times.Once);
+        overrideServiceMock.Verify(s => s.GetOverrideModel("anthropic/claude-3.5-haiku"), Times.Once);
+    }
+
+    [Fact]
+    public void SelectProvider_BudgetModeInactive_UsesNormalModel()
+    {
+        // Arrange
+        var overrideServiceMock = new Mock<ILlmModelOverrideService>();
+        overrideServiceMock.Setup(s => s.IsInBudgetMode()).Returns(false);
+
+        var strategy = new HybridAdaptiveRoutingStrategy(
+            _configuration,
+            _aiSettings,
+            _logger,
+            overrideServiceMock.Object);
+
+        var user = CreateUser(Role.Admin);
+
+        // Act
+        var decision = strategy.SelectProvider(user);
+
+        // Assert - Normal model selection (no downgrade)
+        overrideServiceMock.Verify(s => s.GetOverrideModel(It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public void SelectProvider_BudgetModeActive_NoMappingExists_KeepsOriginalModel()
+    {
+        // Arrange
+        var overrideServiceMock = new Mock<ILlmModelOverrideService>();
+        overrideServiceMock.Setup(s => s.IsInBudgetMode()).Returns(true);
+        overrideServiceMock.Setup(s => s.GetOverrideModel(It.IsAny<string>()))
+            .Returns((string model) => model); // No mapping → return original
+
+        var strategy = new HybridAdaptiveRoutingStrategy(
+            _configuration,
+            _aiSettings,
+            _logger,
+            overrideServiceMock.Object);
+
+        var user = CreateUser(Role.User);
+
+        // Act
+        var decision = strategy.SelectProvider(user);
+
+        // Assert - Original model kept (no downgrade mapping)
+        overrideServiceMock.Verify(s => s.GetOverrideModel(It.IsAny<string>()), Times.Once);
     }
     private static AuthUser CreateUser(Role role)
     {
@@ -660,4 +749,3 @@ public class HybridAdaptiveRoutingStrategyTests
             role);
     }
 }
-

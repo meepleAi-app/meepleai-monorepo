@@ -5,6 +5,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
 using Api.Configuration;
 using Api.Services;
 using Api.Services.LlmClients;
@@ -519,9 +520,9 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
         };
 
         var routingStrategy = new HybridAdaptiveRoutingStrategy(
-            _strategyLogger,
             _configuration,
-            aiSettings);
+            aiSettings,
+            _strategyLogger);
 
         return new HybridLlmService(
             clients,

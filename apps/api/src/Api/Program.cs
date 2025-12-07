@@ -340,6 +340,7 @@ v1Api.MapRuleSpecEndpoints();
 // Issue #1439: Split AdminEndpoints into focused endpoint files
 v1Api.MapConfigurationEndpoints();     // System configuration CRUD & operations
 v1Api.MapAnalyticsEndpoints();         // Dashboard statistics & metrics
+v1Api.MapLlmAnalyticsEndpoints();      // ISSUE-1725: LLM cost optimization analytics
 v1Api.MapAlertEndpoints();             // Alert management
 v1Api.MapAuditEndpoints();             // Audit log retrieval & search
 v1Api.MapFeatureFlagEndpoints();       // Feature flag management

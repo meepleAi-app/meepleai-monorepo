@@ -272,6 +272,21 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         {
             services.AddScoped<IPdfUploadQuotaService, PdfUploadQuotaService>();
         }
+
+        // Register Mock IConnectionMultiplexer (required by PdfUploadQuotaService) - Issue #1983
+        if (!services.Any(s => s.ServiceType == typeof(IConnectionMultiplexer)))
+        {
+            var mockDatabase = new Mock<IDatabase>();
+            var mockConnectionMultiplexer = new Mock<IConnectionMultiplexer>();
+
+            // Setup GetDatabase() to return mock IDatabase (required by PdfUploadQuotaService)
+            mockConnectionMultiplexer.Setup(r => r.GetDatabase(It.IsAny<int>(), It.IsAny<object>()))
+                .Returns(mockDatabase.Object);
+            mockConnectionMultiplexer.Setup(r => r.GetDatabase(-1, null))
+                .Returns(mockDatabase.Object);
+
+            services.AddSingleton(mockConnectionMultiplexer.Object);
+        }
     }
 
     private async Task SeedTestDataAsync()
@@ -793,9 +808,6 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
                 w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
         });
 
-        // Register Redis (required by PdfUploadQuotaService)
-        services.AddSingleton<IConnectionMultiplexer>(_redis!);
-
         RegisterMockServices(services);
         services.Configure<PdfProcessingOptions>(options => options.MaxFileSizeBytes = 104857600);
         services.AddMediatR(config => config.RegisterServicesFromAssembly(typeof(UploadPdfCommandHandler).Assembly));
@@ -848,9 +860,6 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
             options.ConfigureWarnings(w =>
                 w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
         });
-
-        // Register Redis (required by PdfUploadQuotaService)
-        services.AddSingleton<IConnectionMultiplexer>(_redis!);
 
         RegisterMockServices(services);
         services.Configure<PdfProcessingOptions>(options => options.MaxFileSizeBytes = 104857600);
@@ -1028,9 +1037,6 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
             options.ConfigureWarnings(w =>
                 w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
         });
-
-        // Register Redis (required by PdfUploadQuotaService)
-        services.AddSingleton<IConnectionMultiplexer>(_redis!);
 
         var permissionDeniedStorage = new Mock<IBlobStorageService>();
         permissionDeniedStorage.Setup(b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -1233,9 +1239,6 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
             options.UseInMemoryDatabase("BackgroundTaskTest");
         });
         services.AddSingleton<IBackgroundTaskService>(backgroundTaskMock.Object);
-
-        // Register Redis (required by PdfUploadQuotaService)
-        services.AddSingleton<IConnectionMultiplexer>(_redis!);
 
         RegisterMockServices(services);
         services.Configure<PdfProcessingOptions>(options => options.MaxFileSizeBytes = 104857600);

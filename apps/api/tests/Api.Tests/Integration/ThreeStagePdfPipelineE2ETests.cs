@@ -29,7 +29,9 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
 {
     private readonly Action<string> _output;
     private IContainer? _unstructuredContainer;
+#pragma warning disable CS0649 // Field is never assigned (reserved for future SmolDocling container initialization)
     private IContainer? _smoldoclingContainer;
+#pragma warning restore CS0649
     private readonly IConfiguration _configuration;
     private readonly ILogger<EnhancedPdfProcessingOrchestrator> _logger;
     private readonly IOptions<PdfProcessingOptions> _options;

@@ -6,25 +6,23 @@
  * Then: Mocks are created with correct defaults and customization
  */
 
+import { createJsonResponse, createErrorResponse, setupUploadMocks } from './upload-mocks';
 import {
-  createAuthMock,
-  createGameMock,
-  createPdfMock,
-  createRuleSpecMock,
-  createJsonResponse,
-  createErrorResponse,
-  setupUploadMocks,
-} from './upload-mocks';
+  createMockAuthResponse,
+  createMockGame,
+  createMockPdfDocument,
+  createMockRuleSpec,
+} from './common-fixtures';
 
 describe('upload-mocks fixture', () => {
   describe('Given auth mock factory', () => {
     describe('When created with default options', () => {
       it('Then returns auth response with default values', () => {
-        const authMock = createAuthMock();
+        const authMock = createMockAuthResponse();
 
         expect(authMock.user.id).toBe('user-1');
-        expect(authMock.user.email).toBe('user@example.com');
-        expect(authMock.user.role).toBe('Admin');
+        expect(authMock.user.email).toBe('test@meepleai.dev');
+        expect(authMock.user.role).toBe('User');
         expect(authMock.user.displayName).toBe('Test User');
         expect(authMock.expiresAt).toBeDefined();
       });
@@ -32,8 +30,8 @@ describe('upload-mocks fixture', () => {
 
     describe('When created with custom options', () => {
       it('Then returns auth response with custom values', () => {
-        const authMock = createAuthMock({
-          userId: 'user-custom',
+        const authMock = createMockAuthResponse({
+          id: 'user-custom',
           email: 'custom@example.com',
           role: 'Editor',
           displayName: 'Custom User',
@@ -50,7 +48,7 @@ describe('upload-mocks fixture', () => {
   describe('Given game mock factory', () => {
     describe('When created with default options', () => {
       it('Then returns game with default values', () => {
-        const gameMock = createGameMock();
+        const gameMock = createMockGame();
 
         expect(gameMock.id).toBe('game-1');
         expect(gameMock.title).toBe('Test Game');
@@ -60,7 +58,7 @@ describe('upload-mocks fixture', () => {
 
     describe('When created with custom options', () => {
       it('Then returns game with custom values', () => {
-        const gameMock = createGameMock({
+        const gameMock = createMockGame({
           id: 'game-custom',
           title: 'Custom Game',
           createdAt: '2024-01-01T00:00:00Z',
@@ -76,7 +74,7 @@ describe('upload-mocks fixture', () => {
   describe('Given PDF mock factory', () => {
     describe('When created for status polling response', () => {
       it('Then includes processingStatus field', () => {
-        const pdfMock = createPdfMock({
+        const pdfMock = createMockPdfDocument({
           id: 'pdf-123',
           processingStatus: 'completed',
           processingError: null,
@@ -90,7 +88,7 @@ describe('upload-mocks fixture', () => {
 
     describe('When created for PDF list response', () => {
       it('Then includes status field', () => {
-        const pdfMock = createPdfMock({
+        const pdfMock = createMockPdfDocument({
           id: 'pdf-123',
           status: 'failed',
           logUrl: 'http://example.com/log',
@@ -104,7 +102,7 @@ describe('upload-mocks fixture', () => {
 
     describe('When created with custom file size', () => {
       it('Then returns PDF with custom size', () => {
-        const pdfMock = createPdfMock({
+        const pdfMock = createMockPdfDocument({
           fileName: 'large.pdf',
           fileSizeBytes: 5242880, // 5 MB
         });
@@ -117,23 +115,22 @@ describe('upload-mocks fixture', () => {
 
   describe('Given RuleSpec mock factory', () => {
     describe('When created with default options', () => {
-      it('Then returns RuleSpec with default rule', () => {
-        const ruleSpecMock = createRuleSpecMock();
+      it('Then returns RuleSpec with default atoms', () => {
+        const ruleSpecMock = createMockRuleSpec();
 
         expect(ruleSpecMock.gameId).toBe('game-1');
         expect(ruleSpecMock.version).toBe('v1');
-        expect(ruleSpecMock.rules).toHaveLength(1);
-        expect(ruleSpecMock.rules[0].id).toBe('r1');
-        expect(ruleSpecMock.rules[0].text).toBe('Test rule');
+        expect(ruleSpecMock.atoms).toBeDefined();
+        expect(ruleSpecMock.atoms.length).toBeGreaterThan(0);
       });
     });
 
-    describe('When created with custom rules', () => {
-      it('Then returns RuleSpec with custom rules', () => {
-        const ruleSpecMock = createRuleSpecMock({
+    describe('When created with custom atoms', () => {
+      it('Then returns RuleSpec with custom atoms', () => {
+        const ruleSpecMock = createMockRuleSpec({
           gameId: 'game-custom',
           version: 'v2',
-          rules: [
+          atoms: [
             { id: 'r1', text: 'Rule 1', section: 'Setup', page: '1', line: '5' },
             { id: 'r2', text: 'Rule 2', section: 'Gameplay', page: '2', line: '10' },
           ],
@@ -141,9 +138,9 @@ describe('upload-mocks fixture', () => {
 
         expect(ruleSpecMock.gameId).toBe('game-custom');
         expect(ruleSpecMock.version).toBe('v2');
-        expect(ruleSpecMock.rules).toHaveLength(2);
-        expect(ruleSpecMock.rules[0].section).toBe('Setup');
-        expect(ruleSpecMock.rules[1].section).toBe('Gameplay');
+        expect(ruleSpecMock.atoms).toHaveLength(2);
+        expect(ruleSpecMock.atoms[0].section).toBe('Setup');
+        expect(ruleSpecMock.atoms[1].section).toBe('Gameplay');
       });
     });
   });
@@ -190,7 +187,7 @@ describe('upload-mocks fixture', () => {
 
         expect(response.ok).toBe(true);
         const data = await response.json();
-        expect(data.user.role).toBe('Admin');
+        expect(data.user.role).toBe('User');
       });
 
       it('Then handles /games GET endpoint', async () => {
@@ -252,7 +249,7 @@ describe('upload-mocks fixture', () => {
         expect(response.ok).toBe(true);
         const data = await response.json();
         expect(data.gameId).toBe('game-1');
-        expect(data.rules).toBeDefined();
+        expect(data.atoms).toBeDefined();
       });
 
       it('Then handles /games/{id}/rulespec PUT endpoint', async () => {
@@ -396,7 +393,7 @@ describe('upload-mocks fixture', () => {
         const mockFetch = setupUploadMocks({
           pdfs: {
             pdfs: [
-              createPdfMock({
+              createMockPdfDocument({
                 id: 'pdf-failed',
                 fileName: 'failed.pdf',
                 status: 'failed',

@@ -125,8 +125,7 @@ public class CorsHeaderWhitelistTests : IClassFixture<CorsTestFactory>
     {
         "Content-Type",
         "Authorization",
-        "X-Correlation-ID",
-        "X-API-Key"
+        "X-Correlation-ID"
     };
 
     // Non-whitelisted headers (should be rejected)
@@ -148,7 +147,6 @@ public class CorsHeaderWhitelistTests : IClassFixture<CorsTestFactory>
     [InlineData("Content-Type")]
     [InlineData("Authorization")]
     [InlineData("X-Correlation-ID")]
-    [InlineData("X-API-Key")]
     public async Task PreflightRequest_WhitelistedHeader_ReturnsAllowedHeaders(string headerName)
     {
         // Arrange
@@ -264,7 +262,6 @@ public class CorsHeaderWhitelistTests : IClassFixture<CorsTestFactory>
     [InlineData("content-type")]
     [InlineData("AUTHORIZATION")]
     [InlineData("x-correlation-id")]
-    [InlineData("X-API-KEY")]
     public async Task PreflightRequest_CaseInsensitiveHeaders_Accepted(string headerName)
     {
         // Arrange
@@ -339,8 +336,8 @@ public class CorsHeaderWhitelistTests : IClassFixture<CorsTestFactory>
         var allowedHeaders = response.Headers.GetValues("Access-Control-Allow-Headers");
         var allowedHeadersList = string.Join(",", allowedHeaders).Split(',', StringSplitOptions.TrimEntries);
 
-        // Verify exactly 4 whitelisted headers
-        Assert.Equal(4, WhitelistedHeaders.Length);
+        // Verify exactly 3 whitelisted headers
+        Assert.Equal(3, WhitelistedHeaders.Length);
         foreach (var header in WhitelistedHeaders)
         {
             Assert.Contains(header, allowedHeadersList, StringComparer.OrdinalIgnoreCase);

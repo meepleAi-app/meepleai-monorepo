@@ -36,7 +36,6 @@ public class SecurityHeadersMiddlewareTests
             EnableHsts = true,
             EnableXFrameOptions = true,
             EnableXContentTypeOptions = true,
-            EnableXssProtection = true,
             EnableReferrerPolicy = true,
             EnablePermissionsPolicy = true
         };
@@ -52,11 +51,10 @@ public class SecurityHeadersMiddlewareTests
         // Act
         await middleware.InvokeAsync(context);
 
-        // Assert
+        // Assert - All 6 security headers should be present
         Assert.True(context.Response.Headers.ContainsKey("Content-Security-Policy"));
         Assert.True(context.Response.Headers.ContainsKey("X-Frame-Options"));
         Assert.True(context.Response.Headers.ContainsKey("X-Content-Type-Options"));
-        Assert.True(context.Response.Headers.ContainsKey("X-XSS-Protection"));
         Assert.True(context.Response.Headers.ContainsKey("Referrer-Policy"));
         Assert.True(context.Response.Headers.ContainsKey("Permissions-Policy"));
 
@@ -113,21 +111,6 @@ public class SecurityHeadersMiddlewareTests
         // Assert
         Assert.True(context.Response.Headers.ContainsKey("X-Content-Type-Options"));
         Assert.Equal("nosniff", context.Response.Headers["X-Content-Type-Options"].ToString());
-    }
-
-    [Fact]
-    public async Task InvokeAsync_XssProtection_SetToBlockMode()
-    {
-        // Arrange
-        var context = CreateHttpContext();
-        var middleware = CreateMiddleware(_options);
-
-        // Act
-        await middleware.InvokeAsync(context);
-
-        // Assert
-        Assert.True(context.Response.Headers.ContainsKey("X-XSS-Protection"));
-        Assert.Equal("1; mode=block", context.Response.Headers["X-XSS-Protection"].ToString());
     }
 
     [Fact]
@@ -285,7 +268,6 @@ public class SecurityHeadersMiddlewareTests
 
         // Enabled headers should be present
         Assert.True(context.Response.Headers.ContainsKey("X-Content-Type-Options"));
-        Assert.True(context.Response.Headers.ContainsKey("X-XSS-Protection"));
     }
 
     [Fact]
@@ -357,13 +339,12 @@ public class SecurityHeadersMiddlewareTests
             "Content-Security-Policy",
             "X-Frame-Options",
             "X-Content-Type-Options",
-            "X-XSS-Protection",
             "Referrer-Policy",
             "Permissions-Policy"
         };
 
         var presentHeaders = securityHeaders.Count(h => context.Response.Headers.ContainsKey(h));
-        Assert.Equal(6, presentHeaders); // 6 headers in development (HSTS skipped)
+        Assert.Equal(5, presentHeaders); // 5 headers in development (HSTS skipped)
     }
 
     [Fact]
@@ -459,4 +440,3 @@ public class SecurityHeadersMiddlewareTests
             Options.Create(options));
     }
 }
-

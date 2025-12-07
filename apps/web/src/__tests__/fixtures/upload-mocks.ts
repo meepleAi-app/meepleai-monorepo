@@ -20,142 +20,26 @@ import {
   type MockRuleSpec,
 } from './common-fixtures';
 
-export interface AuthMockOptions {
-  userId?: string;
-  email?: string;
-  role?: 'Admin' | 'Editor' | 'Viewer' | 'User';
-  displayName?: string;
-  expiresAt?: string;
-}
-
-export interface GameMockOptions {
-  id?: string;
-  title?: string;
-  createdAt?: string;
-}
-
-export interface PdfMockOptions {
-  id?: string;
-  fileName?: string;
-  fileSizeBytes?: number;
-  uploadedAt?: string;
-  uploadedByUserId?: string;
-  processingStatus?: 'pending' | 'processing' | 'completed' | 'failed';
-  processingError?: string | null;
-  status?: string;
-  logUrl?: string | null;
-}
-
-export interface RuleSpecMockOptions {
-  id?: string;
-  gameId?: string;
-  version?: string;
-  createdAt?: string;
-  createdByUserId?: string | null;
-  parentVersionId?: string | null;
-  atoms?: Array<{
-    id: string;
-    text: string;
-    section?: string | null;
-    page?: string | null;
-    line?: string | null;
-  }>;
-}
-
-// Re-export response helpers for backward compatibility
+// Re-export response helpers
 export { createJsonResponse, createErrorResponse };
 
 export interface UploadMocksConfig {
-  auth?: ReturnType<typeof createAuthMock> | null;
-  games?: ReturnType<typeof createGameMock>[];
-  pdfs?: { pdfs: ReturnType<typeof createPdfMock>[] };
+  auth?: ReturnType<typeof createMockAuthResponse> | null;
+  games?: ReturnType<typeof createMockGame>[];
+  pdfs?: { pdfs: MockPdfDocument[] };
   uploadResponse?: { documentId: string; fileName?: string };
   pdfStatusSequence?: Array<{ processingStatus: string; processingError?: string | null }>;
-  ruleSpec?: ReturnType<typeof createRuleSpecMock> | null;
-  createGameResponse?: ReturnType<typeof createGameMock>;
+  ruleSpec?: MockRuleSpec | null;
+  createGameResponse?: ReturnType<typeof createMockGame>;
   createGameError?: { status: number; error: string };
   uploadError?: { status: number; error: string; correlationId?: string };
   ruleSpecError?: { status: number; error: unknown };
-  publishRuleSpecResponse?: ReturnType<typeof createRuleSpecMock>;
+  publishRuleSpecResponse?: MockRuleSpec;
   publishRuleSpecError?: { status: number; error: string };
   retryParseResponse?: { success: boolean };
   retryParseError?: { status: number; error: string };
   onUploadCapture?: (formData: FormData) => void; // Callback to capture upload FormData
-  pollingDelayMs?: number; // NEW: Delay in ms for polling responses to simulate network latency
-}
-
-/**
- * Creates a mock auth response
- * @deprecated - Now wraps common-fixtures createMockAuthResponse for consistency
- */
-export function createAuthMock(options: AuthMockOptions = {}) {
-  return createMockAuthResponse({
-    id: options.userId ?? 'user-1',
-    email: options.email ?? 'user@example.com',
-    role: (options.role ?? 'Admin') as MockUser['role'],
-    displayName: options.displayName ?? 'Test User',
-  });
-}
-
-/**
- * Creates a mock game object
- * @deprecated - Now wraps common-fixtures createMockGame for consistency
- */
-export function createGameMock(options: GameMockOptions = {}) {
-  return createMockGame({
-    id: options.id ?? 'game-1',
-    title: options.title ?? 'Test Game',
-    createdAt: options.createdAt ?? new Date().toISOString(),
-  });
-}
-
-/**
- * Creates a mock PDF document
- * @deprecated - Now wraps common-fixtures createMockPdfDocument for consistency
- */
-export function createPdfMock(options: PdfMockOptions = {}): MockPdfDocument {
-  return createMockPdfDocument({
-    id: options.id,
-    fileName: options.fileName,
-    fileSizeBytes: options.fileSizeBytes,
-    uploadedAt: options.uploadedAt,
-    uploadedByUserId: options.uploadedByUserId,
-    processingStatus: options.processingStatus,
-    processingError: options.processingError,
-    status: options.status,
-    logUrl: options.logUrl,
-  });
-}
-
-/**
- * Creates a mock RuleSpec object (Issue #1977)
- * @deprecated - Now wraps common-fixtures createMockRuleSpec for consistency
- *
- * Issue #1951: Maintains backward compatibility with 1 atom default
- * (common-fixtures has 2 atoms default for broader use cases)
- */
-export function createRuleSpecMock(options: RuleSpecMockOptions = {}): MockRuleSpec {
-  // Convert atoms format if provided in options
-  const atoms = options.atoms?.map(atom => ({
-    id: atom.id,
-    text: atom.text,
-    section: atom.section,
-    page: atom.page,
-    line: atom.line,
-  })) || [
-    // Default: 1 atom (upload-mocks.test.ts expects this)
-    createMockRuleAtom({ id: 'r1', text: 'Test rule' }),
-  ];
-
-  return createMockRuleSpec({
-    id: options.id,
-    gameId: options.gameId,
-    version: options.version,
-    createdAt: options.createdAt,
-    createdByUserId: options.createdByUserId,
-    parentVersionId: options.parentVersionId,
-    atoms: atoms,
-  });
+  pollingDelayMs?: number; // Delay in ms for polling responses to simulate network latency
 }
 
 /**
@@ -168,12 +52,12 @@ export function createRuleSpecMock(options: RuleSpecMockOptions = {}): MockRuleS
  */
 export function setupUploadMocks(config: UploadMocksConfig = {}) {
   const {
-    auth = createAuthMock(),
-    games = [createGameMock()],
+    auth = createMockAuthResponse(),
+    games = [createMockGame()],
     pdfs = { pdfs: [] },
     uploadResponse = { documentId: 'pdf-123', fileName: 'test.pdf' },
     pdfStatusSequence = [],
-    ruleSpec = createRuleSpecMock(),
+    ruleSpec = createMockRuleSpec(),
     createGameResponse,
     createGameError,
     uploadError,
@@ -205,7 +89,7 @@ export function setupUploadMocks(config: UploadMocksConfig = {}) {
   } else {
     router.post('/api/v1/games', () =>
       createJsonResponse(
-        createGameResponse ?? createGameMock({ id: 'game-new', title: 'New Game' }),
+        createGameResponse ?? createMockGame({ id: 'game-new', title: 'New Game' }),
         201
       )
     );

@@ -1,5 +1,8 @@
+using Api.BoundedContexts.SystemConfiguration.Application.Commands;
+using Api.BoundedContexts.SystemConfiguration.Application.Queries;
 using Api.Infrastructure.Entities;
 using Api.Models;
+using MediatR;
 using Microsoft.Extensions.Logging;
 
 namespace Api.Services;
@@ -7,19 +10,22 @@ namespace Api.Services;
 /// <summary>
 /// CONFIG-05: Feature flags service implementation.
 /// Provides runtime feature toggling with role-based access control.
-/// Builds on CONFIG-01's ConfigurationService infrastructure.
+/// Uses CQRS commands/queries for configuration management.
 /// </summary>
 public class FeatureFlagService : IFeatureFlagService
 {
     private readonly IConfigurationService _configService;
+    private readonly IMediator _mediator;
     private readonly ILogger<FeatureFlagService> _logger;
     private const string FeatureFlagCategory = "FeatureFlags";
 
     public FeatureFlagService(
         IConfigurationService configService,
+        IMediator mediator,
         ILogger<FeatureFlagService> logger)
     {
         _configService = configService;
+        _mediator = mediator;
         _logger = logger;
     }
 
@@ -77,13 +83,12 @@ public class FeatureFlagService : IFeatureFlagService
             }
 
             // Update existing configuration
-            var updateRequest = new UpdateConfigurationRequest(
-                Value: "true",
-                Description: existing.Description,
-                IsActive: true,
-                RequiresRestart: false);
+            var command = new UpdateConfigValueCommand(
+                ConfigId: configId,
+                NewValue: "true",
+                UpdatedByUserId: userGuid);
 
-            await _configService.UpdateConfigurationAsync(configId, updateRequest, userGuid).ConfigureAwait(false);
+            await _mediator.Send(command).ConfigureAwait(false);
 
             _logger.LogInformation("Feature {FeatureName} enabled{RoleInfo} by {UserId}",
                 featureName, role.HasValue ? $" for {role.Value}" : "", userId ?? "system");
@@ -91,17 +96,17 @@ public class FeatureFlagService : IFeatureFlagService
         else
         {
             // Create new configuration
-            var createRequest = new CreateConfigurationRequest(
+            var command = new CreateConfigurationCommand(
                 Key: key,
                 Value: "true",
                 ValueType: "Boolean",
+                CreatedByUserId: userGuid,
                 Description: $"Feature flag: {featureName}",
                 Category: FeatureFlagCategory,
-                IsActive: true,
-                RequiresRestart: false,
-                Environment: "Production");
+                Environment: "Production",
+                RequiresRestart: false);
 
-            await _configService.CreateConfigurationAsync(createRequest, userGuid).ConfigureAwait(false);
+            await _mediator.Send(command).ConfigureAwait(false);
 
             _logger.LogInformation("Feature {FeatureName} created and enabled{RoleInfo} by {UserId}",
                 featureName, role.HasValue ? $" for {role.Value}" : "", userId ?? "system");
@@ -128,13 +133,12 @@ public class FeatureFlagService : IFeatureFlagService
             }
 
             // Update existing configuration
-            var updateRequest = new UpdateConfigurationRequest(
-                Value: "false",
-                Description: existing.Description,
-                IsActive: true,
-                RequiresRestart: false);
+            var command = new UpdateConfigValueCommand(
+                ConfigId: configId,
+                NewValue: "false",
+                UpdatedByUserId: userGuid);
 
-            await _configService.UpdateConfigurationAsync(configId, updateRequest, userGuid).ConfigureAwait(false);
+            await _mediator.Send(command).ConfigureAwait(false);
 
             _logger.LogInformation("Feature {FeatureName} disabled{RoleInfo} by {UserId}",
                 featureName, role.HasValue ? $" for {role.Value}" : "", userId ?? "system");
@@ -142,17 +146,17 @@ public class FeatureFlagService : IFeatureFlagService
         else
         {
             // Create new configuration as disabled
-            var createRequest = new CreateConfigurationRequest(
+            var command = new CreateConfigurationCommand(
                 Key: key,
                 Value: "false",
                 ValueType: "Boolean",
+                CreatedByUserId: userGuid,
                 Description: $"Feature flag: {featureName}",
                 Category: FeatureFlagCategory,
-                IsActive: true,
-                RequiresRestart: false,
-                Environment: "Production");
+                Environment: "Production",
+                RequiresRestart: false);
 
-            await _configService.CreateConfigurationAsync(createRequest, userGuid).ConfigureAwait(false);
+            await _mediator.Send(command).ConfigureAwait(false);
 
             _logger.LogInformation("Feature {FeatureName} created and disabled{RoleInfo} by {UserId}",
                 featureName, role.HasValue ? $" for {role.Value}" : "", userId ?? "system");
@@ -165,10 +169,13 @@ public class FeatureFlagService : IFeatureFlagService
     public async Task<List<FeatureFlagDto>> GetAllFeatureFlagsAsync()
     {
         // Get all feature flag configurations (category = "FeatureFlags")
-        var configs = await _configService.GetConfigurationsAsync(
-            category: FeatureFlagCategory,
-            activeOnly: true,
-            pageSize: 100);
+        var query = new GetAllConfigsQuery(
+            Category: FeatureFlagCategory,
+            Environment: null,
+            ActiveOnly: true,
+            Page: 1,
+            PageSize: 100);
+        var configs = await _mediator.Send(query).ConfigureAwait(false);
 
         var flags = new List<FeatureFlagDto>();
 

@@ -77,27 +77,9 @@ export function createGamesClient({ httpClient }: CreateGamesClientParams) {
       page: number = 1,
       pageSize: number = 20
     ): Promise<PaginatedGamesResponse> {
-      // Fetch all games from backend
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const allGamesRaw = await httpClient.get<any[]>('/api/v1/games');
-      // TODO (Issue #1682): PascalCase normalization creates maintenance burden.
-      //       Consider: (A) Backend returns camelCase OR (B) Zod transform for casing
-      // Normalize response to handle both PascalCase (API) and camelCase (expected)
-      const allGames: Game[] = (allGamesRaw ?? []).map(g => ({
-        id: g.id ?? g.Id,
-        title: g.title ?? g.Title,
-        publisher: g.publisher ?? g.Publisher ?? null,
-        yearPublished: g.yearPublished ?? g.YearPublished ?? null,
-        minPlayers: g.minPlayers ?? g.MinPlayers ?? null,
-        maxPlayers: g.maxPlayers ?? g.MaxPlayers ?? null,
-        minPlayTimeMinutes: g.minPlayTimeMinutes ?? g.MinPlayTimeMinutes ?? null,
-        maxPlayTimeMinutes: g.maxPlayTimeMinutes ?? g.MaxPlayTimeMinutes ?? null,
-        bggId: g.bggId ?? g.BggId ?? null,
-        createdAt: g.createdAt ?? g.CreatedAt,
-        imageUrl: g.imageUrl ?? g.ImageUrl ?? null,
-        faqCount: g.faqCount ?? g.FaqCount ?? null,
-        averageRating: g.averageRating ?? g.AverageRating ?? null,
-      }));
+      // Fetch all games from backend with Zod validation
+      // Backend serializes to camelCase (Program.cs:204 - JsonNamingPolicy.CamelCase)
+      const allGames: Game[] = (await httpClient.get('/api/v1/games', z.array(GameSchema))) ?? [];
 
       // Client-side filtering
       let filtered = allGames;

@@ -251,7 +251,6 @@ public class SecurityHeadersMiddlewareTests
             EnableHsts = false,
             EnableXFrameOptions = false,
             EnableXContentTypeOptions = true,
-            EnableXssProtection = true,
             EnableReferrerPolicy = true,
             EnablePermissionsPolicy = true
         };

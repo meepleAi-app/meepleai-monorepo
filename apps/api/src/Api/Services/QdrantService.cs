@@ -7,8 +7,10 @@ using Qdrant.Client.Grpc;
 using System.Diagnostics;
 namespace Api.Services;
 /// <summary>
-/// Service for vector storage and retrieval using Qdrant
-/// Facade pattern - delegates to specialized services
+/// Qdrant vector database adapter.
+/// Classification: Tier 1 Infrastructure Adapter (ADR-017)
+/// Critical: YES (19 references). Pure technical integration, zero business logic.
+/// Facade pattern - delegates to specialized services.
 /// </summary>
 public class QdrantService : IQdrantService
 {

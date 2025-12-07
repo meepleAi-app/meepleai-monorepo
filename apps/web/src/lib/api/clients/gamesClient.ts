@@ -71,6 +71,8 @@ export function createGamesClient({ httpClient }: CreateGamesClientParams) {
       // Fetch all games from backend
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const allGamesRaw = await httpClient.get<any[]>('/api/v1/games');
+      // TODO (Issue #1682): PascalCase normalization creates maintenance burden.
+      //       Consider: (A) Backend returns camelCase OR (B) Zod transform for casing
       // Normalize response to handle both PascalCase (API) and camelCase (expected)
       const allGames: Game[] = (allGamesRaw ?? []).map(g => ({
         id: g.id ?? g.Id,
@@ -237,6 +239,92 @@ export function createGamesClient({ httpClient }: CreateGamesClientParams) {
         `/api/v1/games/${encodeURIComponent(gameId)}/documents`
       );
       return response ?? [];
+    },
+
+    /**
+     * Create new game
+     * POST /api/v1/games
+     */
+    async create(name: string): Promise<{ id: string; title: string; createdAt: string }> {
+      return httpClient.post<{ id: string; title: string; createdAt: string }>('/api/v1/games', {
+        name,
+      });
+    },
+
+    // ========== RuleSpec Management ==========
+
+    /**
+     * Get RuleSpec for a game
+     * GET /api/v1/games/{gameId}/rulespec
+     *
+     * TODO (Issue #1681): Create RuleSpecSchema instead of any
+     */
+    async getRuleSpec(gameId: string): Promise<any> {
+      return httpClient.get(`/api/v1/games/${encodeURIComponent(gameId)}/rulespec`);
+    },
+
+    /**
+     * Get specific RuleSpec version
+     * GET /api/v1/games/{gameId}/rulespec/versions/{version}
+     */
+    async getRuleSpecVersion(gameId: string, version: number): Promise<any> {
+      return httpClient.get(
+        `/api/v1/games/${encodeURIComponent(gameId)}/rulespec/versions/${version}`
+      );
+    },
+
+    /**
+     * Get RuleSpec version history
+     * GET /api/v1/games/{gameId}/rulespec/history
+     */
+    async getRuleSpecHistory(gameId: string): Promise<any> {
+      return httpClient.get(`/api/v1/games/${encodeURIComponent(gameId)}/rulespec/history`);
+    },
+
+    /**
+     * Get RuleSpec version timeline with authors
+     * GET /api/v1/games/{gameId}/rulespec/versions/timeline
+     */
+    async getRuleSpecTimeline(gameId: string): Promise<{ authors?: string[] }> {
+      const result = await httpClient.get<{ authors?: string[] }>(
+        `/api/v1/games/${encodeURIComponent(gameId)}/rulespec/versions/timeline`
+      );
+      return result ?? { authors: [] };
+    },
+
+    /**
+     * Update RuleSpec for a game
+     * PUT /api/v1/games/{gameId}/rulespec
+     */
+    async updateRuleSpec(gameId: string, ruleSpecData: any): Promise<any> {
+      return httpClient.put(`/api/v1/games/${encodeURIComponent(gameId)}/rulespec`, ruleSpecData);
+    },
+
+    /**
+     * Get AI agents available for a game
+     * GET /api/v1/games/{gameId}/agents
+     *
+     * TODO (Issue #1681): Create AgentSchema instead of any[]
+     */
+    async getAgents(gameId: string): Promise<any[]> {
+      const result = await httpClient.get<any[]>(
+        `/api/v1/games/${encodeURIComponent(gameId)}/agents`
+      );
+      return result ?? [];
+    },
+
+    /**
+     * Get diff between two RuleSpec versions
+     * GET /api/v1/games/{gameId}/rulespec/diff?from={from}&to={to}
+     */
+    async getRuleSpecDiff(
+      gameId: string,
+      fromVersion: number | string,
+      toVersion: number | string
+    ): Promise<any> {
+      return httpClient.get(
+        `/api/v1/games/${encodeURIComponent(gameId)}/rulespec/diff?from=${encodeURIComponent(fromVersion)}&to=${encodeURIComponent(toVersion)}`
+      );
     },
   };
 }

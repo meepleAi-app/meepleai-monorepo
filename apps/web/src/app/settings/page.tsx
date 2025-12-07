@@ -208,7 +208,7 @@ export default function SettingsPage() {
 
     try {
       setLoading(true);
-      await api.put('/api/v1/users/profile', {
+      await api.auth.updateProfile({
         displayName: displayName.trim(),
         email: email.trim(),
       });
@@ -253,7 +253,7 @@ export default function SettingsPage() {
 
     try {
       setLoading(true);
-      await api.put('/api/v1/users/profile/password', {
+      await api.auth.changePassword({
         currentPassword,
         newPassword,
       });

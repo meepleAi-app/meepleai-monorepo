@@ -52,19 +52,15 @@ export function useGames(user?: AuthUser) {
     setError(null);
 
     try {
-      const createdGame = await api.post<{ id: string; title: string; createdAt: string }>(
-        '/api/v1/games',
-        { name }
-      );
-      if (createdGame) {
-        const newGame: GameSummary = {
-          id: createdGame.id,
-          title: createdGame.title,
-          createdAt: createdGame.createdAt,
-        };
-        setGames(prev => [...prev, newGame]);
-        return newGame;
-      }
+      const createdGame = await api.games.create(name);
+
+      const newGame: GameSummary = {
+        id: createdGame.id,
+        title: createdGame.title,
+        createdAt: createdGame.createdAt,
+      };
+      setGames(prev => [...prev, newGame]);
+      return newGame;
     } catch (err) {
       console.error('Failed to create game', err);
       setError('Unable to create game. Please try again.');

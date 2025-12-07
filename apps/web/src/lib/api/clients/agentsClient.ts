@@ -46,10 +46,11 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
       }
 
       const url = `/api/v1/agents${params.toString() ? `?${params.toString()}` : ''}`;
-      const response = await httpClient.get<{ success: boolean; agents: AgentDto[]; count: number }>(
-        url,
-        GetAllAgentsResponseSchema
-      );
+      const response = await httpClient.get<{
+        success: boolean;
+        agents: AgentDto[];
+        count: number;
+      }>(url, GetAllAgentsResponseSchema);
 
       return response?.agents ?? [];
     },
@@ -98,11 +99,7 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
      * @param request Agent creation request
      */
     async create(request: CreateAgentRequest): Promise<AgentDto> {
-      const response = await httpClient.post<AgentDto>(
-        '/api/v1/agents',
-        request,
-        AgentDtoSchema
-      );
+      const response = await httpClient.post<AgentDto>('/api/v1/agents', request, AgentDtoSchema);
 
       if (!response) {
         throw new Error('Failed to create agent: no response from server');
@@ -129,6 +126,22 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
       }
 
       return response;
+    },
+
+    /**
+     * Invoke chess agent (convenience wrapper)
+     * POST /api/v1/agents/chess
+     */
+    async invokeChess(request: { question: string; fenPosition?: string }): Promise<any> {
+      return httpClient.post('/api/v1/agents/chess', request);
+    },
+
+    /**
+     * Generate setup guide (convenience wrapper)
+     * POST /api/v1/agents/setup
+     */
+    async generateSetupGuide(request: { gameId: string; chatId: string | null }): Promise<any> {
+      return httpClient.post('/api/v1/agents/setup', request);
     },
   };
 }

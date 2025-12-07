@@ -236,8 +236,7 @@ builder.Services.AddCors(options =>
             .WithHeaders(
                 "Content-Type",
                 "Authorization",
-                "X-Correlation-ID",
-                "X-API-Key"
+                "X-Correlation-ID"
             )
             .AllowAnyMethod()
             .AllowCredentials()

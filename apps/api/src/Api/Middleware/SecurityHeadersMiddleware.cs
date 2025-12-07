@@ -6,14 +6,14 @@ namespace Api.Middleware;
 /// <summary>
 /// Middleware that adds HTTP security headers to all responses.
 /// Implements OWASP security best practices to protect against common vulnerabilities:
-/// - XSS (Cross-Site Scripting)
+/// - XSS (Cross-Site Scripting) via CSP
 /// - Clickjacking
 /// - MIME sniffing attacks
 /// - Protocol downgrade attacks
 /// - Referrer information leaks
 /// - Unauthorized browser feature access
 ///
-/// Issue #1447: Implements 7 critical security headers for OWASP compliance.
+/// Issue #1447: Implements 6 critical security headers for OWASP compliance.
 /// </summary>
 public class SecurityHeadersMiddleware
 {
@@ -75,19 +75,13 @@ public class SecurityHeadersMiddleware
                 headers.Append("X-Content-Type-Options", _options.XContentTypeOptionsPolicy);
             }
 
-            // 5. X-XSS-Protection - Browser XSS filter (legacy support)
-            if (_options.EnableXssProtection && !headers.ContainsKey("X-XSS-Protection"))
-            {
-                headers.Append("X-XSS-Protection", _options.XssProtectionPolicy);
-            }
-
-            // 6. Referrer-Policy - Controls referrer information
+            // 5. Referrer-Policy - Controls referrer information
             if (_options.EnableReferrerPolicy && !headers.ContainsKey("Referrer-Policy"))
             {
                 headers.Append("Referrer-Policy", _options.ReferrerPolicyValue);
             }
 
-            // 7. Permissions-Policy - Limits browser features
+            // 6. Permissions-Policy - Limits browser features
             if (_options.EnablePermissionsPolicy && !headers.ContainsKey("Permissions-Policy"))
             {
                 headers.Append("Permissions-Policy", _options.PermissionsPolicyValue);
@@ -152,7 +146,6 @@ public class SecurityHeadersOptions
     public bool EnableHsts { get; set; } = true;
     public bool EnableXFrameOptions { get; set; } = true;
     public bool EnableXContentTypeOptions { get; set; } = true;
-    public bool EnableXssProtection { get; set; } = true;
     public bool EnableReferrerPolicy { get; set; } = true;
     public bool EnablePermissionsPolicy { get; set; } = true;
 
@@ -200,13 +193,6 @@ public class SecurityHeadersOptions
     public string XContentTypeOptionsPolicy { get; set; } = "nosniff";
 
     /// <summary>
-    /// X-XSS-Protection header value.
-    /// Default: 1; mode=block (enables XSS filter and blocks page if attack detected)
-    /// Note: This is a legacy header, modern browsers rely on CSP instead.
-    /// </summary>
-    public string XssProtectionPolicy { get; set; } = "1; mode=block";
-
-    /// <summary>
     /// Referrer-Policy header value.
     /// Default: strict-origin-when-cross-origin (balanced security and functionality)
     /// </summary>
@@ -219,7 +205,6 @@ public class SecurityHeadersOptions
     /// - geolocation: Location tracking
     /// - payment: Payment Request API
     /// - usb, serial: Hardware device access
-    /// - sync-xhr: Synchronous XHR (deprecated, performance issue)
     /// - fullscreen: Fullscreen API (prevents unauthorized fullscreen)
     /// - picture-in-picture: PiP video mode (prevents abuse)
     /// - accelerometer, gyroscope, magnetometer: Motion/orientation sensors
@@ -232,7 +217,6 @@ public class SecurityHeadersOptions
         "payment=(), " +
         "usb=(), " +
         "serial=(), " +
-        "sync-xhr=(), " +
         "fullscreen=(), " +
         "picture-in-picture=(), " +
         "accelerometer=(), " +
@@ -329,23 +313,6 @@ public class SecurityHeadersOptionsValidator : IValidateOptions<SecurityHeadersO
             else if (!options.XContentTypeOptionsPolicy.Equals("nosniff", StringComparison.OrdinalIgnoreCase))
             {
                 errors.Add($"X-Content-Type-Options must be 'nosniff' (got: {options.XContentTypeOptionsPolicy})");
-            }
-        }
-
-        // Validate X-XSS-Protection
-        if (options.EnableXssProtection)
-        {
-            if (string.IsNullOrWhiteSpace(options.XssProtectionPolicy))
-            {
-                errors.Add("X-XSS-Protection policy cannot be null or empty when enabled");
-            }
-            else
-            {
-                var validPatterns = new[] { "0", "1", "1; mode=block" };
-                if (!validPatterns.Contains(options.XssProtectionPolicy.Trim(), StringComparer.Ordinal))
-                {
-                    errors.Add($"X-XSS-Protection must be '0', '1', or '1; mode=block' (got: {options.XssProtectionPolicy})");
-                }
             }
         }
 

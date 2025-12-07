@@ -4,14 +4,13 @@ using Api.Services;
 namespace Api.Middleware;
 
 /// <summary>
-/// Middleware that authenticates requests using API keys from the secure cookie, Authorization header, or legacy X-API-Key header.
+/// Middleware that authenticates requests using API keys from the secure cookie or Authorization header.
 /// Runs before authorization middleware and sets up ClaimsPrincipal for API key-based requests.
 /// Falls through to cookie authentication if no API key is provided.
 /// </summary>
 public class ApiKeyAuthenticationMiddleware
 {
     private const string AuthorizationHeaderName = "Authorization";
-    private const string LegacyApiKeyHeaderName = "X-API-Key";
     private const string ApiKeyCookieName = "meeple_apikey";
     private readonly RequestDelegate _next;
     private readonly ILogger<ApiKeyAuthenticationMiddleware> _logger;
@@ -61,17 +60,6 @@ public class ApiKeyAuthenticationMiddleware
             {
                 apiKey = authValue["ApiKey ".Length..].Trim();
                 source = "authorization-header";
-            }
-        }
-
-        // Priority 3: Legacy X-API-Key header
-        if (apiKey == null && context.Request.Headers.TryGetValue(LegacyApiKeyHeaderName, out var apiKeyValues))
-        {
-            var headerApiKey = apiKeyValues.FirstOrDefault();
-            if (!string.IsNullOrWhiteSpace(headerApiKey))
-            {
-                apiKey = headerApiKey;
-                source = "legacy-header";
             }
         }
 

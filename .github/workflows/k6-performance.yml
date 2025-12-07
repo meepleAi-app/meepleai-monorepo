@@ -92,6 +92,8 @@ jobs:
       - name: Build API
         working-directory: apps/api/src/Api
         run: dotnet build --configuration Release --no-restore
+        env:
+          ConnectionStrings__Postgres: ${{ secrets.TEST_DB_CONNECTION_STRING || 'Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=postgres' }}
 
       - name: Install EF Core tools
         run: dotnet tool install --global dotnet-ef --version 9.0.11

@@ -31,7 +31,7 @@ public static class UserProfileEndpoints
             // Session validated by RequireSessionFilter
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
-            var query = new DddGetUserProfileQuery { UserId = session!.User.Id };
+            var query = new DddGetUserProfileQuery { UserId = session!.User!.Id };
             var profile = await mediator.Send(query, ct).ConfigureAwait(false);
 
             if (profile == null)
@@ -69,7 +69,7 @@ public static class UserProfileEndpoints
 
             var command = new DddUpdateUserProfileCommand
             {
-                UserId = session!.User.Id,
+                UserId = session!.User!.Id,
                 DisplayName = payload.DisplayName,
                 Email = payload.Email
             };
@@ -113,7 +113,7 @@ public static class UserProfileEndpoints
 
             var command = new DddChangePasswordCommand
             {
-                UserId = session!.User.Id,
+                UserId = session!.User!.Id,
                 CurrentPassword = payload.CurrentPassword,
                 NewPassword = payload.NewPassword
             };
@@ -157,7 +157,7 @@ public static class UserProfileEndpoints
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
             // session.User.Id is already a Guid from SessionStatusDto
-            var userId = session!.User.Id;
+            var userId = session!.User!.Id;
 
             var query = new GetUserUploadQuotaQuery(userId);
             var quotaInfo = await mediator.Send(query, ct).ConfigureAwait(false);
@@ -201,7 +201,7 @@ public static class UserProfileEndpoints
 
             var command = new DddUpdatePreferencesCommand
             {
-                UserId = session!.User.Id,
+                UserId = session!.User!.Id,
                 Language = payload.Language,
                 Theme = payload.Theme,
                 EmailNotifications = payload.EmailNotifications,
@@ -241,7 +241,7 @@ public static class UserProfileEndpoints
 
             var query = new DddGetUserProfileQuery
             {
-                UserId = session!.User.Id
+                UserId = session!.User!.Id
             };
 
             var userProfile = await mediator.Send(query, ct).ConfigureAwait(false);

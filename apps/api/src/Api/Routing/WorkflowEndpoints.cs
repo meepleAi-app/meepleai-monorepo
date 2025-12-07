@@ -62,7 +62,7 @@ public static class WorkflowEndpoints
                 Name: request.Name,
                 BaseUrl: request.BaseUrl,
                 ApiKeyEncrypted: apiKeyEncrypted,
-                CreatedByUserId: session!.User.Id,
+                CreatedByUserId: session!.User!.Id,
                 WebhookUrl: request.WebhookUrl
             );
 
@@ -93,7 +93,7 @@ public static class WorkflowEndpoints
                 IsActive: request.IsActive
             );
 
-            logger.LogInformation("Admin {UserId} updating n8n config {ConfigId}", session!.User.Id, configId);
+            logger.LogInformation("Admin {UserId} updating n8n config {ConfigId}", session!.User!.Id, configId);
             var config = await mediator.Send(command, ct).ConfigureAwait(false);
             logger.LogInformation("n8n config {ConfigId} updated successfully", config.Id);
             return Results.Json(config);
@@ -106,7 +106,7 @@ public static class WorkflowEndpoints
 
             var command = new DeleteN8nConfigCommand(ConfigId: configId);
 
-            logger.LogInformation("Admin {UserId} deleting n8n config {ConfigId}", session!.User.Id, configId);
+            logger.LogInformation("Admin {UserId} deleting n8n config {ConfigId}", session!.User!.Id, configId);
             var deleted = await mediator.Send(command, ct).ConfigureAwait(false);
 
             if (!deleted)
@@ -123,7 +123,7 @@ public static class WorkflowEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            logger.LogInformation("Admin {UserId} testing n8n config {ConfigId}", session!.User.Id, configId);
+            logger.LogInformation("Admin {UserId} testing n8n config {ConfigId}", session!.User!.Id, configId);
 
             var command = new Api.BoundedContexts.WorkflowIntegration.Application.Commands.N8nConfig.TestN8nConnectionCommand
             {
@@ -186,7 +186,7 @@ public static class WorkflowEndpoints
             // Session validated by RequireSessionFilter
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
-            logger.LogInformation("User {UserId} importing n8n template {TemplateId}", session!.User.Id, id);
+            logger.LogInformation("User {UserId} importing n8n template {TemplateId}", session!.User!.Id, id);
 
             var command = new Api.BoundedContexts.WorkflowIntegration.Application.Commands.N8nTemplates.ImportN8nTemplateCommand
             {

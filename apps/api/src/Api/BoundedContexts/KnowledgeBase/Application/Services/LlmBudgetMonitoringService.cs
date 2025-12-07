@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.Services;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -24,11 +25,12 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
 /// Actions:
 /// - Warning threshold: Send alert notification
 /// - Critical threshold: Send alert + optional model downgrade
+///
+/// DI Pattern: Uses IServiceScopeFactory to resolve scoped services (ILlmCostLogRepository)
 /// </remarks>
 public class LlmBudgetMonitoringService : BackgroundService
 {
-    private readonly ILlmCostLogRepository _costLogRepository;
-    private readonly IAlertingService _alertingService;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly IConfiguration _configuration;
     private readonly ILogger<LlmBudgetMonitoringService> _logger;
 
@@ -40,13 +42,11 @@ public class LlmBudgetMonitoringService : BackgroundService
     private int CheckIntervalMinutes => _configuration.GetValue("LlmBudgetAlerts:CheckIntervalMinutes", 60);
 
     public LlmBudgetMonitoringService(
-        ILlmCostLogRepository costLogRepository,
-        IAlertingService alertingService,
+        IServiceScopeFactory scopeFactory,
         IConfiguration configuration,
         ILogger<LlmBudgetMonitoringService> logger)
     {
-        _costLogRepository = costLogRepository ?? throw new ArgumentNullException(nameof(costLogRepository));
-        _alertingService = alertingService ?? throw new ArgumentNullException(nameof(alertingService));
+        _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
         _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
@@ -81,29 +81,35 @@ public class LlmBudgetMonitoringService : BackgroundService
 
     private async Task CheckBudgetThresholdsAsync(CancellationToken ct)
     {
+        // Create scope to resolve scoped services
+        using var scope = _scopeFactory.CreateScope();
+        var costLogRepository = scope.ServiceProvider.GetRequiredService<ILlmCostLogRepository>();
+        var alertingService = scope.ServiceProvider.GetRequiredService<IAlertingService>();
+
         var now = DateTime.UtcNow;
 
         // Check daily budget
-        var dailySpend = await _costLogRepository.GetTotalCostAsync(
+        var dailySpend = await costLogRepository.GetTotalCostAsync(
             startDate: DateOnly.FromDateTime(now.Date),
             endDate: DateOnly.FromDateTime(now),
             ct: ct).ConfigureAwait(false);
 
         var dailyPercentage = (double)(dailySpend / DailyBudgetUsd);
-        await ProcessThresholdAsync("Daily", dailySpend, DailyBudgetUsd, dailyPercentage, ct).ConfigureAwait(false);
+        await ProcessThresholdAsync(alertingService, "Daily", dailySpend, DailyBudgetUsd, dailyPercentage, ct).ConfigureAwait(false);
 
         // Check monthly budget
         var monthStart = new DateTime(now.Year, now.Month, 1);
-        var monthlySpend = await _costLogRepository.GetTotalCostAsync(
+        var monthlySpend = await costLogRepository.GetTotalCostAsync(
             startDate: DateOnly.FromDateTime(monthStart),
             endDate: DateOnly.FromDateTime(now),
             ct: ct).ConfigureAwait(false);
 
         var monthlyPercentage = (double)(monthlySpend / MonthlyBudgetUsd);
-        await ProcessThresholdAsync("Monthly", monthlySpend, MonthlyBudgetUsd, monthlyPercentage, ct).ConfigureAwait(false);
+        await ProcessThresholdAsync(alertingService, "Monthly", monthlySpend, MonthlyBudgetUsd, monthlyPercentage, ct).ConfigureAwait(false);
     }
 
     private async Task ProcessThresholdAsync(
+        IAlertingService alertingService,
         string period,
         decimal actualSpend,
         decimal budgetLimit,
@@ -113,6 +119,7 @@ public class LlmBudgetMonitoringService : BackgroundService
         if (percentage >= CriticalThreshold)
         {
             await SendBudgetAlertAsync(
+                alertingService,
                 severity: "Critical",
                 period: period,
                 actualSpend: actualSpend,
@@ -123,6 +130,7 @@ public class LlmBudgetMonitoringService : BackgroundService
         else if (percentage >= WarningThreshold)
         {
             await SendBudgetAlertAsync(
+                alertingService,
                 severity: "Warning",
                 period: period,
                 actualSpend: actualSpend,
@@ -137,6 +145,7 @@ public class LlmBudgetMonitoringService : BackgroundService
     }
 
     private async Task SendBudgetAlertAsync(
+        IAlertingService alertingService,
         string severity,
         string period,
         decimal actualSpend,
@@ -159,7 +168,7 @@ public class LlmBudgetMonitoringService : BackgroundService
             "Budget alert triggered: {Severity} - {Period} spend ${Spend:F2} / ${Limit:F2} ({Percentage:P0})",
             severity, period, actualSpend, budgetLimit, percentage);
 
-        await _alertingService.SendAlertAsync(
+        await alertingService.SendAlertAsync(
             alertType: $"LlmBudget{severity}",
             severity: severity == "Critical" ? "Error" : "Warning",
             message: message,

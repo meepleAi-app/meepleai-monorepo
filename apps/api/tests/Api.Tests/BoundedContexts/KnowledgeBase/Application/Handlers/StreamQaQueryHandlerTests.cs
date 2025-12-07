@@ -703,13 +703,20 @@ public class StreamQaQueryHandlerTests
             .Returns(new Confidence(0.87));
     }
 
-    private async IAsyncEnumerable<string> StreamTokensAsync(string[] tokens)
+    // ISSUE-1725: Updated to return StreamChunk instead of string
+    private async IAsyncEnumerable<StreamChunk> StreamTokensAsync(string[] tokens)
     {
         foreach (var token in tokens)
         {
             await Task.Delay(TestConstants.Timing.MinimalDelay); // Simulate async streaming
-            yield return token;
+            yield return new StreamChunk(Content: token);
         }
+        // Return final chunk with mock usage metadata
+        yield return new StreamChunk(
+            Content: null,
+            Usage: new LlmUsage(10, 8, 18),
+            Cost: new LlmCost { InputCost = 0.0001m, OutputCost = 0.0008m, ModelId = "test-model", Provider = "Test" },
+            IsFinal: true);
     }
 
     private ChatThread CreateChatThread(Guid threadId, string gameId, int messageCount)

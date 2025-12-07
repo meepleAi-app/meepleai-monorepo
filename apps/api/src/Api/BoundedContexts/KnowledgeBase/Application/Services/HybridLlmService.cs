@@ -213,7 +213,7 @@ public class HybridLlmService : ILlmService
         return lastFailure ?? LlmCompletionResult.CreateFailure("Provider error: No providers available");
     }
     /// <inheritdoc/>
-    public IAsyncEnumerable<string> GenerateCompletionStreamAsync(
+    public IAsyncEnumerable<StreamChunk> GenerateCompletionStreamAsync(
         string systemPrompt,
         string userPrompt,
         CancellationToken ct = default)
@@ -227,8 +227,9 @@ public class HybridLlmService : ILlmService
 
     /// <summary>
     /// Generate streaming completion with user context for adaptive routing
+    /// ISSUE-1725: Enhanced to return StreamChunk with usage metadata
     /// </summary>
-    public async IAsyncEnumerable<string> GenerateCompletionStreamAsync(
+    public async IAsyncEnumerable<StreamChunk> GenerateCompletionStreamAsync(
         string systemPrompt,
         string userPrompt,
         User? user,

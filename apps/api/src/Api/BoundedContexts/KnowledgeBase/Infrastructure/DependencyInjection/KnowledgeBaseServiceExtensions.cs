@@ -145,6 +145,9 @@ public static class KnowledgeBaseServiceExtensions
         services.AddScoped<RunGridSearchHandler>();
         services.AddSingleton<IReportGeneratorService, ReportGeneratorService>();
 
+        // ISSUE-1725: LLM budget monitoring background service
+        services.AddHostedService<LlmBudgetMonitoringService>();
+
         return services;
     }
 }

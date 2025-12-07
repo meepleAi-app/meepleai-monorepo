@@ -1,4 +1,5 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
+using Api.Services;
 using Api.Services.LlmClients;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -180,17 +181,18 @@ public class OpenRouterLlmClientTests
         var client = CreateClient(mockHandler.Object);
 
         // Act
-        var chunks = new List<string>();
+        var chunks = new List<StreamChunk>();
         await foreach (var chunk in client.GenerateCompletionStreamAsync(
             "openai/gpt-4o-mini", "system", "prompt", 0.7, 100, TestCancellationToken))
         {
             chunks.Add(chunk);
         }
 
-        // Assert
-        Assert.Equal(2, chunks.Count);
-        Assert.Equal("Hello ", chunks[0]);
-        Assert.Equal("world", chunks[1]);
+        // Assert - verify content chunks (usage chunk may follow)
+        var contentChunks = chunks.Where(c => !string.IsNullOrEmpty(c.Content)).ToList();
+        Assert.Equal(2, contentChunks.Count);
+        Assert.Equal("Hello ", contentChunks[0].Content);
+        Assert.Equal("world", contentChunks[1].Content);
     }
 
     [Fact]

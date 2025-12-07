@@ -12,6 +12,11 @@ using Microsoft.Extensions.Logging;
 
 namespace Api.Services;
 
+/// <summary>
+/// RAG (Retrieval-Augmented Generation) pipeline orchestrator.
+/// Classification: Tier 3 Orchestration Service (ADR-017)
+/// Critical: YES (21 references). Coordinates Embedding, Search, LLM, Validation.
+/// </summary>
 public class RagService : IRagService
 {
     // CONFIG-04: Hardcoded defaults (lowest priority fallback)

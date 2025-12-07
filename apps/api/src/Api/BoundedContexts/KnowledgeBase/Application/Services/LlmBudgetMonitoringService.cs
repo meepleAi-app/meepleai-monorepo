@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
 using Api.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -24,7 +25,8 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
 ///
 /// Actions:
 /// - Warning threshold: Send alert notification
-/// - Critical threshold: Send alert + optional model downgrade
+/// - Critical threshold: Send alert + enable budget mode (auto-downgrade to cheaper models)
+/// - Below warning: Disable budget mode (restore normal models)
 ///
 /// DI Pattern: Uses IServiceScopeFactory to resolve scoped services (ILlmCostLogRepository)
 /// </remarks>
@@ -32,6 +34,7 @@ public class LlmBudgetMonitoringService : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IConfiguration _configuration;
+    private readonly ILlmModelOverrideService _modelOverrideService;
     private readonly ILogger<LlmBudgetMonitoringService> _logger;
 
     // Configuration with defaults
@@ -44,10 +47,12 @@ public class LlmBudgetMonitoringService : BackgroundService
     public LlmBudgetMonitoringService(
         IServiceScopeFactory scopeFactory,
         IConfiguration configuration,
+        ILlmModelOverrideService modelOverrideService,
         ILogger<LlmBudgetMonitoringService> logger)
     {
         _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
         _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+        _modelOverrideService = modelOverrideService ?? throw new ArgumentNullException(nameof(modelOverrideService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         _logger.LogInformation(
@@ -118,6 +123,10 @@ public class LlmBudgetMonitoringService : BackgroundService
     {
         if (percentage >= CriticalThreshold)
         {
+            // ISSUE-1725: Enable budget mode (auto-downgrade to cheaper models)
+            var reason = $"{period} budget {percentage:P0} exceeded (${actualSpend:F2} / ${budgetLimit:F2})";
+            _modelOverrideService.EnableBudgetMode(reason);
+
             await SendBudgetAlertAsync(
                 alertingService,
                 severity: "Critical",
@@ -138,6 +147,14 @@ public class LlmBudgetMonitoringService : BackgroundService
                 percentage: percentage,
                 ct: ct).ConfigureAwait(false);
         }
+        else if (_modelOverrideService.IsInBudgetMode())
+        {
+            // ISSUE-1725: Budget dropped below warning → disable budget mode
+            _modelOverrideService.DisableBudgetMode();
+            _logger.LogInformation(
+                "{Period} budget recovered to {Percentage:P0} - budget mode disabled",
+                period, percentage);
+        }
 
         _logger.LogDebug(
             "{Period} budget status: ${Spend:F2} / ${Limit:F2} ({Percentage:P0})",
@@ -153,6 +170,7 @@ public class LlmBudgetMonitoringService : BackgroundService
         double percentage,
         CancellationToken ct)
     {
+        var budgetModeStatus = _modelOverrideService.GetBudgetModeStatus();
         var message = $"""
             🚨 LLM Budget Alert - {severity}
 
@@ -162,6 +180,8 @@ public class LlmBudgetMonitoringService : BackgroundService
             Usage: {percentage:P0}
 
             Threshold: {(severity == "Critical" ? CriticalThreshold : WarningThreshold):P0}
+            
+            {budgetModeStatus}
             """;
 
         _logger.LogWarning(
@@ -178,7 +198,8 @@ public class LlmBudgetMonitoringService : BackgroundService
                 { "actualSpend", actualSpend },
                 { "budgetLimit", budgetLimit },
                 { "percentage", percentage },
-                { "source", "LlmBudgetMonitoring" }
+                { "source", "LlmBudgetMonitoring" },
+                { "budgetModeActive", _modelOverrideService.IsInBudgetMode() }
             },
             cancellationToken: ct).ConfigureAwait(false);
     }

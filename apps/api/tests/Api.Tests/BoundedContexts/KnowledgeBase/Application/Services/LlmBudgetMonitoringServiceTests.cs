@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
 using Api.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -66,6 +67,7 @@ public class LlmBudgetMonitoringServiceTests
         var sut = new LlmBudgetMonitoringService(
             _scopeFactoryMock.Object,
             _config,
+            Mock.Of<ILlmModelOverrideService>(),
             _loggerMock.Object);
 
         // Assert
@@ -79,6 +81,7 @@ public class LlmBudgetMonitoringServiceTests
         var sut = new LlmBudgetMonitoringService(
             _scopeFactoryMock.Object,
             _config,
+            Mock.Of<ILlmModelOverrideService>(),
             _loggerMock.Object);
 
         // Mock spend below warning threshold (30 / 50 = 60%)
@@ -110,6 +113,7 @@ public class LlmBudgetMonitoringServiceTests
         var sut = new LlmBudgetMonitoringService(
             _scopeFactoryMock.Object,
             _config,
+            Mock.Of<ILlmModelOverrideService>(),
             _loggerMock.Object);
 
         // Mock spend at warning threshold (41 / 50 = 82% > 80% warning for daily)
@@ -142,6 +146,7 @@ public class LlmBudgetMonitoringServiceTests
         var sut = new LlmBudgetMonitoringService(
             _scopeFactoryMock.Object,
             _config,
+            Mock.Of<ILlmModelOverrideService>(),
             _loggerMock.Object);
 
         // Mock spend at critical threshold (48 / 50 = 96% > 95% critical for daily)

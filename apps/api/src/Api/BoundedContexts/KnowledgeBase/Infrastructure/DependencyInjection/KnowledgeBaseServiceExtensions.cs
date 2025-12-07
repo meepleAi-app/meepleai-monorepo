@@ -8,6 +8,8 @@ using Api.BoundedContexts.KnowledgeBase.Application.Services.Chunking;
 using Api.BoundedContexts.KnowledgeBase.Application.Services.Reranking;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services.Analytics;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.QualityTracking;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.External.Reranking;
@@ -60,6 +62,15 @@ public static class KnowledgeBaseServiceExtensions
         // Domain Services - Routing Strategy
         services.AddSingleton<ILlmRoutingStrategy, HybridAdaptiveRoutingStrategy>();
 
+        // ISSUE-1725: Model override service for budget-aware downgrading
+        services.AddSingleton<ILlmModelOverrideService, LlmModelOverrideService>();
+
+        // ISSUE-1725: Analytics domain services for cost optimization
+        services.AddSingleton<IQueryEfficiencyAnalyzer, QueryEfficiencyAnalyzer>();
+        services.AddSingleton<IModelRecommendationService, ModelRecommendationService>();
+        services.AddSingleton<ICacheCorrelationAnalyzer, CacheCorrelationAnalyzer>();
+        services.AddSingleton<IMonthlyOptimizationReportService, MonthlyOptimizationReportService>();
+
         // ISSUE-960: Cost Tracking (from main)
         // Domain Services - Cost Calculator and Alerting
         services.AddSingleton<ILlmCostCalculator, LlmCostCalculator>();
@@ -94,6 +105,8 @@ public static class KnowledgeBaseServiceExtensions
         services.AddScoped<SearchQueryHandler>();
         services.AddScoped<AskQuestionQueryHandler>();
         services.AddScoped<GetLlmCostReportQueryHandler>(); // ISSUE-960: Cost reporting
+        services.AddScoped<GetQueryEfficiencyReportQueryHandler>(); // ISSUE-1725: Efficiency reporting
+        services.AddScoped<GetMonthlyOptimizationReportQueryHandler>(); // ISSUE-1725: Monthly optimization
         services.AddScoped<InvokeAgentCommandHandler>(); // Issue #867: Agent invocation
 
         // ISSUE-1903: ADR-016 Phase 1 - Advanced Chunking

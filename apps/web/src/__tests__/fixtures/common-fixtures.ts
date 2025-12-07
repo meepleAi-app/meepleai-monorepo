@@ -249,13 +249,16 @@ export type MockRuleAtom = {
 };
 
 /**
- * RuleSpec type matching backend
+ * RuleSpec type matching backend (Issue #1977)
  */
 export type MockRuleSpec = {
+  id: string;
   gameId: string;
   version: string;
   createdAt: string;
-  rules: MockRuleAtom[];
+  createdByUserId: string | null;
+  parentVersionId: string | null;
+  atoms: MockRuleAtom[];
 };
 
 /**
@@ -276,21 +279,24 @@ export const createMockRuleAtom = (overrides?: Partial<MockRuleAtom>): MockRuleA
 });
 
 /**
- * Creates a mock RuleSpec
+ * Creates a mock RuleSpec (Issue #1977: Aligned with backend RuleSpecDto)
  *
  * @example
  * const ruleSpec = createMockRuleSpec({
  *   gameId: 'demo-chess',
- *   rules: [createMockRuleAtom({ text: 'Rule 1' })]
+ *   atoms: [createMockRuleAtom({ text: 'Rule 1' })]
  * });
  */
 export const createMockRuleSpec = (overrides?: Partial<MockRuleSpec>): MockRuleSpec => ({
+  id: overrides?.id || 'rulespec-1',
   gameId: overrides?.gameId || 'game-1',
   version: overrides?.version || 'v1', // Issue #1951: Changed from '1.0.0' to 'v1' to match test expectations
   createdAt: overrides?.createdAt || new Date().toISOString(),
-  rules: overrides?.rules || [
-    createMockRuleAtom({ id: 'rule-1', text: 'Default rule 1' }),
-    createMockRuleAtom({ id: 'rule-2', text: 'Default rule 2' }),
+  createdByUserId: overrides?.createdByUserId !== undefined ? overrides.createdByUserId : null,
+  parentVersionId: overrides?.parentVersionId !== undefined ? overrides.parentVersionId : null,
+  atoms: overrides?.atoms || [
+    createMockRuleAtom({ id: 'atom-1', text: 'Default rule 1' }),
+    createMockRuleAtom({ id: 'atom-2', text: 'Default rule 2' }),
   ],
 });
 
@@ -299,15 +305,21 @@ export const createMockRuleSpec = (overrides?: Partial<MockRuleSpec>): MockRuleS
 // =============================================================================
 
 /**
- * Agent type matching backend
- * Simplified version of AgentDto for basic testing
+ * Agent type matching backend AgentDto (Issue #1977)
+ * Agents are global, not tied to specific games
  */
 export type MockAgent = {
   id: string;
-  gameId: string;
   name: string;
-  type: string; // Changed from 'kind' to match Agent and AgentDto
+  type: string;
+  strategyName: string;
+  strategyParameters: Record<string, unknown>;
+  isActive: boolean;
   createdAt: string;
+  lastInvokedAt: string | null;
+  invocationCount: number;
+  isRecentlyUsed: boolean;
+  isIdle: boolean;
 };
 
 /**
@@ -336,21 +348,26 @@ export type MockChat = {
 };
 
 /**
- * Creates a mock agent
+ * Creates a mock agent (Issue #1977: Aligned with backend AgentDto)
  *
  * @example
  * const agent = createMockAgent({
- *   gameId: 'demo-chess',
  *   name: 'Chess Expert',
  *   type: 'qa'
  * });
  */
 export const createMockAgent = (overrides?: Partial<MockAgent>): MockAgent => ({
   id: overrides?.id || 'agent-1',
-  gameId: overrides?.gameId || 'game-1',
   name: overrides?.name || 'Test Agent',
-  type: overrides?.type || 'qa', // Changed from 'kind'
+  type: overrides?.type || 'qa',
+  strategyName: overrides?.strategyName || 'hybrid-rag',
+  strategyParameters: overrides?.strategyParameters || {},
+  isActive: overrides?.isActive !== undefined ? overrides.isActive : true,
   createdAt: overrides?.createdAt || new Date().toISOString(),
+  lastInvokedAt: overrides?.lastInvokedAt !== undefined ? overrides.lastInvokedAt : null,
+  invocationCount: overrides?.invocationCount || 0,
+  isRecentlyUsed: overrides?.isRecentlyUsed !== undefined ? overrides.isRecentlyUsed : false,
+  isIdle: overrides?.isIdle !== undefined ? overrides.isIdle : true,
 });
 
 /**
@@ -644,22 +661,23 @@ export const isValidMockGame = (obj: any): obj is MockGame => {
 };
 
 /**
- * Type guard to validate mock RuleSpec
+ * Type guard to validate mock RuleSpec (Issue #1977)
  */
 export const isValidMockRuleSpec = (obj: any): obj is MockRuleSpec => {
   return (
     typeof obj === 'object' &&
     obj !== null &&
+    typeof obj.id === 'string' &&
     typeof obj.gameId === 'string' &&
     typeof obj.version === 'string' &&
     typeof obj.createdAt === 'string' &&
-    Array.isArray(obj.rules) &&
-    obj.rules.every(
-      (rule: any) =>
-        typeof rule === 'object' &&
-        rule !== null &&
-        typeof rule.id === 'string' &&
-        typeof rule.text === 'string'
+    Array.isArray(obj.atoms) &&
+    obj.atoms.every(
+      (atom: any) =>
+        typeof atom === 'object' &&
+        atom !== null &&
+        typeof atom.id === 'string' &&
+        typeof atom.text === 'string'
     )
   );
 };

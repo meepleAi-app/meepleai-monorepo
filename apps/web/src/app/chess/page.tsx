@@ -8,6 +8,7 @@ import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { logger } from '@/lib/logger';
 import { createErrorContext } from '@/lib/errors';
+import type { Message } from '@/types';
 
 // Type definitions
 type AuthUser = {
@@ -20,15 +21,6 @@ type AuthUser = {
 type AuthResponse = {
   user: AuthUser;
   expiresAt: string;
-};
-
-type Message = {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  fen?: string; // FEN position from AI response
-  suggestedMoves?: string[]; // Moves in algebraic notation (e.g., ["e2-e4", "Nf3"])
-  timestamp: Date;
 };
 
 type ChessResponse = {
@@ -168,7 +160,13 @@ export default function ChessPage() {
         id: tempAssistantId,
         role: 'assistant',
         content: res.answer,
-        fen: res.fen,
+        analysis: res.analysis
+          ? {
+              fenPosition: res.analysis.fenPosition,
+              evaluationSummary: res.analysis.evaluationSummary,
+              keyConsiderations: res.analysis.keyConsiderations,
+            }
+          : undefined,
         suggestedMoves: res.suggestedMoves,
         timestamp: new Date(),
       };
@@ -176,8 +174,8 @@ export default function ChessPage() {
       setMessages(prev => [...prev, assistantMessage]);
 
       // Update board if FEN position is provided
-      if (res.fen) {
-        loadFenPosition(res.fen);
+      if (res.analysis?.fenPosition) {
+        loadFenPosition(res.analysis.fenPosition);
       }
 
       // Highlight suggested moves
@@ -225,7 +223,11 @@ export default function ChessPage() {
         id: `move-${Date.now()}`,
         role: 'assistant',
         content: `Mossa eseguita: ${move.san}`,
-        fen: game.fen(),
+        analysis: {
+          fenPosition: game.fen(),
+          evaluationSummary: null,
+          keyConsiderations: [],
+        },
         timestamp: new Date(),
       };
 
@@ -409,9 +411,9 @@ export default function ChessPage() {
                   )}
 
                   {/* FEN Position */}
-                  {msg.fen && (
+                  {msg.analysis?.fenPosition && (
                     <div className="mt-2 text-xs text-slate-600">
-                      Posizione: {msg.fen.substring(0, 40)}...
+                      Posizione: {msg.analysis.fenPosition.substring(0, 40)}...
                     </div>
                   )}
                 </div>

@@ -24,6 +24,7 @@ import {
   WorkflowTemplateSchema,
   WorkflowTemplateDetailSchema,
   ImportWorkflowResponseSchema,
+  DashboardStatsSchema,
   type CreateUserRequest,
   type UpdateUserRequest,
   type AdminUser,
@@ -43,6 +44,7 @@ import {
   type WorkflowTemplate,
   type WorkflowTemplateDetail,
   type ImportWorkflowResponse,
+  type DashboardStats,
 } from '../schemas';
 
 export interface CreateAdminClientParams {
@@ -279,21 +281,26 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
     /**
      * Get analytics data (admin only)
      * GET /api/v1/admin/analytics
+     *
+     * Issue #1977: Added DashboardStatsSchema validation
      */
     async getAnalytics(params?: {
       startDate?: Date;
       endDate?: Date;
       groupBy?: string;
       roleFilter?: string;
-    }): Promise<any> {
+    }): Promise<DashboardStats | null> {
       const queryParams = new URLSearchParams();
-      if (params?.startDate) queryParams.set('startDate', params.startDate.toISOString());
-      if (params?.endDate) queryParams.set('endDate', params.endDate.toISOString());
+      if (params?.startDate) queryParams.set('fromDate', params.startDate.toISOString());
+      if (params?.endDate) queryParams.set('toDate', params.endDate.toISOString());
       if (params?.groupBy) queryParams.set('groupBy', params.groupBy);
       if (params?.roleFilter) queryParams.set('roleFilter', params.roleFilter);
 
       const query = queryParams.toString();
-      return httpClient.get(`/api/v1/admin/analytics${query ? `?${query}` : ''}`);
+      return httpClient.get(
+        `/api/v1/admin/analytics${query ? `?${query}` : ''}`,
+        DashboardStatsSchema
+      );
     },
 
     /**

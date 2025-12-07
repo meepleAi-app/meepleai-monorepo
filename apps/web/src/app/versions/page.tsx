@@ -11,6 +11,17 @@ import { cn } from '@/lib/utils';
 import { getErrorMessage } from '@/lib/utils/errorHandler';
 import { logger } from '@/lib/logger';
 import { createErrorContext } from '@/lib/errors';
+import type {
+  RuleSpecVersion,
+  RuleSpecHistory,
+  RuleAtom,
+  RuleSpec,
+  RuleSpecDiff,
+  RuleAtomChange,
+  DiffSummary,
+  FieldChange,
+  ChangeType,
+} from '@/lib/api/schemas';
 
 type AuthUser = {
   id: string;
@@ -22,69 +33,6 @@ type AuthUser = {
 type AuthResponse = {
   user: AuthUser;
   expiresAt: string;
-};
-
-type RuleSpecVersion = {
-  version: string;
-  createdAt: string;
-  ruleCount: number;
-  createdBy?: string | null;
-};
-
-type RuleSpecHistory = {
-  gameId: string;
-  versions: RuleSpecVersion[];
-  totalVersions: number;
-};
-
-type RuleAtom = {
-  id: string;
-  text: string;
-  section?: string | null;
-  page?: string | null;
-  line?: string | null;
-};
-
-type RuleSpec = {
-  gameId: string;
-  version: string;
-  createdAt: string;
-  rules: RuleAtom[];
-};
-
-type FieldChange = {
-  fieldName: string;
-  oldValue?: string | null;
-  newValue?: string | null;
-};
-
-type ChangeType = 'Added' | 'Modified' | 'Deleted' | 'Unchanged';
-
-type RuleAtomChange = {
-  type: ChangeType;
-  oldAtom?: string | null;
-  newAtom?: string | null;
-  oldValue?: RuleAtom | null;
-  newValue?: RuleAtom | null;
-  fieldChanges?: FieldChange[] | null;
-};
-
-type DiffSummary = {
-  totalChanges: number;
-  added: number;
-  modified: number;
-  deleted: number;
-  unchanged: number;
-};
-
-type RuleSpecDiff = {
-  gameId: string;
-  fromVersion: string;
-  toVersion: string;
-  fromCreatedAt: string;
-  toCreatedAt: string;
-  summary: DiffSummary;
-  changes: RuleAtomChange[];
 };
 
 function VersionHistoryContent() {
@@ -123,7 +71,7 @@ function VersionHistoryContent() {
       const historyData = await api.games.getRuleSpecHistory(gId);
       setHistory(historyData);
       // Auto-select the two most recent versions for diff
-      if (historyData.versions.length >= 2) {
+      if (historyData && historyData.versions.length >= 2) {
         setSelectedFromVersion(historyData.versions[1].version);
         setSelectedToVersion(historyData.versions[0].version);
       }
@@ -224,6 +172,10 @@ function VersionHistoryContent() {
     try {
       // Get the version to restore
       const versionData = await api.games.getRuleSpecVersion(gameId, Number(version));
+
+      if (!versionData) {
+        throw new Error(`Version ${version} not found`);
+      }
 
       // Save it as a new version
       const updated = await api.games.updateRuleSpec(gameId, versionData);
@@ -378,7 +330,7 @@ function VersionHistoryContent() {
                   <div className="text-xs text-gray-600 mb-2">
                     {new Date(version.createdAt).toLocaleString()}
                   </div>
-                  <div className="text-xs text-gray-600 mb-2">{version.ruleCount} regole</div>
+                  <div className="text-xs text-gray-600 mb-2">{version.atomCount} regole</div>
                   {authUser.role === 'Admin' || authUser.role === 'Editor' ? (
                     <button
                       onClick={() => handleRestoreVersion(version.version)}

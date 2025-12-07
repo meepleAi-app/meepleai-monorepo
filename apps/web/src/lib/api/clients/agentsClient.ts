@@ -11,12 +11,16 @@ import {
   AgentResponseDtoSchema,
   GetAllAgentsResponseSchema,
   ConfigureAgentResponseSchema,
+  ChessAgentResponseSchema,
+  SetupGuideResponseSchema,
   type AgentDto,
   type AgentResponseDto,
   type InvokeAgentRequest,
   type CreateAgentRequest,
   type ConfigureAgentRequest,
   type ConfigureAgentResponse,
+  type ChessAgentResponse,
+  type SetupGuideResponse,
 } from '../schemas';
 
 export interface CreateAgentsClientParams {
@@ -131,17 +135,43 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
     /**
      * Invoke chess agent (convenience wrapper)
      * POST /api/v1/agents/chess
+     *
+     * Issue #1977: Added ChessAgentResponseSchema validation
      */
-    async invokeChess(request: { question: string; fenPosition?: string }): Promise<any> {
-      return httpClient.post('/api/v1/agents/chess', request);
+    async invokeChess(request: {
+      question: string;
+      fenPosition?: string;
+    }): Promise<ChessAgentResponse> {
+      const response = await httpClient.post(
+        '/api/v1/agents/chess',
+        request,
+        ChessAgentResponseSchema
+      );
+      if (!response) {
+        throw new Error('Failed to invoke chess agent: no response from server');
+      }
+      return response;
     },
 
     /**
      * Generate setup guide (convenience wrapper)
      * POST /api/v1/agents/setup
+     *
+     * Issue #1977: Added SetupGuideResponseSchema validation
      */
-    async generateSetupGuide(request: { gameId: string; chatId: string | null }): Promise<any> {
-      return httpClient.post('/api/v1/agents/setup', request);
+    async generateSetupGuide(request: {
+      gameId: string;
+      chatId: string | null;
+    }): Promise<SetupGuideResponse> {
+      const response = await httpClient.post(
+        '/api/v1/agents/setup',
+        request,
+        SetupGuideResponseSchema
+      );
+      if (!response) {
+        throw new Error('Failed to generate setup guide: no response from server');
+      }
+      return response;
     },
   };
 }

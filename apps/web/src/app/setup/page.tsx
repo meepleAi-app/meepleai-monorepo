@@ -6,6 +6,7 @@ import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { logger } from '@/lib/logger';
 import { createErrorContext } from '@/lib/errors';
+import type { SetupGuideResponse, SetupGuideResponseStep, Snippet } from '@/lib/api/schemas';
 
 // Type definitions
 type AuthUser = {
@@ -23,31 +24,6 @@ type AuthResponse = {
 type Game = {
   id: string;
   title: string;
-};
-
-type Snippet = {
-  text: string;
-  source: string;
-  page: number;
-  line: number;
-};
-
-type SetupGuideStep = {
-  stepNumber: number;
-  title: string;
-  instruction: string;
-  references: Snippet[];
-  isOptional: boolean;
-};
-
-type SetupGuideResponse = {
-  gameTitle: string;
-  steps: SetupGuideStep[];
-  estimatedSetupTimeMinutes: number;
-  promptTokens: number;
-  completionTokens: number;
-  totalTokens: number;
-  confidence: number | null;
 };
 
 // Component for viewing citations in a modal
@@ -77,11 +53,15 @@ function CitationModal({ snippets, onClose }: { snippets: Snippet[]; onClose: ()
           {snippets.map((snippet, idx) => (
             <div key={idx} className="p-3 border border-border rounded-md bg-muted">
               <div className="flex justify-between mb-2">
-                <span className="font-medium text-sm text-foreground">{snippet.source}</span>
-                <span className="text-xs text-muted-foreground">Page {snippet.page}</span>
+                <span className="font-medium text-sm text-foreground">
+                  Doc {snippet.documentId.substring(0, 8)}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {snippet.pageNumber !== null ? `Page ${snippet.pageNumber}` : 'No page'}
+                </span>
               </div>
               <div className="text-[13px] text-muted-foreground leading-relaxed">
-                {snippet.text}
+                {snippet.snippet}
               </div>
             </div>
           ))}
@@ -98,7 +78,7 @@ function SetupStepCard({
   onToggleComplete,
   onViewReferences,
 }: {
-  step: SetupGuideStep;
+  step: SetupGuideResponseStep;
   isCompleted: boolean;
   onToggleComplete: () => void;
   onViewReferences: () => void;

@@ -12,11 +12,20 @@ import {
   GameSessionDtoSchema,
   PaginatedGamesResponseSchema,
   PdfDocumentDtoSchema,
+  RuleSpecSchema,
+  RuleSpecHistorySchema,
+  VersionTimelineSchema,
+  RuleSpecDiffSchema,
   type Game,
   type GameSessionDto,
   type PaginatedGamesResponse,
   type PdfDocumentDto,
+  type RuleSpec,
+  type RuleSpecHistory,
+  type VersionTimeline,
+  type RuleSpecDiff,
 } from '../schemas';
+import { AgentDtoSchema, type AgentDto } from '../schemas';
 
 export interface CreateGamesClientParams {
   httpClient: HttpClient;
@@ -257,58 +266,79 @@ export function createGamesClient({ httpClient }: CreateGamesClientParams) {
      * Get RuleSpec for a game
      * GET /api/v1/games/{gameId}/rulespec
      *
-     * TODO (Issue #1681): Create RuleSpecSchema instead of any
+     * Issue #1977: Added RuleSpecSchema validation
      */
-    async getRuleSpec(gameId: string): Promise<any> {
-      return httpClient.get(`/api/v1/games/${encodeURIComponent(gameId)}/rulespec`);
+    async getRuleSpec(gameId: string): Promise<RuleSpec | null> {
+      return httpClient.get(`/api/v1/games/${encodeURIComponent(gameId)}/rulespec`, RuleSpecSchema);
     },
 
     /**
      * Get specific RuleSpec version
      * GET /api/v1/games/{gameId}/rulespec/versions/{version}
+     *
+     * Issue #1977: Added RuleSpecSchema validation
      */
-    async getRuleSpecVersion(gameId: string, version: number): Promise<any> {
+    async getRuleSpecVersion(gameId: string, version: number): Promise<RuleSpec | null> {
       return httpClient.get(
-        `/api/v1/games/${encodeURIComponent(gameId)}/rulespec/versions/${version}`
+        `/api/v1/games/${encodeURIComponent(gameId)}/rulespec/versions/${version}`,
+        RuleSpecSchema
       );
     },
 
     /**
      * Get RuleSpec version history
      * GET /api/v1/games/{gameId}/rulespec/history
+     *
+     * Issue #1977: Added RuleSpecHistorySchema validation
      */
-    async getRuleSpecHistory(gameId: string): Promise<any> {
-      return httpClient.get(`/api/v1/games/${encodeURIComponent(gameId)}/rulespec/history`);
+    async getRuleSpecHistory(gameId: string): Promise<RuleSpecHistory | null> {
+      return httpClient.get(
+        `/api/v1/games/${encodeURIComponent(gameId)}/rulespec/history`,
+        RuleSpecHistorySchema
+      );
     },
 
     /**
      * Get RuleSpec version timeline with authors
      * GET /api/v1/games/{gameId}/rulespec/versions/timeline
+     *
+     * Issue #1977: Added VersionTimelineSchema validation
      */
-    async getRuleSpecTimeline(gameId: string): Promise<{ authors?: string[] }> {
-      const result = await httpClient.get<{ authors?: string[] }>(
-        `/api/v1/games/${encodeURIComponent(gameId)}/rulespec/versions/timeline`
+    async getRuleSpecTimeline(gameId: string): Promise<VersionTimeline | null> {
+      return httpClient.get(
+        `/api/v1/games/${encodeURIComponent(gameId)}/rulespec/versions/timeline`,
+        VersionTimelineSchema
       );
-      return result ?? { authors: [] };
     },
 
     /**
      * Update RuleSpec for a game
      * PUT /api/v1/games/{gameId}/rulespec
+     *
+     * Issue #1977: Added RuleSpecSchema validation
      */
-    async updateRuleSpec(gameId: string, ruleSpecData: any): Promise<any> {
-      return httpClient.put(`/api/v1/games/${encodeURIComponent(gameId)}/rulespec`, ruleSpecData);
+    async updateRuleSpec(gameId: string, ruleSpecData: Partial<RuleSpec>): Promise<RuleSpec> {
+      const result = await httpClient.put(
+        `/api/v1/games/${encodeURIComponent(gameId)}/rulespec`,
+        ruleSpecData,
+        RuleSpecSchema
+      );
+      if (!result) {
+        throw new Error('Failed to update RuleSpec: no response from server');
+      }
+      return result;
     },
 
     /**
      * Get AI agents available for a game
      * GET /api/v1/games/{gameId}/agents
      *
-     * TODO (Issue #1681): Create AgentSchema instead of any[]
+     * Issue #1977: Added AgentDtoSchema validation
      */
-    async getAgents(gameId: string): Promise<any[]> {
-      const result = await httpClient.get<any[]>(
-        `/api/v1/games/${encodeURIComponent(gameId)}/agents`
+    async getAgents(gameId: string): Promise<AgentDto[]> {
+      const result = await httpClient.get(
+        `/api/v1/games/${encodeURIComponent(gameId)}/agents`,
+        AgentDtoSchema.array()
       );
       return result ?? [];
     },
@@ -316,14 +346,17 @@ export function createGamesClient({ httpClient }: CreateGamesClientParams) {
     /**
      * Get diff between two RuleSpec versions
      * GET /api/v1/games/{gameId}/rulespec/diff?from={from}&to={to}
+     *
+     * Issue #1977: Added RuleSpecDiffSchema validation
      */
     async getRuleSpecDiff(
       gameId: string,
       fromVersion: number | string,
       toVersion: number | string
-    ): Promise<any> {
+    ): Promise<RuleSpecDiff | null> {
       return httpClient.get(
-        `/api/v1/games/${encodeURIComponent(gameId)}/rulespec/diff?from=${encodeURIComponent(fromVersion)}&to=${encodeURIComponent(toVersion)}`
+        `/api/v1/games/${encodeURIComponent(gameId)}/rulespec/diff?from=${encodeURIComponent(fromVersion)}&to=${encodeURIComponent(toVersion)}`,
+        RuleSpecDiffSchema
       );
     },
   };

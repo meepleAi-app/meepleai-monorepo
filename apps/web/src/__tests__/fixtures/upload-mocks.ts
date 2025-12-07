@@ -47,10 +47,13 @@ export interface PdfMockOptions {
 }
 
 export interface RuleSpecMockOptions {
+  id?: string;
   gameId?: string;
   version?: string;
   createdAt?: string;
-  rules?: Array<{
+  createdByUserId?: string | null;
+  parentVersionId?: string | null;
+  atoms?: Array<{
     id: string;
     text: string;
     section?: string | null;
@@ -125,30 +128,33 @@ export function createPdfMock(options: PdfMockOptions = {}): MockPdfDocument {
 }
 
 /**
- * Creates a mock RuleSpec object
+ * Creates a mock RuleSpec object (Issue #1977)
  * @deprecated - Now wraps common-fixtures createMockRuleSpec for consistency
  *
- * Issue #1951: Maintains backward compatibility with 1 rule default
- * (common-fixtures has 2 rules default for broader use cases)
+ * Issue #1951: Maintains backward compatibility with 1 atom default
+ * (common-fixtures has 2 atoms default for broader use cases)
  */
 export function createRuleSpecMock(options: RuleSpecMockOptions = {}): MockRuleSpec {
-  // Convert rules format if provided in options
-  const rules = options.rules?.map(rule => ({
-    id: rule.id,
-    text: rule.text,
-    section: rule.section,
-    page: rule.page,
-    line: rule.line,
+  // Convert atoms format if provided in options
+  const atoms = options.atoms?.map(atom => ({
+    id: atom.id,
+    text: atom.text,
+    section: atom.section,
+    page: atom.page,
+    line: atom.line,
   })) || [
-    // Default: 1 rule (upload-mocks.test.ts expects this)
+    // Default: 1 atom (upload-mocks.test.ts expects this)
     createMockRuleAtom({ id: 'r1', text: 'Test rule' }),
   ];
 
   return createMockRuleSpec({
+    id: options.id,
     gameId: options.gameId,
     version: options.version,
     createdAt: options.createdAt,
-    rules: rules,
+    createdByUserId: options.createdByUserId,
+    parentVersionId: options.parentVersionId,
+    atoms: atoms,
   });
 }
 

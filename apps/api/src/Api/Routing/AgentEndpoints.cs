@@ -41,7 +41,7 @@ public static class AgentEndpoints
 
             logger.LogInformation(
                 "Created agent {AgentId} by user {UserId}",
-                result.Id, session.User.Id);
+                result.Id, session!.User.Id);
 
             return Results.Created($"/api/v1/agents/{result.Id}", result);
         })
@@ -95,7 +95,7 @@ public static class AgentEndpoints
 
             logger.LogInformation(
                 "Retrieved {Count} agents for user {UserId}",
-                results.Count, session.User.Id);
+                results.Count, session!.User.Id);
 
             return Results.Ok(new
             {
@@ -144,7 +144,7 @@ public static class AgentEndpoints
 
             logger.LogInformation(
                 "Configured agent {AgentId} by user {UserId}",
-                id, session.User.Id);
+                id, session!.User.Id);
 
             return Results.Ok(result);
         })
@@ -172,7 +172,7 @@ public static class AgentEndpoints
                 Query: req.Query,
                 GameId: req.GameId,
                 ChatThreadId: req.ChatThreadId,
-                UserId: session.User.Id
+                UserId: session!.User.Id
             );
 
             var result = await mediator.Send(command, ct).ConfigureAwait(false);

@@ -206,7 +206,7 @@ docker compose restart qdrant
 # Wait 15-30 seconds for startup
 
 # Option B: Check Qdrant resources
-docker stats --no-stream qdrant
+docker compose stats --no-stream qdrant
 # If memory at limit, increase memory allocation
 
 # Option C: Verify collection exists

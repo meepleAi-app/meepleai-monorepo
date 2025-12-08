@@ -176,7 +176,7 @@ npgsql_connection_pool_active_connections / npgsql_connection_pool_size * 100
 
 **Docker stats**:
 ```bash
-docker stats --no-stream api postgres redis qdrant
+docker compose stats --no-stream
 ```
 
 ## Common Root Causes & Fixes
@@ -391,7 +391,7 @@ docker compose restart api
 # This is a temporary fix, root cause must be investigated
 
 # Check memory usage
-docker stats --no-stream api
+docker compose stats --no-stream
 
 # If container was OOMKilled (exit code 137):
 docker compose ps api  # Check exit code
@@ -404,7 +404,7 @@ docker compose logs api --tail 100 | grep "OutOfMemory"
 curl http://localhost:9090/api/v1/query?query=meepleai:api:error_rate:5m
 
 # Memory usage normalized (< 60%)
-docker stats --no-stream api
+docker compose stats --no-stream
 
 # API responds normally
 curl -f http://localhost:8080/health
@@ -454,7 +454,7 @@ curl http://localhost:9090/api/v1/query?query=rate(http_server_request_duration_
 curl http://localhost:9090/api/v1/query?query=meepleai:api:error_rate:5m
 
 # CPU/memory usage normalized
-docker stats --no-stream api
+docker compose stats --no-stream
 ```
 
 **Prevention**:

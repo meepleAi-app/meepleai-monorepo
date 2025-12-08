@@ -491,7 +491,7 @@ curl http://localhost:9090/api/v1/query?query=rate(http_server_request_duration_
 curl http://localhost:9090/api/v1/query?query=meepleai:api:error_rate:5m
 
 # CPU/memory usage normalized (< 60%)
-docker stats --no-stream api
+docker compose stats --no-stream
 ```
 
 **Prevention**:

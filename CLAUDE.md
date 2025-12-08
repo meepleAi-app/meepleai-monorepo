@@ -58,7 +58,21 @@ docs/                Architecture, ADRs, guides
 | **Frontend** | `pnpm dev` / `pnpm build` / `pnpm test` | Vitest 90%+ |
 | | `pnpm storybook` | Storybook dev server |
 | | `pnpm test:visual` | Visual regression (Chromatic) |
-| **Docker** | `docker compose up -d` | Full stack (15 services) |
+| **Docker** | `docker compose up -d` | Full stack (default via COMPOSE_PROFILES=full) |
+| | `./start-minimal.sh` | Core only (postgres, redis, qdrant, api, web) |
+| | `./start-dev.sh` | Dev + basic monitoring (minimal + prometheus, grafana) |
+| | `./start-observability.sh` | Full observability (+ alertmanager, hyperdx) |
+| | `./start-ai.sh` | AI/ML services only |
+| | `./start-automation.sh` | Automation (n8n) only |
+| | `docker compose --profile <profile> up` | Manual profile selection (minimal/dev/observability/ai/automation/full) |
+
+**Docker Profiles** (Issue #702):
+- **minimal**: Core services only (postgres, redis, qdrant, api, web)
+- **dev**: Development + basic observability (minimal + prometheus, grafana)
+- **observability**: Full monitoring stack (dev + alertmanager, hyperdx)
+- **ai**: AI/ML services (ollama, embedding, unstructured, smoldocling, reranker)
+- **automation**: Workflow automation (n8n)
+- **full**: Everything (default for backward compatibility)
 
 **Services**:
 - **Core**: postgres:5432, qdrant:6333, redis:6379

@@ -1,6 +1,7 @@
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.SharedKernel.Application.Interfaces;
 
+#pragma warning disable MA0048 // File name must match type name - Command and result in same file
 namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 
 /// <summary>

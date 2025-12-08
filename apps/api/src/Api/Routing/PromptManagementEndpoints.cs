@@ -1,4 +1,4 @@
-using Api.BoundedContexts.Administration.Application.Commands;
+﻿using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.Extensions;
@@ -61,7 +61,7 @@ public static class PromptManagementEndpoints
                     request.Category,
                     request.InitialContent,
                     request.Metadata,
-                    session.User.Id),
+                    session!.User!.Id),
                 ct);
 
             return Results.Created(
@@ -121,7 +121,7 @@ public static class PromptManagementEndpoints
                     id,
                     request.Content,
                     request.Metadata,
-                    session.User.Id),
+                    session!.User!.Id),
                 ct);
 
             return Results.Created(
@@ -175,7 +175,7 @@ public static class PromptManagementEndpoints
             var command = new ActivatePromptVersionCommand(
                 TemplateId: id,
                 VersionId: versionId,
-                ActivatedByUserId: session.User.Id,
+                ActivatedByUserId: session!.User!.Id,
                 Reason: "Admin activation via UI"
             );
 
@@ -214,7 +214,7 @@ public static class PromptManagementEndpoints
             if (!authorized) return error!;
 
             logger.LogInformation("Admin {AdminId} evaluating prompt template {TemplateId}, version {VersionId}",
-                session.User.Id, templateId, versionId);
+                session!.User!.Id, templateId, versionId);
 
             // ADMIN-01: Use CQRS pattern for prompt evaluation
             var command = new Api.BoundedContexts.Administration.Application.Commands.PromptEvaluation.EvaluatePromptCommand
@@ -251,7 +251,7 @@ public static class PromptManagementEndpoints
 
             logger.LogInformation(
                 "Admin {AdminId} comparing prompt versions: Baseline {BaselineId} vs Candidate {CandidateId}",
-                session.User.Id, request.BaselineVersionId, request.CandidateVersionId);
+                session!.User!.Id, request.BaselineVersionId, request.CandidateVersionId);
 
             // ADMIN-01: Use CQRS pattern for prompt comparison
             var command = new Api.BoundedContexts.Administration.Application.Commands.PromptEvaluation.ComparePromptVersionsCommand
@@ -386,8 +386,8 @@ public static class PromptManagementEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            logger.LogInformation("Admin {AdminId} activating version {VersionId} for template {TemplateId}", session.User.Id, versionId, templateId);
-            var command = new Api.BoundedContexts.Administration.Application.Commands.ActivatePromptVersionCommand(templateId, versionId, session.User.Id, request.Reason);
+            logger.LogInformation("Admin {AdminId} activating version {VersionId} for template {TemplateId}", session!.User!.Id, versionId, templateId);
+            var command = new Api.BoundedContexts.Administration.Application.Commands.ActivatePromptVersionCommand(templateId, versionId, session!.User!.Id, request.Reason);
             var activatedVersion = await mediator.Send(command, ct).ConfigureAwait(false);
             logger.LogInformation("Version {VersionId} (v{VersionNumber}) activated successfully", activatedVersion.Id, activatedVersion.VersionNumber);
             return Results.Json(activatedVersion);

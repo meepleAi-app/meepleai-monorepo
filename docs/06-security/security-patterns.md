@@ -1,357 +1,89 @@
-# Security Patterns - Production-Ready Best Practices
+# Security Patterns & Best Practices
 
-**Source**: Security fixes from integration tests (Issues #798, #814, Completed 2025-11-07)
-**Framework**: ASP.NET Core 9.0
-**Status**: Production-validated patterns
-
----
-
-## Path Traversal Prevention (CWE-22, OWASP A01:2021)
-
-### Pattern: Multi-Layer Defense
-
-**Implementation** (`Infrastructure/Security/PathSecurity.cs`):
-
-```csharp
-public static class PathSecurity
-{
-    public static string SanitizeFilename(string filename)
-    {
-        if (string.IsNullOrWhiteSpace(filename))
-            throw new ArgumentException("Filename cannot be empty");
-
-        // Layer 1: Path traversal pattern detection
-        if (filename.Contains("..") ||   // Standard traversal
-            filename.Contains("....") ||  // Doubled traversal
-            filename.Contains("//") ||    // Double slashes
-            filename.Contains("\\\\"))    // Double backslashes
-        {
-            throw new SecurityException(
-                $"Path traversal pattern detected in filename: '{filename}'");
-        }
-
-        // Layer 2: Remove path characters
-        var invalidChars = Path.GetInvalidFileNameChars();
-        var sanitized = new string(filename
-            .Where(c => !invalidChars.Contains(c))
-            .ToArray());
-
-        // Layer 3: Remove dangerous patterns
-        sanitized = sanitized
-            .Replace(":", "")
-            .Replace("<", "")
-            .Replace(">", "")
-            .Replace("|", "")
-            .Replace("*", "")
-            .Replace("?", "")
-            .Replace("\"", "");
-
-        // Layer 4: Limit length
-        if (sanitized.Length > 255)
-            sanitized = sanitized.Substring(0, 255);
-
-        return sanitized;
-    }
-
-    public static string GenerateSafeFilename(string originalFilename)
-    {
-        var extension = Path.GetExtension(originalFilename);
-
-        if (string.IsNullOrWhiteSpace(extension))
-        {
-            return $"{Guid.NewGuid():N}"; // N format = no hyphens
-        }
-
-        var sanitizedExtension = SanitizeFilename(extension.TrimStart('.'));
-        return $"{Guid.NewGuid():N}.{sanitizedExtension}"; // ✅ Explicit dot
-    }
-
-    public static void ValidatePath(string path, string allowedBasePath)
-    {
-        var fullPath = Path.GetFullPath(path);
-        var basePath = Path.GetFullPath(allowedBasePath);
-
-        if (!fullPath.StartsWith(basePath, StringComparison.OrdinalIgnoreCase))
-        {
-            throw new SecurityException(
-                $"Path '{path}' is outside allowed directory '{allowedBasePath}'");
-        }
-    }
-}
-```
-
-**Key Defenses**:
-1. Pattern detection (`..`, `....`, `//`, `\\`)
-2. Invalid char removal
-3. Dangerous pattern removal
-4. Length limiting
-5. GUID-based naming (prevents guessing)
-6. Full path validation (basePath boundary check)
+**Version**: 2.0 (Consolidated)
+**Last Updated**: 2025-12-08
+**Status**: Production Security Standards
+**Location**: Consolidated from 6 security remediation guides
 
 ---
 
-### Testing Path Security
+## Table of Contents
 
-**Test Pattern** (xUnit):
-
-```csharp
-public class PathSecurityTests
-{
-    [Theory]
-    [InlineData("../../../etc/passwd")]
-    [InlineData("..\\..\\windows\\system32")]
-    [InlineData("....//secret")]
-    [InlineData("file//path")]
-    public void SanitizeFilename_PathTraversal_ThrowsSecurityException(string maliciousFilename)
-    {
-        // Act & Assert
-        var act = () => PathSecurity.SanitizeFilename(maliciousFilename);
-        act.Should().Throw<SecurityException>()
-           .WithMessage("*Path traversal pattern detected*");
-    }
-
-    [Theory]
-    [InlineData("document.pdf", @"^[a-f0-9]{32}\.pdf$")]
-    [InlineData("file.txt", @"^[a-f0-9]{32}\.txt$")]
-    [InlineData("image.png", @"^[a-f0-9]{32}\.png$")]
-    public void GenerateSafeFilename_ValidExtension_ReturnsGuidWithExtension(
-        string original, string expectedPattern)
-    {
-        // Act
-        var result = PathSecurity.GenerateSafeFilename(original);
-
-        // Assert
-        Assert.DoesNotContain("-", result); // N format = no hyphens
-        Assert.Matches(expectedPattern, result);
-    }
-
-    [Fact]
-    public void ValidatePath_OutsideAllowedDirectory_ThrowsSecurityException()
-    {
-        // Arrange
-        var basePath = "/app/uploads";
-        var maliciousPath = "/app/uploads/../../../etc/passwd";
-
-        // Act & Assert
-        var act = () => PathSecurity.ValidatePath(maliciousPath, basePath);
-        act.Should().Throw<SecurityException>()
-           .WithMessage("*outside allowed directory*");
-    }
-}
-```
-
-**Coverage Target**: 100% (security code must be fully tested)
+1. [Overview](#overview)
+2. [Resource Management Patterns](#resource-management-patterns)
+3. [Credential Handling Patterns](#credential-handling-patterns)
+4. [Input Validation Patterns](#input-validation-patterns)
+5. [Output Encoding Patterns](#output-encoding-patterns)
+6. [Error Handling Patterns](#error-handling-patterns)
+7. [CodeQL Integration](#codeql-integration)
+8. [Security Checklist](#security-checklist)
+9. [Related Documentation](#related-documentation)
 
 ---
 
-## PII Masking in Logs (GDPR/Privacy Compliance)
+## Overview
 
-### Pattern: Automatic PII Masking
+Consolidated security patterns for MeepleAI from CodeQL analysis and security audits. These patterns prevent common vulnerabilities and maintain code security standards.
 
-**Implementation** (`Logging/PiiMaskingEnricher.cs`):
+### Security Categories
 
-```csharp
-public class PiiMaskingEnricher : ILogEventEnricher
-{
-    private static readonly Regex EmailRegex = new(@"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b");
-    private static readonly Regex IpRegex = new(@"\b(?:\d{1,3}\.){3}\d{1,3}\b");
-    private static readonly Regex CreditCardRegex = new(@"\b\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}\b");
-
-    public void Enrich(LogEvent logEvent, ILogEventPropertyFactory factory)
-    {
-        if (logEvent.Properties.ContainsKey("Email"))
-        {
-            var email = logEvent.Properties["Email"].ToString();
-            var masked = MaskEmail(email);
-            logEvent.AddOrUpdateProperty(factory.CreateProperty("Email", masked));
-        }
-
-        if (logEvent.Properties.ContainsKey("IpAddress"))
-        {
-            var ip = logEvent.Properties["IpAddress"].ToString();
-            var masked = MaskIpAddress(ip);
-            logEvent.AddOrUpdateProperty(factory.CreateProperty("IpAddress", masked));
-        }
-
-        // Mask PII in message text
-        var maskedMessage = MaskPiiInText(logEvent.MessageTemplate.Text);
-        // ... (apply masking)
-    }
-
-    private static string MaskEmail(string email)
-    {
-        if (string.IsNullOrWhiteSpace(email))
-            return email;
-
-        var parts = email.Split('@');
-        if (parts.Length != 2)
-            return email;
-
-        var local = parts[0];
-        var domain = parts[1];
-
-        // Mask: "test@example.com" → "t***t@example.com"
-        var masked = local.Length <= 2
-            ? new string('*', local.Length)
-            : $"{local[0]}***{local[^1]}";
-
-        return $"{masked}@{domain}";
-    }
-
-    private static string MaskIpAddress(string ip)
-    {
-        if (string.IsNullOrWhiteSpace(ip) || ip == "null")
-            return ip;
-
-        var parts = ip.Split('.');
-        if (parts.Length != 4)
-            return ip;
-
-        // Mask: "192.168.1.1" → "192.168.1.***"
-        return $"{parts[0]}.{parts[1]}.{parts[2]}.***";
-    }
-
-    private static string MaskCreditCard(string card)
-    {
-        // Mask: "1234567890123456" → "****-****-****-3456"
-        if (card.Length < 4)
-            return "****";
-
-        var last4 = card.Substring(card.Length - 4);
-        return $"****-****-****-{last4}";
-    }
-}
-```
-
-**Register in Program.cs**:
-```csharp
-Log.Logger = new LoggerConfiguration()
-    .Enrich.With<PiiMaskingEnricher>()
-    .WriteTo.Console()
-    .WriteTo.Seq(Configuration["SEQ_URL"])
-    .CreateLogger();
-```
+| Pattern Category | CWE Coverage | Severity | Files Consolidated |
+|------------------|--------------|----------|-------------------|
+| **Resource Management** | CWE-404, CWE-775 | Medium | disposable-resource-leak-remediation.md |
+| **Credential Handling** | CWE-798, CWE-259 | Critical | hardcoded-credentials-remediation.md |
+| **Null Safety** | CWE-476 | High | null-reference-remediation.md |
+| **Input Validation** | CWE-20, CWE-1287 | Critical | incomplete-sanitization-prevention.md, regex-sanitization-guide.md |
+| **Output Encoding** | CWE-117, CWE-93 | Medium | log-forging-prevention.md |
 
 ---
 
-### Testing PII Masking
+## Resource Management Patterns
 
-**Test Pattern**:
+### Problem: Disposable Resource Leaks
 
+**CWE-404**: Improper Resource Shutdown
+**Risk**: Resource exhaustion, memory leaks, file handle exhaustion
+
+### Pattern 1: Always Use `using` Statement
+
+**❌ BAD**:
 ```csharp
-public class PiiMaskingTests
+public async Task<string> ReadFileAsync(string path)
 {
-    [Theory]
-    [InlineData("test@example.com", "t***t@example.com")]
-    [InlineData("a@b.com", "a***@b.com")] // Short email
-    [InlineData("verylongemail@domain.com", "v***m@domain.com")]
-    public void MaskEmail_ValidEmail_MasksCorrectly(string input, string expected)
-    {
-        // Act
-        var result = PiiMaskingEnricher.MaskEmail(input);
-
-        // Assert
-        result.Should().Be(expected);
-        result.Should().NotContain(input.Split('@')[0]); // Local part masked
-    }
-
-    [Theory]
-    [InlineData("192.168.1.1", "192.168.1.***")]
-    [InlineData("10.0.0.1", "10.0.0.***")]
-    [InlineData("null", "null")] // Handle null gracefully
-    public void MaskIpAddress_ValidIp_MasksCorrectly(string input, string expected)
-    {
-        // Act
-        var result = PiiMaskingEnricher.MaskIpAddress(input);
-
-        // Assert
-        result.Should().Be(expected);
-    }
-
-    [Fact]
-    public void LogEvent_ContainsPii_MaskedInOutput()
-    {
-        // Arrange
-        var logger = new LoggerConfiguration()
-            .Enrich.With<PiiMaskingEnricher>()
-            .WriteTo.Sink(new TestSink())
-            .CreateLogger();
-
-        // Act
-        logger.Information("User {Email} from {IpAddress}", "test@example.com", "192.168.1.1");
-
-        // Assert
-        var logOutput = testSink.LogEvents.First().RenderMessage();
-        logOutput.Should().Contain("t***t@example.com");
-        logOutput.Should().Contain("192.168.1.***");
-        logOutput.Should().NotContain("test@example.com"); // Original masked
-        logOutput.Should().NotContain("192.168.1.1"); // Original masked
-    }
+    var stream = File.OpenRead(path);
+    var reader = new StreamReader(stream);
+    return await reader.ReadToEndAsync();
+    // LEAK: stream and reader never disposed
 }
 ```
 
-**Coverage Target**: 100% (privacy-critical code)
-
----
-
-## IDisposable Best Practices (CODE-01)
-
-### Pattern: Always Dispose Resources
-
-**Common Violations** (Fixed in Issue #798):
-
-#### 1. HttpContent Must Be Disposed
-
+**✅ GOOD**:
 ```csharp
-// ❌ BAD: Memory leak
-public async Task<HttpResponseMessage> PostDataAsync(object data)
+public async Task<string> ReadFileAsync(string path)
 {
-    var content = new StringContent(JsonSerializer.Serialize(data));
-    return await _httpClient.PostAsync("/api/data", content); // ❌ content not disposed
-}
-
-// ✅ GOOD: Proper disposal
-public async Task<HttpResponseMessage> PostDataAsync(object data)
-{
-    using var content = new StringContent(JsonSerializer.Serialize(data));
-    return await _httpClient.PostAsync("/api/data", content);
+    using var stream = File.OpenRead(path);
+    using var reader = new StreamReader(stream);
+    return await reader.ReadToEndAsync();
+    // Automatically disposed when method exits
 }
 ```
 
-#### 2. IServiceScope Must Be Disposed
+### Pattern 2: Use IHttpClientFactory
 
+**❌ BAD**:
 ```csharp
-// ❌ BAD: Scope leak
-public async Task ProcessInBackground()
-{
-    var scope = _scopeFactory.CreateScope(); // ❌ Never disposed
-    var service = scope.ServiceProvider.GetRequiredService<IMyService>();
-    await service.ProcessAsync();
-}
-
-// ✅ GOOD: Scope disposed
-public async Task ProcessInBackground()
-{
-    using var scope = _scopeFactory.CreateScope();
-    var service = scope.ServiceProvider.GetRequiredService<IMyService>();
-    await service.ProcessAsync();
-} // Scope automatically disposed here
-```
-
-#### 3. HttpClient Injection (Never `new HttpClient()`)
-
-```csharp
-// ❌ BAD: Socket exhaustion
 public class MyService
 {
-    public async Task CallApiAsync()
+    public async Task<string> FetchDataAsync()
     {
-        using var client = new HttpClient(); // ❌ Creates new connection each time
+        var client = new HttpClient(); // LEAK: New instance every call
         return await client.GetStringAsync("https://api.example.com");
     }
 }
+```
 
-// ✅ GOOD: Inject via IHttpClientFactory
+**✅ GOOD**:
+```csharp
 public class MyService
 {
     private readonly IHttpClientFactory _httpClientFactory;
@@ -361,400 +93,590 @@ public class MyService
         _httpClientFactory = httpClientFactory;
     }
 
-    public async Task CallApiAsync()
+    public async Task<string> FetchDataAsync()
     {
         var client = _httpClientFactory.CreateClient();
         return await client.GetStringAsync("https://api.example.com");
-    } // Client managed by factory (connection pooling)
+    }
 }
 ```
 
-**Register in Program.cs**:
+### Pattern 3: Nested Using Statements
+
+**✅ GOOD**:
 ```csharp
-builder.Services.AddHttpClient();
+public async Task ProcessPdfAsync(Stream pdfStream)
+{
+    using var memoryStream = new MemoryStream();
+    await pdfStream.CopyToAsync(memoryStream);
+
+    using var document = PdfDocument.Open(memoryStream);
+    using var page = document.GetPage(1);
+
+    // All disposed in reverse order
+}
 ```
+
+### Common Disposable Types
+
+**Always dispose**:
+- `Stream` (FileStream, MemoryStream, etc.)
+- `StreamReader`, `StreamWriter`
+- `HttpClient` (use IHttpClientFactory instead)
+- `SqlConnection`, `DbContext`
+- `BitmapImage`, `Image`
+- Custom classes implementing `IDisposable`
 
 ---
 
-### Roslyn Analyzers Enforcement
+## Credential Handling Patterns
 
-**.editorconfig** (Enforce IDisposable rules):
+### Problem: Hardcoded Credentials
 
-```ini
-# CA2000: Dispose objects before losing scope
-dotnet_diagnostic.CA2000.severity = error
+**CWE-798**: Use of Hard-coded Credentials
+**Risk**: Credential exposure, unauthorized access, compliance violations
 
-# CA1001: Types that own disposable fields should be disposable
-dotnet_diagnostic.CA1001.severity = warning
+### Pattern 1: Use Configuration/Secrets
 
-# IDE0067: Dispose objects before losing scope
-dotnet_diagnostic.IDE0067.severity = error
-
-# IDE0068: Use recommended dispose pattern
-dotnet_diagnostic.IDE0068.severity = warning
-
-# IDE0069: Disposable fields should be disposed
-dotnet_diagnostic.IDE0069.severity = error
+**❌ BAD**:
+```csharp
+// Hardcoded password
+var connectionString = "Server=localhost;Database=meepleai;User=admin;Password=SuperSecret123!";
 ```
 
-**Build Enforcement**: Violations block compilation (error severity)
+**✅ GOOD**:
+```csharp
+// From configuration
+var connectionString = _configuration.GetConnectionString("Postgres");
+
+// From environment variable
+var apiKey = Environment.GetEnvironmentVariable("OPENROUTER_API_KEY");
+
+// From Docker secrets
+var password = File.ReadAllText("/run/secrets/postgres-password");
+```
+
+### Pattern 2: User Secrets (Development)
+
+**Setup**:
+```bash
+# Initialize user secrets
+dotnet user-secrets init
+
+# Set secret
+dotnet user-secrets set "OpenRouter:ApiKey" "your-key-here"
+```
+
+**Usage**:
+```csharp
+public class Startup
+{
+    public void ConfigureServices(IServiceCollection services)
+    {
+        // Automatically loads user secrets in development
+        services.Configure<OpenRouterOptions>(Configuration.GetSection("OpenRouter"));
+    }
+}
+```
+
+### Pattern 3: Never Log Credentials
+
+**❌ BAD**:
+```csharp
+_logger.LogInformation("Connecting with password: {Password}", password);
+_logger.LogDebug("API Key: {ApiKey}", apiKey);
+```
+
+**✅ GOOD**:
+```csharp
+_logger.LogInformation("Connecting to database");
+_logger.LogDebug("API request authenticated"); // Don't log key
+```
+
+### Credential Storage
+
+| Environment | Method | Location |
+|-------------|--------|----------|
+| **Development** | User Secrets | `~/.microsoft/usersecrets/` |
+| **Staging** | Docker Secrets | `./secrets/staging/` |
+| **Production** | Docker Secrets | `./secrets/prod/` |
+| **CI/CD** | GitHub Secrets | GitHub Actions encrypted |
+
+See: [Environment Variables Guide](./environment-variables-production.md)
 
 ---
 
 ## Input Validation Patterns
 
-### Pattern 1: Email Validation
+### Problem: Incomplete Sanitization
 
+**CWE-20**: Improper Input Validation
+**CWE-1287**: Improper Validation of Specified Type
+**Risk**: SQL injection, XSS, command injection
+
+### Pattern 1: Validate All User Input
+
+**❌ BAD**:
 ```csharp
-public class Email : ValueObject
+public IActionResult GetGame(string gameId)
 {
-    private static readonly Regex EmailRegex = new(
-        @"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$",
-        RegexOptions.Compiled);
+    // No validation
+    var game = _repository.GetById(gameId);
+    return Ok(game);
+}
+```
 
-    public string Value { get; private set; }
-
-    public Email(string value)
+**✅ GOOD**:
+```csharp
+public IActionResult GetGame(string gameId)
+{
+    // Validate format
+    if (!Guid.TryParse(gameId, out var parsedId))
     {
-        if (string.IsNullOrWhiteSpace(value))
-            throw new DomainException("Email cannot be empty");
-
-        if (!EmailRegex.IsMatch(value))
-            throw new DomainException($"Invalid email format: {value}");
-
-        if (value.Length > 255)
-            throw new DomainException("Email too long (max 255 characters)");
-
-        Value = value.ToLowerInvariant(); // Normalize
+        return BadRequest("Invalid game ID format");
     }
 
-    protected override IEnumerable<object> GetEqualityComponents()
+    var game = _repository.GetById(parsedId);
+    if (game == null)
     {
-        yield return Value;
+        return NotFound();
+    }
+
+    return Ok(game);
+}
+```
+
+### Pattern 2: Use FluentValidation
+
+**✅ GOOD**:
+```csharp
+public class RegisterUserCommandValidator : AbstractValidator<RegisterUserCommand>
+{
+    public RegisterUserCommandValidator()
+    {
+        RuleFor(x => x.Email)
+            .NotEmpty()
+            .EmailAddress()
+            .MaximumLength(255);
+
+        RuleFor(x => x.Password)
+            .NotEmpty()
+            .MinimumLength(8)
+            .Matches(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])")
+            .WithMessage("Password must contain uppercase, lowercase, digit, and special char");
+
+        RuleFor(x => x.DisplayName)
+            .NotEmpty()
+            .MinimumLength(2)
+            .MaximumLength(100)
+            .Matches(@"^[a-zA-Z0-9\s_-]+$")
+            .WithMessage("Display name contains invalid characters");
     }
 }
 ```
 
-**Use**: Email value object in domain entities (User, etc.)
+See: [ADR-012: FluentValidation CQRS](../01-architecture/adr/adr-012-fluentvalidation-cqrs.md)
+
+### Pattern 3: Regex Sanitization
+
+**Problem**: Incomplete regex validation allows bypass
+
+**❌ BAD**:
+```csharp
+// Incomplete: Allows "user@evil.com.attacker.com"
+var emailRegex = new Regex(@"^\w+@\w+\.\w+");
+```
+
+**✅ GOOD**:
+```csharp
+// Complete: Anchors prevent bypass
+var emailRegex = new Regex(@"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$");
+
+// Or use built-in
+var addr = new MailAddress(email); // Throws if invalid
+```
+
+**Regex Security Checklist**:
+- ✅ Use `^` and `$` anchors
+- ✅ Validate complete string, not substring
+- ✅ Avoid overly permissive patterns (`.+`, `.*`)
+- ✅ Test with malicious inputs
+
+**Common Bypasses**:
+```
+Pattern: ^\w+@\w+\.\w+
+Bypass: attacker@evil.com.fake.com  ✗
+
+Pattern: @example\.com
+Bypass: attacker@evil.com@example.com  ✗
+
+Pattern: ^[a-z]+$
+Bypass: UPPERCASE  ✗ (case-sensitive)
+```
+
+### Pattern 4: File Upload Validation
+
+**✅ GOOD**:
+```csharp
+public async Task<IActionResult> UploadPdf(IFormFile file)
+{
+    // 1. Validate file exists
+    if (file == null || file.Length == 0)
+    {
+        return BadRequest("No file provided");
+    }
+
+    // 2. Validate file size (50MB max)
+    if (file.Length > 50 * 1024 * 1024)
+    {
+        return BadRequest("File too large (max 50MB)");
+    }
+
+    // 3. Validate extension
+    var allowedExtensions = new[] { ".pdf" };
+    var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+    if (!allowedExtensions.Contains(extension))
+    {
+        return BadRequest("Only PDF files allowed");
+    }
+
+    // 4. Validate MIME type
+    if (file.ContentType != "application/pdf")
+    {
+        return BadRequest("Invalid file type");
+    }
+
+    // 5. Validate actual content (magic bytes)
+    using var stream = file.OpenReadStream();
+    var header = new byte[4];
+    await stream.ReadAsync(header);
+    if (!header.SequenceEqual(new byte[] { 0x25, 0x50, 0x44, 0x46 })) // %PDF
+    {
+        return BadRequest("File is not a valid PDF");
+    }
+
+    // Process file...
+}
+```
+
+**Defense in Depth**:
+1. Extension check (basic)
+2. MIME type check (client-provided)
+3. Magic bytes check (content verification)
+4. Virus scan (if applicable)
+5. Size limit (DoS prevention)
 
 ---
 
-### Pattern 2: Password Strength Validation
+## Output Encoding Patterns
 
+### Problem: Log Forging
+
+**CWE-117**: Improper Output Neutralization for Logs
+**Risk**: Log injection, log tampering, misleading audit trails
+
+### Pattern 1: Sanitize User Input Before Logging
+
+**❌ BAD**:
 ```csharp
-public static class PasswordValidator
-{
-    private const int MinLength = 8;
-    private const int MaxLength = 128;
-
-    public static void Validate(string password)
-    {
-        if (string.IsNullOrWhiteSpace(password))
-            throw new DomainException("Password cannot be empty");
-
-        if (password.Length < MinLength)
-            throw new DomainException($"Password must be at least {MinLength} characters");
-
-        if (password.Length > MaxLength)
-            throw new DomainException($"Password too long (max {MaxLength} characters)");
-
-        if (!password.Any(char.IsUpper))
-            throw new DomainException("Password must contain at least one uppercase letter");
-
-        if (!password.Any(char.IsDigit))
-            throw new DomainException("Password must contain at least one digit");
-
-        // Optional: Special character requirement
-        if (!password.Any(c => "!@#$%^&*()_+-=[]{}|;:,.<>?".Contains(c)))
-            throw new DomainException("Password must contain at least one special character");
-    }
-}
+_logger.LogInformation("User {Email} logged in", userInput);
+// If userInput = "admin\nHACKED: Admin logged in"
+// Creates fake log entry!
 ```
 
-**Use**: User.ChangePassword(), User.SetPassword()
-
----
-
-### Pattern 3: SQL Injection Prevention
-
-**Always Use Parameterized Queries**:
-
+**✅ GOOD**:
 ```csharp
-// ❌ BAD: SQL injection vulnerability
-public async Task<User?> GetUserByEmailAsync(string email)
-{
-    var sql = $"SELECT * FROM users WHERE email = '{email}'"; // ❌ Vulnerable!
-    return await _context.Users.FromSqlRaw(sql).FirstOrDefaultAsync();
-}
+var sanitizedEmail = userInput.Replace("\n", "").Replace("\r", "");
+_logger.LogInformation("User {Email} logged in", sanitizedEmail);
 
-// ✅ GOOD: Parameterized query
-public async Task<User?> GetUserByEmailAsync(string email)
-{
-    return await _context.Users
-        .Where(u => u.Email == email) // ✅ EF Core parameterizes
-        .FirstOrDefaultAsync();
-}
-
-// ✅ GOOD: Explicit parameters (if raw SQL needed)
-public async Task<User?> GetUserByEmailAsync(string email)
-{
-    var sql = "SELECT * FROM users WHERE email = @email";
-    return await _context.Users
-        .FromSqlRaw(sql, new SqlParameter("@email", email))
-        .FirstOrDefaultAsync();
-}
+// Or use structured logging (auto-escapes)
+_logger.LogInformation("User logged in: {Email}", new { Email = userInput });
 ```
 
-**Rule**: NEVER concatenate user input into SQL strings
+### Pattern 2: Use Structured Logging
 
----
-
-## Rate Limiting Patterns
-
-### Pattern: Per-Role Rate Limits
-
-**Implementation** (`Infrastructure/RateLimitService.cs`):
-
+**✅ GOOD (Serilog)**:
 ```csharp
-public class RateLimitService
-{
-    private readonly IConfiguration _configuration;
-    private readonly IMemoryCache _cache;
-
-    public async Task<bool> IsAllowedAsync(string userId, string role, string operation)
-    {
-        var key = $"ratelimit:{userId}:{operation}";
-        var limit = GetLimitForRole(role, operation);
-
-        if (_cache.TryGetValue(key, out int currentCount))
-        {
-            if (currentCount >= limit)
-                return false; // Rate limit exceeded
-
-            _cache.Set(key, currentCount + 1, TimeSpan.FromMinutes(1));
-        }
-        else
-        {
-            _cache.Set(key, 1, TimeSpan.FromMinutes(1));
-        }
-
-        return true;
-    }
-
-    private int GetLimitForRole(string role, string operation)
-    {
-        return role switch
-        {
-            "Admin" => 1000, // High limit for admins
-            "Editor" => 500,
-            "User" => 100,
-            _ => 10 // Anonymous users
-        };
-    }
-}
+_logger.LogInformation(
+    "Login attempt for {Email} from {IpAddress} at {Timestamp}",
+    email,      // Auto-escaped
+    ipAddress,  // Auto-escaped
+    DateTime.UtcNow
+);
 ```
 
-**Usage in Endpoint**:
-```csharp
-app.MapPost("/api/upload", async (
-    ClaimsPrincipal user,
-    RateLimitService rateLimit) =>
-{
-    var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-    var role = user.FindFirstValue(ClaimTypes.Role);
-
-    if (!await rateLimit.IsAllowedAsync(userId, role, "upload"))
-    {
-        return Results.StatusCode(429); // Too Many Requests
-    }
-
-    // Process upload...
-})
-.RequireAuthorization();
-```
-
-**Configuration** (`appsettings.json`):
+**Output** (JSON, safe):
 ```json
 {
-  "RateLimit": {
-    "User": { "Upload": 10, "Chat": 100 },
-    "Editor": { "Upload": 50, "Chat": 500 },
-    "Admin": { "Upload": 1000, "Chat": 10000 }
-  }
+  "Message": "Login attempt for admin@example.com from 192.168.1.1",
+  "Email": "admin@example.com",
+  "IpAddress": "192.168.1.1",
+  "Timestamp": "2025-12-08T10:30:00Z"
 }
 ```
 
----
+### Pattern 3: Validate Log Inputs
 
-## CSRF Protection (SameSite Cookies)
-
-### Pattern: Secure Cookie Configuration
-
-**Implementation** (`Program.cs`):
-
+**✅ GOOD**:
 ```csharp
-builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-    .AddCookie(options =>
-    {
-        options.Cookie.Name = "MeepleAI.Session";
-        options.Cookie.HttpOnly = true; // ✅ Prevent XSS
-        options.Cookie.SecurePolicy = CookieSecurePolicy.Always; // ✅ HTTPS only
-        options.Cookie.SameSite = SameSiteMode.Lax; // ✅ CSRF protection
-
-        // For strict CSRF (breaks some OAuth flows)
-        // options.Cookie.SameSite = SameSiteMode.Strict;
-
-        options.ExpireTimeSpan = TimeSpan.FromDays(30);
-        options.SlidingExpiration = true;
-    });
-```
-
-**CORS Configuration** (if frontend separate domain):
-
-```csharp
-builder.Services.AddCors(options =>
+public void LogUserAction(string userInput)
 {
-    options.AddDefaultPolicy(policy =>
+    // Validate before logging
+    if (string.IsNullOrWhiteSpace(userInput) || userInput.Length > 200)
     {
-        policy.WithOrigins("https://app.meepleai.dev") // ✅ Explicit origin
-              .AllowCredentials() // ✅ Required for cookies
-              .AllowAnyMethod()
-              .AllowAnyHeader();
-    });
-});
+        _logger.LogWarning("Invalid user input for logging (length: {Length})", userInput?.Length ?? 0);
+        return;
+    }
 
-// ❌ NEVER in production:
-// policy.AllowAnyOrigin().AllowCredentials(); // SECURITY VIOLATION!
+    // Sanitize
+    var sanitized = Regex.Replace(userInput, @"[\r\n]", "");
+
+    _logger.LogInformation("User action: {Action}", sanitized);
+}
 ```
 
 ---
 
-## XSS Prevention
+## Error Handling Patterns
 
-### Pattern 1: Output Encoding (React Auto-Escapes)
+### Problem: Null Reference Exceptions
 
-React automatically escapes JSX content:
+**CWE-476**: NULL Pointer Dereference
+**Risk**: Application crashes, DoS, data corruption
 
-```tsx
-// ✅ SAFE: React auto-escapes
-function Component({ userInput }: Props) {
-  return <div>{userInput}</div>; // Auto-escaped
-}
+### Pattern 1: Null-Conditional Operator
 
-// ⚠️ DANGEROUS: dangerouslySetInnerHTML
-function Component({ html }: Props) {
-  return <div dangerouslySetInnerHTML={{ __html: html }} />; // Bypasses escaping!
-}
-```
-
-**Rule**: Avoid `dangerouslySetInnerHTML` unless absolutely necessary + sanitize input
-
----
-
-### Pattern 2: Input Sanitization (Backend)
-
+**❌ BAD**:
 ```csharp
-public static class InputSanitizer
+public string GetUserEmail(User user)
 {
-    public static string SanitizeHtml(string input)
+    return user.Email; // NullReferenceException if user is null
+}
+```
+
+**✅ GOOD**:
+```csharp
+public string? GetUserEmail(User? user)
+{
+    return user?.Email; // Returns null safely
+}
+```
+
+### Pattern 2: Null Checks with Early Return
+
+**✅ GOOD**:
+```csharp
+public async Task<IActionResult> GetGame(Guid gameId)
+{
+    var game = await _repository.GetByIdAsync(gameId);
+    if (game == null)
     {
-        if (string.IsNullOrWhiteSpace(input))
-            return input;
+        return NotFound($"Game {gameId} not found");
+    }
 
-        // Use HtmlAgilityPack or similar
-        var doc = new HtmlDocument();
-        doc.LoadHtml(input);
+    return Ok(game); // game guaranteed non-null here
+}
+```
 
-        // Remove dangerous tags
-        var dangerousTags = new[] { "script", "iframe", "object", "embed", "link" };
-        foreach (var tag in dangerousTags)
-        {
-            var nodes = doc.DocumentNode.SelectNodes($"//{tag}");
-            if (nodes != null)
-            {
-                foreach (var node in nodes)
-                    node.Remove();
-            }
-        }
+### Pattern 3: Nullable Reference Types
 
-        // Remove dangerous attributes
-        var dangerousAttrs = new[] { "onclick", "onerror", "onload" };
-        foreach (var node in doc.DocumentNode.DescendantsAndSelf())
-        {
-            foreach (var attr in dangerousAttrs)
-            {
-                node.Attributes.Remove(attr);
-            }
-        }
+**✅ GOOD** (C# 9+):
+```csharp
+#nullable enable
 
-        return doc.DocumentNode.OuterHtml;
+public class GameService
+{
+    // Compiler enforces null checks
+    public Game? FindGame(Guid id)  // May return null
+    {
+        return _repository.Find(id);
+    }
+
+    public Game GetGame(Guid id)  // Never returns null
+    {
+        return _repository.Find(id) ?? throw new NotFoundException();
     }
 }
 ```
 
-**Use**: Before saving rich text content (TipTap editor, markdown, etc.)
-
----
-
-## Security Checklist (All Features)
-
-### Before Deploying New Feature
-
-- [ ] **Input Validation**: All user inputs validated (length, format, type)
-- [ ] **Path Security**: File uploads use PathSecurity.GenerateSafeFilename()
-- [ ] **PII Masking**: Sensitive data masked in logs (PiiMaskingEnricher)
-- [ ] **IDisposable**: All resources properly disposed (CA2000 enforced)
-- [ ] **SQL Injection**: Parameterized queries only (no string concatenation)
-- [ ] **XSS**: No dangerouslySetInnerHTML OR sanitized
-- [ ] **CSRF**: SameSite cookies configured
-- [ ] **Rate Limiting**: Endpoints have appropriate rate limits
-- [ ] **Authorization**: All endpoints have [Authorize] OR require valid session
-- [ ] **HTTPS**: SecurePolicy = Always (production)
-- [ ] **Security Tests**: 100% coverage on security code
-
----
-
-## Code Quality Standards
-
-### Enforce with Analyzers
-
-**.editorconfig** (Security + Quality):
-
-```ini
-# Security
-dotnet_diagnostic.CA2000.severity = error  # Dispose objects
-dotnet_diagnostic.CA3001.severity = error  # SQL injection
-dotnet_diagnostic.CA3003.severity = error  # File path injection
-dotnet_diagnostic.CA3004.severity = error  # Information disclosure
-dotnet_diagnostic.CA3005.severity = error  # LDAP injection
-dotnet_diagnostic.CA3006.severity = error  # Process command injection
-dotnet_diagnostic.CA3007.severity = error  # Open redirect
-dotnet_diagnostic.CA3008.severity = error  # XPath injection
-dotnet_diagnostic.CA3009.severity = error  # XML injection
-dotnet_diagnostic.CA3010.severity = error  # XAML injection
-dotnet_diagnostic.CA3011.severity = error  # DLL injection
-dotnet_diagnostic.CA3012.severity = error  # Regex injection
-
-# Code Quality
-dotnet_diagnostic.CA1001.severity = warning  # Types with disposable fields
-dotnet_diagnostic.CA1806.severity = error   # Do not ignore method results
-dotnet_diagnostic.CA1816.severity = warning  # Dispose methods
-dotnet_diagnostic.CA2007.severity = none    # ConfigureAwait (not needed in ASP.NET Core)
-dotnet_diagnostic.CA2213.severity = warning  # Disposable fields
-
-# IDE
-dotnet_diagnostic.IDE0067.severity = error  # Dispose objects
-dotnet_diagnostic.IDE0068.severity = warning # Dispose pattern
-dotnet_diagnostic.IDE0069.severity = error  # Dispose fields
+**Enable in .csproj**:
+```xml
+<PropertyGroup>
+  <Nullable>enable</Nullable>
+</PropertyGroup>
 ```
 
-**CI Enforcement**: Build fails if errors present
+---
+
+## CodeQL Integration
+
+### Suppressing False Positives
+
+**When to Suppress**:
+- ✅ Verified false positive (with documentation)
+- ✅ Accepted risk (with justification)
+- ✅ CodeQL limitation (known issue)
+
+**How to Suppress**:
+
+```csharp
+// Suppress with explanation
+#pragma warning disable CA1062 // Validate parameter is non-null
+public void ProcessData(string data)
+{
+    // Justification: data is validated by FluentValidation before this method
+    var processed = data.ToUpper();
+}
+#pragma warning restore CA1062
+```
+
+**Documentation Required**:
+```csharp
+// SECURITY: False positive suppression
+// CodeQL: CWE-476 (Null Reference)
+// Justification: Parameter validated by middleware before controller action
+// Verified: 2025-12-08
+// Reviewer: Security Team
+#pragma warning disable CA1062
+```
+
+See: [CodeQL False Positive Management](./codeql-false-positive-management.md)
+
+### Common False Positives
+
+| CodeQL Rule | Common FP Scenario | Mitigation |
+|-------------|-------------------|------------|
+| **Null Reference** | Parameter validated by middleware | Document validation flow |
+| **Resource Leak** | Disposed by DI container | Add comment explaining lifecycle |
+| **SQL Injection** | Using parameterized queries | Use EF Core or Dapper |
+| **Hardcoded Credentials** | Example/test data | Move to test fixtures |
 
 ---
 
-**Knowledge extracted from**:
-- COMPLETE-INTEGRATION-TEST-FIXES-2025-11-07.md (479 lines)
-- code-quality-fixes-2025-11-09.md
-- Issue #798 (CODE-02), #814, #801
+## Security Checklist
 
-**Status**: Production-ready security and quality patterns
+### Code Review Checklist
+
+**Resource Management**:
+- [ ] All `IDisposable` objects disposed (`using` statement)
+- [ ] `IHttpClientFactory` used instead of `new HttpClient()`
+- [ ] Database connections properly closed
+- [ ] File handles released
+
+**Credential Handling**:
+- [ ] No hardcoded passwords, API keys, or tokens
+- [ ] Credentials loaded from configuration/secrets
+- [ ] Sensitive data never logged
+- [ ] Environment-specific credentials (dev/staging/prod)
+
+**Input Validation**:
+- [ ] All user input validated (length, format, type)
+- [ ] FluentValidation rules for DTOs
+- [ ] Regex patterns use anchors (`^`, `$`)
+- [ ] File uploads validated (size, type, content)
+
+**Output Encoding**:
+- [ ] User input sanitized before logging
+- [ ] Structured logging used (Serilog)
+- [ ] HTML output encoded (Razor auto-encodes)
+- [ ] JSON responses use serializer (not string concat)
+
+**Null Safety**:
+- [ ] Nullable reference types enabled
+- [ ] Null checks for all nullable parameters
+- [ ] Early returns for null cases
+- [ ] Use null-conditional operators (`?.`, `??`)
+
+**Authentication & Authorization**:
+- [ ] All endpoints require authentication (except public)
+- [ ] Authorization policies enforced
+- [ ] Session management secure (httpOnly, secure cookies)
+- [ ] API keys validated and rate-limited
+
+See: [Security Testing Strategy](./security-testing-strategy.md)
+
+---
+
+## Related Documentation
+
+### Security Policies & Strategies
+- **[SECURITY.md](../../SECURITY.md)** - Security policy and reporting
+- **[Security Testing Strategy](./security-testing-strategy.md)** - Comprehensive testing
+- **[OAuth Security](./oauth-security.md)** - OAuth implementation security
+- **[2FA Security Assessment](./2fa-security-assessment-issue-576.md)** - 2FA security (Issue #576)
+
+### CodeQL & Scanning
+- **[CodeQL False Positive Management](./codeql-false-positive-management.md)** - Managing FPs
+- **[Code Scanning Remediation Summary](./code-scanning-remediation-summary.md)** - Historical fixes
+- **[CodeQL C# Status](./codeql-csharp-status-2025-11-18.md)** - Current status
+
+### Configuration & Deployment
+- **[Environment Variables Production](./environment-variables-production.md)** - Production secrets
+- **[Security Headers](./security-headers.md)** - HTTP security headers (ADR-010)
+- **[CORS Configuration](../03-api/cors-configuration.md)** - CORS whitelist (ADR-011)
+
+### Architecture
+- **[Security Testing](../02-development/testing/specialized/security-testing.md)** - Security test patterns
+- **[ADR-010: Security Headers](../01-architecture/adr/adr-010-security-headers-middleware.md)** - Headers middleware
+- **[ADR-011: CORS Whitelist](../01-architecture/adr/adr-011-cors-whitelist-headers.md)** - CORS policy
+
+---
+
+## Quick Reference
+
+### Common Security Violations
+
+| Violation | Pattern | Fix |
+|-----------|---------|-----|
+| **Resource Leak** | `new HttpClient()` | Use `IHttpClientFactory` |
+| **Hardcoded Password** | `Password="secret"` | Use configuration |
+| **Log Injection** | `Log(userInput)` | Sanitize `\n`, `\r` |
+| **Null Reference** | `user.Email` | `user?.Email` |
+| **SQL Injection** | String concat SQL | Use EF Core or parameters |
+| **XSS** | Unencoded HTML | Use Razor (auto-encodes) |
+
+### Secure Coding Standards
+
+**DO**:
+- ✅ Validate all input
+- ✅ Use parameterized queries
+- ✅ Dispose IDisposable objects
+- ✅ Load secrets from configuration
+- ✅ Enable nullable reference types
+- ✅ Use structured logging
+
+**DON'T**:
+- ❌ Trust user input
+- ❌ Hardcode credentials
+- ❌ Ignore null checks
+- ❌ Create new HttpClient instances
+- ❌ Log sensitive data
+- ❌ Disable security features
+
+---
+
+## Changelog
+
+### 2025-12-08: Documentation Consolidation
+
+**Changes**:
+- ✅ Consolidated 6 security remediation guides:
+  - disposable-resource-leak-remediation.md
+  - hardcoded-credentials-remediation.md
+  - null-reference-remediation.md
+  - log-forging-prevention.md
+  - incomplete-sanitization-prevention.md
+  - regex-sanitization-guide.md
+- ✅ Organized by pattern category (Resource, Credential, Validation, Encoding, Error)
+- ✅ Added comprehensive code examples
+- ✅ Added security checklist for code review
+- ✅ Added quick reference table
+- ✅ Updated all cross-references
+
+---
+
+**Version**: 2.0 (Post-Consolidation)
+**Last Updated**: 2025-12-08
+**Patterns Covered**: 20+ security patterns
+**CWE Coverage**: CWE-404, CWE-798, CWE-476, CWE-117, CWE-20, CWE-1287
+**Documentation**: Single comprehensive security patterns guide

@@ -27,6 +27,7 @@ Design tokens are automatically imported in `globals.css`:
 
 Instead of inline styles, use Tailwind classes that reference design tokens:
 
+{% raw %}
 ```tsx
 // ❌ Before
 <div style={{ padding: 24, background: '#f8f9fa', borderRadius: 8 }}>
@@ -34,6 +35,7 @@ Instead of inline styles, use Tailwind classes that reference design tokens:
 // ✅ After
 <div className="p-6 bg-sidebar rounded-md">
 ```
+{% endraw %}
 
 ### 3. Reference This Guide
 
@@ -874,6 +876,7 @@ Just use semantic color names - they adapt automatically:
 
 ### ❌ Don't Use Inline Styles
 
+{% raw %}
 ```tsx
 // ❌ Bad
 <div style={{ padding: 24, background: '#f8f9fa' }}>
@@ -881,6 +884,7 @@ Just use semantic color names - they adapt automatically:
 // ✅ Good
 <div className="p-6 bg-sidebar">
 ```
+{% endraw %}
 
 ### ❌ Don't Use Magic Numbers
 
@@ -904,6 +908,7 @@ Just use semantic color names - they adapt automatically:
 
 ### ❌ Don't Mix Styling Approaches
 
+{% raw %}
 ```tsx
 // ❌ Bad - inconsistent
 <div style={{ padding: 24 }} className="bg-card">
@@ -911,6 +916,7 @@ Just use semantic color names - they adapt automatically:
 // ✅ Good - use Tailwind only
 <div className="p-6 bg-card">
 ```
+{% endraw %}
 
 ---
 

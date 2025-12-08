@@ -26,14 +26,14 @@ public static class ApiKeyEndpoints
                 return Results.BadRequest(new { error = "Key name is required" });
             }
 
-            logger.LogInformation("User {UserId} creating API key '{KeyName}'", session.User.Id, request.KeyName);
+            logger.LogInformation("User {UserId} creating API key '{KeyName}'", session.User!.Id, request.KeyName);
 
             var command = new Api.BoundedContexts.Authentication.Application.Commands.CreateApiKeyManagementCommand(
-                session.User.Id.ToString(),
+                session.User!.Id.ToString(),
                 request);
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
-            logger.LogInformation("API key '{KeyId}' created for user {UserId}", result.ApiKey.Id, session.User.Id);
+            logger.LogInformation("API key '{KeyId}' created for user {UserId}", result.ApiKey.Id, session.User!.Id);
 
             return Results.Created($"/api/v1/api-keys/{result.ApiKey.Id}", result);
         })
@@ -45,7 +45,7 @@ public static class ApiKeyEndpoints
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
             var query = new Api.BoundedContexts.Authentication.Application.Queries.ListApiKeysQuery(
-                session.User.Id.ToString(),
+                session.User!.Id.ToString(),
                 includeRevoked,
                 page,
                 pageSize);
@@ -59,12 +59,12 @@ public static class ApiKeyEndpoints
             // Session validated by RequireSessionFilter
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
-            var query = new Api.BoundedContexts.Authentication.Application.Queries.GetApiKeyQuery(keyId, session.User.Id.ToString());
+            var query = new Api.BoundedContexts.Authentication.Application.Queries.GetApiKeyQuery(keyId, session.User!.Id.ToString());
             var apiKey = await mediator.Send(query, ct).ConfigureAwait(false);
 
             if (apiKey == null)
             {
-                logger.LogWarning("API key {KeyId} not found for user {UserId}", keyId, session.User.Id);
+                logger.LogWarning("API key {KeyId} not found for user {UserId}", keyId, session.User!.Id);
                 return Results.NotFound(new { error = "API key not found" });
             }
 
@@ -77,21 +77,21 @@ public static class ApiKeyEndpoints
             // Session validated by RequireSessionFilter
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
-            logger.LogInformation("User {UserId} updating API key {KeyId}", session.User.Id, keyId);
+            logger.LogInformation("User {UserId} updating API key {KeyId}", session.User!.Id, keyId);
 
             var command = new Api.BoundedContexts.Authentication.Application.Commands.UpdateApiKeyManagementCommand(
                 keyId,
-                session.User.Id.ToString(),
+                session.User!.Id.ToString(),
                 request);
             var updated = await mediator.Send(command, ct).ConfigureAwait(false);
 
             if (updated == null)
             {
-                logger.LogWarning("API key {KeyId} not found for user {UserId}", keyId, session.User.Id);
+                logger.LogWarning("API key {KeyId} not found for user {UserId}", keyId, session.User!.Id);
                 return Results.NotFound(new { error = "API key not found" });
             }
 
-            logger.LogInformation("API key {KeyId} updated by user {UserId}", keyId, session.User.Id);
+            logger.LogInformation("API key {KeyId} updated by user {UserId}", keyId, session.User!.Id);
             return Results.Json(updated);
         })
         .RequireSession(); // Issue #1446: Automatic session validation
@@ -101,18 +101,18 @@ public static class ApiKeyEndpoints
             // Session validated by RequireSessionFilter
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
-            logger.LogInformation("User {UserId} revoking API key {KeyId}", session.User.Id, keyId);
+            logger.LogInformation("User {UserId} revoking API key {KeyId}", session.User!.Id, keyId);
 
-            var command = new Api.BoundedContexts.Authentication.Application.Commands.RevokeApiKeyManagementCommand(keyId, session.User.Id.ToString());
+            var command = new Api.BoundedContexts.Authentication.Application.Commands.RevokeApiKeyManagementCommand(keyId, session.User!.Id.ToString());
             var success = await mediator.Send(command, ct).ConfigureAwait(false);
 
             if (!success)
             {
-                logger.LogWarning("API key {KeyId} not found for user {UserId}", keyId, session.User.Id);
+                logger.LogWarning("API key {KeyId} not found for user {UserId}", keyId, session.User!.Id);
                 return Results.NotFound(new { error = "API key not found" });
             }
 
-            logger.LogInformation("API key {KeyId} revoked by user {UserId}", keyId, session.User.Id);
+            logger.LogInformation("API key {KeyId} revoked by user {UserId}", keyId, session.User!.Id);
             return Results.NoContent();
         })
         .RequireSession(); // Issue #1446: Automatic session validation
@@ -122,21 +122,21 @@ public static class ApiKeyEndpoints
             // Session validated by RequireSessionFilter
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
-            logger.LogInformation("User {UserId} rotating API key {KeyId}", session.User.Id, keyId);
+            logger.LogInformation("User {UserId} rotating API key {KeyId}", session.User!.Id, keyId);
 
             var command = new Api.BoundedContexts.Authentication.Application.Commands.RotateApiKeyCommand(
                 keyId,
-                session.User.Id.ToString(),
+                session.User!.Id.ToString(),
                 request ?? new RotateApiKeyRequest());
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
             if (result == null)
             {
-                logger.LogWarning("API key {KeyId} not found for user {UserId}", keyId, session.User.Id);
+                logger.LogWarning("API key {KeyId} not found for user {UserId}", keyId, session.User!.Id);
                 return Results.NotFound(new { error = "API key not found" });
             }
 
-            logger.LogInformation("API key {OldKeyId} rotated to {NewKeyId} by user {UserId}", keyId, result.NewApiKey.Id, session.User.Id);
+            logger.LogInformation("API key {OldKeyId} rotated to {NewKeyId} by user {UserId}", keyId, result.NewApiKey.Id, session.User!.Id);
             return Results.Json(result);
         })
         .RequireSession(); // Issue #1446: Automatic session validation
@@ -146,12 +146,12 @@ public static class ApiKeyEndpoints
             // Session validated by RequireSessionFilter
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
-            var query = new Api.BoundedContexts.Authentication.Application.Queries.GetApiKeyUsageQuery(keyId, session.User.Id.ToString());
+            var query = new Api.BoundedContexts.Authentication.Application.Queries.GetApiKeyUsageQuery(keyId, session.User!.Id.ToString());
             var usage = await mediator.Send(query, ct).ConfigureAwait(false);
 
             if (usage == null)
             {
-                logger.LogWarning("API key {KeyId} not found for user {UserId}", keyId, session.User.Id);
+                logger.LogWarning("API key {KeyId} not found for user {UserId}", keyId, session.User!.Id);
                 return Results.NotFound(new { error = "API key not found" });
             }
 
@@ -165,9 +165,9 @@ public static class ApiKeyEndpoints
             // Session validated AND Admin role checked by RequireAdminSessionFilter
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
-            logger.LogInformation("Admin {AdminId} permanently deleting API key {KeyId}", session.User.Id, keyId);
+            logger.LogInformation("Admin {AdminId} permanently deleting API key {KeyId}", session.User!.Id, keyId);
 
-            var command = new Api.BoundedContexts.Authentication.Application.Commands.DeleteApiKeyCommand(keyId, session.User.Id.ToString());
+            var command = new Api.BoundedContexts.Authentication.Application.Commands.DeleteApiKeyCommand(keyId, session.User!.Id.ToString());
             var success = await mediator.Send(command, ct).ConfigureAwait(false);
 
             if (!success)
@@ -176,7 +176,7 @@ public static class ApiKeyEndpoints
                 return Results.NotFound(new { error = "API key not found" });
             }
 
-            logger.LogInformation("API key {KeyId} permanently deleted by admin {AdminId}", keyId, session.User.Id);
+            logger.LogInformation("API key {KeyId} permanently deleted by admin {AdminId}", keyId, session.User!.Id);
             return Results.NoContent();
         })
         .RequireAdminSession(); // Issue #1446: Automatic admin session validation

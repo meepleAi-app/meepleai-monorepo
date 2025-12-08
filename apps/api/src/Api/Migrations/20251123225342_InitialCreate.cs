@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
+#pragma warning disable MA0048 // File name must match type name - EF Core migration
 
 namespace Api.Migrations
 {

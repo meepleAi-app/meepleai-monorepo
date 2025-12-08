@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
+#pragma warning disable MA0048 // File name must match type name - Interface and enum in same file
 namespace Api.Infrastructure.BackgroundTasks;
 
 /// <summary>

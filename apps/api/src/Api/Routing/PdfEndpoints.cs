@@ -1,4 +1,4 @@
-using Api.BoundedContexts.DocumentProcessing.Application.Commands;
+﻿using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Application.Queries;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
@@ -56,7 +56,7 @@ public static class PdfEndpoints
                 return Results.BadRequest(new { error = "validation_failed", details = new Dictionary<string, string>(StringComparer.Ordinal) { ["file"] = "No file provided" } });
             }
 
-            var userId = session.User.Id;
+            var userId = session!.User!.Id;
 
             logger.LogInformation("User {UserId} uploading PDF for game {GameId}", userId, gameId);
 
@@ -182,16 +182,16 @@ public static class PdfEndpoints
                 return Results.NotFound(new { error = "PDF not found" });
             }
 
-            var userId = session.User.Id;
+            var userId = session!.User!.Id;
 
             // Authorization: User can only download their own PDFs unless admin
-            bool isAdmin = string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+            bool isAdmin = string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
             bool isOwner = pdf.UploadedByUserId == userId;
 
             if (!isAdmin && !isOwner)
             {
                 logger.LogWarning("User {UserId} denied access to download PDF {PdfId} (owner: {OwnerId})",
-                    session.User.Id, pdfId, pdf.UploadedByUserId);
+                    session!.User!.Id, pdfId, pdf.UploadedByUserId);
                 return Results.Forbid();
             }
 
@@ -204,7 +204,7 @@ public static class PdfEndpoints
                 return Results.NotFound(new { error = "PDF file not found in storage" });
             }
 
-            logger.LogInformation("User {UserId} downloading PDF {PdfId}", session.User.Id, pdfId);
+            logger.LogInformation("User {UserId} downloading PDF {PdfId}", session!.User!.Id, pdfId);
 
             // Return file as inline (viewable in browser) with proper content type
             return Results.Stream(fileStream, contentType: pdf.ContentType ?? "application/pdf", fileDownloadName: pdf.FileName, enableRangeProcessing: true);
@@ -227,28 +227,28 @@ public static class PdfEndpoints
                 return Results.NotFound(new { error = "PDF not found" });
             }
 
-            var userId = session.User.Id;
+            var userId = session!.User!.Id;
 
             // RLS: Check permissions
-            bool isAdmin = string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+            bool isAdmin = string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
             bool isOwner = pdf.UploadedByUserId == userId;
 
             if (!isAdmin && !isOwner)
             {
                 // Audit log access denial
                 await auditService.LogAsync(
-                    session.User.Id.ToString(),
+                    session!.User!.Id.ToString(),
                     "ACCESS_DENIED",
                     "PdfDocument",
                     pdfId.ToString(),
                     "Denied",
-                    $"User attempted to delete PDF owned by another user. User role: {session.User.Role}, Owner: {pdf.UploadedByUserId}. RLS scope: own resources only.",
+                    $"User attempted to delete PDF owned by another user. User role: {session!.User!.Role}, Owner: {pdf.UploadedByUserId}. RLS scope: own resources only.",
                     null,
                     null,
                     ct);
 
                 logger.LogWarning("User {UserId} with role {Role} denied access to delete PDF {PdfId} (owner: {OwnerId})",
-                    session.User.Id, session.User.Role, pdfId, pdf.UploadedByUserId);
+                    session!.User!.Id, session!.User!.Role, pdfId, pdf.UploadedByUserId);
 
                 return Results.StatusCode(StatusCodes.Status403Forbidden);
             }
@@ -262,16 +262,16 @@ public static class PdfEndpoints
                 return Results.BadRequest(new { error = result.Message });
             }
 
-            logger.LogInformation("User {UserId} deleted PDF {PdfId}", session.User.Id, pdfId);
+            logger.LogInformation("User {UserId} deleted PDF {PdfId}", session!.User!.Id, pdfId);
 
             // Audit log successful deletion
             await auditService.LogAsync(
-                session.User.Id.ToString(),
+                session!.User!.Id.ToString(),
                 "DELETE",
                 "PdfDocument",
                 pdfId.ToString(),
                 "Success",
-                $"PDF deleted successfully by user with role: {session.User.Role}",
+                $"PDF deleted successfully by user with role: {session!.User!.Role}",
                 null,
                 null,
                 ct);
@@ -294,11 +294,11 @@ public static class PdfEndpoints
                 return Results.NotFound(new { error = "PDF not found" });
             }
 
-            var userId = session.User.Id;
+            var userId = session!.User!.Id;
 
             // Authorization: User can only view their own PDFs unless admin
             if (pdf.UploadedByUserId != userId &&
-                !string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+                !string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
             {
                 return Results.Forbid();
             }
@@ -345,11 +345,11 @@ public static class PdfEndpoints
                 return Results.NotFound(new { error = "PDF not found" });
             }
 
-            var userId = session.User.Id;
+            var userId = session!.User!.Id;
 
             // Authorization: User can only cancel their own PDFs unless admin
             if (pdf.UploadedByUserId != userId &&
-                !string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+                !string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
             {
                 return Results.Forbid();
             }
@@ -369,7 +369,7 @@ public static class PdfEndpoints
                 return Results.BadRequest(new { error = "Processing task not found or already completed" });
             }
 
-            logger.LogInformation("User {UserId} cancelled processing for PDF {PdfId}", session.User.Id, pdfId);
+            logger.LogInformation("User {UserId} cancelled processing for PDF {PdfId}", session!.User!.Id, pdfId);
 
             return Results.Ok(new { message = "Processing cancellation requested" });
         })
@@ -382,13 +382,13 @@ public static class PdfEndpoints
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(session.User.Role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(session!.User!.Role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
             {
                 return Results.StatusCode(StatusCodes.Status403Forbidden);
             }
 
-            logger.LogInformation("User {UserId} generating RuleSpec from PDF {PdfId}", session.User.Id, pdfId);
+            logger.LogInformation("User {UserId} generating RuleSpec from PDF {PdfId}", session!.User!.Id, pdfId);
 
             try
             {
@@ -412,14 +412,14 @@ public static class PdfEndpoints
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(session.User.Role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(session!.User!.Role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
             {
-                logger.LogWarning("User {UserId} with role {Role} attempted to index PDF without permission", session.User.Id, session.User.Role);
+                logger.LogWarning("User {UserId} with role {Role} attempted to index PDF without permission", session!.User!.Id, session!.User!.Role);
                 return Results.StatusCode(StatusCodes.Status403Forbidden);
             }
 
-            logger.LogInformation("User {UserId} indexing PDF {PdfId}", session.User.Id, pdfId);
+            logger.LogInformation("User {UserId} indexing PDF {PdfId}", session!.User!.Id, pdfId);
 
             var result = await mediator.Send(new IndexPdfCommand(pdfId.ToString()), ct).ConfigureAwait(false);
 
@@ -452,14 +452,14 @@ public static class PdfEndpoints
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(session.User.Role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(session!.User!.Role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
             {
-                logger.LogWarning("User {UserId} with role {Role} attempted to extract PDF text without permission", session.User.Id, session.User.Role);
+                logger.LogWarning("User {UserId} with role {Role} attempted to extract PDF text without permission", session!.User!.Id, session!.User!.Role);
                 return Results.StatusCode(StatusCodes.Status403Forbidden);
             }
 
-            logger.LogInformation("User {UserId} extracting text from PDF {PdfId}", session.User.Id, pdfId);
+            logger.LogInformation("User {UserId} extracting text from PDF {PdfId}", session!.User!.Id, pdfId);
 
             var result = await mediator.Send(new ExtractPdfTextCommand(pdfId), ct).ConfigureAwait(false);
 
@@ -505,7 +505,7 @@ public static class PdfEndpoints
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            var userId = session.User.Id;
+            var userId = session!.User!.Id;
 
             logger.LogInformation(
                 "User {UserId} initializing chunked upload for game {GameId}, file {FileName} ({FileSize} bytes)",
@@ -545,7 +545,7 @@ public static class PdfEndpoints
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            var userId = session.User.Id;
+            var userId = session!.User!.Id;
 
             var form = await context.Request.ReadFormAsync(ct).ConfigureAwait(false);
 
@@ -605,7 +605,7 @@ public static class PdfEndpoints
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            var userId = session.User.Id;
+            var userId = session!.User!.Id;
 
             logger.LogInformation("User {UserId} completing chunked upload session {SessionId}",
                 userId, request.SessionId);
@@ -652,7 +652,7 @@ public static class PdfEndpoints
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            var userId = session.User.Id;
+            var userId = session!.User!.Id;
 
             var query = new GetChunkedUploadStatusQuery(sessionId, userId);
             var result = await mediator.Send(query, ct).ConfigureAwait(false);

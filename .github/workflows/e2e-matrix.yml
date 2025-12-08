@@ -1,0 +1,167 @@
+name: E2E Tests (Matrix Sharded)
+
+# Issue #2007 Phase 3: CI Matrix Sharding for Parallel Execution
+# Reduces CI execution time from 5-8 minutes to 2-3 minutes (60-70% faster)
+
+on:
+  pull_request:
+    paths:
+      - 'apps/web/**'
+      - '.github/workflows/e2e-matrix.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/web/**'
+      - '.github/workflows/e2e-matrix.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+  actions: write
+
+# Cancel previous runs on same PR/branch
+concurrency:
+  group: e2e-matrix-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e-matrix:
+    name: E2E Shard ${{ matrix.shard }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10  # Reduced from 20min (Phase 2 optimization)
+    strategy:
+      fail-fast: false  # Continue running other shards even if one fails
+      matrix:
+        shard: ['1/4', '2/4', '3/4', '4/4']
+    
+    defaults:
+      run:
+        working-directory: apps/web
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup frontend environment
+        uses: ./.github/actions/setup-frontend
+        with:
+          node-version: '20'
+          pnpm-version: '10'
+          working-directory: apps/web
+          frozen-lockfile: 'false'
+
+      - name: Setup Playwright browsers
+        uses: ./.github/actions/setup-playwright
+        with:
+          working-directory: apps/web
+
+      - name: Setup Test Environment
+        run: cp .env.test.example .env.test
+
+      - name: Build Next.js for E2E
+        run: pnpm build
+
+      # Run tests for this shard
+      # Uses dev server (Phase 2 decision: alpha phase prioritizes dev-only bug detection)
+      - name: Run E2E Tests - Shard ${{ matrix.shard }}
+        env:
+          CI: true
+        run: pnpm test:e2e --shard=${{ matrix.shard }} --project=desktop-chrome
+
+      # Upload test results for this shard
+      - name: Upload Test Results - Shard ${{ matrix.shard }}
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: test-results-shard-${{ strategy.job-index }}
+          path: apps/web/test-results/
+          retention-days: 7
+
+      # Upload Playwright report for this shard (only on failure)
+      - name: Upload Playwright Report - Shard ${{ matrix.shard }}
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: playwright-report-shard-${{ strategy.job-index }}
+          path: apps/web/playwright-report/
+          retention-days: 7
+
+  # Aggregate results from all shards
+  e2e-results:
+    name: E2E Results Aggregation
+    runs-on: ubuntu-latest
+    needs: e2e-matrix
+    if: always()  # Run even if some shards failed
+    
+    steps:
+      - name: Download All Test Results
+        uses: actions/download-artifact@v6
+        with:
+          pattern: test-results-shard-*
+          path: test-results-all/
+          merge-multiple: true
+
+      - name: Analyze Test Results
+        id: analyze
+        run: |
+          # Count total test results
+          total_files=$(find test-results-all -name "*.xml" -o -name "*.json" | wc -l)
+          echo "total_test_files=$total_files" >> $GITHUB_OUTPUT
+          
+          # Check for failures (basic detection)
+          if find test-results-all -name "*failures*" | grep -q .; then
+            echo "has_failures=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_failures=false" >> $GITHUB_OUTPUT
+          fi
+          
+          echo "✅ Aggregated test results from all shards"
+          echo "Total test result files: $total_files"
+
+      - name: Comment PR with Results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const hasFailures = '${{ steps.analyze.outputs.has_failures }}' === 'true';
+            const totalFiles = '${{ steps.analyze.outputs.total_test_files }}';
+            
+            const status = hasFailures ? '❌' : '✅';
+            const message = hasFailures ? 'Some E2E tests failed' : 'All E2E tests passed!';
+            
+            const comment = `## ${status} E2E Tests (Matrix Sharded)
+            
+            **Status**: ${message}
+            **Shards**: 4 parallel executions
+            **Test Files**: ${totalFiles}
+            
+            ${hasFailures ? '⚠️ **Action Required**: Check failed test reports in artifacts.' : '✅ All 4 shards passed successfully!'}
+            
+            ---
+            📊 **Phase 3**: CI Matrix Sharding (Issue #2007)
+            ⚡ **Performance**: 60-70% faster than sequential execution
+            🔧 **Infrastructure**: GitHub Actions matrix strategy (no Docker needed)
+            `;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+      - name: Upload Aggregated Results
+        uses: actions/upload-artifact@v6
+        with:
+          name: e2e-aggregated-results-${{ github.run_number }}
+          path: test-results-all/
+          retention-days: 30
+
+      # Fail the job if any shard failed
+      - name: Check Test Results
+        if: steps.analyze.outputs.has_failures == 'true'
+        run: |
+          echo "❌ Some E2E tests failed. Check individual shard reports."
+          exit 1

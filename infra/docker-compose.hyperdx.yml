@@ -18,6 +18,7 @@ services:
     image: docker.hyperdx.io/hyperdx/hyperdx-local:latest
     container_name: meepleai-hyperdx
     restart: unless-stopped
+    profiles: [observability, full]
 
     ports:
       # Web UI - Custom port to avoid conflict with meepleai-api:8080

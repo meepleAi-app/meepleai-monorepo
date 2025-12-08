@@ -105,7 +105,14 @@ apps/api/src/Api/BoundedContexts/
 3. **Start infrastructure services**
    ```bash
    cd infra
-   docker compose up -d postgres qdrant redis n8n
+   # Option 1: Full stack (all services)
+   docker compose up -d
+
+   # Option 2: Minimal profile (core only - faster for development)
+   ./start-minimal.sh
+
+   # Option 3: Dev profile (core + basic monitoring)
+   ./start-dev.sh
    ```
 
 4. **Run the API**
@@ -236,10 +243,53 @@ pnpm typecheck
 
 ### Infrastructure
 
-```bash
-# Start all services
-docker compose up -d
+#### Docker Compose Profiles (Issue #702)
 
+MeepleAI supports Docker Compose profiles for selective service startup, reducing resource usage during development.
+
+**Available Profiles**:
+- **minimal**: Core services only (postgres, redis, qdrant, api, web)
+- **dev**: Development + basic observability (minimal + prometheus, grafana)
+- **observability**: Full monitoring stack (dev + alertmanager, hyperdx)
+- **ai**: AI/ML services (ollama, embedding, unstructured, smoldocling, reranker)
+- **automation**: Workflow automation (n8n)
+- **full**: Everything (default - backward compatible)
+
+**Quick Start Scripts**:
+```bash
+# Minimal (core only - fastest)
+cd infra && ./start-minimal.sh
+
+# Development (core + basic monitoring)
+cd infra && ./start-dev.sh
+
+# Full observability (core + complete monitoring)
+cd infra && ./start-observability.sh
+
+# AI/ML services
+cd infra && ./start-ai.sh
+
+# Automation (n8n)
+cd infra && ./start-automation.sh
+
+# Everything (default)
+cd infra && ./start-full.sh
+```
+
+**Manual Profile Usage**:
+```bash
+# Start with specific profile
+docker compose --profile minimal up -d
+
+# Start with multiple profiles
+docker compose --profile minimal --profile ai up -d
+
+# Start full stack (default via .env)
+docker compose up -d
+```
+
+**Common Commands**:
+```bash
 # View logs
 docker compose logs -f api
 

@@ -2,6 +2,7 @@ services:
   postgres:
     image: postgres:16.4-alpine3.20
     restart: unless-stopped
+    profiles: [minimal, dev, observability, ai, automation, full]
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-meeple}
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
@@ -38,6 +39,7 @@ services:
   qdrant:
     image: qdrant/qdrant:v1.12.4
     restart: unless-stopped
+    profiles: [minimal, dev, observability, ai, automation, full]
     ports:
       - "127.0.0.1:6333:6333"  # HTTP REST API
       - "127.0.0.1:6334:6334"  # gRPC API
@@ -63,6 +65,7 @@ services:
   redis:
     image: redis:7.4.1-alpine3.20
     restart: unless-stopped
+    profiles: [minimal, dev, observability, ai, automation, full]
     command: ["sh","-c","redis-server --appendonly yes --requirepass $(cat /run/secrets/redis-password) --maxmemory 768mb --maxmemory-policy allkeys-lru"]
     ports:
       - "127.0.0.1:6379:6379"
@@ -87,6 +90,7 @@ services:
   ollama:
     image: ollama/ollama:0.3.14
     restart: unless-stopped
+    profiles: [ai, full]
     environment:
       # Memory management for CPU-only mode
       OLLAMA_MAX_LOADED_MODELS: 3
@@ -124,6 +128,7 @@ services:
   ollama-pull:
     image: curlimages/curl:8.12.1
     container_name: ollama-pull
+    profiles: [ai, full]
     depends_on:
       ollama:
         condition: service_healthy
@@ -151,6 +156,7 @@ services:
       context: ../apps/embedding-service
       dockerfile: ./Dockerfile
     restart: unless-stopped
+    profiles: [ai, full]
     ports:
       - "8000:8000"
     healthcheck:
@@ -184,6 +190,7 @@ services:
       dockerfile: ./Dockerfile
     container_name: meepleai-unstructured
     restart: unless-stopped
+    profiles: [ai, full]
     ports:
       - "8001:8001"
     environment:
@@ -224,6 +231,7 @@ services:
       dockerfile: ./Dockerfile
     container_name: meepleai-smoldocling
     restart: unless-stopped
+    profiles: [ai, full]
     ports:
       - "8002:8002"
     environment:
@@ -276,6 +284,7 @@ services:
       dockerfile: ./Dockerfile
     container_name: meepleai-reranker
     restart: unless-stopped
+    profiles: [ai, full]
     ports:
       - "127.0.0.1:8003:8003"  # Bind to localhost only for security
     environment:
@@ -318,6 +327,7 @@ services:
   prometheus:
     image: prom/prometheus:v3.7.0
     restart: unless-stopped
+    profiles: [dev, observability, full]
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
@@ -350,6 +360,7 @@ services:
   alertmanager:
     image: prom/alertmanager:v0.27.0
     restart: unless-stopped
+    profiles: [observability, full]
     env_file:
       - ./env/alertmanager.env
     secrets:
@@ -407,6 +418,7 @@ services:
   grafana:
     image: grafana/grafana:11.4.0
     restart: unless-stopped
+    profiles: [dev, observability, full]
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD__FILE: /run/secrets/grafana-admin-password
@@ -444,6 +456,7 @@ services:
   n8n:
     image: n8nio/n8n:1.114.4
     restart: unless-stopped
+    profiles: [automation, full]
     environment:
       # Node.js heap size tuning (75% of container limit minus overhead)
       NODE_OPTIONS: "--max-old-space-size=512"
@@ -478,6 +491,7 @@ services:
       context: ../apps/api
       dockerfile: ./src/Api/Dockerfile
     restart: unless-stopped
+    profiles: [minimal, dev, observability, ai, automation, full]
     env_file:
       - ./env/api.env.dev
     environment:
@@ -520,8 +534,8 @@ services:
         condition: service_started
       redis:
         condition: service_healthy
-      ollama:
-        condition: service_healthy
+      # ollama dependency removed - optional service for local embeddings
+      # API works without it (uses OpenRouter for LLM, embedding-service for embeddings)
     healthcheck:
       test: ["CMD-SHELL", "curl --fail http://localhost:8080/ || exit 1"]
       interval: 10s
@@ -544,6 +558,7 @@ services:
       context: ../apps/web
       dockerfile: ./Dockerfile
     restart: unless-stopped
+    profiles: [minimal, dev, observability, ai, automation, full]
     env_file:
       - ./env/web.env.dev
     ports:

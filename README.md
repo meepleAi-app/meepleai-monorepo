@@ -288,6 +288,28 @@ docker compose --profile minimal --profile ai up -d
 docker compose up -d
 ```
 
+**Local Customization** (Issue #707):
+
+For local development customizations without modifying docker-compose.yml:
+
+```bash
+# Copy the example override file
+cd infra
+cp docker-compose.override.yml.example docker-compose.override.yml
+
+# Edit docker-compose.override.yml for your needs:
+# - Port customization (avoid conflicts)
+# - Debug logging (verbose output)
+# - Resource adjustments (increase limits)
+# - Service disabling (faster startup)
+
+# Docker Compose automatically uses override file when present
+docker compose up -d
+
+# Validate your override configuration
+docker compose config
+```
+
 **Common Commands**:
 ```bash
 # View logs

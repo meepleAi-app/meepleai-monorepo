@@ -495,6 +495,53 @@ Track weekly:
 
 ---
 
-**Act Status**: ✅ Complete
+## Phase 2 Implementation Decision (2025-12-08)
+
+### Context
+Phase 1 completed successfully (PR #2011 merged). CI execution blocked by missing production build (`MODULE_NOT_FOUND: .next/standalone/server.js`).
+
+### Two Options Analyzed
+
+**Option 1: Production Build with CI Setup**
+- Pro: Production-like environment, 50-70% faster
+- Con: Build overhead (+30-60s), doesn't detect dev-only bugs, conflicts with "siamo in alpha"
+- Time: 1-2 hours
+- Confidence: 95%
+
+**Option 2: Dev Server Always** ✅ **SELECTED**
+- Pro: Zero build overhead, detects dev-only bugs, faster feedback, aligned with alpha phase
+- Con: Memory pressure (mitigated by sharding), slower than production (OK for alpha)
+- Time: 15-30 minutes
+- Confidence: 95%
+
+### Decision Rationale
+1. **User Context Priority**: "siamo in alpha, non aspettare CI" → dev server appropriate
+2. **Empirical Evidence**: 4/4 shards passed locally with dev server
+3. **Simplicity**: Minimal change (remove CI conditional)
+4. **Risk Mitigation**: Phase 1 safeguards active (sharding, health checks, 4GB heap)
+5. **Future Flexibility**: Production build can be added via ENV_VAR in beta phase
+
+### Implementation
+**File**: `apps/web/playwright.config.ts` (lines 141-148)
+- **Before**: Conditional `process.env.CI === 'true' ? production : dev`
+- **After**: Always dev server `'node --max-old-space-size=4096 ./node_modules/next/dist/bin/next dev -p 3000'`
+- **Comment Updated**: Explains alpha phase rationale and future evolution path
+
+### Validation
+✅ Test execution successful: `pnpm test:e2e:shard1` (21/21 passed)
+✅ Dev server auto-starts correctly
+✅ Health checks operational
+✅ Memory monitoring active
+
+### Expected Outcomes
+- ✅ CI unblocked (tests can run without build step)
+- ✅ Dev-only bugs detectable (aligns with alpha testing)
+- ✅ Fast feedback loop maintained
+- ⚠️ Production build optimization deferred to beta phase
+
+---
+
+**Act Status**: ✅ Complete (Phase 1 + Phase 2 decision documented)
 **Implementation Decision**: ✅ GO - Proceed with Phase 1 immediately
-**Review Date**: After Phase 1 completion (expected end of Week 1)
+**Phase 2 Decision**: ✅ Dev server always (alpha phase appropriate)
+**Review Date**: After Phase 2 implementation complete (expected: today)

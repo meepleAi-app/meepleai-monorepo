@@ -138,16 +138,13 @@ export default defineConfig<ChromaticConfig>({
     process.env.PARALLEL_E2E === 'true'
       ? undefined
       : {
-          // Issue #1868: Use production server in CI (after pnpm build), dev server locally
-          // Issue #1951: Use standalone server in CI (compatible with output: 'standalone')
-          // Issue #1951: In CI, NEXT_PUBLIC_API_BASE=http://localhost:8081 (mock server started in CI step)
-          // Issue #2008: Check CI === 'true' (not just truthy) to avoid treating CI=false as true
-          command:
-            process.env.CI === 'true'
-              ? 'cross-env PORT=3000 node .next/standalone/server.js'
-              : 'node --max-old-space-size=4096 ./node_modules/next/dist/bin/next dev -p 3000',
+          // Issue #2007 Phase 2: Always use dev server (alpha phase priority)
+          // Rationale: Dev server detects dev-only bugs, faster feedback loop
+          // Memory managed via sharding (4 shards) + health checks + 4GB heap
+          // Production build can be added via ENV_VAR in beta phase if needed
+          command: 'node --max-old-space-size=4096 ./node_modules/next/dist/bin/next dev -p 3000',
           url: 'http://localhost:3000',
-          reuseExistingServer: process.env.CI !== 'true',
-          timeout: process.env.CI === 'true' ? 30 * 1000 : 180 * 1000, // 30s for prod, 3min for dev startup
+          reuseExistingServer: !process.env.CI,
+          timeout: 180 * 1000, // 3min for dev server startup
         },
 });

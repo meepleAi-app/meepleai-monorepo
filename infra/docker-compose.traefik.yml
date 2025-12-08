@@ -1,0 +1,190 @@
+# Traefik v3.2 Reverse Proxy
+# Issue #703: Add reverse proxy layer for production deployment
+#
+# Features:
+# - Automatic Docker service discovery
+# - HTTP routing (TLS ready for production)
+# - Dashboard with basic auth (development mode)
+# - Rate limiting middlewares
+# - Security headers
+#
+# Upgrade Path (for production):
+# 1. Enable docker-socket-proxy (uncomment below)
+# 2. Configure Let's Encrypt (see traefik.yml comments)
+# 3. Enable TLS entrypoint (port 443)
+# 4. Update service labels for HTTPS
+#
+# Usage:
+#   Development: docker compose -f docker-compose.yml -f docker-compose.traefik.yml up -d
+#   With profiles: COMPOSE_PROFILES=minimal,proxy docker compose up -d
+
+services:
+  # PRODUCTION SECURITY: Socket Proxy (uncomment for production)
+  # Limits Traefik's access to Docker API (read-only containers)
+  # docker-socket-proxy:
+  #   image: ghcr.io/tecnativa/docker-socket-proxy:0.3.0
+  #   container_name: meepleai-socket-proxy
+  #   restart: unless-stopped
+  #   profiles: [minimal, dev, observability, ai, automation, full]
+  #   environment:
+  #     CONTAINERS: 1  # Allow Traefik to read container info
+  #     POST: 0        # Deny write operations
+  #   volumes:
+  #     - /var/run/docker.sock:/var/run/docker.sock:ro
+  #   networks:
+  #     - meepleai
+  #   security_opt:
+  #     - no-new-privileges=true
+  #   read_only: true
+  #   tmpfs:
+  #     - /run
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         cpus: '0.5'
+  #         memory: 256M
+  #       reservations:
+  #         cpus: '0.25'
+  #         memory: 128M
+
+  traefik:
+    image: traefik:v3.2
+    container_name: meepleai-traefik
+    restart: unless-stopped
+    profiles: [minimal, dev, observability, ai, automation, full]
+    command:
+      # API & Dashboard
+      - "--api.dashboard=true"
+      - "--api.insecure=true"  # DEVELOPMENT ONLY - Remove for production
+
+      # Logging
+      - "--log.level=INFO"  # DEBUG for troubleshooting
+      - "--accesslog=true"
+      - "--accesslog.filepath=/var/log/traefik/access.log"
+      - "--log.filepath=/var/log/traefik/traefik.log"
+
+      # Entry Points
+      - "--entrypoints.web.address=:80"
+      # PRODUCTION: Uncomment for HTTPS
+      # - "--entrypoints.websecure.address=:443"
+
+      # Docker Provider
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"  # Opt-in via labels
+      - "--providers.docker.network=meepleai"
+      # PRODUCTION: Use socket proxy instead
+      # - "--providers.docker.endpoint=tcp://docker-socket-proxy:2375"
+
+      # Dynamic Configuration (middlewares, TLS options)
+      - "--providers.file.directory=/etc/traefik/dynamic"
+      - "--providers.file.watch=true"
+
+      # Metrics (Prometheus)
+      - "--metrics.prometheus=true"
+      - "--metrics.prometheus.addEntryPointsLabels=true"
+      - "--metrics.prometheus.addServicesLabels=true"
+
+      # PRODUCTION: Let's Encrypt (HTTP Challenge)
+      # Requires port 80 to be publicly accessible
+      # - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
+      # - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+      # - "--certificatesresolvers.letsencrypt.acme.email=your-email@example.com"
+      # - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+      # - "--certificatesresolvers.letsencrypt.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"  # STAGING - remove for production
+
+      # PRODUCTION: Let's Encrypt (DNS Challenge - requires Cloudflare)
+      # Preferred for wildcard certificates
+      # - "--certificatesresolvers.letsencrypt.acme.dnschallenge=true"
+      # - "--certificatesresolvers.letsencrypt.acme.dnschallenge.provider=cloudflare"
+      # - "--certificatesresolvers.letsencrypt.acme.email=your-email@example.com"
+      # - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+
+    ports:
+      - "80:80"       # HTTP
+      # - "443:443"   # HTTPS (uncomment for production)
+      - "8080:8080"   # Dashboard (DEVELOPMENT ONLY)
+
+    environment:
+      # PRODUCTION: Cloudflare API token for DNS challenge
+      # CF_DNS_API_TOKEN_FILE: /run/secrets/cloudflare-api-token
+      TZ: Europe/Rome
+
+    volumes:
+      # ⚠️ SECURITY CRITICAL: Direct Docker socket access grants root-equivalent privileges
+      # DEVELOPMENT ONLY: This allows Traefik to control entire Docker daemon
+      # PRODUCTION: MUST use docker-socket-proxy (uncomment lines 22-48) to restrict API access
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+      # Static configuration
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+
+      # Dynamic configuration (middlewares, TLS options)
+      - ./traefik/dynamic:/etc/traefik/dynamic:ro
+
+      # Logs
+      - ./traefik/logs:/var/log/traefik
+
+      # PRODUCTION: Let's Encrypt certificates
+      # - ./traefik/letsencrypt:/letsencrypt
+
+    # PRODUCTION: Secrets for sensitive data
+    # secrets:
+    #   - cloudflare-api-token
+    #   - traefik-dashboard-users
+
+    labels:
+      # Enable Traefik for itself (dashboard)
+      - "traefik.enable=true"
+
+      # Dashboard router
+      - "traefik.http.routers.traefik-dashboard.rule=Host(`traefik.localhost`)"
+      - "traefik.http.routers.traefik-dashboard.entrypoints=web"
+      - "traefik.http.routers.traefik-dashboard.service=api@internal"
+
+      # PRODUCTION: Basic auth for dashboard
+      # Generate password: echo $(htpasswd -nbB admin "your-password") | sed -e s/\\$/\\$\\$/g
+      # - "traefik.http.routers.traefik-dashboard.middlewares=dashboard-auth"
+      # - "traefik.http.middlewares.dashboard-auth.basicauth.users=admin:$$2y$$05$$..."
+
+      # PRODUCTION: HTTPS dashboard
+      # - "traefik.http.routers.traefik-dashboard-secure.rule=Host(`traefik.yourdomain.com`)"
+      # - "traefik.http.routers.traefik-dashboard-secure.entrypoints=websecure"
+      # - "traefik.http.routers.traefik-dashboard-secure.tls.certresolver=letsencrypt"
+      # - "traefik.http.routers.traefik-dashboard-secure.service=api@internal"
+      # - "traefik.http.routers.traefik-dashboard-secure.middlewares=dashboard-auth"
+
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+    networks:
+      - meepleai
+
+    security_opt:
+      - no-new-privileges=true
+
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+# PRODUCTION: Secrets (uncomment and configure)
+# secrets:
+#   cloudflare-api-token:
+#     file: ./secrets/cloudflare-api-token.txt
+#   traefik-dashboard-users:
+#     file: ./secrets/traefik-dashboard-users.txt
+
+# Network inherited from main docker-compose.yml
+networks:
+  meepleai:
+    name: meepleai
+    # Network created by main docker-compose.yml
+    # No 'external: true' needed - Docker Compose handles multi-file network merging

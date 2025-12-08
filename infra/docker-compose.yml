@@ -6,6 +6,11 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-meeple}
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
       POSTGRES_DB: ${POSTGRES_DB:-meepleai}
+      # Performance tuning aligned with resource limits
+      POSTGRES_SHARED_BUFFERS: 512MB
+      POSTGRES_EFFECTIVE_CACHE_SIZE: 1536MB
+      POSTGRES_WORK_MEM: 16MB
+      POSTGRES_MAINTENANCE_WORK_MEM: 256MB
     ports:
       - "127.0.0.1:5432:5432"
     volumes:
@@ -20,6 +25,15 @@ services:
       retries: 10
     networks:
       - meepleai
+    shm_size: 1g
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '1.0'
+          memory: 1G
 
   qdrant:
     image: qdrant/qdrant:v1.12.4
@@ -37,11 +51,19 @@ services:
       start_period: 10s
     networks:
       - meepleai
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
 
   redis:
     image: redis:7.4.1-alpine3.20
     restart: unless-stopped
-    command: ["sh","-c","redis-server --appendonly yes --requirepass $(cat /run/secrets/redis-password)"]
+    command: ["sh","-c","redis-server --appendonly yes --requirepass $(cat /run/secrets/redis-password) --maxmemory 768mb --maxmemory-policy allkeys-lru"]
     ports:
       - "127.0.0.1:6379:6379"
     healthcheck:
@@ -53,10 +75,24 @@ services:
       - meepleai
     secrets:
       - redis-password
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
 
   ollama:
     image: ollama/ollama:0.3.14
     restart: unless-stopped
+    environment:
+      # Memory management for CPU-only mode
+      OLLAMA_MAX_LOADED_MODELS: 3
+      OLLAMA_KEEP_ALIVE: 5m
+      # Uncomment if using GPU
+      # OLLAMA_GPU_MEMORY_FRACTION: 0.80
     ports:
       - "11434:11434"
     volumes:
@@ -69,8 +105,15 @@ services:
       start_period: 20s
     networks:
       - meepleai
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          memory: 8G
+        reservations:
+          cpus: '2.0'
+          memory: 4G
     # Uncomment if you have NVIDIA GPU support
-    # deploy:
     #   resources:
     #     reservations:
     #       devices:
@@ -93,6 +136,14 @@ services:
       '
     networks:
       - meepleai
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
 
   # AI-09: Local multilingual embedding service
   embedding-service:
@@ -110,8 +161,15 @@ services:
       start_period: 60s
     networks:
       - meepleai
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
     # Uncomment if you have NVIDIA GPU support for faster embeddings
-    # deploy:
     #   resources:
     #     reservations:
     #       devices:
@@ -150,6 +208,14 @@ services:
       start_period: 20s
     networks:
       - meepleai
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '1.0'
+          memory: 1G
 
   # BGAI-005: SmolDocling VLM service (Stage 2 - complex layouts fallback)
   smoldocling-service:
@@ -187,8 +253,15 @@ services:
       start_period: 120s  # Long startup for model download
     networks:
       - meepleai
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
     # Uncomment for GPU support (requires NVIDIA Docker runtime)
-    # deploy:
     #   resources:
     #     reservations:
     #       devices:
@@ -220,8 +293,15 @@ services:
       start_period: 120s  # Long startup for model download
     networks:
       - meepleai
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '1.0'
+          memory: 1G
     # Uncomment for GPU support (requires NVIDIA Docker runtime)
-    # deploy:
     #   resources:
     #     reservations:
     #       devices:
@@ -257,6 +337,14 @@ services:
       retries: 5
     networks:
       - meepleai
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
 
   # OPS-05: Error Monitoring & Alerting
   alertmanager:
@@ -285,6 +373,14 @@ services:
       retries: 5
     networks:
       - meepleai
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
 
   # NOTE: Grafana OnCall is commented out for now as it requires manual setup
   # To add on-call management, follow the setup guide at:
@@ -336,10 +432,21 @@ services:
       start_period: 20s
     networks:
       - meepleai
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
 
   n8n:
     image: n8nio/n8n:1.114.4
     restart: unless-stopped
+    environment:
+      # Node.js heap size tuning (75% of container limit minus overhead)
+      NODE_OPTIONS: "--max-old-space-size=512"
     env_file:
       - ./env/n8n.env.dev
     secrets:
@@ -357,6 +464,14 @@ services:
         condition: service_healthy
     networks:
       - meepleai
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
 
   api:
     build:
@@ -415,6 +530,14 @@ services:
       start_period: 20s
     networks:
       - meepleai
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '1.0'
+          memory: 1G
 
   web:
     build:
@@ -436,6 +559,14 @@ services:
       start_period: 60s
     networks:
       - meepleai
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
 
 volumes:
   pgdata:

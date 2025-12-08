@@ -10,6 +10,9 @@ export default defineConfig<ChromaticConfig>({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : 2, // Issue #1868: Single worker in CI for stability, 2 local for speed
+  // Issue #2007: Add global setup/teardown for server health checks
+  globalSetup: require.resolve('./e2e/global-setup.ts'),
+  globalTeardown: require.resolve('./e2e/global-teardown.ts'),
   // Issue #1498: E2E Code Coverage Reporting
   reporter: [
     [process.env.CI ? 'dot' : 'html'], // Standard reporters
@@ -133,7 +136,7 @@ export default defineConfig<ChromaticConfig>({
     // Issue #1951: Use standalone server in CI (compatible with output: 'standalone')
     // Issue #1951: In CI, NEXT_PUBLIC_API_BASE=http://localhost:8081 (mock server started in CI step)
     command: process.env.CI
-      ? 'PORT=3000 node .next/standalone/server.js'
+      ? 'cross-env PORT=3000 node .next/standalone/server.js'
       : 'node --max-old-space-size=4096 ./node_modules/next/dist/bin/next dev -p 3000',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,

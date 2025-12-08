@@ -13,6 +13,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Npgsql;
 using OtpNet;
+using Polly;
 using Xunit;
 
 namespace Api.Tests.Integration.Authentication;
@@ -157,9 +158,21 @@ public sealed class TotpReplayAttackPreventionTests : IAsyncLifetime
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
         _totpService = _serviceProvider.GetRequiredService<ITotpService>();
 
-        // Apply EF Core migrations
-        await _dbContext.Database.MigrateAsync(TestCancellationToken);
-        _output("Database migrations applied successfully");
+        // Apply EF Core migrations with retry policy (Issue #2005: Testcontainers race condition)
+        var retryPolicy = Policy
+            .Handle<Npgsql.NpgsqlException>()
+            .Or<System.IO.EndOfStreamException>()
+            .WaitAndRetryAsync(
+                retryCount: 3,
+                sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
+                onRetry: (exception, timeSpan, retryCount, context) =>
+                {
+                    _output($"⚠️ Migration attempt {retryCount} failed: {exception.Message}. Retrying in {timeSpan.TotalSeconds}s...");
+                });
+
+        await retryPolicy.ExecuteAsync(async () =>
+            await _dbContext.Database.MigrateAsync(TestCancellationToken));
+        _output("✓ Database migrations applied successfully");
 
         // Create test user with 2FA enabled
         await SeedTestUserAsync();

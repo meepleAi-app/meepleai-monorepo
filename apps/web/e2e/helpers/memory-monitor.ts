@@ -124,7 +124,7 @@ export class MemoryMonitor {
     if (this.intervalId) {
       clearInterval(this.intervalId);
       this.intervalId = null;
-      console.log('[MemoryMonitor] Stopped memory monitoring');
+      console.warn('[MemoryMonitor] Stopped memory monitoring');
     }
   }
 
@@ -181,7 +181,7 @@ export class MemoryMonitor {
     try {
       if (fs.existsSync(logFilePath)) {
         fs.unlinkSync(logFilePath);
-        console.log('[MemoryMonitor] Cleaned up memory log file');
+        console.warn('[MemoryMonitor] Cleaned up memory log file');
       }
     } catch (error) {
       console.error('[MemoryMonitor] Error cleaning up memory log:', error);

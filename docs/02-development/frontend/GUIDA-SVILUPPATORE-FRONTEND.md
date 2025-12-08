@@ -1102,6 +1102,7 @@ export function UndoRedoButtons() {
 
 #### **AuthProvider**
 
+{% raw %}
 ```tsx
 // components/auth/AuthProvider.tsx
 'use client';
@@ -1172,6 +1173,7 @@ export function useAuth() {
   return context;
 }
 ```
+{% endraw %}
 
 ---
 

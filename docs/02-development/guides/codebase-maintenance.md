@@ -649,12 +649,14 @@ gh run list --workflow=ci.yml --limit 10 --json conclusion,durationMs --jq '.[] 
 
 **Common Optimizations**:
 1. **Dependency Caching**:
+   {% raw %}
    ```yaml
    - uses: actions/cache@v4
      with:
        path: ~/.pnpm-store
        key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
    ```
+   {% endraw %}
 
 2. **Parallel Jobs**:
    ```yaml

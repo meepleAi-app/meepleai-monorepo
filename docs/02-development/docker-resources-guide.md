@@ -318,7 +318,9 @@ docker stats
 docker stats postgres qdrant api
 
 # Format output
+{% raw %}
 docker stats --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}"
+{% endraw %}
 ```
 
 ### cAdvisor Metrics (Issue #705)
@@ -396,7 +398,9 @@ Limit: 4.5GB (P95 * 1.2)
 
 **Identify CPU-heavy services**:
 ```bash
+{% raw %}
 docker stats --format "table {{.Name}}\t{{.CPUPerc}}" | sort -k2 -rn
+{% endraw %}
 ```
 
 **Optimization**:
@@ -543,7 +547,9 @@ docker inspect <container> | grep -A 10 "NanoCpus"
 
 **Diagnosis**:
 ```bash
+{% raw %}
 docker stats --format "table {{.Name}}\t{{.MemUsage}}\t{{.MemPerc}}"
+{% endraw %}
 ```
 
 **Fixes**:

@@ -61,6 +61,7 @@ function Notification() {
 
 ### Pop In with Spring
 
+{% raw %}
 ```tsx
 import { motion } from 'framer-motion';
 import { VARIANTS } from '@/lib/animations';
@@ -80,6 +81,7 @@ function ActionButton({ onClick }) {
   );
 }
 ```
+{% endraw %}
 
 ---
 
@@ -87,6 +89,7 @@ function ActionButton({ onClick }) {
 
 ### Spinning Loader
 
+{% raw %}
 ```tsx
 import { motion } from 'framer-motion';
 import { useReducedMotion, TRANSITIONS } from '@/lib/animations';
@@ -113,9 +116,11 @@ function SpinningLoader() {
   );
 }
 ```
+{% endraw %}
 
 ### Pulsing Dots
 
+{% raw %}
 ```tsx
 import { motion } from 'framer-motion';
 import { TRANSITIONS, useReducedMotion } from '@/lib/animations';
@@ -156,9 +161,11 @@ function LoadingDots() {
   );
 }
 ```
+{% endraw %}
 
 ### Skeleton Loader
 
+{% raw %}
 ```tsx
 import { motion } from 'framer-motion';
 import { useReducedMotion, DURATIONS } from '@/lib/animations';
@@ -190,6 +197,7 @@ function SkeletonLoader() {
   );
 }
 ```
+{% endraw %}
 
 ---
 
@@ -363,6 +371,7 @@ function Drawer({ isOpen, onClose, children }) {
 
 ### Hover and Tap
 
+{% raw %}
 ```tsx
 import { motion } from 'framer-motion';
 import { TRANSITIONS } from '@/lib/animations';
@@ -381,9 +390,11 @@ function InteractiveButton({ onClick, children }) {
   );
 }
 ```
+{% endraw %}
 
 ### Loading Button
 
+{% raw %}
 ```tsx
 import { motion, AnimatePresence } from 'framer-motion';
 import { VARIANTS, useReducedMotion } from '@/lib/animations';
@@ -433,6 +444,7 @@ function LoadingButton({ isLoading, onClick, children }) {
   );
 }
 ```
+{% endraw %}
 
 ---
 
@@ -460,6 +472,7 @@ function ChatMessage({ message, isUser }) {
 
 ### Typing Indicator
 
+{% raw %}
 ```tsx
 import { motion } from 'framer-motion';
 import { useReducedMotion, TRANSITIONS } from '@/lib/animations';
@@ -497,6 +510,7 @@ function TypingIndicator() {
   );
 }
 ```
+{% endraw %}
 
 ### Streaming Text
 
@@ -548,6 +562,7 @@ function AccessibleCard() {
 
 ### Complete Disable
 
+{% raw %}
 ```tsx
 import { motion } from 'framer-motion';
 import { useReducedMotion } from '@/lib/animations';
@@ -569,6 +584,7 @@ function ConditionalAnimation({ children }) {
   );
 }
 ```
+{% endraw %}
 
 ### Instant Transitions
 

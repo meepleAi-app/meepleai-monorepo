@@ -1041,6 +1041,7 @@ cache_hit_rate = Gauge('cache_hit_rate', 'Semantic cache hit rate')
 
 ### Alerting Rules (Prometheus)
 
+{% raw %}
 ```yaml
 # prometheus-rules.yml
 groups:
@@ -1099,6 +1100,7 @@ groups:
     annotations:
       summary: "Cache hit rate {{ $value }} below target 40%"
 ```
+{% endraw %}
 
 ### Dashboards (Grafana)
 

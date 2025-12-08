@@ -94,6 +94,7 @@ This ensures state updates see the most recent state, not captured closure value
 - Error message never displays
 
 **Component Code** (users.tsx:744-757):
+{% raw %}
 ```typescript
 <input
   id="email"
@@ -110,6 +111,7 @@ This ensures state updates see the most recent state, not captured closure value
 />
 {errors.email && <div>...</div>}  // ← Never renders
 ```
+{% endraw %}
 
 **Why It Fails**:
 ```

@@ -652,6 +652,7 @@ scrape_configs:
 #### ✅ Qualità Eccellente
 
 **Esempio** (`infra/prometheus/alerts/api-performance.yml:15-30`):
+{% raw %}
 ```yaml
 - alert: HighErrorRate
   expr: |
@@ -665,6 +666,7 @@ scrape_configs:
     description: "{{ $value }} errori/sec negli ultimi 5 minuti"
     runbook_url: "https://docs.meepleai.dev/runbooks/high-error-rate"
 ```
+{% endraw %}
 
 **Statistiche**:
 - ✅ 15 alert CRITICAL

@@ -248,7 +248,7 @@ public sealed class TotpReplayAttackPreventionTests : IAsyncLifetime
         var user = await _dbContext!.Users
             .Where(u => u.Email == TestUserEmail)
             .FirstAsync(TestCancellationToken);
-        var secret = user.TotpSecretEncrypted.Replace("encrypted_", "");
+        var secret = user.TotpSecretEncrypted!.Replace("encrypted_", "");
         var validCode = GenerateValidTotpCode(secret);
 
         // Act
@@ -279,7 +279,7 @@ public sealed class TotpReplayAttackPreventionTests : IAsyncLifetime
         var user = await _dbContext!.Users
             .Where(u => u.Email == TestUserEmail)
             .FirstAsync(TestCancellationToken);
-        var secret = user.TotpSecretEncrypted.Replace("encrypted_", "");
+        var secret = user.TotpSecretEncrypted!.Replace("encrypted_", "");
         var validCode = GenerateValidTotpCode(secret);
 
         // Act - First use: should succeed
@@ -308,7 +308,7 @@ public sealed class TotpReplayAttackPreventionTests : IAsyncLifetime
     {
         // Arrange
         var user = await _dbContext!.Users.FirstAsync(u => u.Email == TestUserEmail);
-        var secret = user.TotpSecretEncrypted.Replace("encrypted_", "");
+        var secret = user.TotpSecretEncrypted!.Replace("encrypted_", "");
 
         // Generate first code
         var firstCode = GenerateValidTotpCode(secret);
@@ -362,7 +362,7 @@ public sealed class TotpReplayAttackPreventionTests : IAsyncLifetime
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         // Generate new valid code
-        var secret = user.TotpSecretEncrypted.Replace("encrypted_", "");
+        var secret = user.TotpSecretEncrypted!.Replace("encrypted_", "");
         var validCode = GenerateValidTotpCode(secret);
 
         // Act

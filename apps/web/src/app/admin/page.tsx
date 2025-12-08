@@ -1,12 +1,13 @@
 /**
  * Admin Dashboard - Server Component Wrapper
  *
- * Issue #1608: Frontend Route Protection with E2E Test Compatibility
+ * Issue #874: Enhanced centralized dashboard with metrics + activity feed
  *
- * Architecture:
- * - Middleware: Blocks unauthenticated users (server-side)
- * - RequireRole: Blocks unauthorized roles (client-side, E2E compatible)
- * - AdminClient: Interactive dashboard UI
+ * Features (FASE 1):
+ * - 16 real-time metrics (polling 30s)
+ * - Activity feed (last 10 events)
+ * - AdminLayout with navigation
+ * - Performance optimized (<1s load, <2s TTI)
  *
  * Security Layers:
  * 1. middleware.ts: Redirects if no session cookie
@@ -15,12 +16,12 @@
  */
 
 import { RequireRole } from '@/components/auth/RequireRole';
-import { AdminClient } from './admin-client';
+import { DashboardClient } from './dashboard-client';
 
 export default function AdminPage() {
   return (
     <RequireRole allowedRoles={['Admin']}>
-      <AdminClient />
+      <DashboardClient />
     </RequireRole>
   );
 }

@@ -260,21 +260,36 @@ public class TotpService : ITotpService
 
             // SEC-07: Store used code to prevent replay (Issue #1787)
             var expiresAt = _timeProvider.GetUtcNow().UtcDateTime.AddMinutes(2);
-            await _dbContext.UsedTotpCodes.AddAsync(new UsedTotpCodeEntity
+            
+            try
             {
-                Id = Guid.NewGuid(),
-                UserId = userId,
-                CodeHash = codeHash,
-                TimeStep = timeStep,
-                UsedAt = _timeProvider.GetUtcNow().UtcDateTime,
-                ExpiresAt = expiresAt
-            }, cancellationToken);
-            await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+                await _dbContext.UsedTotpCodes.AddAsync(new UsedTotpCodeEntity
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = userId,
+                    CodeHash = codeHash,
+                    TimeStep = timeStep,
+                    UsedAt = _timeProvider.GetUtcNow().UtcDateTime,
+                    ExpiresAt = expiresAt
+                }, cancellationToken);
+                await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-            _logger.LogInformation("2FA verify success for user {UserId}, code stored for replay prevention", userId);
+                _logger.LogInformation("2FA verify success for user {UserId}, code stored for replay prevention", userId);
 
-            // SEC-08: Track successful TOTP verification
-            MeepleAiMetrics.Record2FAVerification("totp", success: true, userId: userId.ToString());
+                // SEC-08: Track successful TOTP verification
+                MeepleAiMetrics.Record2FAVerification("totp", success: true, userId: userId.ToString());
+            }
+            catch (DbUpdateException ex) when (IsDuplicateKeyViolation(ex))
+            {
+                // Concurrent request already stored this code - replay attack detected at DB level
+                _logger.LogWarning("🔴 TOTP replay attack detected via DB constraint for user {UserId}", userId);
+                await _auditService.LogAsync(userId.ToString(), "TotpReplayAttempt", "TwoFactor", userId.ToString(), "Blocked",
+                    "Replay attack prevented by database constraint - concurrent request");
+
+                // SEC-08: Track replay attack detected by DB constraint
+                MeepleAiMetrics.Record2FAVerification("totp", success: false, userId: userId.ToString(), isReplayAttack: true);
+                return false;
+            }
         }
 
         return isValid;
@@ -714,5 +729,21 @@ public class TotpService : ITotpService
         var bytes = System.Text.Encoding.UTF8.GetBytes(code);
         var hashBytes = SHA256.HashData(bytes);
         return Convert.ToHexString(hashBytes);
+    }
+
+    /// <summary>
+    /// Checks if a DbUpdateException is caused by a unique constraint violation.
+    /// Used to detect TOTP replay attacks when concurrent requests try to insert the same code.
+    /// </summary>
+    private static bool IsDuplicateKeyViolation(DbUpdateException ex)
+    {
+        // PostgreSQL unique constraint violation: 23505
+        if (ex.InnerException is Npgsql.PostgresException pgEx)
+        {
+            return pgEx.SqlState == "23505"; // unique_violation
+        }
+
+        // Generic fallback for other databases
+        return ex.InnerException?.Message.Contains("unique", StringComparison.OrdinalIgnoreCase) ?? false;
     }
 }

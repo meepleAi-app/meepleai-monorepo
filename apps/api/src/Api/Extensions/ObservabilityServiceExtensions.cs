@@ -73,10 +73,7 @@ public static class ObservabilityServiceExtensions
                 {
                     options.RecordException = true;
                 })
-                .AddEntityFrameworkCoreInstrumentation(options =>
-                {
-                    options.SetDbStatementForText = true;
-                })
+                .AddEntityFrameworkCoreInstrumentation()
                 // Add explicit Activity Sources for tracing (not Meter sources)
                 .AddSource("Microsoft.AspNetCore")  // ASP.NET Core framework traces
                 .AddSource("System.Net.Http")       // HTTP client traces

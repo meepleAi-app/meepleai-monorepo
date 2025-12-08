@@ -25,6 +25,7 @@ import {
   WorkflowTemplateDetailSchema,
   ImportWorkflowResponseSchema,
   DashboardStatsSchema,
+  RecentActivityDtoSchema,
   type CreateUserRequest,
   type UpdateUserRequest,
   type AdminUser,
@@ -45,6 +46,7 @@ import {
   type WorkflowTemplateDetail,
   type ImportWorkflowResponse,
   type DashboardStats,
+  type RecentActivityDto,
 } from '../schemas';
 
 export interface CreateAdminClientParams {
@@ -366,6 +368,28 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
         { parameters },
         ImportWorkflowResponseSchema
       );
+    },
+
+    /**
+     * Get recent activity feed (Issue #874)
+     * GET /api/v1/admin/activity
+     */
+    async getRecentActivity(params?: { limit?: number; since?: Date }): Promise<RecentActivityDto> {
+      const queryParams = new URLSearchParams();
+      if (params?.limit) queryParams.set('limit', params.limit.toString());
+      if (params?.since) queryParams.set('since', params.since.toISOString());
+
+      const query = queryParams.toString();
+      const result = await httpClient.get(
+        `/api/v1/admin/activity${query ? `?${query}` : ''}`,
+        RecentActivityDtoSchema
+      );
+
+      if (!result) {
+        throw new Error('Failed to fetch recent activity');
+      }
+
+      return result;
     },
   };
 }

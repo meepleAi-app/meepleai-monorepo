@@ -66,6 +66,9 @@ docs/                Architecture, ADRs, guides
 | | `./start-automation.sh` | Automation (n8n) only |
 | | `docker compose --profile <profile> up` | Manual profile selection (minimal/dev/observability/ai/automation/full) |
 | | `cp docker-compose.override.yml.example docker-compose.override.yml` | Local customization (ports, debug, resources) - Issue #707 |
+| **Traefik** | `docker compose -f docker-compose.yml -f docker-compose.traefik.yml up -d` | Reverse proxy (optional, all profiles) - Issue #703 |
+| | `http://traefik.localhost:8080` | Dashboard (dev mode, no auth) |
+| | **Note**: Traefik requires explicit `-f docker-compose.traefik.yml` flag | Active in all profiles but needs file inclusion |
 
 **Docker Profiles** (Issue #702):
 - **minimal**: Core services only (postgres, redis, qdrant, api, web)
@@ -81,6 +84,7 @@ docs/                Architecture, ADRs, guides
 - **Observability**: hyperdx:8180, prometheus:9090, alertmanager:9093, grafana:3001
 - **Workflow**: n8n:5678
 - **App**: api:8080, web:3000
+- **Proxy**: traefik:80,8080 (Issue #703 - optional, dev-first)
 
 ---
 
@@ -328,6 +332,55 @@ cd apps/web && pnpm dev                                        # T3 (3000)
 | **Testing** | `docs/02-development/testing/test-writing-guide.md` |
 | **Shadcn/UI** | `docs/04-frontend/shadcn-ui-installation.md` |
 | **AI Provider Config** | `docs/03-api/ai-provider-configuration.md`, `docs/02-development/ai-provider-integration.md` |
+| **Traefik Proxy** | `infra/traefik/README.md`, `infra/traefik/TESTING.md` (Issue #703) |
+
+---
+
+## Traefik Reverse Proxy (Issue #703)
+
+**Dev-first approach**: Basic HTTP routing now, production-ready foundations in place.
+
+### Quick Start
+```bash
+# Start with Traefik
+cd infra
+docker compose -f docker-compose.yml -f docker-compose.traefik.yml up -d
+
+# Access dashboard
+open http://traefik.localhost:8080
+```
+
+### Expose Services
+Add labels to any service in `docker-compose.yml`:
+```yaml
+labels:
+  - "traefik.enable=true"
+  - "traefik.http.routers.myservice.rule=Host(`myservice.localhost`)"
+  - "traefik.http.services.myservice.loadbalancer.server.port=8080"
+  - "traefik.http.routers.myservice.middlewares=rate-limit-api@file,security-headers@file"
+```
+
+### Current Features
+- ✅ Automatic Docker service discovery
+- ✅ HTTP routing with labels
+- ✅ Dashboard at `http://traefik.localhost:8080`
+- ✅ Rate limiting middlewares (100 req/s standard, 300 req/min API)
+- ✅ Security headers (OWASP recommended)
+- ✅ Prometheus metrics (`/metrics`)
+- ✅ Access logs (JSON format)
+- ✅ CORS support for API services
+
+### Production Upgrade Path (Commented, Ready)
+1. **Docker Socket Proxy**: Uncomment in `docker-compose.traefik.yml`
+2. **Let's Encrypt SSL**: Configure HTTP or DNS challenge
+3. **HTTPS Redirect**: Global or per-service
+4. **Dashboard Auth**: Basic auth or OAuth
+5. **IP Whitelisting**: For admin endpoints
+
+### Documentation
+- **Setup Guide**: `infra/traefik/README.md`
+- **Testing Guide**: `infra/traefik/TESTING.md`
+- **Examples**: `infra/docker-compose.traefik-examples.yml`
 
 ---
 

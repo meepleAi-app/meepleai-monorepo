@@ -1,0 +1,48 @@
+# Traefik Dynamic Configuration - TLS Options
+# This file contains TLS/SSL configuration for secure connections
+
+# PRODUCTION: TLS Options
+# Uncomment when enabling HTTPS
+tls:
+  options:
+    default:
+      minVersion: VersionTLS12
+      maxVersion: VersionTLS13
+      cipherSuites:
+        # TLS 1.2 Cipher Suites (OWASP recommended)
+        - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+        - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+        - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+        - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+        - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305
+        - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305
+      curvePreferences:
+        - CurveP521
+        - CurveP384
+      sniStrict: true
+      alpnProtocols:
+        - h2
+        - http/1.1
+
+    # Strict TLS for sensitive services
+    strict:
+      minVersion: VersionTLS13
+      maxVersion: VersionTLS13
+      sniStrict: true
+      alpnProtocols:
+        - h2
+
+    # Legacy support (if needed for older clients)
+    # legacy:
+    #   minVersion: VersionTLS10
+    #   maxVersion: VersionTLS13
+    #   sniStrict: false
+
+  # Certificate stores
+  # stores:
+  #   default:
+  #     defaultCertificate:
+  #       certFile: /certs/default.crt
+  #       keyFile: /certs/default.key
+
+  # Certificate resolvers are defined in static config (traefik.yml)

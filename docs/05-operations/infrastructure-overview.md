@@ -28,11 +28,11 @@
 
 ### Key Components
 
-- **17 Docker Services**: Core (postgres, redis, qdrant), AI/ML (ollama, embedding, unstructured, smoldocling), Observability (hyperdx, prometheus, grafana, alertmanager, cadvisor, node-exporter), Workflow (n8n), App (api, web)
+- **17 Docker Services**: Core (postgres, redis, qdrant), AI/ML (ollama, embedding, unstructured, smoldocling, reranker), Observability (prometheus, grafana, alertmanager, cadvisor, node-exporter), Workflow (n8n), App (api, web)
 - **5 Docker Profiles**: minimal, dev, observability, ai, automation, full
 - **Reverse Proxy**: Traefik v3.2 (optional, dev-first) - See [Traefik Guide](deployment/traefik-guide.md)
-- **8 Grafana Dashboards**: API performance, errors, cache, AI quality, RAG operations, infrastructure
-- **40+ Prometheus Alert Rules**: API, database, cache, PDF processing, quality metrics
+- **13 Grafana Dashboards**: API performance, errors, cache, AI quality, RAG operations, infrastructure, 2FA security, ingestion, LLM cost, RAG evaluation, quality gauges, HTTP retry, infrastructure monitoring
+- **31 Prometheus Alert Rules**: API, database, cache, PDF processing, quality metrics (9 categories)
 - **14 n8n Workflow Templates**: Automation, backup, monitoring
 
 ---

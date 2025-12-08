@@ -745,30 +745,65 @@ Escalate if:
 
 ## Testing This Runbook
 
-**Simulate error spike**:
-```bash
-# Baseline: assume normal error rate ~0.1/sec
-# Trigger spike: 10 errors/sec for 2 minutes (100x baseline > 3x threshold)
+**Prerequisites** (Issue #2004):
+- API running on localhost:8080
+- Admin user credentials (default: admin@meepleai.dev / admin123)
+- Prometheus on localhost:9090
+- Test endpoint enabled: `TestEndpoints:Enabled=true` in appsettings.Development.json
 
-for i in {1..120}; do
-  curl -X POST http://localhost:8080/api/v1/test-error &
-  sleep 1
+**Automated test** (recommended):
+```bash
+# Use automated test script (includes auth, cleanup, alert validation)
+./scripts/test-runbooks.sh error-spike
+
+# Expected output:
+# - Generates 200 errors in rapid burst (spike scenario)
+# - Waits 310 seconds for ErrorSpike alert to fire
+# - Validates ErrorSpike alert in Prometheus
+# - Automatic cleanup of session cookies
+```
+
+**Manual test**:
+```bash
+# 1. Login as admin and save session cookie
+ADMIN_EMAIL="admin@meepleai.dev"
+ADMIN_PASSWORD="admin123"
+curl -c /tmp/session.txt -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d "{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$ADMIN_PASSWORD\"}"
+
+# 2. Trigger rapid burst of 200 errors (spike scenario)
+for i in {1..200}; do
+  curl -b /tmp/session.txt -X POST http://localhost:8080/api/v1/test/error \
+    -H "Content-Type: application/json" \
+    -d '{"errorType":"exception"}' &
 done
 
-# Wait 2 minutes for ErrorSpike alert to fire
-# Follow runbook investigation steps
+# Wait for all background requests to complete
+wait
+
+# 3. Wait for ErrorSpike alert to fire (5 min threshold + 10 sec buffer)
+sleep 310
+
+# 4. Verify alert in Prometheus
+curl http://localhost:9090/api/v1/alerts | jq '.data.alerts[] | select(.labels.alertname == "ErrorSpike")'
+
+# 5. Cleanup
+rm /tmp/session.txt
 ```
 
 **Expected behavior**:
-- ErrorSpike alert fires in Alertmanager after 2 minutes
-- Dashboard shows spike ratio > 3 in Error Spike Ratio panel
-- Error Trend panel shows visual spike
-- Alert auto-resolves 2 minutes after errors stop
+- ErrorSpike alert fires in Alertmanager after ~5 minutes
+- Dashboard shows spike ratio > 3x baseline in Error Spike Ratio panel
+- Error Trend panel shows clear spike pattern
+- Logs show rapid burst of simulated exceptions
+- Alert auto-resolves ~2 minutes after error rate normalizes
 
 **Cleanup**:
-- Errors stop automatically after loop completes
+- Errors stop automatically after burst completes
 - Alert auto-resolves when error rate returns to < 3x baseline
-- No manual cleanup needed
+- Session cookie removed with `rm /tmp/session.txt`
+- No manual cleanup of logs/metrics needed (development environment)
 
 ## Related Runbooks
 

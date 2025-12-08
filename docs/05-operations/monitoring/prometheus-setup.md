@@ -24,14 +24,14 @@
 
 ## Overview
 
-Prometheus monitoring and alerting configuration for MeepleAI with 40+ modular alert rules organized by category.
+Prometheus monitoring and alerting configuration for MeepleAI with 31 modular alert rules organized by category.
 
 ### Key Features
 
 - **9 Alert Categories**: API, Cache, Database, Infrastructure, Vector Search, Quality, PDF, Prompts, HTTP Retry
-- **40+ Alert Rules**: Critical, Warning, Info severity levels
+- **31 Alert Rules**: Critical, Warning, Info severity levels
 - **Modular Structure**: Alert rules in separate files by category
-- **Grafana Integration**: 8 dashboards using Prometheus metrics
+- **Grafana Integration**: 13 dashboards using Prometheus metrics
 - **AlertManager Routing**: Email, Slack, PagerDuty notifications
 
 ### Components
@@ -118,7 +118,7 @@ command:
 
 ---
 
-## Alert Rules (40+)
+## Alert Rules (31 Total)
 
 ### API Performance (api-performance.yml) - 7 Rules
 

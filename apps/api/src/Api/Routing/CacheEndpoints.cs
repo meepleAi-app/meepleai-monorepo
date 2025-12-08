@@ -40,10 +40,10 @@ public static class CacheEndpoints
             var game = await mediator.Send(new GetGameByIdQuery(gameId), ct).ConfigureAwait(false);
             if (game == null)
             {
-                logger.LogWarning("Admin {AdminId} invalidating cache for non-existent game {GameId} (idempotent)", session.User.Id, gameId);
+                logger.LogWarning("Admin {AdminId} invalidating cache for non-existent game {GameId} (idempotent)", session!.User!.Id, gameId);
             }
 
-            logger.LogInformation("Admin {AdminId} invalidating cache for game {GameId}", session.User.Id, gameId);
+            logger.LogInformation("Admin {AdminId} invalidating cache for game {GameId}", session!.User!.Id, gameId);
             await cacheService.InvalidateGameAsync(gameId.ToString(), ct).ConfigureAwait(false);
             logger.LogInformation("Successfully invalidated cache for game {GameId}", gameId);
             return Results.Json(new { ok = true, message = $"Cache invalidated for game '{gameId}'" });
@@ -68,7 +68,7 @@ public static class CacheEndpoints
                 return Results.BadRequest(new { error = "tag is required" });
             }
 
-            logger.LogInformation("Admin {AdminId} invalidating cache by tag {Tag}", session.User.Id, tag);
+            logger.LogInformation("Admin {AdminId} invalidating cache by tag {Tag}", session!.User!.Id, tag);
             await cacheService.InvalidateByCacheTagAsync(tag, ct).ConfigureAwait(false);
             logger.LogInformation("Successfully invalidated cache by tag {Tag}", tag);
             return Results.Json(new { ok = true, message = $"Cache invalidated for tag '{tag}'" });

@@ -273,6 +273,72 @@ All runbooks include a "Testing This Runbook" section with:
 - **Quarterly**: Test all critical runbooks (high-error-rate, error-spike, dependency-down)
 - **Pre-production**: Test all runbooks before major releases
 
+### Test Endpoints (Issue #2004)
+
+**Automated Test Script**:
+```bash
+# Test specific runbook
+./scripts/test-runbooks.sh high-error-rate  # Test HighErrorRate alert
+./scripts/test-runbooks.sh error-spike      # Test ErrorSpike alert
+./scripts/test-runbooks.sh all              # Test all error-related runbooks
+
+# Script features:
+# - Automatic admin authentication
+# - Configurable error generation (type, count, duration)
+# - Prometheus alert validation
+# - Automatic cleanup (session cookies)
+```
+
+**Available Test Endpoints** (Admin-only, dev/staging only):
+
+| Endpoint | Method | Purpose | Parameters |
+|----------|--------|---------|------------|
+| `/api/v1/test/error` | POST | Simulate errors for alert testing | `{"errorType": "500\|400\|timeout\|exception"}` |
+
+**Configuration**:
+```json
+// appsettings.Development.json
+"TestEndpoints": {
+  "Enabled": true,              // Enable test endpoints
+  "MaxErrorCount": 1000,        // Max errors per request
+  "MaxDurationSeconds": 300     // Max test duration
+}
+```
+
+**Security**:
+- Admin role required (`RequireAdminSession()`)
+- Disabled in production (default: `Enabled: false`)
+- Rate limiting applied (Admin: 1000 tokens, 10/sec refill)
+
+**Supported Error Types**:
+- `"500"`: Throws InvalidOperationException (simulated 500 Internal Server Error)
+- `"400"`: Throws ArgumentException (simulated 400 Bad Request)
+- `"timeout"`: Delays 30s then throws TimeoutException (simulated 504 Gateway Timeout)
+- `"exception"`: Throws ApplicationException (simulated unhandled exception)
+
+**Usage Examples**:
+```bash
+# Single error (for quick test)
+curl -b /tmp/session.txt -X POST http://localhost:8080/api/v1/test/error \
+  -H "Content-Type: application/json" \
+  -d '{"errorType":"500"}'
+
+# Burst for HighErrorRate alert (200 errors in 120 sec = 1.67/sec)
+for i in {1..200}; do
+  curl -b /tmp/session.txt -X POST http://localhost:8080/api/v1/test/error \
+    -H "Content-Type: application/json" \
+    -d '{"errorType":"500"}' &
+  sleep 0.6
+done
+
+# Spike for ErrorSpike alert (200 errors rapid burst)
+for i in {1..200}; do
+  curl -b /tmp/session.txt -X POST http://localhost:8080/api/v1/test/error \
+    -H "Content-Type: application/json" \
+    -d '{"errorType":"exception"}' &
+done
+```
+
 ## Runbook Maintenance
 
 ### Review Schedule

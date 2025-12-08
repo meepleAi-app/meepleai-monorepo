@@ -1,4 +1,4 @@
-using Api.BoundedContexts.GameManagement.Application.Commands;
+﻿using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.GameManagement.Application.DTOs;
 using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.BoundedContexts.Authentication.Application.DTOs;
@@ -175,7 +175,7 @@ public static class RuleSpecEndpoints
             // Session validated by RequireSessionFilter
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
-            var userId = session.User.Id;
+            var userId = session!.User!.Id;
 
             // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
             logger.LogInformation("User {UserId} creating comment on RuleSpec {GameId} version {Version}", userId, gameId, version);
@@ -205,7 +205,7 @@ public static class RuleSpecEndpoints
             // Session validated by RequireSessionFilter
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
-            var userId = session.User.Id;
+            var userId = session!.User!.Id;
 
             // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
             logger.LogInformation("User {UserId} replying to comment {CommentId}", userId, commentId);
@@ -236,7 +236,7 @@ public static class RuleSpecEndpoints
         {
             // Session validated by RequireSessionFilter
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-            var userId = session.User.Id;
+            var userId = session!.User!.Id;
 
             logger.LogInformation("User {UserId} fetching comments for RuleSpec {GameId} version {Version} (includeResolved: {IncludeResolved})",
                 userId, gameId, version, includeResolved);
@@ -265,7 +265,7 @@ public static class RuleSpecEndpoints
         {
             // Session validated by RequireSessionFilter
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-            var userId = session.User.Id;
+            var userId = session!.User!.Id;
 
             logger.LogInformation("User {UserId} fetching comments for RuleSpec {GameId} version {Version} line {LineNumber}",
                 userId, gameId, version, lineNumber);

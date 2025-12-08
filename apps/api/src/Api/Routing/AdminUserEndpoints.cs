@@ -7,6 +7,7 @@ using Api.Models;
 using Api.SharedKernel.Domain.Exceptions;
 using MediatR;
 
+#pragma warning disable MA0048 // File name must match type name - Endpoints and DTOs in same file
 namespace Api.Routing;
 
 /// <summary>

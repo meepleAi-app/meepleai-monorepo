@@ -78,13 +78,13 @@ docs/                Architecture, ADRs, guides
 - **automation**: Workflow automation (n8n)
 - **full**: Everything (default for backward compatibility)
 
-**Services**:
+**Services** (17 base + 2 optional):
 - **Core**: postgres:5432, qdrant:6333, redis:6379
-- **AI/ML**: ollama:11434, embedding:8000, unstructured:8001, smoldocling:8002
-- **Observability**: hyperdx:8180, prometheus:9090, alertmanager:9093, grafana:3001, cadvisor:8082, node-exporter:9100
+- **AI/ML**: ollama:11434, embedding:8000, unstructured:8001, smoldocling:8002, reranker:8003
+- **Observability**: prometheus:9090, alertmanager:9093, grafana:3001, cadvisor:8082, node-exporter:9100
 - **Workflow**: n8n:5678
 - **App**: api:8080, web:3000
-- **Proxy**: traefik:80,8080 (Issue #703 - optional, dev-first)
+- **Optional**: hyperdx:8180 (requires `-f docker-compose.hyperdx.yml`), traefik:80,8080 (requires `-f docker-compose.traefik.yml`)
 
 ---
 
@@ -316,7 +316,14 @@ cd apps/web && pnpm dev                                        # T3 (3000)
 
 ## Key Docs
 
-**See [docs/INDEX.md](docs/INDEX.md) for complete navigation** (115 docs, 800+ pages)
+**See [docs/INDEX.md](docs/INDEX.md) for complete navigation** (~90 docs consolidated from 140+)
+
+**Documentation Consolidation**: ✅ **Complete** (Phase 1-5 done, 2025-12-08)
+- **Result**: 140+ → 90 files (-36% reduction)
+- **Consolidated**: 8 comprehensive guides (testing, Docker, design, security, infra, monitoring, workflows)
+- **Deleted**: 50+ obsolete files (no archive maintained)
+- **Standardized**: 100% kebab-case naming compliance
+- **Summary**: [docs/CONSOLIDATION-FINAL-SUMMARY.md](docs/CONSOLIDATION-FINAL-SUMMARY.md)
 
 | Doc | Path |
 |-----|------|

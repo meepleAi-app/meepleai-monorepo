@@ -1,4 +1,4 @@
-using Api.Configuration;
+﻿using Api.Configuration;
 using Api.Extensions;
 using Api.Services;
 using MediatR;
@@ -170,7 +170,7 @@ Rate limited to 10 requests per minute per IP address.
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            var userId = session.User.Id;
+            var userId = session!.User!.Id;
             var command = new Api.BoundedContexts.Authentication.Application.Commands.OAuth.UnlinkOAuthAccountCommand
             {
                 UserId = userId,
@@ -222,7 +222,7 @@ User must have at least one authentication method remaining (password or another
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            var userId = session.User.Id;
+            var userId = session!.User!.Id;
             var query = new Api.BoundedContexts.Authentication.Application.Queries.OAuth.GetLinkedOAuthAccountsQuery
             {
                 UserId = userId

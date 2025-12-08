@@ -3,6 +3,7 @@ using Serilog.Events;
 using System.Collections;
 using System.Reflection;
 
+#pragma warning disable MA0048 // File name must match type name - Multi-type logging file
 namespace Api.Logging;
 
 /// <summary>

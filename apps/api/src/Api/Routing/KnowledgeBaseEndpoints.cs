@@ -1,4 +1,4 @@
-using Api.BoundedContexts.Authentication.Application.DTOs;
+﻿using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
@@ -47,7 +47,7 @@ public static class KnowledgeBaseEndpoints
 
             logger.LogInformation(
                 "KnowledgeBase search request from user {UserId} for game {GameId}: {Query}",
-                session.User.Id, gameId, req.query);
+                session!.User!.Id, gameId, req.query);
 
             // Create query
             var query = new SearchQuery(
@@ -105,7 +105,7 @@ public static class KnowledgeBaseEndpoints
 
             logger.LogInformation(
                 "KnowledgeBase Q&A request from user {UserId} for game {GameId}: {Query}",
-                session.User.Id, gameId, req.query);
+                session!.User!.Id, gameId, req.query);
 
             // Create query
             var query = new AskQuestionQuery(
@@ -150,7 +150,7 @@ public static class KnowledgeBaseEndpoints
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
             
 
-            var userId = session.User.Id;
+            var userId = session!.User!.Id;
 
             logger.LogInformation("Creating chat thread for user {UserId}, game {GameId}", userId, req.GameId);
 
@@ -189,10 +189,10 @@ public static class KnowledgeBaseEndpoints
             }
 
             // Authorization: User can only access their own threads unless admin
-            var userId = session.User.Id;
+            var userId = session!.User!.Id;
 
             if (result.UserId != userId &&
-                !string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+                !string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
             {
                 return Results.Forbid();
             }
@@ -217,7 +217,7 @@ public static class KnowledgeBaseEndpoints
 
             if (gameId.HasValue)
             {
-                var userId = session.User.Id;
+                var userId = session!.User!.Id;
 
                 var query = new GetChatThreadsByGameQuery(gameId.Value, userId);
                 var results = await mediator.Send(query, ct).ConfigureAwait(false);
@@ -252,7 +252,7 @@ public static class KnowledgeBaseEndpoints
             }
 
             // SEC: Authorize BEFORE executing command to prevent unauthorized mutations
-            var userId = session.User.Id;
+            var userId = session!.User!.Id;
 
             // Verify thread ownership before mutation
             var threadQuery = new GetChatThreadByIdQuery(threadId);
@@ -264,7 +264,7 @@ public static class KnowledgeBaseEndpoints
             }
 
             if (existingThread.UserId != userId &&
-                !string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+                !string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
             {
                 logger.LogWarning("User {UserId} denied access to add message to thread {ThreadId} (owner: {OwnerId})",
                     userId, threadId, existingThread.UserId);
@@ -294,8 +294,8 @@ public static class KnowledgeBaseEndpoints
         {
             // Session validated by RequireSessionFilter
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-            // session.User.Id is already a Guid from SessionStatusDto
-            var userId = session.User.Id;
+            // session!.User!.Id is already a Guid from SessionStatusDto
+            var userId = session!.User!.Id;
 
             // Verify thread ownership before mutation
             var threadQuery = new GetChatThreadByIdQuery(threadId);
@@ -307,7 +307,7 @@ public static class KnowledgeBaseEndpoints
             }
 
             if (existingThread.UserId != userId &&
-                !string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+                !string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
             {
                 logger.LogWarning("User {UserId} denied access to close thread {ThreadId} (owner: {OwnerId})",
                     userId, threadId, existingThread.UserId);
@@ -332,8 +332,8 @@ public static class KnowledgeBaseEndpoints
         {
             // Session validated by RequireSessionFilter
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-            // session.User.Id is already a Guid from SessionStatusDto
-            var userId = session.User.Id;
+            // session!.User!.Id is already a Guid from SessionStatusDto
+            var userId = session!.User!.Id;
 
             // Verify thread ownership before mutation
             var threadQuery = new GetChatThreadByIdQuery(threadId);
@@ -345,7 +345,7 @@ public static class KnowledgeBaseEndpoints
             }
 
             if (existingThread.UserId != userId &&
-                !string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+                !string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
             {
                 logger.LogWarning("User {UserId} denied access to reopen thread {ThreadId} (owner: {OwnerId})",
                     userId, threadId, existingThread.UserId);
@@ -371,8 +371,8 @@ public static class KnowledgeBaseEndpoints
         {
             // Session validated by RequireSessionFilter
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-            // session.User.Id is already a Guid from SessionStatusDto
-            var userId = session.User.Id;
+            // session!.User!.Id is already a Guid from SessionStatusDto
+            var userId = session!.User!.Id;
 
             // Verify thread ownership before export
             var threadQuery = new GetChatThreadByIdQuery(threadId);
@@ -384,7 +384,7 @@ public static class KnowledgeBaseEndpoints
             }
 
             if (existingThread.UserId != userId &&
-                !string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+                !string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
             {
                 logger.LogWarning("User {UserId} denied access to export thread {ThreadId} (owner: {OwnerId})",
                     userId, threadId, existingThread.UserId);
@@ -435,7 +435,7 @@ public static class KnowledgeBaseEndpoints
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
             
 
-            var userId = session.User.Id;
+            var userId = session!.User!.Id;
 
             if (string.IsNullOrWhiteSpace(req.Content))
             {
@@ -467,9 +467,9 @@ public static class KnowledgeBaseEndpoints
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
             
 
-            var userId = session.User.Id;
+            var userId = session!.User!.Id;
 
-            var isAdmin = string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+            var isAdmin = string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
 
             var command = new DeleteMessageCommand(threadId, messageId, userId, isAdmin);
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -495,7 +495,7 @@ public static class KnowledgeBaseEndpoints
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
             
 
-            var userId = session.User.Id;
+            var userId = session!.User!.Id;
 
             var command = new DeleteChatThreadCommand(threadId, userId);
             await mediator.Send(command, ct).ConfigureAwait(false);

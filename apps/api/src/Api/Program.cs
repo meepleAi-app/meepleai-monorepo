@@ -362,6 +362,9 @@ v1Api.MapAgentEndpoints();
 v1Api.MapTelemetryTestEndpoints();
 v1Api.MapTestTelemetryEndpoints(); // Issue #1567: Manual span test endpoint
 
+// Issue #2004: Runbook validation test endpoints
+v1Api.MapTestEndpoints();
+
 app.Run();
 
 // Bootstrap: Create initial admin user if database is empty
@@ -638,4 +641,5 @@ static bool ShouldSkipMigrations(WebApplication app, MeepleAiDbContext db)
     return false;
 }
 
+#pragma warning disable S1118 // Utility classes should not have public constructors - Required for test integration
 public partial class Program { }

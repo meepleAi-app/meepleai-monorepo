@@ -313,7 +313,7 @@ Clients can also store the key securely and send it via the `Authorization: ApiK
             // Use CQRS Command to extend session (default 30 days extension)
             var command = new ExtendSessionCommand(
                 dbSession.Id,
-                session.User.Id,
+                session!.User!.Id,
                 ExtensionDuration: null  // Use default from Session.DefaultLifetime
             );
             var response = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -331,7 +331,7 @@ Clients can also store the key securely and send it via the `Authorization: ApiK
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            var query = new GetUserSessionsQuery(session.User.Id);
+            var query = new GetUserSessionsQuery(session!.User!.Id);
             var sessions = await mediator.Send(query, ct).ConfigureAwait(false);
             return Results.Json(sessions);
         });

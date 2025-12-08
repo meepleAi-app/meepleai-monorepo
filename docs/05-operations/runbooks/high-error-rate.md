@@ -594,28 +594,63 @@ http://localhost:8082
 
 ## Testing This Runbook
 
-**Simulate alert condition**:
+**Prerequisites** (Issue #2004):
+- API running on localhost:8080
+- Admin user credentials (default: admin@meepleai.dev / admin123)
+- Prometheus on localhost:9090
+- Test endpoint enabled: `TestEndpoints:Enabled=true` in appsettings.Development.json
+
+**Automated test** (recommended):
 ```bash
-# Trigger multiple errors (requires test endpoint or load test)
+# Use automated test script (includes auth, cleanup, alert validation)
+./scripts/test-runbooks.sh high-error-rate
+
+# Expected output:
+# - Generates 200 errors over 120 seconds (1.67 errors/sec avg)
+# - Waits 130 seconds for alert to fire
+# - Validates HighErrorRate alert in Prometheus
+# - Automatic cleanup of session cookies
+```
+
+**Manual test**:
+```bash
+# 1. Login as admin and save session cookie
+ADMIN_EMAIL="admin@meepleai.dev"
+ADMIN_PASSWORD="admin123"
+curl -c /tmp/session.txt -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d "{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$ADMIN_PASSWORD\"}"
+
+# 2. Trigger 200 errors over 120 seconds (1.67 errors/sec)
 for i in {1..200}; do
-  curl -X POST http://localhost:8080/api/v1/test-error &
+  curl -b /tmp/session.txt -X POST http://localhost:8080/api/v1/test/error \
+    -H "Content-Type: application/json" \
+    -d '{"errorType":"500"}' &
+  sleep 0.6  # Delay between requests
 done
 
-# Wait 2 minutes for alert to fire
-# Follow runbook investigation steps 1-7
-# Expected: Alert fires, dashboard shows spike, logs show errors
+# 3. Wait for alert to fire (2 min threshold + 10 sec buffer)
+sleep 130
+
+# 4. Verify alert in Prometheus
+curl http://localhost:9090/api/v1/alerts | jq '.data.alerts[] | select(.labels.alertname == "HighErrorRate")'
+
+# 5. Cleanup
+rm /tmp/session.txt
 ```
 
 **Expected behavior**:
-- Alert fires in Alertmanager after 2 minutes
-- Dashboard shows error rate > 1/sec
-- Logs show test errors with correlation IDs
-- Trace shows test endpoint failures
+- Alert fires in Alertmanager after ~2 minutes
+- Dashboard shows error rate > 1/sec (actual: ~1.67/sec)
+- Logs show simulated 500 errors with admin user context
+- HyperDX traces show test endpoint failures
+- Prometheus metrics incremented (meepleai_api_errors_total)
 
 **Cleanup**:
 - Errors stop automatically after loop completes
 - Alert auto-resolves after 2 minutes (when error rate drops < 1/sec)
-- No manual cleanup needed
+- Session cookie removed with `rm /tmp/session.txt`
+- No manual cleanup of logs/metrics needed (development environment)
 
 ## Related Runbooks
 

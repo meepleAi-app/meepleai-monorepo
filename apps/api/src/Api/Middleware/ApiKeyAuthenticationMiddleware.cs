@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Api.Services;
 
+#pragma warning disable MA0048 // File name must match type name - Contains middleware and extension methods
 namespace Api.Middleware;
 
 /// <summary>

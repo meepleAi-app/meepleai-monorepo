@@ -88,10 +88,6 @@ const meta = {
     },
     chromatic: {
       viewports: [375, 768, 1024],
-      modes: {
-        light: { theme: 'light' },
-        dark: { theme: 'dark' },
-      },
     },
   },
   tags: ['autodocs'],

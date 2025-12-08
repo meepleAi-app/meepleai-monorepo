@@ -2,9 +2,10 @@
  * Comments Enhanced E2E Tests - MIGRATED TO POM
  *
  * @see apps/web/e2e/pages/
+ * Issue #2007: Updated to use role-based fixtures (editorPage, adminPage)
  */
 
-import { test, expect } from './fixtures/chromatic';
+import { test, expect } from './fixtures/roles';
 import { getTextMatcher, t } from './fixtures/i18n';
 
 /**

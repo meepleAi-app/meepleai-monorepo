@@ -131,17 +131,23 @@ export default defineConfig<ChromaticConfig>({
     },
   ],
 
-  webServer: {
-    // Issue #1868: Use production server in CI (after pnpm build), dev server locally
-    // Issue #1951: Use standalone server in CI (compatible with output: 'standalone')
-    // Issue #1951: In CI, NEXT_PUBLIC_API_BASE=http://localhost:8081 (mock server started in CI step)
-    // Issue #2008: Check CI === 'true' (not just truthy) to avoid treating CI=false as true
-    command:
-      process.env.CI === 'true'
-        ? 'cross-env PORT=3000 node .next/standalone/server.js'
-        : 'node --max-old-space-size=4096 ./node_modules/next/dist/bin/next dev -p 3000',
-    url: 'http://localhost:3000',
-    reuseExistingServer: process.env.CI !== 'true',
-    timeout: process.env.CI === 'true' ? 30 * 1000 : 180 * 1000, // 30s for prod, 3min for dev startup
-  },
+  // Issue #2008: Disable webServer in parallel mode to prevent port conflicts
+  // When PARALLEL_E2E=true, the server is started once by scripts/run-parallel-e2e.js
+  // and all shards reuse it
+  webServer:
+    process.env.PARALLEL_E2E === 'true'
+      ? undefined
+      : {
+          // Issue #1868: Use production server in CI (after pnpm build), dev server locally
+          // Issue #1951: Use standalone server in CI (compatible with output: 'standalone')
+          // Issue #1951: In CI, NEXT_PUBLIC_API_BASE=http://localhost:8081 (mock server started in CI step)
+          // Issue #2008: Check CI === 'true' (not just truthy) to avoid treating CI=false as true
+          command:
+            process.env.CI === 'true'
+              ? 'cross-env PORT=3000 node .next/standalone/server.js'
+              : 'node --max-old-space-size=4096 ./node_modules/next/dist/bin/next dev -p 3000',
+          url: 'http://localhost:3000',
+          reuseExistingServer: process.env.CI !== 'true',
+          timeout: process.env.CI === 'true' ? 30 * 1000 : 180 * 1000, // 30s for prod, 3min for dev startup
+        },
 });

@@ -1,0 +1,622 @@
+# Docker Compose Resource Limits Template
+#
+# USAGE:
+# Development: cp docker-compose.yml docker-compose.yml.bak
+#              Merge this template's resource sections into your docker-compose.yml
+# Production: Create separate docker-compose.prod.yml with these values
+#
+# See: docs/02-development/docker-compose-resource-limits.md for detailed guidance
+#
+# NOTE: These are RECOMMENDED values. Adjust based on your actual host hardware
+# and observed usage patterns using: docker stats --no-stream
+#
+
+version: '3.8'
+
+services:
+  # ============================================================================
+  # DATABASE & CACHING TIER
+  # ============================================================================
+
+  postgres:
+    image: postgres:17
+    container_name: postgres
+    environment:
+      POSTGRES_DB: meepleai
+      POSTGRES_USER: meepleai
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      # Memory configuration - adjust shared_buffers based on container limit
+      # Calculation: shared_buffers = 25% of memory limit
+      #             effective_cache_size = 50-75% of memory limit
+      POSTGRES_INITDB_ARGS: |
+        -c shared_buffers=256M
+        -c effective_cache_size=1G
+        -c work_mem=256M
+        -c maintenance_work_mem=256M
+        -c max_connections=200
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    # CRITICAL: Must set shm_size for parallel queries (work_mem × max_parallel_workers)
+    shm_size: 1G
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U meepleai"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        # DEVELOPMENT (or adjust for your host)
+        limits:
+          cpus: '1.0'      # I/O-intensive, doesn't need many CPUs
+          memory: 1G
+        reservations:
+          cpus: '0.5'      # Guarantee minimum
+          memory: 512M
+
+        # PRODUCTION: Uncomment below (adjust to 4GB limit if host has memory)
+        # limits:
+        #   cpus: '2.0'    # More CPUs for I/O throughput
+        #   memory: 4G
+        # reservations:
+        #   cpus: '1.5'    # CRITICAL: DB is highest priority
+        #   memory: 3G
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    command:
+      - redis-server
+      - --maxmemory
+      - '512mb'              # CRITICAL: Prevent OOM kills
+      - --maxmemory-policy
+      - 'allkeys-lru'        # Evict least-recently-used keys
+      - --appendonly
+      - 'yes'
+      - --appendfsync
+      - 'everysec'
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        # DEVELOPMENT
+        limits:
+          cpus: '0.5'      # Cache is CPU-light
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+        # PRODUCTION: Uncomment below
+        # limits:
+        #   cpus: '1.0'
+        #   memory: 2G
+        # reservations:
+        #   cpus: '0.75'
+        #   memory: 1.5G
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_storage:/qdrant/storage
+      - qdrant_snapshots:/qdrant/snapshots
+    environment:
+      QDRANT_API_KEY: ${QDRANT_API_KEY}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        # DEVELOPMENT
+        limits:
+          cpus: '1.5'      # Vector search is CPU-intensive
+          memory: 2G
+        reservations:
+          cpus: '0.75'
+          memory: 1G
+
+        # PRODUCTION: Uncomment below
+        # limits:
+        #   cpus: '4.0'
+        #   memory: 8G
+        # reservations:
+        #   cpus: '2.0'
+        #   memory: 4G
+
+  # ============================================================================
+  # ML SERVICES (AI/Embedding/Reranking)
+  # ============================================================================
+
+  ollama:
+    image: ollama/ollama
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama:/root/.ollama
+    environment:
+      # VRAM control (if GPU available)
+      OLLAMA_GPU: '1'                        # Enable GPU
+      OLLAMA_GPU_MEMORY_FRACTION: '0.80'     # Use 80% of VRAM
+      OLLAMA_NUM_GPU_LAYERS: '-1'            # All layers on GPU
+      # Model management
+      OLLAMA_MAX_LOADED_MODELS: '3'          # Max 3 models in memory
+      OLLAMA_KEEP_ALIVE: '5m'                # Unload after 5min idle
+    # gpu: all  # Uncomment to enable GPU support (if docker --gpus installed)
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        # DEVELOPMENT (CPU inference)
+        limits:
+          cpus: '4.0'      # CPU inference is expensive
+          memory: 8G
+        reservations:
+          cpus: '2.0'
+          memory: 4G
+
+        # PRODUCTION with GPU: Reduce CPU limits, increase memory for model swapping
+        # limits:
+        #   cpus: '8.0'      # Fallback if GPU unavailable
+        #   memory: 16G
+        # reservations:
+        #   cpus: '4.0'
+        #   memory: 8G
+
+  embedding:
+    image: meepleai/embedding:latest
+    container_name: embedding
+    ports:
+      - "8000:8000"
+    environment:
+      EMBEDDING_MODEL: "all-MiniLM-L6-v2"  # Fast, 120M params
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        # DEVELOPMENT
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '1.0'
+          memory: 1G
+
+        # PRODUCTION
+        # limits:
+        #   cpus: '4.0'
+        #   memory: 4G
+        # reservations:
+        #   cpus: '2.0'
+        #   memory: 2G
+
+  reranker:
+    image: meepleai/reranker:latest
+    container_name: reranker
+    ports:
+      - "8001:8001"
+    environment:
+      RERANKER_MODEL: "cross-encoder/qnli-distilroberta-base"  # Lightweight
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        # DEVELOPMENT
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '1.0'
+          memory: 1G
+
+        # PRODUCTION
+        # limits:
+        #   cpus: '4.0'
+        #   memory: 4G
+        # reservations:
+        #   cpus: '2.0'
+        #   memory: 2G
+
+  smoldocling:
+    image: meepleai/smoldocling:latest
+    container_name: smoldocling
+    ports:
+      - "8002:8002"
+    environment:
+      MODEL_DEVICE: "auto"  # GPU if available, else CPU
+      MODEL_DTYPE: "float16"  # Reduce memory footprint
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        # DEVELOPMENT
+        limits:
+          cpus: '2.0'
+          memory: 3G      # VLM needs more memory
+        reservations:
+          cpus: '1.0'
+          memory: 1.5G
+
+        # PRODUCTION
+        # limits:
+        #   cpus: '4.0'
+        #   memory: 6G
+        # reservations:
+        #   cpus: '2.0'
+        #   memory: 3G
+
+  unstructured:
+    image: meepleai/unstructured:latest
+    container_name: unstructured
+    ports:
+      - "8001:8000"  # Note: internal port is 8000, mapped to 8001
+    environment:
+      UNSTRUCTURED_API_KEY: ${UNSTRUCTURED_API_KEY}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        # DEVELOPMENT
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '1.0'
+          memory: 1G
+
+        # PRODUCTION
+        # limits:
+        #   cpus: '4.0'
+        #   memory: 4G
+        # reservations:
+        #   cpus: '2.0'
+        #   memory: 2G
+
+  # ============================================================================
+  # OBSERVABILITY TIER
+  # ============================================================================
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'  # 30 days retention
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9090/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        # DEVELOPMENT
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+        # PRODUCTION
+        # limits:
+        #   cpus: '1.0'
+        #   memory: 1G
+        # reservations:
+        #   cpus: '0.5'
+        #   memory: 512M
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD}
+      GF_INSTALL_PLUGINS: 'grafana-clock-panel,grafana-simple-json-datasource'
+      GF_USERS_ALLOW_SIGN_UP: 'false'
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./datasources:/etc/grafana/provisioning/datasources:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        # DEVELOPMENT
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+        # PRODUCTION
+        # limits:
+        #   cpus: '1.0'
+        #   memory: 1G
+        # reservations:
+        #   cpus: '0.5'
+        #   memory: 512M
+
+  hyperdx:
+    image: hyperdxio/hyperdx:latest
+    container_name: hyperdx
+    ports:
+      - "8180:8180"
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://hyperdx:4318"  # OTLP HTTP endpoint
+    volumes:
+      - hyperdx_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8180/api/v1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        # DEVELOPMENT (optional in dev)
+        limits:
+          cpus: '2.0'
+          memory: 2G      # ClickHouse can be memory-intensive
+        reservations:
+          cpus: '1.0'
+          memory: 1G
+
+        # PRODUCTION
+        # limits:
+        #   cpus: '4.0'
+        #   memory: 8G    # ClickHouse needs sustained memory
+        # reservations:
+        #   cpus: '2.0'
+        #   memory: 4G
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: alertmanager
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/config.yml:ro
+      - alertmanager_data:/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/config.yml'
+      - '--storage.path=/alertmanager'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9093/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        # DEVELOPMENT & PRODUCTION (lightweight)
+        limits:
+          cpus: '0.25'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+
+  # ============================================================================
+  # WORKFLOW & AUTOMATION
+  # ============================================================================
+
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n
+    ports:
+      - "5678:5678"
+    environment:
+      N8N_SECURE_COOKIE: 'true'
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY}
+      # CRITICAL: Node.js heap size must respect container memory limit
+      # Calculation: (container_memory_mb * 0.75) - 256
+      # For 2G: (2048 * 0.75) - 256 = 1280M
+      # For 4G: (4096 * 0.75) - 256 = 3072M
+      NODE_OPTIONS: '--max-old-space-size=1280'  # Adjust for your container
+      # Workflow execution timeouts
+      N8N_EXECUTIONS_TIMEOUT: '3600'  # 1 hour per workflow
+      N8N_EXECUTIONS_MAX_TIMEOUT: '7200'  # 2 hour absolute max
+      # Database
+      DB_TYPE: 'postgresdb'
+      DB_POSTGRESDB_HOST: 'postgres'
+      DB_POSTGRESDB_PORT: '5432'
+      DB_POSTGRESDB_DATABASE: 'meepleai_n8n'
+      DB_POSTGRESDB_USER: 'meepleai'
+      DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - n8n_data:/home/node/.n8n
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5678/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        # DEVELOPMENT
+        limits:
+          cpus: '2.0'
+          memory: 2G      # Node.js workflow state needs memory
+        reservations:
+          cpus: '1.0'
+          memory: 1G
+
+        # PRODUCTION
+        # limits:
+        #   cpus: '4.0'
+        #   memory: 4G
+        # reservations:
+        #   cpus: '2.0'
+        #   memory: 2G
+
+  # ============================================================================
+  # APPLICATION SERVICES
+  # ============================================================================
+
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+      args:
+        BUILDKIT_INLINE_CACHE: '1'
+    container_name: api
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      ASPNETCORE_URLS: 'http://+:8080'
+      # Database
+      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=meepleai;User Id=meepleai;Password=${POSTGRES_PASSWORD};"
+      # Cache
+      ConnectionStrings__Redis: 'redis:6379'
+      # Vector DB
+      QDRANT_URL: 'http://qdrant:6333'
+      QDRANT_API_KEY: ${QDRANT_API_KEY}
+      # ML Services
+      EMBEDDING_SERVICE_URL: 'http://embedding:8000'
+      RERANKER_SERVICE_URL: 'http://reranker:8001'
+      SMOLDOCLING_SERVICE_URL: 'http://smoldocling:8002'
+      UNSTRUCTURED_SERVICE_URL: 'http://unstructured:8000'
+      # LLM
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      # Observability
+      HYPERDX_OTLP_ENDPOINT: 'http://hyperdx:4318'
+      HYPERDX_SERVICE_NAME: 'meepleai-api'
+      # .NET Runtime - respect container limits
+      DOTNET_GC_SERVER: '1'           # Server GC for multi-core
+      DOTNET_GC_HEAP_COUNT: '2'       # Hint for core count
+    volumes:
+      - ./apps/api:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        # DEVELOPMENT
+        limits:
+          cpus: '2.0'
+          memory: 1.5G
+        reservations:
+          cpus: '1.0'
+          memory: 768M
+
+        # PRODUCTION
+        # replicas: 3                # Run 3 API instances
+        # limits:
+        #   cpus: '4.0'
+        #   memory: 3G
+        # reservations:
+        #   cpus: '2.0'
+        #   memory: 1.5G
+        # update_config:
+        #   parallelism: 1
+        #   delay: 10s
+
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+      args:
+        BUILDKIT_INLINE_CACHE: '1'
+    container_name: web
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      NEXT_PUBLIC_API_BASE: 'http://localhost:8080'
+      # Node.js heap size
+      NODE_OPTIONS: '--max-old-space-size=768'  # For 1G container
+    volumes:
+      - ./apps/web:/app
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        # DEVELOPMENT
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+        # PRODUCTION
+        # replicas: 2
+        # limits:
+        #   cpus: '2.0'
+        #   memory: 1.5G
+        # reservations:
+        #   cpus: '1.0'
+        #   memory: 768M
+
+volumes:
+  postgres_data:
+  redis_data:
+  qdrant_storage:
+  qdrant_snapshots:
+  ollama:
+  prometheus_data:
+  grafana_data:
+  hyperdx_data:
+  alertmanager_data:
+  n8n_data:
+
+networks:
+  default:
+    name: meepleai
+    driver: bridge

@@ -382,7 +382,7 @@ public class ApiExceptionHandlerMiddlewareTests
         var responseBody = await reader.ReadToEndAsync(TestCancellationToken);
         var errorResponse = JsonSerializer.Deserialize<JsonDocument>(responseBody);
 
-        Assert.Equal("test-trace-id", errorResponse.RootElement.GetProperty("correlationId").GetString());
+        Assert.Equal("test-trace-id", errorResponse!.RootElement.GetProperty("correlationId").GetString());
     }
 
     [Fact]
@@ -407,7 +407,7 @@ public class ApiExceptionHandlerMiddlewareTests
         var responseBody = await reader.ReadToEndAsync(TestCancellationToken);
         var errorResponse = JsonSerializer.Deserialize<JsonDocument>(responseBody);
 
-        Assert.True(errorResponse.RootElement.TryGetProperty("stackTrace", out var stackTrace));
+        Assert.True(errorResponse!.RootElement.TryGetProperty("stackTrace", out var stackTrace));
         Assert.NotNull(stackTrace.GetString());
     }
 
@@ -434,7 +434,7 @@ public class ApiExceptionHandlerMiddlewareTests
         var errorResponse = JsonSerializer.Deserialize<JsonDocument>(responseBody);
 
         // In production, stackTrace should be null or not present
-        if (errorResponse.RootElement.TryGetProperty("stackTrace", out var stackTrace))
+        if (errorResponse!.RootElement.TryGetProperty("stackTrace", out var stackTrace))
         {
             Assert.Equal(JsonValueKind.Null, stackTrace.ValueKind);
         }
@@ -500,7 +500,7 @@ public class ApiExceptionHandlerMiddlewareTests
         var responseBody = await reader.ReadToEndAsync(TestCancellationToken);
         var errorResponse = JsonSerializer.Deserialize<JsonDocument>(responseBody);
 
-        Assert.Equal(expectedErrorCode, errorResponse.RootElement.GetProperty("error").GetString());
+        Assert.Equal(expectedErrorCode, errorResponse!.RootElement.GetProperty("error").GetString());
     }
 
     [Theory]
@@ -531,7 +531,7 @@ public class ApiExceptionHandlerMiddlewareTests
         var responseBody = await reader.ReadToEndAsync(TestCancellationToken);
         var errorResponse = JsonSerializer.Deserialize<JsonDocument>(responseBody);
 
-        Assert.Equal(expectedErrorCode, errorResponse.RootElement.GetProperty("error").GetString());
+        Assert.Equal(expectedErrorCode, errorResponse!.RootElement.GetProperty("error").GetString());
     }
 
     [Theory]

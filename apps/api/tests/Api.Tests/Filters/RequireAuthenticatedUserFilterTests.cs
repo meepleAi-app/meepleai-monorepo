@@ -116,7 +116,7 @@ public class RequireAuthenticatedUserFilterTests
         Assert.True(context.HttpContext.Items.ContainsKey(nameof(SessionStatusDto)));
         var sessionInContext = context.HttpContext.Items[nameof(SessionStatusDto)] as SessionStatusDto;
         Assert.NotNull(sessionInContext);
-        Assert.Equal(testSession.User.Id, sessionInContext.User.Id);
+        Assert.Equal(testSession!.User!.Id, sessionInContext!.User!.Id);
     }
 
     [Fact]

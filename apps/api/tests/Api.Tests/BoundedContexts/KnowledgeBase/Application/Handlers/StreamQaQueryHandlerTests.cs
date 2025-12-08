@@ -223,7 +223,7 @@ public class StreamQaQueryHandlerTests
         var tokenEvents = events.Where(e => e.Type == StreamingEventType.Token).ToList();
         Assert.NotEmpty(tokenEvents);
 
-        var reconstructedAnswer = string.Join("", tokenEvents.Select(e => ((StreamingToken)e.Data).token));
+        var reconstructedAnswer = string.Join("", tokenEvents.Select(e => ((StreamingToken)e.Data!).token));
         Assert.Equal(cachedAnswer, reconstructedAnswer);
 
         // Complete event should have cached metadata

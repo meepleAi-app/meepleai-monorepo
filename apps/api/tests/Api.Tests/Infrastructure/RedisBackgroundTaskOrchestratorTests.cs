@@ -285,7 +285,7 @@ public class RedisBackgroundTaskOrchestratorTests
 
         // Mock failed lock acquisition (already held)
         _mockDatabase.Setup(db => db.StringSetAsync(
-                It.Is<RedisKey>(k => ((string)k).Contains(lockKey)),
+                It.Is<RedisKey>(k => ((string)k)!.Contains(lockKey)),
                 It.IsAny<RedisValue>(),
                 lockTimeout,
                 When.NotExists,

@@ -157,7 +157,7 @@ public class StreamExplainQueryHandlerTests
         var stateUpdates = events.Where(e => e.Type == StreamingEventType.StateUpdate).ToList();
         Assert.True(stateUpdates.Count >= 4);
 
-        var messages = stateUpdates.Select(s => ((StreamingStateUpdate)s.Data).message).ToList();
+        var messages = stateUpdates.Select(s => ((StreamingStateUpdate)s.Data!).message).ToList();
         Assert.Contains("Generating embeddings for topic...", messages);
         Assert.Contains("Searching vector database for relevant content...", messages);
         Assert.Contains("Building outline structure...", messages);
@@ -240,7 +240,7 @@ public class StreamExplainQueryHandlerTests
         // Verify chunk indices are sequential
         for (int i = 0; i < scriptChunks.Count; i++)
         {
-            var chunk = (StreamingScriptChunk)scriptChunks[i].Data;
+            var chunk = (StreamingScriptChunk)scriptChunks[i].Data!;
             Assert.Equal(i, chunk.chunkIndex);
             Assert.Equal(scriptChunks.Count, chunk.totalChunks);
         }

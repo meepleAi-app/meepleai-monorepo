@@ -65,6 +65,7 @@ docs/                Architecture, ADRs, guides
 | | `./start-ai.sh` | AI/ML services only |
 | | `./start-automation.sh` | Automation (n8n) only |
 | | `docker compose --profile <profile> up` | Manual profile selection (minimal/dev/observability/ai/automation/full) |
+| | `cp docker-compose.override.yml.example docker-compose.override.yml` | Local customization (ports, debug, resources) - Issue #707 |
 
 **Docker Profiles** (Issue #702):
 - **minimal**: Core services only (postgres, redis, qdrant, api, web)

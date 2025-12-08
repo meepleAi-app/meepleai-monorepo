@@ -564,6 +564,7 @@ export async function updateProfile(formData: FormData) {
 
 **Example**: Debug auth context.
 
+{% raw %}
 ```typescript
 // apps/web/src/contexts/AuthContext.tsx
 'use client'
@@ -602,6 +603,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   )
 }
 ```
+{% endraw %}
 
 **Inspect**:
 - Context value propagation

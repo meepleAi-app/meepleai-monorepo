@@ -369,6 +369,7 @@ npx shadcn@latest add badge
 #### 1.3 Theming System (Week 3)
 
 **Theme Provider**:
+{% raw %}
 ```tsx
 // src/components/theme-provider.tsx
 'use client'
@@ -401,6 +402,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   )
 }
 ```
+{% endraw %}
 
 **Theme Switcher Component**:
 ```bash

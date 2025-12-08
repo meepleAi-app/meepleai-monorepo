@@ -162,15 +162,18 @@ docker compose exec postgres psql -U meeple -d meepleai -c "\l+"
 
 **Redis**:
 ```bash
+# Set password from Docker secret (run once per session)
+export REDIS_PASS=$(cat infra/secrets/redis-password.txt)
+
 # Test connection
-docker compose exec redis redis-cli ping
+docker compose exec redis redis-cli -a "$REDIS_PASS" --no-auth-warning ping
 # Should return: PONG (if healthy)
 
 # Check memory usage
-docker compose exec redis redis-cli info memory | grep used_memory_human
+docker compose exec redis redis-cli -a "$REDIS_PASS" --no-auth-warning info memory | grep used_memory_human
 
 # Check keyspace (number of keys)
-docker compose exec redis redis-cli info keyspace
+docker compose exec redis redis-cli -a "$REDIS_PASS" --no-auth-warning info keyspace
 ```
 
 **Qdrant**:

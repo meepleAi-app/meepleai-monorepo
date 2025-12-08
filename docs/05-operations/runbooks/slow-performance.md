@@ -140,23 +140,26 @@ docker compose logs postgres --tail 100 | grep -i "connection\|timeout"
 
 **Redis performance**:
 ```bash
+# Set password from Docker secret (run once)
+export REDIS_PASS=$(cat infra/secrets/redis-password.txt)
+
 # Check Redis stats
-docker compose exec redis redis-cli info stats | grep -E "hits|misses"
+docker compose exec redis redis-cli -a "$REDIS_PASS" --no-auth-warning info stats | grep -E "hits|misses"
 
 # Cache hit rate (should be >80%)
 # hit_rate = hits / (hits + misses)
 
 # Check slow commands
-docker compose exec redis redis-cli slowlog get 10
+docker compose exec redis redis-cli -a "$REDIS_PASS" --no-auth-warning slowlog get 10
 
 # Check memory usage
-docker compose exec redis redis-cli info memory | grep used_memory_human
+docker compose exec redis redis-cli -a "$REDIS_PASS" --no-auth-warning info memory | grep used_memory_human
 ```
 
 **Redis latency**:
 ```bash
 # Check Redis latency
-docker compose exec redis redis-cli --latency
+docker compose exec redis redis-cli -a "$REDIS_PASS" --no-auth-warning --latency
 # Typical: <1ms, Warning: >5ms, Critical: >10ms
 ```
 
@@ -299,15 +302,15 @@ time curl -f http://localhost:8080/<slow-endpoint>
 **Investigation**:
 ```bash
 # Check cache hit rate
-docker compose exec redis redis-cli info stats | grep -E "keyspace_hits|keyspace_misses"
+docker compose exec redis redis-cli -a "$REDIS_PASS" --no-auth-warning info stats | grep -E "keyspace_hits|keyspace_misses"
 # Calculate: hits / (hits + misses)
 # Should be >80%, problem if <50%
 
 # Check cache size
-docker compose exec redis redis-cli info memory | grep used_memory_human
+docker compose exec redis redis-cli -a "$REDIS_PASS" --no-auth-warning info memory | grep used_memory_human
 
 # Check key count
-docker compose exec redis redis-cli info keyspace
+docker compose exec redis redis-cli -a "$REDIS_PASS" --no-auth-warning info keyspace
 ```
 
 **Fix**:
@@ -337,7 +340,7 @@ docker compose restart redis
 **Verification**:
 ```bash
 # Cache hit rate improved (>70%)
-docker compose exec redis redis-cli info stats | grep -E "keyspace_hits|keyspace_misses"
+docker compose exec redis redis-cli -a "$REDIS_PASS" --no-auth-warning info stats | grep -E "keyspace_hits|keyspace_misses"
 
 # Response times improved
 curl http://localhost:9090/api/v1/query?query=meepleai:api:response_time_p95:5m

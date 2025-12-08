@@ -101,7 +101,8 @@ curl http://localhost:8080/health | jq '.checks.postgres'
 
 # Redis
 docker compose ps redis
-docker compose exec redis redis-cli ping
+export REDIS_PASS=$(cat infra/secrets/redis-password.txt)
+docker compose exec redis redis-cli -a "$REDIS_PASS" --no-auth-warning ping
 docker compose logs redis --tail 50
 
 # Qdrant
@@ -312,7 +313,7 @@ docker compose ps | grep "qdrant\|redis"
 
 # Service responds to health check
 curl http://localhost:6333/healthz  # Qdrant
-docker compose exec redis redis-cli ping  # Redis
+docker compose exec redis redis-cli -a "$(docker compose exec -T redis cat /run/secrets/redis-password 2>/dev/null)" --no-auth-warning ping  # Redis
 
 # Affected endpoints work again
 curl -f http://localhost:8080/api/v1/chat  # RAG endpoint

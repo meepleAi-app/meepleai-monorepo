@@ -161,11 +161,14 @@ http_server_request_duration_bucket{le="+Inf"}
 
 **Application-specific metrics**:
 ```bash
+# Set Redis password (run once)
+export REDIS_PASS=$(cat infra/secrets/redis-password.txt)
+
 # PDF processing queue (large files = high memory)
 curl http://localhost:8080/metrics | grep "pdf_queue"
 
 # Cache size (Redis memory usage)
-docker compose exec redis redis-cli info memory | grep used_memory_human
+docker compose exec redis redis-cli -a "$REDIS_PASS" --no-auth-warning info memory | grep used_memory_human
 
 # Vector operations (Qdrant memory)
 curl http://localhost:6333/metrics | grep memory
@@ -347,23 +350,23 @@ docker stats --no-stream api
 **Investigation**:
 ```bash
 # Check Redis memory usage
-docker compose exec redis redis-cli info memory | grep used_memory_human
+docker compose exec redis redis-cli -a "$REDIS_PASS" --no-auth-warning info memory | grep used_memory_human
 
 # Check number of keys
-docker compose exec redis redis-cli dbsize
+docker compose exec redis redis-cli -a "$REDIS_PASS" --no-auth-warning dbsize
 
 # Check cache eviction policy
-docker compose exec redis redis-cli config get maxmemory-policy
+docker compose exec redis redis-cli -a "$REDIS_PASS" --no-auth-warning config get maxmemory-policy
 
 # Check if evictions happening
-docker compose exec redis redis-cli info stats | grep evicted_keys
+docker compose exec redis redis-cli -a "$REDIS_PASS" --no-auth-warning info stats | grep evicted_keys
 ```
 
 **Fix**:
 ```bash
 # Option A: Configure maxmemory and eviction policy
-docker compose exec redis redis-cli config set maxmemory 256mb
-docker compose exec redis redis-cli config set maxmemory-policy allkeys-lru
+docker compose exec redis redis-cli -a "$REDIS_PASS" --no-auth-warning config set maxmemory 256mb
+docker compose exec redis redis-cli -a "$REDIS_PASS" --no-auth-warning config set maxmemory-policy allkeys-lru
 
 # Option B: Reduce cache TTL (expire faster)
 # Edit appsettings.json:
@@ -373,7 +376,7 @@ docker compose exec redis redis-cli config set maxmemory-policy allkeys-lru
 docker compose restart api
 
 # Option C: Clear cache manually (temporary)
-docker compose exec redis redis-cli flushdb
+docker compose exec redis redis-cli -a "$REDIS_PASS" --no-auth-warning flushdb
 # Cache will rebuild automatically
 
 # Option D: Increase Redis memory limit (if legitimate)
@@ -386,14 +389,14 @@ docker compose restart redis
 **Verification**:
 ```bash
 # Redis memory stable or decreasing
-docker compose exec redis redis-cli info memory | grep used_memory_human
+docker compose exec redis redis-cli -a "$REDIS_PASS" --no-auth-warning info memory | grep used_memory_human
 
 # Evictions happening (old keys being removed)
-docker compose exec redis redis-cli info stats | grep evicted_keys
+docker compose exec redis redis-cli -a "$REDIS_PASS" --no-auth-warning info stats | grep evicted_keys
 # Should be > 0
 
 # Cache still effective (hit rate >70%)
-docker compose exec redis redis-cli info stats | grep keyspace_hits
+docker compose exec redis redis-cli -a "$REDIS_PASS" --no-auth-warning info stats | grep keyspace_hits
 ```
 
 **Prevention**:

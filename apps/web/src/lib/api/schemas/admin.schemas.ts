@@ -260,7 +260,7 @@ export type TimeSeriesDataPoint = z.infer<typeof TimeSeriesDataPointSchema>;
 
 /**
  * Dashboard Metrics Schema
- * Matches DashboardMetrics from backend Contracts
+ * Matches DashboardMetrics from backend Contracts (Issue #874: Extended to 16 metrics)
  */
 export const DashboardMetricsSchema = z.object({
   totalUsers: z.number().int().nonnegative(),
@@ -271,6 +271,15 @@ export const DashboardMetricsSchema = z.object({
   averageConfidenceScore: z.number(),
   totalRagRequests: z.number().int().nonnegative(),
   totalTokensUsed: z.number().int().nonnegative(),
+  // Issue #874: Additional metrics for centralized dashboard (16 total)
+  totalGames: z.number().int().nonnegative(),
+  apiRequests7d: z.number().int().nonnegative(),
+  apiRequests30d: z.number().int().nonnegative(),
+  averageLatency24h: z.number().nonnegative(),
+  averageLatency7d: z.number().nonnegative(),
+  errorRate24h: z.number().min(0).max(1),
+  activeAlerts: z.number().int().nonnegative(),
+  resolvedAlerts: z.number().int().nonnegative(),
 });
 
 export type DashboardMetrics = z.infer<typeof DashboardMetricsSchema>;
@@ -290,5 +299,48 @@ export const DashboardStatsSchema = z.object({
 });
 
 export type DashboardStats = z.infer<typeof DashboardStatsSchema>;
+
+/**
+ * Activity Event Schemas (Issue #874)
+ * For admin dashboard activity feed
+ */
+export const ActivitySeveritySchema = z.enum(['Info', 'Warning', 'Error', 'Critical']);
+export type ActivitySeverity = z.infer<typeof ActivitySeveritySchema>;
+
+export const ActivityEventTypeSchema = z.enum([
+  'UserRegistered',
+  'UserLogin',
+  'PdfUploaded',
+  'PdfProcessed',
+  'AlertCreated',
+  'AlertResolved',
+  'GameAdded',
+  'ConfigurationChanged',
+  'ErrorOccurred',
+  'SystemEvent',
+]);
+export type ActivityEventType = z.infer<typeof ActivityEventTypeSchema>;
+
+export const ActivityEventSchema = z.object({
+  id: z.string(),
+  eventType: ActivityEventTypeSchema,
+  description: z.string(),
+  userId: z.string().nullable().optional(),
+  userEmail: z.string().nullable().optional(),
+  entityId: z.string().nullable().optional(),
+  entityType: z.string().nullable().optional(),
+  timestamp: z.string().datetime(),
+  severity: ActivitySeveritySchema.optional().default('Info'),
+});
+
+export type ActivityEvent = z.infer<typeof ActivityEventSchema>;
+
+export const RecentActivityDtoSchema = z.object({
+  events: z.array(ActivityEventSchema),
+  totalCount: z.number().int().nonnegative(),
+  generatedAt: z.string().datetime(),
+});
+
+export type RecentActivityDto = z.infer<typeof RecentActivityDtoSchema>;
 
 // Note: PagedResult is defined in config.schemas.ts and re-exported via index.ts

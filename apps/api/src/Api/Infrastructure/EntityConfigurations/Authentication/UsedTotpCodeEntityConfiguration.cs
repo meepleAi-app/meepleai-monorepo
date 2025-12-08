@@ -26,7 +26,7 @@ public class UsedTotpCodeEntityConfiguration : IEntityTypeConfiguration<UsedTotp
 
         builder.Property(e => e.CodeHash)
             .IsRequired()
-            .HasMaxLength(128); // PBKDF2 hash length
+            .HasMaxLength(128); // SHA256 hash length (64 hex chars)
 
         builder.Property(e => e.TimeStep)
             .IsRequired();
@@ -38,12 +38,14 @@ public class UsedTotpCodeEntityConfiguration : IEntityTypeConfiguration<UsedTotp
             .IsRequired();
 
         // Indexes
-        // PERFORMANCE: Composite index for fast replay attack detection
-        // Order: (UserId, CodeHash, ExpiresAt) enables efficient lookup + cleanup
-        builder.HasIndex(e => new { e.UserId, e.CodeHash, e.ExpiresAt })
-            .HasDatabaseName("ix_used_totp_codes_user_code_expiry");
+        // SECURITY: UNIQUE constraint prevents TOTP replay attacks at DB level
+        // Fixes race condition where concurrent requests could both pass AnyAsync() check
+        // Order: (UserId, CodeHash) ensures atomicity - duplicate insert will fail
+        builder.HasIndex(e => new { e.UserId, e.CodeHash })
+            .IsUnique()
+            .HasDatabaseName("ix_used_totp_codes_user_code_unique");
 
-        // PERFORMANCE: Index for background cleanup job
+        // PERFORMANCE: Index for background cleanup job (non-unique)
         builder.HasIndex(e => e.ExpiresAt)
             .HasDatabaseName("ix_used_totp_codes_expiry");
 

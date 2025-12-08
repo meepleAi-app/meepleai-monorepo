@@ -5,3 +5,7 @@ storybook-static/
 
 # E2E Coverage Reports (Issue #1498)
 coverage-e2e/
+
+# E2E Test Artifacts (Issue #2008)
+e2e/.memory-log.json
+e2e/.memory-log.json.tmp

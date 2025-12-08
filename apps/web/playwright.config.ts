@@ -6,16 +6,16 @@ import path from 'path';
 export default defineConfig<ChromaticConfig>({
   testDir: './e2e',
   timeout: 60000, // 60s global timeout for dev mode
-  fullyParallel: !process.env.CI, // Issue #1868: Disable parallel in CI to prevent axe-core race conditions
-  forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : 2, // Issue #1868: Single worker in CI for stability, 2 local for speed
+  fullyParallel: process.env.CI !== 'true', // Issue #1868: Disable parallel in CI to prevent axe-core race conditions
+  forbidOnly: process.env.CI === 'true',
+  retries: process.env.CI === 'true' ? 2 : 0, // Issue #2008: Retry strategy - CI transient failures, local fast feedback
+  workers: process.env.CI === 'true' ? 1 : 2, // Issue #1868: Single worker in CI for stability, 2 local for speed
   // Issue #2007: Add global setup/teardown for server health checks
   globalSetup: require.resolve('./e2e/global-setup.ts'),
   globalTeardown: require.resolve('./e2e/global-teardown.ts'),
   // Issue #1498: E2E Code Coverage Reporting
   reporter: [
-    [process.env.CI ? 'dot' : 'html'], // Standard reporters
+    [process.env.CI === 'true' ? 'dot' : 'html'], // Standard reporters
     [
       '@bgotink/playwright-coverage',
       defineCoverageReporterConfig({
@@ -135,11 +135,13 @@ export default defineConfig<ChromaticConfig>({
     // Issue #1868: Use production server in CI (after pnpm build), dev server locally
     // Issue #1951: Use standalone server in CI (compatible with output: 'standalone')
     // Issue #1951: In CI, NEXT_PUBLIC_API_BASE=http://localhost:8081 (mock server started in CI step)
-    command: process.env.CI
-      ? 'cross-env PORT=3000 node .next/standalone/server.js'
-      : 'node --max-old-space-size=4096 ./node_modules/next/dist/bin/next dev -p 3000',
+    // Issue #2008: Check CI === 'true' (not just truthy) to avoid treating CI=false as true
+    command:
+      process.env.CI === 'true'
+        ? 'cross-env PORT=3000 node .next/standalone/server.js'
+        : 'node --max-old-space-size=4096 ./node_modules/next/dist/bin/next dev -p 3000',
     url: 'http://localhost:3000',
-    reuseExistingServer: !process.env.CI,
-    timeout: process.env.CI ? 30 * 1000 : 180 * 1000, // 30s for prod, 3min for dev startup
+    reuseExistingServer: process.env.CI !== 'true',
+    timeout: process.env.CI === 'true' ? 30 * 1000 : 180 * 1000, // 30s for prod, 3min for dev startup
   },
 });

@@ -91,7 +91,8 @@ curl http://localhost:8080/health | jq '.'
 
 # Check dependencies
 curl http://localhost:6333/healthz  # Qdrant
-docker compose exec redis redis-cli ping  # Redis
+export REDIS_PASS=$(cat infra/secrets/redis-password.txt)
+docker compose exec redis redis-cli -a "$REDIS_PASS" --no-auth-warning ping  # Redis
 docker compose exec postgres psql -U meeple -d meepleai -c "SELECT 1;"  # Postgres
 
 # Check dashboards

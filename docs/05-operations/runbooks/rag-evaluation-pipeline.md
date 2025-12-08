@@ -266,7 +266,8 @@ curl http://localhost:8080/health/ready | jq .
 **Diagnostic Steps**:
 ```bash
 # 1. Clear Redis cache
-docker compose exec redis redis-cli FLUSHALL
+export REDIS_PASS=$(cat infra/secrets/redis-password.txt)
+docker compose exec redis redis-cli -a "$REDIS_PASS" --no-auth-warning FLUSHALL
 
 # 2. Verify document count stability
 curl http://localhost:6333/collections/meepleai-documents | jq '.result.points_count'

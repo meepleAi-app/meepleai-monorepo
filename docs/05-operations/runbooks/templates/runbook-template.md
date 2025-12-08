@@ -95,7 +95,8 @@ curl http://localhost:8080/health | jq '.checks.postgres'
 
 # Redis
 docker compose ps redis
-docker compose exec redis redis-cli ping
+export REDIS_PASS=$(cat infra/secrets/redis-password.txt)
+docker compose exec redis redis-cli -a "$REDIS_PASS" --no-auth-warning ping
 docker compose logs redis --tail 50
 
 # Qdrant

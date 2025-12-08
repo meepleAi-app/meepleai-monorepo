@@ -45,7 +45,7 @@ export class MemoryMonitor {
    * Start monitoring memory usage at the specified interval
    */
   start(intervalMs: number = 10000): void {
-    console.log(`[MemoryMonitor] Starting memory monitoring (interval: ${intervalMs}ms)`);
+    console.warn(`[MemoryMonitor] Starting memory monitoring (interval: ${intervalMs}ms)`);
 
     try {
       // Ensure directory exists
@@ -107,7 +107,7 @@ export class MemoryMonitor {
 
       // Log current usage (every 5 samples to reduce noise)
       if (data.samples.length % 5 === 0) {
-        console.log(
+        console.warn(
           `[MemoryMonitor] Heap: ${(usage.heapUsed / 1024 / 1024).toFixed(2)}MB / ${(usage.heapTotal / 1024 / 1024).toFixed(2)}MB (Samples: ${data.samples.length})`
         );
       }

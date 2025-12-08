@@ -518,3 +518,156 @@ groups:
             Review recent changes and monitor for escalation.
           runbook_url: "https://docs.meepleai.dev/runbooks/ai-quality-low"
           dashboard_url: "http://localhost:3001/d/quality-metrics"
+
+  # ========================================
+  # P3-705: Infrastructure Monitoring Rules
+  # Container and host metrics alerts
+  # ========================================
+
+  - name: container_alerts
+    interval: 30s
+    rules:
+      # CRITICAL: Container high memory usage (>90% of limit)
+      - alert: ContainerHighMemory
+        expr: |
+          (container_memory_usage_bytes / container_spec_memory_limit_bytes) > 0.9
+          and container_spec_memory_limit_bytes > 0
+        for: 5m
+        labels:
+          severity: warning
+          service: infrastructure
+          category: container
+        annotations:
+          summary: "Container {{ $labels.name }} memory usage > 90%"
+          description: |
+            Container {{ $labels.name }} is using {{ $value | humanizePercentage }} of its memory limit.
+            Current usage may lead to OOM kills.
+            Check container logs and consider increasing memory limits.
+          runbook_url: "https://docs.meepleai.dev/runbooks/infrastructure-monitoring"
+          dashboard_url: "http://localhost:3001/d/infrastructure-monitoring"
+
+      # WARNING: Container high CPU usage (>80%)
+      - alert: ContainerHighCPU
+        expr: |
+          rate(container_cpu_usage_seconds_total[5m]) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          service: infrastructure
+          category: container
+        annotations:
+          summary: "Container {{ $labels.name }} CPU usage > 80%"
+          description: |
+            Container {{ $labels.name }} CPU usage is {{ $value | humanizePercentage }}.
+            High CPU usage may affect performance.
+            Check for CPU-intensive operations or consider resource optimization.
+          runbook_url: "https://docs.meepleai.dev/runbooks/infrastructure-monitoring"
+          dashboard_url: "http://localhost:3001/d/infrastructure-monitoring"
+
+      # WARNING: Container restart detected
+      - alert: ContainerRestarted
+        expr: |
+          increase(container_start_time_seconds[5m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+          service: infrastructure
+          category: container
+        annotations:
+          summary: "Container {{ $labels.name }} has restarted"
+          description: |
+            Container {{ $labels.name }} has been restarted.
+            Check container logs for crash reasons or OOM kills.
+          runbook_url: "https://docs.meepleai.dev/runbooks/infrastructure-monitoring"
+
+  - name: host_alerts
+    interval: 30s
+    rules:
+      # CRITICAL: Host high CPU usage (>80%)
+      - alert: HostHighCPU
+        expr: |
+          100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: infrastructure
+          category: host
+        annotations:
+          summary: "Host CPU usage > 80%"
+          description: |
+            Host {{ $labels.instance }} CPU usage is {{ $value | humanize }}%.
+            High CPU usage may affect all containers performance.
+            Check for resource-intensive processes or scale infrastructure.
+          runbook_url: "https://docs.meepleai.dev/runbooks/infrastructure-monitoring"
+          dashboard_url: "http://localhost:3001/d/infrastructure-monitoring"
+
+      # CRITICAL: Host low disk space (<10%)
+      - alert: HostLowDiskSpace
+        expr: |
+          ((node_filesystem_avail_bytes{fstype!~"tmpfs|fuse.lxcfs|squashfs"} / node_filesystem_size_bytes{fstype!~"tmpfs|fuse.lxcfs|squashfs"}) * 100) < 10
+        for: 5m
+        labels:
+          severity: critical
+          service: infrastructure
+          category: host
+        annotations:
+          summary: "Host disk space < 10% on {{ $labels.mountpoint }}"
+          description: |
+            Host {{ $labels.instance }} has only {{ $value | humanize }}% free disk space on {{ $labels.mountpoint }}.
+            Critical disk space may cause service failures.
+            Clean up old logs, backups, or expand disk capacity immediately.
+          runbook_url: "https://docs.meepleai.dev/runbooks/infrastructure-monitoring"
+          dashboard_url: "http://localhost:3001/d/infrastructure-monitoring"
+
+      # WARNING: Host low disk space (<20%)
+      - alert: HostLowDiskSpaceWarning
+        expr: |
+          ((node_filesystem_avail_bytes{fstype!~"tmpfs|fuse.lxcfs|squashfs"} / node_filesystem_size_bytes{fstype!~"tmpfs|fuse.lxcfs|squashfs"}) * 100) < 20
+        for: 10m
+        labels:
+          severity: warning
+          service: infrastructure
+          category: host
+        annotations:
+          summary: "Host disk space < 20% on {{ $labels.mountpoint }}"
+          description: |
+            Host {{ $labels.instance }} has {{ $value | humanize }}% free disk space on {{ $labels.mountpoint }}.
+            Plan disk cleanup or expansion to prevent critical state.
+          runbook_url: "https://docs.meepleai.dev/runbooks/infrastructure-monitoring"
+          dashboard_url: "http://localhost:3001/d/infrastructure-monitoring"
+
+      # WARNING: Host high memory usage (>85%)
+      - alert: HostHighMemory
+        expr: |
+          ((node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+          service: infrastructure
+          category: host
+        annotations:
+          summary: "Host memory usage > 85%"
+          description: |
+            Host {{ $labels.instance }} memory usage is {{ $value | humanize }}%.
+            High memory usage may lead to swapping and performance degradation.
+            Check for memory leaks or consider adding more RAM.
+          runbook_url: "https://docs.meepleai.dev/runbooks/infrastructure-monitoring"
+          dashboard_url: "http://localhost:3001/d/infrastructure-monitoring"
+
+      # WARNING: Host high load average
+      - alert: HostHighLoadAverage
+        expr: |
+          node_load15 / count(node_cpu_seconds_total{mode="idle"}) without (cpu, mode) > 2
+        for: 10m
+        labels:
+          severity: warning
+          service: infrastructure
+          category: host
+        annotations:
+          summary: "Host load average is high"
+          description: |
+            Host {{ $labels.instance }} 15-minute load average is {{ $value | humanize }}x CPU cores.
+            High load may indicate resource saturation.
+            Check for CPU-bound processes or I/O bottlenecks.
+          runbook_url: "https://docs.meepleai.dev/runbooks/infrastructure-monitoring"
+          dashboard_url: "http://localhost:3001/d/infrastructure-monitoring"

@@ -89,3 +89,21 @@ scrape_configs:
         labels:
           service: 'alertmanager'
           component: 'alerting'
+
+  # P3-705: cAdvisor - Container metrics
+  - job_name: 'cadvisor'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['cadvisor:8080']
+        labels:
+          service: 'cadvisor'
+          component: 'container-metrics'
+
+  # P3-705: node-exporter - Host metrics
+  - job_name: 'node-exporter'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['node-exporter:9100']
+        labels:
+          service: 'node-exporter'
+          component: 'host-metrics'

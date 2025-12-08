@@ -81,7 +81,7 @@ docs/                Architecture, ADRs, guides
 **Services**:
 - **Core**: postgres:5432, qdrant:6333, redis:6379
 - **AI/ML**: ollama:11434, embedding:8000, unstructured:8001, smoldocling:8002
-- **Observability**: hyperdx:8180, prometheus:9090, alertmanager:9093, grafana:3001
+- **Observability**: hyperdx:8180, prometheus:9090, alertmanager:9093, grafana:3001, cadvisor:8082, node-exporter:9100
 - **Workflow**: n8n:5678
 - **App**: api:8080, web:3000
 - **Proxy**: traefik:80,8080 (Issue #703 - optional, dev-first)
@@ -442,4 +442,4 @@ bash tools/cleanup-caches.sh                # Run
 
 ---
 
-**Note**: For complete documentation index see [docs/INDEX.md](docs/INDEX.md). Docker services and ports updated to reflect full observability stack (15 services total).
+**Note**: For complete documentation index see [docs/INDEX.md](docs/INDEX.md). Docker services and ports updated to reflect full observability stack (17 services total: +cAdvisor, +node-exporter for infrastructure monitoring - Issue #705).

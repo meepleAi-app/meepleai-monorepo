@@ -22,10 +22,6 @@ const meta = {
     layout: 'padded',
     chromatic: {
       viewports: [375, 768, 1024],
-      modes: {
-        light: {},
-        dark: {},
-      },
     },
   },
   tags: ['autodocs'],

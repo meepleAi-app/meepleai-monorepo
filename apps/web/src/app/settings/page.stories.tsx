@@ -24,10 +24,6 @@ const meta = {
     layout: 'fullscreen',
     chromatic: {
       viewports: [375, 768, 1024],
-      modes: {
-        light: {},
-        dark: {},
-      },
     },
   },
   tags: ['autodocs'],

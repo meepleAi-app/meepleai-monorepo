@@ -616,6 +616,12 @@ curl http://localhost:9100/metrics
 curl http://localhost:9090/api/v1/alerts
 ```
 
+**Quick Resource Check**:
+```bash
+# Memory and CPU usage for all services
+docker compose stats --no-stream
+```
+
 ---
 
 **Last Updated**: 2025-12-08 (Issue #705)

@@ -163,8 +163,7 @@ http_server_active_requests
 
 **Docker stats**:
 ```bash
-docker stats --no-stream api
-docker stats --no-stream postgres redis qdrant
+docker compose stats --no-stream
 ```
 
 ## Common Root Causes & Fixes

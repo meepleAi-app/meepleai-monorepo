@@ -71,7 +71,7 @@ rate(http_server_request_duration_count[5m])
 
 **Docker stats**:
 ```bash
-docker stats --no-stream api postgres redis qdrant
+docker compose stats --no-stream
 
 # Look for:
 # - CPU > 80% (CPU bottleneck)
@@ -346,7 +346,7 @@ docker compose exec redis redis-cli -a "$REDIS_PASS" --no-auth-warning info stat
 curl http://localhost:9090/api/v1/query?query=meepleai:api:response_time_p95:5m
 
 # Database load decreased
-docker stats --no-stream postgres
+docker compose stats --no-stream postgres
 # CPU should be <50%
 ```
 
@@ -412,7 +412,7 @@ curl http://localhost:9090/api/v1/query?query=rate(http_server_request_duration_
 curl http://localhost:9090/api/v1/query?query=meepleai:api:response_time_p95:5m
 
 # Resource usage normalized
-docker stats --no-stream api
+docker compose stats --no-stream
 # CPU <70%, Memory <70%
 ```
 
@@ -510,7 +510,7 @@ time curl -X POST http://localhost:8080/api/v1/chat \
 **Investigation**:
 ```bash
 # Check memory usage
-docker stats --no-stream api
+docker compose stats --no-stream
 
 # Check GC events in logs
 docker compose logs api | grep -i "gc\|garbage"
@@ -550,7 +550,7 @@ docker compose restart api
 **Verification**:
 ```bash
 # Memory usage stable (<70%)
-docker stats --no-stream api
+docker compose stats --no-stream
 
 # No GC pause spikes in logs
 docker compose logs api --tail 100 | grep -i gc
@@ -573,7 +573,7 @@ docker compose logs api --tail 100 | grep -i gc
 
 1. **Identify slow component** (database, cache, external API):
    ```bash
-   docker stats --no-stream api postgres redis qdrant
+   docker compose stats --no-stream
    ```
 
 2. **Silence alert** (if actively working):

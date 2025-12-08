@@ -99,7 +99,7 @@ curl http://localhost:8080/health | jq '.version'
 **Docker stats details**:
 ```bash
 # Current memory usage
-docker stats --no-stream api
+docker compose stats --no-stream
 
 # Memory limit
 docker inspect api | grep -i memory
@@ -182,7 +182,7 @@ curl http://localhost:6333/metrics | grep memory
 free -h
 
 # Per-process memory (top processes)
-docker stats --no-stream
+docker compose stats --no-stream
 
 # Swap usage (indicates memory pressure)
 swapon --show
@@ -208,6 +208,9 @@ docker compose config | grep -A 5 "resources:"
 
 **Investigation**:
 ```bash
+# Check memory usage
+docker compose stats --no-stream
+
 # Check GC pressure
 docker compose exec api curl http://localhost:8080/metrics | grep "dotnet_gc_"
 
@@ -251,7 +254,7 @@ docker compose up -d
 **Verification**:
 ```bash
 # Memory usage stable after restart
-docker stats --no-stream api
+docker compose stats --no-stream
 # Should be <500MB after restart
 
 # Monitor for growth (check every 30 minutes)
@@ -324,7 +327,7 @@ docker compose up -d
 # Monitor memory during next batch operation
 
 # Memory returns to baseline after operation
-docker stats --no-stream api
+docker compose stats --no-stream api
 # Should be <60% after operation completes
 
 # No errors during batch processing
@@ -483,9 +486,9 @@ curl http://localhost:8080/metrics | grep "http_server_active_requests"
 
 1. **Check memory trend** (growing vs stable):
    ```bash
-   docker stats --no-stream api
+   docker compose stats --no-stream
    # Wait 1 minute, check again
-   docker stats --no-stream api
+   docker compose stats --no-stream
    # Compare values
    ```
 

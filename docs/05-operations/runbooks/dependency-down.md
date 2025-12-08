@@ -194,7 +194,7 @@ curl http://localhost:6333/cluster
 
 **Docker stats** (check for resource exhaustion):
 ```bash
-docker stats --no-stream postgres redis qdrant
+docker compose stats --no-stream
 ```
 
 **Look for**:
@@ -271,7 +271,7 @@ docker compose restart <service>
 docker compose ps <service>
 
 # Option B: If restart loop (check resources first)
-docker stats --no-stream <service>
+docker compose stats --no-stream <service>
 # If memory at limit, increase memory allocation
 
 # Option C: Full restart (nuclear option)
@@ -382,7 +382,7 @@ curl http://localhost:8080/health
 **Investigation**:
 ```bash
 # Check memory usage
-docker stats --no-stream postgres redis qdrant api
+docker compose stats --no-stream postgres redis qdrant api
 
 # Check container memory limit
 docker inspect <container-id> | grep -i memory
@@ -428,7 +428,7 @@ docker compose restart <service>
 **Verification**:
 ```bash
 # Memory usage normalized (<80%)
-docker stats --no-stream <service>
+docker compose stats --no-stream <service>
 
 # Service running and healthy
 docker compose ps <service>

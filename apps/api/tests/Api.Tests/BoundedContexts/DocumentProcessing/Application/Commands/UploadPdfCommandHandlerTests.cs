@@ -15,6 +15,7 @@ using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
 using FluentAssertions;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Commands;
 
@@ -23,6 +24,7 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Commands;
 /// Tests PDF upload, validation, storage, and background processing orchestration.
 /// ISSUE-1818: Migrating to FluentAssertions for improved readability.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class UploadPdfCommandHandlerTests
 {
     /// <summary>
@@ -54,9 +56,6 @@ public class UploadPdfCommandHandlerTests
 
         return (scopeFactoryMock, loggerMock, pdfTextExtractorMock, tableExtractorMock, backgroundTaskServiceMock, cacheServiceMock, blobStorageServiceMock, quotaServiceMock, pdfOptions);
     }
-
-    #region Construction Tests
-
     [Fact]
     public void Constructor_WithValidDependencies_CreatesInstance()
     {
@@ -329,11 +328,6 @@ public class UploadPdfCommandHandlerTests
         act.Should().Throw<ArgumentNullException>()
             .WithParameterName("pdfOptions");
     }
-
-    #endregion
-
-    #region Command Tests
-
     [Fact]
     public void UploadPdfCommand_ConstructsCorrectly()
     {
@@ -353,11 +347,6 @@ public class UploadPdfCommandHandlerTests
         command.UserId.Should().Be(userId);
         command.File.Should().Be(formFileMock.Object);
     }
-
-    #endregion
-
-    #region Validation Tests
-
     [Fact]
     public void UploadPdfCommand_WithEmptyGameId_AllowsConstruction()
     {
@@ -387,9 +376,6 @@ public class UploadPdfCommandHandlerTests
         command.Should().NotBeNull();
         command.UserId.Should().Be(Guid.Empty);
     }
-
-    #endregion
-
     // NOTE: Full workflow tests (file validation, blob storage upload, background processing,
     // PDF extraction, indexing, error handling, progress tracking, cache invalidation)
     // should be in integration test suite due to complex dependencies and async background work.

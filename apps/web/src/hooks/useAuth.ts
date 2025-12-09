@@ -26,11 +26,6 @@ export interface AuthUser {
   role: string;
 }
 
-export interface AuthResponse {
-  user: AuthUser;
-  expiresAt?: string;
-}
-
 export interface RegisterData {
   email: string;
   password: string;
@@ -71,12 +66,8 @@ export function useAuth(): UseAuthReturn {
   const loadCurrentUser = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await api.get<AuthResponse>('/api/v1/auth/me');
-      if (res?.user) {
-        setUser(res.user);
-      } else {
-        setUser(null);
-      }
+      const user = await api.auth.getMe();
+      setUser(user);
     } catch (err) {
       // Session not found or expired - this is expected for logged-out users
       setUser(null);
@@ -94,17 +85,13 @@ export function useAuth(): UseAuthReturn {
     setError('');
 
     try {
-      const res = await api.post<AuthResponse>('/api/v1/auth/login', {
+      const authUser = await api.auth.login({
         email: data.email,
         password: data.password,
       });
 
-      if (!res?.user) {
-        throw new Error('Login response missing user data');
-      }
-
-      setUser(res.user);
-      return res.user;
+      setUser(authUser);
+      return authUser;
     } catch (err: any) {
       const errorMessage = err?.message || 'Login failed. Please check your credentials.';
       setError(errorMessage);
@@ -123,21 +110,15 @@ export function useAuth(): UseAuthReturn {
     setError('');
 
     try {
-      const payload = {
+      const authUser = await api.auth.register({
         email: data.email,
         password: data.password,
         displayName: data.displayName || undefined,
         role: data.role || 'User',
-      };
+      });
 
-      const res = await api.post<AuthResponse>('/api/v1/auth/register', payload);
-
-      if (!res?.user) {
-        throw new Error('Registration response missing user data');
-      }
-
-      setUser(res.user);
-      return res.user;
+      setUser(authUser);
+      return authUser;
     } catch (err: any) {
       const errorMessage = err?.message || 'Registration failed. Please try again.';
       setError(errorMessage);
@@ -156,7 +137,7 @@ export function useAuth(): UseAuthReturn {
     setError('');
 
     try {
-      await api.post('/api/v1/auth/logout');
+      await api.auth.logout();
       setUser(null);
       await router.push('/');
     } catch (err: any) {

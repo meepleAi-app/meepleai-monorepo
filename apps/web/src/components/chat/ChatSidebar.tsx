@@ -13,7 +13,7 @@
 
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { useChatContext } from '@/hooks/useChatContext';
+import { useChatStore } from '@/store/chat/store';
 import { GameSelector } from './GameSelector';
 import { AgentSelector } from './AgentSelector';
 import { ChatHistory } from './ChatHistory';
@@ -23,8 +23,27 @@ import { ChatThread, Game } from '@/types';
 const MAX_THREADS_PER_GAME = 5; // Issue #858: Thread limit constant
 
 export function ChatSidebar() {
-  const { games, chats, selectedGameId, selectedAgentId, sidebarCollapsed, loading, createChat } =
-    useChatContext();
+  // Issue #1676: Migrated from useChatContext to direct Zustand store
+  const {
+    games,
+    chatsByGame,
+    selectedGameId,
+    selectedAgentId,
+    sidebarCollapsed,
+    loading,
+    createChat,
+  } = useChatStore(state => ({
+    games: state.games,
+    chatsByGame: state.chatsByGame,
+    selectedGameId: state.selectedGameId,
+    selectedAgentId: state.selectedAgentId,
+    sidebarCollapsed: state.sidebarCollapsed,
+    loading: state.loading,
+    createChat: state.createChat,
+  }));
+
+  // Derived value
+  const chats = selectedGameId ? (chatsByGame[selectedGameId] ?? []) : [];
 
   const handleCreateChat = () => {
     void createChat();

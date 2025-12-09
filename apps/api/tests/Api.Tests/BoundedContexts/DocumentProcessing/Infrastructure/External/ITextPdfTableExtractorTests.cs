@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Infrastructure.External;
 
@@ -14,6 +15,7 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Infrastructure.External;
 /// Tests infrastructure logic with mocked dependencies
 /// ISSUE-1818: Migrated to FluentAssertions for improved readability.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class ITextPdfTableExtractorTests
 {
     private readonly Mock<ITableDetectionService> _mockTableDetection;
@@ -35,9 +37,6 @@ public class ITextPdfTableExtractorTests
             _ruleConverter,
             _logger);
     }
-
-    #region Constructor Tests
-
     [Fact]
     public void Constructor_WithNullTableDetectionService_ThrowsArgumentNullException()
     {
@@ -89,11 +88,6 @@ public class ITextPdfTableExtractorTests
         
         act.Should().Throw<ArgumentNullException>();
     }
-
-    #endregion
-
-    #region ExtractTablesAsync - Validation Tests
-
     [Fact]
     public async Task ExtractTablesAsync_WithNullFilePath_ReturnsFailureResult()
     {
@@ -140,11 +134,6 @@ public class ITextPdfTableExtractorTests
         result.Success.Should().BeFalse();
         result.ErrorMessage.Should().Contain("File not found");
     }
-
-    #endregion
-
-    #region ExtractStructuredContentAsync - Validation Tests
-
     [Fact]
     public async Task ExtractStructuredContentAsync_WithNullFilePath_ReturnsFailureResult()
     {
@@ -180,11 +169,6 @@ public class ITextPdfTableExtractorTests
         result.Success.Should().BeFalse();
         result.ErrorMessage.Should().Contain("File not found");
     }
-
-    #endregion
-
-    #region Cancellation Tests
-
     [Fact]
     public async Task ExtractTablesAsync_WithCancellationToken_PropagatesCancellation()
     {
@@ -230,11 +214,6 @@ public class ITextPdfTableExtractorTests
                 File.Delete(tempPdfPath);
         }
     }
-
-    #endregion
-
-    #region Result Structure Tests
-
     [Fact]
     public void TableExtractionResult_CreateSuccess_ReturnsSuccessResult()
     {
@@ -314,11 +293,6 @@ public class ITextPdfTableExtractorTests
         result.DiagramCount.Should().Be(0);
         result.AtomicRuleCount.Should().Be(0);
     }
-
-    #endregion
-
-    #region DTO Tests
-
     [Fact]
     public void PdfTable_DefaultConstructor_InitializesCollections()
     {
@@ -377,11 +351,6 @@ public class ITextPdfTableExtractorTests
         diagram.Description.Should().Be("Test diagram");
         diagram.ImageData!.Length.Should().Be(3);
     }
-
-    #endregion
-
-    #region Helper Methods
-
     /// <summary>
     /// Creates a minimal valid PDF file for testing
     /// </summary>
@@ -422,6 +391,4 @@ startxref
         File.WriteAllText(tempPath, pdfContent);
         return tempPath;
     }
-
-    #endregion
 }

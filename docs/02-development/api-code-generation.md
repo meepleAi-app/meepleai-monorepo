@@ -95,12 +95,12 @@ import { UserProfile } from '@/lib/api/generated/api-client';
 ### 2. Validate API Responses with Zod
 
 ```typescript
-import { UserProfileSchema } from '@/lib/api/generated/zod-schemas';
+import { GameSchema } from '@/lib/api/generated/zod-schemas';
 
 // Validate API response
-const response = await fetch('/api/v1/users/profile');
+const response = await fetch('/api/v1/games');
 const data = await response.json();
-const profile = UserProfileSchema.parse(data); // Runtime validation
+const games = GameSchema.parse(data); // Runtime validation
 ```
 
 ### 3. Use Generated API Client

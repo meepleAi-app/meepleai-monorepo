@@ -11,13 +11,29 @@
  */
 
 import React from 'react';
-import { useChatContext } from '@/hooks/useChatContext';
+import { useChatStore } from '@/store/chat/store';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 
 export function MessageEditForm() {
-  const { editingMessageId, editContent, setEditContent, saveEdit, cancelEdit, loading } =
-    useChatContext();
+  // Issue #1676: Migrated from useChatContext to direct Zustand store
+  const {
+    editingMessageId,
+    editContent,
+    setEditContent,
+    saveEdit,
+    editMessage,
+    cancelEdit,
+    loading,
+  } = useChatStore(state => ({
+    editingMessageId: state.editingMessageId,
+    editContent: state.editContent,
+    setEditContent: state.setEditContent,
+    saveEdit: state.saveEdit,
+    editMessage: state.editMessage,
+    cancelEdit: state.cancelEdit,
+    loading: state.loading,
+  }));
 
   if (!editingMessageId) {
     return null;
@@ -38,7 +54,7 @@ export function MessageEditForm() {
       />
       <div className="flex gap-2 mt-2">
         <Button
-          onClick={() => void saveEdit()}
+          onClick={() => void saveEdit(editMessage)}
           disabled={!canSave}
           size="sm"
           aria-label="Save edited message"

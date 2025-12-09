@@ -67,7 +67,7 @@ Ho completato una code review approfondita del sistema di logging, gestione erro
          ↓                    ↓                    ↓
     ┌────────┐          ┌─────────┐          ┌──────────┐
     │  Seq   │          │ Jaeger  │          │Prometheus│
-    │ :8081  │          │ :16686  │          │  :9090   │
+    │ :8180  │          │ :8180  │          │  :9090   │
     └────────┘          └─────────┘          └──────────┘
          ↓                                         ↓
     ┌────────────────┐                    ┌──────────────┐
@@ -1185,8 +1185,8 @@ Il sistema di logging, gestione errori ed eventi di MeepleAI rappresenta un **es
 ✅ **PRODUCTION-READY al 100%** senza modifiche obbligatorie
 
 **Infrastruttura richiesta**:
-- Seq (logging aggregation) - `http://seq:8081`
-- Jaeger (distributed tracing) - `http://jaeger:16686`
+- Seq (logging aggregation) - `http://seq:8180`
+- Jaeger (distributed tracing) - `http://jaeger:8180`
 - Prometheus (metrics) - `http://prometheus:9090`
 - Grafana (dashboards) - `http://grafana:3001` (opzionale ma raccomandato)
 

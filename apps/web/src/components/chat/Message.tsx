@@ -12,7 +12,7 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { Message as MessageType } from '@/types';
-import { useChatContext } from '@/hooks/useChatContext';
+import { useChatStore } from '@/store/chat/store';
 import { MessageActions } from './MessageActions';
 import { MessageEditForm } from './MessageEditForm';
 import { FollowUpQuestions } from './FollowUpQuestions';
@@ -23,6 +23,7 @@ interface MessageProps {
 }
 
 export const Message = React.memo(function Message({ message, isUser }: MessageProps) {
+  // Issue #1676: Migrated from useChatContext to direct Zustand store
   const {
     editingMessageId,
     startEditMessage,
@@ -30,7 +31,14 @@ export const Message = React.memo(function Message({ message, isUser }: MessageP
     setMessageFeedback,
     loading,
     setInputValue,
-  } = useChatContext();
+  } = useChatStore(state => ({
+    editingMessageId: state.editingMessageId,
+    startEditMessage: state.startEdit,
+    deleteMessage: state.deleteMessage,
+    setMessageFeedback: state.setMessageFeedback,
+    loading: state.loading,
+    setInputValue: state.setInputValue,
+  }));
 
   const isEditing = editingMessageId === message.id;
   const isDeleted = message.isDeleted;

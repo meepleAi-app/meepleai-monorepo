@@ -1,5 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Evaluation;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Evaluation;
 
@@ -7,6 +8,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Evaluation;
 /// Unit tests for EvaluationDataset.
 /// ADR-016 Phase 0: Validates dataset creation, validation, filtering, and JSON serialization.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class EvaluationDatasetTests
 {
     private static EvaluationSample CreateSample(

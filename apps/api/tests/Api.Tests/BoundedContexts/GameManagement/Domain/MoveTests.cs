@@ -1,12 +1,13 @@
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Domain;
 
+[Trait("Category", TestCategories.Unit)]
+
 public class MoveTests
 {
-    #region Constructor Tests
-
     [Fact]
     public void Move_WithValidParameters_CreatesSuccessfully()
     {
@@ -115,41 +116,22 @@ public class MoveTests
         var after = DateTime.UtcNow;
         Assert.InRange(move.Timestamp, before, after.AddSeconds(1));
     }
-
-    #endregion
-
-    #region ToString Tests
-
-    [Fact]
-    public void ToString_WithoutPosition_ReturnsFormattedString()
+    [Theory]
+    [InlineData("Alice", "roll dice", null, "Alice: roll dice")]
+    [InlineData("Bob", "move piece", "A5", "Bob: move piece at A5")]
+    public void ToString_ReturnsFormattedString(string playerName, string action, string? position, string expected)
     {
         // Arrange
-        var move = new Move("Alice", "roll dice");
+        var move = position == null 
+            ? new Move(playerName, action) 
+            : new Move(playerName, action, position);
 
         // Act
         var result = move.ToString();
 
         // Assert
-        Assert.Equal("Alice: roll dice", result);
+        Assert.Equal(expected, result);
     }
-
-    [Fact]
-    public void ToString_WithPosition_ReturnsFormattedStringWithPosition()
-    {
-        // Arrange
-        var move = new Move("Bob", "move piece", "A5");
-
-        // Act
-        var result = move.ToString();
-
-        // Assert
-        Assert.Equal("Bob: move piece at A5", result);
-    }
-
-    #endregion
-
-    #region Record Equality Tests
-
     [Fact]
     public void Move_EqualityByValue_WorksCorrectly()
     {
@@ -165,28 +147,16 @@ public class MoveTests
         Assert.True(move1 == move2);
     }
 
-    [Fact]
-    public void Move_DifferentPlayerName_AreNotEqual()
+    [Theory]
+    [InlineData("Alice", "roll dice", "Bob", "roll dice")]      // Different player
+    [InlineData("Alice", "roll dice", "Alice", "draw card")]    // Different action
+    public void Move_DifferentProperties_AreNotEqual(string player1, string action1, string player2, string action2)
     {
         // Arrange
-        var move1 = new Move("Alice", "roll dice");
-        var move2 = new Move("Bob", "roll dice");
+        var move1 = new Move(player1, action1);
+        var move2 = new Move(player2, action2);
 
         // Act & Assert
         Assert.NotEqual(move1, move2);
     }
-
-    [Fact]
-    public void Move_DifferentAction_AreNotEqual()
-    {
-        // Arrange
-        var move1 = new Move("Alice", "roll dice");
-        var move2 = new Move("Alice", "draw card");
-
-        // Act & Assert
-        Assert.NotEqual(move1, move2);
-    }
-
-    #endregion
 }
-

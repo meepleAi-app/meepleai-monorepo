@@ -7,6 +7,7 @@ using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 
@@ -14,6 +15,7 @@ namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 /// Tests for UpdateUserCommandHandler.
 /// Tests user updates (email, display name, role).
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class UpdateUserCommandHandlerTests
 {
     private readonly Mock<IUserRepository> _mockUserRepository;
@@ -308,4 +310,3 @@ public class UpdateUserCommandHandlerTests
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 }
-

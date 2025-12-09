@@ -22,16 +22,15 @@
  * - PUT /api/v1/auth/password-reset/confirm - Confirm new password
  */
 
-
-import { Suspense, useEffect, useState, FormEvent } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
-import { motion } from "framer-motion";
-import { api } from "@/lib/api";
-import { AccessibleFormInput, AccessibleButton } from "@/components/accessible";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { getErrorMessage } from "@/lib/utils/errorHandler";
+import { Suspense, useEffect, useState, FormEvent } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import { motion } from 'framer-motion';
+import { api } from '@/lib/api';
+import { AccessibleFormInput, AccessibleButton } from '@/components/accessible';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { getErrorMessage } from '@/lib/utils/errorHandler';
 
 // Type definitions
 type AuthUser = {
@@ -46,7 +45,7 @@ type AuthResponse = {
   expiresAt: string;
 };
 
-type PasswordStrength = "weak" | "medium" | "strong";
+type PasswordStrength = 'weak' | 'medium' | 'strong';
 
 interface PasswordValidation {
   minLength: boolean;
@@ -78,15 +77,13 @@ const validatePassword = (password: string): PasswordValidation => {
   const hasLowercase = /[a-z]/.test(password);
   const hasNumber = /[0-9]/.test(password);
 
-  const requirementsMet = [minLength, hasUppercase, hasLowercase, hasNumber].filter(
-    Boolean
-  ).length;
+  const requirementsMet = [minLength, hasUppercase, hasLowercase, hasNumber].filter(Boolean).length;
 
-  let strength: PasswordStrength = "weak";
+  let strength: PasswordStrength = 'weak';
   if (requirementsMet === 4) {
-    strength = "strong";
+    strength = 'strong';
   } else if (requirementsMet >= 2 && minLength) {
-    strength = "medium";
+    strength = 'medium';
   }
 
   return {
@@ -103,22 +100,22 @@ const validatePassword = (password: string): PasswordValidation => {
 const PasswordStrengthIndicator = ({ strength }: { strength: PasswordStrength }) => {
   const strengthConfig = {
     weak: {
-      color: "bg-red-500",
-      text: "Weak",
-      textColor: "text-red-500",
-      width: "w-1/3",
+      color: 'bg-red-500',
+      text: 'Weak',
+      textColor: 'text-red-500',
+      width: 'w-1/3',
     },
     medium: {
-      color: "bg-orange-500",
-      text: "Medium",
-      textColor: "text-orange-500",
-      width: "w-2/3",
+      color: 'bg-orange-500',
+      text: 'Medium',
+      textColor: 'text-orange-500',
+      width: 'w-2/3',
     },
     strong: {
-      color: "bg-green-500",
-      text: "Strong",
-      textColor: "text-green-500",
-      width: "w-full",
+      color: 'bg-green-500',
+      text: 'Strong',
+      textColor: 'text-green-500',
+      width: 'w-full',
     },
   };
 
@@ -148,43 +145,43 @@ function ResetPasswordPageContent() {
   const token = searchParams?.get('token') ?? null;
 
   // Mode: 'request' (no token) or 'reset' (with token)
-  const mode = token ? "reset" : "request";
+  const mode = token ? 'reset' : 'request';
 
   // Authentication state
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
   // Request mode state
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState('');
   const [requestSuccess, setRequestSuccess] = useState(false);
 
   // Reset mode state
   const [tokenValid, setTokenValid] = useState<boolean | null>(null);
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordValidation, setPasswordValidation] = useState<PasswordValidation>({
     minLength: false,
     hasUppercase: false,
     hasLowercase: false,
     hasNumber: false,
     isValid: false,
-    strength: "weak",
+    strength: 'weak',
   });
   const [resetSuccess, setResetSuccess] = useState(false);
 
   // UI state
   const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState('');
 
   // Check if user is already authenticated
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const res = await api.get<AuthResponse>("/api/v1/auth/me");
-        if (res) {
-          setAuthUser(res.user);
+        const user = await api.auth.getMe();
+        if (user) {
+          setAuthUser(user);
           // Redirect to chat if already logged in
-          void router.push("/chat");
+          void router.push('/chat');
         }
       } catch {
         setAuthUser(null);
@@ -198,16 +195,16 @@ function ResetPasswordPageContent() {
 
   // Verify token on page load (reset mode only)
   useEffect(() => {
-    if (mode === "reset" && token && typeof token === "string") {
+    if (mode === 'reset' && token && typeof token === 'string') {
       const verifyToken = async () => {
         setIsLoading(true);
-        setErrorMessage("");
+        setErrorMessage('');
         try {
-          await api.get(`/api/v1/auth/password-reset/verify?token=${encodeURIComponent(token)}`);
+          await api.auth.verifyResetToken(token);
           setTokenValid(true);
         } catch (err) {
           setTokenValid(false);
-          setErrorMessage(getErrorMessage(err, "Invalid or expired reset token."));
+          setErrorMessage(getErrorMessage(err, 'Invalid or expired reset token.'));
         } finally {
           setIsLoading(false);
         }
@@ -228,7 +225,7 @@ function ResetPasswordPageContent() {
         hasLowercase: false,
         hasNumber: false,
         isValid: false,
-        strength: "weak",
+        strength: 'weak',
       });
     }
   }, [newPassword]);
@@ -236,14 +233,14 @@ function ResetPasswordPageContent() {
   // Handle request reset submission
   const handleRequestReset = async (e: FormEvent) => {
     e.preventDefault();
-    setErrorMessage("");
+    setErrorMessage('');
     setIsLoading(true);
 
     try {
-      await api.post("/api/v1/auth/password-reset/request", { email });
+      await api.auth.requestPasswordReset(email);
       setRequestSuccess(true);
     } catch (err) {
-      setErrorMessage(getErrorMessage(err, "Failed to send reset email. Please try again."));
+      setErrorMessage(getErrorMessage(err, 'Failed to send reset email. Please try again.'));
     } finally {
       setIsLoading(false);
     }
@@ -252,21 +249,21 @@ function ResetPasswordPageContent() {
   // Handle password reset submission
   const handleConfirmReset = async (e: FormEvent) => {
     e.preventDefault();
-    setErrorMessage("");
+    setErrorMessage('');
 
     // Client-side validation
     if (!passwordValidation.isValid) {
-      setErrorMessage("Password does not meet all requirements.");
+      setErrorMessage('Password does not meet all requirements.');
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      setErrorMessage("Passwords do not match.");
+      setErrorMessage('Passwords do not match.');
       return;
     }
 
-    if (!token || typeof token !== "string") {
-      setErrorMessage("Invalid reset token.");
+    if (!token || typeof token !== 'string') {
+      setErrorMessage('Invalid reset token.');
       return;
     }
 
@@ -274,40 +271,37 @@ function ResetPasswordPageContent() {
 
     try {
       // Confirm password reset
-      await api.put("/api/v1/auth/password-reset/confirm", {
-        token,
-        newPassword,
-      });
+      await api.auth.confirmPasswordReset(token, newPassword);
 
       setResetSuccess(true);
 
       // Auto-login after reset
       try {
-        const loginRes = await api.post<AuthResponse>("/api/v1/auth/login", {
-          email: email || "", // Email might not be known in reset mode
+        const authUser = await api.auth.login({
+          email: email || '', // Email might not be known in reset mode
           password: newPassword,
         });
 
-        if (loginRes) {
-          setAuthUser(loginRes.user);
+        if (authUser) {
+          setAuthUser(authUser);
           // Redirect to chat after 2 seconds
           setTimeout(() => {
-            void router.push("/chat");
+            void router.push('/chat');
           }, 2000);
         } else {
           // If auto-login fails, redirect to login page
           setTimeout(() => {
-            void router.push("/");
+            void router.push('/');
           }, 2000);
         }
       } catch {
         // If auto-login fails, redirect to login page
         setTimeout(() => {
-          void router.push("/");
+          void router.push('/');
         }, 2000);
       }
     } catch (err) {
-      setErrorMessage(getErrorMessage(err, "Failed to reset password. Please try again."));
+      setErrorMessage(getErrorMessage(err, 'Failed to reset password. Please try again.'));
       setIsLoading(false);
     }
   };
@@ -354,12 +348,13 @@ function ResetPasswordPageContent() {
         >
           <Card className="p-8 space-y-6">
             {/* Request Reset Mode */}
-            {mode === "request" && !requestSuccess && (
+            {mode === 'request' && !requestSuccess && (
               <>
                 <div className="text-center space-y-2">
                   <h1 className="text-3xl font-bold">Reset Password</h1>
                   <p className="text-slate-400">
-                    Enter your email address and we&apos;ll send you instructions to reset your password.
+                    Enter your email address and we&apos;ll send you instructions to reset your
+                    password.
                   </p>
                 </div>
 
@@ -378,7 +373,7 @@ function ResetPasswordPageContent() {
                     label="Email Address"
                     type="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={e => setEmail(e.target.value)}
                     required
                     autoComplete="email"
                     placeholder="you@example.com"
@@ -409,7 +404,7 @@ function ResetPasswordPageContent() {
             )}
 
             {/* Request Success State */}
-            {mode === "request" && requestSuccess && (
+            {mode === 'request' && requestSuccess && (
               <div className="text-center space-y-4">
                 <div className="text-6xl mb-4">✉️</div>
                 <h2 className="text-2xl font-bold text-green-400">Check Your Email</h2>
@@ -417,11 +412,11 @@ function ResetPasswordPageContent() {
                   We&apos;ve sent password reset instructions to <strong>{email}</strong>.
                 </p>
                 <p className="text-sm text-slate-400">
-                  Didn&apos;t receive the email? Check your spam folder or{" "}
+                  Didn&apos;t receive the email? Check your spam folder or{' '}
                   <button
                     onClick={() => {
                       setRequestSuccess(false);
-                      setEmail("");
+                      setEmail('');
                     }}
                     className="text-primary hover:text-primary/80 underline"
                   >
@@ -438,7 +433,7 @@ function ResetPasswordPageContent() {
             )}
 
             {/* Reset Password Mode - Token Verification */}
-            {mode === "reset" && tokenValid === null && (
+            {mode === 'reset' && tokenValid === null && (
               <div className="text-center space-y-4">
                 <div className="animate-spin text-4xl mb-4">⏳</div>
                 <p className="text-slate-400">Verifying reset token...</p>
@@ -446,16 +441,14 @@ function ResetPasswordPageContent() {
             )}
 
             {/* Reset Password Mode - Invalid Token */}
-            {mode === "reset" && tokenValid === false && (
+            {mode === 'reset' && tokenValid === false && (
               <div className="text-center space-y-4">
                 <div className="text-6xl mb-4">⚠️</div>
                 <h2 className="text-2xl font-bold text-red-400">Invalid or Expired Link</h2>
                 <p className="text-slate-300">
                   This password reset link is invalid or has expired.
                 </p>
-                {errorMessage && (
-                  <p className="text-sm text-red-400">{errorMessage}</p>
-                )}
+                {errorMessage && <p className="text-sm text-red-400">{errorMessage}</p>}
                 <div className="pt-4 space-y-2">
                   <Button asChild className="w-full">
                     <Link href="/reset-password">Request New Reset Link</Link>
@@ -468,13 +461,11 @@ function ResetPasswordPageContent() {
             )}
 
             {/* Reset Password Mode - Valid Token */}
-            {mode === "reset" && tokenValid === true && !resetSuccess && (
+            {mode === 'reset' && tokenValid === true && !resetSuccess && (
               <>
                 <div className="text-center space-y-2">
                   <h1 className="text-3xl font-bold">Set New Password</h1>
-                  <p className="text-slate-400">
-                    Choose a strong password for your account.
-                  </p>
+                  <p className="text-slate-400">Choose a strong password for your account.</p>
                 </div>
 
                 {errorMessage && (
@@ -492,7 +483,7 @@ function ResetPasswordPageContent() {
                     label="New Password"
                     type="password"
                     value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
+                    onChange={e => setNewPassword(e.target.value)}
                     required
                     autoComplete="new-password"
                     inputClassName="w-full bg-white border border-slate-300 rounded-lg px-4 py-3 text-slate-900 focus:border-primary focus:ring-2 focus:ring-ring"
@@ -505,42 +496,38 @@ function ResetPasswordPageContent() {
                       <div className="text-sm space-y-1">
                         <div
                           className={`flex items-center gap-2 ${
-                            passwordValidation.minLength ? "text-green-400" : "text-slate-500"
+                            passwordValidation.minLength ? 'text-green-400' : 'text-slate-500'
                           }`}
                         >
-                          <span aria-hidden="true">
-                            {passwordValidation.minLength ? "✓" : "○"}
-                          </span>
+                          <span aria-hidden="true">{passwordValidation.minLength ? '✓' : '○'}</span>
                           <span>At least 8 characters</span>
                         </div>
                         <div
                           className={`flex items-center gap-2 ${
-                            passwordValidation.hasUppercase ? "text-green-400" : "text-slate-500"
+                            passwordValidation.hasUppercase ? 'text-green-400' : 'text-slate-500'
                           }`}
                         >
                           <span aria-hidden="true">
-                            {passwordValidation.hasUppercase ? "✓" : "○"}
+                            {passwordValidation.hasUppercase ? '✓' : '○'}
                           </span>
                           <span>At least 1 uppercase letter</span>
                         </div>
                         <div
                           className={`flex items-center gap-2 ${
-                            passwordValidation.hasLowercase ? "text-green-400" : "text-slate-500"
+                            passwordValidation.hasLowercase ? 'text-green-400' : 'text-slate-500'
                           }`}
                         >
                           <span aria-hidden="true">
-                            {passwordValidation.hasLowercase ? "✓" : "○"}
+                            {passwordValidation.hasLowercase ? '✓' : '○'}
                           </span>
                           <span>At least 1 lowercase letter</span>
                         </div>
                         <div
                           className={`flex items-center gap-2 ${
-                            passwordValidation.hasNumber ? "text-green-400" : "text-slate-500"
+                            passwordValidation.hasNumber ? 'text-green-400' : 'text-slate-500'
                           }`}
                         >
-                          <span aria-hidden="true">
-                            {passwordValidation.hasNumber ? "✓" : "○"}
-                          </span>
+                          <span aria-hidden="true">{passwordValidation.hasNumber ? '✓' : '○'}</span>
                           <span>At least 1 number</span>
                         </div>
                       </div>
@@ -551,12 +538,12 @@ function ResetPasswordPageContent() {
                     label="Confirm Password"
                     type="password"
                     value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    onChange={e => setConfirmPassword(e.target.value)}
                     required
                     autoComplete="new-password"
                     error={
                       confirmPassword && newPassword !== confirmPassword
-                        ? "Passwords do not match"
+                        ? 'Passwords do not match'
                         : undefined
                     }
                     inputClassName="w-full bg-white border border-slate-300 rounded-lg px-4 py-3 text-slate-900 focus:border-primary focus:ring-2 focus:ring-ring"
@@ -590,16 +577,12 @@ function ResetPasswordPageContent() {
             )}
 
             {/* Reset Success State */}
-            {mode === "reset" && resetSuccess && (
+            {mode === 'reset' && resetSuccess && (
               <div className="text-center space-y-4">
                 <div className="text-6xl mb-4">✅</div>
                 <h2 className="text-2xl font-bold text-green-400">Password Reset Successful</h2>
-                <p className="text-slate-300">
-                  Your password has been successfully reset.
-                </p>
-                <p className="text-sm text-slate-400">
-                  Redirecting to chat...
-                </p>
+                <p className="text-slate-300">Your password has been successfully reset.</p>
+                <p className="text-sm text-slate-400">Redirecting to chat...</p>
                 <div className="animate-spin text-2xl mx-auto w-fit">⏳</div>
               </div>
             )}
@@ -614,4 +597,3 @@ function ResetPasswordPageContent() {
     </div>
   );
 }
-

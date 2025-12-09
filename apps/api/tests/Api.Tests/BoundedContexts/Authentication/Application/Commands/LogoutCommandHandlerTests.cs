@@ -6,6 +6,7 @@ using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Application.Commands;
 
@@ -13,6 +14,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Application.Commands;
 /// Comprehensive tests for LogoutCommandHandler.
 /// Tests session revocation, token validation, and error handling.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class LogoutCommandHandlerTests
 {
     private readonly Mock<ISessionRepository> _sessionRepositoryMock;
@@ -29,9 +31,6 @@ public class LogoutCommandHandlerTests
             _unitOfWorkMock.Object
         );
     }
-
-    #region Happy Path Tests
-
     [Fact]
     public async Task Handle_WithValidSession_RevokesSession()
     {
@@ -105,11 +104,6 @@ public class LogoutCommandHandlerTests
         Assert.Equal("update", callOrder[0]);
         Assert.Equal("save", callOrder[1]);
     }
-
-    #endregion
-
-    #region Invalid Session Tests
-
     [Fact]
     public async Task Handle_WithNonExistentSession_ThrowsDomainException()
     {
@@ -182,11 +176,6 @@ public class LogoutCommandHandlerTests
         _sessionRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<Session>(), It.IsAny<CancellationToken>()), Times.Never);
         _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
-
-    #endregion
-
-    #region Token Hash Tests
-
     [Fact]
     public async Task Handle_UsesTokenHashForLookup()
     {
@@ -218,11 +207,6 @@ public class LogoutCommandHandlerTests
             Times.Once
         );
     }
-
-    #endregion
-
-    #region Transaction Tests
-
     [Fact]
     public async Task Handle_CallsSaveChangesOnce()
     {
@@ -251,11 +235,6 @@ public class LogoutCommandHandlerTests
         // Assert
         _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
-
-    #endregion
-
-    #region Edge Cases
-
     [Fact]
     public async Task Handle_WithExpiredSession_StillRevokes()
     {
@@ -357,7 +336,4 @@ public class LogoutCommandHandlerTests
         Assert.True(session.RevokedAt >= beforeRevoke);
         Assert.True(session.RevokedAt <= afterRevoke);
     }
-
-    #endregion
 }
-

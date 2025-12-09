@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 
@@ -14,6 +15,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// Tests streaming RAG explain flow with progressive SSE events.
 /// Coverage: validation, embedding, search, citations, outline, script chunking, cancellation, errors.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class StreamExplainQueryHandlerTests
 {
     private readonly Mock<IEmbeddingService> _embeddingServiceMock;
@@ -37,9 +39,6 @@ public class StreamExplainQueryHandlerTests
             _fakeTimeProvider
         );
     }
-
-    #region Happy Path Tests
-
     [Fact]
     public async Task Handle_ValidInput_StreamsCorrectEvents()
     {
@@ -158,7 +157,7 @@ public class StreamExplainQueryHandlerTests
         var stateUpdates = events.Where(e => e.Type == StreamingEventType.StateUpdate).ToList();
         Assert.True(stateUpdates.Count >= 4);
 
-        var messages = stateUpdates.Select(s => ((StreamingStateUpdate)s.Data).message).ToList();
+        var messages = stateUpdates.Select(s => ((StreamingStateUpdate)s.Data!).message).ToList();
         Assert.Contains("Generating embeddings for topic...", messages);
         Assert.Contains("Searching vector database for relevant content...", messages);
         Assert.Contains("Building outline structure...", messages);
@@ -241,16 +240,11 @@ public class StreamExplainQueryHandlerTests
         // Verify chunk indices are sequential
         for (int i = 0; i < scriptChunks.Count; i++)
         {
-            var chunk = (StreamingScriptChunk)scriptChunks[i].Data;
+            var chunk = (StreamingScriptChunk)scriptChunks[i].Data!;
             Assert.Equal(i, chunk.chunkIndex);
             Assert.Equal(scriptChunks.Count, chunk.totalChunks);
         }
     }
-
-    #endregion
-
-    #region Validation Tests
-
     [Fact]
     public async Task Handle_EmptyTopic_ReturnsError()
     {
@@ -307,11 +301,6 @@ public class StreamExplainQueryHandlerTests
         Assert.Single(events);
         Assert.Equal(StreamingEventType.Error, events[0].Type);
     }
-
-    #endregion
-
-    #region Error Handling Tests
-
     [Fact]
     public async Task Handle_EmbeddingServiceFails_ReturnsError()
     {
@@ -433,11 +422,6 @@ public class StreamExplainQueryHandlerTests
         var error = Assert.IsType<StreamingError>(errorEvent.Data);
         Assert.Equal("NO_RESULTS", error.errorCode);
     }
-
-    #endregion
-
-    #region Cancellation Tests
-
     [Fact]
     public async Task Handle_CancellationRequested_StopsStreaming()
     {
@@ -516,11 +500,6 @@ public class StreamExplainQueryHandlerTests
             }
         });
     }
-
-    #endregion
-
-    #region Data Integrity Tests
-
     [Fact]
     public async Task Handle_CitationsIncludeCorrectMetadata()
     {
@@ -648,11 +627,6 @@ public class StreamExplainQueryHandlerTests
         Assert.Equal(0, complete.completionTokens);
         Assert.Equal(0, complete.totalTokens);
     }
-
-    #endregion
-
-    #region Helper Methods
-
     private void SetupHappyPathMocks()
     {
         SetupEmbeddingMock("test topic");
@@ -693,7 +667,5 @@ public class StreamExplainQueryHandlerTests
                 Results = results
             });
     }
-
-    #endregion
 }
 

@@ -78,7 +78,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 20
       - name: Validate RuleSpec Examples
@@ -329,6 +329,24 @@ jobs:
         timeout-minutes: 20
         run: pnpm test:e2e:groups
 
+      # Issue #1498: E2E Code Coverage (Chromium only)
+      # Runs subset of E2E tests on Chromium browsers to generate coverage report
+      - name: Run E2E Tests with Coverage (Chromium)
+        timeout-minutes: 15
+        run: pnpm test:e2e:coverage
+        continue-on-error: true  # Don't fail CI if coverage tests fail
+
+      - name: Upload E2E Coverage Report
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: e2e-coverage-report-${{ github.run_number }}
+          path: |
+            apps/web/coverage-e2e/html/
+            apps/web/coverage-e2e/lcov.info
+            apps/web/coverage-e2e/coverage.json
+          retention-days: 30
+
       - name: Upload Playwright Report
         if: failure()
         uses: actions/upload-artifact@v5
@@ -382,14 +400,14 @@ jobs:
           version: 9
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 20
           cache: pnpm
           cache-dependency-path: apps/web/pnpm-lock.yaml
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '9.0.x'
 
@@ -414,9 +432,60 @@ jobs:
           nohup dotnet run --no-build > api.log 2>&1 &
           echo $! > api.pid
 
+      # Issue #1951: Improved health check with longer timeout, logging, and process validation
       - name: Wait for API Health
+        working-directory: apps/api/src/Api
         run: |
-          timeout 60 bash -c 'until curl -f http://localhost:8080/health; do sleep 2; done'
+          echo "::notice::Waiting for API server to be ready..."
+
+          # Verify API process is running
+          if [ -f api.pid ]; then
+            PID=$(cat api.pid)
+            if ps -p $PID > /dev/null 2>&1; then
+              echo "✓ API process is running (PID: $PID)"
+            else
+              echo "::error::API process not found (PID: $PID)"
+              cat api.log || echo "No logs available"
+              exit 1
+            fi
+          else
+            echo "::error::api.pid file not found"
+            exit 1
+          fi
+
+          # Wait for health endpoint with robust retry logic (120s timeout)
+          MAX_ATTEMPTS=60  # 60 attempts × 2s = 120s total
+          ATTEMPT=1
+
+          while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
+            echo "::debug::Health check attempt $ATTEMPT/$MAX_ATTEMPTS..."
+
+            # Check if API process is still alive
+            if ! ps -p $PID > /dev/null 2>&1; then
+              echo "::error::API process died during startup"
+              cat api.log || echo "No logs available"
+              exit 1
+            fi
+
+            # Try health endpoint
+            if curl -f -s http://localhost:8080/health > /dev/null 2>&1; then
+              echo "::notice::✓ API server is ready after $ATTEMPT attempts ($(($ATTEMPT * 2))s)"
+
+              # Verify health response content
+              HEALTH_RESPONSE=$(curl -s http://localhost:8080/health)
+              echo "::notice::Health response: $HEALTH_RESPONSE"
+              exit 0
+            fi
+
+            ATTEMPT=$((ATTEMPT + 1))
+            sleep 2
+          done
+
+          # Timeout reached
+          echo "::error::API health check timeout after 120s"
+          echo "::error::Last 50 lines of API logs:"
+          tail -50 api.log || echo "No logs available"
+          exit 1
 
       # Run Postman API Tests via Newman
       - name: Run API Smoke Tests
@@ -486,7 +555,25 @@ jobs:
         run: cp .env.test.example .env.test
       - name: Build Next.js for E2E
         run: pnpm build
+
+      # Issue #1951: Start mock API server for SSR (prevents ECONNREFUSED)
+      - name: Start Mock API Server
+        run: |
+          nohup node e2e/mock-api-server.js > mock-api.log 2>&1 &
+          echo $! > mock-api.pid
+
+          # Wait for mock API to be ready
+          for i in {1..10}; do
+            if curl -f -s http://localhost:8081/health > /dev/null 2>&1; then
+              echo "✓ Mock API server ready on port 8081"
+              break
+            fi
+            sleep 1
+          done
+
       - name: Run Playwright Accessibility Tests
+        env:
+          NEXT_PUBLIC_API_BASE: http://localhost:8081
         run: pnpm test:e2e e2e/accessibility.spec.ts
       - name: Upload Playwright Report
         if: failure()
@@ -495,6 +582,15 @@ jobs:
           name: playwright-a11y-report-${{ github.run_number }}
           path: apps/web/playwright-report/
           retention-days: 7
+
+      # Issue #1951: Stop mock API server
+      - name: Stop Mock API Server
+        if: always()
+        run: |
+          if [ -f mock-api.pid ]; then
+            kill $(cat mock-api.pid) || true
+            rm mock-api.pid
+          fi
 
   ci-api-unit-integration:
     needs: changes
@@ -563,6 +659,7 @@ jobs:
       # Unit Tests: <5s execution target
       # Integration Tests: <2min execution target
       # Combined: 90% of test suite (70% unit + 20% integration)
+      # Issue #1820: Optimized with category-based execution (fast tests first)
       - name: Unit & Integration Tests with Coverage (Target >=90%)
         timeout-minutes: 20
         env:
@@ -573,26 +670,46 @@ jobs:
           ConnectionStrings__Postgres: ${{ secrets.TEST_DB_CONNECTION_STRING || 'Host=127.0.0.1;Port=5432;Database=meepleai_test;Username=meeple;Password=meeplepass;Maximum Pool Size=100' }}
           OTEL_EXPORTER_OTLP_ENDPOINT: http://localhost:4318
         run: |
-          # Test Pyramid: 70% Unit Tests (<5s) + 20% Integration Tests (<2min)
-          # Reference: docs/02-development/testing/testing-strategy.md
-          # Note: xUnit v3 AssemblyFixture automatically runs cleanup after all tests
-          # Timeout: 20min (Issue #829: increased from 15min for xUnit v3 + ExecuteDeleteAsync overhead)
-          # With optimizations, expected completion: ~12-14min
-          # SECURITY NOTE: TwoFactorSecurityPenetrationTests excluded (5-8min) - runs in dedicated workflow
-          echo "::notice::Running unit and integration tests (90% of test suite) with 90% coverage threshold"
-          echo "::notice::Excluding TwoFactorSecurityPenetrationTests (runs in security-penetration-tests.yml)"
+          # Issue #1820: Category-based execution for performance optimization
+          # Step 1: Run Unit tests first (fast, ~2-3 min)
+          echo "::notice::Step 1/3 - Running Unit tests (fast, <5s per test)"
           dotnet test \
-            --filter "FullyQualifiedName!~TwoFactorSecurityPenetrationTests" \
+            --filter "Category=Unit" \
+            --logger "console;verbosity=minimal" \
+            --no-build \
+            --blame-hang-timeout 5m \
+            -p:CollectCoverage=true \
+            -p:CoverletOutputFormat=cobertura \
+            -p:CoverletOutput=./tests/Api.Tests/coverage/unit-coverage.cobertura.xml
+          
+          # Step 2: Run Security tests (fast, <30s total)
+          echo "::notice::Step 2/3 - Running Security tests"
+          dotnet test \
+            --filter "Category=Security&FullyQualifiedName!~TwoFactorSecurityPenetrationTests" \
+            --logger "console;verbosity=minimal" \
+            --no-build \
+            --blame-hang-timeout 5m \
+            -p:CollectCoverage=true \
+            -p:CoverletOutputFormat=cobertura \
+            -p:CoverletOutput=./tests/Api.Tests/coverage/security-coverage.cobertura.xml \
+            -p:MergeWith=./tests/Api.Tests/coverage/unit-coverage.cobertura.xml
+          
+          # Step 3: Run Integration tests (slower, ~3-4 min with parallel execution)
+          echo "::notice::Step 3/3 - Running Integration tests (parallel execution enabled)"
+          dotnet test \
+            --filter "Category=Integration" \
             --logger "console;verbosity=normal" \
             --no-build \
             --blame-hang-timeout 5m \
             -p:CollectCoverage=true \
             -p:CoverletOutputFormat=cobertura \
             -p:CoverletOutput=./tests/Api.Tests/coverage/ \
+            -p:MergeWith=./tests/Api.Tests/coverage/security-coverage.cobertura.xml \
             -p:Threshold=90 \
             -p:ThresholdType=line \
-            -p:Exclude="[*]Api.Migrations.*" \
-            -- xUnit.Parallelization.MaxParallelThreads=2
+            -p:Exclude="[*]Api.Migrations.*"
+          
+          echo "::notice::All test categories completed successfully"
 
       # TEST-002: Validate test isolation by running tests in random order (Issue #1500)
       # This ensures tests don't depend on shared state or execution order
@@ -903,11 +1020,8 @@ jobs:
         image: ollama/ollama:latest
         ports:
           - 11434:11434
-        options: >-
-          --health-cmd "curl -f http://localhost:11434/api/tags || exit 1"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+        # Note: No health check - Ollama container doesn't have curl/wget installed
+        # Health is verified in "Wait for Ollama" step instead
     defaults:
       run:
         working-directory: apps/api

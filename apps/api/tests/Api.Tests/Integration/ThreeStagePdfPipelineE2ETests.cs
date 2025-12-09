@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Integration;
 
@@ -22,16 +23,15 @@ namespace Api.Tests.Integration;
 /// Architecture: EnhancedPdfProcessingOrchestrator → 3 stages with quality-based fallback
 /// Hybrid approach: Tests 1-5 use fake extractors (fast), Test 6 uses Testcontainers (real performance)
 /// </remarks>
-[Collection("PdfPipeline")]
 [Trait("Category", "Integration")]
 [Trait("Category", "E2E")]
-[Trait("Dependency", "Testcontainers")]
-[Trait("BoundedContext", "DocumentProcessing")]
 public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
 {
     private readonly Action<string> _output;
     private IContainer? _unstructuredContainer;
+#pragma warning disable CS0649 // Field is never assigned (reserved for future SmolDocling container initialization)
     private IContainer? _smoldoclingContainer;
+#pragma warning restore CS0649
     private readonly IConfiguration _configuration;
     private readonly ILogger<EnhancedPdfProcessingOrchestrator> _logger;
     private readonly IOptions<PdfProcessingOptions> _options;
@@ -79,9 +79,6 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
 
         _output("Cleanup complete");
     }
-
-    #region Test 1: Happy Path - Stage 1 Succeeds
-
     [Fact]
     public async Task HappyPath_Stage1HighQuality_ReturnsStage1Result()
     {
@@ -113,11 +110,6 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
 
         _output($"✓ Test 1 passed: Stage {result.StageUsed} ({result.StageName}), Quality: {result.Quality}, Duration: {result.TotalDurationMs}ms");
     }
-
-    #endregion
-
-    #region Test 2: Fallback to Stage 2
-
     [Fact]
     public async Task Fallback_Stage1LowQuality_FallsBackToStage2()
     {
@@ -148,11 +140,6 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
 
         _output($"✓ Test 2 passed: Fallback to Stage {result.StageUsed}, Quality improved from Low to {result.Quality}");
     }
-
-    #endregion
-
-    #region Test 3: Fallback to Stage 3
-
     [Fact]
     public async Task Fallback_Stage1And2Fail_FallsBackToStage3()
     {
@@ -182,11 +169,6 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
 
         _output($"✓ Test 3 passed: All stages attempted, Stage 3 succeeded as fallback");
     }
-
-    #endregion
-
-    #region Test 4: Quality Gate Enforcement
-
     [Fact]
     public async Task QualityGate_Stage1LowToStage2High_EnforcesThreshold()
     {
@@ -216,11 +198,6 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
 
         _output($"✓ Test 4 passed: Quality gate enforced, Stage 2 quality ({result.Quality}) meets threshold");
     }
-
-    #endregion
-
-    #region Test 5: All Stages Fail
-
     [Fact]
     public async Task AllStagesFail_ReturnsStage3ErrorResult()
     {
@@ -251,11 +228,6 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
 
         _output($"✓ Test 5 passed: All stages failed gracefully, error: {result.ErrorMessage}");
     }
-
-    #endregion
-
-    #region Test 6: Performance P95 with Real Services
-
     [Fact]
     public async Task Performance_P95Latency_WithRealServices()
     {
@@ -339,11 +311,6 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
         // Cleanup
         unstructuredClient.Dispose();
     }
-
-    #endregion
-
-    #region Helper: Fake Extractor (for Tests 1-5)
-
     /// <summary>
     /// Fake PDF extractor for controlled testing without real services
     /// </summary>
@@ -416,11 +383,6 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
             return Task.FromResult(PagedTextExtractionResult.CreateFailure(_errorMsg ?? $"{_name} paged failed"));
         }
     }
-
-    #endregion
-
-    #region Helper: Test HttpClientFactory
-
     private class TestHttpClientFactory : IHttpClientFactory
     {
         private readonly HttpClient _client;
@@ -435,17 +397,10 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
             return _client;
         }
     }
-
-    #endregion
-
-    #region Helper Methods
-
     private static MemoryStream CreateDummyPdfStream()
     {
         // Minimal PDF header
         var pdfBytes = new byte[] { 0x25, 0x50, 0x44, 0x46, 0x2D, 0x31, 0x2E, 0x34 }; // %PDF-1.4
         return new MemoryStream(pdfBytes);
     }
-
-    #endregion
 }

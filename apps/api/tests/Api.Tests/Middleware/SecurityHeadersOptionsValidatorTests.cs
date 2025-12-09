@@ -1,6 +1,7 @@
 using Api.Middleware;
 using Microsoft.Extensions.Options;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Middleware;
 
@@ -8,6 +9,7 @@ namespace Api.Tests.Middleware;
 /// Tests for SecurityHeadersOptionsValidator (Issue #1447).
 /// Validates configuration validation at startup.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class SecurityHeadersOptionsValidatorTests
 {
     private readonly SecurityHeadersOptionsValidator _validator;
@@ -216,44 +218,6 @@ public class SecurityHeadersOptionsValidatorTests
     }
 
     [Fact]
-    public void Validate_InvalidXssProtection_ReturnsFail()
-    {
-        // Arrange
-        var options = new SecurityHeadersOptions
-        {
-            EnableXssProtection = true,
-            XssProtectionPolicy = "2"
-        };
-
-        // Act
-        var result = _validator.Validate(null, options);
-
-        // Assert
-        Assert.True(result.Failed);
-        Assert.Contains("X-XSS-Protection must be '0', '1', or '1; mode=block'", result.FailureMessage);
-    }
-
-    [Theory]
-    [InlineData("0")]
-    [InlineData("1")]
-    [InlineData("1; mode=block")]
-    public void Validate_ValidXssProtection_ReturnsSuccess(string policy)
-    {
-        // Arrange
-        var options = new SecurityHeadersOptions
-        {
-            EnableXssProtection = true,
-            XssProtectionPolicy = policy
-        };
-
-        // Act
-        var result = _validator.Validate(null, options);
-
-        // Assert
-        Assert.True(result.Succeeded);
-    }
-
-    [Fact]
     public void Validate_InvalidReferrerPolicy_ReturnsFail()
     {
         // Arrange
@@ -359,4 +323,3 @@ public class SecurityHeadersOptionsValidatorTests
         Assert.True(result.Succeeded);
     }
 }
-

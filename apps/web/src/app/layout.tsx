@@ -5,6 +5,7 @@
  * It wraps all pages with shared providers and global styles.
  *
  * Issue #1077: FE-IMP-001 - Bootstrap App Router + Shared Providers
+ * Issue #1566: [P3] ⚛️ Implement HyperDX Browser SDK (Next.js)
  *
  * @see https://nextjs.org/docs/app/building-your-application/routing/layouts-and-pages
  */
@@ -12,6 +13,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Quicksand } from 'next/font/google';
 import { AppProviders } from './providers';
+import { HyperDXProvider } from '@/components/HyperDXProvider';
 import '../styles/globals.css';
 import '../styles/diff-viewer.css';
 import 'prismjs/themes/prism-tomorrow.css';
@@ -44,7 +46,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="it" suppressHydrationWarning>
       <body className={quicksand.variable}>
-        <AppProviders>{children}</AppProviders>
+        <HyperDXProvider>
+          <AppProviders>{children}</AppProviders>
+        </HyperDXProvider>
       </body>
     </html>
   );

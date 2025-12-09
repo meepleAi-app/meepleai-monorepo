@@ -4,6 +4,7 @@ using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Application.Queries;
 
@@ -11,6 +12,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Application.Queries;
 /// Comprehensive tests for GetUserByIdQueryHandler.
 /// Tests user retrieval by ID and DTO mapping.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class GetUserByIdQueryHandlerTests
 {
     private readonly Mock<IUserRepository> _userRepositoryMock;
@@ -21,9 +23,6 @@ public class GetUserByIdQueryHandlerTests
         _userRepositoryMock = new Mock<IUserRepository>();
         _handler = new GetUserByIdQueryHandler(_userRepositoryMock.Object);
     }
-
-    #region Happy Path Tests
-
     [Fact]
     public async Task Handle_WithExistingUser_ReturnsUserDto()
     {
@@ -123,11 +122,6 @@ public class GetUserByIdQueryHandlerTests
         Assert.True(result.IsTwoFactorEnabled);
         Assert.NotNull(result.TwoFactorEnabledAt);
     }
-
-    #endregion
-
-    #region User Not Found Tests
-
     [Fact]
     public async Task Handle_WithNonExistentUser_ReturnsNull()
     {
@@ -147,11 +141,6 @@ public class GetUserByIdQueryHandlerTests
 
         _userRepositoryMock.Verify(x => x.GetByIdAsync(userId, It.IsAny<CancellationToken>()), Times.Once);
     }
-
-    #endregion
-
-    #region DTO Mapping Tests
-
     [Fact]
     public async Task Handle_MapsDtoCorrectly()
     {
@@ -196,11 +185,6 @@ public class GetUserByIdQueryHandlerTests
         Assert.Equal(user.CreatedAt, result.CreatedAt);
         Assert.True(result.CreatedAt <= DateTime.UtcNow);
     }
-
-    #endregion
-
-    #region Edge Cases
-
     [Fact]
     public async Task Handle_WithCancellationToken_PassesToRepository()
     {
@@ -240,11 +224,6 @@ public class GetUserByIdQueryHandlerTests
         _userRepositoryMock.Verify(x => x.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
         _userRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
     }
-
-    #endregion
-
-    #region Helper Methods
-
     private User CreateTestUser(string email)
     {
         return new User(
@@ -255,7 +234,4 @@ public class GetUserByIdQueryHandlerTests
             role: Role.User
         );
     }
-
-    #endregion
 }
-

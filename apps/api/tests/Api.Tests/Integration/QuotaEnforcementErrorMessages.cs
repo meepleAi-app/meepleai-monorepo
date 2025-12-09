@@ -11,8 +11,6 @@ namespace Api.Tests.Integration;
 /// </summary>
 public static class QuotaEnforcementErrorMessages
 {
-    #region Quota Limit Errors
-
     /// <summary>
     /// Error when daily upload limit is reached.
     /// Source: PdfUploadQuotaService.cs
@@ -24,11 +22,6 @@ public static class QuotaEnforcementErrorMessages
     /// Source: PdfUploadQuotaService.cs
     /// </summary>
     public const string WeeklyLimitReached = "Weekly upload limit reached";
-
-    #endregion
-
-    #region Tier Names
-
     /// <summary>
     /// Free tier identifier in quota messages.
     /// </summary>
@@ -43,11 +36,6 @@ public static class QuotaEnforcementErrorMessages
     /// Premium tier identifier in quota messages.
     /// </summary>
     public const string PremiumTier = "premium tier";
-
-    #endregion
-
-    #region Quota Limit Values
-
     /// <summary>
     /// Free tier daily limit description.
     /// </summary>
@@ -72,8 +60,6 @@ public static class QuotaEnforcementErrorMessages
     /// Premium tier daily limit description.
     /// </summary>
     public const string PremiumTierDailyLimit = "100 PDF/day";
-
-    #endregion
 }
 
 /// <summary>

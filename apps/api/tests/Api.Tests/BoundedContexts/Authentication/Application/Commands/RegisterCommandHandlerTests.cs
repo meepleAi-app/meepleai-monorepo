@@ -6,6 +6,7 @@ using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Application.Commands;
 
@@ -13,6 +14,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Application.Commands;
 /// Comprehensive tests for RegisterCommandHandler.
 /// Tests user registration, role assignment, session creation, and business rules.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class RegisterCommandHandlerTests
 {
     private readonly Mock<IUserRepository> _userRepositoryMock;
@@ -35,9 +37,6 @@ public class RegisterCommandHandlerTests
             _timeProvider
         );
     }
-
-    #region Happy Path Tests
-
     [Fact]
     public async Task Handle_WithValidData_FirstUser_RegistersAsAdmin()
     {
@@ -259,11 +258,6 @@ public class RegisterCommandHandlerTests
         // Assert
         Assert.Equal("test@example.com", result.User.Email);
     }
-
-    #endregion
-
-    #region Duplicate Email Tests
-
     [Fact]
     public async Task Handle_WithDuplicateEmail_ThrowsDomainException()
     {
@@ -319,11 +313,6 @@ public class RegisterCommandHandlerTests
             () => _handler.Handle(command, TestContext.Current.CancellationToken)
         );
     }
-
-    #endregion
-
-    #region Role Assignment Tests
-
     [Fact]
     public async Task Handle_SubsequentUser_WithAdminRole_ThrowsDomainException()
     {
@@ -412,11 +401,6 @@ public class RegisterCommandHandlerTests
         // Assert
         Assert.Equal(Role.User.Value, result.User.Role);
     }
-
-    #endregion
-
-    #region Email Validation Tests
-
     [Fact]
     public async Task Handle_WithInvalidEmail_ThrowsValidationException()
     {
@@ -496,11 +480,6 @@ public class RegisterCommandHandlerTests
             () => _handler.Handle(command, TestContext.Current.CancellationToken)
         );
     }
-
-    #endregion
-
-    #region Invalid Role Tests
-
     [Fact]
     public async Task Handle_WithInvalidRole_ThrowsValidationException()
     {
@@ -527,11 +506,6 @@ public class RegisterCommandHandlerTests
             () => _handler.Handle(command, TestContext.Current.CancellationToken)
         );
     }
-
-    #endregion
-
-    #region DTO Mapping Tests
-
     [Fact]
     public async Task Handle_MapsDtoCorrectly()
     {
@@ -567,11 +541,6 @@ public class RegisterCommandHandlerTests
         Assert.True(result.User.CreatedAt <= DateTime.UtcNow);
         Assert.True(result.User.CreatedAt >= DateTime.UtcNow.AddSeconds(-5));
     }
-
-    #endregion
-
-    #region Transaction Tests
-
     [Fact]
     public async Task Handle_CallsSaveChangesOnce()
     {
@@ -639,11 +608,6 @@ public class RegisterCommandHandlerTests
         Assert.Equal(Role.User.Value, callOrder[0]);
         Assert.Equal("session", callOrder[1]);
     }
-
-    #endregion
-
-    #region Edge Cases
-
     [Fact]
     public async Task Handle_WithNullIpAddress_Succeeds()
     {
@@ -734,11 +698,6 @@ public class RegisterCommandHandlerTests
         _sessionRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Session>(), token), Times.Once);
         _unitOfWorkMock.Verify(x => x.SaveChangesAsync(token), Times.Once);
     }
-
-    #endregion
-
-    #region Helper Methods
-
     private User CreateTestUser(string email = "test@example.com", string password = "SecurePassword123!")
     {
         return new User(
@@ -749,7 +708,4 @@ public class RegisterCommandHandlerTests
             role: Role.User
         );
     }
-
-    #endregion
 }
-

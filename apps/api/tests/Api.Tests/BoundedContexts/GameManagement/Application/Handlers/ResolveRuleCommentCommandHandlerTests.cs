@@ -5,6 +5,7 @@ using Api.Infrastructure;
 using Api.Tests.Helpers;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 
@@ -15,6 +16,7 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 /// ✅ RESOLVED: Integration tests added for full resolution workflow with nested replies.
 /// ISSUE-1500: TEST-002 - Fixed test isolation (fresh context per test)
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class ResolveRuleCommentCommandHandlerTests
 {
     private static MeepleAiDbContext CreateFreshDbContext()
@@ -28,9 +30,6 @@ public class ResolveRuleCommentCommandHandlerTests
         timeProviderMock.Setup(t => t.GetUtcNow()).Returns(new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero));
         return timeProviderMock;
     }
-
-    #region Construction Tests
-
     [Fact]
     public void Constructor_WithValidDependencies_CreatesInstance()
     {
@@ -93,11 +92,6 @@ public class ResolveRuleCommentCommandHandlerTests
                 timeProviderMock.Object,
                 null!));
     }
-
-    #endregion
-
-    #region Command Tests
-
     [Fact]
     public void Command_AsOwner_ConstructsCorrectly()
     {
@@ -203,9 +197,6 @@ public class ResolveRuleCommentCommandHandlerTests
         Assert.NotEqual(command1.CommentId, command2.CommentId);
         Assert.NotEqual(command1.ResolvedByUserId, command2.ResolvedByUserId);
     }
-
-    #endregion
-
     // NOTE: Full integration tests for Handle method (comment resolution, recursive reply resolution,
     // authorization, circular reference detection, max depth limit) should be in integration test suite
     // due to DbContext complexity and recursive descendant loading logic.

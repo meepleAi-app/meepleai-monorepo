@@ -388,8 +388,8 @@ docker restart unstructured
 # View metrics in Prometheus
 curl http://localhost:9090/api/v1/query?query=pdf_processing_duration_seconds
 
-# View logs in Seq
-# http://localhost:8081
+# View logs in HyperDX
+# http://localhost:8180
 # Query: @Message like '%PDF processing%'
 ```
 

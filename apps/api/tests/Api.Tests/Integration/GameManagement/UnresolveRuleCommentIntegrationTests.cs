@@ -11,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Integration.GameManagement;
 
@@ -30,11 +31,9 @@ namespace Api.Tests.Integration.GameManagement;
 /// Coverage Target: ≥90% for UnresolveRuleCommentCommandHandler
 /// Execution Time Target: <60s
 /// </summary>
-[Collection("UnresolveRuleCommentIntegration")]
+[Trait("Category", TestCategories.Integration)]
 public sealed class UnresolveRuleCommentIntegrationTests : IAsyncLifetime
 {
-    #region Test Infrastructure
-
     private IContainer? _postgresContainer;
     private MeepleAiDbContext? _dbContext;
     private IServiceProvider? _serviceProvider;
@@ -180,11 +179,6 @@ public sealed class UnresolveRuleCommentIntegrationTests : IAsyncLifetime
         _dbContext!.RuleSpecComments.RemoveRange(_dbContext.RuleSpecComments);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
     }
-
-    #endregion
-
-    #region 1. Happy Path Tests
-
     [Fact]
     public async Task UnresolveOwnComment_Success()
     {
@@ -237,11 +231,6 @@ public sealed class UnresolveRuleCommentIntegrationTests : IAsyncLifetime
         result.Should().NotBeNull();
         result.IsResolved.Should().BeFalse();
     }
-
-    #endregion
-
-    #region 2. Authorization Error Tests
-
     [Fact]
     public async Task UnresolveOtherUserComment_AsNonAdmin_ThrowsUnauthorized()
     {
@@ -268,11 +257,6 @@ public sealed class UnresolveRuleCommentIntegrationTests : IAsyncLifetime
         comment.Should().NotBeNull();
         comment!.IsResolved.Should().BeTrue();
     }
-
-    #endregion
-
-    #region 3. Admin Override Tests
-
     [Fact]
     public async Task UnresolveOtherUserComment_AsAdmin_Success()
     {
@@ -294,11 +278,6 @@ public sealed class UnresolveRuleCommentIntegrationTests : IAsyncLifetime
         result.Should().NotBeNull();
         result.IsResolved.Should().BeFalse();
     }
-
-    #endregion
-
-    #region 4. Parent Unresolve Tests
-
     [Fact]
     public async Task UnresolveComment_WithResolvedParent_UnresolvesParent()
     {
@@ -372,11 +351,6 @@ public sealed class UnresolveRuleCommentIntegrationTests : IAsyncLifetime
         parent.Should().NotBeNull();
         parent!.IsResolved.Should().BeFalse();
     }
-
-    #endregion
-
-    #region 5. Already Unresolved Tests
-
     [Fact]
     public async Task UnresolveAlreadyUnresolvedComment_Success()
     {
@@ -412,9 +386,6 @@ public sealed class UnresolveRuleCommentIntegrationTests : IAsyncLifetime
         result.Should().NotBeNull();
         result.IsResolved.Should().BeFalse();
     }
-
-    #endregion
-
     private static async Task EnsureCreatedWithRetry(MeepleAiDbContext context)
     {
         const int maxAttempts = 3;
@@ -431,9 +402,6 @@ public sealed class UnresolveRuleCommentIntegrationTests : IAsyncLifetime
             }
         }
     }
-
-    #region 6. Not Found Tests
-
     [Fact]
     public async Task UnresolveNonExistentComment_ThrowsInvalidOperation()
     {
@@ -455,7 +423,4 @@ public sealed class UnresolveRuleCommentIntegrationTests : IAsyncLifetime
         await act.Should().ThrowAsync<InvalidOperationException>()
             .WithMessage("*not found*");
     }
-
-    #endregion
 }
-

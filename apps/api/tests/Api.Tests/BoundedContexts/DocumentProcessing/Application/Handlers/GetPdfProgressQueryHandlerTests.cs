@@ -6,6 +6,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Handlers;
 
@@ -14,9 +15,9 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Handlers;
 /// ISSUE-1818: Migrated to FluentAssertions for improved readability.
 /// Tests PDF processing progress retrieval.
 /// NOTE: Uses DbContext directly - simplified tests due to mocking complexity.
-/// TODO: Convert to integration tests or refactor handler to use repository.
-/// ISSUE-1818: Migrated to FluentAssertions for improved readability.
+/// ISSUE-1674: Convert to integration tests or refactor handler to use repository.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class GetPdfProgressQueryHandlerTests
 {
     private readonly Mock<ILogger<GetPdfProgressQueryHandler>> _loggerMock;
@@ -25,9 +26,6 @@ public class GetPdfProgressQueryHandlerTests
     {
         _loggerMock = new Mock<ILogger<GetPdfProgressQueryHandler>>();
     }
-
-    #region Construction Tests
-
     [Fact]
     public void Constructor_WithValidDependencies_CreatesInstance()
     {
@@ -69,11 +67,6 @@ public class GetPdfProgressQueryHandlerTests
         
         act.Should().Throw<ArgumentNullException>();
     }
-
-    #endregion
-
-    #region Query Tests
-
     [Fact]
     public void Query_HasCorrectPdfIdProperty()
     {
@@ -86,11 +79,6 @@ public class GetPdfProgressQueryHandlerTests
         // Assert
         query.PdfId.Should().Be(pdfId);
     }
-
-    #endregion
-
-    #region Result Tests
-
     [Fact]
     public void PdfProgressResult_ConstructsCorrectly()
     {
@@ -121,9 +109,6 @@ public class GetPdfProgressQueryHandlerTests
         // Assert
         result.ProcessingProgressJson.Should().BeNull();
     }
-
-    #endregion
-
     // NOTE: Full integration tests for Handle method should be in integration test suite
     // due to DbContext dependency complexity. See integration-tests.yml workflow.
 }

@@ -152,7 +152,7 @@ test('submits login form', async () => {
 
 ### Refactoring (DDD Migration)
 
-**DDD migration documentation - 99% complete as of 2025-11-15.**
+**DDD migration documentation - 100% complete as of 2025-11-15.**
 
 | Document | Description | Priority | Pages |
 |----------|-------------|----------|-------|
@@ -169,11 +169,11 @@ test('submits login form', async () => {
 - ✅ 7/7 bounded contexts migrated (6 at 100%, 1 at 95%)
 - ✅ 72+ CQRS handlers operational
 - ✅ 60+ endpoints migrated to MediatR
-- ✅ 2,070 lines legacy code removed
-  - GameService: 181 lines
-  - AuthService: 346 lines
-  - PDF services: 1,300 lines
-  - UserManagementService: 243 lines
+- ✅ 2,070 lines legacy code removed (DDD migration complete)
+  - GameService: 181 lines (→ GameManagement bounded context)
+  - AuthService: 346 lines (→ Authentication bounded context)
+  - PDF services: 1,300 lines (→ DocumentProcessing bounded context)
+  - UserManagementService: 243 lines (→ Administration bounded context)
 - ✅ 99.1% test pass rate maintained
 - ✅ Zero build errors
 
@@ -194,8 +194,8 @@ test('submits login form', async () => {
 
 Before (Legacy):
 ```csharp
-// Routing/AuthRoutes.cs
-app.MapPost("/api/v1/auth/login", async (LoginRequest req, AuthService authService) =>
+// Routing/AuthRoutes.cs (CURRENT - uses MediatR)
+app.MapPost("/api/v1/auth/login", async (LoginCommand cmd, IMediator mediator) =>
 {
     var result = await authService.LoginAsync(req.Email, req.Password);
     return Results.Ok(result);

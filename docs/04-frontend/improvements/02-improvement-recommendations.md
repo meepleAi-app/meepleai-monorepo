@@ -15,6 +15,7 @@ These changes provide immediate value with minimal effort.
 **Problem**: `height: 100vh` breaks on iOS (browser UI overlaps)
 
 **Solution**:
+{% raw %}
 ```tsx
 // Before ❌
 <main style={{ height: "100vh" }}>
@@ -23,6 +24,7 @@ These changes provide immediate value with minimal effort.
 <main className="h-dvh">
 // dvh = dynamic viewport height (iOS safe)
 ```
+{% endraw %}
 
 **Files**: `pages/chat.tsx`, `pages/upload.tsx`
 **Effort**: 15 minutes

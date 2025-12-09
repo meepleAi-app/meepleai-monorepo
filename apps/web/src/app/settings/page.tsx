@@ -140,6 +140,13 @@ export default function SettingsPage() {
       setProfile(user);
       setDisplayName(user.DisplayName);
       setEmail(user.Email);
+      // Hydrate preferences from profile
+      setPreferences({
+        language: user.Language,
+        theme: (user.Theme as 'light' | 'dark' | 'system') || 'system',
+        emailNotifications: user.EmailNotifications,
+        dataRetentionDays: user.DataRetentionDays,
+      });
       setError(null);
     } catch (err) {
       logger.error(
@@ -201,7 +208,7 @@ export default function SettingsPage() {
 
     try {
       setLoading(true);
-      await api.put('/api/v1/users/profile', {
+      await api.auth.updateProfile({
         displayName: displayName.trim(),
         email: email.trim(),
       });
@@ -246,7 +253,7 @@ export default function SettingsPage() {
 
     try {
       setLoading(true);
-      await api.put('/api/v1/users/profile/password', {
+      await api.auth.changePassword({
         currentPassword,
         newPassword,
       });
@@ -270,15 +277,28 @@ export default function SettingsPage() {
     }
   };
 
-  // Preferences update handler (mock - backend not implemented)
+  // Preferences update handler
   const handleUpdatePreferences = async () => {
     setSuccess(null);
     setError(null);
 
-    // Mock success for now
-    setSuccess('Preferences saved successfully (mock - backend pending)');
-
-    // TODO: Implement UpdatePreferencesCommand when backend is ready
+    try {
+      setLoading(true);
+      await api.auth.updatePreferences(preferences);
+      setSuccess('Preferences saved successfully');
+    } catch (err) {
+      const errorMsg = getErrorMessage(err);
+      logger.error(
+        'Failed to update preferences',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('SettingsPage', 'handleUpdatePreferences', {
+          operation: 'update_preferences',
+        })
+      );
+      setError(errorMsg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // 2FA handlers

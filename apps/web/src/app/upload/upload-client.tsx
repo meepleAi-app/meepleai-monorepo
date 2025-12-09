@@ -40,22 +40,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { LoadingButton, Spinner } from '@/components/loading';
 import { useAuthUser } from '@/hooks/useAuthUser';
-
-// Types
-interface RuleAtom {
-  id: string;
-  text: string;
-  section?: string | null;
-  page?: string | null;
-  line?: string | null;
-}
-
-interface RuleSpec {
-  gameId: string;
-  version: string;
-  createdAt: string;
-  rules: RuleAtom[];
-}
+import type { RuleAtom, RuleSpec } from '@/lib/api/schemas';
 
 const enableProcessingProgress = process.env.NEXT_PUBLIC_ENABLE_PROGRESS_UI === 'true';
 
@@ -180,13 +165,7 @@ export function UploadClient({
     setAutoAdvanceTriggered(true);
 
     try {
-      const fetchedRuleSpec = await api.get<RuleSpec>(`/api/v1/games/${confirmedGameId}/rulespec`);
-
-      if (!fetchedRuleSpec) {
-        wizardDispatch({ type: 'ERROR', error: 'Unable to load RuleSpec' });
-        return;
-      }
-
+      const fetchedRuleSpec = await api.games.getRuleSpec(confirmedGameId);
       setRuleSpec(fetchedRuleSpec);
       wizardDispatch({ type: 'PARSING_COMPLETE' });
       await refetchPdfs();
@@ -255,9 +234,9 @@ export function UploadClient({
   const updateRuleAtom = useCallback(
     (index: number, field: keyof RuleAtom, value: string) => {
       if (!ruleSpec) return;
-      const updatedRules = [...ruleSpec.rules];
-      updatedRules[index] = { ...updatedRules[index], [field]: value };
-      setRuleSpec({ ...ruleSpec, rules: updatedRules });
+      const updatedAtoms = [...ruleSpec.atoms];
+      updatedAtoms[index] = { ...updatedAtoms[index], [field]: value };
+      setRuleSpec({ ...ruleSpec, atoms: updatedAtoms });
     },
     [ruleSpec]
   );
@@ -265,22 +244,22 @@ export function UploadClient({
   const deleteRuleAtom = useCallback(
     (index: number) => {
       if (!ruleSpec) return;
-      const updatedRules = ruleSpec.rules.filter((_, i) => i !== index);
-      setRuleSpec({ ...ruleSpec, rules: updatedRules });
+      const updatedAtoms = ruleSpec.atoms.filter((_, i) => i !== index);
+      setRuleSpec({ ...ruleSpec, atoms: updatedAtoms });
     },
     [ruleSpec]
   );
 
   const addRuleAtom = useCallback(() => {
     if (!ruleSpec) return;
-    const newRule: RuleAtom = {
+    const newAtom: RuleAtom = {
       id: `new-${Date.now()}`,
       text: '',
       section: null,
       page: null,
       line: null,
     };
-    setRuleSpec({ ...ruleSpec, rules: [...ruleSpec.rules, newRule] });
+    setRuleSpec({ ...ruleSpec, atoms: [...ruleSpec.atoms, newAtom] });
   }, [ruleSpec]);
 
   const resetWizard = useCallback(() => {
@@ -456,12 +435,12 @@ export function UploadClient({
                 <strong>Version:</strong> {ruleSpec.version}
               </p>
               <p>
-                <strong>Total Rules:</strong> {ruleSpec.rules?.length || 0}
+                <strong>Total Rules:</strong> {ruleSpec.atoms?.length || 0}
               </p>
             </div>
 
             <div className="space-y-4 mb-6 max-h-96 overflow-y-auto">
-              {(ruleSpec.rules || []).map((rule, index) => (
+              {(ruleSpec.atoms || []).map((rule, index) => (
                 <Card key={rule.id ?? index} className="p-4">
                   <div className="flex justify-between items-center mb-3">
                     <h4 className="font-semibold">Rule {index + 1}</h4>

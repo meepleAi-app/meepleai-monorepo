@@ -22,6 +22,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Integration;
 
@@ -29,7 +30,7 @@ namespace Api.Tests.Integration;
 /// Cross-context integration tests: DocumentProcessing ↔ KnowledgeBase.
 /// Tests PDF upload, processing, vector embedding, and RAG search integration.
 /// </summary>
-[Collection("DocKB")]
+[Trait("Category", TestCategories.Integration)]
 public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLifetime
 {
     private IContainer? _postgresContainer;
@@ -443,4 +444,3 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
         );
     }
 }
-

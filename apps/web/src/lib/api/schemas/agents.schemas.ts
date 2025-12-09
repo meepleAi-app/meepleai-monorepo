@@ -112,3 +112,78 @@ export const ConfigureAgentResponseSchema = z.object({
 });
 
 export type ConfigureAgentResponse = z.infer<typeof ConfigureAgentResponseSchema>;
+
+/**
+ * Chess Analysis Schema (Issue #1977)
+ * Matches ChessAnalysis from backend Contracts
+ */
+export const ChessAnalysisSchema = z.object({
+  fenPosition: z.string().nullable(),
+  evaluationSummary: z.string().nullable(),
+  keyConsiderations: z.array(z.string()),
+});
+
+export type ChessAnalysis = z.infer<typeof ChessAnalysisSchema>;
+
+/**
+ * Snippet Schema (Issue #1977)
+ * Matches Snippet from backend search results
+ */
+export const SnippetSchema = z.object({
+  documentId: z.string().uuid(),
+  gameId: z.string().uuid(),
+  snippet: z.string(),
+  score: z.number(),
+  pageNumber: z.number().int().nullable(),
+  metadata: z.record(z.string(), z.any()).nullable(),
+});
+
+export type Snippet = z.infer<typeof SnippetSchema>;
+
+/**
+ * Chess Agent Response Schema (Issue #1977)
+ * Matches ChessAgentResponse from backend Contracts
+ */
+export const ChessAgentResponseSchema = z.object({
+  answer: z.string(),
+  analysis: ChessAnalysisSchema.nullable(),
+  suggestedMoves: z.array(z.string()),
+  sources: z.array(SnippetSchema),
+  promptTokens: z.number().int().nonnegative(),
+  completionTokens: z.number().int().nonnegative(),
+  totalTokens: z.number().int().nonnegative(),
+  confidence: z.number().nullable(),
+  metadata: z.record(z.string(), z.string()).nullable(),
+});
+
+export type ChessAgentResponse = z.infer<typeof ChessAgentResponseSchema>;
+
+/**
+ * Setup Guide Response Step Schema (Issue #1977)
+ * Matches SetupGuideStep from backend Contracts (non-streaming response)
+ */
+export const SetupGuideResponseStepSchema = z.object({
+  stepNumber: z.number().int().positive(),
+  title: z.string(),
+  instruction: z.string(),
+  references: z.array(SnippetSchema),
+  isOptional: z.boolean(),
+});
+
+export type SetupGuideResponseStep = z.infer<typeof SetupGuideResponseStepSchema>;
+
+/**
+ * Setup Guide Response Schema (Issue #1977)
+ * Matches SetupGuideResponse from backend Contracts
+ */
+export const SetupGuideResponseSchema = z.object({
+  gameTitle: z.string(),
+  steps: z.array(SetupGuideResponseStepSchema),
+  estimatedSetupTimeMinutes: z.number().int().nonnegative(),
+  promptTokens: z.number().int().nonnegative(),
+  completionTokens: z.number().int().nonnegative(),
+  totalTokens: z.number().int().nonnegative(),
+  confidence: z.number().nullable(),
+});
+
+export type SetupGuideResponse = z.infer<typeof SetupGuideResponseSchema>;

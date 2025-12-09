@@ -24,10 +24,8 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Integration;
 /// Note: Full RAG pipeline testing (with real LLM) is in Phase 4 manual script
 /// This integration test focuses on validation logic without external dependencies
 /// </remarks>
-[Collection("GoldenDatasetAccuracyIntegration")]
 [Trait("Category", "Integration")]
 [Trait("BoundedContext", "KnowledgeBase")]
-[Trait("Issue", "999")]
 public class GoldenDatasetAccuracyIntegrationTests
 {
     private readonly Mock<ILogger<GoldenDatasetLoader>> _mockLoaderLogger;

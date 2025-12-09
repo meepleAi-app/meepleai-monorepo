@@ -164,7 +164,7 @@ describe('ChatMessage', () => {
       await user.click(citationLink);
 
       expect(handleClick).toHaveBeenCalledTimes(1);
-      expect(handleClick).toHaveBeenCalledWith('cite-1');
+      expect(handleClick).toHaveBeenCalledWith('cite-1', 5);
     });
 
     it('does not render citations for user messages', () => {
@@ -289,7 +289,7 @@ describe('ChatMessage', () => {
       citationLink.focus();
       await user.keyboard('{Enter}');
 
-      expect(handleClick).toHaveBeenCalledWith('cite-1');
+      expect(handleClick).toHaveBeenCalledWith('cite-1', 5);
     });
 
     it('citation links respond to Space key', async () => {
@@ -309,7 +309,7 @@ describe('ChatMessage', () => {
       citationLink.focus();
       await user.keyboard(' ');
 
-      expect(handleClick).toHaveBeenCalledWith('cite-1');
+      expect(handleClick).toHaveBeenCalledWith('cite-1', 5);
     });
   });
 });
@@ -376,7 +376,7 @@ describe('CitationLink', () => {
 
     await user.click(screen.getByLabelText('Citation: Regolamento page 5'));
 
-    expect(handleClick).toHaveBeenCalledWith('cite-1');
+    expect(handleClick).toHaveBeenCalledWith('cite-1', 5);
   });
 
   it('handles keyboard Enter key', async () => {
@@ -389,7 +389,7 @@ describe('CitationLink', () => {
     link.focus();
     await user.keyboard('{Enter}');
 
-    expect(handleClick).toHaveBeenCalledWith('cite-1');
+    expect(handleClick).toHaveBeenCalledWith('cite-1', 5);
   });
 
   it('handles keyboard Space key', async () => {
@@ -402,7 +402,7 @@ describe('CitationLink', () => {
     link.focus();
     await user.keyboard(' ');
 
-    expect(handleClick).toHaveBeenCalledWith('cite-1');
+    expect(handleClick).toHaveBeenCalledWith('cite-1', 5);
   });
 
   it('applies custom className', () => {

@@ -172,7 +172,7 @@ Questa guida fornisce un elenco completo di tutte le variabili d'ambiente da val
 - **Default**: `http://localhost:8080`
 - **Esempio**:
   - HTTP: `ASPNETCORE_URLS=http://+:8080`
-  - HTTPS: `ASPNETCORE_URLS=https://+:8080;http://+:8081`
+  - HTTPS: `ASPNETCORE_URLS=https://+:8080;http://+:8180`
 - **Note**: In produzione dietro reverse proxy (Nginx, Traefik) o usare HTTPS diretto
 
 ### `ASPNETCORE_HTTPS_PORT`

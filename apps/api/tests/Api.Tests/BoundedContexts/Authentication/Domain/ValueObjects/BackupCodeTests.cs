@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Exceptions;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Domain.ValueObjects;
 
@@ -8,6 +9,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Domain.ValueObjects;
 /// Tests for BackupCode value object.
 /// Validates backup code creation, usage tracking, and business rules.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class BackupCodeTests
 {
     [Fact]
@@ -175,4 +177,3 @@ public class BackupCodeTests
         Assert.NotEqual(unusedCode, usedCode);
     }
 }
-

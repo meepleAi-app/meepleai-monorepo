@@ -1,12 +1,13 @@
 using Api.SharedKernel.Domain.Validation;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.SharedKernel.Domain.Validation;
 
+[Trait("Category", TestCategories.Unit)]
+
 public class CommonValidatorsTests
 {
-    #region Email Validation
-
     [Theory]
     [InlineData("test@example.com")]
     [InlineData("user.name@example.co.uk")]
@@ -35,11 +36,6 @@ public class CommonValidatorsTests
         Assert.True(result.IsFailure);
         Assert.NotNull(result.Error);
     }
-
-    #endregion
-
-    #region URL Validation
-
     [Theory]
     [InlineData("http://example.com")]
     [InlineData("https://example.com")]
@@ -68,11 +64,6 @@ public class CommonValidatorsTests
         Assert.True(result.IsFailure);
         Assert.NotNull(result.Error);
     }
-
-    #endregion
-
-    #region API Key Validation
-
     [Theory]
     [InlineData("mpl_dev_YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXo=")]
     [InlineData("mpl_staging_YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXo=")]
@@ -101,11 +92,6 @@ public class CommonValidatorsTests
         Assert.True(result.IsFailure);
         Assert.NotNull(result.Error);
     }
-
-    #endregion
-
-    #region Password Validation
-
     [Theory]
     [InlineData("Test123!")]
     [InlineData("SecureP@ssw0rd")]
@@ -135,11 +121,6 @@ public class CommonValidatorsTests
         Assert.True(result.IsFailure);
         Assert.NotNull(result.Error);
     }
-
-    #endregion
-
-    #region File Validation
-
     [Theory]
     [InlineData("document.pdf")]
     [InlineData("my-file-123.txt")]
@@ -196,11 +177,6 @@ public class CommonValidatorsTests
         Assert.True(result.IsFailure);
         Assert.NotNull(result.Error);
     }
-
-    #endregion
-
-    #region JSON Validation
-
     [Theory]
     [InlineData("{\"key\": \"value\"}")]
     [InlineData("[1, 2, 3]")]
@@ -228,11 +204,6 @@ public class CommonValidatorsTests
         Assert.True(result.IsFailure);
         Assert.NotNull(result.Error);
     }
-
-    #endregion
-
-    #region Version Validation
-
     [Theory]
     [InlineData("1.0")]
     [InlineData("1.0.0")]
@@ -261,11 +232,6 @@ public class CommonValidatorsTests
         Assert.True(result.IsFailure);
         Assert.NotNull(result.Error);
     }
-
-    #endregion
-
-    #region Configuration Key Validation
-
     [Theory]
     [InlineData("RateLimit")]
     [InlineData("RateLimit.Admin.MaxTokens")]
@@ -294,11 +260,6 @@ public class CommonValidatorsTests
         Assert.True(result.IsFailure);
         Assert.NotNull(result.Error);
     }
-
-    #endregion
-
-    #region DateTime Validation
-
     [Fact]
     public void NotInFuture_WithPastDate_ReturnsSuccess()
     {
@@ -385,11 +346,6 @@ public class CommonValidatorsTests
         Assert.True(result.IsFailure);
         Assert.NotNull(result.Error);
     }
-
-    #endregion
-
-    #region Enum Validation
-
     private enum TestEnum
     {
         Value1,
@@ -423,7 +379,5 @@ public class CommonValidatorsTests
         Assert.True(result.IsFailure);
         Assert.NotNull(result.Error);
     }
-
-    #endregion
 }
 

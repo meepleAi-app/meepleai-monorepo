@@ -290,9 +290,6 @@ public class HybridCacheService : IHybridCacheService
 
         return Task.FromResult(stats);
     }
-
-    #region Tag Tracking (Redis-Based)
-
     private void TrackTags(string cacheKey, string[] tags)
     {
         if (_redisDb == null)
@@ -489,6 +486,4 @@ public class HybridCacheService : IHybridCacheService
         }
 #pragma warning restore CA1031 // Do not catch general exception types
     }
-
-    #endregion
 }

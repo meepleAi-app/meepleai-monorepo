@@ -49,8 +49,6 @@ namespace Api.Tests.TestHelpers;
 /// </remarks>
 public static class TestDataFactory
 {
-    #region Games
-
     /// <summary>
     /// Creates a valid game with sensible defaults (Catan-like).
     /// </summary>
@@ -96,11 +94,6 @@ public static class TestDataFactory
         }
         return games;
     }
-
-    #endregion
-
-    #region Users
-
     /// <summary>
     /// Creates a standard user with User role.
     /// </summary>
@@ -140,11 +133,6 @@ public static class TestDataFactory
             .WithDisplayName("Test User with 2FA")
             .With2FA("JBSWY3DPEHPK3PXP")
             .Build();
-
-    #endregion
-
-    #region Sessions
-
     /// <summary>
     /// Creates an active session for a user.
     /// </summary>
@@ -171,11 +159,6 @@ public static class TestDataFactory
             .ForUser(userId)
             .WithLifetime(TimeSpan.FromMinutes(5))
             .Build();
-
-    #endregion
-
-    #region PDF Documents
-
     /// <summary>
     /// Creates a valid PDF document for a game.
     /// </summary>
@@ -224,11 +207,6 @@ public static class TestDataFactory
             .WithFileName(fileName ?? "failed-rules.pdf")
             .ThatIsFailed(errorMessage ?? "PDF processing failed")
             .Build();
-
-    #endregion
-
-    #region Snippets (RAG)
-
     /// <summary>
     /// Creates valid snippets for citation testing.
     /// </summary>
@@ -260,11 +238,6 @@ public static class TestDataFactory
             new Snippet("text", $"PDF:{pdfId}", page: -1, line: 0, score: 0.8f),
             new Snippet("text", $"PDF:{pdfId}", page: 999, line: 0, score: 0.7f),
         };
-
-    #endregion
-
-    #region Agents
-
     /// <summary>
     /// Creates a RAG agent with hybrid search strategy.
     /// </summary>
@@ -294,11 +267,6 @@ public static class TestDataFactory
             .WithType(AgentType.ConversationAgent)
             .WithStrategy(AgentStrategy.HybridSearch())
             .Build();
-
-    #endregion
-
-    #region Common Scenarios
-
     /// <summary>
     /// Creates a complete game setup with user, game, and PDFs.
     /// </summary>
@@ -355,11 +323,6 @@ public static class TestDataFactory
             .Build();
         return (game, gameSession);
     }
-
-    #endregion
-
-    #region Constants
-
     /// <summary>
     /// Default values for test data.
     /// Provides commonly used constants and deterministic GUIDs for stable test data.
@@ -400,7 +363,5 @@ public static class TestDataFactory
         /// <summary>Deterministic GUID for test PDF document (useful for assertions that need stable IDs).</summary>
         public static readonly Guid TestPdfId = Guid.Parse("00000000-0000-0000-0000-000000000003");
     }
-
-    #endregion
 }
 

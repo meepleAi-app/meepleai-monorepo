@@ -173,7 +173,8 @@ describe('ChatInput', () => {
 **Backend (Testcontainers + WebApplicationFactory)**
 
 ```csharp
-// Example: Integration Test with Real Database
+// Example: Integration Test with Real Database (LEGACY - use CQRS handlers)
+// NOTE: GameService removed in DDD migration
 public class GameServiceIntegrationTests : IClassFixture<IntegrationTestFixture>
 {
     private readonly HttpClient _client;

@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 
@@ -15,6 +16,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// Tests streaming setup guide generation with progressive step delivery, LLM integration, and fallback behavior.
 /// Coverage: validation, embedding, search, LLM generation, step parsing, default fallback, errors, cancellation.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class StreamSetupGuideQueryHandlerTests
 {
     private readonly Mock<IEmbeddingService> _embeddingServiceMock;
@@ -49,9 +51,6 @@ public class StreamSetupGuideQueryHandlerTests
             _fakeTimeProvider
         );
     }
-
-    #region Happy Path Tests
-
     [Fact]
     public async Task Handle_ValidGameId_StreamsSetupSteps()
     {
@@ -187,11 +186,6 @@ This is required.";
         var step3 = Assert.IsType<StreamingSetupStep>(stepEvents[2].Data).step;
         Assert.False(step3.isOptional);
     }
-
-    #endregion
-
-    #region Default Fallback Tests
-
     [Fact]
     public async Task Handle_EmbeddingFails_ReturnsDefaultSteps()
     {
@@ -346,11 +340,6 @@ This is required.";
         var completeEvent = events.LastOrDefault(e => e.Type == StreamingEventType.Complete);
         Assert.NotNull(completeEvent);
     }
-
-    #endregion
-
-    #region Validation Tests
-
     [Fact]
     public async Task Handle_EmptyGameId_ReturnsError()
     {
@@ -407,11 +396,6 @@ This is required.";
         Assert.Single(events);
         Assert.Equal(StreamingEventType.Error, events[0].Type);
     }
-
-    #endregion
-
-    #region Cancellation Tests
-
     [Fact]
     public async Task Handle_CancellationRequested_StopsStreaming()
     {
@@ -450,11 +434,6 @@ This is required.";
         Assert.InRange(events.Count, 1, 5); // Should stop early
         Assert.True(cts.IsCancellationRequested);
     }
-
-    #endregion
-
-    #region Prompt Template Tests
-
     [Fact]
     public async Task Handle_PromptDatabaseEnabled_UsesTemplateService()
     {
@@ -575,11 +554,6 @@ This is required.";
             Times.Once
         );
     }
-
-    #endregion
-
-    #region Data Integrity Tests
-
     [Fact]
     public async Task Handle_EstimatedTimeCalculation_MinimumFiveMinutes()
     {
@@ -679,11 +653,6 @@ Instruction 4";
         Assert.True(complete.confidence.HasValue);
         Assert.Equal(0.92, complete.confidence.Value, 0.001); // Max score
     }
-
-    #endregion
-
-    #region Helper Methods
-
     private static IConfiguration CreateConfiguration(bool promptDatabaseEnabled)
     {
         var configBuilder = new ConfigurationBuilder();
@@ -767,7 +736,5 @@ Give each player their starting items.";
             }
         };
     }
-
-    #endregion
 }
 

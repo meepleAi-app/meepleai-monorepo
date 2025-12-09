@@ -4,6 +4,7 @@ using Api.Models;
 using Api.Services;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 
@@ -11,6 +12,7 @@ namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 /// Tests for GetAdminStatsQueryHandler.
 /// Tests delegation to AdminStatsService for dashboard statistics.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class GetAdminStatsQueryHandlerTests
 {
     private readonly Mock<IAdminStatsService> _mockAdminStatsService;
@@ -39,7 +41,16 @@ public class GetAdminStatsQueryHandlerTests
                 TotalChatMessages: 1250,
                 AverageConfidenceScore: 0.95,
                 TotalRagRequests: 320,
-                TotalTokensUsed: 0
+                TotalTokensUsed: 0,
+                // Issue #874: New metrics with test defaults
+                TotalGames: 25,
+                ApiRequests7d: 500,
+                ApiRequests30d: 2000,
+                AverageLatency24h: 200.0,
+                AverageLatency7d: 215.0,
+                ErrorRate24h: 0.05,
+                ActiveAlerts: 2,
+                ResolvedAlerts: 15
             ),
             UserTrend: Array.Empty<TimeSeriesDataPoint>(),
             SessionTrend: Array.Empty<TimeSeriesDataPoint>(),
@@ -87,7 +98,16 @@ public class GetAdminStatsQueryHandlerTests
                 TotalChatMessages: 0,
                 AverageConfidenceScore: 0.0,
                 TotalRagRequests: 0,
-                TotalTokensUsed: 0
+                TotalTokensUsed: 0,
+                // Issue #874: New metrics
+                TotalGames: 10,
+                ApiRequests7d: 0,
+                ApiRequests30d: 0,
+                AverageLatency24h: 0.0,
+                AverageLatency7d: 0.0,
+                ErrorRate24h: 0.0,
+                ActiveAlerts: 0,
+                ResolvedAlerts: 0
             ),
             UserTrend: Array.Empty<TimeSeriesDataPoint>(),
             SessionTrend: Array.Empty<TimeSeriesDataPoint>(),
@@ -130,7 +150,16 @@ public class GetAdminStatsQueryHandlerTests
                 TotalChatMessages: 280,
                 AverageConfidenceScore: 0.0,
                 TotalRagRequests: 45,
-                TotalTokensUsed: 0
+                TotalTokensUsed: 0,
+                // Issue #874: New metrics
+                TotalGames: 1,
+                ApiRequests7d: 100,
+                ApiRequests30d: 500,
+                AverageLatency24h: 180.0,
+                AverageLatency7d: 190.0,
+                ErrorRate24h: 0.02,
+                ActiveAlerts: 0,
+                ResolvedAlerts: 5
             ),
             UserTrend: Array.Empty<TimeSeriesDataPoint>(),
             SessionTrend: Array.Empty<TimeSeriesDataPoint>(),
@@ -174,7 +203,16 @@ public class GetAdminStatsQueryHandlerTests
                 TotalChatMessages: 0,
                 AverageConfidenceScore: 0.0,
                 TotalRagRequests: 0,
-                TotalTokensUsed: 0
+                TotalTokensUsed: 0,
+                // Issue #874: New metrics
+                TotalGames: 0,
+                ApiRequests7d: 0,
+                ApiRequests30d: 0,
+                AverageLatency24h: 0.0,
+                AverageLatency7d: 0.0,
+                ErrorRate24h: 0.0,
+                ActiveAlerts: 0,
+                ResolvedAlerts: 0
             ),
             UserTrend: Array.Empty<TimeSeriesDataPoint>(),
             SessionTrend: Array.Empty<TimeSeriesDataPoint>(),
@@ -222,7 +260,16 @@ public class GetAdminStatsQueryHandlerTests
                 TotalChatMessages: 0,
                 AverageConfidenceScore: 0.0,
                 TotalRagRequests: 230,
-                TotalTokensUsed: 0
+                TotalTokensUsed: 0,
+                // Issue #874: New metrics
+                TotalGames: 0,
+                ApiRequests7d: 0,
+                ApiRequests30d: 0,
+                AverageLatency24h: 0.0,
+                AverageLatency7d: 0.0,
+                ErrorRate24h: 0.0,
+                ActiveAlerts: 0,
+                ResolvedAlerts: 0
             ),
             UserTrend: Array.Empty<TimeSeriesDataPoint>(),
             SessionTrend: Array.Empty<TimeSeriesDataPoint>(),
@@ -276,7 +323,16 @@ public class GetAdminStatsQueryHandlerTests
                 TotalChatMessages: 0,
                 AverageConfidenceScore: 0.0,
                 TotalRagRequests: 0,
-                TotalTokensUsed: 0
+                TotalTokensUsed: 0,
+                // Issue #874: New metrics
+                TotalGames: 0,
+                ApiRequests7d: 0,
+                ApiRequests30d: 0,
+                AverageLatency24h: 0.0,
+                AverageLatency7d: 0.0,
+                ErrorRate24h: 0.0,
+                ActiveAlerts: 0,
+                ResolvedAlerts: 0
             ),
             UserTrend: Array.Empty<TimeSeriesDataPoint>(),
             SessionTrend: Array.Empty<TimeSeriesDataPoint>(),
@@ -303,4 +359,3 @@ public class GetAdminStatsQueryHandlerTests
             Times.Once);
     }
 }
-

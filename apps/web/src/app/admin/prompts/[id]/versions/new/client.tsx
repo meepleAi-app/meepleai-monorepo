@@ -1,13 +1,13 @@
 'use client';
 
 import type { AuthUser } from '@/types/auth';
-import React, { useState, useCallback } from "react";
-import { useRouter, useParams } from "next/navigation";
-import Link from "next/link";
-import { api } from "@/lib/api";
-import { cn } from "@/lib/utils";
-import { PromptEditor } from "@/components/prompt";
-import { LoadingButton } from "@/components/loading/LoadingButton";
+import React, { useState, useCallback } from 'react';
+import { useRouter, useParams } from 'next/navigation';
+import Link from 'next/link';
+import { api } from '@/lib/api';
+import { cn } from '@/lib/utils';
+import { PromptEditor } from '@/components/prompt';
+import { LoadingButton } from '@/components/loading/LoadingButton';
 import { getErrorMessage } from '@/lib/utils/errorHandler';
 import { logger } from '@/lib/logger';
 import { createErrorContext } from '@/lib/errors';
@@ -15,27 +15,32 @@ import { createErrorContext } from '@/lib/errors';
 type ToastState = {
   show: boolean;
   message: string;
-  type: "success" | "error";
+  type: 'success' | 'error';
 };
 
-interface AdminPageClientProps { user: AuthUser; }
+interface AdminPageClientProps {
+  user: AuthUser;
+}
 
 export function AdminPageClient({ user }: AdminPageClientProps) {
   const router = useRouter();
   const params = useParams();
   const id = params?.id as string | undefined;
 
-  const [content, setContent] = useState("");
-  const [metadata, setMetadata] = useState("");
+  const [content, setContent] = useState('');
+  const [metadata, setMetadata] = useState('');
   const [activateImmediately, setActivateImmediately] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [toast, setToast] = useState<ToastState>({ show: false, message: "", type: "success" });
+  const [toast, setToast] = useState<ToastState>({ show: false, message: '', type: 'success' });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Handle missing ID
   if (!id) {
     return (
-      <div className="min-h-screen" style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
+      <div
+        className="min-h-screen"
+        style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
+      >
         <div className="max-w-[1400px] mx-auto p-8">
           <div className="bg-white rounded-xl shadow-[0_20px_60px_rgba(0,0,0,0.3)] overflow-hidden p-8">
             <h1 className="text-2xl font-bold mb-4">Invalid Template ID</h1>
@@ -51,23 +56,23 @@ export function AdminPageClient({ user }: AdminPageClientProps) {
     );
   }
 
-  const showToast = useCallback((message: string, type: "success" | "error") => {
+  const showToast = useCallback((message: string, type: 'success' | 'error') => {
     setToast({ show: true, message, type });
-    setTimeout(() => setToast({ show: false, message: "", type: "success" }), 5000);
+    setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 5000);
   }, []);
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
     if (!content.trim()) {
-      newErrors.content = "Content is required";
+      newErrors.content = 'Content is required';
     }
 
     if (metadata.trim()) {
       try {
         JSON.parse(metadata);
       } catch {
-        newErrors.metadata = "Metadata must be valid JSON";
+        newErrors.metadata = 'Metadata must be valid JSON';
       }
     }
 
@@ -79,7 +84,7 @@ export function AdminPageClient({ user }: AdminPageClientProps) {
     e.preventDefault();
 
     if (!validateForm()) {
-      showToast("Please fix the errors before submitting", "error");
+      showToast('Please fix the errors before submitting', 'error');
       return;
     }
 
@@ -94,21 +99,23 @@ export function AdminPageClient({ user }: AdminPageClientProps) {
         payload.metadata = JSON.parse(metadata);
       }
 
-      const result = await api.post<{ id: string }>(`/api/v1/admin/prompts/${id}/versions`, payload);
+      const result = await api.admin.createPromptVersion(id, payload as any);
 
-      if (!result) throw new Error("Failed to create version");
-
-      showToast("Version created successfully", "success");
+      showToast('Version created successfully', 'success');
 
       if (activateImmediately && result.id) {
         try {
-          await api.post<{}>(`/api/v1/admin/prompts/${id}/versions/${result.id}/activate`, {});
-          showToast("Version created and activated", "success");
+          await api.admin.activatePromptVersion(id, result.id);
+          showToast('Version created and activated', 'success');
         } catch (err) {
           logger.error(
             'Failed to activate prompt version',
             err instanceof Error ? err : new Error(String(err)),
-            createErrorContext('NewPromptVersion', 'handleSubmit', { promptId: id, versionId: result.id, operation: 'activate_version' })
+            createErrorContext('NewPromptVersion', 'handleSubmit', {
+              promptId: id,
+              versionId: result.id,
+              operation: 'activate_version',
+            })
           );
         }
       }
@@ -117,18 +124,24 @@ export function AdminPageClient({ user }: AdminPageClientProps) {
         router.push(`/admin/prompts/${id}`);
       }, 1000);
     } catch (err) {
-      showToast(getErrorMessage(err, "Failed to create version"), "error");
+      showToast(getErrorMessage(err, 'Failed to create version'), 'error');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen" style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
+    <div
+      className="min-h-screen"
+      style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
+    >
       <div className="max-w-[1400px] mx-auto p-8">
         <div className="bg-white rounded-xl shadow-[0_20px_60px_rgba(0,0,0,0.3)] overflow-hidden">
           {/* Header */}
-          <div className="p-8 text-white" style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
+          <div
+            className="p-8 text-white"
+            style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
+          >
             <div className="flex items-center justify-between mb-4">
               <Link href={`/admin/prompts/${id}`}>
                 <button className="px-4 py-2 bg-white/20 text-white border-none rounded-lg cursor-pointer">
@@ -151,35 +164,27 @@ export function AdminPageClient({ user }: AdminPageClientProps) {
               </p>
               <PromptEditor
                 value={content}
-                onChange={(value) => setContent(value || "")}
+                onChange={value => setContent(value || '')}
                 height="500px"
                 placeholder="Enter your prompt content here..."
               />
-              {errors.content && (
-                <div className="text-red-600 text-sm mt-2">
-                  {errors.content}
-                </div>
-              )}
+              {errors.content && <div className="text-red-600 text-sm mt-2">{errors.content}</div>}
             </div>
 
             <div className="mb-6">
-              <label className="block mb-2 font-semibold text-lg">
-                Metadata (Optional)
-              </label>
+              <label className="block mb-2 font-semibold text-lg">Metadata (Optional)</label>
               <p className="text-sm text-gray-500 mb-2">
                 Provide additional metadata as JSON (e.g., model parameters, tags)
               </p>
               <textarea
                 value={metadata}
-                onChange={(e) => setMetadata(e.target.value)}
+                onChange={e => setMetadata(e.target.value)}
                 rows={6}
                 placeholder='{\n  "temperature": 0.7,\n  "max_tokens": 1000,\n  "tags": ["production"]\n}'
                 className="w-full px-3 py-3 border border-gray-300 rounded-lg font-mono text-sm"
               />
               {errors.metadata && (
-                <div className="text-red-600 text-sm mt-2">
-                  {errors.metadata}
-                </div>
+                <div className="text-red-600 text-sm mt-2">{errors.metadata}</div>
               )}
             </div>
 
@@ -188,7 +193,7 @@ export function AdminPageClient({ user }: AdminPageClientProps) {
                 <input
                   type="checkbox"
                   checked={activateImmediately}
-                  onChange={(e) => setActivateImmediately(e.target.checked)}
+                  onChange={e => setActivateImmediately(e.target.checked)}
                   className="mr-2 w-[18px] h-[18px] cursor-pointer"
                 />
                 <span className="font-medium">Activate this version immediately</span>
@@ -224,8 +229,8 @@ export function AdminPageClient({ user }: AdminPageClientProps) {
       {toast.show && (
         <div
           className={cn(
-            "fixed bottom-8 right-8 px-6 py-4 text-white rounded-lg shadow-[0_10px_40px_rgba(0,0,0,0.3)] z-[100] font-medium",
-            toast.type === "success" ? "bg-emerald-500" : "bg-red-500"
+            'fixed bottom-8 right-8 px-6 py-4 text-white rounded-lg shadow-[0_10px_40px_rgba(0,0,0,0.3)] z-[100] font-medium',
+            toast.type === 'success' ? 'bg-emerald-500' : 'bg-red-500'
           )}
         >
           {toast.message}

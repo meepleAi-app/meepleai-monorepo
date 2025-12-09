@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Infrastructure.Persistence;
 
@@ -15,6 +16,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Infrastructure.Persistence;
 /// Integration tests for OAuthAccountRepository using Testcontainers with real PostgreSQL.
 /// Tests OAuth provider linking, token management, and multi-provider scenarios.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class OAuthAccountRepositoryTests : IntegrationTestBase<OAuthAccountRepository>
 {
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
@@ -23,9 +25,6 @@ public class OAuthAccountRepositoryTests : IntegrationTestBase<OAuthAccountRepos
 
     protected override OAuthAccountRepository CreateRepository(MeepleAiDbContext dbContext)
         => new OAuthAccountRepository(dbContext, MockEventCollector.Object, NullLogger<OAuthAccountRepository>.Instance);
-
-    #region GetByUserIdAndProviderAsync Tests
-
     [Fact]
     public async Task GetByUserIdAndProviderAsync_ExistingAccount_ReturnsAccount()
     {
@@ -77,11 +76,6 @@ public class OAuthAccountRepositoryTests : IntegrationTestBase<OAuthAccountRepos
         // Assert
         Assert.Null(result);
     }
-
-    #endregion
-
-    #region GetByProviderUserIdAsync Tests
-
     [Fact]
     public async Task GetByProviderUserIdAsync_ExistingAccount_ReturnsAccount()
     {
@@ -137,11 +131,6 @@ public class OAuthAccountRepositoryTests : IntegrationTestBase<OAuthAccountRepos
         // Assert
         Assert.Null(result);
     }
-
-    #endregion
-
-    #region GetByUserIdAsync Tests
-
     [Fact]
     public async Task GetByUserIdAsync_NoAccounts_ReturnsEmptyList()
     {
@@ -208,11 +197,6 @@ public class OAuthAccountRepositoryTests : IntegrationTestBase<OAuthAccountRepos
         Assert.Equal(2, user1Accounts.Count);
         Assert.Single(user2Accounts);
     }
-
-    #endregion
-
-    #region AddAsync Tests
-
     [Fact]
     public async Task AddAsync_NewAccount_PersistsSuccessfully()
     {
@@ -266,11 +250,6 @@ public class OAuthAccountRepositoryTests : IntegrationTestBase<OAuthAccountRepos
         Assert.NotNull(persisted);
         Assert.Null(persisted.RefreshTokenEncrypted);
     }
-
-    #endregion
-
-    #region UpdateAsync Tests
-
     [Fact]
     public async Task UpdateAsync_RefreshTokens_UpdatesCorrectly()
     {
@@ -325,11 +304,6 @@ public class OAuthAccountRepositoryTests : IntegrationTestBase<OAuthAccountRepos
         Assert.NotNull(updated);
         Assert.Equal("new_access_token_only", updated.AccessTokenEncrypted);
     }
-
-    #endregion
-
-    #region DeleteAsync Tests
-
     [Fact]
     public async Task DeleteAsync_ExistingAccount_RemovesFromDatabase()
     {
@@ -361,11 +335,6 @@ public class OAuthAccountRepositoryTests : IntegrationTestBase<OAuthAccountRepos
         await Repository.DeleteAsync(account);
         await DbContext.SaveChangesAsync(TestCancellationToken);
     }
-
-    #endregion
-
-    #region Mapping Tests
-
     [Fact]
     public async Task Mapping_DomainToPersistence_AllFieldsCorrect()
     {
@@ -419,11 +388,6 @@ public class OAuthAccountRepositoryTests : IntegrationTestBase<OAuthAccountRepos
         Assert.Equal(account.ProviderUserId, retrieved.ProviderUserId);
         Assert.Equal(account.AccessTokenEncrypted, retrieved.AccessTokenEncrypted);
     }
-
-    #endregion
-
-    #region Multi-Provider Scenarios
-
     [Fact]
     public async Task MultiProvider_UserWithThreeProviders_AllPersistCorrectly()
     {
@@ -453,11 +417,6 @@ public class OAuthAccountRepositoryTests : IntegrationTestBase<OAuthAccountRepos
         Assert.NotNull(github);
         Assert.NotNull(discord);
     }
-
-    #endregion
-
-    #region Helper Methods
-
     /// <summary>
     /// Creates a test user in the database to satisfy FK constraints for OAuth accounts.
     /// </summary>
@@ -502,7 +461,5 @@ public class OAuthAccountRepositoryTests : IntegrationTestBase<OAuthAccountRepos
             tokenExpiresAt: tokenExpiresAt
         );
     }
-
-    #endregion
 }
 

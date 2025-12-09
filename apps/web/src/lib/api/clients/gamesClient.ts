@@ -6,14 +6,26 @@
  */
 
 import type { HttpClient } from '../core/httpClient';
+import { z } from 'zod';
 import {
   GameSchema,
+  GameSessionDtoSchema,
   PaginatedGamesResponseSchema,
   PdfDocumentDtoSchema,
+  RuleSpecSchema,
+  RuleSpecHistorySchema,
+  VersionTimelineSchema,
+  RuleSpecDiffSchema,
   type Game,
+  type GameSessionDto,
   type PaginatedGamesResponse,
   type PdfDocumentDto,
+  type RuleSpec,
+  type RuleSpecHistory,
+  type VersionTimeline,
+  type RuleSpecDiff,
 } from '../schemas';
+import { AgentDtoSchema, type AgentDto } from '../schemas';
 
 export interface CreateGamesClientParams {
   httpClient: HttpClient;
@@ -65,25 +77,9 @@ export function createGamesClient({ httpClient }: CreateGamesClientParams) {
       page: number = 1,
       pageSize: number = 20
     ): Promise<PaginatedGamesResponse> {
-      // Fetch all games from backend
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const allGamesRaw = await httpClient.get<any[]>('/api/v1/games');
-      // Normalize response to handle both PascalCase (API) and camelCase (expected)
-      const allGames: Game[] = (allGamesRaw ?? []).map(g => ({
-        id: g.id ?? g.Id,
-        title: g.title ?? g.Title,
-        publisher: g.publisher ?? g.Publisher ?? null,
-        yearPublished: g.yearPublished ?? g.YearPublished ?? null,
-        minPlayers: g.minPlayers ?? g.MinPlayers ?? null,
-        maxPlayers: g.maxPlayers ?? g.MaxPlayers ?? null,
-        minPlayTimeMinutes: g.minPlayTimeMinutes ?? g.MinPlayTimeMinutes ?? null,
-        maxPlayTimeMinutes: g.maxPlayTimeMinutes ?? g.MaxPlayTimeMinutes ?? null,
-        bggId: g.bggId ?? g.BggId ?? null,
-        createdAt: g.createdAt ?? g.CreatedAt,
-        imageUrl: g.imageUrl ?? g.ImageUrl ?? null,
-        faqCount: g.faqCount ?? g.FaqCount ?? null,
-        averageRating: g.averageRating ?? g.AverageRating ?? null,
-      }));
+      // Fetch all games from backend with Zod validation
+      // Backend serializes to camelCase (Program.cs:204 - JsonNamingPolicy.CamelCase)
+      const allGames: Game[] = (await httpClient.get('/api/v1/games', z.array(GameSchema))) ?? [];
 
       // Client-side filtering
       let filtered = allGames;
@@ -205,6 +201,27 @@ export function createGamesClient({ httpClient }: CreateGamesClientParams) {
     },
 
     /**
+     * Get all sessions for a specific game with optional pagination
+     * Issue #1675: FE-IMP-005 - Connect frontend to backend sessions API
+     * @param gameId Game ID (GUID format)
+     * @param pageNumber Optional page number (1-indexed)
+     * @param pageSize Optional page size (default determined by backend)
+     */
+    async getSessions(
+      gameId: string,
+      pageNumber?: number,
+      pageSize?: number
+    ): Promise<GameSessionDto[]> {
+      const params = new URLSearchParams();
+      if (pageNumber) params.append('pageNumber', pageNumber.toString());
+      if (pageSize) params.append('pageSize', pageSize.toString());
+      const queryString = params.toString() ? `?${params.toString()}` : '';
+      const url = `/api/v1/games/${encodeURIComponent(gameId)}/sessions${queryString}`;
+      const response = await httpClient.get(url, z.array(GameSessionDtoSchema));
+      return response ?? [];
+    },
+
+    /**
      * Get PDF documents for a specific game
      * @param gameId Game ID (GUID format)
      */
@@ -213,6 +230,116 @@ export function createGamesClient({ httpClient }: CreateGamesClientParams) {
         `/api/v1/games/${encodeURIComponent(gameId)}/documents`
       );
       return response ?? [];
+    },
+
+    /**
+     * Create new game
+     * POST /api/v1/games
+     */
+    async create(name: string): Promise<{ id: string; title: string; createdAt: string }> {
+      return httpClient.post<{ id: string; title: string; createdAt: string }>('/api/v1/games', {
+        name,
+      });
+    },
+
+    // ========== RuleSpec Management ==========
+
+    /**
+     * Get RuleSpec for a game
+     * GET /api/v1/games/{gameId}/rulespec
+     *
+     * Issue #1977: Added RuleSpecSchema validation
+     */
+    async getRuleSpec(gameId: string): Promise<RuleSpec | null> {
+      return httpClient.get(`/api/v1/games/${encodeURIComponent(gameId)}/rulespec`, RuleSpecSchema);
+    },
+
+    /**
+     * Get specific RuleSpec version
+     * GET /api/v1/games/{gameId}/rulespec/versions/{version}
+     *
+     * Issue #1977: Added RuleSpecSchema validation
+     */
+    async getRuleSpecVersion(gameId: string, version: number): Promise<RuleSpec | null> {
+      return httpClient.get(
+        `/api/v1/games/${encodeURIComponent(gameId)}/rulespec/versions/${version}`,
+        RuleSpecSchema
+      );
+    },
+
+    /**
+     * Get RuleSpec version history
+     * GET /api/v1/games/{gameId}/rulespec/history
+     *
+     * Issue #1977: Added RuleSpecHistorySchema validation
+     */
+    async getRuleSpecHistory(gameId: string): Promise<RuleSpecHistory | null> {
+      return httpClient.get(
+        `/api/v1/games/${encodeURIComponent(gameId)}/rulespec/history`,
+        RuleSpecHistorySchema
+      );
+    },
+
+    /**
+     * Get RuleSpec version timeline with authors
+     * GET /api/v1/games/{gameId}/rulespec/versions/timeline
+     *
+     * Issue #1977: Added VersionTimelineSchema validation
+     */
+    async getRuleSpecTimeline(gameId: string): Promise<VersionTimeline | null> {
+      return httpClient.get(
+        `/api/v1/games/${encodeURIComponent(gameId)}/rulespec/versions/timeline`,
+        VersionTimelineSchema
+      );
+    },
+
+    /**
+     * Update RuleSpec for a game
+     * PUT /api/v1/games/{gameId}/rulespec
+     *
+     * Issue #1977: Added RuleSpecSchema validation
+     */
+    async updateRuleSpec(gameId: string, ruleSpecData: Partial<RuleSpec>): Promise<RuleSpec> {
+      const result = await httpClient.put(
+        `/api/v1/games/${encodeURIComponent(gameId)}/rulespec`,
+        ruleSpecData,
+        RuleSpecSchema
+      );
+      if (!result) {
+        throw new Error('Failed to update RuleSpec: no response from server');
+      }
+      return result;
+    },
+
+    /**
+     * Get AI agents available for a game
+     * GET /api/v1/games/{gameId}/agents
+     *
+     * Issue #1977: Added AgentDtoSchema validation
+     */
+    async getAgents(gameId: string): Promise<AgentDto[]> {
+      const result = await httpClient.get(
+        `/api/v1/games/${encodeURIComponent(gameId)}/agents`,
+        AgentDtoSchema.array()
+      );
+      return result ?? [];
+    },
+
+    /**
+     * Get diff between two RuleSpec versions
+     * GET /api/v1/games/{gameId}/rulespec/diff?from={from}&to={to}
+     *
+     * Issue #1977: Added RuleSpecDiffSchema validation
+     */
+    async getRuleSpecDiff(
+      gameId: string,
+      fromVersion: number | string,
+      toVersion: number | string
+    ): Promise<RuleSpecDiff | null> {
+      return httpClient.get(
+        `/api/v1/games/${encodeURIComponent(gameId)}/rulespec/diff?from=${encodeURIComponent(fromVersion)}&to=${encodeURIComponent(toVersion)}`,
+        RuleSpecDiffSchema
+      );
     },
   };
 }

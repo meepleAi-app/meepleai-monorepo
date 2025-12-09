@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 
@@ -18,6 +19,7 @@ namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 /// NOTE: Complex handler with service dependencies - focused on construction and basic scenarios.
 /// RESOLVED: Issue #1690 - Integration tests added in LlmHealthIntegrationTests.cs.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class GetLlmHealthQueryHandlerTests
 {
     private readonly Mock<IProviderHealthCheckService> _healthCheckServiceMock;
@@ -49,9 +51,6 @@ public class GetLlmHealthQueryHandlerTests
             aiSettingsMock.Object,
             healthCheckServiceMock.Object);
     }
-
-    #region Construction Tests
-
     [Fact]
     public void Constructor_WithValidDependencies_CreatesInstance()
     {
@@ -83,11 +82,6 @@ public class GetLlmHealthQueryHandlerTests
                 _healthCheckServiceMock.Object,
                 null!));
     }
-
-    #endregion
-
-    #region Query Tests
-
     [Fact]
     public void Query_ConstructsCorrectly()
     {
@@ -97,9 +91,6 @@ public class GetLlmHealthQueryHandlerTests
         // Assert
         Assert.NotNull(query);
     }
-
-    #endregion
-
     // NOTE: Full workflow tests (health check aggregation, circuit breaker status,
     // latency statistics, success rate calculation, history tracking)
     // should be in integration test suite due to complex service dependencies.
@@ -119,4 +110,3 @@ public class GetLlmHealthQueryHandlerTests
     // See integration-tests.yml workflow and ProviderHealthCheckServiceTests.cs
     // for health check service unit tests.
 }
-

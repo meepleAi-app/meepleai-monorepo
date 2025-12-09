@@ -22,7 +22,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { useChatContext } from '@/hooks/useChatContext';
+import { useChatStore } from '@/store/chat/store';
 import { MessageList } from './MessageList';
 import { MessageInput } from './MessageInput';
 import { MobileSidebar } from './MobileSidebar';
@@ -49,16 +49,31 @@ const INITIAL_PDF_MODAL_STATE: PdfModalState = {
 };
 
 export function ChatContent() {
+  // Issue #1676: Migrated from useChatContext to direct Zustand store
   const {
     games,
     selectedGameId,
-    activeChatId,
-    chats,
-    messages,
+    chatsByGame,
+    activeChatIds,
+    messagesByChat,
     errorMessage,
     sidebarCollapsed,
     toggleSidebar,
-  } = useChatContext();
+  } = useChatStore(state => ({
+    games: state.games,
+    selectedGameId: state.selectedGameId,
+    chatsByGame: state.chatsByGame,
+    activeChatIds: state.activeChatIds,
+    messagesByChat: state.messagesByChat,
+    errorMessage: state.error ?? '',
+    sidebarCollapsed: state.sidebarCollapsed,
+    toggleSidebar: state.toggleSidebar,
+  }));
+
+  // Derived values
+  const activeChatId = selectedGameId ? activeChatIds[selectedGameId] : null;
+  const chats = selectedGameId ? (chatsByGame[selectedGameId] ?? []) : [];
+  const messages = activeChatId ? (messagesByChat[activeChatId] ?? []) : [];
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -71,39 +86,25 @@ export function ChatContent() {
   const isArchived = activeThread?.status === 'Closed';
 
   /**
-   * Handle citation click → open PDF at specific page (BGAI-074)
+   * Handle citation click → open PDF at specific page (BGAI-074, Issue #1940)
    *
-   * Looks up the citation from messages to get documentId and pageNumber,
+   * Receives documentId and pageNumber directly from clicked citation,
    * then opens PdfViewerModal at that page.
+   *
+   * Fix for Issue #1940: No longer searches through messages - receives
+   * exact page number from citation click, ensuring correct page is opened.
    */
   const handleCitationClick = useCallback(
-    (citationId: string) => {
-      // Find the citation in messages to get document details
-      // CitationId format from VirtualizedMessageList: documentId
-      for (const message of messages) {
-        const citation = message.citations?.find(c => c.documentId === citationId);
-        if (citation) {
-          const pdfUrl = api.pdf.getPdfDownloadUrl(citation.documentId);
-          setPdfModal({
-            open: true,
-            pdfUrl,
-            pageNumber: citation.pageNumber,
-            documentName: selectedGame?.title || 'PDF Document',
-          });
-          return;
-        }
-      }
-
-      // Fallback: If no citation found, try opening by documentId directly
-      const pdfUrl = api.pdf.getPdfDownloadUrl(citationId);
+    (documentId: string, pageNumber: number) => {
+      const pdfUrl = api.pdf.getPdfDownloadUrl(documentId);
       setPdfModal({
         open: true,
         pdfUrl,
-        pageNumber: 1,
+        pageNumber,
         documentName: selectedGame?.title || 'PDF Document',
       });
     },
-    [messages, selectedGame?.title]
+    [selectedGame?.title]
   );
 
   /**

@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Exceptions;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Domain.ValueObjects;
 
@@ -8,10 +9,9 @@ namespace Api.Tests.BoundedContexts.Authentication.Domain.ValueObjects;
 /// Unit tests for UserTier Value Object.
 /// Tests tier parsing, validation, and comparison logic.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class UserTierTests
 {
-    #region Parse Tests
-
     [Theory]
     [InlineData("free")]
     [InlineData("normal")]
@@ -63,76 +63,38 @@ public class UserTierTests
         Assert.Contains("Invalid user tier", exception.Message);
         Assert.Contains("free, normal, premium", exception.Message);
     }
-
-    #endregion
-
-    #region Static Tier Constants
-
-    [Fact]
-    public void StaticTier_Free_HasCorrectValue()
-    {
-        // Assert
-        Assert.Equal("free", UserTier.Free.Value);
-    }
-
-    [Fact]
-    public void StaticTier_Normal_HasCorrectValue()
-    {
-        // Assert
-        Assert.Equal("normal", UserTier.Normal.Value);
-    }
-
-    [Fact]
-    public void StaticTier_Premium_HasCorrectValue()
-    {
-        // Assert
-        Assert.Equal("premium", UserTier.Premium.Value);
-    }
-
-    #endregion
-
-    #region Is* Methods
-
-    [Fact]
-    public void IsFree_FreeTier_ReturnsTrue()
+    [Theory]
+    [InlineData("free")]
+    [InlineData("normal")]
+    [InlineData("premium")]
+    public void StaticTier_HasCorrectValue(string expectedValue)
     {
         // Arrange
-        var tier = UserTier.Free;
+        var tier = expectedValue switch
+        {
+            "free" => UserTier.Free,
+            "normal" => UserTier.Normal,
+            "premium" => UserTier.Premium,
+            _ => throw new ArgumentException($"Unexpected tier value: {expectedValue}")
+        };
 
-        // Act & Assert
-        Assert.True(tier.IsFree());
-        Assert.False(tier.IsNormal());
-        Assert.False(tier.IsPremium());
+        // Assert
+        Assert.Equal(expectedValue, tier.Value);
     }
-
-    [Fact]
-    public void IsNormal_NormalTier_ReturnsTrue()
+    [Theory]
+    [InlineData("free", true, false, false)]
+    [InlineData("normal", false, true, false)]
+    [InlineData("premium", false, false, true)]
+    public void IsTierType_ReturnsCorrectValue(string tierValue, bool expectedIsFree, bool expectedIsNormal, bool expectedIsPremium)
     {
         // Arrange
-        var tier = UserTier.Normal;
+        var tier = UserTier.Parse(tierValue);
 
         // Act & Assert
-        Assert.False(tier.IsFree());
-        Assert.True(tier.IsNormal());
-        Assert.False(tier.IsPremium());
+        Assert.Equal(expectedIsFree, tier.IsFree());
+        Assert.Equal(expectedIsNormal, tier.IsNormal());
+        Assert.Equal(expectedIsPremium, tier.IsPremium());
     }
-
-    [Fact]
-    public void IsPremium_PremiumTier_ReturnsTrue()
-    {
-        // Arrange
-        var tier = UserTier.Premium;
-
-        // Act & Assert
-        Assert.False(tier.IsFree());
-        Assert.False(tier.IsNormal());
-        Assert.True(tier.IsPremium());
-    }
-
-    #endregion
-
-    #region GetLevel Tests
-
     [Theory]
     [InlineData("free", 0)]
     [InlineData("normal", 1)]
@@ -162,99 +124,25 @@ public class UserTierTests
         Assert.True(normal.GetLevel() < premium.GetLevel());
         Assert.True(free.GetLevel() < premium.GetLevel());
     }
-
-    #endregion
-
-    #region HasLevel Tests
-
-    [Fact]
-    public void HasLevel_PremiumHasNormalLevel_ReturnsTrue()
+    [Theory]
+    [InlineData("premium", "normal", true)]    // Premium has Normal level
+    [InlineData("premium", "free", true)]      // Premium has Free level
+    [InlineData("normal", "free", true)]       // Normal has Free level
+    [InlineData("free", "normal", false)]      // Free does not have Normal level
+    [InlineData("free", "premium", false)]     // Free does not have Premium level
+    [InlineData("normal", "normal", true)]     // Same tier always has level
+    public void HasLevel_ReturnsCorrectPermission(string tierValue, string requiredLevelValue, bool expected)
     {
         // Arrange
-        var premium = UserTier.Premium;
-        var normal = UserTier.Normal;
+        var tier = UserTier.Parse(tierValue);
+        var requiredLevel = UserTier.Parse(requiredLevelValue);
 
         // Act
-        var hasLevel = premium.HasLevel(normal);
+        var hasLevel = tier.HasLevel(requiredLevel);
 
         // Assert
-        Assert.True(hasLevel);
+        Assert.Equal(expected, hasLevel);
     }
-
-    [Fact]
-    public void HasLevel_PremiumHasFreeLevel_ReturnsTrue()
-    {
-        // Arrange
-        var premium = UserTier.Premium;
-        var free = UserTier.Free;
-
-        // Act
-        var hasLevel = premium.HasLevel(free);
-
-        // Assert
-        Assert.True(hasLevel);
-    }
-
-    [Fact]
-    public void HasLevel_NormalHasFreeLevel_ReturnsTrue()
-    {
-        // Arrange
-        var normal = UserTier.Normal;
-        var free = UserTier.Free;
-
-        // Act
-        var hasLevel = normal.HasLevel(free);
-
-        // Assert
-        Assert.True(hasLevel);
-    }
-
-    [Fact]
-    public void HasLevel_FreeDoesNotHaveNormalLevel_ReturnsFalse()
-    {
-        // Arrange
-        var free = UserTier.Free;
-        var normal = UserTier.Normal;
-
-        // Act
-        var hasLevel = free.HasLevel(normal);
-
-        // Assert
-        Assert.False(hasLevel);
-    }
-
-    [Fact]
-    public void HasLevel_FreeDoesNotHavePremiumLevel_ReturnsFalse()
-    {
-        // Arrange
-        var free = UserTier.Free;
-        var premium = UserTier.Premium;
-
-        // Act
-        var hasLevel = free.HasLevel(premium);
-
-        // Assert
-        Assert.False(hasLevel);
-    }
-
-    [Fact]
-    public void HasLevel_SameTier_ReturnsTrue()
-    {
-        // Arrange
-        var tier1 = UserTier.Parse("normal");
-        var tier2 = UserTier.Parse("normal");
-
-        // Act
-        var hasLevel = tier1.HasLevel(tier2);
-
-        // Assert
-        Assert.True(hasLevel);
-    }
-
-    #endregion
-
-    #region Equality Tests
-
     [Fact]
     public void Equals_SameTierValues_ReturnsTrue()
     {
@@ -287,11 +175,6 @@ public class UserTierTests
         // Act & Assert
         Assert.Equal(tier1, tier2);
     }
-
-    #endregion
-
-    #region ToString Tests
-
     [Theory]
     [InlineData("free")]
     [InlineData("normal")]
@@ -307,11 +190,6 @@ public class UserTierTests
         // Assert
         Assert.Equal(tierValue, result);
     }
-
-    #endregion
-
-    #region Implicit String Conversion
-
     [Fact]
     public void ImplicitStringConversion_WorksCorrectly()
     {
@@ -324,7 +202,4 @@ public class UserTierTests
         // Assert
         Assert.Equal("premium", tierString);
     }
-
-    #endregion
 }
-

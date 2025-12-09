@@ -10,9 +10,11 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Moq.Protected;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Infrastructure.External;
 
+[Trait("Category", TestCategories.Unit)]
 public class UnstructuredPdfTextExtractorTests
 {
     private readonly Mock<IHttpClientFactory> _mockHttpClientFactory;

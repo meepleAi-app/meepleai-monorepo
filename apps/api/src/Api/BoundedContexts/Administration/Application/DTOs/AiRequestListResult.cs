@@ -10,7 +10,7 @@ public record AiRequestListResult
     /// <summary>
     /// List of AI request log entities.
     /// </summary>
-    public required List<AiRequestLogEntity> Requests { get; init; }
+    public required IReadOnlyList<AiRequestLogEntity> Requests { get; init; }
 
     /// <summary>
     /// Total count of requests matching the filter criteria (before pagination).

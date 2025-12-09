@@ -102,7 +102,7 @@ Analyzed **1,316+ reported security issues** from GitHub Code Scanning across al
 - ✅ **QdrantVectorSearcher.cs** - Dictionary access without TryGetValue
 - ✅ **RuleSpecService.cs** (2 fixes) - Nullable Email in LINQ queries
 - ✅ **RuleCommentService.cs** - Email in mention resolution
-- ✅ **UserManagementService.cs** - Email in user search
+- ✅ **UserManagementService.cs** (LEGACY - removed in DDD migration) - Email in user search
 - ✅ **OAuthService.cs** - Email split without guard
 
 **Impact:**

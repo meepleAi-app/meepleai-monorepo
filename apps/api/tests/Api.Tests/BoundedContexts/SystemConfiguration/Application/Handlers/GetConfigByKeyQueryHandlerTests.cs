@@ -5,6 +5,7 @@ using Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
 using SystemConfig = Api.BoundedContexts.SystemConfiguration.Domain.Entities.SystemConfiguration;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.SystemConfiguration.Application.Handlers;
 
@@ -12,6 +13,7 @@ namespace Api.Tests.BoundedContexts.SystemConfiguration.Application.Handlers;
 /// Tests for GetConfigByKeyQueryHandler.
 /// Tests retrieval of configuration by key.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class GetConfigByKeyQueryHandlerTests
 {
     private readonly Mock<IConfigurationRepository> _mockConfigRepository;

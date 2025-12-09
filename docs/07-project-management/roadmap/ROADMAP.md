@@ -1,269 +1,509 @@
-# 🗺️ MeepleAI Development Roadmap
+# MeepleAI Development Roadmap
 
-**Last Updated**: 2025-12-04
-**Status**: Active Development (Alpha Phase)
-**Open Issues**: 64
-**Priority Distribution**: P1: 1 | P2: 11 | P3: 52
-
----
-
-## 🎯 EXECUTION SEQUENCE (Priority + Dependencies)
-
-### 🔴 Phase 1: Critical Issues (Week 1)
-
-#### Immediate Action Required
-| # | Issue | Type | Priority | Blockers | Effort |
-|---|-------|------|----------|----------|--------|
-| [#1817](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1817) | 🚨 K6 Performance Tests Failed - Investigation Required | Both | **P1** | None | 4-8h |
-
-**Why First**: CI/CD pipeline is failing. Blocks all releases.
+**Last Updated**: 2025-12-07
+**Project Status**: Alpha - Post-DDD Migration (99% → 100%)
+**Open Issues**: 56 (execution-focused roadmap)
+**Next Milestone**: DDD 100% Completion → Beta Preparation
 
 ---
 
-### 🟡 Phase 2: Testing Infrastructure (Week 2-3) - PARALLEL EXECUTION
+## 📊 Executive Summary
 
-#### Frontend Track 🎨
-| # | Issue | Type | Priority | Blockers | Effort |
-|---|-------|------|----------|----------|--------|
-| [#1496](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1496) | 📸 [E2E-010] Add Visual Regression Tests | Frontend | P2 | None | 8-12h |
-| [#1508](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1508) | 🛡️ [TEST-010] Add Error Boundary Tests | Frontend | P2 | None | 4-6h |
-| [#1509](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1509) | ⚡ [TEST-011] Add Performance Tests | Frontend | P2 | None | 6-8h |
-| [#1510](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1510) | 🔌 [TEST-012] Add API SDK Integration Tests | Frontend | P2 | None | 8-10h |
-| [#1511](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1511) | 🎨 [TEST-013] Expand Visual Regression Tests | Frontend | P2 | #1496 | 6-8h |
-| [#1497](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1497) | 🌐 [E2E-011] Add Browser Matrix (Firefox, Safari) | Frontend | P2 | #1496 | 8-10h |
-| [#1498](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1498) | 📊 [E2E-012] Add E2E Code Coverage Reporting | Frontend | P2 | #1497 | 6-8h |
+| Category | Count | Execution Status |
+|----------|-------|------------------|
+| **Critical Issues** | 1 issue | 🚨 **URGENT** (investigate immediately) |
+| **Epic - Post-DDD Cleanup** | 1 Epic + 5 sub-issues | 🔴 **BLOCKED** (DDD must reach 100%) |
+| **Backend Enhancements** | 1 issue | ⚡ **READY** (can start anytime) |
+| **Infrastructure** | 8 issues | ⚡ **READY** (can start anytime) |
+| **Admin Console FASE 1-4** | 45 issues (4 Epics) | ⏸️ **DEFERRED** (Future phases) |
+| **Other Enhancements** | 2 issues | ⏸️ **DEFERRED** |
 
-**Subtotal**: 7 issues, ~52h effort
-
-#### Backend Track ⚙️
-| # | Issue | Type | Priority | Blockers | Effort |
-|---|-------|------|----------|----------|--------|
-| [#1506](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1506) | 📊 [TEST-008] Consolidate with Theory Tests | Backend | P2 | None | 4-6h |
-| [#1507](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1507) | 📁 [TEST-009] Remove Excessive Regions | Backend | P2 | None | 2-4h |
-| [#1737](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1737) | [P2] Unreliable GC.Collect() in performance tests | Backend | P2 | None | 4-6h |
-
-**Subtotal**: 3 issues, ~14h effort
-
-#### Full-Stack Track 🔗
-| # | Issue | Type | Priority | Blockers | Effort |
-|---|-------|------|----------|----------|--------|
-| [#1675](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1675) | [P2] Implement Missing Frontend Backend APIs | Both | P2 | None | 12-16h |
-
-**Subtotal**: 1 issue, ~14h effort
-
-**Phase 2 Total**: 11 issues (P2), ~80h effort
+**Priority Distribution**: 1 P1 (High), 55 P3 (Low/Deferred)
 
 ---
 
-### 🟢 Phase 3: Infrastructure & Observability (Optional - Week 4-6)
+## 🎯 EXECUTION SEQUENCE (Wave-Based)
 
-#### Epic: HyperDX Migration (Sequential Execution)
-| # | Issue | Type | Priority | Blockers | Notes |
-|---|-------|------|----------|----------|-------|
-| [#1561](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1561) | 🚀 EPIC: HyperDX Observability Platform | Infrastructure | P3 | - | Epic container |
-| [#1562](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1562) | 🐳 Deploy HyperDX Docker Container | Infrastructure | P3 | None | Container setup |
-| [#1563](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1563) | ⚙️ Configure .NET API OpenTelemetry for HyperDX | Backend | P3 | #1562 | Telemetry config |
-| [#1564](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1564) | 🗑️ Remove Seq and Jaeger Services | Infrastructure | P3 | #1563 | Cleanup |
-| [#1565](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1565) | 🧪 Integration Testing - Backend Telemetry | Backend | P3 | #1563 | Testing |
-| [#1566](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1566) | ⚛️ Implement HyperDX Browser SDK (Next.js) | Frontend | P3 | #1562 | Browser telemetry |
-| [#1567](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1567) | 🚨 Configure HyperDX Application Alerts | Infrastructure | P3 | #1563 | Alerting |
-| [#1568](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1568) | 📊 Load Testing and Performance Validation | Both | P3 | #1567 | Load testing |
-| [#1569](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1569) | 📚 Update Documentation for HyperDX Migration | Documentation | P3 | #1568 | Docs |
-| [#1570](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1570) | ✅ Final Verification and Go-Live Checklist | Infrastructure | P3 | #1569 | Go-live |
-
-**Subtotal**: 10 issues (Epic + 9 tasks)
+### Legend
+- **Type**: 🎨 Frontend | 🔧 Backend | 🔄 Both | 🏗️ Infrastructure | 📚 Documentation | 🧪 Testing
+- **Execution**: ⚡ Parallel | 🔗 Sequential | 🔴 Blocked | 🚨 Urgent
+- **Priority**: P0 (Critical) | P1 (High) | P2 (Medium) | P3 (Low)
 
 ---
 
-### 🔵 Phase 4: Deferred / Low Priority (P3) - 52 Issues
+## WAVE 0: Critical Issues (IMMEDIATE ACTION REQUIRED)
 
-<details>
-<summary><b>Click to expand Deferred Issues (52 total)</b></summary>
+**Status**: 🚨 **URGENT** - Investigate immediately
+**Total Effort**: 0.5-1 day investigation
 
-#### Backend - RAG & ML (4 issues)
-- [#1901](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1901) - Implementare pipeline embedding PDF con chunking avanzato e hybrid index
-- [#1725](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1725) - [P3] Enhancement: LLM Token Tracking - Advanced Features
-- [#1820](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1820) - [P3] Optimize PDF Upload Test Execution Performance
-- [#1821](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1821) - [P3] Improve PDF Background Processing Reliability
+| # | Issue | Type | Priority | Effort | Execution |
+|---|-------|------|----------|--------|-----------|
+| 1 | [#1976](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1976) - K6 Performance Tests Failed | 🔧🏗️ Backend/Infra | **P1 - High** | 0.5-1d | 🚨 **URGENT** |
 
-#### Infrastructure - Docker & Security (9 issues)
-- [#701](https://github.com/DegrassiAaron/meepleai-monorepo/issues/701) - [P3] ⚡ Add resource limits to all Docker services
-- [#702](https://github.com/DegrassiAaron/meepleai-monorepo/issues/702) - [P3] 🎯 Implement Docker Compose profiles
-- [#703](https://github.com/DegrassiAaron/meepleai-monorepo/issues/703) - [P3] 🌐 Add Traefik reverse proxy layer
-- [#704](https://github.com/DegrassiAaron/meepleai-monorepo/issues/704) - [P3] 💾 Create backup automation scripts
-- [#705](https://github.com/DegrassiAaron/meepleai-monorepo/issues/705) - [P3] 📊 Add infrastructure monitoring (cAdvisor)
-- [#706](https://github.com/DegrassiAaron/meepleai-monorepo/issues/706) - [P3] 📖 Create operational runbooks
-- [#707](https://github.com/DegrassiAaron/meepleai-monorepo/issues/707) - [P3] 🔧 Add docker-compose.override.yml example
-- [#818](https://github.com/DegrassiAaron/meepleai-monorepo/issues/818) - [P3] Security: Quarterly security scan review process
-- [#936](https://github.com/DegrassiAaron/meepleai-monorepo/issues/936) - 🔬 Spike: POC Infisical Secret Rotation
+**Description**: Automated nightly K6 performance tests failed. Requires immediate investigation.
 
-#### Code Quality & Cleanup (5 issues)
-- [#1676](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1676) - [P3] Remove Backward Compatibility Layers
-- [#1677](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1677) - [P3] Remove Obsolete Data Models
-- [#1679](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1679) - [P3] Cleanup Legacy Comments and Deprecation Markers
-- [#1680](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1680) - [P3] Audit Infrastructure Services
-- [#1681](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1681) - [P3] Update Legacy Documentation References
+**Action Items**:
+- [ ] Review [workflow run #19998248099](https://github.com/DegrassiAaron/meepleai-monorepo/actions/runs/19998248099)
+- [ ] Check performance reports artifact
+- [ ] Investigate root cause (API response times, error rates, DB connections, resource constraints)
+- [ ] Fix identified issues
+- [ ] Re-run workflow to verify
+- [ ] Close issue once resolved
 
-#### Admin Console - FASE 1: Dashboard (16 issues)
-**Epic**: [#874](https://github.com/DegrassiAaron/meepleai-monorepo/issues/874)
-- [#875](https://github.com/DegrassiAaron/meepleai-monorepo/issues/875) - [Backend] AdminDashboardService.cs
-- [#876](https://github.com/DegrassiAaron/meepleai-monorepo/issues/876) - [Backend] Aggregate metrics from existing services
-- [#877](https://github.com/DegrassiAaron/meepleai-monorepo/issues/877) - [Backend] GET /api/v1/admin/dashboard/stats endpoint
-- [#878](https://github.com/DegrassiAaron/meepleai-monorepo/issues/878) - [Backend] Activity Feed Service
-- [#879](https://github.com/DegrassiAaron/meepleai-monorepo/issues/879) - [Backend] HybridCache for dashboard stats
-- [#880](https://github.com/DegrassiAaron/meepleai-monorepo/issues/880) - [Testing] Unit tests AdminDashboardService (90%+)
-- [#881](https://github.com/DegrassiAaron/meepleai-monorepo/issues/881) - [Frontend] AdminLayout component
-- [#882](https://github.com/DegrassiAaron/meepleai-monorepo/issues/882) - [Frontend] StatCard reusable component
-- [#883](https://github.com/DegrassiAaron/meepleai-monorepo/issues/883) - [Frontend] MetricsGrid component
-- [#884](https://github.com/DegrassiAaron/meepleai-monorepo/issues/884) - [Frontend] ActivityFeed component
-- [#885](https://github.com/DegrassiAaron/meepleai-monorepo/issues/885) - [Frontend] /pages/admin/index.tsx
-- [#886](https://github.com/DegrassiAaron/meepleai-monorepo/issues/886) - [Frontend] Dashboard API integration + 30s polling
-- [#887](https://github.com/DegrassiAaron/meepleai-monorepo/issues/887) - [Testing] Jest tests dashboard components (90%+)
-- [#888](https://github.com/DegrassiAaron/meepleai-monorepo/issues/888) - [Testing] E2E Playwright test - Dashboard flow
-- [#889](https://github.com/DegrassiAaron/meepleai-monorepo/issues/889) - [Testing] Performance + Accessibility
-
-#### Admin Console - FASE 2: Infrastructure Monitoring (13 issues)
-**Epic**: [#890](https://github.com/DegrassiAaron/meepleai-monorepo/issues/890)
-- [#891](https://github.com/DegrassiAaron/meepleai-monorepo/issues/891) - [Backend] InfrastructureMonitoringService.cs
-- [#892](https://github.com/DegrassiAaron/meepleai-monorepo/issues/892) - [Backend] Extend /health endpoints
-- [#893](https://github.com/DegrassiAaron/meepleai-monorepo/issues/893) - [Backend] Prometheus client integration
-- [#894](https://github.com/DegrassiAaron/meepleai-monorepo/issues/894) - [Backend] GET /api/v1/admin/infrastructure/details
-- [#895](https://github.com/DegrassiAaron/meepleai-monorepo/issues/895) - [Testing] Unit tests InfrastructureMonitoringService
-- [#896](https://github.com/DegrassiAaron/meepleai-monorepo/issues/896) - [Frontend] ServiceHealthMatrix component
-- [#897](https://github.com/DegrassiAaron/meepleai-monorepo/issues/897) - [Frontend] ServiceCard component
-- [#898](https://github.com/DegrassiAaron/meepleai-monorepo/issues/898) - [Frontend] MetricsChart component
-- [#899](https://github.com/DegrassiAaron/meepleai-monorepo/issues/899) - [Frontend] /pages/admin/infrastructure.tsx
-- [#900](https://github.com/DegrassiAaron/meepleai-monorepo/issues/900) - [Testing] Jest tests infrastructure components
-- [#901](https://github.com/DegrassiAaron/meepleai-monorepo/issues/901) - [Integration] Grafana embed iframe setup
-- [#902](https://github.com/DegrassiAaron/meepleai-monorepo/issues/902) - [Testing] E2E + Load test (100 concurrent users)
-
-#### Admin Console - FASE 3: Enhanced Management (12 issues)
-**Epic**: [#903](https://github.com/DegrassiAaron/meepleai-monorepo/issues/903)
-- [#904](https://github.com/DegrassiAaron/meepleai-monorepo/issues/904) - [Backend] ApiKeyManagementService
-- [#905](https://github.com/DegrassiAaron/meepleai-monorepo/issues/905) - [Backend] UserManagementService - Bulk operations
-- [#906](https://github.com/DegrassiAaron/meepleai-monorepo/issues/906) - [Backend] CSV import/export utility
-- [#907](https://github.com/DegrassiAaron/meepleai-monorepo/issues/907) - [Testing] Unit tests bulk operations
-- [#908](https://github.com/DegrassiAaron/meepleai-monorepo/issues/908) - [Frontend] /pages/admin/api-keys.tsx
-- [#909](https://github.com/DegrassiAaron/meepleai-monorepo/issues/909) - [Frontend] API key creation modal
-- [#910](https://github.com/DegrassiAaron/meepleai-monorepo/issues/910) - [Frontend] FilterPanel reusable component
-- [#911](https://github.com/DegrassiAaron/meepleai-monorepo/issues/911) - [Frontend] UserActivityTimeline component
-- [#912](https://github.com/DegrassiAaron/meepleai-monorepo/issues/912) - [Frontend] BulkActionBar component
-- [#913](https://github.com/DegrassiAaron/meepleai-monorepo/issues/913) - [Testing] Jest tests management components
-- [#914](https://github.com/DegrassiAaron/meepleai-monorepo/issues/914) - [Testing] E2E + Security audit + Stress test
-
-#### Admin Console - FASE 4: Advanced Features (8 issues)
-**Epic**: [#915](https://github.com/DegrassiAaron/meepleai-monorepo/issues/915)
-- [#916](https://github.com/DegrassiAaron/meepleai-monorepo/issues/916) - [Backend] ReportingService.cs
-- [#917](https://github.com/DegrassiAaron/meepleai-monorepo/issues/917) - [Backend] Report templates - 4 predefined
-- [#918](https://github.com/DegrassiAaron/meepleai-monorepo/issues/918) - [Backend] Email delivery integration
-- [#919](https://github.com/DegrassiAaron/meepleai-monorepo/issues/919) - [Testing] Unit tests ReportingService
-- [#920](https://github.com/DegrassiAaron/meepleai-monorepo/issues/920) - [Frontend] /pages/admin/reports.tsx
-- [#921](https://github.com/DegrassiAaron/meepleai-monorepo/issues/921) - [Frontend] Enhanced alert configuration UI
-- [#922](https://github.com/DegrassiAaron/meepleai-monorepo/issues/922) - [Testing] E2E report + Email validation
-
-#### Frontend Enhancement Epics (7 issues)
-- [#926](https://github.com/DegrassiAaron/meepleai-monorepo/issues/926) - [FRONTEND-1] Epic: Foundation & Quick Wins (Phase 1)
-- [#931](https://github.com/DegrassiAaron/meepleai-monorepo/issues/931) - [FRONTEND-7] Epic: React 19 Optimization (Phase 2)
-- [#932](https://github.com/DegrassiAaron/meepleai-monorepo/issues/932) - [FRONTEND-19] Epic: Advanced Features (Phase 4)
-- [#933](https://github.com/DegrassiAaron/meepleai-monorepo/issues/933) - [FRONTEND-12] Epic: App Router Migration (Phase 3)
-- [#934](https://github.com/DegrassiAaron/meepleai-monorepo/issues/934) - [FRONTEND-24] Epic: Design Polish (Phase 5)
-- [#935](https://github.com/DegrassiAaron/meepleai-monorepo/issues/935) - [FRONTEND-29] Epic: Performance & Accessibility (Phase 6)
-- [#844](https://github.com/DegrassiAaron/meepleai-monorepo/issues/844) - epic: UI/UX Automated Testing Roadmap 2025
-
-</details>
+**Rationale**: Performance regression could indicate production readiness issues. Must be resolved before Beta.
 
 ---
 
-## 📊 Issue Statistics
+## WAVE 1: Post-DDD Cleanup (Final 1%)
 
-### By Type
-| Type | Count | % |
-|------|-------|---|
-| Frontend | 25 | 39% |
-| Backend | 20 | 31% |
-| Infrastructure | 12 | 19% |
-| Both/E2E | 7 | 11% |
-| **Total** | **64** | **100%** |
+**Status**: 🔴 **BLOCKED** - Requires DDD = 100% (currently 99%)
+**Total Effort**: 8-12 days
+**Epic**: [#1967](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1967) - Post-DDD Migration Cleanup
 
-### By Priority
-| Priority | Count | % |
-|----------|-------|---|
-| P0 (Critical) | 0 | 0% |
-| P1 (High) | 1 | 2% |
-| P2 (Medium) | 11 | 17% |
-| P3 (Low/Deferred) | 52 | 81% |
-| **Total** | **64** | **100%** |
+### Sequential Track (Must complete in order)
 
----
+| # | Issue | Type | Priority | Effort | Blocker | Execution |
+|---|-------|------|----------|--------|---------|-----------|
+| 1 | [#1677](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1677) - Remove Obsolete Data Models | 🔧 Backend | P3 | 1-2d | DDD = 100% | 🔗 **First** |
+| 2 | [#1676](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1676) - Remove Backward Compatibility Layers | 🔄 Both | P3 | 3-4d | 🔗 After #1677 | 🔗 **Second** |
+| 3 | [#1679](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1679) - Cleanup Legacy Comments/Deprecation Markers | 🔄 Both | P3 | 1-2d | 🔗 After #1676 | 🔗 **Third** |
 
-## 🎯 Recommended Execution Plan
+**Rationale**: Sequential execution ensures clean refactoring - each step builds on previous cleanup.
 
-### Week 1: Critical Path ⚡
-**Owner**: Backend Team
-1. **[#1817](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1817)** - Fix K6 Performance Tests (4-8h)
-   - **Blocks**: CI/CD releases
-   - **Priority**: Immediate
+**Details**:
+- **#1677**: Remove `RuleSpecV0.cs`, verify no usage, update tests
+- **#1676**: Remove 8 DTO → legacy model conversions (frontend must use new DTOs first)
+- **#1679**: Remove TODO comments, deprecation markers, legacy inline documentation
 
-### Week 2-3: Testing Infrastructure 🧪
+### Parallel Track (After sequential completes)
 
-#### Frontend Team (~52h total)
-**Week 2**:
-- [#1496](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1496) - Visual Regression Tests (8-12h)
-- [#1508](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1508) - Error Boundary Tests (4-6h)
-- [#1509](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1509) - Performance Tests (6-8h)
+| # | Issue | Type | Priority | Effort | Blocker | Execution |
+|---|-------|------|----------|--------|---------|-----------|
+| 4 | [#1680](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1680) - Audit Infrastructure Services | 📚 Documentation | P3 | 2-3d | 🔗 After Sequential | ⚡ **Parallel** |
+| 5 | [#1681](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1681) - Update Legacy Documentation References | 📚 Documentation | P3 | 1d | 🔗 After Sequential | ⚡ **Parallel** |
 
-**Week 3**:
-- [#1510](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1510) - API SDK Integration Tests (8-10h)
-- [#1511](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1511) - Expand Visual Regression (6-8h)
-- [#1497](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1497) - Browser Matrix (8-10h)
-- [#1498](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1498) - E2E Code Coverage (6-8h)
+**Rationale**: Documentation can run in parallel after code cleanup completes.
 
-#### Backend Team (~14h total)
-**Week 2**:
-- [#1506](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1506) - Consolidate Theory Tests (4-6h)
-- [#1507](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1507) - Remove Excessive Regions (2-4h)
-- [#1737](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1737) - Fix GC.Collect() Tests (4-6h)
+**Details**:
+- **#1680**: Categorize ConfigurationService, AdminStatsService, AlertingService, RagService as infrastructure vs domain
+- **#1681**: Update CLAUDE.md, ADRs, guides to reflect 100% DDD completion
 
-#### Full-Stack Team (~14h total)
-**Week 2-3**:
-- [#1675](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1675) - Implement Missing Backend APIs (12-16h)
-
-### Week 4+: Optional - HyperDX Migration
-**Decision Point**: Evaluate if observability upgrade is critical for MVP
-- **If YES**: Execute HyperDX Epic (#1561-#1570) sequentially (10 issues)
-- **If NO**: Defer to Q2 2025
-
-### Future: Deferred (52 issues)
-- **Admin Console** (45 issues): Evaluate necessity for beta launch
-- **Frontend Epics** (7 issues): Schedule for Q2-Q3 2025
-- **Code Cleanup** (5 issues): Maintenance windows
+**Total Wave 1 Time**:
+- Sequential: 5-8 days
+- Parallel: 2-3 days
+- **Critical Path**: 7-11 days
 
 ---
 
-## 📝 Strategic Notes
+## WAVE 2: Backend Enhancements
 
-1. **Testing First**: Focus on stabilizing existing features before adding new ones
-2. **Parallel Execution**: Frontend and Backend teams work independently on P2 issues
-3. **Admin Console**: 45 deferred issues - consider if needed for MVP/beta
-4. **HyperDX Migration**: Optional observability upgrade - can defer to Q2 2025
-5. **Code Quality**: P3 cleanup issues - schedule during quiet periods
+**Status**: ⚡ **READY** - Can start anytime (no blockers)
+**Total Effort**: 5-7 days
+**Type**: Backend optimization and observability
+
+| # | Issue | Type | Priority | Effort | Dependencies | Execution |
+|---|-------|------|----------|--------|--------------|-----------|
+| 1 | [#1725](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1725) - LLM Token Tracking - Advanced Features | 🔧 Backend + 📊 Observability | P3 | 5-7d | #1694 ✅ (completed) | ⚡ **Ready** |
+
+**Execution Strategy**:
+- Can run in parallel with Wave 3 (Infrastructure)
+- Independent from Wave 1 (no DDD blocker)
+
+**Scope**:
+1. Streaming token tracking (capture usage in streaming responses)
+2. Grafana dashboard for cost monitoring
+3. Budget alerts & thresholds
+4. Per-user cost attribution
+5. Token usage analytics & optimization
+
+**Foundation**: Issue #1694 completed (basic token tracking operational)
+
+**Total Wave 2 Time**: 5-7 days
 
 ---
 
-## 📅 Changelog
+## WAVE 3: Infrastructure Enhancements
 
-### v16.0 (2025-12-04) - Complete Rebuild ♻️
-- **Deleted** old ROADMAP.md with stale issue references
-- **Rebuilt** from current GitHub open issues only (64 total)
-- **New sequencing** based on priority + dependencies + parallelization
-- **Removed** all references to closed issues (#989, #994, #1000, etc.)
-- **Added** clear Frontend/Backend/Full-Stack parallel tracks
-- **Collapsed** deferred issues (52) for better readability
+**Status**: ⚡ **READY** - Can start anytime (no blockers)
+**Total Effort**: 3-7 days (all parallel)
+**Type**: Production readiness, developer experience, operations
+
+### All Infrastructure Issues (Can run in parallel)
+
+| # | Issue | Type | Priority | Effort | Dependencies | Execution |
+|---|-------|------|----------|--------|--------------|-----------|
+| 1 | [#701](https://github.com/DegrassiAaron/meepleai-monorepo/issues/701) - Add resource limits to all Docker services | 🏗️ Infrastructure | P3 | 1d | None | ⚡ **Parallel** |
+| 2 | [#702](https://github.com/DegrassiAaron/meepleai-monorepo/issues/702) - Docker Compose profiles for selective startup | 🏗️ Infrastructure | P3 | 1-2d | None | ⚡ **Parallel** |
+| 3 | [#703](https://github.com/DegrassiAaron/meepleai-monorepo/issues/703) - Add Traefik reverse proxy layer | 🏗️ Infrastructure | P3 | 2-3d | None | ⚡ **Parallel** |
+| 4 | [#704](https://github.com/DegrassiAaron/meepleai-monorepo/issues/704) - Create backup automation scripts | 🏗️ Infrastructure | P3 | 1-2d | None | ⚡ **Parallel** |
+| 5 | [#705](https://github.com/DegrassiAaron/meepleai-monorepo/issues/705) - Add infrastructure monitoring (cAdvisor + node-exporter) | 🏗️ Infrastructure | P3 | 1-2d | None | ⚡ **Parallel** |
+| 6 | [#706](https://github.com/DegrassiAaron/meepleai-monorepo/issues/706) - Create operational runbooks documentation | 📚 Documentation | P3 | 2-3d | None | ⚡ **Parallel** |
+| 7 | [#707](https://github.com/DegrassiAaron/meepleai-monorepo/issues/707) - Add docker-compose.override.yml example | 🏗️ Infrastructure | P3 | 0.5d | None | ⚡ **Parallel** |
+| 8 | [#818](https://github.com/DegrassiAaron/meepleai-monorepo/issues/818) - Quarterly security scan review process | 📚 Documentation + 🔒 Security | P3 | 1d | None | ⚡ **Parallel** |
+
+**Critical Path**: 2-3 days (if 8 parallel workers) or 11-17 days (if sequential)
+
+**Batching Suggestions**:
+- **Batch A - Docker**: #701, #702, #707 (3-4 days)
+- **Batch B - Production Infra**: #703, #704, #705 (4-7 days)
+- **Batch C - Documentation/Process**: #706, #818 (3-4 days)
 
 ---
 
-**Version**: 16.0
-**Last Updated**: 2025-12-04
-**Open Issues**: 64
-**Maintainer**: Engineering Team
-**Review Cadence**: Weekly sprint planning
+## DEFERRED: Admin Console Development
+
+**Status**: ⏸️ **DEFERRED** - Future phases (not scheduled)
+**Total Issues**: 45 (4 Epics + 41 sub-issues)
+**Decision Point**: Product owner prioritization required
+
+### Epic Structure
+
+| Epic # | Title | Sub-Issues | Effort Estimate | Type |
+|--------|-------|------------|-----------------|------|
+| [#874](https://github.com/DegrassiAaron/meepleai-monorepo/issues/874) | FASE 1: Dashboard Overview | [#875](https://github.com/DegrassiAaron/meepleai-monorepo/issues/875)-[#889](https://github.com/DegrassiAaron/meepleai-monorepo/issues/889) (15 issues) | 2-3 weeks | 🔄 Both |
+| [#890](https://github.com/DegrassiAaron/meepleai-monorepo/issues/890) | FASE 2: Infrastructure Monitoring | [#891](https://github.com/DegrassiAaron/meepleai-monorepo/issues/891)-[#902](https://github.com/DegrassiAaron/meepleai-monorepo/issues/902) (12 issues) | 2 weeks | 🔄 Both |
+| [#903](https://github.com/DegrassiAaron/meepleai-monorepo/issues/903) | FASE 3: Enhanced Management | [#904](https://github.com/DegrassiAaron/meepleai-monorepo/issues/904)-[#914](https://github.com/DegrassiAaron/meepleai-monorepo/issues/914) (11 issues) | 2 weeks | 🔄 Both |
+| [#915](https://github.com/DegrassiAaron/meepleai-monorepo/issues/915) | FASE 4: Advanced Features | [#916](https://github.com/DegrassiAaron/meepleai-monorepo/issues/916)-[#922](https://github.com/DegrassiAaron/meepleai-monorepo/issues/922) (7 issues) | 1-2 weeks | 🔄 Both |
+
+**Total Admin Console Effort**: 7-9 weeks (if sequential) or 4-5 weeks (if parallel teams)
+
+**Recommendation**: Defer until after Beta launch - Admin Console not critical for MVP
+
+### FASE 1: Dashboard Overview (#874)
+
+**Backend Issues** (7 issues):
+- [#875](https://github.com/DegrassiAaron/meepleai-monorepo/issues/875) - AdminDashboardService.cs
+- [#876](https://github.com/DegrassiAaron/meepleai-monorepo/issues/876) - Aggregate metrics from existing services
+- [#877](https://github.com/DegrassiAaron/meepleai-monorepo/issues/877) - GET /api/v1/admin/dashboard/stats endpoint
+- [#878](https://github.com/DegrassiAaron/meepleai-monorepo/issues/878) - Activity Feed Service
+- [#879](https://github.com/DegrassiAaron/meepleai-monorepo/issues/879) - HybridCache for dashboard stats
+- [#880](https://github.com/DegrassiAaron/meepleai-monorepo/issues/880) - Unit tests AdminDashboardService
+
+**Frontend Issues** (6 issues):
+- [#881](https://github.com/DegrassiAaron/meepleai-monorepo/issues/881) - AdminLayout component
+- [#882](https://github.com/DegrassiAaron/meepleai-monorepo/issues/882) - StatCard reusable component
+- [#883](https://github.com/DegrassiAaron/meepleai-monorepo/issues/883) - MetricsGrid component
+- [#884](https://github.com/DegrassiAaron/meepleai-monorepo/issues/884) - ActivityFeed component
+- [#885](https://github.com/DegrassiAaron/meepleai-monorepo/issues/885) - /pages/admin/index.tsx
+- [#886](https://github.com/DegrassiAaron/meepleai-monorepo/issues/886) - Dashboard API integration
+
+**Testing Issues** (2 issues):
+- [#887](https://github.com/DegrassiAaron/meepleai-monorepo/issues/887) - Jest tests (90%+ coverage)
+- [#888](https://github.com/DegrassiAaron/meepleai-monorepo/issues/888) - E2E Playwright test
+- [#889](https://github.com/DegrassiAaron/meepleai-monorepo/issues/889) - Performance + Accessibility
+
+### FASE 2: Infrastructure Monitoring (#890)
+
+**Backend Issues** (5 issues):
+- [#891](https://github.com/DegrassiAaron/meepleai-monorepo/issues/891) - InfrastructureMonitoringService.cs
+- [#892](https://github.com/DegrassiAaron/meepleai-monorepo/issues/892) - Extend /health endpoints
+- [#893](https://github.com/DegrassiAaron/meepleai-monorepo/issues/893) - Prometheus client integration
+- [#894](https://github.com/DegrassiAaron/meepleai-monorepo/issues/894) - GET /api/v1/admin/infrastructure/details
+- [#895](https://github.com/DegrassiAaron/meepleai-monorepo/issues/895) - Unit tests InfrastructureMonitoringService
+
+**Frontend Issues** (5 issues):
+- [#896](https://github.com/DegrassiAaron/meepleai-monorepo/issues/896) - ServiceHealthMatrix component
+- [#897](https://github.com/DegrassiAaron/meepleai-monorepo/issues/897) - ServiceCard component
+- [#898](https://github.com/DegrassiAaron/meepleai-monorepo/issues/898) - MetricsChart component
+- [#899](https://github.com/DegrassiAaron/meepleai-monorepo/issues/899) - /pages/admin/infrastructure.tsx
+- [#900](https://github.com/DegrassiAaron/meepleai-monorepo/issues/900) - Jest tests infrastructure components
+
+**Integration/Testing Issues** (2 issues):
+- [#901](https://github.com/DegrassiAaron/meepleai-monorepo/issues/901) - Grafana embed iframe setup
+- [#902](https://github.com/DegrassiAaron/meepleai-monorepo/issues/902) - E2E test + Load test
+
+### FASE 3: Enhanced Management (#903)
+
+**Backend Issues** (4 issues):
+- [#904](https://github.com/DegrassiAaron/meepleai-monorepo/issues/904) - ApiKeyManagementService
+- [#905](https://github.com/DegrassiAaron/meepleai-monorepo/issues/905) - ~~UserManagementService~~ Administration handlers - Bulk operations
+- [#906](https://github.com/DegrassiAaron/meepleai-monorepo/issues/906) - CSV import/export utility
+- [#907](https://github.com/DegrassiAaron/meepleai-monorepo/issues/907) - Unit tests bulk operations
+
+**Frontend Issues** (5 issues):
+- [#908](https://github.com/DegrassiAaron/meepleai-monorepo/issues/908) - /pages/admin/api-keys.tsx
+- [#909](https://github.com/DegrassiAaron/meepleai-monorepo/issues/909) - API key creation modal
+- [#910](https://github.com/DegrassiAaron/meepleai-monorepo/issues/910) - FilterPanel component (reusable)
+- [#911](https://github.com/DegrassiAaron/meepleai-monorepo/issues/911) - UserActivityTimeline component
+- [#912](https://github.com/DegrassiAaron/meepleai-monorepo/issues/912) - BulkActionBar component
+
+**Testing Issues** (2 issues):
+- [#913](https://github.com/DegrassiAaron/meepleai-monorepo/issues/913) - Jest tests management components
+- [#914](https://github.com/DegrassiAaron/meepleai-monorepo/issues/914) - E2E + Security audit + Stress test
+
+### FASE 4: Advanced Features (#915)
+
+**Backend Issues** (4 issues):
+- [#916](https://github.com/DegrassiAaron/meepleai-monorepo/issues/916) - ReportingService.cs
+- [#917](https://github.com/DegrassiAaron/meepleai-monorepo/issues/917) - Report templates
+- [#918](https://github.com/DegrassiAaron/meepleai-monorepo/issues/918) - Email delivery integration
+- [#919](https://github.com/DegrassiAaron/meepleai-monorepo/issues/919) - Unit tests ReportingService
+
+**Frontend Issues** (2 issues):
+- [#920](https://github.com/DegrassiAaron/meepleai-monorepo/issues/920) - /pages/admin/reports.tsx
+- [#921](https://github.com/DegrassiAaron/meepleai-monorepo/issues/921) - Enhanced alert configuration UI
+
+**Testing Issues** (1 issue):
+- [#922](https://github.com/DegrassiAaron/meepleai-monorepo/issues/922) - E2E report generation + Email validation
+
+**FASE Structure** (Well-organized):
+- ✅ Clear Epic-to-sub-issue hierarchy
+- ✅ Backend + Frontend split within each FASE
+- ✅ Testing requirements defined
+- ✅ E2E scenarios documented
+
+**When to Start**: After Beta launch and stable user base established
+
+---
+
+## DEFERRED: Other Enhancements
+
+| # | Issue | Type | Priority | Status | Notes |
+|---|-------|------|----------|--------|-------|
+| [#844](https://github.com/DegrassiAaron/meepleai-monorepo/issues/844) | UI/UX Automated Testing Roadmap 2025 | 🧪 Testing | P3 | Deferred | Epic for visual/E2E testing strategy |
+| [#936](https://github.com/DegrassiAaron/meepleai-monorepo/issues/936) | POC Infisical Secret Rotation (Phase 2) | 🔒🏗️ Security/Infra | P3 | Deferred | Infrastructure security enhancement |
+
+**Rationale**: Nice-to-have features, not critical for current phase
+
+---
+
+## 📈 EXECUTION SCENARIOS
+
+### Scenario A: Single Developer (Sequential Execution)
+
+**Timeline**: ~4-5 weeks (24-37 days)
+
+| Week | Wave | Issues | Effort |
+|------|------|--------|--------|
+| **Week 0** | Wave 0 | #1976 (investigate + fix) | 0.5-1 day |
+| **Week 1-2** | Wave 1 Sequential | #1677 → #1676 → #1679 | 5-8 days |
+| **Week 2** | Wave 1 Parallel | #1680, #1681 | 2-3 days |
+| **Week 3** | Wave 2 | #1725 | 5-7 days |
+| **Week 4-5** | Wave 3 | Infrastructure (batched) | 11-17 days |
+
+**Critical Path**: 24-38 days (~5-7 weeks)
+
+---
+
+### Scenario B: Small Team (2-3 Developers, Parallel Execution)
+
+**Timeline**: ~2-3 weeks (11-17 days)
+
+| Week | Track A (Developer 1) | Track B (Developer 2) | Track C (Developer 3) |
+|------|----------------------|----------------------|----------------------|
+| **Week 0** | Wave 0: #1976 investigation | Wait | Start Wave 3 (#701, #702, #707) |
+| **Week 1** | Wave 1 Sequential: #1677 → #1676 | Wave 2: #1725 | Wave 3: #703, #704, #705 |
+| **Week 2** | Wave 1: #1679 → #1680 | Wave 2: #1725 (cont) | Wave 3: #706, #818 |
+| **Week 3** | Wave 1: #1681 | Validation/Testing | Validation/Testing |
+
+**Critical Path**: 11-17 days (~2-3 weeks with parallelization)
+
+**Benefits**:
+- Wave 3 (Infrastructure) can start immediately (no DDD blocker)
+- Wave 1 and Wave 2 run in parallel once DDD = 100%
+- 50-60% time reduction vs single developer
+
+---
+
+### Scenario C: Full Team (4+ Developers, Maximum Parallelization)
+
+**Timeline**: ~1.5-2 weeks (8-12 days after DDD = 100%)
+
+**Team Assignment**:
+- **Team A** (2 devs): Wave 1 Sequential + Parallel
+- **Team B** (1 dev): Wave 2 - #1725
+- **Team C** (2 devs): Wave 3 - Infrastructure (batched)
+- **Team D** (1 dev): Wave 0 - #1976 investigation
+
+**Timeline**:
+- **Day 0**: #1976 investigation + fix, Wave 3 starts
+- **Day 1**: DDD reaches 100%, all waves run in parallel
+- **Day 1-8**: All waves execute concurrently
+- **Day 9-12**: Wave 1 Parallel + Infrastructure completion
+
+**Critical Path**: 8-12 days (~2 weeks)
+
+---
+
+## 📊 DEPENDENCY GRAPH
+
+```
+Wave 0 (URGENT):
+#1976 (K6 Performance Investigation) → Fix → Verify
+    ↓
+Resolve before Beta release
+
+DDD Migration (99% → 100%)
+    ↓
+    🔴 BLOCKED
+    ↓
+Epic #1967: Post-DDD Cleanup
+    ↓
+#1677 (Remove Models)
+    ↓ 🔗 Sequential
+#1676 (Remove Compatibility)
+    ↓ 🔗 Sequential
+#1679 (Cleanup Comments)
+    ↓ 🔗 Sequential Complete
+    ├─ ⚡ #1680 (Audit Services) ────┐
+    └─ ⚡ #1681 (Update Docs) ────────┤
+                                      ↓
+                            Wave 1 COMPLETE
+
+⚡ PARALLEL (No Dependencies) ⚡
+
+Wave 2:                       Wave 3:
+#1725 (LLM Tracking)          #701-707, #818 (Infrastructure)
+                              (All 8 can run in parallel)
+```
+
+---
+
+## 🎯 SUCCESS CRITERIA
+
+### Wave 0 Completion (Performance Investigation)
+- [ ] K6 performance tests passing
+- [ ] Root cause identified and documented
+- [ ] Fix verified in CI/CD pipeline
+- [ ] Performance baselines restored
+
+### Wave 1 Completion (Post-DDD Cleanup)
+- [ ] CLAUDE.md updated to **DDD 100% Complete**
+- [ ] All legacy services completely removed (zero references)
+- [ ] Zero backward compatibility code remaining
+- [ ] Documentation reflects current architecture
+- [ ] Infrastructure services properly categorized
+- [ ] All tests passing (90%+ coverage maintained)
+- [ ] Zero build warnings related to obsolete code
+
+### Wave 2 Completion (Backend Enhancements)
+- [ ] LLM token tracking operational with Grafana dashboard (#1725)
+- [ ] Budget alerts configured and tested
+- [ ] Per-user cost attribution working
+- [ ] Token usage analytics available
+- [ ] Streaming token tracking implemented
+
+### Wave 3 Completion (Infrastructure)
+- [ ] All 15 Docker services have resource limits (#701)
+- [ ] Docker Compose profiles functional (#702)
+- [ ] Traefik reverse proxy operational (optional - production only) (#703)
+- [ ] Backup automation scripts tested (#704)
+- [ ] Infrastructure monitoring dashboards available (#705)
+- [ ] Operational runbooks documented (#706)
+- [ ] docker-compose.override.yml example provided (#707)
+- [ ] Quarterly security review process established (#818)
+
+### Overall Quality Gates (Continuous)
+- [ ] 90%+ test coverage maintained
+- [ ] CI pipeline < 15 minutes
+- [ ] Zero build errors
+- [ ] Zero high/critical security vulnerabilities
+- [ ] All ADRs reviewed and current
+
+---
+
+## 🚀 EXECUTION TRIGGERS
+
+### Start Conditions
+
+| Wave | Trigger | Status |
+|------|---------|--------|
+| **Wave 0** | Automated issue created | 🚨 **URGENT** (investigate immediately) |
+| **Wave 1** | DDD migration reaches 100% | 🔴 **BLOCKED** (currently 99%) |
+| **Wave 2** | No blockers | ⚡ **READY** (can start anytime) |
+| **Wave 3** | No blockers | ⚡ **READY** (can start anytime) |
+| **Deferred** | Product owner decision + resource allocation | ⏸️ **NOT SCHEDULED** |
+
+### Recommended Start Order
+
+**Option 1 - Conservative** (Wait for DDD 100%):
+1. **Immediate**: Resolve Wave 0 (#1976)
+2. Wait for DDD = 100%
+3. Start Wave 1 (highest business value - cleanup)
+4. Parallel: Wave 2 + Wave 3
+
+**Option 2 - Aggressive** (Maximize parallelization):
+1. **Immediate**: Resolve Wave 0 (#1976)
+2. **Start immediately**: Wave 2 + Wave 3 (no DDD dependency)
+3. **When DDD = 100%**: Add Wave 1 to parallel execution
+
+**Recommendation**: **Option 2** if team has ≥3 developers, **Option 1** if single developer
+
+---
+
+## 🚫 OUT OF SCOPE
+
+The following are **NOT** in current roadmap:
+
+1. **New Features** - Any feature not in existing 56 open issues
+2. **Breaking Changes** - API changes requiring client updates
+3. **Major Rewrites** - Complete architecture overhauls (e.g., microservices, Kubernetes)
+4. **Third-Party Integrations** - New external services beyond current stack
+5. **Admin Console** - Deferred to future phases (45 issues)
+6. **Frontend Modernization** - Previously deferred (6 Epics closed as placeholders)
+
+**Process**: Propose via GitHub issue → Product owner review → Roadmap update
+
+---
+
+## 📞 ESCALATION & COMMUNICATION
+
+### Blockers
+- **Report**: Daily standup or Slack #engineering
+- **Resolution**: Engineering lead decision within 24h
+
+### Priority Changes
+- **Only for**: P0 production incidents (currently 1 P1: #1976)
+- **Process**: Immediate escalation to product owner
+
+### Scope Changes
+- **Require**: Product owner approval
+- **Timeline**: Review within 48h
+
+---
+
+## 📚 RELATED DOCUMENTATION
+
+- [CLAUDE.md](../../../CLAUDE.md) - Project overview and current status (DDD 99%)
+- [docs/INDEX.md](../../INDEX.md) - Complete documentation index (115 docs, 800+ pages)
+- [Architecture ADRs](../../01-architecture/adr/) - Architecture decision records
+- [Testing Guide](../../02-development/testing/test-writing-guide.md) - Testing standards (90%+ coverage)
+- [Issue Analysis](../tracking/github-issues-analysis-2025-12-06.md) - Detailed issue breakdown
+- [Cleanup Summary](../tracking/github-issues-cleanup-summary-2025-12-06.md) - Consolidation results
+
+---
+
+## 📝 CHANGELOG
+
+### 2025-12-07 - Execution-Focused Roadmap Rebuild
+
+**Trigger**: Roadmap update request - focus on open issues execution sequence
+
+**Changes**:
+- ✅ Reorganized around execution sequence with parallelization opportunities
+- ✅ Added Wave 0 for critical performance investigation (#1976)
+- ✅ Clarified Wave 1 sequential vs parallel execution tracks
+- ✅ Identified Wave 2 and Wave 3 as parallel-ready
+- ✅ Verified all 56 issue links to GitHub
+- ✅ Added type classification (Frontend/Backend/Both/Infrastructure/Documentation/Testing)
+- ✅ Added priority classification (P0/P1/P2/P3)
+- ✅ Added explicit dependency tracking
+- ✅ Simplified from 67 to 56 open issues (removed closed issues from count)
+- ✅ Added 3 team scenarios with parallelization strategies
+
+**Approach**:
+- **Sequential Execution**: Wave 1 (Post-DDD Cleanup) requires ordered completion
+- **Parallel Execution**: Wave 2 (Backend) + Wave 3 (Infrastructure) can run concurrently
+- **Frontend/Backend Separation**: Clear delineation for team assignment
+- **Deferred Work**: Admin Console (45 issues) clearly marked as future phase
+
+**Files**:
+- Roadmap: Complete rebuild focused on execution
+- Based on: GitHub open issues as of 2025-12-07
+
+---
+
+**Next Review**: After Wave 0 resolution or 2025-12-20 (whichever comes first)
+**Roadmap Refresh**: Every 2 weeks or after major milestone completion
+
+**Status**: ✅ **CURRENT AND VALIDATED** (2025-12-07)

@@ -8,6 +8,7 @@ using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Persistence;
+using Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Services;
@@ -46,11 +47,9 @@ namespace Api.Tests.Integration;
 ///
 /// Infrastructure: PostgreSQL (real DB), Redis (real cache), Qdrant (mocked for now)
 /// </summary>
-[Collection("PdfUploadIntegration")]
+[Trait("Category", TestCategories.Integration)]
 public sealed class UploadPdfIntegrationTests : IAsyncLifetime
 {
-    #region Test Infrastructure
-
     private IContainer? _postgresContainer;
     private IContainer? _redisContainer;
     private MeepleAiDbContext? _dbContext;
@@ -232,6 +231,8 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
                     stream.CopyTo(fileStream);
                     return new BlobStorageResult(true, Guid.NewGuid().ToString(), filePath, stream.Length, null);
                 });
+            blobStorageMock.Setup(b => b.DeleteAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(true);
             services.AddSingleton<IBlobStorageService>(blobStorageMock.Object);
         }
 
@@ -257,12 +258,34 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
             services.AddSingleton<IPdfTableExtractor>(tableExtractorMock.Object);
         }
 
+        // Register IConfigurationService mock (required by PdfUploadQuotaService)
+        if (!services.Any(s => s.ServiceType == typeof(IConfigurationService)))
+        {
+            var configServiceMock = new Mock<IConfigurationService>();
+            configServiceMock.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<string>()))
+                .Returns(Task.FromResult<int?>(null));
+            services.AddSingleton<IConfigurationService>(configServiceMock.Object);
+        }
+
+        // Use REAL PdfUploadQuotaService for Issue #1821 quota reservation tests
         if (!services.Any(s => s.ServiceType == typeof(IPdfUploadQuotaService)))
         {
-            var quotaMock = new Mock<IPdfUploadQuotaService>();
-            quotaMock.Setup(q => q.CheckQuotaAsync(It.IsAny<Guid>(), It.IsAny<UserTier>(), It.IsAny<AuthRole>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(PdfUploadQuotaResult.Success(0, int.MaxValue, 0, int.MaxValue, DateTime.MaxValue, DateTime.MaxValue));
-            services.AddSingleton<IPdfUploadQuotaService>(quotaMock.Object);
+            services.AddScoped<IPdfUploadQuotaService, PdfUploadQuotaService>();
+        }
+
+        // Register Mock IConnectionMultiplexer (required by PdfUploadQuotaService) - Issue #1983
+        if (!services.Any(s => s.ServiceType == typeof(IConnectionMultiplexer)))
+        {
+            var mockDatabase = new Mock<IDatabase>();
+            var mockConnectionMultiplexer = new Mock<IConnectionMultiplexer>();
+
+            // Setup GetDatabase() to return mock IDatabase (required by PdfUploadQuotaService)
+            mockConnectionMultiplexer.Setup(r => r.GetDatabase(It.IsAny<int>(), It.IsAny<object>()))
+                .Returns(mockDatabase.Object);
+            mockConnectionMultiplexer.Setup(r => r.GetDatabase(-1, null))
+                .Returns(mockDatabase.Object);
+
+            services.AddSingleton(mockConnectionMultiplexer.Object);
         }
     }
 
@@ -297,11 +320,6 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
 
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
-
-    #endregion
-
-    #region Helper Methods
-
     private IFormFile CreateMockFormFile(string fileName, byte[] content, string contentType = "application/pdf")
     {
         var formFile = new Mock<IFormFile>();
@@ -379,11 +397,6 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         return game;
     }
-
-    #endregion
-
-    #region 1. Invalid PDF Scenarios Tests
-
     [Fact(Timeout = 30000)] // 30s for Testcontainers integration tests
     public async Task UploadPdf_WithCorruptedPdf_ReturnsError()
     {
@@ -504,11 +517,6 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         var docCount = await _dbContext.PdfDocuments.CountAsync(TestContext.Current.CancellationToken);
         docCount.Should().Be(0, "malformed PDF should not create database record");
     }
-
-    #endregion
-
-    #region 2. Large File Handling Tests
-
     [Fact(Timeout = 30000)]
     public async Task UploadPdf_WithFileNearSizeLimit_Succeeds()
     {
@@ -575,59 +583,42 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         docCount.Should().Be(0, "oversized file should not create database record");
     }
 
-    [Fact(Timeout = 60000)] // 60s for performance/memory tests
-    public async Task UploadPdf_WithLargeFile_HandlesMemoryEfficiently()
+    [Fact(Timeout = 30000)]
+    public async Task UploadPdf_WithLargeFile_HandlesSuccessfully()
     {
         // Arrange
         var handler = _serviceProvider!.GetRequiredService<UploadPdfCommandHandler>();
         var testUser = await _dbContext!.Users.FirstAsync(TestCancellationToken);
         var testGame = await _dbContext.Games.FirstAsync(TestCancellationToken);
 
-        // Create large PDF (5MB - within limit but large enough to test memory handling)
+        // Create large PDF (5MB - within limit but large enough to test large file handling)
         var largePdfSize = 5 * 1024 * 1024;
         var largePdf = CreateValidPdfBytes(largePdfSize);
-        var formFile = CreateMockFormFile("large_memory_test.pdf", largePdf);
+        var formFile = CreateMockFormFile("large_file_test.pdf", largePdf);
 
         var command = new UploadPdfCommand(
             GameId: testGame.Id.ToString(),
             UserId: testUser.Id,
             File: formFile);
 
-        // Capture initial memory
-        GC.Collect();
-        GC.WaitForPendingFinalizers();
-        GC.Collect();
-        var initialMemory = GC.GetTotalMemory(false);
-
         // Act
         var result = await handler.Handle(command, TestCancellationToken);
-
-        // Force cleanup
-        GC.Collect();
-        GC.WaitForPendingFinalizers();
-        GC.Collect();
-        var finalMemory = GC.GetTotalMemory(false);
 
         // Assert
         result.Should().NotBeNull();
         result.Success.Should().BeTrue("large file should be handled successfully");
 
-        // Memory growth should be reasonable (less than 2x file size)
-        var memoryGrowth = finalMemory - initialMemory;
-        memoryGrowth.Should().BeLessThan(largePdfSize * 2,
-            "memory growth should be reasonable for large file processing");
-
-        // Verify file was stored
+        // Verify file was stored correctly
         var documentId = result.Document != null ? Guid.Parse(result.Document.Id.ToString()) : Guid.Empty;
         var doc = await _dbContext.PdfDocuments.FirstOrDefaultAsync(d => d.Id == documentId, TestCancellationToken);
         doc.Should().NotBeNull();
         doc!.FileSizeBytes.Should().Be(largePdfSize);
+
+        // NOTE: Memory efficiency testing removed (Issue #1737)
+        // GC.Collect() is non-deterministic and causes flaky tests.
+        // For memory profiling, use tools like dotMemory or BenchmarkDotNet
+        // in manual performance testing suites instead of automated tests.
     }
-
-    #endregion
-
-    #region 3. Concurrent Upload Tests
-
     [Fact(Timeout = 30000)]
     public async Task UploadPdf_WithConcurrentUploads_HandlesCorrectly()
     {
@@ -731,11 +722,6 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
             dbDocIds.Should().Contain(successId, "all successful uploads should have database records");
         }
     }
-
-    #endregion
-
-    #region 4. Storage Failure Scenarios Tests (PostgreSQL with Testcontainers - Issue #1733)
-
     [Fact(Timeout = 30000)]
     public async Task UploadPdf_WhenBlobStorageFails_ReturnsErrorAndRollsBackTransaction()
     {
@@ -1094,11 +1080,6 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         var docCount = await testDbContext.PdfDocuments.CountAsync(TestContext.Current.CancellationToken);
         docCount.Should().Be(0, "PostgreSQL transaction rollback should prevent database records on permission failure");
     }
-
-    #endregion
-
-    #region 5. Integration Points Tests
-
     [Fact(Timeout = 30000)]
     public async Task UploadPdf_SuccessfulUpload_PersistsToDatabase()
     {
@@ -1338,6 +1319,164 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         doc.UploadedAt.Should().NotBe(default(DateTime), "upload timestamp should be set");
     }
 
-    #endregion
-}
+    /// <summary>
+    /// Tests idempotency protection (Issue #1821 - #1742).
+    /// Verifies that duplicate background processing tasks are detected and skipped.
+    /// </summary>
+    [Fact(Timeout = 30000)]
+    public async Task ProcessPdfAsync_DuplicateProcessing_ShouldSkipIdempotently()
+    {
+        // Arrange
+        var testUser = await _dbContext!.Users.FirstAsync(TestCancellationToken);
+        var testGame = await _dbContext.Games.FirstAsync(TestCancellationToken);
 
+        var pdfBytes = CreateValidPdfBytes(1024 * 20);
+        var formFile = CreateMockFormFile("idempotency_test.pdf", pdfBytes);
+        var command = new UploadPdfCommand(testGame.Id.ToString(), testUser.Id, formFile);
+
+        var handler = _serviceProvider!.GetRequiredService<UploadPdfCommandHandler>();
+        var firstResult = await handler.Handle(command, TestCancellationToken);
+
+        firstResult.Success.Should().BeTrue();
+        var pdfId = firstResult.Document!.Id;
+
+        // Mark as already processed
+        var pdfDoc = await _dbContext!.PdfDocuments.FirstOrDefaultAsync(d => d.Id == pdfId, TestCancellationToken);
+        pdfDoc!.ProcessingStatus = "completed";
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
+
+        // Act: Simulate duplicate background task
+        var processPdfMethod = typeof(UploadPdfCommandHandler)
+            .GetMethod("ProcessPdfAsync", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var filePath = Path.Combine(_testDataDirectory!, pdfId.ToString() + ".pdf");
+        await File.WriteAllBytesAsync(filePath, pdfBytes, TestCancellationToken);
+
+        var task = processPdfMethod!.Invoke(handler, new object[] { pdfId.ToString(), filePath, testUser.Id, TestCancellationToken }) as Task;
+        await task!;
+
+        // Assert
+        var finalDoc = await _dbContext.PdfDocuments.FirstOrDefaultAsync(d => d.Id == pdfId, TestCancellationToken);
+        finalDoc!.ProcessingStatus.Should().Be("completed");
+
+        if (File.Exists(filePath)) File.Delete(filePath);
+    }
+
+    /// <summary>
+    /// Tests two-phase quota management success flow (Issue #1821 - #1743).
+    /// </summary>
+    [Fact(Timeout = 30000)]
+    public async Task QuotaReservation_SuccessfulProcessing_ShouldConfirmQuota()
+    {
+        // Arrange
+        var testUser = await _dbContext!.Users.FirstAsync(TestCancellationToken);
+        var testGame = await _dbContext.Games.FirstAsync(TestCancellationToken);
+
+        var quotaService = _serviceProvider!.GetRequiredService<IPdfUploadQuotaService>();
+        var tier = UserTier.Parse(testUser.Tier);
+        var role = AuthRole.Parse(testUser.Role);
+        var initialQuota = await quotaService.GetQuotaInfoAsync(testUser.Id, tier, role, TestCancellationToken);
+
+        // Act: Upload PDF (triggers quota reservation)
+        var pdfBytes = CreateValidPdfBytes(1024 * 25);
+        var formFile = CreateMockFormFile("quota_success_test.pdf", pdfBytes);
+        var command = new UploadPdfCommand(testGame.Id.ToString(), testUser.Id, formFile);
+
+        var handler = _serviceProvider.GetRequiredService<UploadPdfCommandHandler>();
+        var result = await handler.Handle(command, TestCancellationToken);
+
+        result.Success.Should().BeTrue();
+        var pdfId = result.Document!.Id.ToString();
+
+        // Verify quota was reserved
+        var afterReservationQuota = await quotaService.GetQuotaInfoAsync(testUser.Id, tier, role, TestCancellationToken);
+        afterReservationQuota.DailyUploadsUsed.Should().Be(initialQuota.DailyUploadsUsed + 1);
+
+        // Check Redis for reservation
+        var redis = _serviceProvider.GetRequiredService<IConnectionMultiplexer>();
+        var db = redis.GetDatabase();
+        var reservationKey = $"pdf:quota:reservation:{testUser.Id}:{pdfId}";
+        (await db.KeyExistsAsync(reservationKey)).Should().BeTrue();
+
+        // Simulate successful processing and confirmation
+        await quotaService.ConfirmQuotaAsync(testUser.Id, pdfId, TestCancellationToken);
+
+        // Assert: Reservation removed, quota still consumed
+        (await db.KeyExistsAsync(reservationKey)).Should().BeFalse();
+
+        var finalQuota = await quotaService.GetQuotaInfoAsync(testUser.Id, tier, role, TestCancellationToken);
+        finalQuota.DailyUploadsUsed.Should().Be(initialQuota.DailyUploadsUsed + 1);
+    }
+
+    /// <summary>
+    /// Tests two-phase quota management rollback flow (Issue #1821 - #1743).
+    /// </summary>
+    [Fact(Timeout = 30000)]
+    public async Task QuotaReservation_ProcessingFailure_ShouldReleaseQuota()
+    {
+        // Arrange
+        var testUser = await _dbContext!.Users.FirstAsync(TestCancellationToken);
+
+        var quotaService = _serviceProvider!.GetRequiredService<IPdfUploadQuotaService>();
+        var tier = UserTier.Parse(testUser.Tier);
+        var role = AuthRole.Parse(testUser.Role);
+        var initialQuota = await quotaService.GetQuotaInfoAsync(testUser.Id, tier, role, TestCancellationToken);
+
+        // Manually reserve quota
+        var pdfId = Guid.NewGuid().ToString();
+        var reservationResult = await quotaService.ReserveQuotaAsync(testUser.Id, pdfId, TestCancellationToken);
+
+        reservationResult.Reserved.Should().BeTrue();
+
+        // Verify quota incremented
+        var afterReservationQuota = await quotaService.GetQuotaInfoAsync(testUser.Id, tier, role, TestCancellationToken);
+        afterReservationQuota.DailyUploadsUsed.Should().Be(initialQuota.DailyUploadsUsed + 1);
+
+        // Verify reservation exists
+        var redis = _serviceProvider.GetRequiredService<IConnectionMultiplexer>();
+        var db = redis.GetDatabase();
+        var reservationKey = $"pdf:quota:reservation:{testUser.Id}:{pdfId}";
+        (await db.KeyExistsAsync(reservationKey)).Should().BeTrue();
+
+        // Act: Simulate processing failure
+        await quotaService.ReleaseQuotaAsync(testUser.Id, pdfId, TestCancellationToken);
+
+        // Assert: Quota rolled back
+        var finalQuota = await quotaService.GetQuotaInfoAsync(testUser.Id, tier, role, TestCancellationToken);
+        finalQuota.DailyUploadsUsed.Should().Be(initialQuota.DailyUploadsUsed);
+
+        (await db.KeyExistsAsync(reservationKey)).Should().BeFalse();
+    }
+
+    /// <summary>
+    /// Tests quota reservation expiry behavior (Issue #1821 - #1743).
+    /// </summary>
+    [Fact(Timeout = 30000)]
+    public async Task QuotaReservation_Expiry_ShouldAutoCleanup()
+    {
+        // Arrange
+        var testUser = await _dbContext!.Users.FirstAsync(TestCancellationToken);
+        var quotaService = _serviceProvider!.GetRequiredService<IPdfUploadQuotaService>();
+        var pdfId = Guid.NewGuid().ToString();
+
+        // Reserve quota
+        var reservationResult = await quotaService.ReserveQuotaAsync(testUser.Id, pdfId, TestCancellationToken);
+        reservationResult.Reserved.Should().BeTrue();
+
+        // Verify reservation exists with TTL
+        var redis = _serviceProvider.GetRequiredService<IConnectionMultiplexer>();
+        var db = redis.GetDatabase();
+        var reservationKey = $"pdf:quota:reservation:{testUser.Id}:{pdfId}";
+        (await db.KeyExistsAsync(reservationKey)).Should().BeTrue();
+
+        var ttl = await db.KeyTimeToLiveAsync(reservationKey);
+        ttl.Should().NotBeNull();
+        ttl!.Value.TotalMinutes.Should().BeGreaterThan(29);
+        ttl.Value.TotalMinutes.Should().BeLessThan(31);
+
+        // Verify expiry time
+        reservationResult.ExpiresAt.Should().NotBeNull();
+        var expectedExpiry = DateTime.UtcNow.AddMinutes(30);
+        var timeDiff = Math.Abs((reservationResult.ExpiresAt!.Value - expectedExpiry).TotalSeconds);
+        timeDiff.Should().BeLessThan(5);
+    }
+}

@@ -5,6 +5,7 @@ using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Tests.BoundedContexts.GameManagement.TestHelpers;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 
@@ -12,6 +13,7 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 /// Comprehensive tests for GetGameByIdQueryHandler.
 /// Tests single game retrieval and DTO mapping.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class GetGameByIdQueryHandlerTests
 {
     private readonly Mock<IGameRepository> _gameRepositoryMock;
@@ -22,9 +24,6 @@ public class GetGameByIdQueryHandlerTests
         _gameRepositoryMock = new Mock<IGameRepository>();
         _handler = new GetGameByIdQueryHandler(_gameRepositoryMock.Object);
     }
-
-    #region Happy Path Tests
-
     [Fact]
     public async Task Handle_ExistingGame_ReturnsMappedDto()
     {
@@ -152,11 +151,6 @@ public class GetGameByIdQueryHandlerTests
         Assert.NotNull(result.MaxPlayTimeMinutes);
         Assert.NotNull(result.BggId);
     }
-
-    #endregion
-
-    #region Edge Cases
-
     [Fact]
     public async Task Handle_NonExistentGame_ReturnsNull()
     {
@@ -198,11 +192,6 @@ public class GetGameByIdQueryHandlerTests
         // Assert
         Assert.Null(result);
     }
-
-    #endregion
-
-    #region Cancellation Tests
-
     [Fact]
     public async Task Handle_WithCancellationToken_PassesToRepository()
     {
@@ -231,11 +220,6 @@ public class GetGameByIdQueryHandlerTests
             r => r.GetByIdAsync(gameId, cancellationToken),
             Times.Once);
     }
-
-    #endregion
-
-    #region DTO Mapping Tests
-
     [Fact]
     public async Task Handle_PreservesCreatedAt()
     {
@@ -261,7 +245,5 @@ public class GetGameByIdQueryHandlerTests
         Assert.NotEqual(default(DateTime), result.CreatedAt);
         Assert.Equal(game.CreatedAt, result.CreatedAt);
     }
-
-    #endregion
 }
 

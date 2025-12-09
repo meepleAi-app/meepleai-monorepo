@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import { useChatContext } from '@/hooks/useChatContext';
+import { useChatStore } from '@/store/chat/store';
 import { SkeletonLoader } from '../loading/SkeletonLoader';
 import {
   Select,
@@ -18,7 +18,14 @@ import {
 import { AgentDto } from '@/lib/api/schemas/agents.schemas';
 
 export function AgentSelector() {
-  const { agents, selectedAgentId, selectAgent, selectedGameId, loading } = useChatContext();
+  // Issue #1676: Migrated from useChatContext to direct Zustand store
+  const { agents, selectedAgentId, selectAgent, selectedGameId, loading } = useChatStore(state => ({
+    agents: state.agents,
+    selectedAgentId: state.selectedAgentId,
+    selectAgent: state.selectAgent,
+    selectedGameId: state.selectedGameId,
+    loading: state.loading,
+  }));
 
   if (loading.agents) {
     return (

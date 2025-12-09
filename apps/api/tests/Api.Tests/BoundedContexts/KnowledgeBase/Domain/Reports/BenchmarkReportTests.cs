@@ -2,6 +2,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Evaluation;
 using Api.BoundedContexts.KnowledgeBase.Domain.GridSearch;
 using Api.BoundedContexts.KnowledgeBase.Domain.Reports;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Reports;
 
@@ -9,6 +10,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Reports;
 /// Unit tests for BenchmarkReport and ReportSummary.
 /// ADR-016 Phase 5: Validates benchmark report creation and summary calculations.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class BenchmarkReportTests
 {
     [Fact]

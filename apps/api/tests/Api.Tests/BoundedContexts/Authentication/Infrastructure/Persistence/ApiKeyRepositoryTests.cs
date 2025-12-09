@@ -5,6 +5,7 @@ using Api.Infrastructure;
 using Api.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Infrastructure.Persistence;
 
@@ -12,6 +13,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Infrastructure.Persistence;
 /// Integration tests for ApiKeyRepository using Testcontainers with real PostgreSQL.
 /// Tests API key management, scoping, expiration, and revocation logic.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
 {
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
@@ -37,9 +39,6 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
         await DbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
         return userId;
     }
-
-    #region GetByKeyPrefixAsync Tests
-
     [Fact]
     public async Task GetByKeyPrefixAsync_ExistingKey_ReturnsApiKey()
     {
@@ -78,11 +77,6 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
         // Assert
         Assert.Null(result);
     }
-
-    #endregion
-
-    #region GetByUserIdAsync Tests
-
     [Fact]
     public async Task GetByUserIdAsync_NoKeys_ReturnsEmptyList()
     {
@@ -150,11 +144,6 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
         Assert.Equal(2, user1Keys.Count);
         Assert.Single(user2Keys);
     }
-
-    #endregion
-
-    #region GetActiveKeysByUserIdAsync Tests
-
     [Fact]
     public async Task GetActiveKeysByUserIdAsync_OnlyActiveKeys_ReturnsAll()
     {
@@ -274,11 +263,6 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
         Assert.Contains(activeKeys, k => k.Id == active1.Id);
         Assert.Contains(activeKeys, k => k.Id == active2.Id);
     }
-
-    #endregion
-
-    #region AddAsync Tests
-
     [Fact]
     public async Task AddAsync_NewApiKey_PersistsSuccessfully()
     {
@@ -332,11 +316,6 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
         Assert.NotNull(persisted);
         Assert.Null(persisted.ExpiresAt);
     }
-
-    #endregion
-
-    #region UpdateAsync Tests
-
     [Fact]
     public async Task UpdateAsync_LastUsedAt_UpdatesCorrectly()
     {
@@ -385,11 +364,6 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
         Assert.Equal(revokerId, updated.RevokedBy);
         Assert.False(updated.IsActive);
     }
-
-    #endregion
-
-    #region Mapping Tests
-
     [Fact]
     public async Task Mapping_DomainToPersistence_AllFieldsCorrect()
     {
@@ -444,11 +418,6 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
         Assert.Equal(apiKey.Scopes, retrieved.Scopes);
         Assert.Equal(apiKey.IsActive, retrieved.IsActive);
     }
-
-    #endregion
-
-    #region Scope Serialization Tests
-
     [Fact]
     public async Task ScopeSerialization_SingleScope_PersistsCorrectly()
     {
@@ -484,11 +453,6 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
         Assert.NotNull(persisted);
         Assert.Equal("read,write,admin", persisted.Scopes);
     }
-
-    #endregion
-
-    #region Concurrent Access Tests
-
     [Fact]
     public async Task ConcurrentPrefixLookups_NoConflicts()
     {
@@ -552,11 +516,6 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
         Assert.NotNull(updated);
         Assert.NotNull(updated.LastUsedAt);
     }
-
-    #endregion
-
-    #region Edge Cases
-
     [Fact]
     public async Task NullableFields_Metadata_HandledCorrectly()
     {
@@ -598,7 +557,5 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
         var reloaded = await DbContext.ApiKeys.FirstOrDefaultAsync(k => k.Id == apiKey.Id, TestContext.Current.CancellationToken);
         Assert.Null(reloaded!.LastUsedAt); // Should remain null
     }
-
-    #endregion
 }
 

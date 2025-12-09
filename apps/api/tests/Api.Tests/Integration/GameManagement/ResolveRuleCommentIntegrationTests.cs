@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Integration.GameManagement;
 
@@ -31,11 +32,9 @@ namespace Api.Tests.Integration.GameManagement;
 /// Coverage Target: ≥90% for ResolveRuleCommentCommandHandler
 /// Execution Time Target: <60s
 /// </summary>
-[Collection("ResolveRuleCommentIntegration")]
+[Trait("Category", TestCategories.Integration)]
 public sealed class ResolveRuleCommentIntegrationTests : IAsyncLifetime
 {
-    #region Test Infrastructure
-
     private IContainer? _postgresContainer;
     private MeepleAiDbContext? _dbContext;
     private IServiceProvider? _serviceProvider;
@@ -211,11 +210,6 @@ public sealed class ResolveRuleCommentIntegrationTests : IAsyncLifetime
         _dbContext!.RuleSpecComments.RemoveRange(_dbContext.RuleSpecComments);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
     }
-
-    #endregion
-
-    #region 1. Happy Path Tests
-
     [Fact]
     public async Task ResolveOwnComment_Success()
     {
@@ -273,11 +267,6 @@ public sealed class ResolveRuleCommentIntegrationTests : IAsyncLifetime
         reply.Should().NotBeNull();
         reply!.IsResolved.Should().BeFalse("replies should not be resolved");
     }
-
-    #endregion
-
-    #region 2. Authorization Error Tests
-
     [Fact]
     public async Task ResolveOtherUserComment_AsNonAdmin_ThrowsUnauthorized()
     {
@@ -304,11 +293,6 @@ public sealed class ResolveRuleCommentIntegrationTests : IAsyncLifetime
         comment.Should().NotBeNull();
         comment!.IsResolved.Should().BeFalse();
     }
-
-    #endregion
-
-    #region 3. Admin Override Tests
-
     [Fact]
     public async Task ResolveOtherUserComment_AsAdmin_Success()
     {
@@ -331,11 +315,6 @@ public sealed class ResolveRuleCommentIntegrationTests : IAsyncLifetime
         result.IsResolved.Should().BeTrue();
         result.ResolvedByUserId.Should().Be(_otherUserId.ToString());
     }
-
-    #endregion
-
-    #region 4. Recursive Resolution Tests
-
     [Fact]
     public async Task ResolveComment_WithReplies_ResolvesAll()
     {
@@ -369,11 +348,6 @@ public sealed class ResolveRuleCommentIntegrationTests : IAsyncLifetime
         reply2.Should().NotBeNull();
         reply2!.IsResolved.Should().BeTrue("reply 2 should be resolved");
     }
-
-    #endregion
-
-    #region 5. Nested Replies Handling Tests
-
     [Fact]
     public async Task ResolveComment_WithNestedReplies_ResolvesAllLevels()
     {
@@ -410,11 +384,6 @@ public sealed class ResolveRuleCommentIntegrationTests : IAsyncLifetime
         l2.Should().NotBeNull();
         l2!.IsResolved.Should().BeTrue();
     }
-
-    #endregion
-
-    #region 6. Already Resolved Tests
-
     [Fact]
     public async Task ResolveAlreadyResolvedComment_Success()
     {
@@ -447,11 +416,6 @@ public sealed class ResolveRuleCommentIntegrationTests : IAsyncLifetime
         result.Should().NotBeNull();
         result.IsResolved.Should().BeTrue();
     }
-
-    #endregion
-
-    #region 7. Not Found Tests
-
     [Fact]
     public async Task ResolveNonExistentComment_ThrowsInvalidOperation()
     {
@@ -473,7 +437,4 @@ public sealed class ResolveRuleCommentIntegrationTests : IAsyncLifetime
         await act.Should().ThrowAsync<InvalidOperationException>()
             .WithMessage("*not found*");
     }
-
-    #endregion
 }
-

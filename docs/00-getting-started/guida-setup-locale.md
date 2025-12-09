@@ -38,7 +38,7 @@
 | **Embedding** | Ollama | Latest |
 | **PDF Processing** | Unstructured + SmolDocling + Docnet | - |
 | **Workflow** | n8n | Latest |
-| **Observability** | Seq + Jaeger + Prometheus + Grafana | Latest |
+| **Observability** | HyperDX + HyperDX + Prometheus + Grafana | Latest |
 
 ### Architettura
 
@@ -233,7 +233,7 @@ nano api.env.dev  # oppure code api.env.dev per VS Code
 > - `localhost` → `postgres` (database)
 > - `localhost:6333` → `http://meepleai-qdrant:6333` (vector DB)
 > - `localhost:6379` → `meepleai-redis:6379` (cache)
-> - `localhost:8081` → `http://seq:5341` (logging - porta ingestion)
+> - `localhost:8180` → `http://seq:5341` (logging - porta ingestion)
 > - `localhost:8001` → `http://unstructured:8001` (PDF processing)
 > - `localhost:8002` → `http://smoldocling:8002` (PDF processing)
 
@@ -270,7 +270,7 @@ AI__OPENROUTER__CHATMODEL=anthropic/claude-3.5-sonnet
 # ============================================
 # Se API in Docker: http://seq:5341 (porta ingestion, NON 8081!)
 # Se API fuori Docker: http://localhost:5341
-# Porta 8081 è solo per la UI web di Seq
+# Porta 8081 è solo per la UI web di HyperDX
 SEQ_URL=http://localhost:5341
 JAEGER_AGENT_HOST=localhost
 JAEGER_AGENT_PORT=6831
@@ -414,8 +414,8 @@ curl http://localhost:6333/healthz
 docker compose exec meepleai-redis meepleai-redis-cli ping
 # Output atteso: PONG
 
-# Seq
-curl http://localhost:8081/api/health
+# HyperDX
+curl http://localhost:8180/api/health
 # Output atteso: Status 200
 
 # Ollama (se avviato)
@@ -538,14 +538,14 @@ curl -b cookies.txt http://localhost:8080/api/v1/games
 
 ### 5. Verifica Servizi Osservabilità
 
-**Seq (Logs)**:
+**HyperDX (Logs)**:
 ```
-http://localhost:8081
+http://localhost:8180
 ```
 
-**Jaeger (Tracing)**:
+**HyperDX (Tracing)**:
 ```
-http://localhost:16686
+http://localhost:8180
 ```
 
 **Grafana (Dashboards)**:
@@ -1083,7 +1083,7 @@ taskkill /PID <PID> /F
 
 # Oppure cambia porta
 # Frontend: pnpm dev -p 3001
-# Backend: dotnet run --urls "http://localhost:8081"
+# Backend: dotnet run --urls "http://localhost:8180"
 ```
 
 #### 9. Ollama modelli mancanti
@@ -1102,14 +1102,14 @@ docker exec -it ollama ollama pull nomic-embed-text
 docker exec -it ollama ollama list
 ```
 
-#### 10. Seq non mostra logs
+#### 10. HyperDX non mostra logs
 
 **Sintomo**:
-- Seq UI vuota su http://localhost:8081
+- HyperDX UI vuota su http://localhost:8180
 
 **Soluzione**:
 ```bash
-# Verifica che Seq sia running
+# Verifica che HyperDX sia running
 docker compose ps meepleai-seq
 
 # Verifica SEQ_URL in api.env.dev
@@ -1206,8 +1206,8 @@ pnpm install
 | **Unstructured** | https://docs.unstructured.io/ | PDF extraction |
 | **Ollama** | https://ollama.ai/docs | Local LLM |
 | **n8n** | https://docs.n8n.io/ | Workflow automation |
-| **Seq** | https://docs.datalust.co/docs | Log management |
-| **Jaeger** | https://www.jaegertracing.io/docs/ | Distributed tracing |
+| **HyperDX** | https://docs.datalust.co/docs | Log management |
+| **HyperDX** | https://www.jaegertracing.io/docs/ | Distributed tracing |
 | **Grafana** | https://grafana.com/docs/ | Dashboards |
 
 ### Community & Support
@@ -1252,7 +1252,7 @@ pnpm install
 - [ ] Redis running (porta 6379)
 - [ ] API backend running (porta 8080)
 - [ ] Frontend web running (porta 3000)
-- [ ] Seq running (porta 8081) - opzionale
+- [ ] HyperDX running (porta 8081) - opzionale
 - [ ] Ollama running (porta 11434) - se usi Ollama
 
 **Verifica**:

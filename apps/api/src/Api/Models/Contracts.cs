@@ -565,7 +565,16 @@ public record DashboardMetrics(
     int TotalChatMessages,
     double AverageConfidenceScore,
     int TotalRagRequests,
-    long TotalTokensUsed
+    long TotalTokensUsed,
+    // Issue #874: Additional metrics for centralized dashboard (12+ metrics total)
+    int TotalGames,
+    int ApiRequests7d,
+    int ApiRequests30d,
+    double AverageLatency24h,
+    double AverageLatency7d,
+    double ErrorRate24h,
+    int ActiveAlerts,
+    int ResolvedAlerts
 );
 
 public record TimeSeriesDataPoint(
@@ -581,6 +590,47 @@ public record AnalyticsQueryParams(
     string? GameId = null,
     string? RoleFilter = null
 );
+
+// Issue #874: Activity Feed models for admin dashboard
+public record RecentActivityDto(
+    IReadOnlyList<ActivityEvent> Events,
+    int TotalCount,
+    DateTime GeneratedAt
+);
+
+public record ActivityEvent(
+    string Id,
+    ActivityEventType EventType,
+    string Description,
+    string? UserId,
+    string? UserEmail,
+    string? EntityId,
+    string? EntityType,
+    DateTime Timestamp,
+    ActivitySeverity Severity = ActivitySeverity.Info
+);
+
+public enum ActivityEventType
+{
+    UserRegistered,
+    UserLogin,
+    PdfUploaded,
+    PdfProcessed,
+    AlertCreated,
+    AlertResolved,
+    GameAdded,
+    ConfigurationChanged,
+    ErrorOccurred,
+    SystemEvent
+}
+
+public enum ActivitySeverity
+{
+    Info,
+    Warning,
+    Error,
+    Critical
+}
 
 public record ExportDataRequest(
     [Required] string Format, // "csv" or "json"

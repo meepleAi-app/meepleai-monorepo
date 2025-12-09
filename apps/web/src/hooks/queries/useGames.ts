@@ -85,8 +85,7 @@ export function useGameSessions(gameId: string, enabled: boolean = true) {
   return useQuery({
     queryKey: gamesKeys.sessions(gameId),
     queryFn: async () => {
-      // TODO: FE-IMP-005 - api.games.getSessions not implemented
-      throw new Error("Not implemented");
+      return api.games.getSessions(gameId);
     },
     enabled,
     staleTime: 2 * 60 * 1000, // Sessions change more frequently (2min)

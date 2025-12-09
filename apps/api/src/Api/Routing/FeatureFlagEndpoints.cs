@@ -1,4 +1,4 @@
-using Api.BoundedContexts.SystemConfiguration.Application.Commands;
+﻿using Api.BoundedContexts.SystemConfiguration.Application.Commands;
 using Api.BoundedContexts.SystemConfiguration.Application.DTOs;
 using Api.BoundedContexts.SystemConfiguration.Application.Queries;
 using Api.Extensions;
@@ -110,7 +110,7 @@ public static class FeatureFlagEndpoints
             if (!authorized) return error!;
 
             logger.LogInformation("Admin {AdminId} toggling feature flag '{Key}' to {Status}",
-                session.User.Id, key, enabled ? "enabled" : "disabled");
+                session!.User!.Id, key, enabled ? "enabled" : "disabled");
 
             // Get the configuration for this feature flag
             var configQuery = new GetConfigByKeyQuery(key, Environment: null);
@@ -126,7 +126,7 @@ public static class FeatureFlagEndpoints
             var updateCommand = new UpdateConfigValueCommand(
                 ConfigId: config.Id,
                 NewValue: enabled.ToString().ToLowerInvariant(),
-                UpdatedByUserId: Guid.Parse(session.User.Id)
+                UpdatedByUserId: session!.User!.Id
             );
             var updatedConfig = await mediator.Send(updateCommand, ct).ConfigureAwait(false);
 
@@ -165,7 +165,7 @@ public static class FeatureFlagEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            logger.LogInformation("Admin {AdminId} creating feature flag '{Key}'", session.User.Id, request.Key);
+            logger.LogInformation("Admin {AdminId} creating feature flag '{Key}'", session!.User!.Id, request.Key);
 
             // Default to "All" if no environment specified
             var environment = request.Environment ?? "All";
@@ -174,7 +174,7 @@ public static class FeatureFlagEndpoints
                 Key: request.Key,
                 Value: request.Enabled.ToString().ToLowerInvariant(),
                 ValueType: "bool",
-                CreatedByUserId: Guid.Parse(session.User.Id),
+                CreatedByUserId: session!.User!.Id,
                 Description: request.Description,
                 Category: "Features",
                 Environment: environment,

@@ -1,10 +1,13 @@
 /**
  * Tests for OAuthButtons component
  * Comprehensive coverage of OAuth authentication buttons
+ *
+ * Issue #1951: Fixed 34 test failures by wrapping with IntlProvider
  */
 
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { renderWithIntl } from '../../../__tests__/fixtures/common-fixtures';
 import OAuthButtons, { buildOAuthUrl } from '../OAuthButtons';
 
 describe('buildOAuthUrl', () => {
@@ -91,47 +94,47 @@ describe('OAuthButtons', () => {
 
   describe('Rendering', () => {
     it('renders divider with "Or continue with" text', () => {
-      render(<OAuthButtons />);
+      renderWithIntl(<OAuthButtons />);
       expect(screen.getByText('Or continue with')).toBeInTheDocument();
     });
 
     it('renders Google OAuth button', () => {
-      render(<OAuthButtons />);
+      renderWithIntl(<OAuthButtons />);
       expect(screen.getByRole('button', { name: /continue with google/i })).toBeInTheDocument();
     });
 
     it('renders Discord OAuth button', () => {
-      render(<OAuthButtons />);
+      renderWithIntl(<OAuthButtons />);
       expect(screen.getByRole('button', { name: /continue with discord/i })).toBeInTheDocument();
     });
 
     it('renders GitHub OAuth button', () => {
-      render(<OAuthButtons />);
+      renderWithIntl(<OAuthButtons />);
       expect(screen.getByRole('button', { name: /continue with github/i })).toBeInTheDocument();
     });
 
     it('renders all three OAuth buttons', () => {
-      render(<OAuthButtons />);
+      renderWithIntl(<OAuthButtons />);
       const buttons = screen.getAllByRole('button');
       expect(buttons).toHaveLength(3);
     });
 
     it('renders Google logo SVG', () => {
-      const { container } = render(<OAuthButtons />);
+      const { container } = renderWithIntl(<OAuthButtons />);
       const googleButton = screen.getByRole('button', { name: /continue with google/i });
       const svg = googleButton.querySelector('svg');
       expect(svg).toBeInTheDocument();
     });
 
     it('renders Discord logo SVG', () => {
-      const { container } = render(<OAuthButtons />);
+      const { container } = renderWithIntl(<OAuthButtons />);
       const discordButton = screen.getByRole('button', { name: /continue with discord/i });
       const svg = discordButton.querySelector('svg');
       expect(svg).toBeInTheDocument();
     });
 
     it('renders GitHub logo SVG', () => {
-      const { container } = render(<OAuthButtons />);
+      const { container } = renderWithIntl(<OAuthButtons />);
       const githubButton = screen.getByRole('button', { name: /continue with github/i });
       const svg = githubButton.querySelector('svg');
       expect(svg).toBeInTheDocument();
@@ -170,7 +173,7 @@ describe('OAuthButtons', () => {
       const user = userEvent.setup();
       const onOAuthLogin = vi.fn();
 
-      render(<OAuthButtons onOAuthLogin={onOAuthLogin} />);
+      renderWithIntl(<OAuthButtons onOAuthLogin={onOAuthLogin} />);
       const googleButton = screen.getByRole('button', { name: /continue with google/i });
       await user.click(googleButton);
 
@@ -182,7 +185,7 @@ describe('OAuthButtons', () => {
       const user = userEvent.setup();
       const onOAuthLogin = vi.fn();
 
-      render(<OAuthButtons onOAuthLogin={onOAuthLogin} />);
+      renderWithIntl(<OAuthButtons onOAuthLogin={onOAuthLogin} />);
       const discordButton = screen.getByRole('button', { name: /continue with discord/i });
       await user.click(discordButton);
 
@@ -194,7 +197,7 @@ describe('OAuthButtons', () => {
       const user = userEvent.setup();
       const onOAuthLogin = vi.fn();
 
-      render(<OAuthButtons onOAuthLogin={onOAuthLogin} />);
+      renderWithIntl(<OAuthButtons onOAuthLogin={onOAuthLogin} />);
       const githubButton = screen.getByRole('button', { name: /continue with github/i });
       await user.click(githubButton);
 
@@ -206,7 +209,7 @@ describe('OAuthButtons', () => {
       const user = userEvent.setup();
       const onOAuthLogin = vi.fn();
 
-      render(<OAuthButtons onOAuthLogin={onOAuthLogin} />);
+      renderWithIntl(<OAuthButtons onOAuthLogin={onOAuthLogin} />);
       await user.click(screen.getByRole('button', { name: /continue with google/i }));
 
       // Should call callback instead of redirect
@@ -218,7 +221,7 @@ describe('OAuthButtons', () => {
       const user = userEvent.setup();
       const onOAuthLogin = vi.fn();
 
-      render(<OAuthButtons onOAuthLogin={onOAuthLogin} />);
+      renderWithIntl(<OAuthButtons onOAuthLogin={onOAuthLogin} />);
       await user.click(screen.getByRole('button', { name: /continue with discord/i }));
 
       // Should call callback instead of redirect
@@ -229,7 +232,7 @@ describe('OAuthButtons', () => {
       const user = userEvent.setup();
       const onOAuthLogin = vi.fn();
 
-      render(<OAuthButtons onOAuthLogin={onOAuthLogin} />);
+      renderWithIntl(<OAuthButtons onOAuthLogin={onOAuthLogin} />);
       await user.click(screen.getByRole('button', { name: /continue with github/i }));
 
       // Should call callback instead of redirect
@@ -240,7 +243,7 @@ describe('OAuthButtons', () => {
       const user = userEvent.setup();
       const onOAuthLogin = vi.fn();
 
-      render(<OAuthButtons onOAuthLogin={onOAuthLogin} />);
+      renderWithIntl(<OAuthButtons onOAuthLogin={onOAuthLogin} />);
 
       // Test all three providers
       await user.click(screen.getByRole('button', { name: /continue with google/i }));
@@ -259,7 +262,7 @@ describe('OAuthButtons', () => {
       const user = userEvent.setup();
       const onOAuthLogin = vi.fn();
 
-      render(<OAuthButtons onOAuthLogin={onOAuthLogin} />);
+      renderWithIntl(<OAuthButtons onOAuthLogin={onOAuthLogin} />);
       await user.click(screen.getByRole('button', { name: /continue with google/i }));
 
       expect(onOAuthLogin).toHaveBeenCalledTimes(1);
@@ -270,7 +273,7 @@ describe('OAuthButtons', () => {
       const onOAuthLogin = vi.fn();
       process.env.NEXT_PUBLIC_API_BASE = 'https://api.example.com';
 
-      render(<OAuthButtons onOAuthLogin={onOAuthLogin} />);
+      renderWithIntl(<OAuthButtons onOAuthLogin={onOAuthLogin} />);
       await user.click(screen.getByRole('button', { name: /continue with google/i }));
 
       // Callback should be used instead of redirect
@@ -281,7 +284,7 @@ describe('OAuthButtons', () => {
 
   describe('Styling', () => {
     it('applies correct styling to Google button', () => {
-      render(<OAuthButtons />);
+      renderWithIntl(<OAuthButtons />);
       const googleButton = screen.getByRole('button', { name: /continue with google/i });
 
       expect(googleButton).toHaveClass('w-full');
@@ -291,21 +294,21 @@ describe('OAuthButtons', () => {
     });
 
     it('applies Discord brand color to Discord button', () => {
-      render(<OAuthButtons />);
+      renderWithIntl(<OAuthButtons />);
       const discordButton = screen.getByRole('button', { name: /continue with discord/i });
 
       expect(discordButton).toHaveClass('bg-[#5865F2]');
     });
 
     it('applies dark background to GitHub button', () => {
-      render(<OAuthButtons />);
+      renderWithIntl(<OAuthButtons />);
       const githubButton = screen.getByRole('button', { name: /continue with github/i });
 
       expect(githubButton).toHaveClass('bg-slate-900');
     });
 
     it('applies focus ring styles to buttons', () => {
-      render(<OAuthButtons />);
+      renderWithIntl(<OAuthButtons />);
       const buttons = screen.getAllByRole('button');
 
       buttons.forEach(button => {
@@ -314,7 +317,7 @@ describe('OAuthButtons', () => {
     });
 
     it('applies hover styles to buttons', () => {
-      render(<OAuthButtons />);
+      renderWithIntl(<OAuthButtons />);
       const googleButton = screen.getByRole('button', { name: /continue with google/i });
 
       expect(googleButton).toHaveClass('hover:bg-slate-50');
@@ -323,7 +326,7 @@ describe('OAuthButtons', () => {
 
   describe('Accessibility', () => {
     it('renders all buttons with type="button"', () => {
-      render(<OAuthButtons />);
+      renderWithIntl(<OAuthButtons />);
       const buttons = screen.getAllByRole('button');
 
       buttons.forEach(button => {
@@ -332,7 +335,7 @@ describe('OAuthButtons', () => {
     });
 
     it('has descriptive text for each provider', () => {
-      render(<OAuthButtons />);
+      renderWithIntl(<OAuthButtons />);
 
       expect(screen.getByRole('button', { name: /continue with google/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /continue with discord/i })).toBeInTheDocument();
@@ -340,14 +343,14 @@ describe('OAuthButtons', () => {
     });
 
     it('renders SVG icons for visual users', () => {
-      const { container } = render(<OAuthButtons />);
+      const { container } = renderWithIntl(<OAuthButtons />);
       const svgs = container.querySelectorAll('svg');
 
       expect(svgs.length).toBe(3); // One for each provider
     });
 
     it('maintains proper button order', () => {
-      render(<OAuthButtons />);
+      renderWithIntl(<OAuthButtons />);
       const buttons = screen.getAllByRole('button');
 
       expect(buttons[0]).toHaveTextContent('Continue with Google');
@@ -370,7 +373,7 @@ describe('OAuthButtons', () => {
       const user = userEvent.setup();
       const onOAuthLogin = vi.fn();
 
-      render(<OAuthButtons onOAuthLogin={onOAuthLogin} />);
+      renderWithIntl(<OAuthButtons onOAuthLogin={onOAuthLogin} />);
       const googleButton = screen.getByRole('button', { name: /continue with google/i });
 
       await user.click(googleButton);
@@ -385,7 +388,7 @@ describe('OAuthButtons', () => {
       const user = userEvent.setup();
       const onOAuthLogin = vi.fn();
 
-      render(<OAuthButtons onOAuthLogin={onOAuthLogin} />);
+      renderWithIntl(<OAuthButtons onOAuthLogin={onOAuthLogin} />);
 
       await user.click(screen.getByRole('button', { name: /continue with google/i }));
       await user.click(screen.getByRole('button', { name: /continue with discord/i }));
@@ -418,7 +421,7 @@ describe('OAuthButtons', () => {
      */
 
     it('provider parameter is hardcoded (not injectable)', () => {
-      render(<OAuthButtons />);
+      renderWithIntl(<OAuthButtons />);
 
       // Verify providers are hardcoded literals in onClick handlers
       // Not derived from user input - this is secure by design
@@ -436,7 +439,7 @@ describe('OAuthButtons', () => {
         expect(['google', 'discord', 'github']).toContain(provider);
       });
 
-      render(<OAuthButtons onOAuthLogin={onOAuthLogin} />);
+      renderWithIntl(<OAuthButtons onOAuthLogin={onOAuthLogin} />);
 
       await user.click(screen.getByRole('button', { name: /continue with google/i }));
       await user.click(screen.getByRole('button', { name: /continue with discord/i }));
@@ -453,25 +456,25 @@ describe('OAuthButtons', () => {
 
   describe('Layout', () => {
     it('renders divider with horizontal line', () => {
-      const { container } = render(<OAuthButtons />);
+      const { container } = renderWithIntl(<OAuthButtons />);
       const divider = container.querySelector('.border-t');
       expect(divider).toBeInTheDocument();
     });
 
     it('centers the divider text', () => {
-      const { container } = render(<OAuthButtons />);
+      const { container } = renderWithIntl(<OAuthButtons />);
       const dividerText = screen.getByText('Or continue with');
       expect(dividerText.closest('.relative')).toHaveClass('flex', 'justify-center');
     });
 
     it('spaces buttons vertically', () => {
-      const { container } = render(<OAuthButtons />);
+      const { container } = renderWithIntl(<OAuthButtons />);
       const buttonContainer = container.querySelector('.space-y-2');
       expect(buttonContainer).toBeInTheDocument();
     });
 
     it('spaces overall sections vertically', () => {
-      const { container } = render(<OAuthButtons />);
+      const { container } = renderWithIntl(<OAuthButtons />);
       const mainContainer = container.querySelector('.space-y-3');
       expect(mainContainer).toBeInTheDocument();
     });

@@ -6,7 +6,9 @@ using Microsoft.AspNetCore.Mvc;
 // DDD CQRS imports
 using DddUpdateUserProfileCommand = Api.BoundedContexts.Authentication.Application.Commands.UpdateUserProfileCommand;
 using DddChangePasswordCommand = Api.BoundedContexts.Authentication.Application.Commands.ChangePasswordCommand;
+using DddUpdatePreferencesCommand = Api.BoundedContexts.Authentication.Application.Commands.UpdatePreferencesCommand;
 using DddGetUserProfileQuery = Api.BoundedContexts.Authentication.Application.Queries.GetUserProfileQuery;
+using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Application.Queries;
 
 namespace Api.Routing;
@@ -27,9 +29,9 @@ public static class UserProfileEndpoints
             CancellationToken ct) =>
         {
             // Session validated by RequireSessionFilter
-            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
-            var query = new DddGetUserProfileQuery { UserId = Guid.Parse(session.User.Id) };
+            var query = new DddGetUserProfileQuery { UserId = session!.User!.Id };
             var profile = await mediator.Send(query, ct).ConfigureAwait(false);
 
             if (profile == null)
@@ -63,11 +65,11 @@ public static class UserProfileEndpoints
             CancellationToken ct) =>
         {
             // Session validated by RequireSessionFilter
-            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
             var command = new DddUpdateUserProfileCommand
             {
-                UserId = Guid.Parse(session.User.Id),
+                UserId = session!.User!.Id,
                 DisplayName = payload.DisplayName,
                 Email = payload.Email
             };
@@ -107,11 +109,11 @@ public static class UserProfileEndpoints
             CancellationToken ct) =>
         {
             // Session validated by RequireSessionFilter
-            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
             var command = new DddChangePasswordCommand
             {
-                UserId = Guid.Parse(session.User.Id),
+                UserId = session!.User!.Id,
                 CurrentPassword = payload.CurrentPassword,
                 NewPassword = payload.NewPassword
             };
@@ -152,12 +154,10 @@ public static class UserProfileEndpoints
             CancellationToken ct) =>
         {
             // Session validated by RequireSessionFilter
-            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
-            if (!Guid.TryParse(session.User.Id, out var userId))
-            {
-                return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
-            }
+            // session.User.Id is already a Guid from SessionStatusDto
+            var userId = session!.User!.Id;
 
             var query = new GetUserUploadQuotaQuery(userId);
             var quotaInfo = await mediator.Send(query, ct).ConfigureAwait(false);
@@ -188,6 +188,89 @@ public static class UserProfileEndpoints
         .Produces(400)
         .Produces(401);
 
+        // Update user preferences (AUTH-PROFILE-04)
+        group.MapPut("/users/preferences", async (
+            [FromBody] UpdatePreferencesPayload payload,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            // Session validated by RequireSessionFilter
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+            var command = new DddUpdatePreferencesCommand
+            {
+                UserId = session!.User!.Id,
+                Language = payload.Language,
+                Theme = payload.Theme,
+                EmailNotifications = payload.EmailNotifications,
+                DataRetentionDays = payload.DataRetentionDays
+            };
+
+            var updatedProfile = await mediator.Send(command, ct).ConfigureAwait(false);
+            logger.LogInformation("Preferences updated for user {UserId}", session.User.Id);
+
+            return Results.Json(updatedProfile);
+        })
+        .RequireSession()
+        .RequireAuthorization()
+        .WithName("UpdateUserPreferences")
+        .WithTags("User Profile")
+        .WithSummary("Update user preferences")
+        .WithDescription(@"Updates user preferences including language, theme, email notifications, and data retention settings.
+
+**Authorization**: Requires active session (cookie-based authentication).
+
+**Request Body**: UpdatePreferencesPayload with language, theme, emailNotifications, dataRetentionDays.
+
+**Response**: Updated UserProfileDto with all profile information including new preferences.")
+        .Produces<UserProfileDto>(200)
+        .Produces(400)
+        .Produces(401);
+
+        // Get user preferences (AUTH-PROFILE-05)
+        group.MapGet("/users/preferences", async (
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            // Session validated by RequireSessionFilter
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+            var query = new DddGetUserProfileQuery
+            {
+                UserId = session!.User!.Id
+            };
+
+            var userProfile = await mediator.Send(query, ct).ConfigureAwait(false);
+            logger.LogInformation("Preferences retrieved for user {UserId}", session.User.Id);
+
+            // Extract preferences from full profile
+            var preferences = new
+            {
+                language = userProfile!.Language,
+                theme = userProfile.Theme,
+                emailNotifications = userProfile.EmailNotifications,
+                dataRetentionDays = userProfile.DataRetentionDays
+            };
+
+            return Results.Json(preferences);
+        })
+        .RequireSession()
+        .RequireAuthorization()
+        .WithName("GetUserPreferences")
+        .WithTags("User Profile")
+        .WithSummary("Get user preferences")
+        .WithDescription(@"Retrieves user preferences including language, theme, email notifications, and data retention settings.
+
+**Authorization**: Requires active session (cookie-based authentication).
+
+**Response**: UserPreferences object with current settings.")
+        .Produces(200)
+        .Produces(401);
+
         return group;
     }
 }
@@ -201,3 +284,12 @@ public record UpdateProfilePayload(string? DisplayName, string? Email);
 /// Payload for changing password.
 /// </summary>
 public record ChangePasswordPayload(string CurrentPassword, string NewPassword);
+
+/// <summary>
+/// Payload for updating user preferences.
+/// </summary>
+public record UpdatePreferencesPayload(
+    string Language,
+    string Theme,
+    bool EmailNotifications,
+    int DataRetentionDays);

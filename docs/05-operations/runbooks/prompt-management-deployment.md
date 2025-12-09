@@ -194,7 +194,8 @@ pg_restore -d meepleai -t prompt_versions backup.sql
 psql -d meepleai -c "SELECT name, is_active FROM prompt_versions WHERE is_active = true;"
 
 # 4. Clear Redis cache
-redis-cli FLUSHDB
+export REDIS_PASS=$(cat infra/secrets/redis-password.txt)
+docker compose exec redis redis-cli -a "$REDIS_PASS" --no-auth-warning FLUSHDB
 
 # 5. Re-enable with monitoring
 export Features__PromptDatabase="true"
@@ -238,15 +239,18 @@ meepleai_prompt_activation_total
 
 **Diagnosis**:
 ```bash
+# Set Redis password (run once)
+export REDIS_PASS=$(cat infra/secrets/redis-password.txt)
+
 # Check Redis connectivity
-redis-cli PING
+docker compose exec redis redis-cli -a "$REDIS_PASS" --no-auth-warning PING
 # Expected: PONG
 
 # Check cache keys
-redis-cli KEYS "meepleai:prompt:*"
+docker compose exec redis redis-cli -a "$REDIS_PASS" --no-auth-warning KEYS "meepleai:prompt:*"
 
 # Check TTL
-redis-cli TTL "meepleai:prompt:qa-system-prompt"
+docker compose exec redis redis-cli -a "$REDIS_PASS" --no-auth-warning TTL "meepleai:prompt:qa-system-prompt"
 ```
 
 **Resolution**:

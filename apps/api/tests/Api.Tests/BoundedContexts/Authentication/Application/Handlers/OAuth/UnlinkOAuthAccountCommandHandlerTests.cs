@@ -7,6 +7,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Application.Handlers.OAuth;
 
@@ -14,6 +15,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Application.Handlers.OAuth;
 /// Tests for UnlinkOAuthAccountCommandHandler.
 /// Validates OAuth account unlinking logic with lockout prevention.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class UnlinkOAuthAccountCommandHandlerTests
 {
     private readonly Mock<IUserRepository> _userRepositoryMock;
@@ -35,9 +37,6 @@ public class UnlinkOAuthAccountCommandHandlerTests
             _unitOfWorkMock.Object,
             _loggerMock.Object);
     }
-
-    #region Success Cases
-
     [Fact]
     public async Task Handle_ValidCommand_UnlinksOAuthAccountSuccessfully()
     {
@@ -104,11 +103,6 @@ public class UnlinkOAuthAccountCommandHandlerTests
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
     }
-
-    #endregion
-
-    #region Error Cases
-
     [Fact]
     public async Task Handle_UserNotFound_ReturnsErrorResult()
     {
@@ -246,11 +240,6 @@ public class UnlinkOAuthAccountCommandHandlerTests
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
     }
-
-    #endregion
-
-    #region Helper Methods
-
     private static User CreateTestUserWithPassword(Guid userId)
     {
         return new User(
@@ -293,7 +282,4 @@ public class UnlinkOAuthAccountCommandHandlerTests
             tokenExpiresAt: DateTime.UtcNow.AddHours(1)
         );
     }
-
-    #endregion
 }
-

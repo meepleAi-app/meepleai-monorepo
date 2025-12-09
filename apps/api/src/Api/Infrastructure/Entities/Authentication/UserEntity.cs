@@ -15,6 +15,12 @@ public class UserEntity
     public DateTime CreatedAt { get; set; }
     public bool IsDemoAccount { get; set; } = false; // Issue #1663: Demo users for testing (user/editor@meepleai.dev)
 
+    // User Preferences
+    public string Language { get; set; } = "en";
+    public bool EmailNotifications { get; set; } = true;
+    public string Theme { get; set; } = "system";
+    public int DataRetentionDays { get; set; } = 90;
+
     // Two-Factor Authentication
     public string? TotpSecretEncrypted { get; set; }
     public bool IsTwoFactorEnabled { get; set; } = false;

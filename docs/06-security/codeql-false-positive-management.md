@@ -154,7 +154,7 @@ Most are from proper patterns:
 - ✅ Dictionary access without TryGetValue (QdrantVectorSearcher.cs)
 - ✅ Nullable Email in LINQ queries (RuleSpecService.cs - 2 fixes)
 - ✅ Email in mention resolution (RuleCommentService.cs)
-- ✅ Email in user search (UserManagementService.cs)
+- ✅ Email in user search (UserManagementService.cs - LEGACY, removed in DDD migration)
 - ✅ Email split without guard (OAuthService.cs)
 
 **Action**:

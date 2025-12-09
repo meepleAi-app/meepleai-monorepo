@@ -5,6 +5,7 @@ using Api.Services.LlmClients;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services;
 
@@ -13,6 +14,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services;
 /// ISSUE-974: BGAI-032 - Multi-model consensus validation (GPT-4 + Claude)
 /// ISSUE-975: BGAI-033 - Consensus similarity calculation using cosine ≥0.90
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class MultiModelValidationServiceTests
 {
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;

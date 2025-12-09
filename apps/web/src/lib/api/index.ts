@@ -29,6 +29,7 @@ import {
   createConfigClient,
   createBggClient,
   createAgentsClient,
+  createAdminClient,
   type AuthClient,
   type GamesClient,
   type SessionsClient,
@@ -37,6 +38,7 @@ import {
   type ConfigClient,
   type BggClient,
   type AgentsClient,
+  type AdminClient,
 } from './clients';
 
 // Re-export client-specific types for consumer convenience
@@ -58,9 +60,7 @@ export type {
   SortDirection,
 } from './clients/gamesClient';
 
-export type {
-  SessionHistoryFilters,
-} from './clients/sessionsClient';
+export type { SessionHistoryFilters } from './clients/sessionsClient';
 
 export type {
   CreateConfigurationRequest,
@@ -134,29 +134,8 @@ export interface ApiClient {
   /** AI Agents Management & Invocation (Issue #868) */
   agents: AgentsClient;
 
-  /**
-   * @deprecated Use feature-specific clients instead (auth, games, sessions, etc.)
-   * Direct HTTP methods for endpoints not yet migrated to modular clients
-   */
-  get<T>(path: string): Promise<T | null>;
-
-  /**
-   * @deprecated Use feature-specific clients instead (auth, games, sessions, etc.)
-   * Direct HTTP methods for endpoints not yet migrated to modular clients
-   */
-  post<T>(path: string, body?: unknown): Promise<T>;
-
-  /**
-   * @deprecated Use feature-specific clients instead (auth, games, sessions, etc.)
-   * Direct HTTP methods for endpoints not yet migrated to modular clients
-   */
-  put<T>(path: string, body: unknown): Promise<T>;
-
-  /**
-   * @deprecated Use feature-specific clients instead (auth, games, sessions, etc.)
-   * Direct HTTP methods for endpoints not yet migrated to modular clients
-   */
-  delete(path: string): Promise<void>;
+  /** Administration (Users & Prompts Management) - Issue #1679 */
+  admin: AdminClient;
 }
 
 /**
@@ -213,12 +192,7 @@ export function createApiClient(config?: ApiClientConfig): ApiClient {
     config: createConfigClient({ httpClient }),
     bgg: createBggClient({ httpClient }),
     agents: createAgentsClient({ httpClient }),
-
-    // Deprecated HTTP helpers for backward compatibility
-    get: <T>(path: string) => httpClient.get<T>(path),
-    post: <T>(path: string, body?: unknown) => httpClient.post<T>(path, body),
-    put: <T>(path: string, body: unknown) => httpClient.put<T>(path, body),
-    delete: (path: string) => httpClient.delete(path),
+    admin: createAdminClient({ httpClient }),
   };
 
   return client;

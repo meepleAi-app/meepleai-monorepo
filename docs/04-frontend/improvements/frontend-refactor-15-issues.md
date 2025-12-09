@@ -690,6 +690,7 @@ useHotkeys('cmd+/', () => showShortcuts())
 
 ### Technical Metrics
 
+{% raw %}
 | Metric | Baseline | Target | Measurement |
 |--------|----------|--------|-------------|
 | Largest file | 1564 lines | < 500 lines | LOC counter |
@@ -698,6 +699,7 @@ useHotkeys('cmd+/', () => showShortcuts())
 | Bundle size | 450 KB | < 350 KB | `next build` output |
 | Re-renders | Baseline | -80% | React DevTools Profiler |
 | Test coverage | 90% | 95%+ | Jest coverage report |
+{% endraw %}
 
 ### UX Metrics
 

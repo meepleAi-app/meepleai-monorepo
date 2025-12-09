@@ -84,12 +84,8 @@ const adminAuth = mockAdminAuth();
 
 **Key Functions**:
 - `setupUploadMocks(config)` - Complete upload flow router
-- `createAuthMock(options)` - Deprecated, use `common-fixtures`
-- `createGameMock(options)` - Deprecated, use `common-fixtures`
-- `createPdfMock(options)` - Deprecated, use `createMockPdfDocument`
-- `createRuleSpecMock(options)` - Deprecated, use `createMockRuleSpec`
 
-**Note**: This file now wraps `common-fixtures` for backward compatibility.
+**Note**: Uses `common-fixtures` for mock data generation (createMockAuthResponse, createMockGame, createMockPdfDocument, createMockRuleSpec).
 
 ### `test-helpers.ts`
 
@@ -248,15 +244,15 @@ mockApi.get.mockResolvedValueOnce(customStats);
 import { setupUploadMocks } from '../fixtures/upload-mocks';
 
 const mockFetch = setupUploadMocks({
-  auth: createAuthMock({ role: 'Editor' }),
-  games: [createGameMock()],
+  auth: createMockAuthResponse({ role: 'Editor' }),
+  games: [createMockGame()],
   uploadResponse: { documentId: 'pdf-123', fileName: 'rules.pdf' },
   pdfStatusSequence: [
     { processingStatus: 'pending' },
     { processingStatus: 'processing' },
     { processingStatus: 'completed' },
   ],
-  ruleSpec: createRuleSpecMock(),
+  ruleSpec: createMockRuleSpec(),
 });
 
 global.fetch = mockFetch;

@@ -171,6 +171,8 @@ public class ApiKeyQuotaEnforcementMiddleware
         await _next(context).ConfigureAwait(false);
     }
 
+    // Suppress S3459/S1144: Properties assigned by JsonSerializer.Deserialize (line 74)
+#pragma warning disable S3459, S1144
     private class ApiKeyMetadata
     {
         public ApiKeyQuota? Quota { get; set; }
@@ -181,4 +183,5 @@ public class ApiKeyQuotaEnforcementMiddleware
         public int? DailyLimit { get; set; }
         public int? HourlyLimit { get; set; }
     }
+#pragma warning restore S3459, S1144
 }

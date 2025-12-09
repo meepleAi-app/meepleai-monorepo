@@ -5,6 +5,7 @@ using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.Tests.Infrastructure;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Application.Queries;
 
@@ -12,6 +13,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Application.Queries;
 /// Comprehensive tests for ValidateSessionQueryHandler.
 /// Tests session validation, expiration, revocation, and user retrieval.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class ValidateSessionQueryHandlerTests
 {
     private readonly Mock<ISessionRepository> _sessionRepositoryMock;
@@ -31,9 +33,6 @@ public class ValidateSessionQueryHandlerTests
             _timeProvider
         );
     }
-
-    #region Happy Path Tests
-
     [Fact]
     public async Task Handle_WithValidSession_ReturnsSessionStatus()
     {
@@ -111,11 +110,6 @@ public class ValidateSessionQueryHandlerTests
 
         _sessionRepositoryMock.Verify(x => x.UpdateLastSeenAsync(session.Id, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Once);
     }
-
-    #endregion
-
-    #region Invalid Session Tests
-
     [Fact]
     public async Task Handle_WithNonExistentSession_ReturnsInvalidStatus()
     {
@@ -216,11 +210,6 @@ public class ValidateSessionQueryHandlerTests
 
         _sessionRepositoryMock.Verify(x => x.UpdateLastSeenAsync(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Never);
     }
-
-    #endregion
-
-    #region User Not Found Tests
-
     [Fact]
     public async Task Handle_WithDeletedUser_ReturnsInvalidStatus()
     {
@@ -257,11 +246,6 @@ public class ValidateSessionQueryHandlerTests
 
         _sessionRepositoryMock.Verify(x => x.UpdateLastSeenAsync(session.Id, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Once);
     }
-
-    #endregion
-
-    #region Token Hash Tests
-
     [Fact]
     public async Task Handle_UsesTokenHashForLookup()
     {
@@ -297,11 +281,6 @@ public class ValidateSessionQueryHandlerTests
             Times.Once
         );
     }
-
-    #endregion
-
-    #region DTO Mapping Tests
-
     [Fact]
     public async Task Handle_MapsDtoCorrectly()
     {
@@ -360,11 +339,6 @@ public class ValidateSessionQueryHandlerTests
         Assert.Null(result.User);
         Assert.False(result.IsValid);
     }
-
-    #endregion
-
-    #region Session Status Fields Tests
-
     [Fact]
     public async Task Handle_ValidSession_ReturnsExpiresAt()
     {
@@ -465,11 +439,6 @@ public class ValidateSessionQueryHandlerTests
         Assert.Equal(session.ExpiresAt, result.ExpiresAt); // Handler returns session timestamps
         Assert.Equal(session.LastSeenAt, result.LastSeenAt);
     }
-
-    #endregion
-
-    #region Edge Cases
-
     [Fact]
     public async Task Handle_WithInvalidTokenFormat_ReturnsInvalidStatus()
     {
@@ -554,11 +523,6 @@ public class ValidateSessionQueryHandlerTests
         // Assert - Query handlers don't call SaveChanges, but they do call UpdateLastSeenAsync
         _sessionRepositoryMock.Verify(x => x.UpdateLastSeenAsync(session.Id, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Once);
     }
-
-    #endregion
-
-    #region Helper Methods
-
     private User CreateTestUser(string email)
     {
         return new User(
@@ -569,7 +533,4 @@ public class ValidateSessionQueryHandlerTests
             role: Role.User
         );
     }
-
-    #endregion
 }
-

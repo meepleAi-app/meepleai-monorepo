@@ -17,6 +17,7 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Services;
 /// Verifies temp file strategy for PDFs ≥50MB to reduce memory pressure
 /// ISSUE-1818: Migrated to FluentAssertions for improved readability.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class LargePdfStreamingTests
 {
     private readonly ILogger<EnhancedPdfProcessingOrchestrator> _logger;
@@ -234,9 +235,6 @@ public class LargePdfStreamingTests
         result.Success.Should().BeTrue();
         // Temp file should be cleaned up automatically after extraction
     }
-
-    #region Helper Methods
-
     private static Stream CreateTestPdfStream(long size)
     {
         var stream = new MemoryStream();
@@ -258,8 +256,6 @@ public class LargePdfStreamingTests
         stream.Position = 0;
         return stream;
     }
-
-    #endregion
 }
 
 /// <summary>

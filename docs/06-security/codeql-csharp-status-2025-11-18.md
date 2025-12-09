@@ -113,7 +113,7 @@ grep -r '_logger\.Log.*\+ ' apps/api/src/Api --include="*.cs"  # 0 results
 - ✅ `QdrantVectorSearcher.cs` - Dictionary access without TryGetValue
 - ✅ `RuleSpecService.cs` (2 fixes) - Nullable Email in LINQ queries
 - ✅ `RuleCommentService.cs` - Email in mention resolution
-- ✅ `UserManagementService.cs` - Email in user search
+- ✅ `UserManagementService.cs` (LEGACY - removed in DDD migration) - Email in user search
 - ✅ `OAuthService.cs` - Email split without guard
 
 **Impact**:

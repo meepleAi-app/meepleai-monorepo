@@ -1,6 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Entities;
 
@@ -8,6 +9,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Entities;
 /// Unit tests for Agent aggregate root.
 /// Issue #866: AI Agents Entity & Configuration
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class AgentTests
 {
     [Fact]

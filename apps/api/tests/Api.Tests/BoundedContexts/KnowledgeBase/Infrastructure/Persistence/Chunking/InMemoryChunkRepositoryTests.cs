@@ -4,12 +4,14 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure.Persistence.Chunking;
 
 /// <summary>
 /// Unit tests for InMemoryChunkRepository.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class InMemoryChunkRepositoryTests
 {
     private readonly InMemoryChunkRepository _repository;

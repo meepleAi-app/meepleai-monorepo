@@ -264,7 +264,7 @@ public async Task CacheInvalidation_Concurrent_NoStaleData()
 - TOCTOU timing window exists but handled gracefully with exceptions
 - Consider implementing optimistic locking for PDF metadata updates
 
-### ✅ UserManagementService (MEDIUM PRIORITY)
+### ✅ UserManagementService (LEGACY - removed in DDD migration) (MEDIUM PRIORITY)
 - ✅ Concurrent user creation with same email
 - ✅ Concurrent user updates (optimistic concurrency)
 - ✅ Concurrent role assignments

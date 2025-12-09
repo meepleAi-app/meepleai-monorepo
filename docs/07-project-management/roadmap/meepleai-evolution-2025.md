@@ -31,7 +31,7 @@
 
 # 4. Game Management
 ✓ RuleSpec v0 validation: Check schema compliance
-✓ Game CRUD operations: Test GameService endpoints
+✓ Game CRUD operations: Test Game CQRS handlers
 ✓ BGG integration: Verify BggApiService (7-day cache)
 ✓ Version control: Test RuleSpecDiffService
 ```

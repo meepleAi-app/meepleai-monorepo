@@ -8,7 +8,7 @@
 import React from 'react';
 import { AuthProvider } from '@/components/auth/AuthProvider';
 import { GameProvider } from '@/components/game/GameProvider';
-import { ChatProvider } from '@/components/chat/ChatProvider';
+import { ChatStoreProvider } from '@/store/chat/ChatStoreProvider';
 import { UIProvider } from '@/components/ui/UIProvider';
 import { api } from '@/lib/api';
 
@@ -40,15 +40,16 @@ export function setupProviderMocks() {
 
 /**
  * Full provider tree wrapper for integration tests
- * Wraps children in: Auth → Game → Chat → UI
+ * Issue #1676 Phase 3: Migrated from ChatProvider to ChatStoreProvider
+ * Wraps children in: Auth → Game → ChatStore → UI
  */
 export function AllProviders({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
       <GameProvider>
-        <ChatProvider>
+        <ChatStoreProvider>
           <UIProvider>{children}</UIProvider>
-        </ChatProvider>
+        </ChatStoreProvider>
       </GameProvider>
     </AuthProvider>
   );
@@ -61,9 +62,7 @@ export function AllProviders({ children }: { children: React.ReactNode }) {
  * Note: Call setupProviderMocks() in your beforeEach if you haven't already mocked the API
  */
 export function createWrapper() {
-  return ({ children }: { children: React.ReactNode }) => (
-    <AllProviders>{children}</AllProviders>
-  );
+  return ({ children }: { children: React.ReactNode }) => <AllProviders>{children}</AllProviders>;
 }
 
 /**
@@ -103,20 +102,8 @@ export const mockProviders = () => {
     GameProvider: ({ children }: { children: React.ReactNode }) => children,
   }));
 
-  // Mock ChatProvider
-  vi.mock('@/components/chat/ChatProvider', () => ({
-    useChat: vi.fn(() => ({
-      activeChatId: null,
-      chats: [],
-      isLoading: false,
-      error: null,
-      setActiveChatId: vi.fn(),
-      refreshChats: vi.fn(),
-      createChat: vi.fn(),
-      deleteChat: vi.fn(),
-    })),
-    ChatProvider: ({ children }: { children: React.ReactNode }) => children,
-  }));
+  // Issue #1676 Phase 3: ChatProvider mock removed (migrated to Zustand store)
+  // Components now use useChatStore directly, no need for provider mock
 
   // Mock UIProvider
   vi.mock('@/components/ui/UIProvider', () => ({

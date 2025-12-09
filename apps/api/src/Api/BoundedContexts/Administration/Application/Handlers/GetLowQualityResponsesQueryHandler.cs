@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.Administration.Application.Handlers;
 /// Retrieves low-quality AI responses for admin review.
 /// AI-11: Quality tracking endpoints
 /// NOTE: Uses DbContext directly for AiRequestLogs (legacy infrastructure entity).
-/// TODO: Create proper repository when AiRequestLog is migrated to bounded context.
+/// ISSUE-1674: Create proper repository when AiRequestLog is migrated to bounded context.
 /// </summary>
 public class GetLowQualityResponsesQueryHandler : IQueryHandler<GetLowQualityResponsesQuery, LowQualityResponsesResult>
 {

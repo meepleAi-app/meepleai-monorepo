@@ -5,6 +5,7 @@ using Api.Tests.Helpers;
 using Moq;
 using Xunit;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 
@@ -12,9 +13,10 @@ namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 /// Tests for GetAllUsersQueryHandler.
 /// Tests user listing with pagination, filtering, and sorting.
 /// NOTE: Uses DbContext directly - simplified tests due to mocking complexity.
-/// TODO: Add integration tests for full pagination/filtering workflow.
+/// ISSUE-1674: Add integration tests for full pagination/filtering workflow.
 /// ISSUE-1500: TEST-002 - Fixed test isolation (fresh context per test)
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class GetAllUsersQueryHandlerTests
 {
     /// <summary>
@@ -24,9 +26,6 @@ public class GetAllUsersQueryHandlerTests
     {
         return DbContextHelper.CreateInMemoryDbContext();
     }
-
-    #region Construction Tests
-
     [Fact]
     public void Constructor_WithValidDbContext_CreatesInstance()
     {
@@ -47,11 +46,6 @@ public class GetAllUsersQueryHandlerTests
         Assert.Throws<ArgumentNullException>(() =>
             new GetAllUsersQueryHandler(null!));
     }
-
-    #endregion
-
-    #region Query Tests
-
     [Fact]
     public void Query_WithDefaultPagination_ConstructsCorrectly()
     {
@@ -130,9 +124,6 @@ public class GetAllUsersQueryHandlerTests
         Assert.Equal("displayname", query.SortBy);
         Assert.Equal("asc", query.SortOrder);
     }
-
-    #endregion
-
     // NOTE: Full integration tests for Handle method (pagination, filtering, sorting)
     // should be in integration test suite due to DbContext complexity.
     // See integration-tests.yml workflow.
@@ -147,4 +138,3 @@ public class GetAllUsersQueryHandlerTests
     // 7. Empty result sets
     // 8. LastSeenAt calculation from active sessions
 }
-

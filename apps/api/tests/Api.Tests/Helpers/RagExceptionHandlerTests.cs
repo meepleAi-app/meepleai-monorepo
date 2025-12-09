@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Helpers;
 
@@ -13,6 +14,7 @@ namespace Api.Tests.Helpers;
 /// Unit tests for RagExceptionHandler (Issue #1441).
 /// Verifies centralized exception handling eliminates duplicate catch blocks.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class RagExceptionHandlerTests
 {
     private readonly Mock<ILogger> _mockLogger;

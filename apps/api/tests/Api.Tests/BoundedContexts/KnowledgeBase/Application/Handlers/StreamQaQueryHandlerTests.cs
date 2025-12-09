@@ -12,6 +12,7 @@ using Microsoft.Extensions.Time.Testing;
 using Moq;
 using System.Text;
 using Xunit;
+using Api.Tests.Constants;
 using DomainSearchResult = Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
@@ -21,6 +22,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// Tests streaming RAG Q&A with token-by-token delivery, chat context, and caching.
 /// Coverage: validation, search, LLM streaming, cache hit/miss, chat context, confidence tracking, errors, cancellation.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class StreamQaQueryHandlerTests
 {
     private readonly Mock<IEmbeddingRepository> _embeddingRepositoryMock;
@@ -81,9 +83,6 @@ public class StreamQaQueryHandlerTests
             _fakeTimeProvider
         );
     }
-
-    #region Happy Path Tests
-
     [Fact]
     public async Task Handle_ValidQuery_StreamsCorrectEvents()
     {
@@ -224,7 +223,7 @@ public class StreamQaQueryHandlerTests
         var tokenEvents = events.Where(e => e.Type == StreamingEventType.Token).ToList();
         Assert.NotEmpty(tokenEvents);
 
-        var reconstructedAnswer = string.Join("", tokenEvents.Select(e => ((StreamingToken)e.Data).token));
+        var reconstructedAnswer = string.Join("", tokenEvents.Select(e => ((StreamingToken)e.Data!).token));
         Assert.Equal(cachedAnswer, reconstructedAnswer);
 
         // Complete event should have cached metadata
@@ -246,11 +245,6 @@ public class StreamQaQueryHandlerTests
             Times.Never
         );
     }
-
-    #endregion
-
-    #region Chat Context Integration Tests
-
     [Fact]
     public async Task Handle_WithThreadId_IncludesChatHistory()
     {
@@ -364,11 +358,6 @@ public class StreamQaQueryHandlerTests
         var completeEvent = events.LastOrDefault(e => e.Type == StreamingEventType.Complete);
         Assert.NotNull(completeEvent);
     }
-
-    #endregion
-
-    #region Validation Tests
-
     [Fact]
     public async Task Handle_EmptyQuery_ReturnsError()
     {
@@ -425,11 +414,6 @@ public class StreamQaQueryHandlerTests
         Assert.Single(events);
         Assert.Equal(StreamingEventType.Error, events[0].Type);
     }
-
-    #endregion
-
-    #region Error Handling Tests
-
     [Fact]
     public async Task Handle_SearchReturnsNoResults_ReturnsError()
     {
@@ -474,11 +458,6 @@ public class StreamQaQueryHandlerTests
             Times.Never
         );
     }
-
-    #endregion
-
-    #region Cancellation Tests
-
     [Fact]
     public async Task Handle_CancellationRequested_StopsStreaming()
     {
@@ -526,11 +505,6 @@ public class StreamQaQueryHandlerTests
         Assert.True(events.Count < 100); // Should stop before all tokens
         Assert.True(cts.IsCancellationRequested);
     }
-
-    #endregion
-
-    #region Quality Tracking Tests
-
     [Fact]
     public async Task Handle_CalculatesConfidenceScores()
     {
@@ -575,11 +549,6 @@ public class StreamQaQueryHandlerTests
         _qualityTrackingServiceMock.Verify(x => x.CalculateLlmConfidence(It.IsAny<string>(), It.IsAny<List<DomainSearchResult>>()), Times.Once);
         _qualityTrackingServiceMock.Verify(x => x.CalculateOverallConfidence(searchConfidence, llmConfidence), Times.Once);
     }
-
-    #endregion
-
-    #region Helper Methods
-
     private void SetupHappyPathMocks(string gameId, string userQuery)
     {
         _cacheMock
@@ -734,13 +703,20 @@ public class StreamQaQueryHandlerTests
             .Returns(new Confidence(0.87));
     }
 
-    private async IAsyncEnumerable<string> StreamTokensAsync(string[] tokens)
+    // ISSUE-1725: Updated to return StreamChunk instead of string
+    private async IAsyncEnumerable<StreamChunk> StreamTokensAsync(string[] tokens)
     {
         foreach (var token in tokens)
         {
             await Task.Delay(TestConstants.Timing.MinimalDelay); // Simulate async streaming
-            yield return token;
+            yield return new StreamChunk(Content: token);
         }
+        // Return final chunk with mock usage metadata
+        yield return new StreamChunk(
+            Content: null,
+            Usage: new LlmUsage(10, 8, 18),
+            Cost: new LlmCost { InputCost = 0.0001m, OutputCost = 0.0008m, ModelId = "test-model", Provider = "Test" },
+            IsFinal: true);
     }
 
     private ChatThread CreateChatThread(Guid threadId, string gameId, int messageCount)
@@ -760,7 +736,5 @@ public class StreamQaQueryHandlerTests
 
         return thread;
     }
-
-    #endregion
 }
 

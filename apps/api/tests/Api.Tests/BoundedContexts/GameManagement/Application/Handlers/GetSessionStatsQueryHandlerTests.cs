@@ -5,6 +5,7 @@ using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Tests.BoundedContexts.GameManagement.TestHelpers;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 
@@ -12,6 +13,7 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 /// Comprehensive tests for GetSessionStatsQueryHandler.
 /// Tests session statistics aggregation, filtering, and win rate calculations.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class GetSessionStatsQueryHandlerTests
 {
     private readonly Mock<IGameSessionRepository> _sessionRepositoryMock;
@@ -22,9 +24,6 @@ public class GetSessionStatsQueryHandlerTests
         _sessionRepositoryMock = new Mock<IGameSessionRepository>();
         _handler = new GetSessionStatsQueryHandler(_sessionRepositoryMock.Object);
     }
-
-    #region Happy Path Tests
-
     [Fact]
     public async Task Handle_WithMultipleSessions_ReturnsAggregatedStatistics()
     {
@@ -169,11 +168,6 @@ public class GetSessionStatsQueryHandlerTests
         Assert.Equal("Charlie", result.TopPlayers[2].PlayerName);
         Assert.Equal(1, result.TopPlayers[2].WinCount);
     }
-
-    #endregion
-
-    #region Edge Cases
-
     [Fact]
     public async Task Handle_WithNoSessions_ReturnsZeroStatistics()
     {
@@ -285,11 +279,6 @@ public class GetSessionStatsQueryHandlerTests
         Assert.Equal(3, result.TopPlayers[0].WinCount);
         Assert.Equal(100.00m, result.TopPlayers[0].WinRate); // 3/3 * 100 = 100%
     }
-
-    #endregion
-
-    #region Filter Tests
-
     [Fact]
     public async Task Handle_WithGameIdFilter_PassesFilterToRepository()
     {
@@ -351,11 +340,6 @@ public class GetSessionStatsQueryHandlerTests
             r => r.FindHistoryAsync(null, startDate, endDate, null, null, It.IsAny<CancellationToken>()),
             Times.Once);
     }
-
-    #endregion
-
-    #region Duration Calculation Tests
-
     [Fact]
     public async Task Handle_WithSingleSession_ReturnsExactDuration()
     {
@@ -408,11 +392,6 @@ public class GetSessionStatsQueryHandlerTests
         Assert.NotNull(result);
         Assert.Equal(62, result.AverageDurationMinutes); // (61 + 62 + 63) / 3 = 62
     }
-
-    #endregion
-
-    #region Win Rate Precision Tests
-
     [Fact]
     public async Task Handle_RoundsWinRatesToTwoDecimalPlaces()
     {
@@ -439,7 +418,5 @@ public class GetSessionStatsQueryHandlerTests
         var alice = result.TopPlayers.First(p => p.PlayerName == "Alice");
         Assert.Equal(33.33m, alice.WinRate); // 1/3 * 100 = 33.33%
     }
-
-    #endregion
 }
 

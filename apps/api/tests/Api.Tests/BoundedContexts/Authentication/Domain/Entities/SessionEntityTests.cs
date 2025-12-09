@@ -4,6 +4,7 @@ using Api.SharedKernel.Domain.Exceptions;
 using Api.Tests.BoundedContexts.Authentication.TestHelpers;
 using Microsoft.Extensions.Time.Testing;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Domain.Entities;
 
@@ -11,10 +12,9 @@ namespace Api.Tests.BoundedContexts.Authentication.Domain.Entities;
 /// Comprehensive domain tests for Session entity.
 /// Tests session lifecycle, validation, expiration, revocation, and edge cases.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class SessionEntityTests
 {
-    #region Constructor Tests
-
     [Fact]
     public void Constructor_WithValidData_CreatesSession()
     {
@@ -87,11 +87,6 @@ public class SessionEntityTests
         Assert.Null(session.IpAddress);
         Assert.Null(session.UserAgent);
     }
-
-    #endregion
-
-    #region IsValid Tests
-
     [Fact]
     public void IsValid_WithValidSession_ReturnsTrue()
     {
@@ -175,11 +170,6 @@ public class SessionEntityTests
         // Assert
         Assert.True(isValid);
     }
-
-    #endregion
-
-    #region IsExpired Tests
-
     [Fact]
     public void IsExpired_WithValidSession_ReturnsFalse()
     {
@@ -230,11 +220,6 @@ public class SessionEntityTests
         // Assert
         Assert.True(isExpired);
     }
-
-    #endregion
-
-    #region IsRevoked Tests
-
     [Fact]
     public void IsRevoked_WithActiveSession_ReturnsFalse()
     {
@@ -262,11 +247,6 @@ public class SessionEntityTests
         // Assert
         Assert.True(isRevoked);
     }
-
-    #endregion
-
-    #region UpdateLastSeen Tests
-
     [Fact]
     public void UpdateLastSeen_SetsTimestamp()
     {
@@ -300,11 +280,6 @@ public class SessionEntityTests
         Assert.NotNull(session.LastSeenAt);
         Assert.True(session.LastSeenAt > firstUpdate);
     }
-
-    #endregion
-
-    #region Revoke Tests
-
     [Fact]
     public void Revoke_WithActiveSession_RevokesSuccessfully()
     {
@@ -347,11 +322,6 @@ public class SessionEntityTests
         var exception = Assert.Throws<DomainException>(() => session.Revoke());
         Assert.Equal(firstRevokedAt, session.RevokedAt); // Timestamp unchanged
     }
-
-    #endregion
-
-    #region Extend Tests
-
     [Fact]
     public void Extend_WithValidSession_ExtendsSuccessfully()
     {
@@ -425,11 +395,6 @@ public class SessionEntityTests
             session.Extend(TimeSpan.FromDays(-1), timeProvider));
         Assert.Contains("positive", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
-
-    #endregion
-
-    #region Builder Integration Tests
-
     [Fact]
     public void Builder_CreateDefault_ProducesValidSession()
     {
@@ -454,7 +419,4 @@ public class SessionEntityTests
         // Assert
         Assert.True(session.IsExpired(timeProvider));
     }
-
-    #endregion
 }
-

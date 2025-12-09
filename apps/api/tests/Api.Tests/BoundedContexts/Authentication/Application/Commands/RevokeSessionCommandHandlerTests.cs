@@ -6,12 +6,14 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Application.Commands;
 
 /// <summary>
 /// Tests for RevokeSessionCommandHandler focusing on authorization.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class RevokeSessionCommandHandlerTests
 {
     private readonly Mock<ISessionRepository> _sessionRepositoryMock;
@@ -126,4 +128,3 @@ public class RevokeSessionCommandHandlerTests
         Assert.Equal("Session not found", result.ErrorMessage);
     }
 }
-

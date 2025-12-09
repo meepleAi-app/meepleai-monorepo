@@ -15,16 +15,17 @@
  */
 
 import React from 'react';
-import { useChatContext } from '@/hooks/useChatContext';
+import { useChatWithStreaming } from '@/hooks/useChatWithStreaming';
 import { VirtualizedMessageList } from './VirtualizedMessageList';
 import { SkeletonLoader } from '../loading/SkeletonLoader';
 
 export interface MessageListProps {
   /** Citation click handler for PDF page jump (BGAI-074) */
-  onCitationClick?: (citationId: string) => void;
+  onCitationClick?: (documentId: string, pageNumber: number) => void;
 }
 
 export function MessageList({ onCitationClick }: MessageListProps) {
+  // Issue #1676: Uses streaming-enabled hook (combines Zustand + SSE)
   const {
     messages,
     activeChatId,
@@ -33,7 +34,7 @@ export function MessageList({ onCitationClick }: MessageListProps) {
     isStreaming,
     streamingAnswer,
     streamingState: streamingStateMessage,
-  } = useChatContext();
+  } = useChatWithStreaming();
 
   // Loading state
   if (loading.messages) {

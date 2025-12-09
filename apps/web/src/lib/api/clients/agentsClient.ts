@@ -11,12 +11,16 @@ import {
   AgentResponseDtoSchema,
   GetAllAgentsResponseSchema,
   ConfigureAgentResponseSchema,
+  ChessAgentResponseSchema,
+  SetupGuideResponseSchema,
   type AgentDto,
   type AgentResponseDto,
   type InvokeAgentRequest,
   type CreateAgentRequest,
   type ConfigureAgentRequest,
   type ConfigureAgentResponse,
+  type ChessAgentResponse,
+  type SetupGuideResponse,
 } from '../schemas';
 
 export interface CreateAgentsClientParams {
@@ -46,10 +50,11 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
       }
 
       const url = `/api/v1/agents${params.toString() ? `?${params.toString()}` : ''}`;
-      const response = await httpClient.get<{ success: boolean; agents: AgentDto[]; count: number }>(
-        url,
-        GetAllAgentsResponseSchema
-      );
+      const response = await httpClient.get<{
+        success: boolean;
+        agents: AgentDto[];
+        count: number;
+      }>(url, GetAllAgentsResponseSchema);
 
       return response?.agents ?? [];
     },
@@ -98,11 +103,7 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
      * @param request Agent creation request
      */
     async create(request: CreateAgentRequest): Promise<AgentDto> {
-      const response = await httpClient.post<AgentDto>(
-        '/api/v1/agents',
-        request,
-        AgentDtoSchema
-      );
+      const response = await httpClient.post<AgentDto>('/api/v1/agents', request, AgentDtoSchema);
 
       if (!response) {
         throw new Error('Failed to create agent: no response from server');
@@ -128,6 +129,48 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
         throw new Error('Failed to configure agent: no response from server');
       }
 
+      return response;
+    },
+
+    /**
+     * Invoke chess agent (convenience wrapper)
+     * POST /api/v1/agents/chess
+     *
+     * Issue #1977: Added ChessAgentResponseSchema validation
+     */
+    async invokeChess(request: {
+      question: string;
+      fenPosition?: string;
+    }): Promise<ChessAgentResponse> {
+      const response = await httpClient.post(
+        '/api/v1/agents/chess',
+        request,
+        ChessAgentResponseSchema
+      );
+      if (!response) {
+        throw new Error('Failed to invoke chess agent: no response from server');
+      }
+      return response;
+    },
+
+    /**
+     * Generate setup guide (convenience wrapper)
+     * POST /api/v1/agents/setup
+     *
+     * Issue #1977: Added SetupGuideResponseSchema validation
+     */
+    async generateSetupGuide(request: {
+      gameId: string;
+      chatId: string | null;
+    }): Promise<SetupGuideResponse> {
+      const response = await httpClient.post(
+        '/api/v1/agents/setup',
+        request,
+        SetupGuideResponseSchema
+      );
+      if (!response) {
+        throw new Error('Failed to generate setup guide: no response from server');
+      }
       return response;
     },
   };

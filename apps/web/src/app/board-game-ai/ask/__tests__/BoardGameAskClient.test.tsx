@@ -20,7 +20,9 @@ import { useChatQuery } from '@/lib/hooks/useChatQuery';
 // Mock dependencies
 vi.mock('@/lib/api', () => ({
   api: {
-    get: vi.fn(),
+    games: {
+      getAll: vi.fn(),
+    },
   },
 }));
 vi.mock('@/lib/hooks/useChatQuery');
@@ -56,7 +58,7 @@ describe('BoardGameAskClient', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     const { api } = await import('@/lib/api');
-    vi.mocked(api.get).mockResolvedValue(mockGames);
+    vi.mocked(api.games.getAll).mockResolvedValue(mockGames);
     (useChatQuery as any).mockReturnValue([mockQueryState, mockQueryControls]);
   });
 
@@ -105,7 +107,7 @@ describe('BoardGameAskClient', () => {
       render(<BoardGameAskClient />);
 
       await waitFor(() => {
-        expect(api.get).toHaveBeenCalledWith('/api/v1/games');
+        expect(api.games.getAll).toHaveBeenCalled();
       });
 
       // Auto-selection happens via useEffect, verify select has value
@@ -118,14 +120,21 @@ describe('BoardGameAskClient', () => {
     it('should display games in select dropdown', async () => {
       render(<BoardGameAskClient />);
 
+      // Wait for games to load and first game to be auto-selected
+      const selectTrigger = screen.getByLabelText(/select game/i);
       await waitFor(() => {
-        expect(screen.getByText('Catan')).toBeInTheDocument();
+        expect(selectTrigger).not.toHaveTextContent('Loading games...');
+      });
+
+      // Verify the selected game is displayed in the trigger (auto-selected first game)
+      await waitFor(() => {
+        expect(selectTrigger).toHaveTextContent('Catan');
       });
     });
 
     it('should show loading state while fetching games', async () => {
       const { api } = await import('@/lib/api');
-      vi.mocked(api.get).mockImplementation(
+      vi.mocked(api.games.getAll).mockImplementation(
         () => new Promise(resolve => setTimeout(() => resolve(mockGames), 100))
       );
 
@@ -136,7 +145,7 @@ describe('BoardGameAskClient', () => {
 
     it('should display error when games fetch fails', async () => {
       const { api } = await import('@/lib/api');
-      vi.mocked(api.get).mockRejectedValue(new Error('Network error'));
+      vi.mocked(api.games.getAll).mockRejectedValue(new Error('Network error'));
 
       render(<BoardGameAskClient />);
 
@@ -184,7 +193,7 @@ describe('BoardGameAskClient', () => {
 
     it('should be disabled when no game is selected', async () => {
       const { api } = await import('@/lib/api');
-      vi.mocked(api.get).mockResolvedValue([]);
+      vi.mocked(api.games.getAll).mockResolvedValue([]);
       render(<BoardGameAskClient />);
 
       await waitFor(() => {
@@ -474,7 +483,7 @@ describe('BoardGameAskClient', () => {
 
       // Step 1: Wait for games to load and verify game selected
       await waitFor(() => {
-        expect(api.get).toHaveBeenCalledWith('/api/v1/games');
+        expect(api.games.getAll).toHaveBeenCalled();
       });
 
       await waitFor(() => {

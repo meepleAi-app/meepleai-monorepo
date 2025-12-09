@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 
@@ -15,6 +16,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// Tests for ProvideAgentFeedbackCommandHandler.
 /// Tests feedback submission validation and storage.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class ProvideAgentFeedbackCommandHandlerTests
 {
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
@@ -35,9 +37,6 @@ public class ProvideAgentFeedbackCommandHandlerTests
     {
         return DbContextHelper.CreateInMemoryDbContext();
     }
-
-    #region Validation Tests
-
     [Fact]
     public async Task Handle_WithValidHelpfulOutcome_Succeeds()
     {
@@ -215,11 +214,6 @@ public class ProvideAgentFeedbackCommandHandlerTests
         var feedback = await context.AgentFeedbacks.FirstOrDefaultAsync(TestCancellationToken);
         Assert.Null(feedback);
     }
-
-    #endregion
-
-    #region Required Field Validation Tests
-
     [Fact]
     public async Task Handle_WithNullMessageId_ThrowsArgumentException()
     {
@@ -295,11 +289,6 @@ public class ProvideAgentFeedbackCommandHandlerTests
         await Assert.ThrowsAsync<ArgumentException>(
             () => handler.Handle(command, TestContext.Current.CancellationToken));
     }
-
-    #endregion
-
-    #region Update Tests
-
     [Fact]
     public async Task Handle_WithExistingFeedback_UpdatesOutcome()
     {
@@ -339,7 +328,5 @@ public class ProvideAgentFeedbackCommandHandlerTests
         Assert.Equal("not-helpful", feedback.Outcome);
         Assert.Equal("/api/v1/search", feedback.Endpoint);
     }
-
-    #endregion
 }
 

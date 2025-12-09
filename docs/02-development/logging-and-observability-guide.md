@@ -33,15 +33,15 @@ cd infra
 docker compose up -d seq jaeger prometheus grafana
 
 # Verify services
-curl http://localhost:8081/health  # Seq
-curl http://localhost:16686/        # Jaeger UI
+curl http://localhost:8180/health  # HyperDX
+curl http://localhost:8180/        # HyperDX UI
 curl http://localhost:9090/         # Prometheus
 curl http://localhost:3001/         # Grafana
 ```
 
 **URLs**:
-- **Seq (Logs)**: http://localhost:8081
-- **Jaeger (Traces)**: http://localhost:16686
+- **HyperDX (Logs)**: http://localhost:8180
+- **HyperDX (Traces)**: http://localhost:8180
 - **Prometheus (Metrics)**: http://localhost:9090
 - **Grafana (Dashboards)**: http://localhost:3001
 
@@ -72,7 +72,7 @@ public class MyService
 ```
 
 **Perché structured logging?**
-- ✅ Parametri indexati separatamente in Seq (query: `OrderId = "abc-123"`)
+- ✅ Parametri indexati separatamente in HyperDX (query: `OrderId = "abc-123"`)
 - ✅ Performance migliore (no string allocation)
 - ✅ Type-safe
 
@@ -436,10 +436,10 @@ Tutti gli errori gestiti da `ApiExceptionHandlerMiddleware` ritornano:
 }
 ```
 
-**Correlation ID** può essere usato per cercare logs in Seq:
+**Correlation ID** può essere usato per cercare logs in HyperDX:
 
 ```
-# In Seq search
+# In HyperDX search
 CorrelationId = "0HN7GQJK3QJ9K"
 ```
 
@@ -980,7 +980,7 @@ using (var activity = MeepleAiActivitySources.Rag.StartActivity("ProcessRagQuery
 }
 ```
 
-**Risultato in Jaeger**:
+**Risultato in HyperDX**:
 
 ```
 Trace: 5f3d7c8a9b2e1f4d
@@ -1032,12 +1032,12 @@ _logger.LogInformation(
     httpContext.TraceIdentifier);  // = TraceId
 ```
 
-**Cerca in Seq**:
+**Cerca in HyperDX**:
 ```
 CorrelationId = "5f3d7c8a9b2e1f4d"
 ```
 
-**Cerca in Jaeger**:
+**Cerca in HyperDX**:
 ```
 Trace ID: 5f3d7c8a9b2e1f4d
 ```
@@ -1319,16 +1319,16 @@ public void UpdateLastSeenAt()
 
 ## 🔧 Troubleshooting
 
-### Logs non appaiono in Seq
+### Logs non appaiono in HyperDX
 
 **Verifica**:
-1. Seq è running: `curl http://localhost:8081/health`
+1. HyperDX è running: `curl http://localhost:8180/health`
 2. `SEQ_URL` configurato in environment variables o appsettings
-3. Log level in configuration: `Logging:LogLevel:Seq` almeno `Debug`
+3. Log level in configuration: `Logging:LogLevel:HyperDX` almeno `Debug`
 
 **Debug**:
 ```bash
-# Check Seq logs
+# Check HyperDX logs
 docker logs seq
 
 # Check app logs (console sink)
@@ -1340,22 +1340,22 @@ docker logs meepleai-api
   "Logging": {
     "LogLevel": {
       "Default": "Information",
-      "Seq": "Debug"  # ← Ensure this is set
+      "HyperDX": "Debug"  # ← Ensure this is set
     }
   }
 }
 ```
 
-### Traces non appaiono in Jaeger
+### Traces non appaiono in HyperDX
 
 **Verifica**:
-1. Jaeger è running: `curl http://localhost:16686/`
+1. HyperDX è running: `curl http://localhost:8180/`
 2. `OTEL_EXPORTER_OTLP_ENDPOINT` configurato: `http://jaeger:4318`
 3. Activity Source registrato in `ObservabilityServiceExtensions.cs`
 
 **Debug**:
 ```bash
-# Check Jaeger logs
+# Check HyperDX logs
 docker logs jaeger
 
 # Check if spans are created
@@ -1399,7 +1399,7 @@ _logger.LogInformation(
     context.Request.Path,
     context.TraceIdentifier);
 
-// Search in Seq
+// Search in HyperDX
 CorrelationId = "abc-123" or TraceIdentifier = "abc-123"
 ```
 
@@ -1427,15 +1427,95 @@ var history = await _mediator.Send(query);
 
 ---
 
+## 💰 LLM Cost Monitoring (Issue #1725)
+
+### Quick Start
+
+**Dashboard**: http://localhost:3001/d/llm-cost-monitoring
+
+**Metriche Chiave**:
+- `meepleai_llm_cost_usd` - Costo per richiesta LLM
+- `gen_ai.client.token.usage` - Token usage (prompt + completion)
+- `gen_ai.client.operation.duration` - Latenza LLM
+
+### Registrare Token Usage (Streaming)
+
+```csharp
+// Issue #1725: StreamChunk pattern per streaming con usage metadata
+await foreach (var chunk in llmService.GenerateCompletionStreamAsync(...))
+{
+    if (!string.IsNullOrEmpty(chunk.Content))
+    {
+        // Processa contenuto
+        yield return chunk.Content;
+    }
+
+    if (chunk.IsFinal && chunk.Usage != null && chunk.Cost != null)
+    {
+        // Registra metriche OTel
+        MeepleAiMetrics.RecordLlmTokenUsage(
+            promptTokens: chunk.Usage.PromptTokens,
+            completionTokens: chunk.Usage.CompletionTokens,
+            totalTokens: chunk.Usage.TotalTokens,
+            modelId: chunk.Cost.ModelId,
+            provider: chunk.Cost.Provider,
+            costUsd: chunk.Cost.TotalCost,
+            userSegment: "pro",           // Opzionale: segmento utente
+            userIdHash: "a1b2c3d4");      // Opzionale: hash privacy-safe
+    }
+}
+```
+
+### Query Prometheus Utili
+
+**Costo giornaliero**:
+```promql
+sum(increase(meepleai_llm_cost_usd[1d])) by (model_id)
+```
+
+**Token rate (ultimi 5min)**:
+```promql
+sum(rate(gen_ai_client_token_usage{gen_ai_token_type="input"}[5m])) by (gen_ai_request_model)
+```
+
+**Costo per query**:
+```promql
+sum(rate(meepleai_llm_cost_usd[5m])) / sum(rate(meepleai_agent_invocations_total[5m]))
+```
+
+**Costo per segmento utente**:
+```promql
+sum(meepleai_llm_cost_usd) by (user_segment)
+```
+
+### Budget Alerts
+
+**Configurazione** (`appsettings.json`):
+```json
+"LlmBudgetAlerts": {
+  "DailyBudgetUsd": 50.00,
+  "MonthlyBudgetUsd": 1000.00,
+  "Thresholds": { "Warning": 0.80, "Critical": 0.95 },
+  "CheckIntervalMinutes": 60
+}
+```
+
+**Runbook**: [LLM Budget Alerts](../05-operations/runbooks/llm-budget-alerts.md)
+
+**Dashboard**: [Grafana LLM Cost Monitoring](../05-operations/monitoring/grafana-llm-cost-dashboard.md)
+
+---
+
 ## 📚 Risorse Aggiuntive
 
 ### Documentazione
 
 - [Serilog Documentation](https://github.com/serilog/serilog/wiki)
 - [OpenTelemetry .NET](https://opentelemetry.io/docs/instrumentation/net/)
+- [OpenTelemetry GenAI Semantic Conventions](https://opentelemetry.io/docs/specs/semconv/gen-ai/)
 - [Prometheus Query Language](https://prometheus.io/docs/prometheus/latest/querying/basics/)
-- [Jaeger Tracing](https://www.jaegertracing.io/docs/)
-- [Seq Query Language](https://docs.datalust.co/docs/the-seq-query-language)
+- [HyperDX Tracing](https://www.jaegertracing.io/docs/)
+- [HyperDX Query Language](https://docs.datalust.co/docs/the-seq-query-language)
 
 ### Code References
 
@@ -1448,8 +1528,8 @@ var history = await _mediator.Send(query);
 
 ### Dashboard URLs (Local Development)
 
-- **Seq** (Logs): http://localhost:8081
-- **Jaeger** (Traces): http://localhost:16686
+- **HyperDX** (Logs): http://localhost:8180
+- **HyperDX** (Traces): http://localhost:8180
 - **Prometheus** (Metrics): http://localhost:9090
 - **Grafana** (Dashboards): http://localhost:3001
   - Username: `admin`

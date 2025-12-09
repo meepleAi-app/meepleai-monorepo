@@ -126,14 +126,8 @@ public static class TwoFactorEndpoints
             CookieHelpers.WriteSessionCookie(context, sessionResult.SessionToken, sessionResult.ExpiresAt);
             logger.LogInformation("2FA verified and session created for user {UserId} via CQRS", verifyResult.UserId.Value);
 
-            // Map to legacy format for backward compatibility
-            var legacyUser = new AuthUser(
-                Id: sessionResult.User.Id.ToString(),
-                Email: sessionResult.User.Email,
-                DisplayName: sessionResult.User.DisplayName,
-                Role: sessionResult.User.Role);
-
-            return Results.Ok(new { message = "2FA verification successful", user = legacyUser });
+            // Issue #1676 Phase 2: Return UserDto directly (no legacy conversion)
+            return Results.Ok(new { message = "2FA verification successful", user = sessionResult.User });
         })
         .WithName("Verify2FA")
         .WithTags("Authentication");

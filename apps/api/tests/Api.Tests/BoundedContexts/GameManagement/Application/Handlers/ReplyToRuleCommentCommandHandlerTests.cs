@@ -5,6 +5,7 @@ using Api.Infrastructure;
 using Api.Tests.Helpers;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 
@@ -15,6 +16,7 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 /// ✅ RESOLVED: Integration tests added for full reply workflow with thread depth limits.
 /// ISSUE-1500: TEST-002 - Fixed test isolation (fresh context per test)
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class ReplyToRuleCommentCommandHandlerTests
 {
     private static MeepleAiDbContext CreateFreshDbContext()
@@ -28,9 +30,6 @@ public class ReplyToRuleCommentCommandHandlerTests
         timeProviderMock.Setup(t => t.GetUtcNow()).Returns(new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero));
         return timeProviderMock;
     }
-
-    #region Construction Tests
-
     [Fact]
     public void Constructor_WithValidDependencies_CreatesInstance()
     {
@@ -93,11 +92,6 @@ public class ReplyToRuleCommentCommandHandlerTests
                 timeProviderMock.Object,
                 null!));
     }
-
-    #endregion
-
-    #region Command Tests
-
     [Fact]
     public void Command_WithSimpleReply_ConstructsCorrectly()
     {
@@ -223,9 +217,6 @@ public class ReplyToRuleCommentCommandHandlerTests
         Assert.NotEqual(command1.UserId, command2.UserId);
         Assert.NotEqual(command1.CommentText, command2.CommentText);
     }
-
-    #endregion
-
     // NOTE: Full integration tests for Handle method (reply creation, thread depth validation,
     // @mention extraction, circular reference detection, context inheritance from parent)
     // should be in integration test suite due to DbContext complexity.

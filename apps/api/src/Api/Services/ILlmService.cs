@@ -3,6 +3,19 @@ using System.Collections.Generic;
 namespace Api.Services;
 
 /// <summary>
+/// ISSUE-1725: Streaming chunk with optional usage metadata
+/// Content: Text chunk from LLM (null in final chunk with usage only)
+/// Usage: Token usage metadata (only in final chunk)
+/// Cost: Cost metadata (only in final chunk)
+/// IsFinal: True if this is the last chunk containing usage metadata
+/// </summary>
+public record StreamChunk(
+    string? Content,
+    LlmUsage? Usage = null,
+    LlmCost? Cost = null,
+    bool IsFinal = false);
+
+/// <summary>
 /// Interface for LLM chat completion services
 /// </summary>
 public interface ILlmService
@@ -17,8 +30,9 @@ public interface ILlmService
 
     /// <summary>
     /// CHAT-01: Generate a streaming chat completion response with token-by-token delivery
+    /// ISSUE-1725: Enhanced to return StreamChunk with usage metadata in final chunk
     /// </summary>
-    IAsyncEnumerable<string> GenerateCompletionStreamAsync(
+    IAsyncEnumerable<StreamChunk> GenerateCompletionStreamAsync(
         string systemPrompt,
         string userPrompt,
         CancellationToken ct = default);

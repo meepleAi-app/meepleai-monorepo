@@ -5,6 +5,7 @@ using Api.Infrastructure;
 using Api.Tests.Helpers;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 
@@ -15,6 +16,7 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 /// ✅ RESOLVED: Integration tests added for full comment deletion workflow with authorization.
 /// ISSUE-1500: TEST-002 - Fixed test isolation (fresh context per test)
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class DeleteRuleCommentCommandHandlerTests
 {
     /// <summary>
@@ -24,9 +26,6 @@ public class DeleteRuleCommentCommandHandlerTests
     {
         return DbContextHelper.CreateInMemoryDbContext();
     }
-
-    #region Construction Tests
-
     [Fact]
     public void Constructor_WithValidDependencies_CreatesInstance()
     {
@@ -68,11 +67,6 @@ public class DeleteRuleCommentCommandHandlerTests
                 context,
                 null!));
     }
-
-    #endregion
-
-    #region Command Tests
-
     [Fact]
     public void Command_AsOwner_ConstructsCorrectly()
     {
@@ -133,9 +127,6 @@ public class DeleteRuleCommentCommandHandlerTests
         Assert.NotEqual(command1.UserId, command2.UserId);
         Assert.NotEqual(command1.IsAdmin, command2.IsAdmin);
     }
-
-    #endregion
-
     // NOTE: Full integration tests for Handle method (comment deletion, ownership validation,
     // admin authorization, cascade deletion of replies) should be in integration test suite
     // due to DbContext complexity.

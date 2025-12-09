@@ -8,8 +8,6 @@ namespace Api.SharedKernel.Domain.Validation;
 /// </summary>
 public static class ValidationExtensions
 {
-    #region String Validations
-
     /// <summary>
     /// Validates that a string is not null, empty, or whitespace.
     /// </summary>
@@ -121,11 +119,6 @@ public static class ValidationExtensions
 
         return Result<string>.Success(value);
     }
-
-    #endregion
-
-    #region GUID Validations
-
     /// <summary>
     /// Validates that a GUID is not empty.
     /// </summary>
@@ -167,11 +160,6 @@ public static class ValidationExtensions
 
         return Result<Guid>.Success(value.Value);
     }
-
-    #endregion
-
-    #region Numeric Validations
-
     /// <summary>
     /// Validates that a number is greater than a minimum value.
     /// </summary>
@@ -293,11 +281,6 @@ public static class ValidationExtensions
 
         return Result<T>.Success(value);
     }
-
-    #endregion
-
-    #region Collection Validations
-
     /// <summary>
     /// Validates that a collection is not null or empty.
     /// </summary>
@@ -369,11 +352,6 @@ public static class ValidationExtensions
 
         return Result<IEnumerable<T>>.Success(value);
     }
-
-    #endregion
-
-    #region Object Validations
-
     /// <summary>
     /// Validates that an object is not null.
     /// </summary>
@@ -395,11 +373,6 @@ public static class ValidationExtensions
 
         return Result<T>.Success(value);
     }
-
-    #endregion
-
-    #region Chaining and Composition
-
     /// <summary>
     /// Allows chaining additional validation on a successful result.
     /// </summary>
@@ -455,6 +428,4 @@ public static class ValidationExtensions
     {
         return value.Must(predicate, Error.Validation(errorMessage));
     }
-
-    #endregion
 }

@@ -6,6 +6,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.BoundedContexts.GameManagement.TestHelpers;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 
@@ -13,6 +14,7 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 /// Comprehensive tests for AbandonGameSessionCommandHandler.
 /// Tests session abandonment with reason tracking and state validation.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class AbandonGameSessionCommandHandlerTests
 {
     private readonly Mock<IGameSessionRepository> _sessionRepositoryMock;
@@ -27,9 +29,6 @@ public class AbandonGameSessionCommandHandlerTests
             _sessionRepositoryMock.Object,
             _unitOfWorkMock.Object);
     }
-
-    #region Happy Path Tests
-
     [Fact]
     public async Task Handle_InProgressSession_AbandonsSuccessfully()
     {
@@ -224,11 +223,6 @@ public class AbandonGameSessionCommandHandlerTests
         Assert.Equal("Abandoned", result.Status);
         Assert.Equal(4, result.Players.Count);
     }
-
-    #endregion
-
-    #region Edge Cases
-
     [Fact]
     public async Task Handle_NonExistentSession_ThrowsInvalidOperationException()
     {
@@ -333,11 +327,6 @@ public class AbandonGameSessionCommandHandlerTests
         // Empty string reason should not be added to notes
         Assert.True(string.IsNullOrEmpty(result.Notes) || !result.Notes.Contains("Abandoned:"));
     }
-
-    #endregion
-
-    #region Domain Behavior Tests
-
     [Fact]
     public async Task Handle_PreservesSessionMetadata()
     {
@@ -403,11 +392,6 @@ public class AbandonGameSessionCommandHandlerTests
         Assert.True(result.CompletedAt >= beforeAbandon);
         Assert.True(result.CompletedAt <= afterAbandon);
     }
-
-    #endregion
-
-    #region Cancellation Tests
-
     [Fact]
     public async Task Handle_WithCancellationToken_PassesToRepository()
     {
@@ -443,7 +427,5 @@ public class AbandonGameSessionCommandHandlerTests
             u => u.SaveChangesAsync(cancellationToken),
             Times.Once);
     }
-
-    #endregion
 }
 

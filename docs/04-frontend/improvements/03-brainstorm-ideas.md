@@ -239,6 +239,7 @@ const AiAvatar: React.FC<{ state: 'thinking' | 'confident' | 'searching' | 'unce
 - **Smooth animations**: Spring physics for natural feel
 
 **Implementation** (using `react-spring`):
+{% raw %}
 ```tsx
 import { useSpring, animated } from '@react-spring/web'
 import { useDrag } from '@use-gesture/react'
@@ -265,6 +266,7 @@ const BottomSheet: React.FC = ({ children }) => {
   )
 }
 ```
+{% endraw %}
 
 **Risk**: Medium - Requires testing on many devices
 **Effort**: 3 days

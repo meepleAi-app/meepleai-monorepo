@@ -8,7 +8,7 @@
  */
 
 import type { Meta, StoryObj } from '@storybook/react';
-import { fn } from '@storybook/test';
+import { fn } from 'storybook/test';
 import { ErrorDisplay } from './ErrorDisplay';
 import { NetworkError, ServerError, RateLimitError, ApiError } from '@/lib/api/core/errors';
 
@@ -26,10 +26,6 @@ const meta = {
     // Chromatic settings
     chromatic: {
       viewports: [375, 768, 1024],
-      modes: {
-        light: { theme: 'light' },
-        dark: { theme: 'dark' },
-      },
     },
   },
   tags: ['autodocs'],

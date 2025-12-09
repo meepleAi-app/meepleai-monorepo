@@ -1,3 +1,4 @@
+#pragma warning disable MA0048 // File name must match type name - Multi-type DTO file
 namespace Api.Models;
 
 /// <summary>
@@ -232,7 +233,7 @@ public class ApiKeyListResponse
     /// <summary>
     /// List of API keys.
     /// </summary>
-    public List<ApiKeyDto> Keys { get; init; } = new();
+    public IReadOnlyList<ApiKeyDto> Keys { get; init; } = new List<ApiKeyDto>();
 
     /// <summary>
     /// Total count of keys (before pagination).

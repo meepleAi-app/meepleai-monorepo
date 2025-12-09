@@ -63,7 +63,7 @@ _logger.LogDebug("Retrieved user info from OAuth provider. Provider: {Provider}"
 
 ### 4-5. User Management Email Logging
 
-**File**: `apps/api/src/Api/Services/UserManagementService.cs`
+**File**: `apps/api/src/Api/Services/UserManagementService.cs` (LEGACY - removed in DDD migration)
 
 **Before (line 125)**:
 ```csharp

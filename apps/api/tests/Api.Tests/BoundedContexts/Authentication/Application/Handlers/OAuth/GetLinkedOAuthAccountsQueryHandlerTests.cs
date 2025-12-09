@@ -5,6 +5,7 @@ using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Application.Handlers.OAuth;
 
@@ -12,6 +13,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Application.Handlers.OAuth;
 /// Tests for GetLinkedOAuthAccountsQueryHandler.
 /// Validates retrieval and mapping of OAuth accounts to DTOs.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class GetLinkedOAuthAccountsQueryHandlerTests
 {
     private readonly Mock<IOAuthAccountRepository> _oauthAccountRepositoryMock;
@@ -27,9 +29,6 @@ public class GetLinkedOAuthAccountsQueryHandlerTests
             _oauthAccountRepositoryMock.Object,
             _loggerMock.Object);
     }
-
-    #region Success Cases
-
     [Fact]
     public async Task Handle_NoLinkedAccounts_ReturnsEmptyList()
     {
@@ -204,11 +203,6 @@ public class GetLinkedOAuthAccountsQueryHandlerTests
         var githubDto = result.Accounts.First(a => a.Provider == "github");
         Assert.False(githubDto.SupportsRefresh);
     }
-
-    #endregion
-
-    #region Error Handling
-
     [Fact]
     public async Task Handle_ExceptionThrown_ReturnsEmptyList()
     {
@@ -253,11 +247,6 @@ public class GetLinkedOAuthAccountsQueryHandlerTests
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
     }
-
-    #endregion
-
-    #region Helper Methods
-
     private static OAuthAccount CreateTestOAuthAccount(Guid userId, string provider)
     {
         return new OAuthAccount(
@@ -270,7 +259,4 @@ public class GetLinkedOAuthAccountsQueryHandlerTests
             tokenExpiresAt: DateTime.UtcNow.AddHours(1)
         );
     }
-
-    #endregion
 }
-

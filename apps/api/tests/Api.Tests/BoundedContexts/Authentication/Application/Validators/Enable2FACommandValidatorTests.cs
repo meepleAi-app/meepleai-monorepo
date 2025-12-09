@@ -2,6 +2,7 @@ using Api.BoundedContexts.Authentication.Application.Commands;
 using Api.BoundedContexts.Authentication.Application.Validators;
 using FluentValidation.TestHelper;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Application.Validators;
 
@@ -9,6 +10,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Application.Validators;
 /// Unit tests for Enable2FACommandValidator.
 /// Issue #1449: FluentValidation for Authentication CQRS pipeline
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public sealed class Enable2FACommandValidatorTests
 {
     private readonly Enable2FACommandValidator _validator = new();
@@ -28,9 +30,6 @@ public sealed class Enable2FACommandValidatorTests
         // Assert
         result.ShouldNotHaveAnyValidationErrors();
     }
-
-    #region UserId Validation
-
     [Fact]
     public void Should_Fail_When_UserId_Is_Empty()
     {
@@ -47,11 +46,6 @@ public sealed class Enable2FACommandValidatorTests
         result.ShouldHaveValidationErrorFor(x => x.UserId)
             .WithErrorMessage("User ID is required");
     }
-
-    #endregion
-
-    #region TotpCode Validation
-
     [Theory]
     [InlineData(null)]
     [InlineData("")]
@@ -150,9 +144,6 @@ public sealed class Enable2FACommandValidatorTests
         // Assert
         result.ShouldNotHaveAnyValidationErrors();
     }
-
-    #endregion
-
     [Fact]
     public void Should_Fail_With_Multiple_Validation_Errors()
     {
@@ -170,4 +161,3 @@ public sealed class Enable2FACommandValidatorTests
         result.ShouldHaveValidationErrorFor(x => x.TotpCode);
     }
 }
-

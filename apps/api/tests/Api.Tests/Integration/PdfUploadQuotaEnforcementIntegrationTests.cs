@@ -23,6 +23,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using StackExchange.Redis;
 using Xunit;
+using Api.Tests.Constants;
 using AuthRole = Api.BoundedContexts.Authentication.Domain.ValueObjects.Role;
 
 namespace Api.Tests.Integration;
@@ -37,9 +38,10 @@ namespace Api.Tests.Integration;
 /// persists within a single container lifecycle, so parallel execution could cause
 /// unpredictable quota counts.
 /// </summary>
-[Collection("QuotaEnforcement")]
+[Trait("Category", TestCategories.Integration)]
 public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
 {
+    private readonly string _redisKeyPrefix = $"test:{Guid.NewGuid()}:";
     private IContainer? _postgresContainer;
     private IContainer? _redisContainer;
     private MeepleAiDbContext? _dbContext;
@@ -167,9 +169,6 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
             await _redisContainer.DisposeAsync();
         }
     }
-
-    #region Helper Methods
-
     private async Task<User> CreateUserAsync(UserTier tier, AuthRole? role = null)
     {
         var userRepo = _serviceProvider!.GetRequiredService<IUserRepository>();
@@ -224,11 +223,6 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
 
         return $"{year}-W{week:D2}";
     }
-
-    #endregion
-
-    #region Free Tier Quota Tests
-
     [Fact(Timeout = 30000)] // 30s for Testcontainers integration tests
     public async Task FreeTier_FiveUploadsInDay_SixthUploadDenied()
     {
@@ -291,11 +285,6 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         deniedCheck.ErrorMessage.ShouldIndicateFreeTierLimit();
         deniedCheck.ErrorMessage.ShouldIndicateFreeTier();
     }
-
-    #endregion
-
-    #region Normal Tier Quota Tests
-
     [Fact(Timeout = 30000)]
     public async Task NormalTier_TwentyUploadsInDay_AllAllowed()
     {
@@ -361,11 +350,6 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         deniedCheck.ErrorMessage.ShouldIndicateNormalTierLimit();
         deniedCheck.ErrorMessage.ShouldIndicateNormalTier();
     }
-
-    #endregion
-
-    #region Premium Tier Quota Tests
-
     [Fact(Timeout = 30000)]
     public async Task PremiumTier_HundredUploadsInDay_AllAllowed()
     {
@@ -396,11 +380,6 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         deniedCheck.ErrorMessage.ShouldIndicateDailyLimitReached();
         deniedCheck.ErrorMessage.ShouldIndicatePremiumTierDailyLimit();
     }
-
-    #endregion
-
-    #region Admin/Editor Bypass Tests
-
     [Fact(Timeout = 30000)]
     public async Task AdminUser_UnlimitedUploads_NoQuotaCheck()
     {
@@ -460,11 +439,6 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         var info = await GetQuotaInfoAsync(user.Id, user.Tier, user.Role);
         info.IsUnlimited.Should().BeTrue();
     }
-
-    #endregion
-
-    #region Tier Upgrade Tests
-
     [Fact(Timeout = 30000)]
     public async Task UserUpgrade_FreeToPremium_QuotaLimitIncreases()
     {
@@ -532,11 +506,6 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         quotaCheckAfter.DailyLimit.Should().Be(5);
         quotaCheckAfter.ErrorMessage.ShouldIndicateDailyLimitReached();
     }
-
-    #endregion
-
-    #region Multiple Users Isolation Tests
-
     [Fact(Timeout = 30000)]
     public async Task MultipleUsers_QuotaTrackedIndependently()
     {
@@ -571,11 +540,6 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         info3.DailyUploadsUsed.Should().Be(50);
         (info3.DailyLimit - info3.DailyUploadsUsed).Should().Be(50); // DailyRemaining computed
     }
-
-    #endregion
-
-    #region Redis Persistence Tests
-
     [Fact(Timeout = 30000)]
     public async Task QuotaTracking_PersistsInRedis_AcrossServiceInstances()
     {
@@ -605,7 +569,4 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         info.WeeklyUploadsUsed.Should().Be(3);
         (info.WeeklyLimit - info.WeeklyUploadsUsed).Should().Be(17); // WeeklyRemaining computed
     }
-
-    #endregion
 }
-

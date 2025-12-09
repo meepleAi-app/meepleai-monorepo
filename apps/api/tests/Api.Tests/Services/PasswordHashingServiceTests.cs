@@ -1,8 +1,11 @@
 using Api.Services;
 using System;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Services;
+
+[Trait("Category", TestCategories.Unit)]
 
 public class PasswordHashingServiceTests
 {

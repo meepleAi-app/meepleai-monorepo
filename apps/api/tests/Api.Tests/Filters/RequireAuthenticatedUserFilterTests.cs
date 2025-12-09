@@ -1,10 +1,11 @@
+using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.Filters;
 using Api.Infrastructure.Entities;
-using Api.Models;
 using Microsoft.AspNetCore.Http;
 using Moq;
 using System.Security.Claims;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Filters;
 
@@ -12,6 +13,7 @@ namespace Api.Tests.Filters;
 /// Tests for RequireAuthenticatedUserFilter (Issue #1446 - Future Enhancement).
 /// Validates authentication via session OR API key.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class RequireAuthenticatedUserFilterTests
 {
     private readonly Mock<EndpointFilterDelegate> _nextMock;
@@ -97,7 +99,7 @@ public class RequireAuthenticatedUserFilterTests
         var filter = new RequireAuthenticatedUserFilter();
         var testSession = CreateTestSession();
         var httpContext = new DefaultHttpContext();
-        httpContext.Items[nameof(ActiveSession)] = testSession;
+        httpContext.Items[nameof(SessionStatusDto)] = testSession;
 
         var context = new DefaultEndpointFilterInvocationContext(httpContext);
         var expectedResult = Results.Ok(new { success = true });
@@ -111,10 +113,10 @@ public class RequireAuthenticatedUserFilterTests
         Assert.Equal(expectedResult, result);
 
         // Verify session is in HttpContext.Items
-        Assert.True(context.HttpContext.Items.ContainsKey(nameof(ActiveSession)));
-        var sessionInContext = context.HttpContext.Items[nameof(ActiveSession)] as ActiveSession;
+        Assert.True(context.HttpContext.Items.ContainsKey(nameof(SessionStatusDto)));
+        var sessionInContext = context.HttpContext.Items[nameof(SessionStatusDto)] as SessionStatusDto;
         Assert.NotNull(sessionInContext);
-        Assert.Equal(testSession.User.Id, sessionInContext.User.Id);
+        Assert.Equal(testSession!.User!.Id, sessionInContext!.User!.Id);
     }
 
     [Fact]
@@ -156,7 +158,7 @@ public class RequireAuthenticatedUserFilterTests
         if (includeSession)
         {
             var testSession = CreateTestSession();
-            httpContext.Items[nameof(ActiveSession)] = testSession;
+            httpContext.Items[nameof(SessionStatusDto)] = testSession;
         }
 
         if (includeApiKey)
@@ -174,16 +176,20 @@ public class RequireAuthenticatedUserFilterTests
         return new DefaultEndpointFilterInvocationContext(httpContext);
     }
 
-    private ActiveSession CreateTestSession()
+    private SessionStatusDto CreateTestSession()
     {
-        var authUser = new AuthUser(
-            Id: "test-user-id",
+        var userDto = new UserDto(
+            Id: Guid.NewGuid(),
             Email: "test@example.com",
             DisplayName: "Test User",
-            Role: "User"
+            Role: "User",
+            CreatedAt: DateTime.UtcNow,
+            IsTwoFactorEnabled: false,
+            TwoFactorEnabledAt: null
         );
-        return new ActiveSession(
-            User: authUser,
+        return new SessionStatusDto(
+            IsValid: true,
+            User: userDto,
             ExpiresAt: DateTime.UtcNow.AddHours(1),
             LastSeenAt: DateTime.UtcNow
         );

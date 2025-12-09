@@ -1,5 +1,5 @@
-import { useState, useCallback, useEffect, useRef } from "react";
-import { api } from "../api";
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { api, ChatThreadDto } from '../api';
 
 /**
  * CHAT-03: Multi-game chat context switching hook
@@ -14,15 +14,20 @@ import { api } from "../api";
  * - Preserves active chat ID per game
  * - Handles loading states per game
  * - Supports multiple concurrent chats per game
+ *
+ * TODO (Issue #1680): Type refactoring needed
+ * - ChatThreadDto vs Chat type mismatch (ChatThreadDto missing gameName, agentId, agentName, startedAt)
+ * - Consider adding mapper ChatThreadDto → Chat with game info enrichment
+ * - Or update backend to include game metadata in ChatThreadDto
  */
 
 // Type definitions
 export type Message = {
   id: string;
-  role: "user" | "assistant";
+  role: 'user' | 'assistant';
   content: string;
   snippets?: Snippet[];
-  feedback?: "helpful" | "not-helpful" | null;
+  feedback?: 'helpful' | 'not-helpful' | null;
   endpoint?: string;
   gameId?: string;
   timestamp: Date;
@@ -36,15 +41,8 @@ export type Snippet = {
   line?: number | null;
 };
 
-export type Chat = {
-  id: string;
-  gameId: string;
-  gameName: string;
-  agentId: string;
-  agentName: string;
-  startedAt: string;
-  lastMessageAt: string | null;
-};
+// Use ChatThreadDto from backend (replaces local Chat type)
+export type Chat = ChatThreadDto;
 
 export type ChatMessage = {
   id: string;
@@ -107,30 +105,33 @@ export function useMultiGameChat(activeGameId: string | null): UseMultiGameChatR
   /**
    * Get or initialize chat state for a game
    */
-  const getGameState = useCallback((gameId: string): GameChatState => {
-    const existingState = chatStatesByGame.get(gameId);
-    if (existingState) {
-      return existingState;
-    }
+  const getGameState = useCallback(
+    (gameId: string): GameChatState => {
+      const existingState = chatStatesByGame.get(gameId);
+      if (existingState) {
+        return existingState;
+      }
 
-    // Initialize new game state
-    const newState: GameChatState = {
-      activeChatId: null,
-      chats: [],
-      messages: [],
-      isLoadingChats: false,
-      isLoadingMessages: false,
-    };
+      // Initialize new game state
+      const newState: GameChatState = {
+        activeChatId: null,
+        chats: [],
+        messages: [],
+        isLoadingChats: false,
+        isLoadingMessages: false,
+      };
 
-    setChatStatesByGame((prev) => new Map(prev).set(gameId, newState));
-    return newState;
-  }, [chatStatesByGame]);
+      setChatStatesByGame(prev => new Map(prev).set(gameId, newState));
+      return newState;
+    },
+    [chatStatesByGame]
+  );
 
   /**
    * Update state for a specific game
    */
   const updateGameState = useCallback((gameId: string, updates: Partial<GameChatState>) => {
-    setChatStatesByGame((prev) => {
+    setChatStatesByGame(prev => {
       const newMap = new Map(prev);
       const currentState = newMap.get(gameId) || {
         activeChatId: null,
@@ -147,183 +148,213 @@ export function useMultiGameChat(activeGameId: string | null): UseMultiGameChatR
   /**
    * Load chats for a specific game
    */
-  const loadChatsForGame = useCallback(async (gameId: string) => {
-    updateGameState(gameId, { isLoadingChats: true });
+  const loadChatsForGame = useCallback(
+    async (gameId: string) => {
+      updateGameState(gameId, { isLoadingChats: true });
 
-    try {
-      const chatsList = await api.get<Chat[]>(`/api/v1/chats?gameId=${gameId}`);
-      updateGameState(gameId, {
-        chats: chatsList ?? [],
-        isLoadingChats: false,
-      });
-    } catch (err) {
-      console.error(`Error loading chats for game ${gameId}:`, err);
-      updateGameState(gameId, {
-        chats: [],
-        isLoadingChats: false,
-      });
-    }
-  }, [updateGameState]);
+      try {
+        const chatsList = await api.chat.getThreadsByGame(gameId);
+        updateGameState(gameId, {
+          chats: (chatsList as any) ?? [],
+          isLoadingChats: false,
+        });
+      } catch (err) {
+        console.error(`Error loading chats for game ${gameId}:`, err);
+        updateGameState(gameId, {
+          chats: [],
+          isLoadingChats: false,
+        });
+      }
+    },
+    [updateGameState]
+  );
 
   /**
    * Switch to a different game
    */
-  const switchGame = useCallback(async (gameId: string) => {
-    // Get or initialize state for this game
-    const gameState = getGameState(gameId);
+  const switchGame = useCallback(
+    async (gameId: string) => {
+      // Get or initialize state for this game
+      const gameState = getGameState(gameId);
 
-    // Load chats if not already loaded
-    if (gameState.chats.length === 0 && !gameState.isLoadingChats) {
-      await loadChatsForGame(gameId);
-    }
-  }, [getGameState, loadChatsForGame]);
+      // Load chats if not already loaded
+      if (gameState.chats.length === 0 && !gameState.isLoadingChats) {
+        await loadChatsForGame(gameId);
+      }
+    },
+    [getGameState, loadChatsForGame]
+  );
 
   /**
    * Load chat history for a specific chat
    */
-  const loadChatHistory = useCallback(async (chatId: string) => {
-    if (!activeGameId) return;
+  const loadChatHistory = useCallback(
+    async (chatId: string) => {
+      if (!activeGameId) return;
 
-    updateGameState(activeGameId, { isLoadingMessages: true });
+      updateGameState(activeGameId, { isLoadingMessages: true });
 
-    try {
-      const chatWithHistory = await api.get<ChatWithHistory>(`/api/v1/chats/${chatId}`);
+      try {
+        const chatWithHistory = await api.chat.getThreadById(chatId);
 
-      if (chatWithHistory) {
-        // Convert backend messages to frontend Message format
-        const loadedMessages: Message[] = chatWithHistory.messages.map((msg) => {
-          const role: "user" | "assistant" = msg.level === "user" ? "user" : "assistant";
+        if (chatWithHistory) {
+          // Convert backend messages to frontend Message format
+          const loadedMessages = chatWithHistory.messages.map((msg: any) => {
+            const role: 'user' | 'assistant' = msg.level === 'user' ? 'user' : 'assistant';
 
-          let snippets: Snippet[] | undefined;
-          if (msg.metadataJson) {
-            try {
-              const metadata = JSON.parse(msg.metadataJson);
-              snippets = metadata.snippets;
-            } catch {
-              // Ignore JSON parse errors
+            let snippets: Snippet[] | undefined;
+            if (msg.metadataJson) {
+              try {
+                const metadata = JSON.parse(msg.metadataJson);
+                snippets = metadata.snippets;
+              } catch {
+                // Ignore JSON parse errors
+              }
             }
-          }
 
-          return {
-            id: `backend-${msg.id}`,
-            role,
-            content: msg.message,
-            snippets,
-            feedback: null,
-            endpoint: "qa",
-            gameId: chatWithHistory.gameId,
-            timestamp: new Date(msg.createdAt),
-            backendMessageId: msg.id,
-          };
-        });
+            return {
+              id: `backend-${msg.id}`,
+              role,
+              content: msg.message,
+              snippets,
+              feedback: null,
+              endpoint: 'qa',
+              gameId: chatWithHistory.gameId,
+              timestamp: new Date(msg.createdAt),
+              backendMessageId: msg.id,
+            };
+          });
 
-        updateGameState(activeGameId, {
-          messages: loadedMessages,
-          activeChatId: chatId,
-          isLoadingMessages: false,
-        });
+          updateGameState(activeGameId, {
+            messages: loadedMessages as any,
+            activeChatId: chatId,
+            isLoadingMessages: false,
+          });
+        }
+      } catch (err) {
+        console.error('Error loading chat history:', err);
+        updateGameState(activeGameId, { isLoadingMessages: false });
       }
-    } catch (err) {
-      console.error("Error loading chat history:", err);
-      updateGameState(activeGameId, { isLoadingMessages: false });
-    }
-  }, [activeGameId, updateGameState]);
+    },
+    [activeGameId, updateGameState]
+  );
 
   /**
    * Create a new chat for current game
    */
-  const createNewChat = useCallback(async (gameId: string, agentId: string): Promise<Chat | null> => {
-    try {
-      const newChat = await api.post<Chat>("/api/v1/chats", {
-        gameId,
-        agentId,
-      });
-
-      if (newChat) {
-        // Add to chat list for this game
-        const gameState = getGameState(gameId);
-        updateGameState(gameId, {
-          chats: [newChat, ...(gameState.chats || [])],
-          activeChatId: newChat.id,
-          messages: [],
+  const createNewChat = useCallback(
+    async (gameId: string, agentId: string): Promise<Chat | null> => {
+      try {
+        const newChat = await api.chat.createThread({
+          gameId,
+          title: null,
         });
 
-        return newChat;
+        if (newChat) {
+          // Add to chat list for this game
+          const gameState = getGameState(gameId);
+          updateGameState(gameId, {
+            chats: [newChat as any, ...(gameState.chats || [])],
+            activeChatId: newChat.id,
+            messages: [],
+          });
+
+          return newChat;
+        }
+        return null;
+      } catch (err) {
+        console.error('Error creating chat:', err);
+        return null;
       }
-      return null;
-    } catch (err) {
-      console.error("Error creating chat:", err);
-      return null;
-    }
-  }, [getGameState, updateGameState]);
+    },
+    [getGameState, updateGameState]
+  );
 
   /**
    * Delete a chat
    */
-  const deleteChat = useCallback(async (chatId: string) => {
-    if (!activeGameId) return;
+  const deleteChat = useCallback(
+    async (chatId: string) => {
+      if (!activeGameId) return;
 
-    try {
-      await api.delete(`/api/v1/chats/${chatId}`);
+      try {
+        await api.chat.deleteThread(chatId);
 
-      const gameState = getGameState(activeGameId);
+        const gameState = getGameState(activeGameId);
 
-      updateGameState(activeGameId, {
-        chats: gameState.chats.filter((c) => c.id !== chatId),
-        activeChatId: gameState.activeChatId === chatId ? null : gameState.activeChatId,
-        messages: gameState.activeChatId === chatId ? [] : gameState.messages,
-      });
-    } catch (err) {
-      console.error("Error deleting chat:", err);
-    }
-  }, [activeGameId, getGameState, updateGameState]);
+        updateGameState(activeGameId, {
+          chats: gameState.chats.filter(c => c.id !== chatId),
+          activeChatId: gameState.activeChatId === chatId ? null : gameState.activeChatId,
+          messages: gameState.activeChatId === chatId ? [] : gameState.messages,
+        });
+      } catch (err) {
+        console.error('Error deleting chat:', err);
+      }
+    },
+    [activeGameId, getGameState, updateGameState]
+  );
 
   /**
    * Set messages for current game
    */
-  const setMessages = useCallback((updater: React.SetStateAction<Message[]>) => {
-    if (!activeGameId) return;
+  const setMessages = useCallback(
+    (updater: React.SetStateAction<Message[]>) => {
+      if (!activeGameId) return;
 
-    const gameState = getGameState(activeGameId);
-    const newMessages = typeof updater === 'function' ? updater(gameState.messages) : updater;
+      const gameState = getGameState(activeGameId);
+      const newMessages = typeof updater === 'function' ? updater(gameState.messages) : updater;
 
-    updateGameState(activeGameId, { messages: newMessages });
-  }, [activeGameId, getGameState, updateGameState]);
+      updateGameState(activeGameId, { messages: newMessages });
+    },
+    [activeGameId, getGameState, updateGameState]
+  );
 
   /**
    * Set chats for current game
    */
-  const setChats = useCallback((updater: React.SetStateAction<Chat[]>) => {
-    if (!activeGameId) return;
+  const setChats = useCallback(
+    (updater: React.SetStateAction<Chat[]>) => {
+      if (!activeGameId) return;
 
-    const gameState = getGameState(activeGameId);
-    const newChats = typeof updater === 'function' ? updater(gameState.chats) : updater;
+      const gameState = getGameState(activeGameId);
+      const newChats = typeof updater === 'function' ? updater(gameState.chats) : updater;
 
-    updateGameState(activeGameId, { chats: newChats });
-  }, [activeGameId, getGameState, updateGameState]);
+      updateGameState(activeGameId, { chats: newChats });
+    },
+    [activeGameId, getGameState, updateGameState]
+  );
 
   /**
    * Set active chat ID for current game
    */
-  const setActiveChatId = useCallback((chatId: string | null) => {
-    if (!activeGameId) return;
-    updateGameState(activeGameId, { activeChatId: chatId });
-  }, [activeGameId, updateGameState]);
+  const setActiveChatId = useCallback(
+    (chatId: string | null) => {
+      if (!activeGameId) return;
+      updateGameState(activeGameId, { activeChatId: chatId });
+    },
+    [activeGameId, updateGameState]
+  );
 
   /**
    * Check if a game has initialized state
    */
-  const hasGameState = useCallback((gameId: string): boolean => {
-    return chatStatesByGame.has(gameId);
-  }, [chatStatesByGame]);
+  const hasGameState = useCallback(
+    (gameId: string): boolean => {
+      return chatStatesByGame.has(gameId);
+    },
+    [chatStatesByGame]
+  );
 
   /**
    * Get number of chats for a game
    */
-  const getGameChatCount = useCallback((gameId: string): number => {
-    const gameState = chatStatesByGame.get(gameId);
-    return gameState?.chats.length ?? 0;
-  }, [chatStatesByGame]);
+  const getGameChatCount = useCallback(
+    (gameId: string): number => {
+      const gameState = chatStatesByGame.get(gameId);
+      return gameState?.chats.length ?? 0;
+    },
+    [chatStatesByGame]
+  );
 
   // TEST-685: Store switchGame in ref to avoid effect dependency issues
   const switchGameRef = useRef(switchGame);
@@ -337,13 +368,15 @@ export function useMultiGameChat(activeGameId: string | null): UseMultiGameChatR
   }, [activeGameId]);
 
   // Get current game state (or empty state if no game selected)
-  const currentState = activeGameId ? getGameState(activeGameId) : {
-    activeChatId: null,
-    chats: [],
-    messages: [],
-    isLoadingChats: false,
-    isLoadingMessages: false,
-  };
+  const currentState = activeGameId
+    ? getGameState(activeGameId)
+    : {
+        activeChatId: null,
+        chats: [],
+        messages: [],
+        isLoadingChats: false,
+        isLoadingMessages: false,
+      };
 
   return {
     ...currentState,

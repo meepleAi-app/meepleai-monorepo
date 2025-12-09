@@ -1,5 +1,6 @@
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
 using Xunit;
+using Api.Tests.Constants;
 using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Infrastructure.Validation;
@@ -8,12 +9,10 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Infrastructure.Validation
 /// BGAI-086: Unit tests for PDF processing configuration validation
 /// Tests all validation rules for startup configuration
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class PdfProcessingConfigurationValidatorTests
 {
     private readonly PdfProcessingConfigurationValidator _validator = new();
-
-    #region Valid Configuration Tests
-
     [Fact]
     public void Validate_ValidConfiguration_ReturnsSuccess()
     {
@@ -56,11 +55,6 @@ public class PdfProcessingConfigurationValidatorTests
         // Assert
         result.Succeeded.Should().BeTrue();
     }
-
-    #endregion
-
-    #region Quality Threshold Validation Tests
-
     [Theory]
     [InlineData(-0.1)]
     [InlineData(-1.0)]
@@ -170,11 +164,6 @@ public class PdfProcessingConfigurationValidatorTests
         // Assert
         result.Succeeded.Should().BeTrue();
     }
-
-    #endregion
-
-    #region File Size Validation Tests
-
     [Theory]
     [InlineData(1024)] // 1 KB - minimum
     [InlineData(1048576)] // 1 MB
@@ -215,11 +204,6 @@ public class PdfProcessingConfigurationValidatorTests
         result.Succeeded.Should().BeFalse();
         Assert.Contains("MaxFileSizeBytes must be between", result.FailureMessage);
     }
-
-    #endregion
-
-    #region Unstructured API URL Validation Tests
-
     [Theory]
     [InlineData("http://localhost:8001")]
     [InlineData("https://unstructured-service:8001")]
@@ -272,11 +256,6 @@ public class PdfProcessingConfigurationValidatorTests
         result.Succeeded.Should().BeFalse();
         Assert.Contains("Extractor.Unstructured.ApiUrl must be a valid absolute URL", result.FailureMessage);
     }
-
-    #endregion
-
-    #region Unstructured Timeout/Retry Validation Tests
-
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]
@@ -313,11 +292,6 @@ public class PdfProcessingConfigurationValidatorTests
         result.Succeeded.Should().BeFalse();
         Assert.Contains("Extractor.Unstructured.MaxRetries must be between 0 and 10", result.FailureMessage);
     }
-
-    #endregion
-
-    #region SmolDocling API URL Validation Tests
-
     [Theory]
     [InlineData("http://localhost:8002")]
     [InlineData("https://smoldocling-service:8002")]
@@ -370,11 +344,6 @@ public class PdfProcessingConfigurationValidatorTests
         result.Succeeded.Should().BeFalse();
         Assert.Contains("Extractor.SmolDocling.ApiUrl must be a valid absolute URL", result.FailureMessage);
     }
-
-    #endregion
-
-    #region SmolDocling Timeout/Retry Validation Tests
-
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]
@@ -411,11 +380,6 @@ public class PdfProcessingConfigurationValidatorTests
         result.Succeeded.Should().BeFalse();
         Assert.Contains("Extractor.SmolDocling.MaxRetries must be between 0 and 10", result.FailureMessage);
     }
-
-    #endregion
-
-    #region Helper Methods
-
     private static PdfProcessingOptions CreateValidOptions()
     {
         return new PdfProcessingOptions
@@ -449,7 +413,5 @@ public class PdfProcessingConfigurationValidatorTests
             }
         };
     }
-
-    #endregion
 }
 

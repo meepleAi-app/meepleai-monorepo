@@ -7,7 +7,19 @@
  * Mirrors /login structure but with defaultMode="register"
  */
 
+import type { Metadata } from 'next';
 import { Suspense, useState, useEffect } from 'react';
+
+// Metadata for SEO
+export const metadata: Metadata = {
+  title: 'Registrati | MeepleAI',
+  description:
+    "Crea il tuo account MeepleAI per accedere all'assistente AI per giochi da tavolo. Risposte immediate alle regole con citazioni dal manuale.",
+  robots: {
+    index: true,
+    follow: true,
+  },
+};
 import { useRouter } from 'next/navigation';
 import { AuthModal } from '@/components/auth';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -33,7 +45,10 @@ function RegisterPageContent() {
   }
 
   return (
-    <div className="min-h-dvh flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 px-4">
+    <div
+      className="min-h-dvh flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 px-4"
+      data-testid="register-page"
+    >
       {/* Unified Auth Modal - Registration Mode */}
       <AuthModal isOpen={showAuthModal} onClose={handleClose} defaultMode="register" />
     </div>
@@ -44,7 +59,7 @@ function RegisterFallback() {
   const { t } = useTranslation();
   return (
     <div className="min-h-dvh flex items-center justify-center bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-300">
-      {t('auth.register.loadingMessage') || 'Loading registration...'}
+      {t('auth.register.loadingMessage')}
     </div>
   );
 }

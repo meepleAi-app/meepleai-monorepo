@@ -8,12 +8,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useMultiGameChat } from '../useMultiGameChat';
 import { api } from '../../api';
 
-// Mock the api module
+// Mock the api module with chat client structure
 vi.mock('../../api', () => ({
   api: {
-    get: vi.fn(),
-    post: vi.fn(),
-    delete: vi.fn(),
+    chat: {
+      getThreadsByGame: vi.fn(),
+      getThreadById: vi.fn(),
+      createThread: vi.fn(),
+      addMessage: vi.fn(),
+      deleteThread: vi.fn(),
+    },
   },
 }));
 
@@ -34,7 +38,7 @@ describe('useMultiGameChat state', () => {
     });
 
     it('should initialize state when game is provided', async () => {
-      vi.mocked(api.get).mockResolvedValueOnce([]);
+      vi.mocked(api.chat.getThreadsByGame).mockResolvedValueOnce([] as any);
 
       const { result } = renderHook(() => useMultiGameChat('game-1'));
 
@@ -55,7 +59,7 @@ describe('useMultiGameChat state', () => {
     });
 
     it('should return true for initialized game', async () => {
-      vi.mocked(api.get).mockResolvedValueOnce([]);
+      vi.mocked(api.chat.getThreadsByGame).mockResolvedValueOnce([] as any);
 
       const { result } = renderHook(() => useMultiGameChat('game-1'));
 
@@ -67,7 +71,7 @@ describe('useMultiGameChat state', () => {
 
   describe('getGameChatCount', () => {
     it('should return 0 for game with no chats', async () => {
-      vi.mocked(api.get).mockResolvedValueOnce([]);
+      vi.mocked(api.chat.getThreadsByGame).mockResolvedValueOnce([] as any);
 
       const { result } = renderHook(() => useMultiGameChat('game-1'));
 
@@ -100,7 +104,7 @@ describe('useMultiGameChat state', () => {
         },
       ];
 
-      vi.mocked(api.get).mockResolvedValueOnce(mockChats);
+      vi.mocked(api.chat.getThreadsByGame).mockResolvedValueOnce(mockChats as any);
 
       const { result } = renderHook(() => useMultiGameChat('game-1'));
 
@@ -120,7 +124,7 @@ describe('useMultiGameChat state', () => {
 
   describe('setMessages', () => {
     it('should update messages for current game', async () => {
-      vi.mocked(api.get).mockResolvedValueOnce([]);
+      vi.mocked(api.chat.getThreadsByGame).mockResolvedValueOnce([] as any);
 
       const { result } = renderHook(() => useMultiGameChat('game-1'));
 
@@ -163,7 +167,7 @@ describe('useMultiGameChat state', () => {
 
   describe('setChats', () => {
     it('should update chats for current game', async () => {
-      vi.mocked(api.get).mockResolvedValueOnce([]);
+      vi.mocked(api.chat.getThreadsByGame).mockResolvedValueOnce([] as any);
 
       const { result } = renderHook(() => useMultiGameChat('game-1'));
 
@@ -191,7 +195,7 @@ describe('useMultiGameChat state', () => {
 
   describe('setActiveChatId', () => {
     it('should update active chat ID', async () => {
-      vi.mocked(api.get).mockResolvedValueOnce([]);
+      vi.mocked(api.chat.getThreadsByGame).mockResolvedValueOnce([] as any);
 
       const { result } = renderHook(() => useMultiGameChat('game-1'));
 
@@ -207,7 +211,7 @@ describe('useMultiGameChat state', () => {
     });
 
     it('should allow setting to null', async () => {
-      vi.mocked(api.get).mockResolvedValueOnce([]);
+      vi.mocked(api.chat.getThreadsByGame).mockResolvedValueOnce([] as any);
 
       const { result } = renderHook(() => useMultiGameChat('game-1'));
 

@@ -3,16 +3,20 @@ import { useMultiGameChat, Chat } from '../useMultiGameChat';
 import * as api from '../../api';
 import { mockNewChat } from './useMultiGameChat.test-helpers';
 
-// Mock the API module
+// Mock the API module with chat client structure
 vi.mock('../../api', () => ({
   api: {
-    get: vi.fn(),
-    post: vi.fn(),
-    delete: vi.fn(),
+    chat: {
+      getThreadsByGame: vi.fn(),
+      getThreadById: vi.fn(),
+      createThread: vi.fn(),
+      addMessage: vi.fn(),
+      deleteThread: vi.fn(),
+    },
   },
 }));
 
-const mockApi = api.api as Mocked<typeof api.api>;
+const mockApi = api.api.chat as any;
 
 /**
  * Tests for useMultiGameChat chat operations functionality
@@ -25,7 +29,7 @@ describe('useMultiGameChat - Chat Operations', () => {
 
   describe('Create New Chat', () => {
     it('should create new chat and add to chats list', async () => {
-      mockApi.post.mockResolvedValueOnce(mockNewChat);
+      mockApi.createThread.mockResolvedValueOnce(mockNewChat);
 
       const { result } = renderHook(() => useMultiGameChat('game-1'));
 
@@ -36,9 +40,8 @@ describe('useMultiGameChat - Chat Operations', () => {
       });
 
       expect(createdChat).toEqual(mockNewChat);
-      expect(mockApi.post).toHaveBeenCalledWith('/api/v1/chats', {
+      expect(mockApi.createThread).toHaveBeenCalledWith({
         gameId: 'game-1',
-        agentId: 'agent-1',
       });
 
       await waitFor(() => {
@@ -47,7 +50,7 @@ describe('useMultiGameChat - Chat Operations', () => {
     });
 
     it('should set new chat as active and clear messages', async () => {
-      mockApi.post.mockResolvedValueOnce(mockNewChat);
+      mockApi.createThread.mockResolvedValueOnce(mockNewChat);
 
       const { result } = renderHook(() => useMultiGameChat('game-1'));
 
@@ -63,7 +66,7 @@ describe('useMultiGameChat - Chat Operations', () => {
 
     it('should handle API errors when creating chat', async () => {
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      mockApi.post.mockRejectedValueOnce(new Error('Failed to create chat'));
+      mockApi.createThread.mockRejectedValueOnce(new Error('Failed to create chat'));
 
       const { result } = renderHook(() => useMultiGameChat('game-1'));
 
@@ -78,20 +81,20 @@ describe('useMultiGameChat - Chat Operations', () => {
         }
       });
 
-      await waitFor(() => {
-        expect(createdChat).toBeNull();
-      }, { timeout: 1000 });
-
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        'Error creating chat:',
-        expect.any(Error)
+      await waitFor(
+        () => {
+          expect(createdChat).toBeNull();
+        },
+        { timeout: 1000 }
       );
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith('Error creating chat:', expect.any(Error));
 
       consoleErrorSpy.mockRestore();
     });
 
     it('should return null if API returns no chat', async () => {
-      mockApi.post.mockResolvedValueOnce(null);
+      mockApi.createThread.mockResolvedValueOnce(null);
 
       const { result } = renderHook(() => useMultiGameChat('game-1'));
 
@@ -128,8 +131,8 @@ describe('useMultiGameChat - Chat Operations', () => {
     ];
 
     it('should delete chat and remove from chats list', async () => {
-      mockApi.get.mockResolvedValueOnce(mockChats);
-      mockApi.delete.mockResolvedValueOnce(undefined);
+      mockApi.getThreadsByGame.mockResolvedValueOnce(mockChats);
+      mockApi.deleteThread.mockResolvedValueOnce(undefined);
 
       const { result } = renderHook(() => useMultiGameChat('game-1'));
 
@@ -152,12 +155,12 @@ describe('useMultiGameChat - Chat Operations', () => {
         expect(result.current.chats[0].id).toBe('chat-2');
       });
 
-      expect(mockApi.delete).toHaveBeenCalledWith('/api/v1/chats/chat-1');
+      expect(mockApi.deleteThread).toHaveBeenCalledWith('chat-1');
     });
 
     it('should clear activeChatId and messages if deleting active chat', async () => {
-      mockApi.get.mockResolvedValueOnce(mockChats);
-      mockApi.delete.mockResolvedValueOnce(undefined);
+      mockApi.getThreadsByGame.mockResolvedValueOnce(mockChats);
+      mockApi.deleteThread.mockResolvedValueOnce(undefined);
 
       const { result } = renderHook(() => useMultiGameChat('game-1'));
 
@@ -194,8 +197,8 @@ describe('useMultiGameChat - Chat Operations', () => {
     });
 
     it('should not clear messages if deleting non-active chat', async () => {
-      mockApi.get.mockResolvedValueOnce(mockChats);
-      mockApi.delete.mockResolvedValueOnce(undefined);
+      mockApi.getThreadsByGame.mockResolvedValueOnce(mockChats);
+      mockApi.deleteThread.mockResolvedValueOnce(undefined);
 
       const { result } = renderHook(() => useMultiGameChat('game-1'));
 
@@ -236,7 +239,7 @@ describe('useMultiGameChat - Chat Operations', () => {
 
     it('should handle API errors when deleting chat', async () => {
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      mockApi.delete.mockRejectedValueOnce(new Error('Delete failed'));
+      mockApi.deleteThread.mockRejectedValueOnce(new Error('Delete failed'));
 
       const { result } = renderHook(() => useMultiGameChat('game-1'));
 
@@ -248,14 +251,14 @@ describe('useMultiGameChat - Chat Operations', () => {
         }
       });
 
-      await waitFor(() => {
-        expect(consoleErrorSpy).toHaveBeenCalled();
-      }, { timeout: 1000 });
-
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        'Error deleting chat:',
-        expect.any(Error)
+      await waitFor(
+        () => {
+          expect(consoleErrorSpy).toHaveBeenCalled();
+        },
+        { timeout: 1000 }
       );
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith('Error deleting chat:', expect.any(Error));
 
       consoleErrorSpy.mockRestore();
     });
@@ -267,7 +270,7 @@ describe('useMultiGameChat - Chat Operations', () => {
         await result.current.deleteChat('chat-1');
       });
 
-      expect(mockApi.delete).not.toHaveBeenCalled();
+      expect(mockApi.deleteThread).not.toHaveBeenCalled();
     });
   });
 });

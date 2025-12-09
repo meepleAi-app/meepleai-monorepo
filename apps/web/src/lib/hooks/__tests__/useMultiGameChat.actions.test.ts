@@ -8,12 +8,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useMultiGameChat } from '../useMultiGameChat';
 import { api } from '../../api';
 
-// Mock the api module
+// Mock the api module with chat client structure
 vi.mock('../../api', () => ({
   api: {
-    get: vi.fn(),
-    post: vi.fn(),
-    delete: vi.fn(),
+    chat: {
+      getThreadsByGame: vi.fn(),
+      getThreadById: vi.fn(),
+      createThread: vi.fn(),
+      addMessage: vi.fn(),
+      deleteThread: vi.fn(),
+    },
   },
 }));
 
@@ -36,7 +40,7 @@ describe('useMultiGameChat actions', () => {
         },
       ];
 
-      vi.mocked(api.get).mockResolvedValueOnce(mockChats);
+      vi.mocked(api.chat.getThreadsByGame).mockResolvedValueOnce(mockChats as any);
 
       const { result } = renderHook(() => useMultiGameChat(null));
 
@@ -44,7 +48,7 @@ describe('useMultiGameChat actions', () => {
         await result.current.switchGame('game-1');
       });
 
-      expect(api.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1');
+      expect(api.chat.getThreadsByGame).toHaveBeenCalledWith('game-1');
     });
 
     it('should not reload chats if already loaded', async () => {
@@ -60,7 +64,7 @@ describe('useMultiGameChat actions', () => {
         },
       ];
 
-      vi.mocked(api.get).mockResolvedValueOnce(mockChats);
+      vi.mocked(api.chat.getThreadsByGame).mockResolvedValueOnce(mockChats as any);
 
       const { result } = renderHook(() => useMultiGameChat('game-1'));
 
@@ -76,11 +80,11 @@ describe('useMultiGameChat actions', () => {
       });
 
       // Should not call API again since chats are already loaded
-      expect(api.get).not.toHaveBeenCalled();
+      expect(api.chat.getThreadsByGame).not.toHaveBeenCalled();
     });
 
     it('should handle API errors gracefully', async () => {
-      vi.mocked(api.get).mockRejectedValueOnce(new Error('Network error'));
+      vi.mocked(api.chat.getThreadsByGame).mockRejectedValueOnce(new Error('Network error'));
 
       const { result } = renderHook(() => useMultiGameChat(null));
 
@@ -122,7 +126,8 @@ describe('useMultiGameChat actions', () => {
         ],
       };
 
-      vi.mocked(api.get).mockResolvedValueOnce(mockChats).mockResolvedValueOnce(mockChatHistory);
+      vi.mocked(api.chat.getThreadsByGame).mockResolvedValueOnce(mockChats as any);
+      vi.mocked(api.chat.getThreadById).mockResolvedValueOnce(mockChatHistory as any);
 
       const { result } = renderHook(() => useMultiGameChat('game-1'));
 
@@ -134,7 +139,7 @@ describe('useMultiGameChat actions', () => {
         await result.current.loadChatHistory('chat-1');
       });
 
-      expect(api.get).toHaveBeenCalledWith('/api/v1/chats/chat-1');
+      expect(api.chat.getThreadById).toHaveBeenCalledWith('chat-1');
       expect(result.current.messages).toHaveLength(2);
       expect(result.current.messages[0].role).toBe('user');
       expect(result.current.messages[1].role).toBe('assistant');
@@ -163,7 +168,8 @@ describe('useMultiGameChat actions', () => {
         ],
       };
 
-      vi.mocked(api.get).mockResolvedValueOnce(mockChats).mockResolvedValueOnce(mockChatHistory);
+      vi.mocked(api.chat.getThreadsByGame).mockResolvedValueOnce(mockChats as any);
+      vi.mocked(api.chat.getThreadById).mockResolvedValueOnce(mockChatHistory as any);
 
       const { result } = renderHook(() => useMultiGameChat('game-1'));
 
@@ -186,7 +192,7 @@ describe('useMultiGameChat actions', () => {
         await result.current.loadChatHistory('chat-1');
       });
 
-      expect(api.get).not.toHaveBeenCalled();
+      expect(api.chat.getThreadsByGame).not.toHaveBeenCalled();
     });
   });
 
@@ -203,8 +209,8 @@ describe('useMultiGameChat actions', () => {
         lastMessageAt: null,
       };
 
-      vi.mocked(api.get).mockResolvedValueOnce(mockChats);
-      vi.mocked(api.post).mockResolvedValueOnce(newChat);
+      vi.mocked(api.chat.getThreadsByGame).mockResolvedValueOnce(mockChats as any);
+      vi.mocked(api.chat.createThread).mockResolvedValueOnce(newChat as any);
 
       const { result } = renderHook(() => useMultiGameChat('game-1'));
 
@@ -217,9 +223,8 @@ describe('useMultiGameChat actions', () => {
         createdChat = await result.current.createNewChat('game-1', 'agent-1');
       });
 
-      expect(api.post).toHaveBeenCalledWith('/api/v1/chats', {
+      expect(api.chat.createThread).toHaveBeenCalledWith({
         gameId: 'game-1',
-        agentId: 'agent-1',
       });
       expect(createdChat).toEqual(newChat);
       expect(result.current.chats).toContainEqual(newChat);
@@ -227,8 +232,8 @@ describe('useMultiGameChat actions', () => {
     });
 
     it('should return null on API error', async () => {
-      vi.mocked(api.get).mockResolvedValueOnce([]);
-      vi.mocked(api.post).mockRejectedValueOnce(new Error('API Error'));
+      vi.mocked(api.chat.getThreadsByGame).mockResolvedValueOnce([] as any);
+      vi.mocked(api.chat.createThread).mockRejectedValueOnce(new Error('API Error'));
 
       const { result } = renderHook(() => useMultiGameChat('game-1'));
 
@@ -245,8 +250,8 @@ describe('useMultiGameChat actions', () => {
     });
 
     it('should return null when API returns null', async () => {
-      vi.mocked(api.get).mockResolvedValueOnce([]);
-      vi.mocked(api.post).mockResolvedValueOnce(null);
+      vi.mocked(api.chat.getThreadsByGame).mockResolvedValueOnce([] as any);
+      vi.mocked(api.chat.createThread).mockResolvedValueOnce(null as any);
 
       const { result } = renderHook(() => useMultiGameChat('game-1'));
 
@@ -286,8 +291,8 @@ describe('useMultiGameChat actions', () => {
         },
       ];
 
-      vi.mocked(api.get).mockResolvedValueOnce(mockChats);
-      vi.mocked(api.delete).mockResolvedValueOnce(undefined);
+      vi.mocked(api.chat.getThreadsByGame).mockResolvedValueOnce(mockChats as any);
+      vi.mocked(api.chat.deleteThread).mockResolvedValueOnce(undefined as any);
 
       const { result } = renderHook(() => useMultiGameChat('game-1'));
 
@@ -299,7 +304,7 @@ describe('useMultiGameChat actions', () => {
         await result.current.deleteChat('chat-1');
       });
 
-      expect(api.delete).toHaveBeenCalledWith('/api/v1/chats/chat-1');
+      expect(api.chat.deleteThread).toHaveBeenCalledWith('chat-1');
       expect(result.current.chats).toHaveLength(1);
       expect(result.current.chats[0].id).toBe('chat-2');
     });
@@ -317,8 +322,8 @@ describe('useMultiGameChat actions', () => {
         },
       ];
 
-      vi.mocked(api.get).mockResolvedValueOnce(mockChats);
-      vi.mocked(api.delete).mockResolvedValueOnce(undefined);
+      vi.mocked(api.chat.getThreadsByGame).mockResolvedValueOnce(mockChats as any);
+      vi.mocked(api.chat.deleteThread).mockResolvedValueOnce(undefined as any);
 
       const { result } = renderHook(() => useMultiGameChat('game-1'));
 
@@ -351,7 +356,7 @@ describe('useMultiGameChat actions', () => {
         await result.current.deleteChat('chat-1');
       });
 
-      expect(api.delete).not.toHaveBeenCalled();
+      expect(api.chat.deleteThread).not.toHaveBeenCalled();
     });
   });
 });

@@ -1,12 +1,27 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { MetricsGrid } from './MetricsGrid';
 import type { StatCardProps } from './StatCard';
+import {
+  Users,
+  Activity,
+  Gamepad2,
+  Server,
+  Clock,
+  AlertTriangle,
+  FileText,
+  MessageCircle,
+  Brain,
+  Zap,
+  Bell,
+  CheckCircle,
+} from 'lucide-react';
 
 /**
- * MetricsGrid - Issue #874
+ * MetricsGrid - Issue #874, #883
  *
- * Responsive 4-column grid layout for admin dashboard metrics.
- * Automatically adapts to mobile (1col), tablet (2col), desktop (3-4col).
+ * Responsive 4x3 grid layout for admin dashboard metrics.
+ * Features: responsive layout (4 cols desktop, 2 tablet, 1 mobile),
+ * loading skeleton, smooth transitions, empty state.
  */
 const meta = {
   title: 'Admin/MetricsGrid',
@@ -18,36 +33,120 @@ const meta = {
     },
   },
   tags: ['autodocs'],
+  argTypes: {
+    loading: {
+      control: 'boolean',
+      description: 'Show loading skeleton state',
+    },
+    emptyStateMessage: {
+      control: 'text',
+      description: 'Message shown when metrics array is empty',
+    },
+  },
 } satisfies Meta<typeof MetricsGrid>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
 const mockMetrics: StatCardProps[] = [
-  { label: 'Total Users', value: '1,247', variant: 'default' },
-  { label: 'Active Sessions', value: '42', variant: 'success' },
-  { label: 'Total Games', value: '125', variant: 'default' },
-  { label: 'API Requests (24h)', value: '3,456', variant: 'default' },
-  { label: 'API Requests (7d)', value: '24,891', variant: 'default' },
-  { label: 'API Requests (30d)', value: '112,034', variant: 'default' },
-  { label: 'Avg Latency (24h)', value: '215ms', variant: 'success' },
-  { label: 'Avg Latency (7d)', value: '228ms', variant: 'default' },
-  { label: 'Error Rate (24h)', value: '2.5%', variant: 'warning' },
-  { label: 'Total PDFs', value: '847', variant: 'default' },
-  { label: 'Total Chat Messages', value: '15,234', variant: 'default' },
-  { label: 'Avg Confidence', value: '94.2%', variant: 'success' },
-  { label: 'Total RAG Requests', value: '18,547', variant: 'default' },
-  { label: 'Total Tokens', value: '15.7M', variant: 'default' },
-  { label: 'Active Alerts', value: '2', variant: 'warning' },
-  { label: 'Resolved Alerts', value: '37', variant: 'default' },
+  {
+    label: 'Total Users',
+    value: '1,247',
+    icon: Users,
+    variant: 'default',
+    trend: 'up',
+    trendValue: '+12%',
+  },
+  {
+    label: 'Active Sessions',
+    value: '42',
+    icon: Activity,
+    variant: 'success',
+    trend: 'up',
+    trendValue: '+5',
+  },
+  { label: 'Total Games', value: '125', icon: Gamepad2, variant: 'default' },
+  {
+    label: 'API Requests (24h)',
+    value: '3,456',
+    icon: Server,
+    variant: 'default',
+    trend: 'up',
+    trendValue: '+8%',
+  },
+  {
+    label: 'Avg Latency',
+    value: '215ms',
+    icon: Clock,
+    variant: 'success',
+    trend: 'down',
+    trendValue: '-15ms',
+  },
+  {
+    label: 'Error Rate',
+    value: '2.5%',
+    icon: AlertTriangle,
+    variant: 'warning',
+    trend: 'up',
+    trendValue: '+0.3%',
+  },
+  { label: 'Total PDFs', value: '847', icon: FileText, variant: 'default' },
+  {
+    label: 'Chat Messages',
+    value: '15,234',
+    icon: MessageCircle,
+    variant: 'default',
+    trend: 'up',
+    trendValue: '+234',
+  },
+  { label: 'Avg Confidence', value: '94.2%', icon: Brain, variant: 'success' },
+  { label: 'RAG Requests', value: '18,547', icon: Zap, variant: 'default' },
+  { label: 'Active Alerts', value: '2', icon: Bell, variant: 'warning' },
+  { label: 'Resolved Alerts', value: '37', icon: CheckCircle, variant: 'default' },
 ];
 
 /**
- * Full grid with 16 metrics (4x4 layout)
+ * Full grid with 12 metrics (4x3 layout)
  */
 export const Full: Story = {
   args: {
     metrics: mockMetrics,
+  },
+};
+
+/**
+ * Loading state - shows 12 skeleton cards
+ */
+export const Loading: Story = {
+  args: {
+    metrics: [],
+    loading: true,
+  },
+  parameters: {
+    chromatic: {
+      viewports: [375, 768, 1920],
+    },
+  },
+};
+
+/**
+ * Empty state - no metrics available
+ */
+export const Empty: Story = {
+  args: {
+    metrics: [],
+    loading: false,
+  },
+};
+
+/**
+ * Empty state with custom message
+ */
+export const EmptyCustomMessage: Story = {
+  args: {
+    metrics: [],
+    loading: false,
+    emptyStateMessage: 'Dashboard metrics are being loaded...',
   },
 };
 

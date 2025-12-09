@@ -9,6 +9,13 @@ import { test, expect } from '@playwright/test';
 
 test.describe('User Registration Diagnostic', () => {
   test('complete registration flow with screenshots', async ({ page }) => {
+    // Register network listener BEFORE navigation
+    page.on('response', response => {
+      if (response.url().includes('register') || response.url().includes('auth')) {
+        console.log('API Response:', response.status(), response.url());
+      }
+    });
+
     // Step 1: Navigate to home page
     await page.goto('http://localhost:3000');
     await page.screenshot({
@@ -19,7 +26,11 @@ test.describe('User Registration Diagnostic', () => {
     // Step 2: Navigate to login page and switch to register tab
     await page.goto('http://localhost:3000/login');
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000); // Wait for modal to open
+
+    // Wait for AuthModal to be visible (state-based wait)
+    const authModal = page.locator('[role="dialog"]').first();
+    await authModal.waitFor({ state: 'visible', timeout: 5000 });
+
     await page.screenshot({
       path: 'test-results/registration-02-login-page-loaded.png',
       fullPage: true,
@@ -29,7 +40,11 @@ test.describe('User Registration Diagnostic', () => {
     const registerTab = page.locator('button[role="tab"]').filter({ hasText: /^Register$/i });
     await registerTab.waitFor({ state: 'visible', timeout: 10000 });
     await registerTab.click();
-    await page.waitForTimeout(500); // Wait for tab switch animation
+
+    // Wait for register form to be visible (state-based)
+    const registerFormTitle = page.getByText(/create your account/i);
+    await registerFormTitle.waitFor({ state: 'visible', timeout: 5000 });
+
     await page.screenshot({
       path: 'test-results/registration-03-register-tab-active.png',
       fullPage: true,
@@ -97,8 +112,9 @@ test.describe('User Registration Diagnostic', () => {
 
     await submitButton.click();
 
-    // Wait for response and capture
-    await page.waitForTimeout(2000);
+    // Wait for response - expect redirect to /chat or error
+    await page.waitForURL(/\/(chat|login)/, { timeout: 10000 }).catch(() => {});
+
     await page.screenshot({
       path: 'test-results/registration-09-after-submit.png',
       fullPage: true,
@@ -124,7 +140,6 @@ test.describe('User Registration Diagnostic', () => {
     }
 
     // Check if redirected to success page
-    await page.waitForTimeout(1000);
     const currentUrl = page.url();
     console.log('Current URL after registration:', currentUrl);
 
@@ -139,11 +154,13 @@ test.describe('User Registration Diagnostic', () => {
     console.log('Final URL:', currentUrl);
     console.log('Has Error:', hasError);
 
-    // Network requests log
-    page.on('response', response => {
-      if (response.url().includes('register') || response.url().includes('auth')) {
-        console.log('API Response:', response.status(), response.url());
-      }
-    });
+    // Assert successful registration
+    expect(currentUrl).toContain('/chat');
+  });
+
+  // Cleanup screenshots after test
+  test.afterEach(async () => {
+    // Screenshots are automatically cleaned by Playwright's built-in mechanisms
+    // This hook placeholder for future cleanup if needed
   });
 });

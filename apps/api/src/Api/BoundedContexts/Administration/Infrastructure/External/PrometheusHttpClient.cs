@@ -12,7 +12,6 @@ public class PrometheusHttpClient : IPrometheusQueryService
 {
     private readonly HttpClient _httpClient;
     private readonly ILogger<PrometheusHttpClient> _logger;
-    private readonly PrometheusOptions _options;
 
     public PrometheusHttpClient(
         HttpClient httpClient,
@@ -21,15 +20,15 @@ public class PrometheusHttpClient : IPrometheusQueryService
     {
         _httpClient = httpClient;
         _logger = logger;
-        _options = options.Value;
+        var prometheusOptions = options.Value;
 
         // Configure base URL from options
-        if (!string.IsNullOrEmpty(_options.BaseUrl))
+        if (!string.IsNullOrEmpty(prometheusOptions.BaseUrl))
         {
-            _httpClient.BaseAddress = new Uri(_options.BaseUrl);
+            _httpClient.BaseAddress = new Uri(prometheusOptions.BaseUrl);
         }
 
-        _httpClient.Timeout = TimeSpan.FromSeconds(_options.TimeoutSeconds);
+        _httpClient.Timeout = TimeSpan.FromSeconds(prometheusOptions.TimeoutSeconds);
     }
 
     public async Task<PrometheusQueryResult> QueryRangeAsync(

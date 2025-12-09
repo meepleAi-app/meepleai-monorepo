@@ -12,8 +12,8 @@ public class InfrastructureHealthService : IInfrastructureHealthService
     private readonly HealthCheckService _healthCheckService;
     private readonly ILogger<InfrastructureHealthService> _logger;
 
-    // Monitored services: PostgreSQL, Redis, Qdrant, n8n, Prometheus
-    private static readonly string[] MonitoredServices = { "postgres", "redis", "qdrant", "qdrant-collection" };
+    // Issue #892: Monitored services including n8n and HyperDX
+    private static readonly string[] MonitoredServices = { "postgres", "redis", "qdrant", "qdrant-collection", "n8n", "hyperdx" };
 
     public InfrastructureHealthService(
         HealthCheckService healthCheckService,

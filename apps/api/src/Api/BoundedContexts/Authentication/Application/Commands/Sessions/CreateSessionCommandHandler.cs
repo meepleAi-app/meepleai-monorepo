@@ -17,18 +17,15 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
     private readonly IUserRepository _userRepository;
     private readonly ISessionRepository _sessionRepository;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly TimeProvider _timeProvider;
 
     public CreateSessionCommandHandler(
         IUserRepository userRepository,
         ISessionRepository sessionRepository,
-        IUnitOfWork unitOfWork,
-        TimeProvider timeProvider)
+        IUnitOfWork unitOfWork)
     {
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
-        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
     }
 
     public async Task<CreateSessionResponse> Handle(CreateSessionCommand command, CancellationToken cancellationToken)

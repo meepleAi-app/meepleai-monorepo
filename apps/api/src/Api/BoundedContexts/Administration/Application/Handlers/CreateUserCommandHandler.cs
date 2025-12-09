@@ -17,16 +17,13 @@ public class CreateUserCommandHandler : ICommandHandler<CreateUserCommand, UserD
 {
     private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly TimeProvider _timeProvider;
 
     public CreateUserCommandHandler(
         IUserRepository userRepository,
-        IUnitOfWork unitOfWork,
-        TimeProvider timeProvider)
+        IUnitOfWork unitOfWork)
     {
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
-        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
     }
 
     public async Task<UserDto> Handle(CreateUserCommand command, CancellationToken cancellationToken)

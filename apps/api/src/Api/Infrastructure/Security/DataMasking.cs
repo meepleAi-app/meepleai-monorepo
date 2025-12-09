@@ -180,10 +180,11 @@ public static partial class DataMasking
 
     // Regex patterns for connection string password detection
     // FIX MA0009: Add timeout to prevent ReDoS attacks
-    [GeneratedRegex(@"(password|pwd)=[^;]+", RegexOptions.IgnoreCase, matchTimeoutMilliseconds: 1000)]
+    // FIX MA0023: Add ExplicitCapture for performance
+    [GeneratedRegex(@"(password|pwd)=[^;]+", RegexOptions.IgnoreCase | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
     private static partial Regex PasswordInConnectionStringPattern1();
 
-    [GeneratedRegex(@"(Password|PWD)=[^;]+", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
+    [GeneratedRegex(@"(Password|PWD)=[^;]+", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
     private static partial Regex PasswordInConnectionStringPattern2();
 
     [GeneratedRegex(@"(password|pwd):\w+", RegexOptions.IgnoreCase, matchTimeoutMilliseconds: 1000)]

@@ -25,9 +25,6 @@ public sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<HandleOA
     private const string EncryptionPurpose = "OAuthTokens";
 
     private readonly IOAuthService _oauthService;
-    private readonly IUserRepository _userRepository;
-    private readonly IOAuthAccountRepository _oauthAccountRepository;
-    private readonly IUnitOfWork _unitOfWork;
     private readonly IMediator _mediator;
     private readonly ILogger<HandleOAuthCallbackCommandHandler> _logger;
     private readonly IEncryptionService _encryptionService;
@@ -36,9 +33,6 @@ public sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<HandleOA
 
     public HandleOAuthCallbackCommandHandler(
         IOAuthService oauthService,
-        IUserRepository userRepository,
-        IOAuthAccountRepository oauthAccountRepository,
-        IUnitOfWork unitOfWork,
         IMediator mediator,
         ILogger<HandleOAuthCallbackCommandHandler> logger,
         IEncryptionService encryptionService,
@@ -46,9 +40,6 @@ public sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<HandleOA
         MeepleAiDbContext db)
     {
         _oauthService = oauthService;
-        _userRepository = userRepository;
-        _oauthAccountRepository = oauthAccountRepository;
-        _unitOfWork = unitOfWork;
         _mediator = mediator;
         _logger = logger;
         _encryptionService = encryptionService;

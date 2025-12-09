@@ -190,6 +190,20 @@ public static class ObservabilityServiceExtensions
                 "qdrant-collection",
                 tags: new[] { "vector", "qdrant", "collection" });
 
+        // Issue #892: Additional health checks for n8n and HyperDX
+        var n8nUrl = configuration["N8N_URL"] ?? "http://n8n:5678";
+        var hyperDxUrl = configuration["HYPERDX_URL"] ?? "http://meepleai-hyperdx:8000";
+
+        healthChecksBuilder
+            .AddUrlGroup(
+                new Uri($"{n8nUrl}/healthz"),
+                name: "n8n",
+                tags: new[] { "automation", "workflow" })
+            .AddUrlGroup(
+                new Uri($"{hyperDxUrl}/health"),
+                name: "hyperdx",
+                tags: new[] { "observability", "monitoring" });
+
         return services;
     }
 

@@ -1,0 +1,178 @@
+name: Quarterly Security Review Reminder
+
+on:
+  schedule:
+    # First day of Jan, Apr, Jul, Oct at 9am UTC
+    - cron: '0 9 1 1,4,7,10 *'
+  workflow_dispatch:
+
+# Cancel previous runs on same workflow
+concurrency:
+  group: security-review-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  create-reminder-issue:
+    name: Create Quarterly Security Review Issue
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Calculate Quarter
+        id: quarter
+        run: |
+          MONTH=$(date +%-m)
+          YEAR=$(date +%Y)
+
+          # Calculate quarter (1-4)
+          if [ $MONTH -le 3 ]; then
+            QUARTER=1
+          elif [ $MONTH -le 6 ]; then
+            QUARTER=2
+          elif [ $MONTH -le 9 ]; then
+            QUARTER=3
+          else
+            QUARTER=4
+          fi
+
+          echo "quarter=$QUARTER" >> $GITHUB_OUTPUT
+          echo "year=$YEAR" >> $GITHUB_OUTPUT
+          echo "quarter_label=Q${QUARTER}" >> $GITHUB_OUTPUT
+
+          # Calculate next review date (first Monday of next quarter's first month)
+          if [ $QUARTER -eq 4 ]; then
+            NEXT_YEAR=$((YEAR + 1))
+            NEXT_MONTH=1
+          else
+            NEXT_YEAR=$YEAR
+            NEXT_MONTH=$((QUARTER * 3 + 1))
+          fi
+
+          echo "next_review_year=$NEXT_YEAR" >> $GITHUB_OUTPUT
+          echo "next_review_month=$NEXT_MONTH" >> $GITHUB_OUTPUT
+
+      - name: Create Security Review Issue
+        uses: actions/github-script@v7
+        env:
+          QUARTER: ${{ steps.quarter.outputs.quarter }}
+          YEAR: ${{ steps.quarter.outputs.year }}
+          QUARTER_LABEL: ${{ steps.quarter.outputs.quarter_label }}
+          NEXT_YEAR: ${{ steps.quarter.outputs.next_review_year }}
+          NEXT_MONTH: ${{ steps.quarter.outputs.next_review_month }}
+        with:
+          script: |
+            const { QUARTER, YEAR, QUARTER_LABEL, NEXT_YEAR, NEXT_MONTH } = process.env;
+
+            // Format next review date
+            const nextReviewDate = `${NEXT_YEAR}-${String(NEXT_MONTH).padStart(2, '0')}-01`;
+
+            const issueBody = `## 🔒 Quarterly Security Review - ${QUARTER_LABEL} ${YEAR}
+
+            This is an automated reminder to conduct the quarterly security review.
+
+            ## Review Template
+            📋 Use the template: [docs/06-security/security-review-template.md](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/docs/06-security/security-review-template.md)
+
+            ## Review Scope
+
+            ### 1. CodeQL Security Scans
+            - [ ] Review all open CodeQL alerts
+            - [ ] Triage by severity (critical, high, medium, low)
+            - [ ] Create issues for legitimate findings
+            - [ ] Dismiss false positives with justification
+
+            **Command**:
+            \`\`\`bash
+            gh api repos/${context.repo.owner}/${context.repo.repo}/code-scanning/alerts \\
+              --jq '.[] | select(.state=="open") | {number, rule: .rule.id, severity: .rule.severity}'
+            \`\`\`
+
+            ### 2. Dependency Vulnerabilities
+
+            **Backend (.NET)**:
+            \`\`\`bash
+            cd apps/api
+            dotnet list package --vulnerable --include-transitive
+            \`\`\`
+
+            **Frontend (pnpm)**:
+            \`\`\`bash
+            cd apps/web
+            pnpm audit --audit-level=moderate
+            \`\`\`
+
+            - [ ] Scan backend dependencies
+            - [ ] Scan frontend dependencies
+            - [ ] Update vulnerable packages
+            - [ ] Document exceptions with risk assessment
+
+            ### 3. Security Best Practices Audit
+            - [ ] Review authentication/authorization code
+            - [ ] Check secrets management (no hardcoded secrets)
+            - [ ] Validate input sanitization
+            - [ ] Review database queries (SQL injection prevention)
+            - [ ] Check CORS/CSP configurations
+
+            ### 4. Infrastructure Security
+            - [ ] Review Docker configurations
+            - [ ] Check environment variable handling
+            - [ ] Validate TLS/HTTPS configurations
+            - [ ] Review API rate limiting
+            - [ ] Verify monitoring and logging
+
+            ## Process
+
+            ### Week 1: Preparation
+            - [ ] Run all security scans
+            - [ ] Collect CodeQL results
+            - [ ] Run dependency audits
+            - [ ] Generate summary report
+
+            ### Week 2: Review & Triage
+            - [ ] Triage findings by severity
+            - [ ] Create GitHub issues for fixes
+            - [ ] Document false positives
+            - [ ] Prioritize remediation
+
+            ### Weeks 3-4: Remediation
+            - [ ] Fix critical/high severity issues
+            - [ ] Update dependencies
+            - [ ] Run regression tests
+            - [ ] Document changes
+
+            ### End of Quarter: Documentation
+            - [ ] Create \`docs/06-security/${YEAR}-${QUARTER_LABEL}-security-review.md\` from template
+            - [ ] Update \`SECURITY.md\` if needed
+            - [ ] Archive security scan results
+
+            ## Resources
+            - [Security Review Process](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/SECURITY.md#quarterly-security-review-process)
+            - [Security Documentation](https://github.com/${context.repo.owner}/${context.repo.repo}/tree/main/docs/06-security)
+            - [Security Scanning Workflow](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/.github/workflows/security-scan.yml)
+
+            ## Success Criteria
+            - ✅ 100% critical/high findings addressed within quarter
+            - ✅ Zero untracked security vulnerabilities
+            - ✅ Review completed within first 2 weeks of quarter
+            - ✅ Security posture metrics show improvement
+
+            ---
+
+            **Next Review Due**: ${nextReviewDate}
+            **Automated Issue**: Created by [security-review-reminder.yml](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/.github/workflows/security-review-reminder.yml)
+            `;
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🔒 ${QUARTER_LABEL} ${YEAR} Security Review`,
+              labels: ['area/security', 'kind/policy', 'priority-high'],
+              body: issueBody,
+              assignees: [] // Add default assignees if needed
+            });
+
+            console.log(`✅ Created ${QUARTER_LABEL} ${YEAR} security review issue`);

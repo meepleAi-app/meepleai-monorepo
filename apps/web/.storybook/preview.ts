@@ -34,6 +34,10 @@ const MockAuthProvider = ({ children }: { children: React.ReactNode }) => {
   });
 };
 
+// Note: Next.js router mocking is now handled by @storybook/nextjs adapter
+// Stories that need custom router behavior should use the nextjs.router parameter
+// See: https://storybook.js.org/docs/react/configure/integration/nextjs
+
 const preview: Preview = {
   parameters: {
     controls: {

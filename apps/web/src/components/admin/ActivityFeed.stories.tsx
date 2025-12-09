@@ -3,10 +3,14 @@ import { ActivityFeed } from './ActivityFeed';
 import type { ActivityEvent } from './ActivityFeed';
 
 /**
- * ActivityFeed - Issue #874
+ * ActivityFeed - Issue #884
  *
- * Displays recent system activity events.
- * Shows last 10 events with severity indicators and icons.
+ * Timeline for recent system activity events.
+ * Features:
+ * - Timeline layout with event type icons
+ * - Relative timestamps (e.g., "5 minuti fa")
+ * - Scrollable container (max 10 events)
+ * - View All link
  */
 const meta = {
   title: 'Admin/ActivityFeed',
@@ -18,10 +22,29 @@ const meta = {
     },
   },
   tags: ['autodocs'],
+  argTypes: {
+    showViewAll: {
+      control: 'boolean',
+      description: 'Show or hide the View All link',
+    },
+    viewAllHref: {
+      control: 'text',
+      description: 'Custom href for View All link',
+    },
+    maxEvents: {
+      control: { type: 'number', min: 1, max: 20 },
+      description: 'Maximum number of events to display',
+    },
+  },
 } satisfies Meta<typeof ActivityFeed>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
+
+// Generate dynamic timestamps relative to "now" for realistic relative times
+const now = new Date();
+const minutesAgo = (minutes: number) => new Date(now.getTime() - minutes * 60 * 1000).toISOString();
+const hoursAgo = (hours: number) => new Date(now.getTime() - hours * 60 * 60 * 1000).toISOString();
 
 const mockEvents: ActivityEvent[] = [
   {
@@ -32,7 +55,7 @@ const mockEvents: ActivityEvent[] = [
     userEmail: 'john.doe@example.com',
     entityId: 'user-123',
     entityType: 'User',
-    timestamp: new Date('2025-12-08T14:30:00Z').toISOString(),
+    timestamp: minutesAgo(5),
     severity: 'Info',
   },
   {
@@ -43,7 +66,7 @@ const mockEvents: ActivityEvent[] = [
     userEmail: 'alice@example.com',
     entityId: 'pdf-789',
     entityType: 'PdfDocument',
-    timestamp: new Date('2025-12-08T14:25:00Z').toISOString(),
+    timestamp: minutesAgo(15),
     severity: 'Info',
   },
   {
@@ -52,7 +75,7 @@ const mockEvents: ActivityEvent[] = [
     description: 'Alert: High error rate detected (Severity: warning)',
     entityId: 'alert-456',
     entityType: 'Alert',
-    timestamp: new Date('2025-12-08T14:20:00Z').toISOString(),
+    timestamp: minutesAgo(30),
     severity: 'Warning',
   },
   {
@@ -62,7 +85,7 @@ const mockEvents: ActivityEvent[] = [
     userId: 'user-789',
     entityId: 'request-999',
     entityType: 'AiRequestLog',
-    timestamp: new Date('2025-12-08T14:15:00Z').toISOString(),
+    timestamp: minutesAgo(45),
     severity: 'Error',
   },
   {
@@ -71,7 +94,7 @@ const mockEvents: ActivityEvent[] = [
     description: 'Alert: Database connection restored (Severity: critical)',
     entityId: 'alert-123',
     entityType: 'Alert',
-    timestamp: new Date('2025-12-08T14:10:00Z').toISOString(),
+    timestamp: hoursAgo(1),
     severity: 'Critical',
   },
   {
@@ -81,7 +104,7 @@ const mockEvents: ActivityEvent[] = [
     userId: 'admin-001',
     entityId: 'game-999',
     entityType: 'Game',
-    timestamp: new Date('2025-12-08T14:05:00Z').toISOString(),
+    timestamp: hoursAgo(2),
     severity: 'Info',
   },
   {
@@ -91,7 +114,7 @@ const mockEvents: ActivityEvent[] = [
     userId: 'admin-001',
     entityId: 'config-123',
     entityType: 'Configuration',
-    timestamp: new Date('2025-12-08T14:00:00Z').toISOString(),
+    timestamp: hoursAgo(3),
     severity: 'Info',
   },
   {
@@ -101,7 +124,7 @@ const mockEvents: ActivityEvent[] = [
     userId: 'user-222',
     entityId: 'pdf-888',
     entityType: 'PdfDocument',
-    timestamp: new Date('2025-12-08T13:55:00Z').toISOString(),
+    timestamp: hoursAgo(5),
     severity: 'Info',
   },
   {
@@ -112,7 +135,7 @@ const mockEvents: ActivityEvent[] = [
     userEmail: 'admin@meepleai.com',
     entityId: 'session-777',
     entityType: 'Session',
-    timestamp: new Date('2025-12-08T13:50:00Z').toISOString(),
+    timestamp: hoursAgo(8),
     severity: 'Info',
   },
   {
@@ -121,13 +144,13 @@ const mockEvents: ActivityEvent[] = [
     description: 'Daily backup completed successfully',
     entityId: 'backup-20251208',
     entityType: 'System',
-    timestamp: new Date('2025-12-08T13:45:00Z').toISOString(),
+    timestamp: hoursAgo(12),
     severity: 'Info',
   },
 ];
 
 /**
- * Default activity feed with 10 events
+ * Default activity feed with 10 events and View All link
  */
 export const Default: Story = {
   args: {
@@ -136,7 +159,7 @@ export const Default: Story = {
 };
 
 /**
- * Empty state (no activity)
+ * Empty state (no activity) with enhanced icon
  */
 export const Empty: Story = {
   args: {
@@ -163,12 +186,48 @@ export const InfoOnly: Story = {
 };
 
 /**
- * Limited to 5 events
+ * Limited to 5 events with View All link
  */
 export const Limited: Story = {
   args: {
     events: mockEvents,
     maxEvents: 5,
+  },
+};
+
+/**
+ * Without View All link
+ */
+export const NoViewAllLink: Story = {
+  args: {
+    events: mockEvents,
+    showViewAll: false,
+  },
+};
+
+/**
+ * Custom View All href
+ */
+export const CustomViewAllHref: Story = {
+  args: {
+    events: mockEvents,
+    viewAllHref: '/admin/logs',
+  },
+};
+
+/**
+ * Many events to show scrolling behavior
+ */
+export const Scrollable: Story = {
+  args: {
+    events: Array.from({ length: 15 }, (_, i) => ({
+      id: `event-${i}`,
+      eventType: 'SystemEvent',
+      description: `System event ${i + 1}: Processing batch operation`,
+      timestamp: minutesAgo(i * 10),
+      severity: 'Info' as const,
+    })),
+    maxEvents: 15,
   },
 };
 

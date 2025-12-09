@@ -1,25 +1,27 @@
 /**
- * Enhanced Admin Dashboard - Issue #874, #885
+ * Enhanced Admin Dashboard - Issue #874, #885, #886
  *
  * Centralized dashboard with:
  * - System status section
- * - 16 real-time metrics (polling every 30s)
+ * - 16 real-time metrics (React Query polling every 30s)
  * - Quick actions for common tasks
  * - Activity feed (last 10 system events)
  * - AdminLayout with navigation
  * - Performance optimized (<1s load, <2s TTI)
+ * - Tab visibility pause (stops polling when hidden)
  */
 
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { MetricsGrid } from '@/components/admin/MetricsGrid';
 import { ActivityFeed } from '@/components/admin/ActivityFeed';
 import { QuickActions, type QuickAction } from '@/components/admin/QuickActions';
 import { SystemStatus, type ServiceStatus } from '@/components/admin/SystemStatus';
 import type { StatCardProps } from '@/components/admin/StatCard';
-import { api, type DashboardMetrics, type RecentActivityDto } from '@/lib/api';
+import { useDashboardData } from '@/hooks/queries/useDashboardData';
+import type { DashboardMetrics } from '@/lib/api';
 import {
   FileUpIcon,
   UsersIcon,
@@ -28,8 +30,6 @@ import {
   MessageSquareIcon,
   DatabaseIcon,
 } from 'lucide-react';
-
-const POLLING_INTERVAL_MS = 30000; // 30 seconds
 
 /**
  * Derives system status from metrics
@@ -145,108 +145,11 @@ function buildQuickActions(metrics: DashboardMetrics | null): QuickAction[] {
   ];
 }
 
-export function DashboardClient() {
-  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
-  const [activity, setActivity] = useState<RecentActivityDto | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [errorCount, setErrorCount] = useState(0);
-  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
-  const [refreshing, setRefreshing] = useState(false);
-
-  const fetchDashboardData = useCallback(async () => {
-    try {
-      setError(null);
-
-      // Parallel API calls for performance
-      const [analyticsData, activityData] = await Promise.all([
-        api.admin.getAnalytics(),
-        api.admin.getRecentActivity({ limit: 10 }),
-      ]);
-
-      if (analyticsData?.metrics) {
-        setMetrics(analyticsData.metrics);
-      }
-
-      if (activityData) {
-        setActivity(activityData);
-      }
-
-      setLastUpdate(new Date());
-      setErrorCount(0); // Reset error count on success
-      setLoading(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load dashboard data');
-      setErrorCount(prev => prev + 1); // Increment error count
-      setLoading(false);
-    }
-  }, []);
-
-  // Initial load
-  useEffect(() => {
-    void fetchDashboardData();
-  }, [fetchDashboardData]);
-
-  // Polling every 30 seconds (Issue #874 requirement)
-  // Stops after 3 consecutive failures to prevent API hammering
-  useEffect(() => {
-    if (errorCount >= 3) {
-      // Stop polling after 3 consecutive failures
-      return;
-    }
-
-    const interval = setInterval(() => {
-      void fetchDashboardData();
-    }, POLLING_INTERVAL_MS);
-
-    return () => clearInterval(interval);
-  }, [fetchDashboardData, errorCount]);
-
-  if (loading) {
-    return (
-      <AdminLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="text-lg text-gray-500">Loading dashboard...</div>
-        </div>
-      </AdminLayout>
-    );
-  }
-
-  if (error) {
-    return (
-      <AdminLayout>
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-          <h2 className="text-lg font-semibold text-red-800 mb-2">Error Loading Dashboard</h2>
-          <p className="text-red-600">{error}</p>
-          {errorCount >= 3 && (
-            <p className="text-sm text-red-500 mt-2">
-              Polling paused after 3 consecutive failures. Click retry to resume.
-            </p>
-          )}
-          <button
-            onClick={() => {
-              setErrorCount(0); // Reset error count on manual retry
-              void fetchDashboardData();
-            }}
-            className="mt-4 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
-          >
-            Retry
-          </button>
-        </div>
-      </AdminLayout>
-    );
-  }
-
-  if (!metrics) {
-    return (
-      <AdminLayout>
-        <div className="text-center text-gray-500 py-12">No dashboard data available</div>
-      </AdminLayout>
-    );
-  }
-
-  // Transform metrics to StatCard format
-  const metricCards: StatCardProps[] = [
+/**
+ * Transform metrics to StatCard format
+ */
+function buildMetricCards(metrics: DashboardMetrics): StatCardProps[] {
+  return [
     {
       label: 'Total Users',
       value: metrics.totalUsers.toLocaleString(),
@@ -335,16 +238,64 @@ export function DashboardClient() {
       variant: 'default',
     },
   ];
+}
 
-  // Derive system status and quick actions from metrics
-  const systemStatus = deriveSystemStatus(metrics);
-  const quickActions = buildQuickActions(metrics);
+export function DashboardClient() {
+  // React Query hook with 30s polling and tab visibility pause (Issue #886)
+  const { metrics, events, isLoading, isError, error, lastUpdate, refetch, isFetching, analytics } =
+    useDashboardData(10);
+
+  // Memoize derived data to prevent unnecessary re-renders
+  const systemStatus = useMemo(() => deriveSystemStatus(metrics), [metrics]);
+  const quickActions = useMemo(() => buildQuickActions(metrics), [metrics]);
+  const metricCards = useMemo(() => (metrics ? buildMetricCards(metrics) : []), [metrics]);
 
   const handleRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await fetchDashboardData();
-    setRefreshing(false);
-  }, [fetchDashboardData]);
+    await refetch();
+  }, [refetch]);
+
+  // Check if retry limit reached (3 consecutive failures)
+  const retryLimitReached = analytics.failureCount >= 3;
+
+  if (isLoading) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-lg text-gray-500">Loading dashboard...</div>
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  if (isError && error) {
+    return (
+      <AdminLayout>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+          <h2 className="text-lg font-semibold text-red-800 mb-2">Error Loading Dashboard</h2>
+          <p className="text-red-600">{error.message}</p>
+          {retryLimitReached && (
+            <p className="text-sm text-red-500 mt-2">
+              Polling paused after 3 consecutive failures. Click retry to resume.
+            </p>
+          )}
+          <button
+            onClick={() => void refetch()}
+            className="mt-4 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  if (!metrics) {
+    return (
+      <AdminLayout>
+        <div className="text-center text-gray-500 py-12">No dashboard data available</div>
+      </AdminLayout>
+    );
+  }
 
   return (
     <AdminLayout>
@@ -371,7 +322,7 @@ export function DashboardClient() {
             overallStatus={systemStatus.overall}
             lastUpdate={lastUpdate}
             onRefresh={handleRefresh}
-            refreshing={refreshing}
+            refreshing={isFetching}
           />
           <QuickActions actions={quickActions} />
         </div>
@@ -380,7 +331,7 @@ export function DashboardClient() {
         <MetricsGrid metrics={metricCards} />
 
         {/* Activity Feed */}
-        {activity && <ActivityFeed events={activity.events} />}
+        {events.length > 0 && <ActivityFeed events={events} />}
       </div>
     </AdminLayout>
   );

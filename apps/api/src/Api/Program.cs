@@ -142,6 +142,7 @@ builder.Services.Configure<RagPromptsConfiguration>(builder.Configuration.GetSec
 builder.Services.Configure<HybridCacheConfiguration>(builder.Configuration.GetSection("HybridCache")); // PERF-05: HybridCache configuration
 builder.Services.Configure<HybridSearchConfiguration>(builder.Configuration.GetSection("HybridSearch")); // AI-14: Hybrid search configuration
 builder.Services.Configure<WeeklyEvaluationConfiguration>(builder.Configuration.GetSection("QualityEvaluation")); // BGAI-042: Weekly evaluation configuration
+builder.Services.Configure<Api.BoundedContexts.Administration.Infrastructure.External.PrometheusOptions>(builder.Configuration.GetSection("Prometheus")); // Issue #893: Prometheus HTTP client configuration
 
 // Issue #1447: Security headers middleware configuration
 builder.Services.AddSecurityHeaders(builder.Configuration);
@@ -341,6 +342,7 @@ v1Api.MapRuleSpecEndpoints();
 v1Api.MapConfigurationEndpoints();     // System configuration CRUD & operations
 v1Api.MapAnalyticsEndpoints();         // Dashboard statistics & metrics
 v1Api.MapLlmAnalyticsEndpoints();      // ISSUE-1725: LLM cost optimization analytics
+v1Api.MapMonitoringEndpoints();        // Issues #891 + #893: Infrastructure health & Prometheus metrics
 v1Api.MapAlertEndpoints();             // Alert management
 v1Api.MapAuditEndpoints();             // Audit log retrieval & search
 v1Api.MapFeatureFlagEndpoints();       // Feature flag management

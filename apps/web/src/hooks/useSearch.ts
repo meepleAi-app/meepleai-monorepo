@@ -68,7 +68,7 @@ function buildSearchIndex(sources: SearchDataSources): SearchResult[] {
       subtitle: message.role === 'user' ? 'You' : 'Assistant',
       timestamp: message.timestamp,
       message,
-      chatId: '', // TODO: Get from message context
+      chatId: '', // TODO: Issue #2030 - Get from message context
       gameId: message.gameId,
       relevanceScore: 0,
     };
@@ -153,10 +153,10 @@ function applyFilters(results: SearchResult[], filters?: SearchFilters): SearchR
 
       // Message results: Cannot filter by agent without chat-message association
       // Note: message.endpoint is HTTP route ("/qa"), not agentId
-      // TODO: Need to pass chat context to properly filter messages by agent
+      // TODO: Issue #2030 - Need to pass chat context to properly filter messages by agent
 
       // Chat results: Cannot filter by agent (ChatThread doesn't have agentId)
-      // TODO: If chat needs agent filtering, ChatThread type needs agentId property
+      // TODO: Issue #2030 - If chat needs agent filtering, ChatThread type needs agentId property
 
       // Game results: cannot be filtered by agent (games don't have agents)
       if (result.type === 'game') return false;

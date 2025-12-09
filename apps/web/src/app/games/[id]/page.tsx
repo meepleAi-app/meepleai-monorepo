@@ -3,7 +3,7 @@
  *
  * Full-page view with:
  * - Overview: Game info + BGG details (reuses GameDetailModal logic)
- * - Rules: Placeholder for GetRuleSpecsQuery (backend TODO)
+ * - Rules: Placeholder for GetRuleSpecsQuery (Issue #2027)
  * - Sessions: Game session history (uses api.sessions.getHistory)
  * - Notes: User notes (localStorage-based)
  *

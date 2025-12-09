@@ -190,6 +190,7 @@ export const MobileView: Story = {
     },
     chromatic: {
       viewports: [375],
+      delay: 1500, // Increased delay to let store effects settle
     },
     docs: {
       description: {
@@ -214,6 +215,7 @@ export const TabletView: Story = {
     },
     chromatic: {
       viewports: [768],
+      delay: 1500, // Increased delay to let store effects settle
     },
     docs: {
       description: {
@@ -237,6 +239,7 @@ export const DesktopView: Story = {
     },
     chromatic: {
       viewports: [1440],
+      delay: 1500, // Increased delay to let store effects settle
     },
     docs: {
       description: {

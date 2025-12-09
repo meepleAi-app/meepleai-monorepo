@@ -63,7 +63,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
   const handleTypeToggle = (type: SearchResultType) => {
     const currentTypes = filters.types || [];
     const newTypes = currentTypes.includes(type)
-      ? currentTypes.filter((t) => t !== type)
+      ? currentTypes.filter(t => t !== type)
       : [...currentTypes, type];
 
     onFiltersChange({
@@ -110,12 +110,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold">Filters</h3>
         {hasActiveFilters && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleClearFilters}
-            className="h-7 text-xs"
-          >
+          <Button variant="ghost" size="sm" onClick={handleClearFilters} className="h-7 text-xs">
             <X className="w-3 h-3 mr-1" />
             Clear All
           </Button>
@@ -128,16 +123,13 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
           <Label htmlFor="filter-game" className="text-xs">
             Game
           </Label>
-          <Select
-            value={filters.gameId || 'all'}
-            onValueChange={handleGameChange}
-          >
+          <Select value={filters.gameId || 'all'} onValueChange={handleGameChange}>
             <SelectTrigger id="filter-game" className="h-8 text-xs">
               <SelectValue placeholder="All games" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All games</SelectItem>
-              {games.map((game) => (
+              {games.map(game => (
                 <SelectItem key={game.id} value={game.id}>
                   {game.title}
                 </SelectItem>
@@ -151,16 +143,13 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
           <Label htmlFor="filter-agent" className="text-xs">
             Agent
           </Label>
-          <Select
-            value={filters.agentId || 'all'}
-            onValueChange={handleAgentChange}
-          >
+          <Select value={filters.agentId || 'all'} onValueChange={handleAgentChange}>
             <SelectTrigger id="filter-agent" className="h-8 text-xs">
               <SelectValue placeholder="All agents" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All agents</SelectItem>
-              {agents.map((agent) => (
+              {agents.map(agent => (
                 <SelectItem key={agent.id} value={agent.id}>
                   {agent.name}
                 </SelectItem>
@@ -214,7 +203,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
         </div>
       </div>
 
-      {/* TODO: PDF Language Filter (requires backend support) */}
+      {/* TODO: Issue #2029 - PDF Language Filter (requires backend support) */}
       {/* <div className="space-y-2">
         <Label htmlFor="filter-language" className="text-xs">
           PDF Language

@@ -66,7 +66,7 @@ export interface AgentSearchResult extends BaseSearchResult {
 
 /**
  * PDF search result
- * TODO: Add PDF document type when available
+ * TODO: Issue #2029 - Add PDF document type when available
  */
 export interface PdfSearchResult extends BaseSearchResult {
   type: 'pdf';
@@ -74,7 +74,7 @@ export interface PdfSearchResult extends BaseSearchResult {
   fileName: string;
   gameId?: string;
   gameName?: string;
-  language?: string; // TODO: Add when PDF language metadata is available
+  language?: string; // TODO: Issue #2029 - Add when PDF language metadata is available
 }
 
 /**
@@ -96,7 +96,7 @@ export interface SearchFilters {
   dateFrom?: Date;
   dateTo?: Date;
   types?: SearchResultType[];
-  language?: string; // TODO: Implement when PDF language is available
+  language?: string; // TODO: Issue #2029 - Implement when PDF language is available
 }
 
 /**

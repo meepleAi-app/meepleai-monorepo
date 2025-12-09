@@ -1,10 +1,11 @@
 /**
- * StatCard Component Tests - Issue #874
+ * StatCard Component Tests - Issue #874, #882
  */
 
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { StatCard } from '../StatCard';
+import { Users, Activity, AlertTriangle } from 'lucide-react';
 
 describe('StatCard', () => {
   it('renders label and value correctly', () => {
@@ -104,5 +105,100 @@ describe('StatCard', () => {
     const value = screen.getByText('1,247');
     expect(value).toHaveClass('text-3xl');
     expect(value).toHaveClass('font-bold');
+  });
+
+  // ==================== Issue #882 New Tests ====================
+
+  describe('Icon support', () => {
+    it('renders icon when provided', () => {
+      const { container } = render(<StatCard label="Total Users" value="1,247" icon={Users} />);
+      const svg = container.querySelector('svg');
+      expect(svg).toBeInTheDocument();
+    });
+
+    it('does not render icon wrapper when icon not provided', () => {
+      const { container } = render(<StatCard label="Total Users" value="1,247" />);
+      // Should not have icon container with rounded-lg class in the flex layout
+      const iconContainer = container.querySelector('.rounded-lg.p-2');
+      expect(iconContainer).not.toBeInTheDocument();
+    });
+
+    it('applies correct icon styling for default variant', () => {
+      const { container } = render(
+        <StatCard label="Test" value="100" icon={Users} variant="default" />
+      );
+      const iconContainer = container.querySelector('[class*="text-gray-600"]');
+      expect(iconContainer).toBeInTheDocument();
+    });
+
+    it('applies correct icon styling for success variant', () => {
+      const { container } = render(
+        <StatCard label="Test" value="100" icon={Activity} variant="success" />
+      );
+      const iconContainer = container.querySelector('[class*="text-green-600"]');
+      expect(iconContainer).toBeInTheDocument();
+    });
+
+    it('applies correct icon styling for warning variant', () => {
+      const { container } = render(
+        <StatCard label="Test" value="100" icon={AlertTriangle} variant="warning" />
+      );
+      const iconContainer = container.querySelector('[class*="text-yellow-600"]');
+      expect(iconContainer).toBeInTheDocument();
+    });
+
+    it('applies correct icon styling for danger variant', () => {
+      const { container } = render(
+        <StatCard label="Test" value="100" icon={AlertTriangle} variant="danger" />
+      );
+      const iconContainer = container.querySelector('[class*="text-red-600"]');
+      expect(iconContainer).toBeInTheDocument();
+    });
+  });
+
+  describe('Loading state', () => {
+    it('renders loading skeleton when loading is true', () => {
+      render(<StatCard label="Test" value="100" loading />);
+      expect(screen.getByTestId('statcard-loading')).toBeInTheDocument();
+    });
+
+    it('does not render label or value when loading', () => {
+      render(<StatCard label="Total Users" value="1,247" loading />);
+      expect(screen.queryByText('Total Users')).not.toBeInTheDocument();
+      expect(screen.queryByText('1,247')).not.toBeInTheDocument();
+    });
+
+    it('renders skeleton placeholders when loading', () => {
+      const { container } = render(<StatCard label="Test" value="100" loading />);
+      const skeletons = container.querySelectorAll('.animate-pulse');
+      expect(skeletons.length).toBeGreaterThan(0);
+    });
+
+    it('renders icon skeleton when icon is provided and loading', () => {
+      const { container } = render(<StatCard label="Test" value="100" icon={Users} loading />);
+      // Should have a larger skeleton for the icon
+      const iconSkeleton = container.querySelector('.h-10.w-10');
+      expect(iconSkeleton).toBeInTheDocument();
+    });
+
+    it('does not render icon skeleton when no icon and loading', () => {
+      const { container } = render(<StatCard label="Test" value="100" loading />);
+      const iconSkeleton = container.querySelector('.h-10.w-10');
+      expect(iconSkeleton).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Hover effect', () => {
+    it('has hover transition classes', () => {
+      const { container } = render(<StatCard label="Test" value="100" />);
+      const card = container.querySelector('[class*="hover:shadow-md"]');
+      expect(card).toBeInTheDocument();
+    });
+
+    it('has transition-all class for smooth animation', () => {
+      const { container } = render(<StatCard label="Test" value="100" />);
+      const card = container.querySelector('[class*="transition-all"]');
+      expect(card).toBeInTheDocument();
+    });
   });
 });

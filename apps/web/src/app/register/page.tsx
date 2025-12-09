@@ -7,19 +7,7 @@
  * Mirrors /login structure but with defaultMode="register"
  */
 
-import type { Metadata } from 'next';
 import { Suspense, useState, useEffect } from 'react';
-
-// Metadata for SEO
-export const metadata: Metadata = {
-  title: 'Registrati | MeepleAI',
-  description:
-    "Crea il tuo account MeepleAI per accedere all'assistente AI per giochi da tavolo. Risposte immediate alle regole con citazioni dal manuale.",
-  robots: {
-    index: true,
-    follow: true,
-  },
-};
 import { useRouter } from 'next/navigation';
 import { AuthModal } from '@/components/auth';
 import { useTranslation } from '@/hooks/useTranslation';

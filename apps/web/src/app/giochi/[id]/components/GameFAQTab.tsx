@@ -4,7 +4,7 @@
  * Displays frequently asked questions using Shadcn Accordion.
  * Currently uses placeholder/mock data.
  *
- * TODO: Future implementation will query backend FAQ system
+ * TODO: Issue #2028 - Backend FAQ system implementation
  * via GameManagement.Application.Queries.GetGameFAQsQuery
  *
  * Issue #1841 (PAGE-005)
@@ -104,7 +104,7 @@ export function GameFAQTab({ gameId, gameTitle }: GameFAQTabProps) {
       </Accordion>
 
       {/* Backend TODO Comment */}
-      {/* TODO: Replace mock FAQ data with backend query:
+      {/* TODO: Issue #2028 - Replace mock FAQ data with backend query:
           const { data: faqs } = useGameFAQs(gameId);
           Backend Query: GameManagement.Application.Queries.GetGameFAQsQuery
           Expected response: Array<{ id: string; question: string; answer: string; }>

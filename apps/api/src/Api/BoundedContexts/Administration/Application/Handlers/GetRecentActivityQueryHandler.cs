@@ -7,8 +7,19 @@ using Microsoft.EntityFrameworkCore;
 namespace Api.BoundedContexts.Administration.Application.Handlers;
 
 /// <summary>
-/// Issue #874: Handler for GetRecentActivityQuery.
-/// Aggregates recent system events from audit logs, user registrations, PDF uploads, and alerts.
+/// Issue #874, #878: Activity Feed Service - Handler for GetRecentActivityQuery.
+/// Serves as ActivityFeedService per Issue #878 (DDD/CQRS: Handlers ARE application services).
+///
+/// Functionality:
+/// - GetRecentActivityAsync(int count): Implemented via Handle() method
+/// - Merges data sources by timestamp: User logins, PDF uploads, critical errors, config changes
+/// - Returns ActivityEventDto: Wrapped in RecentActivityDto with metadata
+///
+/// Data Sources:
+/// 1. User registrations (UserRegistered events)
+/// 2. PDF uploads (PdfUploaded events)
+/// 3. System alerts (AlertCreated/AlertResolved events)
+/// 4. AI Request errors (ErrorOccurred events)
 /// </summary>
 public class GetRecentActivityQueryHandler : IQueryHandler<GetRecentActivityQuery, RecentActivityDto>
 {

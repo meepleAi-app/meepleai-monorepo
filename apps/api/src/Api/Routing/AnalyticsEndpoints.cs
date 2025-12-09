@@ -155,6 +155,44 @@ public static class AnalyticsEndpoints
         .Produces(StatusCodes.Status401Unauthorized)
         .Produces(StatusCodes.Status403Forbidden);
 
+        // Issue #877: Dashboard stats endpoint
+        group.MapGet("/admin/dashboard/stats", async (
+            HttpContext context,
+            IMediator mediator,
+            DateTime? fromDate = null,
+            DateTime? toDate = null,
+            int days = 30,
+            string? gameId = null,
+            string? roleFilter = null,
+            CancellationToken ct = default) =>
+        {
+            var (authorized, _, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
+
+            var query = new GetAdminStatsQuery(fromDate, toDate, days, gameId, roleFilter);
+            var stats = await mediator.Send(query, ct).ConfigureAwait(false);
+            return Results.Ok(stats);
+        })
+        .WithName("GetDashboardStats")
+        .WithTags("Admin", "Dashboard")
+        .WithDescription("Get comprehensive dashboard statistics for admin overview page. " +
+                         "Returns aggregated metrics (users, sessions, games, PDFs), " +
+                         "time-series trends (daily data points), and system health indicators. " +
+                         "Supports filtering by date range, game, and user role.")
+        .WithSummary("Admin Dashboard Overview Statistics")
+        .Produces<DashboardStatsDto>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status403Forbidden)
+        .WithOpenApi(operation =>
+        {
+            operation.Parameters[0].Description = "Start date for filtering (optional, defaults to 'days' ago from now)";
+            operation.Parameters[1].Description = "End date for filtering (optional, defaults to now)";
+            operation.Parameters[2].Description = "Number of days to look back (default: 30, used if fromDate/toDate not specified)";
+            operation.Parameters[3].Description = "Filter by specific game ID (optional)";
+            operation.Parameters[4].Description = "Filter by user role: 'admin', 'user', or 'editor' (optional)";
+            return operation;
+        });
+
         // Issue #874: Activity feed endpoint for admin dashboard
         group.MapGet("/admin/activity", async (
             HttpContext context,

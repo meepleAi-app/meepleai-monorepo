@@ -12,7 +12,8 @@ using Xunit;
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 
 /// <summary>
-/// Tests for GetRecentActivityQueryHandler - Issue #874
+/// Tests for GetRecentActivityQueryHandler - Issue #874, #878
+/// Validates ActivityFeedService functionality (13 comprehensive test scenarios)
 /// </summary>
 public class GetRecentActivityQueryHandlerTests : IDisposable
 {

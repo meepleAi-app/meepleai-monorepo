@@ -134,6 +134,19 @@ export const Loading: Story = {
  */
 export const ProfileUpdateSuccess: Story = {
   parameters: {
+    nextjs: {
+      router: {
+        pathname: '/settings',
+        query: {},
+        asPath: '/settings',
+        push: async () => true,
+        replace: async () => true,
+        back: () => {},
+        reload: () => {},
+        prefetch: async () => {},
+        isReady: true,
+      },
+    },
     mockData: [
       {
         url: '/api/v1/auth/me',

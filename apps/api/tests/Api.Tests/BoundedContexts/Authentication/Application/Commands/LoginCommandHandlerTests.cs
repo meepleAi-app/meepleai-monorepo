@@ -37,8 +37,7 @@ public class LoginCommandHandlerTests
             _userRepositoryMock.Object,
             _sessionRepositoryMock.Object,
             _tempSessionServiceMock.Object,
-            _unitOfWorkMock.Object,
-            _timeProvider
+            _unitOfWorkMock.Object
         );
     }
     [Fact]

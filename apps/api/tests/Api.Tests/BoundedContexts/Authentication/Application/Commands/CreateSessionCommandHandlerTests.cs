@@ -33,8 +33,7 @@ public class CreateSessionCommandHandlerTests
         _handler = new CreateSessionCommandHandler(
             _userRepositoryMock.Object,
             _sessionRepositoryMock.Object,
-            _unitOfWorkMock.Object,
-            _timeProvider
+            _unitOfWorkMock.Object
         );
     }
     [Fact]

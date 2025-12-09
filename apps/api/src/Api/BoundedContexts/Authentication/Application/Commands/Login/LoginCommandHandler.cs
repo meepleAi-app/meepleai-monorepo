@@ -19,20 +19,17 @@ public class LoginCommandHandler : ICommandHandler<LoginCommand, LoginResponse>
     private readonly ISessionRepository _sessionRepository;
     private readonly ITempSessionService _tempSessionService;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly TimeProvider _timeProvider;
 
     public LoginCommandHandler(
         IUserRepository userRepository,
         ISessionRepository sessionRepository,
         ITempSessionService tempSessionService,
-        IUnitOfWork unitOfWork,
-        TimeProvider timeProvider)
+        IUnitOfWork unitOfWork)
     {
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _tempSessionService = tempSessionService ?? throw new ArgumentNullException(nameof(tempSessionService));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
-        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
     }
 
     public async Task<LoginResponse> Handle(LoginCommand command, CancellationToken cancellationToken)

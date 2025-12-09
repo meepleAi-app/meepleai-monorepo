@@ -96,9 +96,10 @@ public static class CommonValidators
         return Result<string>.Success(value);
     }
     // FIX MA0009: Add timeout to prevent ReDoS attacks
+    // FIX MA0023: Add ExplicitCapture for performance
     private static readonly Regex ApiKeyRegex = new(
         @"^mpl_(dev|staging|prod)_[A-Za-z0-9+/]{32,}={0,2}$",
-        RegexOptions.Compiled,
+        RegexOptions.Compiled | RegexOptions.ExplicitCapture,
         TimeSpan.FromSeconds(1));
 
     /// <summary>

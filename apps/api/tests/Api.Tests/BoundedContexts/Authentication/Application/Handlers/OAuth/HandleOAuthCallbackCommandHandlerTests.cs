@@ -68,9 +68,6 @@ public class HandleOAuthCallbackCommandHandlerTests : IDisposable
 
         _handler = new HandleOAuthCallbackCommandHandler(
             _oauthServiceMock.Object,
-            _userRepositoryMock.Object,
-            _oauthAccountRepositoryMock.Object,
-            _unitOfWorkMock.Object,
             _mediatorMock.Object,
             _loggerMock.Object,
             _encryptionServiceMock.Object,

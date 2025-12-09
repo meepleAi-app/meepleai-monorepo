@@ -30,8 +30,7 @@ public class CreateUserCommandHandlerTests
         _mockTimeProvider = new Mock<TimeProvider>();
         _handler = new CreateUserCommandHandler(
             _mockUserRepository.Object,
-            _mockUnitOfWork.Object,
-            _mockTimeProvider.Object);
+            _mockUnitOfWork.Object);
     }
 
     [Fact]

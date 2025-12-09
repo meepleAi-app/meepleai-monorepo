@@ -33,8 +33,7 @@ public class RegisterCommandHandlerTests
         _handler = new RegisterCommandHandler(
             _userRepositoryMock.Object,
             _sessionRepositoryMock.Object,
-            _unitOfWorkMock.Object,
-            _timeProvider
+            _unitOfWorkMock.Object
         );
     }
     [Fact]

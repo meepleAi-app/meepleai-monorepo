@@ -15,16 +15,13 @@ namespace Api.Services;
 public class AiResponseCacheService : IAiResponseCacheService
 {
     private readonly IHybridCacheService _hybridCache;
-    private readonly MeepleAiDbContext _dbContext;
     private readonly ILogger<AiResponseCacheService> _logger;
 
     public AiResponseCacheService(
         IHybridCacheService hybridCache,
-        MeepleAiDbContext dbContext,
         ILogger<AiResponseCacheService> logger)
     {
         _hybridCache = hybridCache ?? throw new ArgumentNullException(nameof(hybridCache));
-        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 

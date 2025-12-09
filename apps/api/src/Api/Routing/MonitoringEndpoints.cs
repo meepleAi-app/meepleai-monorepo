@@ -251,6 +251,53 @@ public static class MonitoringEndpoints
         .Produces(401)
         .Produces(404);
 
+        // Issue #894: Comprehensive infrastructure details (health + metrics)
+        group.MapGet("/admin/infrastructure/details", async (
+            HttpContext context,
+            IMediator mediator,
+            CancellationToken ct = default) =>
+        {
+            var (authorized, _, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
+
+            var query = new GetInfrastructureDetailsQuery();
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+            return Results.Json(new
+            {
+                overall = new
+                {
+                    state = result.Overall.State.ToString(),
+                    totalServices = result.Overall.TotalServices,
+                    healthyServices = result.Overall.HealthyServices,
+                    degradedServices = result.Overall.DegradedServices,
+                    unhealthyServices = result.Overall.UnhealthyServices,
+                    checkedAt = result.Overall.CheckedAt
+                },
+                services = result.Services.Select(s => new
+                {
+                    serviceName = s.ServiceName,
+                    state = s.State.ToString(),
+                    errorMessage = s.ErrorMessage,
+                    checkedAt = s.CheckedAt,
+                    responseTimeMs = s.ResponseTime.TotalMilliseconds
+                }),
+                prometheusMetrics = new
+                {
+                    apiRequestsLast24h = result.Metrics.ApiRequestsLast24h,
+                    avgLatencyMs = result.Metrics.AvgLatencyMs,
+                    errorRate = result.Metrics.ErrorRate,
+                    llmCostLast24h = result.Metrics.LlmCostLast24h
+                }
+            });
+        })
+        .WithName("GetInfrastructureDetails")
+        .WithTags("Monitoring")
+        .WithSummary("Get comprehensive infrastructure details including health checks and Prometheus metrics")
+        .WithDescription("Issue #894: Returns aggregated infrastructure status combining service health and operational metrics from Prometheus")
+        .Produces<object>(200)
+        .Produces(401);
+
         return group;
     }
 }

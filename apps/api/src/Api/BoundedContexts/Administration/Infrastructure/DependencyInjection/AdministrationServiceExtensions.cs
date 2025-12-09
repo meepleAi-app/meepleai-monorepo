@@ -26,6 +26,9 @@ public static class AdministrationServiceExtensions
             .AddPolicyHandler(GetRetryPolicy())
             .AddPolicyHandler(GetCircuitBreakerPolicy());
 
+        // Issue #894: Infrastructure details orchestration service
+        services.AddScoped<IInfrastructureDetailsService, InfrastructureDetailsService>();
+
         return services;
     }
 

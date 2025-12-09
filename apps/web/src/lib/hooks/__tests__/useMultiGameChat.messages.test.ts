@@ -8,16 +8,20 @@ import {
   chatWithBadJson,
 } from './useMultiGameChat.test-helpers';
 
-// Mock the API module
+// Mock the API module with chat client structure
 vi.mock('../../api', () => ({
   api: {
-    get: vi.fn(),
-    post: vi.fn(),
-    delete: vi.fn(),
+    chat: {
+      getThreadsByGame: vi.fn(),
+      getThreadById: vi.fn(),
+      createThread: vi.fn(),
+      addMessage: vi.fn(),
+      deleteThread: vi.fn(),
+    },
   },
 }));
 
-const mockApi = api.api as Mocked<typeof api.api>;
+const mockApi = api.api.chat as any;
 
 /**
  * Tests for useMultiGameChat message handling functionality
@@ -30,7 +34,8 @@ describe('useMultiGameChat - Messages', () => {
 
   describe('Message Handling', () => {
     it('should load chat history and convert messages', async () => {
-      mockApi.get.mockResolvedValueOnce([]).mockResolvedValueOnce(mockChatWithHistory);
+      mockApi.getThreadsByGame.mockResolvedValueOnce([]);
+      mockApi.getThreadById.mockResolvedValueOnce(mockChatWithHistory);
 
       const { result } = renderHook(() => useMultiGameChat('game-1'));
 
@@ -43,9 +48,12 @@ describe('useMultiGameChat - Messages', () => {
         await result.current.loadChatHistory('chat-1');
       });
 
-      await waitFor(() => {
-        expect(result.current.messages).toHaveLength(2);
-      }, { timeout: 1000 });
+      await waitFor(
+        () => {
+          expect(result.current.messages).toHaveLength(2);
+        },
+        { timeout: 1000 }
+      );
 
       const messages = result.current.messages;
 
@@ -66,7 +74,8 @@ describe('useMultiGameChat - Messages', () => {
     });
 
     it('should set activeChatId when loading chat history', async () => {
-      mockApi.get.mockResolvedValueOnce([]).mockResolvedValueOnce(mockChatWithHistory);
+      mockApi.getThreadsByGame.mockResolvedValueOnce([]);
+      mockApi.getThreadById.mockResolvedValueOnce(mockChatWithHistory);
 
       const { result } = renderHook(() => useMultiGameChat('game-1'));
 
@@ -79,20 +88,23 @@ describe('useMultiGameChat - Messages', () => {
         await result.current.loadChatHistory('chat-1');
       });
 
-      await waitFor(() => {
-        expect(result.current.activeChatId).toBe('chat-1');
-      }, { timeout: 1000 });
+      await waitFor(
+        () => {
+          expect(result.current.activeChatId).toBe('chat-1');
+        },
+        { timeout: 1000 }
+      );
     });
 
     it('should set loading state while fetching messages', async () => {
-      mockApi.get.mockResolvedValueOnce([]); // Initial load
+      mockApi.getThreadsByGame.mockResolvedValueOnce([]); // Initial load
 
       let resolveChat: (value: typeof mockChatWithHistory) => void;
-      const chatPromise = new Promise<typeof mockChatWithHistory>((resolve) => {
+      const chatPromise = new Promise<typeof mockChatWithHistory>(resolve => {
         resolveChat = resolve;
       });
 
-      mockApi.get.mockReturnValueOnce(chatPromise);
+      mockApi.getThreadById.mockReturnValueOnce(chatPromise);
 
       const { result } = renderHook(() => useMultiGameChat('game-1'));
 
@@ -105,26 +117,31 @@ describe('useMultiGameChat - Messages', () => {
         result.current.loadChatHistory('chat-1');
       });
 
-      await waitFor(() => {
-        expect(result.current.isLoadingMessages).toBe(true);
-      }, { timeout: 1000 });
+      await waitFor(
+        () => {
+          expect(result.current.isLoadingMessages).toBe(true);
+        },
+        { timeout: 1000 }
+      );
 
       await act(async () => {
         resolveChat!(mockChatWithHistory);
         await chatPromise;
       });
 
-      await waitFor(() => {
-        expect(result.current.isLoadingMessages).toBe(false);
-      }, { timeout: 1000 });
+      await waitFor(
+        () => {
+          expect(result.current.isLoadingMessages).toBe(false);
+        },
+        { timeout: 1000 }
+      );
     });
 
     it('should handle API errors when loading chat history', async () => {
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       // TEST-685: Mock initial auto-load, then the failing loadChatHistory call
-      mockApi.get
-        .mockResolvedValueOnce([]) // Initial auto-load from useEffect
-        .mockRejectedValueOnce(new Error('Chat not found')); // loadChatHistory call
+      mockApi.getThreadsByGame.mockResolvedValueOnce([]); // Initial auto-load from useEffect
+      mockApi.getThreadById.mockRejectedValueOnce(new Error('Chat not found')); // loadChatHistory call
 
       const { result } = renderHook(() => useMultiGameChat('game-1'));
 
@@ -141,9 +158,12 @@ describe('useMultiGameChat - Messages', () => {
         }
       });
 
-      await waitFor(() => {
-        expect(result.current.isLoadingMessages).toBe(false);
-      }, { timeout: 1000 });
+      await waitFor(
+        () => {
+          expect(result.current.isLoadingMessages).toBe(false);
+        },
+        { timeout: 1000 }
+      );
 
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         'Error loading chat history:',
@@ -160,11 +180,12 @@ describe('useMultiGameChat - Messages', () => {
         await result.current.loadChatHistory('chat-1');
       });
 
-      expect(mockApi.get).not.toHaveBeenCalled();
+      expect(mockApi.getThreadsByGame).not.toHaveBeenCalled();
     });
 
     it('should handle messages with malformed metadata JSON', async () => {
-      mockApi.get.mockResolvedValueOnce([]).mockResolvedValueOnce(chatWithBadJson);
+      mockApi.getThreadsByGame.mockResolvedValueOnce([]);
+      mockApi.getThreadById.mockResolvedValueOnce(chatWithBadJson);
 
       const { result } = renderHook(() => useMultiGameChat('game-1'));
 
@@ -177,9 +198,12 @@ describe('useMultiGameChat - Messages', () => {
         await result.current.loadChatHistory('chat-1');
       });
 
-      await waitFor(() => {
-        expect(result.current.messages).toHaveLength(1);
-      }, { timeout: 1000 });
+      await waitFor(
+        () => {
+          expect(result.current.messages).toHaveLength(1);
+        },
+        { timeout: 1000 }
+      );
 
       // Should not have snippets due to JSON parse error
       expect(result.current.messages[0].snippets).toBeUndefined();
@@ -188,10 +212,12 @@ describe('useMultiGameChat - Messages', () => {
 
   describe('Context Switching', () => {
     it('should preserve messages per game when switching', async () => {
-      mockApi.get
+      mockApi.getThreadsByGame
         .mockResolvedValueOnce([{ ...chatGame1 }]) // chats for game-1
+        .mockResolvedValueOnce([{ ...chatGame2 }]); // chats for game-2
+
+      mockApi.getThreadById
         .mockResolvedValueOnce(chatGame1) // chat history for chat-1
-        .mockResolvedValueOnce([{ ...chatGame2 }]) // chats for game-2
         .mockResolvedValueOnce(chatGame2); // chat history for chat-2
 
       const { result } = renderHook(() => useMultiGameChat('game-1'));
@@ -224,10 +250,9 @@ describe('useMultiGameChat - Messages', () => {
     });
 
     it('should preserve activeChatId per game', async () => {
-      const { result, rerender } = renderHook(
-        ({ gameId }) => useMultiGameChat(gameId),
-        { initialProps: { gameId: 'game-1' } }
-      );
+      const { result, rerender } = renderHook(({ gameId }) => useMultiGameChat(gameId), {
+        initialProps: { gameId: 'game-1' },
+      });
 
       // Set activeChatId for game-1
       act(() => {

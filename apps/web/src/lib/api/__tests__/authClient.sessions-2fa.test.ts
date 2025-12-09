@@ -7,11 +7,7 @@
 
 import { createAuthClient } from '../clients/authClient';
 import { HttpClient } from '../core/httpClient';
-import type {
-  SessionStatusResponse,
-  TotpSetupResponse,
-  TwoFactorStatusDto,
-} from '../schemas';
+import type { SessionStatusResponse, TotpSetupResponse, TwoFactorStatusDto } from '../schemas';
 import { globalRequestCache } from '../core/requestCache';
 
 describe('AuthClient - Sessions & 2FA', () => {
@@ -124,9 +120,7 @@ describe('AuthClient - Sessions & 2FA', () => {
           headers: new Headers(),
         });
 
-        await expect(authClient.getTwoFactorStatus()).rejects.toThrow(
-          'Failed to get 2FA status'
-        );
+        await expect(authClient.getTwoFactorStatus()).rejects.toThrow('Failed to get 2FA status');
       });
     });
 
@@ -219,7 +213,10 @@ describe('AuthClient - Sessions & 2FA', () => {
         mockFetch.mockResolvedValueOnce({
           ok: true,
           status: 200,
-          json: async () => ({ message: '2FA disabled' }),
+          json: async () => ({
+            Success: true,
+            ErrorMessage: null,
+          }),
           headers: new Headers(),
         });
 

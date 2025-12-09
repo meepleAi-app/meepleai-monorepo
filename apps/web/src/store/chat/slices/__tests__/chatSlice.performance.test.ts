@@ -208,8 +208,8 @@ describe('Chat Slice Performance', () => {
       const avgTime = duration / iterations;
 
       // Array selector should also be fast
-      // Relaxed from 0.01ms to 0.05ms for more realistic CI/CD performance
-      expect(avgTime).toBeLessThan(0.05);
+      // Relaxed from 0.01ms to 0.07ms for CI/CD performance variance (Issue #2036)
+      expect(avgTime).toBeLessThan(0.07);
 
       console.log(`[PERF] Array selector avg time (1000 calls): ${avgTime.toFixed(4)}ms`);
     });

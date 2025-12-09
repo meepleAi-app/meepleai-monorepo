@@ -667,6 +667,45 @@ public class RagValidationPipelineIntegrationTests : IAsyncLifetime
 - Test validation pipeline logic, not LLM integration
 - Run with: `dotnet test --filter "FullyQualifiedName~RagValidationPipelineIntegrationTests"`
 
+### ⚠️ Docker Hijack Prevention (Issue #895)
+
+**CRITICAL**: Avoid `.UntilCommandIsCompleted()` wait strategy in Testcontainers tests.
+
+**Problem**: Command execution uses Docker stream hijacking which fails intermittently:
+```
+System.InvalidOperationException: cannot hijack chunked or content length stream
+```
+
+**❌ AVOID** (hijack-prone):
+```csharp
+.WithWaitStrategy(Wait.ForUnixContainer()
+    .UntilCommandIsCompleted("pg_isready", "-U", "postgres"))
+```
+
+**✅ PREFER** (robust alternatives):
+```csharp
+// Option 1: Default TCP wait + delay (simplest)
+.WithPortBinding(5432, true)
+.Build();
+
+await _postgresContainer.StartAsync(CancellationToken.None);
+await Task.Delay(TimeSpan.FromSeconds(2)); // Wait for full readiness
+
+// Option 2: HTTP health check (if service supports it)
+.WithWaitStrategy(Wait.ForUnixContainer()
+    .UntilHttpRequestIsSucceeded(r => r
+        .ForPath("/health")
+        .ForPort(8080)
+        .ForStatusCode(HttpStatusCode.OK)))
+```
+
+**When It Fails**:
+- Concurrent test execution (CI environment)
+- Docker API under load
+- Windows + WSL2 + Docker Desktop
+
+**Pattern Documented**: Issue #2031 tracks preventive fixes for 20+ vulnerable tests
+
 ---
 
 ## E2E Testing (Playwright)

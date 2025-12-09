@@ -354,6 +354,15 @@ public static class MeepleAiMetrics
         name: "meepleai.cache.evictions.total",
         unit: "evictions",
         description: "Total number of cache evictions");
+
+    /// <summary>
+    /// Counter for dashboard cache invalidations triggered by configuration changes.
+    /// Issue #879: Tracks cache invalidation events for monitoring and observability.
+    /// </summary>
+    public static readonly Counter<long> DashboardCacheInvalidationsTotal = Meter.CreateCounter<long>(
+        name: "meepleai.cache.dashboard.invalidations.total",
+        unit: "invalidations",
+        description: "Dashboard cache invalidations triggered by configuration changes");
     /// <summary>
     /// Counter for failed TOTP verification attempts.
     /// Tracks brute force attack patterns and authentication failures.

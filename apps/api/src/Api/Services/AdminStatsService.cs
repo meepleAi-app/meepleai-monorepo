@@ -19,7 +19,7 @@ public class AdminStatsService : IAdminStatsService
     private readonly HybridCache _cache;
     private readonly ILogger<AdminStatsService> _logger;
     private readonly TimeProvider _timeProvider;
-    private static readonly TimeSpan CacheDuration = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan CacheDuration = TimeSpan.FromMinutes(1); // Issue #879: Reduced from 5min to 1min for dashboard stats
 
     public AdminStatsService(
         MeepleAiDbContext dbContext,
@@ -77,7 +77,7 @@ public class AdminStatsService : IAdminStatsService
             new HybridCacheEntryOptions
             {
                 Expiration = CacheDuration,
-                LocalCacheExpiration = TimeSpan.FromMinutes(2) // L1 cache shorter than L2
+                LocalCacheExpiration = TimeSpan.FromSeconds(30) // Issue #879: Proportional to 1min L2 (was 2min for 5min L2)
             },
             cancellationToken: cancellationToken
         );

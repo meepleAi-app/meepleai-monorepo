@@ -66,6 +66,45 @@ pre-commit install
 pre-commit run --all-files
 ```
 
+## Quarterly Security Review Process
+
+We conduct **quarterly security reviews** to proactively maintain our security posture:
+
+### Schedule
+- **Q1**: January (first week)
+- **Q2**: April (first week)
+- **Q3**: July (first week)
+- **Q4**: October (first week)
+
+### Scope
+1. **CodeQL Security Scans**: Review and triage all open alerts
+2. **Dependency Vulnerabilities**: Audit backend (.NET) and frontend (pnpm) packages
+3. **Security Best Practices**: Authentication, secrets management, input validation
+4. **Infrastructure Security**: Docker, environment variables, TLS/HTTPS, monitoring
+
+### Process
+**Automated reminder issues** are created quarterly via GitHub Actions (see `.github/workflows/security-review-reminder.yml`).
+
+**Review template**: [docs/06-security/security-review-template.md](./docs/06-security/security-review-template.md)
+
+**Responsibilities**:
+- **Security Team/Lead**: Coordinate review, triage findings
+- **Engineering Team**: Implement fixes for critical/high severity issues
+- **DevOps Team**: Infrastructure and monitoring validation
+
+### Deliverables
+- **Quarterly Report**: `docs/06-security/YYYY-QN-security-review.md` (from template)
+- **GitHub Issues**: Created for all actionable findings
+- **Metrics Tracking**: MTTR, vulnerability backlog, false positive rate
+
+### Success Metrics
+- ✅ 100% critical/high findings addressed within quarter
+- ✅ Zero untracked security vulnerabilities
+- ✅ Reviews completed within first 2 weeks of quarter
+- ✅ Continuous improvement in security posture metrics
+
+---
+
 ## Detailed Security Documentation
 
 For comprehensive security information, including:
@@ -75,9 +114,8 @@ For comprehensive security information, including:
 - GitHub PAT rotation
 - Pre-commit hook setup
 - Security checklist for developers
-- Quarterly security maintenance
 
-**See**: [docs/SECURITY.md](./docs/SECURITY.md)
+**See**: [docs/06-security/](./docs/06-security/) directory
 
 ## Security Features in MeepleAI
 

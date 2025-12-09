@@ -81,17 +81,20 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
         else
         {
             // Start PostgreSQL container
+            // Issue #895: Removed UntilCommandIsCompleted wait strategy to avoid Docker hijack errors
+            // Default wait strategy uses TCP port check (safer than hijacked pg_isready command)
             _postgresContainer = new ContainerBuilder()
                 .WithImage("postgres:16-alpine")
                 .WithEnvironment("POSTGRES_USER", "postgres")
                 .WithEnvironment("POSTGRES_PASSWORD", "postgres")
                 .WithEnvironment("POSTGRES_DB", "meepleai_test")
                 .WithPortBinding(5432, true)
-                .WithWaitStrategy(Wait.ForUnixContainer()
-                    .UntilCommandIsCompleted("pg_isready", "-U", "postgres"))
                 .Build();
 
-            await _postgresContainer.StartAsync(TestCancellationToken);
+            await _postgresContainer.StartAsync(CancellationToken.None);
+
+            // Wait for PostgreSQL to be fully ready after port opens
+            await Task.Delay(TimeSpan.FromSeconds(2), CancellationToken.None);
             var containerPort = _postgresContainer.GetMappedPublicPort(5432);
             connectionString = $"Host=localhost;Port={containerPort};Database=meepleai_test;Username=postgres;Password=postgres;Ssl Mode=Disable;Trust Server Certificate=true;KeepAlive=30;Pooling=false;";
 

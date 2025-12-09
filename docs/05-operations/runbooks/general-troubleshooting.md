@@ -241,23 +241,23 @@ Remove-Item -Force "$env:APPDATA\Code\SingletonCookie"
 
 ### Seq Logs: Not Receiving Events
 
-**Sintomo**: Seq dashboard vuoto, nessun log visibile
+**Sintomo**: HyperDX dashboard vuoto, nessun log visibile
 
-**Root Cause**: `SEQ_URL` non configurato o Seq container down
+**Root Cause**: `HYPERDX_OTLP_ENDPOINT` non configurato o HyperDX container down
 
 **Soluzione**:
 ```bash
-# Verifica Seq health
-curl http://localhost:8081/api
+# Verifica HyperDX health
+curl http://localhost:8180/api
 # Verifica env var
-echo $SEQ_URL
-# Restart Seq container
-docker compose restart seq
+echo $HYPERDX_OTLP_ENDPOINT
+# Restart HyperDX container
+docker compose -f docker-compose.hyperdx.yml restart
 ```
 
 **Prevenzione**:
-- Validation: SEQ_URL validato all'avvio con fallback a console
-- Health check: Seq incluso in `/health` endpoint
+- Validation: HYPERDX_OTLP_ENDPOINT validato all'avvio con fallback a console
+- Health check: HyperDX incluso in `/health` endpoint
 - Documentation: Observability guide in `docs/observability.md`
 
 **Riferimenti**: Issue #XXX, PR #YYY

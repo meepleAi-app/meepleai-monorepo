@@ -7,6 +7,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.BoundedContexts.Authentication.TestHelpers;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 
@@ -14,6 +15,7 @@ namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 /// Comprehensive tests for DeleteUserCommandHandler.
 /// Tests user deletion with business rules: no self-deletion, preserve last admin.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class DeleteUserCommandHandlerTests
 {
     private readonly Mock<IUserRepository> _userRepositoryMock;
@@ -28,9 +30,6 @@ public class DeleteUserCommandHandlerTests
             _userRepositoryMock.Object,
             _unitOfWorkMock.Object);
     }
-
-    #region Happy Path Tests
-
     [Fact]
     public async Task Handle_RegularUser_DeletesSuccessfully()
     {
@@ -129,11 +128,6 @@ public class DeleteUserCommandHandlerTests
             r => r.DeleteAsync(adminUser, It.IsAny<CancellationToken>()),
             Times.Once);
     }
-
-    #endregion
-
-    #region Business Rule Tests
-
     [Fact]
     public async Task Handle_SelfDeletion_ThrowsDomainException()
     {
@@ -217,11 +211,6 @@ public class DeleteUserCommandHandlerTests
             r => r.DeleteAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
-
-    #endregion
-
-    #region Edge Cases
-
     [Fact]
     public async Task Handle_AdminCountExactlyOne_PreventsDelete()
     {
@@ -308,11 +297,6 @@ public class DeleteUserCommandHandlerTests
             r => r.CountAdminsAsync(It.IsAny<CancellationToken>()),
             Times.Never);
     }
-
-    #endregion
-
-    #region Cancellation Tests
-
     [Fact]
     public async Task Handle_WithCancellationToken_PassesToRepository()
     {
@@ -348,7 +332,4 @@ public class DeleteUserCommandHandlerTests
             u => u.SaveChangesAsync(cancellationToken),
             Times.Once);
     }
-
-    #endregion
 }
-

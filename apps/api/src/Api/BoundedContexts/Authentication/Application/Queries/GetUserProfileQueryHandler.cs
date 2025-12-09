@@ -34,7 +34,11 @@ public class GetUserProfileQueryHandler : IQueryHandler<GetUserProfileQuery, Use
             Role: user.Role.Value,
             CreatedAt: user.CreatedAt,
             IsTwoFactorEnabled: user.IsTwoFactorEnabled,
-            TwoFactorEnabledAt: user.TwoFactorEnabledAt
+            TwoFactorEnabledAt: user.TwoFactorEnabledAt,
+            Language: user.Language,
+            Theme: user.Theme,
+            EmailNotifications: user.EmailNotifications,
+            DataRetentionDays: user.DataRetentionDays
         );
     }
 }

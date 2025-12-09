@@ -11,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Integration.GameManagement;
 
@@ -30,11 +31,9 @@ namespace Api.Tests.Integration.GameManagement;
 /// Coverage Target: ≥90% for ReplyToRuleCommentCommandHandler
 /// Execution Time Target: <60s
 /// </summary>
-[Collection("ReplyToRuleCommentIntegration")]
+[Trait("Category", TestCategories.Integration)]
 public sealed class ReplyToRuleCommentIntegrationTests : IAsyncLifetime
 {
-    #region Test Infrastructure
-
     private IContainer? _postgresContainer;
     private MeepleAiDbContext? _dbContext;
     private IServiceProvider? _serviceProvider;
@@ -195,11 +194,6 @@ public sealed class ReplyToRuleCommentIntegrationTests : IAsyncLifetime
         _dbContext!.RuleSpecComments.RemoveRange(_dbContext.RuleSpecComments);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
     }
-
-    #endregion
-
-    #region 1. Happy Path Tests
-
     [Fact]
     public async Task ReplyToComment_WithValidData_Success()
     {
@@ -250,11 +244,6 @@ public sealed class ReplyToRuleCommentIntegrationTests : IAsyncLifetime
         result.Version.Should().Be("1.0.0");
         result.LineNumber.Should().Be(42); // Inherited from parent
     }
-
-    #endregion
-
-    #region 2. Thread Depth Validation Tests
-
     [Fact]
     public async Task ReplyToComment_AtMaxDepth_ThrowsInvalidOperation()
     {
@@ -309,11 +298,6 @@ public sealed class ReplyToRuleCommentIntegrationTests : IAsyncLifetime
         result.Should().NotBeNull();
         result.ParentCommentId.Should().Be(level3);
     }
-
-    #endregion
-
-    #region 3. Parent Not Found Tests
-
     [Fact]
     public async Task ReplyToNonExistentComment_ThrowsInvalidOperation()
     {
@@ -334,11 +318,6 @@ public sealed class ReplyToRuleCommentIntegrationTests : IAsyncLifetime
         await act.Should().ThrowAsync<InvalidOperationException>()
             .WithMessage("*not found*");
     }
-
-    #endregion
-
-    #region 4. Nested Replies Tests
-
     [Fact]
     public async Task CreateMultipleReplies_ToSameParent_Success()
     {
@@ -375,11 +354,6 @@ public sealed class ReplyToRuleCommentIntegrationTests : IAsyncLifetime
             .ToListAsync(TestContext.Current.CancellationToken);
         replies.Should().HaveCount(2);
     }
-
-    #endregion
-
-    #region 5. Validation Error Tests
-
     [Fact]
     public async Task ReplyWithEmptyText_ThrowsInvalidOperation()
     {
@@ -422,11 +396,6 @@ public sealed class ReplyToRuleCommentIntegrationTests : IAsyncLifetime
         await act.Should().ThrowAsync<InvalidOperationException>()
             .WithMessage("*exceeds maximum length*");
     }
-
-    #endregion
-
-    #region 6. @Mention Extraction Tests
-
     [Fact]
     public async Task ReplyWithMention_ExtractsMentionedUser()
     {
@@ -447,7 +416,4 @@ public sealed class ReplyToRuleCommentIntegrationTests : IAsyncLifetime
         result.Should().NotBeNull();
         result.MentionedUserIds.Should().Contain(_testUserId.ToString());
     }
-
-    #endregion
 }
-

@@ -8,7 +8,7 @@
 
 ---
 
-## Architecture (DDD - 99% Complete)
+## Architecture (DDD - 100% Complete)
 
 **7 Bounded Contexts** - CQRS/MediatR architecture:
 
@@ -58,14 +58,33 @@ docs/                Architecture, ADRs, guides
 | **Frontend** | `pnpm dev` / `pnpm build` / `pnpm test` | Vitest 90%+ |
 | | `pnpm storybook` | Storybook dev server |
 | | `pnpm test:visual` | Visual regression (Chromatic) |
-| **Docker** | `docker compose up -d` | Full stack (15 services) |
+| **Docker** | `docker compose up -d` | Full stack (default via COMPOSE_PROFILES=full) |
+| | `./start-minimal.sh` | Core only (postgres, redis, qdrant, api, web) |
+| | `./start-dev.sh` | Dev + basic monitoring (minimal + prometheus, grafana) |
+| | `./start-observability.sh` | Full observability (+ alertmanager, hyperdx) |
+| | `./start-ai.sh` | AI/ML services only |
+| | `./start-automation.sh` | Automation (n8n) only |
+| | `docker compose --profile <profile> up` | Manual profile selection (minimal/dev/observability/ai/automation/full) |
+| | `cp docker-compose.override.yml.example docker-compose.override.yml` | Local customization (ports, debug, resources) - Issue #707 |
+| **Traefik** | `docker compose -f docker-compose.yml -f docker-compose.traefik.yml up -d` | Reverse proxy (optional, all profiles) - Issue #703 |
+| | `http://traefik.localhost:8080` | Dashboard (dev mode, no auth) |
+| | **Note**: Traefik requires explicit `-f docker-compose.traefik.yml` flag | Active in all profiles but needs file inclusion |
 
-**Services**:
+**Docker Profiles** (Issue #702):
+- **minimal**: Core services only (postgres, redis, qdrant, api, web)
+- **dev**: Development + basic observability (minimal + prometheus, grafana)
+- **observability**: Full monitoring stack (dev + alertmanager, hyperdx)
+- **ai**: AI/ML services (ollama, embedding, unstructured, smoldocling, reranker)
+- **automation**: Workflow automation (n8n)
+- **full**: Everything (default for backward compatibility)
+
+**Services** (17 base + 2 optional):
 - **Core**: postgres:5432, qdrant:6333, redis:6379
-- **AI/ML**: ollama:11434, embedding:8000, unstructured:8001, smoldocling:8002
-- **Observability**: seq:8081, jaeger:16686, prometheus:9090, alertmanager:9093, grafana:3001
+- **AI/ML**: ollama:11434, embedding:8000, unstructured:8001, smoldocling:8002, reranker:8003
+- **Observability**: prometheus:9090, alertmanager:9093, grafana:3001, cadvisor:8082, node-exporter:9100
 - **Workflow**: n8n:5678
 - **App**: api:8080, web:3000
+- **Optional**: hyperdx:8180 (requires `-f docker-compose.hyperdx.yml`), traefik:80,8080 (requires `-f docker-compose.traefik.yml`)
 
 ---
 
@@ -110,8 +129,9 @@ docs/                Architecture, ADRs, guides
 
 ### Observability
 - **Health**: `/health` (ready/live), checks PG/Redis/Qdrant
-- **Logs**: Serilog → Seq, correlation IDs
-- **Traces**: OpenTelemetry → Jaeger (W3C)
+- **Unified Platform**: HyperDX (logs, traces, session replay)
+- **Logs**: Serilog → HyperDX OTLP, correlation IDs
+- **Traces**: OpenTelemetry → HyperDX (W3C)
 - **Metrics**: Prometheus `/metrics`, Grafana dashboards
 - **Alerts**: Email/Slack/PagerDuty (OPS-07)
 
@@ -226,15 +246,17 @@ PDF Upload → EnhancedPdfProcessingOrchestrator
 
 ## DDD Migration Status
 
-**99% Complete** (2025-11-11):
-- ✅ 7/7 contexts migrated (6 at 100%, 1 at 95%)
+**100% Complete** (2025-12-06 - Issue #1676):
+- ✅ 7/7 contexts migrated (all at 100%)
 - ✅ 72+ CQRS handlers operational
-- ✅ 2,070 lines legacy code removed
+- ✅ 2,470+ lines legacy code removed (+400 from backward compat layers)
 - ✅ 60+ endpoints migrated to MediatR
-- ✅ 99.1% test pass rate maintained
+- ✅ Backward compatibility layers removed (frontend + backend)
+- ✅ 99.7% test pass rate maintained
 - ✅ Zero build errors
 
-**Contexts**: GameManagement, DocumentProcessing, Authentication, WorkflowIntegration, SystemConfiguration, Administration (all 100%), KnowledgeBase (95%)
+**Contexts**: All 7 bounded contexts at 100% DDD compliance
+**Latest:** Issue #1676 - Removed all DTO → legacy model conversions (3-phase migration: Frontend, Backend, Storybook)
 
 **Pattern Reused**:
 1. Implement handlers (Commands/Queries)
@@ -250,7 +272,7 @@ PDF Upload → EnhancedPdfProcessingOrchestrator
 **API** (.env in `infra/env/`):
 - `OPENROUTER_API_KEY` (LLM)
 - `ConnectionStrings__Postgres`
-- `QDRANT_URL`, `REDIS_URL`, `SEQ_URL`
+- `QDRANT_URL`, `REDIS_URL`, `HYPERDX_OTLP_ENDPOINT`
 - `INITIAL_ADMIN_EMAIL`, `INITIAL_ADMIN_PASSWORD` (bootstrap)
 
 **Web**:
@@ -274,7 +296,7 @@ PDF → PdfTextExtractor → TextChunking → Embedding → Qdrant → RagServic
 
 **Local Stack**:
 ```bash
-cd infra && docker compose up postgres qdrant redis n8n seq    # T1
+cd infra && docker compose -f docker-compose.yml -f docker-compose.hyperdx.yml up -d postgres qdrant redis hyperdx    # T1
 cd apps/api/src/Api && dotnet run                              # T2 (8080)
 cd apps/web && pnpm dev                                        # T3 (3000)
 ```
@@ -294,7 +316,14 @@ cd apps/web && pnpm dev                                        # T3 (3000)
 
 ## Key Docs
 
-**See [docs/INDEX.md](docs/INDEX.md) for complete navigation** (115 docs, 800+ pages)
+**See [docs/INDEX.md](docs/INDEX.md) for complete navigation** (~90 docs consolidated from 140+)
+
+**Documentation Consolidation**: ✅ **Complete** (Phase 1-5 done, 2025-12-08)
+- **Result**: 140+ → 90 files (-36% reduction)
+- **Consolidated**: 8 comprehensive guides (testing, Docker, design, security, infra, monitoring, workflows)
+- **Deleted**: 50+ obsolete files (no archive maintained)
+- **Standardized**: 100% kebab-case naming compliance
+- **Summary**: [docs/CONSOLIDATION-FINAL-SUMMARY.md](docs/CONSOLIDATION-FINAL-SUMMARY.md)
 
 | Doc | Path |
 |-----|------|
@@ -310,6 +339,55 @@ cd apps/web && pnpm dev                                        # T3 (3000)
 | **Testing** | `docs/02-development/testing/test-writing-guide.md` |
 | **Shadcn/UI** | `docs/04-frontend/shadcn-ui-installation.md` |
 | **AI Provider Config** | `docs/03-api/ai-provider-configuration.md`, `docs/02-development/ai-provider-integration.md` |
+| **Traefik Proxy** | `infra/traefik/README.md`, `infra/traefik/TESTING.md` (Issue #703) |
+
+---
+
+## Traefik Reverse Proxy (Issue #703)
+
+**Dev-first approach**: Basic HTTP routing now, production-ready foundations in place.
+
+### Quick Start
+```bash
+# Start with Traefik
+cd infra
+docker compose -f docker-compose.yml -f docker-compose.traefik.yml up -d
+
+# Access dashboard
+open http://traefik.localhost:8080
+```
+
+### Expose Services
+Add labels to any service in `docker-compose.yml`:
+```yaml
+labels:
+  - "traefik.enable=true"
+  - "traefik.http.routers.myservice.rule=Host(`myservice.localhost`)"
+  - "traefik.http.services.myservice.loadbalancer.server.port=8080"
+  - "traefik.http.routers.myservice.middlewares=rate-limit-api@file,security-headers@file"
+```
+
+### Current Features
+- ✅ Automatic Docker service discovery
+- ✅ HTTP routing with labels
+- ✅ Dashboard at `http://traefik.localhost:8080`
+- ✅ Rate limiting middlewares (100 req/s standard, 300 req/min API)
+- ✅ Security headers (OWASP recommended)
+- ✅ Prometheus metrics (`/metrics`)
+- ✅ Access logs (JSON format)
+- ✅ CORS support for API services
+
+### Production Upgrade Path (Commented, Ready)
+1. **Docker Socket Proxy**: Uncomment in `docker-compose.traefik.yml`
+2. **Let's Encrypt SSL**: Configure HTTP or DNS challenge
+3. **HTTPS Redirect**: Global or per-service
+4. **Dashboard Auth**: Basic auth or OAuth
+5. **IP Whitelisting**: For admin endpoints
+
+### Documentation
+- **Setup Guide**: `infra/traefik/README.md`
+- **Testing Guide**: `infra/traefik/TESTING.md`
+- **Examples**: `infra/docker-compose.traefik-examples.yml`
 
 ---
 
@@ -358,17 +436,17 @@ bash tools/cleanup-caches.sh                # Run
 ## Phase Status
 
 **Current**: Alpha (pre-production, DDD refactoring COMPLETE)
-**DDD**: **99% complete** (7/7 contexts, 72+ handlers, 60+ endpoints, 2,070 lines removed)
-**Next**: Final polish (1%) → Beta testing (2-4 weeks) → Production
+**DDD**: **100% complete** (7/7 contexts, 72+ handlers, 60+ endpoints, 2,070 lines removed)
+**Next**: Beta testing (2-4 weeks) → Production
 **Target**: 10,000 MAU by Phase 4, >99.5% uptime SLA
 
 ---
 
-**Version**: 1.0-rc (DDD 99%)
-**Last Updated**: 2025-12-03
-**Last Verified**: 2025-12-03 (against codebase)
+**Version**: 1.0-rc (DDD 100%)
+**Last Updated**: 2025-12-07
+**Last Verified**: 2025-12-07 (against codebase)
 **Owner**: Engineering Lead
 
 ---
 
-**Note**: For complete documentation index see [docs/INDEX.md](docs/INDEX.md). Docker services and ports updated to reflect full observability stack (15 services total).
+**Note**: For complete documentation index see [docs/INDEX.md](docs/INDEX.md). Docker services and ports updated to reflect full observability stack (17 services total: +cAdvisor, +node-exporter for infrastructure monitoring - Issue #705).

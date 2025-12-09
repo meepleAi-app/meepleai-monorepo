@@ -1,8 +1,11 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Exceptions;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain;
+
+[Trait("Category", TestCategories.Unit)]
 
 public class ConfidenceTests
 {
@@ -30,40 +33,19 @@ public class ConfidenceTests
         Assert.Throws<ValidationException>(() => new Confidence(value));
     }
 
-    [Fact]
-    public void IsHigh_WithHighConfidence_ReturnsTrue()
+    [Theory]
+    [InlineData(0.9, true, false, false)]   // High confidence
+    [InlineData(0.6, false, true, false)]   // Medium confidence
+    [InlineData(0.3, false, false, true)]   // Low confidence
+    public void ConfidenceLevel_ReturnsCorrectClassification(double value, bool expectedIsHigh, bool expectedIsMedium, bool expectedIsLow)
     {
         // Arrange
-        var confidence = new Confidence(0.9);
+        var confidence = new Confidence(value);
 
         // Act & Assert
-        Assert.True(confidence.IsHigh());
-        Assert.False(confidence.IsMedium());
-        Assert.False(confidence.IsLow());
-    }
-
-    [Fact]
-    public void IsMedium_WithMediumConfidence_ReturnsTrue()
-    {
-        // Arrange
-        var confidence = new Confidence(0.6);
-
-        // Act & Assert
-        Assert.False(confidence.IsHigh());
-        Assert.True(confidence.IsMedium());
-        Assert.False(confidence.IsLow());
-    }
-
-    [Fact]
-    public void IsLow_WithLowConfidence_ReturnsTrue()
-    {
-        // Arrange
-        var confidence = new Confidence(0.3);
-
-        // Act & Assert
-        Assert.False(confidence.IsHigh());
-        Assert.False(confidence.IsMedium());
-        Assert.True(confidence.IsLow());
+        Assert.Equal(expectedIsHigh, confidence.IsHigh());
+        Assert.Equal(expectedIsMedium, confidence.IsMedium());
+        Assert.Equal(expectedIsLow, confidence.IsLow());
     }
 
     [Fact]
@@ -79,4 +61,3 @@ public class ConfidenceTests
         Assert.Equal(0.75, value);
     }
 }
-

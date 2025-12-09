@@ -1,6 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Evaluation;
 using Api.BoundedContexts.KnowledgeBase.Domain.GridSearch;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.GridSearch;
 
@@ -8,6 +9,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.GridSearch;
 /// Unit tests for GridSearchResult and ConfigurationResult.
 /// ADR-016 Phase 5: Validates result aggregation and best configuration selection.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class GridSearchResultTests
 {
     [Fact]

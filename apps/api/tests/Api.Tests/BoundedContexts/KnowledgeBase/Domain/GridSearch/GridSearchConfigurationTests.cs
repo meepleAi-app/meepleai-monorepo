@@ -1,5 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.GridSearch;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.GridSearch;
 
@@ -7,6 +8,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.GridSearch;
 /// Unit tests for GridSearchConfiguration.
 /// ADR-016 Phase 5: Validates configuration creation and grid search setup.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class GridSearchConfigurationTests
 {
     [Fact]

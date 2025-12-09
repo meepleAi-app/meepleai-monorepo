@@ -20,6 +20,12 @@ public class UserEntityConfiguration : IEntityTypeConfiguration<UserEntity>
             .IsRequired();
         builder.Property(e => e.CreatedAt).IsRequired();
 
+        // User Preferences
+        builder.Property(e => e.Language).IsRequired().HasMaxLength(10).HasDefaultValue("en");
+        builder.Property(e => e.EmailNotifications).IsRequired().HasDefaultValue(true);
+        builder.Property(e => e.Theme).IsRequired().HasMaxLength(20).HasDefaultValue("system");
+        builder.Property(e => e.DataRetentionDays).IsRequired().HasDefaultValue(90);
+
         // AUTH-07: Two-Factor Authentication
         builder.Property(e => e.TotpSecretEncrypted).HasMaxLength(512);
         builder.Property(e => e.IsTwoFactorEnabled).IsRequired().HasDefaultValue(false);

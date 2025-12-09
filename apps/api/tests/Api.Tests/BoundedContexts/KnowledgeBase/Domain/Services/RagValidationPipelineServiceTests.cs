@@ -5,6 +5,7 @@ using Api.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services;
 
@@ -13,6 +14,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services;
 /// ISSUE-977: BGAI-035 - Wire all 5 validation layers in RAG pipeline
 /// ISSUE-979: BGAI-037 - Performance optimization (parallel validation)
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class RagValidationPipelineServiceTests
 {
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
@@ -42,9 +44,6 @@ public class RagValidationPipelineServiceTests
             _mockAccuracyTracking.Object,
             _mockLogger.Object);
     }
-
-    #region ValidateResponseAsync Tests (Standard Mode - 3 Layers)
-
     [Fact]
     public async Task ValidateResponseAsync_AllLayersPass_ReturnsValid()
     {
@@ -269,11 +268,6 @@ public class RagValidationPipelineServiceTests
             x => x.DetectHallucinationsAsync(It.IsAny<string>(), "en", default),
             Times.Once);
     }
-
-    #endregion
-
-    #region ValidateWithMultiModelAsync Tests (Multi-Model Mode - 4 Layers)
-
     [Fact]
     public async Task ValidateWithMultiModelAsync_AllLayersPass_ReturnsValid()
     {
@@ -560,11 +554,6 @@ public class RagValidationPipelineServiceTests
         Assert.Equal(RagValidationSeverity.Critical, result.Severity);
         Assert.Equal(HallucinationSeverity.High, result.HallucinationDetection.Severity);
     }
-
-    #endregion
-
-    #region Helper Methods
-
     private QaResponse CreateQaResponse(double confidence)
     {
         return new QaResponse(
@@ -667,7 +656,5 @@ public class RagValidationPipelineServiceTests
                 });
         }
     }
-
-    #endregion
 }
 

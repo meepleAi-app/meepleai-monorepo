@@ -1,8 +1,29 @@
 ﻿# MeepleAI Documentation Index
 
 **Project**: Italian Board Game Rules AI Assistant
-**Version**: 2.1
-**Last Updated**: 2025-12-02
+**Version**: 3.0 (Post-Consolidation)
+**Last Updated**: 2025-12-08
+**Total Documents**: ~90 (consolidated from 140+)
+
+---
+
+## 📋 Documentation Consolidation (2025-12-08)
+
+**Status**: ✅ Phase 1-4 Complete
+**Reduction**: 140+ → ~90 files (-36%)
+**Strategy**: Delete obsolete, consolidate duplicates, standardize naming
+
+**New Consolidated Guides**:
+- 📚 [Comprehensive Testing Guide](./02-development/testing/comprehensive-testing-guide.md) - All test types in one place
+- 🧪 [Test Patterns Reference](./02-development/testing/test-patterns-reference.md) - Quick pattern lookup
+- 🐳 [Docker Resources Guide](./02-development/docker-resources-guide.md) - Complete resource configuration
+- 🎨 [Design System v2.0](./04-frontend/design-system.md) - Consolidated design guide
+- 🔒 [Security Patterns](./06-security/security-patterns.md) - All security patterns
+- 🏗️ [Infrastructure Overview](./05-operations/infrastructure-overview.md) - Complete infra guide
+- 📊 [Prometheus Setup](./05-operations/monitoring/prometheus-setup.md) - Monitoring & alerts
+- ⚙️ [Workflow Automation](./05-operations/workflow-automation.md) - n8n workflows
+
+**Details**: [CONSOLIDATION-FINAL-SUMMARY.md](./CONSOLIDATION-FINAL-SUMMARY.md)
 
 ---
 
@@ -68,10 +89,19 @@
 **Audience**: Developers, QA engineers, refactoring team
 **Purpose**: Development guides, testing, refactoring, implementation notes
 
+- [**Docker Resources Guide**](./02-development/docker-resources-guide.md) ⭐ **CONSOLIDATED** - Complete Docker resource limits and optimization
+- [Backend Developer Guide (IT)](./02-development/backend/GUIDA-SVILUPPATORE-BACKEND.md) - Complete backend guide
+- [Frontend Developer Guide (IT)](./02-development/frontend/GUIDA-SVILUPPATORE-FRONTEND.md) - Complete frontend guide
+- [Backend Codebase Analysis](./02-development/analysis-summary.md) - Historical analysis (converted from .txt)
+
 #### Subdirectories
-- **[guides/](./02-development/guides/)** - Technical guides (2 files)
-  - [LLM Integration](./02-development/guides/llm-integration.md)
+- **[guides/](./02-development/guides/)** - Technical guides (~10 files)
+  - [LLM Integration](./02-development/guides/llm-integration-guide.md)
+  - [PDF Processing Guide](./02-development/guides/pdf-processing-guide.md)
+  - [PDF Processing Troubleshooting](./02-development/guides/pdf-processing-troubleshooting.md)
+  - [Local Debugging Guide](./02-development/guides/local-debugging-guide.md)
   - [Unstructured Setup](./02-development/guides/unstructured-setup.md)
+  - _...and more guides_
 
 - **[refactoring/](./02-development/refactoring/)** - DDD migration docs (4 files)
   - [Legacy Code Inventory](./02-development/refactoring/legacy-code-inventory.md) (150+ pages)
@@ -88,16 +118,17 @@
   - [Infrastructure Comprehensive Review 2025-11-22](./02-development/code-review/INFRASTRUCTURE-COMPREHENSIVE-REVIEW-2025-11-22.md)
   - [PDF Processing Checklist](./02-development/code-review/pdf-processing-checklist.md)
 
-- **[testing/](./02-development/testing/)** - Testing documentation (23 files)
-  - [Test Writing Guide](./02-development/testing/test-writing-guide.md) ⭐
-  - [Golden Dataset Testing Guide](./02-development/testing/golden-dataset-testing-guide.md) ⭐ **NEW** - RAG accuracy validation (Issue #999)
-  - [UI Element Identification Guide](./02-development/testing/ui-element-identification-guide.md) ⭐ **NEW** - Test selector best practices
-  - [Testing Strategy](./02-development/testing/board-game-ai-testing-strategy.md) (30 pages)
-  - [Test Patterns](./02-development/testing/test-patterns.md)
+- **[testing/](./02-development/testing/)** - Testing documentation (~15 files, consolidated)
+  - [Comprehensive Testing Guide](./02-development/testing/comprehensive-testing-guide.md) ⭐ **CONSOLIDATED** - All test types (unit, integration, E2E, manual, performance, visual)
+  - [Test Patterns Reference](./02-development/testing/test-patterns-reference.md) ⭐ **CONSOLIDATED** - Quick pattern lookup
+  - [Golden Dataset Testing Guide](./02-development/testing/golden-dataset-testing-guide.md) - RAG accuracy validation (Issue #999)
+  - [UI Element Identification Guide](./02-development/testing/ui-element-identification-guide.md) - Test selector best practices
+  - [Testing Strategy](./02-development/testing/core/testing-strategy.md)
   - [Accessibility Testing](./02-development/testing/accessibility-testing-guide.md)
   - [E2E Contribution Guide](./02-development/testing/e2e-contribution-guide.md)
   - [Page Object Model Architecture](./02-development/testing/pom-architecture-design.md)
-  - _...and 15 more testing docs_
+  - [Visual Testing Guide](./02-development/testing/visual-testing-guide.md) - Chromatic integration
+  - _...and more testing docs_
 
 ### [03 - API](./03-api/)
 **Audience**: API consumers, frontend developers, integrators
@@ -120,34 +151,51 @@
 
 ### [05 - Operations](./05-operations/)
 **Audience**: DevOps, SRE, on-call engineers
-**Purpose**: Deployment, monitoring, incident response
+**Purpose**: Deployment, monitoring, incident response, infrastructure
 
-- [**Deployment Guide**](./05-operations/deployment-guide.md) (50+ pages) ⭐ **NEW** - Complete workflow with Git/GitHub integration
+- [**Infrastructure Overview**](./05-operations/infrastructure-overview.md) ⭐ **CONSOLIDATED** - Complete infrastructure guide (Docker Compose, profiles, 17 services)
+- [**Deployment Guide**](./05-operations/deployment-guide.md) (50+ pages) - Complete workflow with Git/GitHub integration
 
 #### Subdirectories
-- **[deployment/](./05-operations/deployment/)** - Deployment guides (3 files)
+- **[deployment/](./05-operations/deployment/)** - Deployment guides (6 files)
   - [Multi-Environment Strategy](./05-operations/deployment/multi-environment-strategy.md)
   - [Frontend Deployment](./05-operations/deployment/frontend-deployment.md)
   - [Disaster Recovery](./05-operations/deployment/disaster-recovery.md)
-  - **[infrastructure/](./05-operations/deployment/infrastructure/)** - Infrastructure provider comparison ⭐ **NEW**
-    - [EU Hosting Providers Comparison](./05-operations/deployment/infrastructure/EU_HOSTING_COMPARISON_2025.md) (700+ pages) - Top 10 EU providers analyzed
+  - [Traefik Guide](./05-operations/deployment/traefik-guide.md) ⭐ **NEW** - Reverse proxy setup (Issue #703)
+  - [Traefik Testing](./05-operations/deployment/traefik-testing.md) ⭐ **NEW** - Testing procedures
+  - [Traefik Production](./05-operations/deployment/traefik-production.md) ⭐ **NEW** - Production checklist
+  - **[infrastructure/](./05-operations/deployment/infrastructure/)** - Infrastructure provider comparison
+    - [EU Hosting Providers Comparison](./05-operations/deployment/infrastructure/EU_HOSTING_COMPARISON_2025.md) - Top 10 EU providers
 
-- **[runbooks/](./05-operations/runbooks/)** - Incident runbooks (6 files)
+- **[runbooks/](./05-operations/runbooks/)** - Incident runbooks (~10 files)
   - [High Error Rate](./05-operations/runbooks/high-error-rate.md)
+  - [Slow Performance](./05-operations/runbooks/slow-performance.md)
+  - [High Memory Usage](./05-operations/runbooks/high-memory-usage.md)
   - [Dependency Down](./05-operations/runbooks/dependency-down.md)
-  - [AI Quality Low](./05-operations/runbooks/ai-quality-low.md)
-  - [Error Spike](./05-operations/runbooks/error-spike.md)
+  - [Infrastructure Monitoring](./05-operations/runbooks/infrastructure-monitoring.md) ⭐ **NEW** (Issue #705)
+  - [RAG Evaluation Pipeline](./05-operations/runbooks/rag-evaluation-pipeline.md)
   - [Prompt Management Deployment](./05-operations/runbooks/prompt-management-deployment.md)
-  - [General Troubleshooting](./05-operations/runbooks/general-troubleshooting.md)
+  - _...and more runbooks_
 
-- **[monitoring/](./05-operations/monitoring/)** - Observability (1 file)
+- **[monitoring/](./05-operations/monitoring/)** - Observability (~5 files)
+  - [Prometheus Setup](./05-operations/monitoring/prometheus-setup.md) ⭐ **CONSOLIDATED** - Complete monitoring guide (40+ alerts)
+  - [Prometheus LLM Queries](./05-operations/monitoring/prometheus-llm-queries.md) - Query examples
+  - [Grafana LLM Cost Dashboard](./05-operations/monitoring/grafana-llm-cost-dashboard.md) - Cost tracking
+  - [Slack Notifications](./05-operations/monitoring/slack-notifications.md) - Alert routing
   - [Logging & Audit](./05-operations/monitoring/logging-and-audit.md)
+
+- **[backup/](./05-operations/backup/)** - Backup & recovery (2 files) ⭐ **NEW** (Issue #704)
+  - [Backup Strategy](./05-operations/backup/backup-strategy.md) - Automated backups
+  - [Restore Procedures](./05-operations/backup/restore-procedures.md) - Recovery steps
+
+- **[Workflow Automation](./05-operations/workflow-automation.md)** ⭐ **CONSOLIDATED** - n8n workflows (13 templates + production)
 
 ### [06 - Security](./06-security/)
 **Audience**: Security team, compliance, developers
 **Purpose**: Security audits, vulnerability remediation, best practices
 
-- [Security Audit 2025-11-04](./06-security/SECURITY_AUDIT_2025-11-04.md) ⭐
+- [**Security Patterns**](./06-security/security-patterns.md) ⭐ **CONSOLIDATED** - All security patterns (resource management, credentials, validation, encoding)
+- [Security Audit 2025-11-04](./06-security/security-audit-2025-11-04.md)
 - [Environment Variables Production Guide](./06-security/environment-variables-production.md) ⭐ **NEW**
 - [Code Scanning Remediation](./06-security/code-scanning-remediation-summary.md)
 - [OAuth Security](./06-security/oauth-security.md)
@@ -205,6 +253,7 @@
 **Purpose**: External references, research papers, wiki content
 
 - [AI Systems for Board Games 2025](./10-knowledge-base/Sistemi%20AI%20per%20arbitrare%20giochi%20da%20tavolo%20%20stato%20dell'arte%202025.md) (Italian)
+- [Game Scraper](./10-knowledge-base/game-scraper.md) ⭐ **NEW** - BoardGameGeek scraper documentation
 - [references/](./10-knowledge-base/references/) - External references
   - [OpenRouter Models Reference](./10-knowledge-base/references/openrouter-models-reference.wiki)
 

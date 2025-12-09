@@ -6,6 +6,7 @@ using Api.Tests.BoundedContexts.DocumentProcessing.TestHelpers;
 using FluentAssertions;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Handlers;
 
@@ -14,6 +15,7 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Handlers;
 /// Tests document retrieval, mapping to DTO, and null handling.
 /// ISSUE-1818: Migrated to FluentAssertions for improved readability.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class GetPdfDocumentByIdQueryHandlerTests
 {
     private readonly Mock<IPdfDocumentRepository> _documentRepositoryMock;
@@ -24,9 +26,6 @@ public class GetPdfDocumentByIdQueryHandlerTests
         _documentRepositoryMock = new Mock<IPdfDocumentRepository>();
         _handler = new GetPdfDocumentByIdQueryHandler(_documentRepositoryMock.Object);
     }
-
-    #region Happy Path Tests
-
     [Fact]
     public async Task Handle_ExistingDocument_ReturnsMappedDto()
     {
@@ -173,11 +172,6 @@ public class GetPdfDocumentByIdQueryHandlerTests
         result.FileSizeBytes.Should().Be(fileSizeBytes);
         result.PageCount.Should().Be(200);
     }
-
-    #endregion
-
-    #region Edge Cases
-
     [Fact]
     public async Task Handle_NonExistentDocument_ReturnsNull()
     {
@@ -219,11 +213,6 @@ public class GetPdfDocumentByIdQueryHandlerTests
         // Assert
         result.Should().BeNull();
     }
-
-    #endregion
-
-    #region Cancellation Tests
-
     [Fact]
     public async Task Handle_WithCancellationToken_PassesToRepository()
     {
@@ -251,6 +240,4 @@ public class GetPdfDocumentByIdQueryHandlerTests
             r => r.GetByIdAsync(documentId, cancellationToken),
             Times.Once);
     }
-
-    #endregion
 }

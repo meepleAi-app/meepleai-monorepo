@@ -1,4 +1,5 @@
 using Api.BoundedContexts.Administration.Application.Commands;
+using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
@@ -25,7 +26,7 @@ public static class AdminMiscEndpoints
             var session = sessionResult.Session;
             if (session == null) throw new InvalidOperationException("Session is required");
 
-            logger.LogInformation("Admin {UserId} starting chess knowledge indexing", session.User.Id);
+            logger.LogInformation("Admin {UserId} starting chess knowledge indexing", session!.User!.Id);
 
             var result = await mediator.Send(new IndexChessKnowledgeCommand(), ct).ConfigureAwait(false);
 
@@ -50,7 +51,7 @@ public static class AdminMiscEndpoints
         group.MapGet("/chess/search", async (string? q, int? limit, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             // Session validated by RequireSessionFilter
-            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
             // Issue #1445: Use centralized query validation
             var queryError = QueryValidator.ValidateQuery(q);
@@ -60,7 +61,7 @@ public static class AdminMiscEndpoints
             }
             var validatedQuery = q!;
 
-            logger.LogInformation("User {UserId} searching chess knowledge: {Query}", session.User.Id, validatedQuery);
+            logger.LogInformation("User {UserId} searching chess knowledge: {Query}", session!.User!.Id, validatedQuery);
 
             var searchResult = await mediator.Send(new SearchChessKnowledgeQuery { Query = validatedQuery, Limit = limit ?? 5 }, ct).ConfigureAwait(false);
 
@@ -91,7 +92,7 @@ public static class AdminMiscEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            logger.LogInformation("Admin {UserId} deleting all chess knowledge", session.User.Id);
+            logger.LogInformation("Admin {UserId} deleting all chess knowledge", session!.User!.Id);
 
             var success = await mediator.Send(new DeleteChessKnowledgeCommand(), ct).ConfigureAwait(false);
 

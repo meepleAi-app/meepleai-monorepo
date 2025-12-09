@@ -1,3 +1,4 @@
+#pragma warning disable MA0048 // File name must match type name - Multi-type configuration file
 namespace Api.Configuration;
 
 /// <summary>
@@ -36,7 +37,7 @@ public class AiProviderSettings
     /// Provider fallback order for circuit breaker (e.g., ["Ollama", "OpenRouter"]).
     /// Providers must exist in Providers dictionary and have Enabled = true.
     /// </summary>
-    public List<string> FallbackChain { get; set; } = new();
+    public IReadOnlyList<string> FallbackChain { get; set; } = new List<string>();
 
     /// <summary>
     /// Circuit breaker configuration shared across all providers.
@@ -71,7 +72,7 @@ public class ProviderConfig
     /// - OPENROUTER_API_KEY_FILE: Path to Docker secret file
     /// See: Infrastructure/SecretsHelper.cs for implementation.
     /// </remarks>
-    public List<string> Models { get; set; } = new();
+    public IReadOnlyList<string> Models { get; set; } = new List<string>();
 
     /// <summary>
     /// Health check interval in seconds (default: 60s).

@@ -4,7 +4,7 @@ This directory contains Grafana dashboard JSON files for the MeepleAI observabil
 
 ## Dashboard Files
 
-✅ **Implemented Dashboards**:
+✅ **Implemented Dashboards** (13 total):
 
 1. **api-performance.json** - API performance metrics
    - Request rate (req/s)
@@ -53,6 +53,32 @@ This directory contains Grafana dashboard JSON files for the MeepleAI observabil
    - HTTP retry patterns and success rates
    - Retry backoff effectiveness
    - Failed retry tracking
+
+9. **infrastructure-monitoring.json** - Infrastructure monitoring (Issue #705)
+   - Container resource usage (cAdvisor)
+   - Host system metrics (node-exporter)
+   - CPU, memory, disk, network statistics
+
+10. **ingestion-services.json** - Data ingestion monitoring
+    - PDF processing pipeline metrics
+    - Document ingestion rates
+    - Processing queue status
+
+11. **llm-cost-monitoring.json** - LLM cost tracking
+    - Token usage by provider and model
+    - Cost per request
+    - Budget tracking and alerts
+
+12. **rag-evaluation.json** - RAG evaluation metrics (ADR-016)
+    - Recall@5, Recall@10, nDCG@10, MRR
+    - Grid search results
+    - Configuration performance comparison
+
+13. **2fa-security-monitoring.json** - 2FA security metrics (Issue #576)
+    - 2FA adoption rate
+    - Authentication success/failure rates
+    - TOTP validation metrics
+    - Backup code usage
 
 ## Auto-Provisioning
 

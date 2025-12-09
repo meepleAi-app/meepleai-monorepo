@@ -22,6 +22,7 @@ using Moq;
 using Npgsql;
 using Testcontainers.Qdrant;
 using Xunit;
+using Api.Tests.Constants;
 using AuthRole = Api.BoundedContexts.Authentication.Domain.ValueObjects.Role;
 
 namespace Api.Tests.Integration.DocumentProcessing;
@@ -43,11 +44,9 @@ namespace Api.Tests.Integration.DocumentProcessing;
 /// Coverage Target: ≥90% for IndexPdfCommandHandler
 /// Execution Time Target: <20s
 /// </summary>
-[Collection("IndexPdfIntegration")]
+[Trait("Category", TestCategories.Integration)]
 public sealed class IndexPdfIntegrationTests : IAsyncLifetime
 {
-    #region Test Infrastructure
-
     private IContainer? _postgresContainer;
     private QdrantContainer? _qdrantContainer;
     private MeepleAiDbContext? _dbContext;
@@ -331,11 +330,6 @@ public sealed class IndexPdfIntegrationTests : IAsyncLifetime
         // Re-seed base data
         await SeedTestDataAsync();
     }
-
-    #endregion
-
-    #region 1. Happy Path Tests
-
     [Fact]
     public async Task IndexValidPdf_WithExtractedText_Success()
     {
@@ -362,11 +356,6 @@ public sealed class IndexPdfIntegrationTests : IAsyncLifetime
         vectorDoc!.IndexingStatus.Should().Be("completed");
         vectorDoc.ChunkCount.Should().BeGreaterThan(0);
     }
-
-    #endregion
-
-    #region 2. Text Extraction Tests
-
     [Fact]
     public async Task IndexPdfWithoutExtractedText_ReturnsTextExtractionRequired()
     {
@@ -405,11 +394,6 @@ public sealed class IndexPdfIntegrationTests : IAsyncLifetime
         result.ErrorCode.Should().Be(PdfIndexingErrorCode.TextExtractionRequired);
         result.ErrorMessage.Should().Contain("not completed");
     }
-
-    #endregion
-
-    #region 3. Vector Generation Tests
-
     [Fact]
     public async Task IndexPdf_GeneratesEmbeddings_Success()
     {
@@ -475,11 +459,6 @@ public sealed class IndexPdfIntegrationTests : IAsyncLifetime
         result.ErrorCode.Should().Be(PdfIndexingErrorCode.EmbeddingFailed);
         result.ErrorMessage.Should().Contain("Embedding generation failed");
     }
-
-    #endregion
-
-    #region 4. Qdrant Storage Tests
-
     [Fact]
     public async Task IndexPdf_StoresInQdrant_Success()
     {
@@ -537,11 +516,6 @@ public sealed class IndexPdfIntegrationTests : IAsyncLifetime
         result.ErrorCode.Should().Be(PdfIndexingErrorCode.QdrantIndexingFailed);
         result.ErrorMessage.Should().Contain("Qdrant indexing failed");
     }
-
-    #endregion
-
-    #region 5. Large PDF / Chunking Tests
-
     [Fact]
     public async Task IndexLargePdf_HandlesChunkingCorrectly()
     {
@@ -571,11 +545,6 @@ public sealed class IndexPdfIntegrationTests : IAsyncLifetime
         vectorDoc!.ChunkCount.Should().Be(result.ChunkCount);
         vectorDoc.TotalCharacters.Should().Be(largeText.Length);
     }
-
-    #endregion
-
-    #region 6. Failure Recovery Tests
-
     [Fact]
     public async Task IndexNonExistentPdf_ReturnsPdfNotFound()
     {
@@ -594,11 +563,6 @@ public sealed class IndexPdfIntegrationTests : IAsyncLifetime
         result.ErrorCode.Should().Be(PdfIndexingErrorCode.PdfNotFound);
         result.ErrorMessage.Should().Contain("not found");
     }
-
-    #endregion
-
-    #region 7. Re-indexing Tests
-
     [Fact]
     public async Task ReindexExistingPdf_UpdatesVectors()
     {
@@ -634,7 +598,4 @@ public sealed class IndexPdfIntegrationTests : IAsyncLifetime
         updatedVectorDoc.IndexedAt.Should().BeAfter(originalIndexedAt!.Value, "IndexedAt should be updated");
         updatedVectorDoc.IndexingStatus.Should().Be("completed");
     }
-
-    #endregion
 }
-

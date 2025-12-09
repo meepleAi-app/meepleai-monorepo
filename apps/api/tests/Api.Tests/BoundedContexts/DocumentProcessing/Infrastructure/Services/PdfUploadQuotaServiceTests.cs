@@ -9,9 +9,11 @@ using Xunit;
 using FluentAssertions;
 using AuthRole = Api.BoundedContexts.Authentication.Domain.ValueObjects.Role;
 using UserTier = Api.BoundedContexts.Authentication.Domain.ValueObjects.UserTier;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Infrastructure.Services;
 
+[Trait("Category", TestCategories.Unit)]
 public class PdfUploadQuotaServiceTests
 {
     private readonly Mock<IConnectionMultiplexer> _redisMock;
@@ -39,9 +41,6 @@ public class PdfUploadQuotaServiceTests
             NullLogger<PdfUploadQuotaService>.Instance,
             _timeProvider);
     }
-
-    #region CheckQuotaAsync Tests
-
     [Fact]
     public async Task CheckQuotaAsync_AdminUser_BypassesQuotaCheck()
     {
@@ -270,11 +269,6 @@ public class PdfUploadQuotaServiceTests
         result.WeeklyUploadsUsed.Should().Be(800);
         Assert.Equal(1000, result.WeeklyLimit); // Custom limit
     }
-
-    #endregion
-
-    #region IncrementUploadCountAsync Tests
-
     [Fact]
     public async Task IncrementUploadCountAsync_ExecutesLuaScriptAtomically()
     {
@@ -373,11 +367,6 @@ public class PdfUploadQuotaServiceTests
                 It.IsAny<CommandFlags>()),
             Times.Once()); // Attempted only daily, then exception caught and method exited
     }
-
-    #endregion
-
-    #region GetQuotaInfoAsync Tests
-
     [Fact]
     public async Task GetQuotaInfoAsync_AdminUser_ReturnsUnlimitedQuota()
     {
@@ -517,11 +506,6 @@ public class PdfUploadQuotaServiceTests
         await Assert.ThrowsAsync<RedisConnectionException>(() =>
             _service.GetQuotaInfoAsync(userId, userTier, userRole));
     }
-
-    #endregion
-
-    #region Week Key Edge Cases Tests
-
     [Theory]
     [InlineData("2024-12-29", "2024-W52")] // Sunday Dec 29, 2024 - Week 52 of 2024
     [InlineData("2024-12-30", "2025-W01")] // Monday Dec 30, 2024 - Week 1 of 2025 (ISO 8601)
@@ -596,11 +580,6 @@ public class PdfUploadQuotaServiceTests
 
         Assert.Contains(expectedWeekKey, weeklyKeyString);
     }
-
-    #endregion
-
-    #region Daily/Weekly Reset Tests
-
     [Fact]
     public async Task CheckQuotaAsync_DailyReset_CalculatesNextMidnight()
     {
@@ -659,13 +638,5 @@ public class PdfUploadQuotaServiceTests
         // Assert
         result.WeeklyResetAt.Should().Be(expectedReset);
     }
-
-    #endregion
-
-    #region Helper Classes
-
     // FakeTimeProvider removed - now using TestTimeProvider from Api.Tests.Infrastructure
-
-    #endregion
 }
-

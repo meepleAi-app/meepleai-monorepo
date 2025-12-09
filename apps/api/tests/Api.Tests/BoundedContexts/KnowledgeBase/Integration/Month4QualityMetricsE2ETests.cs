@@ -19,6 +19,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Npgsql;
+using Polly;
 using Xunit;
 using System.Diagnostics.Metrics;
 
@@ -41,13 +42,12 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Integration;
 ///
 /// Infrastructure: Postgres (for data), mocked LLM (no OpenRouter dependency)
 /// </remarks>
-[Collection("Month4QualityMetricsE2E")]
 [Trait("Category", "Integration")]
 [Trait("Dependency", "Testcontainers")]
 [Trait("BoundedContext", "KnowledgeBase")]
 [Trait("Issue", "995")]
 [Trait("Month", "4")]
-public class Month4QualityMetricsE2ETests : IAsyncLifetime
+public sealed class Month4QualityMetricsE2ETests : IAsyncLifetime
 {
     private IContainer? _postgresContainer;
     private MeepleAiDbContext? _dbContext;
@@ -138,9 +138,21 @@ public class Month4QualityMetricsE2ETests : IAsyncLifetime
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
         _qualityMetrics = _serviceProvider.GetRequiredService<QualityMetrics>();
 
-        // Apply migrations
+        // Apply migrations with retry policy (Issue #2005: Preventive guard for Testcontainers race condition)
         _output("Applying database migrations...");
-        await _dbContext.Database.MigrateAsync(TestCancellationToken);
+        var retryPolicy = Policy
+            .Handle<Npgsql.NpgsqlException>()
+            .Or<System.IO.EndOfStreamException>()
+            .WaitAndRetryAsync(
+                retryCount: 3,
+                sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
+                onRetry: (exception, timeSpan, retryCount, context) =>
+                {
+                    _output($"⚠️ Migration attempt {retryCount} failed: {exception.Message}. Retrying in {timeSpan.TotalSeconds}s...");
+                });
+
+        await retryPolicy.ExecuteAsync(async () =>
+            await _dbContext.Database.MigrateAsync(TestCancellationToken));
         _output("✓ Migrations applied");
 
         // Seed test data

@@ -30,13 +30,13 @@ export const createGameSlice: StateCreator<
   // ============================================================================
   // Actions
   // ============================================================================
-  setGames: (games) =>
-    set((state) => {
+  setGames: games =>
+    set(state => {
       state.games = games;
     }),
 
-  setAgents: (agents) =>
-    set((state) => {
+  setAgents: agents =>
+    set(state => {
       state.agents = agents;
     }),
 
@@ -46,9 +46,9 @@ export const createGameSlice: StateCreator<
     setError(null);
 
     try {
-      const response = await api.get<Array<{ id: string; title: string; createdAt?: string }>>('/api/v1/games');
-      set((state) => {
-        state.games = response ?? [];
+      const response = await api.games.getAll();
+      set(state => {
+        state.games = response.games ?? [];
       });
     } catch (err) {
       logger.error(
@@ -57,7 +57,7 @@ export const createGameSlice: StateCreator<
         createErrorContext('GameSlice', 'loadGames', {})
       );
       setError('Errore nel caricamento dei giochi');
-      set((state) => {
+      set(state => {
         state.games = [];
       });
     } finally {
@@ -74,7 +74,7 @@ export const createGameSlice: StateCreator<
       // Issue #868: Load available (active) agents using agentsClient
       // Agents are global and not tied to specific games
       const response = await api.agents.getAvailable();
-      set((state) => {
+      set(state => {
         state.agents = response ?? [];
       });
     } catch (err) {
@@ -84,7 +84,7 @@ export const createGameSlice: StateCreator<
         createErrorContext('GameSlice', 'loadAgents', {})
       );
       setError('Errore nel caricamento degli agenti');
-      set((state) => {
+      set(state => {
         state.agents = [];
       });
     } finally {

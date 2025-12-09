@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Integration.GameManagement;
 
@@ -30,11 +31,9 @@ namespace Api.Tests.Integration.GameManagement;
 /// Coverage Target: ≥90% for CreateRuleCommentCommandHandler
 /// Execution Time Target: <60s
 /// </summary>
-[Collection("CreateRuleCommentIntegration")]
+[Trait("Category", TestCategories.Integration)]
 public sealed class CreateRuleCommentIntegrationTests : IAsyncLifetime
 {
-    #region Test Infrastructure
-
     private IContainer? _postgresContainer;
     private MeepleAiDbContext? _dbContext;
     private IServiceProvider? _serviceProvider;
@@ -190,11 +189,6 @@ public sealed class CreateRuleCommentIntegrationTests : IAsyncLifetime
         _dbContext!.RuleSpecComments.RemoveRange(_dbContext.RuleSpecComments);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
     }
-
-    #endregion
-
-    #region 1. Happy Path Tests
-
     [Fact]
     public async Task CreateComment_WithValidData_Success()
     {
@@ -247,11 +241,6 @@ public sealed class CreateRuleCommentIntegrationTests : IAsyncLifetime
         result.LineNumber.Should().BeNull();
         result.CommentText.Should().Be("General comment without line number");
     }
-
-    #endregion
-
-    #region 2. Validation Error Tests
-
     [Fact]
     public async Task CreateComment_WithEmptyText_ThrowsInvalidOperation()
     {
@@ -339,11 +328,6 @@ public sealed class CreateRuleCommentIntegrationTests : IAsyncLifetime
         await act.Should().ThrowAsync<InvalidOperationException>()
             .WithMessage("*must be positive*");
     }
-
-    #endregion
-
-    #region 3. @Mention Extraction Tests
-
     [Fact]
     public async Task CreateComment_WithValidMention_ExtractsMentionedUser()
     {
@@ -391,11 +375,6 @@ public sealed class CreateRuleCommentIntegrationTests : IAsyncLifetime
         result.Should().NotBeNull();
         result.MentionedUserIds.Should().BeEmpty();
     }
-
-    #endregion
-
-    #region 4. Long Comment Tests
-
     [Fact]
     public async Task CreateComment_WithMaxLength_Success()
     {
@@ -441,7 +420,4 @@ public sealed class CreateRuleCommentIntegrationTests : IAsyncLifetime
         await act.Should().ThrowAsync<InvalidOperationException>()
             .WithMessage("*exceeds maximum length*");
     }
-
-    #endregion
 }
-

@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
+#pragma warning disable MA0048 // File name must match type name - EF Core migration
+#pragma warning disable S101 // Rename class to match pascal case - FTS is standard acronym
 
 namespace Api.Migrations
 {
@@ -15,15 +17,34 @@ namespace Api.Migrations
         {
             // Create Italian FTS configuration based on the Italian dictionary
             // ADR-016 Phase 3: meepleai_italian configuration for game rules
+            // Issue #1996: Check for Italian dictionary availability (GitHub Actions compatibility)
             migrationBuilder.Sql(@"
                 -- Drop existing configuration if it exists (for idempotency)
                 DROP TEXT SEARCH CONFIGURATION IF EXISTS meepleai_italian CASCADE;
 
-                -- Create Italian text search configuration based on pg_catalog.italian
-                CREATE TEXT SEARCH CONFIGURATION meepleai_italian (COPY = pg_catalog.italian);
+                -- Create Italian text search configuration
+                -- Issue #1996: Fallback to 'simple' if 'italian' dictionary not available (CI environments)
+                DO $$
+                DECLARE
+                    italian_exists BOOLEAN;
+                BEGIN
+                    -- Check if Italian dictionary exists in pg_ts_config
+                    SELECT EXISTS (
+                        SELECT 1 FROM pg_ts_config WHERE cfgname = 'italian'
+                    ) INTO italian_exists;
+
+                    IF italian_exists THEN
+                        -- Production: Use Italian dictionary for better stemming
+                        CREATE TEXT SEARCH CONFIGURATION meepleai_italian (COPY = pg_catalog.italian);
+                        RAISE NOTICE 'Created meepleai_italian configuration with Italian dictionary';
+                    ELSE
+                        -- CI/Dev: Fallback to simple dictionary
+                        CREATE TEXT SEARCH CONFIGURATION meepleai_italian (COPY = pg_catalog.simple);
+                        RAISE NOTICE 'Created meepleai_italian configuration with simple dictionary (Italian not available)';
+                    END IF;
+                END $$;
 
                 -- Create game-specific synonym dictionary
-                -- First, create the synonym file path function if needed
                 DO $$
                 BEGIN
                     -- Create thesaurus dictionary for board game synonyms
@@ -38,16 +59,34 @@ namespace Api.Migrations
 
                 -- Add synonyms dictionary to our configuration
                 -- Game terms get higher priority with the synonyms dictionary
-                ALTER TEXT SEARCH CONFIGURATION meepleai_italian
-                    ALTER MAPPING FOR asciiword, asciihword, hword_asciipart, word, hword, hword_part
-                    WITH meepleai_synonyms, italian_stem;
+                -- Issue #1996: Use simple stem as fallback if italian_stem not available
+                DO $$
+                DECLARE
+                    italian_exists BOOLEAN;
+                BEGIN
+                    SELECT EXISTS (
+                        SELECT 1 FROM pg_ts_config WHERE cfgname = 'italian'
+                    ) INTO italian_exists;
+
+                    IF italian_exists THEN
+                        -- Production: Use Italian stemming
+                        ALTER TEXT SEARCH CONFIGURATION meepleai_italian
+                            ALTER MAPPING FOR asciiword, asciihword, hword_asciipart, word, hword, hword_part
+                            WITH meepleai_synonyms, italian_stem;
+                    ELSE
+                        -- CI/Dev: Use simple stemming as fallback
+                        ALTER TEXT SEARCH CONFIGURATION meepleai_italian
+                            ALTER MAPPING FOR asciiword, asciihword, hword_asciipart, word, hword, hword_part
+                            WITH meepleai_synonyms, simple;
+                    END IF;
+                END $$;
 
                 -- Create index on text_chunks for Italian search if not exists
                 CREATE INDEX IF NOT EXISTS idx_text_chunks_search_vector_italian
                     ON text_chunks USING GIN (search_vector);
 
                 COMMENT ON TEXT SEARCH CONFIGURATION meepleai_italian IS
-                    'ADR-016 Phase 3: Italian FTS configuration for MeepleAI board game rules search';
+                    'ADR-016 Phase 3: Italian FTS configuration for MeepleAI board game rules search (with CI fallback)';
             ");
 
             // Add language column to text_chunks if not exists

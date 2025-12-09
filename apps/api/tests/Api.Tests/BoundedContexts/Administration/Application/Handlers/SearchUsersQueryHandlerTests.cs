@@ -8,6 +8,7 @@ using Api.Tests.TestHelpers;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 
@@ -15,6 +16,7 @@ namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 /// Comprehensive tests for SearchUsersQueryHandler.
 /// Tests user search for autocomplete scenarios with minimum query length validation.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class SearchUsersQueryHandlerTests
 {
     private readonly Mock<IUserRepository> _userRepositoryMock;
@@ -29,9 +31,6 @@ public class SearchUsersQueryHandlerTests
             _userRepositoryMock.Object,
             _loggerMock.Object);
     }
-
-    #region Happy Path Tests
-
     [Fact]
     public async Task Handle_WithValidQuery_ReturnsMatchingUsers()
     {
@@ -125,11 +124,6 @@ public class SearchUsersQueryHandlerTests
             r => r.SearchAsync(Role.User.Value, 2, It.IsAny<CancellationToken>()),
             Times.Once);
     }
-
-    #endregion
-
-    #region Edge Cases
-
     [Fact]
     public async Task Handle_WithEmptyQuery_ReturnsEmptyList()
     {
@@ -236,11 +230,6 @@ public class SearchUsersQueryHandlerTests
         Assert.NotNull(result);
         Assert.Empty(result);
     }
-
-    #endregion
-
-    #region Exception Handling
-
     [Fact]
     public async Task Handle_RepositoryThrowsException_ReturnsEmptyListAndLogsError()
     {
@@ -272,11 +261,6 @@ public class SearchUsersQueryHandlerTests
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
     }
-
-    #endregion
-
-    #region Cancellation Tests
-
     [Fact]
     public async Task Handle_WithCancellationToken_PassesToRepository()
     {
@@ -300,11 +284,6 @@ public class SearchUsersQueryHandlerTests
             r => r.SearchAsync("test", 10, cancellationToken),
             Times.Once);
     }
-
-    #endregion
-
-    #region Logging Tests
-
     [Fact]
     public async Task Handle_WithResults_LogsResultCount()
     {
@@ -336,7 +315,4 @@ public class SearchUsersQueryHandlerTests
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
     }
-
-    #endregion
 }
-

@@ -3,6 +3,7 @@ using Api.BoundedContexts.Authentication.Domain.Events;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using FluentAssertions;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Domain.DomainEvents;
 
@@ -10,6 +11,7 @@ namespace Api.Tests.Domain.DomainEvents;
 /// Tests for Authentication domain event publishing.
 /// Verifies that domain events are raised when aggregate methods are called.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class AuthenticationDomainEventsTests
 {
     [Fact]

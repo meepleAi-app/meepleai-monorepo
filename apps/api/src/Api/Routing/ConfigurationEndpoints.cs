@@ -1,4 +1,4 @@
-using Api.BoundedContexts.SystemConfiguration.Application.Commands;
+﻿using Api.BoundedContexts.SystemConfiguration.Application.Commands;
 using Api.BoundedContexts.SystemConfiguration.Application.DTOs;
 using Api.BoundedContexts.SystemConfiguration.Application.Queries;
 using Api.Extensions;
@@ -86,12 +86,12 @@ public static class ConfigurationEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            logger.LogInformation("Admin {AdminId} creating configuration {Key}", session.User.Id, request.Key);
+            logger.LogInformation("Admin {AdminId} creating configuration {Key}", session!.User!.Id, request.Key);
             var command = new CreateConfigurationCommand(
                 Key: request.Key,
                 Value: request.Value,
                 ValueType: request.ValueType,
-                CreatedByUserId: Guid.Parse(session.User.Id),
+                CreatedByUserId: session!.User!.Id,
                 Description: request.Description,
                 Category: request.Category,
                 Environment: request.Environment,
@@ -117,7 +117,7 @@ public static class ConfigurationEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            logger.LogInformation("Admin {AdminId} updating configuration {Id}", session.User.Id, id);
+            logger.LogInformation("Admin {AdminId} updating configuration {Id}", session!.User!.Id, id);
 
             // For simplicity, we only support value updates via this endpoint
             if (request.Value == null)
@@ -128,7 +128,7 @@ public static class ConfigurationEndpoints
             var command = new UpdateConfigValueCommand(
                 ConfigId: id,
                 NewValue: request.Value,
-                UpdatedByUserId: Guid.Parse(session.User.Id)
+                UpdatedByUserId: session!.User!.Id
             );
             var config = await mediator.Send(command, ct).ConfigureAwait(false);
 
@@ -157,7 +157,7 @@ public static class ConfigurationEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            logger.LogInformation("Admin {AdminId} deleting configuration {Id}", session.User.Id, id);
+            logger.LogInformation("Admin {AdminId} deleting configuration {Id}", session!.User!.Id, id);
             var command = new DeleteConfigurationCommand(id);
             var success = await mediator.Send(command, ct).ConfigureAwait(false);
 
@@ -187,7 +187,7 @@ public static class ConfigurationEndpoints
             if (!authorized) return error!;
 
             logger.LogInformation("Admin {AdminId} toggling configuration {Id} to {Status}",
-                session.User.Id, id, isActive ? "active" : "inactive");
+                session!.User!.Id, id, isActive ? "active" : "inactive");
 
             var command = new ToggleConfigurationCommand(id, isActive);
             var config = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -217,14 +217,14 @@ public static class ConfigurationEndpoints
             if (!authorized) return error!;
 
             logger.LogInformation("Admin {AdminId} performing bulk update on {Count} configurations",
-                session.User.Id, request.Updates.Count);
+                session!.User!.Id, request.Updates.Count);
 
             var updates = request.Updates.Select(u => new BoundedContexts.SystemConfiguration.Application.Commands.ConfigurationUpdate(
                 Id: Guid.Parse(u.Id),
                 Value: u.Value
             )).ToList();
 
-            var command = new BulkUpdateConfigsCommand(updates, Guid.Parse(session.User.Id));
+            var command = new BulkUpdateConfigsCommand(updates, session!.User!.Id);
             var configs = await mediator.Send(command, ct).ConfigureAwait(false);
 
             logger.LogInformation("Bulk update completed successfully for {Count} configurations", configs.Count);
@@ -283,7 +283,7 @@ public static class ConfigurationEndpoints
             if (!authorized) return error!;
 
             logger.LogInformation("Admin {AdminId} importing {Count} configurations",
-                session.User.Id, request.Configurations.Count);
+                session!.User!.Id, request.Configurations.Count);
 
             var items = request.Configurations.Select(c => new ConfigurationImportItem(
                 Key: c.Key,
@@ -296,7 +296,7 @@ public static class ConfigurationEndpoints
                 Environment: c.Environment
             )).ToList();
 
-            var command = new ImportConfigsCommand(items, request.OverwriteExisting, Guid.Parse(session.User.Id));
+            var command = new ImportConfigsCommand(items, request.OverwriteExisting, session!.User!.Id);
             var importedCount = await mediator.Send(command, ct).ConfigureAwait(false);
 
             logger.LogInformation("Successfully imported {Count} configurations", importedCount);
@@ -337,9 +337,9 @@ public static class ConfigurationEndpoints
             if (!authorized) return error!;
 
             logger.LogInformation("Admin {AdminId} rolling back configuration {Id} to version {Version}",
-                session.User.Id, id, version);
+                session!.User!.Id, id, version);
 
-            var command = new RollbackConfigCommand(id, version, Guid.Parse(session.User.Id));
+            var command = new RollbackConfigCommand(id, version, session!.User!.Id);
             var config = await mediator.Send(command, ct).ConfigureAwait(false);
 
             if (config == null)
@@ -384,11 +384,11 @@ public static class ConfigurationEndpoints
 
             if (key != null)
             {
-                logger.LogInformation("Admin {AdminId} invalidating cache for configuration key {Key}", session.User.Id, key);
+                logger.LogInformation("Admin {AdminId} invalidating cache for configuration key {Key}", session!.User!.Id, key);
             }
             else
             {
-                logger.LogInformation("Admin {AdminId} invalidating all configuration cache", session.User.Id);
+                logger.LogInformation("Admin {AdminId} invalidating all configuration cache", session!.User!.Id);
             }
 
             var command = new InvalidateCacheCommand(key);

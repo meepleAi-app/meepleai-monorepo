@@ -2,13 +2,14 @@ using Api.SharedKernel.Domain.Results;
 using Api.SharedKernel.Domain.Validation;
 using Api.SharedKernel.Domain.Exceptions;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.SharedKernel.Domain.Validation;
 
+[Trait("Category", TestCategories.Unit)]
+
 public class ValidationHelpersTests
 {
-    #region ThrowIfFailure
-
     [Fact]
     public void ThrowIfFailure_WithSuccessResult_ReturnsValue()
     {
@@ -44,11 +45,6 @@ public class ValidationHelpersTests
         var exception = Assert.Throws<ValidationException>(() => result.ThrowIfFailure("TestField"));
         Assert.Contains("TestField", exception.Message);
     }
-
-    #endregion
-
-    #region CombineResults
-
     [Fact]
     public void CombineResults_WithAllSuccess_ReturnsSuccess()
     {
@@ -98,11 +94,6 @@ public class ValidationHelpersTests
         Assert.Contains("Error 1", combined.Error.Message);
         Assert.Contains("Error 2", combined.Error.Message);
     }
-
-    #endregion
-
-    #region Validate
-
     [Fact]
     public void Validate_WithAllValidators_Succeeding_ReturnsSuccess()
     {
@@ -137,11 +128,6 @@ public class ValidationHelpersTests
         Assert.NotNull(result.Error);
         Assert.Contains("at least 5", result.Error.Message);
     }
-
-    #endregion
-
-    #region CreateValidator
-
     [Fact]
     public void CreateValidator_WithValidPredicate_ReturnsSuccess()
     {
@@ -173,11 +159,6 @@ public class ValidationHelpersTests
         Assert.NotNull(result.Error);
         Assert.Contains("Must contain 'test'", result.Error.Message);
     }
-
-    #endregion
-
-    #region CreateAsyncValidator
-
     [Fact]
     public async Task CreateAsyncValidator_WithValidPredicate_ReturnsSuccess()
     {
@@ -217,7 +198,5 @@ public class ValidationHelpersTests
         Assert.NotNull(result.Error);
         Assert.Contains("Must contain 'test'", result.Error.Message);
     }
-
-    #endregion
 }
 

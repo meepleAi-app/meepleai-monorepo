@@ -1,6 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Entities;
 
@@ -8,6 +9,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Entities;
 /// Tests for ChatThread.Export() domain method.
 /// ISSUE-860: Chat Export Functionality
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class ChatThreadExportTests
 {
     [Fact]

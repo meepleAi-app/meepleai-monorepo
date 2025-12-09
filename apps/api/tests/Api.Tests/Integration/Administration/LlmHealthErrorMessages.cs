@@ -11,8 +11,6 @@ namespace Api.Tests.Integration.Administration;
 /// </summary>
 public static class LlmHealthMessages
 {
-    #region Health Status
-
     /// <summary>
     /// Pattern indicating healthy provider status.
     /// Source: LLM health monitoring service
@@ -24,11 +22,6 @@ public static class LlmHealthMessages
     /// Example: "2/2 providers healthy"
     /// </summary>
     public const string ProvidersHealthy = "providers healthy";
-
-    #endregion
-
-    #region Circuit States
-
     /// <summary>
     /// Circuit breaker open state (provider unavailable).
     /// Source: Polly circuit breaker
@@ -49,11 +42,6 @@ public static class LlmHealthMessages
     /// Circuit state unknown (provider not yet tested).
     /// </summary>
     public const string CircuitUnknown = "unknown";
-
-    #endregion
-
-    #region Latency Stats
-
     /// <summary>
     /// Latency stats indicating timeout condition.
     /// </summary>
@@ -63,18 +51,11 @@ public static class LlmHealthMessages
     /// Latency stats when no data available.
     /// </summary>
     public const string NoData = "No data";
-
-    #endregion
-
-    #region Summary Patterns
-
     /// <summary>
     /// Summary pattern for no providers configured.
     /// Example: "0/0 providers"
     /// </summary>
     public const string ZeroProviders = "0/0";
-
-    #endregion
 }
 
 /// <summary>

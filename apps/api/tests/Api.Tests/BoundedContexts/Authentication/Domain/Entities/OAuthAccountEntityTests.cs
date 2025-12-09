@@ -2,6 +2,7 @@ using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.Tests.BoundedContexts.Authentication.TestHelpers;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Domain.Entities;
 
@@ -9,10 +10,9 @@ namespace Api.Tests.BoundedContexts.Authentication.Domain.Entities;
 /// Comprehensive domain tests for OAuthAccount entity.
 /// Tests OAuth provider linking, token management, expiration, and provider-specific behavior.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class OAuthAccountEntityTests
 {
-    #region Constructor Tests
-
     [Fact]
     public void Constructor_WithValidData_CreatesOAuthAccount()
     {
@@ -181,11 +181,6 @@ public class OAuthAccountEntityTests
         // Assert
         Assert.Null(account.TokenExpiresAt);
     }
-
-    #endregion
-
-    #region Provider Validation Tests
-
     [Theory]
     [InlineData("google")]
     [InlineData("discord")]
@@ -227,11 +222,6 @@ public class OAuthAccountEntityTests
             )
         );
     }
-
-    #endregion
-
-    #region UpdateTokens Tests
-
     [Fact]
     public void UpdateTokens_WithValidTokens_UpdatesSuccessfully()
     {
@@ -328,11 +318,6 @@ public class OAuthAccountEntityTests
         // Assert
         Assert.Null(account.RefreshTokenEncrypted);
     }
-
-    #endregion
-
-    #region IsTokenExpired Tests
-
     [Fact]
     public void IsTokenExpired_WithNoExpiration_ReturnsFalse()
     {
@@ -408,11 +393,6 @@ public class OAuthAccountEntityTests
         // Assert
         Assert.False(isExpired);
     }
-
-    #endregion
-
-    #region SupportsRefresh Tests
-
     [Fact]
     public void SupportsRefresh_WithGoogleAndRefreshToken_ReturnsTrue()
     {
@@ -519,11 +499,6 @@ public class OAuthAccountEntityTests
         // Assert
         Assert.False(supportsRefresh);
     }
-
-    #endregion
-
-    #region Token Encryption Tests
-
     [Fact]
     public void Constructor_RequiresEncryptedAccessToken()
     {
@@ -547,11 +522,6 @@ public class OAuthAccountEntityTests
         // Assert
         Assert.Equal("encrypted_refresh_value", account.RefreshTokenEncrypted);
     }
-
-    #endregion
-
-    #region Builder Integration Tests
-
     [Fact]
     public void Builder_CreateDefault_ProducesValidOAuthAccount()
     {
@@ -607,11 +577,6 @@ public class OAuthAccountEntityTests
         Assert.Equal("github", account.Provider);
         Assert.Equal(user.Id, account.UserId);
     }
-
-    #endregion
-
-    #region SupportedProviders Tests
-
     [Fact]
     public void SupportedProviders_ContainsExpectedProviders()
     {
@@ -630,7 +595,4 @@ public class OAuthAccountEntityTests
         Assert.Contains("Discord", OAuthAccount.SupportedProviders);
         Assert.Contains("github", OAuthAccount.SupportedProviders);
     }
-
-    #endregion
 }
-

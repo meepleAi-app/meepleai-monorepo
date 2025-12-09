@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Infrastructure.External;
 
@@ -14,6 +15,7 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Infrastructure.External;
 /// ISSUE-1818: Migrated to FluentAssertions for improved readability.
 /// ISSUE-1818: Migrated to FluentAssertions for improved readability.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class DocnetPdfTextExtractorTests : IDisposable
 {
     private readonly Mock<ILogger<DocnetPdfTextExtractor>> _mockLogger;
@@ -65,9 +67,6 @@ public class DocnetPdfTextExtractorTests : IDisposable
             }
         }
     }
-
-    #region ExtractTextAsync Tests
-
     [Fact]
     public async Task ExtractTextAsync_ValidPdf_ReturnsSuccess()
     {
@@ -182,11 +181,6 @@ public class DocnetPdfTextExtractorTests : IDisposable
         result.Success.Should().BeFalse();
         result.ErrorMessage.Should().NotBeNull();
     }
-
-    #endregion
-
-    #region ExtractPagedTextAsync Tests
-
     [Fact]
     public async Task ExtractPagedTextAsync_ValidPdf_ReturnsPageChunks()
     {
@@ -244,11 +238,6 @@ public class DocnetPdfTextExtractorTests : IDisposable
         result.Success.Should().BeFalse();
         result.ErrorMessage.Should().NotBeNull();
     }
-
-    #endregion
-
-    #region Concurrent Access Tests
-
     [Fact]
     public async Task ExtractTextAsync_ConcurrentCalls_HandlesSemaphoreCorrectly()
     {
@@ -267,11 +256,6 @@ public class DocnetPdfTextExtractorTests : IDisposable
         results.Should().AllSatisfy(result => result.Success.Should().BeTrue());
         results.Length.Should().Be(10);
     }
-
-    #endregion
-
-    #region Helper Methods
-
     /// <summary>
     /// Creates a simple test PDF with substantial text content
     /// </summary>
@@ -480,6 +464,4 @@ startxref
 
         return new MemoryStream(System.Text.Encoding.ASCII.GetBytes(pdfContent));
     }
-
-    #endregion
 }

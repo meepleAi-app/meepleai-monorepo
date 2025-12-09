@@ -199,7 +199,7 @@ public class OllamaLlmClient : ILlmClient
     }
 
     /// <inheritdoc/>
-    public async IAsyncEnumerable<string> GenerateCompletionStreamAsync(
+    public async IAsyncEnumerable<StreamChunk> GenerateCompletionStreamAsync(
         string model,
         string systemPrompt,
         string userPrompt,
@@ -311,17 +311,59 @@ public class OllamaLlmClient : ILlmClient
                     continue;
                 }
 
+                // Regular content chunk (process first, even if done=true)
                 var delta = chunk?.Message?.Content;
-                if (!string.IsNullOrEmpty(delta))
+                var hasContent = !string.IsNullOrEmpty(delta);
+
+                if (hasContent)
                 {
-                    yield return delta;
+                    yield return new StreamChunk(Content: delta);
                 }
 
-                // Ollama sends done=true when stream is complete
+                // ISSUE-1725: Check if this is the final chunk (done=true)
                 if (chunk?.Done == true)
                 {
+                    // Final chunk - may contain usage metadata
+                    if (chunk.PromptEvalCount.HasValue && chunk.EvalCount.HasValue)
+                    {
+                        var totalTokens = chunk.PromptEvalCount.Value + chunk.EvalCount.Value;
+                        var usage = new LlmUsage(
+                            chunk.PromptEvalCount.Value,
+                            chunk.EvalCount.Value,
+                            totalTokens);
+
+                        var cost = _costCalculator.CalculateCost(
+                            chunk.Model ?? model,
+                            ProviderName,
+                            usage.PromptTokens,
+                            usage.CompletionTokens);
+
+                        var llmCost = new LlmCost
+                        {
+                            InputCost = cost.InputCost,
+                            OutputCost = cost.OutputCost,
+                            ModelId = chunk.Model ?? model,
+                            Provider = ProviderName
+                        };
+
+                        _logger.LogInformation(
+                            "Ollama streaming usage: {PromptTokens}p + {CompletionTokens}c = {TotalTokens}t (${TotalCost:F6})",
+                            usage.PromptTokens, usage.CompletionTokens, usage.TotalTokens, llmCost.TotalCost);
+
+                        yield return new StreamChunk(
+                            Content: null,
+                            Usage: usage,
+                            Cost: llmCost,
+                            IsFinal: true);
+                    }
+                    else
+                    {
+                        // Done but no usage metadata (fallback)
+                        _logger.LogWarning("Ollama streaming finished without usage metadata");
+                    }
+
                     _logger.LogInformation("Ollama streaming completion finished");
-                    break;
+                    break; // Exit after processing final chunk
                 }
             }
         }
@@ -376,4 +418,14 @@ internal record OllamaStreamChunk
 
     [JsonPropertyName("done")]
     public bool Done { get; init; }
+
+    /// <summary>
+    /// ISSUE-1725: Usage metadata in final chunk (when done=true)
+    /// Ollama provides eval_count (completion), prompt_eval_count (prompt)
+    /// </summary>
+    [JsonPropertyName("prompt_eval_count")]
+    public int? PromptEvalCount { get; init; }
+
+    [JsonPropertyName("eval_count")]
+    public int? EvalCount { get; init; }
 }

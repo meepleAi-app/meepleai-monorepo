@@ -114,3 +114,161 @@ export const BggGameDetailsSchema = z.object({
 });
 
 export type BggGameDetails = z.infer<typeof BggGameDetailsSchema>;
+
+// ========== RuleSpec Management ==========
+
+/**
+ * Rule Atom DTO Schema (Issue #1977)
+ * Matches RuleAtomDto from backend GameManagement context
+ */
+export const RuleAtomSchema = z.object({
+  id: z.string(),
+  text: z.string(),
+  section: z
+    .string()
+    .nullish()
+    .transform(val => val ?? null),
+  page: z
+    .string()
+    .nullish()
+    .transform(val => val ?? null),
+  line: z
+    .string()
+    .nullish()
+    .transform(val => val ?? null),
+});
+
+export type RuleAtom = z.infer<typeof RuleAtomSchema>;
+
+/**
+ * RuleSpec DTO Schema (Issue #1977)
+ * Matches RuleSpecDto from backend GameManagement context
+ */
+export const RuleSpecSchema = z.object({
+  id: z.string().uuid(),
+  gameId: z.string().uuid(),
+  version: z.string(),
+  createdAt: z.string().datetime(),
+  createdByUserId: z.string().uuid().nullable(),
+  parentVersionId: z.string().uuid().nullable(),
+  atoms: z.array(RuleAtomSchema),
+});
+
+export type RuleSpec = z.infer<typeof RuleSpecSchema>;
+
+/**
+ * RuleSpec Version DTO Schema (Issue #1977)
+ * Matches RuleSpecVersionDto from backend GetVersionHistoryQuery
+ */
+export const RuleSpecVersionSchema = z.object({
+  version: z.string(),
+  createdAt: z.string().datetime(),
+  atomCount: z.number().int().nonnegative(),
+  createdByUserName: z.string().nullable(),
+});
+
+export type RuleSpecVersion = z.infer<typeof RuleSpecVersionSchema>;
+
+/**
+ * RuleSpec History DTO Schema (Issue #1977)
+ * Matches RuleSpecHistoryDto from backend GetVersionHistoryQuery
+ */
+export const RuleSpecHistorySchema = z.object({
+  gameId: z.string().uuid(),
+  versions: z.array(RuleSpecVersionSchema),
+  totalVersions: z.number().int().nonnegative(),
+});
+
+export type RuleSpecHistory = z.infer<typeof RuleSpecHistorySchema>;
+
+/**
+ * Version Node DTO Schema (Issue #1977)
+ * Matches VersionNodeDto from backend GetVersionTimelineQuery
+ */
+export const VersionNodeSchema = z.object({
+  version: z.string(),
+  createdAt: z.string().datetime(),
+  parentVersion: z.string().nullable(),
+  createdByUserName: z.string().nullable(),
+  atomCount: z.number().int().nonnegative(),
+  isActive: z.boolean(),
+});
+
+export type VersionNode = z.infer<typeof VersionNodeSchema>;
+
+/**
+ * Version Timeline DTO Schema (Issue #1977)
+ * Matches VersionTimelineDto from backend GetVersionTimelineQuery
+ */
+export const VersionTimelineSchema = z.object({
+  gameId: z.string().uuid(),
+  versions: z.array(VersionNodeSchema),
+  totalVersions: z.number().int().nonnegative(),
+  authors: z.array(z.string()).optional(),
+});
+
+export type VersionTimeline = z.infer<typeof VersionTimelineSchema>;
+
+/**
+ * Field Change DTO Schema (Issue #1977)
+ * Represents a field-level change in rule atom
+ */
+export const FieldChangeSchema = z.object({
+  fieldName: z.string(),
+  oldValue: z.string().nullable(),
+  newValue: z.string().nullable(),
+});
+
+export type FieldChange = z.infer<typeof FieldChangeSchema>;
+
+/**
+ * Change Type Enum (Issue #1977)
+ * Matches ChangeType from backend
+ */
+export const ChangeTypeSchema = z.enum(['Added', 'Modified', 'Deleted', 'Unchanged']);
+export type ChangeType = z.infer<typeof ChangeTypeSchema>;
+
+/**
+ * Rule Atom Change DTO Schema (Issue #1977)
+ * Represents a single atom change in diff
+ */
+export const RuleAtomChangeSchema = z.object({
+  type: ChangeTypeSchema,
+  oldAtom: z.string().nullable(),
+  newAtom: z.string().nullable(),
+  oldValue: RuleAtomSchema.nullable(),
+  newValue: RuleAtomSchema.nullable(),
+  fieldChanges: z.array(FieldChangeSchema).nullable(),
+});
+
+export type RuleAtomChange = z.infer<typeof RuleAtomChangeSchema>;
+
+/**
+ * Diff Summary DTO Schema (Issue #1977)
+ * Summary statistics for diff operation
+ */
+export const DiffSummarySchema = z.object({
+  totalChanges: z.number().int().nonnegative(),
+  added: z.number().int().nonnegative(),
+  modified: z.number().int().nonnegative(),
+  deleted: z.number().int().nonnegative(),
+  unchanged: z.number().int().nonnegative(),
+});
+
+export type DiffSummary = z.infer<typeof DiffSummarySchema>;
+
+/**
+ * RuleSpec Diff DTO Schema (Issue #1977)
+ * Matches RuleSpecDiff from backend Models
+ */
+export const RuleSpecDiffSchema = z.object({
+  gameId: z.string().uuid(),
+  fromVersion: z.string(),
+  toVersion: z.string(),
+  fromCreatedAt: z.string().datetime(),
+  toCreatedAt: z.string().datetime(),
+  summary: DiffSummarySchema,
+  changes: z.array(RuleAtomChangeSchema),
+});
+
+export type RuleSpecDiff = z.infer<typeof RuleSpecDiffSchema>;

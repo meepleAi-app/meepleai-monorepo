@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 
@@ -14,6 +15,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 /// Integration tests for LlmCostLogRepository using Testcontainers with PostgreSQL.
 /// ISSUE-960: BGAI-018 - Cost tracking persistence tests
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class LlmCostLogRepositoryTests : IntegrationTestBase<LlmCostLogRepository>
 {
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;

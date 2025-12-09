@@ -7,6 +7,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Queries;
 
@@ -16,6 +17,7 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.Queries;
 /// Note: Uses in-memory database since RuleSpec is in infrastructure layer.
 /// ISSUE-1500: TEST-002 - Fixed test isolation (fresh context per test)
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class GetRuleSpecsQueryHandlerTests
 {
     /// <summary>
@@ -42,9 +44,6 @@ public class GetRuleSpecsQueryHandlerTests
     {
         return new GetRuleSpecsQueryHandler(context);
     }
-
-    #region Happy Path Tests
-
     [Fact]
     public async Task Handle_WithExistingRuleSpecs_ReturnsOrderedByCreatedAt()
     {
@@ -207,11 +206,6 @@ public class GetRuleSpecsQueryHandlerTests
         var parent = result.First(r => r.Version == "1.0");
         Assert.Null(parent.ParentVersionId);
     }
-
-    #endregion
-
-    #region Edge Cases
-
     [Fact]
     public async Task Handle_WithCancellationToken_Cancels()
     {
@@ -271,11 +265,6 @@ public class GetRuleSpecsQueryHandlerTests
         Assert.Null(atomDto.Page);
         Assert.Null(atomDto.Line);
     }
-
-    #endregion
-
-    #region Helper Methods
-
     private static RuleSpecEntity CreateRuleSpec(Guid gameId, string version, DateTime createdAt)
     {
         return new RuleSpecEntity
@@ -289,7 +278,5 @@ public class GetRuleSpecsQueryHandlerTests
             Atoms = new List<RuleAtomEntity>()
         };
     }
-
-    #endregion
 }
 

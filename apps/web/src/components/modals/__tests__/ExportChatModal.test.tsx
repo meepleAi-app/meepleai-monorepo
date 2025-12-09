@@ -7,6 +7,7 @@
  * Issue #1887 - Batch 12: Test rewrite to match Server Actions migration
  */
 
+import { vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ExportChatModal } from '../ExportChatModal';

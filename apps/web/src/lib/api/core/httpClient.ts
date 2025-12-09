@@ -490,6 +490,138 @@ export class HttpClient {
   }
 
   /**
+   * PATCH request with optional Zod validation and automatic retry (for partial updates)
+   */
+  async patch<T>(
+    path: string,
+    body: unknown,
+    schema?: z.ZodSchema<T>,
+    options?: RequestOptions
+  ): Promise<T> {
+    // Generate cache key for deduplication (opt-out by default for PATCH)
+    const cacheKey = globalRequestCache.generateKey(
+      'PATCH',
+      `${this.baseUrl}${path}`,
+      body,
+      this.getAuthContext(),
+      this.getCacheKeyOptions(options)
+    );
+
+    const skipDedup = options?.retry?.onRetry !== undefined ? true : (options?.skipDedup ?? true);
+
+    return globalRequestCache.dedupe(
+      cacheKey,
+      async () => {
+        if (!options?.skipCircuitBreaker && !canExecuteCircuit(path)) {
+          const error = new Error(
+            `Circuit breaker is OPEN for ${path}. Request denied to prevent cascading failures.`
+          );
+          error.name = 'CircuitBreakerError';
+          throw error;
+        }
+
+        let retryCount = 0;
+
+        const result = await withRetry(
+          async () => {
+            try {
+              const response = await this.fetchImpl(`${this.baseUrl}${path}`, {
+                method: 'PATCH',
+                credentials: 'include',
+                headers: {
+                  ...this.getHeaders(),
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(body),
+                ...options,
+              });
+
+              if (response.status === 401) {
+                const error = await createApiError(path, response);
+                if (!options?.skipErrorLogging) {
+                  logApiError(error);
+                }
+                throw error;
+              }
+
+              if (!response.ok) {
+                await this.handleError(path, response, options);
+              }
+
+              // Handle 204 No Content (no body to parse)
+              if (response.status === 204) {
+                if (retryCount > 0) {
+                  recordRetrySuccess();
+                }
+                if (!options?.skipCircuitBreaker) {
+                  recordCircuitSuccess(path);
+                }
+                return undefined as T;
+              }
+
+              const data = await response.json();
+
+              if (schema) {
+                const validated = this.validateResponse(path, data, schema);
+                if (retryCount > 0) {
+                  recordRetrySuccess();
+                }
+                if (!options?.skipCircuitBreaker) {
+                  recordCircuitSuccess(path);
+                }
+                return validated;
+              }
+
+              if (retryCount > 0) {
+                recordRetrySuccess();
+              }
+
+              if (!options?.skipCircuitBreaker) {
+                recordCircuitSuccess(path);
+              }
+
+              return data as T;
+            } catch (error) {
+              if (error instanceof TypeError && error.message.includes('fetch')) {
+                throw new NetworkError({
+                  message: `Network error for ${path}: ${error.message}`,
+                  endpoint: path,
+                });
+              }
+              throw error;
+            }
+          },
+          {
+            ...options?.retry,
+            onRetry: (attempt, error, delayMs) => {
+              retryCount = attempt;
+              const statusCode = error instanceof ApiError ? error.statusCode : undefined;
+              recordRetryAttempt(path, statusCode, delayMs);
+
+              if (options?.retry?.onRetry) {
+                options.retry.onRetry(attempt, error, delayMs);
+              }
+            },
+          }
+        ).catch(error => {
+          if (retryCount > 0) {
+            recordRetryFailure();
+          }
+
+          if (!options?.skipCircuitBreaker) {
+            recordCircuitFailure(path);
+          }
+
+          throw error;
+        });
+
+        return result;
+      },
+      skipDedup
+    );
+  }
+
+  /**
    * DELETE request with automatic retry
    */
   async delete(path: string, options?: RequestOptions): Promise<void> {

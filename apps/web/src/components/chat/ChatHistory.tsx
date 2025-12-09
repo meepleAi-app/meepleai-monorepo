@@ -7,13 +7,26 @@
  */
 
 import React from 'react';
-import { useChatContext } from '@/hooks/useChatContext';
+import { useChatStore } from '@/store/chat/store';
 import { ThreadListItem } from './ThreadListItem';
 import { SkeletonLoader } from '../loading/SkeletonLoader';
 import { ChatThread } from '@/types';
 
 export function ChatHistory() {
-  const { chats, activeChatId, selectChat, deleteChat, loading } = useChatContext();
+  // Issue #1676: Migrated from useChatContext to direct Zustand store
+  const { selectedGameId, chatsByGame, activeChatIds, selectChat, deleteChat, loading } =
+    useChatStore(state => ({
+      selectedGameId: state.selectedGameId,
+      chatsByGame: state.chatsByGame,
+      activeChatIds: state.activeChatIds,
+      selectChat: state.selectChat,
+      deleteChat: state.deleteChat,
+      loading: state.loading,
+    }));
+
+  // Derived values
+  const activeChatId = selectedGameId ? activeChatIds[selectedGameId] : null;
+  const chats = selectedGameId ? (chatsByGame[selectedGameId] ?? []) : [];
 
   const handleSelectChat = (chatId: string) => {
     void selectChat(chatId);

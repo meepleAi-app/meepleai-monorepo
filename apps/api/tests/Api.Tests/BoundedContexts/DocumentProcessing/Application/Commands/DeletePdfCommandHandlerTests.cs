@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 using FluentAssertions;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Commands;
 
@@ -18,6 +19,7 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Commands;
 /// Tests PDF deletion with cascade cleanup (document, vectors, blob storage, cache).
 /// ISSUE-1818: Migrated to FluentAssertions for improved readability.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class DeletePdfCommandHandlerTests
 {
     /// <summary>
@@ -40,9 +42,6 @@ public class DeletePdfCommandHandlerTests
 
         return (scopeFactoryMock, blobStorageServiceMock, cacheServiceMock, loggerMock);
     }
-
-    #region Construction Tests
-
     [Fact]
     public void Constructor_WithValidDependencies_CreatesInstance()
     {
@@ -160,11 +159,6 @@ public class DeletePdfCommandHandlerTests
         act.Should().Throw<ArgumentNullException>()
             .WithParameterName("logger");
     }
-
-    #endregion
-
-    #region Command Tests
-
     [Fact]
     public void DeletePdfCommand_ConstructsCorrectly()
     {
@@ -177,11 +171,6 @@ public class DeletePdfCommandHandlerTests
         // Assert
         command.PdfId.Should().Be(pdfId);
     }
-
-    #endregion
-
-    #region Result Tests
-
     [Fact]
     public void PdfDeleteResult_WithSuccess_ConstructsCorrectly()
     {
@@ -208,9 +197,6 @@ public class DeletePdfCommandHandlerTests
         result.Message.Should().Be("PDF not found");
         result.GameId.Should().BeNull();
     }
-
-    #endregion
-
     // NOTE: Full workflow tests (cascade deletion, blob storage cleanup, vector deletion)
     // should be in integration test suite due to DbContext and multi-service complexity.
     // See integration-tests.yml workflow.

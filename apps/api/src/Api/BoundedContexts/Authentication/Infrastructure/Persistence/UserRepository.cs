@@ -84,7 +84,11 @@ public class UserRepository : RepositoryBase, IUserRepository
             CreatedAt = entity.CreatedAt,
             TotpSecretEncrypted = entity.TotpSecret?.EncryptedValue,
             IsTwoFactorEnabled = entity.IsTwoFactorEnabled,
-            TwoFactorEnabledAt = entity.TwoFactorEnabledAt
+            TwoFactorEnabledAt = entity.TwoFactorEnabledAt,
+            Language = entity.Language,
+            EmailNotifications = entity.EmailNotifications,
+            Theme = entity.Theme,
+            DataRetentionDays = entity.DataRetentionDays
         };
 
         // Map backup codes
@@ -129,6 +133,12 @@ public class UserRepository : RepositoryBase, IUserRepository
         existingUser.TotpSecretEncrypted = entity.TotpSecret?.EncryptedValue;
         existingUser.IsTwoFactorEnabled = entity.IsTwoFactorEnabled;
         existingUser.TwoFactorEnabledAt = entity.TwoFactorEnabledAt;
+
+        // Update preferences
+        existingUser.Language = entity.Language;
+        existingUser.EmailNotifications = entity.EmailNotifications;
+        existingUser.Theme = entity.Theme;
+        existingUser.DataRetentionDays = entity.DataRetentionDays;
 
         // Synchronize backup codes collection (delete old, add new)
         // This ensures we don't duplicate codes on every update
@@ -210,6 +220,13 @@ public class UserRepository : RepositoryBase, IUserRepository
             role: role,
             tier: tier
         );
+
+        // Reconstruct preferences (use domain method to apply)
+        user.UpdatePreferences(
+            entity.Language,
+            entity.Theme,
+            entity.EmailNotifications,
+            entity.DataRetentionDays);
 
         // Reconstruct 2FA state using reflection (properties are private set)
         if (entity.IsTwoFactorEnabled && !string.IsNullOrEmpty(entity.TotpSecretEncrypted))

@@ -1,14 +1,63 @@
 import { defineConfig, devices } from '@playwright/test';
 import { ChromaticConfig } from '@chromatic-com/playwright';
+import { defineCoverageReporterConfig } from '@bgotink/playwright-coverage';
+import path from 'path';
 
 export default defineConfig<ChromaticConfig>({
   testDir: './e2e',
   timeout: 60000, // 60s global timeout for dev mode
-  fullyParallel: !process.env.CI, // Issue #1868: Disable parallel in CI to prevent axe-core race conditions
-  forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : 2, // Issue #1868: Single worker in CI for stability, 2 local for speed
-  reporter: process.env.CI ? 'dot' : 'html', // Standard reporters only (Chromatic uses fixture, not reporter)
+  fullyParallel: process.env.CI !== 'true', // Issue #1868: Disable parallel in CI to prevent axe-core race conditions
+  forbidOnly: process.env.CI === 'true',
+  retries: process.env.CI === 'true' ? 2 : 0, // Issue #2008: Retry strategy - CI transient failures, local fast feedback
+  workers: process.env.CI === 'true' ? 1 : 2, // Issue #1868: Single worker in CI for stability, 2 local for speed
+  // Issue #2007: Add global setup/teardown for server health checks
+  globalSetup: require.resolve('./e2e/global-setup.ts'),
+  globalTeardown: require.resolve('./e2e/global-teardown.ts'),
+  // Issue #1498: E2E Code Coverage Reporting
+  reporter: [
+    [process.env.CI === 'true' ? 'dot' : 'html'], // Standard reporters
+    [
+      '@bgotink/playwright-coverage',
+      defineCoverageReporterConfig({
+        // Path to the root files should be resolved from (repository root)
+        sourceRoot: path.resolve(__dirname, '../..'),
+        // Files to ignore in coverage
+        exclude: [
+          // Test files
+          '**/e2e/**',
+          '**/__tests__/**',
+          '**/*.test.{ts,tsx}',
+          '**/*.spec.{ts,tsx}',
+          // Generated files
+          '**/generated/**',
+          '**/.next/**',
+          '**/node_modules/**',
+          // Build artifacts
+          '**/dist/**',
+          '**/build/**',
+          '**/coverage/**',
+          '**/playwright-report/**',
+          // Configuration files
+          '**/*.config.{js,ts}',
+          '**/scripts/**',
+          // Storybook
+          '**/.storybook/**',
+          '**/*.stories.{ts,tsx}',
+        ],
+        // Directory in which to write coverage reports
+        resultDir: path.resolve(__dirname, 'coverage-e2e'),
+        // Istanbul reporters to use
+        reports: ['lcov', 'html', 'json', 'text-summary'],
+        // Watermarks for coverage thresholds (issue #1498: start conservative)
+        watermarks: {
+          statements: [30, 60],
+          functions: [30, 60],
+          branches: [30, 60],
+          lines: [30, 60],
+        },
+      }),
+    ],
+  ],
   use: {
     baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',
@@ -31,38 +80,71 @@ export default defineConfig<ChromaticConfig>({
   },
 
   projects: [
+    // Desktop - Multi-browser (Chrome, Firefox, Safari)
+    // Issue #1497: Added Firefox and Safari for comprehensive desktop testing
     {
-      name: 'mobile',
-      use: {
-        // Use Chromium with mobile viewport (avoids WebKit dependency in CI)
-        ...devices['Pixel 5'],
-        viewport: { width: 390, height: 844 },
-      },
-    },
-    {
-      name: 'tablet',
-      use: {
-        // Use Chromium with tablet viewport (avoids WebKit dependency in CI)
-        ...devices['Galaxy Tab S4'],
-        viewport: { width: 1024, height: 1366 },
-      },
-    },
-    {
-      name: 'desktop',
+      name: 'desktop-chrome',
       use: {
         ...devices['Desktop Chrome'],
         viewport: { width: 1920, height: 1080 },
       },
     },
+    {
+      name: 'desktop-firefox',
+      use: {
+        ...devices['Desktop Firefox'],
+        viewport: { width: 1920, height: 1080 },
+      },
+    },
+    {
+      name: 'desktop-safari',
+      use: {
+        ...devices['Desktop Safari'],
+        viewport: { width: 1920, height: 1080 },
+      },
+    },
+
+    // Mobile - Chrome + Safari (iOS simulation critical for market coverage)
+    // Issue #1497: Added Safari for iOS browser testing
+    {
+      name: 'mobile-chrome',
+      use: {
+        ...devices['Pixel 5'],
+        viewport: { width: 390, height: 844 },
+      },
+    },
+    {
+      name: 'mobile-safari',
+      use: {
+        ...devices['iPhone 13'],
+        viewport: { width: 390, height: 844 },
+      },
+    },
+
+    // Tablet - Chrome only (cost optimization, diminishing returns for tablet multi-browser)
+    {
+      name: 'tablet-chrome',
+      use: {
+        ...devices['Galaxy Tab S4'],
+        viewport: { width: 1024, height: 1366 },
+      },
+    },
   ],
 
-  webServer: {
-    // Issue #1868: Use production server in CI (after pnpm build), dev server locally
-    command: process.env.CI
-      ? 'node ./node_modules/next/dist/bin/next start -p 3000'
-      : 'node --max-old-space-size=4096 ./node_modules/next/dist/bin/next dev -p 3000',
-    url: 'http://localhost:3000',
-    reuseExistingServer: !process.env.CI,
-    timeout: process.env.CI ? 30 * 1000 : 180 * 1000, // 30s for prod, 3min for dev startup
-  },
+  // Issue #2008: Disable webServer in parallel mode to prevent port conflicts
+  // When PARALLEL_E2E=true, the server is started once by scripts/run-parallel-e2e.js
+  // and all shards reuse it
+  webServer:
+    process.env.PARALLEL_E2E === 'true'
+      ? undefined
+      : {
+          // Issue #2007 Phase 2: Always use dev server (alpha phase priority)
+          // Rationale: Dev server detects dev-only bugs, faster feedback loop
+          // Memory managed via sharding (4 shards) + health checks + 4GB heap
+          // Production build can be added via ENV_VAR in beta phase if needed
+          command: 'node --max-old-space-size=4096 ./node_modules/next/dist/bin/next dev -p 3000',
+          url: 'http://localhost:3000',
+          reuseExistingServer: !process.env.CI,
+          timeout: 180 * 1000, // 3min for dev server startup
+        },
 });

@@ -18,6 +18,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using Npgsql;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Integration;
 
@@ -26,7 +27,7 @@ namespace Api.Tests.Integration;
 /// Tests user session validation during game play sessions.
 /// Pattern: OAuthIntegrationTests (ServiceCollection + DI + Repositories)
 /// </summary>
-[Collection("AuthGame")]
+[Trait("Category", TestCategories.Integration)]
 public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifetime
 {
     private IContainer? _postgresContainer;
@@ -425,4 +426,3 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
         );
     }
 }
-

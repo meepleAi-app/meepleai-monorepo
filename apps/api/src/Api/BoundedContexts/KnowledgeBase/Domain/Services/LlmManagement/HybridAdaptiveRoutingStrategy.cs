@@ -1,32 +1,22 @@
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.Configuration;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
+namespace Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
 
 /// <summary>
-/// Hybrid adaptive routing strategy combining user-type and traffic split
-/// ISSUE-958: Implements Option B - Ollama Primary + OpenRouter Fallback
-/// BGAI-022 (Issue #1153): Enhanced with AI:Provider configuration integration
+/// ISSUE-959 (BGAI-019): Hybrid LLM routing with adaptive tier-based model selection
+/// ISSUE-963 (BGAI-021): Enhanced with AI:Providers configuration integration (Option C)
+/// ISSUE-1725: Enhanced with budget-aware model override support
 /// </summary>
-/// <remarks>
-/// Routing Logic (BGAI-022 - Approach B):
-/// 1. PreferredProvider override: If AI:PreferredProvider set, skip user-tier routing
-/// 2. Provider enabled check: Only select enabled providers (AI:Providers[x].Enabled)
-/// 3. User-type mapping: Admin → premium models, Editor → standard, User/Anonymous → free
-/// 4. Traffic split override: Configurable percentage for A/B testing per tier
-/// 5. Cost optimization: 80% free tier (Ollama/Llama 3.3 70B), 20% paid (GPT-4o-mini)
-///
-/// Default Model Configuration:
-/// - Anonymous/User: 80% llama3.3:70b-instruct-q4_K_M (free tier), 20% openai/gpt-4o-mini
-/// - Editor: 50% llama3.3:70b, 50% openai/gpt-4o-mini
-/// - Admin: 20% llama3:8b (local), 80% anthropic/claude-3.5-haiku
-/// </remarks>
 public class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
 {
-    private readonly ILogger<HybridAdaptiveRoutingStrategy> _logger;
     private readonly IConfiguration _configuration;
+    private readonly ILlmModelOverrideService _modelOverrideService;
+    private readonly ILogger<HybridAdaptiveRoutingStrategy> _logger;
     private readonly IOptions<AiProviderSettings> _aiSettings;
 
     // Model configuration keys
@@ -60,13 +50,18 @@ public class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
     private const int DefaultAdminOpenRouterPercent = 80; // Prioritize quality
 
     public HybridAdaptiveRoutingStrategy(
-        ILogger<HybridAdaptiveRoutingStrategy> logger,
         IConfiguration configuration,
-        IOptions<AiProviderSettings> aiSettings)
+        IOptions<AiProviderSettings> aiSettings,
+        ILogger<HybridAdaptiveRoutingStrategy> logger,
+        ILlmModelOverrideService? modelOverrideService = null)
     {
-        _logger = logger;
-        _configuration = configuration;
+        _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         _aiSettings = aiSettings ?? throw new ArgumentNullException(nameof(aiSettings));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _modelOverrideService = modelOverrideService ?? new NullModelOverrideService();
+
+        _logger.LogInformation(
+            "HybridAdaptiveRoutingStrategy initialized with budget-aware model override support");
     }
 
     /// <inheritdoc/>
@@ -91,10 +86,13 @@ public class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
                 "[{UserId}] Routing to PreferredProvider {Provider} ({Model}) - overriding user-tier routing",
                 userId, settings.PreferredProvider, preferredModel);
 
-            return new LlmRoutingDecision(
+            var preferredDecision = new LlmRoutingDecision(
                 settings.PreferredProvider,
                 preferredModel,
                 $"PreferredProvider override (AI:PreferredProvider = {settings.PreferredProvider})");
+
+            // ISSUE-1725: Apply budget mode overrides
+            return ApplyBudgetModeOverride(preferredDecision, userId);
         }
 
         // BGAI-022 Step 2: Use existing user-tier routing
@@ -134,10 +132,13 @@ public class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
                     "[{UserId}] Fallback to {Provider} ({Model}) - primary provider disabled",
                     userId, alternativeProvider, alternativeModel);
 
-                return new LlmRoutingDecision(
+                var fallbackDecision = new LlmRoutingDecision(
                     alternativeProvider,
                     alternativeModel,
                     $"Fallback from {selectedProvider} (disabled in AI:Providers)");
+
+                // ISSUE-1725: Apply budget mode overrides
+                return ApplyBudgetModeOverride(fallbackDecision, userId);
             }
 
             // Both providers explicitly disabled - throw exception
@@ -152,9 +153,12 @@ public class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
                 "[{UserId}] Routing to OpenRouter ({Model}) - Role: {Role}, Traffic split: {Percent}%",
                 userId, openRouterModel, userRole.Value, openRouterPercent);
 
-            return LlmRoutingDecision.OpenRouter(
+            var openRouterDecision = LlmRoutingDecision.OpenRouter(
                 openRouterModel,
                 $"User tier: {userRole.Value}, Traffic split: {openRouterPercent}%");
+
+            // ISSUE-1725: Apply budget mode overrides
+            return ApplyBudgetModeOverride(openRouterDecision, userId);
         }
 
         // Determine if Ollama model is local or OpenRouter free tier
@@ -164,10 +168,39 @@ public class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
             "[{UserId}] Routing to {Provider} ({Model}) - Role: {Role}, Cost optimization",
             userId, providerName, ollamaModel, userRole.Value);
 
-        return new LlmRoutingDecision(
+        var decision = new LlmRoutingDecision(
             providerName,
             ollamaModel,
             $"User tier: {userRole.Value}, Cost-optimized primary");
+
+        // ISSUE-1725: Apply budget mode overrides if active
+        return ApplyBudgetModeOverride(decision, userId);
+    }
+
+    /// <summary>
+    /// ISSUE-1725: Apply model override if budget mode is active
+    /// </summary>
+    private LlmRoutingDecision ApplyBudgetModeOverride(LlmRoutingDecision decision, string userId)
+    {
+        if (!_modelOverrideService.IsInBudgetMode())
+        {
+            return decision; // No override needed
+        }
+
+        var overrideModel = _modelOverrideService.GetOverrideModel(decision.ModelId);
+        if (!string.Equals(overrideModel, decision.ModelId, StringComparison.Ordinal))
+        {
+            _logger.LogWarning(
+                "[{UserId}] Budget mode active: {Original} → {Override}",
+                userId, decision.ModelId, overrideModel);
+
+            return new LlmRoutingDecision(
+                decision.ProviderName,
+                overrideModel,
+                $"{decision.Reason} (Budget mode: downgraded from {decision.ModelId})");
+        }
+
+        return decision;
     }
 
     /// <summary>

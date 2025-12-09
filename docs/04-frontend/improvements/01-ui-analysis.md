@@ -126,6 +126,7 @@ ChatProvider {
 - Not tree-shakable
 
 **Evidence**:
+{% raw %}
 ```tsx
 // Examples of inconsistency:
 <div style={{ padding: 24 }}>           // 24px
@@ -138,6 +139,7 @@ ChatProvider {
 <div style={{ background: '#f8f9fa' }}> // Hex color
 <div style={{ backgroundColor: '#f9fafb' }}> // Slightly different
 ```
+{% endraw %}
 
 **Hot Spots** (files with most inline styles):
 1. `upload.tsx` - ~50 instances
@@ -208,6 +210,7 @@ ChatProvider {
 - No mobile-specific patterns (drawer, bottom nav)
 
 **Evidence**:
+{% raw %}
 ```tsx
 // Chat sidebar is always 320px
 <aside style={{ width: sidebarCollapsed ? 0 : 320 }}>
@@ -220,6 +223,7 @@ ChatProvider {
 // Small touch targets
 <button style={{ padding: '8px 12px' }}> {/* < 44px */}
 ```
+{% endraw %}
 
 **Test Results** (Chrome DevTools):
 - iPhone 12 Pro (390px): ⚠️ Layout ok but scroll issues
@@ -316,6 +320,7 @@ import AdminPage from './admin'
 - Inconsistent retry mechanisms
 
 **Evidence**:
+{% raw %}
 ```tsx
 // Pattern 1: String error
 {error && <div className="text-red-500">{error}</div>}
@@ -330,6 +335,7 @@ import AdminPage from './admin'
 // Pattern 3: ErrorDisplay component (best)
 {uploadError && <ErrorDisplay error={uploadError} />}
 ```
+{% endraw %}
 
 **Priority**: 🟡 High - Sprint 2
 
@@ -374,6 +380,7 @@ const [parsing, setParsing] = useState(false);
 **Count**: 300+ instances
 
 **Examples**:
+{% raw %}
 ```tsx
 style={{ padding: 16 }}
 style={{ padding: 24 }}
@@ -383,6 +390,7 @@ style={{ maxWidth: 900 }}
 style={{ gap: 12 }}
 style={{ borderRadius: 8 }}
 ```
+{% endraw %}
 
 **Should be**:
 ```tsx
@@ -470,6 +478,7 @@ const data = schema.parse(await response.json());
 4. Tailwind + inline mix (confusing)
 
 **Example**:
+{% raw %}
 ```tsx
 // All in same file!
 <div className="min-h-screen bg-slate-950">
@@ -477,6 +486,7 @@ const data = schema.parse(await response.json());
 <Card className="p-6 shadow-2xl">
 <div className="flex" style={{ gap: '12px' }}>
 ```
+{% endraw %}
 
 ---
 

@@ -1,6 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Services;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 
@@ -8,6 +9,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 /// Unit tests for TokenUsage value object.
 /// Issue #1694: Verify token usage tracking and cost calculation.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class TokenUsageTests
 {
     [Fact]

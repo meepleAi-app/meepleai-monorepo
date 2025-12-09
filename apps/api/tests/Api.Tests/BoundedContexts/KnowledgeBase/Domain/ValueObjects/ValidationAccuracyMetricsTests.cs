@@ -1,5 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 
@@ -7,6 +8,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 /// Unit tests for ValidationAccuracyMetrics value object.
 /// BGAI-039: Validation accuracy baseline measurement.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class ValidationAccuracyMetricsTests
 {
     [Fact]

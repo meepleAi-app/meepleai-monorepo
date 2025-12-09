@@ -1,4 +1,5 @@
 using Api.BoundedContexts.Administration.Application.Commands;
+using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.GameManagement.Application.Queries;
@@ -36,7 +37,7 @@ public static class AiEndpoints
             CancellationToken ct = default) =>
         {
             // Session validated by RequireSessionFilter
-            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
             if (string.IsNullOrWhiteSpace(req.gameId))
             {
@@ -56,7 +57,7 @@ public static class AiEndpoints
             }
 
             logger.LogInformation("QA request from user {UserId} for game {GameId}: {Query} (bypassCache: {BypassCache}, generateFollowUps: {GenerateFollowUps})",
-                session.User.Id, req.gameId, req.query, bypassCache, generateFollowUps);
+                session.User!.Id, req.gameId, req.query, bypassCache, generateFollowUps);
 
             // ISSUE-1194: Error handling now centralized in middleware + pipeline behavior
             // AI-14: Use hybrid search with configurable search mode (default: Hybrid)
@@ -150,7 +151,7 @@ public static class AiEndpoints
 
             // ADM-01: Log AI request with AI-11 quality scores (using CQRS)
             var logCommand = new LogAiRequestCommand(
-                UserId: session.User.Id,
+                UserId: session.User!.Id.ToString(),
                 GameId: req.gameId,
                 Endpoint: "qa",
                 Query: req.query,
@@ -184,7 +185,7 @@ public static class AiEndpoints
         group.MapPost("/agents/explain", async (ExplainRequest req, HttpContext context, IRagService rag, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             // Session validated by RequireSessionFilter
-            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
             if (string.IsNullOrWhiteSpace(req.gameId))
             {
@@ -193,7 +194,7 @@ public static class AiEndpoints
 
             var startTime = DateTime.UtcNow;
             logger.LogInformation("Explain request from user {UserId} for game {GameId}: {Topic}",
-                session.User.Id, req.gameId, req.topic);
+                session.User!.Id, req.gameId, req.topic);
 
             // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
             // AI-09: Language parameter defaults to null (uses "en")
@@ -205,7 +206,7 @@ public static class AiEndpoints
 
             // ADM-01: Log AI request using CQRS
             var logCommand = new Api.BoundedContexts.Administration.Application.Commands.LogAiRequestCommand(
-                UserId: session.User.Id,
+                UserId: session.User!.Id.ToString(),
                 GameId: req.gameId,
                 Endpoint: "explain",
                 Query: req.topic,
@@ -241,7 +242,7 @@ public static class AiEndpoints
             }
 
             logger.LogInformation("Streaming explain request from user {UserId} for game {GameId}: {Topic}",
-                session.User.Id, req.gameId, req.topic);
+                session.User!.Id, req.gameId, req.topic);
 
             // Set SSE headers
             context.Response.Headers["Content-Type"] = "text/event-stream";
@@ -343,7 +344,7 @@ public static class AiEndpoints
 
             var startTime = DateTime.UtcNow;
             logger.LogInformation("Streaming QA request from user {UserId} for game {GameId}: {Query}",
-                session.User.Id, req.gameId, req.query);
+                session.User!.Id, req.gameId, req.query);
 
             // Set SSE headers
             context.Response.Headers["Content-Type"] = "text/event-stream";
@@ -485,7 +486,7 @@ public static class AiEndpoints
 
             // Log AI request using CQRS - Use CancellationToken.None to ensure logging completes even if request was cancelled
             var logCommand = new Api.BoundedContexts.Administration.Application.Commands.LogAiRequestCommand(
-                UserId: session.User.Id,
+                UserId: session.User!.Id.ToString(),
                 GameId: req.gameId,
                 Endpoint: "qa-stream",
                 Query: req.query,
@@ -526,7 +527,7 @@ public static class AiEndpoints
 
             var startTime = DateTime.UtcNow;
             logger.LogInformation("Setup guide streaming request from user {UserId} for game {GameId}",
-                session.User.Id, req.gameId);
+                session.User!.Id, req.gameId);
 
             // Set SSE headers for streaming
             context.Response.Headers["Content-Type"] = "text/event-stream";
@@ -628,7 +629,7 @@ public static class AiEndpoints
 
             // Log AI request using CQRS - Use CancellationToken.None to ensure logging completes even if request was cancelled
             var logCommand = new Api.BoundedContexts.Administration.Application.Commands.LogAiRequestCommand(
-                UserId: session.User.Id,
+                UserId: session.User!.Id.ToString(),
                 GameId: req.gameId,
                 Endpoint: "setup-stream",
                 Query: "setup_guide",
@@ -652,9 +653,9 @@ public static class AiEndpoints
         group.MapPost("/agents/feedback", async (AgentFeedbackRequest req, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             // Session validated by RequireSessionFilter
-            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
-            if (!string.Equals(req.userId, session.User.Id, StringComparison.Ordinal))
+            if (!string.Equals(req.userId, session.User!.Id.ToString(), StringComparison.Ordinal))
             {
                 return Results.BadRequest(new { error = "Invalid user" });
             }
@@ -669,7 +670,7 @@ public static class AiEndpoints
             {
                 MessageId = req.messageId,
                 Endpoint = req.endpoint,
-                UserId = session.User.Id,
+                UserId = session.User!.Id.ToString(),
                 Outcome = string.IsNullOrWhiteSpace(req.outcome) ? null : req.outcome,
                 GameId = req.gameId
             }, ct);
@@ -679,7 +680,7 @@ public static class AiEndpoints
                 req.outcome ?? "cleared",
                 req.messageId,
                 req.endpoint,
-                session.User.Id);
+                session.User!.Id);
 
             return Results.Json(new { ok = true });
         })
@@ -690,7 +691,7 @@ public static class AiEndpoints
         group.MapPost("/agents/chess", async (ChessAgentRequest req, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             // Session validated by RequireSessionFilter
-            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
             // Issue #1445: Use centralized query validation
             var queryError = QueryValidator.ValidateQuery(req.question);
@@ -701,7 +702,7 @@ public static class AiEndpoints
 
             var startTime = DateTime.UtcNow;
             logger.LogInformation("Chess agent request from user {UserId}: {Question}, FEN: {FEN}",
-                session.User.Id, req.question, req.fenPosition ?? "none");
+                session.User!.Id, req.question, req.fenPosition ?? "none");
 
             // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
             var resp = await mediator.Send(new InvokeChessAgentCommand
@@ -732,7 +733,7 @@ public static class AiEndpoints
 
             // ADM-01: Log AI request using CQRS
             var logCommand = new Api.BoundedContexts.Administration.Application.Commands.LogAiRequestCommand(
-                UserId: session.User.Id,
+                UserId: session.User!.Id.ToString(),
                 GameId: "chess",
                 Endpoint: "chess",
                 Query: req.question,
@@ -825,9 +826,9 @@ public static class AiEndpoints
         group.MapPost("/chess/index", async (HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             // Session validated AND Admin role checked by RequireAdminSessionFilter
-            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
-            logger.LogInformation("Admin {UserId} starting chess knowledge indexing", session.User.Id);
+            logger.LogInformation("Admin {UserId} starting chess knowledge indexing", session.User!.Id);
 
             var result = await mediator.Send(new IndexChessKnowledgeCommand(), ct).ConfigureAwait(false);
 
@@ -854,7 +855,7 @@ public static class AiEndpoints
         group.MapGet("/chess/search", async (string? q, int? limit, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             // Session validated by RequireSessionFilter
-            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
             // Issue #1445: Use centralized query validation
             var queryError = QueryValidator.ValidateQuery(q);
@@ -864,7 +865,7 @@ public static class AiEndpoints
             }
             var validatedQuery = q!;
 
-            logger.LogInformation("User {UserId} searching chess knowledge: {Query}", session.User.Id, validatedQuery);
+            logger.LogInformation("User {UserId} searching chess knowledge: {Query}", session.User!.Id, validatedQuery);
 
             var searchResult = await mediator.Send(new SearchChessKnowledgeQuery
             {
@@ -898,9 +899,9 @@ public static class AiEndpoints
         group.MapDelete("/chess/index", async (HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             // Session validated AND Admin role checked by RequireAdminSessionFilter
-            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
-            logger.LogInformation("Admin {UserId} deleting all chess knowledge", session.User.Id);
+            logger.LogInformation("Admin {UserId} deleting all chess knowledge", session.User!.Id);
 
             var success = await mediator.Send(new DeleteChessKnowledgeCommand(), ct).ConfigureAwait(false);
 

@@ -13,7 +13,7 @@
 
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { useChatContext } from '@/hooks/useChatContext';
+import { useChatStore } from '@/store/chat/store';
 import { GameSelector } from './GameSelector';
 import { AgentSelector } from './AgentSelector';
 import { ChatHistory } from './ChatHistory';
@@ -27,7 +27,14 @@ interface MobileSidebarProps {
 }
 
 export function MobileSidebar({ open, onOpenChange }: MobileSidebarProps) {
-  const { games, selectedGameId, selectedAgentId, loading, createChat } = useChatContext();
+  // Issue #1676: Migrated from useChatContext to direct Zustand store
+  const { games, selectedGameId, selectedAgentId, loading, createChat } = useChatStore(state => ({
+    games: state.games,
+    selectedGameId: state.selectedGameId,
+    selectedAgentId: state.selectedAgentId,
+    loading: state.loading,
+    createChat: state.createChat,
+  }));
 
   const handleCreateChat = async () => {
     await createChat();

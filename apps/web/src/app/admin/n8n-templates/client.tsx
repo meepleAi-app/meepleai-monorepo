@@ -45,7 +45,7 @@ const categories = [
   { value: 'integration', label: 'Integration' },
   { value: 'automation', label: 'Automation' },
   { value: 'monitoring', label: 'Monitoring' },
-  { value: 'data-processing', label: 'Data Processing' }
+  { value: 'data-processing', label: 'Data Processing' },
 ];
 
 export function AdminPageClient() {
@@ -64,23 +64,16 @@ export function AdminPageClient() {
     setDataLoading(true);
     setError(null);
     try {
-      const url = category
-        ? `/api/v1/n8n/templates?category=${category}`
-        : '/api/v1/n8n/templates';
-      const data = await api.get<WorkflowTemplate[]>(url);
-
-      if (data === null) {
-        setError('Unauthorized. Please log in.');
-        setTemplates([]);
-        return;
-      }
-
-      setTemplates(data);
+      const data = await api.admin.getWorkflowTemplates(category || undefined);
+      setTemplates(data as any);
     } catch (err) {
       logger.error(
         'Failed to load n8n templates',
         err instanceof Error ? err : new Error(String(err)),
-        createErrorContext('N8nTemplatesPage', 'loadTemplates', { category, operation: 'load_templates' })
+        createErrorContext('N8nTemplatesPage', 'loadTemplates', {
+          category,
+          operation: 'load_templates',
+        })
       );
       setError('Failed to load templates. Please try again.');
     } finally {
@@ -94,19 +87,20 @@ export function AdminPageClient() {
 
   const handleSelectTemplate = async (templateId: string) => {
     try {
-      const data = await api.get<WorkflowTemplateDetail>(`/api/v1/n8n/templates/${templateId}`);
-
-      if (data === null) {
-        setError('Unauthorized. Please log in.');
-        return;
+      const data = await api.admin.getWorkflowTemplateById(templateId);
+      if (data) {
+        setSelectedTemplate(data as any);
+      } else {
+        setError('Template not found');
       }
-
-      setSelectedTemplate(data);
     } catch (err) {
       logger.error(
         'Failed to load n8n template details',
         err instanceof Error ? err : new Error(String(err)),
-        createErrorContext('N8nTemplatesPage', 'handleSelectTemplate', { templateId, operation: 'load_template_details' })
+        createErrorContext('N8nTemplatesPage', 'handleSelectTemplate', {
+          templateId,
+          operation: 'load_template_details',
+        })
       );
       setError('Failed to load template details. Please try again.');
     }
@@ -118,10 +112,7 @@ export function AdminPageClient() {
     setSuccessMessage(null);
 
     try {
-      const result = await api.post<{ workflowId: string; message: string }>(
-        `/api/v1/n8n/templates/${templateId}/import`,
-        { parameters }
-      );
+      const result = await api.admin.importWorkflowTemplate(templateId, parameters);
 
       setSuccessMessage(`${result.message} (Workflow ID: ${result.workflowId})`);
       setSelectedTemplate(null);
@@ -132,9 +123,14 @@ export function AdminPageClient() {
       logger.error(
         'Failed to import n8n template',
         err instanceof Error ? err : new Error(String(err)),
-        createErrorContext('N8nTemplatesPage', 'handleImport', { templateId, operation: 'import_template' })
+        createErrorContext('N8nTemplatesPage', 'handleImport', {
+          templateId,
+          operation: 'import_template',
+        })
       );
-      const errorMsg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || getErrorMessage(err, 'Failed to import template');
+      const errorMsg =
+        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ||
+        getErrorMessage(err, 'Failed to import template');
       setError(`Import failed: ${errorMsg}`);
     } finally {
       setImporting(false);
@@ -144,95 +140,93 @@ export function AdminPageClient() {
   return (
     <AdminAuthGuard loading={authLoading} user={user}>
       <div className="min-h-dvh bg-gray-50 py-8">
-      <div className="container mx-auto px-4">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            n8n Workflow Templates
-          </h1>
-          <p className="text-lg text-gray-600">
-            Browse and import pre-built automation workflows for common tasks
-          </p>
-        </div>
+        <div className="container mx-auto px-4">
+          {/* Header */}
+          <div className="mb-8">
+            <h1 className="text-4xl font-bold text-gray-900 mb-2">n8n Workflow Templates</h1>
+            <p className="text-lg text-gray-600">
+              Browse and import pre-built automation workflows for common tasks
+            </p>
+          </div>
 
-        {/* Success Message */}
-        {successMessage && (
-          <div className="mb-6 p-4 bg-green-50 border-l-4 border-green-500 text-green-700">
-            <div className="flex items-center">
-              <span className="text-2xl mr-3">✅</span>
-              <span>{successMessage}</span>
+          {/* Success Message */}
+          {successMessage && (
+            <div className="mb-6 p-4 bg-green-50 border-l-4 border-green-500 text-green-700">
+              <div className="flex items-center">
+                <span className="text-2xl mr-3">✅</span>
+                <span>{successMessage}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Error Message */}
+          {error && (
+            <div className="mb-6">
+              <ErrorDisplay
+                error={categorizeError(new Error(error))}
+                onRetry={loadTemplates}
+                onDismiss={() => setError(null)}
+                showTechnicalDetails={process.env.NODE_ENV === 'development'}
+              />
+            </div>
+          )}
+
+          {/* Category Filter */}
+          <div className="mb-6">
+            <div className="flex flex-wrap gap-2">
+              {categories.map(cat => (
+                <button
+                  key={cat.value}
+                  onClick={() => setCategory(cat.value)}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                    category === cat.value
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  {cat.label}
+                </button>
+              ))}
             </div>
           </div>
-        )}
 
-        {/* Error Message */}
-        {error && (
-          <div className="mb-6">
-            <ErrorDisplay
-              error={categorizeError(new Error(error))}
-              onRetry={loadTemplates}
-              onDismiss={() => setError(null)}
-              showTechnicalDetails={process.env.NODE_ENV === 'development'}
+          {/* Template Grid */}
+          {dataLoading ? (
+            <div className="text-center py-12">
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+              <p className="mt-4 text-gray-600">Loading templates...</p>
+            </div>
+          ) : templates.length === 0 ? (
+            <div className="text-center py-12 bg-white rounded-lg shadow">
+              <p className="text-2xl mb-2">📋</p>
+              <p className="text-gray-600">No templates found for this category.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {templates.map(template => (
+                <TemplateCard
+                  key={template.id}
+                  template={template}
+                  onSelect={handleSelectTemplate}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Import Modal */}
+          {selectedTemplate && (
+            <TemplateImportModal
+              template={selectedTemplate}
+              onImport={handleImport}
+              onClose={() => setSelectedTemplate(null)}
+              importing={importing}
             />
-          </div>
-        )}
-
-        {/* Category Filter */}
-        <div className="mb-6">
-          <div className="flex flex-wrap gap-2">
-            {categories.map((cat) => (
-              <button
-                key={cat.value}
-                onClick={() => setCategory(cat.value)}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  category === cat.value
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-                }`}
-              >
-                {cat.label}
-              </button>
-            ))}
-          </div>
+          )}
         </div>
-
-        {/* Template Grid */}
-        {dataLoading ? (
-          <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            <p className="mt-4 text-gray-600">Loading templates...</p>
-          </div>
-        ) : templates.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-lg shadow">
-            <p className="text-2xl mb-2">📋</p>
-            <p className="text-gray-600">No templates found for this category.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {templates.map((template) => (
-              <TemplateCard
-                key={template.id}
-                template={template}
-                onSelect={handleSelectTemplate}
-              />
-            ))}
-          </div>
-        )}
-
-        {/* Import Modal */}
-        {selectedTemplate && (
-          <TemplateImportModal
-            template={selectedTemplate}
-            onImport={handleImport}
-            onClose={() => setSelectedTemplate(null)}
-            importing={importing}
-          />
-        )}
-      </div>
       </div>
     </AdminAuthGuard>
   );
-};
+}
 
 interface TemplateCardProps {
   template: WorkflowTemplate;
@@ -244,7 +238,7 @@ const TemplateCard = ({ template, onSelect }: TemplateCardProps) => {
     integration: 'bg-blue-100 text-blue-800',
     automation: 'bg-green-100 text-green-800',
     monitoring: 'bg-yellow-100 text-yellow-800',
-    'data-processing': 'bg-purple-100 text-purple-800'
+    'data-processing': 'bg-purple-100 text-purple-800',
   };
 
   const categoryColor = categoryColors[template.category] || 'bg-gray-100 text-gray-800';
@@ -259,9 +253,7 @@ const TemplateCard = ({ template, onSelect }: TemplateCardProps) => {
         <div className="flex items-start mb-3">
           <span className="text-5xl mr-4">{template.icon}</span>
           <div className="flex-1">
-            <h3 className="text-xl font-semibold text-gray-900 mb-1">
-              {template.name}
-            </h3>
+            <h3 className="text-xl font-semibold text-gray-900 mb-1">{template.name}</h3>
             <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${categoryColor}`}>
               {template.category}
             </span>
@@ -269,13 +261,11 @@ const TemplateCard = ({ template, onSelect }: TemplateCardProps) => {
         </div>
 
         {/* Description */}
-        <p className="text-sm text-gray-600 mb-4 line-clamp-3">
-          {template.description}
-        </p>
+        <p className="text-sm text-gray-600 mb-4 line-clamp-3">{template.description}</p>
 
         {/* Tags */}
         <div className="flex flex-wrap gap-2 mb-4">
-          {template.tags.slice(0, 4).map((tag) => (
+          {template.tags.slice(0, 4).map(tag => (
             <span
               key={tag}
               className="inline-block px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs"
@@ -314,14 +304,19 @@ interface TemplateImportModalProps {
   importing: boolean;
 }
 
-const TemplateImportModal = ({ template, onImport, onClose, importing }: TemplateImportModalProps) => {
+const TemplateImportModal = ({
+  template,
+  onImport,
+  onClose,
+  importing,
+}: TemplateImportModalProps) => {
   const [parameters, setParameters] = useState<Record<string, string>>({});
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     // Initialize with default values
     const defaults: Record<string, string> = {};
-    template.parameters.forEach((param) => {
+    template.parameters.forEach(param => {
       if (param.default) {
         defaults[param.name] = param.default;
       }
@@ -342,7 +337,7 @@ const TemplateImportModal = ({ template, onImport, onClose, importing }: Templat
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {};
 
-    template.parameters.forEach((param) => {
+    template.parameters.forEach(param => {
       if (param.required && !parameters[param.name]?.trim()) {
         errors[param.name] = `${param.label} is required`;
       }
@@ -377,19 +372,15 @@ const TemplateImportModal = ({ template, onImport, onClose, importing }: Templat
     >
       <div
         className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
+        onClick={e => e.stopPropagation()}
       >
         {/* Modal Header */}
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-start justify-between">
           <div className="flex items-start">
             <span className="text-4xl mr-4">{template.icon}</span>
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">
-                {template.name}
-              </h2>
-              <p className="text-sm text-gray-600 mt-1">
-                {template.description}
-              </p>
+              <h2 className="text-2xl font-bold text-gray-900">{template.name}</h2>
+              <p className="text-sm text-gray-600 mt-1">{template.description}</p>
             </div>
           </div>
           <button
@@ -409,16 +400,14 @@ const TemplateImportModal = ({ template, onImport, onClose, importing }: Templat
                 This template has no configurable parameters.
               </p>
             ) : (
-              template.parameters.map((param) => (
+              template.parameters.map(param => (
                 <div key={param.name}>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     {param.label}
                     {param.required && <span className="text-red-500 ml-1">*</span>}
                   </label>
 
-                  <p className="text-sm text-gray-500 mb-2">
-                    {param.description}
-                  </p>
+                  <p className="text-sm text-gray-500 mb-2">{param.description}</p>
 
                   {param.type === 'select' && param.options ? (
                     <select
@@ -426,11 +415,11 @@ const TemplateImportModal = ({ template, onImport, onClose, importing }: Templat
                         validationErrors[param.name] ? 'border-red-500' : 'border-gray-300'
                       }`}
                       value={parameters[param.name] || ''}
-                      onChange={(e) => handleParameterChange(param.name, e.target.value)}
+                      onChange={e => handleParameterChange(param.name, e.target.value)}
                       required={param.required}
                     >
                       <option value="">Select...</option>
-                      {param.options.map((opt) => (
+                      {param.options.map(opt => (
                         <option key={opt} value={opt}>
                           {opt}
                         </option>
@@ -442,27 +431,29 @@ const TemplateImportModal = ({ template, onImport, onClose, importing }: Templat
                         type="checkbox"
                         className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                         checked={parameters[param.name] === 'true'}
-                        onChange={(e) => handleParameterChange(param.name, e.target.checked ? 'true' : 'false')}
+                        onChange={e =>
+                          handleParameterChange(param.name, e.target.checked ? 'true' : 'false')
+                        }
                       />
                       <span className="ml-2 text-sm text-gray-700">Enable</span>
                     </div>
                   ) : (
                     <input
-                      type={param.sensitive ? 'password' : param.type === 'number' ? 'number' : 'text'}
+                      type={
+                        param.sensitive ? 'password' : param.type === 'number' ? 'number' : 'text'
+                      }
                       className={`w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                         validationErrors[param.name] ? 'border-red-500' : 'border-gray-300'
                       }`}
                       value={parameters[param.name] || ''}
-                      onChange={(e) => handleParameterChange(param.name, e.target.value)}
+                      onChange={e => handleParameterChange(param.name, e.target.value)}
                       required={param.required}
                       placeholder={param.default || ''}
                     />
                   )}
 
                   {validationErrors[param.name] && (
-                    <p className="mt-1 text-sm text-red-600">
-                      {validationErrors[param.name]}
-                    </p>
+                    <p className="mt-1 text-sm text-red-600">{validationErrors[param.name]}</p>
                   )}
                 </div>
               ))
@@ -493,4 +484,4 @@ const TemplateImportModal = ({ template, onImport, onClose, importing }: Templat
       </div>
     </div>
   );
-}
+};

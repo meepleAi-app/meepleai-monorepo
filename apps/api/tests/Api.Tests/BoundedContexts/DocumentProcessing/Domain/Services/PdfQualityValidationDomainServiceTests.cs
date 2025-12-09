@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 using FluentAssertions;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Domain.Services;
 
@@ -15,6 +16,7 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Domain.Services;
 /// <remarks>
 /// Issue #951: BGAI-012 - Tests quality threshold enforcement, reporting, recommendations
 /// </remarks>
+[Trait("Category", TestCategories.Unit)]
 public class PdfQualityValidationDomainServiceTests
 {
     private readonly PdfQualityValidationDomainService _service;
@@ -225,4 +227,3 @@ public class PdfQualityValidationDomainServiceTests
         validation.Report.Metrics.TextCoverageScore.Should().BeLessThan(0.5);
     }
 }
-

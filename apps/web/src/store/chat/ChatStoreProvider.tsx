@@ -145,7 +145,8 @@ export function ChatStoreProvider({ children }: PropsWithChildren) {
 /**
  * Export for backward compatibility
  * Components can import from this file or from index.ts
+ *
+ * Issue #1676: Removed compatibility layer export (migrated to direct Zustand)
  */
 export { useChatStore } from './store';
 export { useChatStoreWithSelectors } from './hooks';
-export * from './compatibility';

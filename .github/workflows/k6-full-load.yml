@@ -138,12 +138,20 @@ jobs:
         run: |
           PGPASSWORD="${{ secrets.TEST_POSTGRES_PASSWORD || 'postgres' }}" psql -h localhost -U "${{ secrets.TEST_POSTGRES_USER || 'postgres' }}" -c "CREATE DATABASE meepleai_test;" || true
 
+      # Issue #1817: Add database connectivity validation before migrations
+      - name: Verify database connectivity
+        run: |
+          echo "🔍 Testing PostgreSQL connection..."
+          PGPASSWORD="${{ secrets.TEST_POSTGRES_PASSWORD || 'postgres' }}" psql -h localhost -U "${{ secrets.TEST_POSTGRES_USER || 'postgres' }}" -d meepleai_test -c "SELECT version();"
+          echo "✅ Database connection successful"
+
+      # Issue #1817: Use --connection flag to explicitly pass connection string
+      # This prevents EF Core from defaulting to incorrect 'root' user
       - name: Apply migrations
         working-directory: apps/api/src/Api
         run: |
-          dotnet ef database update --configuration Release
-        env:
-          CONNECTIONSTRINGS__POSTGRES: ${{ secrets.TEST_DB_CONNECTION_STRING || 'Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=postgres' }}
+          dotnet ef database update --configuration Release \
+            --connection "${{ secrets.TEST_DB_CONNECTION_STRING || 'Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=postgres' }}"
 
       - name: Seed test data
         working-directory: apps/api/src/Api
@@ -156,8 +164,8 @@ jobs:
       - name: Start API server
         working-directory: apps/api/src/Api
         run: |
-          nohup dotnet run --configuration Release > ../../api.log 2>&1 &
-          echo $! > ../../api.pid
+          nohup dotnet run --configuration Release > ../../../../api.log 2>&1 &
+          echo $! > ../../../../api.pid
         env:
           ConnectionStrings__Postgres: ${{ secrets.TEST_DB_CONNECTION_STRING || 'Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=postgres' }}
           ConnectionStrings__Redis: 'localhost:6379'
@@ -178,7 +186,8 @@ jobs:
             sleep 2
           done
           echo "❌ API failed to start"
-          cat api.log
+          echo "Last 100 lines of API logs:"
+          tail -n 100 api.log || echo "⚠️ Could not read api.log"
           exit 1
 
       - name: Run k6 full load tests
@@ -204,12 +213,11 @@ jobs:
 
       - name: Debug API logs on failure
         if: failure()
-        working-directory: apps/api
         run: |
           echo "========================================="
           echo "API Logs"
           echo "========================================="
-          cat api.log 2>/dev/null || echo "⚠️ No API logs found at api.log"
+          tail -n 200 api.log 2>/dev/null || echo "⚠️ No API logs found at api.log"
           echo ""
           echo "========================================="
           echo "Health Check Status"

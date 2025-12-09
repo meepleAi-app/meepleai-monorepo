@@ -41,13 +41,8 @@ scrape_configs:
           service: 'meepleai-api'
           component: 'backend'
 
-  # Scrape Jaeger metrics (optional - Jaeger exposes Prometheus metrics)
-  - job_name: 'jaeger'
-    static_configs:
-      - targets: ['jaeger:14269']
-        labels:
-          service: 'jaeger'
-          component: 'tracing'
+  # Jaeger scrape removed - replaced by HyperDX unified observability (Issue #1564)
+  # HyperDX exposes its own metrics if needed at hyperdx:8180/metrics
 
   # Scrape Grafana metrics (optional)
   - job_name: 'grafana'
@@ -94,3 +89,21 @@ scrape_configs:
         labels:
           service: 'alertmanager'
           component: 'alerting'
+
+  # P3-705: cAdvisor - Container metrics
+  - job_name: 'cadvisor'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['cadvisor:8080']
+        labels:
+          service: 'cadvisor'
+          component: 'container-metrics'
+
+  # P3-705: node-exporter - Host metrics
+  - job_name: 'node-exporter'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['node-exporter:9100']
+        labels:
+          service: 'node-exporter'
+          component: 'host-metrics'

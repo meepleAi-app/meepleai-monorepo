@@ -5,6 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Infrastructure.External;
 
@@ -14,6 +15,7 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Infrastructure.External;
 /// Tests both technical validation (magic bytes, Docnet parsing) and business rule delegation.
 /// ISSUE-1818: Migrated to FluentAssertions for improved readability.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class DocnetPdfValidatorTests : IDisposable
 {
     private readonly Mock<ILogger<DocnetPdfValidator>> _mockLogger;
@@ -40,9 +42,6 @@ public class DocnetPdfValidatorTests : IDisposable
         _domainService = new PdfValidationDomainService(configuration);
         _validator = new DocnetPdfValidator(_mockLogger.Object, _domainService);
     }
-
-    #region Precondition Tests
-
     [Fact]
     public async Task ValidateAsync_NullStream_ReturnsFailure()
     {
@@ -86,11 +85,6 @@ public class DocnetPdfValidatorTests : IDisposable
         result.IsValid.Should().BeFalse();
         result.Errors.Keys.Should().Contain("fileName");
     }
-
-    #endregion
-
-    #region Magic Bytes Validation Tests
-
     [Fact]
     public async Task ValidateAsync_ValidMagicBytes_PassesMagicBytesCheck()
     {
@@ -137,11 +131,6 @@ public class DocnetPdfValidatorTests : IDisposable
         result.IsValid.Should().BeFalse();
         result.Errors.Keys.Should().Contain("fileFormat");
     }
-
-    #endregion
-
-    #region File Size Validation Tests
-
     [Fact]
     public async Task ValidateAsync_ValidFileSize_PassesFileSizeCheck()
     {
@@ -171,11 +160,6 @@ public class DocnetPdfValidatorTests : IDisposable
         result.Errors.Keys.Should().Contain("fileSize");
         result.Errors["fileSize"].Should().ContainEquivalentOf("exceeds maximum");
     }
-
-    #endregion
-
-    #region MIME Type Validation Tests
-
     [Fact]
     public async Task ValidateAsync_ValidMimeType_PassesMimeTypeCheck()
     {
@@ -205,11 +189,6 @@ public class DocnetPdfValidatorTests : IDisposable
         // Note: MIME type check delegates to domain service which checks content type
         // GetContentType() returns "application/octet-stream" for non-.pdf files
     }
-
-    #endregion
-
-    #region Integration Tests (multiple validation failures)
-
     [Fact]
     public async Task ValidateAsync_MultipleErrors_ReturnsAllErrors()
     {
@@ -226,11 +205,6 @@ public class DocnetPdfValidatorTests : IDisposable
         result.Errors.Keys.Should().Contain("fileFormat");
         result.Errors.Keys.Should().Contain("fileSize");
     }
-
-    #endregion
-
-    #region ExtractMetadataAsync Tests
-
     [Fact]
     public async Task ExtractMetadataAsync_NullStream_ReturnsNull()
     {
@@ -256,11 +230,6 @@ public class DocnetPdfValidatorTests : IDisposable
         // Assert: Should return null for invalid PDF (Docnet parsing fails)
         metadata.Should().BeNull();
     }
-
-    #endregion
-
-    #region Helper Methods
-
     /// <summary>
     /// Creates a byte array with PDF magic bytes followed by zeros.
     /// Note: This is NOT a valid PDF, just has correct magic bytes for testing.
@@ -272,9 +241,6 @@ public class DocnetPdfValidatorTests : IDisposable
         Array.Copy(pdfMagicBytes, data, Math.Min(pdfMagicBytes.Length, size));
         return data;
     }
-
-    #endregion
-
     public void Dispose()
     {
         GC.SuppressFinalize(this);

@@ -7,53 +7,57 @@
 
 ## Symptoms
 
+**Observable indicators when this alert fires:**
 - Alert: "HighErrorRate" firing in Alertmanager
-- Grafana dashboard shows error rate spike
-- Users experiencing failures (500 errors)
+- Grafana dashboard shows error rate spike above 1 error/sec
+- Users experiencing failures (500 Internal Server Error responses)
 - Multiple requests failing across different endpoints
+- HyperDX logs showing increased error-level entries
 
 ## Impact
 
-- **User Experience**: Users see error messages, cannot complete actions
-- **Data Integrity**: Failed operations may leave inconsistent state
-- **Business**: Revenue loss if payment/checkout endpoints affected
-- **Reputation**: User trust decreases with prolonged errors
+**Effect on system and users:**
+- **User Experience**: Users see error messages, cannot complete actions (login, game browsing, Q&A)
+- **Data Integrity**: Failed operations may leave inconsistent state in database
+- **Business Impact**: Revenue loss if payment/checkout endpoints affected, user churn risk
+- **System Health**: Indicates major API malfunction, potential cascading failures
 
 ## Investigation Steps
 
 ### 1. Verify Alert (30 seconds)
 
-**Dashboard**:
-```json
+**Dashboard Check**:
+```
 http://localhost:3001/d/meepleai-error-monitoring
 ```
 
-Check **Error Rate** panel:
+**Verification checklist**:
 - ✅ Is error rate actually > 1 error/sec?
-- ✅ Which endpoints are affected? (see "Top 10 Endpoints")
+- ✅ Which endpoints are affected? (see "Top 10 Endpoints by Error Rate")
 - ✅ What type of errors? (see "Status Code Distribution")
+- ✅ Is this a false positive (temporary spike)?
 
-**Prometheus**:
-```json
-http://localhost:9090/graph
-Query: meepleai:api:error_rate:5m
+**Prometheus Query**:
+```promql
+meepleai:api:error_rate:5m
 ```
 
-If error rate is < 1/sec:
-- **False alarm**: Silence alert, investigate alert tuning later
-- **Resolution time**: 1 minute
+**If false alarm**:
+- Silence alert for 30 minutes
+- Document why it's a false positive (short-lived spike < 2min)
+- Create issue to adjust alert `for` duration if recurring
 
 ### 2. Identify Scope (1 minute)
 
 **Questions to answer**:
-1. **When did it start?** (check dashboard time range)
-2. **Which endpoints?** (Top 10 Endpoints panel)
-3. **All users or specific users?** (check Seq logs for UserIds)
-4. **Error types?** (500, 502, 503, 504?)
+1. **When did it start?** (check dashboard time range, note exact timestamp)
+2. **Which endpoints affected?** (Top 10 Endpoints panel - all or specific routes?)
+3. **All users or specific users?** (check HyperDX logs filtered by UserIds)
+4. **Error types/patterns?** (500, 502, 503, 504? Exception types?)
 
 **Prometheus queries**:
 ```promql
-# Error rate by endpoint
+# Error rate by endpoint (top 5)
 topk(5, sum by (http_route) (rate(meepleai_api_errors_total[5m])))
 
 # Error rate by status code
@@ -67,109 +71,95 @@ sum by (exception_type) (rate(meepleai_api_errors_total[5m]))
 
 **Recent deployment?**
 ```bash
-# Check recent commits
-git log --oneline -10
+# Check recent commits (last 2 hours)
+git log --oneline --since="2 hours ago"
 
-# Check deployed version (if available)
+# Check deployed version
 curl http://localhost:8080/health | jq '.version'
 ```
 
 **Recent configuration changes?**
-- Database connection strings
-- Redis URL
-- Qdrant URL
-- Environment variables
+- Database connection strings (appsettings.json, env vars)
+- Redis URL configuration
+- Qdrant URL configuration
+- Environment variables (.env files)
+- Feature flags (SystemConfiguration context)
 
 **Recent infrastructure changes?**
-- Docker container restarts
-- Volume deletions
-- Network policy changes
+- Docker container restarts (check `docker compose ps` uptime)
+- Volume deletions or corruption
+- Network policy changes (firewall, Docker network)
 
-### 4. Check Dependencies (2 minutes)
+### 3. Check Dependencies (2 minutes)
 
-**Database (PostgreSQL)**:
+**Dependency Health Check**:
 ```bash
-# Check status
+# PostgreSQL
 docker compose ps postgres
-
-# Check logs (last 50 lines)
 docker compose logs postgres --tail 50
-
-# Check connection from API
 curl http://localhost:8080/health | jq '.checks.postgres'
-```
 
-**Cache (Redis)**:
-```bash
-# Check status
+# Redis
 docker compose ps redis
-
-# Test connection
-docker compose exec redis redis-cli ping
-# Should return: PONG
-
-# Check logs
+export REDIS_PASS=$(cat infra/secrets/redis-password.txt)
+docker compose exec redis redis-cli -a "$REDIS_PASS" --no-auth-warning ping
 docker compose logs redis --tail 50
-```
 
-**Vector DB (Qdrant)**:
-```bash
-# Check status
+# Qdrant
 docker compose ps qdrant
-
-# Check health endpoint
 curl http://localhost:6333/healthz
-
-# Check logs
 docker compose logs qdrant --tail 50
 ```
 
-**Dashboard check**:
-- Go to Error Monitoring dashboard
+**Dashboard dependency panel**:
+- Navigate to Error Monitoring dashboard
 - Scroll to "Dependency Health" section
-- All should show green (Up)
+- Verify all dependencies show green (Up)
 
 ### 5. Analyze Logs (2 minutes)
 
-**Seq - Error logs**:
+**HyperDX - Error/Warning logs**:
 ```
-http://localhost:8081
-Filter: @Level = 'Error' and @Timestamp > DateTimeOffset.Now.AddMinutes(-10)
+http://localhost:8180
+Filter: level:error AND @timestamp:[now-10m TO now]
 ```
 
 **Look for**:
-- Common exception types
-- Stack traces pointing to specific code
-- Error messages indicating root cause
+- Common exception types (most frequent errors)
+- Stack traces pointing to specific code files/lines
+- Error messages indicating root cause (connection refused, timeout, null reference)
+- Correlation patterns (same error across multiple users/endpoints?)
 
-**Seq - By endpoint**:
-```
-RequestPath = '<affected_endpoint>' and @Level = 'Error'
-Example: RequestPath = '/api/v1/games' and @Level = 'Error'
-```sql
-**Get correlation IDs** from error logs, example:
+**Get correlation IDs**:
 ```
 RequestId: 0HN6G8QJ9KL0M:00000001
 ```
 
+**HyperDX - By endpoint filter**:
+```
+http_route:"<affected_endpoint>" AND level:error
+Example: http_route:"/api/v1/games" AND level:error
+```
+
 ### 6. Check Traces (1 minute)
 
-**Jaeger**:
+**HyperDX - Distributed tracing**:
 ```
-http://localhost:16686
+http://localhost:8180
 Service: meepleai-api
 Operation: <affected_endpoint>
 Tags: error=true
 ```
 
 **Look for**:
-- Slow operations (> 1s)
-- Failed dependency calls
-- Timeouts in specific operations
+- Slow operations (> 1s duration, indicating bottlenecks)
+- Failed dependency calls (Postgres, Redis, Qdrant)
+- Timeouts in specific operations (database queries, external API calls)
+- Unusual latency patterns (sudden spikes in P95/P99)
 
 ### 7. Check System Resources (1 minute)
 
-**Prometheus queries**:
+**Prometheus resource queries**:
 ```promql
 # CPU usage (should be < 80%)
 rate(process_cpu_seconds_total{job="meepleai-api"}[5m]) * 100
@@ -177,16 +167,16 @@ rate(process_cpu_seconds_total{job="meepleai-api"}[5m]) * 100
 # Memory usage (should be < 80%)
 process_working_set_bytes{job="meepleai-api"} / process_memory_limit_bytes * 100
 
-# Active requests (spikes may indicate bottleneck)
+# Active requests (check for spikes indicating bottleneck)
 http_server_active_requests
 
-# Database connection pool
-# (if available - would need custom metric)
+# Database connection pool usage (if metric available)
+npgsql_connection_pool_active_connections / npgsql_connection_pool_size * 100
 ```
 
 **Docker stats**:
 ```bash
-docker stats --no-stream api
+docker compose stats --no-stream
 ```
 
 ## Common Root Causes & Fixes
@@ -196,224 +186,369 @@ docker stats --no-stream api
 **Symptoms**:
 - Error spike immediately after deployment (< 5 minutes)
 - Specific endpoint showing 100% error rate
-- New exception type in logs
+- New exception type in logs (not seen before)
+- Error rate correlates exactly with deployment timestamp
 
 **Fix**:
 ```bash
-# Option A: Rollback deployment
+# Option A: Quick rollback (RECOMMENDED)
 git revert <commit-sha>
-git push
-# Wait for CI/CD to redeploy
+git push origin main
+# Wait for CI/CD to redeploy (typically 5-10 minutes)
 
-# Option B: Hot fix if minor
-# 1. Fix bug in code
-# 2. Commit & push
-# 3. Deploy fix
+# Option B: Hot fix (if bug is trivial and fix is known)
+# 1. Fix bug in code locally
+# 2. Test fix locally
+# 3. git commit -m "hotfix: fix <issue>"
+# 4. git push origin main
+# 5. Wait for CI/CD redeploy
 
-# Option C: Rollback Docker image (if available)
+# Option C: Rollback Docker image (if versioned images available)
 docker compose down
-docker compose up -d --force-recreate api
-```json
-**Resolution time**: 5-10 minutes
+docker compose pull meepleai/api:previous-stable-version
+docker compose up -d
+```
+
+**Verification**:
+```bash
+# Error rate drops to baseline
+curl http://localhost:9090/api/v1/query?query=meepleai:api:error_rate:5m
+
+# Affected endpoint returns 200 OK
+curl -f http://localhost:8080/api/v1/games
+
+# No new errors in logs
+# Check HyperDX: level:error AND @timestamp:[now-5m TO now]
+```
+
+**Prevention**:
+- Improve test coverage for affected endpoint
+- Add integration tests for critical paths
+- Implement canary deployment (deploy to 10% traffic first)
+- Monitor error rate for 10 minutes post-deployment
+
+**Resolution time**: 5-15 minutes
 
 ### Cause 2: Database Connection Pool Exhausted
 
 **Symptoms**:
-- 500 errors across all endpoints
-- Error message: "Connection pool exhausted" or "Timeout acquiring connection"
-- Database health check failing
+- 500 errors across all endpoints (not isolated to one route)
+- Error message: "Connection pool exhausted" or "Timeout acquiring connection from pool"
+- Database health check failing (`/health` endpoint red)
+- Logs show: "Npgsql.NpgsqlException: The connection pool has been exhausted"
 
 **Fix**:
 ```bash
-# Option A: Restart API (releases connections)
+# Option A: Restart API (releases all connections)
 docker compose restart api
+# Wait 30 seconds for health check to pass
 
-# Option B: Restart database (if corrupted)
+# Option B: Restart database (if database itself is unhealthy)
 docker compose restart postgres
+# Wait for database to fully start (check logs)
+docker compose logs postgres --tail 20
 
-# Option C: Increase connection pool size (if recurring)
-# Edit appsettings.json or environment variable:
-# ConnectionStrings__Postgres="...;Maximum Pool Size=50"
-# (default is usually 100)
-```json
+# Option C: Increase connection pool size (if recurring issue)
+# Edit apps/api/src/Api/appsettings.json:
+# "ConnectionStrings": {
+#   "Postgres": "...;Maximum Pool Size=100;Minimum Pool Size=10"
+# }
+docker compose restart api
+```
+
+**Verification**:
+```bash
+# API health check passes
+curl http://localhost:8080/health | jq '.status'
+
+# Error rate drops to zero
+curl http://localhost:9090/api/v1/query?query=meepleai:api:error_rate:5m
+
+# Test database query works
+curl -f http://localhost:8080/api/v1/games?page=1&pageSize=10
+```
+
 **Prevention**:
-- Add proper `using` statements for DbContext
-- Ensure connections are disposed after use
-- Monitor connection pool metrics
+- Add proper `using` statements for DbContext in all repository methods
+- Ensure all database connections are disposed after use
+- Monitor connection pool metrics (add custom Prometheus metric)
+- Review code for long-running transactions holding connections
 
 **Resolution time**: 2-5 minutes
 
 ### Cause 3: External Dependency Down (Qdrant, Redis)
 
 **Symptoms**:
-- Errors only on endpoints using RAG/caching
-- Error message: "Connection refused" or "Timeout"
-- Dependency health check red
+- Errors only on endpoints using RAG/caching functionality
+- Error message: "Connection refused" or "Timeout connecting to <service>"
+- Dependency health check shows red status in dashboard
+- Logs show: "Qdrant.Client.QdrantException" or "StackExchange.Redis.RedisConnectionException"
 
 **Fix**:
 ```bash
-# Restart affected service
+# Option A: Restart affected service
 docker compose restart qdrant
 docker compose restart redis
 
-# Check if service is actually down
+# Wait 10-15 seconds for service to initialize
 docker compose ps
+
+# Option B: Check if service is actually down
+docker compose ps  # Look for "Exit X" or "Restarting"
 
 # Check service logs for crash reason
 docker compose logs qdrant --tail 100
 docker compose logs redis --tail 100
 
-# Nuclear option: restart all services
+# Option C: Nuclear option (restart all services)
 docker compose down
 docker compose up -d
-```json
+# Wait for all health checks to pass (30-60 seconds)
+```
+
+**Verification**:
+```bash
+# Service is up and healthy
+docker compose ps | grep "qdrant\|redis"
+
+# Service responds to health check
+curl http://localhost:6333/healthz  # Qdrant
+docker compose exec redis redis-cli -a "$(docker compose exec -T redis cat /run/secrets/redis-password 2>/dev/null)" --no-auth-warning ping  # Redis
+
+# Affected endpoints work again
+curl -f http://localhost:8080/api/v1/chat  # RAG endpoint
+```
+
+**Prevention**:
+- Enable Docker restart policy: `restart: unless-stopped` (already configured)
+- Add resource limits to prevent OOM kills
+- Monitor dependency health metrics (add alerts for dependency down)
+- Implement circuit breaker pattern for external dependencies
+
 **Resolution time**: 2-5 minutes
 
 ### Cause 4: Database Migration Failed
 
 **Symptoms**:
-- Errors immediately after deployment
-- Error message: "Invalid column name" or "Table does not exist"
-- Database queries failing
+- Errors immediately after deployment with DB migration
+- Error message: "Invalid column name 'X'" or "Relation 'table_name' does not exist"
+- All database queries failing (not just specific endpoints)
+- Logs show: "Npgsql.PostgresException"
 
 **Fix**:
 ```bash
 # Check migration status
 cd apps/api/src/Api
 dotnet ef migrations list
+# Look for (Pending) migrations
 
-# Apply missing migrations
+# Option A: Apply missing migration
 dotnet ef database update
-
-# Or rollback to previous migration
-dotnet ef database update <PreviousMigrationName>
-
-# Restart API
 docker compose restart api
-```json
+
+# Option B: Rollback to previous migration (if new migration is broken)
+dotnet ef database update <PreviousMigrationName>
+docker compose restart api
+
+# Option C: Inspect database schema directly
+docker compose exec postgres psql -U meeple -d meepleai
+\dt  # List tables
+\d <table_name>  # Describe specific table
+```
+
+**Verification**:
+```bash
+# Migration status shows all applied
+dotnet ef migrations list
+
+# Database schema matches expected
+docker compose exec postgres psql -U meeple -d meepleai -c "\d users"
+
+# API works with database
+curl -f http://localhost:8080/api/v1/games
+```
+
+**Prevention**:
+- Test migrations on copy of production database before deploying
+- Add migration tests to CI/CD pipeline
+- Create rollback migration for every forward migration
+- Document schema changes in migration comments
+
 **Resolution time**: 5-10 minutes
 
 ### Cause 5: Memory Leak / Resource Exhaustion
 
 **Symptoms**:
-- Error rate increasing gradually over hours
-- Memory usage > 80%
-- Eventually: OutOfMemoryException
-
-**Immediate fix**:
-```bash
-# Restart API to free memory
-docker compose restart api
-```json
-**Long-term investigation**:
-- Check for memory leaks in code
-- Review object disposal (IDisposable)
-- Monitor memory growth over time
-- Use memory profiler (dotMemory, PerfView)
-
-**Resolution time**: 2 minutes (restart), hours to days (fix leak)
-
-### Cause 6: High Traffic Spike (DDoS or legitimate)
-
-**Symptoms**:
-- Error rate correlates with request rate spike
-- Errors: "Too many requests" or timeout errors
-- CPU/memory usage high
+- Error rate increasing gradually over hours (not sudden spike)
+- Memory usage > 80% and climbing
+- Eventually: OutOfMemoryException in logs
+- Container may restart automatically (OOMKilled)
 
 **Fix**:
 ```bash
-# Option A: Enable rate limiting (if not already)
-# Check appsettings.json: RateLimiting section
+# Immediate fix: Restart API to free memory
+docker compose restart api
+# This is a temporary fix, root cause must be investigated
 
-# Option B: Scale horizontally (if Docker Swarm/K8s)
+# Check memory usage
+docker compose stats --no-stream
+
+# If container was OOMKilled (exit code 137):
+docker compose ps api  # Check exit code
+docker compose logs api --tail 100 | grep "OutOfMemory"
+```
+
+**Verification**:
+```bash
+# Error rate returns to baseline
+curl http://localhost:9090/api/v1/query?query=meepleai:api:error_rate:5m
+
+# Memory usage normalized (< 60%)
+docker compose stats --no-stream
+
+# API responds normally
+curl -f http://localhost:8080/health
+```
+
+**Prevention**:
+- Review code for memory leaks (unclosed streams, large object retention)
+- Implement proper IDisposable pattern for all resources
+- Monitor memory growth over time (add Prometheus alert for memory trends)
+- Use memory profiler (dotMemory, PerfView) to identify leak sources
+- Add load tests to catch memory leaks before production
+
+**Resolution time**: 2 minutes (restart), hours to days (fix leak)
+
+### Cause 6: High Traffic Spike (DDoS or Legitimate)
+
+**Symptoms**:
+- Error rate correlates with request rate spike (both increase together)
+- Errors: "Too many requests" (429) or timeout errors (504)
+- CPU/memory usage high (> 80%)
+- Many requests queued or timing out
+
+**Fix**:
+```bash
+# Option A: Enable rate limiting (if not already enabled)
+# Check apps/api/src/Api/appsettings.json:
+# "RateLimiting": { "Enabled": true, "RequestsPerMinute": 100 }
+docker compose restart api
+
+# Option B: Scale horizontally (if Docker Swarm/Kubernetes)
 docker service scale meepleai_api=3
 
-# Option C: Temporary: block suspicious IPs (if DDoS)
-# Add to nginx/firewall rules
+# Option C: Temporary block suspicious IPs (if DDoS attack)
+# Add to nginx/firewall rules (if Traefik is configured)
 
-# Option D: Emergency: enable maintenance mode
+# Option D: Emergency maintenance mode
 # Return 503 Service Unavailable for non-critical endpoints
-```json
+# Requires code change or feature flag
+```
+
+**Verification**:
+```bash
+# Request rate stabilized
+curl http://localhost:9090/api/v1/query?query=rate(http_server_request_duration_count[5m])
+
+# Error rate decreased
+curl http://localhost:9090/api/v1/query?query=meepleai:api:error_rate:5m
+
+# CPU/memory usage normalized
+docker compose stats --no-stream
+```
+
+**Prevention**:
+- Configure rate limiting (already in SystemConfiguration context)
+- Set up CDN for static assets (if applicable)
+- Implement request throttling per user/IP
+- Add DDoS protection (Cloudflare, AWS Shield)
+- Load test system to understand capacity limits
+
 **Resolution time**: 10-30 minutes
 
 ## Mitigation Steps
 
 ### Immediate (< 2 minutes)
 
-1. **Restart API** (if safe to do so):
+1. **Restart API** (if safe to do so and root cause unknown):
    ```bash
    docker compose restart api
    ```
    Wait 30 seconds for health check to pass.
 
-2. **Silence alert** (if you're actively working on it):
+2. **Silence alert** (if actively working on it):
    ```
    http://localhost:9093
    Silences → New Silence
    alertname=HighErrorRate, duration=30m
-   Comment: "Investigating, restarting API"
+   Comment: "Investigating, restarted API, monitoring"
    ```
 
 3. **Notify team**:
-   - Post in #incidents Slack channel
-   - Brief summary: "High error rate on /api/v1/games, investigating"
+   ```
+   #incidents: "🚨 HighErrorRate alert firing - error rate 2.5/sec on /api/v1/games - investigating"
+   ```
 
 ### Short-term (< 10 minutes)
 
-1. **Identify root cause** (use investigation steps above)
-2. **Apply fix** (restart, rollback, or hot fix)
+1. **Identify root cause** (use investigation steps 1-7 above systematically)
+
+2. **Apply fix** (use appropriate fix from Common Root Causes section based on symptoms)
+
 3. **Verify fix**:
-   - Check error rate drops in dashboard
-   - Test affected endpoint manually
-   - Check Seq logs for no new errors
+   - Check error rate drops to < 0.1/sec in dashboard
+   - Test affected endpoint manually with curl
+   - Check HyperDX logs for no new errors in last 5 minutes
 
 4. **Update incident channel**:
-   - Post resolution: "Fixed by restarting Redis, errors resolved"
-   - Post ETA if not yet resolved
+   - Post resolution: "✅ Fixed by restarting Redis - error rate back to baseline"
+   - Post ETA if not yet resolved: "⏳ Identified DB migration issue - rolling back, ETA 5 min"
 
 ### Medium-term (< 1 hour)
 
 1. **Monitor for recurrence**:
-   - Watch dashboard for 15-30 minutes
-   - Ensure error rate stays < 0.1/sec
+   - Watch dashboard Error Monitoring for 15-30 minutes
+   - Ensure error rate stays < 0.1/sec (baseline)
+   - Check for any new error patterns
 
 2. **Resolve alert** (if auto-resolve didn't work):
    ```bash
-   # Alert should auto-resolve when condition clears
-   # If not, check Alertmanager UI
+   # Alert should auto-resolve when error rate < 1/sec for 2 minutes
+   # If not, check Alertmanager UI: http://localhost:9093
    ```
 
 3. **Post-incident tasks**:
-   - Create GitHub issue for root cause fix (if needed)
+   - Create GitHub issue for permanent fix (if rollback/workaround was applied)
    - Update runbook if new scenario encountered
-   - Schedule post-mortem (if major incident)
+   - Schedule post-mortem (if major incident >30 min outage)
 
 ## Escalation
 
 ### When to Escalate
 
 Escalate to senior engineer or manager if:
-- ✅ Cannot identify root cause after 10 minutes
-- ✅ Fix attempts don't resolve issue
-- ✅ Error rate increasing despite mitigation
-- ✅ Critical business endpoint affected (payments, auth)
-- ✅ Data integrity concerns (corrupted data)
+- ✅ Cannot identify root cause after 10 minutes of investigation
+- ✅ Fix attempts don't resolve issue (error rate still high after multiple fixes)
+- ✅ Error rate increasing despite mitigation efforts
+- ✅ Critical business endpoint affected (payments, authentication, core game features)
+- ✅ Data integrity concerns (corrupted data, inconsistent state)
 
 ### Escalation Contacts
 
 **On-call rotation** (check Grafana OnCall):
 ```
 http://localhost:8082
-```json
+```
+
 **Slack channels**:
-- **#incidents**: For active incident coordination
-- **#engineering**: For technical questions
-- **#ops**: For infrastructure issues
+- **#incidents**: For active incident coordination and real-time updates
+- **#engineering**: For technical questions and code-related issues
+- **#ops**: For infrastructure and deployment issues
 
 **Emergency contacts**:
 - Team Lead: [name] - [phone]
 - DevOps Lead: [name] - [phone]
-- CTO: [name] - [phone] (critical only)
+- CTO: [name] - [phone] (critical incidents only, business impact)
 
 ## Post-Incident
 
@@ -422,65 +557,114 @@ http://localhost:8082
 1. **Document incident**:
    - Create GitHub issue with label `incident`
    - Template: `.github/ISSUE_TEMPLATE/incident-report.md`
-   - Include: timeline, root cause, fix, impact
+   - Include: timeline, root cause, fix applied, user impact, duration
 
 2. **Notify stakeholders**:
-   - Post resolution in #incidents
-   - Update status page (if public-facing)
+   - Post resolution in #incidents: "✅ HighErrorRate incident resolved - root cause: DB connection pool - duration: 15 min"
+   - Update status page (if public-facing status page exists)
 
 ### Follow-up (within 48 hours)
 
-1. **Post-mortem** (if major incident):
-   - Schedule 30-minute meeting
+1. **Post-mortem** (if major incident >30 min or high user impact):
+   - Schedule 30-minute meeting with involved team members
    - Blameless culture: focus on systems, not people
-   - Document: what happened, why, how to prevent
+   - Document: what happened, why it happened, how to prevent recurrence
 
 2. **Action items**:
-   - Create GitHub issues for preventive measures
-   - Update monitoring/alerting if gaps found
-   - Update runbook with lessons learned
+   - Create GitHub issues for preventive measures (fix root cause, improve monitoring)
+   - Update monitoring/alerting if gaps found (e.g., add connection pool metric)
+   - Update runbook with lessons learned (add new scenario or improve existing)
 
 ### Prevention
 
-1. **Code review**:
-   - Review code that caused issue
-   - Add/improve error handling
-   - Add/improve input validation
+1. **Code improvements**:
+   - Review code that caused issue (if deployment-related)
+   - Add/improve error handling (try-catch, graceful degradation)
+   - Add/improve input validation (prevent invalid data from causing errors)
 
 2. **Testing**:
-   - Add test for failure scenario
+   - Add test for failure scenario (e.g., test with connection pool exhausted)
    - Add integration test for affected endpoint
    - Add load test if traffic spike caused issue
 
 3. **Monitoring**:
-   - Add custom metric if needed
-   - Adjust alert threshold if false positive
-   - Add new alert if gap discovered
+   - Add custom metric if needed (e.g., connection pool usage)
+   - Adjust alert threshold if false positive (e.g., increase `for` duration)
+   - Add new alert if gap discovered (e.g., dependency health alert)
 
 ## Testing This Runbook
 
-**Simulate high error rate**:
-```bash
-# Trigger multiple errors (requires test endpoint)
-for i in {1..100}; do
-  curl -X POST http://localhost:8080/api/v1/test-error &
-done
+**Prerequisites** (Issue #2004):
+- API running on localhost:8080
+- Admin user credentials (default: admin@meepleai.dev / admin123)
+- Prometheus on localhost:9090
+- Test endpoint enabled: `TestEndpoints:Enabled=true` in appsettings.Development.json
 
-# Wait 2 minutes for alert to fire
-# Follow runbook steps to investigate and resolve
+**Automated test** (recommended):
+```bash
+# Use automated test script (includes auth, cleanup, alert validation)
+./scripts/test-runbooks.sh high-error-rate
+
+# Expected output:
+# - Generates 200 errors over 120 seconds (1.67 errors/sec avg)
+# - Waits 130 seconds for alert to fire
+# - Validates HighErrorRate alert in Prometheus
+# - Automatic cleanup of session cookies
 ```
 
-**Expected**:
-- Alert fires in Alertmanager
-- Dashboard shows error spike
-- Logs show test errors
-- Trace shows test endpoint failures
+**Manual test**:
+```bash
+# 1. Login as admin and save session cookie
+ADMIN_EMAIL="admin@meepleai.dev"
+ADMIN_PASSWORD="admin123"
+curl -c /tmp/session.txt -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d "{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$ADMIN_PASSWORD\"}"
+
+# 2. Trigger 200 errors over 120 seconds (1.67 errors/sec)
+for i in {1..200}; do
+  curl -b /tmp/session.txt -X POST http://localhost:8080/api/v1/test/error \
+    -H "Content-Type: application/json" \
+    -d '{"errorType":"500"}' &
+  sleep 0.6  # Delay between requests
+done
+
+# 3. Wait for alert to fire (2 min threshold + 10 sec buffer)
+sleep 130
+
+# 4. Verify alert in Prometheus
+curl http://localhost:9090/api/v1/alerts | jq '.data.alerts[] | select(.labels.alertname == "HighErrorRate")'
+
+# 5. Cleanup
+rm /tmp/session.txt
+```
+
+**Expected behavior**:
+- Alert fires in Alertmanager after ~2 minutes
+- Dashboard shows error rate > 1/sec (actual: ~1.67/sec)
+- Logs show simulated 500 errors with admin user context
+- HyperDX traces show test endpoint failures
+- Prometheus metrics incremented (meepleai_api_errors_total)
 
 **Cleanup**:
-- Errors stop automatically
-- Alert auto-resolves after 5 minutes
-- No action needed
+- Errors stop automatically after loop completes
+- Alert auto-resolves after 2 minutes (when error rate drops < 1/sec)
+- Session cookie removed with `rm /tmp/session.txt`
+- No manual cleanup of logs/metrics needed (development environment)
+
+## Related Runbooks
+
+- [Error Spike](./error-spike.md): For sudden 3x error rate increase detection
+- [Dependency Down](./dependency-down.md): For PostgreSQL, Redis, Qdrant outages
+- [Slow Performance](./slow-performance.md): For high latency issues that may precede errors
+
+## Related Dashboards
+
+- [Error Monitoring](http://localhost:3001/d/meepleai-error-monitoring): Primary dashboard for error metrics
+- [API Performance](http://localhost:3001/d/api-performance): For response time and throughput metrics
+- [Infrastructure](http://localhost:3001/d/infrastructure): For CPU, memory, resource metrics
 
 ## Changelog
 
+- **2025-12-08**: Rewritten for uniform template compliance (Issue #706)
 - **2025-10-16**: Initial version

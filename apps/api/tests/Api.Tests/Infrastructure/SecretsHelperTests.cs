@@ -4,12 +4,14 @@ using Api.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Infrastructure;
 
 /// <summary>
 /// Tests for SecretsHelper (SEC-708: Docker Secrets implementation).
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class SecretsHelperTests
 {
     [Fact]

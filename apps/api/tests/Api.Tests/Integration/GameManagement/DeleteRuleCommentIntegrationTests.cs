@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Integration.GameManagement;
 
@@ -30,11 +31,9 @@ namespace Api.Tests.Integration.GameManagement;
 /// Coverage Target: ≥90% for DeleteRuleCommentCommandHandler
 /// Execution Time Target: <60s
 /// </summary>
-[Collection("DeleteRuleCommentIntegration")]
+[Trait("Category", TestCategories.Integration)]
 public sealed class DeleteRuleCommentIntegrationTests : IAsyncLifetime
 {
-    #region Test Infrastructure
-
     private IContainer? _postgresContainer;
     private MeepleAiDbContext? _dbContext;
     private IServiceProvider? _serviceProvider;
@@ -184,11 +183,6 @@ public sealed class DeleteRuleCommentIntegrationTests : IAsyncLifetime
         _dbContext!.RuleSpecComments.RemoveRange(_dbContext.RuleSpecComments);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
     }
-
-    #endregion
-
-    #region 1. Happy Path Tests
-
     [Fact]
     public async Task DeleteOwnComment_Success()
     {
@@ -212,11 +206,6 @@ public sealed class DeleteRuleCommentIntegrationTests : IAsyncLifetime
         var comment = await _dbContext!.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == commentId, CancellationToken.None);
         comment.Should().BeNull();
     }
-
-    #endregion
-
-    #region 2. Authorization Error Tests
-
     [Fact]
     public async Task DeleteOtherUserComment_AsNonAdmin_ThrowsUnauthorized()
     {
@@ -241,11 +230,6 @@ public sealed class DeleteRuleCommentIntegrationTests : IAsyncLifetime
         var comment = await _dbContext!.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == commentId, TestCancellationToken);
         comment.Should().NotBeNull();
     }
-
-    #endregion
-
-    #region 3. Admin Override Tests
-
     [Fact]
     public async Task DeleteOtherUserComment_AsAdmin_Success()
     {
@@ -269,11 +253,6 @@ public sealed class DeleteRuleCommentIntegrationTests : IAsyncLifetime
         var comment = await _dbContext!.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == commentId, CancellationToken.None);
         comment.Should().BeNull();
     }
-
-    #endregion
-
-    #region 4. Not Found Tests
-
     [Fact]
     public async Task DeleteNonExistentComment_ThrowsInvalidOperation()
     {
@@ -294,11 +273,6 @@ public sealed class DeleteRuleCommentIntegrationTests : IAsyncLifetime
         await act.Should().ThrowAsync<InvalidOperationException>()
             .WithMessage("*not found*");
     }
-
-    #endregion
-
-    #region 5. Cascade Delete Tests
-
     [Fact]
     public async Task DeleteCommentWithReplies_CascadeDeletes()
     {
@@ -341,11 +315,6 @@ public sealed class DeleteRuleCommentIntegrationTests : IAsyncLifetime
         var replyComment = await _dbContext.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == reply.Id, TestCancellationToken);
         replyComment.Should().BeNull("replies should be cascade deleted");
     }
-
-    #endregion
-
-    #region 6. Concurrent Operations Tests
-
     [Fact]
     public async Task ConcurrentDeletion_HandlesRaceConditionGracefully()
     {
@@ -409,7 +378,4 @@ public sealed class DeleteRuleCommentIntegrationTests : IAsyncLifetime
 
         return new DeleteRuleCommentCommandHandler(dbContext, logger);
     }
-
-    #endregion
 }
-

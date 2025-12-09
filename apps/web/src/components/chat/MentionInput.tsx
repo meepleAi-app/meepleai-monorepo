@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect, useCallback } from "react";
-import { api, type UserSearchResult } from "@/lib/api";
-import { useDebounce } from "@/hooks/useDebounce";
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { api, type UserSearchResult } from '@/lib/api';
+import { useDebounce } from '@/hooks/useDebounce';
 import { logger } from '@/lib/logger';
 import { createErrorContext } from '@/lib/errors';
 
@@ -22,64 +22,70 @@ interface MentionState {
 export function MentionInput({
   value,
   onChange,
-  placeholder = "Write a comment and mention users with @username",
+  placeholder = 'Write a comment and mention users with @username',
   disabled = false,
-  minLength = 2
+  minLength = 2,
 }: MentionInputProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const [mentionState, setMentionState] = useState<MentionState>({
     isOpen: false,
-    query: "",
+    query: '',
     startPos: -1,
-    selectedIndex: 0
+    selectedIndex: 0,
   });
 
   const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+  const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number }>({
+    top: 0,
+    left: 0,
+  });
 
   // Debounce the search query
   const debouncedQuery = useDebounce(mentionState.query, 300);
 
   // Detect @ mention and extract query
-  const detectMention = useCallback((text: string, cursorPos: number): MentionState | null => {
-    if (cursorPos === 0) return null;
+  const detectMention = useCallback(
+    (text: string, cursorPos: number): MentionState | null => {
+      if (cursorPos === 0) return null;
 
-    // Look backwards from cursor to find @ character
-    let startPos = -1;
-    for (let i = cursorPos - 1; i >= 0; i--) {
-      const char = text[i];
+      // Look backwards from cursor to find @ character
+      let startPos = -1;
+      for (let i = cursorPos - 1; i >= 0; i--) {
+        const char = text[i];
 
-      // If we hit whitespace or newline before @, no mention
-      if (char === ' ' || char === '\n' || char === '\r') {
-        break;
+        // If we hit whitespace or newline before @, no mention
+        if (char === ' ' || char === '\n' || char === '\r') {
+          break;
+        }
+
+        // Found @ character
+        if (char === '@') {
+          startPos = i;
+          break;
+        }
       }
 
-      // Found @ character
-      if (char === '@') {
-        startPos = i;
-        break;
-      }
-    }
+      // No @ found
+      if (startPos === -1) return null;
 
-    // No @ found
-    if (startPos === -1) return null;
+      // Extract query between @ and cursor
+      const query = text.substring(startPos + 1, cursorPos);
 
-    // Extract query between @ and cursor
-    const query = text.substring(startPos + 1, cursorPos);
+      // Check if query meets minimum length
+      if (query.length < minLength) return null;
 
-    // Check if query meets minimum length
-    if (query.length < minLength) return null;
-
-    return {
-      isOpen: true,
-      query,
-      startPos,
-      selectedIndex: 0
-    };
-  }, [minLength]);
+      return {
+        isOpen: true,
+        query,
+        startPos,
+        selectedIndex: 0,
+      };
+    },
+    [minLength]
+  );
 
   // Handle textarea input change
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -97,9 +103,9 @@ export function MentionInput({
     } else {
       setMentionState({
         isOpen: false,
-        query: "",
+        query: '',
         startPos: -1,
-        selectedIndex: 0
+        selectedIndex: 0,
       });
       setSearchResults([]);
     }
@@ -161,9 +167,7 @@ export function MentionInput({
     const searchUsers = async () => {
       setIsSearching(true);
       try {
-        const results = await api.get<UserSearchResult[]>(
-          `/api/v1/users/search?query=${encodeURIComponent(debouncedQuery)}`
-        );
+        const results = await api.auth.searchUsers(debouncedQuery);
         setSearchResults(results || []);
       } catch (error) {
         logger.error(
@@ -181,35 +185,38 @@ export function MentionInput({
   }, [debouncedQuery, mentionState.isOpen, minLength]);
 
   // Handle user selection
-  const selectUser = useCallback((user: UserSearchResult) => {
-    if (!textareaRef.current) return;
+  const selectUser = useCallback(
+    (user: UserSearchResult) => {
+      if (!textareaRef.current) return;
 
-    const textarea = textareaRef.current;
-    const beforeMention = value.substring(0, mentionState.startPos);
-    const afterCursor = value.substring(textarea.selectionStart);
+      const textarea = textareaRef.current;
+      const beforeMention = value.substring(0, mentionState.startPos);
+      const afterCursor = value.substring(textarea.selectionStart);
 
-    // Replace @query with @DisplayName followed by space
-    const newValue = `${beforeMention}@${user.displayName} ${afterCursor}`;
-    onChange(newValue);
+      // Replace @query with @DisplayName followed by space
+      const newValue = `${beforeMention}@${user.displayName} ${afterCursor}`;
+      onChange(newValue);
 
-    // Close dropdown
-    setMentionState({
-      isOpen: false,
-      query: "",
-      startPos: -1,
-      selectedIndex: 0
-    });
-    setSearchResults([]);
+      // Close dropdown
+      setMentionState({
+        isOpen: false,
+        query: '',
+        startPos: -1,
+        selectedIndex: 0,
+      });
+      setSearchResults([]);
 
-    // Set cursor after mention
-    const newCursorPos = beforeMention.length + user.displayName.length + 2; // +2 for @ and space
-    setTimeout(() => {
-      if (textareaRef.current) {
-        textareaRef.current.focus();
-        textareaRef.current.setSelectionRange(newCursorPos, newCursorPos);
-      }
-    }, 0);
-  }, [value, mentionState.startPos, onChange]);
+      // Set cursor after mention
+      const newCursorPos = beforeMention.length + user.displayName.length + 2; // +2 for @ and space
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.focus();
+          textareaRef.current.setSelectionRange(newCursorPos, newCursorPos);
+        }
+      }, 0);
+    },
+    [value, mentionState.startPos, onChange]
+  );
 
   // Handle keyboard navigation
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -220,7 +227,7 @@ export function MentionInput({
         e.preventDefault();
         setMentionState(prev => ({
           ...prev,
-          selectedIndex: Math.min(prev.selectedIndex + 1, searchResults.length - 1)
+          selectedIndex: Math.min(prev.selectedIndex + 1, searchResults.length - 1),
         }));
         break;
 
@@ -228,7 +235,7 @@ export function MentionInput({
         e.preventDefault();
         setMentionState(prev => ({
           ...prev,
-          selectedIndex: Math.max(prev.selectedIndex - 1, 0)
+          selectedIndex: Math.max(prev.selectedIndex - 1, 0),
         }));
         break;
 
@@ -243,9 +250,9 @@ export function MentionInput({
         e.preventDefault();
         setMentionState({
           isOpen: false,
-          query: "",
+          query: '',
           startPos: -1,
-          selectedIndex: 0
+          selectedIndex: 0,
         });
         setSearchResults([]);
         break;
@@ -254,9 +261,9 @@ export function MentionInput({
         // Close dropdown on Tab
         setMentionState({
           isOpen: false,
-          query: "",
+          query: '',
           startPos: -1,
-          selectedIndex: 0
+          selectedIndex: 0,
         });
         setSearchResults([]);
         break;
@@ -281,9 +288,7 @@ export function MentionInput({
     return (
       <>
         {text.substring(0, index)}
-        <strong className="bg-yellow-100">
-          {text.substring(index, index + query.length)}
-        </strong>
+        <strong className="bg-yellow-100">{text.substring(index, index + query.length)}</strong>
         {text.substring(index + query.length)}
       </>
     );
@@ -300,7 +305,7 @@ export function MentionInput({
         disabled={disabled}
         role="combobox"
         aria-expanded={mentionState.isOpen}
-        aria-controls={mentionState.isOpen ? "mention-dropdown" : undefined}
+        aria-controls={mentionState.isOpen ? 'mention-dropdown' : undefined}
         aria-autocomplete="list"
         aria-activedescendant={
           mentionState.isOpen && searchResults.length > 0
@@ -319,17 +324,13 @@ export function MentionInput({
           className="fixed z-[1000] bg-white border border-gray-400 rounded shadow-lg max-h-[200px] overflow-y-auto min-w-[250px] max-w-[400px]"
           style={{
             top: dropdownPosition.top,
-            left: dropdownPosition.left
+            left: dropdownPosition.left,
           }}
         >
           {isSearching ? (
-            <div className="p-3 text-sm text-gray-600">
-              Searching users...
-            </div>
+            <div className="p-3 text-sm text-gray-600">Searching users...</div>
           ) : searchResults.length === 0 ? (
-            <div className="p-3 text-sm text-gray-600">
-              No users found
-            </div>
+            <div className="p-3 text-sm text-gray-600">No users found</div>
           ) : (
             searchResults.map((user, index) => (
               <div
@@ -342,7 +343,7 @@ export function MentionInput({
                 className="p-2.5 cursor-pointer transition-colors"
                 style={{
                   background: index === mentionState.selectedIndex ? '#e3f2fd' : 'transparent',
-                  borderBottom: index < searchResults.length - 1 ? '1px solid #f0f0f0' : 'none'
+                  borderBottom: index < searchResults.length - 1 ? '1px solid #f0f0f0' : 'none',
                 }}
               >
                 <div className="text-sm font-medium mb-0.5">

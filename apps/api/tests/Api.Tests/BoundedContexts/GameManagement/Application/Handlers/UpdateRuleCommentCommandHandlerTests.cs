@@ -5,6 +5,7 @@ using Api.Infrastructure;
 using Api.Tests.Helpers;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 
@@ -15,6 +16,7 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 /// ✅ RESOLVED: Integration tests added for full comment update workflow with authorization.
 /// ISSUE-1500: TEST-002 - Fixed test isolation (fresh context per test)
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class UpdateRuleCommentCommandHandlerTests
 {
     private static MeepleAiDbContext CreateFreshDbContext()
@@ -28,9 +30,6 @@ public class UpdateRuleCommentCommandHandlerTests
         timeProviderMock.Setup(t => t.GetUtcNow()).Returns(new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero));
         return timeProviderMock;
     }
-
-    #region Construction Tests
-
     [Fact]
     public void Constructor_WithValidDependencies_CreatesInstance()
     {
@@ -93,11 +92,6 @@ public class UpdateRuleCommentCommandHandlerTests
                 timeProviderMock.Object,
                 null!));
     }
-
-    #endregion
-
-    #region Command Tests
-
     [Fact]
     public void Command_WithValidProperties_ConstructsCorrectly()
     {
@@ -156,9 +150,6 @@ public class UpdateRuleCommentCommandHandlerTests
         Assert.Contains("🎲", command.CommentText);
         Assert.Contains("émojis", command.CommentText);
     }
-
-    #endregion
-
     // NOTE: Full integration tests for Handle method (comment update, ownership validation,
     // UpdatedAt timestamp, navigation property reloading) should be in integration test suite
     // due to DbContext complexity and EF Core Include/ThenInclude chains.

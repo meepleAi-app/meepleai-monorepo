@@ -31,14 +31,14 @@ export const createChatSlice: StateCreator<
   // ============================================================================
   // Actions
   // ============================================================================
-  loadChats: async (gameId) => {
+  loadChats: async gameId => {
     const { setLoading, setError } = get();
     setLoading('chats', true);
     setError(null);
 
     try {
       const chatThreads = await api.chat.getThreadsByGame(gameId);
-      set((state) => {
+      set(state => {
         state.chatsByGame[gameId] = chatThreads ?? [];
       });
     } catch (err) {
@@ -48,7 +48,7 @@ export const createChatSlice: StateCreator<
         createErrorContext('ChatSlice', 'loadChats', { gameId })
       );
       setError('Errore nel caricamento delle chat');
-      set((state) => {
+      set(state => {
         state.chatsByGame[gameId] = [];
       });
     } finally {
@@ -78,7 +78,7 @@ export const createChatSlice: StateCreator<
         // Save the previous active ID before updating state
         const previousActiveId = get().activeChatIds[selectedGameId];
 
-        set((state) => {
+        set(state => {
           if (!state.chatsByGame[selectedGameId]) {
             state.chatsByGame[selectedGameId] = [];
           }
@@ -90,12 +90,14 @@ export const createChatSlice: StateCreator<
         // Auto-archive oldest thread if limit exceeded
         // Get fresh state after mutation, but exclude the newly created thread from archive check
         const { chatsByGame } = get();
-        const activeThreads = (chatsByGame[selectedGameId] ?? [])
-          .filter(t => t.status !== 'Closed' && t.id !== newThread.id);
+        const activeThreads = (chatsByGame[selectedGameId] ?? []).filter(
+          t => t.status !== 'Closed' && t.id !== newThread.id
+        );
         if (activeThreads.length > CHAT_CONFIG.MAX_THREADS_PER_GAME) {
-          const sorted = [...activeThreads].sort((a, b) =>
-            new Date(a.lastMessageAt ?? a.createdAt).getTime() -
-            new Date(b.lastMessageAt ?? b.createdAt).getTime()
+          const sorted = [...activeThreads].sort(
+            (a, b) =>
+              new Date(a.lastMessageAt ?? a.createdAt).getTime() -
+              new Date(b.lastMessageAt ?? b.createdAt).getTime()
           );
           // Use the previous active ID (before creating new thread) to avoid archiving it
           const toArchive = sorted.find(t => t.id !== previousActiveId);
@@ -108,7 +110,10 @@ export const createChatSlice: StateCreator<
               logger.error(
                 'Failed to auto-archive thread',
                 archiveErr instanceof Error ? archiveErr : new Error(String(archiveErr)),
-                createErrorContext('ChatSlice', 'createChat.autoArchive', { threadId: toArchive.id, gameId: selectedGameId })
+                createErrorContext('ChatSlice', 'createChat.autoArchive', {
+                  threadId: toArchive.id,
+                  gameId: selectedGameId,
+                })
               );
             }
           }
@@ -118,7 +123,10 @@ export const createChatSlice: StateCreator<
       logger.error(
         'Failed to create chat thread',
         err instanceof Error ? err : new Error(String(err)),
-        createErrorContext('ChatSlice', 'createChat', { gameId: selectedGameId, agentId: selectedAgentId })
+        createErrorContext('ChatSlice', 'createChat', {
+          gameId: selectedGameId,
+          agentId: selectedAgentId,
+        })
       );
       setError('Errore nella creazione della chat');
     } finally {
@@ -126,7 +134,7 @@ export const createChatSlice: StateCreator<
     }
   },
 
-  deleteChat: async (chatId) => {
+  deleteChat: async chatId => {
     const { selectedGameId, setLoading, setError, activeChatIds } = get();
 
     if (!selectedGameId) return;
@@ -138,9 +146,9 @@ export const createChatSlice: StateCreator<
     setError(null);
 
     try {
-      await api.delete(`/api/v1/chats/${chatId}`);
+      await api.chat.deleteThread(chatId);
 
-      set((state) => {
+      set(state => {
         const currentThreads = state.chatsByGame[selectedGameId] ?? [];
         state.chatsByGame[selectedGameId] = currentThreads.filter(c => c.id !== chatId);
 
@@ -162,12 +170,12 @@ export const createChatSlice: StateCreator<
     }
   },
 
-  selectChat: async (chatId) => {
+  selectChat: async chatId => {
     const { selectedGameId, loadMessages } = get();
 
     if (!selectedGameId) return;
 
-    set((state) => {
+    set(state => {
       state.activeChatIds[selectedGameId] = chatId;
     });
 
@@ -175,7 +183,7 @@ export const createChatSlice: StateCreator<
   },
 
   updateChatTitle: (chatId, title) =>
-    set((state) => {
+    set(state => {
       const { selectedGameId } = get();
       if (!selectedGameId) return;
 

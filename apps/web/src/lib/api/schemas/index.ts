@@ -24,3 +24,6 @@ export * from './agents.schemas';
 
 // Streaming SSE schemas (Issue #1007)
 export * from './streaming.schemas';
+
+// Admin schemas (Issue #1679)
+export * from './admin.schemas';

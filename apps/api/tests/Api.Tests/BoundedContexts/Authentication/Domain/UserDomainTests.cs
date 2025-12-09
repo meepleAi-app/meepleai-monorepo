@@ -2,6 +2,7 @@ using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Exceptions;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Domain;
 
@@ -9,6 +10,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Domain;
 /// Domain tests for User aggregate root.
 /// DDD-PHASE2: Tests aligned with Guid schema.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class UserDomainTests
 {
     [Fact]
@@ -520,9 +522,6 @@ public class UserDomainTests
         // Assert
         Assert.Equal(Role.Admin, user.Role);
     }
-
-    #region Backup Codes Tests
-
     [Fact]
     public void User_Enable2FA_WithBackupCodes_StoresCodesSuccessfully()
     {
@@ -700,11 +699,6 @@ public class UserDomainTests
         // Assert
         Assert.False(result);
     }
-
-    #endregion
-
-    #region UpdateTier Tests
-
     [Fact]
     public void User_UpdateTier_ByAdmin_UpdatesTierSuccessfully()
     {
@@ -828,9 +822,6 @@ public class UserDomainTests
         // Assert
         Assert.Equal(UserTier.Premium, user.Tier);
     }
-
-    #endregion
-
     private static User CreateTestUser(
         string password = "TestPassword123!",
         Role? role = null,
@@ -845,4 +836,3 @@ public class UserDomainTests
         return new User(id, email, "Test User", passwordHash, userRole, userTier);
     }
 }
-

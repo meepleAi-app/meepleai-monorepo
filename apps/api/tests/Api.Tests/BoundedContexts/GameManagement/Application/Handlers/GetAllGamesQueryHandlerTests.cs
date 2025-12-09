@@ -5,6 +5,7 @@ using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Tests.BoundedContexts.GameManagement.TestHelpers;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 
@@ -12,6 +13,7 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 /// Comprehensive tests for GetAllGamesQueryHandler.
 /// Tests game catalog retrieval and DTO mapping.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class GetAllGamesQueryHandlerTests
 {
     private readonly Mock<IGameRepository> _gameRepositoryMock;
@@ -22,9 +24,6 @@ public class GetAllGamesQueryHandlerTests
         _gameRepositoryMock = new Mock<IGameRepository>();
         _handler = new GetAllGamesQueryHandler(_gameRepositoryMock.Object);
     }
-
-    #region Happy Path Tests
-
     [Fact]
     public async Task Handle_WithMultipleGames_ReturnsAllMappedDtos()
     {
@@ -210,11 +209,6 @@ public class GetAllGamesQueryHandlerTests
         Assert.Equal(30549, result[1].BggId);
         Assert.Null(result[2].BggId);
     }
-
-    #endregion
-
-    #region Cancellation Tests
-
     [Fact]
     public async Task Handle_WithCancellationToken_PassesToRepository()
     {
@@ -244,11 +238,6 @@ public class GetAllGamesQueryHandlerTests
             r => r.GetAllAsync(cancellationToken),
             Times.Once);
     }
-
-    #endregion
-
-    #region DTO Mapping Tests
-
     [Fact]
     public async Task Handle_MapsAllPropertiesToDto()
     {
@@ -291,7 +280,5 @@ public class GetAllGamesQueryHandlerTests
         Assert.Equal(266192, dto.BggId);
         Assert.NotEqual(default(DateTime), dto.CreatedAt);
     }
-
-    #endregion
 }
 

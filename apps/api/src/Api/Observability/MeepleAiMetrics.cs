@@ -19,9 +19,6 @@ public static class MeepleAiMetrics
     /// Meter instance for creating metrics
     /// </summary>
     private static readonly Meter Meter = new(MeterName, "1.0.0");
-
-    #region RAG/AI Metrics
-
     /// <summary>
     /// Counter for total RAG requests
     /// </summary>
@@ -61,11 +58,6 @@ public static class MeepleAiMetrics
         name: "meepleai.rag.errors.total",
         unit: "errors",
         description: "Total number of RAG errors by type");
-
-    #endregion
-
-    #region LLM/Agent Token Usage Metrics (Issue #1694 - OpenTelemetry GenAI Semantic Conventions)
-
     /// <summary>
     /// Counter for LLM token usage following OpenTelemetry GenAI semantic conventions.
     /// Tracks prompt_tokens, completion_tokens, and total_tokens by model and provider.
@@ -120,11 +112,6 @@ public static class MeepleAiMetrics
         name: "meepleai.agent.cost.usd",
         unit: "usd",
         description: "Agent invocation cost in USD by agent type");
-
-    #endregion
-
-    #region Vector Search Metrics
-
     /// <summary>
     /// Counter for total vector searches
     /// </summary>
@@ -156,11 +143,6 @@ public static class MeepleAiMetrics
         name: "meepleai.vector.indexing.duration",
         unit: "ms",
         description: "Vector indexing duration in milliseconds");
-
-    #endregion
-
-    #region PDF Processing Metrics
-
     /// <summary>
     /// Counter for total PDF uploads
     /// </summary>
@@ -272,11 +254,6 @@ public static class MeepleAiMetrics
         name: "meepleai.pdf.indexing.duration",
         unit: "ms",
         description: "Qdrant indexing duration");
-
-    #endregion
-
-    #region Streaming Metrics
-
     /// <summary>
     /// Histogram for streaming operation total duration in milliseconds
     /// </summary>
@@ -300,11 +277,6 @@ public static class MeepleAiMetrics
         name: "meepleai.streaming.requests.total",
         unit: "requests",
         description: "Total streaming requests by type");
-
-    #endregion
-
-    #region Agent Metrics
-
     /// <summary>
     /// Counter for agent invocations by type (chess/feedback/followup/qa/explain/setup)
     /// </summary>
@@ -328,11 +300,6 @@ public static class MeepleAiMetrics
         name: "meepleai.agent.errors.total",
         unit: "errors",
         description: "Agent errors by type");
-
-    #endregion
-
-    #region Hybrid Search Metrics
-
     /// <summary>
     /// Histogram for vector search component scores in hybrid search
     /// </summary>
@@ -364,11 +331,6 @@ public static class MeepleAiMetrics
         name: "meepleai.search.hybrid.total",
         unit: "searches",
         description: "Total hybrid search requests");
-
-    #endregion
-
-    #region Cache Metrics
-
     /// <summary>
     /// Counter for cache hits
     /// </summary>
@@ -392,11 +354,6 @@ public static class MeepleAiMetrics
         name: "meepleai.cache.evictions.total",
         unit: "evictions",
         description: "Total number of cache evictions");
-
-    #endregion
-
-    #region Two-Factor Authentication Metrics (SEC-08)
-
     /// <summary>
     /// Counter for failed TOTP verification attempts.
     /// Tracks brute force attack patterns and authentication failures.
@@ -468,11 +425,6 @@ public static class MeepleAiMetrics
         name: "meepleai.2fa.disable.total",
         unit: "disables",
         description: "Total number of 2FA disable operations");
-
-    #endregion
-
-    #region Error Metrics (OPS-05)
-
     /// <summary>
     /// Counter for API errors with detailed categorization.
     /// Tracks all API errors by endpoint, status code, exception type, and severity.
@@ -492,11 +444,6 @@ public static class MeepleAiMetrics
         name: "meepleai.api.errors.unhandled",
         unit: "errors",
         description: "Total number of unhandled exceptions caught by exception middleware");
-
-    #endregion
-
-    #region Helper Methods
-
     /// <summary>
     /// Records a RAG request with duration and metadata
     /// </summary>
@@ -773,6 +720,7 @@ public static class MeepleAiMetrics
     /// <summary>
     /// Records LLM token usage following OpenTelemetry GenAI semantic conventions.
     /// Issue #1694: Track actual token usage from LLM calls with cost calculation.
+    /// Issue #1725: Enhanced with per-user cost attribution (low-cardinality)
     /// </summary>
     /// <param name="promptTokens">Number of tokens in the prompt/input</param>
     /// <param name="completionTokens">Number of tokens in the completion/output</param>
@@ -781,6 +729,8 @@ public static class MeepleAiMetrics
     /// <param name="provider">Provider name (e.g., "OpenRouter", "Ollama")</param>
     /// <param name="operationDurationMs">Optional LLM operation duration in milliseconds</param>
     /// <param name="costUsd">Optional estimated cost in USD</param>
+    /// <param name="userSegment">Optional user segment (free, pro, enterprise, admin) - LOW CARDINALITY</param>
+    /// <param name="userIdHash">Optional user ID hash (first 8 chars) - LOW CARDINALITY for privacy</param>
     public static void RecordLlmTokenUsage(
         int promptTokens,
         int completionTokens,
@@ -788,7 +738,9 @@ public static class MeepleAiMetrics
         string modelId,
         string provider,
         double? operationDurationMs = null,
-        decimal? costUsd = null)
+        decimal? costUsd = null,
+        string? userSegment = null,
+        string? userIdHash = null)
     {
         // OpenTelemetry GenAI Semantic Convention: gen_ai.client.token.usage
         var baseTags = new TagList
@@ -831,6 +783,18 @@ public static class MeepleAiMetrics
                 { "model_id", modelId },
                 { "provider", provider.ToLowerInvariant() }
             };
+
+            // ISSUE-1725: Add user attribution tags (low-cardinality for Prometheus)
+            if (!string.IsNullOrEmpty(userSegment))
+            {
+                costTags.Add("user_segment", userSegment);
+            }
+
+            if (!string.IsNullOrEmpty(userIdHash))
+            {
+                costTags.Add("user_id_hash", userIdHash);
+            }
+
             LlmCostUsd.Record((double)costUsd.Value, costTags);
         }
     }
@@ -959,11 +923,6 @@ public static class MeepleAiMetrics
                 break;
         }
     }
-
-    #endregion
-
-    #region RAG Evaluation Metrics (ADR-016 Phase 5)
-
     /// <summary>
     /// Counter for total evaluation runs.
     /// </summary>
@@ -1151,6 +1110,4 @@ public static class MeepleAiMetrics
 
         EvaluationSamplesTotal.Add(1, tags);
     }
-
-    #endregion
 }

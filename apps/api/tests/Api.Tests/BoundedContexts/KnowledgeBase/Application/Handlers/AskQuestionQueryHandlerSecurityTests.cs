@@ -9,6 +9,7 @@ using Api.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 
@@ -21,6 +22,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 ///
 /// Fix: Validate thread.GameId matches query.GameId before using chat history.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class AskQuestionQueryHandlerSecurityTests
 {
     private readonly SearchQueryHandler _searchHandler;

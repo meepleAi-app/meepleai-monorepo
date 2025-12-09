@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Reranking;
 
@@ -16,6 +17,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Reranking
 /// Unit tests for ResilientRetrievalService.
 /// ADR-016 Phase 4: Resilient retrieval with graceful degradation.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class ResilientRetrievalServiceTests
 {
     private readonly Mock<IHybridSearchService> _hybridSearchMock;

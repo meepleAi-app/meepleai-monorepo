@@ -25,11 +25,8 @@ namespace Api.Tests.Integration;
 /// Full-stack cross-context integration tests.
 /// Tests complete end-to-end workflows across all bounded contexts.
 /// </summary>
-[Collection("FullStack")]
 [Trait("Category", "Integration")]
 [Trait("Category", "CrossContext")]
-[Trait("Dependency", "PostgreSQL")]
-[Trait("BoundedContext", "FullStack")]
 public sealed class FullStackCrossContextWorkflowTests : IAsyncLifetime
 {
     private IContainer? _postgresContainer;
@@ -369,4 +366,3 @@ public sealed class FullStackCrossContextWorkflowTests : IAsyncLifetime
         );
     }
 }
-

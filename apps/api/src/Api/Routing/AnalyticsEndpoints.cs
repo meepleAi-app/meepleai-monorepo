@@ -155,6 +155,28 @@ public static class AnalyticsEndpoints
         .Produces(StatusCodes.Status401Unauthorized)
         .Produces(StatusCodes.Status403Forbidden);
 
+        // Issue #874: Activity feed endpoint for admin dashboard
+        group.MapGet("/admin/activity", async (
+            HttpContext context,
+            IMediator mediator,
+            int limit = 10,
+            DateTime? since = null,
+            CancellationToken ct = default) =>
+        {
+            var (authorized, _, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
+
+            var query = new GetRecentActivityQuery(limit, since);
+            var activity = await mediator.Send(query, ct).ConfigureAwait(false);
+            return Results.Ok(activity);
+        })
+        .WithName("GetRecentActivity")
+        .WithTags("Admin")
+        .WithDescription("Get recent activity feed for admin dashboard (last N system events)")
+        .Produces<RecentActivityDto>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status403Forbidden);
+
         group.MapPost("/admin/analytics/export", async (
             HttpContext context,
             IMediator mediator,

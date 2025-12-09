@@ -81,6 +81,7 @@ temp/
 
 # Docker
 .dockerignore
+docker-compose.override.yml
 
 # Data
 data/

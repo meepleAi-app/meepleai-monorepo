@@ -442,8 +442,9 @@ namespace Api.Migrations
                     b.HasIndex("ExpiresAt")
                         .HasDatabaseName("ix_used_totp_codes_expiry");
 
-                    b.HasIndex("UserId", "CodeHash", "ExpiresAt")
-                        .HasDatabaseName("ix_used_totp_codes_user_code_expiry");
+                    b.HasIndex("UserId", "CodeHash")
+                        .IsUnique()
+                        .HasDatabaseName("ix_used_totp_codes_user_code_unique");
 
                     b.ToTable("used_totp_codes", (string)null);
                 });
@@ -1781,6 +1782,11 @@ namespace Api.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int>("DataRetentionDays")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(90);
+
                     b.Property<string>("DisplayName")
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");
@@ -1790,6 +1796,11 @@ namespace Api.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
+                    b.Property<bool>("EmailNotifications")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
                     b.Property<bool>("IsDemoAccount")
                         .HasColumnType("boolean");
 
@@ -1798,6 +1809,13 @@ namespace Api.Migrations
                         .HasColumnType("boolean")
                         .HasDefaultValue(false);
 
+                    b.Property<string>("Language")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasDefaultValue("en");
+
                     b.Property<string>("PasswordHash")
                         .HasColumnType("text");
 
@@ -1805,6 +1823,13 @@ namespace Api.Migrations
                         .IsRequired()
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
+
+                    b.Property<string>("Theme")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("system");
 
                     b.Property<string>("Tier")
                         .IsRequired()

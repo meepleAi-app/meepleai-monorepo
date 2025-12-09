@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Diagnostics;
 using Api.Middleware;
 using Scalar.AspNetCore;
 using Serilog;
@@ -78,6 +79,23 @@ public static class WebApplicationExtensions
                 context.Response.Headers.Append("X-Correlation-Id", context.TraceIdentifier);
                 return Task.CompletedTask;
             });
+
+            await next().ConfigureAwait(false);
+        });
+
+        // Issue #1563: Add trace context to response headers for frontend correlation
+        app.Use(async (context, next) =>
+        {
+            var activity = Activity.Current;
+            if (activity != null)
+            {
+                context.Response.OnStarting(() =>
+                {
+                    context.Response.Headers.Append("X-Trace-Id", activity.TraceId.ToString());
+                    context.Response.Headers.Append("X-Span-Id", activity.SpanId.ToString());
+                    return Task.CompletedTask;
+                });
+            }
 
             await next().ConfigureAwait(false);
         });

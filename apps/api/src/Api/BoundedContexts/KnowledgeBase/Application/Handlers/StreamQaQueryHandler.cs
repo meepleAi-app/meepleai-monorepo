@@ -231,16 +231,47 @@ public class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagStr
         // Step 5: Stream tokens from LLM
         var answerBuilder = new StringBuilder();
         var tokenCount = 0;
+        LlmUsage? llmUsage = null;
+        LlmCost? llmCost = null;
 
-        await foreach (var token in _llmService.GenerateCompletionStreamAsync(systemPrompt, userPrompt, cancellationToken))
+        await foreach (var chunk in _llmService.GenerateCompletionStreamAsync(systemPrompt, userPrompt, cancellationToken))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            answerBuilder.Append(token);
-            tokenCount++;
-            yield return CreateEvent(StreamingEventType.Token, new StreamingToken(token));
+
+            // ISSUE-1725: Handle final chunk with usage metadata
+            if (chunk.IsFinal && chunk.Usage != null && chunk.Cost != null)
+            {
+                llmUsage = chunk.Usage;
+                llmCost = chunk.Cost;
+                _logger.LogInformation(
+                    "Streaming usage received: {PromptTokens}p + {CompletionTokens}c = {TotalTokens}t (${Cost:F6})",
+                    llmUsage.PromptTokens, llmUsage.CompletionTokens, llmUsage.TotalTokens, llmCost.TotalCost);
+                continue; // Don't append content from final chunk (it's null)
+            }
+
+            // Regular content chunk
+            if (!string.IsNullOrEmpty(chunk.Content))
+            {
+                answerBuilder.Append(chunk.Content);
+                tokenCount++;
+                yield return CreateEvent(StreamingEventType.Token, new StreamingToken(chunk.Content));
+            }
         }
 
         var answer = answerBuilder.ToString().Trim();
+
+        // ISSUE-1725: Record LLM token usage with OpenTelemetry GenAI semantic conventions
+        if (llmUsage != null && llmCost != null)
+        {
+            Api.Observability.MeepleAiMetrics.RecordLlmTokenUsage(
+                promptTokens: llmUsage.PromptTokens,
+                completionTokens: llmUsage.CompletionTokens,
+                totalTokens: llmUsage.TotalTokens,
+                modelId: llmCost.ModelId,
+                provider: llmCost.Provider,
+                operationDurationMs: null, // Not tracked for streaming
+                costUsd: llmCost.TotalCost);
+        }
 
         // Calculate quality metrics
         var llmConfidence = _qualityTrackingService.CalculateLlmConfidence(answer, domainSearchResults);

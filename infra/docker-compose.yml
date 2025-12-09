@@ -2,10 +2,16 @@ services:
   postgres:
     image: postgres:16.4-alpine3.20
     restart: unless-stopped
+    profiles: [minimal, dev, observability, ai, automation, full]
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-meeple}
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
       POSTGRES_DB: ${POSTGRES_DB:-meepleai}
+      # Performance tuning aligned with resource limits
+      POSTGRES_SHARED_BUFFERS: 512MB
+      POSTGRES_EFFECTIVE_CACHE_SIZE: 1536MB
+      POSTGRES_WORK_MEM: 16MB
+      POSTGRES_MAINTENANCE_WORK_MEM: 256MB
     ports:
       - "127.0.0.1:5432:5432"
     volumes:
@@ -20,10 +26,20 @@ services:
       retries: 10
     networks:
       - meepleai
+    shm_size: 1g
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '1.0'
+          memory: 1G
 
   qdrant:
     image: qdrant/qdrant:v1.12.4
     restart: unless-stopped
+    profiles: [minimal, dev, observability, ai, automation, full]
     ports:
       - "127.0.0.1:6333:6333"  # HTTP REST API
       - "127.0.0.1:6334:6334"  # gRPC API
@@ -37,11 +53,20 @@ services:
       start_period: 10s
     networks:
       - meepleai
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
 
   redis:
     image: redis:7.4.1-alpine3.20
     restart: unless-stopped
-    command: ["sh","-c","redis-server --appendonly yes --requirepass $(cat /run/secrets/redis-password)"]
+    profiles: [minimal, dev, observability, ai, automation, full]
+    command: ["sh","-c","redis-server --appendonly yes --requirepass $(cat /run/secrets/redis-password) --maxmemory 768mb --maxmemory-policy allkeys-lru"]
     ports:
       - "127.0.0.1:6379:6379"
     healthcheck:
@@ -53,10 +78,25 @@ services:
       - meepleai
     secrets:
       - redis-password
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
 
   ollama:
     image: ollama/ollama:0.3.14
     restart: unless-stopped
+    profiles: [ai, full]
+    environment:
+      # Memory management for CPU-only mode
+      OLLAMA_MAX_LOADED_MODELS: 3
+      OLLAMA_KEEP_ALIVE: 5m
+      # Uncomment if using GPU
+      # OLLAMA_GPU_MEMORY_FRACTION: 0.80
     ports:
       - "11434:11434"
     volumes:
@@ -69,8 +109,15 @@ services:
       start_period: 20s
     networks:
       - meepleai
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          memory: 8G
+        reservations:
+          cpus: '2.0'
+          memory: 4G
     # Uncomment if you have NVIDIA GPU support
-    # deploy:
     #   resources:
     #     reservations:
     #       devices:
@@ -81,6 +128,7 @@ services:
   ollama-pull:
     image: curlimages/curl:8.12.1
     container_name: ollama-pull
+    profiles: [ai, full]
     depends_on:
       ollama:
         condition: service_healthy
@@ -93,6 +141,14 @@ services:
       '
     networks:
       - meepleai
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
 
   # AI-09: Local multilingual embedding service
   embedding-service:
@@ -100,6 +156,7 @@ services:
       context: ../apps/embedding-service
       dockerfile: ./Dockerfile
     restart: unless-stopped
+    profiles: [ai, full]
     ports:
       - "8000:8000"
     healthcheck:
@@ -110,8 +167,15 @@ services:
       start_period: 60s
     networks:
       - meepleai
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
     # Uncomment if you have NVIDIA GPU support for faster embeddings
-    # deploy:
     #   resources:
     #     reservations:
     #       devices:
@@ -126,6 +190,7 @@ services:
       dockerfile: ./Dockerfile
     container_name: meepleai-unstructured
     restart: unless-stopped
+    profiles: [ai, full]
     ports:
       - "8001:8001"
     environment:
@@ -150,6 +215,14 @@ services:
       start_period: 20s
     networks:
       - meepleai
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '1.0'
+          memory: 1G
 
   # BGAI-005: SmolDocling VLM service (Stage 2 - complex layouts fallback)
   smoldocling-service:
@@ -158,6 +231,7 @@ services:
       dockerfile: ./Dockerfile
     container_name: meepleai-smoldocling
     restart: unless-stopped
+    profiles: [ai, full]
     ports:
       - "8002:8002"
     environment:
@@ -187,8 +261,15 @@ services:
       start_period: 120s  # Long startup for model download
     networks:
       - meepleai
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
     # Uncomment for GPU support (requires NVIDIA Docker runtime)
-    # deploy:
     #   resources:
     #     reservations:
     #       devices:
@@ -203,6 +284,7 @@ services:
       dockerfile: ./Dockerfile
     container_name: meepleai-reranker
     restart: unless-stopped
+    profiles: [ai, full]
     ports:
       - "127.0.0.1:8003:8003"  # Bind to localhost only for security
     environment:
@@ -220,8 +302,15 @@ services:
       start_period: 120s  # Long startup for model download
     networks:
       - meepleai
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '1.0'
+          memory: 1G
     # Uncomment for GPU support (requires NVIDIA Docker runtime)
-    # deploy:
     #   resources:
     #     reservations:
     #       devices:
@@ -229,43 +318,16 @@ services:
     #           count: 1
     #           capabilities: [gpu]
 
-  seq:
-    image: datalust/seq:2025.1
-    restart: unless-stopped
-    environment:
-      ACCEPT_EULA: "Y"
-    ports:
-      - "127.0.0.1:5341:5341"  # Ingestion port
-      - "127.0.0.1:8081:80"    # Web UI port
-    volumes:
-      - seqdata:/data
-    networks:
-      - meepleai
-
   # OPS-02: OpenTelemetry Observability Stack
-  jaeger:
-    image: jaegertracing/all-in-one:1.74.0
-    restart: unless-stopped
-    environment:
-      COLLECTOR_OTLP_ENABLED: "true"
-      SPAN_STORAGE_TYPE: "badger"
-      BADGER_EPHEMERAL: "true"  # Use in-memory storage for development (no persistence needed)
-    ports:
-      - "127.0.0.1:16686:16686"  # Jaeger UI
-      - "127.0.0.1:4318:4318"    # OTLP HTTP receiver
-      - "127.0.0.1:4317:4317"    # OTLP gRPC receiver (optional)
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:16686"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-    networks:
-      - meepleai
+  # Seq and Jaeger removed - replaced by HyperDX unified observability (see docker-compose.hyperdx.yml)
+  # Migration: Issue #1564 - HyperDX provides logs, traces, and session replay in one platform
+  # HyperDX UI: http://localhost:8180
+  # OTLP endpoints: gRPC :14317, HTTP :14318
 
   prometheus:
     image: prom/prometheus:v3.7.0
     restart: unless-stopped
+    profiles: [dev, observability, full]
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
@@ -285,11 +347,20 @@ services:
       retries: 5
     networks:
       - meepleai
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
 
   # OPS-05: Error Monitoring & Alerting
   alertmanager:
     image: prom/alertmanager:v0.27.0
     restart: unless-stopped
+    profiles: [observability, full]
     env_file:
       - ./env/alertmanager.env
     secrets:
@@ -313,6 +384,14 @@ services:
       retries: 5
     networks:
       - meepleai
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
 
   # NOTE: Grafana OnCall is commented out for now as it requires manual setup
   # To add on-call management, follow the setup guide at:
@@ -336,9 +415,60 @@ services:
   #   networks:
   #     - meepleai
 
+  # P3-705: cAdvisor for container metrics
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    restart: unless-stopped
+    profiles: [observability, full]
+    privileged: true
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    ports:
+      - "127.0.0.1:8082:8080"
+    networks:
+      - meepleai
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+  # P3-705: node-exporter for host metrics
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    restart: unless-stopped
+    profiles: [observability, full]
+    command:
+      - '--path.rootfs=/host'
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    volumes:
+      - /:/host:ro,rslave
+    ports:
+      - "127.0.0.1:9100:9100"
+    networks:
+      - meepleai
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
   grafana:
     image: grafana/grafana:11.4.0
     restart: unless-stopped
+    profiles: [dev, observability, full]
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD__FILE: /run/secrets/grafana-admin-password
@@ -355,7 +485,7 @@ services:
       - "127.0.0.1:3001:3000"
     depends_on:
       - prometheus
-      - jaeger
+      # jaeger dependency removed - replaced by HyperDX (Issue #1564)
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
       interval: 10s
@@ -364,10 +494,22 @@ services:
       start_period: 20s
     networks:
       - meepleai
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
 
   n8n:
     image: n8nio/n8n:1.114.4
     restart: unless-stopped
+    profiles: [automation, full]
+    environment:
+      # Node.js heap size tuning (75% of container limit minus overhead)
+      NODE_OPTIONS: "--max-old-space-size=512"
     env_file:
       - ./env/n8n.env.dev
     secrets:
@@ -385,12 +527,21 @@ services:
         condition: service_healthy
     networks:
       - meepleai
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
 
   api:
     build:
       context: ../apps/api
       dockerfile: ./src/Api/Dockerfile
     restart: unless-stopped
+    profiles: [minimal, dev, observability, ai, automation, full]
     env_file:
       - ./env/api.env.dev
     environment:
@@ -433,8 +584,8 @@ services:
         condition: service_started
       redis:
         condition: service_healthy
-      ollama:
-        condition: service_healthy
+      # ollama dependency removed - optional service for local embeddings
+      # API works without it (uses OpenRouter for LLM, embedding-service for embeddings)
     healthcheck:
       test: ["CMD-SHELL", "curl --fail http://localhost:8080/ || exit 1"]
       interval: 10s
@@ -443,12 +594,21 @@ services:
       start_period: 20s
     networks:
       - meepleai
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '1.0'
+          memory: 1G
 
   web:
     build:
       context: ../apps/web
       dockerfile: ./Dockerfile
     restart: unless-stopped
+    profiles: [minimal, dev, observability, ai, automation, full]
     env_file:
       - ./env/web.env.dev
     ports:
@@ -464,14 +624,23 @@ services:
       start_period: 60s
     networks:
       - meepleai
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
 
 volumes:
   pgdata:
   qdrantdata:
-  seqdata:
+  # seqdata removed - replaced by HyperDX (Issue #1564)
   ollamadata:
   # OPS-02: OpenTelemetry volumes
   # jaegerdata removed - using ephemeral storage for development
+  # Seq and Jaeger replaced by HyperDX unified observability
   prometheusdata:
   grafanadata:
   # OPS-05: Error Monitoring & Alerting volumes

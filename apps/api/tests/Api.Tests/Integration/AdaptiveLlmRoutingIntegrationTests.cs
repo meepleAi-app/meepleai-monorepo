@@ -5,6 +5,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
 using Api.Configuration;
 using Api.Services;
 using Api.Services.LlmClients;
@@ -31,7 +32,6 @@ namespace Api.Tests.Integration;
 ///
 /// Dependencies: BGAI-020, BGAI-021
 /// </remarks>
-[Collection("LlmRouting")]
 [Trait("Category", "Integration")]
 public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
 {
@@ -105,9 +105,6 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
         _loggerFactory?.Dispose();
         return ValueTask.CompletedTask;
     }
-
-    #region Test 1: Ollama Primary Success
-
     [Fact]
     public async Task OllamaPrimarySuccess_GeneratesCompletion()
     {
@@ -158,11 +155,6 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
                 It.IsAny<CancellationToken>()),
             Times.Never);
     }
-
-    #endregion
-
-    #region Test 2: Ollama Fails → OpenRouter Fallback
-
     [Fact]
     public async Task OllamaFails_FallsBackToOpenRouter()
     {
@@ -211,11 +203,6 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
                 It.IsAny<CancellationToken>()),
             Times.AtLeastOnce);
     }
-
-    #endregion
-
-    #region Test 3: Both Providers Down → Error Handling
-
     [Fact]
     public async Task BothProvidersDown_ReturnsError()
     {
@@ -253,11 +240,6 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
         Assert.NotNull(result.ErrorMessage);
         Assert.Contains("error", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
     }
-
-    #endregion
-
-    #region Test 4: Feature Flag Toggle
-
     [Fact]
     public async Task FeatureFlag_DisableOllama_FallsBackToOpenRouter()
     {
@@ -344,11 +326,6 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
-
-    #endregion
-
-    #region Test 5: Cost Tracking Accuracy
-
     [Fact]
     public async Task CostTracking_OllamaIsFree()
     {
@@ -436,11 +413,6 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
-
-    #endregion
-
-    #region Test 6: Latency Comparison
-
     [Fact]
     public async Task LatencyTracking_RecordsLatency()
     {
@@ -533,11 +505,6 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
             Assert.NotNull(latencyStats);
         }
     }
-
-    #endregion
-
-    #region Helper Methods
-
     /// <summary>
     /// Creates a configured HybridLlmService instance for testing
     /// </summary>
@@ -553,9 +520,9 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
         };
 
         var routingStrategy = new HybridAdaptiveRoutingStrategy(
-            _strategyLogger,
             _configuration,
-            aiSettings);
+            aiSettings,
+            _strategyLogger);
 
         return new HybridLlmService(
             clients,
@@ -668,7 +635,4 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
             password,
             role);
     }
-
-    #endregion
 }
-

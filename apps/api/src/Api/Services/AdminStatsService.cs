@@ -92,8 +92,10 @@ public class AdminStatsService : IAdminStatsService
         CancellationToken cancellationToken)
     {
         var startOfDay = now.Date;
+        var start7DaysAgo = now.AddDays(-7);
+        var start30DaysAgo = now.AddDays(-30);
 
-        // Parallel independent queries
+        // Parallel independent queries (original 8 + new 8 for Issue #874)
         var totalUsersTask = _dbContext.Users
             .AsNoTracking()
             .CountAsync(cancellationToken);
@@ -129,9 +131,65 @@ public class AdminStatsService : IAdminStatsService
             .AsNoTracking()
             .SumAsync(log => (long)log.TokenCount, cancellationToken);
 
-        await Task.WhenAll(totalUsersTask, activeSessionsTask, apiRequestsTodayTask,
+        // Issue #874: Additional metrics for centralized dashboard
+        var totalGamesTask = _dbContext.Games
+            .AsNoTracking()
+            .CountAsync(cancellationToken);
+
+        var apiRequests7dTask = _dbContext.AiRequestLogs
+            .AsNoTracking()
+            .Where(log => log.CreatedAt >= start7DaysAgo)
+            .CountAsync(cancellationToken);
+
+        var apiRequests30dTask = _dbContext.AiRequestLogs
+            .AsNoTracking()
+            .Where(log => log.CreatedAt >= start30DaysAgo)
+            .CountAsync(cancellationToken);
+
+        var avgLatency24hTask = _dbContext.AiRequestLogs
+            .AsNoTracking()
+            .Where(log => log.CreatedAt >= startOfDay)
+            .AverageAsync(log => (double?)log.LatencyMs, cancellationToken);
+
+        var avgLatency7dTask = _dbContext.AiRequestLogs
+            .AsNoTracking()
+            .Where(log => log.CreatedAt >= start7DaysAgo)
+            .AverageAsync(log => (double?)log.LatencyMs, cancellationToken);
+
+        var errorCount24hTask = _dbContext.AiRequestLogs
+            .AsNoTracking()
+            .Where(log => log.CreatedAt >= startOfDay && log.Status != "Success")
+            .CountAsync(cancellationToken);
+
+        var totalCount24hTask = _dbContext.AiRequestLogs
+            .AsNoTracking()
+            .Where(log => log.CreatedAt >= startOfDay)
+            .CountAsync(cancellationToken);
+
+        var activeAlertsTask = _dbContext.Alerts
+            .AsNoTracking()
+            .Where(a => a.IsActive)
+            .CountAsync(cancellationToken);
+
+        var resolvedAlertsTask = _dbContext.Alerts
+            .AsNoTracking()
+            .Where(a => !a.IsActive && a.ResolvedAt.HasValue)
+            .CountAsync(cancellationToken);
+
+        await Task.WhenAll(
+            totalUsersTask, activeSessionsTask, apiRequestsTodayTask,
             totalPdfDocumentsTask, totalChatMessagesTask, avgConfidenceTask,
-            totalRagRequestsTask, totalTokensTask);
+            totalRagRequestsTask, totalTokensTask,
+            // Issue #874 metrics
+            totalGamesTask, apiRequests7dTask, apiRequests30dTask,
+            avgLatency24hTask, avgLatency7dTask, errorCount24hTask, totalCount24hTask,
+            activeAlertsTask, resolvedAlertsTask
+        );
+
+        // Calculate error rate (avoid division by zero)
+        var errorCount = await errorCount24hTask;
+        var totalCount = await totalCount24hTask;
+        var errorRate = totalCount > 0 ? (double)errorCount / totalCount : 0.0;
 
         return new DashboardMetrics(
             TotalUsers: await totalUsersTask,
@@ -141,7 +199,16 @@ public class AdminStatsService : IAdminStatsService
             TotalChatMessages: await totalChatMessagesTask,
             AverageConfidenceScore: await avgConfidenceTask ?? 0.0,
             TotalRagRequests: await totalRagRequestsTask,
-            TotalTokensUsed: await totalTokensTask
+            TotalTokensUsed: await totalTokensTask,
+            // Issue #874: Additional metrics
+            TotalGames: await totalGamesTask,
+            ApiRequests7d: await apiRequests7dTask,
+            ApiRequests30d: await apiRequests30dTask,
+            AverageLatency24h: await avgLatency24hTask ?? 0.0,
+            AverageLatency7d: await avgLatency7dTask ?? 0.0,
+            ErrorRate24h: errorRate,
+            ActiveAlerts: await activeAlertsTask,
+            ResolvedAlerts: await resolvedAlertsTask
         );
     }
 

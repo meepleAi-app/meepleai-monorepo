@@ -2,9 +2,11 @@ using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Exceptions;
 using System;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Domain;
 
+[Trait("Category", TestCategories.Unit)]
 public class PasswordHashTests
 {
     [Fact]
@@ -73,4 +75,3 @@ public class PasswordHashTests
     }
 
 }
-

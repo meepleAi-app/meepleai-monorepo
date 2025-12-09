@@ -2,6 +2,7 @@ using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Exceptions;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Domain.Entities;
 
@@ -10,10 +11,9 @@ namespace Api.Tests.BoundedContexts.Authentication.Domain.Entities;
 /// Tests business rules, validation logic, and authentication method management.
 /// Target: 90%+ coverage for OAuth-related methods.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class UserOAuthTests
 {
-    #region LinkOAuthAccount Tests (7 tests)
-
     [Fact]
     public void LinkOAuthAccount_ValidAccount_AddsToCollection()
     {
@@ -118,11 +118,6 @@ public class UserOAuthTests
         // Collection should be readonly and not allow direct modification
         Assert.Single(collection);
     }
-
-    #endregion
-
-    #region UnlinkOAuthAccount Tests (6 tests)
-
     [Fact]
     public void UnlinkOAuthAccount_ValidProvider_RemovesFromCollection()
     {
@@ -214,11 +209,6 @@ public class UserOAuthTests
         Assert.Contains(user.OAuthAccounts, a => a.Provider == "discord");
         Assert.True(user.HasAnyAuthenticationMethod()); // Still has Discord
     }
-
-    #endregion
-
-    #region GetOAuthAccount Tests (3 tests)
-
     [Fact]
     public void GetOAuthAccount_ProviderExists_ReturnsAccount()
     {
@@ -267,11 +257,6 @@ public class UserOAuthTests
         Assert.NotNull(result);
         Assert.Equal(linkedProvider, result.Provider);
     }
-
-    #endregion
-
-    #region HasOAuthAccount Tests (4 tests)
-
     [Fact]
     public void HasOAuthAccount_ProviderLinked_ReturnsTrue()
     {
@@ -333,11 +318,6 @@ public class UserOAuthTests
         // Assert
         Assert.True(result);
     }
-
-    #endregion
-
-    #region HasAnyAuthenticationMethod Tests (4 tests)
-
     [Fact]
     public void HasAnyAuthenticationMethod_UserHasPasswordOnly_ReturnsTrue()
     {
@@ -393,11 +373,6 @@ public class UserOAuthTests
         // Assert
         Assert.False(result); // Edge case validation
     }
-
-    #endregion
-
-    #region Integration/Edge Case Tests (3 tests)
-
     [Fact]
     public void LinkMultipleProviders_GoogleDiscordGitHub_AllLinkedSuccessfully()
     {
@@ -473,11 +448,6 @@ public class UserOAuthTests
         Assert.Empty(user.OAuthAccounts);
         Assert.False(user.HasOAuthAccount("discord"));
     }
-
-    #endregion
-
-    #region Test Helpers
-
     /// <summary>
     /// Creates a test user with email, password, and User role.
     /// </summary>
@@ -533,7 +503,4 @@ public class UserOAuthTests
             tokenExpiresAt: DateTime.UtcNow.AddHours(1)
         );
     }
-
-    #endregion
 }
-

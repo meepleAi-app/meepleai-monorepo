@@ -7,6 +7,7 @@ using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Application;
 
@@ -14,6 +15,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Application;
 /// Application layer tests for user profile management handlers.
 /// Tests handler logic with mocked dependencies.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class UserProfileHandlerTests
 {
     private readonly Mock<IUserRepository> _userRepositoryMock;
@@ -24,9 +26,6 @@ public class UserProfileHandlerTests
         _userRepositoryMock = new Mock<IUserRepository>();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
     }
-
-    #region GetUserProfileQueryHandler Tests
-
     [Fact]
     public async Task GetUserProfile_UserExists_ReturnsProfileDto()
     {
@@ -69,11 +68,6 @@ public class UserProfileHandlerTests
         // Assert
         Assert.Null(result);
     }
-
-    #endregion
-
-    #region UpdateUserProfileCommandHandler Tests
-
     [Fact]
     public async Task UpdateProfile_DisplayNameOnly_UpdatesSuccessfully()
     {
@@ -180,11 +174,6 @@ public class UserProfileHandlerTests
             handler.Handle(command, TestContext.Current.CancellationToken));
         Assert.Contains("User not found", exception.Message);
     }
-
-    #endregion
-
-    #region ChangePasswordCommandHandler Tests
-
     [Fact]
     public async Task ChangePassword_CorrectCurrentPassword_ChangesSuccessfully()
     {
@@ -285,9 +274,6 @@ public class UserProfileHandlerTests
             handler.Handle(command, TestContext.Current.CancellationToken));
         Assert.Contains("User not found", exception.Message);
     }
-
-    #endregion
-
     private static User CreateTestUser(Guid? userId = null, string password = "TestPassword123!")
     {
         return new User(
@@ -299,4 +285,3 @@ public class UserProfileHandlerTests
         );
     }
 }
-

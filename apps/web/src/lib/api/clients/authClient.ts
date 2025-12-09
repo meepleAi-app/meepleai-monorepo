@@ -8,6 +8,14 @@
 import type { HttpClient } from '../core/httpClient';
 import { setStoredApiKey, clearStoredApiKey } from '../core/apiKeyStore';
 import {
+  AuthUserSchema,
+  LoginResponseSchema,
+  RegisterResponseSchema,
+  LogoutResponseSchema,
+  CurrentUserResponseSchema,
+  VerifyResetTokenResponseSchema,
+  RequestPasswordResetResponseSchema,
+  ConfirmPasswordResetResponseSchema,
   SessionStatusResponseSchema,
   UserSessionInfoSchema,
   RevokeSessionResponseSchema,
@@ -20,6 +28,15 @@ import {
   ChangePasswordResponseSchema,
   UserPreferencesSchema,
   ApiKeyLoginResponseSchema,
+  UserSearchResultSchema,
+  type AuthUser,
+  type LoginResponse,
+  type RegisterResponse,
+  type LogoutResponse,
+  type CurrentUserResponse,
+  type VerifyResetTokenResponse,
+  type RequestPasswordResetResponse,
+  type ConfirmPasswordResetResponse,
   type SessionStatusResponse,
   type UserSessionInfo,
   type RevokeSessionResponse,
@@ -32,10 +49,23 @@ import {
   type ChangePasswordResponse,
   type UserPreferences,
   type ApiKeyLoginResponse,
+  type UserSearchResult,
 } from '../schemas';
 
 export interface CreateAuthClientParams {
   httpClient: HttpClient;
+}
+
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface RegisterRequest {
+  email: string;
+  password: string;
+  displayName?: string;
+  role?: string;
 }
 
 export interface UpdateProfileRequest {
@@ -60,13 +90,111 @@ export interface ChangePasswordRequest {
  */
 export function createAuthClient({ httpClient }: CreateAuthClientParams) {
   return {
+    // ========== Core Authentication ==========
+
+    /**
+     * Login with email and password
+     * POST /api/v1/auth/login
+     */
+    async login(request: LoginRequest): Promise<AuthUser> {
+      const response = await httpClient.post('/api/v1/auth/login', request, LoginResponseSchema);
+      return response.user;
+    },
+
+    /**
+     * Register new user account
+     * POST /api/v1/auth/register
+     */
+    async register(request: RegisterRequest): Promise<AuthUser> {
+      const response = await httpClient.post(
+        '/api/v1/auth/register',
+        request,
+        RegisterResponseSchema
+      );
+      return response.user;
+    },
+
+    /**
+     * Logout current user
+     * POST /api/v1/auth/logout
+     */
+    async logout(): Promise<void> {
+      await httpClient.post('/api/v1/auth/logout', {}, LogoutResponseSchema);
+    },
+
+    /**
+     * Get current authenticated user
+     * GET /api/v1/auth/me
+     */
+    async getMe(): Promise<AuthUser | null> {
+      const response = await httpClient.get('/api/v1/auth/me', CurrentUserResponseSchema);
+      return response?.user ?? null;
+    },
+
+    // ========== Password Reset ==========
+
+    /**
+     * Verify password reset token validity
+     * GET /api/v1/auth/password-reset/verify?token={token}
+     */
+    async verifyResetToken(token: string): Promise<void> {
+      await httpClient.get(`/api/v1/auth/password-reset/verify?token=${encodeURIComponent(token)}`);
+    },
+
+    /**
+     * Request password reset email
+     * POST /api/v1/auth/password-reset/request
+     */
+    async requestPasswordReset(email: string): Promise<RequestPasswordResetResponse> {
+      return httpClient.post(
+        '/api/v1/auth/password-reset/request',
+        { email },
+        RequestPasswordResetResponseSchema
+      );
+    },
+
+    /**
+     * Confirm password reset with token and new password
+     * PUT /api/v1/auth/password-reset/confirm
+     */
+    async confirmPasswordReset(
+      token: string,
+      newPassword: string
+    ): Promise<ConfirmPasswordResetResponse> {
+      return httpClient.put(
+        '/api/v1/auth/password-reset/confirm',
+        { token, newPassword },
+        ConfirmPasswordResetResponseSchema
+      );
+    },
+
+    // ========== User Search ==========
+
+    /**
+     * Search users by query
+     * GET /api/v1/users/search?query={query}
+     *
+     * Issue #1977: Added UserSearchResultSchema validation
+     */
+    async searchUsers(query: string): Promise<UserSearchResult[]> {
+      const result = await httpClient.get(
+        `/api/v1/users/search?query=${encodeURIComponent(query)}`,
+        UserSearchResultSchema.array()
+      );
+      return result ?? [];
+    },
+
     // ========== API Key Authentication ==========
 
     /**
      * Validate API key and store it for header-based auth
      */
     async loginWithApiKey(apiKey: string): Promise<ApiKeyLoginResponse> {
-      const response = await httpClient.post('/api/v1/auth/apikey/login', { apiKey }, ApiKeyLoginResponseSchema);
+      const response = await httpClient.post(
+        '/api/v1/auth/apikey/login',
+        { apiKey },
+        ApiKeyLoginResponseSchema
+      );
       await setStoredApiKey(apiKey.trim());
       return response;
     },
@@ -75,7 +203,10 @@ export function createAuthClient({ httpClient }: CreateAuthClientParams) {
      * Logout API key authentication (clears stored key)
      */
     async logoutApiKey(): Promise<{ ok: boolean; message: string }> {
-      const response = await httpClient.post<{ ok: boolean; message: string }>('/api/v1/auth/apikey/logout', {});
+      const response = await httpClient.post<{ ok: boolean; message: string }>(
+        '/api/v1/auth/apikey/logout',
+        {}
+      );
       clearStoredApiKey();
       return response;
     },
@@ -86,21 +217,14 @@ export function createAuthClient({ httpClient }: CreateAuthClientParams) {
      * Get current session status
      */
     async getSessionStatus(): Promise<SessionStatusResponse | null> {
-      return httpClient.get(
-        '/api/v1/auth/session/status',
-        SessionStatusResponseSchema
-      );
+      return httpClient.get('/api/v1/auth/session/status', SessionStatusResponseSchema);
     },
 
     /**
      * Extend current session
      */
     async extendSession(): Promise<SessionStatusResponse> {
-      return httpClient.post(
-        '/api/v1/auth/session/extend',
-        {},
-        SessionStatusResponseSchema
-      );
+      return httpClient.post('/api/v1/auth/session/extend', {}, SessionStatusResponseSchema);
     },
 
     /**
@@ -146,22 +270,14 @@ export function createAuthClient({ httpClient }: CreateAuthClientParams) {
      * Setup 2FA (get QR code and backup codes)
      */
     async setup2FA(): Promise<TotpSetupResponse> {
-      return httpClient.post(
-        '/api/v1/auth/2fa/setup',
-        {},
-        TotpSetupResponseSchema
-      );
+      return httpClient.post('/api/v1/auth/2fa/setup', {}, TotpSetupResponseSchema);
     },
 
     /**
      * Enable 2FA with verification code
      */
     async enable2FA(code: string): Promise<Enable2FAResult> {
-      return httpClient.post(
-        '/api/v1/auth/2fa/enable',
-        { code },
-        Enable2FAResultSchema
-      );
+      return httpClient.post('/api/v1/auth/2fa/enable', { code }, Enable2FAResultSchema);
     },
 
     /**
@@ -175,15 +291,11 @@ export function createAuthClient({ httpClient }: CreateAuthClientParams) {
      * Disable 2FA
      */
     async disable2FA(password: string, code: string): Promise<Disable2FAResult> {
-      const response = await httpClient.post<{ message: string }>(
+      return httpClient.post(
         '/api/v1/auth/2fa/disable',
-        { password, code }
+        { password, code },
+        Disable2FAResultSchema
       );
-
-      return {
-        Success: true,
-        ErrorMessage: null,
-      };
     },
 
     // ========== User Profile ==========
@@ -198,22 +310,14 @@ export function createAuthClient({ httpClient }: CreateAuthClientParams) {
     /**
      * Update user profile
      */
-    async updateProfile(
-      payload: UpdateProfileRequest
-    ): Promise<UpdateProfileResponse> {
-      return httpClient.put(
-        '/api/v1/users/profile',
-        payload,
-        UpdateProfileResponseSchema
-      );
+    async updateProfile(payload: UpdateProfileRequest): Promise<UpdateProfileResponse> {
+      return httpClient.put('/api/v1/users/profile', payload, UpdateProfileResponseSchema);
     },
 
     /**
      * Change user password
      */
-    async changePassword(
-      request: ChangePasswordRequest
-    ): Promise<ChangePasswordResponse> {
+    async changePassword(request: ChangePasswordRequest): Promise<ChangePasswordResponse> {
       return httpClient.put(
         '/api/v1/users/profile/password',
         request,
@@ -231,16 +335,11 @@ export function createAuthClient({ httpClient }: CreateAuthClientParams) {
     },
 
     /**
-     * Update user preferences
+     * Update user preferences (Issue #1675)
+     * Returns updated UserProfile with new preferences
      */
-    async updatePreferences(
-      payload: UpdatePreferencesRequest
-    ): Promise<UserPreferences> {
-      return httpClient.put(
-        '/api/v1/users/preferences',
-        payload,
-        UserPreferencesSchema
-      );
+    async updatePreferences(payload: UpdatePreferencesRequest): Promise<UserProfile> {
+      return httpClient.put('/api/v1/users/preferences', payload, UserProfileSchema);
     },
   };
 }

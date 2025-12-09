@@ -2,6 +2,7 @@ using Api.BoundedContexts.Authentication.Application.Commands;
 using Api.BoundedContexts.Authentication.Application.Validators;
 using FluentValidation.TestHelper;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Application.Validators;
 
@@ -9,6 +10,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Application.Validators;
 /// Unit tests for RegisterCommandValidator.
 /// Issue #1449: FluentValidation for Authentication CQRS pipeline
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public sealed class RegisterCommandValidatorTests
 {
     private readonly RegisterCommandValidator _validator = new();
@@ -29,9 +31,6 @@ public sealed class RegisterCommandValidatorTests
         // Assert
         result.ShouldNotHaveAnyValidationErrors();
     }
-
-    #region Email Validation
-
     [Theory]
     [InlineData(null)]
     [InlineData("")]
@@ -91,11 +90,6 @@ public sealed class RegisterCommandValidatorTests
         // Assert
         result.ShouldHaveValidationErrorFor(x => x.Email);
     }
-
-    #endregion
-
-    #region Password Validation
-
     [Theory]
     [InlineData(null)]
     [InlineData("")]
@@ -156,13 +150,17 @@ public sealed class RegisterCommandValidatorTests
             .WithErrorMessage("Password must not exceed 128 characters");
     }
 
-    [Fact]
-    public void Should_Fail_When_Password_Has_No_Uppercase()
+    [Theory]
+    [InlineData("password123!", "Password must contain at least one uppercase letter")]
+    [InlineData("PASSWORD123!", "Password must contain at least one lowercase letter")]
+    [InlineData("PasswordTest!", "Password must contain at least one digit")]
+    [InlineData("PasswordTest123", "Password must contain at least one special character")]
+    public void Should_Fail_When_Password_Missing_Requirement(string password, string expectedError)
     {
         // Arrange
         var command = new RegisterCommand(
             Email: "test@example.com",
-            Password: "password123!",
+            Password: password,
             DisplayName: "Test User"
         );
 
@@ -171,67 +169,8 @@ public sealed class RegisterCommandValidatorTests
 
         // Assert
         result.ShouldHaveValidationErrorFor(x => x.Password)
-            .WithErrorMessage("Password must contain at least one uppercase letter");
+            .WithErrorMessage(expectedError);
     }
-
-    [Fact]
-    public void Should_Fail_When_Password_Has_No_Lowercase()
-    {
-        // Arrange
-        var command = new RegisterCommand(
-            Email: "test@example.com",
-            Password: "PASSWORD123!",
-            DisplayName: "Test User"
-        );
-
-        // Act
-        var result = _validator.TestValidate(command);
-
-        // Assert
-        result.ShouldHaveValidationErrorFor(x => x.Password)
-            .WithErrorMessage("Password must contain at least one lowercase letter");
-    }
-
-    [Fact]
-    public void Should_Fail_When_Password_Has_No_Digit()
-    {
-        // Arrange
-        var command = new RegisterCommand(
-            Email: "test@example.com",
-            Password: "PasswordTest!",
-            DisplayName: "Test User"
-        );
-
-        // Act
-        var result = _validator.TestValidate(command);
-
-        // Assert
-        result.ShouldHaveValidationErrorFor(x => x.Password)
-            .WithErrorMessage("Password must contain at least one digit");
-    }
-
-    [Fact]
-    public void Should_Fail_When_Password_Has_No_Special_Character()
-    {
-        // Arrange
-        var command = new RegisterCommand(
-            Email: "test@example.com",
-            Password: "PasswordTest123",
-            DisplayName: "Test User"
-        );
-
-        // Act
-        var result = _validator.TestValidate(command);
-
-        // Assert
-        result.ShouldHaveValidationErrorFor(x => x.Password)
-            .WithErrorMessage("Password must contain at least one special character");
-    }
-
-    #endregion
-
-    #region DisplayName Validation
-
     [Theory]
     [InlineData(null)]
     [InlineData("")]
@@ -333,11 +272,6 @@ public sealed class RegisterCommandValidatorTests
         result.ShouldHaveValidationErrorFor(x => x.DisplayName)
             .WithErrorMessage("Display name can only contain letters, numbers, spaces, hyphens, underscores, and periods");
     }
-
-    #endregion
-
-    #region Role Validation
-
     [Theory]
     [InlineData("user")]
     [InlineData("editor")]
@@ -401,9 +335,6 @@ public sealed class RegisterCommandValidatorTests
         result.ShouldHaveValidationErrorFor(x => x.Role)
             .WithErrorMessage("Role must be one of: user, editor, admin");
     }
-
-    #endregion
-
     [Fact]
     public void Should_Fail_With_Multiple_Validation_Errors()
     {
@@ -423,4 +354,3 @@ public sealed class RegisterCommandValidatorTests
         result.ShouldHaveValidationErrorFor(x => x.DisplayName);
     }
 }
-

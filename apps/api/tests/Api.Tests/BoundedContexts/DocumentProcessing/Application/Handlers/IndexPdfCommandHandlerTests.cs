@@ -8,6 +8,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Handlers;
 
@@ -20,6 +21,7 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Handlers;
 /// ISSUE-1500: TEST-002 - Fixed test isolation (fresh context per test)
 /// ISSUE-1818: Migrated to FluentAssertions for improved readability.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class IndexPdfCommandHandlerTests
 {
     /// <summary>
@@ -42,9 +44,6 @@ public class IndexPdfCommandHandlerTests
 
         return (chunkingServiceMock, embeddingServiceMock, qdrantServiceMock, loggerMock);
     }
-
-    #region Construction Tests
-
     [Fact]
     public void Constructor_WithValidDependencies_CreatesInstance()
     {
@@ -104,11 +103,6 @@ public class IndexPdfCommandHandlerTests
         // Assert
         handler.Should().NotBeNull();
     }
-
-    #endregion
-
-    #region Command Tests
-
     [Fact]
     public void IndexPdfCommand_ConstructsCorrectly()
     {
@@ -121,11 +115,6 @@ public class IndexPdfCommandHandlerTests
         // Assert
         command.PdfId.Should().Be(pdfId);
     }
-
-    #endregion
-
-    #region Result DTO Tests
-
     [Fact]
     public void IndexingResultDto_CreateSuccess_ConstructsCorrectly()
     {
@@ -211,11 +200,6 @@ public class IndexPdfCommandHandlerTests
         result.Success.Should().BeFalse();
         result.ErrorCode.Should().Be(PdfIndexingErrorCode.QdrantIndexingFailed);
     }
-
-    #endregion
-
-    #region Error Code Tests
-
     [Theory]
     [InlineData(PdfIndexingErrorCode.PdfNotFound)]
     [InlineData(PdfIndexingErrorCode.TextExtractionRequired)]
@@ -228,9 +212,6 @@ public class IndexPdfCommandHandlerTests
         // Assert
         Enum.IsDefined(typeof(PdfIndexingErrorCode), errorCode).Should().BeTrue();
     }
-
-    #endregion
-
     // NOTE: Full workflow tests (text chunking, embedding generation, Qdrant indexing)
     // should be in integration test suite due to DbContext and multi-service complexity.
     // See integration-tests.yml workflow.

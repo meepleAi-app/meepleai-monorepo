@@ -17,33 +17,19 @@
 
 'use client';
 
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
-import type { AuthUser } from "@/types/auth";
-import { api } from "@/lib/api";
-import { RichTextEditor, ViewModeToggle } from "@/components/editor";
-import { useDebounce } from "@/hooks/useDebounce";
-import { cn } from "@/lib/utils";
-import { getErrorMessage } from "@/lib/utils/errorHandler";
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import type { AuthUser } from '@/types/auth';
+import { api } from '@/lib/api';
+import { RichTextEditor, ViewModeToggle } from '@/components/editor';
+import { useDebounce } from '@/hooks/useDebounce';
+import { cn } from '@/lib/utils';
+import { getErrorMessage } from '@/lib/utils/errorHandler';
 import { logger } from '@/lib/logger';
 import { createErrorContext } from '@/lib/errors';
 import { useAuthUser } from '@/hooks/useAuthUser';
-
-type RuleAtom = {
-  id: string;
-  text: string;
-  section?: string | null;
-  page?: string | null;
-  line?: string | null;
-};
-
-type RuleSpec = {
-  gameId: string;
-  version: string;
-  createdAt: string;
-  rules: RuleAtom[];
-};
+import type { RuleAtom, RuleSpec } from '@/lib/api/schemas';
 
 type AuthResponse = {
   user: AuthUser;
@@ -55,7 +41,7 @@ type HistoryEntry = {
   timestamp: number;
 };
 
-type ViewMode = "rich" | "json";
+type ViewMode = 'rich' | 'json';
 
 export function EditorClient() {
   const { user } = useAuthUser();
@@ -64,13 +50,13 @@ export function EditorClient() {
   const gameId = searchParams?.get('gameId') ?? null;
 
   const [ruleSpec, setRuleSpec] = useState<RuleSpec | null>(null);
-  const [jsonContent, setJsonContent] = useState<string>("");
-  const [richContent, setRichContent] = useState<string>("");
-  const [viewMode, setViewMode] = useState<ViewMode>("rich");
+  const [jsonContent, setJsonContent] = useState<string>('');
+  const [richContent, setRichContent] = useState<string>('');
+  const [viewMode, setViewMode] = useState<ViewMode>('rich');
   const [isValid, setIsValid] = useState<boolean>(true);
-  const [validationError, setValidationError] = useState<string>("");
-  const [statusMessage, setStatusMessage] = useState<string>("");
-  const [errorMessage, setErrorMessage] = useState<string>("");
+  const [validationError, setValidationError] = useState<string>('');
+  const [statusMessage, setStatusMessage] = useState<string>('');
+  const [errorMessage, setErrorMessage] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
@@ -80,12 +66,12 @@ export function EditorClient() {
   const [historyIndex, setHistoryIndex] = useState<number>(-1);
 
   // Debounced content for auto-save (2 second delay)
-  const debouncedContent = useDebounce(viewMode === "rich" ? richContent : jsonContent, 2000);
+  const debouncedContent = useDebounce(viewMode === 'rich' ? richContent : jsonContent, 2000);
 
   // Sanitized rich content for XSS protection (SEC-715)
   // SSR-safe: Only sanitize in browser environment to avoid "window is not defined"
   const sanitizedRichContent = useMemo(() => {
-    if (!richContent) return "";
+    if (!richContent) return '';
 
     // Return unsanitized content during SSR (server-side rendering)
     // Content will be sanitized on client-side hydration
@@ -96,14 +82,38 @@ export function EditorClient() {
 
     return DOMPurify.sanitize(richContent, {
       ALLOWED_TAGS: [
-        'p', 'br', 'strong', 'em', 'u', 's', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-        'ul', 'ol', 'li', 'blockquote', 'code', 'pre', 'a', 'table',
-        'thead', 'tbody', 'tr', 'th', 'td', 'span', 'div'
+        'p',
+        'br',
+        'strong',
+        'em',
+        'u',
+        's',
+        'h1',
+        'h2',
+        'h3',
+        'h4',
+        'h5',
+        'h6',
+        'ul',
+        'ol',
+        'li',
+        'blockquote',
+        'code',
+        'pre',
+        'a',
+        'table',
+        'thead',
+        'tbody',
+        'tr',
+        'th',
+        'td',
+        'span',
+        'div',
       ],
       ALLOWED_ATTR: ['href', 'class', 'style', 'target', 'rel'],
       ALLOW_DATA_ATTR: false,
       ALLOW_UNKNOWN_PROTOCOLS: false,
-      SAFE_FOR_TEMPLATES: true
+      SAFE_FOR_TEMPLATES: true,
     });
   }, [richContent]);
 
@@ -118,60 +128,59 @@ export function EditorClient() {
       const parsed = JSON.parse(content);
 
       // Basic validation against RuleSpec schema
-      if (!parsed.gameId || typeof parsed.gameId !== "string") {
-        throw new Error("gameId è richiesto e deve essere una stringa");
+      if (!parsed.gameId || typeof parsed.gameId !== 'string') {
+        throw new Error('gameId è richiesto e deve essere una stringa');
       }
-      if (!parsed.version || typeof parsed.version !== "string") {
-        throw new Error("version è richiesto e deve essere una stringa");
+      if (!parsed.version || typeof parsed.version !== 'string') {
+        throw new Error('version è richiesto e deve essere una stringa');
       }
-      if (!parsed.createdAt || typeof parsed.createdAt !== "string") {
-        throw new Error("createdAt è richiesto e deve essere una stringa");
+      if (!parsed.createdAt || typeof parsed.createdAt !== 'string') {
+        throw new Error('createdAt è richiesto e deve essere una stringa');
       }
-      if (!Array.isArray(parsed.rules)) {
-        throw new Error("rules deve essere un array");
+      if (!Array.isArray(parsed.atoms)) {
+        throw new Error('atoms deve essere un array');
       }
 
       // Validate each rule atom
-      for (let i = 0; i < parsed.rules.length; i++) {
-        const rule = parsed.rules[i];
-        if (!rule.id || typeof rule.id !== "string") {
-          throw new Error(`rules[${i}].id è richiesto e deve essere una stringa`);
+      for (let i = 0; i < parsed.atoms.length; i++) {
+        const rule = parsed.atoms[i];
+        if (!rule.id || typeof rule.id !== 'string') {
+          throw new Error(`atoms[${i}].id è richiesto e deve essere una stringa`);
         }
-        if (!rule.text || typeof rule.text !== "string") {
-          throw new Error(`rules[${i}].text è richiesto e deve essere una stringa`);
+        if (!rule.text || typeof rule.text !== 'string') {
+          throw new Error(`atoms[${i}].text è richiesto e deve essere una stringa`);
         }
       }
 
       setIsValid(true);
-      setValidationError("");
+      setValidationError('');
     } catch (err) {
       setIsValid(false);
-      setValidationError(getErrorMessage(err, "JSON non valido"));
+      setValidationError(getErrorMessage(err, 'JSON non valido'));
     }
   }, []);
 
   const loadRuleSpec = useCallback(
     async (gId: string) => {
       setIsLoading(true);
-      setErrorMessage("");
+      setErrorMessage('');
       try {
-        const spec = await api.get<RuleSpec>(`/api/v1/games/${gId}/rulespec`);
-        if (spec) {
-          setRuleSpec(spec);
-          const formatted = JSON.stringify(spec, null, 2);
-          setJsonContent(formatted);
-          initializeHistory(formatted);
-          validateJson(formatted);
-        } else {
-          setErrorMessage("RuleSpec non trovato per questo gioco.");
-        }
+        const spec = await api.games.getRuleSpec(gId);
+        setRuleSpec(spec);
+        const formatted = JSON.stringify(spec, null, 2);
+        setJsonContent(formatted);
+        initializeHistory(formatted);
+        validateJson(formatted);
       } catch (err) {
         logger.error(
           'Failed to load rule spec',
           err instanceof Error ? err : new Error(String(err)),
-          createErrorContext('EditorPage', 'loadRuleSpec', { gameId: gId, operation: 'load_rule_spec' })
+          createErrorContext('EditorPage', 'loadRuleSpec', {
+            gameId: gId,
+            operation: 'load_rule_spec',
+          })
         );
-        setErrorMessage(getErrorMessage(err, "Impossibile caricare RuleSpec."));
+        setErrorMessage(getErrorMessage(err, 'Impossibile caricare RuleSpec.'));
       } finally {
         setIsLoading(false);
       }
@@ -181,7 +190,7 @@ export function EditorClient() {
 
   // Load RuleSpec when user and gameId available
   useEffect(() => {
-    if (user && gameId && typeof gameId === "string") {
+    if (user && gameId && typeof gameId === 'string') {
       void loadRuleSpec(gameId);
     }
   }, [user, gameId, loadRuleSpec]);
@@ -191,28 +200,29 @@ export function EditorClient() {
     if (hasUnsavedChanges && isValid && debouncedContent) {
       void handleAutoSave();
     }
-
   }, [debouncedContent]);
 
   const handleAutoSave = async () => {
-    if (!isValid || !gameId || typeof gameId !== "string") {
+    if (!isValid || !gameId || typeof gameId !== 'string') {
       return;
     }
 
     try {
-      const contentToSave = viewMode === "rich" ? convertRichToJson(richContent) : jsonContent;
+      const contentToSave = viewMode === 'rich' ? convertRichToJson(richContent) : jsonContent;
       const parsed: RuleSpec = JSON.parse(contentToSave);
-      
+
       setIsSaving(true);
-      setErrorMessage("");
-      
-      const updated = await api.put<RuleSpec>(`/api/v1/games/${gameId}/rulespec`, parsed);
+      setErrorMessage('');
+
+      const updated = await api.games.updateRuleSpec(gameId, parsed);
       setRuleSpec(updated);
       setHasUnsavedChanges(false);
-      setStatusMessage(`Auto-salvato (versione ${updated.version}) alle ${new Date().toLocaleTimeString()}`);
-      
+      setStatusMessage(
+        `Auto-salvato (versione ${updated.version}) alle ${new Date().toLocaleTimeString()}`
+      );
+
       // Clear success message after 3 seconds
-      setTimeout(() => setStatusMessage(""), 3000);
+      setTimeout(() => setStatusMessage(''), 3000);
     } catch (err) {
       logger.error(
         'Auto-save failed',
@@ -229,25 +239,25 @@ export function EditorClient() {
     // For now, store rich content in a special field
     // In a real implementation, you'd parse HTML to extract structured data
     if (!ruleSpec) return jsonContent;
-    
+
     const updated = {
       ...ruleSpec,
       // Store rich content in a metadata field for now
-      richText: html
+      richText: html,
     };
     return JSON.stringify(updated, null, 2);
   };
 
   const handleViewModeChange = (newMode: ViewMode) => {
-    if (newMode === "json" && viewMode === "rich") {
+    if (newMode === 'json' && viewMode === 'rich') {
       // Convert rich text to JSON before switching
       const converted = convertRichToJson(richContent);
       setJsonContent(converted);
-    } else if (newMode === "rich" && viewMode === "json") {
+    } else if (newMode === 'rich' && viewMode === 'json') {
       // Parse JSON to extract rich content
       try {
         const parsed = JSON.parse(jsonContent);
-        setRichContent(parsed.richText || "<p>Nessun contenuto formattato disponibile</p>");
+        setRichContent(parsed.richText || '<p>Nessun contenuto formattato disponibile</p>');
       } catch {
         // If parsing fails, keep current rich content
       }
@@ -262,10 +272,10 @@ export function EditorClient() {
     try {
       convertRichToJson(html);
       setIsValid(true);
-      setValidationError("");
+      setValidationError('');
     } catch (err) {
       setIsValid(false);
-      setValidationError(getErrorMessage(err, "Impossibile convertire in JSON"));
+      setValidationError(getErrorMessage(err, 'Impossibile convertire in JSON'));
     }
   };
 
@@ -313,23 +323,23 @@ export function EditorClient() {
 
   const handleSave = async () => {
     if (!isValid) {
-      setErrorMessage("Impossibile salvare: JSON non valido");
+      setErrorMessage('Impossibile salvare: JSON non valido');
       return;
     }
 
-    if (!gameId || typeof gameId !== "string") {
-      setErrorMessage("gameId mancante");
+    if (!gameId || typeof gameId !== 'string') {
+      setErrorMessage('gameId mancante');
       return;
     }
 
     try {
-      const contentToSave = viewMode === "rich" ? convertRichToJson(richContent) : jsonContent;
+      const contentToSave = viewMode === 'rich' ? convertRichToJson(richContent) : jsonContent;
       const parsed: RuleSpec = JSON.parse(contentToSave);
       setIsSaving(true);
-      setErrorMessage("");
-      setStatusMessage("");
+      setErrorMessage('');
+      setStatusMessage('');
 
-      const updated = await api.put<RuleSpec>(`/api/v1/games/${gameId}/rulespec`, parsed);
+      const updated = await api.games.updateRuleSpec(gameId, parsed);
       setRuleSpec(updated);
       setHasUnsavedChanges(false);
       setStatusMessage(`RuleSpec salvato con successo (versione ${updated.version})`);
@@ -339,7 +349,7 @@ export function EditorClient() {
         err instanceof Error ? err : new Error(String(err)),
         createErrorContext('EditorPage', 'handleSave', { gameId, operation: 'save_rule_spec' })
       );
-      setErrorMessage(getErrorMessage(err, "Impossibile salvare RuleSpec"));
+      setErrorMessage(getErrorMessage(err, 'Impossibile salvare RuleSpec'));
     } finally {
       setIsSaving(false);
     }
@@ -361,7 +371,7 @@ export function EditorClient() {
   }
 
   // RequireRole already checked permissions, this is redundant but kept for safety
-  if (user && user.role !== "Admin" && user.role !== "Editor") {
+  if (user && user.role !== 'Admin' && user.role !== 'Editor') {
     return (
       <main className="p-6 font-sans">
         <h1>Editor RuleSpec</h1>
@@ -393,9 +403,7 @@ export function EditorClient() {
           <p className="my-2 mx-0 text-gray-600">
             Game: <strong>{gameId}</strong>
             {hasUnsavedChanges && (
-              <span className="ml-3 text-orange-500 text-sm">
-                • Modifiche non salvate
-              </span>
+              <span className="ml-3 text-orange-500 text-sm">• Modifiche non salvate</span>
             )}
           </p>
         </div>
@@ -407,10 +415,7 @@ export function EditorClient() {
           >
             Storico Versioni
           </Link>
-          <Link
-            href="/"
-            className="px-4 py-2 bg-gray-600 text-white no-underline rounded text-sm"
-          >
+          <Link href="/" className="px-4 py-2 bg-gray-600 text-white no-underline rounded text-sm">
             Home
           </Link>
         </div>
@@ -425,9 +430,7 @@ export function EditorClient() {
       )}
 
       {errorMessage && (
-        <div className="p-3 bg-red-50 border border-red-600 rounded mb-4">
-          {errorMessage}
-        </div>
+        <div className="p-3 bg-red-50 border border-red-600 rounded mb-4">{errorMessage}</div>
       )}
 
       {isLoading ? (
@@ -437,18 +440,16 @@ export function EditorClient() {
           {/* Editor Panel */}
           <div className="flex-[1_1_50%] flex flex-col">
             <div className="flex justify-between items-center mb-3">
-              <h2 className="m-0">
-                {viewMode === "rich" ? "Editor Visuale" : "Editor JSON"}
-              </h2>
+              <h2 className="m-0">{viewMode === 'rich' ? 'Editor Visuale' : 'Editor JSON'}</h2>
               <div className="flex gap-2">
-                {viewMode === "json" && (
+                {viewMode === 'json' && (
                   <>
                     <button
                       onClick={handleUndo}
                       disabled={!canUndo}
                       className={cn(
-                        "px-3 py-1.5 text-white border-none rounded cursor-pointer text-sm",
-                        canUndo ? "bg-blue-600" : "bg-gray-300 cursor-not-allowed"
+                        'px-3 py-1.5 text-white border-none rounded cursor-pointer text-sm',
+                        canUndo ? 'bg-blue-600' : 'bg-gray-300 cursor-not-allowed'
                       )}
                       title="Annulla (Ctrl+Z)"
                     >
@@ -458,8 +459,8 @@ export function EditorClient() {
                       onClick={handleRedo}
                       disabled={!canRedo}
                       className={cn(
-                        "px-3 py-1.5 text-white border-none rounded cursor-pointer text-sm",
-                        canRedo ? "bg-blue-600" : "bg-gray-300 cursor-not-allowed"
+                        'px-3 py-1.5 text-white border-none rounded cursor-pointer text-sm',
+                        canRedo ? 'bg-blue-600' : 'bg-gray-300 cursor-not-allowed'
                       )}
                       title="Ripeti (Ctrl+Y)"
                     >
@@ -471,13 +472,13 @@ export function EditorClient() {
                   onClick={handleSave}
                   disabled={!isValid || isSaving || !hasUnsavedChanges}
                   className={cn(
-                    "px-4 py-1.5 text-white border-none rounded text-sm font-bold",
+                    'px-4 py-1.5 text-white border-none rounded text-sm font-bold',
                     isValid && !isSaving && hasUnsavedChanges
-                      ? "bg-green-600 cursor-pointer"
-                      : "bg-gray-300 cursor-not-allowed"
+                      ? 'bg-green-600 cursor-pointer'
+                      : 'bg-gray-300 cursor-not-allowed'
                   )}
                 >
-                  {isSaving ? "Salvataggio..." : hasUnsavedChanges ? "Salva Ora" : "Salvato"}
+                  {isSaving ? 'Salvataggio...' : hasUnsavedChanges ? 'Salva Ora' : 'Salvato'}
                 </button>
               </div>
             </div>
@@ -485,17 +486,15 @@ export function EditorClient() {
             {/* Validation Status */}
             <div
               className={cn(
-                "p-2 rounded mb-2 text-sm",
-                isValid
-                  ? "bg-green-50 border border-green-600"
-                  : "bg-red-50 border border-red-600"
+                'p-2 rounded mb-2 text-sm',
+                isValid ? 'bg-green-50 border border-green-600' : 'bg-red-50 border border-red-600'
               )}
             >
-              {isValid ? "✓ Contenuto valido" : `✗ ${validationError}`}
+              {isValid ? '✓ Contenuto valido' : `✗ ${validationError}`}
             </div>
 
             {/* Editor */}
-            {viewMode === "rich" ? (
+            {viewMode === 'rich' ? (
               <RichTextEditor
                 content={richContent}
                 onChange={handleRichContentChange}
@@ -505,11 +504,11 @@ export function EditorClient() {
             ) : (
               <textarea
                 value={jsonContent}
-                onChange={(e) => handleJsonChange(e.target.value)}
+                onChange={e => handleJsonChange(e.target.value)}
                 onBlur={handleJsonBlur}
                 className={cn(
-                  "flex-1 min-h-[600px] font-mono text-sm p-3 rounded resize-y",
-                  isValid ? "border-2 border-gray-300" : "border-2 border-red-600"
+                  'flex-1 min-h-[600px] font-mono text-sm p-3 rounded resize-y',
+                  isValid ? 'border-2 border-gray-300' : 'border-2 border-red-600'
                 )}
                 spellCheck={false}
               />
@@ -520,14 +519,16 @@ export function EditorClient() {
           <div className="flex-[1_1_50%] flex flex-col">
             <h2 className="mt-0">Preview</h2>
             <div className="flex-1 p-4 bg-gray-50 border border-gray-300 rounded overflow-y-auto min-h-[600px]">
-              {isValid && (viewMode === "rich" ? richContent : jsonContent) ? (
-                viewMode === "rich" ? (
+              {isValid && (viewMode === 'rich' ? richContent : jsonContent) ? (
+                viewMode === 'rich' ? (
                   <div dangerouslySetInnerHTML={{ __html: sanitizedRichContent }} />
                 ) : (
                   <RuleSpecPreview ruleSpec={JSON.parse(jsonContent)} />
                 )
               ) : (
-                <p className="text-gray-400">Correggi gli errori per visualizzare l&apos;anteprima</p>
+                <p className="text-gray-400">
+                  Correggi gli errori per visualizzare l&apos;anteprima
+                </p>
               )}
             </div>
           </div>
@@ -554,13 +555,11 @@ function RuleSpecPreview({ ruleSpec }: { ruleSpec: RuleSpec }) {
             </tr>
             <tr>
               <td className="p-1 px-2 font-bold">Creato:</td>
-              <td className="p-1 px-2">
-                {new Date(ruleSpec.createdAt).toLocaleString()}
-              </td>
+              <td className="p-1 px-2">{new Date(ruleSpec.createdAt).toLocaleString()}</td>
             </tr>
             <tr>
               <td className="p-1 px-2 font-bold">N. Regole:</td>
-              <td className="p-1 px-2">{ruleSpec.rules.length}</td>
+              <td className="p-1 px-2">{ruleSpec.atoms.length}</td>
             </tr>
           </tbody>
         </table>
@@ -568,11 +567,8 @@ function RuleSpecPreview({ ruleSpec }: { ruleSpec: RuleSpec }) {
 
       <div>
         <h3 className="mb-3">Regole</h3>
-        {ruleSpec.rules.map((rule, index) => (
-          <div
-            key={rule.id}
-            className="mb-4 p-3 bg-white border border-gray-300 rounded"
-          >
+        {ruleSpec.atoms.map((rule, index) => (
+          <div key={rule.id} className="mb-4 p-3 bg-white border border-gray-300 rounded">
             <div className="flex justify-between mb-2">
               <strong className="text-blue-600">
                 {index + 1}. {rule.id}

@@ -2,6 +2,7 @@ using Serilog.Core;
 using Serilog.Events;
 using Api.Infrastructure.Security;
 
+#pragma warning disable MA0048 // File name must match type name - Multi-enricher file
 namespace Api.Logging;
 
 /// <summary>

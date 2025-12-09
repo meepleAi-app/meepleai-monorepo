@@ -5,6 +5,7 @@ using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Queries;
 
@@ -12,6 +13,7 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.Queries;
 /// Comprehensive tests for GetGameDetailsQueryHandler.
 /// Tests game detail retrieval with extended metadata and statistics.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class GetGameDetailsQueryHandlerTests
 {
     private readonly Mock<IGameRepository> _gameRepositoryMock;
@@ -27,9 +29,6 @@ public class GetGameDetailsQueryHandlerTests
             _sessionRepositoryMock.Object
         );
     }
-
-    #region Happy Path Tests
-
     [Fact]
     public async Task Handle_WithExistingGame_ReturnsGameDetailsDto()
     {
@@ -155,11 +154,6 @@ public class GetGameDetailsQueryHandlerTests
         Assert.Equal(123456, result.BggId);
         Assert.Equal("{\"rating\": 8.5}", result.BggMetadata);
     }
-
-    #endregion
-
-    #region Game Not Found Tests
-
     [Fact]
     public async Task Handle_WithNonExistentGame_ReturnsNull()
     {
@@ -180,11 +174,6 @@ public class GetGameDetailsQueryHandlerTests
         _gameRepositoryMock.Verify(x => x.GetByIdAsync(gameId, It.IsAny<CancellationToken>()), Times.Once);
         _sessionRepositoryMock.Verify(x => x.FindByGameIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
     }
-
-    #endregion
-
-    #region Edge Cases
-
     [Fact]
     public async Task Handle_WithCancellationToken_PassesToRepository()
     {
@@ -237,11 +226,6 @@ public class GetGameDetailsQueryHandlerTests
         Assert.Null(result.TotalSessionsPlayed); // No completed sessions
         Assert.Null(result.LastPlayedAt);
     }
-
-    #endregion
-
-    #region Helper Methods
-
     private Game CreateTestGame()
     {
         return new Game(
@@ -290,7 +274,5 @@ public class GetGameDetailsQueryHandlerTests
             players: players
         );
     }
-
-    #endregion
 }
 

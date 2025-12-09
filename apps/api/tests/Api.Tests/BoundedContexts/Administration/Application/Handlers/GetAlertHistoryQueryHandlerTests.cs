@@ -4,6 +4,7 @@ using Api.Models;
 using Api.Services;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 
@@ -11,6 +12,7 @@ namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 /// Tests for GetAlertHistoryQueryHandler.
 /// Tests retrieval of historical alerts within a date range.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class GetAlertHistoryQueryHandlerTests
 {
     private readonly Mock<IAlertingService> _mockAlertingService;
@@ -130,4 +132,3 @@ public class GetAlertHistoryQueryHandlerTests
         Assert.Equal("CriticalError", result[0].AlertType);
     }
 }
-

@@ -48,6 +48,25 @@ public static class GameEndpoints
         })
         .RequireAuthenticatedUser(); // Issue #1446: Dual authentication (session OR API key)
 
+        // Get all sessions for a game (DDD/CQRS)
+        // Issue #1675: Frontend needs game sessions listing
+        group.MapGet("/games/{id}/sessions", async (
+            Guid id,
+            [FromQuery] int? pageNumber,
+            [FromQuery] int? pageSize,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            // User authenticated via session OR API key (RequireAuthenticatedUserFilter)
+
+            var query = new GetGameSessionsQuery(id, pageNumber, pageSize);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+            return Results.Ok(result);
+        })
+        .RequireAuthenticatedUser(); // Issue #1446: Dual authentication (session OR API key)
+
         // Get game details with extended metadata and statistics (DDD/CQRS)
         // Issue #1196: Supports Game Detail Page (Issue #855)
         group.MapGet("/games/{id}/details", async (

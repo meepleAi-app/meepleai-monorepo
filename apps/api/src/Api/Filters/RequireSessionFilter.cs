@@ -1,3 +1,4 @@
+using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.Extensions;
 using Api.Infrastructure.Entities;
 
@@ -11,7 +12,7 @@ namespace Api.Filters;
 ///
 /// Pattern:
 /// - Automatically validates session exists and is active
-/// - Stores validated ActiveSession in HttpContext.Items for endpoint access
+/// - Stores validated SessionStatusDto in HttpContext.Items for endpoint access
 /// - Returns 401 Unauthorized if validation fails
 /// - Opt-in approach prevents breaking changes
 ///
@@ -20,7 +21,7 @@ namespace Api.Filters;
 /// group.MapGet("/endpoint", async (HttpContext context) =>
 /// {
 ///     // Session is already validated and available in HttpContext.Items
-///     var session = context.Items[nameof(ActiveSession)] as ActiveSession;
+///     var session = context.Items[nameof(SessionStatusDto)] as SessionStatusDto;
 ///     // Use session...
 /// })
 /// .RequireSession();
@@ -30,7 +31,7 @@ namespace Api.Filters;
 /// continue using manual validation due to their specialized error handling requirements.
 ///
 /// Related: SessionValidationExtensions.cs provides TryGetActiveSession() used internally
-/// Issue: #1446
+/// Issue: #1446, #1676 Phase 3
 /// </summary>
 public class RequireSessionFilter : IEndpointFilter
 {
@@ -56,7 +57,7 @@ public class RequireSessionFilter : IEndpointFilter
         }
 
         // Session was validated by TryGetActiveSession() extension method
-        // which checks HttpContext.Items[nameof(ActiveSession)]
+        // which checks HttpContext.Items[nameof(SessionStatusDto)]
         // Endpoint can safely retrieve session from HttpContext.Items
         return await next(context).ConfigureAwait(false);
     }

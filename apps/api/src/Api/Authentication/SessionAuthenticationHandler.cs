@@ -1,7 +1,7 @@
 using System.Security.Claims;
 using System.Text.Encodings.Web;
+using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.Authentication.Application.Queries;
-using Api.Models;
 using Api.Routing;
 using MediatR;
 using Microsoft.AspNetCore.Authentication;
@@ -24,10 +24,12 @@ namespace Api.Authentication;
 /// 4. Handles challenge (401) and forbidden (403) responses correctly
 ///
 /// Architecture:
-/// - SessionAuthenticationMiddleware: Runs first, populates HttpContext.Items[ActiveSession]
+/// - SessionAuthenticationMiddleware: Runs first, populates HttpContext.Items[SessionStatusDto]
 /// - SessionAuthenticationHandler: Runs during authentication, creates ClaimsPrincipal from session
 /// - Both use the same ValidateSessionQuery via MediatR for consistency
 /// - Endpoints using .RequireAuthorization() now get proper 401/403 instead of 500
+///
+/// Issue #1676 Phase 3: Migrated from ActiveSession (legacy) to SessionStatusDto (DDD)
 /// </summary>
 public class SessionAuthenticationHandler : AuthenticationHandler<AuthenticationSchemeOptions>
 {
@@ -51,9 +53,9 @@ public class SessionAuthenticationHandler : AuthenticationHandler<Authentication
             return AuthenticateResult.NoResult();
         }
 
-        if (Context.Items.TryGetValue(nameof(ActiveSession), out var cached) && cached is ActiveSession cachedSession)
+        if (Context.Items.TryGetValue(nameof(SessionStatusDto), out var cached) && cached is SessionStatusDto cachedSession)
         {
-            return AuthenticateResult.Success(CreateTicketFromActiveSession(cachedSession, Scheme.Name));
+            return AuthenticateResult.Success(CreateTicketFromSessionStatus(cachedSession, Scheme.Name));
         }
 
         // Try to get session cookie
@@ -93,16 +95,9 @@ public class SessionAuthenticationHandler : AuthenticationHandler<Authentication
             var principal = new ClaimsPrincipal(identity);
             var ticket = new AuthenticationTicket(principal, Scheme.Name);
 
-            // Store session in HttpContext.Items for endpoints that need it (legacy ActiveSession format)
-            // Convert DDD DTO to legacy model for backward compatibility
-            var legacyUser = new AuthUser(
-                Id: result.User.Id.ToString(),
-                Email: result.User.Email,
-                DisplayName: result.User.DisplayName,
-                Role: result.User.Role);
-
-            var activeSession = new ActiveSession(legacyUser, result.ExpiresAt!.Value, result.LastSeenAt);
-            Context.Items[nameof(ActiveSession)] = activeSession;
+            // Store session in HttpContext.Items for endpoints that need it (DDD DTO format)
+            // Issue #1676 Phase 3: Migrated from ActiveSession to SessionStatusDto
+            Context.Items[nameof(SessionStatusDto)] = result;
 
             return AuthenticateResult.Success(ticket);
         }
@@ -133,18 +128,23 @@ public class SessionAuthenticationHandler : AuthenticationHandler<Authentication
         return Task.CompletedTask;
     }
 
-    private static AuthenticationTicket CreateTicketFromActiveSession(ActiveSession session, string schemeName)
+    private static AuthenticationTicket CreateTicketFromSessionStatus(SessionStatusDto sessionStatus, string schemeName)
     {
+        if (sessionStatus.User == null)
+        {
+            throw new InvalidOperationException("Cannot create ticket from session status without user information");
+        }
+
         var claims = new List<Claim>
         {
-            new(ClaimTypes.NameIdentifier, session.User.Id),
-            new(ClaimTypes.Email, session.User.Email),
-            new(ClaimTypes.Role, session.User.Role)
+            new(ClaimTypes.NameIdentifier, sessionStatus.User.Id.ToString()),
+            new(ClaimTypes.Email, sessionStatus.User.Email),
+            new(ClaimTypes.Role, sessionStatus.User.Role)
         };
 
-        if (!string.IsNullOrWhiteSpace(session.User.DisplayName))
+        if (!string.IsNullOrWhiteSpace(sessionStatus.User.DisplayName))
         {
-            claims.Add(new Claim(ClaimTypes.Name, session.User.DisplayName));
+            claims.Add(new Claim(ClaimTypes.Name, sessionStatus.User.DisplayName));
         }
 
         var identity = new ClaimsIdentity(claims, schemeName);

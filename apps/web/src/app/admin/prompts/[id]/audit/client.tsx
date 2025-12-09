@@ -1,13 +1,13 @@
 'use client';
 
 import type { AuthUser } from '@/types/auth';
-import React, { useState, useEffect, useCallback } from "react";
-import { useRouter, useParams } from "next/navigation";
-import Link from "next/link";
-import { api } from "@/lib/api";
-import { cn } from "@/lib/utils";
-import { ErrorDisplay } from "@/components/errors";
-import { categorizeError } from "@/lib/errorUtils";
+import React, { useState, useEffect, useCallback } from 'react';
+import { useRouter, useParams } from 'next/navigation';
+import Link from 'next/link';
+import { api } from '@/lib/api';
+import { cn } from '@/lib/utils';
+import { ErrorDisplay } from '@/components/errors';
+import { categorizeError } from '@/lib/errorUtils';
 import { getErrorMessage } from '@/lib/utils/errorHandler';
 
 type PromptAuditLog = {
@@ -20,7 +20,9 @@ type PromptAuditLog = {
   details?: Record<string, unknown>;
 };
 
-interface AdminPageClientProps { user: AuthUser; }
+interface AdminPageClientProps {
+  user: AuthUser;
+}
 
 export function AdminPageClient({ user }: AdminPageClientProps) {
   const router = useRouter();
@@ -34,7 +36,10 @@ export function AdminPageClient({ user }: AdminPageClientProps) {
   // Handle missing ID
   if (!id) {
     return (
-      <div className="min-h-screen" style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
+      <div
+        className="min-h-screen"
+        style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
+      >
         <div className="max-w-7xl mx-auto p-8">
           <div className="bg-white rounded-xl shadow-2xl overflow-hidden p-8">
             <h1 className="text-2xl font-bold mb-4">Invalid Template ID</h1>
@@ -51,7 +56,7 @@ export function AdminPageClient({ user }: AdminPageClientProps) {
   }
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [actionFilter, setActionFilter] = useState("");
+  const [actionFilter, setActionFilter] = useState('');
 
   const fetchAuditLogs = useCallback(async () => {
     if (!id) return;
@@ -62,18 +67,20 @@ export function AdminPageClient({ user }: AdminPageClientProps) {
     try {
       const params = new URLSearchParams({
         page: page.toString(),
-        limit: "20",
+        limit: '20',
       });
 
-      if (actionFilter) params.append("action", actionFilter);
+      if (actionFilter) params.append('action', actionFilter);
 
-      const result = await api.get<{ logs: PromptAuditLog[]; totalPages: number }>(`/api/v1/admin/prompts/${id}/audit?${params}`);
-      if (!result) throw new Error("Unauthorized");
+      const result = await api.admin.getPromptAuditLogs(id, {
+        page,
+        pageSize: 20,
+      });
 
-      setLogs(result.logs || []);
+      setLogs((result.logs as any) || []);
       setTotalPages(result.totalPages || 1);
     } catch (err) {
-      setError(getErrorMessage(err, "Failed to fetch audit logs"));
+      setError(getErrorMessage(err, 'Failed to fetch audit logs'));
     } finally {
       setLoading(false);
     }
@@ -88,26 +95,32 @@ export function AdminPageClient({ user }: AdminPageClientProps) {
   }, [actionFilter]);
 
   const getActionColor = (action: string): string => {
-    if (action.includes("create")) return "#059669";
-    if (action.includes("update") || action.includes("activate")) return "#2563eb";
-    if (action.includes("delete")) return "#dc2626";
-    return "#6b7280";
+    if (action.includes('create')) return '#059669';
+    if (action.includes('update') || action.includes('activate')) return '#2563eb';
+    if (action.includes('delete')) return '#dc2626';
+    return '#6b7280';
   };
 
   const getActionIcon = (action: string): string => {
-    if (action.includes("create")) return "+";
-    if (action.includes("update")) return "✎";
-    if (action.includes("activate")) return "✓";
-    if (action.includes("delete")) return "✕";
-    return "•";
+    if (action.includes('create')) return '+';
+    if (action.includes('update')) return '✎';
+    if (action.includes('activate')) return '✓';
+    if (action.includes('delete')) return '✕';
+    return '•';
   };
 
   return (
-    <div className="min-h-screen" style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
+    <div
+      className="min-h-screen"
+      style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
+    >
       <div className="max-w-7xl mx-auto p-8">
         <div className="bg-white rounded-xl shadow-2xl overflow-hidden">
           {/* Header */}
-          <div className="p-8 text-white" style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
+          <div
+            className="p-8 text-white"
+            style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
+          >
             <div className="mb-4">
               <Link href={`/admin/prompts/${id}`}>
                 <button className="px-4 py-2 bg-white/20 text-white border-none rounded-lg cursor-pointer hover:bg-white/30">
@@ -125,7 +138,7 @@ export function AdminPageClient({ user }: AdminPageClientProps) {
               <label className="font-medium">Filter by action:</label>
               <select
                 value={actionFilter}
-                onChange={(e) => setActionFilter(e.target.value)}
+                onChange={e => setActionFilter(e.target.value)}
                 className="px-4 py-2 border border-gray-300 rounded-lg min-w-[200px]"
               >
                 <option value="">All Actions</option>
@@ -169,7 +182,7 @@ export function AdminPageClient({ user }: AdminPageClientProps) {
                       </tr>
                     </thead>
                     <tbody>
-                      {logs.map((log) => (
+                      {logs.map(log => (
                         <tr key={log.id} className="border-b border-gray-200">
                           <td className="p-4 text-gray-500 text-sm">
                             {new Date(log.timestamp).toLocaleString()}
@@ -180,7 +193,7 @@ export function AdminPageClient({ user }: AdminPageClientProps) {
                                 className="inline-flex items-center justify-center w-6 h-6 rounded-full font-bold text-sm"
                                 style={{
                                   background: `${getActionColor(log.action)}20`,
-                                  color: getActionColor(log.action)
+                                  color: getActionColor(log.action),
                                 }}
                               >
                                 {getActionIcon(log.action)}
@@ -192,7 +205,9 @@ export function AdminPageClient({ user }: AdminPageClientProps) {
                           <td className="p-4 text-gray-500 text-sm">
                             {log.details && Object.keys(log.details).length > 0 ? (
                               <details>
-                                <summary className="cursor-pointer text-indigo-700 font-medium">View details</summary>
+                                <summary className="cursor-pointer text-indigo-700 font-medium">
+                                  View details
+                                </summary>
                                 <pre className="mt-2 p-2 bg-gray-50 rounded text-xs overflow-auto max-w-md">
                                   {JSON.stringify(log.details, null, 2)}
                                 </pre>
@@ -210,13 +225,13 @@ export function AdminPageClient({ user }: AdminPageClientProps) {
                 {/* Pagination */}
                 <div className="flex justify-center items-center gap-4 mt-6">
                   <button
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
                     disabled={page === 1}
                     className={cn(
-                      "px-4 py-2 border-none rounded-lg font-medium",
+                      'px-4 py-2 border-none rounded-lg font-medium',
                       page === 1
-                        ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                        : "bg-indigo-500 text-white cursor-pointer hover:bg-indigo-600"
+                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                        : 'bg-indigo-500 text-white cursor-pointer hover:bg-indigo-600'
                     )}
                   >
                     Previous
@@ -225,13 +240,13 @@ export function AdminPageClient({ user }: AdminPageClientProps) {
                     Page {page} of {totalPages}
                   </span>
                   <button
-                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                     disabled={page === totalPages}
                     className={cn(
-                      "px-4 py-2 border-none rounded-lg font-medium",
+                      'px-4 py-2 border-none rounded-lg font-medium',
                       page === totalPages
-                        ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                        : "bg-indigo-500 text-white cursor-pointer hover:bg-indigo-600"
+                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                        : 'bg-indigo-500 text-white cursor-pointer hover:bg-indigo-600'
                     )}
                   >
                     Next

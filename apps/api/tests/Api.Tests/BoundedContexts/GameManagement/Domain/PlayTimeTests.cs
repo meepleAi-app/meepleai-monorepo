@@ -1,8 +1,11 @@
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Exceptions;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Domain;
+
+[Trait("Category", TestCategories.Unit)]
 
 public class PlayTimeTests
 {
@@ -30,77 +33,42 @@ public class PlayTimeTests
         Assert.Equal(60, average);
     }
 
-    [Fact]
-    public void PlayTime_IsQuick_WhenMaxBelow30Minutes()
+    [Theory]
+    [InlineData(15, 25, true, false, false)]    // Quick game
+    [InlineData(45, 75, false, true, false)]    // Medium game
+    [InlineData(120, 180, false, false, true)]  // Long game
+    public void PlayTimeCategory_ReturnsCorrectClassification(int minMinutes, int maxMinutes, bool expectedIsQuick, bool expectedIsMedium, bool expectedIsLong)
     {
         // Arrange
-        var quick = new PlayTime(15, 25);
-        var notQuick = new PlayTime(30, 60);
+        var playTime = new PlayTime(minMinutes, maxMinutes);
 
         // Act & Assert
-        Assert.True(quick.IsQuick);
-        Assert.False(notQuick.IsQuick);
+        Assert.Equal(expectedIsQuick, playTime.IsQuick);
+        Assert.Equal(expectedIsMedium, playTime.IsMedium);
+        Assert.Equal(expectedIsLong, playTime.IsLong);
     }
 
-    [Fact]
-    public void PlayTime_IsMedium_WhenBetween30And90Minutes()
-    {
-        // Arrange
-        var medium = new PlayTime(45, 75);
-        var shortGame = new PlayTime(15, 25);
-        var longGame = new PlayTime(120, 180);
-
-        // Act & Assert
-        Assert.True(medium.IsMedium);
-        Assert.False(shortGame.IsMedium);
-        Assert.False(longGame.IsMedium);
-    }
-
-    [Fact]
-    public void PlayTime_IsLong_WhenMinAbove90Minutes()
-    {
-        // Arrange
-        var longGame = new PlayTime(120, 180);
-        var medium = new PlayTime(60, 90);
-
-        // Act & Assert
-        Assert.True(longGame.IsLong);
-        Assert.False(medium.IsLong);
-    }
-
-    [Fact]
-    public void PlayTime_Quick_FactoryMethod_Works()
+    [Theory]
+    [InlineData("Quick", 15, 30, true, false, false)]
+    [InlineData("Standard", 45, 60, false, true, false)]
+    [InlineData("Long", 120, 180, false, false, true)]
+    public void FactoryMethod_CreatesCorrectPlayTime(string methodName, int expectedMin, int expectedMax, bool expectedIsQuick, bool expectedIsMedium, bool expectedIsLong)
     {
         // Arrange & Act
-        var quick = PlayTime.Quick;
+        var playTime = methodName switch
+        {
+            "Quick" => PlayTime.Quick,
+            "Standard" => PlayTime.Standard,
+            "Long" => PlayTime.Long,
+            _ => throw new ArgumentException($"Unknown factory method: {methodName}")
+        };
 
         // Assert
-        Assert.Equal(15, quick.MinMinutes);
-        Assert.Equal(30, quick.MaxMinutes);
-        Assert.True(quick.IsQuick);
-    }
-
-    [Fact]
-    public void PlayTime_Standard_FactoryMethod_Works()
-    {
-        // Arrange & Act
-        var standard = PlayTime.Standard;
-
-        // Assert
-        Assert.Equal(45, standard.MinMinutes);
-        Assert.Equal(60, standard.MaxMinutes);
-    }
-
-    [Fact]
-    public void PlayTime_Long_FactoryMethod_Works()
-    {
-        // Arrange & Act
-        var longGame = PlayTime.Long;
-
-        // Assert
-        Assert.Equal(120, longGame.MinMinutes);
-        Assert.Equal(180, longGame.MaxMinutes);
-        Assert.True(longGame.IsLong);
+        Assert.Equal(expectedMin, playTime.MinMinutes);
+        Assert.Equal(expectedMax, playTime.MaxMinutes);
+        Assert.Equal(expectedIsQuick, playTime.IsQuick);
+        Assert.Equal(expectedIsMedium, playTime.IsMedium);
+        Assert.Equal(expectedIsLong, playTime.IsLong);
     }
 
     [Fact]
@@ -152,4 +120,3 @@ public class PlayTimeTests
         Assert.NotEqual(time1, time3);
     }
 }
-

@@ -11,8 +11,6 @@ namespace Api.Tests.Integration;
 /// </summary>
 public static class PdfUploadErrorMessages
 {
-    #region File Validation Errors
-
     /// <summary>
     /// Error when no file is provided or file is empty.
     /// Source: UploadPdfCommandHandler.cs line 86
@@ -32,11 +30,6 @@ public static class PdfUploadErrorMessages
     /// </summary>
     public const string InvalidFileType = "Invalid file type";
     public const string OnlyPdfAllowed = "Only PDF files are allowed";
-
-    #endregion
-
-    #region PDF Structure Validation Errors
-
     /// <summary>
     /// Error prefix for all PDF validation failures.
     /// Source: ValidatePdfStructureAsync method
@@ -69,11 +62,6 @@ public static class PdfUploadErrorMessages
     /// Source: UploadPdfCommandHandler.cs line 348
     /// </summary>
     public const string FailedToValidateStructure = "Failed to validate PDF structure";
-
-    #endregion
-
-    #region Storage and Permission Errors
-
     /// <summary>
     /// Error when blob storage fails.
     /// Source: UploadPdfCommandHandler.cs line 200
@@ -88,11 +76,6 @@ public static class PdfUploadErrorMessages
     public const string AccessDenied = "Access denied";
     public const string InsufficientPermissions = "Insufficient permissions";
     public const string PermissionPattern = "permission";
-
-    #endregion
-
-    #region Entity Validation Errors
-
     /// <summary>
     /// Error when file name is invalid.
     /// Source: UploadPdfCommandHandler.cs line 120, 130
@@ -110,8 +93,6 @@ public static class PdfUploadErrorMessages
     /// Source: UploadPdfCommandHandler.cs line 155
     /// </summary>
     public const string UserNotFound = "User not found";
-
-    #endregion
 }
 
 /// <summary>

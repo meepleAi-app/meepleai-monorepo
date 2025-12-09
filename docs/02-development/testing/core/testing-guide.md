@@ -338,8 +338,16 @@ describe('ErrorBoundary', () => {
 
 ### Service Unit Testing
 
+> **⚠️ DEPRECATED**: This section shows legacy service-based testing.
+> **Current approach**: Test CQRS handlers (Commands/Queries) instead.
+> **See**: `apps/api/tests/Api.Tests/BoundedContexts/{Context}/Application/` for current CQRS handler tests.
+
+<details>
+<summary>Legacy Service Testing Example (Deprecated)</summary>
+
 ```csharp
-// apps/api/tests/Api.Tests/Services/AuthServiceTests.cs
+// LEGACY EXAMPLE - apps/api/tests/Api.Tests/Services/AuthServiceTests.cs
+// NOTE: AuthService removed in DDD migration. Use CQRS handlers instead.
 using Xunit;
 using Moq;
 using MeepleAi.Api.Services;
@@ -404,6 +412,8 @@ public class AuthServiceTests
 - Use `Mock<T>` from Moq for dependencies
 - Verify mock interactions with `.Verify()`
 - Use `[Fact]` for simple tests, `[Theory]` for parameterized tests
+
+</details>
 
 ### Database Integration Testing
 
@@ -778,9 +788,9 @@ it('disables button when disabled prop is true', () => {
 });
 ```
 
-**Backend Example**:
+**Backend Example** (⚠️ LEGACY - AuthService removed, use CQRS handlers):
 ```csharp
-// apps/api/tests/Api.Tests/Services/AuthServiceTests.cs
+// LEGACY: apps/api/tests/Api.Tests/Services/AuthServiceTests.cs
 [Fact]
 public async Task LoginAsync_WithValidCredentials_ReturnsSession()
 {
@@ -951,8 +961,10 @@ it('expires toast after 5 seconds', () => {
 
 ### Service Mocking (Backend)
 
+> **⚠️ DEPRECATED**: AuthService removed. For current CQRS handler mocking examples, see `apps/api/tests/Api.Tests/BoundedContexts/Authentication/Application/`.
+
 ```csharp
-// apps/api/tests/Api.Tests/Services/AuthServiceTests.cs
+// LEGACY: apps/api/tests/Api.Tests/Services/AuthServiceTests.cs
 private readonly Mock<ISessionManagementService> _mockSessionService;
 
 public AuthServiceTests()

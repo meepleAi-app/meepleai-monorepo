@@ -456,6 +456,7 @@ validation_meets_baseline{context="overall"} 1
 
 ### Alerting Rules (Future Enhancement)
 
+{% raw %}
 ```yaml
 - alert: ValidationAccuracyBelowBaseline
   expr: validation_accuracy_baseline < 0.80
@@ -464,6 +465,7 @@ validation_meets_baseline{context="overall"} 1
     summary: "Validation accuracy below 80% baseline"
     description: "Accuracy is {{ $value | humanizePercentage }} for context {{ $labels.context }}"
 ```
+{% endraw %}
 
 ---
 

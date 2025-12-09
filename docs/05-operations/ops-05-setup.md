@@ -108,8 +108,8 @@ curl -X POST http://localhost:9093/api/v1/alerts -d '[{
 | **Grafana Dashboard** | http://localhost:3001/d/meepleai-error-monitoring | admin / admin |
 | **Prometheus Alerts** | http://localhost:9090/alerts | - |
 | **Alertmanager** | http://localhost:9093 | - |
-| **Seq Logs** | http://localhost:8081 | - |
-| **Jaeger Traces** | http://localhost:16686 | - |
+| **Seq Logs** | http://localhost:8180 | - |
+| **Jaeger Traces** | http://localhost:8180 | - |
 | **API Metrics** | http://localhost:8080/metrics | - |
 
 ## 📧 Email Format

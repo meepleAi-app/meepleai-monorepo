@@ -294,11 +294,13 @@ PNPM_VERSION: '9'
 ### Caching Strategy
 
 **NuGet Packages** (Backend):
+{% raw %}
 ```yaml
 key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', '**/packages.lock.json') }}
 restore-keys:
   - ${{ runner.os }}-nuget-
 ```
+{% endraw %}
 
 **pnpm Dependencies** (Frontend):
 ```yaml

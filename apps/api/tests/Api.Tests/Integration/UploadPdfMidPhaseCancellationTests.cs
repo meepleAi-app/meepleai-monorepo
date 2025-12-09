@@ -23,6 +23,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using StackExchange.Redis;
 using Xunit;
+using Api.Tests.Constants;
 using AuthRole = Api.BoundedContexts.Authentication.Domain.ValueObjects.Role;
 
 namespace Api.Tests.Integration;
@@ -42,7 +43,7 @@ namespace Api.Tests.Integration;
 /// 5. Mid-vector store cancellation
 /// 6. Random timing cancellation (stress test)
 /// </summary>
-[Collection("PdfUploadIntegration")]
+[Trait("Category", TestCategories.Integration)]
 public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
 {
     private IContainer? _postgresContainer;
@@ -242,9 +243,6 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
         var testUser = await PdfUploadTestHelpers.SeedTestUserAsync(_dbContext!);
         var testGame = await PdfUploadTestHelpers.SeedTestGameAsync(_dbContext!);
     }
-
-    #region Mid-Phase Cancellation Tests
-
     /// <summary>
     /// Tests cancellation that occurs MID-WAY through database query execution.
     ///
@@ -610,6 +608,4 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
         userStillExists.Should().BeTrue("user should survive all cancellation scenarios");
         gameStillExists.Should().BeTrue("game should survive all cancellation scenarios");
     }
-
-    #endregion
 }

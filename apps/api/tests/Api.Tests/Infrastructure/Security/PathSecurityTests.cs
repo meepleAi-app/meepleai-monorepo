@@ -2,6 +2,7 @@ using Api.Infrastructure.Security;
 using FluentAssertions;
 using System.Security;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Infrastructure.Security;
 
@@ -18,10 +19,9 @@ namespace Api.Tests.Infrastructure.Security;
 /// <para><b>Security Standard:</b> OWASP Top 10 2021 - A01 Broken Access Control</para>
 /// <para><b>Acceptance Criteria:</b> Issue #1819 (#1746) - PathSecurity.SanitizeFilename verified</para>
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public sealed class PathSecurityTests
 {
-    #region ValidatePathIsInDirectory Tests
-
     /// <summary>
     /// Tests that ValidatePathIsInDirectory correctly validates paths within allowed directory.
     ///
@@ -117,11 +117,6 @@ public sealed class PathSecurityTests
         action.Should().Throw<ArgumentException>()
             .WithParameterName(expectedParam);
     }
-
-    #endregion
-
-    #region SanitizeFilename Tests
-
     /// <summary>
     /// Tests that dangerous filename characters are removed to prevent XSS and filesystem attacks.
     ///
@@ -270,11 +265,6 @@ public sealed class PathSecurityTests
             .WithMessage("*cannot be empty*")
             .WithParameterName("filename");
     }
-
-    #endregion
-
-    #region ValidateFileExtension Tests
-
     /// <summary>
     /// Tests that valid file extensions are accepted.
     ///
@@ -323,11 +313,6 @@ public sealed class PathSecurityTests
             .WithMessage("*At least one allowed extension*")
             .WithParameterName("allowedExtensions");
     }
-
-    #endregion
-
-    #region GenerateSafeFilename Tests
-
     /// <summary>
     /// Tests that generated filenames are unique GUIDs with original extension.
     ///
@@ -382,11 +367,6 @@ public sealed class PathSecurityTests
         name1.Should().NotBe(name3);
         new[] { name1, name2, name3 }.Should().OnlyHaveUniqueItems();
     }
-
-    #endregion
-
-    #region SafeFileExists Tests
-
     /// <summary>
     /// Tests that SafeFileExists returns false for path traversal attempts.
     ///
@@ -431,11 +411,6 @@ public sealed class PathSecurityTests
             File.Delete(fullPath);
         }
     }
-
-    #endregion
-
-    #region SafeDirectoryExists Tests
-
     /// <summary>
     /// Tests that SafeDirectoryExists returns false for path traversal attempts.
     /// </summary>
@@ -478,11 +453,6 @@ public sealed class PathSecurityTests
             Directory.Delete(fullPath);
         }
     }
-
-    #endregion
-
-    #region ValidateIdentifier Tests
-
     /// <summary>
     /// Tests that valid identifiers (alphanumeric, hyphens, underscores) are accepted.
     ///
@@ -537,6 +507,4 @@ public sealed class PathSecurityTests
         action.Should().Throw<ArgumentException>()
             .WithMessage("*invalid characters*"); // Regex fails before "only dots" check
     }
-
-    #endregion
 }

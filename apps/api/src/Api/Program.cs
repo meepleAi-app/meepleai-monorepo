@@ -32,6 +32,11 @@ using System.Net;
 using System.Security.Claims;
 using AspNetIpNetwork = Microsoft.AspNetCore.HttpOverrides.IPNetwork;
 
+// Issue #1567: Enable HTTP/2 for gRPC without TLS (required for OpenTelemetry OTLP exporter)
+// This allows gRPC connections over http:// (insecure) instead of requiring https://
+// Required for local development with HyperDX
+AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
+
 var builder = WebApplication.CreateBuilder(args);
 
 // OPS-04: Configure Serilog with environment-based settings and sensitive data redaction
@@ -231,11 +236,12 @@ builder.Services.AddCors(options =>
             .WithHeaders(
                 "Content-Type",
                 "Authorization",
-                "X-Correlation-ID",
-                "X-API-Key"
+                "X-Correlation-ID"
             )
             .AllowAnyMethod()
-            .AllowCredentials();
+            .AllowCredentials()
+            // Issue #1563 (P0-3): Expose trace headers for frontend correlation
+            .WithExposedHeaders("X-Trace-Id", "X-Span-Id");
     });
 });
 
@@ -334,6 +340,7 @@ v1Api.MapRuleSpecEndpoints();
 // Issue #1439: Split AdminEndpoints into focused endpoint files
 v1Api.MapConfigurationEndpoints();     // System configuration CRUD & operations
 v1Api.MapAnalyticsEndpoints();         // Dashboard statistics & metrics
+v1Api.MapLlmAnalyticsEndpoints();      // ISSUE-1725: LLM cost optimization analytics
 v1Api.MapAlertEndpoints();             // Alert management
 v1Api.MapAuditEndpoints();             // Audit log retrieval & search
 v1Api.MapFeatureFlagEndpoints();       // Feature flag management
@@ -350,6 +357,13 @@ v1Api.MapKnowledgeBaseEndpoints();
 
 // Issue #866: Agent management endpoints
 v1Api.MapAgentEndpoints();
+
+// Issue #1565: Telemetry test endpoints for HyperDX integration testing
+v1Api.MapTelemetryTestEndpoints();
+v1Api.MapTestTelemetryEndpoints(); // Issue #1567: Manual span test endpoint
+
+// Issue #2004: Runbook validation test endpoints
+v1Api.MapTestEndpoints();
 
 app.Run();
 
@@ -627,4 +641,5 @@ static bool ShouldSkipMigrations(WebApplication app, MeepleAiDbContext db)
     return false;
 }
 
+#pragma warning disable S1118 // Utility classes should not have public constructors - Required for test integration
 public partial class Program { }

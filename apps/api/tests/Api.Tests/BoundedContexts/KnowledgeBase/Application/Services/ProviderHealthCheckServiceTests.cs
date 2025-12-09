@@ -269,9 +269,6 @@ public class ProviderHealthCheckServiceTests
         // Assert - No exception thrown, service stopped gracefully
         Assert.True(true);
     }
-
-    #region Helper Methods
-
     private Mock<ILlmClient> CreateMockClient(string providerName)
     {
         var mock = new Mock<ILlmClient>();
@@ -304,7 +301,5 @@ public class ProviderHealthCheckServiceTests
 
         return scopeFactory.Object;
     }
-
-    #endregion
 }
 

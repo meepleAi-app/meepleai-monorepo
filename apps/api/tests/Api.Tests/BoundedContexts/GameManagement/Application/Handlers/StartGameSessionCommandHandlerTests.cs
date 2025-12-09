@@ -6,6 +6,7 @@ using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 
@@ -13,6 +14,7 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 /// Comprehensive tests for StartGameSessionCommandHandler.
 /// Tests game session creation and lifecycle management.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class StartGameSessionCommandHandlerTests
 {
     private readonly Mock<IGameSessionRepository> _sessionRepositoryMock;
@@ -30,9 +32,6 @@ public class StartGameSessionCommandHandlerTests
             _gameRepositoryMock.Object,
             _unitOfWorkMock.Object);
     }
-
-    #region Happy Path Tests
-
     [Fact]
     public async Task Handle_WithTwoPlayers_CreatesAndStartsSession()
     {
@@ -163,11 +162,6 @@ public class StartGameSessionCommandHandlerTests
         Assert.NotEqual(Guid.Empty, result.Id);
         Assert.NotEqual(gameId, result.Id); // Session ID should differ from Game ID
     }
-
-    #endregion
-
-    #region Edge Cases
-
     [Fact]
     public async Task Handle_NonExistentGame_ThrowsInvalidOperationException()
     {
@@ -223,11 +217,6 @@ public class StartGameSessionCommandHandlerTests
         Assert.Equal("First", result.Players[1].PlayerName);
         Assert.Equal("Second", result.Players[2].PlayerName);
     }
-
-    #endregion
-
-    #region Cancellation Tests
-
     [Fact]
     public async Task Handle_WithCancellationToken_PassesToRepositories()
     {
@@ -262,11 +251,6 @@ public class StartGameSessionCommandHandlerTests
             u => u.SaveChangesAsync(cancellationToken),
             Times.Once);
     }
-
-    #endregion
-
-    #region Session Status Tests
-
     [Fact]
     public async Task Handle_SessionStartsImmediately()
     {
@@ -290,7 +274,5 @@ public class StartGameSessionCommandHandlerTests
         // Assert - Session should be InProgress after Start() is called
         Assert.Equal("InProgress", result.Status);
     }
-
-    #endregion
 }
 

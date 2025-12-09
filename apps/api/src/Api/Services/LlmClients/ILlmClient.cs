@@ -33,6 +33,7 @@ public interface ILlmClient
 
     /// <summary>
     /// Generate a streaming chat completion response from this provider
+    /// ISSUE-1725: Enhanced to return StreamChunk with usage metadata in final chunk
     /// </summary>
     /// <param name="model">Model identifier</param>
     /// <param name="systemPrompt">System-level instructions</param>
@@ -40,8 +41,8 @@ public interface ILlmClient
     /// <param name="temperature">Sampling temperature</param>
     /// <param name="maxTokens">Maximum tokens to generate</param>
     /// <param name="ct">Cancellation token</param>
-    /// <returns>Async stream of text chunks</returns>
-    IAsyncEnumerable<string> GenerateCompletionStreamAsync(
+    /// <returns>Async stream of StreamChunks (content + optional usage metadata in final chunk)</returns>
+    IAsyncEnumerable<StreamChunk> GenerateCompletionStreamAsync(
         string model,
         string systemPrompt,
         string userPrompt,

@@ -92,20 +92,45 @@ jobs:
       - name: Build API
         working-directory: apps/api/src/Api
         run: dotnet build --configuration Release --no-restore
+        env:
+          ConnectionStrings__Postgres: ${{ secrets.TEST_DB_CONNECTION_STRING || 'Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=postgres' }}
 
       - name: Install EF Core tools
         run: dotnet tool install --global dotnet-ef --version 9.0.11
 
+      # Issue #1954: Properly handle database creation with explicit error handling
       - name: Create test database
         run: |
-          PGPASSWORD="${{ secrets.TEST_POSTGRES_PASSWORD || 'postgres' }}" psql -h localhost -U "${{ secrets.TEST_POSTGRES_USER || 'postgres' }}" -c "CREATE DATABASE meepleai_test;" || true
+          echo "🗄️  Creating test database..."
+          PGPASSWORD="${{ secrets.TEST_POSTGRES_PASSWORD || 'postgres' }}" psql -h localhost -U "${{ secrets.TEST_POSTGRES_USER || 'postgres' }}" -d postgres <<-EOSQL
+            SELECT 'CREATE DATABASE meepleai_test'
+            WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'meepleai_test')\gexec
+          EOSQL
+          echo "✅ Database ready"
 
+      # Issue #1817: Add database connectivity validation before migrations
+      # Issue #1954: Connect to default 'postgres' database first, then verify meepleai_test exists
+      - name: Verify database connectivity
+        run: |
+          echo "🔍 Testing PostgreSQL connection..."
+          PGPASSWORD="${{ secrets.TEST_POSTGRES_PASSWORD || 'postgres' }}" psql -h localhost -U "${{ secrets.TEST_POSTGRES_USER || 'postgres' }}" -d postgres -c "SELECT version();"
+          echo "✅ Database connection successful"
+
+          echo "🔍 Verifying test database exists..."
+          DB_EXISTS=$(PGPASSWORD="${{ secrets.TEST_POSTGRES_PASSWORD || 'postgres' }}" psql -h localhost -U "${{ secrets.TEST_POSTGRES_USER || 'postgres' }}" -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='meepleai_test'")
+          if [ "$DB_EXISTS" != "1" ]; then
+            echo "❌ Database meepleai_test does not exist!"
+            exit 1
+          fi
+          echo "✅ Test database verified"
+
+      # Issue #1817: Use --connection flag to explicitly pass connection string
+      # This prevents EF Core from defaulting to incorrect 'root' user
       - name: Apply migrations
         working-directory: apps/api/src/Api
         run: |
-          dotnet ef database update --configuration Release
-        env:
-          CONNECTIONSTRINGS__POSTGRES: ${{ secrets.TEST_DB_CONNECTION_STRING || 'Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=postgres' }}
+          dotnet ef database update --configuration Release \
+            --connection "${{ secrets.TEST_DB_CONNECTION_STRING || 'Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=postgres' }}"
 
       # Issue #1663: Test user is now seeded automatically on API startup via EnsureTestUserExistsAsync
       # No need for separate seeding step - reduces workflow complexity and eliminates race conditions
@@ -113,8 +138,8 @@ jobs:
       - name: Start API server
         working-directory: apps/api/src/Api
         run: |
-          nohup dotnet run --configuration Release > ../../api.log 2>&1 &
-          echo $! > ../../api.pid
+          nohup dotnet run --configuration Release > ../../../../api.log 2>&1 &
+          echo $! > ../../../../api.pid
         env:
           ConnectionStrings__Postgres: ${{ secrets.TEST_DB_CONNECTION_STRING || 'Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=postgres' }}
           ConnectionStrings__Redis: 'localhost:6379'
@@ -133,7 +158,8 @@ jobs:
             sleep 2
           done
           echo "❌ API failed to start"
-          cat api.log
+          echo "Last 100 lines of API logs:"
+          tail -n 100 api.log || echo "⚠️ Could not read api.log"
           exit 1
 
       - name: Run k6 performance tests
@@ -164,12 +190,11 @@ jobs:
 
       - name: Debug API logs on failure
         if: failure()
-        working-directory: apps/api
         run: |
           echo "========================================="
           echo "API Logs"
           echo "========================================="
-          cat api.log 2>/dev/null || echo "⚠️ No API logs found at api.log"
+          tail -n 200 api.log 2>/dev/null || echo "⚠️ No API logs found at api.log"
           echo ""
           echo "========================================="
           echo "Health Check Status"

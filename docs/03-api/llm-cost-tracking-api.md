@@ -1,19 +1,23 @@
 # LLM Cost Tracking API
 
-**Issue**: #960 (BGAI-018)
+**Issue**: #960 (BGAI-018), #1694 (Token Tracking), #1725 (Advanced Observability)
 **Status**: ✅ Production Ready
-**Version**: 1.0
-**Updated**: 2025-11-12
+**Version**: 2.0
+**Updated**: 2025-12-07
 
 ---
 
 ## Overview
 
-Comprehensive LLM cost tracking system providing:
+Comprehensive LLM cost tracking and observability system providing:
 - Real-time cost calculation for every LLM request
 - Per-user and per-tier cost attribution
 - Historical cost analytics and reporting
 - Multi-threshold alerting ($100/day, $500/week, $3000/month)
+- **[NEW #1725]** Streaming token tracking with usage metadata
+- **[NEW #1725]** Grafana dashboard for cost monitoring
+- **[NEW #1725]** Budget alerts with configurable thresholds
+- **[NEW #1725]** OpenTelemetry GenAI semantic conventions
 
 ---
 
@@ -348,7 +352,51 @@ result.Cost.InputCost     // Decimal
 result.Cost.OutputCost    // Decimal
 result.Cost.ModelId       // string
 result.Cost.Provider      // string
+result.Usage.PromptTokens      // int
+result.Usage.CompletionTokens  // int
+result.Usage.TotalTokens       // int
 ```
+
+### StreamChunk (Issue #1725)
+**NEW**: Streaming API now returns `IAsyncEnumerable<StreamChunk>` instead of `IAsyncEnumerable<string>`
+
+```csharp
+public record StreamChunk(
+    string? Content,           // Text chunk (null in final chunk)
+    LlmUsage? Usage = null,    // Token usage (only in final chunk)
+    LlmCost? Cost = null,      // Cost metadata (only in final chunk)
+    bool IsFinal = false       // True if this is the last chunk
+);
+```
+
+**Usage Pattern**:
+```csharp
+await foreach (var chunk in llmService.GenerateCompletionStreamAsync(...))
+{
+    if (!string.IsNullOrEmpty(chunk.Content))
+    {
+        // Process content chunk
+        yield return chunk.Content;
+    }
+
+    if (chunk.IsFinal && chunk.Usage != null && chunk.Cost != null)
+    {
+        // Record usage metrics
+        MeepleAiMetrics.RecordLlmTokenUsage(
+            chunk.Usage.PromptTokens,
+            chunk.Usage.CompletionTokens,
+            chunk.Usage.TotalTokens,
+            chunk.Cost.ModelId,
+            chunk.Cost.Provider,
+            costUsd: chunk.Cost.TotalCost);
+    }
+}
+```
+
+**Provider Support**:
+- **OpenRouter**: Sends usage in final SSE chunk (requires `usage: { include: true }`)
+- **Ollama**: Sends usage in done=true chunk (`prompt_eval_count`, `eval_count`)
+- **Fallback**: Logs warning if usage metadata absent
 
 ---
 

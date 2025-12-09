@@ -2,6 +2,7 @@ using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.Tests.BoundedContexts.Authentication.TestHelpers;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Domain.Entities;
 
@@ -9,10 +10,9 @@ namespace Api.Tests.BoundedContexts.Authentication.Domain.Entities;
 /// Comprehensive domain tests for ApiKey entity.
 /// Tests key generation, verification, scopes, expiration, revocation, and security.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class ApiKeyEntityTests
 {
-    #region Create Tests
-
     [Fact]
     public void Create_WithValidData_GeneratesApiKey()
     {
@@ -155,11 +155,6 @@ public class ApiKeyEntityTests
         // Assert
         Assert.NotEqual(key1, key2);
     }
-
-    #endregion
-
-    #region VerifyKey Tests
-
     [Fact]
     public void VerifyKey_WithCorrectKey_ReturnsTrue()
     {
@@ -281,11 +276,6 @@ public class ApiKeyEntityTests
         // Assert
         Assert.False(isValid);
     }
-
-    #endregion
-
-    #region HasScope Tests
-
     [Fact]
     public void HasScope_WithSingleScope_ReturnsTrue()
     {
@@ -383,11 +373,6 @@ public class ApiKeyEntityTests
         Assert.True(apiKey.HasScope("write"));
         Assert.True(apiKey.HasScope("delete"));
     }
-
-    #endregion
-
-    #region MarkAsUsed Tests
-
     [Fact]
     public void MarkAsUsed_UpdatesLastUsedTimestamp()
     {
@@ -421,11 +406,6 @@ public class ApiKeyEntityTests
         Assert.NotNull(apiKey.LastUsedAt);
         Assert.True(apiKey.LastUsedAt > firstUpdate);
     }
-
-    #endregion
-
-    #region Revoke Tests
-
     [Fact]
     public void Revoke_WithActiveKey_RevokesSuccessfully()
     {
@@ -474,11 +454,6 @@ public class ApiKeyEntityTests
         Assert.Equal(revokedBy, apiKey.RevokedBy);
         Assert.False(apiKey.IsActive);
     }
-
-    #endregion
-
-    #region IsExpired Tests
-
     [Fact]
     public void IsExpired_WithNoExpiration_ReturnsFalse()
     {
@@ -538,11 +513,6 @@ public class ApiKeyEntityTests
         // Assert
         Assert.True(isExpired);
     }
-
-    #endregion
-
-    #region IsValidKey Tests
-
     [Fact]
     public void IsValidKey_WithValidKey_ReturnsTrue()
     {
@@ -624,11 +594,6 @@ public class ApiKeyEntityTests
         validKey.Revoke(Guid.NewGuid());
         Assert.False(validKey.IsValidKey());
     }
-
-    #endregion
-
-    #region Builder Integration Tests
-
     [Fact]
     public void Builder_CreateDefault_ProducesValidApiKey()
     {
@@ -666,7 +631,4 @@ public class ApiKeyEntityTests
         Assert.True(apiKey.HasScope("write"));
         Assert.True(apiKey.HasScope("admin"));
     }
-
-    #endregion
 }
-

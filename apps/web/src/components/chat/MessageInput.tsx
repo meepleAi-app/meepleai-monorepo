@@ -8,12 +8,13 @@
  */
 
 import React, { FormEvent } from 'react';
-import { useChatContext } from '@/hooks/useChatContext';
+import { useChatWithStreaming } from '@/hooks/useChatWithStreaming';
 import { LoadingButton } from '../loading/LoadingButton';
 import { SearchModeToggle, SearchMode } from '@/components';
 import { Input } from '@/components/ui/input';
 
 export function MessageInput() {
+  // Issue #1676: Uses streaming-enabled hook (combines Zustand + SSE)
   const {
     inputValue,
     setInputValue,
@@ -26,7 +27,7 @@ export function MessageInput() {
     // Streaming state (Issue #1007)
     isStreaming,
     stopStreaming,
-  } = useChatContext();
+  } = useChatWithStreaming();
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();

@@ -142,8 +142,8 @@
 
 **Investigation**:
 ```bash
-# Check error logs (Seq)
-curl "http://meepleai-seq:8081/api/events?filter=@Level='Error'&count=100"
+# Check error logs (HyperDX)
+curl "http://localhost:8180/api/search?q=level:error&size=100"
 
 # Check Prometheus metrics
 curl "http://meepleai-prometheus:9090/api/v1/query?query=rate(http_requests_total{status=~'5..'}[5m])"
@@ -167,26 +167,22 @@ curl http://meepleai-api:8080/health
 
 | Document | Description | Priority |
 |----------|-------------|----------|
-| [Logging & Audit](./monitoring/logging-and-audit.md) | Serilog → Seq, correlation IDs, audit trails | ⭐ Essential |
+| [Logging & Audit](./monitoring/logging-and-audit.md) | Serilog → HyperDX, correlation IDs, audit trails | ⭐ Essential |
 | [Slack Notifications](./monitoring/slack-notifications.md) | CI/CD failure alerts via Slack webhooks | Recommended |
 
 **Observability Stack** (15 services total):
 
 ```
 ┌─────────────────────────────────────────────────┐
-│              Application Logs                    │
-│          (Serilog → Seq:8081)                   │
+│         Unified Observability Platform           │
+│              (HyperDX:8180)                      │
+│  - Application Logs (Serilog → OTLP)           │
+│  - Distributed Tracing (OpenTelemetry)          │
+│  - Session Replay (Frontend)                    │
 │  - Correlation IDs (W3C Trace Context)          │
 │  - Structured logging (JSON)                    │
 │  - Log levels: Debug, Info, Warning, Error      │
-└─────────────────────────────────────────────────┘
-                     ↓
-┌─────────────────────────────────────────────────┐
-│            Distributed Tracing                   │
-│       (OpenTelemetry → Jaeger:16686)            │
-│  - W3C Trace Context propagation                │
-│  - Spans: HTTP, DB queries, external calls      │
-│  - Trace visualization                          │
+│  - Trace visualization & log-trace correlation  │
 └─────────────────────────────────────────────────┘
                      ↓
 ┌─────────────────────────────────────────────────┐
@@ -329,7 +325,7 @@ curl "http://meepleai-prometheus:9090/api/v1/query?query=rate(http_request_durat
 # - Identify bottleneck spans (DB queries, external API calls)
 
 # 4. Check Seq logs (errors, warnings)
-curl "http://meepleai-seq:8081/api/events?filter=@Level='Warning' OR @Level='Error'&count=100"
+curl "http://localhost:8180/api/search?q=level:error&size=100"
 
 # 5. Profile slow endpoints (if needed)
 # - dotnet-trace for CPU profiling

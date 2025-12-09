@@ -1,0 +1,118 @@
+# Traefik v3.2 Static Configuration
+# This file contains static configuration that requires Traefik restart to change
+# Dynamic configuration (middlewares, routers) is in ./dynamic/
+
+# API & Dashboard
+api:
+  dashboard: true
+  insecure: true  # DEVELOPMENT ONLY - allows HTTP dashboard access
+  # PRODUCTION: Remove insecure flag and use basic auth middleware
+
+# Entry Points
+entryPoints:
+  web:
+    address: ":80"
+    # PRODUCTION: HTTP to HTTPS redirect
+    # http:
+    #   redirections:
+    #     entryPoint:
+    #       to: websecure
+    #       scheme: https
+    #       permanent: true
+
+  # PRODUCTION: HTTPS entry point
+  # websecure:
+  #   address: ":443"
+  #   http:
+  #     tls:
+  #       certResolver: letsencrypt
+  #       domains:
+  #         - main: "yourdomain.com"
+  #           sans:
+  #             - "*.yourdomain.com"
+
+# Logging
+log:
+  level: INFO  # DEBUG, INFO, WARN, ERROR
+  filePath: "/var/log/traefik/traefik.log"
+  format: json  # json or common
+  # PRODUCTION: Send logs to HyperDX or similar
+  # maxSize: 100  # MB
+  # maxBackups: 3
+  # maxAge: 28  # days
+  # compress: true
+
+# Access Logs
+accessLog:
+  filePath: "/var/log/traefik/access.log"
+  format: json
+  bufferingSize: 100
+  # PRODUCTION: Filter sensitive headers
+  # fields:
+  #   headers:
+  #     defaultMode: keep
+  #     names:
+  #       Authorization: drop
+  #       Cookie: drop
+
+# Providers
+providers:
+  # Docker Provider
+  docker:
+    endpoint: "unix:///var/run/docker.sock"  # DEVELOPMENT ONLY
+    # PRODUCTION: Use socket proxy
+    # endpoint: "tcp://docker-socket-proxy:2375"
+    exposedByDefault: false  # Require explicit traefik.enable=true label
+    network: "meepleai"      # Default network for containers
+    watch: true              # Watch for container changes
+    # defaultRule: "Host(`{{ normalize .Name }}.localhost`)"  # Default hostname pattern
+
+  # File Provider (dynamic configuration)
+  file:
+    directory: "/etc/traefik/dynamic"
+    watch: true
+
+# PRODUCTION: Certificate Resolvers
+# certificatesResolvers:
+#   # Let's Encrypt with HTTP Challenge
+#   letsencrypt:
+#     acme:
+#       email: "your-email@example.com"
+#       storage: "/letsencrypt/acme.json"
+#       # STAGING: Test configuration without rate limits
+#       # caServer: "https://acme-staging-v02.api.letsencrypt.org/directory"
+#       httpChallenge:
+#         entryPoint: web
+#
+#   # Alternative: DNS Challenge (for wildcard certs)
+#   # Requires Cloudflare API token
+#   letsencrypt-dns:
+#     acme:
+#       email: "your-email@example.com"
+#       storage: "/letsencrypt/acme.json"
+#       dnsChallenge:
+#         provider: cloudflare
+#         resolvers:
+#           - "1.1.1.1:53"
+#           - "1.0.0.1:53"
+
+# Metrics
+metrics:
+  prometheus:
+    addEntryPointsLabels: true
+    addRoutersLabels: true
+    addServicesLabels: true
+    buckets:
+      - 0.1
+      - 0.3
+      - 1.2
+      - 5.0
+
+# Global
+global:
+  checkNewVersion: true
+  sendAnonymousUsage: false
+
+# PRODUCTION: Pilot integration for monitoring
+# pilot:
+#   token: "your-pilot-token"

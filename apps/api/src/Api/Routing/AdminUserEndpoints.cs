@@ -1,10 +1,13 @@
 using Api.BoundedContexts.Administration.Application.Commands;
+using Api.BoundedContexts.Administration.Application.DTOs;
 using Api.BoundedContexts.Administration.Application.Queries;
+using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.Extensions;
 using Api.Models;
 using Api.SharedKernel.Domain.Exceptions;
 using MediatR;
 
+#pragma warning disable MA0048 // File name must match type name - Endpoints and DTOs in same file
 namespace Api.Routing;
 
 /// <summary>
@@ -24,9 +27,9 @@ public static class AdminUserEndpoints
             CancellationToken ct) =>
         {
             // Session validated by RequireSessionFilter
-            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
-            logger.LogInformation("User {UserId} searching for users with query: {Query}", session.User.Id, query);
+            logger.LogInformation("User {UserId} searching for users with query: {Query}", session!.User!.Id, query);
 
             // Use CQRS Query for user search
             var searchQuery = new SearchUsersQuery(query, MaxResults: 10);
@@ -73,7 +76,7 @@ public static class AdminUserEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            logger.LogInformation("Admin {AdminId} creating new user with email {Email}", session.User.Id, request.Email);
+            logger.LogInformation("Admin {AdminId} creating new user with email {Email}", session!.User!.Id, request.Email);
             var command = new CreateUserCommand(request.Email, request.Password, request.DisplayName, request.Role ?? "user");
             var user = await mediator.Send(command, ct).ConfigureAwait(false);
             logger.LogInformation("User {UserId} created successfully", user.Id);
@@ -93,7 +96,7 @@ public static class AdminUserEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            logger.LogInformation("Admin {AdminId} updating user {UserId}", session.User.Id, id);
+            logger.LogInformation("Admin {AdminId} updating user {UserId}", session!.User!.Id, id);
             var command = new UpdateUserCommand(id, request.Email, request.DisplayName, request.Role);
             var user = await mediator.Send(command, ct).ConfigureAwait(false);
             logger.LogInformation("User {UserId} updated successfully", id);
@@ -112,8 +115,8 @@ public static class AdminUserEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            logger.LogInformation("Admin {AdminId} deleting user {UserId}", session.User.Id, id);
-            var command = new DeleteUserCommand(id, session.User.Id);
+            logger.LogInformation("Admin {AdminId} deleting user {UserId}", session!.User!.Id, id);
+            var command = new DeleteUserCommand(id, session.User!.Id.ToString());
             await mediator.Send(command, ct).ConfigureAwait(false);
             logger.LogInformation("User {UserId} deleted successfully", id);
             return Results.NoContent();
@@ -137,14 +140,14 @@ public static class AdminUserEndpoints
             if (!Guid.TryParse(id, out var userId))
             {
                 logger.LogWarning("Admin {AdminId} attempted to update tier with invalid user ID: {UserId}",
-                    session.User.Id, id);
+                    session!.User!.Id, id);
                 return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
             }
 
             // Validate requester ID format
-            if (!Guid.TryParse(session.User.Id, out var requesterId))
+            if (!Guid.TryParse(session!.User!.Id.ToString(), out var requesterId))
             {
-                logger.LogError("Invalid requester ID format in session: {RequesterId}", session.User.Id);
+                logger.LogError("Invalid requester ID format in session: {RequesterId}", session.User!.Id);
                 return Results.BadRequest(new { error = "invalid_session", message = "Invalid session user ID format" });
             }
 
@@ -191,7 +194,7 @@ public static class AdminUserEndpoints
 **Authorization**: Admin only
 
 **Request Body**: UpdateUserTierRequest with tier field")
-        .Produces<UserDto>(StatusCodes.Status200OK)
+        .Produces<Api.BoundedContexts.Authentication.Application.DTOs.UserDto>(StatusCodes.Status200OK)
         .Produces(StatusCodes.Status400BadRequest)
         .Produces(StatusCodes.Status401Unauthorized)
         .Produces(StatusCodes.Status403Forbidden);

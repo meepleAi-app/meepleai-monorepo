@@ -26,16 +26,20 @@
 .PARAMETER OutputPath
     Path for the generated report (default: claudedocs/quality/golden-dataset-results.md)
 
+.PARAMETER ApiKey
+    API key for authentication (required, format: mpl_dev_...)
+    Create via: POST /api/v1/auth/api-keys
+
 .PARAMETER DryRun
     Parse dataset and show stats without running evaluation
 
 .EXAMPLE
     # Run full evaluation (all 1000 cases)
-    pwsh tools/run-golden-dataset-evaluation.ps1
+    pwsh tools/run-golden-dataset-evaluation.ps1 -ApiKey "mpl_dev_..."
 
 .EXAMPLE
     # Quick validation (50 cases)
-    pwsh tools/run-golden-dataset-evaluation.ps1 -SampleSize 50
+    pwsh tools/run-golden-dataset-evaluation.ps1 -ApiKey "mpl_dev_..." -SampleSize 50
 
 .EXAMPLE
     # Dry run (no API calls)
@@ -52,6 +56,7 @@ param(
     [int]$SampleSize = 0, # 0 = all
     [bool]$Stratified = $true,
     [string]$OutputPath = "claudedocs/quality/golden-dataset-results.md",
+    [string]$ApiKey = "",  # API key for authentication (required)
     [switch]$DryRun
 )
 
@@ -148,18 +153,26 @@ if ($DryRun) {
     exit 0
 }
 
-# 4. Check API availability
+# 4. Validate API key
+if ([string]::IsNullOrWhiteSpace($ApiKey)) {
+    Write-Error "API key is required for authentication"
+    Write-Info "Usage: pwsh tools/run-golden-dataset-evaluation.ps1 -ApiKey 'mpl_dev_...'"
+    Write-Info "Create an API key via: POST /api/v1/auth/api-keys"
+    exit 1
+}
+
+# 5. Check API availability
 Write-Info "`nChecking API availability at: $ApiBaseUrl"
 try {
-    $healthCheck = Invoke-RestMethod -Uri "$ApiBaseUrl/health" -Method Get -TimeoutSec 5
-    Write-Success "API is healthy: $($healthCheck.status)"
+    $healthCheck = Invoke-RestMethod -Uri "$ApiBaseUrl/health/ready" -Method Get -TimeoutSec 5
+    Write-Success "API is healthy and ready"
 } catch {
     Write-Error "API not available at $ApiBaseUrl. Please start the API first."
     Write-Info "  cd apps/api/src/Api && dotnet run"
     exit 1
 }
 
-# 5. Run evaluation
+# 6. Run evaluation
 Write-Info "`nStarting evaluation..."
 Write-Warning "This will make ~$($testCases.Count) LLM API calls (cost: ~`$$(($testCases.Count * 0.005).ToString('F2')))"
 Write-Info "Press Ctrl+C to cancel..."
@@ -167,6 +180,12 @@ Start-Sleep -Seconds 3
 
 $results = @()
 $progressCount = 0
+
+# Setup authentication headers
+$headers = @{
+    "X-API-Key" = $ApiKey
+    "Content-Type" = "application/json"
+}
 
 foreach ($testCase in $testCases) {
     $progressCount++
@@ -183,7 +202,7 @@ foreach ($testCase in $testCases) {
             bypassCache = $true  # Ensure fresh responses for accuracy testing
         } | ConvertTo-Json
 
-        $response = Invoke-RestMethod -Uri "$ApiBaseUrl/knowledge-base/ask" -Method Post -Body $body -ContentType "application/json" -TimeoutSec 30
+        $response = Invoke-RestMethod -Uri "$ApiBaseUrl/api/v1/knowledge-base/ask" -Method Post -Headers $headers -Body $body -TimeoutSec 30
 
         # Evaluate response
         $keywordMatches = 0
@@ -253,7 +272,7 @@ foreach ($testCase in $testCases) {
 
 Write-Success "`nEvaluation complete: $($results.Count) test cases processed"
 
-# 6. Calculate metrics
+# 7. Calculate metrics
 $correct = ($results | Where-Object { $_.IsCorrect }).Count
 $accuracy = $correct / $results.Count
 $avgConfidence = ($results | Measure-Object -Property Confidence -Average).Average
@@ -294,7 +313,7 @@ $gameMetrics = $results | Group-Object GameId | ForEach-Object {
     }
 }
 
-# 7. Display results
+# 8. Display results
 Write-Info "`n===== OVERALL RESULTS ====="
 Write-Info "Total test cases: $($results.Count)"
 Write-Info "Correct answers: $correct"
@@ -311,7 +330,7 @@ $categoryMetrics | Format-Table -AutoSize
 Write-Info "===== BY GAME ====="
 $gameMetrics | Format-Table -AutoSize
 
-# 8. Generate markdown report
+# 9. Generate markdown report
 $reportDir = Split-Path $OutputPath
 if ($reportDir -and -not (Test-Path $reportDir)) {
     New-Item -ItemType Directory -Path $reportDir -Force | Out-Null
@@ -401,7 +420,7 @@ $(if ($accuracy -ge 0.95) {
 $reportContent | Out-File -FilePath $OutputPath -Encoding UTF8
 Write-Success "`nReport saved to: $OutputPath"
 
-# 9. Exit code
+# 10. Exit code
 if ($accuracy -ge 0.80) {
     Write-Success "`n✅ EVALUATION PASSED - Accuracy meets threshold (≥80%)"
     exit 0

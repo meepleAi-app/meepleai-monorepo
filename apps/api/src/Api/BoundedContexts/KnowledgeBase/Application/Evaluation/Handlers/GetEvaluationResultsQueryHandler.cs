@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Handlers;
 /// <summary>
 /// Handler for GetEvaluationResultsQuery.
 /// Uses thread-safe in-memory cache with bounded size.
-/// TODO: In production, consider persisting to database for durability.
+/// ISSUE-1674: Consider persisting to database for durability in production.
 /// </summary>
 public sealed class GetEvaluationResultsQueryHandler : IRequestHandler<GetEvaluationResultsQuery, IReadOnlyList<EvaluationResult>>
 {

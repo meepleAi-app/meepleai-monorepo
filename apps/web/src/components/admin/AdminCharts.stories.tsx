@@ -57,3 +57,29 @@ export const EmptyStates: Story = {
     </div>
   ),
 };
+
+export const LoadingStates: Story = {
+  name: 'Loading placeholders',
+  render: () => (
+    <div className="space-y-8 p-6 bg-slate-50">
+      <div className="h-[300px] w-full animate-pulse rounded-lg bg-slate-100" />
+      <div className="h-[300px] w-full animate-pulse rounded-lg bg-slate-100" />
+      <div className="h-[300px] w-full animate-pulse rounded-lg bg-slate-100" />
+      <div className="h-[300px] w-full animate-pulse rounded-lg bg-slate-100" />
+    </div>
+  ),
+};
+
+export const ErrorStates: Story = {
+  name: 'Error placeholders',
+  render: () => (
+    <div className="space-y-4 p-6 bg-slate-50">
+      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-800">
+        Failed to load charts. Please retry.
+      </div>
+      <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-yellow-800">
+        Metrics temporarily unavailable.
+      </div>
+    </div>
+  ),
+};

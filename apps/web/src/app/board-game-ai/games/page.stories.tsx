@@ -493,6 +493,26 @@ export const DesktopFlow: Story = {
 };
 
 /**
+ * Responsive Matrix (375/768/1280/1440)
+ * Single Chromatic snapshot across key breakpoints.
+ */
+export const ResponsiveMatrix: Story = {
+  args: {
+    games: mockGames.slice(0, 12),
+    view: 'grid',
+    currentPage: 1,
+    totalPages: 3,
+    total: 60,
+  },
+  parameters: {
+    chromatic: {
+      viewports: [375, 768, 1280, 1440],
+      delay: 300,
+    },
+  },
+};
+
+/**
  * Empty State
  * No games found after search
  */

@@ -227,7 +227,7 @@ export function createGamesClient({ httpClient }: CreateGamesClientParams) {
      */
     async getDocuments(gameId: string): Promise<PdfDocumentDto[]> {
       const response = await httpClient.get<PdfDocumentDto[]>(
-        `/api/v1/games/${encodeURIComponent(gameId)}/documents`
+        `/api/v1/games/${encodeURIComponent(gameId)}/pdfs`
       );
       return response ?? [];
     },

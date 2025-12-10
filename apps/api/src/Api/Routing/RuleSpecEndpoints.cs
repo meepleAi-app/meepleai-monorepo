@@ -350,6 +350,61 @@ public static class RuleSpecEndpoints
         .Produces(StatusCodes.Status403Forbidden)
         .Produces(StatusCodes.Status404NotFound);
 
+        // 7. Update comment text
+        group.MapPut("/comments/{commentId}", async (
+            Guid commentId,
+            UpdateCommentRequest request,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            var (authorized, session, error) = context.RequireAdminOrEditorSession();
+            if (!authorized) return error!;
+
+            var userId = session!.User!.Id;
+            logger.LogInformation("User {UserId} updating comment {CommentId}", userId, commentId);
+
+            var command = new UpdateRuleCommentCommand(commentId, request.CommentText, userId);
+            var updated = await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.Ok(updated);
+        })
+        .RequireAuthorization()
+        .WithName("UpdateComment")
+        .WithTags("Comments")
+        .Produces<RuleCommentDto>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status400BadRequest)
+        .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status403Forbidden)
+        .Produces(StatusCodes.Status404NotFound);
+
+        // 8. Delete comment
+        group.MapDelete("/comments/{commentId}", async (
+            Guid commentId,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            var (authorized, session, error) = context.RequireAdminOrEditorSession();
+            if (!authorized) return error!;
+
+            var userId = session!.User!.Id;
+            logger.LogInformation("User {UserId} deleting comment {CommentId}", userId, commentId);
+
+            var command = new DeleteRuleCommentCommand(commentId, userId);
+            var deleted = await mediator.Send(command, ct).ConfigureAwait(false);
+
+            return deleted ? Results.NoContent() : Results.NotFound(new { error = "Comment not found" });
+        })
+        .RequireAuthorization()
+        .WithName("DeleteComment")
+        .WithTags("Comments")
+        .Produces(StatusCodes.Status204NoContent)
+        .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status403Forbidden)
+        .Produces(StatusCodes.Status404NotFound);
+
         // EDIT-07: Bulk RuleSpec operations
         group.MapPost("/rulespecs/bulk/export", async (BulkExportRequest request, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
@@ -386,6 +441,8 @@ public static class RuleSpecEndpoints
 
         return group;
     }
+
+    private record UpdateCommentRequest(string CommentText);
 
     // Issue #1676 Phase 2: ToModel() helper removed (no longer needed, return RuleSpecDto directly)
 }

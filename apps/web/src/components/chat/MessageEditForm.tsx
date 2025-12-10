@@ -53,21 +53,10 @@ export function MessageEditForm() {
         autoFocus
       />
       <div className="flex gap-2 mt-2">
-        <Button
-          onClick={() => void saveEdit(editMessage)}
-          disabled={!canSave}
-          size="sm"
-          aria-label="Save edited message"
-        >
+        <Button onClick={() => void saveEdit(editMessage)} disabled={!canSave} size="sm">
           {isUpdating ? 'Salvataggio...' : 'Salva'}
         </Button>
-        <Button
-          onClick={cancelEdit}
-          disabled={isUpdating}
-          variant="secondary"
-          size="sm"
-          aria-label="Cancel editing"
-        >
+        <Button onClick={cancelEdit} disabled={isUpdating} variant="secondary" size="sm">
           Annulla
         </Button>
       </div>

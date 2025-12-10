@@ -129,15 +129,20 @@ async function isSessionCookieValid(request: NextRequest, cookieValue: string): 
  * Get API base URL origin for CSP
  * Extracts the origin (protocol + host) from the API base URL
  * Results are cached for performance
+ *
+ * Uses API_BASE_URL for server-side (middleware) and NEXT_PUBLIC_API_BASE for client
  */
 function getApiOrigin(): string {
   if (cachedApiOrigin !== null) {
     return cachedApiOrigin;
   }
 
-  const envBase = process.env.NEXT_PUBLIC_API_BASE?.trim();
-  const apiBase =
-    envBase && envBase !== 'undefined' && envBase !== 'null' ? envBase : 'http://localhost:8080';
+  // For server-side (middleware), prefer API_BASE_URL (Docker service name)
+  // For client-side, NEXT_PUBLIC_API_BASE will be used
+  const serverApiBase = process.env.API_BASE_URL?.trim();
+  const clientApiBase = process.env.NEXT_PUBLIC_API_BASE?.trim();
+
+  const apiBase = serverApiBase || clientApiBase || 'http://localhost:8080';
 
   try {
     const url = new URL(apiBase);

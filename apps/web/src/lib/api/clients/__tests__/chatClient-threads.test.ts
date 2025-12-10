@@ -26,10 +26,14 @@ import {
 describe('ChatClient - Threads & Messages', () => {
   let mockHttpClient: ReturnType<typeof createMockHttpClient>;
   let chatClient: ReturnType<typeof createChatClient>;
+  let mockFetch: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     mockHttpClient = createMockHttpClient();
     chatClient = createChatClient({ httpClient: mockHttpClient });
+    mockFetch = vi.fn();
+    // @ts-expect-error override global fetch in tests
+    global.fetch = mockFetch;
   });
 
   describe('Chat Threads', () => {
@@ -44,9 +48,7 @@ describe('ChatClient - Threads & Messages', () => {
 
         const result = await chatClient.getThreadsByGame('game-1');
 
-        expect(mockHttpClient.get).toHaveBeenCalledWith(
-          '/api/v1/knowledge-base/chat-threads?gameId=game-1'
-        );
+        expect(mockHttpClient.get).toHaveBeenCalledWith('/api/v1/chat-threads?gameId=game-1');
         expect(result).toEqual(mockThreads);
       });
 
@@ -61,7 +63,7 @@ describe('ChatClient - Threads & Messages', () => {
         await chatClient.getThreadsByGame('game with spaces');
 
         expect(mockHttpClient.get).toHaveBeenCalledWith(
-          '/api/v1/knowledge-base/chat-threads?gameId=game%20with%20spaces'
+          '/api/v1/chat-threads?gameId=game%20with%20spaces'
         );
       });
 
@@ -78,9 +80,7 @@ describe('ChatClient - Threads & Messages', () => {
         mockHttpClient.get.mockResolvedValueOnce([]);
         await chatClient.getThreadsByGame('');
 
-        expect(mockHttpClient.get).toHaveBeenCalledWith(
-          '/api/v1/knowledge-base/chat-threads?gameId='
-        );
+        expect(mockHttpClient.get).toHaveBeenCalledWith('/api/v1/chat-threads?gameId=');
       });
     });
 
@@ -92,7 +92,7 @@ describe('ChatClient - Threads & Messages', () => {
         const result = await chatClient.getThreadById('thread-123');
 
         expect(mockHttpClient.get).toHaveBeenCalledWith(
-          '/api/v1/knowledge-base/chat-threads/thread-123',
+          '/api/v1/chat-threads/thread-123',
           expect.anything()
         );
         expect(result).toEqual(mockThread);
@@ -129,7 +129,7 @@ describe('ChatClient - Threads & Messages', () => {
         const result = await chatClient.createThread(request);
 
         expect(mockHttpClient.post).toHaveBeenCalledWith(
-          '/api/v1/knowledge-base/chat-threads',
+          '/api/v1/chat-threads',
           request,
           expect.anything()
         );
@@ -143,7 +143,7 @@ describe('ChatClient - Threads & Messages', () => {
         await chatClient.createThread(request);
 
         expect(mockHttpClient.post).toHaveBeenCalledWith(
-          '/api/v1/knowledge-base/chat-threads',
+          '/api/v1/chat-threads',
           request,
           expect.anything()
         );
@@ -160,7 +160,7 @@ describe('ChatClient - Threads & Messages', () => {
         await chatClient.createThread(request);
 
         expect(mockHttpClient.post).toHaveBeenCalledWith(
-          '/api/v1/knowledge-base/chat-threads',
+          '/api/v1/chat-threads',
           request,
           expect.anything()
         );
@@ -180,7 +180,7 @@ describe('ChatClient - Threads & Messages', () => {
         const result = await chatClient.addMessage('thread-123', request);
 
         expect(mockHttpClient.post).toHaveBeenCalledWith(
-          '/api/v1/knowledge-base/chat-threads/thread-123/messages',
+          '/api/v1/chat-threads/thread-123/messages',
           request,
           expect.anything()
         );
@@ -222,7 +222,7 @@ describe('ChatClient - Threads & Messages', () => {
         const result = await chatClient.closeThread('thread-123');
 
         expect(mockHttpClient.post).toHaveBeenCalledWith(
-          '/api/v1/knowledge-base/chat-threads/thread-123/close',
+          '/api/v1/chat-threads/thread-123/close',
           {},
           expect.anything()
         );
@@ -249,7 +249,7 @@ describe('ChatClient - Threads & Messages', () => {
         const result = await chatClient.reopenThread('thread-123');
 
         expect(mockHttpClient.post).toHaveBeenCalledWith(
-          '/api/v1/knowledge-base/chat-threads/thread-123/reopen',
+          '/api/v1/chat-threads/thread-123/reopen',
           {},
           expect.anything()
         );
@@ -267,7 +267,7 @@ describe('ChatClient - Threads & Messages', () => {
         const result = await chatClient.updateMessage('chat-1', 'msg-123', 'Updated content');
 
         expect(mockHttpClient.put).toHaveBeenCalledWith(
-          '/api/v1/chats/chat-1/messages/msg-123',
+          '/api/v1/chat-threads/chat-1/messages/msg-123',
           { content: 'Updated content' },
           expect.anything()
         );
@@ -298,7 +298,9 @@ describe('ChatClient - Threads & Messages', () => {
         mockHttpClient.delete.mockResolvedValueOnce(undefined);
         await chatClient.deleteMessage('chat-1', 'msg-123');
 
-        expect(mockHttpClient.delete).toHaveBeenCalledWith('/api/v1/chats/chat-1/messages/msg-123');
+        expect(mockHttpClient.delete).toHaveBeenCalledWith(
+          '/api/v1/chat-threads/chat-1/messages/msg-123'
+        );
       });
 
       it('should return void', async () => {
@@ -317,50 +319,73 @@ describe('ChatClient - Threads & Messages', () => {
 
     it('should export chat as PDF', async () => {
       const blob = new Blob(['content'], { type: 'application/pdf' });
-      mockHttpClient.postFile.mockResolvedValueOnce({
-        blob,
-        filename: 'chat-export.pdf',
-      });
+      const url = 'http://localhost:8080/api/v1/chat-threads/chat-1/export?format=pdf';
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        blob: async () => blob,
+        headers: {
+          get: (name: string) =>
+            name.toLowerCase() === 'content-disposition'
+              ? 'attachment; filename="chat-export.pdf"'
+              : null,
+        },
+      } as any);
 
       await chatClient.exportChat('chat-1', { format: 'pdf' });
 
-      expect(mockHttpClient.postFile).toHaveBeenCalledWith('/api/v1/chats/chat-1/export', {
-        format: 'pdf',
-      });
+      expect(mockFetch).toHaveBeenCalledWith(url, { method: 'GET', credentials: 'include' });
       expect(mockDownloadFile).toHaveBeenCalledWith(blob, 'chat-export.pdf');
     });
 
     it('should export chat as TXT', async () => {
       const blob = new Blob(['content'], { type: 'text/plain' });
-      mockHttpClient.postFile.mockResolvedValueOnce({
-        blob,
-        filename: 'chat-export.txt',
-      });
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        blob: async () => blob,
+        headers: {
+          get: (name: string) =>
+            name.toLowerCase() === 'content-disposition'
+              ? 'attachment; filename="chat-export.txt"'
+              : null,
+        },
+      } as any);
 
       await chatClient.exportChat('chat-1', { format: 'txt' });
 
-      expect(mockHttpClient.postFile).toHaveBeenCalledWith('/api/v1/chats/chat-1/export', {
-        format: 'txt',
-      });
+      expect(mockDownloadFile).toHaveBeenCalledWith(blob, 'chat-export.txt');
     });
 
     it('should export chat as Markdown', async () => {
       const blob = new Blob(['content'], { type: 'text/markdown' });
-      mockHttpClient.postFile.mockResolvedValueOnce({
-        blob,
-        filename: 'chat-export.md',
-      });
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        blob: async () => blob,
+        headers: {
+          get: (name: string) =>
+            name.toLowerCase() === 'content-disposition'
+              ? 'attachment; filename="chat-export.md"'
+              : null,
+        },
+      } as any);
 
       await chatClient.exportChat('chat-1', { format: 'md' });
 
-      expect(mockHttpClient.postFile).toHaveBeenCalledWith('/api/v1/chats/chat-1/export', {
-        format: 'md',
-      });
+      expect(mockDownloadFile).toHaveBeenCalledWith(blob, 'chat-export.md');
     });
 
     it('should include date filters when provided', async () => {
       const blob = new Blob(['content']);
-      mockHttpClient.postFile.mockResolvedValueOnce({ blob, filename: 'export.pdf' });
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        blob: async () => blob,
+        headers: {
+          get: () => 'attachment; filename="export.pdf"',
+        },
+      } as any);
 
       await chatClient.exportChat('chat-1', {
         format: 'pdf',
@@ -368,26 +393,25 @@ describe('ChatClient - Threads & Messages', () => {
         dateTo: '2025-01-31',
       });
 
-      expect(mockHttpClient.postFile).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.objectContaining({
-          format: 'pdf',
-          dateFrom: '2025-01-01',
-          dateTo: '2025-01-31',
-        })
-      );
+      const calledUrl = mockFetch.mock.calls[0][0] as string;
+      expect(calledUrl).toContain('format=pdf');
+      expect(calledUrl).toContain('dateFrom=2025-01-01');
+      expect(calledUrl).toContain('dateTo=2025-01-31');
     });
 
     it('should encode chatId in URL', async () => {
       const blob = new Blob(['content']);
-      mockHttpClient.postFile.mockResolvedValueOnce({ blob, filename: 'export.pdf' });
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        blob: async () => blob,
+        headers: { get: () => 'attachment' },
+      } as any);
 
       await chatClient.exportChat('chat with/spaces', { format: 'pdf' });
 
-      expect(mockHttpClient.postFile).toHaveBeenCalledWith(
-        expect.stringContaining('chat%20with%2Fspaces'),
-        expect.anything()
-      );
+      const calledUrl = mockFetch.mock.calls[0][0] as string;
+      expect(calledUrl).toContain('chat%20with%2Fspaces');
     });
   });
 
@@ -407,11 +431,10 @@ describe('ChatClient - Threads & Messages', () => {
     });
 
     it('should propagate httpClient errors for exportChat', async () => {
-      const error = new Error('Export failed');
-      mockHttpClient.postFile.mockRejectedValueOnce(error);
+      mockFetch.mockResolvedValueOnce(new Response(null, { status: 500 }));
 
       await expect(chatClient.exportChat('chat-1', { format: 'pdf' })).rejects.toThrow(
-        'Export failed'
+        'Failed to export chat'
       );
     });
   });

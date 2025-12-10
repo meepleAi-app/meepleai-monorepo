@@ -47,7 +47,7 @@ describe('ChatClient - Operations & Management', () => {
         const result = await chatClient.getRuleSpecComments('catan', '1.0');
 
         expect(mockHttpClient.get).toHaveBeenCalledWith(
-          '/api/v1/games/catan/rulespec/versions/1.0/comments?includeResolved=true',
+          '/api/v1/rulespecs/catan/1.0/comments?includeResolved=true',
           expect.anything()
         );
         expect(result).toEqual(mockComments);
@@ -95,7 +95,7 @@ describe('ChatClient - Operations & Management', () => {
         const result = await chatClient.createRuleSpecComment('catan', '1.0', request);
 
         expect(mockHttpClient.post).toHaveBeenCalledWith(
-          '/api/v1/games/catan/rulespec/versions/1.0/comments',
+          '/api/v1/rulespecs/catan/1.0/comments',
           request,
           expect.anything()
         );
@@ -144,7 +144,7 @@ describe('ChatClient - Operations & Management', () => {
         const result = await chatClient.updateRuleSpecComment('catan', 'comment-123', request);
 
         expect(mockHttpClient.put).toHaveBeenCalledWith(
-          '/api/v1/games/catan/rulespec/comments/comment-123',
+          '/api/v1/comments/comment-123',
           request,
           expect.anything()
         );
@@ -166,9 +166,7 @@ describe('ChatClient - Operations & Management', () => {
         mockHttpClient.delete.mockResolvedValueOnce(undefined);
         await chatClient.deleteRuleSpecComment('catan', 'comment-123');
 
-        expect(mockHttpClient.delete).toHaveBeenCalledWith(
-          '/api/v1/games/catan/rulespec/comments/comment-123'
-        );
+        expect(mockHttpClient.delete).toHaveBeenCalledWith('/api/v1/comments/comment-123');
       });
 
       it('should return void', async () => {
@@ -196,7 +194,7 @@ describe('ChatClient - Operations & Management', () => {
         const result = await chatClient.createCommentReply('comment-parent', request);
 
         expect(mockHttpClient.post).toHaveBeenCalledWith(
-          '/api/v1/rulespec/comments/comment-parent/replies',
+          '/api/v1/comments/comment-parent/replies',
           request,
           expect.anything()
         );
@@ -217,7 +215,7 @@ describe('ChatClient - Operations & Management', () => {
         await chatClient.resolveComment('comment-123');
 
         expect(mockHttpClient.post).toHaveBeenCalledWith(
-          '/api/v1/rulespec/comments/comment-123/resolve',
+          '/api/v1/comments/comment-123/resolve',
           {}
         );
       });
@@ -236,7 +234,7 @@ describe('ChatClient - Operations & Management', () => {
         await chatClient.unresolveComment('comment-123');
 
         expect(mockHttpClient.post).toHaveBeenCalledWith(
-          '/api/v1/rulespec/comments/comment-123/unresolve',
+          '/api/v1/comments/comment-123/unresolve',
           {}
         );
       });

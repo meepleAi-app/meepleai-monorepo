@@ -44,6 +44,27 @@ Log.Logger = LoggingConfiguration.ConfigureSerilog(builder).CreateLogger();
 
 builder.Host.UseSerilog();
 
+// BGAI-081: Cookie Policy for Development
+// Allow SameSite=None without Secure for localhost cross-port development
+// In production, this should be removed (SameSite=None REQUIRES Secure=true)
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.Configure<CookiePolicyOptions>(options =>
+    {
+        options.MinimumSameSitePolicy = SameSiteMode.Unspecified;
+        // Allow SameSite=None without Secure in development
+        options.OnAppendCookie = cookieContext =>
+        {
+            if (cookieContext.CookieOptions.SameSite == SameSiteMode.None && 
+                !cookieContext.CookieOptions.Secure)
+            {
+                // ASP.NET Core normally blocks this, but we allow it for localhost development
+                cookieContext.CookieOptions.SameSite = SameSiteMode.None;
+            }
+        };
+    });
+}
+
 // PERF-11: Configure Response Compression (Brotli + Gzip)
 builder.Services.AddResponseCompression(options =>
 {

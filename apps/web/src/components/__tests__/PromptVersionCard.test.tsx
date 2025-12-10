@@ -488,7 +488,11 @@ describe('PromptVersionCard', () => {
 
       render(<PromptVersionCard version={versionWithWhitespace} />);
 
-      expect(screen.getByText(contentWithWhitespace)).toBeInTheDocument();
+      expect(
+        screen.getByText(contentWithWhitespace, {
+          normalizer: text => text, // preserve tabs and multiple spaces
+        })
+      ).toBeInTheDocument();
     });
 
     it('should preserve newlines in content display', () => {

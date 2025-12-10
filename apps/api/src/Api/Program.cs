@@ -52,16 +52,7 @@ if (builder.Environment.IsDevelopment())
     builder.Services.Configure<CookiePolicyOptions>(options =>
     {
         options.MinimumSameSitePolicy = SameSiteMode.Unspecified;
-        // Allow SameSite=None without Secure in development
-        options.OnAppendCookie = cookieContext =>
-        {
-            if (cookieContext.CookieOptions.SameSite == SameSiteMode.None && 
-                !cookieContext.CookieOptions.Secure)
-            {
-                // ASP.NET Core normally blocks this, but we allow it for localhost development
-                cookieContext.CookieOptions.SameSite = SameSiteMode.None;
-            }
-        };
+        options.HandleSameSiteCookieCompatibility();
     });
 }
 

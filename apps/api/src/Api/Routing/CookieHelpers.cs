@@ -17,7 +17,31 @@ public static class CookieHelpers
     {
         var options = CreateSessionCookieOptions(context, expiresAt);
         var sessionCookieName = GetSessionCookieName(context);
-        context.Response.Cookies.Append(sessionCookieName, token, options);
+        
+        // BGAI-081: Development workaround for SameSite=None without Secure
+        // ASP.NET Core blocks SameSite=None without Secure, so we write the header directly
+        if (context.RequestServices.GetRequiredService<IHostEnvironment>().IsDevelopment() && 
+            options.SameSite == SameSiteMode.None && 
+            !options.Secure)
+        {
+            // Build Set-Cookie header manually
+            var cookieValue = $"{sessionCookieName}={token}; " +
+                            $"Path={options.Path}; " +
+                            $"Expires={expiresAt:R}; " +
+                            $"HttpOnly; " +
+                            $"SameSite=None";
+            
+            if (!string.IsNullOrWhiteSpace(options.Domain))
+            {
+                cookieValue += $"; Domain={options.Domain}";
+            }
+            
+            context.Response.Headers.Append("Set-Cookie", cookieValue);
+        }
+        else
+        {
+            context.Response.Cookies.Append(sessionCookieName, token, options);
+        }
     }
 
     public static void RemoveSessionCookie(HttpContext context)

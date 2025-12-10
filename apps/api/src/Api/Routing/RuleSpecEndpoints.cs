@@ -390,9 +390,10 @@ public static class RuleSpecEndpoints
             if (!authorized) return error!;
 
             var userId = session!.User!.Id;
+            var isAdmin = session.User.Role == "Admin";
             logger.LogInformation("User {UserId} deleting comment {CommentId}", userId, commentId);
 
-            var command = new DeleteRuleCommentCommand(commentId, userId);
+            var command = new DeleteRuleCommentCommand(commentId, userId, isAdmin);
             var deleted = await mediator.Send(command, ct).ConfigureAwait(false);
 
             return deleted ? Results.NoContent() : Results.NotFound(new { error = "Comment not found" });

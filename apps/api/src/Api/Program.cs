@@ -52,7 +52,6 @@ if (builder.Environment.IsDevelopment())
     builder.Services.Configure<CookiePolicyOptions>(options =>
     {
         options.MinimumSameSitePolicy = SameSiteMode.Unspecified;
-        options.HandleSameSiteCookieCompatibility();
     });
 }
 

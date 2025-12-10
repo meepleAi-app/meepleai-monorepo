@@ -221,7 +221,7 @@ public class MultiModelValidationServiceTests
         Assert.Equal(ConsensusSeverity.Error, result.Severity);
         Assert.False(result.Gpt4Response.IsSuccess);
         Assert.True(result.ClaudeResponse.IsSuccess);
-        Assert.Contains("GPT-4 failed", result.Message);
+        Assert.Contains("GPT-4 failed", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -260,7 +260,7 @@ public class MultiModelValidationServiceTests
         Assert.Equal(ConsensusSeverity.Error, result.Severity);
         Assert.True(result.Gpt4Response.IsSuccess);
         Assert.False(result.ClaudeResponse.IsSuccess);
-        Assert.Contains("Claude failed", result.Message);
+        Assert.Contains("Claude failed", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -289,7 +289,7 @@ public class MultiModelValidationServiceTests
         Assert.Equal(ConsensusSeverity.Error, result.Severity);
         Assert.False(result.Gpt4Response.IsSuccess);
         Assert.False(result.ClaudeResponse.IsSuccess);
-        Assert.Contains("Both models failed", result.Message);
+        Assert.Contains("Both models failed", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

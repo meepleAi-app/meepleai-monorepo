@@ -7,7 +7,7 @@
 
 import { z } from 'zod';
 import { createApiError, NetworkError, SchemaValidationError, ApiError } from './errors';
-import { logApiError } from './logger';
+import { logApiError, logger } from './logger';
 import { getStoredApiKeySync } from './apiKeyStore';
 import { withRetry, RetryOptions, parseRetryAfter } from './retryPolicy';
 import { recordRetryAttempt, recordRetrySuccess, recordRetryFailure } from './metrics';
@@ -166,7 +166,7 @@ export class HttpClient {
                 const retryAfterMs = parseRetryAfter(retryAfterHeader);
 
                 if (retryAfterMs) {
-                  console.info(
+                  logger.info(
                     `[AdaptiveBackoff] Server requested delay via Retry-After header for ${path}: ${retryAfterMs}ms`
                   );
                 }

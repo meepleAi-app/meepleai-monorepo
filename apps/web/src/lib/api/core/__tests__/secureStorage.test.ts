@@ -3,6 +3,7 @@
  */
 
 import { encrypt, decrypt, clearEncryptionKey } from '../secureStorage';
+import { logger } from '@/lib/api/core/logger';
 
 // Mock Web Crypto API
 const mockCrypto = {
@@ -255,7 +256,7 @@ describe('secureStorage', () => {
 
   describe('fallback behavior', () => {
     it('should warn and return plaintext when crypto API is not available', async () => {
-      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation();
+      const loggerWarnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
 
       // Temporarily remove crypto API
       const originalCrypto = global.window.crypto;
@@ -269,7 +270,7 @@ describe('secureStorage', () => {
       const result = await encrypt(plaintext);
 
       expect(result).toBe(plaintext);
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(loggerWarnSpy).toHaveBeenCalledWith(
         'Web Crypto API not available, storing data unencrypted'
       );
 
@@ -279,11 +280,11 @@ describe('secureStorage', () => {
         writable: true,
         configurable: true,
       });
-      consoleSpy.mockRestore();
+      loggerWarnSpy.mockRestore();
     });
 
     it('should return data as-is when decrypting without crypto API', async () => {
-      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation();
+      const loggerWarnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
 
       // Encrypt first (with crypto)
       const plaintext = 'test-data';
@@ -307,7 +308,7 @@ describe('secureStorage', () => {
         writable: true,
         configurable: true,
       });
-      consoleSpy.mockRestore();
+      loggerWarnSpy.mockRestore();
     });
   });
 });

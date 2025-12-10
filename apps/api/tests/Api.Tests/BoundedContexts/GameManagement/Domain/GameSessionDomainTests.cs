@@ -41,7 +41,7 @@ public class GameSessionDomainTests
         // Act & Assert
         var exception = Assert.Throws<ArgumentException>(() =>
             new GameSession(Guid.NewGuid(), Guid.Empty, players));
-        Assert.Contains("GameId cannot be empty", exception.Message);
+        Assert.Contains("GameId cannot be empty", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -61,7 +61,7 @@ public class GameSessionDomainTests
         // Act & Assert
         var exception = Assert.Throws<ArgumentException>(() =>
             new GameSession(Guid.NewGuid(), Guid.NewGuid(), players));
-        Assert.Contains("at least one player", exception.Message);
+        Assert.Contains("at least one player", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -75,7 +75,7 @@ public class GameSessionDomainTests
         // Act & Assert
         var exception = Assert.Throws<ArgumentException>(() =>
             new GameSession(Guid.NewGuid(), Guid.NewGuid(), players));
-        Assert.Contains("cannot have more than 100 players", exception.Message);
+        Assert.Contains("cannot have more than 100 players", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -100,7 +100,7 @@ public class GameSessionDomainTests
 
         // Act & Assert
         var exception = Assert.Throws<InvalidOperationException>(() => session.Start());
-        Assert.Contains("must be in Setup", exception.Message);
+        Assert.Contains("must be in Setup", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -146,7 +146,7 @@ public class GameSessionDomainTests
 
         // Act & Assert
         var exception = Assert.Throws<InvalidOperationException>(() => session.Complete());
-        Assert.Contains("must be InProgress", exception.Message);
+        Assert.Contains("must be InProgress", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -160,7 +160,7 @@ public class GameSessionDomainTests
         // Act & Assert
         var exception = Assert.Throws<Api.SharedKernel.Domain.Exceptions.ValidationException>(
             () => session.Complete(longName));
-        Assert.Contains("Winner name cannot exceed 50 characters", exception.Message);
+        Assert.Contains("Winner name cannot exceed 50 characters", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -192,7 +192,7 @@ public class GameSessionDomainTests
         // Assert
         Assert.Equal(SessionStatus.Abandoned, session.Status);
         Assert.NotNull(session.CompletedAt);
-        Assert.Contains("Abandoned: Players had to leave", session.Notes);
+        Assert.Contains("Abandoned: Players had to leave", session.Notes, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -205,7 +205,7 @@ public class GameSessionDomainTests
 
         // Act & Assert
         var exception = Assert.Throws<InvalidOperationException>(() => session.Abandon());
-        Assert.Contains("Cannot abandon finished session", exception.Message);
+        Assert.Contains("Cannot abandon finished session", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -335,7 +335,7 @@ public class GameSessionDomainTests
 
         // Act & Assert
         var exception = Assert.Throws<InvalidOperationException>(() => session.AddPlayer(newPlayer));
-        Assert.Contains("Cannot add player to finished session", exception.Message);
+        Assert.Contains("Cannot add player to finished session", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -361,8 +361,8 @@ public class GameSessionDomainTests
 
         // Act & Assert
         var exception = Assert.Throws<InvalidOperationException>(() => session.AddPlayer(duplicatePlayer));
-        Assert.Contains("already in this session", exception.Message);
-        Assert.Contains("Alice", exception.Message);
+        Assert.Contains("already in this session", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Alice", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -374,7 +374,7 @@ public class GameSessionDomainTests
 
         // Act & Assert
         var exception = Assert.Throws<InvalidOperationException>(() => session.AddPlayer(duplicatePlayer));
-        Assert.Contains("already in this session", exception.Message);
+        Assert.Contains("already in this session", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -390,7 +390,7 @@ public class GameSessionDomainTests
 
         // Act & Assert
         var exception = Assert.Throws<InvalidOperationException>(() => session.AddPlayer(oneMorePlayer));
-        Assert.Contains("cannot have more than 100 players", exception.Message);
+        Assert.Contains("cannot have more than 100 players", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

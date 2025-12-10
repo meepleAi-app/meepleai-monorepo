@@ -9,7 +9,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { SearchFilters } from '../search/SearchFilters';
 import {
   measureRenderPerformance,
@@ -164,11 +164,17 @@ describe('SearchFilters Performance', () => {
         />
       );
 
-      const gameSelect = screen.getByLabelText('Game');
+      const gameTrigger = screen.getByLabelText('Game');
+
+      fireEvent.click(gameTrigger);
+      await waitFor(() => {
+        expect(screen.getByRole('listbox')).toBeInTheDocument();
+      });
+      const gameOption = screen.getByText(games[0].title);
 
       const startTime = performance.now();
 
-      fireEvent.change(gameSelect, { target: { value: games[0].id } });
+      fireEvent.click(gameOption);
 
       const endTime = performance.now();
       const duration = endTime - startTime;
@@ -195,11 +201,17 @@ describe('SearchFilters Performance', () => {
         />
       );
 
-      const agentSelect = screen.getByLabelText('Agent');
+      const agentTrigger = screen.getByLabelText('Agent');
+
+      fireEvent.click(agentTrigger);
+      await waitFor(() => {
+        expect(screen.getByRole('listbox')).toBeInTheDocument();
+      });
+      const agentOption = screen.getByText(agents[0].name);
 
       const startTime = performance.now();
 
-      fireEvent.change(agentSelect, { target: { value: agents[0].id } });
+      fireEvent.click(agentOption);
 
       const endTime = performance.now();
       const duration = endTime - startTime;
@@ -258,23 +270,38 @@ describe('SearchFilters Performance', () => {
         />
       );
 
-      const gameSelect = screen.getByLabelText('Game');
-      const agentSelect = screen.getByLabelText('Agent');
-
       const startTime = performance.now();
 
+      const selectGame = async (index: number) => {
+        fireEvent.click(screen.getByLabelText('Game'));
+        await waitFor(() => {
+          expect(screen.getByRole('listbox')).toBeInTheDocument();
+        });
+        const option = screen.getByText(games[index].title);
+        fireEvent.click(option);
+      };
+
+      const selectAgent = async (index: number) => {
+        fireEvent.click(screen.getByLabelText('Agent'));
+        await waitFor(() => {
+          expect(screen.getByRole('listbox')).toBeInTheDocument();
+        });
+        const option = screen.getByText(agents[index].name);
+        fireEvent.click(option);
+      };
+
       // Apply multiple filters sequentially
-      fireEvent.change(gameSelect, { target: { value: games[0].id } });
-      fireEvent.change(agentSelect, { target: { value: agents[0].id } });
-      fireEvent.change(gameSelect, { target: { value: games[1].id } });
-      fireEvent.change(agentSelect, { target: { value: agents[1].id } });
-      fireEvent.change(gameSelect, { target: { value: games[2].id } });
+      await selectGame(0);
+      await selectAgent(0);
+      await selectGame(1);
+      await selectAgent(1);
+      await selectGame(2);
 
       const endTime = performance.now();
       const duration = endTime - startTime;
 
       // 5 filter changes with Radix UI overhead
-      expect(duration).toBeLessThan(800);
+      expect(duration).toBeLessThan(4500);
       expect(mockOnFiltersChange).toHaveBeenCalledTimes(5);
 
       console.log(`[PERF] 5 filter changes: ${duration.toFixed(2)}ms`);

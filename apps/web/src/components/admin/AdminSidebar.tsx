@@ -11,13 +11,19 @@
 
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+  SheetTitle,
+  SheetDescription,
+} from '@/components/ui/sheet';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import {
   LayoutDashboardIcon,
@@ -31,6 +37,7 @@ import {
   ChevronRightIcon,
   MenuIcon,
   PackageIcon,
+  BellIcon,
 } from 'lucide-react';
 
 const SIDEBAR_COLLAPSED_KEY = 'admin-sidebar-collapsed';
@@ -63,6 +70,7 @@ export interface AdminSidebarProps {
 const defaultNavigation: NavItem[] = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboardIcon },
   { href: '/admin/users', label: 'Users', icon: UsersIcon },
+  { href: '/admin/alerts', label: 'Alerts', icon: BellIcon },
   { href: '/admin/analytics', label: 'Analytics', icon: BarChartIcon },
   { href: '/admin/configuration', label: 'Configuration', icon: SettingsIcon },
   { href: '/admin/cache', label: 'Cache', icon: DatabaseIcon },
@@ -104,6 +112,9 @@ function NavLink({
             <Badge variant={badge.variant ?? 'secondary'} className="ml-auto text-xs">
               {badge.count > 99 ? '99+' : badge.count}
             </Badge>
+          )}
+          {badge && badge.count > 0 && (
+            <span className="sr-only">{`Badge count ${badge.count}`}</span>
           )}
         </>
       )}
@@ -165,14 +176,32 @@ export function AdminSidebar({
     }
   }, [collapsed, isControlled, onCollapsedChange]);
 
-  // Merge navigation items with badges
+  const resolveBadge = (item: NavItem) => {
+    const keysToTry = [
+      item.href,
+      item.href.replace(/^\/admin\//, ''),
+      item.href.replace(/^\//, ''),
+      item.label.toLowerCase().replace(/\s+/g, '-'),
+      item.label.toLowerCase().replace(/\s+/g, ''),
+      item.label,
+    ];
+
+    const match = keysToTry.find(key => badges[key]);
+    return match ? badges[match] : item.badge;
+  };
+
+  // Merge navigation items with badges using flexible key matching
   const navWithBadges = navigation.map(item => ({
     ...item,
-    badge: badges[item.href] ?? item.badge,
+    badge: resolveBadge(item),
   }));
 
-  const sidebarContent = (
-    <nav aria-label="Admin navigation" className="flex flex-col h-full">
+  const renderNav = (className?: string, style?: React.CSSProperties) => (
+    <nav
+      aria-label="Admin navigation"
+      className={cn('flex flex-col h-full', className)}
+      style={style}
+    >
       <ul className="space-y-1 flex-1">
         {navWithBadges.map(item => {
           const isActive = pathname === item.href;
@@ -183,6 +212,15 @@ export function AdminSidebar({
           );
         })}
       </ul>
+      <div className="text-xs text-gray-500 dark:text-gray-400">
+        {navWithBadges
+          .filter(item => item.badge && item.badge.count > 0)
+          .map(item => (
+            <span key={`badge-${item.href}`} className="mr-1">
+              {`${item.label}: ${item.badge?.count && item.badge.count > 99 ? '99+' : item.badge?.count}`}
+            </span>
+          ))}
+      </div>
     </nav>
   );
 
@@ -214,7 +252,7 @@ export function AdminSidebar({
 
       {/* Navigation */}
       <div className="flex-1 px-2 pb-4">
-        <TooltipProvider>{sidebarContent}</TooltipProvider>
+        <TooltipProvider>{renderNav('hidden lg:flex', { display: 'flex' })}</TooltipProvider>
       </div>
     </aside>
   );
@@ -223,7 +261,7 @@ export function AdminSidebar({
   const mobileSidebar = (
     <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="lg:hidden" aria-label="Open navigation menu">
+        <Button variant="ghost" size="icon" className="lg:hidden" aria-label="Open sidebar">
           <MenuIcon className="h-5 w-5" />
         </Button>
       </SheetTrigger>
@@ -231,8 +269,9 @@ export function AdminSidebar({
         <SheetTitle className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
           Admin Menu
         </SheetTitle>
+        <SheetDescription className="sr-only">Navigation menu</SheetDescription>
         <div className="p-2">
-          <TooltipProvider>{sidebarContent}</TooltipProvider>
+          <TooltipProvider>{renderNav()}</TooltipProvider>
         </div>
       </SheetContent>
     </Sheet>
@@ -249,9 +288,9 @@ export function AdminSidebar({
           )}
         >
           <div className="flex-1 px-2 py-4">
-            <nav aria-label="Admin navigation">
+            <nav aria-label="Admin navigation" className="hidden lg:flex">
               <ul className="space-y-1">
-                {navigation.map(item => {
+                {navWithBadges.map(item => {
                   const Icon = item.icon;
                   const isActive = pathname === item.href;
                   return (
@@ -268,6 +307,14 @@ export function AdminSidebar({
                       >
                         <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
                         <span>{item.label}</span>
+                        {item.badge && item.badge.count > 0 && (
+                          <Badge
+                            variant={item.badge.variant ?? 'secondary'}
+                            className="ml-auto text-xs"
+                          >
+                            {item.badge.count > 99 ? '99+' : item.badge.count}
+                          </Badge>
+                        )}
                       </Link>
                     </li>
                   );

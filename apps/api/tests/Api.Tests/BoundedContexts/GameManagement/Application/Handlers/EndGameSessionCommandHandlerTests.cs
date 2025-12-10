@@ -173,7 +173,7 @@ public class EndGameSessionCommandHandlerTests
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => _handler.Handle(command, TestContext.Current.CancellationToken));
 
-        Assert.Contains($"Session with ID {sessionId} not found", exception.Message);
+        Assert.Contains($"Session with ID {sessionId} not found", exception.Message, StringComparison.OrdinalIgnoreCase);
 
         // Verify update was NOT called
         _sessionRepositoryMock.Verify(

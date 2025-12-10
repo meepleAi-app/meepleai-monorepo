@@ -192,7 +192,7 @@ public class ResumeGameSessionCommandHandlerTests
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => _handler.Handle(command, TestContext.Current.CancellationToken));
 
-        Assert.Contains($"Session with ID {sessionId} not found", exception.Message);
+        Assert.Contains($"Session with ID {sessionId} not found", exception.Message, StringComparison.OrdinalIgnoreCase);
 
         // Verify save was NOT called
         _unitOfWorkMock.Verify(
@@ -219,7 +219,7 @@ public class ResumeGameSessionCommandHandlerTests
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => _handler.Handle(command, TestContext.Current.CancellationToken));
 
-        Assert.Contains("Cannot resume session in Setup status", exception.Message);
+        Assert.Contains("Cannot resume session in Setup status", exception.Message, StringComparison.OrdinalIgnoreCase);
 
         // Verify save was NOT called
         _unitOfWorkMock.Verify(
@@ -247,7 +247,7 @@ public class ResumeGameSessionCommandHandlerTests
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => _handler.Handle(command, TestContext.Current.CancellationToken));
 
-        Assert.Contains("Cannot resume session in InProgress status", exception.Message);
+        Assert.Contains("Cannot resume session in InProgress status", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -270,7 +270,7 @@ public class ResumeGameSessionCommandHandlerTests
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => _handler.Handle(command, TestContext.Current.CancellationToken));
 
-        Assert.Contains("Cannot resume session in Completed status", exception.Message);
+        Assert.Contains("Cannot resume session in Completed status", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
     [Fact]
     public async Task Handle_PreservesSessionMetadata()

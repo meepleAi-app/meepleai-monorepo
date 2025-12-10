@@ -105,7 +105,7 @@ public class GameDomainTests
 
         // Act & Assert
         var exception = Assert.Throws<ArgumentException>(() => game.LinkToBgg(0));
-        Assert.Contains("BGG ID must be positive", exception.Message);
+        Assert.Contains("BGG ID must be positive", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

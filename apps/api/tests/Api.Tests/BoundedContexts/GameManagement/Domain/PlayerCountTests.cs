@@ -74,7 +74,7 @@ public class PlayerCountTests
     {
         // Act & Assert
         var exception = Assert.Throws<ValidationException>(() => new PlayerCount(0, 4));
-        Assert.Contains("cannot be less than 1", exception.Message);
+        Assert.Contains("cannot be less than 1", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -82,7 +82,7 @@ public class PlayerCountTests
     {
         // Act & Assert
         var exception = Assert.Throws<ValidationException>(() => new PlayerCount(1, 101));
-        Assert.Contains("cannot exceed 100", exception.Message);
+        Assert.Contains("cannot exceed 100", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -90,7 +90,7 @@ public class PlayerCountTests
     {
         // Act & Assert
         var exception = Assert.Throws<ValidationException>(() => new PlayerCount(5, 2));
-        Assert.Contains("cannot exceed maximum", exception.Message);
+        Assert.Contains("cannot exceed maximum", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

@@ -52,7 +52,7 @@ public class SessionPlayerTests
         // Act & Assert
         var exception = Assert.Throws<ValidationException>(() =>
             new SessionPlayer(invalidName, 1));
-        Assert.Contains("Player name cannot be empty", exception.Message);
+        Assert.Contains("Player name cannot be empty", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -64,7 +64,7 @@ public class SessionPlayerTests
         // Act & Assert
         var exception = Assert.Throws<ValidationException>(() =>
             new SessionPlayer(longName, 1));
-        Assert.Contains("cannot exceed 50 characters", exception.Message);
+        Assert.Contains("cannot exceed 50 characters", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -73,7 +73,7 @@ public class SessionPlayerTests
         // Act & Assert
         var exception = Assert.Throws<ValidationException>(() =>
             new SessionPlayer("Alice", 0));
-        Assert.Contains("must be at least 1", exception.Message);
+        Assert.Contains("must be at least 1", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -82,7 +82,7 @@ public class SessionPlayerTests
         // Act & Assert
         var exception = Assert.Throws<ValidationException>(() =>
             new SessionPlayer("Alice", 101));
-        Assert.Contains("cannot exceed 100", exception.Message);
+        Assert.Contains("cannot exceed 100", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

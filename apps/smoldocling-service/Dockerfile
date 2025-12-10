@@ -12,6 +12,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     # Python
     python3.11 \
     python3-pip \
+    # HTTP client for health checks
+    curl \
     # PDF to Image conversion
     poppler-utils \
     # Image processing

@@ -23,7 +23,7 @@ import HyperDX from '@hyperdx/browser';
 // ============================================================================
 
 const isProduction = process.env.NODE_ENV === 'production';
-const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5080';
+const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
 // ============================================================================
 // Initialization
@@ -57,7 +57,7 @@ export function initializeHyperDX(): void {
       // Trace Propagation (correlate frontend → backend)
       // Links frontend requests to backend traces via W3C traceparent headers
       tracePropagationTargets: [
-        /localhost:5080/, // Local development API
+        /localhost:8080/, // Local development API
         /api\.meepleai\.dev/, // Production API domain
         new RegExp(apiBase.replace(/https?:\/\//, '')), // Dynamic API base from environment
       ],

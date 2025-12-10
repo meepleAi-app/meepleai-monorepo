@@ -58,7 +58,7 @@ public class GameTitleTests
     {
         // Act & Assert
         var exception = Assert.Throws<ValidationException>(() => new GameTitle(invalidTitle));
-        Assert.Contains("Game title cannot be empty", exception.Message);
+        Assert.Contains("Game title cannot be empty", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -69,7 +69,7 @@ public class GameTitleTests
 
         // Act & Assert
         var exception = Assert.Throws<ValidationException>(() => new GameTitle(longTitle));
-        Assert.Contains("cannot exceed 200 characters", exception.Message);
+        Assert.Contains("cannot exceed 200 characters", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

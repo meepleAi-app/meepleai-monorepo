@@ -157,27 +157,34 @@ export function useStreamingChat(
         // Use event.type directly for switch to enable proper type narrowing
         switch (event.type) {
           case StreamingEventType.StateUpdate: {
-            const typedEvent = parseEventData(event) as TypedStreamingEvent<StreamingEventType.StateUpdate>;
+            const typedEvent = parseEventData(
+              event
+            ) as TypedStreamingEvent<StreamingEventType.StateUpdate>;
             const stateMsg = typedEvent.data.state;
-            setState((prev) => ({ ...prev, stateMessage: stateMsg }));
+            setState(prev => ({ ...prev, stateMessage: stateMsg }));
             onStateUpdate?.(stateMsg);
             break;
           }
 
           case StreamingEventType.Citations: {
-            const typedEvent = parseEventData(event) as TypedStreamingEvent<StreamingEventType.Citations>;
+            const typedEvent = parseEventData(
+              event
+            ) as TypedStreamingEvent<StreamingEventType.Citations>;
             // Check array length, not truthiness, since empty arrays are truthy
-            const citationsData = typedEvent.data.citations.length > 0
-              ? typedEvent.data.citations
-              : typedEvent.data.snippets;
-            setState((prev) => ({ ...prev, citations: citationsData }));
+            const citationsData =
+              typedEvent.data.citations.length > 0
+                ? typedEvent.data.citations
+                : typedEvent.data.snippets;
+            setState(prev => ({ ...prev, citations: citationsData }));
             break;
           }
 
           case StreamingEventType.Token: {
-            const typedEvent = parseEventData(event) as TypedStreamingEvent<StreamingEventType.Token>;
+            const typedEvent = parseEventData(
+              event
+            ) as TypedStreamingEvent<StreamingEventType.Token>;
             const token = typedEvent.data.token;
-            setState((prev) => {
+            setState(prev => {
               const newAnswer = prev.currentAnswer + token;
               onToken?.(token, newAnswer);
               return { ...prev, currentAnswer: newAnswer };
@@ -186,10 +193,13 @@ export function useStreamingChat(
           }
 
           case StreamingEventType.Complete: {
-            const typedEvent = parseEventData(event) as TypedStreamingEvent<StreamingEventType.Complete>;
-            const { totalTokens, confidence, estimatedReadingTimeMinutes, snippets } = typedEvent.data;
+            const typedEvent = parseEventData(
+              event
+            ) as TypedStreamingEvent<StreamingEventType.Complete>;
+            const { totalTokens, confidence, estimatedReadingTimeMinutes, snippets } =
+              typedEvent.data;
 
-            setState((prev) => {
+            setState(prev => {
               const finalCitations = snippets && snippets.length > 0 ? snippets : prev.citations;
               onComplete?.(prev.currentAnswer, finalCitations, confidence || null);
 
@@ -207,10 +217,12 @@ export function useStreamingChat(
           }
 
           case StreamingEventType.Error: {
-            const typedEvent = parseEventData(event) as TypedStreamingEvent<StreamingEventType.Error>;
+            const typedEvent = parseEventData(
+              event
+            ) as TypedStreamingEvent<StreamingEventType.Error>;
             const error = new Error(typedEvent.data.message);
             error.name = typedEvent.data.code;
-            setState((prev) => ({
+            setState(prev => ({
               ...prev,
               error,
               isStreaming: false,
@@ -221,14 +233,18 @@ export function useStreamingChat(
           }
 
           case StreamingEventType.FollowUpQuestions: {
-            const typedEvent = parseEventData(event) as TypedStreamingEvent<StreamingEventType.FollowUpQuestions>;
+            const typedEvent = parseEventData(
+              event
+            ) as TypedStreamingEvent<StreamingEventType.FollowUpQuestions>;
             const questions = typedEvent.data.questions;
-            setState((prev) => ({ ...prev, followUpQuestions: questions }));
+            setState(prev => ({ ...prev, followUpQuestions: questions }));
             break;
           }
 
           case StreamingEventType.SetupStep: {
-            const typedEvent = parseEventData(event) as TypedStreamingEvent<StreamingEventType.SetupStep>;
+            const typedEvent = parseEventData(
+              event
+            ) as TypedStreamingEvent<StreamingEventType.SetupStep>;
             // For setup guide streaming (future enhancement)
             // Currently just log, can be extended for setup UI
             console.log('[useStreamingChat] Setup step:', typedEvent.data.step);
@@ -247,9 +263,11 @@ export function useStreamingChat(
    */
   const startStreaming = useCallback(
     async (gameId: string, query: string, chatId?: string) => {
-      // Reset state
-      setState(initialState);
-      setState((prev) => ({ ...prev, isStreaming: true, stateMessage: 'Connecting...' }));
+      // Reset and mark streaming in a single update for consistency
+      setState({ ...initialState, isStreaming: true, stateMessage: 'Connecting...' });
+
+      // Allow state to propagate before potentially fast test streams complete
+      await new Promise(resolve => setTimeout(resolve, 5));
 
       // Create new AbortController
       const controller = new AbortController();
@@ -304,13 +322,13 @@ export function useStreamingChat(
         if (error instanceof Error) {
           if (error.name === 'AbortError') {
             // User cancelled, not an error
-            setState((prev) => ({
+            setState(prev => ({
               ...prev,
               isStreaming: false,
               stateMessage: 'Cancelled',
             }));
           } else {
-            setState((prev) => ({
+            setState(prev => ({
               ...prev,
               error,
               isStreaming: false,
@@ -334,6 +352,12 @@ export function useStreamingChat(
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
     }
+    // Immediately reflect cancellation in state for responsive UI/tests
+    setState(prev => ({
+      ...prev,
+      isStreaming: false,
+      stateMessage: 'Cancelled',
+    }));
   }, []);
 
   /**

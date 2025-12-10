@@ -19,7 +19,13 @@ import { AdminHeader, type AdminUser } from './AdminHeader';
 import { AdminBreadcrumbs, type BreadcrumbItem } from './AdminBreadcrumbs';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+  SheetTitle,
+  SheetDescription,
+} from '@/components/ui/sheet';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { MenuIcon } from 'lucide-react';
 
@@ -81,6 +87,7 @@ export function AdminLayout({
         <SheetTitle className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
           Admin Menu
         </SheetTitle>
+        <SheetDescription className="sr-only">Navigation menu</SheetDescription>
         <div className="p-2">
           <TooltipProvider>
             <AdminSidebar badges={badges} collapsed={false} className="border-0 lg:flex" />
@@ -93,10 +100,33 @@ export function AdminLayout({
   // Prevent hydration mismatch by showing default state initially
   const sidebarWidth = !mounted ? 'lg:w-60' : collapsed ? 'lg:w-16' : 'lg:w-60';
 
+  const badgeSummary =
+    badges && Object.keys(badges).length > 0 ? (
+      <span
+        className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400"
+        data-testid="badge-summary"
+      >
+        {Object.entries(badges).map(([key, badge]) => (
+          <span key={`badge-${key}`} aria-label={`${key} badge`}>
+            {`${key}: ${badge.count > 99 ? '99+' : badge.count}`}
+          </span>
+        ))}
+      </span>
+    ) : null;
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       {/* Header */}
-      <AdminHeader user={user} mobileMenuTrigger={mobileMenuTrigger} actions={headerActions} />
+      <AdminHeader
+        user={user}
+        mobileMenuTrigger={mobileMenuTrigger}
+        actions={
+          <>
+            {headerActions}
+            {badgeSummary}
+          </>
+        }
+      />
 
       <div className="flex">
         {/* Sidebar - Desktop only (mobile uses Sheet) */}

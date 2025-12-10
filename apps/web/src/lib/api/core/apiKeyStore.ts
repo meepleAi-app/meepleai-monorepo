@@ -1,4 +1,5 @@
 import { encrypt, decrypt, clearEncryptionKey } from './secureStorage';
+import { logger } from '@/lib/logger';
 
 const STORAGE_KEY = 'meepleai:apiKey';
 
@@ -11,7 +12,8 @@ let isHydrated = false;
 // Generation counter to detect cleared/invalidated keys during async operations
 let hydrationGeneration = 0;
 
-const isBrowser = () => typeof window !== 'undefined' && typeof window.sessionStorage !== 'undefined';
+const isBrowser = () =>
+  typeof window !== 'undefined' && typeof window.sessionStorage !== 'undefined';
 
 /**
  * Store API key securely with encryption
@@ -28,7 +30,10 @@ export async function setStoredApiKey(apiKey: string): Promise<void> {
       const encrypted = await encrypt(apiKey);
       window.sessionStorage.setItem(STORAGE_KEY, encrypted);
     } catch (error) {
-      console.error('Failed to encrypt API key, using in-memory storage only:', error);
+      logger.error(
+        'Failed to encrypt API key, using in-memory storage only:',
+        error instanceof Error ? error : new Error(String(error))
+      );
       // Keep in-memory copy but don't persist to storage if encryption fails
     }
   }
@@ -51,21 +56,24 @@ export async function getStoredApiKey(): Promise<string | null> {
 
         // Check if key was cleared during decryption (generation changed)
         if (hydrationGeneration !== startGeneration) {
-          console.log('API key was cleared during retrieval, discarding decrypted value');
+          logger.debug('API key was cleared during retrieval, discarding decrypted value');
           return null;
         }
 
         // Verify storage still exists before writing to memory
         const currentEncryptedValue = window.sessionStorage.getItem(STORAGE_KEY);
         if (!currentEncryptedValue) {
-          console.log('API key storage was cleared during retrieval, discarding decrypted value');
+          logger.debug('API key storage was cleared during retrieval, discarding decrypted value');
           return null;
         }
 
         memoryApiKey = decrypted;
         return decrypted;
       } catch (error) {
-        console.error('Failed to decrypt API key, clearing storage:', error);
+        logger.error(
+          'Failed to decrypt API key, clearing storage:',
+          error instanceof Error ? error : new Error(String(error))
+        );
         // If decryption fails, clear the corrupted data only if generation hasn't changed
         if (hydrationGeneration === startGeneration) {
           window.sessionStorage.removeItem(STORAGE_KEY);
@@ -133,7 +141,7 @@ export function hydrateApiKey(): Promise<boolean> {
 
       // Check if key was cleared during decryption (generation changed)
       if (hydrationGeneration !== startGeneration) {
-        console.log('API key was cleared during hydration, discarding decrypted value');
+        logger.debug('API key was cleared during hydration, discarding decrypted value');
         isHydrated = true; // Mark as hydrated to prevent stuck state
         return false;
       }
@@ -141,7 +149,7 @@ export function hydrateApiKey(): Promise<boolean> {
       // Verify storage still exists before writing to memory
       const currentEncryptedValue = window.sessionStorage.getItem(STORAGE_KEY);
       if (!currentEncryptedValue) {
-        console.log('API key storage was cleared during hydration, discarding decrypted value');
+        logger.debug('API key storage was cleared during hydration, discarding decrypted value');
         isHydrated = true; // Mark as hydrated to prevent stuck state
         return false;
       }
@@ -150,7 +158,10 @@ export function hydrateApiKey(): Promise<boolean> {
       isHydrated = true;
       return true;
     } catch (error) {
-      console.error('Failed to hydrate API key from sessionStorage:', error);
+      logger.error(
+        'Failed to hydrate API key from sessionStorage:',
+        error instanceof Error ? error : new Error(String(error))
+      );
       // Clear corrupted data only if generation hasn't changed
       if (hydrationGeneration === startGeneration) {
         window.sessionStorage.removeItem(STORAGE_KEY);

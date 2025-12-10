@@ -41,6 +41,7 @@
     "test:visual": "chromatic --exit-zero-on-changes",
     "test:visual:ci": "chromatic --exit-zero-on-changes --exit-once-uploaded",
     "test:visual:debug": "chromatic --debug",
+    "test:admin-dashboard": "vitest --config vitest.admin.config.ts run",
     "scraper:game": "pnpm --dir ../../tools/game-scraper run scraper:game --",
     "scraper:plays": "pnpm --dir ../../tools/game-scraper run scraper:plays --",
     "scraper:qa": "pnpm --dir ../../tools/game-scraper run scraper:qa --",

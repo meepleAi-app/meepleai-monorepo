@@ -449,7 +449,7 @@ public class StreamQaQueryHandlerTests
         var errorEvent = events.FirstOrDefault(e => e.Type == StreamingEventType.Error);
         Assert.NotNull(errorEvent);
         var error = Assert.IsType<StreamingError>(errorEvent.Data);
-        Assert.Contains("No relevant information found", error.errorMessage);
+        Assert.Contains("No relevant information found", error.errorMessage, StringComparison.OrdinalIgnoreCase);
         Assert.Equal("NO_RESULTS", error.errorCode);
 
         // Should not call LLM

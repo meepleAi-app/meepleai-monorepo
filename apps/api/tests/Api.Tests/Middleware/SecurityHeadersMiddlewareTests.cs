@@ -77,10 +77,10 @@ public class SecurityHeadersMiddlewareTests
         var cspValue = context.Response.Headers["Content-Security-Policy"].ToString();
 
         // Verify key CSP directives
-        Assert.Contains("default-src 'self'", cspValue);
-        Assert.Contains("script-src", cspValue);
-        Assert.Contains("style-src", cspValue);
-        Assert.Contains("frame-ancestors 'none'", cspValue);
+        Assert.Contains("default-src 'self'", cspValue, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("script-src", cspValue, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("style-src", cspValue, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("frame-ancestors 'none'", cspValue, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

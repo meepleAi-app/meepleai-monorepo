@@ -15,10 +15,11 @@
  */
 
 import { escapePrometheusLabelValue } from './prometheusUtils';
+import { logger } from '@/lib/logger';
 
 export enum CircuitState {
-  CLOSED = 'CLOSED',       // Normal operation
-  OPEN = 'OPEN',           // Failing, retries disabled
+  CLOSED = 'CLOSED', // Normal operation
+  OPEN = 'OPEN', // Failing, retries disabled
   HALF_OPEN = 'HALF_OPEN', // Testing recovery
 }
 
@@ -64,9 +65,7 @@ export function getCircuitBreakerConfig(): CircuitBreakerConfig {
     windowSize: isBrowser
       ? parseInt(process.env.NEXT_PUBLIC_CIRCUIT_BREAKER_WINDOW_SIZE || '60000', 10)
       : 60000,
-    enabled: isBrowser
-      ? process.env.NEXT_PUBLIC_CIRCUIT_BREAKER_ENABLED !== 'false'
-      : true,
+    enabled: isBrowser ? process.env.NEXT_PUBLIC_CIRCUIT_BREAKER_ENABLED !== 'false' : true,
   };
 }
 
@@ -234,7 +233,7 @@ class CircuitBreaker {
     circuit.successes = 0;
     circuit.lastStateChange = Date.now();
 
-    console.warn(`[CircuitBreaker] ${endpoint} → CLOSED (recovered)`);
+    logger.warn(`[CircuitBreaker] ${endpoint} → CLOSED (recovered)`);
   }
 
   /**
@@ -245,7 +244,7 @@ class CircuitBreaker {
     circuit.state = CircuitState.OPEN;
     circuit.lastStateChange = Date.now();
 
-    console.warn(
+    logger.warn(
       `[CircuitBreaker] ${endpoint} → OPEN (${circuit.failures}/${this.config.failureThreshold} failures)`
     );
   }
@@ -260,7 +259,7 @@ class CircuitBreaker {
     circuit.failures = 0;
     circuit.lastStateChange = Date.now();
 
-    console.warn(`[CircuitBreaker] ${endpoint} → HALF_OPEN (testing recovery)`);
+    logger.warn(`[CircuitBreaker] ${endpoint} → HALF_OPEN (testing recovery)`);
   }
 }
 
@@ -333,12 +332,17 @@ export function exportCircuitBreakerMetrics(): string {
   const lines: string[] = [];
 
   // Circuit state gauge
-  lines.push('# HELP http_circuit_breaker_state Circuit breaker state (0=CLOSED, 1=HALF_OPEN, 2=OPEN)');
+  lines.push(
+    '# HELP http_circuit_breaker_state Circuit breaker state (0=CLOSED, 1=HALF_OPEN, 2=OPEN)'
+  );
   lines.push('# TYPE http_circuit_breaker_state gauge');
   Object.entries(metrics).forEach(([endpoint, metric]) => {
-    const stateValue = metric.state === CircuitState.CLOSED ? 0 : metric.state === CircuitState.HALF_OPEN ? 1 : 2;
+    const stateValue =
+      metric.state === CircuitState.CLOSED ? 0 : metric.state === CircuitState.HALF_OPEN ? 1 : 2;
     const escapedEndpoint = escapePrometheusLabelValue(endpoint);
-    lines.push(`http_circuit_breaker_state{endpoint="${escapedEndpoint}",state="${metric.state}"} ${stateValue}`);
+    lines.push(
+      `http_circuit_breaker_state{endpoint="${escapedEndpoint}",state="${metric.state}"} ${stateValue}`
+    );
   });
 
   // Total requests counter
@@ -346,7 +350,9 @@ export function exportCircuitBreakerMetrics(): string {
   lines.push('# TYPE http_circuit_breaker_requests_total counter');
   Object.entries(metrics).forEach(([endpoint, metric]) => {
     const escapedEndpoint = escapePrometheusLabelValue(endpoint);
-    lines.push(`http_circuit_breaker_requests_total{endpoint="${escapedEndpoint}"} ${metric.totalRequests}`);
+    lines.push(
+      `http_circuit_breaker_requests_total{endpoint="${escapedEndpoint}"} ${metric.totalRequests}`
+    );
   });
 
   // Total failures counter
@@ -354,7 +360,9 @@ export function exportCircuitBreakerMetrics(): string {
   lines.push('# TYPE http_circuit_breaker_failures_total counter');
   Object.entries(metrics).forEach(([endpoint, metric]) => {
     const escapedEndpoint = escapePrometheusLabelValue(endpoint);
-    lines.push(`http_circuit_breaker_failures_total{endpoint="${escapedEndpoint}"} ${metric.totalFailures}`);
+    lines.push(
+      `http_circuit_breaker_failures_total{endpoint="${escapedEndpoint}"} ${metric.totalFailures}`
+    );
   });
 
   return lines.join('\n') + '\n';

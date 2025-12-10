@@ -31,7 +31,7 @@ services:
       ConnectionStrings__Postgres: "Host=postgres;Database=${POSTGRES_DB:-meepleai};Username=${POSTGRES_USER:-meeple};Password=${POSTGRES_PASSWORD:-meeplepass}"
       POSTGRES_PASSWORD_FILE: ""
       QDRANT_URL: http://qdrant:6333
-      REDIS_URL: redis:6379
+      REDIS_URL: "redis:6379,password=changeme-redis-dev-please-set,abortConnect=false"
       OLLAMA_URL: http://ollama:11434
       EMBEDDING_PROVIDER: ollama
       EMBEDDING_MODEL: nomic-embed-text

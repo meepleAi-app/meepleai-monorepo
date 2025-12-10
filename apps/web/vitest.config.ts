@@ -53,6 +53,8 @@ export default defineConfig({
         'src/components/chat/Message.tsx', // Message display (E2E tested)
         'src/components/chat/MessageList.tsx', // Message list (E2E tested)
         'src/components/pages/ChatPage.tsx', // Page component (E2E tested)
+        'src/**/*.stories.*', // Storybook stories (not executed in unit tests)
+        'src/**/*.story.*', // Legacy story formats
         // Issue #1951: progress, checkbox, accordion, sheet, meeple-logo now have unit tests
       ],
       thresholds: {

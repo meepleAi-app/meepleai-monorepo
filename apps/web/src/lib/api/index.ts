@@ -136,6 +136,9 @@ export interface ApiClient {
 
   /** Administration (Users & Prompts Management) - Issue #1679 */
   admin: AdminClient;
+
+  /** Generic DELETE helper (used in some legacy tests) */
+  delete: (path: string) => Promise<void>;
 }
 
 /**
@@ -193,6 +196,7 @@ export function createApiClient(config?: ApiClientConfig): ApiClient {
     bgg: createBggClient({ httpClient }),
     agents: createAgentsClient({ httpClient }),
     admin: createAdminClient({ httpClient }),
+    delete: (path: string) => httpClient.delete(path),
   };
 
   return client;

@@ -133,7 +133,7 @@ The youngest player goes first.";
         var step1 = Assert.IsType<StreamingSetupStep>(stepEvents[0].Data).step;
         Assert.Equal(1, step1.stepNumber);
         Assert.Equal("Place the Board", step1.title);
-        Assert.Contains("game board in the center", step1.instruction);
+        Assert.Contains("game board in the center", step1.instruction, StringComparison.OrdinalIgnoreCase);
 
         var step2 = Assert.IsType<StreamingSetupStep>(stepEvents[1].Data).step;
         Assert.Equal(2, step2.stepNumber);

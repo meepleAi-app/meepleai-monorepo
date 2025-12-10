@@ -140,7 +140,7 @@ public static class RuleSpecEndpoints
         // RULE-02: Compare two versions (diff)
         group.MapGet("/games/{gameId:guid}/rulespec/diff", async (Guid gameId, string? from, string? to, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
-            var (authorized, session, error) = context.RequireAdminOrEditorSession();
+            var (authorized, _, error) = context.RequireAdminOrEditorSession();
             if (!authorized) return error!;
 
             if (string.IsNullOrWhiteSpace(from) || string.IsNullOrWhiteSpace(to))

@@ -55,7 +55,7 @@ public class HybridLlmService : ILlmService
     // ISSUE-962 (BGAI-020): Circuit breaker and monitoring
     private readonly Dictionary<string, CircuitBreakerState> _circuitBreakers = new(StringComparer.Ordinal);
     private readonly Dictionary<string, LatencyStats> _latencyStats = new(StringComparer.Ordinal);
-    private readonly object _monitoringLock = new();
+    private readonly System.Threading.Lock _monitoringLock = new();
 
     // Default LLM parameters
     private const double DefaultTemperature = 0.3;

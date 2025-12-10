@@ -28,3 +28,6 @@ export {
   type AdminBreadcrumbsProps,
   type BreadcrumbItem,
 } from './AdminBreadcrumbs';
+export { AdminAuthGuard } from './AdminAuthGuard';
+export { QuickActions, type QuickActionsProps, type QuickAction } from './QuickActions';
+export { SystemStatus, type SystemStatusProps, type ServiceStatus } from './SystemStatus';

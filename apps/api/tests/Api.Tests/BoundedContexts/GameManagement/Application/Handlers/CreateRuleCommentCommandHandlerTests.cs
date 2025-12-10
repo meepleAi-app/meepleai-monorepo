@@ -146,8 +146,8 @@ public class CreateRuleCommentCommandHandlerTests
             UserId: Guid.NewGuid());
 
         // Assert
-        Assert.Contains("@alice", command.CommentText);
-        Assert.Contains("@bob", command.CommentText);
+        Assert.Contains("@alice", command.CommentText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("@bob", command.CommentText, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

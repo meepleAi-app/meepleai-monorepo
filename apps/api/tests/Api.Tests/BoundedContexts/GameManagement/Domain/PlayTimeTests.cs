@@ -76,7 +76,7 @@ public class PlayTimeTests
     {
         // Act & Assert
         var exception = Assert.Throws<ValidationException>(() => new PlayTime(0, 60));
-        Assert.Contains("cannot be less than 1 minute", exception.Message);
+        Assert.Contains("cannot be less than 1 minute", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -84,7 +84,7 @@ public class PlayTimeTests
     {
         // Act & Assert
         var exception = Assert.Throws<ValidationException>(() => new PlayTime(30, 1500));
-        Assert.Contains("cannot exceed 1440 minutes", exception.Message);
+        Assert.Contains("cannot exceed 1440 minutes", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -92,7 +92,7 @@ public class PlayTimeTests
     {
         // Act & Assert
         var exception = Assert.Throws<ValidationException>(() => new PlayTime(90, 60));
-        Assert.Contains("cannot exceed maximum", exception.Message);
+        Assert.Contains("cannot exceed maximum", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

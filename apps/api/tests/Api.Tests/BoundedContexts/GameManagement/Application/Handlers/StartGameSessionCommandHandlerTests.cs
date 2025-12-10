@@ -183,7 +183,7 @@ public class StartGameSessionCommandHandlerTests
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => _handler.Handle(command, TestContext.Current.CancellationToken));
 
-        Assert.Contains($"Game with ID {gameId} not found", exception.Message);
+        Assert.Contains($"Game with ID {gameId} not found", exception.Message, StringComparison.OrdinalIgnoreCase);
 
         // Verify session was NOT created
         _sessionRepositoryMock.Verify(

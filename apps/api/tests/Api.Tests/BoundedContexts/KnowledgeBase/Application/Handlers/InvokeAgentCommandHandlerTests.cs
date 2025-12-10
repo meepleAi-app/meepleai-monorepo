@@ -111,7 +111,7 @@ public class InvokeAgentCommandHandlerTests
         // Act & Assert
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
             await _handler.Handle(command, TestContext.Current.CancellationToken));
-        Assert.Contains("not found", ex.Message.ToLower());
+        Assert.Contains("not found", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

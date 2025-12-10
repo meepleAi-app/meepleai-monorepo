@@ -144,7 +144,7 @@ public class HnswConfigurationTests
         var result = config.ToString();
 
         // Assert
-        Assert.Contains("m=16", result);
-        Assert.Contains("ef_construct=100", result);
+        Assert.Contains("m=16", result, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("ef_construct=100", result, StringComparison.OrdinalIgnoreCase);
     }
 }

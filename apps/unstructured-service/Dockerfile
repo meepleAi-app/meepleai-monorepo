@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libmagic-dev \
     poppler-utils \
     tesseract-ocr \
+    curl \
     # Italian language support
     tesseract-ocr-ita \
     # OpenCV dependencies (required by unstructured-inference)

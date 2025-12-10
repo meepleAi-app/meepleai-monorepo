@@ -444,8 +444,24 @@ if (typeof global.FileReader === 'undefined' || !global.FileReader.prototype.rea
 
 // Suppress expected React 19 warnings in tests
 const originalError = console.error;
+const originalWarn = console.warn;
+
+const isRadixDialogMessage = (message: unknown) =>
+  typeof message === 'string' &&
+  (message.includes('`DialogContent` requires a `DialogTitle`') ||
+    message.includes('Missing `Description` or `aria-describedby={undefined}`'));
+
+console.warn = (...args: any[]) => {
+  if (isRadixDialogMessage(args[0])) {
+    return;
+  }
+  originalWarn.call(console, ...args);
+};
 beforeAll(() => {
   console.error = (...args: any[]) => {
+    if (isRadixDialogMessage(args[0])) {
+      return;
+    }
     // Suppress expected framer-motion prop warnings in React 19
     if (
       typeof args[0] === 'string' &&
@@ -501,6 +517,7 @@ beforeAll(() => {
 
 afterAll(() => {
   console.error = originalError;
+  console.warn = originalWarn;
 });
 
 beforeEach(() => {

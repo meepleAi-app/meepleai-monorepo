@@ -63,7 +63,7 @@ describe('API Types', () => {
         status: 404,
         headers: mockHeaders,
         json: async () => ({ error: 'Custom error message' }),
-      } as any as Response;
+      } as unknown as Response;
 
       const error = await createApiError('/api/test', mockResponse);
 
@@ -75,10 +75,9 @@ describe('API Types', () => {
     });
 
     it('should handle response without correlation ID', async () => {
-      const mockResponse = new Response(
-        JSON.stringify({ error: 'No correlation' }),
-        { status: 500 }
-      );
+      const mockResponse = new Response(JSON.stringify({ error: 'No correlation' }), {
+        status: 500,
+      });
 
       const error = await createApiError('/api/fail', mockResponse);
 
@@ -97,10 +96,9 @@ describe('API Types', () => {
     });
 
     it('should handle response without error property in body', async () => {
-      const mockResponse = new Response(
-        JSON.stringify({ data: 'something else' }),
-        { status: 400 }
-      );
+      const mockResponse = new Response(JSON.stringify({ data: 'something else' }), {
+        status: 400,
+      });
 
       const error = await createApiError('/api/bad', mockResponse);
 
@@ -122,7 +120,7 @@ describe('API Types', () => {
         status: 500,
         headers: null,
         json: async () => ({ error: 'No headers object' }),
-      } as any as Response;
+      } as unknown as Response;
 
       const error = await createApiError('/api/no-headers', mockResponse);
 
@@ -133,10 +131,10 @@ describe('API Types', () => {
 
     it('should default to 500 if status is not a number', async () => {
       const mockResponse = {
-        status: 'invalid' as any,
+        status: 'invalid' as unknown,
         headers: { get: () => null },
         json: async () => ({ error: 'Invalid status' }),
-      } as any as Response;
+      } as unknown as Response;
 
       const error = await createApiError('/api/invalid', mockResponse);
 
@@ -144,10 +142,7 @@ describe('API Types', () => {
     });
 
     it('should handle empty error message in response', async () => {
-      const mockResponse = new Response(
-        JSON.stringify({ error: '' }),
-        { status: 400 }
-      );
+      const mockResponse = new Response(JSON.stringify({ error: '' }), { status: 400 });
 
       const error = await createApiError('/api/empty-error', mockResponse);
 
@@ -156,10 +151,7 @@ describe('API Types', () => {
     });
 
     it('should preserve original response object', async () => {
-      const mockResponse = new Response(
-        JSON.stringify({ error: 'Test' }),
-        { status: 403 }
-      );
+      const mockResponse = new Response(JSON.stringify({ error: 'Test' }), { status: 403 });
 
       const error = await createApiError('/api/preserve', mockResponse);
 

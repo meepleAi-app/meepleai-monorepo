@@ -14,7 +14,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { ChevronRightIcon, HomeIcon } from 'lucide-react';
+import { ChevronRightIcon } from 'lucide-react';
 
 export interface BreadcrumbItem {
   label: string;
@@ -119,10 +119,25 @@ export function AdminBreadcrumbs({ items, showHomeIcon = true, className }: Admi
                 className="flex items-center gap-1 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
               >
                 {index === 0 && showHomeIcon && (
-                  <HomeIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  <>
+                    <span className="sr-only">Home</span>
+                    <svg
+                      className="h-4 w-4 shrink-0"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      role="img"
+                    >
+                      <path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                      <path d="M9 21v-6h6v6" />
+                    </svg>
+                  </>
                 )}
                 <span className="hidden sm:inline">{item.label}</span>
-                {index === 0 && showHomeIcon && <span className="sm:hidden">{item.label}</span>}
+                {index === 0 && showHomeIcon && <span className="sm:hidden">Home</span>}
               </Link>
             ) : (
               <span
@@ -130,7 +145,22 @@ export function AdminBreadcrumbs({ items, showHomeIcon = true, className }: Admi
                 aria-current="page"
               >
                 {index === 0 && showHomeIcon && (
-                  <HomeIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  <>
+                    <span className="sr-only">Home</span>
+                    <svg
+                      className="h-4 w-4 shrink-0"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      role="img"
+                    >
+                      <path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                      <path d="M9 21v-6h6v6" />
+                    </svg>
+                  </>
                 )}
                 {item.label}
               </span>

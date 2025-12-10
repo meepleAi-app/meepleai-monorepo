@@ -68,6 +68,63 @@ const USER_ROLE_COOKIE = 'meepleai_user_role';
 // Cache API origin at module level for performance (only computed once)
 let cachedApiOrigin: string | null = null;
 
+// Simple session validation cache so we don't call the API on every request
+type SessionValidationEntry = {
+  valid: boolean;
+  expiresAt: number;
+};
+
+const SESSION_CACHE_TTL_MS = 30 * 1000; // 30 seconds
+const SESSION_CACHE_LIMIT = 200;
+const sessionValidationCache = new Map<string, SessionValidationEntry>();
+
+function cacheSessionValidation(cookieValue: string, valid: boolean) {
+  if (!cookieValue) return;
+
+  sessionValidationCache.set(cookieValue, {
+    valid,
+    expiresAt: Date.now() + SESSION_CACHE_TTL_MS,
+  });
+
+  if (sessionValidationCache.size > SESSION_CACHE_LIMIT) {
+    const oldestKey = sessionValidationCache.keys().next().value;
+    if (oldestKey) {
+      sessionValidationCache.delete(oldestKey);
+    }
+  }
+}
+
+async function isSessionCookieValid(request: NextRequest, cookieValue: string): Promise<boolean> {
+  const cached = sessionValidationCache.get(cookieValue);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.valid;
+  }
+
+  const cookieHeader = request.headers.get('cookie');
+  if (!cookieHeader) {
+    cacheSessionValidation(cookieValue, false);
+    return false;
+  }
+
+  try {
+    const apiUrl = `${getApiOrigin()}/api/v1/auth/me`;
+    const response = await fetch(apiUrl, {
+      headers: {
+        cookie: cookieHeader,
+      },
+      credentials: 'include',
+      cache: 'no-store',
+    });
+
+    cacheSessionValidation(cookieValue, response.ok);
+    return response.ok;
+  } catch (error) {
+    cacheSessionValidation(cookieValue, false);
+    console.error('[middleware] Failed to validate session cookie:', error);
+    return false;
+  }
+}
+
 /**
  * Get API base URL origin for CSP
  * Extracts the origin (protocol + host) from the API base URL
@@ -169,12 +226,17 @@ export async function middleware(request: NextRequest) {
 
   // Check if user has a session cookie
   const sessionCookie = request.cookies.get(SESSION_COOKIE_NAME);
-  const isAuthenticated = !!sessionCookie?.value;
+  const sessionCookieValue = sessionCookie?.value;
+  let isAuthenticated = false;
 
-  // Check user role
+  if (sessionCookieValue) {
+    isAuthenticated = await isSessionCookieValid(request, sessionCookieValue);
+  }
+
+  // Check user role (only trusted when we know the session is valid)
   const userRoleCookie = request.cookies.get(USER_ROLE_COOKIE);
-  const userRole = userRoleCookie?.value || 'user';
-  const isAdmin = userRole === 'admin';
+  const userRole = isAuthenticated ? userRoleCookie?.value || 'user' : 'user';
+  const isAdmin = isAuthenticated && userRole === 'admin';
 
   // Check if the current route is protected or public auth route
   const isProtectedRoute = PROTECTED_ROUTES.some(route => pathname.startsWith(route));

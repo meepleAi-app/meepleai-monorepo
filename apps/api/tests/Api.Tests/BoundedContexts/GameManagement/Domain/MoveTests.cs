@@ -66,7 +66,7 @@ public class MoveTests
         // Act & Assert
         var exception = Assert.Throws<ArgumentException>(() =>
             new Move(playerName!, "roll dice"));
-        Assert.Contains("Player name cannot be empty", exception.Message);
+        Assert.Contains("Player name cannot be empty", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Theory]
@@ -78,7 +78,7 @@ public class MoveTests
         // Act & Assert
         var exception = Assert.Throws<ArgumentException>(() =>
             new Move("Alice", action!));
-        Assert.Contains("Action cannot be empty", exception.Message);
+        Assert.Contains("Action cannot be empty", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

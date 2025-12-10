@@ -254,7 +254,7 @@ public class AgentOrchestrationServiceTests
         // Act & Assert
         var ex = Assert.Throws<InvalidOperationException>(() =>
             _service.ExecuteAgent(agent, context, vectorSearch, qualityTracking));
-        Assert.Contains("inactive", ex.Message.ToLower());
+        Assert.Contains("inactive", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

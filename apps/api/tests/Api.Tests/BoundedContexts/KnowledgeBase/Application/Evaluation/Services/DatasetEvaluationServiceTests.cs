@@ -470,7 +470,7 @@ public class DatasetEvaluationServiceTests
         Assert.Equal(sample.Id, result.SampleId);
         Assert.False(result.IsSuccess);
         Assert.NotNull(result.ErrorMessage);
-        Assert.Contains("RAG service unavailable", result.ErrorMessage);
+        Assert.Contains("RAG service unavailable", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

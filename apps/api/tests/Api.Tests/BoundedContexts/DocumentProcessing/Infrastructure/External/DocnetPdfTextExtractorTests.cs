@@ -394,7 +394,7 @@ startxref
     /// <summary>
     /// Creates a multi-page test PDF
     /// </summary>
-    private Stream CreateMultiPageTestPdfStream(int pageCount)
+    private static Stream CreateMultiPageTestPdfStream(int pageCount)
     {
         // Generate a simple multi-page PDF structure
         var pages = new System.Text.StringBuilder();

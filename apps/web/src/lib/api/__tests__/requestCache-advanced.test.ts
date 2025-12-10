@@ -263,7 +263,9 @@ describe('RequestCache - Advanced Features', () => {
       });
 
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('TTL cannot be negative')
+        '[API Warning]',
+        expect.stringContaining('TTL cannot be negative'),
+        undefined
       );
 
       const config = invalidCache.getConfig();
@@ -282,7 +284,11 @@ describe('RequestCache - Advanced Features', () => {
         enabled: true,
       });
 
-      expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining('maxSize must be >= 1'));
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        '[API Warning]',
+        expect.stringContaining('maxSize must be >= 1'),
+        undefined
+      );
 
       const config = invalidCache.getConfig();
       expect(config.maxSize).toBe(100);
@@ -297,7 +303,9 @@ describe('RequestCache - Advanced Features', () => {
       cache.updateConfig({ ttl: -100 });
 
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('TTL cannot be negative')
+        '[API Warning]',
+        expect.stringContaining('TTL cannot be negative'),
+        undefined
       );
 
       const config = cache.getConfig();
@@ -349,7 +357,11 @@ describe('RequestCache - Advanced Features', () => {
 
       const prometheus = cache.toPrometheusFormat();
 
-      assertionHelpers.expectPrometheusMetric(prometheus, 'http_client_cache_hit_rate_percent', '75.00');
+      assertionHelpers.expectPrometheusMetric(
+        prometheus,
+        'http_client_cache_hit_rate_percent',
+        '75.00'
+      );
     });
 
     it('should handle zero requests gracefully', () => {
@@ -359,7 +371,11 @@ describe('RequestCache - Advanced Features', () => {
 
       assertionHelpers.expectPrometheusMetric(prometheus, 'http_client_cache_hits_total', 0);
       assertionHelpers.expectPrometheusMetric(prometheus, 'http_client_cache_misses_total', 0);
-      assertionHelpers.expectPrometheusMetric(prometheus, 'http_client_cache_hit_rate_percent', '0.00');
+      assertionHelpers.expectPrometheusMetric(
+        prometheus,
+        'http_client_cache_hit_rate_percent',
+        '0.00'
+      );
       assertionHelpers.expectPrometheusMetric(prometheus, 'http_client_cache_size', 0);
     });
 

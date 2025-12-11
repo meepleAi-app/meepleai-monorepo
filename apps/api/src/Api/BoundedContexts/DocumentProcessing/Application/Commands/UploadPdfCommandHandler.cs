@@ -197,10 +197,11 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
                 storageResult = await _blobStorageService.StoreAsync(stream, fileName, gameId, cancellationToken).ConfigureAwait(false);
             }
 
-            if (!storageResult.Success)
+            if (!storageResult.Success || string.IsNullOrWhiteSpace(storageResult.FileId))
             {
                 RecordUploadMetricSafely("storage_failed", file.Length);
-                return new PdfUploadResult(false, storageResult.ErrorMessage ?? "Failed to store file", null);
+                var error = storageResult.ErrorMessage ?? "Failed to store file";
+                return new PdfUploadResult(false, error, null);
             }
 
             _logger.LogInformation("Saved PDF file to {FilePath}", storageResult.FilePath);

@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using Api.BoundedContexts.Authentication.Domain.Events;
 using Api.SharedKernel.Domain.Entities;
 using Api.SharedKernel.Domain.Exceptions;
@@ -23,10 +24,14 @@ public sealed class OAuthAccount : AggregateRoot<Guid>
     // Navigation property for EF Core
     public User? User { get; private set; }
 
-    public static readonly HashSet<string> SupportedProviders = new(StringComparer.OrdinalIgnoreCase)
+    /// <summary>
+    /// Immutable set of supported OAuth providers.
+    /// S2386/S3887: Use FrozenSet for thread-safe, immutable collection.
+    /// </summary>
+    public static FrozenSet<string> SupportedProviders { get; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
         "google", "discord", "github"
-    };
+    }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
     private const int DefaultOAuthTokenExpirationHours = 1; // Default OAuth token TTL when provider doesn't specify
 
     /// <summary>

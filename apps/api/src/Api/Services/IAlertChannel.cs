@@ -18,6 +18,6 @@ public interface IAlertChannel
         string alertType,
         string severity,
         string message,
-        Dictionary<string, object>? metadata = null,
+        IDictionary<string, object>? metadata = null,
         CancellationToken cancellationToken = default);
 }

@@ -19,7 +19,7 @@ public sealed class HierarchicalChunk
     /// <summary>
     /// List of child chunk identifiers.
     /// </summary>
-    public List<string> ChildIds { get; private set; } = new();
+    public IList<string> ChildIds { get; private set; } = new List<string>();
 
     /// <summary>
     /// Chunk text content.

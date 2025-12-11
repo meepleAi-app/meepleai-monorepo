@@ -117,8 +117,8 @@ public sealed record AgentStrategy
     /// <summary>
     /// Custom strategy for extensibility.
     /// </summary>
-    public static AgentStrategy Custom(string name, Dictionary<string, object> parameters)
-        => new(name, parameters);
+    public static AgentStrategy Custom(string name, IDictionary<string, object> parameters)
+        => new(name, parameters is Dictionary<string, object> dict ? dict : new Dictionary<string, object>(parameters, StringComparer.Ordinal));
 
     /// <summary>
     /// Gets a parameter value with type conversion.

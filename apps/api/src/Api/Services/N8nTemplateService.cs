@@ -209,7 +209,7 @@ public class N8nTemplateService
     /// </summary>
     public async Task<ImportTemplateResponse> ImportTemplateAsync(
         string templateId,
-        Dictionary<string, string> parameters,
+        IDictionary<string, string> parameters,
         string userId,
         CancellationToken ct = default)
     {
@@ -333,8 +333,8 @@ public class N8nTemplateService
         }
     }
     private void ValidateParameters(
-        List<TemplateParameterDto> templateParams,
-        Dictionary<string, string> providedParams)
+        IList<TemplateParameterDto> templateParams,
+        IDictionary<string, string> providedParams)
     {
         var missingParams = new List<string>();
 
@@ -392,7 +392,7 @@ public class N8nTemplateService
 
     private string SubstituteParameters(
         object workflow,
-        Dictionary<string, string> parameters)
+        IDictionary<string, string> parameters)
     {
         // Serialize workflow to JSON string
         var workflowJson = JsonSerializer.Serialize(workflow);

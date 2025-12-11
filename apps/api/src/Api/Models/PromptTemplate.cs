@@ -23,7 +23,7 @@ public record PromptTemplate
     /// Few-shot examples to improve LLM response quality
     /// Recommended: 3-5 examples per question category
     /// </summary>
-    public List<FewShotExample> FewShotExamples { get; init; } = new();
+    public IList<FewShotExample> FewShotExamples { get; init; } = new List<FewShotExample>();
 
     /// <summary>
     /// Optional game-specific identifier (null for default template)
@@ -71,12 +71,12 @@ public class RagPromptsConfiguration
     /// <summary>
     /// Question type-specific templates
     /// </summary>
-    public Dictionary<string, PromptTemplateConfig> Templates { get; set; } = new(StringComparer.Ordinal);
+    public IDictionary<string, PromptTemplateConfig> Templates { get; set; } = new Dictionary<string, PromptTemplateConfig>(StringComparer.Ordinal);
 
     /// <summary>
     /// Game-specific template overrides (keyed by game ID)
     /// </summary>
-    public Dictionary<string, Dictionary<string, PromptTemplateConfig>> GameTemplates { get; set; } = new(StringComparer.Ordinal);
+    public IDictionary<string, IDictionary<string, PromptTemplateConfig>> GameTemplates { get; set; } = new Dictionary<string, IDictionary<string, PromptTemplateConfig>>(StringComparer.Ordinal);
 }
 
 /// <summary>
@@ -86,7 +86,7 @@ public class PromptTemplateConfig
 {
     public required string SystemPrompt { get; set; }
     public required string UserPromptTemplate { get; set; }
-    public List<FewShotExampleConfig> FewShotExamples { get; set; } = new();
+    public IList<FewShotExampleConfig> FewShotExamples { get; set; } = new List<FewShotExampleConfig>();
 }
 
 /// <summary>

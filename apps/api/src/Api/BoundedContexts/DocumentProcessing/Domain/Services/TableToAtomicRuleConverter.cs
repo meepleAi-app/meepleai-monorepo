@@ -65,7 +65,7 @@ public class TableToAtomicRuleConverter
     /// <param name="headers">Table column headers</param>
     /// <param name="row">Table row data</param>
     /// <returns>List of "Header: Value" pairs</returns>
-    private static List<string> ExtractRulePartsFromRow(List<string> headers, string[] row)
+    private static List<string> ExtractRulePartsFromRow(IList<string> headers, string[] row)
     {
         var parts = new List<string>();
         var columnCount = Math.Min(headers.Count, row.Length);

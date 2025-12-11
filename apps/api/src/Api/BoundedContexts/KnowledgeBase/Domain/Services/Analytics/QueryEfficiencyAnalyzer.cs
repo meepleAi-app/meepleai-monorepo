@@ -69,7 +69,7 @@ public class QueryEfficiencyAnalyzer : IQueryEfficiencyAnalyzer
         };
     }
 
-    public async Task<List<QueryTypeCost>> GetTopCostlyQueriesAsync(
+    public async Task<IReadOnlyList<QueryTypeCost>> GetTopCostlyQueriesAsync(
         DateOnly startDate,
         DateOnly endDate,
         int topN = 10,
@@ -90,10 +90,10 @@ public class QueryEfficiencyAnalyzer : IQueryEfficiencyAnalyzer
             })
             .OrderByDescending(q => q.TotalCost)
             .Take(topN)
-            .ToList();
+            .ToArray();
     }
 
-    public async Task<Dictionary<string, double>> GetAverageTokensByOperationAsync(
+    public async Task<IReadOnlyDictionary<string, double>> GetAverageTokensByOperationAsync(
         DateOnly startDate,
         DateOnly endDate,
         CancellationToken ct = default)
@@ -110,10 +110,10 @@ public class QueryEfficiencyAnalyzer : IQueryEfficiencyAnalyzer
         };
     }
 
-    private List<string> GenerateRecommendations(
+    private IReadOnlyList<string> GenerateRecommendations(
         double avgTokens,
         decimal avgCost,
-        List<QueryTypeCost> topCostly)
+        IReadOnlyList<QueryTypeCost> topCostly)
     {
         var recommendations = new List<string>();
 

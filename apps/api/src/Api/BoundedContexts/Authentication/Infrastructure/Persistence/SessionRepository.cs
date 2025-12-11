@@ -39,7 +39,7 @@ public class SessionRepository : RepositoryBase, ISessionRepository
         return sessionEntity != null ? MapToDomain(sessionEntity) : null;
     }
 
-    public async Task<List<Session>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<Session>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         var sessionEntities = await DbContext.UserSessions
             .AsNoTracking()
@@ -50,7 +50,7 @@ public class SessionRepository : RepositoryBase, ISessionRepository
         return sessionEntities.Select(MapToDomain).ToList();
     }
 
-    public async Task<List<Session>> GetActiveSessionsByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<Session>> GetActiveSessionsByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 

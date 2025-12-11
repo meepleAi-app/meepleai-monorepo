@@ -18,6 +18,6 @@ public record Enable2FACommand(
 /// </summary>
 public sealed record Enable2FAResult(
     bool Success,
-    List<string>? BackupCodes = null,
+    IList<string>? BackupCodes = null,
     string? ErrorMessage = null
 );

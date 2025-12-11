@@ -128,8 +128,8 @@ public sealed class ColumnBoundary
 /// </summary>
 public sealed class ColumnSplitResult
 {
-    public List<string> Columns { get; set; } = new();
-    public List<ColumnBoundary> Boundaries { get; set; } = new();
+    public IList<string> Columns { get; set; } = new List<string>();
+    public IList<ColumnBoundary> Boundaries { get; set; } = new List<ColumnBoundary>();
 }
 
 /// <summary>
@@ -137,8 +137,8 @@ public sealed class ColumnSplitResult
 /// </summary>
 public sealed class DetectedColumnLayout
 {
-    public List<ColumnBoundary> Boundaries { get; } = new();
-    public List<string> Columns { get; set; } = new();
+    public IList<ColumnBoundary> Boundaries { get; } = new List<ColumnBoundary>();
+    public IList<string> Columns { get; set; } = new List<string>();
 }
 
 /// <summary>
@@ -148,8 +148,8 @@ public class PdfTable
 {
     public int PageNumber { get; set; }
     public int StartLine { get; set; }
-    public List<string> Headers { get; set; } = new();
-    public List<string[]> Rows { get; set; } = new();
+    public IList<string> Headers { get; set; } = new List<string>();
+    public IList<string[]> Rows { get; set; } = new List<string[]>();
     public int ColumnCount { get; set; }
     public int RowCount { get; set; }
 }
@@ -174,17 +174,17 @@ public record PdfStructuredExtractionResult
 {
     public bool Success { get; init; }
     public string? ErrorMessage { get; init; }
-    public List<PdfTable> Tables { get; init; } = new();
-    public List<PdfDiagram> Diagrams { get; init; } = new();
-    public List<string> AtomicRules { get; init; } = new();
+    public IList<PdfTable> Tables { get; init; } = new List<PdfTable>();
+    public IList<PdfDiagram> Diagrams { get; init; } = new List<PdfDiagram>();
+    public IList<string> AtomicRules { get; init; } = new List<string>();
     public int TableCount => Tables.Count;
     public int DiagramCount => Diagrams.Count;
     public int AtomicRuleCount => AtomicRules.Count;
 
     public static PdfStructuredExtractionResult CreateSuccess(
-        List<PdfTable> tables,
-        List<PdfDiagram> diagrams,
-        List<string> atomicRules) =>
+        IList<PdfTable> tables,
+        IList<PdfDiagram> diagrams,
+        IList<string> atomicRules) =>
         new()
         {
             Success = true,

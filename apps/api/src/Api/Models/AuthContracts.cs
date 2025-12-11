@@ -147,5 +147,5 @@ public record OAuthUserInfo(
 public class OAuthConfiguration
 {
     public required string CallbackBaseUrl { get; init; }
-    public required Dictionary<string, OAuthProviderConfig> Providers { get; init; }
+    public required IDictionary<string, OAuthProviderConfig> Providers { get; init; }
 }

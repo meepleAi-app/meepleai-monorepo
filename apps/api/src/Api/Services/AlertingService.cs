@@ -44,7 +44,7 @@ public class AlertingService : IAlertingService
         string alertType,
         string severity,
         string message,
-        Dictionary<string, object>? metadata = null,
+        IDictionary<string, object>? metadata = null,
         CancellationToken cancellationToken = default)
     {
         if (!_config.Enabled)
@@ -268,7 +268,7 @@ public class EmailConfiguration
     public string SmtpHost { get; set; } = string.Empty;
     public int SmtpPort { get; set; } = 587;
     public string From { get; set; } = string.Empty;
-    public List<string> To { get; set; } = new();
+    public IList<string> To { get; set; } = new List<string>();
     public bool UseTls { get; set; } = true;
     public string? Username { get; set; }
     public string? Password { get; set; }

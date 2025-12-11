@@ -80,7 +80,7 @@ public record RagEvaluationDataset
     /// Optional metadata
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public Dictionary<string, string>? Metadata { get; init; }
+    public IDictionary<string, string>? Metadata { get; init; }
 }
 
 /// <summary>
@@ -274,7 +274,7 @@ public record RagEvaluationReport
     /// Optional metadata
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public Dictionary<string, string>? Metadata { get; init; }
+    public IDictionary<string, string>? Metadata { get; init; }
 }
 
 /// <summary>

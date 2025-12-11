@@ -115,8 +115,8 @@ public class ValidationAccuracyTrackingService
     /// <param name="expectedValidCounts">Expected valid counts for each evaluation (must match length)</param>
     /// <returns>Aggregated ValidationAccuracyMetrics</returns>
     public ValidationAccuracyMetrics CalculateAggregatedAccuracy(
-        List<PromptEvaluationResult> evaluationResults,
-        List<int> expectedValidCounts)
+        IReadOnlyList<PromptEvaluationResult> evaluationResults,
+        IReadOnlyList<int> expectedValidCounts)
     {
         if (evaluationResults == null || evaluationResults.Count == 0)
             throw new ArgumentException("Evaluation results cannot be null or empty", nameof(evaluationResults));
@@ -175,7 +175,7 @@ public class ValidationAccuracyTrackingService
     /// <summary>
     /// Generates actionable recommendations based on metrics.
     /// </summary>
-    private List<string> GenerateRecommendations(ValidationAccuracyMetrics metrics)
+    private IReadOnlyList<string> GenerateRecommendations(ValidationAccuracyMetrics metrics)
     {
         var recommendations = new List<string>();
 
@@ -261,5 +261,5 @@ public record ValidationAccuracyReport(
     bool MeetsBaseline,
     ValidationAccuracyLevel QualityLevel,
     string Summary,
-    List<string> Recommendations,
+    IReadOnlyList<string> Recommendations,
     DateTime Timestamp);

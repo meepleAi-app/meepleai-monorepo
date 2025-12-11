@@ -27,7 +27,7 @@ public class ChunkedUploadSessionRepository : RepositoryBase, IChunkedUploadSess
         return entity != null ? MapToDomain(entity) : null;
     }
 
-    public async Task<List<ChunkedUploadSession>> GetAllAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<ChunkedUploadSession>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         var entities = await DbContext.ChunkedUploadSessions
             .AsNoTracking()

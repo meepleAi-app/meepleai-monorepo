@@ -24,7 +24,7 @@ public class ConfigurationRepository : RepositoryBase, IConfigurationRepository
         return entity != null ? MapToDomain(entity) : null;
     }
 
-    public async Task<List<SystemConfigurationAggregate>> GetAllAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<SystemConfigurationAggregate>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         var entities = await DbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>()
             .AsNoTracking()

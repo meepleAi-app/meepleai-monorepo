@@ -37,7 +37,7 @@ public class TableDetectionService : ITableDetectionService
         }
 
         var currentRows = new List<string[]>();
-        List<ColumnBoundary>? currentBoundaries = null;
+        IList<ColumnBoundary>? currentBoundaries = null;
         var tableStartLine = -1;
         var lastLineWasBlank = false;
 
@@ -203,7 +203,7 @@ public class TableDetectionService : ITableDetectionService
         };
     }
 
-    private string[] NormalizeRow(IReadOnlyList<string> columns, int columnCount)
+    private string[] NormalizeRow(IList<string> columns, int columnCount)
     {
         var normalized = new string[columnCount];
 

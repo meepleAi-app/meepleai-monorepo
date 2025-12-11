@@ -30,7 +30,7 @@ public class GameSessionRepository : RepositoryBase, IGameSessionRepository
         return sessionEntity != null ? MapToDomain(sessionEntity) : null;
     }
 
-    public async Task<List<GameSession>> GetAllAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<GameSession>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         var sessionEntities = await DbContext.GameSessions
             .AsNoTracking()

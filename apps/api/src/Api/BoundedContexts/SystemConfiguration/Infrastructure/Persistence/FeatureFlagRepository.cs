@@ -28,7 +28,7 @@ public class FeatureFlagRepository : RepositoryBase, IFeatureFlagRepository
         return entity != null ? MapToDomain(entity) : null;
     }
 
-    public async Task<List<FeatureFlag>> GetAllAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<FeatureFlag>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         var entities = await DbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>()
             .AsNoTracking()

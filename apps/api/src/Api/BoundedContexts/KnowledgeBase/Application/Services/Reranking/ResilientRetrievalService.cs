@@ -114,7 +114,7 @@ public sealed class ResilientRetrievalService : IRerankedRetrievalService, IDisp
         );
     }
 
-    private async Task<List<HybridSearchResult>> PerformSearchAsync(
+    private async Task<IReadOnlyList<HybridSearchResult>> PerformSearchAsync(
         RerankedRetrievalRequest request,
         CancellationToken cancellationToken)
     {
@@ -139,7 +139,7 @@ public sealed class ResilientRetrievalService : IRerankedRetrievalService, IDisp
     private async Task<(List<RerankedSearchResult> Results, bool UsedReranker, string? FallbackReason, double? RerankTimeMs)>
         TryRerankAsync(
             string query,
-            List<HybridSearchResult> searchResults,
+            IReadOnlyList<HybridSearchResult> searchResults,
             int topK,
             CancellationToken cancellationToken)
     {
@@ -217,7 +217,7 @@ public sealed class ResilientRetrievalService : IRerankedRetrievalService, IDisp
     }
 
     private static List<RerankedSearchResult> ConvertToFallbackResults(
-        List<HybridSearchResult> searchResults,
+        IReadOnlyList<HybridSearchResult> searchResults,
         int topK)
     {
         return searchResults

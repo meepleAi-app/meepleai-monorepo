@@ -56,7 +56,7 @@ public class UserRepository : RepositoryBase, IUserRepository
             .AnyAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task<List<User>> GetAllAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<User>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         // Include OAuthAccounts for domain logic that requires checking auth methods
         var userEntities = await DbContext.Users
@@ -176,7 +176,7 @@ public class UserRepository : RepositoryBase, IUserRepository
             .AnyAsync(u => u.Id == id, cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task<List<Api.Infrastructure.Entities.UserBackupCodeEntity>> GetBackupCodesAsync(Guid userId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<Api.Infrastructure.Entities.UserBackupCodeEntity>> GetBackupCodesAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         return await DbContext.UserBackupCodes
             .AsNoTracking()
@@ -271,11 +271,11 @@ public class UserRepository : RepositoryBase, IUserRepository
             .CountAsync(u => u.Role == adminRole, cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task<List<User>> SearchAsync(string query, int maxResults, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<User>> SearchAsync(string query, int maxResults, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(query))
         {
-            return new List<User>();
+            return Array.Empty<User>();
         }
 
         // Include OAuthAccounts for domain logic that requires checking auth methods

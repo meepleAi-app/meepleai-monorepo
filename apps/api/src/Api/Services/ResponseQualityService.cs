@@ -40,8 +40,8 @@ public class ResponseQualityService : IResponseQualityService
     /// <param name="modelReportedConfidence">Optional confidence score reported by the LLM model</param>
     /// <returns>Multi-dimensional quality scores</returns>
     public QualityScores CalculateQualityScores(
-        List<RagSearchResult> ragResults,
-        List<Citation>? citations,
+        IList<RagSearchResult> ragResults,
+        IList<Citation>? citations,
         string? responseText,
         double? modelReportedConfidence = null)
     {
@@ -74,7 +74,7 @@ public class ResponseQualityService : IResponseQualityService
     /// Calculate RAG confidence as average of search result scores.
     /// Returns 0.0 if no results.
     /// </summary>
-    private static double CalculateRagConfidence(List<RagSearchResult> ragResults)
+    private static double CalculateRagConfidence(IList<RagSearchResult> ragResults)
     {
         if (ragResults == null || ragResults.Count == 0)
         {
@@ -130,7 +130,7 @@ public class ResponseQualityService : IResponseQualityService
     /// Calculate citation quality as ratio of citations to paragraphs.
     /// Capped at 1.0 (no penalty for over-citing).
     /// </summary>
-    private static double CalculateCitationQuality(List<Citation>? citations, string? responseText)
+    private static double CalculateCitationQuality(IList<Citation>? citations, string? responseText)
     {
         // Null citations list gets 0.0
         if (citations == null)
@@ -176,8 +176,8 @@ public interface IResponseQualityService
     /// Calculate quality scores for an AI response.
     /// </summary>
     QualityScores CalculateQualityScores(
-        List<RagSearchResult> ragResults,
-        List<Citation>? citations,
+        IList<RagSearchResult> ragResults,
+        IList<Citation>? citations,
         string? responseText,
         double? modelReportedConfidence = null);
 }

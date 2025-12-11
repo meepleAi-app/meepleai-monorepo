@@ -28,7 +28,7 @@ public class GameRepository : RepositoryBase, IGameRepository
         return gameEntity != null ? MapToDomain(gameEntity) : null;
     }
 
-    public async Task<List<Game>> GetAllAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<Game>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         var gameEntities = await DbContext.Games
             .AsNoTracking()

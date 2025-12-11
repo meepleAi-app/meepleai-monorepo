@@ -92,7 +92,7 @@ public record StreamingFollowUpQuestions(
 /// Internal DTO for LLM JSON parsing of follow-up questions.
 /// </summary>
 internal record FollowUpQuestionsDto(
-    [property: JsonPropertyName("questions")] List<string> Questions
+    [property: JsonPropertyName("questions")] IList<string> Questions
 );
 
 /// <summary>
@@ -165,11 +165,11 @@ public record WorkflowTemplateDto(
     string Description,
     string Category,
     string Author,
-    List<string> Tags,
+    IList<string> Tags,
     string Icon,
     string? Screenshot,
     string? Documentation,
-    List<TemplateParameterDto> Parameters
+    IList<TemplateParameterDto> Parameters
 );
 
 public record TemplateParameterDto(
@@ -179,7 +179,7 @@ public record TemplateParameterDto(
     string Description,
     bool Required,
     string? Default,
-    List<string>? Options,
+    IList<string>? Options,
     bool Sensitive
 );
 
@@ -190,16 +190,16 @@ public record WorkflowTemplateDetailDto(
     string Description,
     string Category,
     string Author,
-    List<string> Tags,
+    IList<string> Tags,
     string Icon,
     string? Screenshot,
     string? Documentation,
-    List<TemplateParameterDto> Parameters,
+    IList<TemplateParameterDto> Parameters,
     object Workflow
 );
 
 public record ImportTemplateRequest(
-    Dictionary<string, string> Parameters
+    IDictionary<string, string> Parameters
 );
 
 public record ImportTemplateResponse(
@@ -213,7 +213,7 @@ public record ValidateTemplateRequest(
 
 public record ValidateTemplateResponse(
     [property: JsonPropertyName("valid")] bool IsValid,
-    [property: JsonPropertyName("errors")] List<string>? Errors
+    [property: JsonPropertyName("errors")] IList<string>? Errors
 );
 
 // UI-01: Chat management models
@@ -524,8 +524,8 @@ public record RuleCommentDto(
     string? ResolvedByUserId,
     string? ResolvedByDisplayName,
     DateTime? ResolvedAt,
-    List<string> MentionedUserIds,
-    List<RuleCommentDto> Replies,
+    IList<string> MentionedUserIds,
+    IList<RuleCommentDto> Replies,
     DateTime CreatedAt,
     DateTime? UpdatedAt
 );
@@ -666,10 +666,10 @@ public record BggGameDetailsDto(
     double? AverageWeight, // Complexity: 1-5
     string? ThumbnailUrl,
     string? ImageUrl,
-    List<string> Categories,
-    List<string> Mechanics,
-    List<string> Designers,
-    List<string> Publishers
+    IList<string> Categories,
+    IList<string> Mechanics,
+    IList<string> Designers,
+    IList<string> Publishers
 );
 
 public record BggSearchRequest(
@@ -712,11 +712,11 @@ public record AlertDto(
     string AlertType,
     string Severity,
     string Message,
-    Dictionary<string, object>? Metadata,
+    IDictionary<string, object>? Metadata,
     DateTime TriggeredAt,
     DateTime? ResolvedAt,
     bool IsActive,
-    Dictionary<string, bool>? ChannelSent
+    IDictionary<string, bool>? ChannelSent
 );
 
 public record PrometheusAlertWebhook(
@@ -729,8 +729,8 @@ public record PrometheusAlertWebhook(
 
 public record PrometheusAlert(
     string Status, // "firing" or "resolved"
-    Dictionary<string, string> Labels,
-    Dictionary<string, string> Annotations,
+    IReadOnlyDictionary<string, string> Labels,
+    IReadOnlyDictionary<string, string> Annotations,
     DateTime StartsAt,
     DateTime? EndsAt
 );

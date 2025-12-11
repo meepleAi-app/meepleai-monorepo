@@ -236,12 +236,12 @@ internal record PrometheusApiResponse
 internal record PrometheusDataResponse
 {
     public string? ResultType { get; init; }
-    public List<PrometheusResultItem>? Result { get; init; }
+    public IList<PrometheusResultItem>? Result { get; init; }
 }
 
 internal record PrometheusResultItem
 {
-    public Dictionary<string, string>? Metric { get; init; }
+    public IDictionary<string, string>? Metric { get; init; }
     public object? Value { get; init; }  // For instant queries: [timestamp, value]
     public object? Values { get; init; } // For range queries: [[timestamp, value], ...]
 }

@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 public record ConfigureAgentCommand(
     Guid AgentId,
     string StrategyName,
-    Dictionary<string, object> StrategyParameters
+    IDictionary<string, object> StrategyParameters
 ) : IRequest<ConfigureAgentResult>;
 
 /// <summary>

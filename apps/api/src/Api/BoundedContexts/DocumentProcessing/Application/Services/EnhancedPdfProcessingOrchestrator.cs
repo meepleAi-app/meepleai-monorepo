@@ -362,7 +362,7 @@ public class EnhancedPdfProcessingOrchestrator
             overallStopwatch.Stop();
             return new EnhancedPagedExtractionResult(
                 Success: false,
-                PageChunks: new List<PageTextChunk>(),
+                PageChunks: (IList<PageTextChunk>)new List<PageTextChunk>(),
                 TotalPages: 0,
                 TotalCharacters: 0,
                 OcrTriggered: false,
@@ -740,7 +740,7 @@ public record EnhancedExtractionResult(
 /// </summary>
 public record EnhancedPagedExtractionResult(
     bool Success,
-    List<PageTextChunk> PageChunks,
+    IList<PageTextChunk> PageChunks,
     int TotalPages,
     int TotalCharacters,
     bool OcrTriggered,

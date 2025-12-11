@@ -533,7 +533,7 @@ public class PromptEvaluationService : IPromptEvaluationService
     /// </summary>
     private EvaluationMetrics CalculateAggregateMetrics(
         List<QueryEvaluationResult> queryResults,
-        List<PromptTestCase> testCases)
+        IList<PromptTestCase> testCases)
     {
         var totalQueries = queryResults.Count;
 

@@ -24,7 +24,7 @@ public class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
         return entity != null ? MapToDomain(entity) : null;
     }
 
-    public async Task<List<PdfDocument>> GetAllAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<PdfDocument>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         var entities = await DbContext.PdfDocuments
             .AsNoTracking()

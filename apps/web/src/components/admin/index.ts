@@ -50,3 +50,16 @@ export {
   type EmptyBulkActionBarProps,
   type BulkAction,
 } from './BulkActionBar';
+
+// Issue #911: User activity timeline components
+export { UserActivityTimeline, type UserActivityTimelineProps } from './UserActivityTimeline';
+export {
+  UserActivityItem,
+  type UserActivityItemProps,
+  type UserActivityEvent,
+} from './UserActivityItem';
+export {
+  UserActivityFilters,
+  type UserActivityFiltersProps,
+  type UserActivityFilters as UserActivityFiltersType,
+} from './UserActivityFilters';

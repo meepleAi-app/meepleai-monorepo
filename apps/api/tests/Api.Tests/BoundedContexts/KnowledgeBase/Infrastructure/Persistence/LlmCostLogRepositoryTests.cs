@@ -93,7 +93,7 @@ public class LlmCostLogRepositoryTests : IntegrationTestBase<LlmCostLogRepositor
     {
         // Arrange
         await ResetDatabaseAsync();
-        
+
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
         await Repository.LogCostAsync(null, "Anonymous", CreateCost(0.001m), "chat", true, null, 100, null, null, ct: TestCancellationToken);
@@ -112,7 +112,7 @@ public class LlmCostLogRepositoryTests : IntegrationTestBase<LlmCostLogRepositor
     {
         // Arrange
         await ResetDatabaseAsync();
-        
+
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
         await Repository.LogCostAsync(null, "User", CreateCost(0.001m, "OpenRouter"), "chat", true, null, 100, null, null, ct: TestCancellationToken);
@@ -133,7 +133,7 @@ public class LlmCostLogRepositoryTests : IntegrationTestBase<LlmCostLogRepositor
     {
         // Arrange
         await ResetDatabaseAsync();
-        
+
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
         await Repository.LogCostAsync(null, "Anonymous", CreateCost(0.001m), "chat", true, null, 100, null, null, ct: TestCancellationToken);
@@ -203,7 +203,7 @@ public class LlmCostLogRepositoryTests : IntegrationTestBase<LlmCostLogRepositor
     {
         // Arrange
         await ResetDatabaseAsync();
-        
+
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
         await Repository.LogCostAsync(null, "User", CreateCost(0.010m), "chat", true, null, 100, null, null, ct: TestCancellationToken);
@@ -222,7 +222,7 @@ public class LlmCostLogRepositoryTests : IntegrationTestBase<LlmCostLogRepositor
     {
         // Arrange
         await ResetDatabaseAsync();
-        
+
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
         await Repository.LogCostAsync(null, "User", CreateCost(0.001m), "chat", true, null, 100, null, null, ct: TestCancellationToken);

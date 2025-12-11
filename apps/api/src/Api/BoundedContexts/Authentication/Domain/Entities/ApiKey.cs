@@ -28,7 +28,7 @@ public sealed class ApiKey : AggregateRoot<Guid>
     public int UsageCount { get; private set; }
 
     // Navigation property for EF Core
-    public User? User { get; private set; }
+    public User? User { get; }
 
     private const int KeySizeBytes = 32; // 256 bits
     private const int PrefixLength = 8;

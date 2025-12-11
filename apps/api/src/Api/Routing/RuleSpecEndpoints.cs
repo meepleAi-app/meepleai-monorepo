@@ -1,4 +1,4 @@
-﻿using Api.BoundedContexts.GameManagement.Application.Commands;
+using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.GameManagement.Application.DTOs;
 using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.BoundedContexts.Authentication.Application.DTOs;
@@ -390,7 +390,7 @@ public static class RuleSpecEndpoints
             if (!authorized) return error!;
 
             var userId = session!.User!.Id;
-            var isAdmin = session.User.Role == "Admin";
+            var isAdmin = string.Equals(session.User.Role, "Admin", StringComparison.Ordinal);
             logger.LogInformation("User {UserId} deleting comment {CommentId}", userId, commentId);
 
             var command = new DeleteRuleCommentCommand(commentId, userId, isAdmin);

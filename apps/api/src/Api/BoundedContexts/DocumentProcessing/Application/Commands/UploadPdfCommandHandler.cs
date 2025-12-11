@@ -324,11 +324,11 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
     /// <param name="stream">The file stream to validate</param>
     /// <param name="fileName">The file name for logging</param>
     /// <returns>Tuple of (isValid, errorMessage)</returns>
-    private static async Task<(bool IsValid, string? ErrorMessage)> ValidatePdfStructureAsync(Stream stream, string fileName)
+    private static async Task<(bool IsValid, string? ErrorMessage)> ValidatePdfStructureAsync(Stream stream)
     {
         const int headerCheckBytes = 1024; // Read first 1KB to find PDF header
         const int trailerCheckBytes = 1024; // Read last 1KB to find PDF trailer
-        
+
         try
         {
             // Check minimum file size (PDF must have at least header + trailer)
@@ -341,7 +341,7 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
             stream.Seek(0, SeekOrigin.Begin);
             var headerBuffer = new byte[Math.Min(headerCheckBytes, (int)stream.Length)];
             var headerBytesRead = await stream.ReadAsync(headerBuffer.AsMemory(0, headerBuffer.Length)).ConfigureAwait(false);
-            
+
             // Check for PDF header signature (%PDF-1.x)
             var headerText = System.Text.Encoding.ASCII.GetString(headerBuffer, 0, Math.Min(10, headerBytesRead));
             if (!headerText.StartsWith("%PDF-", StringComparison.Ordinal))
@@ -354,7 +354,7 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
             stream.Seek(trailerStart, SeekOrigin.Begin);
             var trailerBuffer = new byte[Math.Min(trailerCheckBytes, (int)(stream.Length - trailerStart))];
             var trailerBytesRead = await stream.ReadAsync(trailerBuffer.AsMemory(0, trailerBuffer.Length)).ConfigureAwait(false);
-            
+
             // Check for PDF EOF marker (%%EOF)
             var trailerText = System.Text.Encoding.ASCII.GetString(trailerBuffer, 0, trailerBytesRead);
             if (!trailerText.Contains("%%EOF", StringComparison.Ordinal))
@@ -364,7 +364,7 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
 
             // Reset stream position for subsequent operations
             stream.Seek(0, SeekOrigin.Begin);
-            
+
             return (true, null);
         }
         catch (Exception ex)
@@ -399,13 +399,13 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
             }
 
             // IDEMPOTENCY CHECK (#1742): Skip if already processing/processed
-            if (pdfDoc.ProcessingStatus != "pending")
+            if (!string.Equals(pdfDoc.ProcessingStatus, "pending", StringComparison.Ordinal))
             {
                 _logger.LogInformation(
                     "PDF {PdfId} already processed (status: {Status}), skipping duplicate background task",
                     pdfId, pdfDoc.ProcessingStatus);
 
-                if (pdfDoc.ProcessingStatus == "failed")
+                if (string.Equals(pdfDoc.ProcessingStatus, "failed", StringComparison.Ordinal))
                 {
                     await quotaService.ReleaseQuotaAsync(userId, pdfId, CancellationToken.None).ConfigureAwait(false);
                 }
@@ -425,291 +425,291 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
             await using (fileStream.ConfigureAwait(false))
             {
                 var extractResult = await _pdfTextExtractor.ExtractPagedTextAsync(fileStream, enableOcrFallback: true, ct).ConfigureAwait(false);
-            extractionStopwatch.Stop();
+                extractionStopwatch.Stop();
 
-            // BGAI-043: Record extraction metrics
-            RecordPipelineMetricSafely("extraction", extractionStopwatch.Elapsed.TotalMilliseconds);
+                // BGAI-043: Record extraction metrics
+                RecordPipelineMetricSafely("extraction", extractionStopwatch.Elapsed.TotalMilliseconds);
 
-            if (!extractResult.Success)
-            {
-                RecordPipelineMetricSafely("extraction_error", 0);
-                await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, extractResult.ErrorMessage, ct).ConfigureAwait(false);
-
-                // Two-Phase Quota (#1743): Release quota on extraction failure
-                await quotaService.ReleaseQuotaAsync(userId, pdfId, CancellationToken.None).ConfigureAwait(false);
-
-                pdfDoc.ProcessingStatus = "failed";
-                pdfDoc.ProcessingError = extractResult.ErrorMessage;
-                pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
-                await db.SaveChangesAsync(ct).ConfigureAwait(false);
-                return;
-            }
-
-            // Combine all page chunks into full text
-            var fullText = string.Join("\n\n", extractResult.PageChunks
-                .Where(pc => !pc.IsEmpty)
-                .Select(pc => pc.Text));
-
-            pdfDoc.ExtractedText = fullText;
-            pdfDoc.PageCount = extractResult.TotalPages;
-            pdfDoc.CharacterCount = extractResult.TotalCharacters;
-            await db.SaveChangesAsync(ct).ConfigureAwait(false);
-
-            // BGAI-043: Record pages processed
-            RecordPipelineMetricSafely("pages_processed", extractResult.TotalPages);
-
-            // Extract structured content (tables, diagrams)
-            var tableExtractor = scope.ServiceProvider.GetService<IPdfTableExtractor>() ?? _tableExtractor;
-            if (tableExtractor != null)
-            {
-                var structuredResult = await tableExtractor.ExtractStructuredContentAsync(filePath, ct).ConfigureAwait(false);
-                if (structuredResult.Success)
+                if (!extractResult.Success)
                 {
-                    pdfDoc.ExtractedTables = System.Text.Json.JsonSerializer.Serialize(structuredResult.Tables);
-                    pdfDoc.ExtractedDiagrams = System.Text.Json.JsonSerializer.Serialize(
-                        structuredResult.Diagrams.Select(d => new
-                        {
-                            d.PageNumber,
-                            d.DiagramType,
-                            d.Description,
-                            d.Width,
-                            d.Height
-                        }));
-                    pdfDoc.AtomicRules = System.Text.Json.JsonSerializer.Serialize(structuredResult.AtomicRules);
-                    pdfDoc.TableCount = structuredResult.TableCount;
-                    pdfDoc.DiagramCount = structuredResult.DiagramCount;
-                    pdfDoc.AtomicRuleCount = structuredResult.AtomicRuleCount;
+                    RecordPipelineMetricSafely("extraction_error", 0);
+                    await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, extractResult.ErrorMessage, ct).ConfigureAwait(false);
+
+                    // Two-Phase Quota (#1743): Release quota on extraction failure
+                    await quotaService.ReleaseQuotaAsync(userId, pdfId, CancellationToken.None).ConfigureAwait(false);
+
+                    pdfDoc.ProcessingStatus = "failed";
+                    pdfDoc.ProcessingError = extractResult.ErrorMessage;
+                    pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
                     await db.SaveChangesAsync(ct).ConfigureAwait(false);
+                    return;
                 }
-            }
 
-            var totalPages = extractResult.TotalPages;
-            await UpdateProgressAsync(db, pdfId, ProcessingStep.Extracting, totalPages, totalPages, startTime, null, ct).ConfigureAwait(false);
+                // Combine all page chunks into full text
+                var fullText = string.Join("\n\n", extractResult.PageChunks
+                    .Where(pc => !pc.IsEmpty)
+                    .Select(pc => pc.Text));
 
-            // Step 2: Chunk text with page tracking (40-60%)
-            await UpdateProgressAsync(db, pdfId, ProcessingStep.Chunking, 0, totalPages, startTime, null, ct).ConfigureAwait(false);
-            var chunkingStopwatch = Stopwatch.StartNew();
-            var chunkingService = scope.ServiceProvider.GetRequiredService<ITextChunkingService>();
-            const int chunkSize = 512;
-            const int chunkOverlap = 50;
+                pdfDoc.ExtractedText = fullText;
+                pdfDoc.PageCount = extractResult.TotalPages;
+                pdfDoc.CharacterCount = extractResult.TotalCharacters;
+                await db.SaveChangesAsync(ct).ConfigureAwait(false);
 
-            var allDocumentChunks = chunkingService.PrepareForEmbedding(fullText, chunkSize, chunkOverlap)
-                ?.Where(chunk => chunk != null && !string.IsNullOrWhiteSpace(chunk.Text))
-                .Select(chunk => new DocumentChunkInput
+                // BGAI-043: Record pages processed
+                RecordPipelineMetricSafely("pages_processed", extractResult.TotalPages);
+
+                // Extract structured content (tables, diagrams)
+                var tableExtractor = scope.ServiceProvider.GetService<IPdfTableExtractor>() ?? _tableExtractor;
+                if (tableExtractor != null)
                 {
-                    Text = chunk.Text,
-                    Page = chunk.Page,
-                    CharStart = chunk.CharStart,
-                    CharEnd = chunk.CharEnd
-                })
-                .ToList()
-                ?? new List<DocumentChunkInput>();
-
-            if (allDocumentChunks.Count == 0)
-            {
-                foreach (var pageChunk in extractResult.PageChunks.Where(pc => !pc.IsEmpty))
-                {
-                    var pageTextChunks = chunkingService.ChunkText(pageChunk.Text, chunkSize, chunkOverlap);
-
-                    foreach (var textChunk in pageTextChunks.Where(t => !string.IsNullOrWhiteSpace(t.Text)))
+                    var structuredResult = await tableExtractor.ExtractStructuredContentAsync(filePath, ct).ConfigureAwait(false);
+                    if (structuredResult.Success)
                     {
-                        allDocumentChunks.Add(new DocumentChunkInput
-                        {
-                            Text = textChunk.Text,
-                            Page = pageChunk.PageNumber,
-                            CharStart = textChunk.CharStart,
-                            CharEnd = textChunk.CharEnd
-                        });
+                        pdfDoc.ExtractedTables = System.Text.Json.JsonSerializer.Serialize(structuredResult.Tables);
+                        pdfDoc.ExtractedDiagrams = System.Text.Json.JsonSerializer.Serialize(
+                            structuredResult.Diagrams.Select(d => new
+                            {
+                                d.PageNumber,
+                                d.DiagramType,
+                                d.Description,
+                                d.Width,
+                                d.Height
+                            }));
+                        pdfDoc.AtomicRules = System.Text.Json.JsonSerializer.Serialize(structuredResult.AtomicRules);
+                        pdfDoc.TableCount = structuredResult.TableCount;
+                        pdfDoc.DiagramCount = structuredResult.DiagramCount;
+                        pdfDoc.AtomicRuleCount = structuredResult.AtomicRuleCount;
+                        await db.SaveChangesAsync(ct).ConfigureAwait(false);
                     }
                 }
-            }
 
-            allDocumentChunks = allDocumentChunks
-                .Where(chunk => chunk != null && !string.IsNullOrWhiteSpace(chunk.Text))
-                .ToList();
+                var totalPages = extractResult.TotalPages;
+                await UpdateProgressAsync(db, pdfId, ProcessingStep.Extracting, totalPages, totalPages, startTime, null, ct).ConfigureAwait(false);
 
-            chunkingStopwatch.Stop();
+                // Step 2: Chunk text with page tracking (40-60%)
+                await UpdateProgressAsync(db, pdfId, ProcessingStep.Chunking, 0, totalPages, startTime, null, ct).ConfigureAwait(false);
+                var chunkingStopwatch = Stopwatch.StartNew();
+                var chunkingService = scope.ServiceProvider.GetRequiredService<ITextChunkingService>();
+                const int chunkSize = 512;
+                const int chunkOverlap = 50;
 
-            // BGAI-043: Record chunking metrics
-            RecordPipelineMetricSafely("chunking", chunkingStopwatch.Elapsed.TotalMilliseconds, allDocumentChunks.Count);
+                var allDocumentChunks = chunkingService.PrepareForEmbedding(fullText, chunkSize, chunkOverlap)
+                    ?.Where(chunk => chunk != null && !string.IsNullOrWhiteSpace(chunk.Text))
+                    .Select(chunk => new DocumentChunkInput
+                    {
+                        Text = chunk.Text,
+                        Page = chunk.Page,
+                        CharStart = chunk.CharStart,
+                        CharEnd = chunk.CharEnd
+                    })
+                    .ToList()
+                    ?? new List<DocumentChunkInput>();
 
-            // Step 3: Generate embeddings (60-80%)
-            await UpdateProgressAsync(db, pdfId, ProcessingStep.Embedding, 0, totalPages, startTime, null, ct).ConfigureAwait(false);
-            var embeddingStopwatch = Stopwatch.StartNew();
-            var embeddingService = scope.ServiceProvider.GetRequiredService<IEmbeddingService>();
-            var texts = allDocumentChunks.Select(c => c.Text).ToList();
-            var embeddingResult = await embeddingService.GenerateEmbeddingsAsync(texts).ConfigureAwait(false);
-            embeddingStopwatch.Stop();
-
-            // BGAI-043: Record embedding metrics
-            RecordPipelineMetricSafely("embedding", embeddingStopwatch.Elapsed.TotalMilliseconds);
-
-            if (!embeddingResult.Success)
-            {
-                await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, $"Embedding generation failed: {embeddingResult.ErrorMessage}", ct).ConfigureAwait(false);
-
-                // Two-Phase Quota (#1743): Release quota on embedding failure
-                await quotaService.ReleaseQuotaAsync(userId, pdfId, CancellationToken.None).ConfigureAwait(false);
-
-                pdfDoc.ProcessingStatus = "failed";
-                pdfDoc.ProcessingError = embeddingResult.ErrorMessage;
-                pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
-                await db.SaveChangesAsync(ct).ConfigureAwait(false);
-                return;
-            }
-
-            await UpdateProgressAsync(db, pdfId, ProcessingStep.Embedding, totalPages, totalPages, startTime, null, ct).ConfigureAwait(false);
-
-            var embeddings = embeddingResult.Embeddings ?? new List<float[]>();
-
-            if (embeddings.Count != allDocumentChunks.Count)
-            {
-                var mismatchMessage = $"Embedding service returned {embeddings.Count} vectors for {allDocumentChunks.Count} chunks";
-                _logger.LogWarning("Embedding count mismatch for PDF {PdfId}: {Message}", pdfId, mismatchMessage);
-                await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, mismatchMessage, ct).ConfigureAwait(false);
-
-                // Two-Phase Quota (#1743): Release quota on embedding mismatch
-                await quotaService.ReleaseQuotaAsync(userId, pdfId, CancellationToken.None).ConfigureAwait(false);
-
-                pdfDoc.ProcessingStatus = "failed";
-                pdfDoc.ProcessingError = mismatchMessage;
-                pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
-                await db.SaveChangesAsync(ct).ConfigureAwait(false);
-                return;
-            }
-
-            var invalidEmbeddingIndexes = new List<int>();
-            for (var i = 0; i < embeddings.Count; i++)
-            {
-                var vector = embeddings[i];
-                if (IsInvalidVector(vector))
+                if (allDocumentChunks.Count == 0)
                 {
-                    invalidEmbeddingIndexes.Add(i);
+                    foreach (var pageChunk in extractResult.PageChunks.Where(pc => !pc.IsEmpty))
+                    {
+                        var pageTextChunks = chunkingService.ChunkText(pageChunk.Text, chunkSize, chunkOverlap);
+
+                        foreach (var textChunk in pageTextChunks.Where(t => !string.IsNullOrWhiteSpace(t.Text)))
+                        {
+                            allDocumentChunks.Add(new DocumentChunkInput
+                            {
+                                Text = textChunk.Text,
+                                Page = pageChunk.PageNumber,
+                                CharStart = textChunk.CharStart,
+                                CharEnd = textChunk.CharEnd
+                            });
+                        }
+                    }
                 }
-            }
 
-            if (invalidEmbeddingIndexes.Count > 0)
-            {
-                var detail = string.Join(", ", invalidEmbeddingIndexes);
-                var error = $"Embedding service returned invalid vectors for chunk indices: {detail}";
-                _logger.LogWarning("Invalid embeddings detected for PDF {PdfId}: {Detail}", pdfId, detail);
-                await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, error, ct).ConfigureAwait(false);
+                allDocumentChunks = allDocumentChunks
+                    .Where(chunk => chunk != null && !string.IsNullOrWhiteSpace(chunk.Text))
+                    .ToList();
 
-                // Two-Phase Quota (#1743): Release quota on invalid embeddings
-                await quotaService.ReleaseQuotaAsync(userId, pdfId, CancellationToken.None).ConfigureAwait(false);
+                chunkingStopwatch.Stop();
 
-                pdfDoc.ProcessingStatus = "failed";
-                pdfDoc.ProcessingError = error;
+                // BGAI-043: Record chunking metrics
+                RecordPipelineMetricSafely("chunking", chunkingStopwatch.Elapsed.TotalMilliseconds, allDocumentChunks.Count);
+
+                // Step 3: Generate embeddings (60-80%)
+                await UpdateProgressAsync(db, pdfId, ProcessingStep.Embedding, 0, totalPages, startTime, null, ct).ConfigureAwait(false);
+                var embeddingStopwatch = Stopwatch.StartNew();
+                var embeddingService = scope.ServiceProvider.GetRequiredService<IEmbeddingService>();
+                var texts = allDocumentChunks.Select(c => c.Text).ToList();
+                var embeddingResult = await embeddingService.GenerateEmbeddingsAsync(texts).ConfigureAwait(false);
+                embeddingStopwatch.Stop();
+
+                // BGAI-043: Record embedding metrics
+                RecordPipelineMetricSafely("embedding", embeddingStopwatch.Elapsed.TotalMilliseconds);
+
+                if (!embeddingResult.Success)
+                {
+                    await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, $"Embedding generation failed: {embeddingResult.ErrorMessage}", ct).ConfigureAwait(false);
+
+                    // Two-Phase Quota (#1743): Release quota on embedding failure
+                    await quotaService.ReleaseQuotaAsync(userId, pdfId, CancellationToken.None).ConfigureAwait(false);
+
+                    pdfDoc.ProcessingStatus = "failed";
+                    pdfDoc.ProcessingError = embeddingResult.ErrorMessage;
+                    pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
+                    await db.SaveChangesAsync(ct).ConfigureAwait(false);
+                    return;
+                }
+
+                await UpdateProgressAsync(db, pdfId, ProcessingStep.Embedding, totalPages, totalPages, startTime, null, ct).ConfigureAwait(false);
+
+                var embeddings = embeddingResult.Embeddings ?? new List<float[]>();
+
+                if (embeddings.Count != allDocumentChunks.Count)
+                {
+                    var mismatchMessage = $"Embedding service returned {embeddings.Count} vectors for {allDocumentChunks.Count} chunks";
+                    _logger.LogWarning("Embedding count mismatch for PDF {PdfId}: {Message}", pdfId, mismatchMessage);
+                    await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, mismatchMessage, ct).ConfigureAwait(false);
+
+                    // Two-Phase Quota (#1743): Release quota on embedding mismatch
+                    await quotaService.ReleaseQuotaAsync(userId, pdfId, CancellationToken.None).ConfigureAwait(false);
+
+                    pdfDoc.ProcessingStatus = "failed";
+                    pdfDoc.ProcessingError = mismatchMessage;
+                    pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
+                    await db.SaveChangesAsync(ct).ConfigureAwait(false);
+                    return;
+                }
+
+                var invalidEmbeddingIndexes = new List<int>();
+                for (var i = 0; i < embeddings.Count; i++)
+                {
+                    var vector = embeddings[i];
+                    if (IsInvalidVector(vector))
+                    {
+                        invalidEmbeddingIndexes.Add(i);
+                    }
+                }
+
+                if (invalidEmbeddingIndexes.Count > 0)
+                {
+                    var detail = string.Join(", ", invalidEmbeddingIndexes);
+                    var error = $"Embedding service returned invalid vectors for chunk indices: {detail}";
+                    _logger.LogWarning("Invalid embeddings detected for PDF {PdfId}: {Detail}", pdfId, detail);
+                    await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, error, ct).ConfigureAwait(false);
+
+                    // Two-Phase Quota (#1743): Release quota on invalid embeddings
+                    await quotaService.ReleaseQuotaAsync(userId, pdfId, CancellationToken.None).ConfigureAwait(false);
+
+                    pdfDoc.ProcessingStatus = "failed";
+                    pdfDoc.ProcessingError = error;
+                    pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
+                    await db.SaveChangesAsync(ct).ConfigureAwait(false);
+                    return;
+                }
+
+                // Step 4: Index in Qdrant (80-100%)
+                await UpdateProgressAsync(db, pdfId, ProcessingStep.Indexing, 0, totalPages, startTime, null, ct).ConfigureAwait(false);
+                var indexingStopwatch = Stopwatch.StartNew();
+                var qdrantService = scope.ServiceProvider.GetRequiredService<IQdrantService>();
+
+                var documentChunks = new List<DocumentChunk>();
+                for (int i = 0; i < allDocumentChunks.Count; i++)
+                {
+                    documentChunks.Add(new DocumentChunk
+                    {
+                        Text = allDocumentChunks[i].Text,
+                        Embedding = embeddings[i],
+                        Page = allDocumentChunks[i].Page,
+                        CharStart = allDocumentChunks[i].CharStart,
+                        CharEnd = allDocumentChunks[i].CharEnd
+                    });
+                }
+
+                // pdfGuid is already parsed at the start of this method
+                var indexResult = await qdrantService.IndexDocumentChunksAsync(pdfDoc.GameId.ToString(), pdfId, documentChunks).ConfigureAwait(false);
+                indexingStopwatch.Stop();
+
+                // BGAI-043: Record indexing metrics
+                RecordPipelineMetricSafely("indexing", indexingStopwatch.Elapsed.TotalMilliseconds);
+
+                if (!indexResult.Success)
+                {
+                    await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, $"Qdrant indexing failed: {indexResult.ErrorMessage}", ct).ConfigureAwait(false);
+
+                    // Two-Phase Quota (#1743): Release quota on indexing failure
+                    await quotaService.ReleaseQuotaAsync(userId, pdfId, CancellationToken.None).ConfigureAwait(false);
+
+                    pdfDoc.ProcessingStatus = "failed";
+                    pdfDoc.ProcessingError = indexResult.ErrorMessage;
+                    pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
+                    await db.SaveChangesAsync(ct).ConfigureAwait(false);
+                    return;
+                }
+
+                // Update vector document
+                var vectorDoc = await db.VectorDocuments.FirstOrDefaultAsync(v => v.PdfDocumentId == pdfGuid, ct).ConfigureAwait(false);
+                if (vectorDoc == null)
+                {
+                    vectorDoc = new VectorDocumentEntity
+                    {
+                        Id = Guid.NewGuid(),
+                        GameId = pdfDoc.GameId,
+                        PdfDocumentId = pdfGuid,
+                        IndexingStatus = "completed",
+                        ChunkCount = indexResult.IndexedCount,
+                        TotalCharacters = fullText.Length,
+                        IndexedAt = _timeProvider.GetUtcNow().UtcDateTime
+                    };
+                    db.VectorDocuments.Add(vectorDoc);
+                }
+                else
+                {
+                    vectorDoc.IndexingStatus = "completed";
+                    vectorDoc.ChunkCount = indexResult.IndexedCount;
+                    vectorDoc.TotalCharacters = fullText.Length;
+                    vectorDoc.IndexedAt = _timeProvider.GetUtcNow().UtcDateTime;
+                }
+
+                // Step 4b: Save text chunks to PostgreSQL for hybrid search (FTS)
+                // Delete existing chunks for re-processing scenario
+                var existingChunks = await db.TextChunks
+                    .Where(tc => tc.PdfDocumentId == pdfGuid)
+                    .ToListAsync(ct).ConfigureAwait(false);
+                if (existingChunks.Count > 0)
+                {
+                    db.TextChunks.RemoveRange(existingChunks);
+                }
+
+                // Create TextChunkEntity for each document chunk (for FTS)
+                var textChunkEntities = new List<TextChunkEntity>();
+                for (int i = 0; i < allDocumentChunks.Count; i++)
+                {
+                    textChunkEntities.Add(new TextChunkEntity
+                    {
+                        Id = Guid.NewGuid(),
+                        GameId = pdfDoc.GameId,
+                        PdfDocumentId = pdfGuid,
+                        Content = allDocumentChunks[i].Text,
+                        ChunkIndex = i,
+                        PageNumber = allDocumentChunks[i].Page,
+                        CharacterCount = allDocumentChunks[i].Text.Length,
+                        CreatedAt = _timeProvider.GetUtcNow().UtcDateTime
+                    });
+                }
+                db.TextChunks.AddRange(textChunkEntities);
+                _logger.LogInformation("Saved {ChunkCount} text chunks to PostgreSQL for hybrid search (PDF {PdfId})",
+                    textChunkEntities.Count, pdfId);
+
+                // Step 5: Complete (100%)
+                await UpdateProgressAsync(db, pdfId, ProcessingStep.Completed, totalPages, totalPages, startTime, null, ct).ConfigureAwait(false);
+                pdfDoc.ProcessingStatus = "completed";
                 pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
                 await db.SaveChangesAsync(ct).ConfigureAwait(false);
-                return;
-            }
 
-            // Step 4: Index in Qdrant (80-100%)
-            await UpdateProgressAsync(db, pdfId, ProcessingStep.Indexing, 0, totalPages, startTime, null, ct).ConfigureAwait(false);
-            var indexingStopwatch = Stopwatch.StartNew();
-            var qdrantService = scope.ServiceProvider.GetRequiredService<IQdrantService>();
+                await InvalidateCacheSafelyAsync(pdfDoc.GameId.ToString(), ct, "PDF processing").ConfigureAwait(false);
 
-            var documentChunks = new List<DocumentChunk>();
-            for (int i = 0; i < allDocumentChunks.Count; i++)
-            {
-                documentChunks.Add(new DocumentChunk
-                {
-                    Text = allDocumentChunks[i].Text,
-                    Embedding = embeddings[i],
-                    Page = allDocumentChunks[i].Page,
-                    CharStart = allDocumentChunks[i].CharStart,
-                    CharEnd = allDocumentChunks[i].CharEnd
-                });
-            }
+                // Two-Phase Quota (#1743): Confirm quota (Phase 2)
+                await quotaService.ConfirmQuotaAsync(userId, pdfId, CancellationToken.None).ConfigureAwait(false);
 
-            // pdfGuid is already parsed at the start of this method
-            var indexResult = await qdrantService.IndexDocumentChunksAsync(pdfDoc.GameId.ToString(), pdfId, documentChunks).ConfigureAwait(false);
-            indexingStopwatch.Stop();
-
-            // BGAI-043: Record indexing metrics
-            RecordPipelineMetricSafely("indexing", indexingStopwatch.Elapsed.TotalMilliseconds);
-
-            if (!indexResult.Success)
-            {
-                await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, $"Qdrant indexing failed: {indexResult.ErrorMessage}", ct).ConfigureAwait(false);
-
-                // Two-Phase Quota (#1743): Release quota on indexing failure
-                await quotaService.ReleaseQuotaAsync(userId, pdfId, CancellationToken.None).ConfigureAwait(false);
-
-                pdfDoc.ProcessingStatus = "failed";
-                pdfDoc.ProcessingError = indexResult.ErrorMessage;
-                pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
-                await db.SaveChangesAsync(ct).ConfigureAwait(false);
-                return;
-            }
-
-            // Update vector document
-            var vectorDoc = await db.VectorDocuments.FirstOrDefaultAsync(v => v.PdfDocumentId == pdfGuid, ct).ConfigureAwait(false);
-            if (vectorDoc == null)
-            {
-                vectorDoc = new VectorDocumentEntity
-                {
-                    Id = Guid.NewGuid(),
-                    GameId = pdfDoc.GameId,
-                    PdfDocumentId = pdfGuid,
-                    IndexingStatus = "completed",
-                    ChunkCount = indexResult.IndexedCount,
-                    TotalCharacters = fullText.Length,
-                    IndexedAt = _timeProvider.GetUtcNow().UtcDateTime
-                };
-                db.VectorDocuments.Add(vectorDoc);
-            }
-            else
-            {
-                vectorDoc.IndexingStatus = "completed";
-                vectorDoc.ChunkCount = indexResult.IndexedCount;
-                vectorDoc.TotalCharacters = fullText.Length;
-                vectorDoc.IndexedAt = _timeProvider.GetUtcNow().UtcDateTime;
-            }
-
-            // Step 4b: Save text chunks to PostgreSQL for hybrid search (FTS)
-            // Delete existing chunks for re-processing scenario
-            var existingChunks = await db.TextChunks
-                .Where(tc => tc.PdfDocumentId == pdfGuid)
-                .ToListAsync(ct).ConfigureAwait(false);
-            if (existingChunks.Count > 0)
-            {
-                db.TextChunks.RemoveRange(existingChunks);
-            }
-
-            // Create TextChunkEntity for each document chunk (for FTS)
-            var textChunkEntities = new List<TextChunkEntity>();
-            for (int i = 0; i < allDocumentChunks.Count; i++)
-            {
-                textChunkEntities.Add(new TextChunkEntity
-                {
-                    Id = Guid.NewGuid(),
-                    GameId = pdfDoc.GameId,
-                    PdfDocumentId = pdfGuid,
-                    Content = allDocumentChunks[i].Text,
-                    ChunkIndex = i,
-                    PageNumber = allDocumentChunks[i].Page,
-                    CharacterCount = allDocumentChunks[i].Text.Length,
-                    CreatedAt = _timeProvider.GetUtcNow().UtcDateTime
-                });
-            }
-            db.TextChunks.AddRange(textChunkEntities);
-            _logger.LogInformation("Saved {ChunkCount} text chunks to PostgreSQL for hybrid search (PDF {PdfId})",
-                textChunkEntities.Count, pdfId);
-
-            // Step 5: Complete (100%)
-            await UpdateProgressAsync(db, pdfId, ProcessingStep.Completed, totalPages, totalPages, startTime, null, ct).ConfigureAwait(false);
-            pdfDoc.ProcessingStatus = "completed";
-            pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
-            await db.SaveChangesAsync(ct).ConfigureAwait(false);
-
-            await InvalidateCacheSafelyAsync(pdfDoc.GameId.ToString(), ct, "PDF processing").ConfigureAwait(false);
-
-            // Two-Phase Quota (#1743): Confirm quota (Phase 2)
-            await quotaService.ConfirmQuotaAsync(userId, pdfId, CancellationToken.None).ConfigureAwait(false);
-
-            _logger.LogInformation("PDF processing completed for {PdfId}: {ChunkCount} chunks indexed", pdfId, indexResult.IndexedCount);
+                _logger.LogInformation("PDF processing completed for {PdfId}: {ChunkCount} chunks indexed", pdfId, indexResult.IndexedCount);
             }
         }
         catch (OperationCanceledException)

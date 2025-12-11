@@ -171,7 +171,7 @@ public static class ApiKeyEndpoints
             }
 
             var query = new Api.BoundedContexts.Authentication.Application.Queries.GetApiKeyUsageStatsQuery(
-                keyGuid, 
+                keyGuid,
                 session.User!.Id);
             var stats = await mediator.Send(query, ct).ConfigureAwait(false);
 
@@ -208,7 +208,7 @@ public static class ApiKeyEndpoints
                 take);
             var logs = await mediator.Send(query, ct).ConfigureAwait(false);
 
-            return Results.Json(new 
+            return Results.Json(new
             {
                 logs,
                 pagination = new
@@ -249,7 +249,7 @@ public static class ApiKeyEndpoints
             // Session validated AND Admin role checked by RequireAdminSessionFilter
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
-            logger.LogInformation("Admin {AdminId} fetching all API keys with stats (userId filter: {UserId}, includeRevoked: {IncludeRevoked})", 
+            logger.LogInformation("Admin {AdminId} fetching all API keys with stats (userId filter: {UserId}, includeRevoked: {IncludeRevoked})",
                 session.User!.Id, userId?.ToString() ?? "none", includeRevoked);
 
             var query = new Api.BoundedContexts.Authentication.Application.Queries.GetAllApiKeysWithStatsQuery(

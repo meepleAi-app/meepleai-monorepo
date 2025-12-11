@@ -30,7 +30,6 @@ public class TotpService : ITotpService
     private const string TotpIssuer = "MeepleAI";
     private const int TimeStepSeconds = 30; // TOTP time step (standard)
     private const int TimeWindowSteps = 2; // Allow ±2 steps (60 second window)
-    private const int PbkdfIterations = 210_000; // Same as password hashing
 
     // SEC-05: Rate limiting constants for brute force protection (Issue #576)
     private const int MaxTotpAttempts = 5; // Maximum attempts
@@ -260,7 +259,7 @@ public class TotpService : ITotpService
 
             // SEC-07: Store used code to prevent replay (Issue #1787)
             var expiresAt = _timeProvider.GetUtcNow().UtcDateTime.AddMinutes(2);
-            
+
             try
             {
                 await _dbContext.UsedTotpCodes.AddAsync(new UsedTotpCodeEntity
@@ -640,7 +639,7 @@ public class TotpService : ITotpService
     /// Track failed 2FA attempt in Redis for lockout mechanism.
     /// Pattern: Sliding window counter with 15-minute TTL.
     /// </summary>
-    private async Task TrackFailedAttemptAsync(Guid userId, string attemptType, CancellationToken cancellationToken)
+    private async Task TrackFailedAttemptAsync(Guid userId, string attemptType)
     {
         var redisKey = $"2fa:failed:{attemptType}:{userId}";
         var redisDb = _redis.GetDatabase();
@@ -657,7 +656,7 @@ public class TotpService : ITotpService
     /// Check if account is locked out due to excessive failed attempts.
     /// Lockout triggers after 5 failed attempts within 15-minute window.
     /// </summary>
-    private async Task<bool> IsAccountLockedOutAsync(Guid userId, string attemptType, CancellationToken cancellationToken)
+    private async Task<bool> IsAccountLockedOutAsync(Guid userId, string attemptType)
     {
         var redisKey = $"2fa:failed:{attemptType}:{userId}";
         var redisDb = _redis.GetDatabase();
@@ -676,7 +675,7 @@ public class TotpService : ITotpService
     /// <summary>
     /// Clear failed attempt counter after successful verification.
     /// </summary>
-    private async Task ClearFailedAttemptsAsync(Guid userId, string attemptType, CancellationToken cancellationToken)
+    private async Task ClearFailedAttemptsAsync(Guid userId, string attemptType)
     {
         var redisKey = $"2fa:failed:{attemptType}:{userId}";
         var redisDb = _redis.GetDatabase();
@@ -740,7 +739,7 @@ public class TotpService : ITotpService
         // PostgreSQL unique constraint violation: 23505
         if (ex.InnerException is Npgsql.PostgresException pgEx)
         {
-            return pgEx.SqlState == "23505"; // unique_violation
+            return string.Equals(pgEx.SqlState, "23505", StringComparison.Ordinal); // unique_violation
         }
 
         // Generic fallback for other databases

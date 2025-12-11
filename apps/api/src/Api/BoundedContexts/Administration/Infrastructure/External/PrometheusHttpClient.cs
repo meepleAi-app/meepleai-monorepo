@@ -68,7 +68,7 @@ public class PrometheusHttpClient : IPrometheusQueryService
                 PropertyNameCaseInsensitive = true
             });
 
-            if (prometheusResponse?.Status != "success")
+            if (!string.Equals(prometheusResponse?.Status, "success", StringComparison.Ordinal))
             {
                 var errorMsg = prometheusResponse?.Error ?? "Unknown error from Prometheus";
                 _logger.LogError("Prometheus query failed: {Error}", errorMsg);
@@ -116,7 +116,7 @@ public class PrometheusHttpClient : IPrometheusQueryService
                 PropertyNameCaseInsensitive = true
             });
 
-            if (prometheusResponse?.Status != "success")
+            if (!string.Equals(prometheusResponse?.Status, "success", StringComparison.Ordinal))
             {
                 var errorMsg = prometheusResponse?.Error ?? "Unknown error from Prometheus";
                 _logger.LogError("Prometheus query failed: {Error}", errorMsg);
@@ -158,12 +158,12 @@ public class PrometheusHttpClient : IPrometheusQueryService
 
         var timeSeries = data.Result.Select(result =>
         {
-            var metric = result.Metric ?? new Dictionary<string, string>();
+            var metric = result.Metric ?? new Dictionary<string, string>(StringComparer.Ordinal);
 
             // Parse values (for range queries) or value (for instant queries)
             var dataPoints = new List<PrometheusDataPoint>();
 
-            if (result.Values is not null && result.Values is JsonElement valuesElement && valuesElement.ValueKind == JsonValueKind.Array)
+            if (result.Values is JsonElement valuesElement && valuesElement.ValueKind == JsonValueKind.Array)
             {
                 // Range query response: array of [timestamp, value] arrays
                 foreach (var valueArray in valuesElement.EnumerateArray())

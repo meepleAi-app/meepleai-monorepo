@@ -41,8 +41,8 @@ public sealed class ParentChunkResolver : IParentChunkResolver
         // Group by parent ID to minimize lookups
         var childrenByParent = childChunks
             .Where(c => c.ParentId != null)
-            .GroupBy(c => c.ParentId!)
-            .ToDictionary(g => g.Key, g => g.ToList());
+            .GroupBy(c => c.ParentId!, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.Ordinal);
 
         if (childrenByParent.Count == 0)
         {
@@ -52,7 +52,7 @@ public sealed class ParentChunkResolver : IParentChunkResolver
 
         // Batch fetch parent chunks
         var parentChunks = await _chunkRepository.GetByIdsAsync(childrenByParent.Keys, cancellationToken).ConfigureAwait(false);
-        var parentsById = parentChunks.ToDictionary(p => p.Id);
+        var parentsById = parentChunks.ToDictionary(p => p.Id, StringComparer.Ordinal);
 
         foreach (var (parentId, children) in childrenByParent)
         {

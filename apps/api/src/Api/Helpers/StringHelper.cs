@@ -130,7 +130,7 @@ public static class StringHelper
         int maxLength = 200)
     {
         // Ensure extension has leading dot
-        if (!string.IsNullOrEmpty(extension) && !extension.StartsWith("."))
+        if (!string.IsNullOrEmpty(extension) && !extension.StartsWith(".", StringComparison.Ordinal))
         {
             extension = "." + extension;
         }

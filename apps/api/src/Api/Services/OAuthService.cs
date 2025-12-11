@@ -176,7 +176,7 @@ public class OAuthService : IOAuthService
                 return value;
             }
 
-            if (value.StartsWith("${") && value.EndsWith("}", StringComparison.Ordinal))
+            if (value.StartsWith("${", StringComparison.Ordinal) && value.EndsWith("}", StringComparison.Ordinal))
             {
                 var envName = value.Substring(2, value.Length - 3);
                 var envValue = Environment.GetEnvironmentVariable(envName);

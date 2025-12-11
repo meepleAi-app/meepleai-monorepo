@@ -166,6 +166,7 @@ public sealed class ResilientRetrievalService : IRerankedRetrievalService, IDisp
                 Content: r.Content,
                 OriginalScore: r.HybridScore,
                 Metadata: new Dictionary<string, object>
+(StringComparer.Ordinal)
                 {
                     ["page_number"] = r.PageNumber ?? 0,
                     ["pdf_document_id"] = r.PdfDocumentId
@@ -229,6 +230,7 @@ public sealed class ResilientRetrievalService : IRerankedRetrievalService, IDisp
                 FinalRank: index + 1,
                 PageNumber: r.PageNumber,
                 Metadata: new Dictionary<string, object>
+(StringComparer.Ordinal)
                 {
                     ["pdf_document_id"] = r.PdfDocumentId
                 }
@@ -243,7 +245,7 @@ public sealed class ResilientRetrievalService : IRerankedRetrievalService, IDisp
         var childIds = results.Select(r => r.ChunkId).ToList();
         var resolvedParents = await _parentResolver.ResolveParentsAsync(childIds, cancellationToken).ConfigureAwait(false);
 
-        var parentLookup = resolvedParents.ToDictionary(p => p.ChildId);
+        var parentLookup = resolvedParents.ToDictionary(p => p.ChildId, StringComparer.Ordinal);
 
         return results.Select(r =>
         {

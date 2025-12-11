@@ -399,7 +399,7 @@ public sealed class User : AggregateRoot<Guid>
             throw new ValidationException(nameof(theme), "Theme cannot be empty");
 
         var validThemes = new[] { "light", "dark", "system" };
-        if (!validThemes.Contains(theme))
+        if (!validThemes.Contains(theme, StringComparer.Ordinal))
             throw new ValidationException(nameof(theme), $"Theme must be one of: {string.Join(", ", validThemes)}");
 
         if (dataRetentionDays <= 0)

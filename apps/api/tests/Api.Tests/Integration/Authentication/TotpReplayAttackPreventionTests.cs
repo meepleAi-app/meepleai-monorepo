@@ -104,96 +104,96 @@ public sealed class TotpReplayAttackPreventionTests : IAsyncLifetime
                 .Build();
 
             await _postgresContainer.StartAsync(TestCancellationToken);
-        var containerPort = _postgresContainer.GetMappedPublicPort(5432);
-        var connectionString = $"Host=localhost;Port={containerPort};Database=totp_replay_test;Username=postgres;Password=postgres";
+            var containerPort = _postgresContainer.GetMappedPublicPort(5432);
+            var connectionString = $"Host=localhost;Port={containerPort};Database=totp_replay_test;Username=postgres;Password=postgres";
 
-        _output($"PostgreSQL container started on port {containerPort}");
+            _output($"PostgreSQL container started on port {containerPort}");
 
-        // Create DbContext with EF Core migrations
-        var services = new ServiceCollection();
-        services.AddDbContext<MeepleAiDbContext>(options =>
-            options.UseNpgsql(connectionString)
-                .ConfigureWarnings(warnings =>
-                    warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)));
+            // Create DbContext with EF Core migrations
+            var services = new ServiceCollection();
+            services.AddDbContext<MeepleAiDbContext>(options =>
+                options.UseNpgsql(connectionString)
+                    .ConfigureWarnings(warnings =>
+                        warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)));
 
-        // MediatR (required by MeepleAiDbContext)
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
+            // MediatR (required by MeepleAiDbContext)
+            services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
 
-        // Domain event infrastructure (required by MeepleAiDbContext)
-        services.AddScoped<Api.SharedKernel.Application.Services.IDomainEventCollector, Api.SharedKernel.Application.Services.DomainEventCollector>();
+            // Domain event infrastructure (required by MeepleAiDbContext)
+            services.AddScoped<Api.SharedKernel.Application.Services.IDomainEventCollector, Api.SharedKernel.Application.Services.DomainEventCollector>();
 
-        // Register dependencies for TotpService
-        services.AddScoped<ITotpService, TotpService>();
-        services.AddScoped<IPasswordHashingService, PasswordHashingService>();
+            // Register dependencies for TotpService
+            services.AddScoped<ITotpService, TotpService>();
+            services.AddScoped<IPasswordHashingService, PasswordHashingService>();
 
-        // Mock EncryptionService (not critical for replay attack testing)
-        var mockEncryptionService = new Mock<IEncryptionService>();
-        mockEncryptionService.Setup(x => x.EncryptAsync(It.IsAny<string>(), It.IsAny<string>()))
-            .ReturnsAsync((string plaintext, string purpose) => $"encrypted_{plaintext}");
-        mockEncryptionService.Setup(x => x.DecryptAsync(It.IsAny<string>(), It.IsAny<string>()))
-            .ReturnsAsync((string ciphertext, string purpose) => ciphertext.Replace("encrypted_", ""));
-        services.AddScoped(_ => mockEncryptionService.Object);
+            // Mock EncryptionService (not critical for replay attack testing)
+            var mockEncryptionService = new Mock<IEncryptionService>();
+            mockEncryptionService.Setup(x => x.EncryptAsync(It.IsAny<string>(), It.IsAny<string>()))
+                .ReturnsAsync((string plaintext, string purpose) => $"encrypted_{plaintext}");
+            mockEncryptionService.Setup(x => x.DecryptAsync(It.IsAny<string>(), It.IsAny<string>()))
+                .ReturnsAsync((string ciphertext, string purpose) => ciphertext.Replace("encrypted_", ""));
+            services.AddScoped(_ => mockEncryptionService.Object);
 
-        // Mock RateLimitService (allow all requests for replay testing focus)
-        var mockRateLimitService = new Mock<IRateLimitService>();
-        mockRateLimitService.Setup(x => x.CheckRateLimitAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<double>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new RateLimitResult(Allowed: true, TokensRemaining: 5, RetryAfterSeconds: 0)); // Always allow
-        services.AddScoped(_ => mockRateLimitService.Object);
+            // Mock RateLimitService (allow all requests for replay testing focus)
+            var mockRateLimitService = new Mock<IRateLimitService>();
+            mockRateLimitService.Setup(x => x.CheckRateLimitAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<double>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new RateLimitResult(Allowed: true, TokensRemaining: 5, RetryAfterSeconds: 0)); // Always allow
+            services.AddScoped(_ => mockRateLimitService.Object);
 
-        // Mock AlertingService (no-op for replay testing)
-        var mockAlertingService = new Mock<IAlertingService>();
-        mockAlertingService.Setup(x => x.SendAlertAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Dictionary<string, object>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new AlertDto(
-                Id: Guid.NewGuid(),
-                AlertType: "TEST",
-                Severity: "INFO",
-                Message: "Test",
-                Metadata: null,
-                TriggeredAt: DateTime.UtcNow,
-                ResolvedAt: null,
-                IsActive: true,
-                ChannelSent: null));
-        services.AddScoped(_ => mockAlertingService.Object);
+            // Mock AlertingService (no-op for replay testing)
+            var mockAlertingService = new Mock<IAlertingService>();
+            mockAlertingService.Setup(x => x.SendAlertAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Dictionary<string, object>>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new AlertDto(
+                    Id: Guid.NewGuid(),
+                    AlertType: "TEST",
+                    Severity: "INFO",
+                    Message: "Test",
+                    Metadata: null,
+                    TriggeredAt: DateTime.UtcNow,
+                    ResolvedAt: null,
+                    IsActive: true,
+                    ChannelSent: null));
+            services.AddScoped(_ => mockAlertingService.Object);
 
-        // Mock Redis ConnectionMultiplexer (minimal mock for lockout tracking)
-        var mockRedis = new Mock<StackExchange.Redis.IConnectionMultiplexer>();
-        var mockDatabase = new Mock<StackExchange.Redis.IDatabase>();
-        mockDatabase.Setup(x => x.StringIncrementAsync(It.IsAny<StackExchange.Redis.RedisKey>(), It.IsAny<long>(), It.IsAny<StackExchange.Redis.CommandFlags>()))
-            .ReturnsAsync(1); // Return count 1 (below lockout threshold)
-        mockDatabase.Setup(x => x.KeyExpireAsync(It.IsAny<StackExchange.Redis.RedisKey>(), It.IsAny<TimeSpan?>(), It.IsAny<StackExchange.Redis.ExpireWhen>(), It.IsAny<StackExchange.Redis.CommandFlags>()))
-            .ReturnsAsync(true);
-        mockDatabase.Setup(x => x.StringGetAsync(It.IsAny<StackExchange.Redis.RedisKey>(), It.IsAny<StackExchange.Redis.CommandFlags>()))
-            .ReturnsAsync(StackExchange.Redis.RedisValue.Null); // No lockout active
-        mockDatabase.Setup(x => x.KeyDeleteAsync(It.IsAny<StackExchange.Redis.RedisKey>(), It.IsAny<StackExchange.Redis.CommandFlags>()))
-            .ReturnsAsync(true);
-        mockRedis.Setup(x => x.GetDatabase(It.IsAny<int>(), It.IsAny<object>()))
-            .Returns(mockDatabase.Object);
-        services.AddSingleton(_ => mockRedis.Object);
+            // Mock Redis ConnectionMultiplexer (minimal mock for lockout tracking)
+            var mockRedis = new Mock<StackExchange.Redis.IConnectionMultiplexer>();
+            var mockDatabase = new Mock<StackExchange.Redis.IDatabase>();
+            mockDatabase.Setup(x => x.StringIncrementAsync(It.IsAny<StackExchange.Redis.RedisKey>(), It.IsAny<long>(), It.IsAny<StackExchange.Redis.CommandFlags>()))
+                .ReturnsAsync(1); // Return count 1 (below lockout threshold)
+            mockDatabase.Setup(x => x.KeyExpireAsync(It.IsAny<StackExchange.Redis.RedisKey>(), It.IsAny<TimeSpan?>(), It.IsAny<StackExchange.Redis.ExpireWhen>(), It.IsAny<StackExchange.Redis.CommandFlags>()))
+                .ReturnsAsync(true);
+            mockDatabase.Setup(x => x.StringGetAsync(It.IsAny<StackExchange.Redis.RedisKey>(), It.IsAny<StackExchange.Redis.CommandFlags>()))
+                .ReturnsAsync(StackExchange.Redis.RedisValue.Null); // No lockout active
+            mockDatabase.Setup(x => x.KeyDeleteAsync(It.IsAny<StackExchange.Redis.RedisKey>(), It.IsAny<StackExchange.Redis.CommandFlags>()))
+                .ReturnsAsync(true);
+            mockRedis.Setup(x => x.GetDatabase(It.IsAny<int>(), It.IsAny<object>()))
+                .Returns(mockDatabase.Object);
+            services.AddSingleton(_ => mockRedis.Object);
 
-        // Register real AuditService - will use same DbContext as TotpService
-        services.AddScoped<AuditService>();
+            // Register real AuditService - will use same DbContext as TotpService
+            services.AddScoped<AuditService>();
 
-        // TimeProvider for testing
-        services.AddSingleton<TimeProvider>(TimeProvider.System);
+            // TimeProvider for testing
+            services.AddSingleton<TimeProvider>(TimeProvider.System);
 
-        // Logging
-        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Information));
+            // Logging
+            services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Information));
 
-        _serviceProvider = services.BuildServiceProvider();
-        _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
-        _totpService = _serviceProvider.GetRequiredService<ITotpService>();
+            _serviceProvider = services.BuildServiceProvider();
+            _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
+            _totpService = _serviceProvider.GetRequiredService<ITotpService>();
 
-        // Apply EF Core migrations with retry policy (Issue #2005: Testcontainers race condition)
-        var retryPolicy = Policy
-            .Handle<Npgsql.NpgsqlException>()
-            .Or<System.IO.EndOfStreamException>()
-            .WaitAndRetryAsync(
-                retryCount: 3,
-                sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
-                onRetry: (exception, timeSpan, retryCount, context) =>
-                {
-                    _output($"⚠️ Migration attempt {retryCount} failed: {exception.Message}. Retrying in {timeSpan.TotalSeconds}s...");
-                });
+            // Apply EF Core migrations with retry policy (Issue #2005: Testcontainers race condition)
+            var retryPolicy = Policy
+                .Handle<Npgsql.NpgsqlException>()
+                .Or<System.IO.EndOfStreamException>()
+                .WaitAndRetryAsync(
+                    retryCount: 3,
+                    sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
+                    onRetry: (exception, timeSpan, retryCount, context) =>
+                    {
+                        _output($"⚠️ Migration attempt {retryCount} failed: {exception.Message}. Retrying in {timeSpan.TotalSeconds}s...");
+                    });
 
             await retryPolicy.ExecuteAsync(async () =>
                 await _dbContext.Database.MigrateAsync(TestCancellationToken));

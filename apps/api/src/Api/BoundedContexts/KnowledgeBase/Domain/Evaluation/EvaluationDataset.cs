@@ -66,7 +66,7 @@ public sealed class EvaluationDataset
     {
         ArgumentNullException.ThrowIfNull(sample);
 
-        if (_samples.Any(s => s.Id == sample.Id))
+        if (_samples.Any(s => string.Equals(s.Id, sample.Id, StringComparison.Ordinal)))
         {
             throw new InvalidOperationException($"Sample with ID '{sample.Id}' already exists in dataset.");
         }
@@ -149,7 +149,7 @@ public sealed class EvaluationDataset
 
         // Check for duplicate IDs
         var duplicateIds = _samples
-            .GroupBy(s => s.Id)
+            .GroupBy(s => s.Id, StringComparer.Ordinal)
             .Where(g => g.Count() > 1)
             .Select(g => g.Key)
             .ToList();
@@ -185,7 +185,7 @@ public sealed class EvaluationDataset
 
         foreach (var sample in other.Samples)
         {
-            if (!_samples.Any(s => s.Id == sample.Id))
+            if (!_samples.Any(s => string.Equals(s.Id, sample.Id, StringComparison.Ordinal)))
             {
                 _samples.Add(sample);
             }

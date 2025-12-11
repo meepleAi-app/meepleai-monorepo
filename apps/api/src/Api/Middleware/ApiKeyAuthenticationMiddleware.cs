@@ -32,7 +32,7 @@ public class ApiKeyAuthenticationMiddleware
         Api.SharedKernel.Infrastructure.Persistence.IUnitOfWork unitOfWork)
     {
         // Only process /api/* paths (skip health checks, swagger, etc.)
-        if (!context.Request.Path.StartsWithSegments("/api"))
+        if (!context.Request.Path.StartsWithSegments("/api", StringComparison.Ordinal))
         {
             await _next(context).ConfigureAwait(false);
             return;
@@ -117,7 +117,7 @@ public class ApiKeyAuthenticationMiddleware
                             // Get all user's keys and find the one used
                             var apiKeys = await apiKeyRepository.GetByUserIdAsync(userGuid).ConfigureAwait(false);
                             var apiKey = apiKeys.FirstOrDefault(k => k.Id == apiKeyGuid);
-                            
+
                             if (apiKey != null)
                             {
                                 var endpoint = context.Request.Path.ToString();

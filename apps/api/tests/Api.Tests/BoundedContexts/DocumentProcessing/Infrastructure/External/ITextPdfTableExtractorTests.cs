@@ -46,7 +46,7 @@ public class ITextPdfTableExtractorTests
             _mockTableAnalyzer.Object,
             _ruleConverter,
             _logger);
-        
+
         act.Should().Throw<ArgumentNullException>();
     }
 
@@ -59,7 +59,7 @@ public class ITextPdfTableExtractorTests
             null!,
             _ruleConverter,
             _logger);
-        
+
         act.Should().Throw<ArgumentNullException>();
     }
 
@@ -72,7 +72,7 @@ public class ITextPdfTableExtractorTests
             _mockTableAnalyzer.Object,
             null!,
             _logger);
-        
+
         act.Should().Throw<ArgumentNullException>();
     }
 
@@ -85,7 +85,7 @@ public class ITextPdfTableExtractorTests
             _mockTableAnalyzer.Object,
             _ruleConverter,
             null!);
-        
+
         act.Should().Throw<ArgumentNullException>();
     }
     [Fact]

@@ -49,7 +49,7 @@ public class GetPdfProgressQueryHandlerTests
             new GetPdfProgressQueryHandler(
                 null!,
                 _loggerMock.Object);
-        
+
         act.Should().Throw<ArgumentNullException>();
     }
 
@@ -64,7 +64,7 @@ public class GetPdfProgressQueryHandlerTests
             new GetPdfProgressQueryHandler(
                 dbContext,
                 null!);
-        
+
         act.Should().Throw<ArgumentNullException>();
     }
     [Fact]

@@ -344,7 +344,7 @@ public class DocnetPdfValidator : IPdfValidator
             using var reader = new StreamReader(fileStream);
 
             var firstLine = reader.ReadLine();
-            if (firstLine != null && firstLine.StartsWith("%PDF-"))
+            if (firstLine != null && firstLine.StartsWith("%PDF-", StringComparison.Ordinal))
             {
                 return firstLine.Substring(5).Trim();
             }

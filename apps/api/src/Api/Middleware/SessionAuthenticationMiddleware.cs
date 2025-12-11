@@ -28,7 +28,7 @@ public class SessionAuthenticationMiddleware
     public async Task InvokeAsync(HttpContext context, IMediator mediator)
     {
         // Process only API routes
-        if (context.Request.Path.StartsWithSegments("/api"))
+        if (context.Request.Path.StartsWithSegments("/api", StringComparison.Ordinal))
         {
             try
             {

@@ -109,7 +109,8 @@ public class GetUserByIdQueryHandlerTests
         {
             Id = Guid.NewGuid(),
             UserId = userId,
-            TokenHash = "session_token", User = user,
+            TokenHash = "session_token",
+            User = user,
             ExpiresAt = DateTime.UtcNow.AddDays(7),
             CreatedAt = DateTime.UtcNow.AddDays(-5),
             LastSeenAt = lastSeenDate,
@@ -156,7 +157,8 @@ public class GetUserByIdQueryHandlerTests
         {
             Id = Guid.NewGuid(),
             UserId = userId,
-            TokenHash = "old_session", User = user,
+            TokenHash = "old_session",
+            User = user,
             ExpiresAt = DateTime.UtcNow.AddDays(7),
             CreatedAt = DateTime.UtcNow.AddDays(-10),
             LastSeenAt = oldLastSeen,
@@ -167,7 +169,8 @@ public class GetUserByIdQueryHandlerTests
         {
             Id = Guid.NewGuid(),
             UserId = userId,
-            TokenHash = "recent_session", User = user,
+            TokenHash = "recent_session",
+            User = user,
             ExpiresAt = DateTime.UtcNow.AddDays(7),
             CreatedAt = DateTime.UtcNow.AddDays(-2),
             LastSeenAt = recentLastSeen,
@@ -213,7 +216,8 @@ public class GetUserByIdQueryHandlerTests
         {
             Id = Guid.NewGuid(),
             UserId = userId,
-            TokenHash = "revoked_session", User = user,
+            TokenHash = "revoked_session",
+            User = user,
             ExpiresAt = DateTime.UtcNow.AddDays(7),
             CreatedAt = DateTime.UtcNow.AddDays(-5),
             LastSeenAt = revokedLastSeen,

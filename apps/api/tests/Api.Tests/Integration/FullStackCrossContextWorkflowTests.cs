@@ -129,14 +129,14 @@ public sealed class FullStackCrossContextWorkflowTests : IAsyncLifetime
 
             try
             {
-                #pragma warning disable EF1002
+#pragma warning disable EF1002
                 foreach (var tableName in tableNames)
                 {
                     await _dbContext.Database.ExecuteSqlRawAsync(
                         $"TRUNCATE TABLE \"{tableName}\" CASCADE;",
                         TestCancellationToken);
                 }
-                #pragma warning restore EF1002
+#pragma warning restore EF1002
             }
             finally
             {

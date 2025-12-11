@@ -8,25 +8,25 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.WorkflowIntegration.Infrastructure.Persistence;
 
-public class N8nConfigurationRepository : RepositoryBase, IN8nConfigurationRepository
+public class N8NConfigurationRepository : RepositoryBase, IN8NConfigurationRepository
 {
-    public N8nConfigurationRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+    public N8NConfigurationRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
         : base(dbContext, eventCollector)
     {
     }
 
-    public async Task<N8nConfiguration?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<N8NConfiguration?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var entity = await DbContext.Set<Api.Infrastructure.Entities.N8nConfigEntity>()
+        var entity = await DbContext.Set<Api.Infrastructure.Entities.N8NConfigEntity>()
             .AsNoTracking()
             .FirstOrDefaultAsync(c => c.Id == id, cancellationToken).ConfigureAwait(false);
 
         return entity != null ? MapToDomain(entity) : null;
     }
 
-    public async Task<IReadOnlyList<N8nConfiguration>> GetAllAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<N8NConfiguration>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        var entities = await DbContext.Set<Api.Infrastructure.Entities.N8nConfigEntity>()
+        var entities = await DbContext.Set<Api.Infrastructure.Entities.N8NConfigEntity>()
             .AsNoTracking()
             .OrderByDescending(c => c.CreatedAt)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
@@ -34,58 +34,58 @@ public class N8nConfigurationRepository : RepositoryBase, IN8nConfigurationRepos
         return entities.Select(MapToDomain).ToList();
     }
 
-    public async Task<N8nConfiguration?> GetActiveConfigurationAsync(CancellationToken cancellationToken = default)
+    public async Task<N8NConfiguration?> GetActiveConfigurationAsync(CancellationToken cancellationToken = default)
     {
-        var entity = await DbContext.Set<Api.Infrastructure.Entities.N8nConfigEntity>()
+        var entity = await DbContext.Set<Api.Infrastructure.Entities.N8NConfigEntity>()
             .AsNoTracking()
             .FirstOrDefaultAsync(c => c.IsActive, cancellationToken).ConfigureAwait(false);
 
         return entity != null ? MapToDomain(entity) : null;
     }
 
-    public async Task<N8nConfiguration?> FindByNameAsync(string name, CancellationToken cancellationToken = default)
+    public async Task<N8NConfiguration?> FindByNameAsync(string name, CancellationToken cancellationToken = default)
     {
-        var entity = await DbContext.Set<Api.Infrastructure.Entities.N8nConfigEntity>()
+        var entity = await DbContext.Set<Api.Infrastructure.Entities.N8NConfigEntity>()
             .AsNoTracking()
             .FirstOrDefaultAsync(c => c.Name == name, cancellationToken).ConfigureAwait(false);
 
         return entity != null ? MapToDomain(entity) : null;
     }
 
-    public async Task AddAsync(N8nConfiguration config, CancellationToken cancellationToken = default)
+    public async Task AddAsync(N8NConfiguration config, CancellationToken cancellationToken = default)
     {
         CollectDomainEvents(config);
         var entity = MapToPersistence(config);
-        await DbContext.Set<Api.Infrastructure.Entities.N8nConfigEntity>().AddAsync(entity, cancellationToken).ConfigureAwait(false);
+        await DbContext.Set<Api.Infrastructure.Entities.N8NConfigEntity>().AddAsync(entity, cancellationToken).ConfigureAwait(false);
     }
 
-    public Task UpdateAsync(N8nConfiguration config, CancellationToken cancellationToken = default)
+    public Task UpdateAsync(N8NConfiguration config, CancellationToken cancellationToken = default)
     {
         CollectDomainEvents(config);
         var entity = MapToPersistence(config);
-        DbContext.Set<Api.Infrastructure.Entities.N8nConfigEntity>().Update(entity);
+        DbContext.Set<Api.Infrastructure.Entities.N8NConfigEntity>().Update(entity);
         return Task.CompletedTask;
     }
 
-    public Task DeleteAsync(N8nConfiguration config, CancellationToken cancellationToken = default)
+    public Task DeleteAsync(N8NConfiguration config, CancellationToken cancellationToken = default)
     {
         var entity = MapToPersistence(config);
-        DbContext.Set<Api.Infrastructure.Entities.N8nConfigEntity>().Remove(entity);
+        DbContext.Set<Api.Infrastructure.Entities.N8NConfigEntity>().Remove(entity);
         return Task.CompletedTask;
     }
 
     public async Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return await DbContext.Set<Api.Infrastructure.Entities.N8nConfigEntity>()
+        return await DbContext.Set<Api.Infrastructure.Entities.N8NConfigEntity>()
             .AnyAsync(c => c.Id == id, cancellationToken).ConfigureAwait(false);
     }
 
-    private static N8nConfiguration MapToDomain(Api.Infrastructure.Entities.N8nConfigEntity entity)
+    private static N8NConfiguration MapToDomain(Api.Infrastructure.Entities.N8NConfigEntity entity)
     {
         var baseUrl = new WorkflowUrl(entity.BaseUrl);
         WorkflowUrl? webhookUrl = entity.WebhookUrl != null ? new WorkflowUrl(entity.WebhookUrl) : null;
 
-        var config = new N8nConfiguration(
+        var config = new N8NConfiguration(
             id: entity.Id,
             name: entity.Name,
             baseUrl: baseUrl,
@@ -95,27 +95,27 @@ public class N8nConfigurationRepository : RepositoryBase, IN8nConfigurationRepos
         );
 
         // Override timestamps and state from DB
-        var isActiveProp = typeof(N8nConfiguration).GetProperty("IsActive");
+        var isActiveProp = typeof(N8NConfiguration).GetProperty("IsActive");
         isActiveProp?.SetValue(config, entity.IsActive);
 
-        var lastTestedAtProp = typeof(N8nConfiguration).GetProperty("LastTestedAt");
+        var lastTestedAtProp = typeof(N8NConfiguration).GetProperty("LastTestedAt");
         lastTestedAtProp?.SetValue(config, entity.LastTestedAt);
 
-        var lastTestResultProp = typeof(N8nConfiguration).GetProperty("LastTestResult");
+        var lastTestResultProp = typeof(N8NConfiguration).GetProperty("LastTestResult");
         lastTestResultProp?.SetValue(config, entity.LastTestResult);
 
-        var createdAtProp = typeof(N8nConfiguration).GetProperty("CreatedAt");
+        var createdAtProp = typeof(N8NConfiguration).GetProperty("CreatedAt");
         createdAtProp?.SetValue(config, entity.CreatedAt);
 
-        var updatedAtProp = typeof(N8nConfiguration).GetProperty("UpdatedAt");
+        var updatedAtProp = typeof(N8NConfiguration).GetProperty("UpdatedAt");
         updatedAtProp?.SetValue(config, entity.UpdatedAt);
 
         return config;
     }
 
-    private static Api.Infrastructure.Entities.N8nConfigEntity MapToPersistence(N8nConfiguration domain)
+    private static Api.Infrastructure.Entities.N8NConfigEntity MapToPersistence(N8NConfiguration domain)
     {
-        return new Api.Infrastructure.Entities.N8nConfigEntity
+        return new Api.Infrastructure.Entities.N8NConfigEntity
         {
             Id = domain.Id,
             Name = domain.Name,

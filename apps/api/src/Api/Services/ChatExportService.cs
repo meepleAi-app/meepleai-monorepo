@@ -96,7 +96,7 @@ public class ChatExportService : IChatExportService
     /// Generates a safe filename for the export, removing dangerous characters.
     /// Format: {game-name}-chat-{chatId-short}.{extension}
     /// </summary>
-    private string GenerateSafeFilename(string gameName, string extension, Guid chatId)
+    private static string GenerateSafeFilename(string gameName, string extension, Guid chatId)
     {
         // Use short form of chatId (first 8 chars) for readability
         var shortChatId = chatId.ToString("N").Substring(0, 8);

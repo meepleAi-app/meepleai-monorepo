@@ -51,7 +51,7 @@ public static class WorkflowIntegrationTestConstants
     /// <summary>
     /// n8n configuration constants.
     /// </summary>
-    public static class N8nConfig
+    public static class N8NConfig
     {
         /// <summary>
         /// Webhook timeout (15 seconds)
@@ -70,6 +70,6 @@ public static class WorkflowIntegrationTestConstants
     public static class TestEntityIds
     {
         public static readonly Guid Workflow1 = Guid.Parse("90000000-0000-0000-0000-000000000001");
-        public static readonly Guid N8nConfig1 = Guid.Parse("91000000-0000-0000-0000-000000000001");
+        public static readonly Guid N8NConfig1 = Guid.Parse("91000000-0000-0000-0000-000000000001");
     }
 }

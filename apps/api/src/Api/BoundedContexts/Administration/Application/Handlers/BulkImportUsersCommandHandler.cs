@@ -222,5 +222,5 @@ public class BulkImportUsersCommandHandler : ICommandHandler<BulkImportUsersComm
         return records;
     }
 
-    private record UserImportRecord(string Email, string DisplayName, string Role, string Password);
+    private sealed record UserImportRecord(string Email, string DisplayName, string Role, string Password);
 }

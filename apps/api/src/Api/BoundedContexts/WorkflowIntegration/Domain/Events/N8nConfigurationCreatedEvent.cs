@@ -4,9 +4,9 @@ using Api.SharedKernel.Domain.Events;
 namespace Api.BoundedContexts.WorkflowIntegration.Domain.Events;
 
 /// <summary>
-/// Domain event raised when a new N8n configuration is created.
+/// Domain event raised when a new N8N configuration is created.
 /// </summary>
-public sealed class N8nConfigurationCreatedEvent : DomainEventBase
+public sealed class N8NConfigurationCreatedEvent : DomainEventBase
 {
     public Guid ConfigurationId { get; }
     public string Name { get; }
@@ -15,7 +15,7 @@ public sealed class N8nConfigurationCreatedEvent : DomainEventBase
     public bool IsActive { get; }
     public Guid CreatedByUserId { get; }
 
-    public N8nConfigurationCreatedEvent(
+    public N8NConfigurationCreatedEvent(
         Guid configurationId,
         string name,
         WorkflowUrl baseUrl,

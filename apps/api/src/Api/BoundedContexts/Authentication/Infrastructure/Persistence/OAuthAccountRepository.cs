@@ -126,7 +126,7 @@ public class OAuthAccountRepository : RepositoryBase, IOAuthAccountRepository
     /// <summary>
     /// Maps persistence entity to domain entity.
     /// </summary>
-    private OAuthAccount MapToDomain(OAuthAccountEntity entity)
+    private static OAuthAccount MapToDomain(OAuthAccountEntity entity)
     {
         if (string.IsNullOrWhiteSpace(entity.Provider))
         {

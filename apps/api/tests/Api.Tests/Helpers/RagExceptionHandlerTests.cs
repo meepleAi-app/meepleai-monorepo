@@ -671,7 +671,6 @@ public class RagExceptionHandlerTests
         public bool Success { get; init; }
         public string? ErrorMessage { get; init; }
 
-        public static TestResult CreateSuccess() => new() { Success = true };
         public static TestResult CreateFailure(string error) => new() { Success = false, ErrorMessage = error };
     }
 }

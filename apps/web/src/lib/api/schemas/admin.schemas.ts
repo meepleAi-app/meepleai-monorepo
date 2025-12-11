@@ -6,6 +6,7 @@
  */
 
 import { z } from 'zod';
+import { ApiKeyDtoSchema } from './auth.schemas';
 
 // ========== User Management ==========
 
@@ -388,5 +389,61 @@ export const InfrastructureDetailsSchema = z.object({
 });
 
 export type InfrastructureDetails = z.infer<typeof InfrastructureDetailsSchema>;
+
+// ========== API Key Management (Issue #908) ==========
+
+// Re-export ApiKeyDto from auth.schemas to avoid duplication
+export type { ApiKeyDto } from './auth.schemas';
+export { ApiKeyDtoSchema } from './auth.schemas';
+
+export const ApiKeyUsageStatsDtoSchema = z.object({
+  keyId: z.string().uuid(),
+  totalUsageCount: z.number().int().nonnegative(),
+  lastUsedAt: z.string().datetime().nullable().optional(),
+  usageCountLast24Hours: z.number().int().nonnegative(),
+  usageCountLast7Days: z.number().int().nonnegative(),
+  usageCountLast30Days: z.number().int().nonnegative(),
+  averageRequestsPerDay: z.number().nonnegative(),
+});
+
+export type ApiKeyUsageStatsDto = z.infer<typeof ApiKeyUsageStatsDtoSchema>;
+
+export const ApiKeyWithStatsDtoSchema = z.object({
+  apiKey: ApiKeyDtoSchema,
+  usageStats: ApiKeyUsageStatsDtoSchema,
+});
+
+export type ApiKeyWithStatsDto = z.infer<typeof ApiKeyWithStatsDtoSchema>;
+
+// Re-export CreateApiKey schemas from auth.schemas to avoid duplication
+export type { CreateApiKeyRequest, CreateApiKeyResponse } from './auth.schemas';
+export { CreateApiKeyRequestSchema, CreateApiKeyResponseSchema } from './auth.schemas';
+
+export const UpdateApiKeyRequestSchema = z.object({
+  keyName: z.string().min(1).optional(),
+  scopes: z.string().min(1).optional(),
+  expiresAt: z.string().datetime().nullable().optional(),
+});
+
+export type UpdateApiKeyRequest = z.infer<typeof UpdateApiKeyRequestSchema>;
+
+export const GetAllApiKeysWithStatsResponseSchema = z.object({
+  keys: z.array(ApiKeyWithStatsDtoSchema),
+  count: z.number().int().nonnegative(),
+  filters: z.object({
+    userId: z.string().uuid().nullable().optional(),
+    includeRevoked: z.boolean(),
+  }),
+});
+
+export type GetAllApiKeysWithStatsResponse = z.infer<typeof GetAllApiKeysWithStatsResponseSchema>;
+
+export const BulkImportApiKeysResultSchema = z.object({
+  successCount: z.number().int().nonnegative(),
+  failedCount: z.number().int().nonnegative(),
+  errors: z.array(z.string()),
+});
+
+export type BulkImportApiKeysResult = z.infer<typeof BulkImportApiKeysResultSchema>;
 
 // Note: PagedResult is defined in config.schemas.ts and re-exported via index.ts

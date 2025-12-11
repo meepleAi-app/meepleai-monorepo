@@ -324,7 +324,7 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
     /// <param name="stream">The file stream to validate</param>
     /// <param name="fileName">The file name for logging</param>
     /// <returns>Tuple of (isValid, errorMessage)</returns>
-    private static async Task<(bool IsValid, string? ErrorMessage)> ValidatePdfStructureAsync(Stream stream)
+    private static async Task<(bool IsValid, string? ErrorMessage)> ValidatePdfStructureAsync(Stream stream, string fileName)
     {
         const int headerCheckBytes = 1024; // Read first 1KB to find PDF header
         const int trailerCheckBytes = 1024; // Read last 1KB to find PDF trailer

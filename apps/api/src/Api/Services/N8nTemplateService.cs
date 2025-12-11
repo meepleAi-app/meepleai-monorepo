@@ -11,19 +11,19 @@ using System.Globalization;
 
 namespace Api.Services;
 
-public class N8nTemplateService
+public class N8NTemplateService
 {
     private readonly MeepleAiDbContext _db;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IConfiguration _configuration;
-    private readonly ILogger<N8nTemplateService> _logger;
+    private readonly ILogger<N8NTemplateService> _logger;
     private readonly string _templatesPath;
 
-    public N8nTemplateService(
+    public N8NTemplateService(
         MeepleAiDbContext db,
         IHttpClientFactory httpClientFactory,
         IConfiguration configuration,
-        ILogger<N8nTemplateService> logger)
+        ILogger<N8NTemplateService> logger)
     {
         _db = db;
         _httpClientFactory = httpClientFactory;
@@ -53,7 +53,7 @@ public class N8nTemplateService
             _logger.LogInformation("Created templates directory at {Path}", _templatesPath);
         }
 
-        _logger.LogInformation("N8n templates directory resolved to: {Path}", Path.GetFullPath(_templatesPath));
+        _logger.LogInformation("N8N templates directory resolved to: {Path}", Path.GetFullPath(_templatesPath));
     }
 
     /// <summary>
@@ -116,7 +116,7 @@ public class N8nTemplateService
 #pragma warning disable CA1031 // Do not catch general exception types
             // Justification: Service boundary - resilience pattern for template gallery loading
             // RESILIENCE PATTERN: Individual template load failures must not break gallery
-            // Rationale: N8n template loading iterates through multiple JSON files. A malformed
+            // Rationale: N8N template loading iterates through multiple JSON files. A malformed
             // or corrupted template file should not prevent other valid templates from loading.
             // We log the error for debugging and continue processing remaining templates.
             // Context: Template failures are typically file-related (malformed JSON, missing file)
@@ -227,7 +227,7 @@ public class N8nTemplateService
         var workflowJson = SubstituteParameters(template.Workflow, parameters);
 
         // Get active n8n configuration
-        var n8nConfig = await _db.N8nConfigs
+        var n8nConfig = await _db.N8NConfigs
             .Where(c => c.IsActive)
             .OrderByDescending(c => c.CreatedAt)
             .FirstOrDefaultAsync(ct).ConfigureAwait(false);
@@ -238,7 +238,7 @@ public class N8nTemplateService
         }
 
         // Create workflow in n8n via REST API
-        var workflowId = await CreateWorkflowInN8nAsync(
+        var workflowId = await CreateWorkflowInN8NAsync(
             n8nConfig,
             template.Name,
             workflowJson,
@@ -422,8 +422,8 @@ public class N8nTemplateService
         return workflowJson;
     }
 
-    private async Task<string> CreateWorkflowInN8nAsync(
-        N8nConfigEntity config,
+    private async Task<string> CreateWorkflowInN8NAsync(
+        N8NConfigEntity config,
         string workflowName,
         string workflowJson,
         CancellationToken ct)
@@ -516,7 +516,7 @@ public class N8nTemplateService
 
     private string DecryptApiKey(string encryptedApiKey)
     {
-        // Use the same decryption logic as N8nConfigService
+        // Use the same decryption logic as N8NConfigService
         var encryptionKey = GetEncryptionKey();
         var fullCipher = Convert.FromBase64String(encryptedApiKey);
 
@@ -553,7 +553,7 @@ public class N8nTemplateService
         return CryptographyHelper.ComputeSha256HashBytes(key);
     }
     // Internal model for deserializing template JSON files
-    private class WorkflowTemplateFile
+    private sealed class WorkflowTemplateFile
     {
         public string Id { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
@@ -569,7 +569,7 @@ public class N8nTemplateService
         public object Workflow { get; set; } = new();
     }
 
-    private class TemplateParameter
+    private sealed class TemplateParameter
     {
         public string Name { get; set; } = string.Empty;
         public string Type { get; set; } = "string";

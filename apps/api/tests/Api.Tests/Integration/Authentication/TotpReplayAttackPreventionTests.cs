@@ -51,7 +51,6 @@ public sealed class TotpReplayAttackPreventionTests : IAsyncLifetime
     private IServiceProvider? _serviceProvider;
     private ITotpService? _totpService;
     private readonly Action<string> _output;
-    private readonly string _redisKeyPrefix = $"test:{Guid.NewGuid()}:";
 
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 

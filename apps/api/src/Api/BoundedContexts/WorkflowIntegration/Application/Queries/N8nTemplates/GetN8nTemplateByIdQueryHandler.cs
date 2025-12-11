@@ -3,28 +3,28 @@ using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.Extensions.Logging;
 
-namespace Api.BoundedContexts.WorkflowIntegration.Application.Queries.N8nTemplates;
+namespace Api.BoundedContexts.WorkflowIntegration.Application.Queries.N8NTemplates;
 
 /// <summary>
 /// Handles retrieval of a specific n8n workflow template by ID with full details.
 /// Business logic: Template existence validation, path security.
-/// Infrastructure delegation: File I/O and JSON deserialization via N8nTemplateService.
+/// Infrastructure delegation: File I/O and JSON deserialization via N8NTemplateService.
 /// Security: Path traversal prevention handled by infrastructure service.
 /// </summary>
-public sealed class GetN8nTemplateByIdQueryHandler : IQueryHandler<GetN8nTemplateByIdQuery, WorkflowTemplateDetailDto?>
+public sealed class GetN8NTemplateByIdQueryHandler : IQueryHandler<GetN8NTemplateByIdQuery, WorkflowTemplateDetailDto?>
 {
-    private readonly N8nTemplateService _templateService;
-    private readonly ILogger<GetN8nTemplateByIdQueryHandler> _logger;
+    private readonly N8NTemplateService _templateService;
+    private readonly ILogger<GetN8NTemplateByIdQueryHandler> _logger;
 
-    public GetN8nTemplateByIdQueryHandler(
-        N8nTemplateService templateService,
-        ILogger<GetN8nTemplateByIdQueryHandler> logger)
+    public GetN8NTemplateByIdQueryHandler(
+        N8NTemplateService templateService,
+        ILogger<GetN8NTemplateByIdQueryHandler> logger)
     {
         _templateService = templateService ?? throw new ArgumentNullException(nameof(templateService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public async Task<WorkflowTemplateDetailDto?> Handle(GetN8nTemplateByIdQuery query, CancellationToken cancellationToken)
+    public async Task<WorkflowTemplateDetailDto?> Handle(GetN8NTemplateByIdQuery query, CancellationToken cancellationToken)
     {
         // Business logic validation
         if (string.IsNullOrWhiteSpace(query.TemplateId))

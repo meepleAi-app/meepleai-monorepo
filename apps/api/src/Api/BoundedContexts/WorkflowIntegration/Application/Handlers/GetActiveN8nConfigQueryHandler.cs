@@ -5,23 +5,23 @@ using Api.SharedKernel.Application.Interfaces;
 
 namespace Api.BoundedContexts.WorkflowIntegration.Application.Handlers;
 
-public class GetActiveN8nConfigQueryHandler : IQueryHandler<GetActiveN8nConfigQuery, N8nConfigurationDto?>
+public class GetActiveN8NConfigQueryHandler : IQueryHandler<GetActiveN8NConfigQuery, N8NConfigurationDto?>
 {
-    private readonly IN8nConfigurationRepository _configRepository;
+    private readonly IN8NConfigurationRepository _configRepository;
 
-    public GetActiveN8nConfigQueryHandler(IN8nConfigurationRepository configRepository)
+    public GetActiveN8NConfigQueryHandler(IN8NConfigurationRepository configRepository)
     {
         _configRepository = configRepository ?? throw new ArgumentNullException(nameof(configRepository));
     }
 
-    public async Task<N8nConfigurationDto?> Handle(GetActiveN8nConfigQuery query, CancellationToken cancellationToken)
+    public async Task<N8NConfigurationDto?> Handle(GetActiveN8NConfigQuery query, CancellationToken cancellationToken)
     {
         var config = await _configRepository.GetActiveConfigurationAsync(cancellationToken).ConfigureAwait(false);
 
         if (config == null)
             return null;
 
-        return new N8nConfigurationDto(
+        return new N8NConfigurationDto(
             Id: config.Id,
             Name: config.Name,
             BaseUrl: config.BaseUrl.Value,

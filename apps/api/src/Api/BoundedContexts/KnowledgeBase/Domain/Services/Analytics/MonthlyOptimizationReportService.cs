@@ -81,16 +81,16 @@ public class MonthlyOptimizationReportService : IMonthlyOptimizationReportServic
         };
     }
 
-    private decimal CalculateModelSwitchSavings(
-        QueryEfficiencyReport efficiency
-        )
+    private static decimal CalculateModelSwitchSavings(
+        QueryEfficiencyReport efficiency,
+        ModelRecommendation recommendation)
     {
         // Estimate savings if switching to recommended model
         // Simplified: Assume 20% cost reduction from optimization
         return efficiency.TotalCost * 0.20m;
     }
 
-    private List<string> GenerateExecutiveSummary(
+    private static List<string> GenerateExecutiveSummary(
         QueryEfficiencyReport efficiency,
         CacheCorrelationReport cache,
         ModelRecommendation recommendation,

@@ -41,7 +41,6 @@ namespace Api.Tests.Integration;
 [Trait("Category", TestCategories.Integration)]
 public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
 {
-    private readonly string _redisKeyPrefix = $"test:{Guid.NewGuid()}:";
     private IContainer? _postgresContainer;
     private IContainer? _redisContainer;
     private MeepleAiDbContext? _dbContext;

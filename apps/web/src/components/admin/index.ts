@@ -31,3 +31,7 @@ export {
 export { AdminAuthGuard } from './AdminAuthGuard';
 export { QuickActions, type QuickActionsProps, type QuickAction } from './QuickActions';
 export { SystemStatus, type SystemStatusProps, type ServiceStatus } from './SystemStatus';
+
+// Issue #896: Infrastructure monitoring components
+export { ServiceCard, type ServiceCardProps } from './ServiceCard';
+export { ServiceHealthMatrix, type ServiceHealthMatrixProps } from './ServiceHealthMatrix';

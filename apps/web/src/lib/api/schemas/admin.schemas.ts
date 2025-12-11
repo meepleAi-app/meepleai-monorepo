@@ -98,6 +98,36 @@ export const DeletePromptResponseSchema = z.object({
 
 export type DeletePromptResponse = z.infer<typeof DeletePromptResponseSchema>;
 
+// ========== User Activity Timeline (Issue #911) ==========
+
+export const UserActivityDtoSchema = z.object({
+  id: z.string().uuid(),
+  action: z.string().min(1),
+  resource: z.string().min(1),
+  resourceId: z.string().nullable().optional(),
+  result: z.string().min(1),
+  details: z.string().nullable().optional(),
+  createdAt: z.string().datetime(),
+  ipAddress: z.string().nullable().optional(),
+});
+
+export type UserActivityDto = z.infer<typeof UserActivityDtoSchema>;
+
+export const GetUserActivityResultSchema = z.object({
+  activities: z.array(UserActivityDtoSchema),
+  totalCount: z.number().int().min(0),
+});
+
+export type GetUserActivityResult = z.infer<typeof GetUserActivityResultSchema>;
+
+export interface UserActivityFilters {
+  actionFilter?: string;
+  resourceFilter?: string;
+  startDate?: Date;
+  endDate?: Date;
+  limit?: number;
+}
+
 export const ActivateVersionResponseSchema = z.object({
   ok: z.boolean(),
   message: z.string(),

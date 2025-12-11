@@ -272,6 +272,58 @@ public static class UserProfileEndpoints
         .Produces(200)
         .Produces(401);
 
+        // Get user activity timeline (USER-ACTIVITY-01 - Issue #911)
+        group.MapGet("/users/me/activity", async (
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            string? actionFilter = null,
+            string? resourceFilter = null,
+            DateTime? startDate = null,
+            DateTime? endDate = null,
+            int limit = 100,
+            CancellationToken ct = default) =>
+        {
+            // Session validated by RequireSessionFilter
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+            var query = new Api.BoundedContexts.Administration.Application.Queries.GetUserActivityQuery(
+                UserId: session!.User!.Id,
+                ActionFilter: actionFilter,
+                ResourceFilter: resourceFilter,
+                StartDate: startDate,
+                EndDate: endDate,
+                Limit: limit
+            );
+
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+            logger.LogInformation("Activity timeline retrieved for user {UserId}: {Count} activities", session.User.Id, result.Activities.Count);
+
+            return Results.Json(result);
+        })
+        .RequireSession()
+        .RequireAuthorization()
+        .WithName("GetMyActivity")
+        .WithTags("User Profile")
+        .WithSummary("Get current user's activity timeline")
+        .WithDescription(@"Retrieves audit log timeline for the authenticated user with optional filtering.
+
+**Issue**: #911 - UserActivityTimeline component backend support.
+
+**Authorization**: Requires active session (cookie-based authentication). Users can only see their own activity.
+
+**Query Parameters**:
+- `actionFilter` (optional): Comma-separated list of action types to filter (e.g., 'Login,PasswordChanged')
+- `resourceFilter` (optional): Filter by resource type (e.g., 'User', 'Game')
+- `startDate` (optional): ISO 8601 timestamp - filter logs from this date
+- `endDate` (optional): ISO 8601 timestamp - filter logs until this date
+- `limit` (optional): Maximum number of logs to return (default: 100, max: 500)
+
+**Response**: GetUserActivityResult with filtered activities and total count.")
+        .Produces(200)
+        .Produces(400)
+        .Produces(401);
+
         return group;
     }
 }

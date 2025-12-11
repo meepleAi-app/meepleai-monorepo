@@ -373,12 +373,10 @@ export const OverallHealthStatusSchema = z.object({
 export type OverallHealthStatus = z.infer<typeof OverallHealthStatusSchema>;
 
 export const PrometheusMetricsSummarySchema = z.object({
-  apiRequestsPerSecond: z.number().nonnegative(),
-  apiErrorRate: z.number().min(0).max(1),
-  averageLatencyMs: z.number().nonnegative(),
-  p95LatencyMs: z.number().nonnegative(),
-  p99LatencyMs: z.number().nonnegative(),
-  collectedAt: z.string().datetime(),
+  apiRequestsLast24h: z.number().int().nonnegative(),
+  avgLatencyMs: z.number().nonnegative(),
+  errorRate: z.number().min(0).max(1),
+  llmCostLast24h: z.number().nonnegative(),
 });
 
 export type PrometheusMetricsSummary = z.infer<typeof PrometheusMetricsSummarySchema>;
@@ -386,7 +384,7 @@ export type PrometheusMetricsSummary = z.infer<typeof PrometheusMetricsSummarySc
 export const InfrastructureDetailsSchema = z.object({
   overall: OverallHealthStatusSchema,
   services: z.array(ServiceHealthStatusSchema),
-  metrics: PrometheusMetricsSummarySchema,
+  prometheusMetrics: PrometheusMetricsSummarySchema,
 });
 
 export type InfrastructureDetails = z.infer<typeof InfrastructureDetailsSchema>;

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using Api.BoundedContexts.Authentication.Application.Queries;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
@@ -55,12 +56,13 @@ public class BulkExportApiKeysQueryHandler : IQueryHandler<BulkExportApiKeysQuer
         var csv = new StringBuilder();
         csv.AppendLine("userId,keyName,scopes,expiresAt,metadata");
 
+        // FIX MA0011: Use IFormatProvider for culture-aware formatting
         foreach (var apiKey in apiKeys)
         {
-            var userId = apiKey.UserId.ToString();
+            var userId = apiKey.UserId.ToString("D", CultureInfo.InvariantCulture);
             var keyName = EscapeCsvField(apiKey.KeyName);
             var scopes = EscapeCsvField(apiKey.Scopes);
-            var expiresAt = apiKey.ExpiresAt?.ToString("yyyy-MM-dd HH:mm:ss") ?? string.Empty;
+            var expiresAt = apiKey.ExpiresAt?.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture) ?? string.Empty;
             var metadata = EscapeCsvField(apiKey.Metadata ?? string.Empty);
 
             csv.AppendLine($"{userId},{keyName},{scopes},{expiresAt},{metadata}");

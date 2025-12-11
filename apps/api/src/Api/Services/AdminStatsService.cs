@@ -433,10 +433,11 @@ public class AdminStatsService : IAdminStatsService
 
     private static void AppendTimeSeriesCsv(StringBuilder sb, string seriesName, IReadOnlyList<TimeSeriesDataPoint> data)
     {
-        sb.AppendLine($"{seriesName} - Date,Count,Average");
+        // FIX MA0011: Use IFormatProvider for culture-aware formatting
+        sb.AppendLine(CultureInfo.InvariantCulture, $"{seriesName} - Date,Count,Average");
         foreach (var point in data)
         {
-            sb.AppendLine($"{point.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)},{point.Count},{point.AverageValue?.ToString("F2", CultureInfo.InvariantCulture) ?? "N/A"}");
+            sb.AppendLine(CultureInfo.InvariantCulture, $"{point.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)},{point.Count},{point.AverageValue?.ToString("F2", CultureInfo.InvariantCulture) ?? "N/A"}");
         }
 #pragma warning disable MA0011 // AppendLine() with no parameters (blank line) - no IFormatProvider overload exists
         sb.AppendLine();

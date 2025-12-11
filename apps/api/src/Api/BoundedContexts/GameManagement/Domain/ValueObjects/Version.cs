@@ -11,7 +11,8 @@ namespace Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 public sealed class Version : ValueObject
 {
     // FIX MA0009: Add timeout to prevent ReDoS attacks
-    private static readonly Regex VersionRegex = new(@"^(\d+)\.(\d+)\.(\d+)$", RegexOptions.Compiled, TimeSpan.FromSeconds(1));
+    // FIX MA0023: Add ExplicitCapture to prevent capturing unneeded groups
+    private static readonly Regex VersionRegex = new(@"^(\d+)\.(\d+)\.(\d+)$", RegexOptions.Compiled | RegexOptions.ExplicitCapture, TimeSpan.FromSeconds(1));
 
     public int Major { get; }
     public int Minor { get; }

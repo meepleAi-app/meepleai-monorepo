@@ -293,9 +293,10 @@ public static class CommonValidators
         }
     }
     // FIX MA0009: Add timeout to prevent ReDoS attacks
+    // FIX MA0023: Add ExplicitCapture to prevent capturing unneeded groups
     private static readonly Regex VersionRegex = new(
         @"^\d+\.\d+(\.\d+)?$",
-        RegexOptions.Compiled,
+        RegexOptions.Compiled | RegexOptions.ExplicitCapture,
         TimeSpan.FromSeconds(1));
 
     /// <summary>
@@ -325,9 +326,10 @@ public static class CommonValidators
         return Result<string>.Success(value);
     }
     // FIX MA0009: Add timeout to prevent ReDoS attacks
+    // FIX MA0023: Add ExplicitCapture to prevent capturing unneeded groups
     private static readonly Regex ConfigKeyRegex = new(
         @"^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)*$",
-        RegexOptions.Compiled,
+        RegexOptions.Compiled | RegexOptions.ExplicitCapture,
         TimeSpan.FromSeconds(1));
 
     /// <summary>

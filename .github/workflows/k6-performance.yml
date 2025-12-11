@@ -93,7 +93,7 @@ jobs:
         working-directory: apps/api/src/Api
         run: dotnet build --configuration Release --no-restore
         env:
-          ConnectionStrings__Postgres: ${{ secrets.TEST_DB_CONNECTION_STRING || 'Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=postgres' }}
+          ConnectionStrings__Postgres: 'Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=postgres'
 
       - name: Install EF Core tools
         run: dotnet tool install --global dotnet-ef --version 9.0.11
@@ -127,11 +127,13 @@ jobs:
       # Issue #2020: MeepleAiDbContextFactory requires ConnectionStrings__Postgres env var
       # The --connection flag is ignored when IDesignTimeDbContextFactory exists
       # EF Core factory reads from Environment.GetEnvironmentVariable() not command args
+      # Note: GitHub Actions secrets.|| fallback doesn't work when secret is undefined
+      # Use direct value for CI tests (no secrets configured in this workflow)
       - name: Apply migrations
         working-directory: apps/api/src/Api
         run: dotnet ef database update --configuration Release
         env:
-          ConnectionStrings__Postgres: ${{ secrets.TEST_DB_CONNECTION_STRING || 'Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=postgres' }}
+          ConnectionStrings__Postgres: 'Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=postgres'
 
       # Issue #1663: Test user is now seeded automatically on API startup via EnsureTestUserExistsAsync
       # No need for separate seeding step - reduces workflow complexity and eliminates race conditions
@@ -165,7 +167,7 @@ jobs:
           tail -n 100 api.log || echo "⚠️ Could not read api.log"
           exit 1
         env:
-          ConnectionStrings__Postgres: ${{ secrets.TEST_DB_CONNECTION_STRING || 'Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=postgres' }}
+          ConnectionStrings__Postgres: 'Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=postgres'
 
       - name: Run k6 performance tests
         working-directory: tests/k6

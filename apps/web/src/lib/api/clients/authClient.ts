@@ -50,6 +50,13 @@ import {
   type UserPreferences,
   type ApiKeyLoginResponse,
   type UserSearchResult,
+  type ApiKeyDto,
+  type CreateApiKeyRequest,
+  type CreateApiKeyResponse,
+  type ListApiKeysResponse,
+  CreateApiKeyResponseSchema,
+  ListApiKeysResponseSchema,
+  ApiKeyDtoSchema,
 } from '../schemas';
 
 export interface CreateAuthClientParams {
@@ -340,6 +347,59 @@ export function createAuthClient({ httpClient }: CreateAuthClientParams) {
      */
     async updatePreferences(payload: UpdatePreferencesRequest): Promise<UserProfile> {
       return httpClient.put('/api/v1/users/preferences', payload, UserProfileSchema);
+    },
+
+    // ========== API Key Management (Issue #909) ==========
+
+    /**
+     * Create a new API key
+     * POST /api/v1/api-keys
+     */
+    async createApiKey(request: CreateApiKeyRequest): Promise<CreateApiKeyResponse> {
+      return httpClient.post('/api/v1/api-keys', request, CreateApiKeyResponseSchema);
+    },
+
+    /**
+     * List all API keys for current user
+     * GET /api/v1/api-keys
+     */
+    async listApiKeys(params?: {
+      includeRevoked?: boolean;
+      page?: number;
+      pageSize?: number;
+    }): Promise<ListApiKeysResponse> {
+      const queryParams = new URLSearchParams();
+      if (params?.includeRevoked) queryParams.append('includeRevoked', 'true');
+      if (params?.page) queryParams.append('page', params.page.toString());
+      if (params?.pageSize) queryParams.append('pageSize', params.pageSize.toString());
+
+      const query = queryParams.toString();
+      const result = await httpClient.get(
+        `/api/v1/api-keys${query ? `?${query}` : ''}`,
+        ListApiKeysResponseSchema
+      );
+
+      if (!result) {
+        return { items: [], total: 0, page: params?.page ?? 1, pageSize: params?.pageSize ?? 20 };
+      }
+
+      return result;
+    },
+
+    /**
+     * Get a specific API key by ID
+     * GET /api/v1/api-keys/{keyId}
+     */
+    async getApiKey(keyId: string): Promise<ApiKeyDto | null> {
+      return httpClient.get(`/api/v1/api-keys/${encodeURIComponent(keyId)}`, ApiKeyDtoSchema);
+    },
+
+    /**
+     * Revoke an API key
+     * DELETE /api/v1/api-keys/{keyId}
+     */
+    async revokeApiKey(keyId: string): Promise<void> {
+      await httpClient.delete(`/api/v1/api-keys/${encodeURIComponent(keyId)}`);
     },
   };
 }

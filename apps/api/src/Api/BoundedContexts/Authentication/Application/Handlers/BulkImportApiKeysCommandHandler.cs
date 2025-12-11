@@ -319,5 +319,5 @@ public class BulkImportApiKeysCommandHandler : ICommandHandler<BulkImportApiKeys
         return fields;
     }
 
-    private record ApiKeyImportRecord(Guid UserId, string KeyName, string Scopes, DateTime? ExpiresAt, string? Metadata);
+    private sealed record ApiKeyImportRecord(Guid UserId, string KeyName, string Scopes, DateTime? ExpiresAt, string? Metadata);
 }

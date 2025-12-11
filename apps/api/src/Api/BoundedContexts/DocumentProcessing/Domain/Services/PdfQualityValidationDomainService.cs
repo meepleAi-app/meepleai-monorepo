@@ -130,7 +130,7 @@ public class PdfQualityValidationDomainService
     /// <summary>
     /// Determines quality level from score
     /// </summary>
-    private string DetermineQualityLevel(double score)
+    private static string DetermineQualityLevel(double score)
     {
         return score switch
         {
@@ -145,7 +145,7 @@ public class PdfQualityValidationDomainService
     /// <summary>
     /// Generates actionable recommendation based on quality score
     /// </summary>
-    private string GenerateRecommendation(double score, string source)
+    private static string GenerateRecommendation(double score, ExtractionQuality quality, string source)
     {
         if (score >= 0.80)
         {

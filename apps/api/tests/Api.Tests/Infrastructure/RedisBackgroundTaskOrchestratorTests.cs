@@ -25,10 +25,6 @@ public class RedisBackgroundTaskOrchestratorTests
     private readonly Mock<ILogger<RedisBackgroundTaskOrchestrator>> _mockLogger;
     private readonly RedisBackgroundTaskOrchestrator _orchestrator;
 
-    // Helper to match RedisKey containing a specific substring
-    private static bool RedisKeyContains(RedisKey key, string substring) =>
-        key.ToString().Contains(substring);
-
     public RedisBackgroundTaskOrchestratorTests()
     {
         _mockRedis = new Mock<IConnectionMultiplexer>();

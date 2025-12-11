@@ -89,7 +89,7 @@ public class UnstructuredPdfTextExtractor : IPdfTextExtractor
             }
 
             // Step 6: Normalize text using domain service
-            var normalizedText = _domainService.NormalizeText(extractionResponse.Text);
+            var normalizedText = PdfTextProcessingDomainService.NormalizeText(extractionResponse.Text);
 
             // Step 7: Map quality score to ExtractionQuality enum
             var quality = MapQualityScore(extractionResponse.QualityScore);

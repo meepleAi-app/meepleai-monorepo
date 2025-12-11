@@ -3,28 +3,28 @@ using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.Extensions.Logging;
 
-namespace Api.BoundedContexts.WorkflowIntegration.Application.Commands.N8nConfig;
+namespace Api.BoundedContexts.WorkflowIntegration.Application.Commands.N8NConfig;
 
 /// <summary>
 /// Handles n8n connection testing with state updates.
 /// Business logic: Config validation, test result persistence.
-/// Infrastructure delegation: HTTP calls, API key decryption, database updates via N8nConfigService.
+/// Infrastructure delegation: HTTP calls, API key decryption, database updates via N8NConfigService.
 /// Side effect: Updates config.LastTestedAt and config.LastTestResult in database.
 /// </summary>
-public sealed class TestN8nConnectionCommandHandler : ICommandHandler<TestN8nConnectionCommand, N8nTestResult>
+public sealed class TestN8NConnectionCommandHandler : ICommandHandler<TestN8NConnectionCommand, N8NTestResult>
 {
-    private readonly N8nConfigService _configService;
-    private readonly ILogger<TestN8nConnectionCommandHandler> _logger;
+    private readonly N8NConfigService _configService;
+    private readonly ILogger<TestN8NConnectionCommandHandler> _logger;
 
-    public TestN8nConnectionCommandHandler(
-        N8nConfigService configService,
-        ILogger<TestN8nConnectionCommandHandler> logger)
+    public TestN8NConnectionCommandHandler(
+        N8NConfigService configService,
+        ILogger<TestN8NConnectionCommandHandler> logger)
     {
         _configService = configService ?? throw new ArgumentNullException(nameof(configService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public async Task<N8nTestResult> Handle(TestN8nConnectionCommand command, CancellationToken cancellationToken)
+    public async Task<N8NTestResult> Handle(TestN8NConnectionCommand command, CancellationToken cancellationToken)
     {
         // Business logic validation
         if (command.ConfigId == Guid.Empty)

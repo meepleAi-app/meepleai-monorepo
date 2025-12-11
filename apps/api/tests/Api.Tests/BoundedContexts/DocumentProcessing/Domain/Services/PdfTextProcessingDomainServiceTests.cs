@@ -88,7 +88,7 @@ public class PdfTextProcessingDomainServiceTests
     public void NormalizeText_EmptyString_ReturnsEmpty()
     {
         // Act
-        var result = _sut.NormalizeText("");
+        var result = PdfTextProcessingDomainService.NormalizeText("");
 
         // Assert
         result.Should().Be(string.Empty);
@@ -101,7 +101,7 @@ public class PdfTextProcessingDomainServiceTests
         var rawText = "Line1\r\nLine2\rLine3\nLine4";
 
         // Act
-        var result = _sut.NormalizeText(rawText);
+        var result = PdfTextProcessingDomainService.NormalizeText(rawText);
 
         // Assert
         result.Should().NotContain("\r");
@@ -115,7 +115,7 @@ public class PdfTextProcessingDomainServiceTests
         var rawText = "Word1    Word2\t\tWord3";
 
         // Act
-        var result = _sut.NormalizeText(rawText);
+        var result = PdfTextProcessingDomainService.NormalizeText(rawText);
 
         // Assert
         result.Should().Be("Word1 Word2 Word3");
@@ -128,7 +128,7 @@ public class PdfTextProcessingDomainServiceTests
         var rawText = "This is a sentenc\ne that was split";
 
         // Act
-        var result = _sut.NormalizeText(rawText);
+        var result = PdfTextProcessingDomainService.NormalizeText(rawText);
 
         // Assert
         result.Should().Contain("sentence that was split");
@@ -141,7 +141,7 @@ public class PdfTextProcessingDomainServiceTests
         var rawText = "Paragraph1\n\n\n\nParagraph2";
 
         // Act
-        var result = _sut.NormalizeText(rawText);
+        var result = PdfTextProcessingDomainService.NormalizeText(rawText);
 
         // Assert
         result.Should().Contain("Paragraph1\n\nParagraph2");
@@ -156,7 +156,7 @@ public class PdfTextProcessingDomainServiceTests
         rawText.Length.Should().Be(11); // Verify input has zero-width character
 
         // Act
-        var result = _sut.NormalizeText(rawText);
+        var result = PdfTextProcessingDomainService.NormalizeText(rawText);
 
         // Assert
         result.Length.Should().Be(10); // Zero-width character removed
@@ -170,7 +170,7 @@ public class PdfTextProcessingDomainServiceTests
         var rawText = "cafe\u0301"; // café with combining accent
 
         // Act
-        var result = _sut.NormalizeText(rawText);
+        var result = PdfTextProcessingDomainService.NormalizeText(rawText);
 
         // Assert: Should normalize to composed form (NFC)
         result.Should().Be("café");
@@ -183,7 +183,7 @@ public class PdfTextProcessingDomainServiceTests
         var pageCount = 2;
 
         // Act
-        var result = _sut.AssessQuality(text, pageCount);
+        var result = PdfTextProcessingDomainService.AssessQuality(text, pageCount);
 
         // Assert
         result.Should().Be(ExtractionQuality.VeryLow);
@@ -197,7 +197,7 @@ public class PdfTextProcessingDomainServiceTests
         var pageCount = 2;
 
         // Act
-        var result = _sut.AssessQuality(text, pageCount);
+        var result = PdfTextProcessingDomainService.AssessQuality(text, pageCount);
 
         // Assert
         result.Should().Be(ExtractionQuality.Low);
@@ -211,7 +211,7 @@ public class PdfTextProcessingDomainServiceTests
         var pageCount = 2;
 
         // Act
-        var result = _sut.AssessQuality(text, pageCount);
+        var result = PdfTextProcessingDomainService.AssessQuality(text, pageCount);
 
         // Assert
         result.Should().Be(ExtractionQuality.Medium);
@@ -225,7 +225,7 @@ public class PdfTextProcessingDomainServiceTests
         var pageCount = 2;
 
         // Act
-        var result = _sut.AssessQuality(text, pageCount);
+        var result = PdfTextProcessingDomainService.AssessQuality(text, pageCount);
 
         // Assert
         result.Should().Be(ExtractionQuality.High);
@@ -239,7 +239,7 @@ public class PdfTextProcessingDomainServiceTests
         var pageCount = 0;
 
         // Act
-        var result = _sut.AssessQuality(text, pageCount);
+        var result = PdfTextProcessingDomainService.AssessQuality(text, pageCount);
 
         // Assert
         result.Should().Be(ExtractionQuality.VeryLow);
@@ -253,7 +253,7 @@ public class PdfTextProcessingDomainServiceTests
         var pageCount = 5;
 
         // Act
-        var result = _sut.AssessQuality(text, pageCount);
+        var result = PdfTextProcessingDomainService.AssessQuality(text, pageCount);
 
         // Assert
         result.Should().Be(ExtractionQuality.VeryLow);

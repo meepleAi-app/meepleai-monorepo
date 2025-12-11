@@ -6,24 +6,24 @@ using Api.SharedKernel.Application.Interfaces;
 
 namespace Api.BoundedContexts.WorkflowIntegration.Application.Handlers;
 
-public class GetN8nConfigByIdQueryHandler : IQueryHandler<GetN8nConfigByIdQuery, N8nConfigurationDto?>
+public class GetN8NConfigByIdQueryHandler : IQueryHandler<GetN8NConfigByIdQuery, N8NConfigurationDto?>
 {
-    private readonly IN8nConfigurationRepository _repository;
+    private readonly IN8NConfigurationRepository _repository;
 
-    public GetN8nConfigByIdQueryHandler(IN8nConfigurationRepository repository)
+    public GetN8NConfigByIdQueryHandler(IN8NConfigurationRepository repository)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
     }
 
-    public async Task<N8nConfigurationDto?> Handle(GetN8nConfigByIdQuery query, CancellationToken cancellationToken)
+    public async Task<N8NConfigurationDto?> Handle(GetN8NConfigByIdQuery query, CancellationToken cancellationToken)
     {
         var config = await _repository.GetByIdAsync(query.ConfigId, cancellationToken).ConfigureAwait(false);
         return config != null ? MapToDto(config) : null;
     }
 
-    private static N8nConfigurationDto MapToDto(N8nConfiguration config)
+    private static N8NConfigurationDto MapToDto(N8NConfiguration config)
     {
-        return new N8nConfigurationDto(
+        return new N8NConfigurationDto(
             Id: config.Id,
             Name: config.Name,
             BaseUrl: config.BaseUrl.Value,

@@ -215,7 +215,7 @@ public static class MonitoringEndpoints
                 responseTimeMs = service.ResponseTimeMs
             });
         })
-        .WithName("GetN8nHealth")
+        .WithName("GetN8NHealth")
         .WithTags("Monitoring", "Health")
         .Produces<object>(200)
         .Produces(401)

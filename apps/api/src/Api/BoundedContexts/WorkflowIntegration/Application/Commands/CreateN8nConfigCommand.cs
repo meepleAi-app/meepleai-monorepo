@@ -3,10 +3,10 @@ using Api.SharedKernel.Application.Interfaces;
 
 namespace Api.BoundedContexts.WorkflowIntegration.Application.Commands;
 
-public record CreateN8nConfigCommand(
+public record CreateN8NConfigCommand(
     string Name,
     string BaseUrl,
     string ApiKeyEncrypted,
     Guid CreatedByUserId,
     string? WebhookUrl = null
-) : ICommand<N8nConfigurationDto>;
+) : ICommand<N8NConfigurationDto>;

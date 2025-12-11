@@ -9,7 +9,7 @@ public static class WorkflowIntegrationServiceExtensions
 {
     public static IServiceCollection AddWorkflowIntegrationContext(this IServiceCollection services)
     {
-        services.AddScoped<IN8nConfigurationRepository, N8nConfigurationRepository>();
+        services.AddScoped<IN8NConfigurationRepository, N8NConfigurationRepository>();
         services.AddScoped<IWorkflowErrorLogRepository, WorkflowErrorLogRepository>();
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
 

@@ -25,7 +25,9 @@ namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 /// - Error handling for PDF parsing failures
 /// - Delegate atomic rule conversion to domain service
 /// </remarks>
+#pragma warning disable S101 // "IText" refers to the iText7 library name, not an interface prefix
 public class ITextPdfTableExtractor : IPdfTableExtractor
+#pragma warning restore S101
 {
     private readonly ITableDetectionService _tableDetectionService;
     private readonly ITableStructureAnalyzer _tableStructureAnalyzer;
@@ -233,7 +235,7 @@ public class ITextPdfTableExtractor : IPdfTableExtractor
                     foreach (var table in pageTables)
                     {
                         // DOMAIN DELEGATION: Convert table to atomic rules using domain service
-                        var rules = _ruleConverter.ConvertTableToAtomicRules(table);
+                        var rules = TableToAtomicRuleConverter.ConvertTableToAtomicRules(table);
                         if (rules != null && rules.Count > 0)
                         {
                             atomicRules.AddRange(rules);
@@ -311,7 +313,7 @@ public class ITextPdfTableExtractor : IPdfTableExtractor
                 foreach (var table in pageTables)
                 {
                     // DOMAIN DELEGATION: Convert table to atomic rules
-                    var rules = _ruleConverter.ConvertTableToAtomicRules(table);
+                    var rules = TableToAtomicRuleConverter.ConvertTableToAtomicRules(table);
                     if (rules != null && rules.Count > 0)
                     {
                         atomicRules.AddRange(rules);

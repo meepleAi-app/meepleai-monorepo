@@ -616,11 +616,7 @@ public class FirstAccuracyBaselineTest
     /// Game DTO for API response
     /// Maps to Api.BoundedContexts.GameManagement.Application.DTOs.GameDto
     /// </summary>
-    private class GameDto
-    {
-        public Guid Id { get; set; }
-        public string Title { get; set; } = string.Empty;
-    }
+    private sealed record GameDto(Guid Id, string Title);
 
     /// <summary>
     /// Authenticates with the API to get a session cookie
@@ -735,32 +731,13 @@ public class FirstAccuracyBaselineTest
     /// API response model for /knowledge-base/ask (DDD endpoint)
     /// Issue #1000: Updated to match actual DDD response structure (QaResponseDto)
     /// </summary>
-    private class KnowledgeBaseAskResponse
-    {
-        public string Answer { get; set; } = string.Empty;
-        public double SearchConfidence { get; set; }
-        public double LlmConfidence { get; set; }
-        public double OverallConfidence { get; set; }
-        public bool IsLowQuality { get; set; }
-        public List<CitationDto>? Citations { get; set; }
-        public List<SourceDto>? Sources { get; set; }
-    }
+    private sealed record KnowledgeBaseAskResponse(
+        string Answer,
+        double OverallConfidence,
+        List<CitationDto>? Citations);
 
-    private class CitationDto
-    {
-        public string? DocumentId { get; set; }
-        public int PageNumber { get; set; }
-        public string? Snippet { get; set; }
-        public double RelevanceScore { get; set; }
-    }
-
-    private class SourceDto
-    {
-        public string? VectorDocumentId { get; set; }
-        public string? TextContent { get; set; }
-        public int PageNumber { get; set; }
-        public double RelevanceScore { get; set; }
-        public int Rank { get; set; }
-        public string? SearchMethod { get; set; }
-    }
+    private sealed record CitationDto(
+        int PageNumber,
+        string? Snippet,
+        double RelevanceScore);
 }

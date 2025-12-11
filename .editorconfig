@@ -198,3 +198,21 @@ indent_size = 2
 # Markdown files
 [*.md]
 trim_trailing_whitespace = false
+
+# ========================================
+# Meziantou.Analyzer Rules (Issue #2076)
+# ========================================
+# Prevent culture-sensitive string operations and formatting issues
+
+[*.cs]
+# MA0006: Use string.Equals instead of == for culture-aware comparisons
+dotnet_diagnostic.MA0006.severity = error
+
+# MA0011: Specify IFormatProvider in parsing and formatting methods
+dotnet_diagnostic.MA0011.severity = error
+
+# MA0023: Add RegexOptions.ExplicitCapture to prevent capturing unneeded groups
+dotnet_diagnostic.MA0023.severity = error
+
+# MA0074: Avoid implicit culture-sensitive string methods (ToLower, ToUpper, Contains)
+dotnet_diagnostic.MA0074.severity = error

@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -24,7 +25,8 @@ public static class TestTelemetryEndpoints
             using var activity = TestActivitySource.StartActivity("test-span-manual");
 
             activity?.SetTag("test.type", "manual");
-            activity?.SetTag("test.timestamp", DateTimeOffset.UtcNow.ToString());
+            // FIX MA0011: Use IFormatProvider for culture-aware formatting
+            activity?.SetTag("test.timestamp", DateTimeOffset.UtcNow.ToString(CultureInfo.InvariantCulture));
 
             logger.LogInformation("Manual span created for testing OpenTelemetry export");
 

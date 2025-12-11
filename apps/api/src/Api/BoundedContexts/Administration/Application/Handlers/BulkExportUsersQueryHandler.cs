@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
@@ -52,12 +53,13 @@ public class BulkExportUsersQueryHandler : IQueryHandler<BulkExportUsersQuery, s
         var csv = new StringBuilder();
         csv.AppendLine("email,displayName,role,createdAt");
 
+        // FIX MA0011: Use IFormatProvider for culture-aware formatting
         foreach (var user in users)
         {
             var email = EscapeCsvField(user.Email.Value);
             var displayName = EscapeCsvField(user.DisplayName);
             var role = user.Role.Value;
-            var createdAt = user.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss");
+            var createdAt = user.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
 
             csv.AppendLine($"{email},{displayName},{role},{createdAt}");
         }

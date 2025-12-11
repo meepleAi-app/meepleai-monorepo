@@ -187,7 +187,8 @@ public static partial class DataMasking
     [GeneratedRegex(@"(Password|PWD)=[^;]+", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
     private static partial Regex PasswordInConnectionStringPattern2();
 
-    [GeneratedRegex(@"(password|pwd):\w+", RegexOptions.IgnoreCase, matchTimeoutMilliseconds: 1000)]
+    // FIX MA0023: Add ExplicitCapture to prevent capturing unneeded groups
+    [GeneratedRegex(@"(password|pwd):\w+", RegexOptions.IgnoreCase | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
     private static partial Regex PasswordInConnectionStringPattern3();
 
     // Regex patterns for response body sanitization

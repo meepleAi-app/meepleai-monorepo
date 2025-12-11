@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.External.Reranking;
 using Api.Services;
@@ -186,8 +187,9 @@ public sealed class ResilientRetrievalService : IRerankedRetrievalService, IDisp
                 OriginalScore: c.OriginalScore,
                 RerankScore: c.RerankScore,
                 FinalRank: index + 1,
+                // FIX MA0011: Use IFormatProvider for culture-aware conversion
                 PageNumber: c.Metadata?.TryGetValue("page_number", out var pageObj) == true
-                    ? Convert.ToInt32(pageObj)
+                    ? Convert.ToInt32(pageObj, CultureInfo.InvariantCulture)
                     : null,
                 Metadata: c.Metadata
             )).ToList();

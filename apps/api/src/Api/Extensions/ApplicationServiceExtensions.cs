@@ -234,10 +234,6 @@ public static class ApplicationServiceExtensions
         // Register all validators from the Authentication bounded context
         services.AddValidatorsFromAssemblyContaining<BoundedContexts.Authentication.Application.Validators.LoginCommandValidator>();
 
-        // Future: Add validators from other bounded contexts here
-        // services.AddValidatorsFromAssemblyContaining<GameManagement.Validators.SomeValidator>();
-        // services.AddValidatorsFromAssemblyContaining<KnowledgeBase.Validators.SomeValidator>();
-
         return services;
     }
 }

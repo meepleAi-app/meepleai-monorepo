@@ -367,7 +367,7 @@ public class GoldenDatasetAccuracyIntegrationTests
         );
     }
 
-    private static QaResponse SimulateIncorrectResponse(GoldenDatasetTestCase testCase)
+    private static QaResponse SimulateIncorrectResponse(GoldenDatasetTestCase _)
     {
         // Build answer WITHOUT expected keywords
         var answer = "This is an incorrect answer that doesn't contain the expected information.";

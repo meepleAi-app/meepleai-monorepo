@@ -83,7 +83,7 @@ public class MonthlyOptimizationReportService : IMonthlyOptimizationReportServic
 
     private static decimal CalculateModelSwitchSavings(
         QueryEfficiencyReport efficiency,
-        ModelRecommendation recommendation)
+        ModelRecommendation _)
     {
         // Estimate savings if switching to recommended model
         // Simplified: Assume 20% cost reduction from optimization

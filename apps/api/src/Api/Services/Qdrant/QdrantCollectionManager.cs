@@ -30,6 +30,8 @@ public class QdrantCollectionManager : IQdrantCollectionManager
             var collectionsResponse = await _clientAdapter.ListCollectionsAsync(ct).ConfigureAwait(false);
             return collectionsResponse.Any(c => string.Equals(c, collectionName, StringComparison.Ordinal));
         }
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
+        // INFRASTRUCTURE LOGGING PATTERN: Log exceptions at the infrastructure boundary for debugging.
         catch (RpcException ex)
         {
             _logger.LogError(ex, "gRPC error checking if collection {CollectionName} exists: {Status}", collectionName, ex.Status);
@@ -45,6 +47,7 @@ public class QdrantCollectionManager : IQdrantCollectionManager
             _logger.LogError(ex, "Operation cancelled while checking if collection {CollectionName} exists", collectionName);
             throw;
         }
+#pragma warning restore S2139
     }
 
     /// <summary>

@@ -139,6 +139,8 @@ public class ActivatePromptVersionCommandHandler : ICommandHandler<ActivatePromp
             return MapToVersionDto(versionToActivate);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
+        // TRANSACTION BOUNDARY PATTERN: Log activation failure before rolling back and rethrowing.
         catch (Exception ex)
 #pragma warning restore CA1031
         {
@@ -168,6 +170,7 @@ public class ActivatePromptVersionCommandHandler : ICommandHandler<ActivatePromp
 
             throw; // Re-throw original exception
         }
+#pragma warning restore S2139
     }
 
     private PromptVersionDto MapToVersionDto(PromptVersionEntity entity)

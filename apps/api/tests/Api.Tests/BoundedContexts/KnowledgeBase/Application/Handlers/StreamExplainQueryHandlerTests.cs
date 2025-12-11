@@ -645,7 +645,7 @@ public class StreamExplainQueryHandlerTests
         SetupQdrantMock("game123", searchResults);
     }
 
-    private void SetupEmbeddingMock(string topic)
+    private void SetupEmbeddingMock(string _)
     {
         var embedding = new float[] { 0.1f, 0.2f, 0.3f };
         _embeddingServiceMock

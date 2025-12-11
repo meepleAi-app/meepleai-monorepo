@@ -25,9 +25,6 @@ public class Enable2FACommandHandler : ICommandHandler<Enable2FACommand, Enable2
     {
         try
         {
-            // Get setup first to retrieve backup codes
-            var status = await _totpService.GetTwoFactorStatusAsync(command.UserId, cancellationToken).ConfigureAwait(false);
-
             // Delegate to existing TotpService (handles all logic: verification, domain updates, persistence)
             var result = await _totpService.EnableTwoFactorAsync(command.UserId, command.TotpCode, cancellationToken).ConfigureAwait(false);
 

@@ -67,11 +67,14 @@ public class InfrastructureDetailsService : IInfrastructureDetailsService
 
             return details;
         }
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
+        // INFRASTRUCTURE LOGGING PATTERN: Log exceptions at the infrastructure boundary for debugging.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to fetch infrastructure details");
             throw;
         }
+#pragma warning restore S2139
     }
 
     private async Task<long> QueryApiRequests24h(DateTime start, DateTime end, CancellationToken ct)

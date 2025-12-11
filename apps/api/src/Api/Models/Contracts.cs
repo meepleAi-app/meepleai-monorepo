@@ -124,7 +124,7 @@ public record SetupGuideStep(
 );
 
 // ADM-02: n8n Configuration models
-public record N8nConfigDto(
+public record N8NConfigDto(
     string Id,
     string Name,
     string BaseUrl,
@@ -136,14 +136,14 @@ public record N8nConfigDto(
     DateTime UpdatedAt
 );
 
-public record CreateN8nConfigRequest(
+public record CreateN8NConfigRequest(
     string Name,
     string BaseUrl,
     string ApiKey,
     string? WebhookUrl
 );
 
-public record UpdateN8nConfigRequest(
+public record UpdateN8NConfigRequest(
     string? Name,
     string? BaseUrl,
     string? ApiKey,
@@ -151,7 +151,7 @@ public record UpdateN8nConfigRequest(
     bool? IsActive
 );
 
-public record N8nTestResult(
+public record N8NTestResult(
     bool Success,
     string Message,
     int? LatencyMs

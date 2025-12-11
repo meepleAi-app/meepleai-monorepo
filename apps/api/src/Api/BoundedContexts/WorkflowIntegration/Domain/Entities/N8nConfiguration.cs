@@ -5,9 +5,9 @@ using Api.SharedKernel.Domain.Entities;
 namespace Api.BoundedContexts.WorkflowIntegration.Domain.Entities;
 
 /// <summary>
-/// N8nConfiguration aggregate root representing n8n instance configuration.
+/// N8NConfiguration aggregate root representing n8n instance configuration.
 /// </summary>
-public sealed class N8nConfiguration : AggregateRoot<Guid>
+public sealed class N8NConfiguration : AggregateRoot<Guid>
 {
     public string Name { get; private set; }
     public WorkflowUrl BaseUrl { get; private set; }
@@ -24,7 +24,7 @@ public sealed class N8nConfiguration : AggregateRoot<Guid>
     /// Private constructor for EF Core.
     /// </summary>
 #pragma warning disable CS8618
-    private N8nConfiguration() : base()
+    private N8NConfiguration() : base()
 #pragma warning restore CS8618
     {
     }
@@ -32,7 +32,7 @@ public sealed class N8nConfiguration : AggregateRoot<Guid>
     /// <summary>
     /// Creates a new n8n configuration.
     /// </summary>
-    public N8nConfiguration(
+    public N8NConfiguration(
         Guid id,
         string name,
         WorkflowUrl baseUrl,
@@ -55,7 +55,7 @@ public sealed class N8nConfiguration : AggregateRoot<Guid>
         UpdatedAt = CreatedAt;
         CreatedByUserId = createdByUserId;
 
-        AddDomainEvent(new N8nConfigurationCreatedEvent(
+        AddDomainEvent(new N8NConfigurationCreatedEvent(
             id,
             Name,
             BaseUrl,
@@ -80,7 +80,7 @@ public sealed class N8nConfiguration : AggregateRoot<Guid>
 
         UpdatedAt = DateTime.UtcNow;
 
-        AddDomainEvent(new N8nConfigurationUpdatedEvent(
+        AddDomainEvent(new N8NConfigurationUpdatedEvent(
             Id,
             name,
             baseUrl,
@@ -115,7 +115,7 @@ public sealed class N8nConfiguration : AggregateRoot<Guid>
         LastTestResult = result;
         UpdatedAt = DateTime.UtcNow;
 
-        AddDomainEvent(new N8nConfigurationTestedEvent(
+        AddDomainEvent(new N8NConfigurationTestedEvent(
             Id,
             success,
             result,

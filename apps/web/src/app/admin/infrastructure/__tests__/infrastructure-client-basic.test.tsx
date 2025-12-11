@@ -103,7 +103,9 @@ describe('InfrastructureClient - Basic Tests', () => {
     render(<InfrastructureClient />);
 
     await waitFor(() => {
-      expect(screen.getByText('Sano')).toBeInTheDocument();
+      // "Sano" appears multiple times (overall health + service badges)
+      const healthElements = screen.getAllByText('Sano');
+      expect(healthElements.length).toBeGreaterThan(0);
     });
   });
 
@@ -113,8 +115,9 @@ describe('InfrastructureClient - Basic Tests', () => {
     render(<InfrastructureClient />);
 
     await waitFor(() => {
-      expect(screen.getByText('15,234')).toBeInTheDocument(); // API requests
-      expect(screen.getByText('125.4 ms')).toBeInTheDocument(); // Latency
+      // Component uses .toLocaleString() - Italian locale uses "." as thousands separator
+      expect(screen.getByText(/15[.,]234/)).toBeInTheDocument(); // API requests
+      expect(screen.getByText(/125\.4\s*ms/)).toBeInTheDocument(); // Latency
     });
   });
 });

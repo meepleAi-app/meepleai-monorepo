@@ -19,6 +19,7 @@ using Microsoft.Extensions.Options;
 using Npgsql;
 using System.Diagnostics;
 
+#pragma warning disable MA0048 // File name must match type name - Contains Handler with related types
 namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 
 public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUploadResult>

@@ -21,6 +21,10 @@ indent_size = 4
 dotnet_diagnostic.MA0004.severity = warning
 MA0004.report = Always
 
+# MA0048: File name must match type name - Enforce code organization (Issue #2068)
+# One type per file improves maintainability and follows C# conventions
+dotnet_diagnostic.MA0048.severity = warning
+
 # Code quality - Production code (strict enforcement)
 [src/**/*.cs]
 # CA1062: Validate arguments of public methods (SUGGESTION - constructor validation complete, method validation TBD)

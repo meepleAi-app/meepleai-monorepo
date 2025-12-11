@@ -1,4 +1,4 @@
-﻿using Api.BoundedContexts.Authentication.Application.DTOs;
+using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
@@ -10,6 +10,7 @@ using Api.Middleware;
 using Api.Models;
 using MediatR;
 
+#pragma warning disable MA0048 // File name must match type name - Contains Interface with supporting types
 namespace Api.Routing;
 
 /// <summary>

@@ -1,5 +1,5 @@
-using System.Text.Json;
-using Api.Models;
+using System.Linq;
+using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
 
 namespace Api.Services;
@@ -12,11 +12,6 @@ public class SessionCacheService : ISessionCacheService
 {
     private readonly IConnectionMultiplexer _redis;
     private readonly ILogger<SessionCacheService> _logger;
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        WriteIndented = false
-    };
 
     public SessionCacheService(
         IConnectionMultiplexer redis,
@@ -24,92 +19,6 @@ public class SessionCacheService : ISessionCacheService
     {
         _redis = redis;
         _logger = logger;
-    }
-
-    public async Task<ActiveSession?> GetAsync(string tokenHash, CancellationToken ct = default)
-    {
-        try
-        {
-            var db = _redis.GetDatabase();
-            var cacheKey = GetCacheKey(tokenHash);
-            var cached = await db.StringGetAsync(cacheKey).ConfigureAwait(false);
-
-            if (!cached.HasValue)
-            {
-                _logger.LogDebug("Session cache miss for hash: {TokenHash}", tokenHash.Substring(0, 8));
-                return null;
-            }
-
-            _logger.LogDebug("Session cache hit for hash: {TokenHash}", tokenHash.Substring(0, 8));
-            var session = JsonSerializer.Deserialize<ActiveSession>(cached.ToString(), JsonOptions);
-            return session;
-        }
-        catch (RedisConnectionException ex)
-        {
-            _logger.LogWarning(ex, "Redis connection failed for session hash {TokenHash}. Proceeding without cache.", tokenHash.Substring(0, 8));
-            return null; // Fail-open: fall back to database
-        }
-        catch (RedisTimeoutException ex)
-        {
-            _logger.LogWarning(ex, "Redis timeout for session hash {TokenHash}. Proceeding without cache.", tokenHash.Substring(0, 8));
-            return null;
-        }
-        catch (JsonException ex)
-        {
-            _logger.LogWarning(ex, "JSON deserialization error for session hash {TokenHash}. Proceeding without cache.", tokenHash.Substring(0, 8));
-            return null;
-        }
-        catch (InvalidOperationException ex)
-        {
-            _logger.LogWarning(ex, "Invalid cache operation for session hash {TokenHash}. Proceeding without cache.", tokenHash.Substring(0, 8));
-            return null;
-        }
-    }
-
-    public async Task SetAsync(string tokenHash, ActiveSession session, DateTime expiresAt, CancellationToken ct = default)
-    {
-        try
-        {
-            var db = _redis.GetDatabase();
-            var cacheKey = GetCacheKey(tokenHash);
-            var json = JsonSerializer.Serialize(session, JsonOptions);
-
-            // Calculate TTL based on session expiration
-            var ttl = expiresAt - DateTime.UtcNow;
-            if (ttl.TotalSeconds <= 0)
-            {
-                _logger.LogDebug("Session already expired, not caching");
-                return;
-            }
-
-            await db.StringSetAsync(cacheKey, json, ttl).ConfigureAwait(false);
-            _logger.LogDebug("Cached session for hash: {TokenHash} (TTL: {TTL}s)", tokenHash.Substring(0, 8), (int)ttl.TotalSeconds);
-
-            // Also add to user's session set for bulk invalidation
-            if (session.User != null)
-            {
-                var userSetKey = GetUserSessionsSetKey(Guid.Parse(session.User.Id));
-                await db.SetAddAsync(userSetKey, cacheKey).ConfigureAwait(false);
-                await db.KeyExpireAsync(userSetKey, ttl).ConfigureAwait(false); // Set same expiration
-            }
-        }
-        catch (RedisConnectionException ex)
-        {
-            _logger.LogWarning(ex, "Redis connection failed setting session hash {TokenHash}. Proceeding without cache.", tokenHash.Substring(0, 8));
-            // Fail-open: session write failure is non-critical
-        }
-        catch (RedisTimeoutException ex)
-        {
-            _logger.LogWarning(ex, "Redis timeout setting session hash {TokenHash}. Proceeding without cache.", tokenHash.Substring(0, 8));
-        }
-        catch (JsonException ex)
-        {
-            _logger.LogWarning(ex, "JSON serialization error for session hash {TokenHash}. Proceeding without cache.", tokenHash.Substring(0, 8));
-        }
-        catch (InvalidOperationException ex)
-        {
-            _logger.LogWarning(ex, "Invalid cache operation for session hash {TokenHash}. Proceeding without cache.", tokenHash.Substring(0, 8));
-        }
     }
 
     public async Task InvalidateAsync(string tokenHash, CancellationToken ct = default)

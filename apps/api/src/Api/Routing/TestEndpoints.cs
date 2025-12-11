@@ -2,6 +2,7 @@ using Api.BoundedContexts.Administration.Application.Commands;
 using Api.Extensions;
 using MediatR;
 
+#pragma warning disable MA0048 // File name must match type name - Contains Interface with supporting types
 namespace Api.Routing;
 
 /// <summary>

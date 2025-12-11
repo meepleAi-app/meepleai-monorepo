@@ -1,6 +1,7 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Microsoft.Extensions.Configuration;
 
+#pragma warning disable MA0048 // File name must match type name - Contains Service with Configuration classes
 namespace Api.BoundedContexts.DocumentProcessing.Domain.Services;
 
 /// <summary>

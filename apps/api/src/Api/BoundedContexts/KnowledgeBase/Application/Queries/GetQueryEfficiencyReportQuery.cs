@@ -1,6 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Analytics;
 using MediatR;
 
+#pragma warning disable MA0048 // File name must match type name - Contains Query with Result record
 namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 
 /// <summary>

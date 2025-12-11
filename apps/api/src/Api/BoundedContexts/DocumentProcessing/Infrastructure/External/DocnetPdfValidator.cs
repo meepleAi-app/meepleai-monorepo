@@ -6,6 +6,7 @@ using Docnet.Core.Models;
 using Microsoft.Extensions.Logging;
 using DomainPdfVersion = Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects.PdfVersion;
 
+#pragma warning disable MA0048 // File name must match type name - Contains Interface with supporting types
 namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 
 /// <summary>

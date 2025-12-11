@@ -1,5 +1,6 @@
 using Api.SharedKernel.Application.Interfaces;
 
+#pragma warning disable MA0048 // File name must match type name - Contains Query with Result record
 namespace Api.BoundedContexts.Authentication.Application.Queries;
 
 /// <summary>

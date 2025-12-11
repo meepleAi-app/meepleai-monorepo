@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Globalization;
 
+#pragma warning disable MA0048 // File name must match type name - Contains Service with Configuration classes
 namespace Api.Services;
 
 /// <summary>

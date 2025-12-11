@@ -1,5 +1,6 @@
 using Api.Services.Pdf;
 
+#pragma warning disable MA0048 // File name must match type name - Contains Interface with supporting types
 namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 
 /// <summary>

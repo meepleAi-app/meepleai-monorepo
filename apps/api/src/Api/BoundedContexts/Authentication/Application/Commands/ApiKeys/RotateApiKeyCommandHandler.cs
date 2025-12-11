@@ -34,7 +34,7 @@ public class RotateApiKeyCommandHandler : ICommandHandler<RotateApiKeyCommand, R
         }
 
         var oldKey = await _db.ApiKeys
-            .FirstOrDefaultAsync(k => k.Id == keyGuid && k.UserId == userGuid, cancellationToken);
+            .FirstOrDefaultAsync(k => k.Id == keyGuid && k.UserId == userGuid, cancellationToken).ConfigureAwait(false);
 
         if (oldKey == null)
         {
@@ -53,7 +53,7 @@ public class RotateApiKeyCommandHandler : ICommandHandler<RotateApiKeyCommand, R
             scopes,
             command.Request.ExpiresAt ?? oldKey.ExpiresAt,
             environment,
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
 
         // Copy quota metadata from old key
         newEntity.Metadata = oldKey.Metadata;

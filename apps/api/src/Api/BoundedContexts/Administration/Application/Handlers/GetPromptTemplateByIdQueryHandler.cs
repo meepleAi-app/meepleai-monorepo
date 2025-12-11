@@ -27,7 +27,7 @@ public class GetPromptTemplateByIdQueryHandler : IQueryHandler<GetPromptTemplate
             .AsNoTracking()
             .Include(t => t.Versions)
             .Include(t => t.CreatedBy)
-            .FirstOrDefaultAsync(t => t.Id == query.TemplateId, cancellationToken);
+            .FirstOrDefaultAsync(t => t.Id == query.TemplateId, cancellationToken).ConfigureAwait(false);
 
         if (template == null)
         {

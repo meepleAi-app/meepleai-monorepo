@@ -29,7 +29,7 @@ public class CreatePromptTemplateCommandHandler : ICommandHandler<CreatePromptTe
     {
         // Verify template name is unique
         var exists = await _dbContext.Set<PromptTemplateEntity>()
-            .AnyAsync(t => t.Name == command.Name, cancellationToken);
+            .AnyAsync(t => t.Name == command.Name, cancellationToken).ConfigureAwait(false);
 
         if (exists)
         {

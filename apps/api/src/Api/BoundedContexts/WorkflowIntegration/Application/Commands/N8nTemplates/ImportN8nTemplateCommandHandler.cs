@@ -51,7 +51,7 @@ public sealed class ImportN8nTemplateCommandHandler : ICommandHandler<ImportN8nT
             command.TemplateId,
             command.Parameters,
             command.UserId,
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Template {TemplateId} imported successfully as workflow {WorkflowId} for user {UserId}",

@@ -245,7 +245,7 @@ public class WeeklyEvaluationService : BackgroundService
                 dataset,
                 topK: 10,
                 thresholds: null,
-                ct: cancellationToken);
+                ct: cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "RAG evaluation completed: MRR={MRR:F4}, P@5={P5:F4}, Latency p95={Latency:F2}ms",

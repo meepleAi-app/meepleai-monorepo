@@ -64,7 +64,7 @@ public class BggApiService : IBggApiService
                 Expiration = TimeSpan.FromDays(_config.CacheTtlDays),
                 LocalCacheExpiration = TimeSpan.FromHours(1)
             },
-            cancellationToken: ct);
+            cancellationToken: ct).ConfigureAwait(false);
 
         return cachedResults ?? new List<BggSearchResultDto>();
     }
@@ -92,7 +92,7 @@ public class BggApiService : IBggApiService
                 Expiration = TimeSpan.FromDays(_config.CacheTtlDays),
                 LocalCacheExpiration = TimeSpan.FromHours(1)
             },
-            cancellationToken: ct);
+            cancellationToken: ct).ConfigureAwait(false);
 
         return cachedDetails;
     }
@@ -107,7 +107,7 @@ public class BggApiService : IBggApiService
             RateLimitKey,
             maxTokens: 10,
             refillRate: _config.MaxRequestsPerSecond,
-            ct);
+            ct).ConfigureAwait(false);
 
         if (!rateLimitResult.Allowed)
         {
@@ -165,7 +165,7 @@ public class BggApiService : IBggApiService
             RateLimitKey,
             maxTokens: 10,
             refillRate: _config.MaxRequestsPerSecond,
-            ct);
+            ct).ConfigureAwait(false);
 
         if (!rateLimitResult.Allowed)
         {

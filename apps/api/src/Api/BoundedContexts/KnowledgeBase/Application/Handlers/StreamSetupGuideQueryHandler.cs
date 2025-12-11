@@ -81,7 +81,7 @@ public class StreamSetupGuideQueryHandler : IStreamingQueryHandler<StreamSetupGu
                 result.CompletionTokens,
                 result.TotalTokens,
                 result.Confidence,
-                cancellationToken))
+                cancellationToken).ConfigureAwait(false))
             {
                 yield return evt;
             }
@@ -95,7 +95,7 @@ public class StreamSetupGuideQueryHandler : IStreamingQueryHandler<StreamSetupGu
             result.CompletionTokens,
             result.TotalTokens,
             result.Confidence,
-            cancellationToken))
+            cancellationToken).ConfigureAwait(false))
         {
             yield return evt;
         }
@@ -126,7 +126,7 @@ public class StreamSetupGuideQueryHandler : IStreamingQueryHandler<StreamSetupGu
                 gameId,
                 queryEmbedding,
                 limit: 10,
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
 
             if (!searchResult.Success || searchResult.Results.Count == 0)
             {

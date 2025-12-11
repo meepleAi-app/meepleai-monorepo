@@ -25,7 +25,7 @@ public class SessionRepository : RepositoryBase, ISessionRepository
     {
         var sessionEntity = await DbContext.UserSessions
             .AsNoTracking()
-            .FirstOrDefaultAsync(s => s.Id == sessionId, cancellationToken);
+            .FirstOrDefaultAsync(s => s.Id == sessionId, cancellationToken).ConfigureAwait(false);
 
         return sessionEntity != null ? MapToDomain(sessionEntity) : null;
     }
@@ -34,7 +34,7 @@ public class SessionRepository : RepositoryBase, ISessionRepository
     {
         var sessionEntity = await DbContext.UserSessions
             .AsNoTracking()
-            .FirstOrDefaultAsync(s => s.TokenHash == tokenHash, cancellationToken);
+            .FirstOrDefaultAsync(s => s.TokenHash == tokenHash, cancellationToken).ConfigureAwait(false);
 
         return sessionEntity != null ? MapToDomain(sessionEntity) : null;
     }
@@ -45,7 +45,7 @@ public class SessionRepository : RepositoryBase, ISessionRepository
             .AsNoTracking()
             .Where(s => s.UserId == userId)
             .OrderByDescending(s => s.CreatedAt)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return sessionEntities.Select(MapToDomain).ToList();
     }
@@ -58,7 +58,7 @@ public class SessionRepository : RepositoryBase, ISessionRepository
             .AsNoTracking()
             .Where(s => s.UserId == userId && s.ExpiresAt > now && s.RevokedAt == null)
             .OrderByDescending(s => s.CreatedAt)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return sessionEntities.Select(MapToDomain).ToList();
     }
@@ -88,7 +88,7 @@ public class SessionRepository : RepositoryBase, ISessionRepository
             .Where(s => s.Id == sessionId)
             .ExecuteUpdateAsync(setters =>
                 setters.SetProperty(s => s.LastSeenAt, lastSeenAt),
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
     }
 
     public async Task RevokeAllUserSessionsAsync(Guid userId, CancellationToken cancellationToken = default)
@@ -97,7 +97,7 @@ public class SessionRepository : RepositoryBase, ISessionRepository
 
         var sessionsToRevoke = await DbContext.UserSessions
             .Where(s => s.UserId == userId && s.RevokedAt == null)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         if (sessionsToRevoke.Count == 0)
         {

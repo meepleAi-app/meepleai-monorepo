@@ -31,7 +31,7 @@ public sealed class GetEvaluationHistoryQueryHandler : IQueryHandler<GetEvaluati
         var results = await _evaluationService.GetHistoricalResultsAsync(
             query.TemplateId.ToString(),
             query.Limit,
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
 
         _logger.LogDebug("Retrieved {Count} historical evaluation results", results.Count);
 

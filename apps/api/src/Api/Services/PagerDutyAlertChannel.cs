@@ -66,7 +66,7 @@ public class PagerDutyAlertChannel : IAlertChannel
             var response = await httpClient.PostAsJsonAsync(
                 PagerDutyEventsApiUrl,
                 payload,
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
 
             if (response.IsSuccessStatusCode)
             {

@@ -58,10 +58,10 @@ public class PrometheusHttpClient : IPrometheusQueryService
 
             var url = $"/api/v1/query_range?query={Uri.EscapeDataString(query)}&start={startUnix}&end={endUnix}&step={step}";
 
-            var response = await _httpClient.GetAsync(url, cancellationToken);
+            var response = await _httpClient.GetAsync(url, cancellationToken).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
 
-            var content = await response.Content.ReadAsStringAsync(cancellationToken);
+            var content = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
             var prometheusResponse = JsonSerializer.Deserialize<PrometheusApiResponse>(content, new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
@@ -106,10 +106,10 @@ public class PrometheusHttpClient : IPrometheusQueryService
             var timeUnix = new DateTimeOffset(timestamp).ToUnixTimeSeconds();
             var url = $"/api/v1/query?query={Uri.EscapeDataString(query)}&time={timeUnix}";
 
-            var response = await _httpClient.GetAsync(url, cancellationToken);
+            var response = await _httpClient.GetAsync(url, cancellationToken).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
 
-            var content = await response.Content.ReadAsStringAsync(cancellationToken);
+            var content = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
             var prometheusResponse = JsonSerializer.Deserialize<PrometheusApiResponse>(content, new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true

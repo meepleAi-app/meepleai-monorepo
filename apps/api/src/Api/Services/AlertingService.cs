@@ -53,7 +53,7 @@ public class AlertingService : IAlertingService
         }
 
         // Check throttling
-        if (await IsThrottledAsync(alertType, cancellationToken))
+        if (await IsThrottledAsync(alertType, cancellationToken).ConfigureAwait(false))
         {
             _logger.LogInformation(
                 "Alert {AlertType} is throttled. Skipping send (throttle window: {ThrottleMinutes} minutes)",
@@ -65,7 +65,7 @@ public class AlertingService : IAlertingService
                 .AsNoTracking()
                 .Where(a => a.AlertType == alertType && a.IsActive)
                 .OrderByDescending(a => a.TriggeredAt)
-                .FirstOrDefaultAsync(cancellationToken);
+                .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
 
             if (existingAlert != null)
             {
@@ -97,7 +97,7 @@ public class AlertingService : IAlertingService
                     severity,
                     message,
                     metadata,
-                    cancellationToken);
+                    cancellationToken).ConfigureAwait(false);
 
                 channelResults[channel.ChannelName] = success;
 
@@ -156,7 +156,7 @@ public class AlertingService : IAlertingService
     {
         var activeAlerts = await _dbContext.Alerts
             .Where(a => a.AlertType == alertType && a.IsActive)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         if (activeAlerts.Count == 0)
         {
@@ -187,7 +187,7 @@ public class AlertingService : IAlertingService
             .AsNoTracking()
             .Where(a => a.IsActive)
             .OrderByDescending(a => a.TriggeredAt)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return alerts.Select(MapToDto).ToList();
     }
@@ -201,7 +201,7 @@ public class AlertingService : IAlertingService
             .AsNoTracking()
             .Where(a => a.TriggeredAt >= fromDate && a.TriggeredAt <= toDate)
             .OrderByDescending(a => a.TriggeredAt)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return alerts.Select(MapToDto).ToList();
     }
@@ -215,7 +215,7 @@ public class AlertingService : IAlertingService
         var recentAlert = await _dbContext.Alerts
             .AsNoTracking()
             .Where(a => a.AlertType == alertType && a.TriggeredAt >= throttleWindow)
-            .AnyAsync(cancellationToken);
+            .AnyAsync(cancellationToken).ConfigureAwait(false);
 
         return recentAlert;
     }

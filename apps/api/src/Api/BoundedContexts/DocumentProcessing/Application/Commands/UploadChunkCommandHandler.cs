@@ -40,7 +40,7 @@ public class UploadChunkCommandHandler : ICommandHandler<UploadChunkCommand, Upl
         {
             try
             {
-                return await ProcessChunkAsync(request, cancellationToken);
+                return await ProcessChunkAsync(request, cancellationToken).ConfigureAwait(false);
             }
             catch (DbUpdateConcurrencyException ex)
             {
@@ -65,7 +65,7 @@ public class UploadChunkCommandHandler : ICommandHandler<UploadChunkCommand, Upl
                 }
 
                 // Small delay before retry to reduce contention
-                await Task.Delay(10 * (attempt + 1), cancellationToken);
+                await Task.Delay(10 * (attempt + 1), cancellationToken).ConfigureAwait(false);
             }
         }
 
@@ -87,7 +87,7 @@ public class UploadChunkCommandHandler : ICommandHandler<UploadChunkCommand, Upl
         try
         {
             // Get session
-            var session = await _sessionRepository.GetByIdAsync(request.SessionId, cancellationToken);
+            var session = await _sessionRepository.GetByIdAsync(request.SessionId, cancellationToken).ConfigureAwait(false);
 
             if (session == null)
             {
@@ -135,8 +135,8 @@ public class UploadChunkCommandHandler : ICommandHandler<UploadChunkCommand, Upl
             if (session.IsExpired)
             {
                 session.MarkAsExpired();
-                await _sessionRepository.UpdateAsync(session, cancellationToken);
-                await _dbContext.SaveChangesAsync(cancellationToken);
+                await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
+                await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
                 return new UploadChunkResult(
                     Success: false,
@@ -210,12 +210,12 @@ public class UploadChunkCommandHandler : ICommandHandler<UploadChunkCommand, Upl
 
             // Save chunk to disk
             var chunkFilePath = session.GetChunkFilePath(request.ChunkIndex);
-            await File.WriteAllBytesAsync(chunkFilePath, request.ChunkData, cancellationToken);
+            await File.WriteAllBytesAsync(chunkFilePath, request.ChunkData, cancellationToken).ConfigureAwait(false);
 
             // Update session
             session.MarkChunkReceived(request.ChunkIndex);
-            await _sessionRepository.UpdateAsync(session, cancellationToken);
-            await _dbContext.SaveChangesAsync(cancellationToken);
+            await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
+            await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
             _logger.LogDebug(
                 "Chunk {ChunkIndex}/{TotalChunks} received for session {SessionId} ({Progress:F1}%)",

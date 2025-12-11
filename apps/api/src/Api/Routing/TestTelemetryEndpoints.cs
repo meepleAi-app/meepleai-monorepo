@@ -28,7 +28,7 @@ public static class TestTelemetryEndpoints
 
             logger.LogInformation("Manual span created for testing OpenTelemetry export");
 
-            await Task.Delay(100); // Simulate some work
+            await Task.Delay(100).ConfigureAwait(false); // Simulate some work
 
             return Results.Ok(new
             {

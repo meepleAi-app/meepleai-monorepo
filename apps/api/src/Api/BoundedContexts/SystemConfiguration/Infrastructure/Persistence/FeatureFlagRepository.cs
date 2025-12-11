@@ -23,7 +23,7 @@ public class FeatureFlagRepository : RepositoryBase, IFeatureFlagRepository
     {
         var entity = await DbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>()
             .AsNoTracking()
-            .FirstOrDefaultAsync(c => c.Id == id && c.Key.StartsWith(FlagPrefix), cancellationToken);
+            .FirstOrDefaultAsync(c => c.Id == id && c.Key.StartsWith(FlagPrefix), cancellationToken).ConfigureAwait(false);
 
         return entity != null ? MapToDomain(entity) : null;
     }
@@ -34,7 +34,7 @@ public class FeatureFlagRepository : RepositoryBase, IFeatureFlagRepository
             .AsNoTracking()
             .Where(c => c.Key.StartsWith(FlagPrefix))
             .OrderBy(c => c.Key)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return entities.Select(MapToDomain).ToList();
     }
@@ -44,7 +44,7 @@ public class FeatureFlagRepository : RepositoryBase, IFeatureFlagRepository
         var key = $"{FlagPrefix}{name}";
         var entity = await DbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>()
             .AsNoTracking()
-            .FirstOrDefaultAsync(c => c.Key == key, cancellationToken);
+            .FirstOrDefaultAsync(c => c.Key == key, cancellationToken).ConfigureAwait(false);
 
         return entity != null ? MapToDomain(entity) : null;
     }
@@ -54,7 +54,7 @@ public class FeatureFlagRepository : RepositoryBase, IFeatureFlagRepository
         var entities = await DbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>()
             .AsNoTracking()
             .Where(c => c.Key.StartsWith(FlagPrefix) && c.IsActive && c.Value == "true")
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return entities.Select(MapToDomain).ToList();
     }
@@ -84,7 +84,7 @@ public class FeatureFlagRepository : RepositoryBase, IFeatureFlagRepository
     public async Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default)
     {
         return await DbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>()
-            .AnyAsync(c => c.Id == id && c.Key.StartsWith(FlagPrefix), cancellationToken);
+            .AnyAsync(c => c.Id == id && c.Key.StartsWith(FlagPrefix), cancellationToken).ConfigureAwait(false);
     }
 
     private static FeatureFlag MapToDomain(Api.Infrastructure.Entities.SystemConfigurationEntity entity)

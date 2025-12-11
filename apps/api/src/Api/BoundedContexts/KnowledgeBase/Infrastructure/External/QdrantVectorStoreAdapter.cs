@@ -34,7 +34,7 @@ public class QdrantVectorStoreAdapter : IQdrantVectorStoreAdapter
             gameId.ToString(),
             queryVector.Values.ToArray(),
             topK,
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
 
         if (!searchResult.Success)
         {
@@ -105,7 +105,7 @@ public class QdrantVectorStoreAdapter : IQdrantVectorStoreAdapter
             gameId,
             pdfId,
             chunks,
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
 
         if (!result.Success)
         {
@@ -120,7 +120,7 @@ public class QdrantVectorStoreAdapter : IQdrantVectorStoreAdapter
     {
         var deleted = await _qdrantService.DeleteDocumentAsync(
             vectorDocumentId.ToString(),
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
 
         if (!deleted)
         {

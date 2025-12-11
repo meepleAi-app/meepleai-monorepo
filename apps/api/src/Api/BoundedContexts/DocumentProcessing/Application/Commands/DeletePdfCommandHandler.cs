@@ -40,7 +40,7 @@ public class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDele
         {
             var pdfGuid = Guid.Parse(pdfId);
             var pdfDoc = await _db.PdfDocuments
-                .FirstOrDefaultAsync(p => p.Id == pdfGuid, cancellationToken);
+                .FirstOrDefaultAsync(p => p.Id == pdfGuid, cancellationToken).ConfigureAwait(false);
 
             if (pdfDoc == null)
             {
@@ -51,7 +51,7 @@ public class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDele
 
             // Delete associated vector document if exists
             var vectorDoc = await _db.VectorDocuments
-                .FirstOrDefaultAsync(v => v.PdfDocumentId == pdfGuid, cancellationToken);
+                .FirstOrDefaultAsync(v => v.PdfDocumentId == pdfGuid, cancellationToken).ConfigureAwait(false);
 
             if (vectorDoc != null)
             {

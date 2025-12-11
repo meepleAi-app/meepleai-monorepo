@@ -24,7 +24,7 @@ public class AgentRepository : RepositoryBase, IAgentRepository
     {
         var entity = await DbContext.Set<AgentEntity>()
             .AsNoTracking()
-            .FirstOrDefaultAsync(a => a.Id == id, ct);
+            .FirstOrDefaultAsync(a => a.Id == id, ct).ConfigureAwait(false);
 
         return entity != null ? KnowledgeBaseMappers.ToDomain(entity) : null;
     }
@@ -33,7 +33,7 @@ public class AgentRepository : RepositoryBase, IAgentRepository
     {
         var entity = await DbContext.Set<AgentEntity>()
             .AsNoTracking()
-            .FirstOrDefaultAsync(a => a.Name == name, ct);
+            .FirstOrDefaultAsync(a => a.Name == name, ct).ConfigureAwait(false);
 
         return entity != null ? KnowledgeBaseMappers.ToDomain(entity) : null;
     }
@@ -43,7 +43,7 @@ public class AgentRepository : RepositoryBase, IAgentRepository
         var entities = await DbContext.Set<AgentEntity>()
             .AsNoTracking()
             .OrderBy(a => a.Name)
-            .ToListAsync(ct);
+            .ToListAsync(ct).ConfigureAwait(false);
 
         return entities.Select(KnowledgeBaseMappers.ToDomain).ToList();
     }
@@ -54,7 +54,7 @@ public class AgentRepository : RepositoryBase, IAgentRepository
             .AsNoTracking()
             .Where(a => a.IsActive)
             .OrderBy(a => a.Name)
-            .ToListAsync(ct);
+            .ToListAsync(ct).ConfigureAwait(false);
 
         return entities.Select(KnowledgeBaseMappers.ToDomain).ToList();
     }
@@ -65,7 +65,7 @@ public class AgentRepository : RepositoryBase, IAgentRepository
             .AsNoTracking()
             .Where(a => a.Type == type.Value)
             .OrderBy(a => a.Name)
-            .ToListAsync(ct);
+            .ToListAsync(ct).ConfigureAwait(false);
 
         return entities.Select(KnowledgeBaseMappers.ToDomain).ToList();
     }
@@ -78,7 +78,7 @@ public class AgentRepository : RepositoryBase, IAgentRepository
             .AsNoTracking()
             .Where(a => a.LastInvokedAt == null || a.LastInvokedAt < sevenDaysAgo)
             .OrderBy(a => a.LastInvokedAt)
-            .ToListAsync(ct);
+            .ToListAsync(ct).ConfigureAwait(false);
 
         return entities.Select(KnowledgeBaseMappers.ToDomain).ToList();
     }
@@ -111,7 +111,7 @@ public class AgentRepository : RepositoryBase, IAgentRepository
     public async Task DeleteAsync(Guid id, CancellationToken ct = default)
     {
         var entity = await DbContext.Set<AgentEntity>()
-            .FirstOrDefaultAsync(a => a.Id == id, ct);
+            .FirstOrDefaultAsync(a => a.Id == id, ct).ConfigureAwait(false);
 
         if (entity != null)
         {
@@ -123,6 +123,6 @@ public class AgentRepository : RepositoryBase, IAgentRepository
     public async Task<bool> ExistsAsync(string name, CancellationToken ct = default)
     {
         return await DbContext.Set<AgentEntity>()
-            .AnyAsync(a => a.Name == name, ct);
+            .AnyAsync(a => a.Name == name, ct).ConfigureAwait(false);
     }
 }

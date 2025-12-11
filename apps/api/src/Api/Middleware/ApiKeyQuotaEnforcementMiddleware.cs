@@ -57,7 +57,7 @@ public class ApiKeyQuotaEnforcementMiddleware
         var apiKey = await db.ApiKeys
             .Where(k => k.Id == apiKeyId)
             .Select(k => new { k.Id, k.Metadata })
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync().ConfigureAwait(false);
 
         if (apiKey == null)
         {
@@ -97,7 +97,7 @@ public class ApiKeyQuotaEnforcementMiddleware
 
             var hourlyCount = await db.AiRequestLogs
                 .Where(l => l.ApiKeyId == apiKeyId && l.CreatedAt >= hourStartUtc)
-                .CountAsync();
+                .CountAsync().ConfigureAwait(false);
 
             if (hourlyCount >= quota.HourlyLimit.Value)
             {
@@ -136,7 +136,7 @@ public class ApiKeyQuotaEnforcementMiddleware
 
             var dailyCount = await db.AiRequestLogs
                 .Where(l => l.ApiKeyId == apiKeyId && l.CreatedAt >= dayStartUtc)
-                .CountAsync();
+                .CountAsync().ConfigureAwait(false);
 
             if (dailyCount >= quota.DailyLimit.Value)
             {

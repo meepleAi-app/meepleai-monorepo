@@ -56,7 +56,7 @@ public class SlackAlertChannel : IAlertChannel
             var response = await httpClient.PostAsJsonAsync(
                 _config.WebhookUrl,
                 payload,
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
 
             if (response.IsSuccessStatusCode)
             {

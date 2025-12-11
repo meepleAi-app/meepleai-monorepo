@@ -79,7 +79,7 @@ public class CitationValidationService : ICitationValidationService
             .AsNoTracking()
             .Where(p => p.GameId == gameGuid)
             .Select(p => new { p.Id, p.PageCount })
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         var pdfDict = pdfDocuments.ToDictionary(p => p.Id.ToString(), p => p.PageCount ?? 0, StringComparer.Ordinal);
 
@@ -90,7 +90,7 @@ public class CitationValidationService : ICitationValidationService
                 snippet,
                 pdfDict,
                 errors,
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
 
             if (isValid)
             {
@@ -134,7 +134,7 @@ public class CitationValidationService : ICitationValidationService
             .AsNoTracking()
             .Where(p => p.GameId == gameGuid)
             .Select(p => new { p.Id, p.PageCount })
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         var pdfDict = pdfDocuments.ToDictionary(p => p.Id.ToString(), p => p.PageCount ?? 0, StringComparer.Ordinal);
         var errors = new List<CitationValidationError>();

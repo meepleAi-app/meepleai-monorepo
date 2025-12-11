@@ -72,7 +72,7 @@ public class TempSessionService : ITempSessionService
         try
         {
             var tempSession = await _dbContext.TempSessions
-                .FirstOrDefaultAsync(ts => ts.TokenHash == tokenHash && !ts.IsUsed && ts.ExpiresAt > now);
+                .FirstOrDefaultAsync(ts => ts.TokenHash == tokenHash && !ts.IsUsed && ts.ExpiresAt > now).ConfigureAwait(false);
 
             if (tempSession == null)
             {
@@ -113,7 +113,7 @@ public class TempSessionService : ITempSessionService
 
         var expiredSessions = await _dbContext.TempSessions
             .Where(ts => ts.ExpiresAt < now.UtcDateTime || (ts.IsUsed && ts.UsedAt < cutoff.UtcDateTime))
-            .ToListAsync(ct);
+            .ToListAsync(ct).ConfigureAwait(false);
 
         if (expiredSessions.Any())
         {

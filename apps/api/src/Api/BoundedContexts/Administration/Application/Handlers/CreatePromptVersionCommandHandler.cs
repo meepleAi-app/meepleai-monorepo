@@ -31,7 +31,7 @@ public class CreatePromptVersionCommandHandler : ICommandHandler<CreatePromptVer
         var template = await _dbContext.Set<PromptTemplateEntity>()
             .Include(t => t.Versions)
             .Include(t => t.CreatedBy)
-            .FirstOrDefaultAsync(t => t.Id == command.TemplateId, cancellationToken);
+            .FirstOrDefaultAsync(t => t.Id == command.TemplateId, cancellationToken).ConfigureAwait(false);
 
         if (template == null)
         {

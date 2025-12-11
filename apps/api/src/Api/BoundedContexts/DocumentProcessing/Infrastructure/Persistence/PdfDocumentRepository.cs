@@ -19,7 +19,7 @@ public class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
     {
         var entity = await DbContext.PdfDocuments
             .AsNoTracking()
-            .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
+            .FirstOrDefaultAsync(p => p.Id == id, cancellationToken).ConfigureAwait(false);
 
         return entity != null ? MapToDomain(entity) : null;
     }
@@ -29,7 +29,7 @@ public class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
         var entities = await DbContext.PdfDocuments
             .AsNoTracking()
             .OrderByDescending(p => p.UploadedAt)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return entities.Select(MapToDomain).ToList();
     }
@@ -40,7 +40,7 @@ public class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
             .AsNoTracking()
             .Where(p => p.GameId == gameId)
             .OrderByDescending(p => p.UploadedAt)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return entities.Select(MapToDomain).ToList();
     }
@@ -51,7 +51,7 @@ public class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
             .AsNoTracking()
             .Where(p => p.ProcessingStatus == status)
             .OrderByDescending(p => p.UploadedAt)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return entities.Select(MapToDomain).ToList();
     }

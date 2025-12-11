@@ -50,7 +50,7 @@ public sealed class ResetPasswordCommandHandler : ICommandHandler<ResetPasswordC
             var (success, userId) = await _passwordResetService.ResetPasswordAsync(
                 command.Token,
                 command.NewPassword,
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
 
             if (!success)
             {

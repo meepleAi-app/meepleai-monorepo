@@ -329,18 +329,20 @@ public class DocnetPdfTextExtractor : IPdfTextExtractor
     {
         var tempPath = Path.Combine(Path.GetTempPath(), $"pdf_extract_{Guid.NewGuid()}.pdf");
 
-        await using var fileStream = new FileStream(
+        var fileStream = new FileStream(
             tempPath,
             FileMode.Create,
             FileAccess.Write,
             FileShare.None,
             bufferSize: 81920,
             useAsync: true);
-
-        await pdfStream.CopyToAsync(fileStream, ct).ConfigureAwait(false);
+        await using (fileStream.ConfigureAwait(false))
+        {
+            await pdfStream.CopyToAsync(fileStream, ct).ConfigureAwait(false);
         await fileStream.FlushAsync(ct).ConfigureAwait(false);
 
         return tempPath;
+        }
     }
 
     /// <summary>

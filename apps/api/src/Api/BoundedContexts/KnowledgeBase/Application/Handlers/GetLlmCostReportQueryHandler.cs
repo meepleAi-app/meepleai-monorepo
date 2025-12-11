@@ -33,7 +33,7 @@ public class GetLlmCostReportQueryHandler : IRequestHandler<GetLlmCostReportQuer
         // Get total cost
         var totalCost = request.UserId.HasValue
             ? await _costLogRepository.GetUserCostAsync(request.UserId.Value, request.StartDate, request.EndDate, ct)
-            : await _costLogRepository.GetTotalCostAsync(request.StartDate, request.EndDate, ct).ConfigureAwait(false);
+.ConfigureAwait(false) : await _costLogRepository.GetTotalCostAsync(request.StartDate, request.EndDate, ct).ConfigureAwait(false);
 
         // Get costs by provider
         var costsByProvider = await _costLogRepository.GetCostsByProviderAsync(request.StartDate, request.EndDate, ct).ConfigureAwait(false);

@@ -70,7 +70,7 @@ public class UsedTotpCodeCleanupTask : IHostedService, IDisposable
             // EF Core 7+: ExecuteDelete for bulk delete without loading entities
             var deleted = await dbContext.UsedTotpCodes
                 .Where(u => u.ExpiresAt < now)
-                .ExecuteDeleteAsync();
+                .ExecuteDeleteAsync().ConfigureAwait(false);
 
             if (deleted > 0)
             {

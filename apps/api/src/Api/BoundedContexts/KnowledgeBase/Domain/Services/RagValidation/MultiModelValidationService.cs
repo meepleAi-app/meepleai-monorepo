@@ -196,7 +196,7 @@ public class MultiModelValidationService : IMultiModelValidationService
                 userPrompt,
                 temperature,
                 maxTokens,
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
 
             stopwatch.Stop();
 

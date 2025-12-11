@@ -53,7 +53,7 @@ public sealed class DatasetEvaluationService : IDatasetEvaluationService
                 break;
             }
 
-            var result = await EvaluateSampleAsync(sample, options, cancellationToken);
+            var result = await EvaluateSampleAsync(sample, options, cancellationToken).ConfigureAwait(false);
             sampleResults.Add(result);
 
             if (sampleResults.Count % 10 == 0)
@@ -104,7 +104,7 @@ public sealed class DatasetEvaluationService : IDatasetEvaluationService
                 sample.Question,
                 null,
                 false,
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
 
             stopwatch.Stop();
 

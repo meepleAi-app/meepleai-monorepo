@@ -169,7 +169,7 @@ public class QualityReportService : BackgroundService, IQualityReportService
         var logs = await dbContext.AiRequestLogs
             .Where(l => l.CreatedAt >= startDate && l.CreatedAt <= endDate)
             .AsNoTracking()
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         var totalResponses = logs.Count;
         var lowQualityCount = logs.Count(l => l.IsLowQuality);

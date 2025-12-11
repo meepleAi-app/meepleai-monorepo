@@ -303,7 +303,7 @@ Clients can also store the key securely and send it via the `Authorization: ApiK
             // Look up session by token hash to get session ID
             var dbSession = await db.UserSessions
                 .AsNoTracking()
-                .FirstOrDefaultAsync(s => s.TokenHash == tokenHash, ct);
+                .FirstOrDefaultAsync(s => s.TokenHash == tokenHash, ct).ConfigureAwait(false);
 
             if (dbSession == null)
             {

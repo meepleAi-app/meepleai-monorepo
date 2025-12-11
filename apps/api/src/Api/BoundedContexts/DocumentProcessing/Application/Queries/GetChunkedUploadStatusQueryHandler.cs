@@ -20,7 +20,7 @@ public class GetChunkedUploadStatusQueryHandler : IQueryHandler<GetChunkedUpload
         GetChunkedUploadStatusQuery request,
         CancellationToken cancellationToken)
     {
-        var session = await _sessionRepository.GetByIdAsync(request.SessionId, cancellationToken);
+        var session = await _sessionRepository.GetByIdAsync(request.SessionId, cancellationToken).ConfigureAwait(false);
 
         if (session == null)
         {

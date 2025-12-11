@@ -25,7 +25,7 @@ public class GameSessionRepository : RepositoryBase, IGameSessionRepository
     {
         var sessionEntity = await DbContext.GameSessions
             .AsNoTracking()
-            .FirstOrDefaultAsync(s => s.Id == id, cancellationToken);
+            .FirstOrDefaultAsync(s => s.Id == id, cancellationToken).ConfigureAwait(false);
 
         return sessionEntity != null ? MapToDomain(sessionEntity) : null;
     }
@@ -35,7 +35,7 @@ public class GameSessionRepository : RepositoryBase, IGameSessionRepository
         var sessionEntities = await DbContext.GameSessions
             .AsNoTracking()
             .OrderByDescending(s => s.StartedAt)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return sessionEntities.Select(MapToDomain).ToList();
     }
@@ -47,7 +47,7 @@ public class GameSessionRepository : RepositoryBase, IGameSessionRepository
             .Where(s => s.GameId == gameId &&
                        (s.Status == "Setup" || s.Status == "InProgress" || s.Status == "Paused"))
             .OrderByDescending(s => s.StartedAt)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return sessionEntities.Select(MapToDomain).ToList();
     }
@@ -58,7 +58,7 @@ public class GameSessionRepository : RepositoryBase, IGameSessionRepository
             .AsNoTracking()
             .Where(s => s.GameId == gameId)
             .OrderByDescending(s => s.StartedAt)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return sessionEntities.Select(MapToDomain).ToList();
     }
@@ -71,7 +71,7 @@ public class GameSessionRepository : RepositoryBase, IGameSessionRepository
             .AsNoTracking()
             .Where(s => EF.Functions.ILike(s.PlayersJson, $"%{normalized}%"))
             .OrderByDescending(s => s.StartedAt)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         // Filter in-memory for exact player name match
         var sessions = sessionEntities

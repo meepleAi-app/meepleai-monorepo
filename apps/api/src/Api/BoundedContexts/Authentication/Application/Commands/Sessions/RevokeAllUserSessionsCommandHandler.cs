@@ -30,7 +30,7 @@ public class RevokeAllUserSessionsCommandHandler : ICommandHandler<RevokeAllUser
 
         var sessions = await _db.UserSessions
             .Where(s => s.UserId == request.UserId && s.RevokedAt == null)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         if (sessions.Count == 0)
         {

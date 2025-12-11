@@ -31,7 +31,7 @@ public class GenerateRuleSpecFromPdfCommandHandler : ICommandHandler<GenerateRul
     {
         var pdf = await _dbContext.PdfDocuments
             .AsNoTracking()
-            .FirstOrDefaultAsync(p => p.Id == command.PdfDocumentId, cancellationToken);
+            .FirstOrDefaultAsync(p => p.Id == command.PdfDocumentId, cancellationToken).ConfigureAwait(false);
 
         if (pdf is null)
         {

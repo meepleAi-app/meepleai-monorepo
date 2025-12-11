@@ -25,7 +25,7 @@ public class UserRepository : RepositoryBase, IUserRepository
             .Include(u => u.BackupCodes)
             .Include(u => u.OAuthAccounts)
             .AsNoTracking()
-            .FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
+            .FirstOrDefaultAsync(u => u.Id == id, cancellationToken).ConfigureAwait(false);
 
         return userEntity != null ? MapToDomain(userEntity) : null;
     }
@@ -37,7 +37,7 @@ public class UserRepository : RepositoryBase, IUserRepository
             .Include(u => u.BackupCodes)
             .Include(u => u.OAuthAccounts)
             .AsNoTracking()
-            .FirstOrDefaultAsync(u => u.Email == email.Value, cancellationToken);
+            .FirstOrDefaultAsync(u => u.Email == email.Value, cancellationToken).ConfigureAwait(false);
 
         return userEntity != null ? MapToDomain(userEntity) : null;
     }
@@ -46,14 +46,14 @@ public class UserRepository : RepositoryBase, IUserRepository
     {
         return await DbContext.Users
             .AsNoTracking()
-            .AnyAsync(u => u.Email == email.Value, cancellationToken);
+            .AnyAsync(u => u.Email == email.Value, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<bool> HasAnyUsersAsync(CancellationToken cancellationToken = default)
     {
         return await DbContext.Users
             .AsNoTracking()
-            .AnyAsync(cancellationToken);
+            .AnyAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<List<User>> GetAllAsync(CancellationToken cancellationToken = default)
@@ -63,7 +63,7 @@ public class UserRepository : RepositoryBase, IUserRepository
             .Include(u => u.BackupCodes)
             .Include(u => u.OAuthAccounts)
             .AsNoTracking()
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return userEntities.Select(MapToDomain).ToList();
     }
@@ -117,7 +117,7 @@ public class UserRepository : RepositoryBase, IUserRepository
         // Note: We don't need to track OAuthAccounts here since they're managed via OAuthAccountRepository
         var existingUser = await DbContext.Users
             .Include(u => u.BackupCodes)
-            .FirstOrDefaultAsync(u => u.Id == entity.Id, cancellationToken);
+            .FirstOrDefaultAsync(u => u.Id == entity.Id, cancellationToken).ConfigureAwait(false);
 
         if (existingUser == null)
         {
@@ -173,7 +173,7 @@ public class UserRepository : RepositoryBase, IUserRepository
     {
         return await DbContext.Users
             .AsNoTracking()
-            .AnyAsync(u => u.Id == id, cancellationToken);
+            .AnyAsync(u => u.Id == id, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<List<Api.Infrastructure.Entities.UserBackupCodeEntity>> GetBackupCodesAsync(Guid userId, CancellationToken cancellationToken = default)
@@ -181,7 +181,7 @@ public class UserRepository : RepositoryBase, IUserRepository
         return await DbContext.UserBackupCodes
             .AsNoTracking()
             .Where(bc => bc.UserId == userId)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -268,7 +268,7 @@ public class UserRepository : RepositoryBase, IUserRepository
         var adminRole = Role.Admin.Value;
         return await DbContext.Users
             .AsNoTracking()
-            .CountAsync(u => u.Role == adminRole, cancellationToken);
+            .CountAsync(u => u.Role == adminRole, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<List<User>> SearchAsync(string query, int maxResults, CancellationToken cancellationToken = default)
@@ -286,7 +286,7 @@ public class UserRepository : RepositoryBase, IUserRepository
             .OrderBy(u => u.DisplayName ?? u.Email)
             .Take(maxResults)
             .AsNoTracking()
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return userEntities.Select(MapToDomain).ToList();
     }

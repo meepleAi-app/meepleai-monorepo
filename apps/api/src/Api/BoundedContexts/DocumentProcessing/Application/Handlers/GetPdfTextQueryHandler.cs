@@ -40,7 +40,7 @@ public class GetPdfTextQueryHandler : IQueryHandler<GetPdfTextQuery, PdfTextResu
                     p.CharacterCount,
                     p.ProcessingError
                 ))
-                .FirstOrDefaultAsync(cancellationToken);
+                .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
 
             if (pdf == null)
             {

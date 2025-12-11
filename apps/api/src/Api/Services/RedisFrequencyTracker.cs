@@ -75,7 +75,7 @@ public class RedisFrequencyTracker : IRedisFrequencyTracker
                 redisKey,
                 start: 0,
                 stop: limit - 1,
-                order: Order.Descending);
+                order: Order.Descending).ConfigureAwait(false);
 
             // Convert Redis entries to FrequentQuery DTOs
             var result = entries.Select(entry => new FrequentQuery

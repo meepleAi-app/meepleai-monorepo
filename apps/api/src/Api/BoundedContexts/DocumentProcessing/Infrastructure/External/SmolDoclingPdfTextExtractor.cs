@@ -95,7 +95,7 @@ public class SmolDoclingPdfTextExtractor : IPdfTextExtractor
 
             // Parse successful response
             var result = await response.Content.ReadFromJsonAsync<SmolDoclingResponse>(
-                cancellationToken: ct);
+                cancellationToken: ct).ConfigureAwait(false);
 
             if (result == null)
             {
@@ -222,7 +222,7 @@ public class SmolDoclingPdfTextExtractor : IPdfTextExtractor
             }
 
             var result = await response.Content.ReadFromJsonAsync<SmolDoclingResponse>(
-                cancellationToken: ct);
+                cancellationToken: ct).ConfigureAwait(false);
 
             if (result == null)
             {

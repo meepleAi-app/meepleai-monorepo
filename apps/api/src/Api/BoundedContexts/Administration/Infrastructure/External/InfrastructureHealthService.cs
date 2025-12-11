@@ -32,7 +32,7 @@ public class InfrastructureHealthService : IInfrastructureHealthService
             // Execute health check for specific service
             var healthReport = await _healthCheckService.CheckHealthAsync(
                 check => check.Name.Equals(serviceName, StringComparison.OrdinalIgnoreCase),
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
 
             var entryPair = healthReport.Entries.FirstOrDefault(e =>
                 e.Key.Equals(serviceName, StringComparison.OrdinalIgnoreCase));
@@ -79,7 +79,7 @@ public class InfrastructureHealthService : IInfrastructureHealthService
         try
         {
             // Execute all health checks
-            var healthReport = await _healthCheckService.CheckHealthAsync(cancellationToken);
+            var healthReport = await _healthCheckService.CheckHealthAsync(cancellationToken).ConfigureAwait(false);
 
             var serviceStatuses = healthReport.Entries
                 .Where(e => MonitoredServices.Contains(e.Key, StringComparer.OrdinalIgnoreCase))
@@ -112,7 +112,7 @@ public class InfrastructureHealthService : IInfrastructureHealthService
 
     public async Task<OverallHealthStatus> GetOverallHealthAsync(CancellationToken cancellationToken = default)
     {
-        var services = await GetAllServicesHealthAsync(cancellationToken);
+        var services = await GetAllServicesHealthAsync(cancellationToken).ConfigureAwait(false);
 
         var healthyCount = services.Count(s => s.State == HealthState.Healthy);
         var degradedCount = services.Count(s => s.State == HealthState.Degraded);

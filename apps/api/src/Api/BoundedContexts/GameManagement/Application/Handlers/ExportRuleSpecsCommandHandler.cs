@@ -41,13 +41,13 @@ public class ExportRuleSpecsCommandHandler : ICommandHandler<ExportRuleSpecsComm
             .Where(rs => command.GameIds.Contains(rs.GameId))
             .GroupBy(rs => rs.GameId)
             .Select(g => g.OrderByDescending(rs => rs.CreatedAt).First().Id)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         var ruleSpecs = await _dbContext.RuleSpecs
             .AsNoTracking()
             .Include(rs => rs.Atoms)
             .Where(rs => latestSpecIds.Contains(rs.Id))
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         if (ruleSpecs.Count == 0)
         {

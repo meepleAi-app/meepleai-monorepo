@@ -35,7 +35,7 @@ public class GetSessionHistoryQueryHandler : IQueryHandler<GetSessionHistoryQuer
             limit: query.Limit,
             offset: query.Offset,
             cancellationToken: cancellationToken
-        );
+        ).ConfigureAwait(false);
 
         return sessions.Select(s => s.ToDto()).ToList();
     }

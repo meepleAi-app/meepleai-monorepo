@@ -128,7 +128,7 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
             // Verify game exists
             var game = await _db.Games
                 .Where(g => g.Id.ToString() == gameId)
-                .FirstOrDefaultAsync(cancellationToken);
+                .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
 
             if (game == null)
             {
@@ -141,7 +141,7 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
                 .AsNoTracking()
                 .Where(u => u.Id == userId)
                 .Select(u => new { u.Id, u.Tier, u.Role })
-                .FirstOrDefaultAsync(cancellationToken);
+                .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
 
             if (user == null)
             {
@@ -159,7 +159,7 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
                 user.Id,
                 userTier,
                 userRole,
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
 
             if (!quotaResult.Allowed)
             {
@@ -420,8 +420,10 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
             await UpdateProgressAsync(db, pdfId, ProcessingStep.Extracting, 0, 0, startTime, null, ct).ConfigureAwait(false);
 
             var extractionStopwatch = Stopwatch.StartNew();
-            await using var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-            var extractResult = await _pdfTextExtractor.ExtractPagedTextAsync(fileStream, enableOcrFallback: true, ct).ConfigureAwait(false);
+            var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            await using (fileStream.ConfigureAwait(false))
+            {
+                var extractResult = await _pdfTextExtractor.ExtractPagedTextAsync(fileStream, enableOcrFallback: true, ct).ConfigureAwait(false);
             extractionStopwatch.Stop();
 
             // BGAI-043: Record extraction metrics
@@ -707,6 +709,7 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
             await quotaService.ConfirmQuotaAsync(userId, pdfId, CancellationToken.None).ConfigureAwait(false);
 
             _logger.LogInformation("PDF processing completed for {PdfId}: {ChunkCount} chunks indexed", pdfId, indexResult.IndexedCount);
+            }
         }
         catch (OperationCanceledException)
         {

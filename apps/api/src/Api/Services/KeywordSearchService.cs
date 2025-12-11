@@ -112,7 +112,7 @@ public class KeywordSearchService : IKeywordSearchService
                     new NpgsqlParameter("@gameId", gameIdString),
                     new NpgsqlParameter("@limit", safeLimit)) // Use capped limit
                 .AsNoTracking()
-                .ToListAsync(cancellationToken);
+                .ToListAsync(cancellationToken).ConfigureAwait(false);
 
             // Restore previous timeout
             _dbContext.Database.SetCommandTimeout(previousTimeout);
@@ -206,7 +206,7 @@ public class KeywordSearchService : IKeywordSearchService
                     new NpgsqlParameter("@gameId", gameIdString),
                     new NpgsqlParameter("@limit", safeLimit)) // Use capped limit
                 .AsNoTracking()
-                .ToListAsync(cancellationToken);
+                .ToListAsync(cancellationToken).ConfigureAwait(false);
 
             // Restore previous timeout
             _dbContext.Database.SetCommandTimeout(previousTimeout);

@@ -25,7 +25,7 @@ public class ChatThreadRepository : RepositoryBase, IChatThreadRepository
     {
         var threadEntity = await DbContext.ChatThreads
             .AsNoTracking()
-            .FirstOrDefaultAsync(t => t.Id == id, cancellationToken);
+            .FirstOrDefaultAsync(t => t.Id == id, cancellationToken).ConfigureAwait(false);
 
         return threadEntity != null ? MapToDomain(threadEntity) : null;
     }
@@ -35,7 +35,7 @@ public class ChatThreadRepository : RepositoryBase, IChatThreadRepository
         var threadEntities = await DbContext.ChatThreads
             .AsNoTracking()
             .OrderByDescending(t => t.LastMessageAt)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return threadEntities.Select(MapToDomain).ToList();
     }
@@ -46,7 +46,7 @@ public class ChatThreadRepository : RepositoryBase, IChatThreadRepository
             .AsNoTracking()
             .Where(t => t.UserId == userId)
             .OrderByDescending(t => t.LastMessageAt)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return threadEntities.Select(MapToDomain).ToList();
     }
@@ -57,7 +57,7 @@ public class ChatThreadRepository : RepositoryBase, IChatThreadRepository
             .AsNoTracking()
             .Where(t => t.GameId == gameId)
             .OrderByDescending(t => t.LastMessageAt)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return threadEntities.Select(MapToDomain).ToList();
     }
@@ -68,7 +68,7 @@ public class ChatThreadRepository : RepositoryBase, IChatThreadRepository
             .AsNoTracking()
             .Where(t => t.UserId == userId && t.GameId == gameId)
             .OrderByDescending(t => t.LastMessageAt)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return threadEntities.Select(MapToDomain).ToList();
     }
@@ -79,7 +79,7 @@ public class ChatThreadRepository : RepositoryBase, IChatThreadRepository
             .AsNoTracking()
             .OrderByDescending(t => t.LastMessageAt)
             .Take(limit)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return threadEntities.Select(MapToDomain).ToList();
     }

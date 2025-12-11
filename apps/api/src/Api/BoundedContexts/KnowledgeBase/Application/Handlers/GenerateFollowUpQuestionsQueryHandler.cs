@@ -106,7 +106,7 @@ public sealed class GenerateFollowUpQuestionsQueryHandler
                     result = await _llmService.GenerateJsonAsync<FollowUpQuestionsDto>(
                         systemPrompt,
                         userPrompt,
-                        timeoutCts.Token);
+                        timeoutCts.Token).ConfigureAwait(false);
 
                     if (result == null)
                     {

@@ -18,7 +18,7 @@ public class AuditLogRepository : RepositoryBase, IAuditLogRepository
     {
         var entity = await DbContext.AuditLogs
             .AsNoTracking()
-            .FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
+            .FirstOrDefaultAsync(a => a.Id == id, cancellationToken).ConfigureAwait(false);
 
         return entity != null ? MapToDomain(entity) : null;
     }
@@ -28,7 +28,7 @@ public class AuditLogRepository : RepositoryBase, IAuditLogRepository
         var entities = await DbContext.AuditLogs
             .AsNoTracking()
             .OrderByDescending(a => a.CreatedAt)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return entities.Select(MapToDomain).ToList();
     }
@@ -39,7 +39,7 @@ public class AuditLogRepository : RepositoryBase, IAuditLogRepository
             .AsNoTracking()
             .Where(a => a.UserId == userId)
             .OrderByDescending(a => a.CreatedAt)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return entities.Select(MapToDomain).ToList();
     }
@@ -50,7 +50,7 @@ public class AuditLogRepository : RepositoryBase, IAuditLogRepository
             .AsNoTracking()
             .Where(a => a.Resource == resource)
             .OrderByDescending(a => a.CreatedAt)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return entities.Select(MapToDomain).ToList();
     }

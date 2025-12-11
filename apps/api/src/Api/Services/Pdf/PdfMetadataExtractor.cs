@@ -77,7 +77,7 @@ public class PdfMetadataExtractor : IPdfMetadataExtractor
             }
 
             return metadata;
-        });
+        }).ConfigureAwait(false);
     }
 
     private DateTime? ParsePdfDate(string pdfDate)

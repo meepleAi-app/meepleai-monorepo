@@ -52,7 +52,7 @@ public class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, IndexingR
         // 1. Retrieve PDF document
         var pdf = await _db.PdfDocuments
             .Include(p => p.Game)
-            .FirstOrDefaultAsync(p => p.Id.ToString() == pdfId, cancellationToken);
+            .FirstOrDefaultAsync(p => p.Id.ToString() == pdfId, cancellationToken).ConfigureAwait(false);
 
         if (pdf == null)
         {
@@ -81,7 +81,7 @@ public class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, IndexingR
         // 3. Check if already indexed (for idempotency)
         var pdfGuid = Guid.Parse(pdfId);
         var existingVectorDoc = await _db.Set<VectorDocumentEntity>()
-            .FirstOrDefaultAsync(v => v.PdfDocumentId == pdfGuid, cancellationToken);
+            .FirstOrDefaultAsync(v => v.PdfDocumentId == pdfGuid, cancellationToken).ConfigureAwait(false);
 
         if (existingVectorDoc != null)
         {
@@ -131,7 +131,7 @@ public class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, IndexingR
                 _logger.LogWarning("No chunks created for PDF {PdfId}", pdfId);
                 return await MarkIndexingFailedAsync(existingVectorDoc,
                     "No chunks created from text",
-                    PdfIndexingErrorCode.ChunkingFailed, cancellationToken);
+                    PdfIndexingErrorCode.ChunkingFailed, cancellationToken).ConfigureAwait(false);
             }
 
             _logger.LogInformation("Created {ChunkCount} chunks for PDF {PdfId}", textChunks.Count, pdfId);
@@ -148,7 +148,7 @@ public class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, IndexingR
                     pdfId, embeddingResult.ErrorMessage);
                 return await MarkIndexingFailedAsync(existingVectorDoc,
                     $"Embedding generation failed: {embeddingResult.ErrorMessage}",
-                    PdfIndexingErrorCode.EmbeddingFailed, cancellationToken);
+                    PdfIndexingErrorCode.EmbeddingFailed, cancellationToken).ConfigureAwait(false);
             }
 
             if (embeddingResult.Embeddings.Count != textChunks.Count)
@@ -157,7 +157,7 @@ public class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, IndexingR
                     textChunks.Count, embeddingResult.Embeddings.Count);
                 return await MarkIndexingFailedAsync(existingVectorDoc,
                     "Embedding count mismatch",
-                    PdfIndexingErrorCode.EmbeddingFailed, cancellationToken);
+                    PdfIndexingErrorCode.EmbeddingFailed, cancellationToken).ConfigureAwait(false);
             }
 
             // 6. Prepare document chunks with embeddings
@@ -182,7 +182,7 @@ public class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, IndexingR
                 pdf.GameId.ToString(),
                 pdfId,
                 documentChunks,
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
 
             if (!indexResult.Success)
             {
@@ -190,7 +190,7 @@ public class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, IndexingR
                     pdfId, indexResult.ErrorMessage);
                 return await MarkIndexingFailedAsync(existingVectorDoc,
                     $"Qdrant indexing failed: {indexResult.ErrorMessage}",
-                    PdfIndexingErrorCode.QdrantIndexingFailed, cancellationToken);
+                    PdfIndexingErrorCode.QdrantIndexingFailed, cancellationToken).ConfigureAwait(false);
             }
 
             // 8. Update VectorDocumentEntity to "completed"
@@ -253,7 +253,7 @@ public class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, IndexingR
             _logger.LogError(ex, "Unexpected error indexing PDF {PdfId}", pdfId);
             return await MarkIndexingFailedAsync(existingVectorDoc,
                 $"Unexpected error: {ex.Message}",
-                PdfIndexingErrorCode.UnexpectedError, cancellationToken);
+                PdfIndexingErrorCode.UnexpectedError, cancellationToken).ConfigureAwait(false);
         }
     }
 

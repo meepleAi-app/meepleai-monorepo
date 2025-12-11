@@ -187,3 +187,7 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
 docker compose up -d postgres qdrant redis ollama api web
 ```
 If anything is missing, Docker will complain about unreadable secrets or env files – refer back to this guide for the exact key/value requirements.
+
+## Esempio di utilizzo dell’applicazione
+
+- Quando MeepleAI API viene avviata, il container carica `infra/env/api.env.dev` (o il file corrispondente all’ambiente) per impostare `POSTGRES_HOST`, `OPENROUTER_API_KEY`, `SEQ_URL` e altri parametri. Allo stesso modo, il front-end Next.js legge `infra/env/web.env.dev` per sapere che deve chiamare `http://localhost:8080`, mentre n8n usa `infra/env/n8n.env.dev` per connettersi all’API `http://api:8080` e all’istanza PostgreSQL.

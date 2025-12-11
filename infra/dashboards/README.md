@@ -101,3 +101,7 @@ You can create dashboards in two ways:
 
 - Grafana Dashboard API: https://grafana.com/docs/grafana/latest/developers/http_api/dashboard/
 - Dashboard JSON Schema: https://grafana.com/docs/grafana/latest/dashboards/json-model/
+
+## Esempio di utilizzo dell’applicazione
+
+- Il servizio API MeepleAI espone `/metrics` e il dashboard `api-performance.json` legge direttamente queste metriche per mostrare latenza p95/p99, error rate e throughput. Quando l’API supera soglie critiche del 5xx, questo dashboard, in combinazione con gli alert in `infra/prometheus/alerts/`, avvisa il team e rende visibile il problema nell’interfaccia Grafana dedicata.

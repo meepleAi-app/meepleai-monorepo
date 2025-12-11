@@ -380,6 +380,7 @@ v1Api.MapTestEndpoints();
 
 app.Run();
 
+#pragma warning disable MA0051 // Method is too long - Bootstrap method requires comprehensive validation and error handling
 // Bootstrap: Create initial admin user if database is empty
 static async Task EnsureInitialAdminUserAsync(WebApplication app, MeepleAiDbContext db, IServiceProvider services)
 {
@@ -506,7 +507,9 @@ static async Task EnsureInitialAdminUserAsync(WebApplication app, MeepleAiDbCont
         throw;
     }
 }
+#pragma warning restore MA0051
 
+#pragma warning disable MA0051 // Method is too long - Bootstrap method handles multiple test users with validation
 // K6 Performance Testing: Ensure demo test users exist for testing (Issue #1663)
 static async Task EnsureTestUserExistsAsync(WebApplication app, MeepleAiDbContext db, IServiceProvider services)
 {
@@ -585,6 +588,7 @@ static async Task EnsureTestUserExistsAsync(WebApplication app, MeepleAiDbContex
 
     app.Logger.LogInformation("✓ Demo user seeding complete");
 }
+#pragma warning restore MA0051
 
 // Helper method to detect unique constraint violations across database providers
 static bool IsUniqueConstraintViolation(DbUpdateException ex)

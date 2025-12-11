@@ -317,6 +317,60 @@ public static class AdminUserEndpoints
         .Produces<string>(StatusCodes.Status200OK, "text/csv")
         .Produces(StatusCodes.Status401Unauthorized);
 
+        // Get user activity timeline (ADMIN-USER-ACTIVITY-01 - Issue #911)
+        group.MapGet("/admin/users/{userId}/activity", async (
+            Guid userId,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            string? actionFilter = null,
+            string? resourceFilter = null,
+            DateTime? startDate = null,
+            DateTime? endDate = null,
+            int limit = 100,
+            CancellationToken ct = default) =>
+        {
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
+
+            logger.LogInformation("Admin {AdminId} fetching activity for user {UserId}", session!.User!.Id, userId);
+
+            var query = new Api.BoundedContexts.Administration.Application.Queries.GetUserActivityQuery(
+                UserId: userId,
+                ActionFilter: actionFilter,
+                ResourceFilter: resourceFilter,
+                StartDate: startDate,
+                EndDate: endDate,
+                Limit: limit
+            );
+
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+            logger.LogInformation("Activity timeline retrieved for user {UserId}: {Count} activities", userId, result.Activities.Count);
+
+            return Results.Json(result);
+        })
+        .WithName("GetUserActivity")
+        .WithTags("Admin")
+        .WithSummary("Get user's activity timeline (admin)")
+        .WithDescription(@"Retrieves audit log timeline for any user with optional filtering.
+
+**Issue**: #911 - UserActivityTimeline component backend support.
+
+**Authorization**: Admin only. Allows admins to view activity of any user.
+
+**Query Parameters**:
+- `actionFilter` (optional): Comma-separated list of action types to filter (e.g., 'Login,PasswordChanged')
+- `resourceFilter` (optional): Filter by resource type (e.g., 'User', 'Game')
+- `startDate` (optional): ISO 8601 timestamp - filter logs from this date
+- `endDate` (optional): ISO 8601 timestamp - filter logs until this date
+- `limit` (optional): Maximum number of logs to return (default: 100, max: 500)
+
+**Response**: GetUserActivityResult with filtered activities and total count.")
+        .Produces(200)
+        .Produces(400)
+        .Produces(401)
+        .Produces(403);
+
         return group;
     }
 }

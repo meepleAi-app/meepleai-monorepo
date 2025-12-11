@@ -41,6 +41,7 @@ npm run test:rag-search
 npm run test:chat
 npm run test:games
 npm run test:sessions
+npm run test:infrastructure  # Issue #902: Infrastructure monitoring
 
 # Run full load test
 npm run test:load
@@ -74,19 +75,25 @@ npm run test:spike
 - **Endpoint**: `GET /api/v1/auth/sessions`
 - **Load Profile**: Burst pattern (20 → 150 → 20 over 4 minutes)
 
-### 5. Database Stress (`scenarios/database-stress.js`)
+### 5. Infrastructure Monitoring (`scenarios/infrastructure.js`) - **Issue #902**
+- **Target**: < 1s p95 latency, 100 req/s throughput
+- **Endpoint**: `GET /api/v1/admin/infrastructure/details`
+- **Load Profile**: 100 VUs, 5 minutes (simulates real-time polling)
+- **Tests**: Service health checks, Prometheus metrics, polling behavior
+
+### 6. Database Stress (`scenarios/database-stress.js`)
 - **Target**: Concurrent query handling validation
 - **Tests**: Complex joins, aggregations, concurrent writes
 
-### 6. Redis Cache (`scenarios/redis-cache.js`)
+### 7. Redis Cache (`scenarios/redis-cache.js`)
 - **Target**: Cache hit rates, eviction behavior
 - **Tests**: Read/write patterns, TTL validation
 
-### 7. WebSocket Load (`scenarios/websocket.js`)
+### 8. WebSocket Load (`scenarios/websocket.js`)
 - **Target**: 1000+ concurrent connections
 - **Tests**: Connection stability, message throughput
 
-### 8. HyperDX Load Testing (`hyperdx-ingestion-test.js`)
+### 9. HyperDX Load Testing (`hyperdx-ingestion-test.js`)
 - **Purpose**: Comprehensive HyperDX performance validation (Issues #1565, #1568)
 - **Scenarios**: 
   - Telemetry ingestion (100 users peak)

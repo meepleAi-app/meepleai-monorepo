@@ -474,7 +474,7 @@ public class PromptEvaluationService : IPromptEvaluationService
 
         // Response is clear if it has reasonable sentence structure
         // and either has formatting or is not too long
-        return avgSentenceLength >= 20 && avgSentenceLength <= 200;
+        return avgSentenceLength >= 20 && (hasStructure || avgSentenceLength <= 200);
     }
 
     /// <summary>

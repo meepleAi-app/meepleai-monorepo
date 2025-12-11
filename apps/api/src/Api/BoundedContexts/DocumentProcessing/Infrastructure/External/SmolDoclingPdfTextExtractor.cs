@@ -214,8 +214,8 @@ public class SmolDoclingPdfTextExtractor : IPdfTextExtractor
             {
                 var errorContent = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
                 _logger.LogError(
-                    "[{RequestId}] SmolDocling service error: {StatusCode}",
-                    requestId, response.StatusCode);
+                    "[{RequestId}] SmolDocling service error: {StatusCode} - {ErrorContent}",
+                    requestId, response.StatusCode, errorContent);
 
                 return PagedTextExtractionResult.CreateFailure(
                     $"Service error: {response.StatusCode}");

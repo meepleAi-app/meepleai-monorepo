@@ -177,6 +177,8 @@ public sealed class InvokeAgentCommandHandler
             // 10. Convert to DTO and return
             return AgentResponseDto.FromDomain(result);
         }
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
+        // HANDLER PATTERN: Log agent invocation failures before propagating.
         catch (Exception ex)
         {
             _logger.LogError(
@@ -187,6 +189,7 @@ public sealed class InvokeAgentCommandHandler
 
             throw;
         }
+#pragma warning restore S2139
     }
 
     /// <summary>

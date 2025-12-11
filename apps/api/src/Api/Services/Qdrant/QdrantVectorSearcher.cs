@@ -45,6 +45,10 @@ public class QdrantVectorSearcher : IQdrantVectorSearcher
 
             return searchResults.ToList();
         }
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
+        // INFRASTRUCTURE LOGGING PATTERN: Log exceptions at the infrastructure boundary to provide
+        // debugging context (collection name, operation type, error details) before propagating.
+        // Callers may not have this context, so logging here is intentional.
         catch (ArgumentNullException ex)
         {
             _logger.LogError(ex, "Null argument during search in collection {CollectionName}", collectionName);
@@ -71,6 +75,7 @@ public class QdrantVectorSearcher : IQdrantVectorSearcher
             _logger.LogError(ex, "Operation cancelled during search in collection {CollectionName}", collectionName);
             throw;
         }
+#pragma warning restore S2139
     }
 
     /// <summary>

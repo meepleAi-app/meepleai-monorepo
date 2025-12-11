@@ -482,7 +482,10 @@ static async Task EnsureInitialAdminUserAsync(WebApplication app, MeepleAiDbCont
         db.AuditLogs.Add(auditLog);
         await db.SaveChangesAsync().ConfigureAwait(false);
     }
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
+    // RACE CONDITION PATTERN: Log unexpected unique constraint violations before propagating.
     catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
+#pragma warning restore S2139
     {
         // Race condition: Another instance created the admin user simultaneously
         // Recheck if an admin user now exists
@@ -501,11 +504,14 @@ static async Task EnsureInitialAdminUserAsync(WebApplication app, MeepleAiDbCont
         app.Logger.LogError(ex, "Unique constraint violation but no admin user found");
         throw;
     }
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
+    // BOOTSTRAP PATTERN: Log critical initialization failures before propagating.
     catch (Exception ex)
     {
         app.Logger.LogError(ex, "Failed to create initial admin user");
         throw;
     }
+#pragma warning restore S2139
 }
 #pragma warning restore MA0051
 

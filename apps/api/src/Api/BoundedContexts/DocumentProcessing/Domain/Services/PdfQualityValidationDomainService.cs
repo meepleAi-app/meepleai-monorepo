@@ -145,7 +145,7 @@ public class PdfQualityValidationDomainService
     /// <summary>
     /// Generates actionable recommendation based on quality score
     /// </summary>
-    private static string GenerateRecommendation(double score, ExtractionQuality quality, string source)
+    private static string GenerateRecommendation(double score, ExtractionQuality _, string source)
     {
         if (score >= 0.80)
         {

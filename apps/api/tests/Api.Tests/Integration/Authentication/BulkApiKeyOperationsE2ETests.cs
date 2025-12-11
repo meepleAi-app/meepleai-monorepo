@@ -274,7 +274,11 @@ public sealed class BulkApiKeyOperationsE2ETests : IAsyncLifetime
 
         // Assert: Key can be verified using hash
         var storedKey = await _dbContext!.ApiKeys.FirstAsync(k => k.KeyName == "Verifiable Key", TestCancellationToken);
-        var isValid = ApiKey.VerifyKey(plaintextKey, storedKey.KeyHash);
+
+        // Verify key hash matches (SHA256)
+        var keyBytes = Convert.FromBase64String(plaintextKey);
+        var computedHash = Convert.ToBase64String(System.Security.Cryptography.SHA256.HashData(keyBytes));
+        var isValid = string.Equals(computedHash, storedKey.KeyHash, StringComparison.Ordinal);
 
         isValid.Should().BeTrue();
     }

@@ -51,7 +51,7 @@ public class RequireAuthenticatedUserFilter : IEndpointFilter
         var httpContext = context.HttpContext;
 
         // Check for session OR API key authentication
-        var (authenticated, session, error) = httpContext.TryGetAuthenticatedUser();
+        var (authenticated, _, error) = httpContext.TryGetAuthenticatedUser();
 
         if (!authenticated)
         {

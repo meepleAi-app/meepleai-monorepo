@@ -270,6 +270,61 @@ public static class ApiKeyEndpoints
         })
         .RequireAdminSession(); // Issue #1446: Automatic admin session validation
 
+        // ISSUE-906: Bulk CSV export for API keys
+        group.MapGet("/admin/api-keys/bulk/export", async (HttpContext context, IMediator mediator, ILogger<Program> logger, Guid? userId = null, bool? isActive = null, string? searchTerm = null, CancellationToken ct = default) =>
+        {
+            // Session validated AND Admin role checked by RequireAdminSessionFilter
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+            logger.LogInformation("Admin {AdminId} exporting API keys to CSV (userId filter: {UserId}, isActive: {IsActive}, search: {SearchTerm})",
+                session.User!.Id, userId?.ToString() ?? "none", isActive?.ToString() ?? "none", searchTerm ?? "none");
+
+            var query = new Api.BoundedContexts.Authentication.Application.Queries.BulkExportApiKeysQuery(
+                userId,
+                isActive,
+                searchTerm);
+            var csv = await mediator.Send(query, ct).ConfigureAwait(false);
+
+            var fileName = $"apikeys-export-{DateTime.UtcNow:yyyyMMdd-HHmmss}.csv";
+            
+            return Results.File(
+                System.Text.Encoding.UTF8.GetBytes(csv),
+                "text/csv",
+                fileName);
+        })
+        .RequireAdminSession(); // Issue #1446: Automatic admin session validation
+
+        // ISSUE-906: Bulk CSV import for API keys
+        group.MapPost("/admin/api-keys/bulk/import", async (HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
+        {
+            // Session validated AND Admin role checked by RequireAdminSessionFilter
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+            // Read CSV content from request body
+            using var reader = new StreamReader(context.Request.Body);
+            var csvContent = await reader.ReadToEndAsync(ct).ConfigureAwait(false);
+
+            if (string.IsNullOrWhiteSpace(csvContent))
+            {
+                return Results.BadRequest(new { error = "CSV content cannot be empty" });
+            }
+
+            logger.LogInformation("Admin {AdminId} importing API keys from CSV ({Size} bytes)",
+                session.User!.Id, System.Text.Encoding.UTF8.GetByteCount(csvContent));
+
+            var command = new Api.BoundedContexts.Authentication.Application.Commands.ApiKeys.BulkImportApiKeysCommand(
+                csvContent,
+                session.User!.Id);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+            logger.LogInformation("Bulk API key import completed: {SuccessCount} succeeded, {FailedCount} failed",
+                result.SuccessCount, result.FailedCount);
+
+            return Results.Json(result);
+        })
+        .RequireAdminSession() // Issue #1446: Automatic admin session validation
+        .DisableAntiforgery(); // CSV upload requires form data
+
         return group;
     }
 }

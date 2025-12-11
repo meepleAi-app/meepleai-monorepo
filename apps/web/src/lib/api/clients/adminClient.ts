@@ -48,6 +48,22 @@ import {
   type ImportWorkflowResponse,
   type DashboardStats,
   type RecentActivityDto,
+  ApiKeyDtoSchema,
+  ApiKeyUsageStatsDtoSchema,
+  ApiKeyWithStatsDtoSchema,
+  CreateApiKeyRequestSchema,
+  CreateApiKeyResponseSchema,
+  UpdateApiKeyRequestSchema,
+  GetAllApiKeysWithStatsResponseSchema,
+  BulkImportApiKeysResultSchema,
+  type ApiKeyDto,
+  type ApiKeyUsageStatsDto,
+  type ApiKeyWithStatsDto,
+  type CreateApiKeyRequest,
+  type CreateApiKeyResponse,
+  type UpdateApiKeyRequest,
+  type GetAllApiKeysWithStatsResponse,
+  type BulkImportApiKeysResult,
 } from '../schemas';
 
 export interface CreateAdminClientParams {
@@ -404,6 +420,89 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
      */
     async getInfrastructureDetails() {
       return httpClient.get('/api/v1/admin/infrastructure/details', InfrastructureDetailsSchema);
+    },
+
+    // ========== API Key Management (Issue #908) ==========
+
+    /**
+     * Get all API keys with usage statistics (admin only)
+     * GET /api/v1/admin/api-keys/stats
+     */
+    async getApiKeysWithStats(params?: {
+      userId?: string;
+      includeRevoked?: boolean;
+    }): Promise<GetAllApiKeysWithStatsResponse> {
+      const queryParams = new URLSearchParams();
+      if (params?.userId) queryParams.set('userId', params.userId);
+      if (params?.includeRevoked !== undefined)
+        queryParams.set('includeRevoked', params.includeRevoked.toString());
+
+      const query = queryParams.toString();
+      const result = await httpClient.get(
+        `/api/v1/admin/api-keys/stats${query ? `?${query}` : ''}`,
+        GetAllApiKeysWithStatsResponseSchema
+      );
+
+      if (!result) {
+        throw new Error('Failed to fetch API keys');
+      }
+
+      return result;
+    },
+
+    /**
+     * Delete API key permanently (admin only)
+     * DELETE /api/v1/admin/api-keys/{keyId}
+     */
+    async deleteApiKey(keyId: string): Promise<void> {
+      await httpClient.delete(`/api/v1/admin/api-keys/${keyId}`);
+    },
+
+    /**
+     * Bulk export API keys to CSV (admin only)
+     * GET /api/v1/admin/api-keys/bulk/export
+     */
+    async exportApiKeysToCSV(params?: {
+      userId?: string;
+      isActive?: boolean;
+      searchTerm?: string;
+    }): Promise<Blob> {
+      const queryParams = new URLSearchParams();
+      if (params?.userId) queryParams.set('userId', params.userId);
+      if (params?.isActive !== undefined) queryParams.set('isActive', params.isActive.toString());
+      if (params?.searchTerm) queryParams.set('searchTerm', params.searchTerm);
+
+      const query = queryParams.toString();
+      const response = await fetch(
+        `${httpClient['baseUrl']}/api/v1/admin/api-keys/bulk/export${query ? `?${query}` : ''}`,
+        {
+          method: 'GET',
+          credentials: 'include',
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Export failed: ${response.statusText}`);
+      }
+
+      return response.blob();
+    },
+
+    /**
+     * Bulk import API keys from CSV (admin only)
+     * POST /api/v1/admin/api-keys/bulk/import
+     */
+    async importApiKeysFromCSV(csvContent: string): Promise<BulkImportApiKeysResult> {
+      return httpClient.post(
+        '/api/v1/admin/api-keys/bulk/import',
+        csvContent,
+        BulkImportApiKeysResultSchema,
+        {
+          headers: {
+            'Content-Type': 'text/csv',
+          },
+        }
+      );
     },
   };
 }

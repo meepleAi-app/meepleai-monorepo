@@ -53,6 +53,16 @@ public class ApiKeyRepository : RepositoryBase, IApiKeyRepository
         return apiKeyEntities.Select(MapToDomain).ToList();
     }
 
+    public async Task<List<ApiKey>> GetAllAsync(CancellationToken cancellationToken = default)
+    {
+        var apiKeyEntities = await DbContext.ApiKeys
+            .AsNoTracking()
+            .OrderByDescending(k => k.CreatedAt)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+        return apiKeyEntities.Select(MapToDomain).ToList();
+    }
+
     public async Task AddAsync(ApiKey apiKey, CancellationToken cancellationToken = default)
     {
         // Collect domain events BEFORE mapping to persistence entity

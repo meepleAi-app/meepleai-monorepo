@@ -51,6 +51,49 @@ public static class ValidationExtensions
     }
 
     /// <summary>
+    /// Validates that a nullable GUID is not null or empty.
+    /// </summary>
+    /// <param name="value">The nullable GUID value to validate.</param>
+    /// <param name="parameterName">The name of the parameter being validated.</param>
+    /// <param name="message">Optional custom error message.</param>
+    /// <returns>A Result containing the validated GUID or an error.</returns>
+    public static Result<Guid> NotNullOrEmpty(
+        this Guid? value,
+        string parameterName,
+        string? message = null)
+    {
+        if (value is null || value == Guid.Empty)
+        {
+            return Result<Guid>.Failure(Error.Validation(
+                message ?? $"{parameterName} cannot be null or empty"));
+        }
+
+        return Result<Guid>.Success(value.Value);
+    }
+
+    /// <summary>
+    /// Validates that a collection is not null or empty.
+    /// </summary>
+    /// <typeparam name="T">The collection element type.</typeparam>
+    /// <param name="value">The collection to validate.</param>
+    /// <param name="parameterName">The name of the parameter being validated.</param>
+    /// <param name="message">Optional custom error message.</param>
+    /// <returns>A Result containing the validated collection or an error.</returns>
+    public static Result<IEnumerable<T>> NotNullOrEmpty<T>(
+        this IEnumerable<T>? value,
+        string parameterName,
+        string? message = null)
+    {
+        if (value is null || !value.Any())
+        {
+            return Result<IEnumerable<T>>.Failure(Error.Validation(
+                message ?? $"{parameterName} cannot be null or empty"));
+        }
+
+        return Result<IEnumerable<T>>.Success(value);
+    }
+
+    /// <summary>
     /// Validates that a string has a minimum length.
     /// </summary>
     /// <param name="value">The string value to validate.</param>
@@ -140,26 +183,6 @@ public static class ValidationExtensions
         return Result<Guid>.Success(value);
     }
 
-    /// <summary>
-    /// Validates that a nullable GUID is not null or empty.
-    /// </summary>
-    /// <param name="value">The nullable GUID value to validate.</param>
-    /// <param name="parameterName">The name of the parameter being validated.</param>
-    /// <param name="message">Optional custom error message.</param>
-    /// <returns>A Result containing the validated GUID or an error.</returns>
-    public static Result<Guid> NotNullOrEmpty(
-        this Guid? value,
-        string parameterName,
-        string? message = null)
-    {
-        if (value is null || value == Guid.Empty)
-        {
-            return Result<Guid>.Failure(Error.Validation(
-                message ?? $"{parameterName} cannot be null or empty"));
-        }
-
-        return Result<Guid>.Success(value.Value);
-    }
     /// <summary>
     /// Validates that a number is greater than a minimum value.
     /// </summary>
@@ -280,27 +303,6 @@ public static class ValidationExtensions
         }
 
         return Result<T>.Success(value);
-    }
-    /// <summary>
-    /// Validates that a collection is not null or empty.
-    /// </summary>
-    /// <typeparam name="T">The collection element type.</typeparam>
-    /// <param name="value">The collection to validate.</param>
-    /// <param name="parameterName">The name of the parameter being validated.</param>
-    /// <param name="message">Optional custom error message.</param>
-    /// <returns>A Result containing the validated collection or an error.</returns>
-    public static Result<IEnumerable<T>> NotNullOrEmpty<T>(
-        this IEnumerable<T>? value,
-        string parameterName,
-        string? message = null)
-    {
-        if (value is null || !value.Any())
-        {
-            return Result<IEnumerable<T>>.Failure(Error.Validation(
-                message ?? $"{parameterName} cannot be null or empty"));
-        }
-
-        return Result<IEnumerable<T>>.Success(value);
     }
 
     /// <summary>

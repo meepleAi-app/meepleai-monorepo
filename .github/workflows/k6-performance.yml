@@ -124,13 +124,14 @@ jobs:
           fi
           echo "✅ Test database verified"
 
-      # Issue #1817: Use --connection flag to explicitly pass connection string
-      # This prevents EF Core from defaulting to incorrect 'root' user
+      # Issue #2020: MeepleAiDbContextFactory requires ConnectionStrings__Postgres env var
+      # The --connection flag is ignored when IDesignTimeDbContextFactory exists
+      # EF Core factory reads from Environment.GetEnvironmentVariable() not command args
       - name: Apply migrations
         working-directory: apps/api/src/Api
-        run: |
-          dotnet ef database update --configuration Release \
-            --connection "${{ secrets.TEST_DB_CONNECTION_STRING || 'Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=postgres' }}"
+        run: dotnet ef database update --configuration Release
+        env:
+          ConnectionStrings__Postgres: ${{ secrets.TEST_DB_CONNECTION_STRING || 'Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=postgres' }}
 
       # Issue #1663: Test user is now seeded automatically on API startup via EnsureTestUserExistsAsync
       # No need for separate seeding step - reduces workflow complexity and eliminates race conditions

@@ -8,15 +8,44 @@
 2025-12-11 03:19:58.830 UTC [83] FATAL:  role "root" does not exist
 ```
 
-K6 performance tests fail consistently during the "Wait for API to be ready" step. PostgreSQL logs show repeated connection attempts with user "root" (GitHub Actions default) instead of "postgres".
+K6 performance tests fail during both "Apply migrations" and "Wait for API to be ready" steps. PostgreSQL logs show repeated connection attempts with user "root" (GitHub Actions default) instead of "postgres".
 
-### Root Cause
-The `/health` endpoint may trigger EF Core DbContext initialization during startup. Without `ConnectionStrings__Postgres` environment variable in the "Wait for API" step, EF Core defaults to the system user ("root" in GitHub Actions), causing authentication failures.
+### Root Cause (Deep Investigation)
+**Primary Cause**: `IDesignTimeDbContextFactory<T>` implementation ignores `--connection` flag.
+
+The `dotnet ef database update --connection` flag is **IGNORED** when a design-time factory exists:
+1. EF Core finds `MeepleAiDbContextFactory` implementing `IDesignTimeDbContextFactory<MeepleAiDbContext>`
+2. Calls `CreateDbContext(string[] args)` method
+3. **The factory reads ONLY from `Environment.GetEnvironmentVariable()`**, NOT from `args[]`
+4. Without env var, factory throws exception and defaults to system user ("root")
+
+**Evidence from Code** (`MeepleAiDbContextFactory.cs` line 29-33):
+```csharp
+var connectionString = Environment.GetEnvironmentVariable("CONNECTIONSTRINGS__POSTGRES")
+    ?? Environment.GetEnvironmentVariable("POSTGRES_CONNECTION_STRING")
+    ?? throw new InvalidOperationException(
+        "Database connection string not configured. " +
+        "Set CONNECTIONSTRINGS__POSTGRES or POSTGRES_CONNECTION_STRING environment variable.");
+```
+
+**Why Issue #1817 Solution Was Incomplete**:
+- Issue #1817 added `--connection` flag assuming it would work
+- Flag is passed to EF Core CLI but factory **doesn't read it**
+- Factory pattern takes precedence over command-line arguments
 
 ### Solution (Fixed 2025-12-11)
-Add `ConnectionStrings__Postgres` environment variable to the "Wait for API to be ready" step:
+**Phase 1**: Add `ConnectionStrings__Postgres` to "Wait for API to be ready" step (PR #2057)
+**Phase 2**: Remove `--connection` flag, use env var for "Apply migrations" (Option C)
 
 ```yaml
+# Apply migrations - Use env var (NOT --connection flag)
+- name: Apply migrations
+  working-directory: apps/api/src/Api
+  run: dotnet ef database update --configuration Release
+  env:
+    ConnectionStrings__Postgres: ${{ secrets.TEST_DB_CONNECTION_STRING || '...' }}
+
+# Wait for API to be ready
 - name: Wait for API to be ready
   run: |
     for i in {1..30}; do
@@ -30,13 +59,24 @@ Add `ConnectionStrings__Postgres` environment variable to the "Wait for API to b
     echo "❌ API failed to start"
     exit 1
   env:
-    ConnectionStrings__Postgres: ${{ secrets.TEST_DB_CONNECTION_STRING || 'Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=postgres' }}
+    ConnectionStrings__Postgres: ${{ secrets.TEST_DB_CONNECTION_STRING || '...' }}
 ```
+
+**Why Option C (env var only) Over Option A (flag + env var)**:
+- Option A = Redundant (flag doesn't work anyway)
+- Option B = Modify factory code (higher risk, production change)
+- **Option C = Clean, single source of truth, aligns with existing pattern**
 
 ### Impact
 - **Duration**: 10+ consecutive nightly runs failed (2025-12-01 to 2025-12-11)
 - **Severity**: P1-High (blocks production readiness monitoring)
-- **Resolution Time**: ~1 hour (analysis + fix + validation)
+- **Resolution Time**: Phase 1 (~1 hour), Phase 2 (~2 hours investigation + fix)
+
+### Key Learnings
+1. **EF Core Design-Time Factories Take Precedence**: Command-line flags like `--connection` are ignored when `IDesignTimeDbContextFactory<T>` exists
+2. **Environment Variables Are Authoritative**: EF Core factories read from `Environment.GetEnvironmentVariable()`, not command args
+3. **Test All Assumptions**: Issue #1817 assumed `--connection` would work without verifying factory behavior
+4. **Consistent Patterns Win**: Using env vars across ALL steps (Build, Migrations, Start, Wait) prevents confusion
 
 ### Validation
 1. ✅ Manual workflow dispatch with `test_type=smoke`

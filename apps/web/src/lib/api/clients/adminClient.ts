@@ -27,6 +27,7 @@ import {
   DashboardStatsSchema,
   RecentActivityDtoSchema,
   InfrastructureDetailsSchema,
+  GetUserActivityResultSchema,
   type CreateUserRequest,
   type UpdateUserRequest,
   type AdminUser,
@@ -48,6 +49,8 @@ import {
   type ImportWorkflowResponse,
   type DashboardStats,
   type RecentActivityDto,
+  type GetUserActivityResult,
+  type UserActivityFilters,
   ApiKeyDtoSchema,
   ApiKeyUsageStatsDtoSchema,
   ApiKeyWithStatsDtoSchema,
@@ -503,6 +506,31 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
           },
         }
       );
+    },
+
+    // ========== User Activity Timeline (Issue #911) ==========
+
+    /**
+     * Get user activity timeline (admin - any user)
+     * GET /api/v1/admin/users/{userId}/activity
+     */
+    async getUserActivity(
+      userId: string,
+      filters?: UserActivityFilters
+    ): Promise<GetUserActivityResult> {
+      const params = new URLSearchParams();
+      if (filters?.actionFilter) params.append('actionFilter', filters.actionFilter);
+      if (filters?.resourceFilter) params.append('resourceFilter', filters.resourceFilter);
+      if (filters?.startDate) params.append('startDate', filters.startDate.toISOString());
+      if (filters?.endDate) params.append('endDate', filters.endDate.toISOString());
+      if (filters?.limit !== undefined) params.append('limit', filters.limit.toString());
+
+      const query = params.toString();
+      const result = await httpClient.get(
+        `/api/v1/admin/users/${userId}/activity${query ? `?${query}` : ''}`,
+        GetUserActivityResultSchema
+      );
+      return result ?? { activities: [], totalCount: 0 };
     },
   };
 }

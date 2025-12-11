@@ -57,6 +57,9 @@ import {
   CreateApiKeyResponseSchema,
   ListApiKeysResponseSchema,
   ApiKeyDtoSchema,
+  GetUserActivityResultSchema,
+  type GetUserActivityResult,
+  type UserActivityFilters,
 } from '../schemas';
 
 export interface CreateAuthClientParams {
@@ -400,6 +403,28 @@ export function createAuthClient({ httpClient }: CreateAuthClientParams) {
      */
     async revokeApiKey(keyId: string): Promise<void> {
       await httpClient.delete(`/api/v1/api-keys/${encodeURIComponent(keyId)}`);
+    },
+
+    // ========== User Activity Timeline (Issue #911) ==========
+
+    /**
+     * Get current user's activity timeline
+     * GET /api/v1/users/me/activity
+     */
+    async getMyActivity(filters?: UserActivityFilters): Promise<GetUserActivityResult> {
+      const params = new URLSearchParams();
+      if (filters?.actionFilter) params.append('actionFilter', filters.actionFilter);
+      if (filters?.resourceFilter) params.append('resourceFilter', filters.resourceFilter);
+      if (filters?.startDate) params.append('startDate', filters.startDate.toISOString());
+      if (filters?.endDate) params.append('endDate', filters.endDate.toISOString());
+      if (filters?.limit !== undefined) params.append('limit', filters.limit.toString());
+
+      const query = params.toString();
+      const result = await httpClient.get(
+        `/api/v1/users/me/activity${query ? `?${query}` : ''}`,
+        GetUserActivityResultSchema
+      );
+      return result ?? { activities: [], totalCount: 0 };
     },
   };
 }

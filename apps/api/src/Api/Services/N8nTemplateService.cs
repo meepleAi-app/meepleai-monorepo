@@ -553,7 +553,7 @@ public class N8NTemplateService
         return CryptographyHelper.ComputeSha256HashBytes(key);
     }
     // Internal model for deserializing template JSON files
-    private class WorkflowTemplateFile
+    private sealed class WorkflowTemplateFile
     {
         public string Id { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
@@ -569,7 +569,7 @@ public class N8NTemplateService
         public object Workflow { get; set; } = new();
     }
 
-    private class TemplateParameter
+    private sealed class TemplateParameter
     {
         public string Name { get; set; } = string.Empty;
         public string Type { get; set; } = "string";

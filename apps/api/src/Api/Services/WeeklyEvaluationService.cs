@@ -112,9 +112,16 @@ public class WeeklyEvaluationService : BackgroundService
             _config.ReportWindowDays);
 
         // Wait before first run to allow application to fully start
-        var initialDelay = TimeSpan.FromMinutes(_config.InitialDelayMinutes);
-        _logger.LogInformation("Waiting {Minutes} minutes before first evaluation", _config.InitialDelayMinutes);
-        await Task.Delay(initialDelay, _timeProvider, stoppingToken).ConfigureAwait(false);
+        var initialDelay = TimeSpan.FromMinutes(Math.Max(0, _config.InitialDelayMinutes));
+        if (initialDelay > TimeSpan.Zero)
+        {
+            _logger.LogInformation("Waiting {Minutes} minutes before first evaluation", _config.InitialDelayMinutes);
+            await Task.Delay(initialDelay, stoppingToken).ConfigureAwait(false);
+        }
+        else
+        {
+            _logger.LogInformation("Initial delay disabled; running first evaluation immediately");
+        }
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -141,7 +148,7 @@ public class WeeklyEvaluationService : BackgroundService
             // Wait for the configured interval before next run
             var interval = TimeSpan.FromDays(_config.IntervalDays);
             _logger.LogInformation("Next weekly evaluation in {Days} days", _config.IntervalDays);
-            await Task.Delay(interval, _timeProvider, stoppingToken).ConfigureAwait(false);
+            await Task.Delay(interval, stoppingToken).ConfigureAwait(false);
         }
 
         _logger.LogInformation("Weekly evaluation service stopped");
@@ -372,4 +379,5 @@ public class WeeklyEvaluationService : BackgroundService
                 ragReport.PassedQualityGates ? "PASSED" : "FAILED");
         }
     }
+
 }

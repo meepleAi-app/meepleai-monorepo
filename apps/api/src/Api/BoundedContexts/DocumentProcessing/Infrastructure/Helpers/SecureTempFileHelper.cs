@@ -1,36 +1,36 @@
+using System.Security.Cryptography;
+
 namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.Helpers;
 
 /// <summary>
-/// Helper for secure temporary file creation.
-/// Addresses S5445: 'Path.GetTempFileName()' is insecure.
-/// Uses Path.GetRandomFileName() with dedicated subdirectory for security.
+/// Helper class for secure temporary file operations.
+/// Addresses S5445: Uses Path.GetRandomFileName() instead of Path.GetTempFileName()
+/// to prevent TOCTOU (Time-of-check to time-of-use) race condition vulnerabilities.
 /// </summary>
 public static class SecureTempFileHelper
 {
     private const string TempSubdirectory = "meepleai-pdf";
 
     /// <summary>
-    /// Creates a secure temporary file path.
-    /// Unlike Path.GetTempFileName(), this approach:
-    /// - Uses cryptographically random file names (Path.GetRandomFileName)
-    /// - Creates files in a dedicated subdirectory for isolation
-    /// - Does not create the file (caller creates with proper permissions)
+    /// Creates a secure temporary file path using cryptographically random filename.
+    /// Does NOT create the file - caller is responsible for file creation.
     /// </summary>
-    /// <param name="extension">Optional file extension (e.g., ".pdf"). Defaults to ".tmp".</param>
-    /// <returns>Full path to the secure temporary file location.</returns>
+    /// <param name="extension">File extension (default: .tmp). Will be prefixed with '.' if missing.</param>
+    /// <returns>Full path to a non-existent temporary file with random name.</returns>
     public static string CreateSecureTempFilePath(string extension = ".tmp")
     {
-        // Ensure extension starts with a dot
+        // Normalize extension
         if (!string.IsNullOrEmpty(extension) && !extension.StartsWith('.'))
         {
             extension = "." + extension;
         }
 
-        // Create dedicated subdirectory for isolation
+        // Use dedicated subdirectory for easier cleanup
         var tempDir = Path.Combine(Path.GetTempPath(), TempSubdirectory);
         Directory.CreateDirectory(tempDir);
 
-        // Use cryptographically random file name (S5445 fix)
+        // Path.GetRandomFileName() generates a cryptographically strong random 11-char name
+        // Format: xxxxxxxx.xxx (8 chars + . + 3 chars)
         var randomFileName = Path.GetRandomFileName();
         var fileNameWithExtension = Path.ChangeExtension(randomFileName, extension);
 
@@ -38,69 +38,51 @@ public static class SecureTempFileHelper
     }
 
     /// <summary>
-    /// Creates a secure temporary file and returns an open FileStream.
-    /// The file is created with exclusive access to prevent race conditions.
+    /// Creates a secure temporary file and returns both path and an open stream.
+    /// Uses FileMode.CreateNew to ensure atomic creation (fails if file exists).
     /// </summary>
-    /// <param name="extension">Optional file extension (e.g., ".pdf"). Defaults to ".tmp".</param>
-    /// <returns>Open FileStream to the secure temporary file.</returns>
-    public static FileStream CreateSecureTempFile(string extension = ".tmp")
+    /// <param name="extension">File extension (default: .tmp).</param>
+    /// <returns>Tuple of file path and open FileStream. Caller must dispose the stream.</returns>
+    public static (string FilePath, FileStream Stream) CreateSecureTempFile(string extension = ".tmp")
     {
         var filePath = CreateSecureTempFilePath(extension);
 
-        // Create file with exclusive access (prevents TOCTOU race conditions)
-        return new FileStream(
-            filePath,
-            FileMode.CreateNew,
-            FileAccess.ReadWrite,
-            FileShare.None,
-            bufferSize: 4096,
-            FileOptions.DeleteOnClose
-        );
-    }
-
-    /// <summary>
-    /// Creates a secure temporary file that persists after the stream is closed.
-    /// Caller is responsible for cleanup via CleanupTempFile.
-    /// </summary>
-    /// <param name="extension">Optional file extension (e.g., ".pdf"). Defaults to ".tmp".</param>
-    /// <returns>Tuple of (FileStream, FilePath) for the secure temporary file.</returns>
-    public static (FileStream Stream, string Path) CreatePersistentSecureTempFile(string extension = ".tmp")
-    {
-        var filePath = CreateSecureTempFilePath(extension);
-
-        // Create file with exclusive access during write, allow read after
+        // FileMode.CreateNew ensures atomic creation - fails if file already exists
+        // This eliminates TOCTOU race condition
         var stream = new FileStream(
             filePath,
             FileMode.CreateNew,
             FileAccess.ReadWrite,
-            FileShare.Read,
-            bufferSize: 4096
-        );
+            FileShare.None,
+            bufferSize: 81920,
+            useAsync: true);
 
-        return (stream, filePath);
+        return (filePath, stream);
     }
 
     /// <summary>
-    /// Cleans up the MeepleAI temp directory.
-    /// Safe to call periodically for maintenance.
+    /// Safely cleans up a temporary file with proper error handling.
+    /// Failures are silently ignored (cleanup is best-effort).
     /// </summary>
-    public static void CleanupTempDirectory()
+    /// <param name="filePath">Path to the temporary file to delete.</param>
+    public static void CleanupTempFile(string? filePath)
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), TempSubdirectory);
-        if (Directory.Exists(tempDir))
+        if (string.IsNullOrEmpty(filePath))
         {
-            try
+            return;
+        }
+
+        try
+        {
+            if (File.Exists(filePath))
             {
-                Directory.Delete(tempDir, recursive: true);
+                File.Delete(filePath);
             }
-            catch (IOException)
-            {
-                // Directory may be in use, ignore
-            }
-            catch (UnauthorizedAccessException)
-            {
-                // Insufficient permissions, ignore
-            }
+        }
+        catch
+        {
+            // Best-effort cleanup - ignore errors
+            // OS will eventually clean temp directory
         }
     }
 }

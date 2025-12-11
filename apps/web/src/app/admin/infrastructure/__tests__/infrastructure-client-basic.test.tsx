@@ -9,7 +9,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { InfrastructureClient } from '../infrastructure-client';
 import { api } from '@/lib/api';
-import type { InfrastructureDetails } from '@/lib/api';
+import { createHealthyInfraData } from './helpers/test-utils';
 
 // Mock next/navigation
 vi.mock('next/navigation', () => ({
@@ -19,6 +19,11 @@ vi.mock('next/navigation', () => ({
     back: vi.fn(),
   }),
   usePathname: () => '/admin/infrastructure',
+}));
+
+// Mock AdminLayout
+vi.mock('@/components/admin/AdminLayout', () => ({
+  AdminLayout: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
 // Mock API
@@ -38,38 +43,7 @@ vi.mock('sonner', () => ({
   },
 }));
 
-const mockData: InfrastructureDetails = {
-  overall: {
-    state: 'Healthy',
-    totalServices: 2,
-    healthyServices: 2,
-    degradedServices: 0,
-    unhealthyServices: 0,
-    checkedAt: new Date().toISOString(),
-  },
-  services: [
-    {
-      serviceName: 'postgres',
-      state: 'Healthy',
-      errorMessage: null,
-      checkedAt: new Date().toISOString(),
-      responseTime: '00:00:00.0150000',
-    },
-    {
-      serviceName: 'redis',
-      state: 'Healthy',
-      errorMessage: null,
-      checkedAt: new Date().toISOString(),
-      responseTime: '00:00:00.0020000',
-    },
-  ],
-  prometheusMetrics: {
-    apiRequestsLast24h: 15234,
-    avgLatencyMs: 125.4,
-    errorRate: 0.012,
-    llmCostLast24h: 3.45,
-  },
-};
+const mockData = createHealthyInfraData();
 
 describe('InfrastructureClient - Basic Tests', () => {
   beforeEach(() => {
@@ -104,6 +78,7 @@ describe('InfrastructureClient - Basic Tests', () => {
 
     await waitFor(() => {
       // "Sano" appears multiple times (overall health + service badges)
+      // Use getAllByText to verify at least one exists
       const healthElements = screen.getAllByText('Sano');
       expect(healthElements.length).toBeGreaterThan(0);
     });
@@ -115,7 +90,8 @@ describe('InfrastructureClient - Basic Tests', () => {
     render(<InfrastructureClient />);
 
     await waitFor(() => {
-      // Component uses .toLocaleString() - Italian locale uses "." as thousands separator
+      // Component uses .toLocaleString() which formats differently per locale
+      // Italian locale uses "." as thousands separator: 15.234
       expect(screen.getByText(/15[.,]234/)).toBeInTheDocument(); // API requests
       expect(screen.getByText(/125\.4\s*ms/)).toBeInTheDocument(); // Latency
     });

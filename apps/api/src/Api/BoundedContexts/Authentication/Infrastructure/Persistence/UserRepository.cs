@@ -228,7 +228,8 @@ public class UserRepository : RepositoryBase, IUserRepository
             entity.EmailNotifications,
             entity.DataRetentionDays);
 
-        // Reconstruct 2FA state using internal hydration method (S3011 fix - no reflection)
+        // S3011 fix: Use internal hydration methods instead of reflection
+        // Reconstruct 2FA state
         if (entity.IsTwoFactorEnabled && !string.IsNullOrEmpty(entity.TotpSecretEncrypted))
         {
             var totpSecret = TotpSecret.FromEncrypted(entity.TotpSecretEncrypted);
@@ -238,11 +239,11 @@ public class UserRepository : RepositoryBase, IUserRepository
                 .Select(bc => BackupCode.FromHashed(bc.CodeHash, bc.IsUsed, bc.UsedAt))
                 .ToList();
 
-            // Use internal method instead of reflection (S3011 fix)
+            // Use internal method instead of reflection (S3011 compliance)
             user.Restore2FAState(totpSecret, entity.IsTwoFactorEnabled, entity.TwoFactorEnabledAt, backupCodes);
         }
 
-        // Reconstruct OAuth accounts using internal hydration method (S3011 fix - no reflection)
+        // Reconstruct OAuth accounts collection
         if (entity.OAuthAccounts.Any())
         {
             var oauthAccounts = entity.OAuthAccounts.Select(oauthEntity => new OAuthAccount(
@@ -255,7 +256,7 @@ public class UserRepository : RepositoryBase, IUserRepository
                 oauthEntity.TokenExpiresAt
             )).ToList();
 
-            // Use internal method instead of reflection (S3011 fix)
+            // Use internal method instead of reflection (S3011 compliance)
             user.RestoreOAuthAccounts(oauthAccounts);
         }
 

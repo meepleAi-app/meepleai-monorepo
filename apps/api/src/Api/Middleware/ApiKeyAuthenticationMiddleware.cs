@@ -27,7 +27,9 @@ public class ApiKeyAuthenticationMiddleware
     public async Task InvokeAsync(
         HttpContext context,
         ApiKeyAuthenticationService apiKeyService,
-        ApiKeyCookieService apiKeyCookieService)
+        ApiKeyCookieService apiKeyCookieService,
+        Api.BoundedContexts.Authentication.Infrastructure.Persistence.IApiKeyRepository apiKeyRepository,
+        Api.SharedKernel.Infrastructure.Persistence.IUnitOfWork unitOfWork)
     {
         // Only process /api/* paths (skip health checks, swagger, etc.)
         if (!context.Request.Path.StartsWithSegments("/api"))
@@ -103,6 +105,36 @@ public class ApiKeyAuthenticationMiddleware
                     result.UserId,
                     result.ApiKeyId,
                     LogValueSanitizer.SanitizePath(context.Request.Path));
+
+                // Record API key usage (async, fire-and-forget)
+                // ISSUE-904: Track API key usage for analytics and auditing
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        if (Guid.TryParse(result.ApiKeyId, out var apiKeyGuid) && Guid.TryParse(result.UserId, out var userGuid))
+                        {
+                            // Get all user's keys and find the one used
+                            var apiKeys = await apiKeyRepository.GetByUserIdAsync(userGuid).ConfigureAwait(false);
+                            var apiKey = apiKeys.FirstOrDefault(k => k.Id == apiKeyGuid);
+                            
+                            if (apiKey != null)
+                            {
+                                var endpoint = context.Request.Path.ToString();
+                                var ipAddress = context.Connection.RemoteIpAddress?.ToString();
+                                var userAgent = context.Request.Headers.UserAgent.ToString();
+
+                                apiKey.RecordUsage(endpoint, ipAddress, userAgent);
+                                await unitOfWork.SaveChangesAsync().ConfigureAwait(false);
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // Log but don't throw - usage tracking should not break requests
+                        _logger.LogError(ex, "Failed to record API key usage for ApiKeyId: {ApiKeyId}", result.ApiKeyId);
+                    }
+                });
 
                 await _next(context).ConfigureAwait(false);
                 return;

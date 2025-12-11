@@ -23,6 +23,7 @@ public class ApiKeyEntityConfiguration : IEntityTypeConfiguration<ApiKeyEntity>
         builder.Property(e => e.RevokedAt);
         builder.Property(e => e.RevokedBy).HasMaxLength(64);
         builder.Property(e => e.Metadata).HasMaxLength(4096);
+        builder.Property(e => e.UsageCount).IsRequired().HasDefaultValue(0);
         builder.HasOne(e => e.User)
             .WithMany()
             .HasForeignKey(e => e.UserId)

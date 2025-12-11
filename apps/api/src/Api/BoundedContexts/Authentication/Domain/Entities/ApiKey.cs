@@ -25,6 +25,7 @@ public sealed class ApiKey : AggregateRoot<Guid>
     public Guid? RevokedBy { get; private set; }
     public bool IsActive { get; private set; }
     public string? Metadata { get; private set; }
+    public int UsageCount { get; private set; }
 
     // Navigation property for EF Core
     public User? User { get; private set; }
@@ -129,6 +130,32 @@ public sealed class ApiKey : AggregateRoot<Guid>
     public void MarkAsUsed()
     {
         LastUsedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Records usage of this API key and raises a domain event.
+    /// Increments usage counter and updates last used timestamp.
+    /// </summary>
+    public void RecordUsage(
+        string endpoint,
+        string? ipAddress = null,
+        string? userAgent = null,
+        DateTime? usedAt = null)
+    {
+        if (string.IsNullOrWhiteSpace(endpoint))
+            throw new ArgumentException("Endpoint cannot be empty", nameof(endpoint));
+
+        var timestamp = usedAt ?? DateTime.UtcNow;
+        LastUsedAt = timestamp;
+        UsageCount++;
+
+        AddDomainEvent(new ApiKeyUsedEvent(
+            Id,
+            UserId,
+            endpoint,
+            ipAddress,
+            userAgent,
+            timestamp));
     }
 
     /// <summary>

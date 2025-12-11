@@ -17,7 +17,7 @@ public sealed record GetLinkedOAuthAccountsQuery : IQuery<GetLinkedOAuthAccounts
 /// </summary>
 public sealed record GetLinkedOAuthAccountsResult
 {
-    public List<OAuthAccountDto> Accounts { get; init; } = new();
+    public IList<OAuthAccountDto> Accounts { get; init; } = new List<OAuthAccountDto>();
 }
 
 /// <summary>

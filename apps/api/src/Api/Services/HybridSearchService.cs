@@ -40,7 +40,7 @@ public class HybridSearchService : IHybridSearchService
         _config = config.Value;
     }
 
-    public async Task<List<HybridSearchResult>> SearchAsync(
+    public async Task<IReadOnlyList<HybridSearchResult>> SearchAsync(
         string query,
         Guid gameId,
         SearchMode mode = SearchMode.Hybrid,
@@ -55,7 +55,7 @@ public class HybridSearchService : IHybridSearchService
         {
             _logger.LogWarning("Invalid query provided to HybridSearchService: {Error}", queryError);
             // Return empty results for invalid queries (maintains existing behavior)
-            return new List<HybridSearchResult>();
+            return Array.Empty<HybridSearchResult>();
         }
 
         // Security: Cap limit parameter to prevent resource exhaustion
@@ -96,7 +96,7 @@ public class HybridSearchService : IHybridSearchService
     /// <summary>
     /// Performs vector-only semantic search using Qdrant.
     /// </summary>
-    private async Task<List<HybridSearchResult>> SearchSemanticOnlyAsync(
+    private async Task<IReadOnlyList<HybridSearchResult>> SearchSemanticOnlyAsync(
         string query,
         Guid gameId,
         int limit,
@@ -107,7 +107,7 @@ public class HybridSearchService : IHybridSearchService
         if (embeddingResult == null || !embeddingResult.Success || embeddingResult.Embeddings?.Count == 0)
         {
             _logger.LogError("Failed to generate query embedding for semantic search: {Error}", embeddingResult?.ErrorMessage ?? "Embedding result was null");
-            return new List<HybridSearchResult>();
+            return Array.Empty<HybridSearchResult>();
         }
 
         var queryEmbedding = embeddingResult.Embeddings![0];
@@ -122,7 +122,7 @@ public class HybridSearchService : IHybridSearchService
         if (!vectorResults.Success)
         {
             _logger.LogError("Qdrant search failed: {Error}", vectorResults.ErrorMessage);
-            return new List<HybridSearchResult>();
+            return Array.Empty<HybridSearchResult>();
         }
 
         return vectorResults.Results.Select((r, index) => new HybridSearchResult
@@ -138,15 +138,15 @@ public class HybridSearchService : IHybridSearchService
             KeywordScore = null,
             VectorRank = index + 1,
             KeywordRank = null,
-            MatchedTerms = new List<string>(),
+            MatchedTerms = Array.Empty<string>(),
             Mode = SearchMode.Semantic
-        }).ToList();
+        }).ToArray();
     }
 
     /// <summary>
     /// Performs keyword-only search using PostgreSQL full-text search.
     /// </summary>
-    private async Task<List<HybridSearchResult>> SearchKeywordOnlyAsync(
+    private async Task<IReadOnlyList<HybridSearchResult>> SearchKeywordOnlyAsync(
         string query,
         Guid gameId,
         int limit,
@@ -175,13 +175,13 @@ public class HybridSearchService : IHybridSearchService
             KeywordRank = index + 1,
             MatchedTerms = r.MatchedTerms,
             Mode = SearchMode.Keyword
-        }).ToList();
+        }).ToArray();
     }
 
     /// <summary>
     /// Performs hybrid search combining vector and keyword results with RRF fusion.
     /// </summary>
-    private async Task<List<HybridSearchResult>> SearchHybridAsync(
+    private async Task<IReadOnlyList<HybridSearchResult>> SearchHybridAsync(
         string query,
         Guid gameId,
         int limit,
@@ -247,11 +247,11 @@ public class HybridSearchService : IHybridSearchService
         var topResults = fusedResults
             .OrderByDescending(r => r.HybridScore)
             .Take(limit)
-            .ToList();
+            .ToArray();
 
         _logger.LogInformation(
             "Hybrid search completed: returned {ResultCount} fused results (from {TotalFused} total)",
-            topResults.Count, fusedResults.Count);
+            topResults.Length, fusedResults.Count);
 
         return topResults;
     }
@@ -270,7 +270,7 @@ public class HybridSearchService : IHybridSearchService
     /// </remarks>
     private List<HybridSearchResult> FuseSearchResults(
         IReadOnlyList<SearchResultItem> vectorResults,
-        List<KeywordSearchResult> keywordResults,
+        IReadOnlyList<KeywordSearchResult> keywordResults,
         Guid gameId,
         float vectorWeight,
         float keywordWeight,
@@ -400,5 +400,5 @@ public class HybridSearchConfiguration
     /// Game-specific terms to boost in keyword search.
     /// Examples: "castling", "en passant", "check", "checkmate"
     /// </summary>
-    public List<string> BoostTerms { get; set; } = new();
+    public IReadOnlyList<string> BoostTerms { get; set; } = Array.Empty<string>();
 }

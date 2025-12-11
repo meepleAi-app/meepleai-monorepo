@@ -22,12 +22,12 @@ public interface ISessionRepository
     /// <summary>
     /// Gets all sessions for a specific user.
     /// </summary>
-    Task<List<Session>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Session>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets all active (valid) sessions for a user.
     /// </summary>
-    Task<List<Session>> GetActiveSessionsByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Session>> GetActiveSessionsByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Adds a new session.

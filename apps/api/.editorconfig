@@ -433,3 +433,7 @@ dotnet_diagnostic.S6377.severity = error
 # Severity: error (blocks build on violation)
 # Replaced: SecurityCodeScan.VS2019 (deprecated) with modern analyzers
 # ==================================================================================================
+
+# MA0016: Prefer collection abstraction over implementation (Issue #2069)
+# Prefer IList<T>, IReadOnlyList<T>, IDictionary<K,V> over concrete types
+dotnet_diagnostic.MA0016.severity = warning

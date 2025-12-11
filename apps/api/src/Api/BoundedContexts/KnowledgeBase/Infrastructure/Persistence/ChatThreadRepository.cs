@@ -30,7 +30,7 @@ public class ChatThreadRepository : RepositoryBase, IChatThreadRepository
         return threadEntity != null ? MapToDomain(threadEntity) : null;
     }
 
-    public async Task<List<ChatThread>> GetAllAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<ChatThread>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         var threadEntities = await DbContext.ChatThreads
             .AsNoTracking()

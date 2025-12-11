@@ -40,14 +40,14 @@ public record TableExtractionResult
 {
     public bool Success { get; init; }
     public string? ErrorMessage { get; init; }
-    public List<PdfTable> Tables { get; init; } = new();
-    public List<string> AtomicRules { get; init; } = new();
+    public IList<PdfTable> Tables { get; init; } = new List<PdfTable>();
+    public IList<string> AtomicRules { get; init; } = new List<string>();
     public int TableCount => Tables.Count;
     public int AtomicRuleCount => AtomicRules.Count;
 
     public static TableExtractionResult CreateSuccess(
-        List<PdfTable> tables,
-        List<string> atomicRules) =>
+        IList<PdfTable> tables,
+        IList<string> atomicRules) =>
         new()
         {
             Success = true,
@@ -72,17 +72,17 @@ public record StructuredContentResult
 {
     public bool Success { get; init; }
     public string? ErrorMessage { get; init; }
-    public List<PdfTable> Tables { get; init; } = new();
-    public List<PdfDiagram> Diagrams { get; init; } = new();
-    public List<string> AtomicRules { get; init; } = new();
+    public IList<PdfTable> Tables { get; init; } = new List<PdfTable>();
+    public IList<PdfDiagram> Diagrams { get; init; } = new List<PdfDiagram>();
+    public IList<string> AtomicRules { get; init; } = new List<string>();
     public int TableCount => Tables.Count;
     public int DiagramCount => Diagrams.Count;
     public int AtomicRuleCount => AtomicRules.Count;
 
     public static StructuredContentResult CreateSuccess(
-        List<PdfTable> tables,
-        List<PdfDiagram> diagrams,
-        List<string> atomicRules) =>
+        IList<PdfTable> tables,
+        IList<PdfDiagram> diagrams,
+        IList<string> atomicRules) =>
         new()
         {
             Success = true,

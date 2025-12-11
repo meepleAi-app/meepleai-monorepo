@@ -21,7 +21,7 @@ public interface IHybridSearchService
     /// <param name="keywordWeight">Weight for keyword search scores (default: 0.3)</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Hybrid search results with RRF-fused scores</returns>
-    Task<List<HybridSearchResult>> SearchAsync(
+    Task<IReadOnlyList<HybridSearchResult>> SearchAsync(
         string query,
         Guid gameId,
         SearchMode mode = SearchMode.Hybrid,
@@ -102,7 +102,7 @@ public record HybridSearchResult
     /// <summary>
     /// Terms matched by keyword search for frontend highlighting.
     /// </summary>
-    public List<string> MatchedTerms { get; init; } = new();
+    public IReadOnlyList<string> MatchedTerms { get; init; } = Array.Empty<string>();
 
     /// <summary>
     /// Search mode used to produce this result.

@@ -26,9 +26,9 @@ public record QueryEfficiencyReportDto
     public required int TotalTokens { get; init; }
     public required double AverageTokensPerQuery { get; init; }
     public required decimal AverageCostPerQuery { get; init; }
-    public required List<QueryTypeCostDto> TopCostlyQueries { get; init; }
-    public required Dictionary<string, double> AverageTokensByOperation { get; init; }
-    public required List<string> OptimizationRecommendations { get; init; }
+    public required IReadOnlyList<QueryTypeCostDto> TopCostlyQueries { get; init; }
+    public required IReadOnlyDictionary<string, double> AverageTokensByOperation { get; init; }
+    public required IReadOnlyList<string> OptimizationRecommendations { get; init; }
 }
 
 public record QueryTypeCostDto

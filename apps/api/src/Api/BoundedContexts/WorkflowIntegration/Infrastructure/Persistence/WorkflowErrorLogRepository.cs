@@ -23,7 +23,7 @@ public class WorkflowErrorLogRepository : RepositoryBase, IWorkflowErrorLogRepos
         return entity != null ? MapToDomain(entity) : null;
     }
 
-    public async Task<List<WorkflowErrorLog>> GetAllAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<WorkflowErrorLog>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         var entities = await DbContext.Set<Api.Infrastructure.Entities.WorkflowErrorLogEntity>()
             .AsNoTracking()

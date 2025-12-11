@@ -23,7 +23,7 @@ public class AuditLogRepository : RepositoryBase, IAuditLogRepository
         return entity != null ? MapToDomain(entity) : null;
     }
 
-    public async Task<List<AuditLog>> GetAllAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<AuditLog>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         var entities = await DbContext.AuditLogs
             .AsNoTracking()

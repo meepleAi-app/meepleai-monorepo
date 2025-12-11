@@ -25,7 +25,7 @@ public class AlertRepository : RepositoryBase, IAlertRepository
         return entity != null ? MapToDomain(entity) : null;
     }
 
-    public async Task<List<Alert>> GetAllAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<Alert>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         var entities = await DbContext.Set<Api.Infrastructure.Entities.AlertEntity>()
             .AsNoTracking()

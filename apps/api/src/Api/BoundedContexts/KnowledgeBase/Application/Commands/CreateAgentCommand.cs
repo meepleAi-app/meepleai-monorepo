@@ -11,6 +11,6 @@ public record CreateAgentCommand(
     string Name,
     string AgentType,
     string StrategyName,
-    Dictionary<string, object> StrategyParameters,
+    IDictionary<string, object> StrategyParameters,
     bool IsActive = true
 ) : IRequest<AgentDto>;

@@ -272,7 +272,7 @@ public class SmolDoclingPdfTextExtractor : IPdfTextExtractor
     /// <summary>
     /// Converts SmolDocling chunks to PageTextChunk format
     /// </summary>
-    private List<PageTextChunk> ConvertToPageChunks(List<SmolDoclingChunk> chunks)
+    private List<PageTextChunk> ConvertToPageChunks(IList<SmolDoclingChunk> chunks)
     {
         var pageChunks = new List<PageTextChunk>();
         int charIndex = 0;

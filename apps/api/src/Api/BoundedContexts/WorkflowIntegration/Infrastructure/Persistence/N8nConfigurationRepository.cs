@@ -24,7 +24,7 @@ public class N8nConfigurationRepository : RepositoryBase, IN8nConfigurationRepos
         return entity != null ? MapToDomain(entity) : null;
     }
 
-    public async Task<List<N8nConfiguration>> GetAllAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<N8nConfiguration>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         var entities = await DbContext.Set<Api.Infrastructure.Entities.N8nConfigEntity>()
             .AsNoTracking()

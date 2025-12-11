@@ -81,14 +81,14 @@ public record TextExtractionResult(
 /// </summary>
 public record PagedTextExtractionResult(
     bool Success,
-    List<PageTextChunk> PageChunks,
+    IList<PageTextChunk> PageChunks,
     int TotalPages,
     int TotalCharacters,
     bool OcrTriggered,
     string? ErrorMessage = null)
 {
     public static PagedTextExtractionResult CreateSuccess(
-        List<PageTextChunk> pageChunks,
+        IList<PageTextChunk> pageChunks,
         int totalPages,
         int totalCharacters,
         bool ocrTriggered)
@@ -106,7 +106,7 @@ public record PagedTextExtractionResult(
     {
         return new PagedTextExtractionResult(
             Success: false,
-            PageChunks: new List<PageTextChunk>(),
+            PageChunks: Array.Empty<PageTextChunk>(),
             TotalPages: 0,
             TotalCharacters: 0,
             OcrTriggered: false,

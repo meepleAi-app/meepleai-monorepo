@@ -13,7 +13,7 @@ public record GameSessionDto(
     DateTime StartedAt,
     DateTime? CompletedAt,
     int PlayerCount,
-    List<SessionPlayerDto> Players,
+    IReadOnlyList<SessionPlayerDto> Players,
     string? WinnerName,
     string? Notes,
     int DurationMinutes
@@ -33,7 +33,7 @@ public record SessionPlayerDto(
 /// </summary>
 public record StartGameSessionRequest(
     Guid GameId,
-    List<SessionPlayerRequest> Players
+    IReadOnlyList<SessionPlayerRequest> Players
 );
 
 /// <summary>
@@ -60,7 +60,7 @@ public record SessionStatsDto(
     int CompletedSessions,
     int AbandonedSessions,
     int AverageDurationMinutes,
-    List<PlayerWinStatsDto> TopPlayers
+    IReadOnlyList<PlayerWinStatsDto> TopPlayers
 );
 
 /// <summary>

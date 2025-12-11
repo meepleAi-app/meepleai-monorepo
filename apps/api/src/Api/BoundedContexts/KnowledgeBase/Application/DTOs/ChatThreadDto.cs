@@ -15,7 +15,7 @@ public record ChatThreadDto(
     DateTime CreatedAt,
     DateTime LastMessageAt,
     int MessageCount,
-    List<ChatMessageDto> Messages
+    IReadOnlyList<ChatMessageDto> Messages
 );
 
 /// <summary>

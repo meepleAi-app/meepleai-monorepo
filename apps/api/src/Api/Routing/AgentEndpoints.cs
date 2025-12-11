@@ -200,13 +200,13 @@ public record CreateAgentRequest(
     string Name,
     string Type,
     string StrategyName,
-    Dictionary<string, object>? StrategyParameters,
+    IDictionary<string, object>? StrategyParameters,
     bool? IsActive
 );
 
 public record ConfigureAgentRequest(
     string StrategyName,
-    Dictionary<string, object>? StrategyParameters
+    IDictionary<string, object>? StrategyParameters
 );
 
 public record InvokeAgentRequest(

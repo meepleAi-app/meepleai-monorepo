@@ -25,9 +25,8 @@ public class KeywordSearchService : IKeywordSearchService
 
     /// <summary>
     /// Mapping of language codes to PostgreSQL text search configurations.
-    /// ADR-016 Phase 3: meepleai_italian uses game-specific synonyms.
     /// </summary>
-    private static readonly Dictionary<string, string> LanguageToFtsConfig = new(StringComparer.OrdinalIgnoreCase)
+    private static readonly IReadOnlyDictionary<string, string> LanguageToFtsConfig = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
     {
         { "it", "meepleai_italian" },
         { "italian", "meepleai_italian" },
@@ -43,12 +42,12 @@ public class KeywordSearchService : IKeywordSearchService
         _logger = logger;
     }
 
-    public async Task<List<KeywordSearchResult>> SearchAsync(
+    public async Task<IReadOnlyList<KeywordSearchResult>> SearchAsync(
         string query,
         Guid gameId,
         int limit = 10,
         bool phraseSearch = false,
-        List<string>? boostTerms = null,
+        IReadOnlyList<string>? boostTerms = null,
         string language = "it",
         CancellationToken cancellationToken = default)
     {
@@ -57,8 +56,7 @@ public class KeywordSearchService : IKeywordSearchService
         if (queryError != null)
         {
             _logger.LogWarning("Invalid query provided to KeywordSearchService: {Error}", queryError);
-            // Return empty results for invalid queries (maintains existing behavior)
-            return new List<KeywordSearchResult>();
+            return Array.Empty<KeywordSearchResult>();
         }
 
         // Security: Cap limit parameter to prevent resource exhaustion
@@ -153,7 +151,7 @@ public class KeywordSearchService : IKeywordSearchService
 #pragma warning restore CA1031 // Do not catch general exception types
     }
 
-    public async Task<List<KeywordDocumentResult>> SearchDocumentsAsync(
+    public async Task<IReadOnlyList<KeywordDocumentResult>> SearchDocumentsAsync(
         string query,
         Guid gameId,
         int limit = 10,
@@ -165,7 +163,7 @@ public class KeywordSearchService : IKeywordSearchService
         if (queryError != null)
         {
             // Return empty results for invalid queries (maintains existing behavior)
-            return new List<KeywordDocumentResult>();
+            return Array.Empty<KeywordDocumentResult>();
         }
 
         // Security: Cap limit parameter
@@ -244,7 +242,7 @@ public class KeywordSearchService : IKeywordSearchService
     /// - Phrase: "en passant" with phraseSearch=true → "en <-> passant"
     /// - Boost: "check" with boostTerms=["check", "checkmate"] → "check:A | checkmate:A"
     /// </remarks>
-    private string BuildTsQuery(string query, bool phraseSearch, List<string>? boostTerms)
+    private string BuildTsQuery(string query, bool phraseSearch, IReadOnlyList<string>? boostTerms)
     {
         // Sanitize query to prevent SQL injection and tsquery syntax errors
         var sanitizedQuery = SanitizeQuery(query);
@@ -333,22 +331,19 @@ public class KeywordSearchService : IKeywordSearchService
 
     /// <summary>
     /// Extracts matched terms from query for frontend highlighting.
-    /// Splits query into individual terms, handling phrase search quotes.
     /// </summary>
-    private List<string> ExtractMatchedTerms(string query, bool phraseSearch)
+    private IReadOnlyList<string> ExtractMatchedTerms(string query, bool phraseSearch)
     {
         if (phraseSearch)
         {
-            // For phrase search, return the entire phrase as one matched term
-            return new List<string> { query.Trim('"').Trim() };
+            return new[] { query.Trim('"').Trim() };
         }
 
-        // Split by spaces and remove empty entries
         return query
             .Split(' ', StringSplitOptions.RemoveEmptyEntries)
             .Select(t => t.Trim())
-            .Where(t => t.Length > 2) // Ignore very short terms
-            .ToList();
+            .Where(t => t.Length > 2)
+            .ToArray();
     }
 }
 

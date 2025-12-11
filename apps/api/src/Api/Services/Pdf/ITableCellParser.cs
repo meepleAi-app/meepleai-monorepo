@@ -11,7 +11,7 @@ public interface ITableCellParser
     /// <param name="line">Line to split</param>
     /// <param name="existingBoundaries">Optional existing column boundaries to use</param>
     /// <returns>Column split result with boundaries and text</returns>
-    ColumnSplitResult SplitIntoColumns(PositionedTextLine line, List<ColumnBoundary>? existingBoundaries);
+    ColumnSplitResult SplitIntoColumns(PositionedTextLine line, IList<ColumnBoundary>? existingBoundaries);
 
     /// <summary>
     /// Detects column layout from a text line
@@ -41,5 +41,5 @@ public interface ITableCellParser
     /// <param name="character">Character to find boundary for</param>
     /// <param name="tolerance">Tolerance for matching</param>
     /// <returns>Boundary index or -1 if not found</returns>
-    int FindBoundaryIndex(List<ColumnBoundary> boundaries, PositionedCharacter character, float tolerance);
+    int FindBoundaryIndex(IList<ColumnBoundary> boundaries, PositionedCharacter character, float tolerance);
 }

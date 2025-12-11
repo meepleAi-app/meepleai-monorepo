@@ -27,9 +27,9 @@ permissions:
 env:
   API_BASE_URL: http://localhost:8080
   TEST_GAME_ID: '00000000-0000-0000-0000-000000000001'
-  # Database credentials - use secrets in CI, fallback to defaults for local runs
-  TEST_POSTGRES_USER: ${{ secrets.TEST_POSTGRES_USER || 'postgres' }}
-  TEST_POSTGRES_PASSWORD: ${{ secrets.TEST_POSTGRES_PASSWORD || 'postgres' }}
+  # Database credentials - hardcoded for CI tests (no secrets to avoid GitHub Actions masking)
+  TEST_POSTGRES_USER: 'postgres'
+  TEST_POSTGRES_PASSWORD: 'testpass123'
   TEST_DB_NAME: meepleai_test
 
 jobs:
@@ -44,8 +44,8 @@ jobs:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_USER: ${{ secrets.TEST_POSTGRES_USER || 'postgres' }}
-          POSTGRES_PASSWORD: ${{ secrets.TEST_POSTGRES_PASSWORD || 'testpass123' }}
+          POSTGRES_USER: 'postgres'
+          POSTGRES_PASSWORD: 'testpass123'
           POSTGRES_DB: meepleai_test
         options: >-
           --health-cmd pg_isready
@@ -102,7 +102,7 @@ jobs:
       - name: Create test database
         run: |
           echo "🗄️  Creating test database..."
-          PGPASSWORD="${{ secrets.TEST_POSTGRES_PASSWORD || 'testpass123' }}" psql -h localhost -U "${{ secrets.TEST_POSTGRES_USER || 'postgres' }}" -d postgres <<-EOSQL
+          PGPASSWORD="testpass123" psql -h localhost -U "postgres" -d postgres <<-EOSQL
             SELECT 'CREATE DATABASE meepleai_test'
             WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'meepleai_test')\gexec
           EOSQL
@@ -113,11 +113,11 @@ jobs:
       - name: Verify database connectivity
         run: |
           echo "🔍 Testing PostgreSQL connection..."
-          PGPASSWORD="${{ secrets.TEST_POSTGRES_PASSWORD || 'testpass123' }}" psql -h localhost -U "${{ secrets.TEST_POSTGRES_USER || 'postgres' }}" -d postgres -c "SELECT version();"
+          PGPASSWORD="testpass123" psql -h localhost -U "postgres" -d postgres -c "SELECT version();"
           echo "✅ Database connection successful"
 
           echo "🔍 Verifying test database exists..."
-          DB_EXISTS=$(PGPASSWORD="${{ secrets.TEST_POSTGRES_PASSWORD || 'testpass123' }}" psql -h localhost -U "${{ secrets.TEST_POSTGRES_USER || 'postgres' }}" -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='meepleai_test'")
+          DB_EXISTS=$(PGPASSWORD="testpass123" psql -h localhost -U "postgres" -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='meepleai_test'")
           if [ "$DB_EXISTS" != "1" ]; then
             echo "❌ Database meepleai_test does not exist!"
             exit 1

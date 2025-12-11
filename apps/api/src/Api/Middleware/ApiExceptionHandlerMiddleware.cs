@@ -44,7 +44,7 @@ public class ApiExceptionHandlerMiddleware
             // structured JSON error responses. This prevents raw exceptions from reaching clients.
             // Context: This is the top-level exception boundary for /api/* routes
             // Only handle /api/* paths
-            if (!context.Request.Path.StartsWithSegments("/api"))
+            if (!context.Request.Path.StartsWithSegments("/api", StringComparison.Ordinal))
             {
                 throw;
             }

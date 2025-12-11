@@ -194,7 +194,7 @@ public class HttpBehaviorTests : IAsyncLifetime
         // Health endpoint may return 503 if external services are down
         // Frontend SDK should handle both success and unavailability
         response.StatusCode.Should().BeOneOf(HttpStatusCode.OK, HttpStatusCode.ServiceUnavailable);
-        
+
         // Test validates API responds within reasonable time
         // Frontend SDK can rely on predictable response times
     }
@@ -226,7 +226,7 @@ public class HttpBehaviorTests : IAsyncLifetime
         if (response.StatusCode == HttpStatusCode.OK || response.StatusCode == HttpStatusCode.ServiceUnavailable)
         {
             response.Content.Headers.ContentType.Should().NotBeNull();
-            
+
             if (response.StatusCode == HttpStatusCode.OK)
             {
                 response.Content.Headers.ContentType!.MediaType.Should().Be("application/json");

@@ -38,7 +38,7 @@ public class SearchResultReranker : ISearchResultReranker
             for (int rank = 0; rank < results.Count; rank++)
             {
                 var result = results[rank];
-                var docKey = $"{result.PdfId}_{result.Page}_{result.Text.GetHashCode()}";
+                var docKey = $"{result.PdfId}_{result.Page}_{StringComparer.Ordinal.GetHashCode(result.Text)}";
 
                 var rrfScore = 1.0 / (k + rank + 1); // rank is 0-indexed, add 1 for proper formula
 

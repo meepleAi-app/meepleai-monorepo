@@ -20,7 +20,7 @@ public class GetActivePromptVersionQueryHandler : IQueryHandler<GetActivePromptV
             .AsNoTracking()
             .Include(v => v.Template)
             .Include(v => v.CreatedBy)
-            .FirstOrDefaultAsync(v => v.Template.Name == request.TemplateName && v.IsActive, cancellationToken);
+            .FirstOrDefaultAsync(v => v.Template.Name == request.TemplateName && v.IsActive, cancellationToken).ConfigureAwait(false);
 
         if (version == null)
         {

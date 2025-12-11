@@ -50,7 +50,7 @@ public class ActivatePromptVersionCommandHandler : ICommandHandler<ActivatePromp
         var versionToActivate = await _db.PromptVersions
             .Include(v => v.Template)
             .Include(v => v.CreatedBy)
-            .FirstOrDefaultAsync(v => v.Id == versionId && v.TemplateId == templateId, cancellationToken);
+            .FirstOrDefaultAsync(v => v.Id == versionId && v.TemplateId == templateId, cancellationToken).ConfigureAwait(false);
 
         if (versionToActivate == null)
         {
@@ -76,7 +76,7 @@ public class ActivatePromptVersionCommandHandler : ICommandHandler<ActivatePromp
             // Deactivate all other versions of the same template
             var otherVersions = await _db.PromptVersions
                 .Where(v => v.TemplateId == templateId && v.Id != versionId && v.IsActive)
-                .ToListAsync(cancellationToken);
+                .ToListAsync(cancellationToken).ConfigureAwait(false);
 
             foreach (var otherVersion in otherVersions)
             {

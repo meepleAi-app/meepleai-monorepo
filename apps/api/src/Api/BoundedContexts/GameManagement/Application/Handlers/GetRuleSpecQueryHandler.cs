@@ -26,7 +26,7 @@ public class GetRuleSpecQueryHandler : IQueryHandler<GetRuleSpecQuery, RuleSpecD
             .Include(r => r.Atoms)
             .Where(r => r.GameId == query.GameId)
             .OrderByDescending(r => r.CreatedAt)
-            .FirstOrDefaultAsync(cancellationToken);
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
 
         if (specEntity is null)
         {

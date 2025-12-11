@@ -7,6 +7,7 @@ using Api.Services;
 using MediatR;
 using Microsoft.Extensions.Options;
 
+#pragma warning disable MA0048 // File name must match type name - Contains Handler with related types
 namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 
 /// <summary>
@@ -106,7 +107,7 @@ public sealed class GenerateFollowUpQuestionsQueryHandler
                     result = await _llmService.GenerateJsonAsync<FollowUpQuestionsDto>(
                         systemPrompt,
                         userPrompt,
-                        timeoutCts.Token);
+                        timeoutCts.Token).ConfigureAwait(false);
 
                     if (result == null)
                     {

@@ -54,7 +54,7 @@ public class GetAiRequestsQueryHandler : IQueryHandler<GetAiRequestsQuery, AiReq
             .OrderByDescending(log => log.CreatedAt)
             .Skip(request.Offset)
             .Take(request.Limit)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return new AiRequestListResult
         {

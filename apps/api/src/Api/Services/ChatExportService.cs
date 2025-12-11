@@ -44,7 +44,7 @@ public class ChatExportService : IChatExportService
                 .Include(c => c.Game)
                 .Include(c => c.Logs)
                 .AsSplitQuery()
-                .FirstOrDefaultAsync(c => c.Id == chatId && c.UserId == userId, ct);
+                .FirstOrDefaultAsync(c => c.Id == chatId && c.UserId == userId, ct).ConfigureAwait(false);
 
             if (chat == null)
             {

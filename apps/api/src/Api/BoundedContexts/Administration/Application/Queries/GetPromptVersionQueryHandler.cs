@@ -25,7 +25,7 @@ public class GetPromptVersionQueryHandler : IQueryHandler<GetPromptVersionQuery,
             .AsNoTracking()
             .Include(v => v.Template)
             .Include(v => v.CreatedBy)
-            .FirstOrDefaultAsync(v => v.TemplateId == templateGuid && v.VersionNumber == request.VersionNumber, cancellationToken);
+            .FirstOrDefaultAsync(v => v.TemplateId == templateGuid && v.VersionNumber == request.VersionNumber, cancellationToken).ConfigureAwait(false);
 
         if (version == null)
         {

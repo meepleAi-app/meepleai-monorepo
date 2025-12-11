@@ -24,7 +24,7 @@ public class GetConfigByKeyQueryHandler : IQueryHandler<GetConfigByKeyQuery, Con
             query.Key,
             query.Environment,
             query.ActiveOnly,
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
 
         if (config == null)
             return null;

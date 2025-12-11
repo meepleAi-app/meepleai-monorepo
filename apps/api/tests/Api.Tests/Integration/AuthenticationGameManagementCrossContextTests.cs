@@ -133,39 +133,39 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
         }
     }
 
-        private async Task ResetDatabaseAsync()
-        {
-            var tableNames = await DbContext.Database
-                .SqlQueryRaw<string>(
-                    @"SELECT tablename
+    private async Task ResetDatabaseAsync()
+    {
+        var tableNames = await DbContext.Database
+            .SqlQueryRaw<string>(
+                @"SELECT tablename
                   FROM pg_tables
                   WHERE schemaname = 'public'
                   AND tablename != '__EFMigrationsHistory'")
-                .ToListAsync(TestCancellationToken);
+            .ToListAsync(TestCancellationToken);
 
-            if (tableNames.Count > 0)
+        if (tableNames.Count > 0)
+        {
+            await DbContext.Database.ExecuteSqlRawAsync(
+                "SET session_replication_role = 'replica';",
+                TestCancellationToken);
+
+            try
             {
-                await DbContext.Database.ExecuteSqlRawAsync(
-                    "SET session_replication_role = 'replica';",
-                    TestCancellationToken);
-
-                try
-                {
-                    foreach (var tableName in tableNames)
-                    {
-                        await DbContext.Database.ExecuteSqlRawAsync(
-                            $"TRUNCATE TABLE \"{tableName}\" CASCADE;",
-                            TestCancellationToken);
-                    }
-                }
-                finally
+                foreach (var tableName in tableNames)
                 {
                     await DbContext.Database.ExecuteSqlRawAsync(
-                        "SET session_replication_role = 'origin';",
+                        $"TRUNCATE TABLE \"{tableName}\" CASCADE;",
                         TestCancellationToken);
                 }
             }
+            finally
+            {
+                await DbContext.Database.ExecuteSqlRawAsync(
+                    "SET session_replication_role = 'origin';",
+                    TestCancellationToken);
+            }
         }
+    }
 
     [Fact]
     public async Task AuthenticatedUser_CanCreateGameSession_WithValidSession()

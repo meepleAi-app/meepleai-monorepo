@@ -43,7 +43,7 @@ public class AiResponseCacheService : IAiResponseCacheService
                 tags: null,
                 expiration: null,
                 ct: ct
-            );
+            ).ConfigureAwait(false);
 
             if (result == null)
             {
@@ -100,7 +100,7 @@ public class AiResponseCacheService : IAiResponseCacheService
                 tags: tags,
                 expiration: TimeSpan.FromSeconds(ttlSeconds),
                 ct: ct
-            );
+            ).ConfigureAwait(false);
 
             _logger.LogInformation("Cached response for key: {CacheKey} with tags: {Tags} (TTL: {TTL}s)",
                 cacheKey, tags != null ? string.Join(", ", tags) : "none", ttlSeconds);

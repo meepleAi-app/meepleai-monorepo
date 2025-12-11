@@ -44,7 +44,7 @@ public class GetUserUploadQuotaQueryHandler : IQueryHandler<GetUserUploadQuotaQu
             query.UserId,
             user.Tier,
             user.Role,
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
 
         return quotaInfo;
     }

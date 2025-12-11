@@ -29,7 +29,7 @@ public class GetGameSessionsQueryHandler : IQueryHandler<GetGameSessionsQuery, L
             throw new ArgumentException("Page number must be positive (1-based)", nameof(query));
 
         // Get all sessions for the game
-        var sessions = await _sessionRepository.FindByGameIdAsync(query.GameId, cancellationToken);
+        var sessions = await _sessionRepository.FindByGameIdAsync(query.GameId, cancellationToken).ConfigureAwait(false);
 
         // Apply pagination if requested (in-memory for MVP)
         var sessionsList = sessions.AsEnumerable();

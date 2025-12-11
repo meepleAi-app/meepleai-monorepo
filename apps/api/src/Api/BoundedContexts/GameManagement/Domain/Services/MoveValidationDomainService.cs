@@ -139,7 +139,7 @@ public class MoveValidationDomainService
                     })
                     .ToList()
             })
-            .FirstOrDefaultAsync(cancellationToken);
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
 
         if (ruleSpecDto == null)
         {

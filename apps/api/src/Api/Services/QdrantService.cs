@@ -5,6 +5,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Qdrant.Client.Grpc;
 using System.Diagnostics;
+
+#pragma warning disable MA0048 // File name must match type name - Contains Service with Configuration classes
 namespace Api.Services;
 /// <summary>
 /// Qdrant vector database adapter.
@@ -406,7 +408,7 @@ public class QdrantService : IQdrantService
                 filter: filter,
                 limit: limit,
                 ct: ct
-            );
+            ).ConfigureAwait(false);
             var results = _vectorSearcher.ConvertToSearchResults(searchResults);
             _logger.LogInformation("Found {Count} results for language {Language}", results.Count, language);
             activity?.SetTag("results.count", results.Count);

@@ -259,7 +259,7 @@ public class SessionTokenTests
         Assert.Equal(expectedValue, tokenString);
     }
 
-    private static bool TryDecodeBase64(string base64String, out byte[] bytes)
+    private static bool TryDecodeBase64(string base64String, out byte[]? bytes)
     {
         bytes = null;
         try

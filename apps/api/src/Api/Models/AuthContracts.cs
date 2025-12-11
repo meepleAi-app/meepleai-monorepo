@@ -48,8 +48,6 @@ public record AuthUser(
 
 public record AuthResult(AuthUser User, string SessionToken, DateTime ExpiresAt);
 
-public record ActiveSession(AuthUser User, DateTime ExpiresAt, DateTime? LastSeenAt);
-
 public record AuthResponse(
     [property: JsonPropertyName("user")] AuthUser User,
     [property: JsonPropertyName("expiresAt")] DateTime? ExpiresAt);
@@ -149,5 +147,5 @@ public record OAuthUserInfo(
 public class OAuthConfiguration
 {
     public required string CallbackBaseUrl { get; init; }
-    public required Dictionary<string, OAuthProviderConfig> Providers { get; init; }
+    public required IDictionary<string, OAuthProviderConfig> Providers { get; init; }
 }

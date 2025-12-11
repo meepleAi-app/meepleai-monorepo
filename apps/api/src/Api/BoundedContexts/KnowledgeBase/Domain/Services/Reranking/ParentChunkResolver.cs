@@ -36,13 +36,13 @@ public sealed class ParentChunkResolver : IParentChunkResolver
         var results = new List<ResolvedParentChunk>();
 
         // Batch fetch child chunks
-        var childChunks = await _chunkRepository.GetByIdsAsync(childIds, cancellationToken);
+        var childChunks = await _chunkRepository.GetByIdsAsync(childIds, cancellationToken).ConfigureAwait(false);
 
         // Group by parent ID to minimize lookups
         var childrenByParent = childChunks
             .Where(c => c.ParentId != null)
-            .GroupBy(c => c.ParentId!)
-            .ToDictionary(g => g.Key, g => g.ToList());
+            .GroupBy(c => c.ParentId!, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.Ordinal);
 
         if (childrenByParent.Count == 0)
         {
@@ -51,8 +51,8 @@ public sealed class ParentChunkResolver : IParentChunkResolver
         }
 
         // Batch fetch parent chunks
-        var parentChunks = await _chunkRepository.GetByIdsAsync(childrenByParent.Keys, cancellationToken);
-        var parentsById = parentChunks.ToDictionary(p => p.Id);
+        var parentChunks = await _chunkRepository.GetByIdsAsync(childrenByParent.Keys, cancellationToken).ConfigureAwait(false);
+        var parentsById = parentChunks.ToDictionary(p => p.Id, StringComparer.Ordinal);
 
         foreach (var (parentId, children) in childrenByParent)
         {
@@ -84,7 +84,7 @@ public sealed class ParentChunkResolver : IParentChunkResolver
         if (string.IsNullOrWhiteSpace(childChunkId))
             throw new ArgumentException("Child chunk ID cannot be empty", nameof(childChunkId));
 
-        var child = await _chunkRepository.GetByIdAsync(childChunkId, cancellationToken);
+        var child = await _chunkRepository.GetByIdAsync(childChunkId, cancellationToken).ConfigureAwait(false);
 
         if (child == null)
         {
@@ -98,7 +98,7 @@ public sealed class ParentChunkResolver : IParentChunkResolver
             return null;
         }
 
-        var parent = await _chunkRepository.GetParentAsync(childChunkId, cancellationToken);
+        var parent = await _chunkRepository.GetParentAsync(childChunkId, cancellationToken).ConfigureAwait(false);
 
         if (parent == null)
         {

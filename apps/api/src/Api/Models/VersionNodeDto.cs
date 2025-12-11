@@ -1,3 +1,6 @@
+
+
+#pragma warning disable MA0048 // File name must match type name - Contains related Request/Response DTOs
 namespace Api.Models;
 
 /// <summary>
@@ -17,8 +20,8 @@ public record VersionNodeDto
     public string? ParentVersion { get; init; }
 
     // Merging support
-    public List<Guid> MergedFromVersionIds { get; init; } = new();
-    public List<string> MergedFromVersions { get; init; } = new();
+    public IList<Guid> MergedFromVersionIds { get; init; } = new List<Guid>();
+    public IList<string> MergedFromVersions { get; init; } = new List<string>();
 
     // Timeline metadata
     public string? ThumbnailUrl { get; init; }
@@ -43,7 +46,7 @@ public record VersionTimelineFilters
 public record VersionTimelineResponse
 {
     public string GameId { get; init; } = string.Empty;
-    public List<VersionNodeDto> Versions { get; init; } = new();
+    public IList<VersionNodeDto> Versions { get; init; } = new List<VersionNodeDto>();
     public int TotalVersions { get; init; }
-    public List<string> Authors { get; init; } = new();
+    public IList<string> Authors { get; init; } = new List<string>();
 }

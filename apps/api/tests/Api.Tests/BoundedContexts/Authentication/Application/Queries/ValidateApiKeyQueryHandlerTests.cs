@@ -350,7 +350,7 @@ public class ValidateApiKeyQueryHandlerTests
         );
 
         // Implementation may throw or return null depending on null checks
-        Assert.True(exception != null || true); // Either throws or returns null
+        Assert.True(true); // Either throws or returns null
     }
 
     [Fact]

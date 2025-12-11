@@ -20,7 +20,7 @@ public interface IRepository<TEntity, TId>
     /// <summary>
     /// Gets all aggregate roots of this type.
     /// </summary>
-    Task<List<TEntity>> GetAllAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<TEntity>> GetAllAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Adds a new aggregate root to the repository.

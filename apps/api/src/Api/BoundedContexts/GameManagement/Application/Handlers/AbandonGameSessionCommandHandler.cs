@@ -28,7 +28,7 @@ public class AbandonGameSessionCommandHandler : ICommandHandler<AbandonGameSessi
     {
         // Load session
         var session = await _sessionRepository.GetByIdAsync(command.SessionId, cancellationToken)
-            ?? throw new InvalidOperationException($"Session with ID {command.SessionId} not found");
+.ConfigureAwait(false) ?? throw new InvalidOperationException($"Session with ID {command.SessionId} not found");
 
         // Abandon via domain method
         session.Abandon(command.Reason);

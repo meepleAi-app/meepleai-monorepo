@@ -26,6 +26,6 @@ public class SendAlertCommandHandler : ICommandHandler<SendAlertCommand, AlertDt
             command.Message,
             command.Metadata,
             cancellationToken
-        );
+        ).ConfigureAwait(false);
     }
 }

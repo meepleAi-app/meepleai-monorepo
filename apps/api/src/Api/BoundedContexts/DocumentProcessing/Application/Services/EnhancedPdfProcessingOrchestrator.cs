@@ -8,6 +8,7 @@ using Api.Observability;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
+#pragma warning disable MA0048 // File name must match type name - Contains Interface with supporting types
 namespace Api.BoundedContexts.DocumentProcessing.Application.Services;
 
 /// <summary>
@@ -75,16 +76,18 @@ public class EnhancedPdfProcessingOrchestrator
             var tempFile = SecureTempFileHelper.CreateSecureTempFilePath(".pdf");
             try
             {
-                await using var fileStream = new FileStream(
+                var fileStream = new FileStream(
                     tempFile,
                     FileMode.Create,
                     FileAccess.Write,
                     FileShare.None,
                     bufferSize: 81920,
                     useAsync: true);
-
-                await pdfStream.CopyToAsync(fileStream, ct).ConfigureAwait(false);
-                return PdfDataHandle.FromTempFile(tempFile);
+                await using (fileStream.ConfigureAwait(false))
+                {
+                    await pdfStream.CopyToAsync(fileStream, ct).ConfigureAwait(false);
+                    return PdfDataHandle.FromTempFile(tempFile);
+                }
             }
             catch
             {
@@ -151,7 +154,7 @@ public class EnhancedPdfProcessingOrchestrator
                 Stage1QualityThreshold,
                 enableOcrFallback,
                 requestId,
-                ct);
+                ct).ConfigureAwait(false);
 
             if (stage1Result != null)
             {
@@ -168,7 +171,7 @@ public class EnhancedPdfProcessingOrchestrator
                 Stage2QualityThreshold,
                 enableOcrFallback,
                 requestId,
-                ct);
+                ct).ConfigureAwait(false);
 
             if (stage2Result != null)
             {
@@ -182,16 +185,19 @@ public class EnhancedPdfProcessingOrchestrator
                 requestId);
 
             var stage3Stopwatch = Stopwatch.StartNew();
-            await using var fallbackStream = pdfData.GetStream();
-            var stage3Result = await _docnetExtractor.ExtractTextAsync(fallbackStream, enableOcrFallback, ct).ConfigureAwait(false);
-            stage3Stopwatch.Stop();
+            var fallbackStream = pdfData.GetStream();
+            await using (fallbackStream.ConfigureAwait(false))
+            {
+                var stage3Result = await _docnetExtractor.ExtractTextAsync(fallbackStream, enableOcrFallback, ct).ConfigureAwait(false);
+                stage3Stopwatch.Stop();
 
-            _logger.LogInformation(
-                "[{RequestId}] Stage 3 (Docnet) completed in {DurationMs}ms - Success={Success}, Quality={Quality}",
-                requestId, stage3Stopwatch.Elapsed.TotalMilliseconds, stage3Result.Success, stage3Result.Quality);
+                _logger.LogInformation(
+                    "[{RequestId}] Stage 3 (Docnet) completed in {DurationMs}ms - Success={Success}, Quality={Quality}",
+                    requestId, stage3Stopwatch.Elapsed.TotalMilliseconds, stage3Result.Success, stage3Result.Quality);
 
-            overallStopwatch.Stop();
-            return CreateEnhancedResult(stage3Result, 3, "Docnet", overallStopwatch.Elapsed, requestId);
+                overallStopwatch.Stop();
+                return CreateEnhancedResult(stage3Result, 3, "Docnet", overallStopwatch.Elapsed, requestId);
+            }
         }
         finally
         {
@@ -220,46 +226,49 @@ public class EnhancedPdfProcessingOrchestrator
 
         try
         {
-            await using var stream = pdfData.GetStream();
-            var result = await extractor.ExtractTextAsync(stream, enableOcrFallback, ct).ConfigureAwait(false);
-            stageStopwatch.Stop();
-
-            if (!result.Success)
+            var stream = pdfData.GetStream();
+            await using (stream.ConfigureAwait(false))
             {
-                _logger.LogWarning(
-                    "[{RequestId}] Stage {Stage} ({StageName}) failed: {Error}",
-                    requestId, stageNumber, stageName, result.ErrorMessage);
+                var result = await extractor.ExtractTextAsync(stream, enableOcrFallback, ct).ConfigureAwait(false);
+                stageStopwatch.Stop();
 
-                // BGAI-043: Record failed stage extraction
-                RecordStageMetricSafely(stageName, false, stageStopwatch.Elapsed.TotalMilliseconds, null);
+                if (!result.Success)
+                {
+                    _logger.LogWarning(
+                        "[{RequestId}] Stage {Stage} ({StageName}) failed: {Error}",
+                        requestId, stageNumber, stageName, result.ErrorMessage);
+
+                    // BGAI-043: Record failed stage extraction
+                    RecordStageMetricSafely(stageName, false, stageStopwatch.Elapsed.TotalMilliseconds, null);
+
+                    return null;
+                }
+
+                // Map quality enum to approximate score for threshold comparison
+                var qualityScore = MapQualityToScore(result.Quality);
+
+                if (qualityScore >= qualityThreshold)
+                {
+                    _logger.LogInformation(
+                        "[{RequestId}] Stage {Stage} ({StageName}) succeeded in {DurationMs}ms - Quality: {Quality} ({Score:F2} ≥ {Threshold:F2})",
+                        requestId, stageNumber, stageName, stageStopwatch.Elapsed.TotalMilliseconds,
+                        result.Quality, qualityScore, qualityThreshold);
+
+                    // BGAI-043: Record successful stage extraction with quality score
+                    RecordStageMetricSafely(stageName, true, stageStopwatch.Elapsed.TotalMilliseconds, qualityScore);
+
+                    return result;
+                }
+
+                _logger.LogWarning(
+                    "[{RequestId}] Stage {Stage} ({StageName}) quality below threshold - Quality: {Quality} ({Score:F2} < {Threshold:F2}), falling back to next stage",
+                    requestId, stageNumber, stageName, result.Quality, qualityScore, qualityThreshold);
+
+                // BGAI-043: Record failed stage extraction (quality too low)
+                RecordStageMetricSafely(stageName, false, stageStopwatch.Elapsed.TotalMilliseconds, qualityScore);
 
                 return null;
             }
-
-            // Map quality enum to approximate score for threshold comparison
-            var qualityScore = MapQualityToScore(result.Quality);
-
-            if (qualityScore >= qualityThreshold)
-            {
-                _logger.LogInformation(
-                    "[{RequestId}] Stage {Stage} ({StageName}) succeeded in {DurationMs}ms - Quality: {Quality} ({Score:F2} ≥ {Threshold:F2})",
-                    requestId, stageNumber, stageName, stageStopwatch.Elapsed.TotalMilliseconds,
-                    result.Quality, qualityScore, qualityThreshold);
-
-                // BGAI-043: Record successful stage extraction with quality score
-                RecordStageMetricSafely(stageName, true, stageStopwatch.Elapsed.TotalMilliseconds, qualityScore);
-
-                return result;
-            }
-
-            _logger.LogWarning(
-                "[{RequestId}] Stage {Stage} ({StageName}) quality below threshold - Quality: {Quality} ({Score:F2} < {Threshold:F2}), falling back to next stage",
-                requestId, stageNumber, stageName, result.Quality, qualityScore, qualityThreshold);
-
-            // BGAI-043: Record failed stage extraction (quality too low)
-            RecordStageMetricSafely(stageName, false, stageStopwatch.Elapsed.TotalMilliseconds, qualityScore);
-
-            return null;
         }
         catch (Exception ex)
         {
@@ -353,7 +362,7 @@ public class EnhancedPdfProcessingOrchestrator
             overallStopwatch.Stop();
             return new EnhancedPagedExtractionResult(
                 Success: false,
-                PageChunks: new List<PageTextChunk>(),
+                PageChunks: (IList<PageTextChunk>)new List<PageTextChunk>(),
                 TotalPages: 0,
                 TotalCharacters: 0,
                 OcrTriggered: false,
@@ -377,7 +386,7 @@ public class EnhancedPdfProcessingOrchestrator
                 Stage1QualityThreshold,
                 enableOcrFallback,
                 requestId,
-                ct);
+                ct).ConfigureAwait(false);
 
             if (stage1Result != null)
             {
@@ -394,13 +403,13 @@ public class EnhancedPdfProcessingOrchestrator
                 Stage2QualityThreshold,
                 enableOcrFallback,
                 requestId,
-                ct);
+                ct).ConfigureAwait(false);
 
-        if (stage2Result != null)
-        {
-            overallStopwatch.Stop();
-            return CreateEnhancedPagedResult(stage2Result, 2, "SmolDocling", overallStopwatch.Elapsed, requestId);
-        }
+            if (stage2Result != null)
+            {
+                overallStopwatch.Stop();
+                return CreateEnhancedPagedResult(stage2Result, 2, "SmolDocling", overallStopwatch.Elapsed, requestId);
+            }
 
             // Stage 3: Docnet (fallback)
             _logger.LogWarning(
@@ -408,16 +417,19 @@ public class EnhancedPdfProcessingOrchestrator
                 requestId);
 
             var stage3Stopwatch = Stopwatch.StartNew();
-            await using var fallbackStream = pdfData.GetStream();
-            var stage3Result = await _docnetExtractor.ExtractPagedTextAsync(fallbackStream, enableOcrFallback, ct).ConfigureAwait(false);
-            stage3Stopwatch.Stop();
+            var fallbackStream = pdfData.GetStream();
+            await using (fallbackStream.ConfigureAwait(false))
+            {
+                var stage3Result = await _docnetExtractor.ExtractPagedTextAsync(fallbackStream, enableOcrFallback, ct).ConfigureAwait(false);
+                stage3Stopwatch.Stop();
 
-            _logger.LogInformation(
-                "[{RequestId}] Stage 3 (Docnet) paged extraction completed in {DurationMs}ms - Success={Success}, Chunks={Chunks}",
-                requestId, stage3Stopwatch.Elapsed.TotalMilliseconds, stage3Result.Success, stage3Result.PageChunks.Count);
+                _logger.LogInformation(
+                    "[{RequestId}] Stage 3 (Docnet) paged extraction completed in {DurationMs}ms - Success={Success}, Chunks={Chunks}",
+                    requestId, stage3Stopwatch.Elapsed.TotalMilliseconds, stage3Result.Success, stage3Result.PageChunks.Count);
 
-            overallStopwatch.Stop();
-            return CreateEnhancedPagedResult(stage3Result, 3, "Docnet", overallStopwatch.Elapsed, requestId);
+                overallStopwatch.Stop();
+                return CreateEnhancedPagedResult(stage3Result, 3, "Docnet", overallStopwatch.Elapsed, requestId);
+            }
         }
         finally
         {
@@ -446,61 +458,64 @@ public class EnhancedPdfProcessingOrchestrator
 
         try
         {
-            await using var stream = pdfData.GetStream();
-            var result = await extractor.ExtractPagedTextAsync(stream, enableOcrFallback, ct).ConfigureAwait(false);
-            stageStopwatch.Stop();
-
-            if (!result.Success)
+            var stream = pdfData.GetStream();
+            await using (stream.ConfigureAwait(false))
             {
-                _logger.LogWarning(
-                    "[{RequestId}] Paged Stage {Stage} ({StageName}) failed: {Error}",
-                    requestId, stageNumber, stageName, result.ErrorMessage);
+                var result = await extractor.ExtractPagedTextAsync(stream, enableOcrFallback, ct).ConfigureAwait(false);
+                stageStopwatch.Stop();
 
-                // BGAI-043: Record failed paged stage extraction
-                RecordStageMetricSafely(stageName, false, stageStopwatch.Elapsed.TotalMilliseconds, null);
+                if (!result.Success)
+                {
+                    _logger.LogWarning(
+                        "[{RequestId}] Paged Stage {Stage} ({StageName}) failed: {Error}",
+                        requestId, stageNumber, stageName, result.ErrorMessage);
+
+                    // BGAI-043: Record failed paged stage extraction
+                    RecordStageMetricSafely(stageName, false, stageStopwatch.Elapsed.TotalMilliseconds, null);
+
+                    return null;
+                }
+
+                // Quality assessment for paged extraction (based on chunk count and content)
+                var hasContent = result.PageChunks.Any(c => !c.IsEmpty);
+                if (!hasContent)
+                {
+                    _logger.LogWarning(
+                        "[{RequestId}] Paged Stage {Stage} ({StageName}) produced no content, falling back",
+                        requestId, stageNumber, stageName);
+
+                    // BGAI-043: Record failed paged stage extraction (no content)
+                    RecordStageMetricSafely(stageName, false, stageStopwatch.Elapsed.TotalMilliseconds, 0.0);
+
+                    return null;
+                }
+
+                // Calculate quality score based on text coverage (similar to PdfQualityValidationDomainService)
+                // This ensures paged extraction honors the same quality thresholds as non-paged
+                var qualityScore = CalculatePagedQualityScore(result);
+
+                if (qualityScore >= qualityThreshold)
+                {
+                    _logger.LogInformation(
+                        "[{RequestId}] Paged Stage {Stage} ({StageName}) succeeded in {DurationMs}ms - Chunks: {Count}, Quality Score: {Score:F2} (≥ {Threshold:F2})",
+                        requestId, stageNumber, stageName, stageStopwatch.Elapsed.TotalMilliseconds,
+                        result.PageChunks.Count, qualityScore, qualityThreshold);
+
+                    // BGAI-043: Record successful paged stage extraction with quality score
+                    RecordStageMetricSafely(stageName, true, stageStopwatch.Elapsed.TotalMilliseconds, qualityScore);
+
+                    return result;
+                }
+
+                _logger.LogWarning(
+                    "[{RequestId}] Paged Stage {Stage} ({StageName}) quality below threshold - Score: {Score:F2} < {Threshold:F2}, falling back to next stage",
+                    requestId, stageNumber, stageName, qualityScore, qualityThreshold);
+
+                // BGAI-043: Record failed paged stage extraction (quality too low)
+                RecordStageMetricSafely(stageName, false, stageStopwatch.Elapsed.TotalMilliseconds, qualityScore);
 
                 return null;
             }
-
-            // Quality assessment for paged extraction (based on chunk count and content)
-            var hasContent = result.PageChunks.Any(c => !c.IsEmpty);
-            if (!hasContent)
-            {
-                _logger.LogWarning(
-                    "[{RequestId}] Paged Stage {Stage} ({StageName}) produced no content, falling back",
-                    requestId, stageNumber, stageName);
-
-                // BGAI-043: Record failed paged stage extraction (no content)
-                RecordStageMetricSafely(stageName, false, stageStopwatch.Elapsed.TotalMilliseconds, 0.0);
-
-                return null;
-            }
-
-            // Calculate quality score based on text coverage (similar to PdfQualityValidationDomainService)
-            // This ensures paged extraction honors the same quality thresholds as non-paged
-            var qualityScore = CalculatePagedQualityScore(result);
-
-            if (qualityScore >= qualityThreshold)
-            {
-                _logger.LogInformation(
-                    "[{RequestId}] Paged Stage {Stage} ({StageName}) succeeded in {DurationMs}ms - Chunks: {Count}, Quality Score: {Score:F2} (≥ {Threshold:F2})",
-                    requestId, stageNumber, stageName, stageStopwatch.Elapsed.TotalMilliseconds,
-                    result.PageChunks.Count, qualityScore, qualityThreshold);
-
-                // BGAI-043: Record successful paged stage extraction with quality score
-                RecordStageMetricSafely(stageName, true, stageStopwatch.Elapsed.TotalMilliseconds, qualityScore);
-
-                return result;
-            }
-
-            _logger.LogWarning(
-                "[{RequestId}] Paged Stage {Stage} ({StageName}) quality below threshold - Score: {Score:F2} < {Threshold:F2}, falling back to next stage",
-                requestId, stageNumber, stageName, qualityScore, qualityThreshold);
-
-            // BGAI-043: Record failed paged stage extraction (quality too low)
-            RecordStageMetricSafely(stageName, false, stageStopwatch.Elapsed.TotalMilliseconds, qualityScore);
-
-            return null;
         }
         catch (Exception ex)
         {
@@ -609,8 +624,6 @@ public class EnhancedPdfProcessingOrchestrator
         private string? _tempFilePath;
 
         private PdfDataHandle() { }
-
-        public bool IsMemoryBased => _bytes != null;
 
         public static PdfDataHandle FromBytes(byte[] bytes)
         {
@@ -727,7 +740,7 @@ public record EnhancedExtractionResult(
 /// </summary>
 public record EnhancedPagedExtractionResult(
     bool Success,
-    List<PageTextChunk> PageChunks,
+    IList<PageTextChunk> PageChunks,
     int TotalPages,
     int TotalCharacters,
     bool OcrTriggered,

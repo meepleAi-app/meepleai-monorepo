@@ -1,4 +1,4 @@
-﻿using Api.BoundedContexts.DocumentProcessing.Application.Commands;
+using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Application.Queries;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
@@ -15,6 +15,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PdfIndexingErrorCode = Api.BoundedContexts.DocumentProcessing.Application.DTOs.PdfIndexingErrorCode;
 
+#pragma warning disable MA0048 // File name must match type name - Contains Interface with supporting types
 namespace Api.Routing;
 
 /// <summary>
@@ -28,7 +29,7 @@ public static class PdfEndpoints
         group.MapPost("/ingest/pdf", async (HttpContext context, IPdfValidator pdfValidator, IMediator mediator, IFeatureFlagService featureFlags, ILogger<Program> logger, CancellationToken ct) =>
         {
             // CONFIG-05: Check if PDF upload feature is enabled (return 403 before auth to reflect feature gating)
-            if (!await featureFlags.IsEnabledAsync("Features.PdfUpload"))
+            if (!await featureFlags.IsEnabledAsync("Features.PdfUpload").ConfigureAwait(false))
             {
                 return Results.Json(
                     new { error = "feature_disabled", message = "PDF uploads are currently disabled", featureName = "Features.PdfUpload" },
@@ -174,7 +175,7 @@ public static class PdfEndpoints
             var pdf = await db.PdfDocuments
                 .Where(p => p.Id == pdfId)
                 .Select(p => new { p.Id, p.GameId, p.FileName, p.FilePath, p.ContentType, p.UploadedByUserId })
-                .FirstOrDefaultAsync(ct);
+                .FirstOrDefaultAsync(ct).ConfigureAwait(false);
 
             if (pdf == null)
             {
@@ -245,7 +246,7 @@ public static class PdfEndpoints
                     $"User attempted to delete PDF owned by another user. User role: {session!.User!.Role}, Owner: {pdf.UploadedByUserId}. RLS scope: own resources only.",
                     null,
                     null,
-                    ct);
+                    ct).ConfigureAwait(false);
 
                 logger.LogWarning("User {UserId} with role {Role} denied access to delete PDF {PdfId} (owner: {OwnerId})",
                     session!.User!.Id, session!.User!.Role, pdfId, pdf.UploadedByUserId);
@@ -274,7 +275,7 @@ public static class PdfEndpoints
                 $"PDF deleted successfully by user with role: {session!.User!.Role}",
                 null,
                 null,
-                ct);
+                ct).ConfigureAwait(false);
 
             return Results.NoContent();
         })
@@ -495,7 +496,7 @@ public static class PdfEndpoints
             CancellationToken ct) =>
         {
             // Check if PDF upload feature is enabled
-            if (!await featureFlags.IsEnabledAsync("Features.PdfUpload"))
+            if (!await featureFlags.IsEnabledAsync("Features.PdfUpload").ConfigureAwait(false))
             {
                 return Results.Json(
                     new { error = "feature_disabled", message = "PDF uploads are currently disabled" },

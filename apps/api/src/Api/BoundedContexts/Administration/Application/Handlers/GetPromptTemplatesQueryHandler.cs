@@ -59,7 +59,7 @@ public class GetPromptTemplatesQueryHandler
                     .Select(v => (int?)v.VersionNumber)
                     .FirstOrDefault()
             })
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return (templates, totalCount);
     }

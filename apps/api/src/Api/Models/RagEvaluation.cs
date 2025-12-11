@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
+#pragma warning disable MA0048 // File name must match type name - Contains related domain models
 namespace Api.Models;
 
 /// <summary>
@@ -79,7 +80,7 @@ public record RagEvaluationDataset
     /// Optional metadata
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public Dictionary<string, string>? Metadata { get; init; }
+    public IDictionary<string, string>? Metadata { get; init; }
 }
 
 /// <summary>
@@ -273,7 +274,7 @@ public record RagEvaluationReport
     /// Optional metadata
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public Dictionary<string, string>? Metadata { get; init; }
+    public IDictionary<string, string>? Metadata { get; init; }
 }
 
 /// <summary>

@@ -29,7 +29,7 @@ public class RuleSpecVersioningDomainService
         var versions = await _dbContext.RuleSpecs
             .Where(r => r.GameId == gameId)
             .Select(r => r.Version)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         var numericVersions = versions
             .Select(TryParseNumericVersion)
@@ -50,7 +50,7 @@ public class RuleSpecVersioningDomainService
 
         // Ensure uniqueness
         while (await _dbContext.RuleSpecs
-            .AnyAsync(r => r.GameId == gameId && r.Version == candidate, cancellationToken))
+            .AnyAsync(r => r.GameId == gameId && r.Version == candidate, cancellationToken).ConfigureAwait(false))
         {
             if (nextNumeric.HasValue)
             {
@@ -72,7 +72,7 @@ public class RuleSpecVersioningDomainService
     public async Task<bool> VersionExistsAsync(Guid gameId, string version, CancellationToken cancellationToken = default)
     {
         return await _dbContext.RuleSpecs
-            .AnyAsync(r => r.GameId == gameId && r.Version == version, cancellationToken);
+            .AnyAsync(r => r.GameId == gameId && r.Version == version, cancellationToken).ConfigureAwait(false);
     }
 
     private static int? TryParseNumericVersion(string? version)

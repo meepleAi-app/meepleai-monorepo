@@ -41,7 +41,7 @@ public sealed class GenerateQualityReportQueryHandler : IQueryHandler<GenerateQu
         var logs = await _dbContext.AiRequestLogs
             .Where(l => l.CreatedAt >= query.StartDate && l.CreatedAt <= query.EndDate)
             .AsNoTracking()
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         var totalResponses = logs.Count;
         var lowQualityCount = logs.Count(l => l.IsLowQuality);

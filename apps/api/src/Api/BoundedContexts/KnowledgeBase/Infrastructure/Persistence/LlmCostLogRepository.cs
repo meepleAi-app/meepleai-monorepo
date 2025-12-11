@@ -71,7 +71,7 @@ public class LlmCostLogRepository : ILlmCostLogRepository
     {
         return await _context.LlmCostLogs
             .Where(x => x.RequestDate >= startDate && x.RequestDate <= endDate)
-            .SumAsync(x => x.TotalCost, ct);
+            .SumAsync(x => x.TotalCost, ct).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
@@ -84,7 +84,7 @@ public class LlmCostLogRepository : ILlmCostLogRepository
             .Where(x => x.RequestDate >= startDate && x.RequestDate <= endDate)
             .GroupBy(x => x.Provider)
             .Select(g => new { Provider = g.Key, TotalCost = g.Sum(x => x.TotalCost) })
-            .ToDictionaryAsync(x => x.Provider, x => x.TotalCost, ct);
+            .ToDictionaryAsync(x => x.Provider, x => x.TotalCost, ct).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
@@ -97,7 +97,7 @@ public class LlmCostLogRepository : ILlmCostLogRepository
             .Where(x => x.RequestDate >= startDate && x.RequestDate <= endDate)
             .GroupBy(x => x.UserRole)
             .Select(g => new { Role = g.Key, TotalCost = g.Sum(x => x.TotalCost) })
-            .ToDictionaryAsync(x => x.Role, x => x.TotalCost, ct);
+            .ToDictionaryAsync(x => x.Role, x => x.TotalCost, ct).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
@@ -109,7 +109,7 @@ public class LlmCostLogRepository : ILlmCostLogRepository
     {
         return await _context.LlmCostLogs
             .Where(x => x.UserId == userId && x.RequestDate >= startDate && x.RequestDate <= endDate)
-            .SumAsync(x => x.TotalCost, ct);
+            .SumAsync(x => x.TotalCost, ct).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
@@ -117,6 +117,6 @@ public class LlmCostLogRepository : ILlmCostLogRepository
     {
         return await _context.LlmCostLogs
             .Where(x => x.RequestDate == date)
-            .SumAsync(x => x.TotalCost, ct);
+            .SumAsync(x => x.TotalCost, ct).ConfigureAwait(false);
     }
 }

@@ -1,3 +1,6 @@
+
+
+#pragma warning disable MA0048 // File name must match type name - Contains related Request/Response DTOs
 namespace Api.BoundedContexts.GameManagement.Application.DTOs;
 
 /// <summary>
@@ -10,7 +13,7 @@ public record GameSessionDto(
     DateTime StartedAt,
     DateTime? CompletedAt,
     int PlayerCount,
-    List<SessionPlayerDto> Players,
+    IReadOnlyList<SessionPlayerDto> Players,
     string? WinnerName,
     string? Notes,
     int DurationMinutes
@@ -30,7 +33,7 @@ public record SessionPlayerDto(
 /// </summary>
 public record StartGameSessionRequest(
     Guid GameId,
-    List<SessionPlayerRequest> Players
+    IReadOnlyList<SessionPlayerRequest> Players
 );
 
 /// <summary>
@@ -57,7 +60,7 @@ public record SessionStatsDto(
     int CompletedSessions,
     int AbandonedSessions,
     int AverageDurationMinutes,
-    List<PlayerWinStatsDto> TopPlayers
+    IReadOnlyList<PlayerWinStatsDto> TopPlayers
 );
 
 /// <summary>

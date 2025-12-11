@@ -80,7 +80,7 @@ public sealed class ChunkedUploadSession : AggregateRoot<Guid>
         if (IsExpired)
             throw new InvalidOperationException("Upload session has expired");
 
-        if (Status == "completed" || Status == "failed")
+        if (string.Equals(Status, "completed", StringComparison.Ordinal) || string.Equals(Status, "failed", StringComparison.Ordinal))
             throw new InvalidOperationException($"Cannot add chunks to session with status '{Status}'");
 
         // Parse existing indices
@@ -178,7 +178,7 @@ public sealed class ChunkedUploadSession : AggregateRoot<Guid>
 
     private HashSet<int> ParseReceivedIndices()
     {
-        if (string.IsNullOrEmpty(ReceivedChunkIndices) || ReceivedChunkIndices == "[]")
+        if (string.IsNullOrEmpty(ReceivedChunkIndices) || string.Equals(ReceivedChunkIndices, "[]", StringComparison.Ordinal))
             return new HashSet<int>();
 
         var trimmed = ReceivedChunkIndices.Trim('[', ']');

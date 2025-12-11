@@ -38,7 +38,7 @@ public class QdrantVectorSearcher : IQdrantVectorSearcher
                 filter: filter,
                 limit: (ulong)limit,
                 cancellationToken: ct
-            );
+            ).ConfigureAwait(false);
 
             _logger.LogDebug("Search in collection {CollectionName} returned {Count} results",
                 collectionName, searchResults.Count);

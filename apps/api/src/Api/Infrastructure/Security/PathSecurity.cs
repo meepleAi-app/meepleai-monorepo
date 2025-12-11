@@ -29,8 +29,8 @@ public static partial class PathSecurity
         // Check for relative traversal sequences, not absolute paths
         // Avoid false positives on Windows absolute paths (C:\Users\...)
         if (filename.Contains("../") || filename.Contains("..\\") ||
-            filename.StartsWith("../") || filename.StartsWith("..\\") ||
-            filename.EndsWith("/..") || filename.EndsWith("\\..") ||
+            filename.StartsWith("../", StringComparison.Ordinal) || filename.StartsWith("..\\", StringComparison.Ordinal) ||
+            filename.EndsWith("/..", StringComparison.Ordinal) || filename.EndsWith("\\..", StringComparison.Ordinal) ||
             filename.Contains("/..") || filename.Contains("\\..") ||
             filename.Contains("....") ||
             filename.Contains("//") ||

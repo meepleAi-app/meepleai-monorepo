@@ -9,6 +9,7 @@ using Api.Infrastructure;
 using Api.Infrastructure.Security;
 using Api.Models;
 
+#pragma warning disable MA0048 // File name must match type name - Contains Interface with supporting types
 namespace Api.Services.LlmClients;
 
 /// <summary>
@@ -318,7 +319,7 @@ public class OpenRouterLlmClient : ILlmClient
                     continue;
 
                 // SSE format: "data: {json}"
-                if (line.StartsWith("data: "))
+                if (line.StartsWith("data: ", StringComparison.Ordinal))
                 {
                     var data = line.Substring(6).Trim();
 

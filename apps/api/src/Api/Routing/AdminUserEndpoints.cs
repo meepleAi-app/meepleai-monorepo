@@ -199,6 +199,124 @@ public static class AdminUserEndpoints
         .Produces(StatusCodes.Status401Unauthorized)
         .Produces(StatusCodes.Status403Forbidden);
 
+        // BULK OPERATIONS - Issue #905
+        group.MapPost("/admin/users/bulk/password-reset", async (
+            BulkPasswordResetRequest request,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
+
+            logger.LogInformation("Admin {AdminId} initiating bulk password reset for {Count} users",
+                session!.User!.Id, request.UserIds.Count);
+
+            var command = new BulkPasswordResetCommand(
+                request.UserIds,
+                request.NewPassword,
+                Guid.Parse(session.User!.Id.ToString())
+            );
+
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("BulkPasswordReset")
+        .WithTags("Admin")
+        .WithSummary("Reset passwords for multiple users")
+        .Produces<BulkOperationResult>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status400BadRequest)
+        .Produces(StatusCodes.Status401Unauthorized);
+
+        group.MapPost("/admin/users/bulk/role-change", async (
+            BulkRoleChangeRequest request,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
+
+            logger.LogInformation("Admin {AdminId} initiating bulk role change for {Count} users to role {Role}",
+                session!.User!.Id, request.UserIds.Count, request.NewRole);
+
+            var command = new BulkRoleChangeCommand(
+                request.UserIds,
+                request.NewRole,
+                Guid.Parse(session.User!.Id.ToString())
+            );
+
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("BulkRoleChange")
+        .WithTags("Admin")
+        .WithSummary("Change role for multiple users")
+        .Produces<BulkOperationResult>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status400BadRequest)
+        .Produces(StatusCodes.Status401Unauthorized);
+
+        group.MapPost("/admin/users/bulk/import", async (
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
+
+            // Read CSV from request body
+            using var reader = new StreamReader(context.Request.Body);
+            var csvContent = await reader.ReadToEndAsync(ct).ConfigureAwait(false);
+
+            logger.LogInformation("Admin {AdminId} initiating bulk user import from CSV",
+                session!.User!.Id);
+
+            var command = new BulkImportUsersCommand(
+                csvContent,
+                Guid.Parse(session.User!.Id.ToString())
+            );
+
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("BulkImportUsers")
+        .WithTags("Admin")
+        .WithSummary("Import users from CSV file")
+        .WithDescription("CSV format: email,displayName,role,password")
+        .Accepts<string>("text/csv")
+        .Produces<BulkOperationResult>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status400BadRequest)
+        .Produces(StatusCodes.Status401Unauthorized);
+
+        group.MapGet("/admin/users/bulk/export", async (
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            string? role = null,
+            string? search = null,
+            CancellationToken ct = default) =>
+        {
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
+
+            logger.LogInformation("Admin {AdminId} exporting users to CSV with filters: Role={Role}, Search={Search}",
+                session!.User!.Id, role, search);
+
+            var query = new BulkExportUsersQuery(role, search);
+            var csv = await mediator.Send(query, ct).ConfigureAwait(false);
+
+            return Results.Content(csv, "text/csv", System.Text.Encoding.UTF8);
+        })
+        .WithName("BulkExportUsers")
+        .WithTags("Admin")
+        .WithSummary("Export users to CSV file")
+        .WithDescription("Returns CSV with format: email,displayName,role,createdAt")
+        .Produces<string>(StatusCodes.Status200OK, "text/csv")
+        .Produces(StatusCodes.Status401Unauthorized);
+
         return group;
     }
 }
@@ -207,3 +325,13 @@ public static class AdminUserEndpoints
 /// Request payload for updating user tier.
 /// </summary>
 public record UpdateUserTierRequest(string Tier);
+
+/// <summary>
+/// Request payload for bulk password reset.
+/// </summary>
+public record BulkPasswordResetRequest(List<Guid> UserIds, string NewPassword);
+
+/// <summary>
+/// Request payload for bulk role change.
+/// </summary>
+public record BulkRoleChangeRequest(List<Guid> UserIds, string NewRole);

@@ -27,7 +27,7 @@ public class GetRuleSpecsQueryHandler : IQueryHandler<GetRuleSpecsQuery, IReadOn
             .Where(rs => rs.GameId == query.GameId)
             .Include(rs => rs.Atoms)
             .OrderByDescending(rs => rs.CreatedAt)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return ruleSpecs.Select(rs => new RuleSpecDto(
             Id: rs.Id,

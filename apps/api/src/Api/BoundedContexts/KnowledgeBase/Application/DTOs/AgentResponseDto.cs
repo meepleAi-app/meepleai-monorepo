@@ -36,7 +36,7 @@ public sealed record AgentResponseDto
     /// <summary>
     /// Search results returned by the agent.
     /// </summary>
-    public List<SearchResultDto> Results { get; init; } = new();
+    public IReadOnlyList<SearchResultDto> Results { get; init; } = Array.Empty<SearchResultDto>();
 
     /// <summary>
     /// Overall confidence score (0.0-1.0).

@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 
+#pragma warning disable MA0048 // File name must match type name - Contains related domain models
 namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.External.Models;
 
 /// <summary>
@@ -15,7 +16,7 @@ public class SmolDoclingResponse
     public string Markdown { get; set; } = string.Empty;
 
     [JsonPropertyName("chunks")]
-    public List<SmolDoclingChunk> Chunks { get; set; } = new();
+    public IList<SmolDoclingChunk> Chunks { get; set; } = new List<SmolDoclingChunk>();
 
     [JsonPropertyName("quality_score")]
     public double QualityScore { get; set; }
@@ -24,7 +25,7 @@ public class SmolDoclingResponse
     public int PageCount { get; set; }
 
     [JsonPropertyName("metadata")]
-    public Dictionary<string, object> Metadata { get; set; } = new(StringComparer.Ordinal);
+    public IDictionary<string, object> Metadata { get; set; } = new Dictionary<string, object>(StringComparer.Ordinal);
 }
 
 /// <summary>
@@ -43,7 +44,7 @@ public class SmolDoclingChunk
     public string? ElementType { get; set; }
 
     [JsonPropertyName("metadata")]
-    public Dictionary<string, object> Metadata { get; set; } = new(StringComparer.Ordinal);
+    public IDictionary<string, object> Metadata { get; set; } = new Dictionary<string, object>(StringComparer.Ordinal);
 }
 
 /// <summary>
@@ -113,7 +114,7 @@ public class SmolDoclingErrorDetail
     public string Message { get; set; } = string.Empty;
 
     [JsonPropertyName("details")]
-    public Dictionary<string, object>? Details { get; set; }
+    public IDictionary<string, object>? Details { get; set; }
 
     [JsonPropertyName("timestamp")]
     public string Timestamp { get; set; } = string.Empty;

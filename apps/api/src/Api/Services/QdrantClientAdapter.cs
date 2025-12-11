@@ -114,7 +114,7 @@ public class QdrantClientAdapter : IQdrantClientAdapter
             vectorsConfig,
             hnswConfig: hnswConfig,
             quantizationConfig: quantizationConfig,
-            cancellationToken: cancellationToken);
+            cancellationToken: cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation("Collection {CollectionName} created successfully with optimized indexing", collectionName);
     }
@@ -136,7 +136,7 @@ public class QdrantClientAdapter : IQdrantClientAdapter
             collectionName,
             hnswConfig: hnswConfig,
             quantizationConfig: quantizationConfig,
-            cancellationToken: cancellationToken);
+            cancellationToken: cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation("Collection {CollectionName} configuration updated successfully", collectionName);
     }

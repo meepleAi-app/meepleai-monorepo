@@ -1,3 +1,6 @@
+
+
+#pragma warning disable MA0048 // File name must match type name - Contains related Request/Response DTOs
 namespace Api.Models;
 
 /// <summary>
@@ -276,7 +279,7 @@ public class PromptVersionHistoryResponse
     /// <summary>
     /// List of all versions (ordered by version number descending).
     /// </summary>
-    public List<PromptVersionDto> Versions { get; init; } = new();
+    public IList<PromptVersionDto> Versions { get; init; } = new List<PromptVersionDto>();
 
     /// <summary>
     /// Total number of versions.
@@ -297,7 +300,7 @@ public class PromptAuditLogResponse
     /// <summary>
     /// List of audit log entries (ordered by timestamp descending).
     /// </summary>
-    public List<PromptAuditLogDto> Logs { get; init; } = new();
+    public IList<PromptAuditLogDto> Logs { get; init; } = new List<PromptAuditLogDto>();
 
     /// <summary>
     /// Total number of log entries.
@@ -313,7 +316,7 @@ public class PromptTemplateListResponse
     /// <summary>
     /// List of templates.
     /// </summary>
-    public List<PromptTemplateDto> Templates { get; init; } = new();
+    public IList<PromptTemplateDto> Templates { get; init; } = new List<PromptTemplateDto>();
 
     /// <summary>
     /// Total count of templates (before pagination).

@@ -10,5 +10,5 @@ public record SendAlertCommand(
     string AlertType,
     string Severity,
     string Message,
-    Dictionary<string, object>? Metadata = null
+    IDictionary<string, object>? Metadata = null
 ) : ICommand<AlertDto>;

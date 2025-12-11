@@ -88,7 +88,7 @@ public class ModelRecommendationService : IModelRecommendationService
 
     public async Task<List<ModelComparison>> CompareModelsAsync(CancellationToken ct = default)
     {
-        await Task.CompletedTask; // Satisfy async
+        await Task.CompletedTask.ConfigureAwait(false); // Satisfy async
 
         var models = new[]
         {

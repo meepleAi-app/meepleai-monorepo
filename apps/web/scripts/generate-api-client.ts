@@ -15,7 +15,7 @@
  *
  * Note: The openapi.json file is committed to the repo (Option C - Hybrid).
  * Regenerate it when API changes by:
- *   1. Fix build errors (ActiveSession, EndpointFilter issues)
+ *   1. Fix build errors (EndpointFilter issues)
  *   2. Run API: cd apps/api && dotnet run
  *   3. Download spec: curl http://localhost:8080/openapi/v1.json -o apps/api/src/Api/openapi.json
  *
@@ -43,7 +43,7 @@ async function fetchOpenApiSpec(): Promise<string> {
     try {
       const response = await fetch(OPENAPI_URL, {
         signal: controller.signal,
-        headers: { 'Accept': 'application/json' }
+        headers: { Accept: 'application/json' },
       });
       clearTimeout(timeoutId);
 
@@ -72,8 +72,8 @@ async function fetchOpenApiSpec(): Promise<string> {
     const errorMsg = error instanceof Error ? error.message : String(error);
     throw new Error(
       `Failed to fetch OpenAPI spec from ${OPENAPI_URL} or read from ${localPath}.\n` +
-      `Error: ${errorMsg}\n` +
-      `Please ensure the API is running or build the API first to generate openapi.json`
+        `Error: ${errorMsg}\n` +
+        `Please ensure the API is running or build the API first to generate openapi.json`
     );
   }
 }
@@ -94,7 +94,7 @@ async function generateZodSchemas(openApiSpec: string): Promise<void> {
   if (typeof parsedSpec !== 'object' || parsedSpec === null || Array.isArray(parsedSpec)) {
     throw new Error(
       'Invalid OpenAPI specification format (expected object). ' +
-      'Ensure the backend is generating a valid OpenAPI document.'
+        'Ensure the backend is generating a valid OpenAPI document.'
     );
   }
 
@@ -102,15 +102,16 @@ async function generateZodSchemas(openApiSpec: string): Promise<void> {
   if (!('openapi' in parsedSpec) && !('swagger' in parsedSpec)) {
     throw new Error(
       'Not a valid OpenAPI specification (missing openapi/swagger field). ' +
-      'Ensure the backend is generating a valid OpenAPI document.'
+        'Ensure the backend is generating a valid OpenAPI document.'
     );
   }
 
-  const version = ('openapi' in parsedSpec && typeof parsedSpec.openapi === 'string')
-    ? parsedSpec.openapi
-    : ('swagger' in parsedSpec && typeof parsedSpec.swagger === 'string')
-      ? parsedSpec.swagger
-      : 'unknown';
+  const version =
+    'openapi' in parsedSpec && typeof parsedSpec.openapi === 'string'
+      ? parsedSpec.openapi
+      : 'swagger' in parsedSpec && typeof parsedSpec.swagger === 'string'
+        ? parsedSpec.swagger
+        : 'unknown';
 
   console.log(`📋 OpenAPI version: ${version}`);
 
@@ -156,7 +157,9 @@ async function main(): Promise<void> {
     console.log('📁 Generated files in:', OUTPUT_DIR);
     console.log('   - openapi.json: OpenAPI specification');
     console.log('   - zod-schemas.ts: Zod validation schemas');
-    console.log('\n💡 Note: TypeScript API client is manually maintained in src/lib/api/clients/\n');
+    console.log(
+      '\n💡 Note: TypeScript API client is manually maintained in src/lib/api/clients/\n'
+    );
   } catch (error) {
     console.error('❌ Error generating API client:');
     console.error(error);

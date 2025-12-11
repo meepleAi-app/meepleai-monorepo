@@ -32,7 +32,7 @@ public class PagerDutyAlertChannel : IAlertChannel
         string alertType,
         string severity,
         string message,
-        Dictionary<string, object>? metadata = null,
+        IDictionary<string, object>? metadata = null,
         CancellationToken cancellationToken = default)
     {
         if (!_config.Enabled)
@@ -66,7 +66,7 @@ public class PagerDutyAlertChannel : IAlertChannel
             var response = await httpClient.PostAsJsonAsync(
                 PagerDutyEventsApiUrl,
                 payload,
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
 
             if (response.IsSuccessStatusCode)
             {
@@ -101,7 +101,7 @@ public class PagerDutyAlertChannel : IAlertChannel
         string alertType,
         string severity,
         string message,
-        Dictionary<string, object>? metadata)
+        IDictionary<string, object>? metadata)
     {
         var customDetails = new Dictionary<string, object>
 (StringComparer.Ordinal)

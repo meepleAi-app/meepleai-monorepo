@@ -56,7 +56,7 @@ public class GetAllUsersQueryHandler : IQueryHandler<GetAllUsersQuery, PagedResu
         var users = await dbQuery
             .Skip((query.Page - 1) * query.Limit)
             .Take(query.Limit)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return new PagedResult<UserDto>(
             Items: users.Select(MapToDto).ToList(),

@@ -1,4 +1,4 @@
-﻿using Api.BoundedContexts.Administration.Application.Commands;
+using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.Extensions;
@@ -33,7 +33,7 @@ public static class PromptManagementEndpoints
 
             var result = await mediator.Send(
                 new GetPromptTemplatesQuery(page, limit, category),
-                ct);
+                ct).ConfigureAwait(false);
 
             return Results.Ok(new PagedResult<PromptTemplateDto>(result.Templates, result.TotalCount, page, limit));
         })
@@ -62,7 +62,7 @@ public static class PromptManagementEndpoints
                     request.InitialContent,
                     request.Metadata,
                     session!.User!.Id),
-                ct);
+                ct).ConfigureAwait(false);
 
             return Results.Created(
                 $"/api/v1/admin/prompts/{result.Id}",
@@ -88,7 +88,7 @@ public static class PromptManagementEndpoints
 
             var result = await mediator.Send(
                 new GetPromptTemplateByIdQuery(id),
-                ct);
+                ct).ConfigureAwait(false);
 
             if (result == null)
             {
@@ -122,7 +122,7 @@ public static class PromptManagementEndpoints
                     request.Content,
                     request.Metadata,
                     session!.User!.Id),
-                ct);
+                ct).ConfigureAwait(false);
 
             return Results.Created(
                 $"/api/v1/admin/prompts/{id}/versions/{result.Id}",
@@ -148,7 +148,7 @@ public static class PromptManagementEndpoints
 
             var result = await mediator.Send(
                 new GetPromptVersionsQuery(id),
-                ct);
+                ct).ConfigureAwait(false);
 
             return Results.Ok(result);
         })

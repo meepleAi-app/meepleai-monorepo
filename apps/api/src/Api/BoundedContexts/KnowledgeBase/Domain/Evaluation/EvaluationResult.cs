@@ -1,3 +1,6 @@
+
+
+#pragma warning disable MA0048 // File name must match type name - Contains Interface with supporting types
 namespace Api.BoundedContexts.KnowledgeBase.Domain.Evaluation;
 
 /// <summary>
@@ -135,19 +138,19 @@ public sealed record EvaluationResult
     /// Metrics broken down by difficulty.
     /// </summary>
     public IReadOnlyDictionary<string, EvaluationMetrics> MetricsByDifficulty { get; init; } =
-        new Dictionary<string, EvaluationMetrics>();
+        new Dictionary<string, EvaluationMetrics>(StringComparer.Ordinal);
 
     /// <summary>
     /// Metrics broken down by category.
     /// </summary>
     public IReadOnlyDictionary<string, EvaluationMetrics> MetricsByCategory { get; init; } =
-        new Dictionary<string, EvaluationMetrics>();
+        new Dictionary<string, EvaluationMetrics>(StringComparer.Ordinal);
 
     /// <summary>
     /// Metrics broken down by game.
     /// </summary>
     public IReadOnlyDictionary<string, EvaluationMetrics> MetricsByGame { get; init; } =
-        new Dictionary<string, EvaluationMetrics>();
+        new Dictionary<string, EvaluationMetrics>(StringComparer.Ordinal);
 
     /// <summary>
     /// Total duration of evaluation in milliseconds.
@@ -229,12 +232,11 @@ public sealed record EvaluationResult
     }
 
     private static IReadOnlyDictionary<string, EvaluationMetrics> CalculateMetricsByGroup(
-        IReadOnlyList<EvaluationSampleResult> results,
-        bool getDifficulty)
+                )
     {
         // Note: This is a simplified implementation. In practice, you'd need to
         // join with the original samples to get difficulty/category metadata.
         // For now, returning empty as the sample results don't carry this metadata.
-        return new Dictionary<string, EvaluationMetrics>();
+        return new Dictionary<string, EvaluationMetrics>(StringComparer.Ordinal);
     }
 }

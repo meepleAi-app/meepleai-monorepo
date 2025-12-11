@@ -1,5 +1,6 @@
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 
+#pragma warning disable MA0048 // File name must match type name - Contains Service with Configuration classes
 namespace Api.BoundedContexts.DocumentProcessing.Domain.Services;
 
 /// <summary>
@@ -18,8 +19,6 @@ public class PdfQualityValidationDomainService
 
     // Default quality thresholds (configurable)
     private const double DefaultMinimumQualityThreshold = 0.80;
-    private const double DefaultWarningQualityThreshold = 0.70;
-    private const double DefaultCriticalQualityThreshold = 0.50;
 
     public PdfQualityValidationDomainService(
         ILogger<PdfQualityValidationDomainService> logger,
@@ -146,7 +145,7 @@ public class PdfQualityValidationDomainService
     /// <summary>
     /// Generates actionable recommendation based on quality score
     /// </summary>
-    private string GenerateRecommendation(double score, ExtractionQuality quality, string source)
+    private string GenerateRecommendation(double score, string source)
     {
         if (score >= 0.80)
         {

@@ -43,7 +43,7 @@ public class GetCommentsForLineQueryHandler : IRequestHandler<GetCommentsForLine
                 && c.LineNumber == query.LineNumber
                 && c.ParentCommentId == null) // Only top-level comments for this line
             .OrderBy(c => c.CreatedAt)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogDebug(
             "Retrieved {CommentCount} comments for {GameId} v{Version} line {LineNumber}",

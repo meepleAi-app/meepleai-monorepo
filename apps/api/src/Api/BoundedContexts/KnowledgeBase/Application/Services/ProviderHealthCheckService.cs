@@ -59,7 +59,7 @@ public sealed class ProviderHealthCheckService : BackgroundService, IProviderHea
     /// <summary>
     /// Initialize health status tracking for all providers
     /// </summary>
-    private Task InitializeHealthStatuses(CancellationToken ct)
+    private Task InitializeHealthStatuses()
     {
         using var scope = _scopeFactory.CreateScope();
         var clients = scope.ServiceProvider.GetRequiredService<IEnumerable<ILlmClient>>();
@@ -120,7 +120,7 @@ public sealed class ProviderHealthCheckService : BackgroundService, IProviderHea
                 HealthCheckPrompt,
                 temperature: 0.1,
                 maxTokens: 10,
-                cts.Token);
+                cts.Token).ConfigureAwait(false);
 
             var success = result.Success && !string.IsNullOrWhiteSpace(result.Response);
 

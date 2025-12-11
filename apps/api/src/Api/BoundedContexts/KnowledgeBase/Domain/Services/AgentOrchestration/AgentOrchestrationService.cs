@@ -1,6 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 
+#pragma warning disable MA0048 // File name must match type name - Contains Service with Configuration classes
 namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
 
 /// <summary>
@@ -154,8 +155,8 @@ public class AgentOrchestrationService
         }
 
         // Conversation continuation patterns
-        if (lowerQuery.StartsWith("and ") || lowerQuery.StartsWith("but ") ||
-            lowerQuery.StartsWith("also ") || lowerQuery.Contains("you said") ||
+        if (lowerQuery.StartsWith("and ", StringComparison.Ordinal) || lowerQuery.StartsWith("but ", StringComparison.Ordinal) ||
+            lowerQuery.StartsWith("also ", StringComparison.Ordinal) || lowerQuery.Contains("you said") ||
             lowerQuery.Contains("earlier"))
         {
             return QueryType.ConversationContinuation;

@@ -1,3 +1,6 @@
+
+
+#pragma warning disable MA0048 // File name must match type name - Contains related Request/Response DTOs
 namespace Api.Models;
 
 /// <summary>
@@ -8,7 +11,7 @@ public record BulkExportRequest
     /// <summary>
     /// List of rule spec IDs to export (gameId format)
     /// </summary>
-    public required List<string> RuleSpecIds { get; init; }
+    public required IList<string> RuleSpecIds { get; init; }
 }
 
 /// <summary>
@@ -19,7 +22,7 @@ public record BulkDeleteRequest
     /// <summary>
     /// List of rule spec IDs to delete (gameId format)
     /// </summary>
-    public required List<string> RuleSpecIds { get; init; }
+    public required IList<string> RuleSpecIds { get; init; }
 }
 
 /// <summary>
@@ -30,7 +33,7 @@ public record BulkDuplicateRequest
     /// <summary>
     /// List of rule spec IDs to duplicate (gameId format)
     /// </summary>
-    public required List<string> RuleSpecIds { get; init; }
+    public required IList<string> RuleSpecIds { get; init; }
 }
 
 /// <summary>
@@ -51,7 +54,7 @@ public record BulkImportResult
     /// <summary>
     /// List of import errors with details
     /// </summary>
-    public required List<ImportError> Errors { get; init; }
+    public required IList<ImportError> Errors { get; init; }
 }
 
 /// <summary>
@@ -99,5 +102,5 @@ public record BulkDuplicateResult
     /// <summary>
     /// List of newly created rule spec IDs
     /// </summary>
-    public required List<string> NewRuleSpecIds { get; init; }
+    public required IList<string> NewRuleSpecIds { get; init; }
 }

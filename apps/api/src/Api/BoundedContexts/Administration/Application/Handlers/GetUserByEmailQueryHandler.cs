@@ -21,7 +21,7 @@ public class GetUserByEmailQueryHandler : IQueryHandler<GetUserByEmailQuery, Use
         var user = await _dbContext.Users
             .Include(u => u.Sessions)
             .AsNoTracking()
-            .FirstOrDefaultAsync(u => u.Email == query.Email, cancellationToken);
+            .FirstOrDefaultAsync(u => u.Email == query.Email, cancellationToken).ConfigureAwait(false);
 
         return user == null ? null : MapToDto(user);
     }

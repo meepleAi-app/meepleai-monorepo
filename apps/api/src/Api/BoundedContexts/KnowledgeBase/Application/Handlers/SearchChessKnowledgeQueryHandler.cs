@@ -39,7 +39,7 @@ public sealed class SearchChessKnowledgeQueryHandler
             // Generate embedding for query
             var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(
                 request.Query,
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
 
             if (!embeddingResult.Success || embeddingResult.Embeddings.Count == 0)
             {
@@ -55,7 +55,7 @@ public sealed class SearchChessKnowledgeQueryHandler
                 ChessCategory,
                 embeddingResult.Embeddings[0],
                 request.Limit,
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Chess knowledge search completed: {ResultCount} results",

@@ -22,17 +22,17 @@ public class ChunkedUploadSessionRepository : RepositoryBase, IChunkedUploadSess
     {
         var entity = await DbContext.ChunkedUploadSessions
             .AsNoTracking()
-            .FirstOrDefaultAsync(s => s.Id == id, cancellationToken);
+            .FirstOrDefaultAsync(s => s.Id == id, cancellationToken).ConfigureAwait(false);
 
         return entity != null ? MapToDomain(entity) : null;
     }
 
-    public async Task<List<ChunkedUploadSession>> GetAllAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<ChunkedUploadSession>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         var entities = await DbContext.ChunkedUploadSessions
             .AsNoTracking()
             .OrderByDescending(s => s.CreatedAt)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return entities.Select(MapToDomain).ToList();
     }
@@ -49,7 +49,7 @@ public class ChunkedUploadSessionRepository : RepositoryBase, IChunkedUploadSess
                         s.Status != "expired" &&
                         s.ExpiresAt > DateTime.UtcNow)
             .OrderByDescending(s => s.CreatedAt)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return entities.Select(MapToDomain).ToList();
     }
@@ -63,7 +63,7 @@ public class ChunkedUploadSessionRepository : RepositoryBase, IChunkedUploadSess
                         s.Status != "completed" &&
                         s.Status != "failed" &&
                         s.Status != "expired")
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return entities.Select(MapToDomain).ToList();
     }
@@ -76,7 +76,7 @@ public class ChunkedUploadSessionRepository : RepositoryBase, IChunkedUploadSess
             .AsNoTracking()
             .Where(s => s.Status == status)
             .OrderByDescending(s => s.CreatedAt)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return entities.Select(MapToDomain).ToList();
     }

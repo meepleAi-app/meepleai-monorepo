@@ -19,7 +19,7 @@ public sealed class HierarchicalChunk
     /// <summary>
     /// List of child chunk identifiers.
     /// </summary>
-    public List<string> ChildIds { get; private set; } = new();
+    public IList<string> ChildIds { get; private set; } = new List<string>();
 
     /// <summary>
     /// Chunk text content.
@@ -112,7 +112,7 @@ public sealed class HierarchicalChunk
         if (string.IsNullOrWhiteSpace(childId))
             throw new ArgumentException("ChildId cannot be empty", nameof(childId));
 
-        if (!ChildIds.Contains(childId))
+        if (!ChildIds.Contains(childId, StringComparer.Ordinal))
         {
             ChildIds.Add(childId);
         }

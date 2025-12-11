@@ -1,6 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Evaluation;
 using Api.BoundedContexts.KnowledgeBase.Domain.GridSearch;
 
+#pragma warning disable MA0048 // File name must match type name - Contains Interface with supporting types
 namespace Api.BoundedContexts.KnowledgeBase.Domain.Reports;
 
 /// <summary>

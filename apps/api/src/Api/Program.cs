@@ -391,7 +391,7 @@ static async Task EnsureInitialAdminUserAsync(WebApplication app, MeepleAiDbCont
 
     // Check if any admin users exist
     var hasAdminUser = await db.Users
-        .AnyAsync(u => u.Role == "admin");
+        .AnyAsync(u => u.Role == "admin").ConfigureAwait(false);
 
     if (hasAdminUser)
     {
@@ -486,7 +486,7 @@ static async Task EnsureInitialAdminUserAsync(WebApplication app, MeepleAiDbCont
         // Race condition: Another instance created the admin user simultaneously
         // Recheck if an admin user now exists
         var adminNowExists = await db.Users
-            .AnyAsync(u => u.Role == "admin");
+            .AnyAsync(u => u.Role == "admin").ConfigureAwait(false);
 
         if (adminNowExists)
         {

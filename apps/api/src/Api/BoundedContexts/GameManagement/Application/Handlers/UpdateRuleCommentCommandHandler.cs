@@ -36,7 +36,7 @@ public class UpdateRuleCommentCommandHandler : IRequestHandler<UpdateRuleComment
         var comment = await _dbContext.RuleSpecComments
             .Include(c => c.User)
             .FirstOrDefaultAsync(c => c.Id == command.CommentId, cancellationToken)
-            ?? throw new InvalidOperationException($"Comment {command.CommentId} not found");
+.ConfigureAwait(false) ?? throw new InvalidOperationException($"Comment {command.CommentId} not found");
 
         // Verify ownership
         if (comment.UserId != command.UserId)
@@ -55,7 +55,7 @@ public class UpdateRuleCommentCommandHandler : IRequestHandler<UpdateRuleComment
 
         // Reload with navigation properties
         return await LoadCommentWithRelationsAsync(comment.Id, cancellationToken)
-            ?? throw new InvalidOperationException("Failed to load updated comment");
+.ConfigureAwait(false) ?? throw new InvalidOperationException("Failed to load updated comment");
     }
 
     private async Task<RuleCommentDto?> LoadCommentWithRelationsAsync(Guid commentId, CancellationToken cancellationToken)
@@ -68,7 +68,7 @@ public class UpdateRuleCommentCommandHandler : IRequestHandler<UpdateRuleComment
                 .ThenInclude(r => r.ResolvedByUser)
             .Include(c => c.ResolvedByUser)
             .AsNoTrackingWithIdentityResolution()
-            .FirstOrDefaultAsync(c => c.Id == commentId, cancellationToken);
+            .FirstOrDefaultAsync(c => c.Id == commentId, cancellationToken).ConfigureAwait(false);
 
         return comment?.ToDto();
     }

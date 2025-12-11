@@ -302,7 +302,7 @@ ANSWER:",
                 .Include(v => v.Template)
                 .Where(v => v.Template.Name == templateName && v.IsActive)
                 .OrderByDescending(v => v.VersionNumber)
-                .FirstOrDefaultAsync(ct);
+                .FirstOrDefaultAsync(ct).ConfigureAwait(false);
 
             if (activeVersion != null)
             {
@@ -310,7 +310,7 @@ ANSWER:",
                 var cacheSet = await db.StringSetAsync(
                     cacheKey,
                     activeVersion.Content,
-                    TimeSpan.FromSeconds(DefaultCacheTtlSeconds));
+                    TimeSpan.FromSeconds(DefaultCacheTtlSeconds)).ConfigureAwait(false);
 
                 if (cacheSet)
                 {
@@ -345,7 +345,7 @@ ANSWER:",
                 .Include(v => v.Template)
                 .Where(v => v.Template.Name == templateName && v.IsActive)
                 .OrderByDescending(v => v.VersionNumber)
-                .FirstOrDefaultAsync(ct);
+                .FirstOrDefaultAsync(ct).ConfigureAwait(false);
 
             return activeVersion?.Content;
         }

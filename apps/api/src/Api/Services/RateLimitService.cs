@@ -3,6 +3,7 @@ using Api.Models;
 using Microsoft.Extensions.Options;
 using StackExchange.Redis;
 
+#pragma warning disable MA0048 // File name must match type name - Contains Service with Configuration classes
 namespace Api.Services;
 
 /// <summary>
@@ -176,7 +177,7 @@ public class RateLimitService : IRateLimitService
     /// Get a specific rate limit value with fallback chain.
     /// Issue #1663: Applies 10x multiplier in Dev/Test environments for K6 performance testing.
     /// </summary>
-    private async Task<T> GetRateLimitValueAsync<T>(string limitType, string role, CancellationToken ct = default) where T : struct
+    private async Task<T> GetRateLimitValueAsync<T>(string limitType, string role) where T : struct
     {
         // Guard: This method should only be called when _configService is not null
         if (_configService == null)

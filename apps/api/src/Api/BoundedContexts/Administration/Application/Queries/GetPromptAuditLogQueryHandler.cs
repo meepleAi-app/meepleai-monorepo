@@ -29,7 +29,7 @@ public class GetPromptAuditLogQueryHandler : IQueryHandler<GetPromptAuditLogQuer
         var template = await _db.PromptTemplates
             .AsNoTracking()
             .Include(t => t.CreatedBy)
-            .FirstOrDefaultAsync(t => t.Id == templateGuid, cancellationToken);
+            .FirstOrDefaultAsync(t => t.Id == templateGuid, cancellationToken).ConfigureAwait(false);
 
         if (template == null)
         {
@@ -56,7 +56,7 @@ public class GetPromptAuditLogQueryHandler : IQueryHandler<GetPromptAuditLogQuer
                 ChangedAt = a.ChangedAt,
                 Details = a.Details
             })
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return new PromptAuditLogResponse
         {

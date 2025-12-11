@@ -28,7 +28,7 @@ public class GetSessionStatusQueryHandler : IQueryHandler<GetSessionStatusQuery,
         var session = await _db.UserSessions
             .AsNoTracking()
             .Include(s => s.User)
-            .FirstOrDefaultAsync(s => s.Id == request.SessionId, cancellationToken);
+            .FirstOrDefaultAsync(s => s.Id == request.SessionId, cancellationToken).ConfigureAwait(false);
 
         if (session == null)
         {

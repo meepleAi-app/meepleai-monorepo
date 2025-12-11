@@ -25,7 +25,7 @@ public class GetRuleSpecVersionQueryHandler : IQueryHandler<GetRuleSpecVersionQu
             .AsNoTracking()
             .Include(r => r.Atoms)
             .Where(r => r.GameId == query.GameId && r.Version == query.Version)
-            .FirstOrDefaultAsync(cancellationToken);
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
 
         if (specEntity is null)
         {

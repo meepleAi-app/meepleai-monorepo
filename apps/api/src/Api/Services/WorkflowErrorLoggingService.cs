@@ -112,7 +112,7 @@ public class WorkflowErrorLoggingService : IWorkflowErrorLoggingService
                         e.RetryCount,
                         e.StackTrace,
                         e.CreatedAt))
-                    .ToListAsync(cancel);
+                    .ToListAsync(cancel).ConfigureAwait(false);
 
                 return new PagedResult<WorkflowErrorDto>(
                     errors,
@@ -125,7 +125,7 @@ public class WorkflowErrorLoggingService : IWorkflowErrorLoggingService
                 Expiration = TimeSpan.FromMinutes(5),
                 LocalCacheExpiration = TimeSpan.FromMinutes(2)
             },
-            cancellationToken: ct);
+            cancellationToken: ct).ConfigureAwait(false);
     }
 
     public async Task<WorkflowErrorDto?> GetErrorByIdAsync(Guid id, CancellationToken ct = default)
@@ -138,7 +138,7 @@ public class WorkflowErrorLoggingService : IWorkflowErrorLoggingService
             {
                 var entity = await _db.WorkflowErrorLogs
                     .AsNoTracking()
-                    .FirstOrDefaultAsync(e => e.Id == id, cancel);
+                    .FirstOrDefaultAsync(e => e.Id == id, cancel).ConfigureAwait(false);
 
                 if (entity == null)
                     return null;
@@ -158,7 +158,7 @@ public class WorkflowErrorLoggingService : IWorkflowErrorLoggingService
                 Expiration = TimeSpan.FromMinutes(10),
                 LocalCacheExpiration = TimeSpan.FromMinutes(5)
             },
-            cancellationToken: ct);
+            cancellationToken: ct).ConfigureAwait(false);
     }
 
     /// <summary>

@@ -40,7 +40,7 @@ public class UpdateRuleSpecCommandHandler : ICommandHandler<UpdateRuleSpecComman
     {
         // Ensure game exists
         var game = await _dbContext.Games
-            .FirstOrDefaultAsync(g => g.Id == command.GameId, cancellationToken);
+            .FirstOrDefaultAsync(g => g.Id == command.GameId, cancellationToken).ConfigureAwait(false);
 
         if (game is null)
         {
@@ -49,7 +49,7 @@ public class UpdateRuleSpecCommandHandler : ICommandHandler<UpdateRuleSpecComman
 
         // Ensure user exists
         var userExists = await _dbContext.Users
-            .AnyAsync(u => u.Id == command.UserId, cancellationToken);
+            .AnyAsync(u => u.Id == command.UserId, cancellationToken).ConfigureAwait(false);
 
         if (!userExists)
         {
@@ -113,7 +113,7 @@ public class UpdateRuleSpecCommandHandler : ICommandHandler<UpdateRuleSpecComman
             $"Updated RuleSpec to version {version}",
             command.IpAddress,
             command.UserAgent,
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
 
         return new RuleSpecDto(
             Id: specEntity.Id,

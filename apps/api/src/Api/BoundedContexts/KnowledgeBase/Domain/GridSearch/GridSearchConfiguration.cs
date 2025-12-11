@@ -1,3 +1,6 @@
+
+
+#pragma warning disable MA0048 // File name must match type name - Contains Interface with supporting types
 namespace Api.BoundedContexts.KnowledgeBase.Domain.GridSearch;
 
 /// <summary>
@@ -73,9 +76,9 @@ public sealed record GridSearchConfiguration
         var all = GetAllConfigurations();
         return new[]
         {
-            all.First(c => c.ConfigurationId == "baseline_none_no_rerank"),
-            all.First(c => c.ConfigurationId == "baseline_none_bge_rerank"),
-            all.First(c => c.ConfigurationId == "dense_scalar_int8_bge_rerank")
+            all.First(c => string.Equals(c.ConfigurationId, "baseline_none_no_rerank", StringComparison.Ordinal)),
+            all.First(c => string.Equals(c.ConfigurationId, "baseline_none_bge_rerank", StringComparison.Ordinal)),
+            all.First(c => string.Equals(c.ConfigurationId, "dense_scalar_int8_bge_rerank", StringComparison.Ordinal))
         };
     }
 }

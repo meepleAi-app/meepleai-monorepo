@@ -69,7 +69,7 @@ public static class AiEndpoints
                 searchMode: req.searchMode,
                 language: null,
                 bypassCache,
-                ct);
+                ct).ConfigureAwait(false);
             var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
 
             // CHAT-02: Generate follow-up questions if enabled
@@ -252,7 +252,7 @@ public static class AiEndpoints
             try
             {
                 var query = new StreamExplainQuery(req.gameId, req.topic);
-                await foreach (var evt in mediator.CreateStream(query, ct))
+                await foreach (var evt in mediator.CreateStream(query, ct).ConfigureAwait(false))
                 {
                     // Serialize event as JSON
                     var json = System.Text.Json.JsonSerializer.Serialize(evt);
@@ -366,7 +366,7 @@ public static class AiEndpoints
                 string? gameName = null;
 
                 var query = new StreamQaQuery(req.gameId, req.query, req.chatId);
-                await foreach (var evt in mediator.CreateStream(query, ct))
+                await foreach (var evt in mediator.CreateStream(query, ct).ConfigureAwait(false))
                 {
                     // Serialize event as JSON
                     var json = System.Text.Json.JsonSerializer.Serialize(evt);
@@ -544,7 +544,7 @@ public static class AiEndpoints
             try
             {
                 var query = new StreamSetupGuideQuery(req.gameId);
-                await foreach (var evt in mediator.CreateStream(query, ct))
+                await foreach (var evt in mediator.CreateStream(query, ct).ConfigureAwait(false))
                 {
                     // Serialize event as JSON
                     var json = System.Text.Json.JsonSerializer.Serialize(evt);

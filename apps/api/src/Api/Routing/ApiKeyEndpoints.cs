@@ -159,6 +159,68 @@ public static class ApiKeyEndpoints
         })
         .RequireSession(); // Issue #1446: Automatic session validation
 
+        // ISSUE-904: Get detailed usage statistics for an API key
+        group.MapGet("/api-keys/{keyId}/stats", async (string keyId, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
+        {
+            // Session validated by RequireSessionFilter
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+            if (!Guid.TryParse(keyId, out var keyGuid))
+            {
+                return Results.BadRequest(new { error = "Invalid API key ID format" });
+            }
+
+            var query = new Api.BoundedContexts.Authentication.Application.Queries.GetApiKeyUsageStatsQuery(
+                keyGuid,
+                session.User!.Id);
+            var stats = await mediator.Send(query, ct).ConfigureAwait(false);
+
+            if (stats == null)
+            {
+                logger.LogWarning("API key {KeyId} not found for user {UserId}", keyId, session.User!.Id);
+                return Results.NotFound(new { error = "API key not found" });
+            }
+
+            return Results.Json(stats);
+        })
+        .RequireSession(); // Issue #1446: Automatic session validation
+
+        // ISSUE-904: Get usage logs for an API key (paginated)
+        group.MapGet("/api-keys/{keyId}/logs", async (string keyId, HttpContext context, IMediator mediator, ILogger<Program> logger, int skip = 0, int take = 50, CancellationToken ct = default) =>
+        {
+            // Session validated by RequireSessionFilter
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+            if (!Guid.TryParse(keyId, out var keyGuid))
+            {
+                return Results.BadRequest(new { error = "Invalid API key ID format" });
+            }
+
+            // Validate pagination parameters
+            if (skip < 0) skip = 0;
+            if (take < 1) take = 50;
+            if (take > 100) take = 100; // Max 100 logs per request
+
+            var query = new Api.BoundedContexts.Authentication.Application.Queries.GetApiKeyUsageLogsQuery(
+                keyGuid,
+                session.User!.Id,
+                skip,
+                take);
+            var logs = await mediator.Send(query, ct).ConfigureAwait(false);
+
+            return Results.Json(new
+            {
+                logs,
+                pagination = new
+                {
+                    skip,
+                    take,
+                    count = logs.Count
+                }
+            });
+        })
+        .RequireSession(); // Issue #1446: Automatic session validation
+
         // API-04: Admin API Key Management endpoint
         group.MapDelete("/admin/api-keys/{keyId}", async (string keyId, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
@@ -178,6 +240,33 @@ public static class ApiKeyEndpoints
 
             logger.LogInformation("API key {KeyId} permanently deleted by admin {AdminId}", keyId, session.User!.Id);
             return Results.NoContent();
+        })
+        .RequireAdminSession(); // Issue #1446: Automatic admin session validation
+
+        // ISSUE-904: Admin endpoint - Get all API keys with usage statistics
+        group.MapGet("/admin/api-keys/stats", async (HttpContext context, IMediator mediator, ILogger<Program> logger, Guid? userId = null, bool includeRevoked = false, CancellationToken ct = default) =>
+        {
+            // Session validated AND Admin role checked by RequireAdminSessionFilter
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+            logger.LogInformation("Admin {AdminId} fetching all API keys with stats (userId filter: {UserId}, includeRevoked: {IncludeRevoked})",
+                session.User!.Id, userId?.ToString() ?? "none", includeRevoked);
+
+            var query = new Api.BoundedContexts.Authentication.Application.Queries.GetAllApiKeysWithStatsQuery(
+                userId,
+                includeRevoked);
+            var keysWithStats = await mediator.Send(query, ct).ConfigureAwait(false);
+
+            return Results.Json(new
+            {
+                keys = keysWithStats,
+                count = keysWithStats.Count,
+                filters = new
+                {
+                    userId,
+                    includeRevoked
+                }
+            });
         })
         .RequireAdminSession(); // Issue #1446: Automatic admin session validation
 

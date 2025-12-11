@@ -195,7 +195,7 @@ public class PromptEvaluationService : IPromptEvaluationService
             // Step 2: Get prompt content from database
             var version = await _dbContext.PromptVersions
                 .AsNoTracking()
-                .FirstOrDefaultAsync(v => v.Id.ToString() == versionId, ct);
+                .FirstOrDefaultAsync(v => v.Id.ToString() == versionId, ct).ConfigureAwait(false);
 
             if (version == null)
             {
@@ -305,7 +305,7 @@ public class PromptEvaluationService : IPromptEvaluationService
                 customPrompt,
                 searchMode: SearchMode.Hybrid,
                 language: "en",
-                cancellationToken: ct);
+                cancellationToken: ct).ConfigureAwait(false);
 
             queryStopwatch.Stop();
 
@@ -533,7 +533,7 @@ public class PromptEvaluationService : IPromptEvaluationService
     /// </summary>
     private EvaluationMetrics CalculateAggregateMetrics(
         List<QueryEvaluationResult> queryResults,
-        List<PromptTestCase> testCases)
+        IList<PromptTestCase> testCases)
     {
         var totalQueries = queryResults.Count;
 
@@ -923,7 +923,7 @@ public class PromptEvaluationService : IPromptEvaluationService
                 .Where(e => e.TemplateId.ToString() == templateId)
                 .OrderByDescending(e => e.ExecutedAt)
                 .Take(limit)
-                .ToListAsync(ct);
+                .ToListAsync(ct).ConfigureAwait(false);
 
             // BGAI-041: Retrieve new 5-metric framework results
             var results = entities.Select(e => new PromptEvaluationResult

@@ -4,6 +4,7 @@ using Api.Models;
 using Api.Services;
 using MediatR;
 
+#pragma warning disable MA0048 // File name must match type name - Contains Handler with related types
 namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 
 /// <summary>

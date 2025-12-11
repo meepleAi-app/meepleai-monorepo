@@ -1,6 +1,7 @@
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 
+#pragma warning disable MA0048 // File name must match type name - Contains Command with Result record
 namespace Api.BoundedContexts.Authentication.Application.Commands.TwoFactor;
 
 /// <summary>
@@ -21,5 +22,5 @@ public sealed record GenerateTotpSetupResult
 {
     public string Secret { get; init; } = string.Empty;
     public string QrCodeUrl { get; init; } = string.Empty;
-    public List<string> BackupCodes { get; init; } = new();
+    public IList<string> BackupCodes { get; init; } = new List<string>();
 }

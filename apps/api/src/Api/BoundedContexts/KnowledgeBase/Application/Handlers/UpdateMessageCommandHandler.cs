@@ -35,7 +35,7 @@ public class UpdateMessageCommandHandler : ICommandHandler<UpdateMessageCommand,
     {
         // Load thread
         var thread = await _threadRepository.GetByIdAsync(request.ThreadId, cancellationToken)
-            ?? throw new InvalidOperationException($"Chat thread {request.ThreadId} not found");
+.ConfigureAwait(false) ?? throw new InvalidOperationException($"Chat thread {request.ThreadId} not found");
 
         // Verify user owns the thread
         if (thread.UserId != request.UserId)
@@ -79,7 +79,7 @@ public class UpdateMessageCommandHandler : ICommandHandler<UpdateMessageCommand,
                 newContent = request.NewContent,
                 updatedAt = message.UpdatedAt
             }),
-            ct: cancellationToken);
+            ct: cancellationToken).ConfigureAwait(false);
 
         return MapToDto(thread);
     }

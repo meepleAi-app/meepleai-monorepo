@@ -2,6 +2,7 @@ using Api.BoundedContexts.Administration.Application.Commands;
 using Api.Extensions;
 using MediatR;
 
+#pragma warning disable MA0048 // File name must match type name - Contains Interface with supporting types
 namespace Api.Routing;
 
 /// <summary>
@@ -40,7 +41,7 @@ public static class TestEndpoints
             try
             {
                 // Handler will throw appropriate exception based on ErrorType
-                await mediator.Send(new SimulateErrorCommand(request.ErrorType), ct);
+                await mediator.Send(new SimulateErrorCommand(request.ErrorType), ct).ConfigureAwait(false);
 
                 // Should never reach here (handler always throws)
                 return Results.StatusCode(StatusCodes.Status500InternalServerError);

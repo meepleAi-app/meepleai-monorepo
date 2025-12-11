@@ -51,10 +51,10 @@ public class MonthlyOptimizationReportService : IMonthlyOptimizationReportServic
 
         await Task.WhenAll(efficiencyTask, cacheTask, modelComparisonTask, recommendationTask).ConfigureAwait(false);
 
-        var efficiencyAnalysis = await efficiencyTask;
-        var cacheAnalysis = await cacheTask;
-        var modelComparisons = await modelComparisonTask;
-        var recommendation = await recommendationTask;
+        var efficiencyAnalysis = await efficiencyTask.ConfigureAwait(false);
+        var cacheAnalysis = await cacheTask.ConfigureAwait(false);
+        var modelComparisons = await modelComparisonTask.ConfigureAwait(false);
+        var recommendation = await recommendationTask.ConfigureAwait(false);
 
         // Calculate total savings opportunity
         var cacheSavings = cacheAnalysis.EstimatedSavingsUsd;
@@ -82,8 +82,8 @@ public class MonthlyOptimizationReportService : IMonthlyOptimizationReportServic
     }
 
     private decimal CalculateModelSwitchSavings(
-        QueryEfficiencyReport efficiency,
-        ModelRecommendation recommendation)
+        QueryEfficiencyReport efficiency
+        )
     {
         // Estimate savings if switching to recommended model
         // Simplified: Assume 20% cost reduction from optimization

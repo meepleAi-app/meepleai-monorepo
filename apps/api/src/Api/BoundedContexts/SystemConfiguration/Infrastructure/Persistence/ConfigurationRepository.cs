@@ -19,17 +19,17 @@ public class ConfigurationRepository : RepositoryBase, IConfigurationRepository
     {
         var entity = await DbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>()
             .AsNoTracking()
-            .FirstOrDefaultAsync(c => c.Id == id, cancellationToken);
+            .FirstOrDefaultAsync(c => c.Id == id, cancellationToken).ConfigureAwait(false);
 
         return entity != null ? MapToDomain(entity) : null;
     }
 
-    public async Task<List<SystemConfigurationAggregate>> GetAllAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<SystemConfigurationAggregate>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         var entities = await DbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>()
             .AsNoTracking()
             .OrderBy(c => c.Key)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return entities.Select(MapToDomain).ToList();
     }
@@ -83,7 +83,7 @@ public class ConfigurationRepository : RepositoryBase, IConfigurationRepository
             .AsNoTracking()
             .Where(c => c.Category == category)
             .OrderBy(c => c.Key)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return entities.Select(MapToDomain).ToList();
     }
@@ -94,7 +94,7 @@ public class ConfigurationRepository : RepositoryBase, IConfigurationRepository
             .AsNoTracking()
             .Where(c => c.IsActive)
             .OrderBy(c => c.Key)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return entities.Select(MapToDomain).ToList();
     }
@@ -124,7 +124,7 @@ public class ConfigurationRepository : RepositoryBase, IConfigurationRepository
     public async Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default)
     {
         return await DbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>()
-            .AnyAsync(c => c.Id == id, cancellationToken);
+            .AnyAsync(c => c.Id == id, cancellationToken).ConfigureAwait(false);
     }
 
     private static SystemConfigurationAggregate MapToDomain(Api.Infrastructure.Entities.SystemConfigurationEntity entity)

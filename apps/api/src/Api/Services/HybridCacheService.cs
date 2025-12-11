@@ -94,7 +94,7 @@ public class HybridCacheService : IHybridCacheService
                 },
                 tags: tags,
                 cancellationToken: ct
-            );
+            ).ConfigureAwait(false);
 
             // Track tags for this key (for manual invalidation support)
             if (tags != null && tags.Length > 0 && _config.EnableTags)

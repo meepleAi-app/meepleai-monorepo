@@ -342,6 +342,11 @@ namespace Api.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<int>("UsageCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
                     b.Property<Guid>("UserId")
                         .HasMaxLength(64)
                         .HasColumnType("uuid");
@@ -358,6 +363,65 @@ namespace Api.Migrations
                     b.HasIndex("IsActive", "ExpiresAt");
 
                     b.ToTable("api_keys", (string)null);
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.ApiKeyUsageLogEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Endpoint")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("endpoint");
+
+                    b.Property<string>("HttpMethod")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("http_method");
+
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(45)
+                        .HasColumnType("character varying(45)")
+                        .HasColumnName("ip_address");
+
+                    b.Property<Guid>("KeyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("key_id");
+
+                    b.Property<long?>("ResponseTimeMs")
+                        .HasColumnType("bigint")
+                        .HasColumnName("response_time_ms");
+
+                    b.Property<int?>("StatusCode")
+                        .HasColumnType("integer")
+                        .HasColumnName("status_code");
+
+                    b.Property<DateTime>("UsedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("used_at");
+
+                    b.Property<string>("UserAgent")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("user_agent");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("KeyId")
+                        .HasDatabaseName("ix_api_key_usage_logs_key_id");
+
+                    b.HasIndex("UsedAt")
+                        .HasDatabaseName("ix_api_key_usage_logs_used_at");
+
+                    b.HasIndex("KeyId", "UsedAt")
+                        .IsDescending(false, true)
+                        .HasDatabaseName("ix_api_key_usage_logs_key_id_used_at");
+
+                    b.ToTable("api_key_usage_logs", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.AuditLogEntity", b =>
@@ -2153,6 +2217,17 @@ namespace Api.Migrations
                     b.Navigation("RevokedByUser");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.ApiKeyUsageLogEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.ApiKeyEntity", "ApiKey")
+                        .WithMany()
+                        .HasForeignKey("KeyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ApiKey");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.Authentication.UsedTotpCodeEntity", b =>

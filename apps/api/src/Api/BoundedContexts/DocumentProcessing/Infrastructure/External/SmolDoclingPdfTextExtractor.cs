@@ -95,7 +95,7 @@ public class SmolDoclingPdfTextExtractor : IPdfTextExtractor
 
             // Parse successful response
             var result = await response.Content.ReadFromJsonAsync<SmolDoclingResponse>(
-                cancellationToken: ct);
+                cancellationToken: ct).ConfigureAwait(false);
 
             if (result == null)
             {
@@ -222,7 +222,7 @@ public class SmolDoclingPdfTextExtractor : IPdfTextExtractor
             }
 
             var result = await response.Content.ReadFromJsonAsync<SmolDoclingResponse>(
-                cancellationToken: ct);
+                cancellationToken: ct).ConfigureAwait(false);
 
             if (result == null)
             {
@@ -272,7 +272,7 @@ public class SmolDoclingPdfTextExtractor : IPdfTextExtractor
     /// <summary>
     /// Converts SmolDocling chunks to PageTextChunk format
     /// </summary>
-    private List<PageTextChunk> ConvertToPageChunks(List<SmolDoclingChunk> chunks)
+    private List<PageTextChunk> ConvertToPageChunks(IList<SmolDoclingChunk> chunks)
     {
         var pageChunks = new List<PageTextChunk>();
         int charIndex = 0;

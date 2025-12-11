@@ -29,7 +29,7 @@ public class RuleSpecCommentEntity
 
     // EDIT-05: User Mentions
     // DDD-PHASE2: Converted to Guid for domain alignment
-    public List<Guid> MentionedUserIds { get; set; } = new();
+    public IList<Guid> MentionedUserIds { get; set; } = new List<Guid>();
 
     // Navigation Properties
     public GameEntity Game { get; set; } = default!;
@@ -37,7 +37,7 @@ public class RuleSpecCommentEntity
 
     // EDIT-05: Threading Navigation Properties
     public RuleSpecCommentEntity? ParentComment { get; set; }
-    public List<RuleSpecCommentEntity> Replies { get; set; } = new();
+    public IList<RuleSpecCommentEntity> Replies { get; set; } = new List<RuleSpecCommentEntity>();
 
     // EDIT-05: Resolution Navigation Property
     public UserEntity? ResolvedByUser { get; set; }

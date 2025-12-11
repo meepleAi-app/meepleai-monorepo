@@ -45,7 +45,7 @@ public class ListApiKeysQueryHandler : IQueryHandler<ListApiKeysQuery, ApiKeyLis
             .OrderByDescending(k => k.CreatedAt)
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         var keys = keyEntities
             .Select(k => MapToDto(k))

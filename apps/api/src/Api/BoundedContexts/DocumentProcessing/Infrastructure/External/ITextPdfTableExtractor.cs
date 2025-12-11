@@ -25,7 +25,9 @@ namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 /// - Error handling for PDF parsing failures
 /// - Delegate atomic rule conversion to domain service
 /// </remarks>
+#pragma warning disable S101 // "IText" refers to the iText7 library name, not an interface prefix
 public class ITextPdfTableExtractor : IPdfTableExtractor
+#pragma warning restore S101
 {
     private readonly ITableDetectionService _tableDetectionService;
     private readonly ITableStructureAnalyzer _tableStructureAnalyzer;

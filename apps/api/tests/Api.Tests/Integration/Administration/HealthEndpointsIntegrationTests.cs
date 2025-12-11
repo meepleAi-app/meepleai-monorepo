@@ -178,7 +178,7 @@ public sealed class HealthEndpointsIntegrationTests
     }
 
     [Fact]
-    public async Task GetServiceHealth_N8n_ReturnsWorkflowServiceHealth()
+    public async Task GetServiceHealth_N8N_ReturnsWorkflowServiceHealth()
     {
         // Arrange - Issue #892: New n8n health endpoint
         var expectedStatus = new ServiceHealthStatus(

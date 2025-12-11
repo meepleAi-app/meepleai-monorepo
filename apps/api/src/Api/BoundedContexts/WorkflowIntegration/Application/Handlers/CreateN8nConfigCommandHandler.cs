@@ -8,25 +8,25 @@ using Api.SharedKernel.Infrastructure.Persistence;
 
 namespace Api.BoundedContexts.WorkflowIntegration.Application.Handlers;
 
-public class CreateN8nConfigCommandHandler : ICommandHandler<CreateN8nConfigCommand, N8nConfigurationDto>
+public class CreateN8NConfigCommandHandler : ICommandHandler<CreateN8NConfigCommand, N8NConfigurationDto>
 {
-    private readonly IN8nConfigurationRepository _configRepository;
+    private readonly IN8NConfigurationRepository _configRepository;
     private readonly IUnitOfWork _unitOfWork;
 
-    public CreateN8nConfigCommandHandler(
-        IN8nConfigurationRepository configRepository,
+    public CreateN8NConfigCommandHandler(
+        IN8NConfigurationRepository configRepository,
         IUnitOfWork unitOfWork)
     {
         _configRepository = configRepository ?? throw new ArgumentNullException(nameof(configRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
 
-    public async Task<N8nConfigurationDto> Handle(CreateN8nConfigCommand command, CancellationToken cancellationToken)
+    public async Task<N8NConfigurationDto> Handle(CreateN8NConfigCommand command, CancellationToken cancellationToken)
     {
         var baseUrl = new WorkflowUrl(command.BaseUrl);
         WorkflowUrl? webhookUrl = command.WebhookUrl != null ? new WorkflowUrl(command.WebhookUrl) : null;
 
-        var config = new N8nConfiguration(
+        var config = new N8NConfiguration(
             id: Guid.NewGuid(),
             name: command.Name,
             baseUrl: baseUrl,
@@ -41,9 +41,9 @@ public class CreateN8nConfigCommandHandler : ICommandHandler<CreateN8nConfigComm
         return MapToDto(config);
     }
 
-    private static N8nConfigurationDto MapToDto(N8nConfiguration config)
+    private static N8NConfigurationDto MapToDto(N8NConfiguration config)
     {
-        return new N8nConfigurationDto(
+        return new N8NConfigurationDto(
             Id: config.Id,
             Name: config.Name,
             BaseUrl: config.BaseUrl.Value,

@@ -1,5 +1,5 @@
 using Api.BoundedContexts.WorkflowIntegration.Application.Commands;
-using N8nConfiguration = Api.BoundedContexts.WorkflowIntegration.Domain.Entities.N8nConfiguration;
+using N8NConfiguration = Api.BoundedContexts.WorkflowIntegration.Domain.Entities.N8NConfiguration;
 using Api.BoundedContexts.WorkflowIntegration.Application.Handlers;
 using Api.BoundedContexts.WorkflowIntegration.Domain.Repositories;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -9,31 +9,31 @@ using Xunit;
 namespace Api.Tests.BoundedContexts.WorkflowIntegration.Application.Handlers;
 
 /// <summary>
-/// Tests for CreateN8nConfigCommandHandler.
+/// Tests for CreateN8NConfigCommandHandler.
 /// Tests creation of n8n workflow configurations.
 /// </summary>
-public class CreateN8nConfigCommandHandlerTests
+public class CreateN8NConfigCommandHandlerTests
 {
-    private readonly Mock<IN8nConfigurationRepository> _mockConfigRepository;
+    private readonly Mock<IN8NConfigurationRepository> _mockConfigRepository;
     private readonly Mock<IUnitOfWork> _mockUnitOfWork;
-    private readonly CreateN8nConfigCommandHandler _handler;
+    private readonly CreateN8NConfigCommandHandler _handler;
 
-    public CreateN8nConfigCommandHandlerTests()
+    public CreateN8NConfigCommandHandlerTests()
     {
-        _mockConfigRepository = new Mock<IN8nConfigurationRepository>();
+        _mockConfigRepository = new Mock<IN8NConfigurationRepository>();
         _mockUnitOfWork = new Mock<IUnitOfWork>();
-        _handler = new CreateN8nConfigCommandHandler(
+        _handler = new CreateN8NConfigCommandHandler(
             _mockConfigRepository.Object,
             _mockUnitOfWork.Object);
     }
 
     [Fact]
-    public async Task Handle_WithValidCommand_CreatesN8nConfiguration()
+    public async Task Handle_WithValidCommand_CreatesN8NConfiguration()
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var command = new CreateN8nConfigCommand(
-            Name: "Production N8n",
+        var command = new CreateN8NConfigCommand(
+            Name: "Production N8N",
             BaseUrl: "https://n8n.example.com",
             ApiKeyEncrypted: "encrypted_api_key_12345",
             CreatedByUserId: userId,
@@ -45,7 +45,7 @@ public class CreateN8nConfigCommandHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal("Production N8n", result.Name);
+        Assert.Equal("Production N8N", result.Name);
         Assert.Equal("https://n8n.example.com", result.BaseUrl);
         Assert.Equal("https://webhook.example.com/n8n", result.WebhookUrl);
         Assert.True(result.IsActive);
@@ -53,7 +53,7 @@ public class CreateN8nConfigCommandHandlerTests
 
         _mockConfigRepository.Verify(
             r => r.AddAsync(
-                It.IsAny<N8nConfiguration>(),
+                It.IsAny<N8NConfiguration>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
         _mockUnitOfWork.Verify(
@@ -66,8 +66,8 @@ public class CreateN8nConfigCommandHandlerTests
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var command = new CreateN8nConfigCommand(
-            Name: "Development N8n",
+        var command = new CreateN8NConfigCommand(
+            Name: "Development N8N",
             BaseUrl: "http://localhost:5678",
             ApiKeyEncrypted: "dev_api_key",
             CreatedByUserId: userId,
@@ -79,7 +79,7 @@ public class CreateN8nConfigCommandHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal("Development N8n", result.Name);
+        Assert.Equal("Development N8N", result.Name);
         Assert.Equal("http://localhost:5678", result.BaseUrl);
         Assert.Null(result.WebhookUrl);
     }
@@ -89,7 +89,7 @@ public class CreateN8nConfigCommandHandlerTests
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var command = new CreateN8nConfigCommand(
+        var command = new CreateN8NConfigCommand(
             Name: "Test Config",
             BaseUrl: "https://test.n8n.com",
             ApiKeyEncrypted: "test_key",
@@ -108,7 +108,7 @@ public class CreateN8nConfigCommandHandlerTests
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var command = new CreateN8nConfigCommand(
+        var command = new CreateN8NConfigCommand(
             Name: "Active Config",
             BaseUrl: "https://active.n8n.com",
             ApiKeyEncrypted: "active_key",
@@ -127,8 +127,8 @@ public class CreateN8nConfigCommandHandlerTests
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var command = new CreateN8nConfigCommand(
-            Name: "Secure N8n",
+        var command = new CreateN8NConfigCommand(
+            Name: "Secure N8N",
             BaseUrl: "https://secure.n8n.com:443",
             ApiKeyEncrypted: "secure_key",
             CreatedByUserId: userId
@@ -147,7 +147,7 @@ public class CreateN8nConfigCommandHandlerTests
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var command = new CreateN8nConfigCommand(
+        var command = new CreateN8NConfigCommand(
             Name: "Test",
             BaseUrl: "https://test.com",
             ApiKeyEncrypted: "key",
@@ -162,7 +162,7 @@ public class CreateN8nConfigCommandHandlerTests
         // Assert
         _mockConfigRepository.Verify(
             r => r.AddAsync(
-                It.IsAny<N8nConfiguration>(),
+                It.IsAny<N8NConfiguration>(),
                 cancellationToken),
             Times.Once);
         _mockUnitOfWork.Verify(
@@ -176,7 +176,7 @@ public class CreateN8nConfigCommandHandlerTests
         // Arrange
         var userId = Guid.NewGuid();
         var beforeCreate = DateTime.UtcNow;
-        var command = new CreateN8nConfigCommand(
+        var command = new CreateN8NConfigCommand(
             Name: "Timestamp Test",
             BaseUrl: "https://timestamp.n8n.com",
             ApiKeyEncrypted: "timestamp_key",

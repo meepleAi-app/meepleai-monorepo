@@ -915,7 +915,7 @@ namespace Api.Migrations
                     b.ToTable("llm_cost_logs", (string)null);
                 });
 
-            modelBuilder.Entity("Api.Infrastructure.Entities.N8nConfigEntity", b =>
+            modelBuilder.Entity("Api.Infrastructure.Entities.N8NConfigEntity", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -2277,7 +2277,7 @@ namespace Api.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Api.Infrastructure.Entities.N8nConfigEntity", b =>
+            modelBuilder.Entity("Api.Infrastructure.Entities.N8NConfigEntity", b =>
                 {
                     b.HasOne("Api.Infrastructure.Entities.UserEntity", "CreatedBy")
                         .WithMany()

@@ -6,24 +6,24 @@ using Api.SharedKernel.Application.Interfaces;
 
 namespace Api.BoundedContexts.WorkflowIntegration.Application.Handlers;
 
-public class GetAllN8nConfigsQueryHandler : IQueryHandler<GetAllN8nConfigsQuery, List<N8nConfigurationDto>>
+public class GetAllN8NConfigsQueryHandler : IQueryHandler<GetAllN8NConfigsQuery, List<N8NConfigurationDto>>
 {
-    private readonly IN8nConfigurationRepository _repository;
+    private readonly IN8NConfigurationRepository _repository;
 
-    public GetAllN8nConfigsQueryHandler(IN8nConfigurationRepository repository)
+    public GetAllN8NConfigsQueryHandler(IN8NConfigurationRepository repository)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
     }
 
-    public async Task<List<N8nConfigurationDto>> Handle(GetAllN8nConfigsQuery query, CancellationToken cancellationToken)
+    public async Task<List<N8NConfigurationDto>> Handle(GetAllN8NConfigsQuery query, CancellationToken cancellationToken)
     {
         var configs = await _repository.GetAllAsync(cancellationToken).ConfigureAwait(false);
         return configs.Select(MapToDto).ToList();
     }
 
-    private static N8nConfigurationDto MapToDto(N8nConfiguration config)
+    private static N8NConfigurationDto MapToDto(N8NConfiguration config)
     {
-        return new N8nConfigurationDto(
+        return new N8NConfigurationDto(
             Id: config.Id,
             Name: config.Name,
             BaseUrl: config.BaseUrl.Value,

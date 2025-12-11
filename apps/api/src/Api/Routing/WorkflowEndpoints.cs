@@ -24,14 +24,14 @@ public static class WorkflowEndpoints
             if (!authorized) return error!;
 
             // CONFIG-05: Check if n8n integration feature is enabled
-            if (!await featureFlags.IsEnabledAsync("Features.N8nIntegration").ConfigureAwait(false))
+            if (!await featureFlags.IsEnabledAsync("Features.N8NIntegration").ConfigureAwait(false))
             {
                 return Results.Json(
-                    new { error = "feature_disabled", message = "n8n integration is currently disabled", featureName = "Features.N8nIntegration" },
+                    new { error = "feature_disabled", message = "n8n integration is currently disabled", featureName = "Features.N8NIntegration" },
                     statusCode: 403);
             }
 
-            var configs = await mediator.Send(new GetAllN8nConfigsQuery(), ct).ConfigureAwait(false);
+            var configs = await mediator.Send(new GetAllN8NConfigsQuery(), ct).ConfigureAwait(false);
             return Results.Json(new { configs });
         });
 
@@ -40,7 +40,7 @@ public static class WorkflowEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            var config = await mediator.Send(new GetN8nConfigByIdQuery(configId), ct).ConfigureAwait(false);
+            var config = await mediator.Send(new GetN8NConfigByIdQuery(configId), ct).ConfigureAwait(false);
 
             if (config == null)
             {
@@ -50,15 +50,15 @@ public static class WorkflowEndpoints
             return Results.Json(config);
         });
 
-        group.MapPost("/admin/n8n", async (CreateN8nConfigRequest request, IMediator mediator, IEncryptionService encryptionService, HttpContext context, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapPost("/admin/n8n", async (CreateN8NConfigRequest request, IMediator mediator, IEncryptionService encryptionService, HttpContext context, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             // Encrypt API key before storing (AUTH-06 pattern)
-            var apiKeyEncrypted = await encryptionService.EncryptAsync(request.ApiKey, "N8nApiKey").ConfigureAwait(false);
+            var apiKeyEncrypted = await encryptionService.EncryptAsync(request.ApiKey, "N8NApiKey").ConfigureAwait(false);
 
-            var command = new CreateN8nConfigCommand(
+            var command = new CreateN8NConfigCommand(
                 Name: request.Name,
                 BaseUrl: request.BaseUrl,
                 ApiKeyEncrypted: apiKeyEncrypted,
@@ -72,7 +72,7 @@ public static class WorkflowEndpoints
             return Results.Json(config);
         });
 
-        group.MapPut("/admin/n8n/{configId}", async (Guid configId, UpdateN8nConfigRequest request, IMediator mediator, IEncryptionService encryptionService, HttpContext context, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapPut("/admin/n8n/{configId}", async (Guid configId, UpdateN8NConfigRequest request, IMediator mediator, IEncryptionService encryptionService, HttpContext context, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
@@ -81,10 +81,10 @@ public static class WorkflowEndpoints
             string? apiKeyEncrypted = null;
             if (!string.IsNullOrWhiteSpace(request.ApiKey))
             {
-                apiKeyEncrypted = await encryptionService.EncryptAsync(request.ApiKey, "N8nApiKey").ConfigureAwait(false);
+                apiKeyEncrypted = await encryptionService.EncryptAsync(request.ApiKey, "N8NApiKey").ConfigureAwait(false);
             }
 
-            var command = new UpdateN8nConfigCommand(
+            var command = new UpdateN8NConfigCommand(
                 ConfigId: configId,
                 Name: request.Name,
                 BaseUrl: request.BaseUrl,
@@ -104,7 +104,7 @@ public static class WorkflowEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            var command = new DeleteN8nConfigCommand(ConfigId: configId);
+            var command = new DeleteN8NConfigCommand(ConfigId: configId);
 
             logger.LogInformation("Admin {UserId} deleting n8n config {ConfigId}", session!.User!.Id, configId);
             var deleted = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -125,7 +125,7 @@ public static class WorkflowEndpoints
 
             logger.LogInformation("Admin {UserId} testing n8n config {ConfigId}", session!.User!.Id, configId);
 
-            var command = new Api.BoundedContexts.WorkflowIntegration.Application.Commands.N8nConfig.TestN8nConnectionCommand
+            var command = new Api.BoundedContexts.WorkflowIntegration.Application.Commands.N8NConfig.TestN8NConnectionCommand
             {
                 ConfigId = configId
             };
@@ -141,7 +141,7 @@ public static class WorkflowEndpoints
             IMediator mediator,
             CancellationToken ct) =>
         {
-            var query = new Api.BoundedContexts.WorkflowIntegration.Application.Queries.N8nTemplates.GetN8nTemplatesQuery
+            var query = new Api.BoundedContexts.WorkflowIntegration.Application.Queries.N8NTemplates.GetN8NTemplatesQuery
             {
                 Category = category
             };
@@ -149,7 +149,7 @@ public static class WorkflowEndpoints
             return Results.Ok(templates);
         })
         .RequireAuthorization()
-        .WithName("GetN8nTemplates")
+        .WithName("GetN8NTemplates")
         .WithTags("N8N")
         .WithDescription("Get all n8n workflow templates, optionally filtered by category");
 
@@ -158,7 +158,7 @@ public static class WorkflowEndpoints
             IMediator mediator,
             CancellationToken ct) =>
         {
-            var query = new Api.BoundedContexts.WorkflowIntegration.Application.Queries.N8nTemplates.GetN8nTemplateByIdQuery
+            var query = new Api.BoundedContexts.WorkflowIntegration.Application.Queries.N8NTemplates.GetN8NTemplateByIdQuery
             {
                 TemplateId = id
             };
@@ -171,7 +171,7 @@ public static class WorkflowEndpoints
             return Results.Ok(template);
         })
         .RequireAuthorization()
-        .WithName("GetN8nTemplate")
+        .WithName("GetN8NTemplate")
         .WithTags("N8N")
         .WithDescription("Get a specific n8n workflow template by ID with full details");
 
@@ -188,7 +188,7 @@ public static class WorkflowEndpoints
 
             logger.LogInformation("User {UserId} importing n8n template {TemplateId}", session!.User!.Id, id);
 
-            var command = new Api.BoundedContexts.WorkflowIntegration.Application.Commands.N8nTemplates.ImportN8nTemplateCommand
+            var command = new Api.BoundedContexts.WorkflowIntegration.Application.Commands.N8NTemplates.ImportN8NTemplateCommand
             {
                 TemplateId = id,
                 Parameters = request.Parameters,
@@ -201,7 +201,7 @@ public static class WorkflowEndpoints
         })
         .RequireSession() // Issue #1446: Automatic session validation
         .RequireAuthorization()
-        .WithName("ImportN8nTemplate")
+        .WithName("ImportN8NTemplate")
         .WithTags("N8N")
         .WithDescription("Import an n8n workflow template with parameter substitution");
 
@@ -215,7 +215,7 @@ public static class WorkflowEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            var query = new Api.BoundedContexts.WorkflowIntegration.Application.Queries.N8nTemplates.ValidateN8nTemplateQuery
+            var query = new Api.BoundedContexts.WorkflowIntegration.Application.Queries.N8NTemplates.ValidateN8NTemplateQuery
             {
                 TemplateJson = request.TemplateJson
             };
@@ -223,7 +223,7 @@ public static class WorkflowEndpoints
             return Results.Ok(result);
         })
         .RequireAuthorization()
-        .WithName("ValidateN8nTemplate")
+        .WithName("ValidateN8NTemplate")
         .WithTags("N8N")
         .WithDescription("Validate n8n workflow template JSON structure (admin only)");
 

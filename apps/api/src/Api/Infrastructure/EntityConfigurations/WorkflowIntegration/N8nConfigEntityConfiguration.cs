@@ -4,9 +4,9 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Api.Infrastructure.EntityConfigurations;
 
-public class N8nConfigEntityConfiguration : IEntityTypeConfiguration<N8nConfigEntity>
+public class N8NConfigEntityConfiguration : IEntityTypeConfiguration<N8NConfigEntity>
 {
-    public void Configure(EntityTypeBuilder<N8nConfigEntity> builder)
+    public void Configure(EntityTypeBuilder<N8NConfigEntity> builder)
     {
         builder.ToTable("n8n_configs");
         builder.HasKey(e => e.Id);

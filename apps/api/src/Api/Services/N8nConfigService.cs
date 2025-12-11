@@ -8,19 +8,19 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Api.Services;
 
-public class N8nConfigService
+public class N8NConfigService
 {
     private readonly MeepleAiDbContext _db;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IConfiguration _configuration;
-    private readonly ILogger<N8nConfigService> _logger;
+    private readonly ILogger<N8NConfigService> _logger;
     private readonly TimeProvider _timeProvider;
 
-    public N8nConfigService(
+    public N8NConfigService(
         MeepleAiDbContext db,
         IHttpClientFactory httpClientFactory,
         IConfiguration configuration,
-        ILogger<N8nConfigService> logger,
+        ILogger<N8NConfigService> logger,
         TimeProvider? timeProvider = null)
     {
         _db = db;
@@ -30,13 +30,13 @@ public class N8nConfigService
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
-    public async Task<List<N8nConfigDto>> GetConfigsAsync(CancellationToken ct)
+    public async Task<List<N8NConfigDto>> GetConfigsAsync(CancellationToken ct)
     {
-        var configs = await _db.N8nConfigs
+        var configs = await _db.N8NConfigs
             .OrderByDescending(c => c.CreatedAt)
             .ToListAsync(ct).ConfigureAwait(false);
 
-        return configs.Select(c => new N8nConfigDto(
+        return configs.Select(c => new N8NConfigDto(
             c.Id.ToString(),
             c.Name,
             c.BaseUrl,
@@ -49,14 +49,14 @@ public class N8nConfigService
         )).ToList();
     }
 
-    public async Task<N8nConfigDto?> GetConfigAsync(string configId, CancellationToken ct)
+    public async Task<N8NConfigDto?> GetConfigAsync(string configId, CancellationToken ct)
     {
         if (!Guid.TryParse(configId, out var guidId))
         {
             return null;
         }
 
-        var config = await _db.N8nConfigs
+        var config = await _db.N8NConfigs
             .FirstOrDefaultAsync(c => c.Id == guidId, ct).ConfigureAwait(false);
 
         if (config == null)
@@ -64,7 +64,7 @@ public class N8nConfigService
             return null;
         }
 
-        return new N8nConfigDto(
+        return new N8NConfigDto(
             config.Id.ToString(),
             config.Name,
             config.BaseUrl,
@@ -77,9 +77,9 @@ public class N8nConfigService
         );
     }
 
-    public async Task<N8nConfigDto> CreateConfigAsync(
+    public async Task<N8NConfigDto> CreateConfigAsync(
         string userId,
-        CreateN8nConfigRequest request,
+        CreateN8NConfigRequest request,
         CancellationToken ct)
     {
         if (!Guid.TryParse(userId, out var userGuid))
@@ -87,7 +87,7 @@ public class N8nConfigService
             throw new ArgumentException("Invalid user ID format", nameof(userId));
         }
 
-        var existingConfig = await _db.N8nConfigs
+        var existingConfig = await _db.N8NConfigs
             .FirstOrDefaultAsync(c => c.Name == request.Name, ct).ConfigureAwait(false);
 
         if (existingConfig != null)
@@ -95,7 +95,7 @@ public class N8nConfigService
             throw new InvalidOperationException($"Configuration with name '{request.Name}' already exists");
         }
 
-        var config = new N8nConfigEntity
+        var config = new N8NConfigEntity
         {
             Id = Guid.NewGuid(),
             Name = request.Name,
@@ -108,10 +108,10 @@ public class N8nConfigService
             UpdatedAt = _timeProvider.GetUtcNow().UtcDateTime
         };
 
-        _db.N8nConfigs.Add(config);
+        _db.N8NConfigs.Add(config);
         await _db.SaveChangesAsync(ct).ConfigureAwait(false);
 
-        return new N8nConfigDto(
+        return new N8NConfigDto(
             config.Id.ToString(),
             config.Name,
             config.BaseUrl,
@@ -124,9 +124,9 @@ public class N8nConfigService
         );
     }
 
-    public async Task<N8nConfigDto> UpdateConfigAsync(
+    public async Task<N8NConfigDto> UpdateConfigAsync(
         string configId,
-        UpdateN8nConfigRequest request,
+        UpdateN8NConfigRequest request,
         CancellationToken ct)
     {
         if (!Guid.TryParse(configId, out var guidId))
@@ -134,7 +134,7 @@ public class N8nConfigService
             throw new ArgumentException("Invalid config ID format", nameof(configId));
         }
 
-        var config = await _db.N8nConfigs
+        var config = await _db.N8NConfigs
             .FirstOrDefaultAsync(c => c.Id == guidId, ct).ConfigureAwait(false);
 
         if (config == null)
@@ -144,7 +144,7 @@ public class N8nConfigService
 
         if (request.Name != null && !string.Equals(request.Name, config.Name, StringComparison.Ordinal))
         {
-            var existingConfig = await _db.N8nConfigs
+            var existingConfig = await _db.N8NConfigs
                 .FirstOrDefaultAsync(c => c.Name == request.Name && c.Id != guidId, ct).ConfigureAwait(false);
 
             if (existingConfig != null)
@@ -179,7 +179,7 @@ public class N8nConfigService
 
         await _db.SaveChangesAsync(ct).ConfigureAwait(false);
 
-        return new N8nConfigDto(
+        return new N8NConfigDto(
             config.Id.ToString(),
             config.Name,
             config.BaseUrl,
@@ -199,7 +199,7 @@ public class N8nConfigService
             return false;
         }
 
-        var config = await _db.N8nConfigs
+        var config = await _db.N8NConfigs
             .FirstOrDefaultAsync(c => c.Id == guidId, ct).ConfigureAwait(false);
 
         if (config == null)
@@ -207,20 +207,20 @@ public class N8nConfigService
             return false;
         }
 
-        _db.N8nConfigs.Remove(config);
+        _db.N8NConfigs.Remove(config);
         await _db.SaveChangesAsync(ct).ConfigureAwait(false);
 
         return true;
     }
 
-    public async Task<N8nTestResult> TestConnectionAsync(string configId, CancellationToken ct)
+    public async Task<N8NTestResult> TestConnectionAsync(string configId, CancellationToken ct)
     {
         if (!Guid.TryParse(configId, out var guidId))
         {
             throw new ArgumentException("Invalid config ID format", nameof(configId));
         }
 
-        var config = await _db.N8nConfigs
+        var config = await _db.N8NConfigs
             .FirstOrDefaultAsync(c => c.Id == guidId, ct).ConfigureAwait(false);
 
         if (config == null)
@@ -251,7 +251,7 @@ public class N8nConfigService
             config.LastTestResult = message;
             await _db.SaveChangesAsync(ct).ConfigureAwait(false);
 
-            return new N8nTestResult(success, message, latency);
+            return new N8NTestResult(success, message, latency);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
         // Justification: Service boundary - external API calls with result pattern
@@ -266,7 +266,7 @@ public class N8nConfigService
             config.LastTestResult = message;
             await _db.SaveChangesAsync(ct).ConfigureAwait(false);
 
-            return new N8nTestResult(false, message, null);
+            return new N8NTestResult(false, message, null);
         }
 #pragma warning restore CA1031
     }

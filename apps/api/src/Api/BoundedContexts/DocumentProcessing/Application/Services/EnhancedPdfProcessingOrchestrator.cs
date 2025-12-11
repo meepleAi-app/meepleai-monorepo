@@ -71,7 +71,7 @@ public class EnhancedPdfProcessingOrchestrator
                 "[{RequestId}] PDF size {Size}MB ≥ threshold {Threshold}MB - using temp file strategy",
                 requestId, pdfSize / 1_000_000.0, threshold / 1_000_000.0);
 
-            // S5445: Use secure temp file creation (cryptographically random, isolated directory)
+            // S5445 fix: Use secure temp file creation instead of Path.GetTempFileName()
             var tempFile = SecureTempFileHelper.CreateSecureTempFilePath(".pdf");
             try
             {
@@ -89,8 +89,7 @@ public class EnhancedPdfProcessingOrchestrator
             catch
             {
                 // Cleanup temp file on error
-                if (File.Exists(tempFile))
-                    File.Delete(tempFile);
+                SecureTempFileHelper.CleanupTempFile(tempFile);
                 throw;
             }
         }

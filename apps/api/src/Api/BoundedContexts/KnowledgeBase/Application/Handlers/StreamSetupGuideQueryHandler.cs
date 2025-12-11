@@ -458,7 +458,7 @@ etc.";
     /// <summary>
     /// Result class for internal setup guide generation (no yield in try-catch)
     /// </summary>
-    private record SetupGuideGenerationResult(
+    private sealed record SetupGuideGenerationResult(
         bool Success,
         List<SetupGuideStep> Steps,
         int TotalTokens,

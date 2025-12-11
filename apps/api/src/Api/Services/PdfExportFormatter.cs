@@ -263,5 +263,5 @@ public class PdfExportFormatter : IExportFormatter
         }
     }
 
-    private record CitationMetadata(string Source, int Page);
+    private sealed record CitationMetadata(string Source, int Page);
 }

@@ -98,26 +98,29 @@ export function InfrastructureClient() {
       }
     } catch (err) {
       console.error('[InfrastructureClient] Fetch error:', err);
-      const newFailureCount = failureCount + 1;
-      setFailureCount(newFailureCount);
+      setFailureCount(prev => {
+        const newCount = prev + 1;
 
-      if (newFailureCount >= MAX_FAILURES) {
-        setError(
-          locale === 'it'
-            ? 'Troppe richieste fallite. Aggiornamento automatico sospeso.'
-            : 'Too many failed requests. Auto-refresh paused.'
-        );
-      } else {
-        setError(
-          locale === 'it'
-            ? 'Errore caricamento dati infrastruttura'
-            : 'Error loading infrastructure data'
-        );
-      }
+        if (newCount >= MAX_FAILURES) {
+          setError(
+            locale === 'it'
+              ? 'Troppe richieste fallite. Aggiornamento automatico sospeso.'
+              : 'Too many failed requests. Auto-refresh paused.'
+          );
+        } else {
+          setError(
+            locale === 'it'
+              ? 'Errore caricamento dati infrastruttura'
+              : 'Error loading infrastructure data'
+          );
+        }
+
+        return newCount;
+      });
     } finally {
       setLoading(false);
     }
-  }, [circuitOpen, failureCount, locale]);
+  }, [circuitOpen, locale]);
 
   // Initial fetch
   useEffect(() => {

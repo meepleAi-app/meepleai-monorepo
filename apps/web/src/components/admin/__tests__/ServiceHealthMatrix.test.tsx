@@ -8,21 +8,7 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { ServiceHealthMatrix } from '../ServiceHealthMatrix';
-import type { ServiceHealthStatus } from '@/lib/api';
-
-// Mock data helper
-const createMockService = (
-  name: string,
-  state: 'Healthy' | 'Degraded' | 'Unhealthy',
-  responseMs: number,
-  errorMsg?: string
-): ServiceHealthStatus => ({
-  serviceName: name,
-  state,
-  errorMessage: errorMsg || null,
-  checkedAt: new Date().toISOString(),
-  responseTime: `00:00:00.${responseMs.toString().padStart(7, '0')}`, // TimeSpan format
-});
+import { createMockService } from '@/app/admin/infrastructure/__tests__/helpers/test-utils';
 
 describe('ServiceHealthMatrix', () => {
   // ==================== Basic Rendering ====================

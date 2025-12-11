@@ -108,8 +108,7 @@ public class DocnetPdfValidator : IPdfValidator
             await DocnetSemaphore.WaitAsync(ct).ConfigureAwait(false);
             try
             {
-                // Save stream to temporary file for Docnet.Core processing
-                // S5445: Use secure temp file creation (cryptographically random, isolated directory)
+                // S5445 fix: Use secure temp file creation instead of Path.GetTempFileName()
                 var tempFile = SecureTempFileHelper.CreateSecureTempFilePath(".pdf");
                 try
                 {
@@ -227,7 +226,7 @@ public class DocnetPdfValidator : IPdfValidator
         await DocnetSemaphore.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            // S5445: Use secure temp file creation (cryptographically random, isolated directory)
+            // S5445 fix: Use secure temp file creation instead of Path.GetTempFileName()
             var tempFile = SecureTempFileHelper.CreateSecureTempFilePath(".pdf");
             try
             {

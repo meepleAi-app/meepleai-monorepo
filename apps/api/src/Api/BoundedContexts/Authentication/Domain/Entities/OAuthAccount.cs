@@ -24,10 +24,7 @@ public sealed class OAuthAccount : AggregateRoot<Guid>
     // Navigation property for EF Core
     public User? User { get; private set; }
 
-    /// <summary>
-    /// Immutable set of supported OAuth providers.
-    /// S2386/S3887: Use FrozenSet for thread-safe, immutable collection.
-    /// </summary>
+    // S2386/S3887 fix: Use immutable FrozenSet instead of mutable HashSet
     public static FrozenSet<string> SupportedProviders { get; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
         "google", "discord", "github"

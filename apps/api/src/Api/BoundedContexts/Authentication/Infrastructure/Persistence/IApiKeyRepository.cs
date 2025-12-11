@@ -25,6 +25,11 @@ public interface IApiKeyRepository
     Task<List<ApiKey>> GetActiveKeysByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets all API keys in the system (for admin operations).
+    /// </summary>
+    Task<List<ApiKey>> GetAllAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Adds a new API key.
     /// </summary>
     Task AddAsync(ApiKey apiKey, CancellationToken cancellationToken = default);

@@ -149,7 +149,7 @@ public class PrometheusHttpClient : IPrometheusQueryService
         }
     }
 
-    private PrometheusQueryResult ParseQueryResult(PrometheusDataResponse? data)
+    private static PrometheusQueryResult ParseQueryResult(PrometheusDataResponse? data)
     {
         if (data?.Result is null)
         {
@@ -199,7 +199,7 @@ public class PrometheusHttpClient : IPrometheusQueryService
                 }
             }
 
-            return new PrometheusTimeSeries(metric, dataPoints);
+            return new PrometheusTimeSeries((IReadOnlyDictionary<string, string>)metric, dataPoints);
         }).ToList();
 
         return new PrometheusQueryResult(data.ResultType ?? "matrix", timeSeries);

@@ -125,7 +125,7 @@ public class TempSessionService : ITempSessionService
     }
 
     // Helper: Generate cryptographically secure 256-bit token
-    private string GenerateSecureToken()
+    private static string GenerateSecureToken()
     {
         var bytes = new byte[TokenSizeBytes];
         RandomNumberGenerator.Fill(bytes);

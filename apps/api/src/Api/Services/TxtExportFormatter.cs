@@ -79,7 +79,7 @@ public class TxtExportFormatter : IExportFormatter
         return Task.FromResult<Stream>(stream);
     }
 
-    private List<ChatLogEntity> FilterLogsByDateRange(
+    private static List<ChatLogEntity> FilterLogsByDateRange(
         ICollection<ChatLogEntity> logs,
         DateTime? dateFrom,
         DateTime? dateTo)

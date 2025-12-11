@@ -8,5 +8,5 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands;
 /// </summary>
 public record StartGameSessionCommand(
     Guid GameId,
-    List<SessionPlayerRequest> Players
+    IReadOnlyList<SessionPlayerRequest> Players
 ) : ICommand<GameSessionDto>;

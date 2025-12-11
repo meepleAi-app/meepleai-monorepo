@@ -21,7 +21,7 @@ public class ApiKeyRepository : RepositoryBase, IApiKeyRepository
     {
         var apiKeyEntity = await DbContext.ApiKeys
             .AsNoTracking()
-            .FirstOrDefaultAsync(k => k.KeyPrefix == keyPrefix, cancellationToken);
+            .FirstOrDefaultAsync(k => k.KeyPrefix == keyPrefix, cancellationToken).ConfigureAwait(false);
 
         return apiKeyEntity != null ? MapToDomain(apiKeyEntity) : null;
     }
@@ -32,7 +32,7 @@ public class ApiKeyRepository : RepositoryBase, IApiKeyRepository
             .AsNoTracking()
             .Where(k => k.UserId == userId)
             .OrderByDescending(k => k.CreatedAt)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return apiKeyEntities.Select(MapToDomain).ToList();
     }
@@ -48,7 +48,7 @@ public class ApiKeyRepository : RepositoryBase, IApiKeyRepository
                        k.RevokedAt == null &&
                        (k.ExpiresAt == null || k.ExpiresAt > now))
             .OrderByDescending(k => k.CreatedAt)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return apiKeyEntities.Select(MapToDomain).ToList();
     }

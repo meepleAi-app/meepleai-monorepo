@@ -26,7 +26,7 @@ public class DeleteRuleCommentCommandHandler : IRequestHandler<DeleteRuleComment
         var comment = await _dbContext.RuleSpecComments
             .Include(c => c.Replies)
             .FirstOrDefaultAsync(c => c.Id == command.CommentId, cancellationToken)
-            ?? throw new InvalidOperationException($"Comment {command.CommentId} not found");
+.ConfigureAwait(false) ?? throw new InvalidOperationException($"Comment {command.CommentId} not found");
 
         // Verify ownership or admin
         if (comment.UserId != command.UserId && !command.IsAdmin)
@@ -54,7 +54,7 @@ public class DeleteRuleCommentCommandHandler : IRequestHandler<DeleteRuleComment
     {
         var replies = await _dbContext.RuleSpecComments
             .Where(c => c.ParentCommentId == parentCommentId)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         foreach (var reply in replies)
         {

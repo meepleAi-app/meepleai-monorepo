@@ -46,7 +46,7 @@ public class SimulateErrorCommandHandler : IRequestHandler<SimulateErrorCommand,
         {
             "500" => throw new InvalidOperationException($"Simulated 500 Internal Server Error (test endpoint)"),
             "400" => throw new ArgumentException($"Simulated 400 Bad Request (test endpoint)"),
-            "timeout" => await SimulateTimeoutAsync(cancellationToken),
+            "timeout" => await SimulateTimeoutAsync(cancellationToken).ConfigureAwait(false),
             "exception" => throw new ApplicationException($"Simulated unhandled exception (test endpoint)"),
             _ => throw new ArgumentException($"Invalid error type: {request.ErrorType}. Valid types: 500, 400, timeout, exception")
         };
@@ -55,7 +55,7 @@ public class SimulateErrorCommandHandler : IRequestHandler<SimulateErrorCommand,
     private static async Task<Unit> SimulateTimeoutAsync(CancellationToken cancellationToken)
     {
         // Simulate a long-running operation that times out
-        await Task.Delay(30000, cancellationToken); // 30 seconds - exceeds typical timeout
+        await Task.Delay(30000, cancellationToken).ConfigureAwait(false); // 30 seconds - exceeds typical timeout
         throw new TimeoutException("Simulated timeout error (test endpoint)");
     }
 }

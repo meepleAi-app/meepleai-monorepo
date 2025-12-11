@@ -1,3 +1,6 @@
+
+
+#pragma warning disable MA0048 // File name must match type name - Contains Interface with supporting types
 namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 
 /// <summary>
@@ -45,7 +48,7 @@ public interface IPdfValidator
 /// </summary>
 public record PdfValidationResult(
     bool IsValid,
-    Dictionary<string, string> Errors,
+    IDictionary<string, string> Errors,
     PdfMetadata? Metadata = null)
 {
     /// <summary>
@@ -57,7 +60,7 @@ public record PdfValidationResult(
     /// <summary>
     /// Creates a failed validation result with errors.
     /// </summary>
-    public static PdfValidationResult CreateFailure(Dictionary<string, string> errors) =>
+    public static PdfValidationResult CreateFailure(IDictionary<string, string> errors) =>
         new(false, errors, null);
 }
 

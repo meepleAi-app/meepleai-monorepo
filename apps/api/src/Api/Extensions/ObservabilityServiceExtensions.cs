@@ -53,6 +53,7 @@ public static class ObservabilityServiceExtensions
                     serviceVersion: serviceVersion,
                     serviceInstanceId: Environment.MachineName)
                 .AddAttributes(new Dictionary<string, object>
+(StringComparer.Ordinal)
                 {
                     ["deployment.environment"] = environment.EnvironmentName,
                     ["service.namespace"] = "meepleai"
@@ -66,7 +67,7 @@ public static class ObservabilityServiceExtensions
                     {
                         // Don't trace health checks or metrics endpoints
                         var path = httpContext.Request.Path.Value ?? string.Empty;
-                        return !path.StartsWith("/health") && !path.Equals("/metrics");
+                        return !path.StartsWith("/health", StringComparison.Ordinal) && !path.Equals("/metrics");
                     };
                 })
                 .AddHttpClientInstrumentation(options =>
@@ -94,7 +95,7 @@ public static class ObservabilityServiceExtensions
                     // Use HTTP endpoint (4318) instead of gRPC (4317)
                     // HTTP/Protobuf requires explicit /v1/traces path for traces
                     var httpEndpoint = hyperDxEndpoint.Replace(":4317", ":4318");
-                    if (!httpEndpoint.EndsWith("/v1/traces"))
+                    if (!httpEndpoint.EndsWith("/v1/traces", StringComparison.Ordinal))
                     {
                         httpEndpoint = httpEndpoint.TrimEnd('/') + "/v1/traces";
                     }
@@ -122,7 +123,7 @@ public static class ObservabilityServiceExtensions
                 {
                     // HTTP/Protobuf requires explicit /v1/metrics path for metrics
                     var httpEndpoint = hyperDxEndpoint.Replace(":4317", ":4318");
-                    if (!httpEndpoint.EndsWith("/v1/metrics"))
+                    if (!httpEndpoint.EndsWith("/v1/metrics", StringComparison.Ordinal))
                     {
                         httpEndpoint = httpEndpoint.TrimEnd('/') + "/v1/metrics";
                     }

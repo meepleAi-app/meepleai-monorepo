@@ -60,7 +60,7 @@ public class LlmCostAlertService
                     ["exceeded_by"] = dailyCost - DailyThreshold,
                     ["provider_breakdown"] = providerBreakdown
                 },
-                cancellationToken: ct);
+                cancellationToken: ct).ConfigureAwait(false);
         }
         else
         {
@@ -96,7 +96,7 @@ public class LlmCostAlertService
                     ["weekly_cost"] = weeklyCost,
                     ["threshold"] = WeeklyThreshold
                 },
-                cancellationToken: ct);
+                cancellationToken: ct).ConfigureAwait(false);
         }
     }
 
@@ -135,7 +135,7 @@ public class LlmCostAlertService
                     ["days_in_month"] = daysInMonth,
                     ["daily_average"] = monthCost / daysElapsed
                 },
-                cancellationToken: ct);
+                cancellationToken: ct).ConfigureAwait(false);
         }
     }
 }

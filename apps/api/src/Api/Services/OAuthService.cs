@@ -176,7 +176,7 @@ public class OAuthService : IOAuthService
                 return value;
             }
 
-            if (value.StartsWith("${") && value.EndsWith("}", StringComparison.Ordinal))
+            if (value.StartsWith("${", StringComparison.Ordinal) && value.EndsWith("}", StringComparison.Ordinal))
             {
                 var envName = value.Substring(2, value.Length - 3);
                 var envValue = Environment.GetEnvironmentVariable(envName);
@@ -314,7 +314,7 @@ public class OAuthService : IOAuthService
             {
                 "google" => ParseGoogleUserInfo(userData),
                 "discord" => ParseDiscordUserInfo(userData),
-                "github" => await ParseGitHubUserInfoAsync(userData, accessToken),
+                "github" => await ParseGitHubUserInfoAsync(userData, accessToken).ConfigureAwait(false),
                 _ => throw new InvalidOperationException($"Unsupported provider: {provider}")
             };
 
@@ -430,7 +430,7 @@ public class OAuthService : IOAuthService
         var oauthAccount = await _db.OAuthAccounts
             .FirstOrDefaultAsync(oa =>
                 oa.UserId == userId &&
-                oa.Provider == provider.ToLowerInvariant());
+                oa.Provider == provider.ToLowerInvariant()).ConfigureAwait(false);
 
         if (oauthAccount == null)
         {

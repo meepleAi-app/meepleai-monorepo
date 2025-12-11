@@ -32,7 +32,7 @@ public class UnresolveRuleCommentCommandHandler : IRequestHandler<UnresolveRuleC
         var comment = await _dbContext.RuleSpecComments
             .Include(c => c.ParentComment)
             .FirstOrDefaultAsync(c => c.Id == command.CommentId, cancellationToken)
-            ?? throw new InvalidOperationException($"Comment {command.CommentId} not found");
+.ConfigureAwait(false) ?? throw new InvalidOperationException($"Comment {command.CommentId} not found");
 
         // Authorization: Only comment owner or admin can unresolve
         if (comment.UserId != command.UserId && !command.IsAdmin)
@@ -50,7 +50,7 @@ public class UnresolveRuleCommentCommandHandler : IRequestHandler<UnresolveRuleC
         if (command.UnresolveParent && comment.ParentCommentId.HasValue)
         {
             var parent = await _dbContext.RuleSpecComments
-                .FirstOrDefaultAsync(c => c.Id == comment.ParentCommentId.Value, cancellationToken);
+                .FirstOrDefaultAsync(c => c.Id == comment.ParentCommentId.Value, cancellationToken).ConfigureAwait(false);
 
             if (parent != null && parent.IsResolved)
             {
@@ -73,7 +73,7 @@ public class UnresolveRuleCommentCommandHandler : IRequestHandler<UnresolveRuleC
 
         // Reload with navigation properties
         return await LoadCommentWithRelationsAsync(command.CommentId, cancellationToken)
-            ?? throw new InvalidOperationException("Failed to load unresolved comment");
+.ConfigureAwait(false) ?? throw new InvalidOperationException("Failed to load unresolved comment");
     }
 
     private async Task<RuleCommentDto?> LoadCommentWithRelationsAsync(Guid commentId, CancellationToken cancellationToken)
@@ -86,7 +86,7 @@ public class UnresolveRuleCommentCommandHandler : IRequestHandler<UnresolveRuleC
                 .ThenInclude(r => r.ResolvedByUser)
             .Include(c => c.ResolvedByUser)
             .AsNoTrackingWithIdentityResolution()
-            .FirstOrDefaultAsync(c => c.Id == commentId, cancellationToken);
+            .FirstOrDefaultAsync(c => c.Id == commentId, cancellationToken).ConfigureAwait(false);
 
         return comment?.ToDto();
     }

@@ -110,7 +110,7 @@ public class QdrantCollectionManager : IQdrantCollectionManager
                 Distance = Distance.Cosine
             },
             cancellationToken: ct
-        );
+        ).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -127,6 +127,6 @@ public class QdrantCollectionManager : IQdrantCollectionManager
             fieldName: fieldName,
             schemaType: schemaType,
             cancellationToken: ct
-        );
+        ).ConfigureAwait(false);
     }
 }

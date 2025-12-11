@@ -1,5 +1,6 @@
 using Api.Constants;
 
+#pragma warning disable MA0048 // File name must match type name - Contains Service with Configuration classes
 namespace Api.Services;
 
 /// <summary>
@@ -263,7 +264,7 @@ public class TextChunkingService : ITextChunkingService
     /// Estimate page number based on character position
     /// Assumes ~2000 characters per page (rough estimate)
     /// </summary>
-    private int EstimatePageNumber(int charPosition, int totalLength)
+    private int EstimatePageNumber(int charPosition)
     {
         const int charsPerPage = 2000;
         return (charPosition / charsPerPage) + 1;

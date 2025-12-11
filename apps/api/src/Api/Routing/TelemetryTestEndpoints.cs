@@ -111,8 +111,8 @@ public static class TelemetryTestEndpoints
     /// </summary>
     private static async Task<IResult> GenerateTestTrace(
         ILogger<Program> logger,
-        IWebHostEnvironment env,
-        HttpContext context)
+        IWebHostEnvironment env
+        )
     {
         if (env.IsProduction())
         {
@@ -148,7 +148,7 @@ public static class TelemetryTestEndpoints
             if (childActivity != null)
             {
                 childActivity.SetTag("operation", "data-fetch");
-                await Task.Delay(10); // Simulate work
+                await Task.Delay(10).ConfigureAwait(false); // Simulate work
 
                 logger.LogInformation(
                     "Child span completed. ParentTraceId: {TraceId}, ChildSpanId: {SpanId}",
@@ -181,8 +181,8 @@ public static class TelemetryTestEndpoints
     /// </summary>
     private static IResult TestSensitiveDataRedaction(
         ILogger<Program> logger,
-        IWebHostEnvironment env,
-        HttpContext context)
+        IWebHostEnvironment env
+        )
     {
         if (env.IsProduction())
         {
@@ -248,8 +248,7 @@ public static class TelemetryTestEndpoints
     private static async Task<IResult> GenerateBulkTelemetry(
         ILogger<Program> logger,
         IWebHostEnvironment env,
-        HttpContext context,
-        int count = 100)
+                int count = 100)
     {
         if (env.IsProduction())
         {
@@ -286,7 +285,7 @@ public static class TelemetryTestEndpoints
             // Throttle to avoid overwhelming the system
             if (i % 10 == 0)
             {
-                await Task.Delay(10);
+                await Task.Delay(10).ConfigureAwait(false);
             }
         }
 

@@ -2,6 +2,7 @@ using System.Text.Json;
 using Api.BoundedContexts.Administration.Domain.Services;
 using Microsoft.Extensions.Options;
 
+#pragma warning disable MA0048 // File name must match type name - Contains Interface with supporting types
 namespace Api.BoundedContexts.Administration.Infrastructure.External;
 
 /// <summary>
@@ -58,16 +59,16 @@ public class PrometheusHttpClient : IPrometheusQueryService
 
             var url = $"/api/v1/query_range?query={Uri.EscapeDataString(query)}&start={startUnix}&end={endUnix}&step={step}";
 
-            var response = await _httpClient.GetAsync(url, cancellationToken);
+            var response = await _httpClient.GetAsync(url, cancellationToken).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
 
-            var content = await response.Content.ReadAsStringAsync(cancellationToken);
+            var content = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
             var prometheusResponse = JsonSerializer.Deserialize<PrometheusApiResponse>(content, new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
             });
 
-            if (prometheusResponse?.Status != "success")
+            if (!string.Equals(prometheusResponse?.Status, "success", StringComparison.Ordinal))
             {
                 var errorMsg = prometheusResponse?.Error ?? "Unknown error from Prometheus";
                 _logger.LogError("Prometheus query failed: {Error}", errorMsg);
@@ -106,16 +107,16 @@ public class PrometheusHttpClient : IPrometheusQueryService
             var timeUnix = new DateTimeOffset(timestamp).ToUnixTimeSeconds();
             var url = $"/api/v1/query?query={Uri.EscapeDataString(query)}&time={timeUnix}";
 
-            var response = await _httpClient.GetAsync(url, cancellationToken);
+            var response = await _httpClient.GetAsync(url, cancellationToken).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
 
-            var content = await response.Content.ReadAsStringAsync(cancellationToken);
+            var content = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
             var prometheusResponse = JsonSerializer.Deserialize<PrometheusApiResponse>(content, new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
             });
 
-            if (prometheusResponse?.Status != "success")
+            if (!string.Equals(prometheusResponse?.Status, "success", StringComparison.Ordinal))
             {
                 var errorMsg = prometheusResponse?.Error ?? "Unknown error from Prometheus";
                 _logger.LogError("Prometheus query failed: {Error}", errorMsg);
@@ -157,12 +158,12 @@ public class PrometheusHttpClient : IPrometheusQueryService
 
         var timeSeries = data.Result.Select(result =>
         {
-            var metric = result.Metric ?? new Dictionary<string, string>();
+            var metric = result.Metric ?? new Dictionary<string, string>(StringComparer.Ordinal);
 
             // Parse values (for range queries) or value (for instant queries)
             var dataPoints = new List<PrometheusDataPoint>();
 
-            if (result.Values is not null && result.Values is JsonElement valuesElement && valuesElement.ValueKind == JsonValueKind.Array)
+            if (result.Values is JsonElement valuesElement && valuesElement.ValueKind == JsonValueKind.Array)
             {
                 // Range query response: array of [timestamp, value] arrays
                 foreach (var valueArray in valuesElement.EnumerateArray())
@@ -235,12 +236,12 @@ internal record PrometheusApiResponse
 internal record PrometheusDataResponse
 {
     public string? ResultType { get; init; }
-    public List<PrometheusResultItem>? Result { get; init; }
+    public IList<PrometheusResultItem>? Result { get; init; }
 }
 
 internal record PrometheusResultItem
 {
-    public Dictionary<string, string>? Metric { get; init; }
+    public IDictionary<string, string>? Metric { get; init; }
     public object? Value { get; init; }  // For instant queries: [timestamp, value]
     public object? Values { get; init; } // For range queries: [[timestamp, value], ...]
 }

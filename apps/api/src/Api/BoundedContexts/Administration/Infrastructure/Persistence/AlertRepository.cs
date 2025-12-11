@@ -20,17 +20,17 @@ public class AlertRepository : RepositoryBase, IAlertRepository
     {
         var entity = await DbContext.Set<Api.Infrastructure.Entities.AlertEntity>()
             .AsNoTracking()
-            .FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
+            .FirstOrDefaultAsync(a => a.Id == id, cancellationToken).ConfigureAwait(false);
 
         return entity != null ? MapToDomain(entity) : null;
     }
 
-    public async Task<List<Alert>> GetAllAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<Alert>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         var entities = await DbContext.Set<Api.Infrastructure.Entities.AlertEntity>()
             .AsNoTracking()
             .OrderByDescending(a => a.TriggeredAt)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return entities.Select(MapToDomain).ToList();
     }
@@ -41,7 +41,7 @@ public class AlertRepository : RepositoryBase, IAlertRepository
             .AsNoTracking()
             .Where(a => a.IsActive)
             .OrderByDescending(a => a.TriggeredAt)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return entities.Select(MapToDomain).ToList();
     }
@@ -52,7 +52,7 @@ public class AlertRepository : RepositoryBase, IAlertRepository
             .AsNoTracking()
             .Where(a => a.AlertType == alertType)
             .OrderByDescending(a => a.TriggeredAt)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return entities.Select(MapToDomain).ToList();
     }
@@ -82,7 +82,7 @@ public class AlertRepository : RepositoryBase, IAlertRepository
     public async Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default)
     {
         return await DbContext.Set<Api.Infrastructure.Entities.AlertEntity>()
-            .AnyAsync(a => a.Id == id, cancellationToken);
+            .AnyAsync(a => a.Id == id, cancellationToken).ConfigureAwait(false);
     }
 
     private static Alert MapToDomain(Api.Infrastructure.Entities.AlertEntity entity)

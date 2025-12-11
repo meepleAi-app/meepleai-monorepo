@@ -49,7 +49,7 @@ public class GetPdfTextQueryHandlerTests
             new GetPdfTextQueryHandler(
                 null!,
                 _loggerMock.Object);
-        
+
         act.Should().Throw<ArgumentNullException>();
     }
 
@@ -64,7 +64,7 @@ public class GetPdfTextQueryHandlerTests
             new GetPdfTextQueryHandler(
                 dbContext,
                 null!);
-        
+
         act.Should().Throw<ArgumentNullException>();
     }
     [Fact]

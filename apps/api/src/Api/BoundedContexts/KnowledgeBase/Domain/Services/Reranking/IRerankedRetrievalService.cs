@@ -1,5 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 
+#pragma warning disable MA0048 // File name must match type name - Contains Service with Configuration classes
 namespace Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
 
 /// <summary>

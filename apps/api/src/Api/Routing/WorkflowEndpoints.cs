@@ -24,7 +24,7 @@ public static class WorkflowEndpoints
             if (!authorized) return error!;
 
             // CONFIG-05: Check if n8n integration feature is enabled
-            if (!await featureFlags.IsEnabledAsync("Features.N8nIntegration"))
+            if (!await featureFlags.IsEnabledAsync("Features.N8nIntegration").ConfigureAwait(false))
             {
                 return Results.Json(
                     new { error = "feature_disabled", message = "n8n integration is currently disabled", featureName = "Features.N8nIntegration" },

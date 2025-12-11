@@ -65,7 +65,7 @@ public class ITextPdfTableExtractor : IPdfTableExtractor
         {
             // Offload blocking I/O to thread pool
             var (tables, atomicRules) = await Task.Run(() =>
-                ExtractTablesFromPdf(filePath, convertToAtomicRules), ct);
+                ExtractTablesFromPdf(filePath, convertToAtomicRules), ct).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Successfully extracted {TableCount} tables from PDF: {FilePath}",
@@ -130,7 +130,7 @@ public class ITextPdfTableExtractor : IPdfTableExtractor
         {
             // Offload blocking I/O to thread pool
             var result = await Task.Run(() =>
-                ExtractStructuredDataFromPdf(filePath), ct);
+                ExtractStructuredDataFromPdf(filePath), ct).ConfigureAwait(false);
 
             return result;
         }

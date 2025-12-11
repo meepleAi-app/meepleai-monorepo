@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 
+#pragma warning disable MA0048 // File name must match type name - Contains related domain models
 namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.External.Models;
 
 /// <summary>
@@ -12,7 +13,7 @@ public class UnstructuredResponse
     public string Text { get; set; } = string.Empty;
 
     [JsonPropertyName("chunks")]
-    public List<UnstructuredChunk> Chunks { get; set; } = new();
+    public IList<UnstructuredChunk> Chunks { get; set; } = new List<UnstructuredChunk>();
 
     [JsonPropertyName("quality_score")]
     public double QualityScore { get; set; }
@@ -21,7 +22,7 @@ public class UnstructuredResponse
     public int PageCount { get; set; }
 
     [JsonPropertyName("metadata")]
-    public Dictionary<string, object> Metadata { get; set; } = new(StringComparer.Ordinal);
+    public IDictionary<string, object> Metadata { get; set; } = new Dictionary<string, object>(StringComparer.Ordinal);
 }
 
 /// <summary>
@@ -40,7 +41,7 @@ public class UnstructuredChunk
     public string? ElementType { get; set; }
 
     [JsonPropertyName("metadata")]
-    public Dictionary<string, object> Metadata { get; set; } = new(StringComparer.Ordinal);
+    public IDictionary<string, object> Metadata { get; set; } = new Dictionary<string, object>(StringComparer.Ordinal);
 }
 
 /// <summary>
@@ -85,7 +86,7 @@ public class UnstructuredErrorDetail
     public string Message { get; set; } = string.Empty;
 
     [JsonPropertyName("details")]
-    public Dictionary<string, object>? Details { get; set; }
+    public IDictionary<string, object>? Details { get; set; }
 
     [JsonPropertyName("timestamp")]
     public string Timestamp { get; set; } = string.Empty;

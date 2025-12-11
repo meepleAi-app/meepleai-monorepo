@@ -37,7 +37,7 @@ public class GetPrometheusMetricsQueryHandler : IRequestHandler<GetPrometheusMet
                 request.Start,
                 request.End,
                 request.Step,
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
 
             var timeSeriesDtos = result.TimeSeries.Select(ts => new PrometheusTimeSeriesDto(
                 ts.Metric,

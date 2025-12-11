@@ -28,7 +28,7 @@ public class CompleteGameSessionCommandHandler : ICommandHandler<CompleteGameSes
     {
         // Load session
         var session = await _sessionRepository.GetByIdAsync(command.SessionId, cancellationToken)
-            ?? throw new InvalidOperationException($"Session with ID {command.SessionId} not found");
+.ConfigureAwait(false) ?? throw new InvalidOperationException($"Session with ID {command.SessionId} not found");
 
         // Complete via domain method
         session.Complete(command.WinnerName);

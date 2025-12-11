@@ -12,10 +12,10 @@ public class AuditLogBuilder
     private string _action = "TestAction";
     private string _resource = "TestResource";
     private string _result = "success";
-    private string? _resourceId = null;
+    private readonly string? _resourceId = null;
     private string? _details;
     private string? _ipAddress;
-    private string? _userAgent = null;
+    private readonly string? _userAgent = null;
 
     public AuditLogBuilder WithId(Guid id)
     {

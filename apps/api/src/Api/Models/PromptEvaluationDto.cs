@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 
+#pragma warning disable MA0048 // File name must match type name - Contains related Request/Response DTOs
 namespace Api.Models;
 
 /// <summary>
@@ -26,7 +27,7 @@ public class PromptTestDataset
 
     /// <summary>Test cases in this dataset</summary>
     [JsonPropertyName("test_cases")]
-    public required List<PromptTestCase> TestCases { get; set; }
+    public required IList<PromptTestCase> TestCases { get; set; }
 
     /// <summary>Quality thresholds for pass/fail</summary>
     [JsonPropertyName("quality_thresholds")]
@@ -64,15 +65,15 @@ public class PromptTestCase
 
     /// <summary>Keywords that MUST appear in response</summary>
     [JsonPropertyName("required_keywords")]
-    public List<string>? RequiredKeywords { get; set; }
+    public IList<string>? RequiredKeywords { get; set; }
 
     /// <summary>Keywords that MUST NOT appear (hallucination detection)</summary>
     [JsonPropertyName("forbidden_keywords")]
-    public List<string>? ForbiddenKeywords { get; set; }
+    public IList<string>? ForbiddenKeywords { get; set; }
 
     /// <summary>Expected citations (document IDs or page numbers)</summary>
     [JsonPropertyName("expected_citations")]
-    public List<string>? ExpectedCitations { get; set; }
+    public IList<string>? ExpectedCitations { get; set; }
 
     /// <summary>Minimum confidence threshold for this specific test case</summary>
     [JsonPropertyName("min_confidence")]
@@ -140,7 +141,7 @@ public class PromptEvaluationResult
     public bool Passed { get; set; }
 
     /// <summary>Individual query results for detailed analysis</summary>
-    public required List<QueryEvaluationResult> QueryResults { get; set; }
+    public required IList<QueryEvaluationResult> QueryResults { get; set; }
 
     /// <summary>Summary message</summary>
     public string? Summary { get; set; }

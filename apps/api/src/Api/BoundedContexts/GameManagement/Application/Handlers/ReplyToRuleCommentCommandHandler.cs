@@ -21,7 +21,6 @@ public partial class ReplyToRuleCommentCommandHandler : IRequestHandler<ReplyToR
 
     private const int MaxCommentLength = 2000;
     private const int MaxThreadDepth = 5;
-    private static readonly TimeSpan RegexTimeout = TimeSpan.FromMilliseconds(100);
 
     [GeneratedRegex(@"@(\w{1,50})", RegexOptions.Compiled, matchTimeoutMilliseconds: 100)]
     private static partial Regex MentionRegex();
@@ -44,7 +43,7 @@ public partial class ReplyToRuleCommentCommandHandler : IRequestHandler<ReplyToR
         var parentComment = await _dbContext.RuleSpecComments
             .Include(c => c.ParentComment)
             .FirstOrDefaultAsync(c => c.Id == command.ParentCommentId, cancellationToken)
-            ?? throw new InvalidOperationException($"Parent comment {command.ParentCommentId} not found");
+.ConfigureAwait(false) ?? throw new InvalidOperationException($"Parent comment {command.ParentCommentId} not found");
 
         // Validate thread depth (adding reply would increase depth by 1)
         var threadDepth = await CalculateThreadDepthAsync(command.ParentCommentId, cancellationToken).ConfigureAwait(false);
@@ -82,7 +81,7 @@ public partial class ReplyToRuleCommentCommandHandler : IRequestHandler<ReplyToR
 
         // Reload with navigation properties
         return await LoadCommentWithRelationsAsync(reply.Id, cancellationToken)
-            ?? throw new InvalidOperationException("Failed to load created reply");
+.ConfigureAwait(false) ?? throw new InvalidOperationException("Failed to load created reply");
     }
 
     private async Task<int> CalculateThreadDepthAsync(Guid commentId, CancellationToken cancellationToken)
@@ -97,7 +96,7 @@ public partial class ReplyToRuleCommentCommandHandler : IRequestHandler<ReplyToR
                 .AsNoTracking()
                 .Where(c => c.Id == currentId)
                 .Select(c => c.ParentCommentId)
-                .FirstOrDefaultAsync(cancellationToken);
+                .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
 
             if (!parent.HasValue)
             {
@@ -146,7 +145,7 @@ public partial class ReplyToRuleCommentCommandHandler : IRequestHandler<ReplyToR
                     || (u.Email != null && mentionedUsernames.Any(m => u.Email.ToLower(CultureInfo.InvariantCulture).StartsWith(m))))
                 .Select(u => u.Id.ToString())
                 .Distinct()
-                .ToListAsync(cancellationToken);
+                .ToListAsync(cancellationToken).ConfigureAwait(false);
 
             if (users.Count < mentionedUsernames.Count)
             {
@@ -174,7 +173,7 @@ public partial class ReplyToRuleCommentCommandHandler : IRequestHandler<ReplyToR
                 .ThenInclude(r => r.ResolvedByUser)
             .Include(c => c.ResolvedByUser)
             .AsNoTrackingWithIdentityResolution()
-            .FirstOrDefaultAsync(c => c.Id == commentId, cancellationToken);
+            .FirstOrDefaultAsync(c => c.Id == commentId, cancellationToken).ConfigureAwait(false);
 
         return comment?.ToDto();
     }

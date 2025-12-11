@@ -37,7 +37,7 @@ public sealed class EvaluatePromptCommandHandler : ICommandHandler<EvaluatePromp
             command.VersionId,
             command.DatasetPath,
             progressCallback: null,
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
 
         if (command.StoreResults)
         {

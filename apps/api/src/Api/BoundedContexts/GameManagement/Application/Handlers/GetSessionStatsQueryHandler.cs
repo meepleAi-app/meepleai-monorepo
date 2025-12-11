@@ -28,7 +28,7 @@ public class GetSessionStatsQueryHandler : IQueryHandler<GetSessionStatsQuery, S
             limit: null,
             offset: null,
             cancellationToken: cancellationToken
-        );
+        ).ConfigureAwait(false);
 
         // Calculate basic statistics
         var totalSessions = sessions.Count;

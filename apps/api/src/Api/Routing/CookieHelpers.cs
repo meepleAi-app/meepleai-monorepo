@@ -17,11 +17,11 @@ public static class CookieHelpers
     {
         var options = CreateSessionCookieOptions(context, expiresAt);
         var sessionCookieName = GetSessionCookieName(context);
-        
+
         // BGAI-081: Development workaround for SameSite=None without Secure
         // ASP.NET Core blocks SameSite=None without Secure, so we write the header directly
-        if (context.RequestServices.GetRequiredService<IHostEnvironment>().IsDevelopment() && 
-            options.SameSite == SameSiteMode.None && 
+        if (context.RequestServices.GetRequiredService<IHostEnvironment>().IsDevelopment() &&
+            options.SameSite == SameSiteMode.None &&
             !options.Secure)
         {
             // Build Set-Cookie header manually
@@ -30,12 +30,12 @@ public static class CookieHelpers
                             $"Expires={expiresAt:R}; " +
                             $"HttpOnly; " +
                             $"SameSite=None";
-            
+
             if (!string.IsNullOrWhiteSpace(options.Domain))
             {
                 cookieValue += $"; Domain={options.Domain}";
             }
-            
+
             context.Response.Headers.Append("Set-Cookie", cookieValue);
         }
         else
@@ -270,7 +270,7 @@ public static class CookieHelpers
         {
             sameSite = SameSiteMode.None;
         }
-        
+
         var path = string.IsNullOrWhiteSpace(configuration.Path) ? "/" : configuration.Path;
 
         var options = new CookieOptions

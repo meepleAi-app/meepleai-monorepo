@@ -18,6 +18,7 @@ public static class AuthenticationServiceExtensions
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<ISessionRepository, SessionRepository>();
         services.AddScoped<IApiKeyRepository, ApiKeyRepository>();
+        services.AddScoped<IApiKeyUsageLogRepository, ApiKeyUsageLogRepository>();
         services.AddScoped<IOAuthAccountRepository, OAuthAccountRepository>();
 
         // Register Unit of Work

@@ -23,17 +23,17 @@ public class GameRepository : RepositoryBase, IGameRepository
     {
         var gameEntity = await DbContext.Games
             .AsNoTracking()
-            .FirstOrDefaultAsync(g => g.Id == id, cancellationToken);
+            .FirstOrDefaultAsync(g => g.Id == id, cancellationToken).ConfigureAwait(false);
 
         return gameEntity != null ? MapToDomain(gameEntity) : null;
     }
 
-    public async Task<List<Game>> GetAllAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<Game>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         var gameEntities = await DbContext.Games
             .AsNoTracking()
             .OrderBy(g => g.Name)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return gameEntities.Select(MapToDomain).ToList();
     }
@@ -44,7 +44,7 @@ public class GameRepository : RepositoryBase, IGameRepository
             .AsNoTracking()
             .Where(g => EF.Functions.ILike(g.Name, $"%{titlePattern}%"))
             .OrderBy(g => g.Name)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return gameEntities.Select(MapToDomain).ToList();
     }

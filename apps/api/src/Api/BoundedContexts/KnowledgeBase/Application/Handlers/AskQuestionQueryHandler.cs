@@ -110,7 +110,7 @@ public class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespons
 
         // Step 2: Build LLM prompt with context
         var systemPrompt = await _promptTemplateService.GetActivePromptAsync("rag-system-prompt")
-            ?? DefaultSystemPrompt;
+.ConfigureAwait(false) ?? DefaultSystemPrompt;
         var context = string.Join("\n\n", searchResults.Select(sr =>
             $"[Page {sr.PageNumber}] {sr.TextContent}"));
 
@@ -124,7 +124,7 @@ public class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespons
         var llmResult = await _llmService.GenerateCompletionAsync(
             systemPrompt,
             userPrompt,
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
 
         var llmResponse = llmResult.Response;
 
@@ -193,7 +193,7 @@ public class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespons
                 systemPrompt,
                 userPrompt,
                 query.Language,
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
 
             validationResult = new RagValidationResultDto(
                 IsValid: validation.IsValid,

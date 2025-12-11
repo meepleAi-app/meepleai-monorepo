@@ -23,7 +23,7 @@ public class VectorDocumentRepository : RepositoryBase, IVectorDocumentRepositor
     {
         var entity = await DbContext.VectorDocuments
             .AsNoTracking()
-            .FirstOrDefaultAsync(vd => vd.Id == id, cancellationToken);
+            .FirstOrDefaultAsync(vd => vd.Id == id, cancellationToken).ConfigureAwait(false);
 
         return entity?.ToDomain();
     }
@@ -38,7 +38,7 @@ public class VectorDocumentRepository : RepositoryBase, IVectorDocumentRepositor
             .FirstOrDefaultAsync(vd =>
                 vd.GameId == gameId &&
                 vd.PdfDocumentId == sourceDocumentId,
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
 
         return entity?.ToDomain();
     }
@@ -50,7 +50,7 @@ public class VectorDocumentRepository : RepositoryBase, IVectorDocumentRepositor
         var entities = await DbContext.VectorDocuments
             .AsNoTracking()
             .Where(vd => vd.GameId == gameId)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return entities.Select(e => e.ToDomain()).ToList();
     }
@@ -74,7 +74,7 @@ public class VectorDocumentRepository : RepositoryBase, IVectorDocumentRepositor
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var entity = await DbContext.VectorDocuments
-            .FirstOrDefaultAsync(vd => vd.Id == id, cancellationToken);
+            .FirstOrDefaultAsync(vd => vd.Id == id, cancellationToken).ConfigureAwait(false);
 
         if (entity != null)
         {
@@ -92,7 +92,7 @@ public class VectorDocumentRepository : RepositoryBase, IVectorDocumentRepositor
             .AnyAsync(vd =>
                 vd.GameId == gameId &&
                 vd.PdfDocumentId == sourceDocumentId,
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<int> GetTotalCountAsync(CancellationToken cancellationToken = default)
@@ -103,6 +103,6 @@ public class VectorDocumentRepository : RepositoryBase, IVectorDocumentRepositor
     public async Task<int> GetTotalEmbeddingsCountAsync(CancellationToken cancellationToken = default)
     {
         return await DbContext.VectorDocuments
-            .SumAsync(vd => vd.ChunkCount, cancellationToken);
+            .SumAsync(vd => vd.ChunkCount, cancellationToken).ConfigureAwait(false);
     }
 }

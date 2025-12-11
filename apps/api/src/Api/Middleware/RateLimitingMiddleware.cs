@@ -1,9 +1,11 @@
 using System.Net;
 using System.Text.Json;
 using System.Globalization;
+using Api.Extensions;
 using Api.Models;
 using Api.Services;
 
+#pragma warning disable MA0048 // File name must match type name - Contains Middleware with Options/Extensions
 namespace Api.Middleware;
 
 /// <summary>
@@ -38,7 +40,9 @@ public class RateLimitingMiddleware
             string role;
             string rateKey;
 
-            if (context.Items.TryGetValue(nameof(ActiveSession), out var value) && value is ActiveSession session)
+            var (authenticated, session, _) = context.TryGetActiveSession();
+
+            if (authenticated && session.User is not null)
             {
                 role = session.User.Role;
                 rateKey = $"user:{session.User.Id}";

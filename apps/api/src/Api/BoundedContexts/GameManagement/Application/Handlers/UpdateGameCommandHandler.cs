@@ -27,7 +27,7 @@ public class UpdateGameCommandHandler : ICommandHandler<UpdateGameCommand, GameD
     {
         // Load game
         var game = await _gameRepository.GetByIdAsync(command.GameId, cancellationToken)
-            ?? throw new InvalidOperationException($"Game with ID {command.GameId} not found");
+.ConfigureAwait(false) ?? throw new InvalidOperationException($"Game with ID {command.GameId} not found");
 
         // Update value objects
         GameTitle? title = command.Title != null ? new GameTitle(command.Title) : null;

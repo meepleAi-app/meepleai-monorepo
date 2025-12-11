@@ -2,6 +2,7 @@ using Api.Infrastructure;
 using Api.Models;
 using Microsoft.EntityFrameworkCore;
 
+#pragma warning disable MA0048 // File name must match type name - Contains Service with Configuration classes
 namespace Api.Services;
 
 /// <summary>
@@ -169,7 +170,7 @@ public class QualityReportService : BackgroundService, IQualityReportService
         var logs = await dbContext.AiRequestLogs
             .Where(l => l.CreatedAt >= startDate && l.CreatedAt <= endDate)
             .AsNoTracking()
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         var totalResponses = logs.Count;
         var lowQualityCount = logs.Count(l => l.IsLowQuality);

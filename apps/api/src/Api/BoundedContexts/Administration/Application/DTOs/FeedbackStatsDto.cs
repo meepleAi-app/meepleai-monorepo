@@ -31,11 +31,11 @@ public record FeedbackStatsDto
     /// Feedback counts grouped by endpoint.
     /// Key: endpoint name, Value: count of feedback for that endpoint.
     /// </summary>
-    public required Dictionary<string, int> FeedbackByEndpoint { get; init; }
+    public required IDictionary<string, int> FeedbackByEndpoint { get; init; }
 
     /// <summary>
     /// Feedback counts grouped by outcome type.
     /// Key: outcome ("helpful", "not-helpful"), Value: count.
     /// </summary>
-    public required Dictionary<string, int> FeedbackByOutcome { get; init; }
+    public required IDictionary<string, int> FeedbackByOutcome { get; init; }
 }

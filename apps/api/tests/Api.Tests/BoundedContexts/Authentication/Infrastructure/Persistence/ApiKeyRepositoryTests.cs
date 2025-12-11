@@ -26,15 +26,15 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
     private async Task<Guid> CreateTestUserAsync(string email = "test@example.com")
     {
         var userId = Guid.NewGuid();
-        await DbContext.Users.AddAsync(new Api.Infrastructure.Entities.UserEntity 
-        { 
-            Id = userId, 
-            Email = email, 
-            DisplayName = $"Test {email}", 
-            PasswordHash = "hash", 
-            Role = "user", 
-            CreatedAt = DateTime.UtcNow, 
-            IsTwoFactorEnabled = false 
+        await DbContext.Users.AddAsync(new Api.Infrastructure.Entities.UserEntity
+        {
+            Id = userId,
+            Email = email,
+            DisplayName = $"Test {email}",
+            PasswordHash = "hash",
+            Role = "user",
+            CreatedAt = DateTime.UtcNow,
+            IsTwoFactorEnabled = false
         });
         await DbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
         return userId;

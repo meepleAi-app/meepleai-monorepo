@@ -29,7 +29,7 @@ public sealed class LoadDatasetCommandHandler : IRequestHandler<LoadDatasetComma
 
         _logger.LogInformation("Loading dataset from '{FilePath}'", request.FilePath);
 
-        var json = await File.ReadAllTextAsync(request.FilePath, cancellationToken);
+        var json = await File.ReadAllTextAsync(request.FilePath, cancellationToken).ConfigureAwait(false);
         var dataset = EvaluationDataset.FromJson(json);
 
         var (isValid, errors) = dataset.Validate();

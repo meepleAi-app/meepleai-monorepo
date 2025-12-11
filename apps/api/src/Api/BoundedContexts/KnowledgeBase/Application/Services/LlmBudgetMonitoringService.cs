@@ -179,7 +179,7 @@ public class LlmBudgetMonitoringService : BackgroundService
             Budget Limit: ${budgetLimit:F2}
             Usage: {percentage:P0}
 
-            Threshold: {(severity == "Critical" ? CriticalThreshold : WarningThreshold):P0}
+            Threshold: {(string.Equals(severity, "Critical", StringComparison.Ordinal) ? CriticalThreshold : WarningThreshold):P0}
             
             {budgetModeStatus}
             """;
@@ -190,9 +190,10 @@ public class LlmBudgetMonitoringService : BackgroundService
 
         await alertingService.SendAlertAsync(
             alertType: $"LlmBudget{severity}",
-            severity: severity == "Critical" ? "Error" : "Warning",
+            severity: string.Equals(severity, "Critical", StringComparison.Ordinal) ? "Error" : "Warning",
             message: message,
             metadata: new Dictionary<string, object>
+(StringComparer.Ordinal)
             {
                 { "period", period },
                 { "actualSpend", actualSpend },

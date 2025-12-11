@@ -30,7 +30,7 @@ public class GetInfrastructureDetailsQueryHandler : IRequestHandler<GetInfrastru
 
         try
         {
-            var details = await _detailsService.GetDetailsAsync(cancellationToken);
+            var details = await _detailsService.GetDetailsAsync(cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Infrastructure details retrieved successfully. Overall state: {State}",

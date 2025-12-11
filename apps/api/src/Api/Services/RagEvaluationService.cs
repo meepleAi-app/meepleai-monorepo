@@ -11,6 +11,7 @@ using Api.Models;
 using System.Globalization;
 using Microsoft.Extensions.Logging;
 
+#pragma warning disable MA0048 // File name must match type name - Contains Service with Configuration classes
 namespace Api.Services;
 
 /// <summary>
@@ -325,11 +326,11 @@ public class RagEvaluationService : IRagEvaluationService
             }
 
             // Step 2: Search Qdrant
-        var searchResult = await _qdrantService.SearchAsync(
-            query.GameId,
-            embeddingResult.Embeddings[0],
-            limit: topK,
-            ct: ct).ConfigureAwait(false);
+            var searchResult = await _qdrantService.SearchAsync(
+                query.GameId,
+                embeddingResult.Embeddings[0],
+                limit: topK,
+                ct: ct).ConfigureAwait(false);
 
             stopwatch.Stop();
 

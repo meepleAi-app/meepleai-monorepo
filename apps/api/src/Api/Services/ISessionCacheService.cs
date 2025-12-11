@@ -1,5 +1,3 @@
-using Api.Models;
-
 namespace Api.Services;
 
 /// <summary>
@@ -8,16 +6,6 @@ namespace Api.Services;
 /// </summary>
 public interface ISessionCacheService
 {
-    /// <summary>
-    /// Get cached session by token hash
-    /// </summary>
-    Task<ActiveSession?> GetAsync(string tokenHash, CancellationToken ct = default);
-
-    /// <summary>
-    /// Cache a validated session
-    /// </summary>
-    Task SetAsync(string tokenHash, ActiveSession session, DateTime expiresAt, CancellationToken ct = default);
-
     /// <summary>
     /// Invalidate a specific session (e.g., on logout)
     /// </summary>

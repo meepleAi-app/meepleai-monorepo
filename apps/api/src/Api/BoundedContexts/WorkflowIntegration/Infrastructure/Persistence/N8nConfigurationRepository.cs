@@ -19,17 +19,17 @@ public class N8nConfigurationRepository : RepositoryBase, IN8nConfigurationRepos
     {
         var entity = await DbContext.Set<Api.Infrastructure.Entities.N8nConfigEntity>()
             .AsNoTracking()
-            .FirstOrDefaultAsync(c => c.Id == id, cancellationToken);
+            .FirstOrDefaultAsync(c => c.Id == id, cancellationToken).ConfigureAwait(false);
 
         return entity != null ? MapToDomain(entity) : null;
     }
 
-    public async Task<List<N8nConfiguration>> GetAllAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<N8nConfiguration>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         var entities = await DbContext.Set<Api.Infrastructure.Entities.N8nConfigEntity>()
             .AsNoTracking()
             .OrderByDescending(c => c.CreatedAt)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return entities.Select(MapToDomain).ToList();
     }
@@ -38,7 +38,7 @@ public class N8nConfigurationRepository : RepositoryBase, IN8nConfigurationRepos
     {
         var entity = await DbContext.Set<Api.Infrastructure.Entities.N8nConfigEntity>()
             .AsNoTracking()
-            .FirstOrDefaultAsync(c => c.IsActive, cancellationToken);
+            .FirstOrDefaultAsync(c => c.IsActive, cancellationToken).ConfigureAwait(false);
 
         return entity != null ? MapToDomain(entity) : null;
     }
@@ -47,7 +47,7 @@ public class N8nConfigurationRepository : RepositoryBase, IN8nConfigurationRepos
     {
         var entity = await DbContext.Set<Api.Infrastructure.Entities.N8nConfigEntity>()
             .AsNoTracking()
-            .FirstOrDefaultAsync(c => c.Name == name, cancellationToken);
+            .FirstOrDefaultAsync(c => c.Name == name, cancellationToken).ConfigureAwait(false);
 
         return entity != null ? MapToDomain(entity) : null;
     }
@@ -77,7 +77,7 @@ public class N8nConfigurationRepository : RepositoryBase, IN8nConfigurationRepos
     public async Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default)
     {
         return await DbContext.Set<Api.Infrastructure.Entities.N8nConfigEntity>()
-            .AnyAsync(c => c.Id == id, cancellationToken);
+            .AnyAsync(c => c.Id == id, cancellationToken).ConfigureAwait(false);
     }
 
     private static N8nConfiguration MapToDomain(Api.Infrastructure.Entities.N8nConfigEntity entity)

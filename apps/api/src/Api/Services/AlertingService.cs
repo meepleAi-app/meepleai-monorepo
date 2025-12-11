@@ -5,6 +5,7 @@ using Api.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
+#pragma warning disable MA0048 // File name must match type name - Contains Service with Configuration classes
 namespace Api.Services;
 
 /// <summary>
@@ -43,7 +44,7 @@ public class AlertingService : IAlertingService
         string alertType,
         string severity,
         string message,
-        Dictionary<string, object>? metadata = null,
+        IDictionary<string, object>? metadata = null,
         CancellationToken cancellationToken = default)
     {
         if (!_config.Enabled)
@@ -53,7 +54,7 @@ public class AlertingService : IAlertingService
         }
 
         // Check throttling
-        if (await IsThrottledAsync(alertType, cancellationToken))
+        if (await IsThrottledAsync(alertType, cancellationToken).ConfigureAwait(false))
         {
             _logger.LogInformation(
                 "Alert {AlertType} is throttled. Skipping send (throttle window: {ThrottleMinutes} minutes)",
@@ -65,7 +66,7 @@ public class AlertingService : IAlertingService
                 .AsNoTracking()
                 .Where(a => a.AlertType == alertType && a.IsActive)
                 .OrderByDescending(a => a.TriggeredAt)
-                .FirstOrDefaultAsync(cancellationToken);
+                .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
 
             if (existingAlert != null)
             {
@@ -97,7 +98,7 @@ public class AlertingService : IAlertingService
                     severity,
                     message,
                     metadata,
-                    cancellationToken);
+                    cancellationToken).ConfigureAwait(false);
 
                 channelResults[channel.ChannelName] = success;
 
@@ -156,7 +157,7 @@ public class AlertingService : IAlertingService
     {
         var activeAlerts = await _dbContext.Alerts
             .Where(a => a.AlertType == alertType && a.IsActive)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         if (activeAlerts.Count == 0)
         {
@@ -187,7 +188,7 @@ public class AlertingService : IAlertingService
             .AsNoTracking()
             .Where(a => a.IsActive)
             .OrderByDescending(a => a.TriggeredAt)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return alerts.Select(MapToDto).ToList();
     }
@@ -201,7 +202,7 @@ public class AlertingService : IAlertingService
             .AsNoTracking()
             .Where(a => a.TriggeredAt >= fromDate && a.TriggeredAt <= toDate)
             .OrderByDescending(a => a.TriggeredAt)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return alerts.Select(MapToDto).ToList();
     }
@@ -215,7 +216,7 @@ public class AlertingService : IAlertingService
         var recentAlert = await _dbContext.Alerts
             .AsNoTracking()
             .Where(a => a.AlertType == alertType && a.TriggeredAt >= throttleWindow)
-            .AnyAsync(cancellationToken);
+            .AnyAsync(cancellationToken).ConfigureAwait(false);
 
         return recentAlert;
     }
@@ -267,7 +268,7 @@ public class EmailConfiguration
     public string SmtpHost { get; set; } = string.Empty;
     public int SmtpPort { get; set; } = 587;
     public string From { get; set; } = string.Empty;
-    public List<string> To { get; set; } = new();
+    public IList<string> To { get; set; } = new List<string>();
     public bool UseTls { get; set; } = true;
     public string? Username { get; set; }
     public string? Password { get; set; }

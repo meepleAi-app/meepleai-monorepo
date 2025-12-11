@@ -5,6 +5,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
+#pragma warning disable MA0048 // File name must match type name - Contains Interface with supporting types
 namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.External.Reranking;
 
 /// <summary>
@@ -61,7 +62,7 @@ public sealed class CrossEncoderRerankerClient : ICrossEncoderReranker
                 Id = c.Id,
                 Content = c.Content,
                 Score = c.OriginalScore,
-                Metadata = c.Metadata ?? new Dictionary<string, object>()
+                Metadata = c.Metadata ?? new Dictionary<string, object>(StringComparer.Ordinal)
             }).ToList(),
             TopK = topK
         };
@@ -75,11 +76,11 @@ public sealed class CrossEncoderRerankerClient : ICrossEncoderReranker
                 "rerank",
                 request,
                 JsonOptions,
-                cts.Token);
+                cts.Token).ConfigureAwait(false);
 
             response.EnsureSuccessStatusCode();
 
-            var result = await response.Content.ReadFromJsonAsync<RerankResponseDto>(JsonOptions, cts.Token);
+            var result = await response.Content.ReadFromJsonAsync<RerankResponseDto>(JsonOptions, cts.Token).ConfigureAwait(false);
 
             if (result == null)
             {
@@ -129,7 +130,7 @@ public sealed class CrossEncoderRerankerClient : ICrossEncoderReranker
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             cts.CancelAfter(TimeSpan.FromSeconds(5));
 
-            var response = await _httpClient.GetAsync("health", cts.Token);
+            var response = await _httpClient.GetAsync("health", cts.Token).ConfigureAwait(false);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -137,8 +138,8 @@ public sealed class CrossEncoderRerankerClient : ICrossEncoderReranker
                 return false;
             }
 
-            var health = await response.Content.ReadFromJsonAsync<HealthResponseDto>(JsonOptions, cts.Token);
-            var isHealthy = health?.ModelLoaded == true && health.Status == "healthy";
+            var health = await response.Content.ReadFromJsonAsync<HealthResponseDto>(JsonOptions, cts.Token).ConfigureAwait(false);
+            var isHealthy = health?.ModelLoaded == true && string.Equals(health.Status, "healthy", StringComparison.Ordinal);
 
             if (!isHealthy)
             {
@@ -166,32 +167,31 @@ public sealed class CrossEncoderRerankerClient : ICrossEncoderReranker
         public string Id { get; set; } = string.Empty;
         public string Content { get; set; } = string.Empty;
         public double Score { get; set; }
-        public Dictionary<string, object> Metadata { get; set; } = new();
+        public Dictionary<string, object> Metadata { get; set; } = new(StringComparer.Ordinal);
     }
 
     private sealed class RerankResponseDto
     {
         public List<RerankResultDto> Results { get; set; } = new();
         public string Model { get; set; } = string.Empty;
-        public double ProcessingTimeMs { get; set; }
+        public double ProcessingTimeMs { get; }
     }
 
     private sealed class RerankResultDto
     {
         public string Id { get; set; } = string.Empty;
         public string Content { get; set; } = string.Empty;
-        public double OriginalScore { get; set; }
-        public double RerankScore { get; set; }
-        public Dictionary<string, object> Metadata { get; set; } = new();
+        public double OriginalScore { get; }
+        public double RerankScore { get; }
+        public Dictionary<string, object> Metadata { get; set; } = new(StringComparer.Ordinal);
     }
 
     private sealed class HealthResponseDto
     {
         public string Status { get; set; } = string.Empty;
-        public bool ModelLoaded { get; set; }
+        public bool ModelLoaded { get; }
         public string ModelName { get; set; } = string.Empty;
         public string Device { get; set; } = string.Empty;
-        public double? UptimeSeconds { get; set; }
     }
 }
 

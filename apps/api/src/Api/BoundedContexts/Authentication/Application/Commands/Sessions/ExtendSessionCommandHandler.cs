@@ -44,7 +44,7 @@ public class ExtendSessionCommandHandler : ICommandHandler<ExtendSessionCommand,
             rateLimitKey,
             MaxExtensionsPerHour,
             RefillRatePerSecond,
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
 
         if (!rateLimitResult.Allowed)
         {

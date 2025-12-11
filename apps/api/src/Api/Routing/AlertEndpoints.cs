@@ -48,7 +48,7 @@ public static class AlertEndpoints
                             severity: alert.Labels.GetValueOrDefault("severity", "warning"),
                             message: alert.Annotations.GetValueOrDefault("summary", "Alert triggered"),
                             metadata: metadata,
-                            cancellationToken: ct);
+                            cancellationToken: ct).ConfigureAwait(false);
                     }
                     else if (string.Equals(alert.Status, "resolved", StringComparison.Ordinal))
                     {
@@ -83,10 +83,10 @@ public static class AlertEndpoints
 
             var alerts = activeOnly == true
                 ? await alertingService.GetActiveAlertsAsync(ct)
-                : await alertingService.GetAlertHistoryAsync(
+.ConfigureAwait(false) : await alertingService.GetAlertHistoryAsync(
                     DateTime.UtcNow.AddDays(-7),
                     DateTime.UtcNow,
-                    ct);
+                    ct).ConfigureAwait(false);
 
             return Results.Ok(alerts);
         })

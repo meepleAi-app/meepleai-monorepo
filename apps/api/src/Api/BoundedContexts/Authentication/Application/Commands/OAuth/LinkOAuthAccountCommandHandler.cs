@@ -50,7 +50,7 @@ public sealed class LinkOAuthAccountCommandHandler : ICommandHandler<LinkOAuthAc
             var existingAccount = await _oauthAccountRepository.GetByUserIdAndProviderAsync(
                 command.UserId,
                 command.Provider,
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
 
             if (existingAccount != null)
             {

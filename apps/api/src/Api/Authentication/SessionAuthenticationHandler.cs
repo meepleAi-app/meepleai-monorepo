@@ -48,7 +48,7 @@ public class SessionAuthenticationHandler : AuthenticationHandler<Authentication
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
         // Skip authentication for non-API routes (static files, health checks, etc.)
-        if (!Context.Request.Path.StartsWithSegments("/api"))
+        if (!Context.Request.Path.StartsWithSegments("/api", StringComparison.Ordinal))
         {
             return AuthenticateResult.NoResult();
         }

@@ -9,7 +9,8 @@ namespace Api.Services.Pdf;
 public class TableCellParser : ITableCellParser
 {
 #pragma warning disable MA0051 // Method is too long
-    public ColumnSplitResult SplitIntoColumns(PositionedTextLine line, List<ColumnBoundary>? existingBoundaries)
+    /// <param name="existingBoundaries">Optional pre-computed column boundaries to maintain consistency across rows</param>
+    public ColumnSplitResult SplitIntoColumns(PositionedTextLine line, IList<ColumnBoundary>? existingBoundaries)
     {
         var result = new ColumnSplitResult();
 
@@ -159,7 +160,7 @@ public class TableCellParser : ITableCellParser
         }
     }
 
-    public int FindBoundaryIndex(List<ColumnBoundary> boundaries, PositionedCharacter character, float tolerance)
+    public int FindBoundaryIndex(IList<ColumnBoundary> boundaries, PositionedCharacter character, float tolerance)
     {
         var center = character.CenterX;
 
@@ -286,7 +287,7 @@ public class TableCellParser : ITableCellParser
         return threshold;
     }
 
-    private static void ApplyPadding(List<ColumnBoundary> boundaries, float padding)
+    private static void ApplyPadding(IList<ColumnBoundary> boundaries, float padding)
     {
         if (padding <= 0f)
         {
@@ -300,14 +301,19 @@ public class TableCellParser : ITableCellParser
         }
     }
 
-    private static void EnsureNonOverlappingBoundaries(List<ColumnBoundary> boundaries)
+    private static void EnsureNonOverlappingBoundaries(IList<ColumnBoundary> boundaries)
     {
         if (boundaries.Count < 2)
         {
             return;
         }
 
-        boundaries.Sort((a, b) => a.Start.CompareTo(b.Start));
+        // Sort the boundaries in-place by copying sorted values back
+        var sorted = boundaries.OrderBy(b => b.Start).ToList();
+        for (int i = 0; i < sorted.Count; i++)
+        {
+            boundaries[i] = sorted[i];
+        }
 
         for (int i = 1; i < boundaries.Count; i++)
         {

@@ -104,7 +104,7 @@ public class HybridLlmService : ILlmService
             systemPrompt,
             userPrompt,
             user: null, // No user context (anonymous)
-            ct);
+            ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -171,7 +171,7 @@ public class HybridLlmService : ILlmService
                     userPrompt,
                     DefaultTemperature,
                     DefaultMaxTokens,
-                    ct);
+                    ct).ConfigureAwait(false);
 
                 attemptStopwatch.Stop();
 
@@ -263,7 +263,7 @@ public class HybridLlmService : ILlmService
             userPrompt,
             DefaultTemperature,
             DefaultMaxTokens,
-            ct))
+            ct).ConfigureAwait(false))
         {
             yield return chunk;
         }
@@ -279,7 +279,7 @@ public class HybridLlmService : ILlmService
             systemPrompt,
             userPrompt,
             user: null, // No user context (anonymous)
-            ct);
+            ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -355,10 +355,10 @@ public class HybridLlmService : ILlmService
         var cleaned = response.Trim();
 
         // Remove markdown code blocks (```json ... ``` or ``` ... ```)
-        if (cleaned.StartsWith("```"))
+        if (cleaned.StartsWith("```", StringComparison.Ordinal))
         {
             var firstNewline = cleaned.IndexOf('\n');
-            var lastBackticks = cleaned.LastIndexOf("```");
+            var lastBackticks = cleaned.LastIndexOf("```", StringComparison.Ordinal);
 
             if (firstNewline > 0 && lastBackticks > firstNewline)
             {
@@ -498,7 +498,7 @@ public class HybridLlmService : ILlmService
                 latencyMs: (int)latencyMs,
                 ipAddress: null,
                 userAgent: null,
-                ct: ct);
+                ct: ct).ConfigureAwait(false);
         }
         catch (Exception logEx)
         {
@@ -524,7 +524,7 @@ public class HybridLlmService : ILlmService
                 latencyMs: (int)latencyMs,
                 ipAddress: null,
                 userAgent: null,
-                ct: ct);
+                ct: ct).ConfigureAwait(false);
         }
         catch (Exception logEx)
         {

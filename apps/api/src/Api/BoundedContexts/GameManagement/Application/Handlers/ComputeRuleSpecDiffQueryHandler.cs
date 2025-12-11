@@ -34,7 +34,7 @@ public class ComputeRuleSpecDiffQueryHandler : IRequestHandler<ComputeRuleSpecDi
             .Include(r => r.Atoms)
             .AsNoTracking()
             .FirstOrDefaultAsync(r => r.GameId == query.GameId && r.Version == query.FromVersion, cancellationToken)
-            ?? throw new InvalidOperationException($"RuleSpec version {query.FromVersion} not found for game {query.GameId}");
+.ConfigureAwait(false) ?? throw new InvalidOperationException($"RuleSpec version {query.FromVersion} not found for game {query.GameId}");
 
         var fromRuleSpec = new RuleSpec(
             gameId: fromEntity.GameId.ToString(),
@@ -54,7 +54,7 @@ public class ComputeRuleSpecDiffQueryHandler : IRequestHandler<ComputeRuleSpecDi
             .Include(r => r.Atoms)
             .AsNoTracking()
             .FirstOrDefaultAsync(r => r.GameId == query.GameId && r.Version == query.ToVersion, cancellationToken)
-            ?? throw new InvalidOperationException($"RuleSpec version {query.ToVersion} not found for game {query.GameId}");
+.ConfigureAwait(false) ?? throw new InvalidOperationException($"RuleSpec version {query.ToVersion} not found for game {query.GameId}");
 
         var toRuleSpec = new RuleSpec(
             gameId: toEntity.GameId.ToString(),

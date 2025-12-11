@@ -87,7 +87,7 @@ public class ConfigurationService : IConfigurationService
             tags: [CacheCategoryTagPrefix + "general"],
             expiration: DefaultCacheDuration,
             ct: cancellationToken
-        );
+        ).ConfigureAwait(false);
 #pragma warning restore CS8621
 #pragma warning restore CS8634
 

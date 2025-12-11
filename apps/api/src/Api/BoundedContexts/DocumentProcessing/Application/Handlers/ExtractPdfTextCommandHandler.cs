@@ -43,7 +43,7 @@ public class ExtractPdfTextCommandHandler : ICommandHandler<ExtractPdfTextComman
 
         // 1. Retrieve PDF document from database
         var pdf = await _db.PdfDocuments
-            .FirstOrDefaultAsync(p => p.Id == pdfId, cancellationToken);
+            .FirstOrDefaultAsync(p => p.Id == pdfId, cancellationToken).ConfigureAwait(false);
 
         if (pdf == null)
         {
@@ -55,7 +55,7 @@ public class ExtractPdfTextCommandHandler : ICommandHandler<ExtractPdfTextComman
         var fileStream = await _blobStorage.RetrieveAsync(
             pdfId.ToString("N"),
             pdf.GameId.ToString(),
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
 
         if (fileStream == null)
         {
@@ -74,7 +74,7 @@ public class ExtractPdfTextCommandHandler : ICommandHandler<ExtractPdfTextComman
             var extractResult = await _pdfTextExtractor.ExtractPagedTextAsync(
                 fileStream,
                 enableOcrFallback: true,
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
 
             if (!extractResult.Success)
             {

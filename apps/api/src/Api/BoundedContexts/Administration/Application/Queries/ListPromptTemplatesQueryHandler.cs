@@ -39,7 +39,7 @@ public class ListPromptTemplatesQueryHandler : IQueryHandler<ListPromptTemplates
                 CreatedByUserId = t.CreatedByUserId.ToString(),
                 CreatedByEmail = t.CreatedBy.Email
             })
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return new PromptTemplateListResponse { Templates = templates };
     }

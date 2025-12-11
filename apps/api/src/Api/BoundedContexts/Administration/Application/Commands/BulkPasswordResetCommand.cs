@@ -1,0 +1,29 @@
+using Api.SharedKernel.Application.Interfaces;
+
+namespace Api.BoundedContexts.Administration.Application.Commands;
+
+/// <summary>
+/// Command to reset passwords for multiple users in bulk.
+/// </summary>
+/// <param name="UserIds">List of user IDs to reset passwords for (max 1000).</param>
+/// <param name="NewPassword">The new password to set for all users.</param>
+/// <param name="RequesterId">The ID of the admin requesting the operation.</param>
+public record BulkPasswordResetCommand(
+    List<Guid> UserIds,
+    string NewPassword,
+    Guid RequesterId
+) : ICommand<BulkOperationResult>;
+
+/// <summary>
+/// Result of a bulk operation with success/failure tracking.
+/// </summary>
+/// <param name="TotalRequested">Total number of items requested for processing.</param>
+/// <param name="SuccessCount">Number of items successfully processed.</param>
+/// <param name="FailedCount">Number of items that failed processing.</param>
+/// <param name="Errors">List of error messages for failed items.</param>
+public record BulkOperationResult(
+    int TotalRequested,
+    int SuccessCount,
+    int FailedCount,
+    List<string> Errors
+);

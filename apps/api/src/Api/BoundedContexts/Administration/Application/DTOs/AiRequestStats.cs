@@ -28,5 +28,5 @@ public record AiRequestStats
     /// <summary>
     /// Request counts grouped by endpoint.
     /// </summary>
-    public required Dictionary<string, int> EndpointCounts { get; init; }
+    public required IDictionary<string, int> EndpointCounts { get; init; }
 }

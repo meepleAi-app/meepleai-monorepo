@@ -25,7 +25,7 @@ public class GetVersionHistoryQueryHandler : IQueryHandler<GetVersionHistoryQuer
             .Include(r => r.CreatedBy)
             .Where(r => r.GameId == query.GameId)
             .OrderByDescending(r => r.CreatedAt)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         var versionDtos = versions.Select(r => new RuleSpecVersionDto(
             r.Version,

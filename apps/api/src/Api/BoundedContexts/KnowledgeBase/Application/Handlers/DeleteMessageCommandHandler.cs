@@ -35,7 +35,7 @@ public class DeleteMessageCommandHandler : ICommandHandler<DeleteMessageCommand,
     {
         // Load thread
         var thread = await _threadRepository.GetByIdAsync(request.ThreadId, cancellationToken)
-            ?? throw new InvalidOperationException($"Chat thread {request.ThreadId} not found");
+.ConfigureAwait(false) ?? throw new InvalidOperationException($"Chat thread {request.ThreadId} not found");
 
         // Verify user owns the thread (unless admin)
         if (!request.IsAdmin && thread.UserId != request.UserId)
@@ -86,7 +86,7 @@ public class DeleteMessageCommandHandler : ICommandHandler<DeleteMessageCommand,
                 isAdminDelete = request.IsAdmin,
                 deletedAt = message.DeletedAt
             }),
-            ct: cancellationToken);
+            ct: cancellationToken).ConfigureAwait(false);
 
         return MapToDto(thread);
     }

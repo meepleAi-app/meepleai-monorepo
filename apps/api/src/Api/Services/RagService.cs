@@ -21,7 +21,6 @@ public class RagService : IRagService
 {
     // CONFIG-04: Hardcoded defaults (lowest priority fallback)
     private const int DefaultTopK = 5;
-    private const double DefaultMinScore = 0.55; // Adjusted for mxbai-embed-large model
 
     private readonly MeepleAiDbContext _dbContext;
     private readonly IEmbeddingService _embeddingService;
@@ -234,10 +233,10 @@ public class RagService : IRagService
                 // OPS-02: Record metrics
                 stopwatch.Stop();
                 MeepleAiMetrics.RecordRagRequest(stopwatch.Elapsed.TotalMilliseconds, gameId, success: true);
-                MeepleAiMetrics.TokensUsed.Record(llmResult.Usage.TotalTokens, new System.Diagnostics.TagList { { "game.id", gameId }, { "operation", "qa" } });
+                MeepleAiMetrics.TokensUsed.Record(llmResult.Usage.TotalTokens, new TagList { { "game.id", gameId }, { "operation", "qa" } });
                 if (confidence.HasValue)
                 {
-                    MeepleAiMetrics.ConfidenceScore.Record(confidence.Value, new System.Diagnostics.TagList { { "game.id", gameId }, { "operation", "qa" } });
+                    MeepleAiMetrics.ConfidenceScore.Record(confidence.Value, new TagList { { "game.id", gameId }, { "operation", "qa" } });
                 }
 
                 return response;
@@ -247,7 +246,7 @@ public class RagService : IRagService
             "qa",
             activity,
             stopwatch,
-            GetQaErrorResponseFactories());
+            GetQaErrorResponseFactories()).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -367,7 +366,7 @@ public class RagService : IRagService
                 MeepleAiMetrics.RecordRagRequest(stopwatch.Elapsed.TotalMilliseconds, gameId, success: true);
                 if (confidence.HasValue)
                 {
-                    MeepleAiMetrics.ConfidenceScore.Record(confidence.Value, new System.Diagnostics.TagList { { "game.id", gameId }, { "operation", "explain" } });
+                    MeepleAiMetrics.ConfidenceScore.Record(confidence.Value, new TagList { { "game.id", gameId }, { "operation", "explain" } });
                 }
 
                 return response;
@@ -378,7 +377,7 @@ public class RagService : IRagService
             activity,
             stopwatch,
             GetExplainErrorResponseFactories(),
-            $"topic: {topic}");
+            $"topic: {topic}").ConfigureAwait(false);
     }
 
     private ExplainResponse CreateEmptyExplainResponse(string message)
@@ -678,10 +677,10 @@ public class RagService : IRagService
                 // OPS-02: Record metrics
                 stopwatch.Stop();
                 MeepleAiMetrics.RecordRagRequest(stopwatch.Elapsed.TotalMilliseconds, gameId, success: true);
-                MeepleAiMetrics.TokensUsed.Record(llmResult.Usage.TotalTokens, new System.Diagnostics.TagList { { "game.id", gameId }, { "operation", "qa_hybrid" } });
+                MeepleAiMetrics.TokensUsed.Record(llmResult.Usage.TotalTokens, new TagList { { "game.id", gameId }, { "operation", "qa_hybrid" } });
                 if (confidence.HasValue)
                 {
-                    MeepleAiMetrics.ConfidenceScore.Record(confidence.Value, new System.Diagnostics.TagList { { "game.id", gameId }, { "operation", "qa_hybrid" } });
+                    MeepleAiMetrics.ConfidenceScore.Record(confidence.Value, new TagList { { "game.id", gameId }, { "operation", "qa_hybrid" } });
                 }
 
                 return response;
@@ -692,7 +691,7 @@ public class RagService : IRagService
             activity,
             stopwatch,
             GetQaErrorResponseFactories(),
-            $"mode: {searchMode}");
+            $"mode: {searchMode}").ConfigureAwait(false);
     }
 
     /// <summary>
@@ -800,7 +799,7 @@ Instructions:
                 var llmResult = await _llmService.GenerateCompletionAsync(
                     customSystemPrompt,
                     userPrompt,
-                    cancellationToken);
+                    cancellationToken).ConfigureAwait(false);
 
                 if (!llmResult.Success || string.IsNullOrWhiteSpace(llmResult.Response))
                 {
@@ -839,10 +838,10 @@ Instructions:
                 // OPS-02: Record metrics
                 stopwatch.Stop();
                 MeepleAiMetrics.RecordRagRequest(stopwatch.Elapsed.TotalMilliseconds, gameId, success: true);
-                MeepleAiMetrics.TokensUsed.Record(llmResult.Usage.TotalTokens, new System.Diagnostics.TagList { { "game.id", gameId }, { "operation", "qa_custom_prompt" } });
+                MeepleAiMetrics.TokensUsed.Record(llmResult.Usage.TotalTokens, new TagList { { "game.id", gameId }, { "operation", "qa_custom_prompt" } });
                 if (confidence.HasValue)
                 {
-                    MeepleAiMetrics.ConfidenceScore.Record(confidence.Value, new System.Diagnostics.TagList { { "game.id", gameId }, { "operation", "qa_custom_prompt" } });
+                    MeepleAiMetrics.ConfidenceScore.Record(confidence.Value, new TagList { { "game.id", gameId }, { "operation", "qa_custom_prompt" } });
                 }
 
                 return response;
@@ -852,6 +851,6 @@ Instructions:
             "qa_custom_prompt",
             activity,
             stopwatch,
-            GetQaErrorResponseFactories());
+            GetQaErrorResponseFactories()).ConfigureAwait(false);
     }
 }

@@ -154,11 +154,11 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
             {
                 foreach (var tableName in tableNames)
                 {
-                #pragma warning disable EF1002
-                await _dbContext.Database.ExecuteSqlRawAsync(
-                    $"TRUNCATE TABLE \"{tableName}\" CASCADE;",
-                    TestCancellationToken);
-                #pragma warning restore EF1002
+#pragma warning disable EF1002
+                    await _dbContext.Database.ExecuteSqlRawAsync(
+                        $"TRUNCATE TABLE \"{tableName}\" CASCADE;",
+                        TestCancellationToken);
+#pragma warning restore EF1002
                 }
             }
             finally

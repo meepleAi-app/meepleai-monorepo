@@ -111,7 +111,7 @@ public sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<HandleOA
                 .Include(oa => oa.User)
                 .FirstOrDefaultAsync(oa =>
                     oa.Provider == command.Provider.ToLowerInvariant() &&
-                    oa.ProviderUserId == userInfo.Id, cancellationToken);
+                    oa.ProviderUserId == userInfo.Id, cancellationToken).ConfigureAwait(false);
 
             UserEntity? user;
             bool isNewUser = false;
@@ -241,7 +241,7 @@ public sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<HandleOA
         var accessTokenEncrypted = await _encryptionService.EncryptAsync(tokenResponse.AccessToken, EncryptionPurpose).ConfigureAwait(false);
         var refreshTokenEncrypted = tokenResponse.RefreshToken != null
             ? await _encryptionService.EncryptAsync(tokenResponse.RefreshToken, EncryptionPurpose)
-            : null;
+.ConfigureAwait(false) : null;
 
         var oauthAccount = new OAuthAccountEntity
         {

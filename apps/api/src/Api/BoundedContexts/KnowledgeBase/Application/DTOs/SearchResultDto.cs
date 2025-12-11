@@ -1,5 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 
+#pragma warning disable MA0048 // File name must match type name - Contains related Request/Response DTOs
 namespace Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 
 /// <summary>
@@ -38,12 +39,12 @@ public record SearchResultDto(
 /// </summary>
 public record QaResponseDto(
     string Answer,
-    List<SearchResultDto> Sources,
+    IReadOnlyList<SearchResultDto> Sources,
     double SearchConfidence,
     double LlmConfidence,
     double OverallConfidence,
     bool IsLowQuality,
-    List<CitationDto> Citations,
+    IReadOnlyList<CitationDto> Citations,
     RagValidationResultDto? ValidationResult = null
 );
 
@@ -75,7 +76,7 @@ public record CitationDto(
 public record ExplainResponseDto(
     string Outline,
     string Script,
-    List<CitationDto> Citations,
+    IReadOnlyList<CitationDto> Citations,
     double Confidence,
     int EstimatedReadingTimeSeconds
 );

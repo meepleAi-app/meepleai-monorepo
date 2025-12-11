@@ -1,3 +1,6 @@
+
+
+#pragma warning disable MA0048 // File name must match type name - Contains related Request/Response DTOs
 namespace Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 
 /// <summary>
@@ -12,7 +15,7 @@ public record ChatThreadDto(
     DateTime CreatedAt,
     DateTime LastMessageAt,
     int MessageCount,
-    List<ChatMessageDto> Messages
+    IReadOnlyList<ChatMessageDto> Messages
 );
 
 /// <summary>

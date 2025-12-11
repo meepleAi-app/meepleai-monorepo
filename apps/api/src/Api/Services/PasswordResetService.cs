@@ -50,7 +50,7 @@ public class PasswordResetService : IPasswordResetService
             rateLimitKey,
             maxTokens: RateLimitPerHour,
             refillRate: RateLimitPerHour / 3600.0, // Refill over 1 hour
-            ct);
+            ct).ConfigureAwait(false);
 
         if (!rateLimitResult.Allowed)
         {
@@ -75,7 +75,7 @@ public class PasswordResetService : IPasswordResetService
         // Invalidate any existing unused tokens for this user
         var existingTokens = await _db.PasswordResetTokens
             .Where(t => t.UserId == user.Id && !t.IsUsed && t.ExpiresAt > now)
-            .ToListAsync(ct);
+            .ToListAsync(ct).ConfigureAwait(false);
 
         foreach (var token in existingTokens)
         {
@@ -111,7 +111,7 @@ public class PasswordResetService : IPasswordResetService
                 user.Email,
                 user.DisplayName ?? user.Email,
                 resetTokenValue,
-                ct);
+                ct).ConfigureAwait(false);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
@@ -147,7 +147,7 @@ public class PasswordResetService : IPasswordResetService
         var tokenHash = HashToken(token);
 
         var resetToken = await _db.PasswordResetTokens
-            .FirstOrDefaultAsync(t => t.TokenHash == tokenHash, ct);
+            .FirstOrDefaultAsync(t => t.TokenHash == tokenHash, ct).ConfigureAwait(false);
 
         if (resetToken == null)
         {
@@ -201,7 +201,7 @@ public class PasswordResetService : IPasswordResetService
 
         var resetToken = await _db.PasswordResetTokens
             .Include(t => t.User)
-            .FirstOrDefaultAsync(t => t.TokenHash == tokenHash, ct);
+            .FirstOrDefaultAsync(t => t.TokenHash == tokenHash, ct).ConfigureAwait(false);
 
         if (resetToken == null)
         {
@@ -243,7 +243,7 @@ public class PasswordResetService : IPasswordResetService
         // Revoke all existing sessions for security
         var existingSessions = await _db.UserSessions
             .Where(s => s.UserId == user.Id && s.RevokedAt == null)
-            .ToListAsync(ct);
+            .ToListAsync(ct).ConfigureAwait(false);
 
         foreach (var session in existingSessions)
         {

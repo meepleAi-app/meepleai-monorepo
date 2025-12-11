@@ -60,7 +60,7 @@ public class GetRecentActivityQueryHandler : IQueryHandler<GetRecentActivityQuer
                 u.Email,
                 u.CreatedAt
             })
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         events.AddRange(userRegistrations.Select(u => new ActivityEvent(
             u.Id.ToString(),
@@ -88,7 +88,7 @@ public class GetRecentActivityQueryHandler : IQueryHandler<GetRecentActivityQuer
                 pdf.UploadedByUserId,
                 pdf.UploadedAt
             })
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         events.AddRange(pdfUploads.Select(pdf => new ActivityEvent(
             pdf.Id.ToString(),
@@ -117,7 +117,7 @@ public class GetRecentActivityQueryHandler : IQueryHandler<GetRecentActivityQuer
                 a.ResolvedAt,
                 a.TriggeredAt
             })
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         events.AddRange(alerts.Select(a => new ActivityEvent(
             a.Id.ToString(),
@@ -145,7 +145,7 @@ public class GetRecentActivityQueryHandler : IQueryHandler<GetRecentActivityQuer
                 log.UserId,
                 log.CreatedAt
             })
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         events.AddRange(recentErrors.Select(log => new ActivityEvent(
             log.Id.ToString(),

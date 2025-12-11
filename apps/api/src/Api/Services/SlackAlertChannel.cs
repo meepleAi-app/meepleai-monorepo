@@ -31,7 +31,7 @@ public class SlackAlertChannel : IAlertChannel
         string alertType,
         string severity,
         string message,
-        Dictionary<string, object>? metadata = null,
+        IDictionary<string, object>? metadata = null,
         CancellationToken cancellationToken = default)
     {
         if (!_config.Enabled)
@@ -56,7 +56,7 @@ public class SlackAlertChannel : IAlertChannel
             var response = await httpClient.PostAsJsonAsync(
                 _config.WebhookUrl,
                 payload,
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
 
             if (response.IsSuccessStatusCode)
             {
@@ -91,7 +91,7 @@ public class SlackAlertChannel : IAlertChannel
         string alertType,
         string severity,
         string message,
-        Dictionary<string, object>? metadata)
+        IDictionary<string, object>? metadata)
     {
         var color = severity.ToUpper(CultureInfo.InvariantCulture) switch
         {

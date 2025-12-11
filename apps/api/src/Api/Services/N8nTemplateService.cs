@@ -209,7 +209,7 @@ public class N8nTemplateService
     /// </summary>
     public async Task<ImportTemplateResponse> ImportTemplateAsync(
         string templateId,
-        Dictionary<string, string> parameters,
+        IDictionary<string, string> parameters,
         string userId,
         CancellationToken ct = default)
     {
@@ -230,7 +230,7 @@ public class N8nTemplateService
         var n8nConfig = await _db.N8nConfigs
             .Where(c => c.IsActive)
             .OrderByDescending(c => c.CreatedAt)
-            .FirstOrDefaultAsync(ct);
+            .FirstOrDefaultAsync(ct).ConfigureAwait(false);
 
         if (n8nConfig == null)
         {
@@ -242,7 +242,7 @@ public class N8nTemplateService
             n8nConfig,
             template.Name,
             workflowJson,
-            ct);
+            ct).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Imported template {TemplateId} as workflow {WorkflowId} for user {UserId}",
@@ -333,8 +333,8 @@ public class N8nTemplateService
         }
     }
     private void ValidateParameters(
-        List<TemplateParameterDto> templateParams,
-        Dictionary<string, string> providedParams)
+        IList<TemplateParameterDto> templateParams,
+        IDictionary<string, string> providedParams)
     {
         var missingParams = new List<string>();
 
@@ -392,7 +392,7 @@ public class N8nTemplateService
 
     private string SubstituteParameters(
         object workflow,
-        Dictionary<string, string> parameters)
+        IDictionary<string, string> parameters)
     {
         // Serialize workflow to JSON string
         var workflowJson = JsonSerializer.Serialize(workflow);
@@ -563,8 +563,8 @@ public class N8nTemplateService
         public string Author { get; set; } = "MeepleAI";
         public List<string> Tags { get; set; } = new();
         public string Icon { get; set; } = "📋";
-        public string? Screenshot { get; set; }
-        public string? Documentation { get; set; }
+        public string? Screenshot { get; }
+        public string? Documentation { get; }
         public List<TemplateParameter> Parameters { get; set; } = new();
         public object Workflow { get; set; } = new();
     }
@@ -575,9 +575,9 @@ public class N8nTemplateService
         public string Type { get; set; } = "string";
         public string Label { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
-        public bool Required { get; set; }
-        public string? Default { get; set; }
-        public List<string>? Options { get; set; }
-        public bool Sensitive { get; set; }
+        public bool Required { get; }
+        public string? Default { get; }
+        public List<string>? Options { get; }
+        public bool Sensitive { get; }
     }
 }

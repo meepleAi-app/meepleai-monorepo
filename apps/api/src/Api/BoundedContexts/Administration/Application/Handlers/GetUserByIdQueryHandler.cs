@@ -22,7 +22,7 @@ public class GetUserByIdQueryHandler : IQueryHandler<GetUserByIdQuery, UserDto?>
         var user = await _dbContext.Users
             .Include(u => u.Sessions)
             .AsNoTracking()
-            .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+            .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken).ConfigureAwait(false);
 
         return user == null ? null : MapToDto(user);
     }

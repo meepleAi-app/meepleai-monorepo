@@ -65,7 +65,7 @@ public class GetLowQualityResponsesQueryHandler : IQueryHandler<GetLowQualityRes
                     log.OverallConfidence ?? 0.0,
                     log.IsLowQuality
                 ))
-                .ToListAsync(cancellationToken);
+                .ToListAsync(cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation("Retrieved {Count} low-quality responses (total: {TotalCount})", responses.Count, totalCount);
 

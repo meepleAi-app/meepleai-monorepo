@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Options;
 using System.Globalization;
 
+#pragma warning disable MA0048 // File name must match type name - Contains Middleware with Options/Extensions
 namespace Api.Middleware;
 
 /// <summary>
@@ -296,7 +297,7 @@ public class SecurityHeadersOptionsValidator : IValidateOptions<SecurityHeadersO
             {
                 var validValues = new[] { "DENY", "SAMEORIGIN" };
                 var upperPolicy = options.XFrameOptionsPolicy.Trim().ToUpperInvariant();
-                if (!validValues.Contains(upperPolicy, StringComparer.Ordinal) && !upperPolicy.StartsWith("ALLOW-FROM"))
+                if (!validValues.Contains(upperPolicy, StringComparer.Ordinal) && !upperPolicy.StartsWith("ALLOW-FROM", StringComparison.Ordinal))
                 {
                     errors.Add($"X-Frame-Options must be DENY, SAMEORIGIN, or ALLOW-FROM uri (got: {options.XFrameOptionsPolicy})");
                 }

@@ -22,7 +22,7 @@ public sealed class Session : AggregateRoot<Guid>
     public string? UserAgent { get; private set; }
 
     // Navigation property for EF Core
-    public User? User { get; private set; }
+    public User? User { get; }
 
     /// <summary>
     /// Default session lifetime (30 days).

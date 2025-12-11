@@ -17,7 +17,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence.Chunking;
 /// </remarks>
 public sealed class InMemoryChunkRepository : IChunkRepository
 {
-    private readonly ConcurrentDictionary<string, HierarchicalChunk> _chunks = new();
+    private readonly ConcurrentDictionary<string, HierarchicalChunk> _chunks = new(StringComparer.Ordinal);
     private readonly ILogger<InMemoryChunkRepository> _logger;
 
     public InMemoryChunkRepository(ILogger<InMemoryChunkRepository> logger)
@@ -58,7 +58,7 @@ public sealed class InMemoryChunkRepository : IChunkRepository
         ct.ThrowIfCancellationRequested();
 
         var children = _chunks.Values
-            .Where(c => c.ParentId == parentId)
+            .Where(c => string.Equals(c.ParentId, parentId, StringComparison.Ordinal))
             .ToList();
 
         return Task.FromResult(children);

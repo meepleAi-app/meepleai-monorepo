@@ -1,5 +1,6 @@
 using Api.SharedKernel.Application.Interfaces;
 
+#pragma warning disable MA0048 // File name must match type name - Contains Query with Result record
 namespace Api.BoundedContexts.Authentication.Application.Queries.OAuth;
 
 /// <summary>
@@ -16,7 +17,7 @@ public sealed record GetLinkedOAuthAccountsQuery : IQuery<GetLinkedOAuthAccounts
 /// </summary>
 public sealed record GetLinkedOAuthAccountsResult
 {
-    public List<OAuthAccountDto> Accounts { get; init; } = new();
+    public IList<OAuthAccountDto> Accounts { get; init; } = new List<OAuthAccountDto>();
 }
 
 /// <summary>

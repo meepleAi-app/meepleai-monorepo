@@ -1,10 +1,11 @@
-﻿using Api.BoundedContexts.SystemConfiguration.Application.Commands;
+using Api.BoundedContexts.SystemConfiguration.Application.Commands;
 using Api.BoundedContexts.SystemConfiguration.Application.DTOs;
 using Api.BoundedContexts.SystemConfiguration.Application.Queries;
 using Api.Extensions;
 using Api.Services;
 using MediatR;
 
+#pragma warning disable MA0048 // File name must match type name - Contains Interface with supporting types
 namespace Api.Routing;
 
 /// <summary>

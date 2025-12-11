@@ -30,7 +30,7 @@ public static class EndpointFilterExtensions
     /// </code>
     /// </example>
     public static RouteHandlerBuilder RequireSession(this RouteHandlerBuilder builder)
-        
+
     {
         return builder.AddEndpointFilter<RequireSessionFilter>();
     }
@@ -57,7 +57,7 @@ public static class EndpointFilterExtensions
     /// </code>
     /// </example>
     public static RouteHandlerBuilder RequireAdminSession(this RouteHandlerBuilder builder)
-        
+
     {
         return builder.AddEndpointFilter<RequireAdminSessionFilter>();
     }
@@ -91,7 +91,7 @@ public static class EndpointFilterExtensions
     /// </code>
     /// </example>
     public static RouteHandlerBuilder RequireAuthenticatedUser(this RouteHandlerBuilder builder)
-        
+
     {
         return builder.AddEndpointFilter<RequireAuthenticatedUserFilter>();
     }

@@ -27,7 +27,7 @@ public class OAuthAccountRepository : RepositoryBase, IOAuthAccountRepository
         var entity = await DbContext.OAuthAccounts
             .AsNoTracking()
             .Include(o => o.User)
-            .FirstOrDefaultAsync(o => o.Id == id, cancellationToken);
+            .FirstOrDefaultAsync(o => o.Id == id, cancellationToken).ConfigureAwait(false);
 
         return entity != null ? MapToDomain(entity) : null;
     }
@@ -38,7 +38,7 @@ public class OAuthAccountRepository : RepositoryBase, IOAuthAccountRepository
         var entity = await DbContext.OAuthAccounts
             .AsNoTracking()
             .Include(o => o.User)
-            .FirstOrDefaultAsync(o => o.UserId == userId && o.Provider == normalizedProvider, cancellationToken);
+            .FirstOrDefaultAsync(o => o.UserId == userId && o.Provider == normalizedProvider, cancellationToken).ConfigureAwait(false);
 
         return entity != null ? MapToDomain(entity) : null;
     }
@@ -50,7 +50,7 @@ public class OAuthAccountRepository : RepositoryBase, IOAuthAccountRepository
             .Include(o => o.User)
             .Where(o => o.UserId == userId)
             .OrderBy(o => o.Provider)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return entities.Select(MapToDomain).ToList();
     }
@@ -61,7 +61,7 @@ public class OAuthAccountRepository : RepositoryBase, IOAuthAccountRepository
         var entity = await DbContext.OAuthAccounts
             .AsNoTracking()
             .Include(o => o.User)
-            .FirstOrDefaultAsync(o => o.Provider == normalizedProvider && o.ProviderUserId == providerUserId, cancellationToken);
+            .FirstOrDefaultAsync(o => o.Provider == normalizedProvider && o.ProviderUserId == providerUserId, cancellationToken).ConfigureAwait(false);
 
         return entity != null ? MapToDomain(entity) : null;
     }
@@ -71,7 +71,7 @@ public class OAuthAccountRepository : RepositoryBase, IOAuthAccountRepository
         var entities = await DbContext.OAuthAccounts
             .AsNoTracking()
             .Include(o => o.User)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return entities.Select(MapToDomain).ToList();
     }
@@ -112,7 +112,7 @@ public class OAuthAccountRepository : RepositoryBase, IOAuthAccountRepository
     {
         return await DbContext.OAuthAccounts
             .AsNoTracking()
-            .AnyAsync(o => o.Id == id, cancellationToken);
+            .AnyAsync(o => o.Id == id, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<bool> ExistsByUserIdAndProviderAsync(Guid userId, string provider, CancellationToken cancellationToken = default)
@@ -120,7 +120,7 @@ public class OAuthAccountRepository : RepositoryBase, IOAuthAccountRepository
         var normalizedProvider = provider.ToLowerInvariant();
         return await DbContext.OAuthAccounts
             .AsNoTracking()
-            .AnyAsync(o => o.UserId == userId && o.Provider == normalizedProvider, cancellationToken);
+            .AnyAsync(o => o.UserId == userId && o.Provider == normalizedProvider, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>

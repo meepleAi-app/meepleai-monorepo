@@ -27,3 +27,20 @@ public record BulkOperationResult(
     int FailedCount,
     List<string> Errors
 );
+
+/// <summary>
+/// Generic result of a bulk operation with success/failure tracking and additional data.
+/// </summary>
+/// <typeparam name="TData">Type of additional data returned for each successful item.</typeparam>
+/// <param name="TotalRequested">Total number of items requested for processing.</param>
+/// <param name="SuccessCount">Number of items successfully processed.</param>
+/// <param name="FailedCount">Number of items that failed processing.</param>
+/// <param name="Errors">List of error messages for failed items.</param>
+/// <param name="Data">Additional data for successful items (e.g., generated keys).</param>
+public record BulkOperationResult<TData>(
+    int TotalRequested,
+    int SuccessCount,
+    int FailedCount,
+    List<string> Errors,
+    List<TData> Data
+);

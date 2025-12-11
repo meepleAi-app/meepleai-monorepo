@@ -69,13 +69,14 @@ export interface AdminSidebarProps {
 
 const defaultNavigation: NavItem[] = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboardIcon },
+  { href: '/admin/infrastructure', label: 'Infrastructure', icon: ServerIcon },
   { href: '/admin/users', label: 'Users', icon: UsersIcon },
   { href: '/admin/alerts', label: 'Alerts', icon: BellIcon },
   { href: '/admin/analytics', label: 'Analytics', icon: BarChartIcon },
   { href: '/admin/configuration', label: 'Configuration', icon: SettingsIcon },
   { href: '/admin/cache', label: 'Cache', icon: DatabaseIcon },
   { href: '/admin/prompts', label: 'Prompts', icon: FileTextIcon },
-  { href: '/admin/n8n-templates', label: 'N8N Templates', icon: ServerIcon },
+  { href: '/admin/n8n-templates', label: 'N8N Templates', icon: PackageIcon },
   { href: '/admin/bulk-export', label: 'Bulk Export', icon: PackageIcon },
 ];
 

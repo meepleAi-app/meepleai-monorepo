@@ -155,7 +155,7 @@ public sealed class RunGridSearchHandler : IRequestHandler<RunGridSearchCommand,
         {
             var allConfigs = GridSearchConfiguration.GetAllConfigurations();
             return allConfigs
-                .Where(c => request.ConfigurationIds.Contains(c.ConfigurationId))
+                .Where(c => request.ConfigurationIds.Contains(c.ConfigurationId, StringComparer.Ordinal))
                 .ToList()
                 .AsReadOnly();
         }

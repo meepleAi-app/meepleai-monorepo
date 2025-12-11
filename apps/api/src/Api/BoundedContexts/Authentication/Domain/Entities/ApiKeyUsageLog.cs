@@ -50,7 +50,7 @@ public sealed class ApiKeyUsageLog : Entity<Guid>
     public long? ResponseTimeMs { get; private set; }
 
     // Navigation property for EF Core
-    public ApiKey? ApiKey { get; private set; }
+    public ApiKey? ApiKey { get; }
 
     /// <summary>
     /// Private constructor for EF Core.

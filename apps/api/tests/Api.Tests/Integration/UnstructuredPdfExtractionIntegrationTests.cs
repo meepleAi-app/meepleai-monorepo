@@ -431,7 +431,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
         for (int i = 0; i < sortedChunks.Count - 1; i++)
         {
             Assert.True(sortedChunks[i].CharEndIndex < sortedChunks[i + 1].CharStartIndex,
-                $"Chunks should not overlap: chunk {i} end={sortedChunks[i].CharEndIndex}, chunk {i+1} start={sortedChunks[i + 1].CharStartIndex}");
+                $"Chunks should not overlap: chunk {i} end={sortedChunks[i].CharEndIndex}, chunk {i + 1} start={sortedChunks[i + 1].CharStartIndex}");
         }
 
         _output($"Metadata validation passed: {pageNumbers.Count} pages with valid indices");

@@ -21,7 +21,6 @@ public class RagService : IRagService
 {
     // CONFIG-04: Hardcoded defaults (lowest priority fallback)
     private const int DefaultTopK = 5;
-    private const double DefaultMinScore = 0.55; // Adjusted for mxbai-embed-large model
 
     private readonly MeepleAiDbContext _dbContext;
     private readonly IEmbeddingService _embeddingService;

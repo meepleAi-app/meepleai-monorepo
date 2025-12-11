@@ -382,50 +382,6 @@ TASK: Generate a step-by-step setup guide for this board game. Focus on the init
 
         return text.Trim();
     }
-    /// <summary>
-    /// Create default setup steps when no RAG data available
-    /// </summary>
-    private List<SetupGuideStep> CreateDefaultSetupSteps()
-    {
-        return new List<SetupGuideStep>
-        {
-            new SetupGuideStep(
-                1,
-                "Prepare Components",
-                "Sort and organize all game components according to the rulebook.",
-                new List<Snippet>(),
-                isOptional: false
-            ),
-            new SetupGuideStep(
-                2,
-                "Setup Play Area",
-                "Place the game board and any shared components in the center of the table.",
-                new List<Snippet>(),
-                isOptional: false
-            ),
-            new SetupGuideStep(
-                3,
-                "Distribute Player Materials",
-                "Give each player their starting resources, cards, and player board as specified in the rules.",
-                new List<Snippet>(),
-                isOptional: false
-            ),
-            new SetupGuideStep(
-                4,
-                "Determine First Player",
-                "Choose or randomly determine the starting player according to the rules.",
-                new List<Snippet>(),
-                isOptional: false
-            ),
-            new SetupGuideStep(
-                5,
-                "Final Setup",
-                "Complete any remaining setup steps specific to this game as described in the rulebook.",
-                new List<Snippet>(),
-                isOptional: false
-            )
-        };
-    }
 
     /// <summary>
     /// ADMIN-01 Phase 3: Get setup guide system prompt using database-driven prompt management with fallback

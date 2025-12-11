@@ -246,7 +246,7 @@ public class PdfUploadQuotaService : IPdfUploadQuotaService
         }
     }
 
-    private async Task DecrementUploadCountAsync(Guid userId, CancellationToken ct = default)
+    private async Task DecrementUploadCountAsync(Guid userId)
     {
         try
         {
@@ -332,7 +332,7 @@ public class PdfUploadQuotaService : IPdfUploadQuotaService
             throw;
         }
     }
-    private async Task<(int dailyLimit, int weeklyLimit)> GetLimitsForTierAsync(UserTier tier, CancellationToken ct)
+    private async Task<(int dailyLimit, int weeklyLimit)> GetLimitsForTierAsync(UserTier tier)
     {
         var tierValue = tier.Value;
         var dailyKey = $"UploadLimits:{tierValue}:DailyLimit";
@@ -351,7 +351,7 @@ public class PdfUploadQuotaService : IPdfUploadQuotaService
         );
     }
 
-    private async Task<(int dailyUsed, int weeklyUsed)> GetUsageAsync(Guid userId, CancellationToken ct)
+    private async Task<(int dailyUsed, int weeklyUsed)> GetUsageAsync(Guid userId)
     {
         var db = _redis.GetDatabase();
         var now = _timeProvider.GetUtcNow().UtcDateTime;

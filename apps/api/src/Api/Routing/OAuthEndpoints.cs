@@ -1,4 +1,4 @@
-﻿using Api.Configuration;
+using Api.Configuration;
 using Api.Extensions;
 using Api.Services;
 using MediatR;

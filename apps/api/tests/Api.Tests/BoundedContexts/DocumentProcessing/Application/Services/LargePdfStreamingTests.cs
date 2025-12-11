@@ -280,7 +280,7 @@ file class FakeExtractor : IPdfTextExtractor
         _name = name;
     }
 
-    public Task<TextExtractionResult> ExtractTextAsync(Stream pdfStream, bool enableOcrFallback, CancellationToken ct)
+    public Task<TextExtractionResult> ExtractTextAsync(Stream pdfStream, bool enableOcrFallback = true, CancellationToken ct = default)
     {
         var result = new TextExtractionResult(
             Success: _success,
@@ -294,7 +294,7 @@ file class FakeExtractor : IPdfTextExtractor
         return Task.FromResult(result);
     }
 
-    public Task<PagedTextExtractionResult> ExtractPagedTextAsync(Stream pdfStream, bool enableOcrFallback, CancellationToken ct)
+    public Task<PagedTextExtractionResult> ExtractPagedTextAsync(Stream pdfStream, bool enableOcrFallback = true, CancellationToken ct = default)
     {
         throw new NotImplementedException();
     }
@@ -314,12 +314,12 @@ file class FakePagedExtractor : IPdfTextExtractor
         _chunks = chunks ?? new List<PageTextChunk>();
     }
 
-    public Task<TextExtractionResult> ExtractTextAsync(Stream pdfStream, bool enableOcrFallback, CancellationToken ct)
+    public Task<TextExtractionResult> ExtractTextAsync(Stream pdfStream, bool enableOcrFallback = true, CancellationToken ct = default)
     {
         throw new NotImplementedException();
     }
 
-    public Task<PagedTextExtractionResult> ExtractPagedTextAsync(Stream pdfStream, bool enableOcrFallback, CancellationToken ct)
+    public Task<PagedTextExtractionResult> ExtractPagedTextAsync(Stream pdfStream, bool enableOcrFallback = true, CancellationToken ct = default)
     {
         var result = new PagedTextExtractionResult(
             Success: _success,

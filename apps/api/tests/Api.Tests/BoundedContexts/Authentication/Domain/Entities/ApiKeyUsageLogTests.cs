@@ -83,7 +83,7 @@ public class ApiKeyUsageLogTests
         var keyId = Guid.NewGuid();
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => 
+        Assert.Throws<ArgumentException>(() =>
             ApiKeyUsageLog.Create(id, keyId, endpoint!));
     }
 

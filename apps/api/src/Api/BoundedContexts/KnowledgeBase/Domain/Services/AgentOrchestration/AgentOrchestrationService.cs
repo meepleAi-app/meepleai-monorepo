@@ -155,8 +155,8 @@ public class AgentOrchestrationService
         }
 
         // Conversation continuation patterns
-        if (lowerQuery.StartsWith("and ") || lowerQuery.StartsWith("but ") ||
-            lowerQuery.StartsWith("also ") || lowerQuery.Contains("you said") ||
+        if (lowerQuery.StartsWith("and ", StringComparison.Ordinal) || lowerQuery.StartsWith("but ", StringComparison.Ordinal) ||
+            lowerQuery.StartsWith("also ", StringComparison.Ordinal) || lowerQuery.Contains("you said") ||
             lowerQuery.Contains("earlier"))
         {
             return QueryType.ConversationContinuation;

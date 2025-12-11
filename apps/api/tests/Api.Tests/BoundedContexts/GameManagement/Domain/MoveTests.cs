@@ -122,8 +122,8 @@ public class MoveTests
     public void ToString_ReturnsFormattedString(string playerName, string action, string? position, string expected)
     {
         // Arrange
-        var move = position == null 
-            ? new Move(playerName, action) 
+        var move = position == null
+            ? new Move(playerName, action)
             : new Move(playerName, action, position);
 
         // Act

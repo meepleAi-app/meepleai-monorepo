@@ -62,7 +62,7 @@ public sealed class CrossEncoderRerankerClient : ICrossEncoderReranker
                 Id = c.Id,
                 Content = c.Content,
                 Score = c.OriginalScore,
-                Metadata = c.Metadata ?? new Dictionary<string, object>()
+                Metadata = c.Metadata ?? new Dictionary<string, object>(StringComparer.Ordinal)
             }).ToList(),
             TopK = topK
         };
@@ -139,7 +139,7 @@ public sealed class CrossEncoderRerankerClient : ICrossEncoderReranker
             }
 
             var health = await response.Content.ReadFromJsonAsync<HealthResponseDto>(JsonOptions, cts.Token).ConfigureAwait(false);
-            var isHealthy = health?.ModelLoaded == true && health.Status == "healthy";
+            var isHealthy = health?.ModelLoaded == true && string.Equals(health.Status, "healthy", StringComparison.Ordinal);
 
             if (!isHealthy)
             {
@@ -167,32 +167,31 @@ public sealed class CrossEncoderRerankerClient : ICrossEncoderReranker
         public string Id { get; set; } = string.Empty;
         public string Content { get; set; } = string.Empty;
         public double Score { get; set; }
-        public Dictionary<string, object> Metadata { get; set; } = new();
+        public Dictionary<string, object> Metadata { get; set; } = new(StringComparer.Ordinal);
     }
 
     private sealed class RerankResponseDto
     {
         public List<RerankResultDto> Results { get; set; } = new();
         public string Model { get; set; } = string.Empty;
-        public double ProcessingTimeMs { get; set; }
+        public double ProcessingTimeMs { get; }
     }
 
     private sealed class RerankResultDto
     {
         public string Id { get; set; } = string.Empty;
         public string Content { get; set; } = string.Empty;
-        public double OriginalScore { get; set; }
-        public double RerankScore { get; set; }
-        public Dictionary<string, object> Metadata { get; set; } = new();
+        public double OriginalScore { get; }
+        public double RerankScore { get; }
+        public Dictionary<string, object> Metadata { get; set; } = new(StringComparer.Ordinal);
     }
 
     private sealed class HealthResponseDto
     {
         public string Status { get; set; } = string.Empty;
-        public bool ModelLoaded { get; set; }
+        public bool ModelLoaded { get; }
         public string ModelName { get; set; } = string.Empty;
         public string Device { get; set; } = string.Empty;
-        public double? UptimeSeconds { get; set; }
     }
 }
 

@@ -326,11 +326,11 @@ public class RagEvaluationService : IRagEvaluationService
             }
 
             // Step 2: Search Qdrant
-        var searchResult = await _qdrantService.SearchAsync(
-            query.GameId,
-            embeddingResult.Embeddings[0],
-            limit: topK,
-            ct: ct).ConfigureAwait(false);
+            var searchResult = await _qdrantService.SearchAsync(
+                query.GameId,
+                embeddingResult.Embeddings[0],
+                limit: topK,
+                ct: ct).ConfigureAwait(false);
 
             stopwatch.Stop();
 

@@ -563,8 +563,8 @@ public class N8nTemplateService
         public string Author { get; set; } = "MeepleAI";
         public List<string> Tags { get; set; } = new();
         public string Icon { get; set; } = "📋";
-        public string? Screenshot { get; set; }
-        public string? Documentation { get; set; }
+        public string? Screenshot { get; }
+        public string? Documentation { get; }
         public List<TemplateParameter> Parameters { get; set; } = new();
         public object Workflow { get; set; } = new();
     }
@@ -575,9 +575,9 @@ public class N8nTemplateService
         public string Type { get; set; } = "string";
         public string Label { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
-        public bool Required { get; set; }
-        public string? Default { get; set; }
-        public List<string>? Options { get; set; }
-        public bool Sensitive { get; set; }
+        public bool Required { get; }
+        public string? Default { get; }
+        public List<string>? Options { get; }
+        public bool Sensitive { get; }
     }
 }

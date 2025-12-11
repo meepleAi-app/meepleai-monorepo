@@ -15,7 +15,6 @@ public class ApiKeyAuthenticationService
 {
     private const string KeyPrefix = "mpl";
     private const int KeyLengthBytes = 32; // 256 bits = 32 bytes
-    private const int HashIterations = 210_000; // Same as password hashing for consistency
     private readonly MeepleAiDbContext _db;
     private readonly IPasswordHashingService _passwordHashingService;
     private readonly ILogger<ApiKeyAuthenticationService> _logger;

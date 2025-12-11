@@ -17,7 +17,6 @@ public sealed class DashboardCacheInvalidationEventHandler :
 {
     private readonly HybridCache _cache;
     private readonly ILogger<DashboardCacheInvalidationEventHandler> _logger;
-    private const string DashboardCacheKeyPrefix = "dashboard:stats:";
 
     public DashboardCacheInvalidationEventHandler(
         HybridCache cache,

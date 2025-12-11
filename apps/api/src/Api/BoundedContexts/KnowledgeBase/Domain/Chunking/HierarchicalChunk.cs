@@ -112,7 +112,7 @@ public sealed class HierarchicalChunk
         if (string.IsNullOrWhiteSpace(childId))
             throw new ArgumentException("ChildId cannot be empty", nameof(childId));
 
-        if (!ChildIds.Contains(childId))
+        if (!ChildIds.Contains(childId, StringComparer.Ordinal))
         {
             ChildIds.Add(childId);
         }

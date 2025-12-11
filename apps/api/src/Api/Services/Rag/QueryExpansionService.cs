@@ -78,7 +78,7 @@ public class QueryExpansionService : IQueryExpansionService
         }
 
         // Add question reformulations for common patterns
-        if (queryLower.StartsWith("how") || queryLower.StartsWith("what") || queryLower.StartsWith("can"))
+        if (queryLower.StartsWith("how", StringComparison.Ordinal) || queryLower.StartsWith("what", StringComparison.Ordinal) || queryLower.StartsWith("can", StringComparison.Ordinal))
         {
             // "How do I X?" → "X rules", "X instructions"
             var baseQuery = query.Replace("how do i ", "", StringComparison.OrdinalIgnoreCase)

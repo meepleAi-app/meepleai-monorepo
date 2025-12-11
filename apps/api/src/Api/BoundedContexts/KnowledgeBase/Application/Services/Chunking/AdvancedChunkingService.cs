@@ -283,7 +283,7 @@ public sealed class AdvancedChunkingService : IAdvancedChunkingService
     /// Estimates page number based on character position.
     /// Uses long arithmetic to prevent integer overflow with large documents.
     /// </summary>
-    private static int EstimatePageNumber(int charPosition, int totalLength)
+    private static int EstimatePageNumber(int charPosition)
     {
         const long charsPerPage = 2000L;
         // Use long division to prevent overflow, then safely cast result

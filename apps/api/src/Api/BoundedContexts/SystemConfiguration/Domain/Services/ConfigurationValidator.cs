@@ -99,7 +99,7 @@ public class ConfigurationValidator
         }
     }
 
-    private static void ValidateDomainRules(string key, string value, string valueType, List<string> errors)
+    private static void ValidateDomainRules(string key, string value, List<string> errors)
     {
         // Rate limit validations
         if (key.Contains("RateLimit", StringComparison.OrdinalIgnoreCase))

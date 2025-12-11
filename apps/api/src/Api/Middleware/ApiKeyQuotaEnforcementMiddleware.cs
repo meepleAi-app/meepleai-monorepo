@@ -31,7 +31,7 @@ public class ApiKeyQuotaEnforcementMiddleware
     public async Task InvokeAsync(HttpContext context, MeepleAiDbContext db, TimeProvider timeProvider)
     {
         // Only enforce quota on API endpoints (skip health checks, swagger, etc.)
-        if (!context.Request.Path.StartsWithSegments("/api"))
+        if (!context.Request.Path.StartsWithSegments("/api", StringComparison.Ordinal))
         {
             await _next(context).ConfigureAwait(false);
             return;

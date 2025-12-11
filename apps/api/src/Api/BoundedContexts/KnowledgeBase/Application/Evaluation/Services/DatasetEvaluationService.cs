@@ -339,7 +339,7 @@ public sealed class DatasetEvaluationService : IDatasetEvaluationService
             return 0.0;
         }
 
-        var overlap = expectedWords.Intersect(generatedWords).Count();
+        var overlap = expectedWords.Intersect(generatedWords, StringComparer.Ordinal).Count();
         return (double)overlap / expectedWords.Count;
     }
 }

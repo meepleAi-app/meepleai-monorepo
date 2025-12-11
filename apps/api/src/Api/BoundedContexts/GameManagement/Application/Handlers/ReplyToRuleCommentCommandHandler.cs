@@ -21,7 +21,6 @@ public partial class ReplyToRuleCommentCommandHandler : IRequestHandler<ReplyToR
 
     private const int MaxCommentLength = 2000;
     private const int MaxThreadDepth = 5;
-    private static readonly TimeSpan RegexTimeout = TimeSpan.FromMilliseconds(100);
 
     [GeneratedRegex(@"@(\w{1,50})", RegexOptions.Compiled, matchTimeoutMilliseconds: 100)]
     private static partial Regex MentionRegex();

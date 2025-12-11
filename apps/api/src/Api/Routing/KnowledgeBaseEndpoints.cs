@@ -31,7 +31,7 @@ public static class KnowledgeBaseEndpoints
         {
             // Session validated by RequireSessionFilter
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-            
+
 
             // Validate request
             if (!Guid.TryParse(req.gameId, out var gameId))
@@ -89,7 +89,7 @@ public static class KnowledgeBaseEndpoints
         {
             // Session validated by RequireSessionFilter
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-            
+
 
             // Validate request
             if (!Guid.TryParse(req.gameId, out var gameId))
@@ -149,7 +149,7 @@ public static class KnowledgeBaseEndpoints
         {
             // Session validated by RequireSessionFilter
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-            
+
 
             var userId = session!.User!.Id;
 
@@ -179,7 +179,7 @@ public static class KnowledgeBaseEndpoints
         {
             // Session validated by RequireSessionFilter
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-            
+
 
             var query = new GetChatThreadByIdQuery(threadId);
             var result = await mediator.Send(query, ct).ConfigureAwait(false);
@@ -214,7 +214,7 @@ public static class KnowledgeBaseEndpoints
         {
             // Session validated by RequireSessionFilter
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-            
+
 
             if (gameId.HasValue)
             {
@@ -245,7 +245,7 @@ public static class KnowledgeBaseEndpoints
         {
             // Session validated by RequireSessionFilter
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-            
+
 
             if (string.IsNullOrWhiteSpace(req.Content))
             {
@@ -434,7 +434,7 @@ public static class KnowledgeBaseEndpoints
         {
             // Session validated by RequireSessionFilter
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-            
+
 
             var userId = session!.User!.Id;
 
@@ -466,7 +466,7 @@ public static class KnowledgeBaseEndpoints
         {
             // Session validated by RequireSessionFilter
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-            
+
 
             var userId = session!.User!.Id;
 
@@ -494,7 +494,7 @@ public static class KnowledgeBaseEndpoints
         {
             // Session validated by RequireSessionFilter
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-            
+
 
             var userId = session!.User!.Id;
 

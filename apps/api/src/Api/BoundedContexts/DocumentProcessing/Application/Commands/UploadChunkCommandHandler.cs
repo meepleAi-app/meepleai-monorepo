@@ -148,7 +148,7 @@ public class UploadChunkCommandHandler : ICommandHandler<UploadChunkCommand, Upl
                 );
             }
 
-            if (session.Status == "completed" || session.Status == "failed")
+            if (string.Equals(session.Status, "completed", StringComparison.Ordinal) || string.Equals(session.Status, "failed", StringComparison.Ordinal))
             {
                 return new UploadChunkResult(
                     Success: false,

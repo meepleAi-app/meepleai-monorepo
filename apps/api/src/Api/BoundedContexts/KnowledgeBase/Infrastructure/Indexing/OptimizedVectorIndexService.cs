@@ -59,7 +59,7 @@ public class OptimizedVectorIndexService : IOptimizedVectorIndexService
 
         var collections = await _clientAdapter.ListCollectionsAsync(cancellationToken).ConfigureAwait(false);
 
-        if (collections.Contains(collectionName))
+        if (collections.Contains(collectionName, StringComparer.Ordinal))
         {
             _logger.LogInformation("Collection {CollectionName} already exists, updating configuration", collectionName);
             await UpdateCollectionConfigurationAsync(collectionName, hnswConfig, quantizationConfig, cancellationToken).ConfigureAwait(false);

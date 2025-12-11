@@ -339,9 +339,9 @@ public class DocnetPdfTextExtractor : IPdfTextExtractor
         await using (fileStream.ConfigureAwait(false))
         {
             await pdfStream.CopyToAsync(fileStream, ct).ConfigureAwait(false);
-        await fileStream.FlushAsync(ct).ConfigureAwait(false);
+            await fileStream.FlushAsync(ct).ConfigureAwait(false);
 
-        return tempPath;
+            return tempPath;
         }
     }
 

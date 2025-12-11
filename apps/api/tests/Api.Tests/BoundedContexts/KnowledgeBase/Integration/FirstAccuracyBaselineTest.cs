@@ -54,7 +54,7 @@ public class FirstAccuracyBaselineTest
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
     // Game slug → GUID mapping (dynamically loaded from API)
-    private Dictionary<string, Guid> _gameSlugToGuidMap = new();
+    private readonly Dictionary<string, Guid> _gameSlugToGuidMap = new();
 
     public FirstAccuracyBaselineTest(Xunit.ITestOutputHelper output)
     {

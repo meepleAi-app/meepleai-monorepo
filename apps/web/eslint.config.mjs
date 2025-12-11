@@ -140,6 +140,9 @@ export default [
       "security/detect-non-literal-fs-filename": "warn",
       "security/detect-non-literal-regexp": "warn",
       "security/detect-non-literal-require": "warn",
+      // Note: detect-object-injection has many false positives with TypeScript
+      // It flags Record<string, T> access even when types are safe
+      // Keep as "warn" - review manually, use eslint-disable-next-line for valid cases
       "security/detect-object-injection": "warn",
       "security/detect-possible-timing-attacks": "warn",
       "security/detect-pseudoRandomBytes": "error",

@@ -16,8 +16,9 @@
  * - 429 rate limits (handled separately)
  */
 
-import { logApiError } from './logger';
+import { logApiError, logger } from './logger';
 import { ApiError, NetworkError, ServerError } from './errors';
+import { sanitizeError } from '@/lib/errors';
 import { API_CONFIG } from '@/config';
 
 export interface RetryConfig {
@@ -42,17 +43,24 @@ export function getRetryConfig(): RetryConfig {
 
   return {
     maxAttempts: isBrowser
-      ? parseInt(process.env.NEXT_PUBLIC_RETRY_MAX_ATTEMPTS || String(API_CONFIG.RETRY_MAX_ATTEMPTS), 10)
+      ? parseInt(
+          process.env.NEXT_PUBLIC_RETRY_MAX_ATTEMPTS || String(API_CONFIG.RETRY_MAX_ATTEMPTS),
+          10
+        )
       : API_CONFIG.RETRY_MAX_ATTEMPTS,
     baseDelay: isBrowser
-      ? parseInt(process.env.NEXT_PUBLIC_RETRY_BASE_DELAY || String(API_CONFIG.RETRY_BASE_DELAY_MS), 10)
+      ? parseInt(
+          process.env.NEXT_PUBLIC_RETRY_BASE_DELAY || String(API_CONFIG.RETRY_BASE_DELAY_MS),
+          10
+        )
       : API_CONFIG.RETRY_BASE_DELAY_MS,
     maxDelay: isBrowser
-      ? parseInt(process.env.NEXT_PUBLIC_RETRY_MAX_DELAY || String(API_CONFIG.RETRY_MAX_DELAY_MS), 10)
+      ? parseInt(
+          process.env.NEXT_PUBLIC_RETRY_MAX_DELAY || String(API_CONFIG.RETRY_MAX_DELAY_MS),
+          10
+        )
       : API_CONFIG.RETRY_MAX_DELAY_MS,
-    enabled: isBrowser
-      ? process.env.NEXT_PUBLIC_RETRY_ENABLED !== 'false'
-      : true,
+    enabled: isBrowser ? process.env.NEXT_PUBLIC_RETRY_ENABLED !== 'false' : true,
     jitter: API_CONFIG.RETRY_JITTER,
   };
 }
@@ -156,7 +164,7 @@ export function calculateBackoffDelay(
  * Sleep for specified milliseconds
  */
 export async function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 /**
@@ -179,10 +187,7 @@ export interface RetryOptions {
  * @returns The result of the function
  * @throws The last error if all retries are exhausted
  */
-export async function withRetry<T>(
-  fn: () => Promise<T>,
-  options: RetryOptions = {}
-): Promise<T> {
+export async function withRetry<T>(fn: () => Promise<T>, options: RetryOptions = {}): Promise<T> {
   const config: RetryConfig = {
     ...getRetryConfig(),
     ...options.retryConfig,
@@ -235,16 +240,22 @@ export async function withRetry<T>(
       // Log retry attempt
       if (error instanceof ApiError) {
         const backoffType = retryAfterMs ? 'server Retry-After' : 'exponential backoff';
-        console.warn(
+        logger.warn(
           `[Retry] Attempt ${attempt + 1}/${config.maxAttempts} failed for ${error.endpoint || 'unknown'}. ` +
-          `Retrying in ${delayMs}ms (${backoffType})... (Status: ${error.statusCode || 'network error'}, ` +
-          `CorrelationId: ${error.correlationId || 'none'})`
+            `Retrying in ${delayMs}ms (${backoffType})... (Status: ${error.statusCode || 'network error'}, ` +
+            `CorrelationId: ${error.correlationId || 'none'})`
         );
       } else {
-        console.warn(
+        const normalizedError = error instanceof Error ? error : new Error(String(error));
+        logger.warn(
           `[Retry] Attempt ${attempt + 1}/${config.maxAttempts} failed. ` +
-          `Retrying in ${delayMs}ms...`,
-          error
+            `Retrying in ${delayMs}ms...`,
+          {
+            component: 'RetryPolicy',
+            metadata: {
+              error: sanitizeError(normalizedError),
+            },
+          }
         );
       }
 

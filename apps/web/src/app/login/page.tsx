@@ -35,7 +35,11 @@ function LoginPageContent() {
 
   // Prevent SSR issues with TanStack Query (FE-IMP-005)
   if (!mounted) {
-    return null;
+    return (
+      <div className="min-h-dvh flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 px-4">
+        <div className="animate-pulse text-slate-500">Loading...</div>
+      </div>
+    );
   }
 
   return (

@@ -114,7 +114,7 @@ public class CitationValidationServiceTests
         Assert.Equal(0, result.InvalidCitations);
         Assert.Empty(result.Errors);
         Assert.Equal(1.0, result.ValidationAccuracy);
-        Assert.Contains("All 3 citations valid", result.Message);
+        Assert.Contains("All 3 citations valid", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -161,7 +161,7 @@ public class CitationValidationServiceTests
         Assert.Equal(0, result.ValidCitations);
         Assert.Single(result.Errors);
         Assert.Equal(CitationErrorType.DocumentNotFound, result.Errors[0].ErrorType);
-        Assert.Contains("not found", result.Errors[0].ErrorMessage);
+        Assert.Contains("not found", result.Errors[0].ErrorMessage, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -186,7 +186,7 @@ public class CitationValidationServiceTests
         Assert.Equal(0, result.ValidCitations);
         Assert.Single(result.Errors);
         Assert.Equal(CitationErrorType.InvalidPageNumber, result.Errors[0].ErrorType);
-        Assert.Contains("Invalid page number", result.Errors[0].ErrorMessage);
+        Assert.Contains("Invalid page number", result.Errors[0].ErrorMessage, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -228,7 +228,7 @@ public class CitationValidationServiceTests
         Assert.False(result.IsValid);
         Assert.Single(result.Errors);
         Assert.Equal(CitationErrorType.MalformedSource, result.Errors[0].ErrorType);
-        Assert.Contains("Invalid source format", result.Errors[0].ErrorMessage);
+        Assert.Contains("Invalid source format", result.Errors[0].ErrorMessage, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

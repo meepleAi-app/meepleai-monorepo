@@ -16,8 +16,8 @@ interface PromptVersionCardProps {
     createdByEmail: string;
     createdAt: string;
   };
-  onActivate?: () => void;
-  onCompare?: () => void;
+  onActivate?: (id: string) => void | Promise<void>;
+  onCompare?: (id: string) => void | Promise<void>;
   showActions?: boolean;
 }
 
@@ -40,11 +40,12 @@ export default function PromptVersionCard({
       <CardHeader>
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2">
-            <CardTitle className="text-lg">
-              Version {version.versionNumber}
-            </CardTitle>
+            <CardTitle className="text-lg">Version {version.versionNumber}</CardTitle>
             {version.isActive && (
-              <Badge variant="default" className="bg-green-100 text-green-800 hover:bg-green-100/80 border-transparent">
+              <Badge
+                variant="default"
+                className="bg-green-100 text-green-800 hover:bg-green-100/80 border-transparent"
+              >
                 Active
               </Badge>
             )}
@@ -52,20 +53,12 @@ export default function PromptVersionCard({
           {showActions && (
             <div className="flex gap-2">
               {!version.isActive && onActivate && (
-                <Button
-                  onClick={onActivate}
-                  size="sm"
-                  variant="default"
-                >
+                <Button onClick={() => onActivate?.(version.id)} size="sm" variant="default">
                   Activate
                 </Button>
               )}
               {onCompare && (
-                <Button
-                  onClick={onCompare}
-                  size="sm"
-                  variant="secondary"
-                >
+                <Button onClick={() => onCompare?.(version.id)} size="sm" variant="secondary">
                   Compare
                 </Button>
               )}
@@ -100,7 +93,7 @@ export default function PromptVersionCard({
         </div>
 
         <div className="mt-3 pt-3 border-t border-border">
-          <p className="text-sm text-muted-foreground italic">
+          <p className="text-sm text-muted-foreground italic whitespace-pre-wrap">
             {truncateContent(version.content, 150)}
           </p>
         </div>

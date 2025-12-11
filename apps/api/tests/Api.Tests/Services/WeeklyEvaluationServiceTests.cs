@@ -161,12 +161,13 @@ public class WeeklyEvaluationServiceTests : IDisposable
         // Act
         await service.StartAsync(_cts.Token);
 
-        // Advance fake clock past initial delay (0.001 minutes)
-        _timeProvider.Advance(TimeSpan.FromMinutes(0.002));
+        // Advance fake clock past initial delay
+        _timeProvider.Advance(TimeSpan.FromMinutes(_config.InitialDelayMinutes + 0.001));
 
         // Wait for execution to complete in real time
         await Task.Delay(TestConstants.Timing.SmallDelay, CancellationToken.None);
 
+        _cts.Cancel();
         await service.StopAsync(_cts.Token);
 
         // Assert
@@ -213,12 +214,11 @@ public class WeeklyEvaluationServiceTests : IDisposable
         // Act
         await service.StartAsync(_cts.Token);
 
-        // Advance fake clock past initial delay (0.001 minutes)
-        _timeProvider.Advance(TimeSpan.FromMinutes(0.002));
+        _timeProvider.Advance(TimeSpan.FromMinutes(_config.InitialDelayMinutes + 0.001));
 
-        // Wait for execution to complete in real time
         await Task.Delay(TestConstants.Timing.SmallDelay, CancellationToken.None);
 
+        _cts.Cancel();
         await service.StopAsync(_cts.Token);
 
         // Assert
@@ -263,7 +263,7 @@ public class WeeklyEvaluationServiceTests : IDisposable
         await service.StartAsync(_cts.Token);
 
         // Advance fake clock past initial delay (0.001 minutes)
-        _timeProvider.Advance(TimeSpan.FromMinutes(0.002));
+        _timeProvider.Advance(TimeSpan.FromMinutes(_config.InitialDelayMinutes + 0.001));
 
         // Wait for execution to complete in real time
         await Task.Delay(TestConstants.Timing.SmallDelay, CancellationToken.None);
@@ -312,7 +312,7 @@ public class WeeklyEvaluationServiceTests : IDisposable
         await service.StartAsync(_cts.Token);
 
         // Advance fake clock past initial delay (0.001 minutes)
-        _timeProvider.Advance(TimeSpan.FromMinutes(0.002));
+        _timeProvider.Advance(TimeSpan.FromMinutes(_config.InitialDelayMinutes + 0.001));
 
         // Wait for first execution (which throws) to complete in real time
         await Task.Delay(TestConstants.Timing.SmallDelay, CancellationToken.None);
@@ -373,6 +373,7 @@ public class WeeklyEvaluationServiceTests : IDisposable
     public async Task ExecuteAsync_LogsEvaluationSummary_WithCorrectMetrics()
     {
         // Arrange
+        _config.InitialDelayMinutes = 0;
         var options = Options.Create(_config);
         var expectedReport = new QualityReport
         {
@@ -391,6 +392,26 @@ public class WeeklyEvaluationServiceTests : IDisposable
             .Setup(x => x.Send(It.IsAny<GenerateQualityReportQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(expectedReport);
 
+        var loggedMessages = new List<string>();
+        _loggerMock
+            .Setup(x => x.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.IsAny<It.IsAnyType>(),
+                It.IsAny<Exception?>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()))
+            .Callback(new InvocationAction(invocation =>
+            {
+                var formatter = invocation.Arguments[4] as Delegate;
+                var state = invocation.Arguments[2];
+                var exception = invocation.Arguments[3] as Exception;
+                var message = formatter?.DynamicInvoke(state, exception) as string;
+                if (message != null)
+                {
+                    loggedMessages.Add(message);
+                }
+            }));
+
         var service = new WeeklyEvaluationService(
             _scopeFactoryMock.Object,
             _loggerMock.Object,
@@ -400,23 +421,13 @@ public class WeeklyEvaluationServiceTests : IDisposable
         // Act
         await service.StartAsync(_cts.Token);
 
-        // Advance fake clock past initial delay (0.001 minutes)
-        _timeProvider.Advance(TimeSpan.FromMinutes(0.002));
-
         // Wait for execution to complete in real time
-        await Task.Delay(TestConstants.Timing.SmallDelay, CancellationToken.None);
+        await Task.Delay(TimeSpan.FromMilliseconds(250), CancellationToken.None);
 
         await service.StopAsync(_cts.Token);
 
         // Assert - verify summary was logged
-        _loggerMock.Verify(
-            x => x.Log(
-                LogLevel.Information,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Weekly Evaluation Summary")),
-                null,
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.AtLeastOnce);
+        Assert.Contains(loggedMessages, msg => msg.Contains("Weekly Evaluation Summary"));
     }
 
     [Fact]
@@ -470,7 +481,7 @@ public class WeeklyEvaluationServiceTests : IDisposable
         await service.StartAsync(_cts.Token);
 
         // Advance fake clock past initial delay (0.001 minutes)
-        _timeProvider.Advance(TimeSpan.FromMinutes(0.002));
+        _timeProvider.Advance(TimeSpan.FromMinutes(_config.InitialDelayMinutes + 0.001));
 
         // Wait for execution to complete in real time
         await Task.Delay(TestConstants.Timing.SmallDelay, CancellationToken.None);
@@ -524,7 +535,7 @@ public class WeeklyEvaluationServiceTests : IDisposable
         await service.StartAsync(_cts.Token);
 
         // Advance fake clock past initial delay (0.001 minutes)
-        _timeProvider.Advance(TimeSpan.FromMinutes(0.002));
+        _timeProvider.Advance(TimeSpan.FromMinutes(_config.InitialDelayMinutes + 0.001));
 
         // Wait for execution to complete in real time
         await Task.Delay(TestConstants.Timing.SmallDelay, CancellationToken.None);
@@ -627,7 +638,7 @@ public class WeeklyEvaluationServiceTests : IDisposable
         await service.StartAsync(_cts.Token);
 
         // Advance fake clock past initial delay (0.001 minutes)
-        _timeProvider.Advance(TimeSpan.FromMinutes(0.002));
+        _timeProvider.Advance(TimeSpan.FromMinutes(_config.InitialDelayMinutes + 0.001));
 
         // Wait for execution to complete in real time
         await Task.Delay(TestConstants.Timing.SmallDelay, CancellationToken.None);
@@ -651,4 +662,3 @@ public class WeeklyEvaluationServiceTests : IDisposable
         Assert.Contains(issuesList, issue => issue.Contains("RAG evaluation failed quality gates"));
     }
 }
-

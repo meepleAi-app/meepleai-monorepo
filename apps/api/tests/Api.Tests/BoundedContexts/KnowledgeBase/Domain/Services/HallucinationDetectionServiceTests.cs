@@ -369,8 +369,8 @@ public class HallucinationDetectionServiceTests
         var result = await _service.DetectHallucinationsAsync(text, "en", TestCancellationToken);
 
         // Assert
-        Assert.Contains("2 hallucination indicator(s) detected", result.Message);
-        Assert.Contains("en", result.Message);
+        Assert.Contains("2 hallucination indicator(s) detected", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("en", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

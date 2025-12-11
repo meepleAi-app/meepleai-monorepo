@@ -1,0 +1,191 @@
+/**
+ * ServiceCard Component - Issue #896
+ *
+ * Displays infrastructure service health status in a card format.
+ * Reuses StatCard pattern with service-specific health indicators.
+ *
+ * Features:
+ * - Health state badge (healthy/degraded/unhealthy)
+ * - Response time metric
+ * - Last check timestamp
+ * - Error message display
+ * - i18n support (IT/EN)
+ */
+
+import { Card, CardContent } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
+import { CheckCircleIcon, AlertTriangleIcon, XCircleIcon, ActivityIcon } from 'lucide-react';
+import type { HealthState } from '@/lib/api';
+import { getInfrastructureI18n, type Locale } from '@/lib/i18n/infrastructure';
+
+export interface ServiceCardProps {
+  /** Service name (e.g., 'postgres', 'redis') */
+  serviceName: string;
+  /** Health state from backend */
+  status: HealthState;
+  /** Optional error message for degraded/unhealthy states */
+  errorMessage?: string | null;
+  /** Response time in milliseconds */
+  responseTimeMs?: number;
+  /** Last check timestamp */
+  lastCheck?: Date;
+  /** Loading state */
+  loading?: boolean;
+  /** Current locale for i18n */
+  locale?: Locale;
+  /** Additional CSS classes */
+  className?: string;
+}
+
+const stateConfig = {
+  Healthy: {
+    icon: CheckCircleIcon,
+    bgColor: 'bg-green-50/50',
+    borderColor: 'border-green-200',
+    badgeBg: 'bg-green-100',
+    badgeText: 'text-green-700',
+    iconColor: 'text-green-600',
+  },
+  Degraded: {
+    icon: AlertTriangleIcon,
+    bgColor: 'bg-yellow-50/50',
+    borderColor: 'border-yellow-200',
+    badgeBg: 'bg-yellow-100',
+    badgeText: 'text-yellow-700',
+    iconColor: 'text-yellow-600',
+  },
+  Unhealthy: {
+    icon: XCircleIcon,
+    bgColor: 'bg-red-50/50',
+    borderColor: 'border-red-200',
+    badgeBg: 'bg-red-100',
+    badgeText: 'text-red-700',
+    iconColor: 'text-red-600',
+  },
+} as const;
+
+function formatResponseTime(ms: number | undefined, locale: Locale): string {
+  if (ms === undefined) return '-';
+  if (ms < 1000) return `${Math.round(ms)}ms`;
+  return `${(ms / 1000).toFixed(2)}s`;
+}
+
+function formatTimestamp(date: Date | undefined, locale: Locale): string {
+  if (!date) return '-';
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMinutes = Math.floor(diffMs / 60000);
+
+  if (diffMinutes < 1) return locale === 'it' ? 'Ora' : 'Now';
+  if (diffMinutes < 60) return `${diffMinutes} ${locale === 'it' ? 'min fa' : 'min ago'}`;
+  const diffHours = Math.floor(diffMinutes / 60);
+  return `${diffHours} ${locale === 'it' ? 'h fa' : 'h ago'}`;
+}
+
+export function ServiceCard({
+  serviceName,
+  status,
+  errorMessage,
+  responseTimeMs,
+  lastCheck,
+  loading = false,
+  locale = 'it',
+  className,
+}: ServiceCardProps) {
+  const i18n = getInfrastructureI18n(locale);
+  // eslint-disable-next-line security/detect-object-injection -- status is typed HealthState enum from backend
+  const config = stateConfig[status] || stateConfig.Unhealthy;
+  const Icon = config.icon;
+  // Safe access with known keys
+  const serviceKey = serviceName as keyof typeof i18n.services;
+  // eslint-disable-next-line security/detect-object-injection -- serviceKey is type-checked keyof
+  const displayName = (
+    serviceKey in i18n.services ? i18n.services[serviceKey] : serviceName
+  ) as string;
+  // eslint-disable-next-line security/detect-object-injection -- status is typed HealthState enum
+  const stateLabel = i18n.states[status];
+
+  if (loading) {
+    return (
+      <Card className={cn('border-gray-200', className)} data-testid="service-card-loading">
+        <CardContent className="p-6">
+          <div className="flex items-start gap-4">
+            <Skeleton className="h-10 w-10 rounded-lg shrink-0" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-3 w-20" />
+              <Skeleton className="h-3 w-32" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card
+      className={cn(
+        config.bgColor,
+        config.borderColor,
+        'transition-all duration-200 hover:shadow-md',
+        className
+      )}
+      data-testid={`service-card-${serviceName}`}
+    >
+      <CardContent className="p-6">
+        <div className="flex items-start gap-4">
+          {/* Service Icon */}
+          <div className={cn('p-2 rounded-lg shrink-0', config.badgeBg)}>
+            <Icon className={cn('h-6 w-6', config.iconColor)} aria-hidden="true" />
+          </div>
+
+          {/* Service Info */}
+          <div className="flex-1 min-w-0">
+            {/* Service Name + Badge */}
+            <div className="flex items-center gap-2 mb-2">
+              <h3 className="text-sm font-semibold text-gray-900 truncate">{displayName}</h3>
+              <span
+                className={cn(
+                  'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium',
+                  config.badgeBg,
+                  config.badgeText
+                )}
+                aria-label={`${i18n.labels.status}: ${stateLabel}`}
+              >
+                {stateLabel}
+              </span>
+            </div>
+
+            {/* Metrics */}
+            <div className="space-y-1 text-xs text-gray-600">
+              {responseTimeMs !== undefined && (
+                <div className="flex items-center gap-1.5">
+                  <ActivityIcon className="h-3 w-3 text-gray-400" aria-hidden="true" />
+                  <span>
+                    {i18n.labels.responseTime}: {formatResponseTime(responseTimeMs, locale)}
+                  </span>
+                </div>
+              )}
+
+              {lastCheck && (
+                <div className="text-gray-500">
+                  {i18n.labels.lastCheck}: {formatTimestamp(lastCheck, locale)}
+                </div>
+              )}
+
+              {/* Error Message */}
+              {errorMessage && status !== 'Healthy' && (
+                <div className="mt-2 p-2 bg-white/60 rounded border border-gray-200">
+                  <p className="text-xs text-gray-700 break-words">
+                    <span className="font-medium">{i18n.labels.errorMessage}:</span> {errorMessage}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}

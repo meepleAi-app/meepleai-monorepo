@@ -337,7 +337,12 @@ describe('RequestCache - Core Functionality', () => {
     it('should handle objects with different property order', () => {
       const key1 = cache.generateKey('POST', '/api/test', testObjects.withOrder1, undefined);
       const key2 = cache.generateKey('POST', '/api/test', testObjects.withOrder2, undefined);
-      const key3 = cache.generateKey('POST', '/api/test', { age: 30, city: 'NYC', name: 'John' }, undefined);
+      const key3 = cache.generateKey(
+        'POST',
+        '/api/test',
+        { age: 30, city: 'NYC', name: 'John' },
+        undefined
+      );
 
       expect(key1).toBe(key2);
       expect(key2).toBe(key3);
@@ -368,7 +373,9 @@ describe('RequestCache - Core Functionality', () => {
       await cache.dedupe(key, requestFn);
 
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Request body too large for caching')
+        '[API Warning]',
+        expect.stringContaining('Request body too large for caching'),
+        undefined
       );
       expect(requestFn).toHaveBeenCalled();
 
@@ -408,9 +415,7 @@ describe('RequestCache - Core Functionality', () => {
     it('should handle concurrent requests to different endpoints', async () => {
       const mockFn = createCountingMockRequest();
 
-      const promises = Array.from({ length: 10 }, (_, i) =>
-        cache.dedupe(`endpoint-${i}`, mockFn)
-      );
+      const promises = Array.from({ length: 10 }, (_, i) => cache.dedupe(`endpoint-${i}`, mockFn));
 
       await Promise.all(promises);
 

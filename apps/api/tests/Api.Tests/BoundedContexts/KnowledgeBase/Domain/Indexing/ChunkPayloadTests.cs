@@ -221,7 +221,7 @@ public class ChunkPayloadTests
         var result = payload.ToString();
 
         // Assert
-        Assert.Contains("page=5", result);
-        Assert.Contains("level=1", result);
+        Assert.Contains("page=5", result, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("level=1", result, StringComparison.OrdinalIgnoreCase);
     }
 }

@@ -16,7 +16,7 @@ public sealed class GetEvaluationResultsQueryHandler : IRequestHandler<GetEvalua
 
     // Thread-safe in-memory cache with bounded size (max 100 results).
     private static readonly List<EvaluationResult> CachedResults = [];
-    private static readonly object CacheLock = new();
+    private static readonly System.Threading.Lock CacheLock = new();
     private const int MaxCacheSize = 100;
 
     public GetEvaluationResultsQueryHandler(ILogger<GetEvaluationResultsQueryHandler> logger)

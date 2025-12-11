@@ -47,8 +47,8 @@ public class LlmModelOverrideServiceTests
         // Assert
         Assert.True(_sut.IsInBudgetMode());
         var status = _sut.GetBudgetModeStatus();
-        Assert.Contains("ACTIVE", status);
-        Assert.Contains(reason, status);
+        Assert.Contains("ACTIVE", status, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(reason, status, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -64,7 +64,7 @@ public class LlmModelOverrideServiceTests
         // Assert
         Assert.False(_sut.IsInBudgetMode());
         var status = _sut.GetBudgetModeStatus();
-        Assert.Contains("INACTIVE", status);
+        Assert.Contains("INACTIVE", status, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -136,7 +136,7 @@ public class LlmModelOverrideServiceTests
         var status = _sut.GetBudgetModeStatus();
 
         // Assert
-        Assert.Contains("INACTIVE", status);
+        Assert.Contains("INACTIVE", status, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -150,9 +150,9 @@ public class LlmModelOverrideServiceTests
         var status = _sut.GetBudgetModeStatus();
 
         // Assert
-        Assert.Contains("ACTIVE", status);
-        Assert.Contains(reason, status);
-        Assert.Contains("min", status); // Duration in minutes
+        Assert.Contains("ACTIVE", status, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(reason, status, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("min", status, StringComparison.OrdinalIgnoreCase); // Duration in minutes
     }
 
     [Fact]
@@ -169,7 +169,7 @@ public class LlmModelOverrideServiceTests
 
         // Assert
         Assert.NotEqual(firstStatus, secondStatus);
-        Assert.Contains("Second reason", secondStatus);
+        Assert.Contains("Second reason", secondStatus, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

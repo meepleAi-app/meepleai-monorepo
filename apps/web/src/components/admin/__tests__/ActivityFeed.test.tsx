@@ -1,11 +1,20 @@
 /**
- * ActivityFeed Component Tests - Issue #874
+ * ActivityFeed Component Tests - Issue #884
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import { ActivityFeed } from '../ActivityFeed';
 import type { ActivityEvent } from '../ActivityFeed';
+
+// Mock next/link
+vi.mock('next/link', () => ({
+  default: ({ children, href, ...props }: { children: React.ReactNode; href: string }) => (
+    <a href={href} {...props}>
+      {children}
+    </a>
+  ),
+}));
 
 const mockEvents: ActivityEvent[] = [
   {
@@ -36,6 +45,16 @@ const mockEvents: ActivityEvent[] = [
 ];
 
 describe('ActivityFeed', () => {
+  // Mock Date.now for consistent relative timestamps
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2025-12-08T15:00:00Z'));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('renders title "Recent Activity"', () => {
     render(<ActivityFeed events={mockEvents} />);
 
@@ -182,5 +201,92 @@ describe('ActivityFeed', () => {
     const { container } = render(<ActivityFeed events={[longEmailEvent]} />);
     const email = container.querySelector('[class*="truncate"]');
     expect(email).toBeInTheDocument();
+  });
+
+  describe('View All link', () => {
+    it('renders View All link by default when events exist', () => {
+      render(<ActivityFeed events={mockEvents} />);
+
+      const viewAllLink = screen.getByRole('link', { name: /view all/i });
+      expect(viewAllLink).toBeInTheDocument();
+      expect(viewAllLink).toHaveAttribute('href', '/admin/activity');
+    });
+
+    it('renders View All link with custom href', () => {
+      render(<ActivityFeed events={mockEvents} viewAllHref="/custom/activity" />);
+
+      const viewAllLink = screen.getByRole('link', { name: /view all/i });
+      expect(viewAllLink).toHaveAttribute('href', '/custom/activity');
+    });
+
+    it('hides View All link when showViewAll is false', () => {
+      render(<ActivityFeed events={mockEvents} showViewAll={false} />);
+
+      expect(screen.queryByRole('link', { name: /view all/i })).not.toBeInTheDocument();
+    });
+
+    it('does not render View All link for empty events with showViewAll false', () => {
+      render(<ActivityFeed events={[]} showViewAll={false} />);
+
+      expect(screen.queryByRole('link', { name: /view all/i })).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Relative timestamps', () => {
+    it('displays relative timestamps in Italian', () => {
+      render(<ActivityFeed events={mockEvents} />);
+
+      // With mocked time at 15:00 and events at 14:30, 14:25, 14:20
+      // Should show relative times like "30 minuti fa"
+      const timestamps = screen.getAllByRole('time');
+      expect(timestamps.length).toBe(mockEvents.length);
+
+      // Check that at least one contains Italian relative text
+      const timestampTexts = timestamps.map(t => t.textContent);
+      expect(timestampTexts.some(text => text?.includes('fa') || text?.includes('minuti'))).toBe(
+        true
+      );
+    });
+
+    it('shows full date in title attribute for accessibility', () => {
+      render(<ActivityFeed events={[mockEvents[0]]} />);
+
+      const timeElement = screen.getByRole('time');
+      expect(timeElement).toHaveAttribute('title');
+    });
+  });
+
+  describe('Scrollable container', () => {
+    it('has scrollable container for events', () => {
+      const { container } = render(<ActivityFeed events={mockEvents} />);
+
+      const scrollContainer = container.querySelector('[class*="overflow-y-auto"]');
+      expect(scrollContainer).toBeInTheDocument();
+    });
+
+    it('has max-height constraint on scrollable container', () => {
+      const { container } = render(<ActivityFeed events={mockEvents} />);
+
+      const scrollContainer = container.querySelector('[class*="max-h-"]');
+      expect(scrollContainer).toBeInTheDocument();
+    });
+
+    it('has accessible region role for activity feed', () => {
+      render(<ActivityFeed events={mockEvents} />);
+
+      const region = screen.getByRole('region', { name: /activity feed/i });
+      expect(region).toBeInTheDocument();
+    });
+  });
+
+  describe('Empty state', () => {
+    it('shows enhanced empty state with icon', () => {
+      const { container } = render(<ActivityFeed events={[]} />);
+
+      expect(screen.getByText('No recent activity')).toBeInTheDocument();
+      // Check for empty state icon
+      const emptyIcon = container.querySelector('svg');
+      expect(emptyIcon).toBeInTheDocument();
+    });
   });
 });

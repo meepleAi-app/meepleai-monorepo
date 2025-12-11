@@ -61,7 +61,7 @@ public class RagValidationPipelineServiceTests
         Assert.Equal(3, result.LayersPassed);
         Assert.Equal(3, result.TotalLayers);
         Assert.Equal(RagValidationSeverity.Pass, result.Severity);
-        Assert.Contains("All validations passed", result.Message);
+        Assert.Contains("All validations passed", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Null(result.MultiModelConsensus);
         Assert.Null(result.ValidationAccuracyMetrics);
     }
@@ -115,7 +115,7 @@ public class RagValidationPipelineServiceTests
         Assert.Equal(2, result.LayersPassed); // Citation and Hallucination pass
         Assert.Equal(3, result.TotalLayers);
         Assert.Equal(RagValidationSeverity.Critical, result.Severity);
-        Assert.Contains("2/3 validations passed", result.Message);
+        Assert.Contains("2/3 validations passed", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

@@ -66,10 +66,11 @@ public static class KnowledgeBaseServiceExtensions
         services.AddSingleton<ILlmModelOverrideService, LlmModelOverrideService>();
 
         // ISSUE-1725: Analytics domain services for cost optimization
-        services.AddSingleton<IQueryEfficiencyAnalyzer, QueryEfficiencyAnalyzer>();
+        // Use Scoped because they depend on scoped repositories (ILlmCostLogRepository)
+        services.AddScoped<IQueryEfficiencyAnalyzer, QueryEfficiencyAnalyzer>();
         services.AddSingleton<IModelRecommendationService, ModelRecommendationService>();
-        services.AddSingleton<ICacheCorrelationAnalyzer, CacheCorrelationAnalyzer>();
-        services.AddSingleton<IMonthlyOptimizationReportService, MonthlyOptimizationReportService>();
+        services.AddScoped<ICacheCorrelationAnalyzer, CacheCorrelationAnalyzer>();
+        services.AddScoped<IMonthlyOptimizationReportService, MonthlyOptimizationReportService>();
 
         // ISSUE-960: Cost Tracking (from main)
         // Domain Services - Cost Calculator and Alerting

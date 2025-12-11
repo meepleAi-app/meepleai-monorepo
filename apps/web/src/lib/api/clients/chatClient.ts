@@ -7,7 +7,7 @@
 
 import type { FeedbackOutcome } from '@/lib/constants/feedback';
 import type { HttpClient } from '../core/httpClient';
-import { downloadFile } from '../core/httpClient';
+import { downloadFile, getApiBase } from '../core/httpClient';
 import {
   ChatThreadDtoSchema,
   ChatMessageResponseSchema,
@@ -129,25 +129,25 @@ export function createChatClient({ httpClient }: CreateChatClientParams): ChatCl
 
     async getThreadsByGame(gameId: string): Promise<ChatThreadDto[]> {
       const response = await httpClient.get<ChatThreadDto[]>(
-        `/api/v1/knowledge-base/chat-threads?gameId=${encodeURIComponent(gameId)}`
+        `/api/v1/chat-threads?gameId=${encodeURIComponent(gameId)}`
       );
       return response ?? [];
     },
 
     async getThreadById(threadId: string): Promise<ChatThreadDto | null> {
       return httpClient.get(
-        `/api/v1/knowledge-base/chat-threads/${encodeURIComponent(threadId)}`,
+        `/api/v1/chat-threads/${encodeURIComponent(threadId)}`,
         ChatThreadDtoSchema
       );
     },
 
     async createThread(request: CreateChatThreadRequest): Promise<ChatThreadDto> {
-      return httpClient.post('/api/v1/knowledge-base/chat-threads', request, ChatThreadDtoSchema);
+      return httpClient.post('/api/v1/chat-threads', request, ChatThreadDtoSchema);
     },
 
     async addMessage(threadId: string, request: AddMessageRequest): Promise<ChatThreadDto> {
       return httpClient.post(
-        `/api/v1/knowledge-base/chat-threads/${encodeURIComponent(threadId)}/messages`,
+        `/api/v1/chat-threads/${encodeURIComponent(threadId)}/messages`,
         request,
         ChatThreadDtoSchema
       );
@@ -155,7 +155,7 @@ export function createChatClient({ httpClient }: CreateChatClientParams): ChatCl
 
     async closeThread(threadId: string): Promise<ChatThreadDto> {
       return httpClient.post(
-        `/api/v1/knowledge-base/chat-threads/${encodeURIComponent(threadId)}/close`,
+        `/api/v1/chat-threads/${encodeURIComponent(threadId)}/close`,
         {},
         ChatThreadDtoSchema
       );
@@ -163,14 +163,14 @@ export function createChatClient({ httpClient }: CreateChatClientParams): ChatCl
 
     async reopenThread(threadId: string): Promise<ChatThreadDto> {
       return httpClient.post(
-        `/api/v1/knowledge-base/chat-threads/${encodeURIComponent(threadId)}/reopen`,
+        `/api/v1/chat-threads/${encodeURIComponent(threadId)}/reopen`,
         {},
         ChatThreadDtoSchema
       );
     },
 
     async deleteThread(threadId: string): Promise<void> {
-      return httpClient.delete(`/api/v1/chats/${threadId}`);
+      return httpClient.delete(`/api/v1/chat-threads/${threadId}`);
     },
 
     // ========== Chat Messages ==========
@@ -181,23 +181,40 @@ export function createChatClient({ httpClient }: CreateChatClientParams): ChatCl
       content: string
     ): Promise<ChatMessageResponse> {
       return httpClient.put(
-        `/api/v1/chats/${chatId}/messages/${messageId}`,
+        `/api/v1/chat-threads/${chatId}/messages/${messageId}`,
         { content },
         ChatMessageResponseSchema
       );
     },
 
     async deleteMessage(chatId: string, messageId: string): Promise<void> {
-      return httpClient.delete(`/api/v1/chats/${chatId}/messages/${messageId}`);
+      return httpClient.delete(`/api/v1/chat-threads/${chatId}/messages/${messageId}`);
     },
 
     // ========== Chat Export ==========
 
     async exportChat(chatId: string, request: ExportChatRequest): Promise<void> {
-      const { blob, filename } = await httpClient.postFile(
-        `/api/v1/chats/${encodeURIComponent(chatId)}/export`,
-        request
-      );
+      const baseUrl = getApiBase();
+      const params = new URLSearchParams();
+      if (request.format) params.append('format', request.format);
+      if (request.dateFrom) params.append('dateFrom', request.dateFrom);
+      if (request.dateTo) params.append('dateTo', request.dateTo);
+      const query = params.toString();
+      const url = `${baseUrl}/api/v1/chat-threads/${encodeURIComponent(chatId)}/export${
+        query ? `?${query}` : ''
+      }`;
+
+      const response = await fetch(url, {
+        method: 'GET',
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to export chat: ${response.status}`);
+      }
+      const blob = await response.blob();
+      const disposition = response.headers.get('content-disposition');
+      const filenameMatch = disposition?.match(/filename="?([^\";]+)"?/i);
+      const filename = filenameMatch?.[1] ?? `chat-${chatId}.zip`;
       downloadFile(blob, filename);
     },
 
@@ -210,7 +227,9 @@ export function createChatClient({ httpClient }: CreateChatClientParams): ChatCl
     ): Promise<RuleSpecCommentsResponse | null> {
       const resolvedParam = includeResolved ? 'true' : 'false';
       return httpClient.get(
-        `/api/v1/games/${gameId}/rulespec/versions/${version}/comments?includeResolved=${resolvedParam}`,
+        `/api/v1/rulespecs/${encodeURIComponent(gameId)}/${encodeURIComponent(
+          version
+        )}/comments?includeResolved=${resolvedParam}`,
         RuleSpecCommentsResponseSchema
       );
     },
@@ -221,7 +240,7 @@ export function createChatClient({ httpClient }: CreateChatClientParams): ChatCl
       request: CreateRuleSpecCommentRequest
     ): Promise<RuleSpecComment> {
       return httpClient.post(
-        `/api/v1/games/${gameId}/rulespec/versions/${version}/comments`,
+        `/api/v1/rulespecs/${encodeURIComponent(gameId)}/${encodeURIComponent(version)}/comments`,
         request,
         RuleSpecCommentSchema
       );
@@ -233,14 +252,14 @@ export function createChatClient({ httpClient }: CreateChatClientParams): ChatCl
       request: UpdateRuleSpecCommentRequest
     ): Promise<RuleSpecComment> {
       return httpClient.put(
-        `/api/v1/games/${gameId}/rulespec/comments/${commentId}`,
+        `/api/v1/comments/${encodeURIComponent(commentId)}`,
         request,
         RuleSpecCommentSchema
       );
     },
 
     async deleteRuleSpecComment(gameId: string, commentId: string): Promise<void> {
-      return httpClient.delete(`/api/v1/games/${gameId}/rulespec/comments/${commentId}`);
+      return httpClient.delete(`/api/v1/comments/${encodeURIComponent(commentId)}`);
     },
 
     async createCommentReply(
@@ -248,18 +267,18 @@ export function createChatClient({ httpClient }: CreateChatClientParams): ChatCl
       request: CreateReplyRequest
     ): Promise<RuleSpecComment> {
       return httpClient.post(
-        `/api/v1/rulespec/comments/${parentCommentId}/replies`,
+        `/api/v1/comments/${parentCommentId}/replies`,
         request,
         RuleSpecCommentSchema
       );
     },
 
     async resolveComment(commentId: string): Promise<void> {
-      return httpClient.post(`/api/v1/rulespec/comments/${commentId}/resolve`, {});
+      return httpClient.post(`/api/v1/comments/${commentId}/resolve`, {});
     },
 
     async unresolveComment(commentId: string): Promise<void> {
-      return httpClient.post(`/api/v1/rulespec/comments/${commentId}/unresolve`, {});
+      return httpClient.post(`/api/v1/comments/${commentId}/unresolve`, {});
     },
 
     // ========== Bulk Operations ==========

@@ -28,6 +28,7 @@ import { HeroSection } from '@/components/landing/HeroSection';
 import { FeaturesSection } from '@/components/landing/FeaturesSection';
 import { HowItWorksSection } from '@/components/landing/HowItWorksSection';
 import { LandingFooter } from '@/components/landing/LandingFooter';
+import { AuthRedirect } from '@/components/landing/AuthRedirect';
 
 // Metadata for SEO
 export const metadata: Metadata = {
@@ -135,6 +136,9 @@ const structuredData = {
 export default function LandingPage() {
   return (
     <main className="min-h-screen flex flex-col">
+      {/* Auto-redirect authenticated users to dashboard */}
+      <AuthRedirect />
+
       {/* Structured Data for SEO - Static content only, no user input */}
       <script
         type="application/ld+json"

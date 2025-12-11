@@ -225,7 +225,7 @@ public class GetSessionHistoryQueryHandlerTests
         var exception = await Assert.ThrowsAsync<ArgumentException>(
             () => _handler.Handle(query, TestContext.Current.CancellationToken));
 
-        Assert.Contains("Limit must be non-negative", exception.Message);
+        Assert.Contains("Limit must be non-negative", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -238,7 +238,7 @@ public class GetSessionHistoryQueryHandlerTests
         var exception = await Assert.ThrowsAsync<ArgumentException>(
             () => _handler.Handle(query, TestContext.Current.CancellationToken));
 
-        Assert.Contains("Limit cannot exceed 1000", exception.Message);
+        Assert.Contains("Limit cannot exceed 1000", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -251,7 +251,7 @@ public class GetSessionHistoryQueryHandlerTests
         var exception = await Assert.ThrowsAsync<ArgumentException>(
             () => _handler.Handle(query, TestContext.Current.CancellationToken));
 
-        Assert.Contains("Offset must be non-negative", exception.Message);
+        Assert.Contains("Offset must be non-negative", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

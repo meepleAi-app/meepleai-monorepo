@@ -69,7 +69,7 @@ public class ApiExceptionHandlerMiddlewareTests
 
         // Assert
         Assert.Equal(400, _httpContext.Response.StatusCode);
-        Assert.StartsWith("application/json", _httpContext.Response.ContentType);
+        Assert.StartsWith("application/json", _httpContext.Response.ContentType, StringComparison.OrdinalIgnoreCase);
 
         _httpContext.Response.Body.Seek(0, SeekOrigin.Begin);
         using var reader = new StreamReader(_httpContext.Response.Body);

@@ -11,7 +11,7 @@ public class LlmModelOverrideService : ILlmModelOverrideService
 {
     private readonly ILogger<LlmModelOverrideService> _logger;
     private readonly Dictionary<string, string> _downgradeMappings;
-    private readonly object _lock = new();
+    private readonly System.Threading.Lock _lock = new();
 
     private bool _budgetModeActive;
     private string? _budgetModeReason;

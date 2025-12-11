@@ -7,19 +7,10 @@
  */
 
 // User queries
-export {
-  useCurrentUser,
-  userKeys,
-} from './useCurrentUser';
+export { useCurrentUser, userKeys } from './useCurrentUser';
 
 // Games queries
-export {
-  useGames,
-  useGame,
-  useGameSessions,
-  useGameDocuments,
-  gamesKeys,
-} from './useGames';
+export { useGames, useGame, useGameSessions, useGameDocuments, gamesKeys } from './useGames';
 
 // Chat queries and mutations
 export {
@@ -35,6 +26,14 @@ export {
   chatKeys,
 } from './useChats';
 
+// Admin dashboard queries (Issue #886)
+export {
+  useDashboardData,
+  useDashboardAnalytics,
+  useDashboardActivity,
+  adminKeys,
+} from './useDashboardData';
+
 // Re-export from @tanstack/react-query for convenience
 export {
   useQuery,
@@ -44,8 +43,4 @@ export {
   useIsMutating,
 } from '@tanstack/react-query';
 
-export type {
-  UseQueryResult,
-  UseMutationResult,
-  QueryClient,
-} from '@tanstack/react-query';
+export type { UseQueryResult, UseMutationResult, QueryClient } from '@tanstack/react-query';

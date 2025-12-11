@@ -64,7 +64,7 @@ public class YearPublishedTests
     {
         // Act & Assert (MinYear = 1000 for historical games support)
         var exception = Assert.Throws<ValidationException>(() => new YearPublished(999));
-        Assert.Contains("cannot be before 1000", exception.Message);
+        Assert.Contains("cannot be before 1000", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -75,7 +75,7 @@ public class YearPublishedTests
 
         // Act & Assert
         var exception = Assert.Throws<ValidationException>(() => new YearPublished(futureYear));
-        Assert.Contains("cannot be after", exception.Message);
+        Assert.Contains("cannot be after", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

@@ -58,7 +58,7 @@ services:
       - "--api.insecure=true"  # DEVELOPMENT ONLY - Remove for production
 
       # Logging
-      - "--log.level=INFO"  # DEBUG for troubleshooting
+      - "--log.level=DEBUG"  # DEBUG for troubleshooting
       - "--accesslog=true"
       - "--accesslog.filepath=/var/log/traefik/access.log"
       - "--log.filepath=/var/log/traefik/traefik.log"
@@ -68,10 +68,13 @@ services:
       # PRODUCTION: Uncomment for HTTPS
       # - "--entrypoints.websecure.address=:443"
 
-      # Docker Provider
+      # Docker Provider  
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"  # Opt-in via labels
       - "--providers.docker.network=meepleai"
+      # WINDOWS Docker Desktop: Use TCP endpoint instead of Unix socket
+      # Docker Desktop on Windows exposes API on localhost:2375 (or via npipe)
+      - "--providers.docker.endpoint=npipe:////./pipe/docker_engine"
       # PRODUCTION: Use socket proxy instead
       # - "--providers.docker.endpoint=tcp://docker-socket-proxy:2375"
 
@@ -113,7 +116,8 @@ services:
       # ⚠️ SECURITY CRITICAL: Direct Docker socket access grants root-equivalent privileges
       # DEVELOPMENT ONLY: This allows Traefik to control entire Docker daemon
       # PRODUCTION: MUST use docker-socket-proxy (uncomment lines 22-48) to restrict API access
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # WINDOWS: Use named pipe instead of Unix socket
+      - //var/run/docker.sock:/var/run/docker.sock:ro
 
       # Static configuration
       - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro

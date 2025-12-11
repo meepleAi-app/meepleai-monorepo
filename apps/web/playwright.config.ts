@@ -135,16 +135,18 @@ export default defineConfig<ChromaticConfig>({
   // When PARALLEL_E2E=true, the server is started once by scripts/run-parallel-e2e.js
   // and all shards reuse it
   webServer:
-    process.env.PARALLEL_E2E === 'true'
+    process.env.PLAYWRIGHT_SKIP_WEB_SERVER === '1'
       ? undefined
-      : {
-          // Issue #2007 Phase 2: Always use dev server (alpha phase priority)
-          // Rationale: Dev server detects dev-only bugs, faster feedback loop
-          // Memory managed via sharding (4 shards) + health checks + 4GB heap
-          // Production build can be added via ENV_VAR in beta phase if needed
-          command: 'node --max-old-space-size=4096 ./node_modules/next/dist/bin/next dev -p 3000',
-          url: 'http://localhost:3000',
-          reuseExistingServer: !process.env.CI,
-          timeout: 180 * 1000, // 3min for dev server startup
-        },
+      : process.env.PARALLEL_E2E === 'true'
+        ? undefined
+        : {
+            // Issue #2007 Phase 2: Always use dev server (alpha phase priority)
+            // Rationale: Dev server detects dev-only bugs, faster feedback loop
+            // Memory managed via sharding (4 shards) + health checks + 4GB heap
+            // Production build can be added via ENV_VAR in beta phase if needed
+            command: 'node --max-old-space-size=4096 ./node_modules/next/dist/bin/next dev -p 3000',
+            url: 'http://localhost:3000',
+            reuseExistingServer: !process.env.CI,
+            timeout: 180 * 1000, // 3min for dev server startup
+          },
 });

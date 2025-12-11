@@ -14,12 +14,23 @@ vi.mock('next/navigation', () => ({
 }));
 
 // Mock api
-vi.mock('@/lib/api', () => ({
-  api: {
-    get: vi.fn(),
-    post: vi.fn(),
-  },
-}));
+vi.mock('@/lib/api', () => {
+  const getMe = vi.fn();
+  const login = vi.fn();
+  const register = vi.fn();
+  const logout = vi.fn();
+
+  return {
+    api: {
+      auth: {
+        getMe,
+        login,
+        register,
+        logout,
+      },
+    },
+  };
+});
 
 describe('useAuth', () => {
   beforeEach(() => {
@@ -28,7 +39,7 @@ describe('useAuth', () => {
 
   describe('initial state', () => {
     it('should have null user initially', async () => {
-      vi.mocked(api.get).mockResolvedValueOnce({ user: null });
+      vi.mocked(api.auth.getMe).mockResolvedValueOnce(null);
 
       const { result } = renderHook(() => useAuth());
 
@@ -42,7 +53,7 @@ describe('useAuth', () => {
 
     it('should load user on mount', async () => {
       const mockUser = { id: '1', email: 'test@test.com', role: 'User' };
-      vi.mocked(api.get).mockResolvedValueOnce({ user: mockUser });
+      vi.mocked(api.auth.getMe).mockResolvedValueOnce(mockUser);
 
       const { result } = renderHook(() => useAuth());
 
@@ -57,8 +68,8 @@ describe('useAuth', () => {
   describe('login', () => {
     it('should login successfully', async () => {
       const mockUser = { id: '1', email: 'test@test.com', role: 'User' };
-      vi.mocked(api.get).mockResolvedValueOnce({ user: null });
-      vi.mocked(api.post).mockResolvedValueOnce({ user: mockUser });
+      vi.mocked(api.auth.getMe).mockResolvedValueOnce(null);
+      vi.mocked(api.auth.login).mockResolvedValueOnce(mockUser);
 
       const { result } = renderHook(() => useAuth());
 
@@ -78,8 +89,8 @@ describe('useAuth', () => {
     });
 
     it('should handle login error', async () => {
-      vi.mocked(api.get).mockResolvedValueOnce({ user: null });
-      vi.mocked(api.post).mockRejectedValueOnce(new Error('Invalid credentials'));
+      vi.mocked(api.auth.getMe).mockResolvedValueOnce(null);
+      vi.mocked(api.auth.login).mockRejectedValueOnce(new Error('Invalid credentials'));
 
       const { result } = renderHook(() => useAuth());
 
@@ -100,8 +111,8 @@ describe('useAuth', () => {
   describe('register', () => {
     it('should register successfully', async () => {
       const mockUser = { id: '1', email: 'new@test.com', role: 'User' };
-      vi.mocked(api.get).mockResolvedValueOnce({ user: null });
-      vi.mocked(api.post).mockResolvedValueOnce({ user: mockUser });
+      vi.mocked(api.auth.getMe).mockResolvedValueOnce(null);
+      vi.mocked(api.auth.register).mockResolvedValueOnce(mockUser);
 
       const { result } = renderHook(() => useAuth());
 
@@ -124,8 +135,8 @@ describe('useAuth', () => {
   describe('logout', () => {
     it('should logout and redirect', async () => {
       const mockUser = { id: '1', email: 'test@test.com', role: 'User' };
-      vi.mocked(api.get).mockResolvedValueOnce({ user: mockUser });
-      vi.mocked(api.post).mockResolvedValueOnce(undefined);
+      vi.mocked(api.auth.getMe).mockResolvedValueOnce(mockUser);
+      vi.mocked(api.auth.logout).mockResolvedValueOnce(undefined);
 
       const { result } = renderHook(() => useAuth());
 
@@ -144,8 +155,8 @@ describe('useAuth', () => {
 
   describe('clearError', () => {
     it('should clear error', async () => {
-      vi.mocked(api.get).mockResolvedValueOnce({ user: null });
-      vi.mocked(api.post).mockRejectedValueOnce(new Error('Error'));
+      vi.mocked(api.auth.getMe).mockResolvedValueOnce(null);
+      vi.mocked(api.auth.login).mockRejectedValueOnce(new Error('Error'));
 
       const { result } = renderHook(() => useAuth());
 

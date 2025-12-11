@@ -7,7 +7,9 @@ import { api, type UserSearchResult } from '@/lib/api';
 // Mock the API module
 vi.mock('@/lib/api', () => ({
   api: {
-    get: vi.fn(),
+    auth: {
+      searchUsers: vi.fn(),
+    },
   },
 }));
 
@@ -36,11 +38,11 @@ const mockUsers: UserSearchResult[] = [
 
 describe('MentionInput', () => {
   const mockOnChange = vi.fn();
-  const mockApiGet = api.get as Mock<typeof api.get>;
+  const mockSearchUsers = api.auth.searchUsers as Mock<typeof api.auth.searchUsers>;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockApiGet.mockResolvedValue(mockUsers);
+    mockSearchUsers.mockResolvedValue(mockUsers);
   });
 
   afterEach(() => {
@@ -102,7 +104,7 @@ describe('MentionInput', () => {
       fireEvent.change(textarea, { target: { value: '@al', selectionStart: 3 } });
 
       await waitFor(() => {
-        expect(mockApiGet).toHaveBeenCalledWith('/api/v1/users/search?query=al');
+        expect(mockSearchUsers).toHaveBeenCalledWith('al');
       });
     });
 
@@ -113,7 +115,7 @@ describe('MentionInput', () => {
       fireEvent.change(textarea, { target: { value: '@a', selectionStart: 2 } });
 
       await waitFor(() => {
-        expect(mockApiGet).not.toHaveBeenCalled();
+        expect(mockSearchUsers).not.toHaveBeenCalled();
       });
     });
 
@@ -124,7 +126,7 @@ describe('MentionInput', () => {
       fireEvent.change(textarea, { target: { value: 'Hello @alice', selectionStart: 12 } });
 
       await waitFor(() => {
-        expect(mockApiGet).toHaveBeenCalledWith('/api/v1/users/search?query=alice');
+        expect(mockSearchUsers).toHaveBeenCalledWith('alice');
       });
     });
 
@@ -137,7 +139,7 @@ describe('MentionInput', () => {
       });
 
       await waitFor(() => {
-        expect(mockApiGet).toHaveBeenCalledWith('/api/v1/users/search?query=al');
+        expect(mockSearchUsers).toHaveBeenCalledWith('al');
       });
     });
 
@@ -150,7 +152,7 @@ describe('MentionInput', () => {
       });
 
       await waitFor(() => {
-        expect(mockApiGet).toHaveBeenCalledWith('/api/v1/users/search?query=alice');
+        expect(mockSearchUsers).toHaveBeenCalledWith('alice');
       });
     });
   });
@@ -176,7 +178,7 @@ describe('MentionInput', () => {
     });
 
     it('shows loading state during search', async () => {
-      mockApiGet.mockImplementation(
+      mockSearchUsers.mockImplementation(
         () => new Promise(resolve => setTimeout(() => resolve(mockUsers), 100))
       );
 
@@ -191,7 +193,7 @@ describe('MentionInput', () => {
     });
 
     it('shows "No users found" when API returns empty array', async () => {
-      mockApiGet.mockResolvedValue([]);
+      mockSearchUsers.mockResolvedValue([]);
 
       render(<MentionInput value="" onChange={mockOnChange} />);
       const textarea = screen.getByRole('combobox');
@@ -222,7 +224,7 @@ describe('MentionInput', () => {
     });
 
     it('handles API errors gracefully', async () => {
-      mockApiGet.mockRejectedValue(new Error('Network error'));
+      mockSearchUsers.mockRejectedValue(new Error('Network error'));
       mockLoggerError.mockClear();
 
       render(<MentionInput value="" onChange={mockOnChange} />);
@@ -530,7 +532,7 @@ describe('MentionInput', () => {
 
       await waitFor(
         () => {
-          expect(mockApiGet).toHaveBeenCalledWith('/api/v1/users/search?query=a');
+          expect(mockSearchUsers).toHaveBeenCalledWith('a');
         },
         { timeout: 3000 }
       );
@@ -539,7 +541,7 @@ describe('MentionInput', () => {
 
       await waitFor(
         () => {
-          expect(mockApiGet).toHaveBeenCalledWith('/api/v1/users/search?query=al');
+          expect(mockSearchUsers).toHaveBeenCalledWith('al');
         },
         { timeout: 3000 }
       );
@@ -548,13 +550,13 @@ describe('MentionInput', () => {
 
       await waitFor(
         () => {
-          expect(mockApiGet).toHaveBeenCalledWith('/api/v1/users/search?query=ali');
+          expect(mockSearchUsers).toHaveBeenCalledWith('ali');
         },
         { timeout: 3000 }
       );
 
       // Verify all three searches were made (due to mocked debounce)
-      expect(mockApiGet).toHaveBeenCalledTimes(3);
+      expect(mockSearchUsers).toHaveBeenCalledTimes(3);
     });
 
     it('handles empty query gracefully', async () => {
@@ -564,7 +566,7 @@ describe('MentionInput', () => {
       fireEvent.change(textarea, { target: { value: '@', selectionStart: 1 } });
 
       await waitFor(() => {
-        expect(mockApiGet).not.toHaveBeenCalled();
+        expect(mockSearchUsers).not.toHaveBeenCalled();
         expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
       });
     });
@@ -575,7 +577,7 @@ describe('MentionInput', () => {
 
       fireEvent.change(textarea, { target: { value: '@test', selectionStart: 0 } });
 
-      expect(mockApiGet).not.toHaveBeenCalled();
+      expect(mockSearchUsers).not.toHaveBeenCalled();
     });
 
     it('highlights matching text in search results', async () => {
@@ -601,7 +603,7 @@ describe('MentionInput', () => {
       });
 
       await waitFor(() => {
-        expect(mockApiGet).toHaveBeenCalledWith('/api/v1/users/search?query=alice');
+        expect(mockSearchUsers).toHaveBeenCalledWith('alice');
       });
     });
   });

@@ -76,6 +76,10 @@ ls -la infra/secrets/*.txt
 chmod 600 infra/secrets/*.txt
 ```
 
+## Esempio di utilizzo dell’applicazione
+
+- Quando MeepleAI API si avvia nel container Docker, monta `postgres-password` e `openrouter-api-key` come secrets Docker e legge `/run/secrets/postgres-password` per connettersi al database e `/run/secrets/openrouter-api-key` per chiamare il provider LLM. n8n e Alertmanager usano lo stesso meccanismo per `n8n-basic-auth-password.txt`, `n8n-encryption-key.txt` e `gmail-app-password.txt`, quindi nessuna password sensibile viene mai scritta nei file di configurazione `.env` committati.
+
 ## References
 
 - [Docker Secrets Documentation](https://docs.docker.com/engine/swarm/secrets/)

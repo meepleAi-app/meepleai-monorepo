@@ -38,11 +38,51 @@ vi.mock('framer-motion', () => ({
 }));
 
 // Mock data
+const mockUuid = (index: number) => `770e8400-e29b-41d4-a716-00000000000${index}`;
+
 const mockGames = [
-  { id: 'game-1', title: 'Catan', description: 'Settle the island of Catan' },
-  { id: 'game-2', title: 'Ticket to Ride', description: 'Build railway routes' },
-  { id: 'game-3', title: 'Azul', description: 'Tile placement game' },
+  {
+    id: mockUuid(1),
+    title: 'Catan',
+    publisher: 'Kosmos',
+    yearPublished: 1995,
+    minPlayers: 3,
+    maxPlayers: 4,
+    minPlayTimeMinutes: 60,
+    maxPlayTimeMinutes: 120,
+    bggId: 13,
+    createdAt: new Date().toISOString(),
+    description: 'Settle the island of Catan',
+  },
+  {
+    id: mockUuid(2),
+    title: 'Ticket to Ride',
+    publisher: 'Days of Wonder',
+    yearPublished: 2004,
+    minPlayers: 2,
+    maxPlayers: 5,
+    minPlayTimeMinutes: 30,
+    maxPlayTimeMinutes: 60,
+    bggId: 9209,
+    createdAt: new Date().toISOString(),
+    description: 'Build railway routes',
+  },
+  {
+    id: mockUuid(3),
+    title: 'Azul',
+    publisher: 'Next Move Games',
+    yearPublished: 2017,
+    minPlayers: 2,
+    maxPlayers: 4,
+    minPlayTimeMinutes: 30,
+    maxPlayTimeMinutes: 45,
+    bggId: 230802,
+    createdAt: new Date().toISOString(),
+    description: 'Tile placement game',
+  },
 ];
+
+const firstGameId = mockGames[0].id;
 
 const mockQueryState = {
   isLoading: false,
@@ -187,7 +227,7 @@ describe('BoardGameAskClient', () => {
       await user.keyboard('{Control>}{Enter}{/Control}');
 
       await waitFor(() => {
-        expect(mockQueryControls.askQuestion).toHaveBeenCalledWith('game-1', 'Test question');
+        expect(mockQueryControls.askQuestion).toHaveBeenCalledWith(firstGameId, 'Test question');
       });
     });
 
@@ -259,7 +299,7 @@ describe('BoardGameAskClient', () => {
       await user.click(button);
 
       await waitFor(() => {
-        expect(mockQueryControls.askQuestion).toHaveBeenCalledWith('game-1', 'Test question');
+        expect(mockQueryControls.askQuestion).toHaveBeenCalledWith(firstGameId, 'Test question');
       });
     });
   });

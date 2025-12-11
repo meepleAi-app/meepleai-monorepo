@@ -17,7 +17,31 @@ public static class CookieHelpers
     {
         var options = CreateSessionCookieOptions(context, expiresAt);
         var sessionCookieName = GetSessionCookieName(context);
-        context.Response.Cookies.Append(sessionCookieName, token, options);
+        
+        // BGAI-081: Development workaround for SameSite=None without Secure
+        // ASP.NET Core blocks SameSite=None without Secure, so we write the header directly
+        if (context.RequestServices.GetRequiredService<IHostEnvironment>().IsDevelopment() && 
+            options.SameSite == SameSiteMode.None && 
+            !options.Secure)
+        {
+            // Build Set-Cookie header manually
+            var cookieValue = $"{sessionCookieName}={token}; " +
+                            $"Path={options.Path}; " +
+                            $"Expires={expiresAt:R}; " +
+                            $"HttpOnly; " +
+                            $"SameSite=None";
+            
+            if (!string.IsNullOrWhiteSpace(options.Domain))
+            {
+                cookieValue += $"; Domain={options.Domain}";
+            }
+            
+            context.Response.Headers.Append("Set-Cookie", cookieValue);
+        }
+        else
+        {
+            context.Response.Cookies.Append(sessionCookieName, token, options);
+        }
     }
 
     public static void RemoveSessionCookie(HttpContext context)
@@ -102,18 +126,33 @@ public static class CookieHelpers
         var secure = configuration.Secure ?? isHttps;
         var secureForced = false;
 
-        if (!secure && !configuration.Secure.HasValue)
+        // CRITICAL FIX: For localhost development with Secure=false
+        // Force SameSite=None BEFORE any other logic modifies it
+        SameSiteMode sameSite;
+        if (configuration.Secure == false)
         {
-            secure = true;
-            secureForced = true;
-        }
-
-        var sameSite = configuration.SameSite ?? (secure ? SameSiteMode.None : SameSiteMode.Lax);
-
-        if (secureForced && sameSite != SameSiteMode.None)
-        {
+            // Explicitly configured for development (HTTP)
+            // Force SameSite=None for cross-port cookies
             sameSite = SameSiteMode.None;
+            secure = false; // Keep secure=false as configured
         }
+        else
+        {
+            // Default logic for production/HTTPS
+            if (!secure && !configuration.Secure.HasValue)
+            {
+                secure = true;
+                secureForced = true;
+            }
+
+            sameSite = configuration.SameSite ?? (secure ? SameSiteMode.None : SameSiteMode.Lax);
+
+            if (secureForced && sameSite != SameSiteMode.None)
+            {
+                sameSite = SameSiteMode.None;
+            }
+        }
+
         var path = string.IsNullOrWhiteSpace(configuration.Path) ? "/" : configuration.Path;
 
         var options = new CookieOptions

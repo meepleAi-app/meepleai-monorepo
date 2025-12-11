@@ -29,13 +29,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import type { Citation } from '@/types';
 import { logger } from '@/lib/logger';
 import { createErrorContext } from '@/lib/errors';
-
-type Game = {
-  id: string;
-  title: string;
-  description?: string;
-  imageUrl?: string;
-};
+import { GamesArrayResponseSchema } from '@/lib/api/schemas/games.schemas';
+import type { Game } from '@/lib/api/schemas/games.schemas';
 
 export default function BoardGameAskClient() {
   // State
@@ -80,15 +75,33 @@ export default function BoardGameAskClient() {
         setLoadingGames(true);
         const response = await api.games.getAll();
 
+        // Validate response with Zod schema (replaces unsafe `as any` casting)
+        const validatedData = GamesArrayResponseSchema.safeParse(response);
+
+        if (!validatedData.success) {
+          logger.error(
+            'Invalid games response schema',
+            new Error(`Validation failed: ${validatedData.error.message}`),
+            createErrorContext('BoardGameAskClient', 'fetchGames', {
+              operation: 'load_games',
+              validationError: validatedData.error.issues,
+            })
+          );
+          setGamesError('Failed to load games: Invalid response format.');
+          setGames([]);
+          return;
+        }
+
+        const gamesData = validatedData.data;
+
         // Check if component is still mounted
         if (abortController.signal.aborted) return;
 
-        if (response && Array.isArray(response.games)) {
-          setGames(response.games as any);
-          // Auto-select first game if available
-          if (response.games.length > 0 && !selectedGameId) {
-            setSelectedGameId(response.games[0].id);
-          }
+        setGames(gamesData);
+
+        // Auto-select first game if available
+        if (gamesData.length > 0 && !selectedGameId) {
+          setSelectedGameId(gamesData[0].id);
         }
       } catch (err) {
         // Don't set error if request was aborted
@@ -99,6 +112,7 @@ export default function BoardGameAskClient() {
             createErrorContext('BoardGameAskClient', 'fetchGames', { operation: 'load_games' })
           );
           setGamesError('Failed to load games. Please try again.');
+          setGames([]); // ensure controlled Select has data
         }
       } finally {
         if (!abortController.signal.aborted) {
@@ -118,18 +132,35 @@ export default function BoardGameAskClient() {
 
   // Handle ask question
   const handleAskQuestion = async () => {
-    if (!selectedGameId) {
+    if (!selectedGameId?.trim()) {
+      setGamesError('Please select a game.');
       return;
     }
-    if (!question.trim()) {
+
+    const trimmedQuestion = question.trim();
+    if (!trimmedQuestion) {
+      return;
+    }
+
+    // Validate input length (prevent abuse)
+    const MAX_QUESTION_LENGTH = 2000;
+    if (trimmedQuestion.length > MAX_QUESTION_LENGTH) {
+      logger.warn(
+        'Question exceeds maximum length',
+        createErrorContext('BoardGameAskClient', 'handleAskQuestion', {
+          length: trimmedQuestion.length,
+          max: MAX_QUESTION_LENGTH,
+        })
+      );
+      setGamesError(`Question must be less than ${MAX_QUESTION_LENGTH} characters.`);
       return;
     }
 
     // Add user question to history
-    setConversationHistory(prev => [...prev, { role: 'user', content: question }]);
+    setConversationHistory(prev => [...prev, { role: 'user', content: trimmedQuestion }]);
 
     // Ask question via backend API
-    await queryControls.askQuestion(selectedGameId, question);
+    await queryControls.askQuestion(selectedGameId, trimmedQuestion);
   };
 
   // Handle Enter key (Ctrl+Enter to submit)

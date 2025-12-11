@@ -134,9 +134,9 @@ public class ProvideAgentFeedbackCommandHandlerTests
         var exception = await Assert.ThrowsAsync<ArgumentException>(
             () => handler.Handle(command, TestCancellationToken));
 
-        Assert.Contains("Invalid outcome", exception.Message);
-        Assert.Contains(invalidOutcome, exception.Message);
-        Assert.Contains("helpful, not-helpful, incorrect", exception.Message);
+        Assert.Contains("Invalid outcome", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(invalidOutcome, exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("helpful, not-helpful, incorrect", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

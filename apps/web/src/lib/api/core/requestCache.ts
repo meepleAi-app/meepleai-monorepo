@@ -13,6 +13,9 @@
  * - Option-sensitive caching (circuit breaker, retry config)
  */
 
+import { logger } from './logger';
+import { sanitizeError } from '@/lib/errors';
+
 /**
  * Configuration for request cache
  */
@@ -126,11 +129,7 @@ export class RequestCache {
   /**
    * Get cached promise or execute request function
    */
-  async dedupe<T>(
-    cacheKey: string,
-    requestFn: () => Promise<T>,
-    skipDedup = false
-  ): Promise<T> {
+  async dedupe<T>(cacheKey: string, requestFn: () => Promise<T>, skipDedup = false): Promise<T> {
     // Skip deduplication if disabled or explicitly skipped
     if (!this.config.enabled || skipDedup) {
       return requestFn();
@@ -212,7 +211,7 @@ export class RequestCache {
    */
   clear(): void {
     // Clear all pending timeouts to prevent memory leaks
-    this.timeouts.forEach((timeout) => {
+    this.timeouts.forEach(timeout => {
       clearTimeout(timeout);
     });
 
@@ -251,16 +250,12 @@ export class RequestCache {
     const validated = { ...config };
 
     if (validated.ttl < 0) {
-      console.warn(
-        `RequestCache: TTL cannot be negative (${validated.ttl}), using default 100ms`
-      );
+      logger.warn(`RequestCache: TTL cannot be negative (${validated.ttl}), using default 100ms`);
       validated.ttl = 100;
     }
 
     if (validated.maxSize < 1) {
-      console.warn(
-        `RequestCache: maxSize must be >= 1 (${validated.maxSize}), using default 100`
-      );
+      logger.warn(`RequestCache: maxSize must be >= 1 (${validated.maxSize}), using default 100`);
       validated.maxSize = 100;
     }
 
@@ -400,7 +395,7 @@ export class RequestCache {
 
       // Prevent DoS via large request bodies
       if (sortedStr.length > MAX_HASH_INPUT_SIZE) {
-        console.warn(
+        logger.warn(
           `RequestCache: Request body too large for caching (${sortedStr.length} chars), forcing cache miss`
         );
         // Return random hash to force cache miss
@@ -418,7 +413,13 @@ export class RequestCache {
       return hash.toString(36);
     } catch (error) {
       // Handle circular references or other JSON errors
-      console.warn('RequestCache: Failed to hash object', error);
+      const normalizedError = error instanceof Error ? error : new Error(String(error));
+      logger.warn('RequestCache: Failed to hash object', {
+        component: 'RequestCache',
+        metadata: {
+          error: sanitizeError(normalizedError),
+        },
+      });
       // Return random hash to force cache miss
       return Math.random().toString(36).substring(2);
     }
@@ -437,12 +438,12 @@ export class RequestCache {
     }
 
     if (Array.isArray(obj)) {
-      return `[${obj.map((item) => this.stringifyWithSortedKeys(item)).join(',')}]`;
+      return `[${obj.map(item => this.stringifyWithSortedKeys(item)).join(',')}]`;
     }
 
     // Sort object keys
     const sortedKeys = Object.keys(obj).sort();
-    const pairs = sortedKeys.map((key) => {
+    const pairs = sortedKeys.map(key => {
       const value = (obj as Record<string, unknown>)[key];
       return `"${key}":${this.stringifyWithSortedKeys(value)}`;
     });
@@ -508,7 +509,9 @@ export class RequestCache {
     lines.push(`http_client_cache_evictions_total ${metrics.evictions}`);
 
     // Cache expirations counter
-    lines.push('# HELP http_client_cache_expirations_total Total number of cache expirations (TTL)');
+    lines.push(
+      '# HELP http_client_cache_expirations_total Total number of cache expirations (TTL)'
+    );
     lines.push('# TYPE http_client_cache_expirations_total counter');
     lines.push(`http_client_cache_expirations_total ${metrics.expirations}`);
 

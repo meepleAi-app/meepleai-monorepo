@@ -90,7 +90,7 @@ public static class AiEndpoints
                         RagContext = resp.snippets,
                         GameName = gameDto.Title,
                         MaxQuestions = 5
-                    }, ct);
+                    }, ct).ConfigureAwait(false);
 
                     logger.LogInformation("Generated {Count} follow-up questions for game {GameId}",
                         followUpQuestions.Count, req.gameId);
@@ -318,7 +318,7 @@ public static class AiEndpoints
             if (!authenticated) return error!;
 
             // CONFIG-05: Check if streaming responses feature is enabled
-            if (!await featureFlags.IsEnabledAsync("Features.StreamingResponses"))
+            if (!await featureFlags.IsEnabledAsync("Features.StreamingResponses").ConfigureAwait(false))
             {
                 return Results.Json(
                     new { error = "feature_disabled", message = "Streaming responses are currently disabled", featureName = "Features.StreamingResponses" },
@@ -415,7 +415,7 @@ public static class AiEndpoints
                                     RagContext = snippets,
                                     GameName = gameName,
                                     MaxQuestions = 5
-                                }, ct);
+                                }, ct).ConfigureAwait(false);
                             });
                         }
                     }
@@ -513,7 +513,7 @@ public static class AiEndpoints
             if (!authenticated) return error!;
 
             // CONFIG-05: Check if setup guide generation feature is enabled
-            if (!await featureFlags.IsEnabledAsync("Features.SetupGuideGeneration"))
+            if (!await featureFlags.IsEnabledAsync("Features.SetupGuideGeneration").ConfigureAwait(false))
             {
                 return Results.Json(
                     new { error = "feature_disabled", message = "Setup guide generation is currently unavailable", featureName = "Features.SetupGuideGeneration" },
@@ -673,7 +673,7 @@ public static class AiEndpoints
                 UserId = session.User!.Id.ToString(),
                 Outcome = string.IsNullOrWhiteSpace(req.outcome) ? null : req.outcome,
                 GameId = req.gameId
-            }, ct);
+            }, ct).ConfigureAwait(false);
 
             logger.LogInformation(
                 "Recorded feedback {Outcome} for message {MessageId} on endpoint {Endpoint} by user {UserId}",
@@ -710,7 +710,7 @@ public static class AiEndpoints
                 Question = req.question,
                 FenPosition = req.fenPosition,
                 ChatId = req.chatId
-            }, ct);
+            }, ct).ConfigureAwait(false);
             var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
 
             logger.LogInformation("Chess agent response delivered: {MoveCount} moves suggested",
@@ -871,7 +871,7 @@ public static class AiEndpoints
             {
                 Query = validatedQuery,
                 Limit = limit ?? 5
-            }, ct);
+            }, ct).ConfigureAwait(false);
 
             if (!searchResult.Success)
             {

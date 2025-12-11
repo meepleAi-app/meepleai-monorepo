@@ -10,6 +10,7 @@
 import { vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { Mock } from 'vitest';
 import { ExportChatModal } from '../ExportChatModal';
 import { exportChatAction } from '@/actions/chat';
 import type { ExportChatActionState } from '@/actions/chat';
@@ -18,6 +19,12 @@ import type { ExportChatActionState } from '@/actions/chat';
 vi.mock('@/actions/chat', () => ({
   exportChatAction: vi.fn(),
 }));
+
+// Type-safe mock reference
+const mockExportChatAction = exportChatAction as Mock<
+  [state: ExportChatActionState, formData: FormData],
+  Promise<ExportChatActionState>
+>;
 
 describe('ExportChatModal', () => {
   const mockOnClose = vi.fn();
@@ -31,7 +38,7 @@ describe('ExportChatModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Default successful response
-    (exportChatAction as any).mockResolvedValue({ success: true });
+    mockExportChatAction.mockResolvedValue({ success: true });
   });
 
   /**
@@ -130,8 +137,8 @@ describe('ExportChatModal', () => {
         expect(exportChatAction).toHaveBeenCalled();
       });
 
-      const callArgs = (exportChatAction as any).mock.calls[0];
-      const formData = callArgs[1] as FormData;
+      const callArgs = mockExportChatAction.mock.calls[0];
+      const formData = callArgs[1];
 
       expect(formData.get('chatId')).toBe('chat-123');
       expect(formData.get('format')).toBe('pdf');
@@ -147,7 +154,7 @@ describe('ExportChatModal', () => {
         expect(exportChatAction).toHaveBeenCalled();
       });
 
-      const formData = (exportChatAction as any).mock.calls[0][1] as FormData;
+      const formData = mockExportChatAction.mock.calls[0][1];
       // Date fields should not be present if not filled
       expect(formData.get('chatId')).toBe('chat-123');
       expect(formData.get('format')).toBeTruthy();
@@ -180,7 +187,7 @@ describe('ExportChatModal', () => {
         expect(exportChatAction).toHaveBeenCalled();
       });
 
-      const formData = (exportChatAction as any).mock.calls[0][1] as FormData;
+      const formData = mockExportChatAction.mock.calls[0][1];
       expect(formData.get('format')).toBe('txt');
     });
   });
@@ -190,7 +197,7 @@ describe('ExportChatModal', () => {
    */
   describe('Error Handling', () => {
     it('displays error message when export fails', async () => {
-      (exportChatAction as any).mockResolvedValue({
+      mockExportChatAction.mockResolvedValue({
         success: false,
         error: { message: 'Errore di rete' },
       });
@@ -207,7 +214,7 @@ describe('ExportChatModal', () => {
     });
 
     it('does not close modal when export fails', async () => {
-      (exportChatAction as any).mockResolvedValue({
+      mockExportChatAction.mockResolvedValue({
         success: false,
         error: { message: 'Errore' },
       });
@@ -225,7 +232,7 @@ describe('ExportChatModal', () => {
     });
 
     it('displays generic error for exceptions', async () => {
-      (exportChatAction as any).mockRejectedValue(new Error('Network error'));
+      mockExportChatAction.mockRejectedValue(new Error('Network error'));
 
       render(<ExportChatModal {...defaultProps} />);
 
@@ -245,7 +252,7 @@ describe('ExportChatModal', () => {
   describe('Loading State', () => {
     it('shows loading state during export', async () => {
       // Delay the resolution to capture loading state
-      (exportChatAction as any).mockImplementation(
+      mockExportChatAction.mockImplementation(
         () => new Promise(resolve => setTimeout(() => resolve({ success: true }), 100))
       );
 
@@ -261,7 +268,7 @@ describe('ExportChatModal', () => {
     });
 
     it('disables buttons during export', async () => {
-      (exportChatAction as any).mockImplementation(
+      mockExportChatAction.mockImplementation(
         () => new Promise(resolve => setTimeout(() => resolve({ success: true }), 100))
       );
 
@@ -338,7 +345,7 @@ describe('ExportChatModal', () => {
     });
 
     it('uses role="alert" for error messages', async () => {
-      (exportChatAction as any).mockResolvedValue({
+      mockExportChatAction.mockResolvedValue({
         success: false,
         error: { message: 'Errore' },
       });

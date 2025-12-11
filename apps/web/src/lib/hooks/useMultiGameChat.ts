@@ -247,7 +247,6 @@ export function useMultiGameChat(activeGameId: string | null): UseMultiGameChatR
       try {
         const newChat = await api.chat.createThread({
           gameId,
-          title: null,
         });
 
         if (newChat) {

@@ -333,7 +333,7 @@ public class HybridAdaptiveRoutingStrategyTests
         // Assert - Should use PreferredProvider (Ollama) instead of user-tier routing
         Assert.Equal("Ollama", decision.ProviderName);
         Assert.Equal("mistral", decision.ModelId);
-        Assert.Contains("PreferredProvider override", decision.Reason);
+        Assert.Contains("PreferredProvider override", decision.Reason, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -373,7 +373,7 @@ public class HybridAdaptiveRoutingStrategyTests
         Assert.All(decisions, d =>
         {
             Assert.Equal("OpenRouter", d.ProviderName);
-            Assert.Contains("Fallback from Ollama", d.Reason);
+            Assert.Contains("Fallback from Ollama", d.Reason, StringComparison.OrdinalIgnoreCase);
         });
     }
 
@@ -395,7 +395,7 @@ public class HybridAdaptiveRoutingStrategyTests
 
         // Act & Assert - Should throw when all providers disabled
         var exception = Assert.Throws<InvalidOperationException>(() => strategy.SelectProvider(user));
-        Assert.Contains("Both AI providers are disabled", exception.Message);
+        Assert.Contains("Both AI providers are disabled", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -423,7 +423,7 @@ public class HybridAdaptiveRoutingStrategyTests
         // Assert - Should use existing user-tier routing (Admin = 80% OpenRouter)
         var openRouterCount = decisions.Count(d => d.ProviderName == "OpenRouter");
         Assert.True(openRouterCount > 60, $"Admin should get ~80% OpenRouter, got {openRouterCount}%");
-        Assert.All(decisions, d => Assert.DoesNotContain("PreferredProvider", d.Reason));
+        Assert.All(decisions, d => Assert.DoesNotContain("PreferredProvider", d.Reason, StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]

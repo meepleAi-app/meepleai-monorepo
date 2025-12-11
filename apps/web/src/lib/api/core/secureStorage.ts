@@ -11,6 +11,9 @@
  * - Complements other security measures (CSP, httpOnly cookies, etc.)
  */
 
+import { logger } from './logger';
+import { sanitizeError } from '@/lib/errors';
+
 const ENCRYPTION_KEY_STORAGE = 'meepleai:encryption:key';
 const ALGORITHM = 'AES-GCM';
 const KEY_LENGTH = 256;
@@ -54,7 +57,13 @@ async function getOrGenerateKey(): Promise<CryptoKey> {
       );
     } catch (error) {
       // If key loading fails, generate a new one
-      console.warn('Failed to load encryption key, generating new one:', error);
+      const normalizedError = error instanceof Error ? error : new Error(String(error));
+      logger.warn('Failed to load encryption key, generating new one:', {
+        component: 'SecureStorage',
+        metadata: {
+          error: sanitizeError(normalizedError),
+        },
+      });
     }
   }
 
@@ -86,7 +95,7 @@ async function getOrGenerateKey(): Promise<CryptoKey> {
 export async function encrypt(plaintext: string): Promise<string> {
   if (!isCryptoAvailable()) {
     // Fallback: return plaintext if crypto not available (SSR, old browsers)
-    console.warn('Web Crypto API not available, storing data unencrypted');
+    logger.warn('Web Crypto API not available, storing data unencrypted');
     return plaintext;
   }
 
@@ -101,11 +110,7 @@ export async function encrypt(plaintext: string): Promise<string> {
     const data = encoder.encode(plaintext);
 
     // Encrypt
-    const encryptedBuffer = await window.crypto.subtle.encrypt(
-      { name: ALGORITHM, iv },
-      key,
-      data
-    );
+    const encryptedBuffer = await window.crypto.subtle.encrypt({ name: ALGORITHM, iv }, key, data);
 
     // Combine IV + encrypted data
     const encryptedArray = new Uint8Array(encryptedBuffer);
@@ -116,7 +121,8 @@ export async function encrypt(plaintext: string): Promise<string> {
     // Convert to base64 for storage
     return btoa(String.fromCharCode(...combined));
   } catch (error) {
-    console.error('Encryption failed:', error);
+    const normalizedError = error instanceof Error ? error : new Error(String(error));
+    logger.error('Encryption failed:', normalizedError);
     throw new Error('Failed to encrypt data');
   }
 }
@@ -154,7 +160,8 @@ export async function decrypt(encryptedData: string): Promise<string> {
     const decoder = new TextDecoder();
     return decoder.decode(decryptedBuffer);
   } catch (error) {
-    console.error('Decryption failed:', error);
+    const normalizedError = error instanceof Error ? error : new Error(String(error));
+    logger.error('Decryption failed:', normalizedError);
     throw new Error('Failed to decrypt data');
   }
 }

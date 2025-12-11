@@ -61,7 +61,7 @@ export function AuthModal({
       const user = await login(data);
       onSuccess?.(user);
       onClose();
-      await router.push('/chat');
+      await router.push('/dashboard');
     } catch (err) {
       // Error is already set in useAuth hook
       console.error('Login failed:', err);
@@ -74,7 +74,7 @@ export function AuthModal({
       const user = await register(data);
       onSuccess?.(user);
       onClose();
-      await router.push('/chat');
+      await router.push('/dashboard');
     } catch (err) {
       // Error is already set in useAuth hook
       console.error('Registration failed:', err);

@@ -7,7 +7,6 @@
  * Shows loading state and redirects based on success/error.
  */
 
-
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
@@ -22,12 +21,13 @@ function OAuthCallbackPageContent() {
   useEffect(() => {
     if (success === 'true') {
       setStatus('success');
-      const message = isNewUser === 'true'
-        ? 'Welcome! Your account has been created.'
-        : 'Successfully logged in!';
+      const message =
+        isNewUser === 'true'
+          ? 'Welcome! Your account has been created.'
+          : 'Successfully logged in!';
 
       setTimeout(() => {
-        router.push('/');
+        router.push('/dashboard');
       }, 1500);
     } else if (error) {
       setStatus('error');

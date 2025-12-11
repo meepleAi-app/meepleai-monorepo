@@ -14,3 +14,7 @@ export { CitationList } from './citations/CitationList';
 
 // Issue #1833: UI-006 - CitationLink component
 export { CitationLink } from './ui/citation-link';
+
+// Issue #898: MetricsChart component (Chart.js/Recharts)
+export { MetricsChart } from './metrics/MetricsChart';
+export type { MetricsChartProps, ChartType, DataSeries, DataPoint } from './metrics/MetricsChart';

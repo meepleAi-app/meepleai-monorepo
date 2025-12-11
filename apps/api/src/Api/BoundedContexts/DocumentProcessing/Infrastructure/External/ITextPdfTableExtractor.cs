@@ -233,7 +233,7 @@ public class ITextPdfTableExtractor : IPdfTableExtractor
                     foreach (var table in pageTables)
                     {
                         // DOMAIN DELEGATION: Convert table to atomic rules using domain service
-                        var rules = _ruleConverter.ConvertTableToAtomicRules(table);
+                        var rules = TableToAtomicRuleConverter.ConvertTableToAtomicRules(table);
                         if (rules != null && rules.Count > 0)
                         {
                             atomicRules.AddRange(rules);
@@ -311,7 +311,7 @@ public class ITextPdfTableExtractor : IPdfTableExtractor
                 foreach (var table in pageTables)
                 {
                     // DOMAIN DELEGATION: Convert table to atomic rules
-                    var rules = _ruleConverter.ConvertTableToAtomicRules(table);
+                    var rules = TableToAtomicRuleConverter.ConvertTableToAtomicRules(table);
                     if (rules != null && rules.Count > 0)
                     {
                         atomicRules.AddRange(rules);

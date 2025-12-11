@@ -134,7 +134,7 @@ public static class LoggingConfiguration
     /// Gets the HyperDX log level based on environment and configuration.
     /// Issue #1563: All environments should log to HyperDX, but threshold may vary.
     /// </summary>
-    private static LogEventLevel GetHyperDxLogLevel(IConfiguration configuration)
+    private static LogEventLevel GetHyperDxLogLevel(string environmentName, IConfiguration configuration)
     {
         // Check for explicit HyperDX log level configuration
         var configuredLevel = configuration["Logging:LogLevel:HyperDX"];

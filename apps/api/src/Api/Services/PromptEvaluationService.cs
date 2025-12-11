@@ -122,7 +122,7 @@ public class PromptEvaluationService : IPromptEvaluationService
     /// Validates dataset structure and content
     /// SECURITY: Prevents malformed datasets from causing runtime errors or resource exhaustion
     /// </summary>
-    private void ValidateDataset(PromptTestDataset dataset)
+    private static void ValidateDataset(PromptTestDataset dataset)
     {
         // Validate basic structure
         if (dataset.TestCases == null || dataset.TestCases.Count == 0)
@@ -382,7 +382,7 @@ public class PromptEvaluationService : IPromptEvaluationService
     /// <summary>
     /// Calculates accuracy: whether response contains all required keywords
     /// </summary>
-    private bool CalculateAccuracy(string response, PromptTestCase testCase)
+    private static bool CalculateAccuracy(string response, PromptTestCase testCase)
     {
         if (testCase.RequiredKeywords == null || testCase.RequiredKeywords.Count == 0)
         {
@@ -400,7 +400,7 @@ public class PromptEvaluationService : IPromptEvaluationService
     /// BGAI-041: Calculates relevance to context (anti-hallucination + topic coherence)
     /// Relevance measures appropriateness to context
     /// </summary>
-    private bool CalculateRelevance(string response, PromptTestCase testCase)
+    private static bool CalculateRelevance(string response, PromptTestCase testCase)
     {
         if (string.IsNullOrWhiteSpace(response))
             return false;
@@ -425,7 +425,7 @@ public class PromptEvaluationService : IPromptEvaluationService
     /// BGAI-041: Calculates completeness of coverage (response depth + aspect coverage)
     /// Completeness measures thoroughness of the response
     /// </summary>
-    private bool CalculateCompleteness(string response, PromptTestCase testCase)
+    private static bool CalculateCompleteness(string response, PromptTestCase testCase)
     {
         if (string.IsNullOrWhiteSpace(response))
             return false;
@@ -454,7 +454,7 @@ public class PromptEvaluationService : IPromptEvaluationService
     /// BGAI-041: Calculates clarity of output (readability + structure)
     /// Clarity measures how understandable and well-structured the response is
     /// </summary>
-    private bool CalculateClarity(string response)
+    private static bool CalculateClarity(string response)
     {
         if (string.IsNullOrWhiteSpace(response))
             return false;
@@ -481,7 +481,7 @@ public class PromptEvaluationService : IPromptEvaluationService
     /// BGAI-041: Calculates citation quality (correctness + presence)
     /// Renamed and enhanced from ValidateCitations
     /// </summary>
-    private bool CalculateCitationQuality(string response, PromptTestCase testCase)
+    private static bool CalculateCitationQuality(string response, PromptTestCase testCase)
     {
         if (testCase.ExpectedCitations == null || testCase.ExpectedCitations.Count == 0)
         {
@@ -506,7 +506,7 @@ public class PromptEvaluationService : IPromptEvaluationService
     /// <summary>
     /// BGAI-041: Generates notes for a single query result with new 5-metric framework
     /// </summary>
-    private string? GenerateQueryNotes(bool isAccurate, bool isRelevant, bool isComplete, bool isClear, bool hasGoodCitationQuality)
+    private static string? GenerateQueryNotes(bool isAccurate, bool isRelevant, bool isComplete, bool isClear, bool hasGoodCitationQuality)
     {
         var notes = new List<string>();
 
@@ -584,7 +584,7 @@ public class PromptEvaluationService : IPromptEvaluationService
     /// <summary>
     /// BGAI-041: Generates summary message for evaluation result (5-metric framework)
     /// </summary>
-    private string GenerateSummary(EvaluationMetrics metrics, Api.Models.QualityThresholds thresholds, bool passed)
+    private static string GenerateSummary(EvaluationMetrics metrics, Api.Models.QualityThresholds thresholds, bool passed)
     {
         var status = passed ? "✅ PASSED" : "❌ FAILED";
         var issues = new List<string>();
@@ -781,7 +781,7 @@ public class PromptEvaluationService : IPromptEvaluationService
     /// Generates Markdown report
     /// </summary>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Meziantou.Analyzer", "MA0051:Method is too long", Justification = "Report generation is clearer in a single method")]
-    private string GenerateMarkdownReport(PromptEvaluationResult result)
+    private static string GenerateMarkdownReport(PromptEvaluationResult result)
     {
         var sb = new StringBuilder();
 

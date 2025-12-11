@@ -232,7 +232,8 @@ public sealed record EvaluationResult
     }
 
     private static IReadOnlyDictionary<string, EvaluationMetrics> CalculateMetricsByGroup(
-                )
+        IReadOnlyList<EvaluationSampleResult> sampleResults,
+        bool getDifficulty)
     {
         // Note: This is a simplified implementation. In practice, you'd need to
         // join with the original samples to get difficulty/category metadata.

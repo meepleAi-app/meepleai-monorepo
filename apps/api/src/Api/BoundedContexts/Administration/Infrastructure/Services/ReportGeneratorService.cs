@@ -28,8 +28,8 @@ public sealed partial class ReportGeneratorService : IReportGeneratorService
         _formatters = new Dictionary<ReportFormat, IReportFormatter>
         {
             [ReportFormat.Csv] = new CsvReportFormatter(),
-            [ReportFormat.Json] = new JsonReportFormatter()
-            // PDF formatter removed - will be added with QuestPDF integration
+            [ReportFormat.Json] = new JsonReportFormatter(),
+            [ReportFormat.Pdf] = new PdfReportFormatter() // ISSUE-917: QuestPDF integration complete
         };
     }
 

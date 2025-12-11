@@ -10,10 +10,11 @@ public enum ReportFormat
     Csv = 1,
 
     /// <summary>JSON format for programmatic consumption</summary>
-    Json = 2
+    Json = 2,
 
-    // TODO: Add Pdf = 3 when QuestPDF integration is complete
-    // Currently disabled to prevent fake PDF generation (returns markdown with .pdf extension)
+    /// <summary>PDF format with charts and professional layout</summary>
+    /// <remarks>ISSUE-917: QuestPDF integration with ScottPlot charts</remarks>
+    Pdf = 3
 }
 
 /// <summary>
@@ -27,6 +28,7 @@ public static class ReportFormatExtensions
         {
             ReportFormat.Csv => "csv",
             ReportFormat.Json => "json",
+            ReportFormat.Pdf => "pdf",
             _ => throw new ArgumentOutOfRangeException(nameof(format), format, null)
         };
     }
@@ -37,6 +39,7 @@ public static class ReportFormatExtensions
         {
             ReportFormat.Csv => "text/csv",
             ReportFormat.Json => "application/json",
+            ReportFormat.Pdf => "application/pdf",
             _ => throw new ArgumentOutOfRangeException(nameof(format), format, null)
         };
     }

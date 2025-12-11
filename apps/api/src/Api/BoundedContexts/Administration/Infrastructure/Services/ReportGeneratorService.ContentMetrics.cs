@@ -71,6 +71,11 @@ public sealed partial class ReportGeneratorService
             .FirstOrDefaultAsync(ct)
             .ConfigureAwait(false);
 
+        // ISSUE-917: Enhanced with multi-line chart
+        var dateLabels = pdfMetrics.Select(m => m.Date.ToString("MMM dd")).ToArray();
+        var pdfCountValues = pdfMetrics.Select(m => (double)m.Count).ToArray();
+        var vectorCountValues = vectorMetrics.Select(v => (double)v.Count).ToArray();
+
         var sections = new List<ReportSection>
         {
             new ReportSection(
@@ -82,16 +87,33 @@ public sealed partial class ReportGeneratorService
                         ["Date"] = m.Date.ToString("yyyy-MM-dd"),
                         ["Uploads"] = m.Count,
                         ["Total Size (MB)"] = $"{m.TotalSize / 1024.0 / 1024.0:F2}"
-                    })).ToList()),
+                    })).ToList(),
+                Chart: new ChartData(
+                    Type: ChartType.Line,
+                    Labels: dateLabels,
+                    Series: new Dictionary<string, double[]>
+                    {
+                        ["Uploads"] = pdfCountValues
+                    },
+                    YAxisLabel: "Count")),
             new ReportSection(
-                Title: "Vector Document Metrics",
-                Description: "Vector embedding creation trends",
+                Title: "Content Processing Trends",
+                Description: "PDF uploads vs Vector embeddings over time",
                 Data: vectorMetrics.Select(v => new ReportDataRow(
                     new Dictionary<string, object>
                     {
                         ["Date"] = v.Date.ToString("yyyy-MM-dd"),
                         ["Documents"] = v.Count
-                    })).ToList()),
+                    })).ToList(),
+                Chart: new ChartData(
+                    Type: ChartType.MultiLine,
+                    Labels: dateLabels,
+                    Series: new Dictionary<string, double[]>
+                    {
+                        ["PDF Uploads"] = pdfCountValues,
+                        ["Vector Docs"] = vectorCountValues
+                    },
+                    YAxisLabel: "Count")),
             new ReportSection(
                 Title: "Game Catalog Summary",
                 Description: "Game catalog statistics",

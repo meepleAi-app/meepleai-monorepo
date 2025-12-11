@@ -62,11 +62,16 @@ public sealed partial class ReportGeneratorService
             .ToListAsync(ct)
             .ConfigureAwait(false);
 
+        // ISSUE-917: Enhanced with line chart and bar chart
+        var dateLabels = aiRequests.Select(r => r.Date.ToString("MMM dd")).ToArray();
+        var tokensValues = aiRequests.Select(r => (double)r.TotalTokens).ToArray();
+        var costValues = aiRequests.Select(r => (double)r.TotalCost).ToArray();
+
         var sections = new List<ReportSection>
         {
             new ReportSection(
-                Title: "Daily AI Usage",
-                Description: "AI request metrics by day",
+                Title: "Daily AI Usage Trends",
+                Description: "AI request tokens and costs over time",
                 Data: aiRequests.Select(r => new ReportDataRow(
                     new Dictionary<string, object>
                     {
@@ -74,7 +79,16 @@ public sealed partial class ReportGeneratorService
                         ["Requests"] = r.Count,
                         ["Tokens"] = r.TotalTokens,
                         ["Cost (USD)"] = $"{r.TotalCost:F4}"
-                    })).ToList()),
+                    })).ToList(),
+                Chart: new ChartData(
+                    Type: ChartType.MultiLine,
+                    Labels: dateLabels,
+                    Series: new Dictionary<string, double[]>
+                    {
+                        ["Tokens (÷1000)"] = tokensValues.Select(t => t / 1000.0).ToArray(),
+                        ["Cost (USD × 100)"] = costValues.Select(c => c * 100.0).ToArray()
+                    },
+                    YAxisLabel: "Scaled Values")),
             new ReportSection(
                 Title: "Model Usage Breakdown",
                 Description: "Usage and cost by AI model",
@@ -84,7 +98,15 @@ public sealed partial class ReportGeneratorService
                         ["Model"] = m.Model ?? "Unknown",
                         ["Requests"] = m.Count,
                         ["Total Cost (USD)"] = $"{m.TotalCost:F4}"
-                    })).ToList())
+                    })).ToList(),
+                Chart: new ChartData(
+                    Type: ChartType.Bar,
+                    Labels: modelUsage.Select(m => m.Model ?? "Unknown").ToArray(),
+                    Series: new Dictionary<string, double[]>
+                    {
+                        ["Total Cost (USD)"] = modelUsage.Select(m => (double)m.TotalCost).ToArray()
+                    },
+                    YAxisLabel: "Cost (USD)"))
         };
 
         return new ReportContent(

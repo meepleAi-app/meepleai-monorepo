@@ -36,7 +36,7 @@ public sealed class ReportingWorkflowTests : IDisposable
             .Options;
 
         var mediatorMock = new Mock<MediatR.IMediator>();
-        var eventCollectorMock = new Mock<Api.SharedKernel.Domain.Interfaces.IDomainEventCollector>();
+        var eventCollectorMock = new Mock<Api.SharedKernel.Application.Services.IDomainEventCollector>();
 
         _dbContext = new MeepleAiDbContext(options, mediatorMock.Object, eventCollectorMock.Object);
         _reportRepository = new AdminReportRepository(_dbContext);

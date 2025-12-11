@@ -56,7 +56,7 @@ public sealed partial class ReportGeneratorService
             .CountAsync(c => c.CreatedAt >= since, ct)
             .ConfigureAwait(false);
 
-        // Create report sections
+        // Create report sections with charts (ISSUE-917)
         var sections = new List<ReportSection>
         {
             new ReportSection(
@@ -84,7 +84,15 @@ public sealed partial class ReportGeneratorService
                         ["Metric"] = "Active Sessions",
                         ["Value"] = activeSessions
                     })
-                }),
+                },
+                Chart: new ChartData(
+                    Type: ChartType.Bar,
+                    Labels: ["Total Users", "Active Users", "Total Sessions", "Active Sessions"],
+                    Series: new Dictionary<string, double[]>
+                    {
+                        ["Value"] = [totalUsers, activeUsers, totalSessions, activeSessions]
+                    },
+                    YAxisLabel: "Count")),
             new ReportSection(
                 Title: "Content Metrics",
                 Description: "Content and document statistics",
@@ -115,7 +123,15 @@ public sealed partial class ReportGeneratorService
                         ["Metric"] = "Recent Chats",
                         ["Value"] = recentChats
                     })
-                })
+                },
+                Chart: new ChartData(
+                    Type: ChartType.Bar,
+                    Labels: ["Games", "Total PDFs", "Recent PDFs", "Threads", "Recent Chats"],
+                    Series: new Dictionary<string, double[]>
+                    {
+                        ["Value"] = [totalGames, totalPdfs, recentPdfs, totalChatThreads, recentChats]
+                    },
+                    YAxisLabel: "Count"))
         };
 
         return new ReportContent(

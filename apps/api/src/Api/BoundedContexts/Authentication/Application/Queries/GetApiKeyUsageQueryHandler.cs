@@ -1,3 +1,4 @@
+using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.Infrastructure;
 using Api.Models;
 using Api.SharedKernel.Application.Interfaces;
@@ -8,11 +9,16 @@ namespace Api.BoundedContexts.Authentication.Application.Queries;
 public class GetApiKeyUsageQueryHandler : IQueryHandler<GetApiKeyUsageQuery, ApiKeyQuotaDto?>
 {
     private readonly MeepleAiDbContext _db;
+    private readonly IApiKeyUsageLogRepository _usageLogRepository;
     private readonly TimeProvider _timeProvider;
 
-    public GetApiKeyUsageQueryHandler(MeepleAiDbContext db, TimeProvider? timeProvider = null)
+    public GetApiKeyUsageQueryHandler(
+        MeepleAiDbContext db,
+        IApiKeyUsageLogRepository usageLogRepository,
+        TimeProvider? timeProvider = null)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
+        _usageLogRepository = usageLogRepository ?? throw new ArgumentNullException(nameof(usageLogRepository));
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
@@ -24,6 +30,7 @@ public class GetApiKeyUsageQueryHandler : IQueryHandler<GetApiKeyUsageQuery, Api
         }
 
         var apiKey = await _db.ApiKeys
+            .AsNoTracking()
             .FirstOrDefaultAsync(k => k.Id == keyGuid && k.UserId == userGuid, cancellationToken).ConfigureAwait(false);
 
         if (apiKey == null)
@@ -32,15 +39,24 @@ public class GetApiKeyUsageQueryHandler : IQueryHandler<GetApiKeyUsageQuery, Api
         // Parse quota from metadata
         var quota = ParseQuotaFromMetadata(apiKey.Metadata);
 
-        // FUTURE ENHANCEMENT: Implement actual usage tracking from request logs
-        // For now, return placeholder data with zero usage
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+        var startOfDay = now.Date;
+        var startOfHour = new DateTime(now.Year, now.Month, now.Day, now.Hour, 0, 0, DateTimeKind.Utc);
+
+        // Get actual usage from logs
+        var requestsToday = await _usageLogRepository.GetUsageCountInRangeAsync(
+            keyGuid, startOfDay, now, cancellationToken).ConfigureAwait(false);
+
+        var requestsThisHour = await _usageLogRepository.GetUsageCountInRangeAsync(
+            keyGuid, startOfHour, now, cancellationToken).ConfigureAwait(false);
+
         return new ApiKeyQuotaDto
         {
             MaxRequestsPerDay = quota.MaxRequestsPerDay,
             MaxRequestsPerHour = quota.MaxRequestsPerHour,
-            RequestsToday = 0,
-            RequestsThisHour = 0,
-            ResetsAt = _timeProvider.GetUtcNow().UtcDateTime.Date.AddDays(1)
+            RequestsToday = requestsToday,
+            RequestsThisHour = requestsThisHour,
+            ResetsAt = startOfDay.AddDays(1)
         };
     }
 

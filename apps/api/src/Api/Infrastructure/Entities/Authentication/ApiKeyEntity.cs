@@ -83,6 +83,12 @@ public class ApiKeyEntity
     /// </summary>
     public string? Metadata { get; set; }
 
+    /// <summary>
+    /// Total number of times this API key has been successfully used for authentication.
+    /// Incremented on each successful API request.
+    /// </summary>
+    public int UsageCount { get; set; } = 0;
+
     // Navigation properties
     /// <summary>
     /// The user who owns this API key.

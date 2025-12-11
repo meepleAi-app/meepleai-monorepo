@@ -2,10 +2,13 @@ using Api.BoundedContexts.Administration.Domain.Repositories;
 using Api.BoundedContexts.Administration.Domain.Services;
 using Api.BoundedContexts.Administration.Infrastructure.External;
 using Api.BoundedContexts.Administration.Infrastructure.Persistence;
+using Api.BoundedContexts.Administration.Infrastructure.Scheduling;
+using Api.BoundedContexts.Administration.Infrastructure.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 using Polly;
 using Polly.Extensions.Http;
+using Quartz;
 
 namespace Api.BoundedContexts.Administration.Infrastructure.DependencyInjection;
 
@@ -18,6 +21,10 @@ public static class AdministrationServiceExtensions
         services.AddScoped<IAuditLogRepository, AuditLogRepository>();
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
 
+        // ISSUE-916: Reporting repositories
+        services.AddScoped<IAdminReportRepository, AdminReportRepository>();
+        services.AddScoped<IReportExecutionRepository, ReportExecutionRepository>();
+
         // Issue #891: Infrastructure health monitoring service
         services.AddScoped<IInfrastructureHealthService, InfrastructureHealthService>();
 
@@ -28,6 +35,27 @@ public static class AdministrationServiceExtensions
 
         // Issue #894: Infrastructure details orchestration service
         services.AddScoped<IInfrastructureDetailsService, InfrastructureDetailsService>();
+
+        // ISSUE-916: Report generation and scheduling services
+        services.AddScoped<IReportGeneratorService, ReportGeneratorService>();
+        services.AddScoped<IReportSchedulerService, QuartzReportSchedulerService>();
+
+        // ISSUE-916: Quartz.NET configuration for report scheduling
+        services.AddQuartz(q =>
+        {
+            q.UseMicrosoftDependencyInjectionJobFactory();
+            q.UseInMemoryStore(); // Use in-memory for alpha; can switch to DB persistence later
+
+            // Register report generation job
+            q.AddJob<GenerateReportJob>(opts => opts
+                .WithIdentity("report-job-template", "reports")
+                .StoreDurably(false));
+        });
+
+        services.AddQuartzHostedService(options =>
+        {
+            options.WaitForJobsToComplete = true;
+        });
 
         return services;
     }

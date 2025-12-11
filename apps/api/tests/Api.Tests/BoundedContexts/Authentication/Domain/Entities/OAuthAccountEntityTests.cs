@@ -580,19 +580,19 @@ public class OAuthAccountEntityTests
     [Fact]
     public void SupportedProviders_ContainsExpectedProviders()
     {
-        // Assert
-        Assert.Contains("google", OAuthAccount.SupportedProviders);
-        Assert.Contains("discord", OAuthAccount.SupportedProviders);
-        Assert.Contains("github", OAuthAccount.SupportedProviders);
+        // Assert - Use .Contains() method directly to avoid xUnit ambiguity with FrozenSet
+        Assert.True(OAuthAccount.SupportedProviders.Contains("google"));
+        Assert.True(OAuthAccount.SupportedProviders.Contains("discord"));
+        Assert.True(OAuthAccount.SupportedProviders.Contains("github"));
         Assert.Equal(3, OAuthAccount.SupportedProviders.Count);
     }
 
     [Fact]
     public void SupportedProviders_IsCaseInsensitive()
     {
-        // Assert
-        Assert.Contains("GOOGLE", OAuthAccount.SupportedProviders);
-        Assert.Contains("Discord", OAuthAccount.SupportedProviders);
-        Assert.Contains("github", OAuthAccount.SupportedProviders);
+        // Assert - Use .Contains() method directly to avoid xUnit ambiguity with FrozenSet
+        Assert.True(OAuthAccount.SupportedProviders.Contains("GOOGLE"));
+        Assert.True(OAuthAccount.SupportedProviders.Contains("Discord"));
+        Assert.True(OAuthAccount.SupportedProviders.Contains("github"));
     }
 }

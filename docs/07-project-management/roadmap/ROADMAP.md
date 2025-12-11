@@ -165,7 +165,7 @@
 
 | # | Issue | Type | Priority | Effort | Dependencies | Execution |
 |---|-------|------|----------|--------|--------------|-----------|
-| 11 | [#901](https://github.com/DegrassiAaron/meepleai-monorepo/issues/901) - Grafana embed iframe | 🔄 Both | P3 | 1d | #894,#899 | 🔗 After BE+FE |
+| 11 | [#901](https://github.com/DegrassiAaron/meepleai-monorepo/issues/901) - Grafana embed iframe | ✅ Frontend | P3 | 1d (0.5d) | #894,#899 | ✅ COMPLETE |
 | 12 | [#902](https://github.com/DegrassiAaron/meepleai-monorepo/issues/902) - E2E test + Load test | 🧪 Testing | P3 | 2-3d | #901 | 🔗 After Integration |
 
 **Parallelization**: Backend Track (#891||#893) || Frontend Track (#896||#897||#898)

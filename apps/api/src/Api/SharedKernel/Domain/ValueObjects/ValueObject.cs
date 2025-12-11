@@ -5,6 +5,13 @@ namespace Api.SharedKernel.Domain.ValueObjects;
 /// Value objects are immutable and have no identity.
 /// Equality is based on the values of all properties.
 /// </summary>
+/// <remarks>
+/// This class implements IEquatable{T} but is intentionally left abstract (not sealed)
+/// to support DDD value object hierarchies. The equality contract is fixed to structural comparison
+/// via GetEqualityComponents() and should not be overridden to maintain value object semantics.
+/// S4035 is suppressed as this design is intentional for DDD base classes.
+/// </remarks>
+#pragma warning disable S4035 // Classes implementing "IEquatable<T>" should be sealed or implement "IEqualityComparer<T>"
 public abstract class ValueObject : IEquatable<ValueObject>
 {
     /// <summary>
@@ -44,3 +51,4 @@ public abstract class ValueObject : IEquatable<ValueObject>
         return !Equals(left, right);
     }
 }
+#pragma warning restore S4035

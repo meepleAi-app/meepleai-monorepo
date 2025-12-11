@@ -17,3 +17,11 @@
 export { CHAT_CONFIG, type ChatConfigKey } from './chat';
 export { UI_CONFIG, type UiConfigKey } from './ui';
 export { API_CONFIG, type ApiConfigKey } from './api';
+export {
+  GRAFANA_DASHBOARDS,
+  getGrafanaBaseUrl,
+  buildGrafanaEmbedUrl,
+  getDashboardById,
+  DEFAULT_DASHBOARD,
+  type GrafanaDashboard,
+} from './grafana-dashboards';

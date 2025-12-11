@@ -2,6 +2,7 @@ using System.Text.Json;
 using Api.BoundedContexts.Administration.Domain.Services;
 using Microsoft.Extensions.Options;
 
+#pragma warning disable MA0048 // File name must match type name - Contains Interface with supporting types
 namespace Api.BoundedContexts.Administration.Infrastructure.External;
 
 /// <summary>

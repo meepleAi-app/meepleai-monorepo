@@ -11,6 +11,7 @@ using DddGetUserProfileQuery = Api.BoundedContexts.Authentication.Application.Qu
 using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Application.Queries;
 
+#pragma warning disable MA0048 // File name must match type name - Contains Interface with supporting types
 namespace Api.Routing;
 
 /// <summary>

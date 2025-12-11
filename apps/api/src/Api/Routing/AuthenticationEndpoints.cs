@@ -230,9 +230,9 @@ Clients can also store the key securely and send it via the `Authorization: ApiK
                 return Results.Json(new { user, expiresAt = (DateTime?)null }); // API keys don't have session expiration
             }
 
-            // Fall back to cookie-based session auth
-            // Issue #1676 Phase 2: Return session user directly (ActiveSession.User is already AuthUser for compatibility)
-            if (context.Items.TryGetValue(nameof(ActiveSession), out var value) && value is ActiveSession session)
+            // Fall back to cookie-based session auth (DDD SessionStatusDto)
+            var (authenticated, session, _) = context.TryGetActiveSession();
+            if (authenticated)
             {
                 return Results.Json(new { user = session.User, expiresAt = session.ExpiresAt });
             }

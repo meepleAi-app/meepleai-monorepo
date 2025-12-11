@@ -11,6 +11,7 @@ using Api.Models;
 using System.Globalization;
 using Microsoft.Extensions.Logging;
 
+#pragma warning disable MA0048 // File name must match type name - Contains Service with Configuration classes
 namespace Api.Services;
 
 /// <summary>

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using Api.Services; // AI-14: For SearchMode enum
 
+#pragma warning disable MA0048 // File name must match type name - Contains related domain models
 namespace Api.Models;
 
 /// <summary>

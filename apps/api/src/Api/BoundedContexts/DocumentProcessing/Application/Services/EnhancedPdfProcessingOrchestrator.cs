@@ -8,6 +8,7 @@ using Api.Observability;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
+#pragma warning disable MA0048 // File name must match type name - Contains Interface with supporting types
 namespace Api.BoundedContexts.DocumentProcessing.Application.Services;
 
 /// <summary>

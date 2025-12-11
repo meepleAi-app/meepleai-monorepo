@@ -121,7 +121,7 @@ Phase 1 successfully implemented `RequireSessionFilter` and refactored 14 endpoi
 
    // AFTER
    // Session validated by RequireSessionFilter
-   var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+   var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
    // ... endpoint logic
    })
    .RequireSession(); // Add filter declaration
@@ -140,7 +140,7 @@ Phase 1 successfully implemented `RequireSessionFilter` and refactored 14 endpoi
 
    // AFTER
    // Session validated AND Admin role checked by RequireAdminSessionFilter
-   var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+   var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
    // ... endpoint logic
    })
    .RequireAdminSession(); // Combines session + role check

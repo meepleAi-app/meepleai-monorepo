@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Globalization;
 
+#pragma warning disable MA0048 // File name must match type name - Contains Interface with supporting types
 namespace Api.BoundedContexts.SystemConfiguration.Domain.Services;
 
 /// <summary>

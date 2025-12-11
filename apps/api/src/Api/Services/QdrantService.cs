@@ -5,6 +5,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Qdrant.Client.Grpc;
 using System.Diagnostics;
+
+#pragma warning disable MA0048 // File name must match type name - Contains Service with Configuration classes
 namespace Api.Services;
 /// <summary>
 /// Qdrant vector database adapter.

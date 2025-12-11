@@ -2,6 +2,7 @@ using System.Text;
 using Api.BoundedContexts.KnowledgeBase.Domain.GridSearch;
 using Api.BoundedContexts.KnowledgeBase.Domain.Reports;
 
+#pragma warning disable MA0048 // File name must match type name - Contains Service with Configuration classes
 namespace Api.BoundedContexts.KnowledgeBase.Application.Reports.Services;
 
 /// <summary>

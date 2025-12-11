@@ -87,6 +87,10 @@ dotnet_diagnostic.CA1063.severity = warning
 # CODE QUALITY: Fix Generic Catch Clauses (Issue #735)
 dotnet_diagnostic.CA1031.severity = warning
 
+# MA0048: File name must match type name
+# CODE ORGANIZATION: Enforce one-type-per-file rule (Issue #2068)
+dotnet_diagnostic.MA0048.severity = warning
+
 # CODE-02: Null Reference Safety Rules
 # CS8600: Converting null literal or possible null value to non-nullable type
 dotnet_diagnostic.CS8600.severity = error

@@ -184,10 +184,10 @@
 
 | # | Issue | Type | Priority | Effort | Dependencies | Execution |
 |---|-------|------|----------|--------|--------------|-----------|
-| 1 | [#904](https://github.com/DegrassiAaron/meepleai-monorepo/issues/904) - ApiKeyManagementService | 🔧 Backend | P3 | 1-2d | FASE 2 done | 🔗 After FASE 2 |
-| 2 | [#905](https://github.com/DegrassiAaron/meepleai-monorepo/issues/905) - Admin handlers - Bulk ops | 🔧 Backend | P3 | 1-2d | None | ⚡ Start |
-| 3 | [#906](https://github.com/DegrassiAaron/meepleai-monorepo/issues/906) - CSV import/export | 🔧 Backend | P3 | 1d | #905 | 🔗 After #905 |
-| 4 | [#907](https://github.com/DegrassiAaron/meepleai-monorepo/issues/907) - Unit tests bulk ops | 🧪 Testing | P3 | 1-2d | #904-906 | 🔗 After Backend |
+| 1 | [#904](https://github.com/DegrassiAaron/meepleai-monorepo/issues/904) - ApiKeyManagementService | 🔧 Backend | P3 | 1-2d | FASE 2 done | ✅ Complete |
+| 2 | [#905](https://github.com/DegrassiAaron/meepleai-monorepo/issues/905) - Admin handlers - Bulk ops | 🔧 Backend | P3 | 1-2d | None | ✅ Complete |
+| 3 | [#906](https://github.com/DegrassiAaron/meepleai-monorepo/issues/906) - CSV import/export | 🔧 Backend | P3 | 1d | #905 | ✅ Complete |
+| 4 | [#907](https://github.com/DegrassiAaron/meepleai-monorepo/issues/907) - E2E tests bulk ops | 🧪 Testing | P3 | 1-2d | #904-906 | ✅ Complete |
 
 ### Frontend Track (3-5 days)
 

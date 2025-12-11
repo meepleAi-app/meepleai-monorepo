@@ -34,13 +34,36 @@ public sealed record ReportContent(
 
 /// <summary>
 /// Report section with data
+/// ISSUE-917: Extended with chart data support
 /// </summary>
 public sealed record ReportSection(
     string Title,
     string? Description,
-    IReadOnlyList<ReportDataRow> Data);
+    IReadOnlyList<ReportDataRow> Data,
+    ChartData? Chart = null);
 
 /// <summary>
 /// Report data row
 /// </summary>
 public sealed record ReportDataRow(IReadOnlyDictionary<string, object> Values);
+
+/// <summary>
+/// Chart data for visualization
+/// ISSUE-917: Chart generation support
+/// </summary>
+public sealed record ChartData(
+    ChartType Type,
+    string[] Labels,
+    Dictionary<string, double[]> Series,
+    string? YAxisLabel = null);
+
+/// <summary>
+/// Chart type enumeration
+/// </summary>
+public enum ChartType
+{
+    Line,
+    Bar,
+    MultiLine,
+    StackedBar
+}

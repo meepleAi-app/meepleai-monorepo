@@ -68,6 +68,11 @@ public sealed partial class ReportGeneratorService
             .ToListAsync(ct)
             .ConfigureAwait(false);
 
+        // ISSUE-917: Enhanced with multi-line chart
+        var dateLabels = registrations.Select(r => r.Date.ToString("MMM dd")).ToArray();
+        var registrationValues = registrations.Select(r => (double)r.Count).ToArray();
+        var loginValues = logins.Select(l => (double)l.Count).ToArray();
+
         var sections = new List<ReportSection>
         {
             new ReportSection(
@@ -78,25 +83,33 @@ public sealed partial class ReportGeneratorService
                     {
                         ["Date"] = r.Date.ToString("yyyy-MM-dd"),
                         ["Registrations"] = r.Count
-                    })).ToList()),
+                    })).ToList(),
+                Chart: new ChartData(
+                    Type: ChartType.Line,
+                    Labels: dateLabels,
+                    Series: new Dictionary<string, double[]>
+                    {
+                        ["Registrations"] = registrationValues
+                    },
+                    YAxisLabel: "Count")),
             new ReportSection(
-                Title: "User Logins",
-                Description: "Daily login activity",
+                Title: "User Engagement Trends",
+                Description: "Daily login and session activity comparison",
                 Data: logins.Select(l => new ReportDataRow(
                     new Dictionary<string, object>
                     {
                         ["Date"] = l.Date.ToString("yyyy-MM-dd"),
                         ["Logins"] = l.Count
-                    })).ToList()),
-            new ReportSection(
-                Title: "Session Activity",
-                Description: "Daily session creation",
-                Data: sessions.Select(s => new ReportDataRow(
-                    new Dictionary<string, object>
+                    })).ToList(),
+                Chart: new ChartData(
+                    Type: ChartType.MultiLine,
+                    Labels: dateLabels,
+                    Series: new Dictionary<string, double[]>
                     {
-                        ["Date"] = s.Date.ToString("yyyy-MM-dd"),
-                        ["Sessions"] = s.Count
-                    })).ToList())
+                        ["Logins"] = loginValues,
+                        ["Sessions"] = sessions.Select(s => (double)s.Count).ToArray()
+                    },
+                    YAxisLabel: "Count"))
         };
 
         return new ReportContent(

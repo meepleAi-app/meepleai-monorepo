@@ -1,81 +1,239 @@
-using System.Text;
+using QuestPDF.Fluent;
+using QuestPDF.Helpers;
+using QuestPDF.Infrastructure;
 
 namespace Api.BoundedContexts.Administration.Infrastructure.Services.Formatters;
 
 /// <summary>
-/// PDF report formatter (Markdown-based)
-/// ISSUE-916: Formats reports as PDF using markdown conversion
-/// NOTE: Currently generates markdown format - can be enhanced with QuestPDF later
+/// PDF report formatter using QuestPDF
+/// ISSUE-917: Professional PDF generation with charts
 /// </summary>
 public sealed class PdfReportFormatter : IReportFormatter
 {
+    private readonly ChartGenerationService _chartService;
+
+    public PdfReportFormatter()
+    {
+        _chartService = new ChartGenerationService();
+
+        // Configure QuestPDF license (Community license for non-commercial use)
+        QuestPDF.Settings.License = LicenseType.Community;
+    }
+
     public byte[] Format(ReportContent content)
     {
-        var sb = new StringBuilder();
-
-        // Title and metadata
-        sb.AppendLine($"# {content.Title}");
-        sb.AppendLine();
-        sb.AppendLine(content.Description);
-        sb.AppendLine();
-        sb.AppendLine($"**Generated**: {content.GeneratedAt:yyyy-MM-dd HH:mm:ss} UTC");
-        sb.AppendLine();
-
-        // Metadata section
-        if (content.Metadata.Count > 0)
+        var document = Document.Create(container =>
         {
-            sb.AppendLine("## Metadata");
-            sb.AppendLine();
-            foreach (var (key, value) in content.Metadata)
+            container.Page(page =>
             {
-                sb.AppendLine($"- **{key}**: {value}");
-            }
-            sb.AppendLine();
-        }
-
-        // Sections
-        foreach (var section in content.Sections)
-        {
-            sb.AppendLine($"## {section.Title}");
-            sb.AppendLine();
-
-            if (!string.IsNullOrWhiteSpace(section.Description))
-            {
-                sb.AppendLine(section.Description);
-                sb.AppendLine();
-            }
-
-            if (section.Data.Count > 0)
-            {
-                // Markdown table
-                var columns = section.Data[0].Values.Keys.ToList();
+                page.Size(PageSizes.A4);
+                page.Margin(2, Unit.Centimetre);
+                page.PageColor(Colors.White);
+                page.DefaultTextStyle(x => x.FontSize(11).FontFamily("Arial"));
 
                 // Header
-                sb.AppendLine($"| {string.Join(" | ", columns)} |");
-                sb.AppendLine($"| {string.Join(" | ", columns.Select(_ => "---"))} |");
-
-                // Data rows
-                foreach (var row in section.Data)
-                {
-                    var values = columns.Select(col =>
+                page.Header()
+                    .Column(column =>
                     {
-                        row.Values.TryGetValue(col, out var value);
-                        return value?.ToString() ?? string.Empty;
+                        column.Item().Text(content.Title)
+                            .FontSize(24)
+                            .Bold()
+                            .FontColor(Colors.Blue.Darken2);
+
+                        column.Item().PaddingTop(5).Text(content.Description)
+                            .FontSize(12)
+                            .FontColor(Colors.Grey.Darken1);
+
+                        column.Item().PaddingTop(5).Text($"Generated: {content.GeneratedAt:yyyy-MM-dd HH:mm:ss} UTC")
+                            .FontSize(10)
+                            .FontColor(Colors.Grey.Medium);
+
+                        column.Item().PaddingTop(10).LineHorizontal(1).LineColor(Colors.Grey.Lighten1);
                     });
-                    sb.AppendLine($"| {string.Join(" | ", values)} |");
+
+                // Content
+                page.Content()
+                    .PaddingVertical(1, Unit.Centimetre)
+                    .Column(column =>
+                    {
+                        // Metadata section (if present)
+                        if (content.Metadata.Count > 0)
+                        {
+                            column.Item().Element(c => RenderMetadata(c, content.Metadata));
+                            column.Item().PaddingTop(10);
+                        }
+
+                        // Sections
+                        foreach (var section in content.Sections)
+                        {
+                            column.Item().Element(c => RenderSection(c, section));
+                            column.Item().PaddingTop(15);
+                        }
+                    });
+
+                // Footer
+                page.Footer()
+                    .AlignCenter()
+                    .Text(x =>
+                    {
+                        x.Span("Page ");
+                        x.CurrentPageNumber();
+                        x.Span(" of ");
+                        x.TotalPages();
+                        x.Span(" | Generated by MeepleAI Administration Console");
+                    });
+            });
+        });
+
+        using var ms = new MemoryStream();
+        document.GeneratePdf(ms);
+        return ms.ToArray();
+    }
+
+    private void RenderMetadata(IContainer container, IReadOnlyDictionary<string, object> metadata)
+    {
+        container.Background(Colors.Grey.Lighten3)
+            .Padding(10)
+            .Column(column =>
+            {
+                column.Item().Text("Report Metadata")
+                    .FontSize(14)
+                    .Bold()
+                    .FontColor(Colors.Blue.Darken1);
+
+                column.Item().PaddingTop(5);
+
+                foreach (var (key, value) in metadata)
+                {
+                    column.Item().Row(row =>
+                    {
+                        row.RelativeItem(4).Text($"{key}:").Bold();
+                        row.RelativeItem(6).Text(value.ToString() ?? string.Empty);
+                    });
                 }
+            });
+    }
 
-                sb.AppendLine();
+    private void RenderSection(IContainer container, ReportSection section)
+    {
+        container.Column(column =>
+        {
+            // Section title
+            column.Item().Text(section.Title)
+                .FontSize(16)
+                .Bold()
+                .FontColor(Colors.Blue.Darken1);
+
+            // Section description
+            if (!string.IsNullOrWhiteSpace(section.Description))
+            {
+                column.Item().PaddingTop(3).Text(section.Description)
+                    .FontSize(11)
+                    .FontColor(Colors.Grey.Darken1);
             }
-        }
 
-        // Footer
-        sb.AppendLine("---");
-        sb.AppendLine($"*Report generated by MeepleAI Administration Console*");
+            column.Item().PaddingTop(8);
 
-        // TODO: Convert markdown to actual PDF using a library like QuestPDF
-        // For now, return markdown as bytes
-        return Encoding.UTF8.GetBytes(sb.ToString());
+            // Chart (if present)
+            if (section.Chart is not null)
+            {
+                column.Item().Element(c => RenderChart(c, section.Chart));
+                column.Item().PaddingTop(10);
+            }
+
+            // Data table
+            if (section.Data.Count > 0)
+            {
+                column.Item().Element(c => RenderTable(c, section.Data));
+            }
+        });
+    }
+
+    private void RenderChart(IContainer container, ChartData chartData)
+    {
+        byte[] chartBytes = chartData.Type switch
+        {
+            ChartType.Line when chartData.Series.Count == 1 =>
+                _chartService.GenerateLineChart(
+                    string.Empty, // Title already in section
+                    chartData.Labels,
+                    chartData.Series.First().Value,
+                    chartData.YAxisLabel ?? "Value"),
+
+            ChartType.Bar when chartData.Series.Count == 1 =>
+                _chartService.GenerateBarChart(
+                    string.Empty,
+                    chartData.Labels,
+                    chartData.Series.First().Value,
+                    chartData.YAxisLabel ?? "Value"),
+
+            ChartType.MultiLine =>
+                _chartService.GenerateMultiLineChart(
+                    string.Empty,
+                    chartData.Labels,
+                    chartData.Series,
+                    chartData.YAxisLabel ?? "Value"),
+
+            ChartType.StackedBar =>
+                _chartService.GenerateStackedBarChart(
+                    string.Empty,
+                    chartData.Labels,
+                    chartData.Series,
+                    chartData.YAxisLabel ?? "Value"),
+
+            _ => throw new ArgumentOutOfRangeException(nameof(chartData.Type), chartData.Type, "Unknown chart type")
+        };
+
+        container.Image(chartBytes);
+    }
+
+    private void RenderTable(IContainer container, IReadOnlyList<ReportDataRow> data)
+    {
+        if (data.Count == 0) return;
+
+        var columns = data[0].Values.Keys.ToList();
+
+        container.Table(table =>
+        {
+            // Define columns
+            table.ColumnsDefinition(columnsDefinition =>
+            {
+                foreach (var _ in columns)
+                {
+                    columnsDefinition.RelativeColumn();
+                }
+            });
+
+            // Header
+            table.Header(header =>
+            {
+                foreach (var column in columns)
+                {
+                    header.Cell()
+                        .Background(Colors.Blue.Darken2)
+                        .Padding(5)
+                        .Text(column)
+                        .FontSize(11)
+                        .Bold()
+                        .FontColor(Colors.White);
+                }
+            });
+
+            // Data rows
+            foreach (var row in data)
+            {
+                foreach (var column in columns)
+                {
+                    row.Values.TryGetValue(column, out var value);
+                    table.Cell()
+                        .Border(0.5f)
+                        .BorderColor(Colors.Grey.Lighten1)
+                        .Padding(5)
+                        .Text(value?.ToString() ?? string.Empty)
+                        .FontSize(10);
+                }
+            }
+        });
     }
 
     public string GetFileExtension() => "pdf";

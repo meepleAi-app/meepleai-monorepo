@@ -99,7 +99,7 @@ export function ServiceCard({
   const Icon = config.icon;
   // Safe access with known keys
   const serviceKey = serviceName as keyof typeof i18n.services;
-  // eslint-disable-next-line security/detect-object-injection -- serviceKey is type-checked keyof
+
   const displayName = (
     serviceKey in i18n.services ? i18n.services[serviceKey] : serviceName
   ) as string;

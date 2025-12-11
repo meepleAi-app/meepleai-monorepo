@@ -198,6 +198,64 @@ export const ApiKeyLoginResponseSchema = z.object({
 
 export type ApiKeyLoginResponse = z.infer<typeof ApiKeyLoginResponseSchema>;
 
+// ========== API Key Management (Issue #909) ==========
+
+/**
+ * Schema for API Key DTO
+ */
+export const ApiKeyDtoSchema = z.object({
+  id: z.string().uuid(),
+  keyName: z.string().min(1),
+  keyPrefix: z.string().min(1),
+  scopes: z.string().min(1),
+  createdAt: z.string().datetime(),
+  expiresAt: z.string().datetime().nullable(),
+  lastUsedAt: z.string().datetime().nullable(),
+  isActive: z.boolean(),
+});
+
+export type ApiKeyDto = z.infer<typeof ApiKeyDtoSchema>;
+
+/**
+ * Schema for Create API Key Request
+ */
+export const CreateApiKeyRequestSchema = z.object({
+  keyName: z.string().min(3).max(100),
+  scopes: z.string().min(1),
+  expiresAt: z.string().datetime().nullable().optional(),
+  metadata: z.string().nullable().optional(),
+});
+
+export type CreateApiKeyRequest = z.infer<typeof CreateApiKeyRequestSchema>;
+
+/**
+ * Schema for Create API Key Response
+ * Includes the plaintext key (only shown once)
+ */
+export const CreateApiKeyResponseSchema = z.object({
+  id: z.string().uuid(),
+  keyName: z.string().min(1),
+  keyPrefix: z.string().min(1),
+  plaintextKey: z.string().min(1),
+  scopes: z.string().min(1),
+  createdAt: z.string().datetime(),
+  expiresAt: z.string().datetime().nullable(),
+});
+
+export type CreateApiKeyResponse = z.infer<typeof CreateApiKeyResponseSchema>;
+
+/**
+ * Schema for List API Keys Response
+ */
+export const ListApiKeysResponseSchema = z.object({
+  items: z.array(ApiKeyDtoSchema),
+  total: z.number().int().nonnegative(),
+  page: z.number().int().positive(),
+  pageSize: z.number().int().positive(),
+});
+
+export type ListApiKeysResponse = z.infer<typeof ListApiKeysResponseSchema>;
+
 // ========== User Search (Admin) ==========
 
 export const UserSearchResultSchema = z.object({

@@ -6,6 +6,7 @@
  */
 
 import { z } from 'zod';
+import { ApiKeyDtoSchema } from './auth.schemas';
 
 // ========== User Management ==========
 
@@ -391,18 +392,9 @@ export type InfrastructureDetails = z.infer<typeof InfrastructureDetailsSchema>;
 
 // ========== API Key Management (Issue #908) ==========
 
-export const ApiKeyDtoSchema = z.object({
-  id: z.string().uuid(),
-  keyName: z.string().min(1),
-  keyPrefix: z.string().min(1),
-  scopes: z.string(),
-  createdAt: z.string().datetime(),
-  expiresAt: z.string().datetime().nullable().optional(),
-  lastUsedAt: z.string().datetime().nullable().optional(),
-  isActive: z.boolean(),
-});
-
-export type ApiKeyDto = z.infer<typeof ApiKeyDtoSchema>;
+// Re-export ApiKeyDto from auth.schemas to avoid duplication
+export type { ApiKeyDto } from './auth.schemas';
+export { ApiKeyDtoSchema } from './auth.schemas';
 
 export const ApiKeyUsageStatsDtoSchema = z.object({
   keyId: z.string().uuid(),
@@ -423,26 +415,9 @@ export const ApiKeyWithStatsDtoSchema = z.object({
 
 export type ApiKeyWithStatsDto = z.infer<typeof ApiKeyWithStatsDtoSchema>;
 
-export const CreateApiKeyRequestSchema = z.object({
-  keyName: z.string().min(1),
-  scopes: z.string().min(1),
-  expiresAt: z.string().datetime().nullable().optional(),
-  metadata: z.string().nullable().optional(),
-});
-
-export type CreateApiKeyRequest = z.infer<typeof CreateApiKeyRequestSchema>;
-
-export const CreateApiKeyResponseSchema = z.object({
-  id: z.string().uuid(),
-  keyName: z.string().min(1),
-  keyPrefix: z.string().min(1),
-  plaintextKey: z.string().min(1),
-  scopes: z.string(),
-  createdAt: z.string().datetime(),
-  expiresAt: z.string().datetime().nullable().optional(),
-});
-
-export type CreateApiKeyResponse = z.infer<typeof CreateApiKeyResponseSchema>;
+// Re-export CreateApiKey schemas from auth.schemas to avoid duplication
+export type { CreateApiKeyRequest, CreateApiKeyResponse } from './auth.schemas';
+export { CreateApiKeyRequestSchema, CreateApiKeyResponseSchema } from './auth.schemas';
 
 export const UpdateApiKeyRequestSchema = z.object({
   keyName: z.string().min(1).optional(),

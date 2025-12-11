@@ -527,7 +527,7 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
         // Arrange
         _output("🔴 SECURITY TEST: Backup code single-use enforcement");
         var (user, backupCodes) = await SeedUserWith2FAAndBackupCodesAsync();
-        var validBackupCode = backupCodes.First();
+        var validBackupCode = backupCodes[0];
 
         // Act - Use same backup code twice
         var firstAttempt = await _totpService!.VerifyBackupCodeAsync(user.Id, validBackupCode, TestCancellationToken);
@@ -551,7 +551,7 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
         // Arrange
         _output("🔴 SECURITY TEST: Race condition prevention for backup code usage");
         var (user, backupCodes) = await SeedUserWith2FAAndBackupCodesAsync();
-        var targetBackupCode = backupCodes.First();
+        var targetBackupCode = backupCodes[0];
 
         // Act - Simulate concurrent usage from 2 different sessions
         var task1 = _totpService!.VerifyBackupCodeAsync(user.Id, targetBackupCode, TestCancellationToken);
@@ -645,7 +645,7 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
         // Arrange
         _output("🔴 SECURITY TEST: Timing attack resistance (backup code verification)");
         var (user, backupCodes) = await SeedUserWith2FAAndBackupCodesAsync();
-        var validBackupCode = backupCodes.First();
+        var validBackupCode = backupCodes[0];
 
         var validTimings = new List<long>();
         var invalidTimings = new List<long>();
@@ -668,7 +668,7 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
 
         // Assert
         var invalidAvg = invalidTimings.Average();
-        var validTime = validTimings.First();
+        var validTime = validTimings[0];
         var timingDifference = Math.Abs(validTime - invalidAvg) / Math.Max(validTime, invalidAvg);
 
         _output($"Valid backup code: {validTime:F2} ticks");

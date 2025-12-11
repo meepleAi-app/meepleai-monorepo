@@ -109,7 +109,7 @@ public class GetLinkedOAuthAccountsQueryHandlerTests
         Assert.NotNull(result);
         Assert.Single(result.Accounts);
 
-        var dto = result.Accounts.First();
+        var dto = result.Accounts[0];
         Assert.Equal(accountId, dto.Id);
         Assert.Equal("google", dto.Provider);
         Assert.Equal("google_user_123", dto.ProviderUserId);

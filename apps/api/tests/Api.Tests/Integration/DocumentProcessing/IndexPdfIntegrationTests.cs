@@ -278,8 +278,8 @@ public sealed class IndexPdfIntegrationTests : IAsyncLifetime
         string status = "completed",
         bool withVectorDoc = false)
     {
-        var gameId = _dbContext!.Games.First().Id;
-        var userId = _dbContext.Users.First().Id;
+        var gameId = (await _dbContext!.Games.FirstAsync()).Id;
+        var userId = (await _dbContext.Users.FirstAsync()).Id;
 
         var pdfDoc = new PdfDocumentEntity
         {

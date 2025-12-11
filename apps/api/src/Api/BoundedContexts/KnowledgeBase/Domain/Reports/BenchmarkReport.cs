@@ -106,8 +106,7 @@ public sealed record BenchmarkReport
 
         // Fallback: best recall regardless of latency
         return results
-            .OrderByDescending(r => r.Metrics.RecallAt10)
-            .First()
+            .MaxBy(r => r.Metrics.RecallAt10)!
             .Configuration.ConfigurationId;
     }
 }

@@ -222,7 +222,7 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
 
         var userSessions = await sessionRepository.GetByUserIdAsync(user.Id, TestCancellationToken);
         userSessions.Should().ContainSingle();
-        userSessions.First().IsValid(_timeProvider).Should().BeTrue();
+        userSessions[0].IsValid(_timeProvider).Should().BeTrue();
 
         var loadedGameSession = await gameSessionRepository.GetByIdAsync(gameSession.Id, TestCancellationToken);
         loadedGameSession.Should().NotBeNull();
@@ -285,7 +285,7 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
         // Act & Assert
         var userSessions = await sessionRepository.GetByUserIdAsync(user.Id, TestCancellationToken);
         userSessions.Should().ContainSingle();
-        var loadedSession = userSessions.First();
+        var loadedSession = userSessions[0];
         loadedSession.IsValid(fakeTimeProvider).Should().BeFalse();
         loadedSession.IsExpired(fakeTimeProvider).Should().BeTrue();
 
@@ -348,7 +348,7 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
         {
             var userSessions = await sessionRepository.GetByUserIdAsync(userId, TestCancellationToken);
             userSessions.Should().ContainSingle();
-            userSessions.First().IsValid(_timeProvider).Should().BeTrue();
+            userSessions[0].IsValid(_timeProvider).Should().BeTrue();
         }
 
         var loadedGameSession = await gameSessionRepository.GetByIdAsync(gameSession.Id, TestCancellationToken);
@@ -408,7 +408,7 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
 
         var allUserSessions = await sessionRepository.GetByUserIdAsync(user.Id, TestCancellationToken);
         allUserSessions.Should().ContainSingle();
-        allUserSessions.First().IsRevoked().Should().BeTrue();
+        allUserSessions[0].IsRevoked().Should().BeTrue();
 
         var loadedGameSession = await gameSessionRepository.GetByIdAsync(gameSession.Id, TestCancellationToken);
         loadedGameSession.Should().NotBeNull();

@@ -363,7 +363,7 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
 
         var gameVectors = await vectorRepository.GetByGameIdAsync(game.Id, TestCancellationToken);
         gameVectors.Should().ContainSingle();
-        gameVectors.First().Metadata.Should().Contain("outbreak");
+        gameVectors[0].Metadata.Should().Contain("outbreak");
     }
 
     [Fact]

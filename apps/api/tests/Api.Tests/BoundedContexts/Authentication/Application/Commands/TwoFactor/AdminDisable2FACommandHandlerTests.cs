@@ -304,7 +304,7 @@ public class AdminDisable2FACommandHandlerTests
         var domainEvents = targetUser.DomainEvents;
         var twoFactorDisabledEvents = domainEvents.OfType<Api.BoundedContexts.Authentication.Domain.Events.TwoFactorDisabledEvent>().ToList();
         Assert.Single(twoFactorDisabledEvents);
-        var twoFactorEvent = twoFactorDisabledEvents.First();
+        var twoFactorEvent = twoFactorDisabledEvents[0];
         Assert.NotNull(twoFactorEvent);
         Assert.Equal(targetUserId, twoFactorEvent.UserId);
         Assert.True(twoFactorEvent.WasAdminOverride); // Should be marked as admin override

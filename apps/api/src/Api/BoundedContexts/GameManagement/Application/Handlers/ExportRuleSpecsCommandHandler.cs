@@ -40,7 +40,7 @@ public class ExportRuleSpecsCommandHandler : ICommandHandler<ExportRuleSpecsComm
             .AsNoTracking()
             .Where(rs => command.GameIds.Contains(rs.GameId))
             .GroupBy(rs => rs.GameId)
-            .Select(g => g.OrderByDescending(rs => rs.CreatedAt).First().Id)
+            .Select(g => g.MaxBy(rs => rs.CreatedAt)!.Id)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         var ruleSpecs = await _dbContext.RuleSpecs

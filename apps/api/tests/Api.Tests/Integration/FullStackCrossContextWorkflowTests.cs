@@ -216,7 +216,7 @@ public sealed class FullStackCrossContextWorkflowTests : IAsyncLifetime
 
         var userSessions = await sessionRepository.GetByUserIdAsync(user.Id, TestCancellationToken);
         userSessions.Should().ContainSingle();
-        userSessions.First().IsValid(_timeProvider).Should().BeTrue();
+        userSessions[0].IsValid(_timeProvider).Should().BeTrue();
 
         var loadedGameSession = await gameSessionRepository.GetByIdAsync(gameSession.Id, TestCancellationToken);
         loadedGameSession.Should().NotBeNull();
@@ -344,7 +344,7 @@ public sealed class FullStackCrossContextWorkflowTests : IAsyncLifetime
         // Assert
         var userSessions = await sessionRepository.GetByUserIdAsync(user.Id, TestCancellationToken);
         userSessions.Should().ContainSingle();
-        userSessions.First().IsExpired(_timeProvider).Should().BeTrue();
+        userSessions[0].IsExpired(_timeProvider).Should().BeTrue();
 
         var loadedGameSession = await gameSessionRepository.GetByIdAsync(gameSession.Id, TestCancellationToken);
         loadedGameSession.Should().NotBeNull();

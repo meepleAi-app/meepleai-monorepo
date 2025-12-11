@@ -86,7 +86,7 @@ public class QdrantVectorStoreAdapter : IQdrantVectorStoreAdapter
             return;
 
         // Group embeddings by VectorDocumentId (they should all be from same document)
-        var firstEmbedding = embeddings.First();
+        var firstEmbedding = embeddings[0];
         var gameId = "unknown"; // GameId not available in Embedding entity
         var pdfId = firstEmbedding.VectorDocumentId.ToString();
 

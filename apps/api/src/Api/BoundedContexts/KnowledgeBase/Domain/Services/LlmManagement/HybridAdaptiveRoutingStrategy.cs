@@ -125,7 +125,7 @@ public class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
                 // Get model from config or use default
                 var alternativeModel = settings.Providers.ContainsKey(alternativeProvider) &&
                                        settings.Providers[alternativeProvider].Models.Any()
-                    ? settings.Providers[alternativeProvider].Models.First()
+                    ? settings.Providers[alternativeProvider].Models[0]
                     : GetDefaultModelForProvider(alternativeProvider, userRole);
 
                 _logger.LogInformation(

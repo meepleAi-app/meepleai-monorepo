@@ -532,7 +532,7 @@ public class StreamExplainQueryHandlerTests
         Assert.NotNull(citationsEvent);
         var citations = Assert.IsType<StreamingCitations>(citationsEvent.Data);
 
-        var citation = citations.citations.First();
+        var citation = citations.citations[0];
         Assert.Equal("Sample rule text", citation.text);
         Assert.Equal($"PDF:{pdfId}", citation.source);
         Assert.Equal(42, citation.page);

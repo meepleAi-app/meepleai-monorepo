@@ -204,7 +204,7 @@ public class QueryValidatorTests
         var exception = Assert.Throws<ValidationException>(() =>
             QueryValidator.ValidateQueryOrThrow(tooLong));
 
-        Assert.Contains("exceeds maximum length", exception.Errors.Values.SelectMany(x => x).First());
+        Assert.Contains("exceeds maximum length", exception.Errors.Values.SelectMany(x => x).ElementAt(0));
     }
 
     [Fact]
@@ -371,4 +371,3 @@ public class QueryValidatorTests
         Assert.NotNull(result);
     }
 }
-

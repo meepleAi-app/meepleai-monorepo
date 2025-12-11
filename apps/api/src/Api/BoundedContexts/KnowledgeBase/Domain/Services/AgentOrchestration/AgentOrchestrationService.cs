@@ -63,8 +63,7 @@ public class AgentOrchestrationService
 
         // Final fallback: Select the most recently used active agent
         selectedAgent ??= activeAgents
-            .OrderByDescending(a => a.LastInvokedAt ?? DateTime.MinValue)
-            .First();
+            .MaxBy(a => a.LastInvokedAt ?? DateTime.MinValue)!;
 
         return selectedAgent;
     }

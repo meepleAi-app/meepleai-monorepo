@@ -155,7 +155,7 @@ public sealed class IndexPdfIntegrationTests : IAsyncLifetime
         }
     }
 
-    private void RegisterMockServices(IServiceCollection services, string qdrantUrl)
+    private void RegisterMockServices(IServiceCollection services, string _)
     {
         // Mock TextChunking service (returns realistic chunks)
         var chunkingMock = new Mock<ITextChunkingService>();

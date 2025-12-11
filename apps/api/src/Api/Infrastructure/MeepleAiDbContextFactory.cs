@@ -44,7 +44,7 @@ public class MeepleAiDbContextFactory : IDesignTimeDbContextFactory<MeepleAiDbCo
     /// No-op mediator for design-time DbContext creation.
     /// Domain events are not dispatched during migrations.
     /// </summary>
-    private class NoOpMediator : IMediator
+    private sealed class NoOpMediator : IMediator
     {
         public IAsyncEnumerable<TResponse> CreateStream<TResponse>(IStreamRequest<TResponse> request, CancellationToken cancellationToken = default)
         {
@@ -88,7 +88,7 @@ public class MeepleAiDbContextFactory : IDesignTimeDbContextFactory<MeepleAiDbCo
     /// No-op event collector for design-time DbContext creation.
     /// Domain events are not collected during migrations.
     /// </summary>
-    private class NoOpEventCollector : IDomainEventCollector
+    private sealed class NoOpEventCollector : IDomainEventCollector
     {
         public void CollectEventsFrom(IAggregateRoot aggregate)
         {

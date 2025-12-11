@@ -104,8 +104,8 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IFeatureFlagService, FeatureFlagService>();
 
         // N8N services
-        services.AddScoped<N8nConfigService>();
-        services.AddScoped<N8nTemplateService>(); // N8N-04: Workflow template service
+        services.AddScoped<N8NConfigService>();
+        services.AddScoped<N8NTemplateService>(); // N8N-04: Workflow template service
 
         // N8N-05: Workflow error logging service
         services.AddScoped<IWorkflowErrorLoggingService, WorkflowErrorLoggingService>();
@@ -233,10 +233,6 @@ public static class ApplicationServiceExtensions
     {
         // Register all validators from the Authentication bounded context
         services.AddValidatorsFromAssemblyContaining<BoundedContexts.Authentication.Application.Validators.LoginCommandValidator>();
-
-        // Future: Add validators from other bounded contexts here
-        // services.AddValidatorsFromAssemblyContaining<GameManagement.Validators.SomeValidator>();
-        // services.AddValidatorsFromAssemblyContaining<KnowledgeBase.Validators.SomeValidator>();
 
         return services;
     }

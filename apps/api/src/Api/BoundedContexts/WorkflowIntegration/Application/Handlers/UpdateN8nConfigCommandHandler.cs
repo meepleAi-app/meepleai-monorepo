@@ -9,24 +9,24 @@ using Api.SharedKernel.Infrastructure.Persistence;
 
 namespace Api.BoundedContexts.WorkflowIntegration.Application.Handlers;
 
-public class UpdateN8nConfigCommandHandler : ICommandHandler<UpdateN8nConfigCommand, N8nConfigurationDto>
+public class UpdateN8NConfigCommandHandler : ICommandHandler<UpdateN8NConfigCommand, N8NConfigurationDto>
 {
-    private readonly IN8nConfigurationRepository _repository;
+    private readonly IN8NConfigurationRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
 
-    public UpdateN8nConfigCommandHandler(
-        IN8nConfigurationRepository repository,
+    public UpdateN8NConfigCommandHandler(
+        IN8NConfigurationRepository repository,
         IUnitOfWork unitOfWork)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
 
-    public async Task<N8nConfigurationDto> Handle(UpdateN8nConfigCommand command, CancellationToken cancellationToken)
+    public async Task<N8NConfigurationDto> Handle(UpdateN8NConfigCommand command, CancellationToken cancellationToken)
     {
         var config = await _repository.GetByIdAsync(command.ConfigId, cancellationToken).ConfigureAwait(false);
         if (config == null)
-            throw new DomainException($"N8nConfiguration with ID {command.ConfigId} not found");
+            throw new DomainException($"N8NConfiguration with ID {command.ConfigId} not found");
 
         // Update configuration fields
         WorkflowUrl? baseUrl = !string.IsNullOrWhiteSpace(command.BaseUrl) ? new WorkflowUrl(command.BaseUrl) : null;
@@ -54,9 +54,9 @@ public class UpdateN8nConfigCommandHandler : ICommandHandler<UpdateN8nConfigComm
         return MapToDto(config);
     }
 
-    private static N8nConfigurationDto MapToDto(N8nConfiguration config)
+    private static N8NConfigurationDto MapToDto(N8NConfiguration config)
     {
-        return new N8nConfigurationDto(
+        return new N8NConfigurationDto(
             Id: config.Id,
             Name: config.Name,
             BaseUrl: config.BaseUrl.Value,

@@ -17,7 +17,7 @@ public class ConfigurationValidator
     /// <param name="value">Value to validate</param>
     /// <param name="valueType">Expected value type (string, int, bool, json, etc.)</param>
     /// <returns>Validation result with any errors</returns>
-    public ValidationResult Validate(string key, string value, string valueType)
+    public static ValidationResult Validate(string key, string value, string valueType)
     {
         if (string.IsNullOrWhiteSpace(key))
             throw new ArgumentException("Key cannot be empty", nameof(key));
@@ -34,7 +34,7 @@ public class ConfigurationValidator
         ValidateValueType(value, valueType, errors);
 
         // Domain-specific validation
-        ValidateDomainRules(key, value, valueType, errors);
+        ValidateDomainRules(key, value, errors);
 
         return new ValidationResult(
             IsValid: errors.Count == 0,

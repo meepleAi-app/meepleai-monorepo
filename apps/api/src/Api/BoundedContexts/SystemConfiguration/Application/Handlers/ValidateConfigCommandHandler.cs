@@ -19,7 +19,7 @@ public class ValidateConfigCommandHandler : ICommandHandler<ValidateConfigComman
 
     public Task<ConfigurationValidationResult> Handle(ValidateConfigCommand command, CancellationToken cancellationToken)
     {
-        var domainResult = _validator.Validate(command.Key, command.Value, command.ValueType);
+        var domainResult = ConfigurationValidator.Validate(command.Key, command.Value, command.ValueType);
 
         var result = new ConfigurationValidationResult(
             IsValid: domainResult.IsValid,

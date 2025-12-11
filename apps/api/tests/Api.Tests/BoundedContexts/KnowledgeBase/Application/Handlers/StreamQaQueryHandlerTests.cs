@@ -561,7 +561,7 @@ public class StreamQaQueryHandlerTests
         SetupQualityTrackingMocks();
     }
 
-    private void SetupSearchMocks(string gameId, string userQuery)
+    private void SetupSearchMocks(string gameId, string _)
     {
         // Setup embedding generation for search
         var queryEmbedding = new float[] { 0.1f, 0.2f, 0.3f };

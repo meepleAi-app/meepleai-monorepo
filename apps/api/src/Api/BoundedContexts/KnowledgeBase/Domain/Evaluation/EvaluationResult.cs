@@ -178,8 +178,8 @@ public sealed record EvaluationResult
         IReadOnlyList<EvaluationSampleResult> sampleResults)
     {
         var metrics = CalculateMetrics(sampleResults);
-        var metricsByDifficulty = CalculateMetricsByGroup(sampleResults, getDifficulty: true);
-        var metricsByCategory = CalculateMetricsByGroup(sampleResults, getDifficulty: false);
+        var metricsByDifficulty = CalculateMetricsByGroup(sampleResults, true);
+        var metricsByCategory = CalculateMetricsByGroup(sampleResults, false);
 
         return new EvaluationResult
         {
@@ -232,7 +232,8 @@ public sealed record EvaluationResult
     }
 
     private static IReadOnlyDictionary<string, EvaluationMetrics> CalculateMetricsByGroup(
-                )
+        IReadOnlyList<EvaluationSampleResult> _,
+        bool __)
     {
         // Note: This is a simplified implementation. In practice, you'd need to
         // join with the original samples to get difficulty/category metadata.

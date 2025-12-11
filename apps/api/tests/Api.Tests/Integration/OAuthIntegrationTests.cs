@@ -56,7 +56,6 @@ public class OAuthIntegrationTests : IAsyncLifetime
     private const string GitHubProvider = "github";
     private const string GoogleUserId = "google-user-123";
     private const string DiscordUserId = "discord-user-456";
-    private const string GitHubUserId = "github-user-789";
     private const string AccessToken = "access_token_encrypted";
     private const string RefreshToken = "refresh_token_encrypted";
 

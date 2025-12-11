@@ -125,7 +125,8 @@ public sealed class ProvideAgentFeedbackCommandHandler : IRequestHandler<Provide
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: CQRS handler boundary - log and rethrow for caller handling
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
+        // HANDLER PATTERN: Log feedback failures before propagating.
         catch (Exception ex)
         {
             _logger.LogError(
@@ -135,5 +136,6 @@ public sealed class ProvideAgentFeedbackCommandHandler : IRequestHandler<Provide
             throw;
         }
 #pragma warning restore CA1031
+#pragma warning restore S2139
     }
 }

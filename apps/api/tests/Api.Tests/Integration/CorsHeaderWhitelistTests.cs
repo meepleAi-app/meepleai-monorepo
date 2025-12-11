@@ -128,15 +128,6 @@ public class CorsHeaderWhitelistTests : IClassFixture<CorsTestFactory>
         "X-Correlation-ID"
     };
 
-    // Non-whitelisted headers (should be rejected)
-    private static readonly string[] NonWhitelistedHeaders = new[]
-    {
-        "X-Custom-Header",
-        "X-Malicious-Header",
-        "X-Debug-Info",
-        "X-Internal-Secret"
-    };
-
     public CorsHeaderWhitelistTests(CorsTestFactory factory)
     {
         _factory = factory;

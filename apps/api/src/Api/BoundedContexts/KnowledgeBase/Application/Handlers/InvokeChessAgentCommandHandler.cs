@@ -455,7 +455,7 @@ ANSWER:";
             null);
     }
 
-    private record ParsedChessResponse(
+    private sealed record ParsedChessResponse(
         string Answer,
         ChessAnalysis? Analysis,
         IReadOnlyList<string> SuggestedMoves);

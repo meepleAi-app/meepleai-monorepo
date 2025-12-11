@@ -41,7 +41,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<AuditLogEntity> AuditLogs => Set<AuditLogEntity>();
     public DbSet<AiRequestLogEntity> AiRequestLogs => Set<AiRequestLogEntity>();
     public DbSet<AgentFeedbackEntity> AgentFeedbacks => Set<AgentFeedbackEntity>();
-    public DbSet<N8nConfigEntity> N8nConfigs => Set<N8nConfigEntity>();
+    public DbSet<N8NConfigEntity> N8NConfigs => Set<N8NConfigEntity>();
     public DbSet<RuleSpecCommentEntity> RuleSpecComments => Set<RuleSpecCommentEntity>();
     public DbSet<PromptTemplateEntity> PromptTemplates => Set<PromptTemplateEntity>();
     public DbSet<PromptVersionEntity> PromptVersions => Set<PromptVersionEntity>();

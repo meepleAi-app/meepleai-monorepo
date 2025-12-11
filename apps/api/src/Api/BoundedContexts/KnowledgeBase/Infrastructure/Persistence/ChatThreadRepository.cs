@@ -254,7 +254,7 @@ public class ChatThreadRepository : RepositoryBase, IChatThreadRepository
     }
 
     // DTO for JSON serialization (internal to repository)
-    private record PersistenceChatMessageDto(
+    private sealed record PersistenceChatMessageDto(
         Guid Id,
         string Content,
         string Role,
@@ -271,7 +271,7 @@ public class ChatThreadRepository : RepositoryBase, IChatThreadRepository
     /// Custom JSON converter to handle legacy messages without Id/SequenceNumber fields.
     /// Allows deserialization of both old format (no Id/SequenceNumber) and new format.
     /// </summary>
-    private class LegacyPersistenceChatMessageDtoConverter : System.Text.Json.Serialization.JsonConverter<PersistenceChatMessageDto>
+    private sealed class LegacyPersistenceChatMessageDtoConverter : System.Text.Json.Serialization.JsonConverter<PersistenceChatMessageDto>
     {
         public override PersistenceChatMessageDto Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {

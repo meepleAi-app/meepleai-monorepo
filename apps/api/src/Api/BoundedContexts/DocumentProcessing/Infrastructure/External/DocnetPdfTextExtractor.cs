@@ -51,10 +51,10 @@ public class DocnetPdfTextExtractor : IPdfTextExtractor
                 var (rawText, pageCount) = await Task.Run(() => ExtractRawText(tempFilePath), ct).ConfigureAwait(false);
 
                 // Step 3: Normalize text (domain service)
-                var normalizedText = _domainService.NormalizeText(rawText);
+                var normalizedText = PdfTextProcessingDomainService.NormalizeText(rawText);
 
                 // Step 4: Assess quality (domain service)
-                var quality = _domainService.AssessQuality(normalizedText, pageCount);
+                var quality = PdfTextProcessingDomainService.AssessQuality(normalizedText, pageCount);
 
                 // Step 5: OCR fallback decision (domain service)
                 var shouldOcr = enableOcrFallback
@@ -86,8 +86,8 @@ public class DocnetPdfTextExtractor : IPdfTextExtractor
                     }
 
                     // Step 7: Normalize OCR text (domain service)
-                    var normalizedOcrText = _domainService.NormalizeText(ocrResult.ExtractedText);
-                    var ocrQuality = _domainService.AssessQuality(normalizedOcrText, ocrResult.PageCount);
+                    var normalizedOcrText = PdfTextProcessingDomainService.NormalizeText(ocrResult.ExtractedText);
+                    var ocrQuality = PdfTextProcessingDomainService.AssessQuality(normalizedOcrText, ocrResult.PageCount);
 
                     _logger.LogInformation(
                         "OCR extraction completed. Pages: {PageCount}, Characters: {CharCount}, Quality: {Quality}",
@@ -306,7 +306,7 @@ public class DocnetPdfTextExtractor : IPdfTextExtractor
             var pageText = pageReader.GetText();
 
             // Normalize text for this page (domain service)
-            var normalizedText = _domainService.NormalizeText(pageText ?? string.Empty);
+            var normalizedText = PdfTextProcessingDomainService.NormalizeText(pageText ?? string.Empty);
 
             // Create PageTextChunk (page numbers are 1-indexed for user display)
             var pageChunk = new PageTextChunk(

@@ -380,6 +380,7 @@ v1Api.MapTestEndpoints();
 
 app.Run();
 
+#pragma warning disable MA0051 // Method is too long - Bootstrap method requires comprehensive validation and error handling
 // Bootstrap: Create initial admin user if database is empty
 static async Task EnsureInitialAdminUserAsync(WebApplication app, MeepleAiDbContext db, IServiceProvider services)
 {
@@ -481,7 +482,10 @@ static async Task EnsureInitialAdminUserAsync(WebApplication app, MeepleAiDbCont
         db.AuditLogs.Add(auditLog);
         await db.SaveChangesAsync().ConfigureAwait(false);
     }
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
+    // RACE CONDITION PATTERN: Log unexpected unique constraint violations before propagating.
     catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
+#pragma warning restore S2139
     {
         // Race condition: Another instance created the admin user simultaneously
         // Recheck if an admin user now exists
@@ -500,13 +504,18 @@ static async Task EnsureInitialAdminUserAsync(WebApplication app, MeepleAiDbCont
         app.Logger.LogError(ex, "Unique constraint violation but no admin user found");
         throw;
     }
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
+    // BOOTSTRAP PATTERN: Log critical initialization failures before propagating.
     catch (Exception ex)
     {
         app.Logger.LogError(ex, "Failed to create initial admin user");
         throw;
     }
+#pragma warning restore S2139
 }
+#pragma warning restore MA0051
 
+#pragma warning disable MA0051 // Method is too long - Bootstrap method handles multiple test users with validation
 // K6 Performance Testing: Ensure demo test users exist for testing (Issue #1663)
 static async Task EnsureTestUserExistsAsync(WebApplication app, MeepleAiDbContext db, IServiceProvider services)
 {
@@ -585,6 +594,7 @@ static async Task EnsureTestUserExistsAsync(WebApplication app, MeepleAiDbContex
 
     app.Logger.LogInformation("✓ Demo user seeding complete");
 }
+#pragma warning restore MA0051
 
 // Helper method to detect unique constraint violations across database providers
 static bool IsUniqueConstraintViolation(DbUpdateException ex)

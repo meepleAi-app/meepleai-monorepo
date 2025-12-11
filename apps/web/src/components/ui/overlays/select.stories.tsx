@@ -9,7 +9,7 @@ import {
   SelectValue,
   SelectSeparator,
 } from './select';
-import { Label } from './label';
+import { Label } from '@/components/ui/label';
 
 /**
  * Select component for dropdown selection.

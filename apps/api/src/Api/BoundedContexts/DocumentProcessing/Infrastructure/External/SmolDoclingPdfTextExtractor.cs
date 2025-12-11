@@ -114,7 +114,7 @@ public class SmolDoclingPdfTextExtractor : IPdfTextExtractor
 
             // Use plain text (not markdown) for consistency with other extractors
             return TextExtractionResult.CreateSuccess(
-                extractedText: _domainService.NormalizeText(result.Text),
+                extractedText: PdfTextProcessingDomainService.NormalizeText(result.Text),
                 pageCount: result.PageCount,
                 characterCount: result.Text.Length,
                 ocrTriggered: false, // SmolDocling is VLM (vision-based, not OCR)
@@ -214,8 +214,8 @@ public class SmolDoclingPdfTextExtractor : IPdfTextExtractor
             {
                 var errorContent = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
                 _logger.LogError(
-                    "[{RequestId}] SmolDocling service error: {StatusCode}",
-                    requestId, response.StatusCode);
+                    "[{RequestId}] SmolDocling service error: {StatusCode} - {ErrorContent}",
+                    requestId, response.StatusCode, errorContent);
 
                 return PagedTextExtractionResult.CreateFailure(
                     $"Service error: {response.StatusCode}");
@@ -279,7 +279,7 @@ public class SmolDoclingPdfTextExtractor : IPdfTextExtractor
 
         foreach (var chunk in chunks.OrderBy(c => c.PageNumber))
         {
-            var normalized = _domainService.NormalizeText(chunk.Text);
+            var normalized = PdfTextProcessingDomainService.NormalizeText(chunk.Text);
             var charCount = normalized.Length;
 
             pageChunks.Add(new PageTextChunk(

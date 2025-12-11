@@ -255,7 +255,6 @@ public class RagServicePerformanceTests : IDisposable
         var mockConfigProvider = RagTestHelpers.CreateDefaultConfigProvider().Object;
 
         return new RagService(
-            _dbContext,
             mockEmbeddingService,
             mockQdrantService,
             mockHybridSearchService,
@@ -265,7 +264,6 @@ public class RagServicePerformanceTests : IDisposable
             mockLogger.Object,
             mockQueryExpansion,
             mockReranker,
-            mockCitationExtractor.Object,
             mockConfigProvider);
     }
 

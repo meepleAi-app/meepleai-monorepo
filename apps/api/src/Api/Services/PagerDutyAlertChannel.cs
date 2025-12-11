@@ -14,7 +14,11 @@ public class PagerDutyAlertChannel : IAlertChannel
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<PagerDutyAlertChannel> _logger;
 
+#pragma warning disable S1075 // URIs should not be hardcoded
+    // Justification: Official PagerDuty Events API endpoint (public contract, never changes)
+    // https://developer.pagerduty.com/api-reference/368ae3d8c8b4e-send-an-event-to-pager-duty
     private const string PagerDutyEventsApiUrl = "https://events.pagerduty.com/v2/enqueue";
+#pragma warning restore S1075
 
     public string ChannelName => "PagerDuty";
 

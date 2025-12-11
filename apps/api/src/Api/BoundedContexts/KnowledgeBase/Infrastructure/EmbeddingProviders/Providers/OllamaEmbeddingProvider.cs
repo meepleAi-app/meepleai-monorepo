@@ -36,8 +36,11 @@ public sealed class OllamaEmbeddingProvider : EmbeddingProviderBase
         _modelName = !string.IsNullOrWhiteSpace(config.Model) ? config.Model : providerType.GetModelName();
         _dimensions = config.Dimensions ?? providerType.GetDimensions();
 
+        // S1075: Default Ollama URL extracted to const
+        const string DefaultOllamaUrl = "http://localhost:11434";
+
         // Configure HttpClient for Ollama
-        var ollamaUrl = config.OllamaUrl ?? "http://localhost:11434";
+        var ollamaUrl = config.OllamaUrl ?? DefaultOllamaUrl;
         HttpClient.BaseAddress = new Uri(ollamaUrl);
         HttpClient.Timeout = TimeSpan.FromSeconds(Math.Max(config.TimeoutSeconds, 60)); // Ollama may need longer timeout
     }

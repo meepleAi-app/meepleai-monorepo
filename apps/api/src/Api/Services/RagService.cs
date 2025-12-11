@@ -22,7 +22,6 @@ public class RagService : IRagService
     // CONFIG-04: Hardcoded defaults (lowest priority fallback)
     private const int DefaultTopK = 5;
 
-    private readonly MeepleAiDbContext _dbContext;
     private readonly IEmbeddingService _embeddingService;
     private readonly IQdrantService _qdrantService;
     private readonly IHybridSearchService _hybridSearchService; // AI-14: Hybrid search service
@@ -34,11 +33,9 @@ public class RagService : IRagService
     // SOLID Refactoring Phase 3: Extracted specialized services
     private readonly IQueryExpansionService _queryExpansion;
     private readonly ISearchResultReranker _reranker;
-    private readonly ICitationExtractorService _citationExtractor;
     private readonly IRagConfigurationProvider _configProvider; // Issue #1441: Centralized configuration provider
 
     public RagService(
-        MeepleAiDbContext dbContext,
         IEmbeddingService embeddingService,
         IQdrantService qdrantService,
         IHybridSearchService hybridSearchService, // AI-14: Inject hybrid search service
@@ -48,10 +45,8 @@ public class RagService : IRagService
         ILogger<RagService> logger,
         IQueryExpansionService queryExpansion,
         ISearchResultReranker reranker,
-        ICitationExtractorService citationExtractor,
         IRagConfigurationProvider configProvider) // Issue #1441: Centralized configuration provider
     {
-        _dbContext = dbContext;
         _embeddingService = embeddingService;
         _qdrantService = qdrantService;
         _hybridSearchService = hybridSearchService; // AI-14
@@ -61,7 +56,6 @@ public class RagService : IRagService
         _logger = logger;
         _queryExpansion = queryExpansion;
         _reranker = reranker;
-        _citationExtractor = citationExtractor;
         _configProvider = configProvider; // Issue #1441
     }
 

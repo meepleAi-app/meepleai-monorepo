@@ -180,9 +180,12 @@ public static class InfrastructureServiceExtensions
         });
 
         // OpenRouter client with optimized settings (unified gateway for cloud AI models)
+        // S1075: OpenRouter API endpoint (official public endpoint)
+        const string OpenRouterApiBaseUrl = "https://openrouter.ai/api/v1/";
+
         services.AddHttpClient("OpenRouter", client =>
         {
-            client.BaseAddress = new Uri("https://openrouter.ai/api/v1/");
+            client.BaseAddress = new Uri(OpenRouterApiBaseUrl);
             var timeoutSeconds = configuration.GetValue<int>("AIAgents:DefaultTimeoutSeconds", 30);
             client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
         })

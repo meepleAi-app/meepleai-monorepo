@@ -131,8 +131,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
 
         _extractor = new UnstructuredPdfTextExtractor(
             serviceProvider.GetRequiredService<IHttpClientFactory>(),
-            logger,
-            domainService);
+            logger);
 
         _output("Test infrastructure initialized");
     }

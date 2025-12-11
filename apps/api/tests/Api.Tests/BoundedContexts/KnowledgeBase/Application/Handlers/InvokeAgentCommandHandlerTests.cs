@@ -42,8 +42,6 @@ public class InvokeAgentCommandHandlerTests
             _mockAgentRepo.Object,
             _mockEmbeddingRepo.Object,
             _mockEmbeddingService.Object,
-            _orchestrationService,
-            _vectorSearchService,
             _qualityTrackingService,
             _mockLogger.Object
         );

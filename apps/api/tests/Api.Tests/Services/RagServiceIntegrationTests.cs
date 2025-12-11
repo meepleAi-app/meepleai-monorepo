@@ -248,7 +248,6 @@ public class RagServiceIntegrationTests : IDisposable
         var mockLlmService = CreateMockLlmService();
 
         return new RagService(
-            _dbContext,
             _mockEmbeddingService.Object,
             _mockQdrantService.Object,
             _mockHybridSearchService.Object,
@@ -258,7 +257,6 @@ public class RagServiceIntegrationTests : IDisposable
             _mockLogger.Object,
             _mockQueryExpansion.Object,
             _mockReranker.Object,
-            _mockCitationExtractor.Object,
             _mockConfigProvider.Object);
     }
 
@@ -795,7 +793,6 @@ public class RagServiceIntegrationTests : IDisposable
         var mockLlmService = CreateMockLlmService();
 
         return new RagService(
-            _dbContext,
             _mockEmbeddingService.Object,
             _mockQdrantService.Object,
             _mockHybridSearchService.Object,
@@ -805,7 +802,6 @@ public class RagServiceIntegrationTests : IDisposable
             _mockLogger.Object,
             _mockQueryExpansion.Object,
             _mockReranker.Object,
-            _mockCitationExtractor.Object,
             configMock.Object);
     }
 }

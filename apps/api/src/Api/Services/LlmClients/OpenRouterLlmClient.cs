@@ -26,7 +26,6 @@ public class OpenRouterLlmClient : ILlmClient
     private readonly HttpClient _httpClient;
     private readonly ILogger<OpenRouterLlmClient> _logger;
     private readonly ILlmCostCalculator _costCalculator;
-    private readonly string _apiKey;
 
     // Hardcoded defaults
     private const int DefaultTimeoutSeconds = 60;
@@ -43,13 +42,16 @@ public class OpenRouterLlmClient : ILlmClient
         _logger = logger;
         _costCalculator = costCalculator;
 
-        // SEC-708: Read API key from Docker Secret file or direct config
-        _apiKey = SecretsHelper.GetSecretOrValue(config, "OPENROUTER_API_KEY", logger, required: true)
+        // S1075: OpenRouter API endpoint (official public endpoint)
+        const string OpenRouterApiBaseUrl = "https://openrouter.ai/api/v1/";
+
+        // SEC-708: Read API key from Docker Secret file or direct config (S1450: local scope)
+        var apiKey = SecretsHelper.GetSecretOrValue(config, "OPENROUTER_API_KEY", logger, required: true)
             ?? throw new InvalidOperationException("OPENROUTER_API_KEY not configured");
 
         // Configure HttpClient
-        _httpClient.BaseAddress = new Uri("https://openrouter.ai/api/v1/");
-        _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {_apiKey}");
+        _httpClient.BaseAddress = new Uri(OpenRouterApiBaseUrl);
+        _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
         _httpClient.DefaultRequestHeaders.Add("HTTP-Referer", "https://meepleai.app");
         _httpClient.Timeout = TimeSpan.FromSeconds(DefaultTimeoutSeconds);
 

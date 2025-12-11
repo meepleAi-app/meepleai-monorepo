@@ -174,22 +174,22 @@ public sealed class CrossEncoderRerankerClient : ICrossEncoderReranker
     {
         public List<RerankResultDto> Results { get; set; } = new();
         public string Model { get; set; } = string.Empty;
-        public double ProcessingTimeMs { get; }
+        public double ProcessingTimeMs { get; set; }
     }
 
     private sealed class RerankResultDto
     {
         public string Id { get; set; } = string.Empty;
         public string Content { get; set; } = string.Empty;
-        public double OriginalScore { get; }
-        public double RerankScore { get; }
+        public double OriginalScore { get; set; }
+        public double RerankScore { get; set; }
         public Dictionary<string, object> Metadata { get; set; } = new(StringComparer.Ordinal);
     }
 
     private sealed class HealthResponseDto
     {
         public string Status { get; set; } = string.Empty;
-        public bool ModelLoaded { get; }
+        public bool ModelLoaded { get; set; }
         public string ModelName { get; set; } = string.Empty;
         public string Device { get; set; } = string.Empty;
     }

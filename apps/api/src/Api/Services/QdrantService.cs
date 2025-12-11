@@ -19,7 +19,6 @@ public class QdrantService : IQdrantService
     private readonly IQdrantCollectionManager _collectionManager;
     private readonly IQdrantVectorIndexer _vectorIndexer;
     private readonly IQdrantVectorSearcher _vectorSearcher;
-    private readonly IEmbeddingService _embeddingService;
     private readonly ILogger<QdrantService> _logger;
     private const string CollectionName = "meepleai_documents";
     // Vector size is determined by the embedding model configured in EmbeddingService
@@ -35,11 +34,10 @@ public class QdrantService : IQdrantService
         _collectionManager = collectionManager;
         _vectorIndexer = vectorIndexer;
         _vectorSearcher = vectorSearcher;
-        _embeddingService = embeddingService;
         _logger = logger;
 
-        // Get vector size from embedding service to ensure consistency
-        _vectorSize = (uint)_embeddingService.GetEmbeddingDimensions();
+        // S1450: embeddingService used only locally for initialization
+        _vectorSize = (uint)embeddingService.GetEmbeddingDimensions();
 
         var provider = configuration["EMBEDDING_PROVIDER"]?.ToLowerInvariant() ?? "ollama";
         var model = configuration["EMBEDDING_MODEL"] ?? "unknown";

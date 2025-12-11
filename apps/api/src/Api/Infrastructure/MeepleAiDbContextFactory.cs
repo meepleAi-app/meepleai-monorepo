@@ -48,12 +48,13 @@ public class MeepleAiDbContextFactory : IDesignTimeDbContextFactory<MeepleAiDbCo
     {
         public IAsyncEnumerable<TResponse> CreateStream<TResponse>(IStreamRequest<TResponse> request, CancellationToken cancellationToken = default)
         {
-            throw new NotImplementedException("Stream not supported in design-time context");
+            // MA0025: NotSupportedException for intentionally unsupported operations
+            throw new NotSupportedException("Stream not supported in design-time context");
         }
 
         public IAsyncEnumerable<object?> CreateStream(object request, CancellationToken cancellationToken = default)
         {
-            throw new NotImplementedException("Stream not supported in design-time context");
+            throw new NotSupportedException("Stream not supported in design-time context");
         }
 
         public Task Publish(object notification, CancellationToken cancellationToken = default)
@@ -70,17 +71,17 @@ public class MeepleAiDbContextFactory : IDesignTimeDbContextFactory<MeepleAiDbCo
 
         public Task<TResponse> Send<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default)
         {
-            throw new NotImplementedException("Send not supported in design-time context");
+            throw new NotSupportedException("Send not supported in design-time context");
         }
 
         public Task Send<TRequest>(TRequest request, CancellationToken cancellationToken = default) where TRequest : IRequest
         {
-            throw new NotImplementedException("Send not supported in design-time context");
+            throw new NotSupportedException("Send not supported in design-time context");
         }
 
         public Task<object?> Send(object request, CancellationToken cancellationToken = default)
         {
-            throw new NotImplementedException("Send not supported in design-time context");
+            throw new NotSupportedException("Send not supported in design-time context");
         }
     }
 

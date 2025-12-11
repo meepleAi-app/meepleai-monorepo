@@ -15,14 +15,11 @@ namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 public class OrchestratedPdfTextExtractor : IPdfTextExtractor
 {
     private readonly EnhancedPdfProcessingOrchestrator _orchestrator;
-    private readonly ILogger<OrchestratedPdfTextExtractor> _logger;
 
     public OrchestratedPdfTextExtractor(
-        EnhancedPdfProcessingOrchestrator orchestrator,
-        ILogger<OrchestratedPdfTextExtractor> logger)
+        EnhancedPdfProcessingOrchestrator orchestrator)
     {
         _orchestrator = orchestrator;
-        _logger = logger;
     }
 
     /// <summary>

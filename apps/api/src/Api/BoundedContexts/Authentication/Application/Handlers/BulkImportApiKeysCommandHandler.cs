@@ -283,7 +283,9 @@ public class BulkImportApiKeysCommandHandler : ICommandHandler<BulkImportApiKeys
         var currentField = new StringBuilder();
         var insideQuotes = false;
 
-        for (int i = 0; i < line.Length; i++)
+        // S127: Use while loop to avoid modifying loop counter in body
+        int i = 0;
+        while (i < line.Length)
         {
             var c = line[i];
 
@@ -293,7 +295,7 @@ public class BulkImportApiKeysCommandHandler : ICommandHandler<BulkImportApiKeys
                 {
                     // Escaped quote
                     currentField.Append('"');
-                    i++; // Skip next quote
+                    i++; // Skip next quote (safe in while loop)
                 }
                 else
                 {
@@ -311,6 +313,8 @@ public class BulkImportApiKeysCommandHandler : ICommandHandler<BulkImportApiKeys
             {
                 currentField.Append(c);
             }
+
+            i++; // Advance to next character
         }
 
         // Add last field

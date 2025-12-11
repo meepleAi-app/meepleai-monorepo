@@ -216,7 +216,7 @@ public class OAuthIntegrationTests : IAsyncLifetime
         Assert.Equal(NewUserEmail, userInDb.Email.Value);
         Assert.NotEmpty(linkedAccounts);
 
-        var linkedAccount = linkedAccounts.First();
+        var linkedAccount = linkedAccounts[0];
         Assert.Equal(GoogleProvider, linkedAccount.Provider);
         Assert.Equal(GoogleUserId, linkedAccount.ProviderUserId);
         Assert.Equal(AccessToken, linkedAccount.AccessTokenEncrypted);
@@ -273,7 +273,7 @@ public class OAuthIntegrationTests : IAsyncLifetime
 
         Assert.NotEmpty(linkedAccounts);
         Assert.Single(linkedAccounts);
-        Assert.Equal(DiscordProvider, linkedAccounts.First().Provider);
+        Assert.Equal(DiscordProvider, linkedAccounts[0].Provider);
 
         _output("✓ Test 2 passed: OAuth callback linked account to existing user");
     }
@@ -343,7 +343,7 @@ public class OAuthIntegrationTests : IAsyncLifetime
         var accountsAfterUnlink = await oauthAccountRepository.GetByUserIdAsync(userId, TestCancellationToken);
 
         Assert.Single(accountsAfterUnlink);
-        Assert.Equal(GoogleProvider, accountsAfterUnlink.First().Provider);
+        Assert.Equal(GoogleProvider, accountsAfterUnlink[0].Provider);
 
         // Discord account deleted
         var discordAccountInDb = await oauthAccountRepository.GetByIdAsync(discordAccountId, TestCancellationToken);
@@ -570,7 +570,7 @@ public class OAuthIntegrationTests : IAsyncLifetime
         // Step 4: Verify only Discord remains
         var result3 = await mediator.Send(query, TestCancellationToken);
         Assert.Single(result3.Accounts);
-        Assert.Equal(DiscordProvider, result3.Accounts.First().Provider);
+        Assert.Equal(DiscordProvider, result3.Accounts[0].Provider);
 
         _output("✓ Test 6 passed: Progressive OAuth account management");
     }

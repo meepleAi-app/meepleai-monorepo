@@ -252,7 +252,7 @@ user3@e2etest.com,User Three,user,Password789!";
         result.SuccessCount.Should().Be(2);
         result.FailedCount.Should().Be(1);
         result.Errors.Should().ContainSingle();
-        result.Errors.First().Should().Contain("not found");
+        result.Errors[0].Should().Contain("not found");
     }
 
     #endregion

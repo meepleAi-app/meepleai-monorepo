@@ -350,7 +350,14 @@ public class HybridCacheService : IHybridCacheService
             // We don't know which tags this key had, so we need to scan all tag keys
             // This is inefficient but necessary without maintaining a reverse index
             // Alternative: Store key → tags mapping separately in Redis (future optimization)
-            var server = _redis.GetServer(_redis.GetEndPoints().First());
+            var endpoints = _redis.GetEndPoints();
+            if (endpoints.Length == 0)
+            {
+                _logger.LogWarning("No Redis endpoints available for untracking key: {CacheKey}", cacheKey);
+                return;
+            }
+
+            var server = _redis.GetServer(endpoints[0]);
             var pattern = TagKeyPrefix + "*";
 
             foreach (var redisKey in server.Keys(pattern: pattern))

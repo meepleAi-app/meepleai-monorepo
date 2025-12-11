@@ -296,9 +296,9 @@ public class GoldenDatasetAccuracyIntegrationTests
         }
 
         // Act - Simulate response with forbidden keyword
-        var testCase = testCasesWithForbidden.First();
+        var testCase = testCasesWithForbidden[0];
         var hallucinatedResponse = new QaResponse(
-            answer: $"This is a test answer containing {testCase.ForbiddenKeywords.First()}",
+            answer: $"This is a test answer containing {testCase.ForbiddenKeywords[0]}",
             snippets: new List<Snippet>(),
             confidence: 0.85
         );
@@ -328,7 +328,7 @@ public class GoldenDatasetAccuracyIntegrationTests
         }
 
         // Act - Simulate response with correct citations
-        var testCase = testCasesWithCitations.First();
+        var testCase = testCasesWithCitations[0];
         var responseWithCitations = SimulatePerfectResponse(testCase);
 
         var result = await _evaluator.EvaluateTestCaseAsync(testCase, responseWithCitations, TestCancellationToken);

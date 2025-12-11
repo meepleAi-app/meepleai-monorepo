@@ -88,7 +88,7 @@ public static class KnowledgeBaseServiceExtensions
         // ISSUE-962 (BGAI-020): Provider Health Check Service (Singleton - background service)
         services.AddHostedService<ProviderHealthCheckService>();
         services.AddSingleton<IProviderHealthCheckService>(sp =>
-            sp.GetServices<IHostedService>().OfType<ProviderHealthCheckService>().First());
+            sp.GetServices<IHostedService>().OfType<ProviderHealthCheckService>().ToList()[0]);
         services.AddSingleton<ProviderHealthCheckService>(sp =>
             (ProviderHealthCheckService)sp.GetRequiredService<IProviderHealthCheckService>());
 

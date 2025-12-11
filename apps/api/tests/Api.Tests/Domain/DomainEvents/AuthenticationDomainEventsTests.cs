@@ -26,7 +26,7 @@ public class AuthenticationDomainEventsTests
 
         // Assert
         user.DomainEvents.Should().HaveCount(1);
-        var domainEvent = user.DomainEvents.First();
+        var domainEvent = user.DomainEvents.ElementAt(0);
         domainEvent.Should().BeOfType<PasswordChangedEvent>();
 
         var passwordChangedEvent = (PasswordChangedEvent)domainEvent;
@@ -47,7 +47,7 @@ public class AuthenticationDomainEventsTests
 
         // Assert
         user.DomainEvents.Should().HaveCount(1);
-        var domainEvent = user.DomainEvents.First();
+        var domainEvent = user.DomainEvents.ElementAt(0);
         domainEvent.Should().BeOfType<PasswordResetEvent>();
 
         var passwordResetEvent = (PasswordResetEvent)domainEvent;
@@ -67,7 +67,7 @@ public class AuthenticationDomainEventsTests
 
         // Assert
         user.DomainEvents.Should().HaveCount(1);
-        var domainEvent = user.DomainEvents.First();
+        var domainEvent = user.DomainEvents.ElementAt(0);
         domainEvent.Should().BeOfType<EmailChangedEvent>();
 
         var emailChangedEvent = (EmailChangedEvent)domainEvent;
@@ -90,7 +90,7 @@ public class AuthenticationDomainEventsTests
 
         // Assert
         user.DomainEvents.Should().HaveCount(1);
-        var domainEvent = user.DomainEvents.First();
+        var domainEvent = user.DomainEvents.ElementAt(0);
         domainEvent.Should().BeOfType<RoleChangedEvent>();
 
         var roleChangedEvent = (RoleChangedEvent)domainEvent;
@@ -111,7 +111,7 @@ public class AuthenticationDomainEventsTests
 
         // Assert
         user.DomainEvents.Should().HaveCount(1);
-        var domainEvent = user.DomainEvents.First();
+        var domainEvent = user.DomainEvents.ElementAt(0);
         domainEvent.Should().BeOfType<TwoFactorEnabledEvent>();
 
         var twoFactorEnabledEvent = (TwoFactorEnabledEvent)domainEvent;
@@ -133,7 +133,7 @@ public class AuthenticationDomainEventsTests
 
         // Assert
         user.DomainEvents.Should().HaveCount(1);
-        var domainEvent = user.DomainEvents.First();
+        var domainEvent = user.DomainEvents.ElementAt(0);
         domainEvent.Should().BeOfType<TwoFactorDisabledEvent>();
 
         var twoFactorDisabledEvent = (TwoFactorDisabledEvent)domainEvent;
@@ -158,7 +158,7 @@ public class AuthenticationDomainEventsTests
 
         // Assert
         user.DomainEvents.Should().HaveCount(1);
-        var domainEvent = user.DomainEvents.First();
+        var domainEvent = user.DomainEvents.ElementAt(0);
         domainEvent.Should().BeOfType<OAuthAccountLinkedEvent>();
 
         var oauthLinkedEvent = (OAuthAccountLinkedEvent)domainEvent;
@@ -184,7 +184,7 @@ public class AuthenticationDomainEventsTests
 
         // Assert
         apiKey.DomainEvents.Should().HaveCount(1);
-        var domainEvent = apiKey.DomainEvents.First();
+        var domainEvent = apiKey.DomainEvents.ElementAt(0);
         domainEvent.Should().BeOfType<ApiKeyRevokedEvent>();
 
         var apiKeyRevokedEvent = (ApiKeyRevokedEvent)domainEvent;
@@ -210,7 +210,7 @@ public class AuthenticationDomainEventsTests
 
         // Assert
         session.DomainEvents.Should().HaveCount(1);
-        var domainEvent = session.DomainEvents.First();
+        var domainEvent = session.DomainEvents.ElementAt(0);
         domainEvent.Should().BeOfType<SessionRevokedEvent>();
 
         var sessionRevokedEvent = (SessionRevokedEvent)domainEvent;
@@ -230,4 +230,3 @@ public class AuthenticationDomainEventsTests
         );
     }
 }
-

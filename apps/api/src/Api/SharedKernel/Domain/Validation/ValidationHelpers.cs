@@ -54,6 +54,9 @@ public static class ValidationHelpers
     /// <returns>A combined result containing all errors if any validation fails.</returns>
     public static Result<T> CombineResults<T>(params Result<T>[] results)
     {
+        if (results.Length == 0)
+            throw new ArgumentException("At least one result is required", nameof(results));
+
         var failures = results.Where(r => r.IsFailure).ToList();
 
         if (failures.Any())
@@ -62,7 +65,7 @@ public static class ValidationHelpers
             return Result<T>.Failure(Error.Validation(combinedMessage));
         }
 
-        return results.First();
+        return results[0];
     }
 
     /// <summary>

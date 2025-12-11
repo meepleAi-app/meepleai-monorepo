@@ -270,7 +270,7 @@ public sealed class BulkApiKeyOperationsE2ETests : IAsyncLifetime
 
         // Act: Import
         var result = await handler.Handle(command, TestCancellationToken);
-        var plaintextKey = result.Data.First().PlaintextKey;
+        var plaintextKey = result.Data[0].PlaintextKey;
 
         // Assert: Key can be verified using hash
         var storedKey = await _dbContext!.ApiKeys.FirstAsync(k => k.KeyName == "Verifiable Key", TestCancellationToken);
@@ -443,7 +443,7 @@ public sealed class BulkApiKeyOperationsE2ETests : IAsyncLifetime
         result.SuccessCount.Should().Be(1);
         result.FailedCount.Should().Be(1);
         result.Errors.Should().ContainSingle();
-        result.Errors.First().Should().Contain("must be in the future");
+        result.Errors[0].Should().Contain("must be in the future");
     }
 
     #endregion

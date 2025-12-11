@@ -91,7 +91,7 @@ public class DomainEventIntegrationTests : IAsyncLifetime
 
         // Verify event was raised
         user.DomainEvents.Should().HaveCount(1);
-        var passwordChangedEvent = (PasswordChangedEvent)user.DomainEvents.First();
+        var passwordChangedEvent = (PasswordChangedEvent)user.DomainEvents.ElementAt(0);
 
         // Manually dispatch event (simulating what SaveChangesAsync does)
         await _mediator.Publish(passwordChangedEvent, CancellationToken.None);
@@ -101,7 +101,7 @@ public class DomainEventIntegrationTests : IAsyncLifetime
         var auditLogs = await _dbContext.AuditLogs.ToListAsync(CancellationToken.None);
         auditLogs.Should().HaveCount(1);
 
-        var auditLog = auditLogs.First();
+        var auditLog = auditLogs.ElementAt(0);
         auditLog.UserId.Should().Be(user.Id);
         auditLog.Action.Should().Contain("PasswordChangedEvent");
         auditLog.Resource.Should().Be("PasswordChangedEvent");
@@ -126,7 +126,7 @@ public class DomainEventIntegrationTests : IAsyncLifetime
 
         // Assert
         apiKey.DomainEvents.Should().HaveCount(1);
-        var domainEvent = apiKey.DomainEvents.First();
+        var domainEvent = apiKey.DomainEvents.ElementAt(0);
         domainEvent.Should().BeOfType<ApiKeyRevokedEvent>();
 
         var apiKeyRevokedEvent = (ApiKeyRevokedEvent)domainEvent;
@@ -141,7 +141,7 @@ public class DomainEventIntegrationTests : IAsyncLifetime
         // Verify audit log
         var auditLogs = await _dbContext.AuditLogs.ToListAsync(CancellationToken.None);
         auditLogs.Should().HaveCount(1);
-        auditLogs.First().Action.Should().Contain("ApiKeyRevokedEvent");
+        auditLogs.ElementAt(0).Action.Should().Contain("ApiKeyRevokedEvent");
     }
 
     [Fact]
@@ -156,7 +156,7 @@ public class DomainEventIntegrationTests : IAsyncLifetime
 
         // Assert
         user.DomainEvents.Should().HaveCount(1);
-        var domainEvent = user.DomainEvents.First();
+        var domainEvent = user.DomainEvents.ElementAt(0);
         domainEvent.Should().BeOfType<TwoFactorEnabledEvent>();
 
         var twoFactorEnabledEvent = (TwoFactorEnabledEvent)domainEvent;
@@ -192,4 +192,3 @@ public class DomainEventIntegrationTests : IAsyncLifetime
         );
     }
 }
-

@@ -66,7 +66,7 @@ public sealed class HealthEndpointsIntegrationTests
         result.Should().NotBeNull();
         result.Services.Should().ContainSingle();
 
-        var service = result.Services.First();
+        var service = result.Services.ElementAt(0);
         service.ServiceName.Should().Be(serviceName);
         service.State.Should().Be("Healthy");
         service.ErrorMessage.Should().BeNull();
@@ -106,7 +106,7 @@ public sealed class HealthEndpointsIntegrationTests
         // Assert
         result.Services.Should().ContainSingle();
 
-        var service = result.Services.First();
+        var service = result.Services.ElementAt(0);
         service.State.Should().Be("Unhealthy");
         service.ErrorMessage.Should().Be("Connection timeout");
         service.ResponseTimeMs.Should().BeGreaterThan(0);
@@ -141,7 +141,7 @@ public sealed class HealthEndpointsIntegrationTests
         // Assert
         result.Services.Should().ContainSingle();
 
-        var service = result.Services.First();
+        var service = result.Services.ElementAt(0);
         service.State.Should().Be("Degraded");
         service.ErrorMessage.Should().Be("High latency detected");
     }
@@ -169,7 +169,7 @@ public sealed class HealthEndpointsIntegrationTests
 
         // Assert
         result.Services.Should().ContainSingle();
-        result.Services.First().ServiceName.Should().Be("postgres");
+        result.Services.ElementAt(0).ServiceName.Should().Be("postgres");
 
         _healthServiceMock.Verify(
             s => s.GetServiceHealthAsync("postgres", It.IsAny<CancellationToken>()),
@@ -200,7 +200,7 @@ public sealed class HealthEndpointsIntegrationTests
 
         // Assert
         result.Services.Should().ContainSingle();
-        var service = result.Services.First();
+        var service = result.Services.ElementAt(0);
         service.ServiceName.Should().Be("n8n");
         service.State.Should().Be("Healthy");
     }
@@ -228,7 +228,7 @@ public sealed class HealthEndpointsIntegrationTests
 
         // Assert
         result.Services.Should().ContainSingle();
-        var service = result.Services.First();
+        var service = result.Services.ElementAt(0);
         service.ServiceName.Should().Be("hyperdx");
         service.State.Should().Be("Healthy");
     }
@@ -260,7 +260,7 @@ public sealed class HealthEndpointsIntegrationTests
         var result = await handler.Handle(query, CancellationToken.None);
 
         // Assert
-        var service = result.Services.First();
+        var service = result.Services.ElementAt(0);
         service.ResponseTimeMs.Should().Be(responseTimeMs);
     }
 }

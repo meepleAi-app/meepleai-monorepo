@@ -9,14 +9,10 @@ namespace Api.Services.Pdf;
 public class TableDetectionService : ITableDetectionService
 {
     private readonly ITableCellParser _cellParser;
-    private readonly ILogger<TableDetectionService> _logger;
 
-    public TableDetectionService(
-        ITableCellParser cellParser,
-        ILogger<TableDetectionService> logger)
+    public TableDetectionService(ITableCellParser cellParser)
     {
         _cellParser = cellParser;
-        _logger = logger;
     }
 
     public List<PositionedTextLine> ExtractPageLines(PdfPage page)
@@ -41,7 +37,9 @@ public class TableDetectionService : ITableDetectionService
         var tableStartLine = -1;
         var lastLineWasBlank = false;
 
-        for (int i = 0; i < lines.Count; i++)
+        // S127: Use while loop to avoid modifying counter in body
+        int i = 0;
+        while (i < lines.Count)
         {
             var line = lines[i];
             var trimmedText = line.GetTrimmedText();
@@ -58,6 +56,7 @@ public class TableDetectionService : ITableDetectionService
                 }
 
                 lastLineWasBlank = true;
+                i++; // Advance to next line
                 continue;
             }
 
@@ -74,7 +73,7 @@ public class TableDetectionService : ITableDetectionService
                 if (previewColumnCount > 0 && previewColumnCount < currentBoundaries.Count)
                 {
                     FinalizeCurrentTable();
-                    i--;
+                    // Don't increment i - reprocess this line
                     lastLineWasBlank = false;
                     continue;
                 }
@@ -82,7 +81,7 @@ public class TableDetectionService : ITableDetectionService
                 if (hasBlankRowSentinel && currentRows.Count > 1 && previewNonEmptyColumns >= requiredPreviewColumns)
                 {
                     FinalizeCurrentTable();
-                    i--;
+                    // Don't increment i - reprocess this line
                     lastLineWasBlank = false;
                     continue;
                 }
@@ -121,7 +120,7 @@ public class TableDetectionService : ITableDetectionService
                     if (extendsLeft || extendsRight)
                     {
                         FinalizeCurrentTable();
-                        i--;
+                        // Don't increment i - reprocess this line
                         continue;
                     }
                 }
@@ -152,6 +151,8 @@ public class TableDetectionService : ITableDetectionService
                     FinalizeCurrentTable();
                 }
             }
+
+            i++; // Advance to next line
         }
 
         FinalizeCurrentTable();

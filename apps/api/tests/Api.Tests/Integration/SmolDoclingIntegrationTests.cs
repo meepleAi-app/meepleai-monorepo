@@ -145,7 +145,6 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
         _extractor = new SmolDoclingPdfTextExtractor(
             serviceProvider.GetRequiredService<IHttpClientFactory>(),
             logger,
-            domainService,
             configuration);
 
         _output("Test infrastructure initialized");
@@ -277,7 +276,6 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
         var unavailableExtractor = new SmolDoclingPdfTextExtractor(
             serviceProvider.GetRequiredService<IHttpClientFactory>(),
             logger,
-            domainService,
             config);
 
         await using var pdfStream = new MemoryStream(new byte[] { 0x25, 0x50, 0x44, 0x46 }); // Minimal PDF header

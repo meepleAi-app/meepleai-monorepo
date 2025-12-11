@@ -41,7 +41,6 @@ public class RagValidationPipelineServiceTests
             _mockMultiModelValidation.Object,
             _mockCitationValidation.Object,
             _mockHallucinationDetection.Object,
-            _mockAccuracyTracking.Object,
             _mockLogger.Object);
     }
     [Fact]

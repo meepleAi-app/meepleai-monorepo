@@ -23,8 +23,6 @@ public sealed class InvokeAgentCommandHandler
     private readonly IAgentRepository _agentRepository;
     private readonly IEmbeddingRepository _embeddingRepository;
     private readonly IEmbeddingService _embeddingService;
-    private readonly AgentOrchestrationService _orchestrationService;
-    private readonly VectorSearchDomainService _vectorSearchService;
     private readonly QualityTrackingDomainService _qualityTrackingService;
     private readonly ILogger<InvokeAgentCommandHandler> _logger;
 
@@ -32,16 +30,12 @@ public sealed class InvokeAgentCommandHandler
         IAgentRepository agentRepository,
         IEmbeddingRepository embeddingRepository,
         IEmbeddingService embeddingService,
-        AgentOrchestrationService orchestrationService,
-        VectorSearchDomainService vectorSearchService,
         QualityTrackingDomainService qualityTrackingService,
         ILogger<InvokeAgentCommandHandler> logger)
     {
         _agentRepository = agentRepository ?? throw new ArgumentNullException(nameof(agentRepository));
         _embeddingRepository = embeddingRepository ?? throw new ArgumentNullException(nameof(embeddingRepository));
         _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
-        _orchestrationService = orchestrationService ?? throw new ArgumentNullException(nameof(orchestrationService));
-        _vectorSearchService = vectorSearchService ?? throw new ArgumentNullException(nameof(vectorSearchService));
         _qualityTrackingService = qualityTrackingService ?? throw new ArgumentNullException(nameof(qualityTrackingService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }

@@ -39,9 +39,12 @@ public class OllamaLlmClient : ILlmClient
         _logger = logger;
         _costCalculator = costCalculator;
 
+        // S1075: Default Ollama URL extracted to const
+        const string DefaultOllamaUrl = "http://ollama:11434";
+
         // Configure Ollama endpoint - check multiple config keys for flexibility
         // Docker uses OLLAMA_URL env var, appsettings.json may use OllamaUrl
-        var ollamaUrl = config["OLLAMA_URL"] ?? config["OllamaUrl"] ?? "http://ollama:11434";
+        var ollamaUrl = config["OLLAMA_URL"] ?? config["OllamaUrl"] ?? DefaultOllamaUrl;
         _httpClient.BaseAddress = new Uri(ollamaUrl);
         _httpClient.Timeout = TimeSpan.FromSeconds(DefaultTimeoutSeconds);
 

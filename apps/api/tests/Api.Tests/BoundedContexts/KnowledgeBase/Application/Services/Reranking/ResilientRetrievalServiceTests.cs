@@ -49,7 +49,6 @@ public class ResilientRetrievalServiceTests
             _hybridSearchMock.Object,
             _rerankerMock.Object,
             _parentResolverMock.Object,
-            _cacheMock.Object,
             _loggerMock.Object,
             Options.Create(_options));
     }

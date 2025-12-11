@@ -31,18 +31,15 @@ public class ITextPdfTableExtractor : IPdfTableExtractor
 {
     private readonly ITableDetectionService _tableDetectionService;
     private readonly ITableStructureAnalyzer _tableStructureAnalyzer;
-    private readonly TableToAtomicRuleConverter _ruleConverter;
     private readonly ILogger<ITextPdfTableExtractor> _logger;
 
     public ITextPdfTableExtractor(
         ITableDetectionService tableDetectionService,
         ITableStructureAnalyzer tableStructureAnalyzer,
-        TableToAtomicRuleConverter ruleConverter,
         ILogger<ITextPdfTableExtractor> logger)
     {
         _tableDetectionService = tableDetectionService ?? throw new ArgumentNullException(nameof(tableDetectionService));
         _tableStructureAnalyzer = tableStructureAnalyzer ?? throw new ArgumentNullException(nameof(tableStructureAnalyzer));
-        _ruleConverter = ruleConverter ?? throw new ArgumentNullException(nameof(ruleConverter));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -218,9 +215,7 @@ public class ITextPdfTableExtractor : IPdfTableExtractor
             // Fallback to concrete detector if no tables detected
             if (pageTables.Count == 0)
             {
-                var detector = new TableDetectionService(
-                    new TableCellParser(),
-                    NullLogger<TableDetectionService>.Instance);
+                var detector = new TableDetectionService(new TableCellParser());
                 var fallbackLines = detector.ExtractPageLines(page);
                 pageTables = detector.DetectTablesInPage(fallbackLines, pageNum);
             }
@@ -299,9 +294,7 @@ public class ITextPdfTableExtractor : IPdfTableExtractor
             if (pageTables.Count == 0)
             {
                 // Fallback to concrete detector
-                var detector = new TableDetectionService(
-                    new TableCellParser(),
-                    NullLogger<TableDetectionService>.Instance);
+                var detector = new TableDetectionService(new TableCellParser());
                 var fallbackLines = detector.ExtractPageLines(page);
                 pageTables = detector.DetectTablesInPage(fallbackLines, pageNum);
             }

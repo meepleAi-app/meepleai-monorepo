@@ -35,7 +35,6 @@ public class RagValidationPipelineService : IRagValidationPipelineService
     private readonly IMultiModelValidationService _multiModelValidation;
     private readonly ICitationValidationService _citationValidation;
     private readonly IHallucinationDetectionService _hallucinationDetection;
-    private readonly ValidationAccuracyTrackingService _accuracyTracking;
     private readonly ILogger<RagValidationPipelineService> _logger;
 
     public RagValidationPipelineService(
@@ -43,14 +42,12 @@ public class RagValidationPipelineService : IRagValidationPipelineService
         IMultiModelValidationService multiModelValidation,
         ICitationValidationService citationValidation,
         IHallucinationDetectionService hallucinationDetection,
-        ValidationAccuracyTrackingService accuracyTracking,
         ILogger<RagValidationPipelineService> logger)
     {
         _confidenceValidation = confidenceValidation ?? throw new ArgumentNullException(nameof(confidenceValidation));
         _multiModelValidation = multiModelValidation ?? throw new ArgumentNullException(nameof(multiModelValidation));
         _citationValidation = citationValidation ?? throw new ArgumentNullException(nameof(citationValidation));
         _hallucinationDetection = hallucinationDetection ?? throw new ArgumentNullException(nameof(hallucinationDetection));
-        _accuracyTracking = accuracyTracking ?? throw new ArgumentNullException(nameof(accuracyTracking));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 

@@ -7,7 +7,6 @@ namespace Api.Services;
 
 public class EmailService : IEmailService
 {
-    private readonly IConfiguration _configuration;
     private readonly ILogger<EmailService> _logger;
     private readonly string _fromAddress;
     private readonly string _fromName;
@@ -20,18 +19,20 @@ public class EmailService : IEmailService
 
     public EmailService(IConfiguration configuration, ILogger<EmailService> logger)
     {
-        _configuration = configuration;
+        // S1075: Default values extracted to const
+        const string DefaultResetUrlBase = "http://localhost:3000/reset-password";
+
         _logger = logger;
 
-        // Load email configuration
-        _fromAddress = _configuration["Email:FromAddress"] ?? "noreply@meepleai.dev";
-        _fromName = _configuration["Email:FromName"] ?? "MeepleAI";
-        _smtpHost = _configuration["Email:SmtpHost"] ?? "localhost";
-        _smtpPort = int.Parse(_configuration["Email:SmtpPort"] ?? "587", CultureInfo.InvariantCulture);
-        _smtpUsername = _configuration["Email:SmtpUsername"];
-        _smtpPassword = _configuration["Email:SmtpPassword"];
-        _enableSsl = bool.Parse(_configuration["Email:EnableSsl"] ?? "true");
-        _resetUrlBase = _configuration["Email:ResetUrlBase"] ?? "http://localhost:3000/reset-password";
+        // Load email configuration (S1450: configuration used only locally)
+        _fromAddress = configuration["Email:FromAddress"] ?? "noreply@meepleai.dev";
+        _fromName = configuration["Email:FromName"] ?? "MeepleAI";
+        _smtpHost = configuration["Email:SmtpHost"] ?? "localhost";
+        _smtpPort = int.Parse(configuration["Email:SmtpPort"] ?? "587", CultureInfo.InvariantCulture);
+        _smtpUsername = configuration["Email:SmtpUsername"];
+        _smtpPassword = configuration["Email:SmtpPassword"];
+        _enableSsl = bool.Parse(configuration["Email:EnableSsl"] ?? "true");
+        _resetUrlBase = configuration["Email:ResetUrlBase"] ?? DefaultResetUrlBase;
     }
 
     public async Task SendPasswordResetEmailAsync(

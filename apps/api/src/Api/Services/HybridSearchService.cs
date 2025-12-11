@@ -15,7 +15,6 @@ public class HybridSearchService : IHybridSearchService
     private readonly IQdrantService _qdrantService;
     private readonly IKeywordSearchService _keywordSearchService;
     private readonly IEmbeddingService _embeddingService;
-    private readonly MeepleAiDbContext _dbContext;
     private readonly ILogger<HybridSearchService> _logger;
     private readonly HybridSearchConfiguration _config;
 
@@ -28,14 +27,12 @@ public class HybridSearchService : IHybridSearchService
         IQdrantService qdrantService,
         IKeywordSearchService keywordSearchService,
         IEmbeddingService embeddingService,
-        MeepleAiDbContext dbContext,
         ILogger<HybridSearchService> logger,
         IOptions<HybridSearchConfiguration> config)
     {
         _qdrantService = qdrantService;
         _keywordSearchService = keywordSearchService;
         _embeddingService = embeddingService;
-        _dbContext = dbContext;
         _logger = logger;
         _config = config.Value;
     }

@@ -19,7 +19,6 @@ namespace Api.Services;
 public class PromptEvaluationService : IPromptEvaluationService
 {
     private readonly IRagService _ragService;
-    private readonly IPromptTemplateService _promptTemplateService;
     private readonly MeepleAiDbContext _dbContext;
     private readonly ILogger<PromptEvaluationService> _logger;
     private readonly string _allowedDatasetsDirectory;
@@ -27,7 +26,6 @@ public class PromptEvaluationService : IPromptEvaluationService
     private readonly IConfigurationService _configService;
     public PromptEvaluationService(
         IRagService ragService,
-        IPromptTemplateService promptTemplateService,
         MeepleAiDbContext dbContext,
         ILogger<PromptEvaluationService> logger,
         IConfigurationService configService,
@@ -35,7 +33,6 @@ public class PromptEvaluationService : IPromptEvaluationService
         TimeProvider? timeProvider = null)
     {
         _ragService = ragService;
-        _promptTemplateService = promptTemplateService;
         _dbContext = dbContext;
         _logger = logger;
         _allowedDatasetsDirectory = allowedDatasetsDirectory

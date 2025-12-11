@@ -8,9 +8,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from './dialog';
-import { Button } from './button';
-import { Label } from './label';
-import { Input } from './input';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 
 /**
  * Dialog component for modal windows and overlays.

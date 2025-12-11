@@ -245,11 +245,14 @@ public class RedisBackgroundTaskOrchestrator : IBackgroundTaskOrchestrator
                 await ReleaseLockAsync(db, fullLockKey, lockValue).ConfigureAwait(false);
             }
         }
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
+        // INFRASTRUCTURE LOGGING PATTERN: Log distributed lock failures before propagating.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error executing task with distributed lock {LockKey}", lockKey);
             throw;
         }
+#pragma warning restore S2139
     }
 
     private async Task ExecuteTaskAsync(

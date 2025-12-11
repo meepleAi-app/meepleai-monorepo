@@ -11,20 +11,20 @@ using Xunit;
 namespace Api.Tests.BoundedContexts.WorkflowIntegration.Application.Handlers;
 
 /// <summary>
-/// Tests for UpdateN8nConfigCommandHandler.
+/// Tests for UpdateN8NConfigCommandHandler.
 /// Tests updates to n8n workflow configurations.
 /// </summary>
-public class UpdateN8nConfigCommandHandlerTests
+public class UpdateN8NConfigCommandHandlerTests
 {
-    private readonly Mock<IN8nConfigurationRepository> _mockRepository;
+    private readonly Mock<IN8NConfigurationRepository> _mockRepository;
     private readonly Mock<IUnitOfWork> _mockUnitOfWork;
-    private readonly UpdateN8nConfigCommandHandler _handler;
+    private readonly UpdateN8NConfigCommandHandler _handler;
 
-    public UpdateN8nConfigCommandHandlerTests()
+    public UpdateN8NConfigCommandHandlerTests()
     {
-        _mockRepository = new Mock<IN8nConfigurationRepository>();
+        _mockRepository = new Mock<IN8NConfigurationRepository>();
         _mockUnitOfWork = new Mock<IUnitOfWork>();
-        _handler = new UpdateN8nConfigCommandHandler(
+        _handler = new UpdateN8NConfigCommandHandler(
             _mockRepository.Object,
             _mockUnitOfWork.Object);
     }
@@ -35,7 +35,7 @@ public class UpdateN8nConfigCommandHandlerTests
         // Arrange
         var configId = Guid.NewGuid();
         var userId = Guid.NewGuid();
-        var existingConfig = new N8nConfiguration(
+        var existingConfig = new N8NConfiguration(
             configId,
             "Old Name",
             new WorkflowUrl("https://old.n8n.com"),
@@ -43,7 +43,7 @@ public class UpdateN8nConfigCommandHandlerTests
             userId
         );
 
-        var command = new UpdateN8nConfigCommand(
+        var command = new UpdateN8NConfigCommand(
             ConfigId: configId,
             Name: "Updated Name",
             BaseUrl: "https://new.n8n.com",
@@ -78,7 +78,7 @@ public class UpdateN8nConfigCommandHandlerTests
     {
         // Arrange
         var configId = Guid.NewGuid();
-        var command = new UpdateN8nConfigCommand(
+        var command = new UpdateN8NConfigCommand(
             ConfigId: configId,
             Name: "Test",
             BaseUrl: "https://test.com",
@@ -89,7 +89,7 @@ public class UpdateN8nConfigCommandHandlerTests
 
         _mockRepository
             .Setup(r => r.GetByIdAsync(configId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((N8nConfiguration?)null);
+            .ReturnsAsync((N8NConfiguration?)null);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<DomainException>(
@@ -98,7 +98,7 @@ public class UpdateN8nConfigCommandHandlerTests
         Assert.Contains(configId.ToString(), exception.Message);
 
         _mockRepository.Verify(
-            r => r.UpdateAsync(It.IsAny<N8nConfiguration>(), It.IsAny<CancellationToken>()),
+            r => r.UpdateAsync(It.IsAny<N8NConfiguration>(), It.IsAny<CancellationToken>()),
             Times.Never);
         _mockUnitOfWork.Verify(
             u => u.SaveChangesAsync(It.IsAny<CancellationToken>()),
@@ -111,7 +111,7 @@ public class UpdateN8nConfigCommandHandlerTests
         // Arrange
         var configId = Guid.NewGuid();
         var userId = Guid.NewGuid();
-        var existingConfig = new N8nConfiguration(
+        var existingConfig = new N8NConfiguration(
             configId,
             "Test Config",
             new WorkflowUrl("https://test.n8n.com"),
@@ -120,7 +120,7 @@ public class UpdateN8nConfigCommandHandlerTests
         );
         existingConfig.Deactivate(); // Start as inactive
 
-        var command = new UpdateN8nConfigCommand(
+        var command = new UpdateN8NConfigCommand(
             ConfigId: configId,
             Name: "Test Config",
             BaseUrl: null,
@@ -146,7 +146,7 @@ public class UpdateN8nConfigCommandHandlerTests
         // Arrange
         var configId = Guid.NewGuid();
         var userId = Guid.NewGuid();
-        var existingConfig = new N8nConfiguration(
+        var existingConfig = new N8NConfiguration(
             configId,
             "Active Config",
             new WorkflowUrl("https://active.n8n.com"),
@@ -154,7 +154,7 @@ public class UpdateN8nConfigCommandHandlerTests
             userId
         );
 
-        var command = new UpdateN8nConfigCommand(
+        var command = new UpdateN8NConfigCommand(
             ConfigId: configId,
             Name: "Active Config",
             BaseUrl: null,
@@ -180,7 +180,7 @@ public class UpdateN8nConfigCommandHandlerTests
         // Arrange - In the update pattern, null means "don't change"
         var configId = Guid.NewGuid();
         var userId = Guid.NewGuid();
-        var existingConfig = new N8nConfiguration(
+        var existingConfig = new N8NConfiguration(
             configId,
             "Test Config",
             new WorkflowUrl("https://test.n8n.com"),
@@ -189,7 +189,7 @@ public class UpdateN8nConfigCommandHandlerTests
             webhookUrl: new WorkflowUrl("https://old.webhook.com")
         );
 
-        var command = new UpdateN8nConfigCommand(
+        var command = new UpdateN8NConfigCommand(
             ConfigId: configId,
             Name: "Test Config",
             BaseUrl: null,
@@ -215,7 +215,7 @@ public class UpdateN8nConfigCommandHandlerTests
         // Arrange
         var configId = Guid.NewGuid();
         var userId = Guid.NewGuid();
-        var existingConfig = new N8nConfiguration(
+        var existingConfig = new N8NConfiguration(
             configId,
             "Original Name",
             new WorkflowUrl("https://original.n8n.com"),
@@ -223,7 +223,7 @@ public class UpdateN8nConfigCommandHandlerTests
             userId
         );
 
-        var command = new UpdateN8nConfigCommand(
+        var command = new UpdateN8NConfigCommand(
             ConfigId: configId,
             Name: "Updated Name Only",
             BaseUrl: null, // Not updating base URL
@@ -250,7 +250,7 @@ public class UpdateN8nConfigCommandHandlerTests
         // Arrange
         var configId = Guid.NewGuid();
         var userId = Guid.NewGuid();
-        var existingConfig = new N8nConfiguration(
+        var existingConfig = new N8NConfiguration(
             configId,
             "Test",
             new WorkflowUrl("https://test.com"),
@@ -258,7 +258,7 @@ public class UpdateN8nConfigCommandHandlerTests
             userId
         );
 
-        var command = new UpdateN8nConfigCommand(
+        var command = new UpdateN8NConfigCommand(
             ConfigId: configId,
             Name: "Updated",
             BaseUrl: null,

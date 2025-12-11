@@ -116,7 +116,7 @@ public class TextChunkingService : ITextChunkingService
     /// PERF-07: Find paragraph boundary (double newline or section markers)
     /// Paragraphs are the strongest semantic boundaries for chunking
     /// </summary>
-    private int FindParagraphBoundary(string text, int start, int end)
+    private static int FindParagraphBoundary(string text, int start, int end)
     {
         // Look for double newline (paragraph break)
         for (int i = start; i < end - 1; i++)
@@ -151,7 +151,7 @@ public class TextChunkingService : ITextChunkingService
     /// Find the nearest sentence boundary (. ! ? followed by space/newline)
     /// PERF-07: Enhanced sentence detection with abbreviation and decimal handling
     /// </summary>
-    private int FindSentenceBoundary(string text, int start, int end)
+    private static int FindSentenceBoundary(string text, int start, int end)
     {
         // Common abbreviations that don't end sentences
         var commonAbbreviations = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -223,7 +223,7 @@ public class TextChunkingService : ITextChunkingService
     /// <summary>
     /// PERF-07: Find the start of the current word (for abbreviation detection)
     /// </summary>
-    private int FindWordStart(string text, int searchStart, int position)
+    private static int FindWordStart(string text, int searchStart, int position)
     {
         for (int i = position - 1; i >= searchStart; i--)
         {
@@ -246,7 +246,7 @@ public class TextChunkingService : ITextChunkingService
             && char.IsDigit(text[position + 1]);
     }
 
-    private int FindWordBoundary(string text, int start, int end)
+    private static int FindWordBoundary(string text, int start, int end)
     {
         // Look backward from end for whitespace
         for (int i = end - 1; i > start; i--)
@@ -264,7 +264,7 @@ public class TextChunkingService : ITextChunkingService
     /// Estimate page number based on character position
     /// Assumes ~2000 characters per page (rough estimate)
     /// </summary>
-    private int EstimatePageNumber(int charPosition)
+    private static int EstimatePageNumber(int charPosition, int _)
     {
         const int charsPerPage = 2000;
         return (charPosition / charsPerPage) + 1;

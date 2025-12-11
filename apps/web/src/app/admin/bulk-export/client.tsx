@@ -8,7 +8,8 @@ import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { getErrorMessage } from '@/lib/utils/errorHandler';
 import { useAuthUser } from '@/components/auth/AuthProvider';
-import { AdminAuthGuard } from '@/components/admin/AdminAuthGuard';
+import { AdminAuthGuard, BulkActionBar } from '@/components/admin';
+import { Download } from 'lucide-react';
 
 type Game = {
   id: string;
@@ -147,34 +148,39 @@ export function AdminPageClient() {
             </div>
           )}
 
-          {/* Bulk Actions */}
-          <div className="mb-6 flex items-center justify-between p-4 bg-slate-800/50 rounded-lg border border-slate-700">
-            <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
-                <input
-                  type="checkbox"
-                  checked={games.length > 0 && selectedGameIds.size === games.length}
-                  onChange={toggleSelectAll}
-                  className="w-4 h-4 rounded border-slate-600 bg-slate-700 text-blue-500 focus:ring-2 focus:ring-blue-500"
-                />
-                <span>Select All</span>
-              </label>
-              <span className="text-slate-400">
-                {selectedGameIds.size} of {games.length} selected
-              </span>
-            </div>
-
-            <Button
-              onClick={handleExport}
-              disabled={selectedGameIds.size === 0 || isExporting}
-              className="px-6 py-2"
-              aria-label={`Export ${selectedGameIds.size} selected rule specs`}
-            >
-              {isExporting
-                ? 'Exporting...'
-                : `Export ${selectedGameIds.size > 0 ? selectedGameIds.size : ''} Rule Spec${selectedGameIds.size !== 1 ? 's' : ''}`}
-            </Button>
+          {/* Select All Checkbox */}
+          <div className="mb-4">
+            <label className="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
+              <input
+                type="checkbox"
+                checked={games.length > 0 && selectedGameIds.size === games.length}
+                onChange={toggleSelectAll}
+                className="w-4 h-4 rounded border-slate-600 bg-slate-700 text-blue-500 focus:ring-2 focus:ring-blue-500"
+              />
+              <span>Select All</span>
+            </label>
           </div>
+
+          {/* Bulk Action Bar */}
+          <BulkActionBar
+            selectedCount={selectedGameIds.size}
+            totalCount={games.length}
+            itemLabel="rule specs"
+            itemLabelSingular="rule spec"
+            actions={[
+              {
+                id: 'export',
+                label: isExporting ? 'Exporting...' : 'Export',
+                icon: Download,
+                variant: 'default',
+                onClick: () => handleExport(),
+                disabled: isExporting,
+                tooltip: 'Export selected rule specs',
+              },
+            ]}
+            onClearSelection={() => setSelectedGameIds(new Set())}
+            testId="bulk-export-action-bar"
+          />
 
           {/* Games List */}
           {dataLoading ? (

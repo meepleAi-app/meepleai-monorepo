@@ -47,10 +47,13 @@ public class GetInfrastructureHealthQueryHandler : IRequestHandler<GetInfrastruc
 
             return new InfrastructureHealthResponse(overall, serviceDtos);
         }
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
+        // HANDLER PATTERN: Log health check failures before propagating.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to get infrastructure health status");
             throw;
         }
+#pragma warning restore S2139
     }
 }

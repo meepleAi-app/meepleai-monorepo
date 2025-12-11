@@ -67,7 +67,7 @@ public class PdfExportFormatter : IExportFormatter
         return Task.FromResult<Stream>(stream);
     }
 
-    private List<ChatLogEntity> FilterLogsByDateRange(
+    private static List<ChatLogEntity> FilterLogsByDateRange(
         ICollection<ChatLogEntity> logs,
         DateTime? dateFrom,
         DateTime? dateTo)
@@ -263,5 +263,5 @@ public class PdfExportFormatter : IExportFormatter
         }
     }
 
-    private record CitationMetadata(string Source, int Page);
+    private sealed record CitationMetadata(string Source, int Page);
 }

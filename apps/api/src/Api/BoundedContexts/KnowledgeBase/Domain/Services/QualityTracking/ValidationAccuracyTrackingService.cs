@@ -175,7 +175,7 @@ public class ValidationAccuracyTrackingService
     /// <summary>
     /// Generates actionable recommendations based on metrics.
     /// </summary>
-    private IReadOnlyList<string> GenerateRecommendations(ValidationAccuracyMetrics metrics)
+    private static IReadOnlyList<string> GenerateRecommendations(ValidationAccuracyMetrics metrics)
     {
         var recommendations = new List<string>();
 
@@ -225,7 +225,7 @@ public class ValidationAccuracyTrackingService
     /// <summary>
     /// Generates a summary message for the metrics.
     /// </summary>
-    private string GenerateSummary(ValidationAccuracyMetrics metrics, string context)
+    private static string GenerateSummary(ValidationAccuracyMetrics metrics, string context)
     {
         var status = metrics.MeetsBaselineThreshold ? "PASS" : "FAIL";
         var emoji = metrics.QualityLevel switch

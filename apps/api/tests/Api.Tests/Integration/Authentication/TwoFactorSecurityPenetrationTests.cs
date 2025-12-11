@@ -53,13 +53,11 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
     private IUnitOfWork? _unitOfWork;
     private Mock<IAlertingService>? _mockAlertingService; // ISSUE-1674: Store for alert verification
     private readonly Action<string> _output;
-    private readonly string _redisKeyPrefix = $"test:{Guid.NewGuid()}:";
 
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
     // Security test constants (OWASP recommendations)
     private const int BruteForceAttemptThreshold = 100; // Attacks typically 100+ attempts
-    private const int ReasonableFailureLimit = 5; // OWASP recommends 3-5 attempts before lockout
     private const int TimingAttackSampleSize = 1000; // Statistical significance
     private const double TimingVarianceThreshold = 0.05; // 5% max timing variance (constant-time)
 

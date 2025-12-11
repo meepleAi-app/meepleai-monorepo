@@ -91,7 +91,7 @@ public class QualityMetrics
     /// - medium: >= 0.60 and < 0.80
     /// - low: < 0.60
     /// </summary>
-    private string DetermineQualityTier(double overallConfidence)
+    private static string DetermineQualityTier(double overallConfidence)
     {
         if (overallConfidence >= HighQualityThreshold)
         {

@@ -34,7 +34,7 @@ public class TableToAtomicRuleConverter
     /// 4. Empty cells are skipped (no null/empty values in rules)
     /// 5. Page number is always included for traceability
     /// </remarks>
-    public List<string> ConvertTableToAtomicRules(PdfTable table)
+    public static List<string> ConvertTableToAtomicRules(PdfTable table)
     {
         var rules = new List<string>();
 
@@ -110,7 +110,7 @@ public class TableToAtomicRuleConverter
     /// This is BUSINESS LOGIC because it defines what constitutes a
     /// meaningful header in game rule tables, not how to parse PDF data.
     /// </remarks>
-    public bool IsHeaderRow(string[] row)
+    public static bool IsHeaderRow(string[] row)
     {
         if (row == null || row.Length == 0)
         {
@@ -154,7 +154,7 @@ public class TableToAtomicRuleConverter
     ///
     /// Categories map to game phases and rule types understood by game designers.
     /// </remarks>
-    public string CategorizeAtomicRule(string atomicRule)
+    public static string CategorizeAtomicRule(string atomicRule)
     {
         if (string.IsNullOrWhiteSpace(atomicRule))
         {

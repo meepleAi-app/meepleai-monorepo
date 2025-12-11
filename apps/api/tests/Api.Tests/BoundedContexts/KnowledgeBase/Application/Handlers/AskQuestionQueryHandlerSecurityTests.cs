@@ -418,7 +418,7 @@ public class AskQuestionQueryHandlerSecurityTests
             "Chat history should not be built when ShouldIncludeChatHistory returns false");
     }
 
-    private void SetupDefaultMocks(Guid gameId)
+    private void SetupDefaultMocks(Guid _)
     {
         // Note: SearchQueryHandler is a real instance, not mocked
         // It will return empty results by default when its dependencies return empty data

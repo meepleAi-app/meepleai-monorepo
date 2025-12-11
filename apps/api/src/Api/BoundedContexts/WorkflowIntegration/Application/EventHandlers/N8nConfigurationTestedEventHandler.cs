@@ -6,25 +6,25 @@ using Microsoft.Extensions.Logging;
 namespace Api.BoundedContexts.WorkflowIntegration.Application.EventHandlers;
 
 /// <summary>
-/// Handler for N8nConfigurationTestedEvent domain event.
+/// Handler for N8NConfigurationTestedEvent domain event.
 /// </summary>
-public sealed class N8nConfigurationTestedEventHandler : DomainEventHandlerBase<N8nConfigurationTestedEvent>
+public sealed class N8NConfigurationTestedEventHandler : DomainEventHandlerBase<N8NConfigurationTestedEvent>
 {
-    public N8nConfigurationTestedEventHandler(
+    public N8NConfigurationTestedEventHandler(
         MeepleAiDbContext dbContext,
-        ILogger<DomainEventHandlerBase<N8nConfigurationTestedEvent>> logger)
+        ILogger<DomainEventHandlerBase<N8NConfigurationTestedEvent>> logger)
         : base(dbContext, logger)
     {
     }
 
-    protected override async Task HandleEventAsync(N8nConfigurationTestedEvent domainEvent, CancellationToken cancellationToken)
+    protected override async Task HandleEventAsync(N8NConfigurationTestedEvent domainEvent, CancellationToken cancellationToken)
     {
         // Future: Send alert if test failed
         // Future: Update health monitoring dashboard
         await Task.CompletedTask.ConfigureAwait(false);
     }
 
-    protected override Dictionary<string, object?>? GetAuditMetadata(N8nConfigurationTestedEvent domainEvent)
+    protected override Dictionary<string, object?>? GetAuditMetadata(N8NConfigurationTestedEvent domainEvent)
     {
         return new Dictionary<string, object?>
 (StringComparer.Ordinal)
@@ -33,7 +33,7 @@ public sealed class N8nConfigurationTestedEventHandler : DomainEventHandlerBase<
             ["TestSuccess"] = domainEvent.TestSuccess,
             ["TestResult"] = domainEvent.TestResult,
             ["TestedAt"] = domainEvent.TestedAt,
-            ["Action"] = "N8nConfigurationTested"
+            ["Action"] = "N8NConfigurationTested"
         };
     }
 }

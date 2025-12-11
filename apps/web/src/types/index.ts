@@ -65,3 +65,14 @@ export type {
   RecentSearch,
   SearchState,
 } from './search';
+
+// API Key Filter Types
+export type {
+  ApiKeyFilters,
+  ApiKeyStatus,
+  ApiKeyScope,
+  ScopeOption,
+  StatusOption,
+} from './api-key-filters';
+
+export { AVAILABLE_SCOPES, AVAILABLE_STATUSES } from './api-key-filters';

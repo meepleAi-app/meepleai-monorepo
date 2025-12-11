@@ -38,6 +38,7 @@ import {
   MenuIcon,
   PackageIcon,
   BellIcon,
+  KeyIcon,
 } from 'lucide-react';
 
 const SIDEBAR_COLLAPSED_KEY = 'admin-sidebar-collapsed';
@@ -71,6 +72,7 @@ const defaultNavigation: NavItem[] = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboardIcon },
   { href: '/admin/infrastructure', label: 'Infrastructure', icon: ServerIcon },
   { href: '/admin/users', label: 'Users', icon: UsersIcon },
+  { href: '/admin/api-keys', label: 'API Keys', icon: KeyIcon },
   { href: '/admin/alerts', label: 'Alerts', icon: BellIcon },
   { href: '/admin/analytics', label: 'Analytics', icon: BarChartIcon },
   { href: '/admin/configuration', label: 'Configuration', icon: SettingsIcon },

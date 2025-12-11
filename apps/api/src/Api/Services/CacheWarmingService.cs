@@ -162,6 +162,8 @@ public class CacheWarmingService : BackgroundService
 
             _logger.LogInformation("Cache warming cycle completed successfully.");
         }
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
+        // INFRASTRUCTURE LOGGING PATTERN: Log cache warming failures before propagating.
         catch (InvalidOperationException ex)
         {
             _logger.LogError(ex, "Invalid operation during cache warming cycle");
@@ -182,6 +184,7 @@ public class CacheWarmingService : BackgroundService
             _logger.LogInformation(ex, "Cache warming cycle operation cancelled");
             throw;
         }
+#pragma warning restore S2139
     }
 
     /// <summary>

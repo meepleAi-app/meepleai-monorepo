@@ -44,7 +44,7 @@ public class PdfTextProcessingDomainService
     /// </summary>
     /// <param name="rawText">Raw extracted text</param>
     /// <returns>Normalized text</returns>
-    public string NormalizeText(string rawText)
+    public static string NormalizeText(string rawText)
     {
         if (string.IsNullOrWhiteSpace(rawText))
         {
@@ -87,7 +87,7 @@ public class PdfTextProcessingDomainService
     /// <param name="text">Extracted text</param>
     /// <param name="pageCount">Number of pages</param>
     /// <returns>Quality assessment</returns>
-    public ExtractionQuality AssessQuality(string text, int pageCount)
+    public static ExtractionQuality AssessQuality(string text, int pageCount)
     {
         if (pageCount <= 0) return ExtractionQuality.VeryLow;
         if (string.IsNullOrWhiteSpace(text)) return ExtractionQuality.VeryLow;
@@ -103,7 +103,7 @@ public class PdfTextProcessingDomainService
     /// <summary>
     /// Removes zero-width characters that can interfere with text processing
     /// </summary>
-    private string RemoveZeroWidthCharacters(string text)
+    private static string RemoveZeroWidthCharacters(string text)
     {
         // Remove zero-width characters by replacing each one individually
         // This is more reliable than regex for unicode character removal

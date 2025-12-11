@@ -96,7 +96,7 @@ public class CreateApiKeyManagementCommandHandler : ICommandHandler<CreateApiKey
         };
     }
 
-    private (int? MaxRequestsPerDay, int? MaxRequestsPerHour) ParseQuotaFromMetadata(string? metadata)
+    private static (int? MaxRequestsPerDay, int? MaxRequestsPerHour) ParseQuotaFromMetadata(string? metadata)
     {
         if (string.IsNullOrWhiteSpace(metadata))
             return (null, null);

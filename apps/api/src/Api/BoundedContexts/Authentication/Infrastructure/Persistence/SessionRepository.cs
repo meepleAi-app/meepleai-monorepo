@@ -112,8 +112,8 @@ public class SessionRepository : RepositoryBase, ISessionRepository
 
         try
         {
-            var rowsAffected = await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-            // rowsAffected might be 0 if another concurrent operation already revoked the sessions
+            // Note: rowsAffected might be 0 if another concurrent operation already revoked the sessions
+            _ = await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
         catch (DbUpdateConcurrencyException)
         {

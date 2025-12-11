@@ -9,18 +9,18 @@ using Xunit;
 namespace Api.Tests.BoundedContexts.WorkflowIntegration.Application.Handlers;
 
 /// <summary>
-/// Tests for GetActiveN8nConfigQueryHandler.
+/// Tests for GetActiveN8NConfigQueryHandler.
 /// Tests retrieval of the currently active n8n configuration.
 /// </summary>
-public class GetActiveN8nConfigQueryHandlerTests
+public class GetActiveN8NConfigQueryHandlerTests
 {
-    private readonly Mock<IN8nConfigurationRepository> _mockRepository;
-    private readonly GetActiveN8nConfigQueryHandler _handler;
+    private readonly Mock<IN8NConfigurationRepository> _mockRepository;
+    private readonly GetActiveN8NConfigQueryHandler _handler;
 
-    public GetActiveN8nConfigQueryHandlerTests()
+    public GetActiveN8NConfigQueryHandlerTests()
     {
-        _mockRepository = new Mock<IN8nConfigurationRepository>();
-        _handler = new GetActiveN8nConfigQueryHandler(_mockRepository.Object);
+        _mockRepository = new Mock<IN8NConfigurationRepository>();
+        _handler = new GetActiveN8NConfigQueryHandler(_mockRepository.Object);
     }
 
     [Fact]
@@ -28,16 +28,16 @@ public class GetActiveN8nConfigQueryHandlerTests
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var activeConfig = new N8nConfiguration(
+        var activeConfig = new N8NConfiguration(
             Guid.NewGuid(),
-            "Production N8n",
+            "Production N8N",
             new WorkflowUrl("https://n8n.production.com"),
             "prod_api_key",
             userId,
             webhookUrl: new WorkflowUrl("https://webhook.production.com")
         );
 
-        var query = new GetActiveN8nConfigQuery();
+        var query = new GetActiveN8NConfigQuery();
 
         _mockRepository
             .Setup(r => r.GetActiveConfigurationAsync(It.IsAny<CancellationToken>()))
@@ -48,7 +48,7 @@ public class GetActiveN8nConfigQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal("Production N8n", result.Name);
+        Assert.Equal("Production N8N", result.Name);
         Assert.Equal("https://n8n.production.com", result.BaseUrl);
         Assert.Equal("https://webhook.production.com", result.WebhookUrl);
         Assert.True(result.IsActive);
@@ -58,11 +58,11 @@ public class GetActiveN8nConfigQueryHandlerTests
     public async Task Handle_WithNoActiveConfig_ReturnsNull()
     {
         // Arrange
-        var query = new GetActiveN8nConfigQuery();
+        var query = new GetActiveN8NConfigQuery();
 
         _mockRepository
             .Setup(r => r.GetActiveConfigurationAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync((N8nConfiguration?)null);
+            .ReturnsAsync((N8NConfiguration?)null);
 
         // Act
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
@@ -79,9 +79,9 @@ public class GetActiveN8nConfigQueryHandlerTests
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var testedConfig = new N8nConfiguration(
+        var testedConfig = new N8NConfiguration(
             Guid.NewGuid(),
-            "Tested N8n",
+            "Tested N8N",
             new WorkflowUrl("https://tested.n8n.com"),
             "tested_key",
             userId
@@ -90,7 +90,7 @@ public class GetActiveN8nConfigQueryHandlerTests
         // Simulate a test
         testedConfig.RecordTestResult(true, "Connection successful");
 
-        var query = new GetActiveN8nConfigQuery();
+        var query = new GetActiveN8NConfigQuery();
 
         _mockRepository
             .Setup(r => r.GetActiveConfigurationAsync(It.IsAny<CancellationToken>()))
@@ -111,15 +111,15 @@ public class GetActiveN8nConfigQueryHandlerTests
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var untestedConfig = new N8nConfiguration(
+        var untestedConfig = new N8NConfiguration(
             Guid.NewGuid(),
-            "Untested N8n",
+            "Untested N8N",
             new WorkflowUrl("https://untested.n8n.com"),
             "untested_key",
             userId
         );
 
-        var query = new GetActiveN8nConfigQuery();
+        var query = new GetActiveN8NConfigQuery();
 
         _mockRepository
             .Setup(r => r.GetActiveConfigurationAsync(It.IsAny<CancellationToken>()))
@@ -139,7 +139,7 @@ public class GetActiveN8nConfigQueryHandlerTests
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var configWithoutWebhook = new N8nConfiguration(
+        var configWithoutWebhook = new N8NConfiguration(
             Guid.NewGuid(),
             "No Webhook Config",
             new WorkflowUrl("https://nowebhook.n8n.com"),
@@ -148,7 +148,7 @@ public class GetActiveN8nConfigQueryHandlerTests
             webhookUrl: null
         );
 
-        var query = new GetActiveN8nConfigQuery();
+        var query = new GetActiveN8NConfigQuery();
 
         _mockRepository
             .Setup(r => r.GetActiveConfigurationAsync(It.IsAny<CancellationToken>()))
@@ -166,13 +166,13 @@ public class GetActiveN8nConfigQueryHandlerTests
     public async Task Handle_WithCancellationToken_PassesTokenToRepository()
     {
         // Arrange
-        var query = new GetActiveN8nConfigQuery();
+        var query = new GetActiveN8NConfigQuery();
         var cancellationTokenSource = new CancellationTokenSource();
         var cancellationToken = cancellationTokenSource.Token;
 
         _mockRepository
             .Setup(r => r.GetActiveConfigurationAsync(cancellationToken))
-            .ReturnsAsync((N8nConfiguration?)null);
+            .ReturnsAsync((N8NConfiguration?)null);
 
         // Act
         await _handler.Handle(query, cancellationToken);
@@ -188,7 +188,7 @@ public class GetActiveN8nConfigQueryHandlerTests
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var config = new N8nConfiguration(
+        var config = new N8NConfiguration(
             Guid.NewGuid(),
             "Timestamp Config",
             new WorkflowUrl("https://timestamp.n8n.com"),
@@ -196,7 +196,7 @@ public class GetActiveN8nConfigQueryHandlerTests
             userId
         );
 
-        var query = new GetActiveN8nConfigQuery();
+        var query = new GetActiveN8NConfigQuery();
 
         _mockRepository
             .Setup(r => r.GetActiveConfigurationAsync(It.IsAny<CancellationToken>()))

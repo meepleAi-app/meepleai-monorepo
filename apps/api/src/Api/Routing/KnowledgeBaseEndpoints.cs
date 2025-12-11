@@ -398,13 +398,13 @@ public static class KnowledgeBaseEndpoints
             var command = new ExportChatCommand(threadId, exportFormat);
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
-            // Generate filename
+            // Generate filename for logging purposes
             var threadTitle = existingThread.Title?.Replace(" ", "_") ?? "chat";
             var sanitizedTitle = new string(threadTitle.Where(c => char.IsLetterOrDigit(c) || c == '_' || c == '-').ToArray());
             var filename = $"{sanitizedTitle}_{threadId.ToString()[..8]}.{result.FileExtension}";
 
-            logger.LogInformation("User {UserId} exported thread {ThreadId} in {Format} format",
-                userId, threadId, result.Format);
+            logger.LogInformation("User {UserId} exported thread {ThreadId} in {Format} format as {Filename}",
+                userId, threadId, result.Format, filename);
 
             // Return file with appropriate content type
             return Results.Content(

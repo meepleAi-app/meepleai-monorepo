@@ -353,7 +353,8 @@ public class AdminStatsService : IAdminStatsService
     private async Task<IReadOnlyList<TimeSeriesDataPoint>> GetChatMessageTrendAsync(
         DateTime fromDate,
         DateTime toDate,
-                CancellationToken cancellationToken)
+        string? _,
+        CancellationToken cancellationToken)
     {
         var data = await _dbContext.ChatLogs
             .AsNoTracking()

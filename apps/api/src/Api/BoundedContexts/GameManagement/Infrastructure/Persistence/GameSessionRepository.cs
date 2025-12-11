@@ -243,5 +243,5 @@ public class GameSessionRepository : RepositoryBase, IGameSessionRepository
     }
 
     // Simple DTO for JSON serialization
-    private record SessionPlayerDto(string PlayerName, int PlayerOrder, string? Color);
+    private sealed record SessionPlayerDto(string PlayerName, int PlayerOrder, string? Color);
 }

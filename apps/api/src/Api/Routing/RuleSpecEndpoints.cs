@@ -443,7 +443,7 @@ public static class RuleSpecEndpoints
         return group;
     }
 
-    private record UpdateCommentRequest(string CommentText);
+    private sealed record UpdateCommentRequest(string CommentText);
 
     // Issue #1676 Phase 2: ToModel() helper removed (no longer needed, return RuleSpecDto directly)
 }

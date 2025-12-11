@@ -38,3 +38,15 @@ export { ServiceHealthMatrix, type ServiceHealthMatrixProps } from './ServiceHea
 
 // Issue #901: Grafana embed iframe
 export { GrafanaEmbed } from './GrafanaEmbed';
+
+// Issue #910: Filter panel component
+export { ApiKeyFilterPanel, type ApiKeyFilterPanelProps } from './ApiKeyFilterPanel';
+
+// Issue #912: Bulk action bar component
+export {
+  BulkActionBar,
+  EmptyBulkActionBar,
+  type BulkActionBarProps,
+  type EmptyBulkActionBarProps,
+  type BulkAction,
+} from './BulkActionBar';

@@ -4,9 +4,9 @@ using Api.SharedKernel.Domain.Events;
 namespace Api.BoundedContexts.WorkflowIntegration.Domain.Events;
 
 /// <summary>
-/// Domain event raised when an N8n configuration is updated.
+/// Domain event raised when an N8N configuration is updated.
 /// </summary>
-public sealed class N8nConfigurationUpdatedEvent : DomainEventBase
+public sealed class N8NConfigurationUpdatedEvent : DomainEventBase
 {
     public Guid ConfigurationId { get; }
     public string? Name { get; }
@@ -14,7 +14,7 @@ public sealed class N8nConfigurationUpdatedEvent : DomainEventBase
     public WorkflowUrl? WebhookUrl { get; }
     public bool? IsActive { get; }
 
-    public N8nConfigurationUpdatedEvent(
+    public N8NConfigurationUpdatedEvent(
         Guid configurationId,
         string? name = null,
         WorkflowUrl? baseUrl = null,

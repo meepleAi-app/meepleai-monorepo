@@ -1,0 +1,10 @@
+# EditorConfig for EF Core Migrations
+# Suppress MA0051 (method too long) for auto-generated migration files
+# These files are scaffolded by 'dotnet ef migrations add' and should not be modified
+
+root = false
+
+[*.cs]
+# Suppress method length warnings for migration files
+# Up()/Down() methods are auto-generated and may exceed 60 lines
+dotnet_diagnostic.MA0051.severity = none

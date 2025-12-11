@@ -512,7 +512,7 @@ public class TotpService : ITotpService
     /// <summary>
     /// Generate cryptographically secure 160-bit TOTP secret
     /// </summary>
-    private string GenerateSecret()
+    private static string GenerateSecret()
     {
         var key = KeyGeneration.GenerateRandomKey(SecretSizeBytes);
         return Base32Encoding.ToString(key);
@@ -521,7 +521,7 @@ public class TotpService : ITotpService
     /// <summary>
     /// Generate otpauth:// URL for QR code (compatible with all authenticator apps)
     /// </summary>
-    private string GenerateQrCodeUrl(string userEmail, string secret)
+    private static string GenerateQrCodeUrl(string userEmail, string secret)
     {
         var issuer = Uri.EscapeDataString(TotpIssuer);
         var email = Uri.EscapeDataString(userEmail);
@@ -571,7 +571,7 @@ public class TotpService : ITotpService
     /// <summary>
     /// Generate 10 secure backup codes (8 characters each, XXXX-XXXX format)
     /// </summary>
-    private List<string> GenerateBackupCodes()
+    private static List<string> GenerateBackupCodes()
     {
         var codes = new List<string>();
         for (int i = 0; i < BackupCodeCount; i++)
@@ -585,7 +585,7 @@ public class TotpService : ITotpService
     /// Generate cryptographically secure random backup code
     /// Format: XXXX-XXXX (8 chars, no ambiguous characters like O/0, I/1, l/1)
     /// </summary>
-    private string GenerateRandomCode()
+    private static string GenerateRandomCode()
     {
         // Remove ambiguous characters: O, 0, I, l, 1
         const string chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -639,7 +639,7 @@ public class TotpService : ITotpService
     /// Track failed 2FA attempt in Redis for lockout mechanism.
     /// Pattern: Sliding window counter with 15-minute TTL.
     /// </summary>
-    private async Task TrackFailedAttemptAsync(Guid userId, string attemptType)
+    private async Task TrackFailedAttemptAsync(Guid userId, string attemptType, CancellationToken _ = default)
     {
         var redisKey = $"2fa:failed:{attemptType}:{userId}";
         var redisDb = _redis.GetDatabase();
@@ -656,7 +656,7 @@ public class TotpService : ITotpService
     /// Check if account is locked out due to excessive failed attempts.
     /// Lockout triggers after 5 failed attempts within 15-minute window.
     /// </summary>
-    private async Task<bool> IsAccountLockedOutAsync(Guid userId, string attemptType)
+    private async Task<bool> IsAccountLockedOutAsync(Guid userId, string attemptType, CancellationToken _ = default)
     {
         var redisKey = $"2fa:failed:{attemptType}:{userId}";
         var redisDb = _redis.GetDatabase();
@@ -675,7 +675,7 @@ public class TotpService : ITotpService
     /// <summary>
     /// Clear failed attempt counter after successful verification.
     /// </summary>
-    private async Task ClearFailedAttemptsAsync(Guid userId, string attemptType)
+    private async Task ClearFailedAttemptsAsync(Guid userId, string attemptType, CancellationToken _ = default)
     {
         var redisKey = $"2fa:failed:{attemptType}:{userId}";
         var redisDb = _redis.GetDatabase();

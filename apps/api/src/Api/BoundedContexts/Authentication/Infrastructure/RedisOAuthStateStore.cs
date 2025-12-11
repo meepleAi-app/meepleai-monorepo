@@ -49,11 +49,14 @@ public class RedisOAuthStateStore : IOAuthStateStore
                 _logger.LogWarning("Failed to store OAuth state in Redis");
             }
         }
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
+        // INFRASTRUCTURE LOGGING PATTERN: Log exceptions at the infrastructure boundary for debugging.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error storing OAuth state in Redis");
             throw;
         }
+#pragma warning restore S2139
     }
 
     public async Task<bool> ValidateAndRemoveStateAsync(string state)

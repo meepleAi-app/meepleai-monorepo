@@ -44,7 +44,7 @@ services:
       INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD:-ChangeThisPassword123!}
       INITIAL_ADMIN_DISPLAY_NAME: ${INITIAL_ADMIN_DISPLAY_NAME:-Dev Admin}
     env_file:
-      - ./env/api.env.dev
+      - ../.env.development
     secrets: []  # Disable secrets in dev
 
   n8n:
@@ -52,7 +52,7 @@ services:
       # Override to use plain env vars instead of secrets
       DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD:-meeplepass}
     env_file:
-      - ./env/n8n.env.dev
+      - ../.env.development
     secrets: []  # Disable secrets in dev
     entrypoint: []  # Use default n8n entrypoint
     command: ["n8n"]
@@ -62,7 +62,7 @@ services:
       # Override for dev - use plain env vars
       GMAIL_APP_PASSWORD: ${GMAIL_APP_PASSWORD:-}
     env_file:
-      - ./env/alertmanager.env
+      - ../.env.development
     secrets: []  # Disable secrets in dev
     entrypoint: []  # Use default entrypoint
     command:

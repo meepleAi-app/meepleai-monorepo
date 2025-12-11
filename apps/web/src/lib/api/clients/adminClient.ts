@@ -26,6 +26,7 @@ import {
   ImportWorkflowResponseSchema,
   DashboardStatsSchema,
   RecentActivityDtoSchema,
+  InfrastructureDetailsSchema,
   type CreateUserRequest,
   type UpdateUserRequest,
   type AdminUser,
@@ -390,6 +391,19 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       }
 
       return result;
+    },
+
+    // ========== Infrastructure Monitoring (Issue #896) ==========
+
+    /**
+     * Get comprehensive infrastructure details
+     * GET /api/v1/admin/infrastructure/details
+     *
+     * Returns aggregated service health + Prometheus metrics
+     * from backend Issues #891-894.
+     */
+    async getInfrastructureDetails() {
+      return httpClient.get('/api/v1/admin/infrastructure/details', InfrastructureDetailsSchema);
     },
   };
 }

@@ -34,7 +34,7 @@ public class N8nConfigService
     {
         var configs = await _db.N8nConfigs
             .OrderByDescending(c => c.CreatedAt)
-            .ToListAsync(ct);
+            .ToListAsync(ct).ConfigureAwait(false);
 
         return configs.Select(c => new N8nConfigDto(
             c.Id.ToString(),
@@ -57,7 +57,7 @@ public class N8nConfigService
         }
 
         var config = await _db.N8nConfigs
-            .FirstOrDefaultAsync(c => c.Id == guidId, ct);
+            .FirstOrDefaultAsync(c => c.Id == guidId, ct).ConfigureAwait(false);
 
         if (config == null)
         {
@@ -88,7 +88,7 @@ public class N8nConfigService
         }
 
         var existingConfig = await _db.N8nConfigs
-            .FirstOrDefaultAsync(c => c.Name == request.Name, ct);
+            .FirstOrDefaultAsync(c => c.Name == request.Name, ct).ConfigureAwait(false);
 
         if (existingConfig != null)
         {
@@ -135,7 +135,7 @@ public class N8nConfigService
         }
 
         var config = await _db.N8nConfigs
-            .FirstOrDefaultAsync(c => c.Id == guidId, ct);
+            .FirstOrDefaultAsync(c => c.Id == guidId, ct).ConfigureAwait(false);
 
         if (config == null)
         {
@@ -145,7 +145,7 @@ public class N8nConfigService
         if (request.Name != null && !string.Equals(request.Name, config.Name, StringComparison.Ordinal))
         {
             var existingConfig = await _db.N8nConfigs
-                .FirstOrDefaultAsync(c => c.Name == request.Name && c.Id != guidId, ct);
+                .FirstOrDefaultAsync(c => c.Name == request.Name && c.Id != guidId, ct).ConfigureAwait(false);
 
             if (existingConfig != null)
             {
@@ -200,7 +200,7 @@ public class N8nConfigService
         }
 
         var config = await _db.N8nConfigs
-            .FirstOrDefaultAsync(c => c.Id == guidId, ct);
+            .FirstOrDefaultAsync(c => c.Id == guidId, ct).ConfigureAwait(false);
 
         if (config == null)
         {
@@ -221,7 +221,7 @@ public class N8nConfigService
         }
 
         var config = await _db.N8nConfigs
-            .FirstOrDefaultAsync(c => c.Id == guidId, ct);
+            .FirstOrDefaultAsync(c => c.Id == guidId, ct).ConfigureAwait(false);
 
         if (config == null)
         {

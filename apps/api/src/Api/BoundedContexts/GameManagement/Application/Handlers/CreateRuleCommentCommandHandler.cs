@@ -67,7 +67,7 @@ public partial class CreateRuleCommentCommandHandler : IRequestHandler<CreateRul
 
         // Reload with navigation properties
         return await LoadCommentWithRelationsAsync(comment.Id, cancellationToken)
-            ?? throw new InvalidOperationException("Failed to load created comment");
+.ConfigureAwait(false) ?? throw new InvalidOperationException("Failed to load created comment");
     }
 
     private async Task<List<string>> ExtractMentionedUsersAsync(string text, CancellationToken cancellationToken)
@@ -97,7 +97,7 @@ public partial class CreateRuleCommentCommandHandler : IRequestHandler<CreateRul
                     || (u.Email != null && mentionedUsernames.Any(m => u.Email.ToLower().StartsWith(m))))
                 .Select(u => u.Id.ToString())
                 .Distinct()
-                .ToListAsync(cancellationToken);
+                .ToListAsync(cancellationToken).ConfigureAwait(false);
 
             if (users.Count < mentionedUsernames.Count)
             {
@@ -125,7 +125,7 @@ public partial class CreateRuleCommentCommandHandler : IRequestHandler<CreateRul
                 .ThenInclude(r => r.ResolvedByUser)
             .Include(c => c.ResolvedByUser)
             .AsNoTrackingWithIdentityResolution()
-            .FirstOrDefaultAsync(c => c.Id == commentId, cancellationToken);
+            .FirstOrDefaultAsync(c => c.Id == commentId, cancellationToken).ConfigureAwait(false);
 
         return comment?.ToDto();
     }

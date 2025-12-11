@@ -116,7 +116,7 @@ public class HybridSearchService : IHybridSearchService
             gameId.ToString(),
             queryEmbedding,
             limit: limit,
-            ct: cancellationToken);
+            ct: cancellationToken).ConfigureAwait(false);
 
         if (!vectorResults.Success)
         {
@@ -157,7 +157,7 @@ public class HybridSearchService : IHybridSearchService
             limit,
             phraseSearch: query.Contains("\""), // Enable phrase search if query has quotes
             boostTerms: _config.BoostTerms,
-            cancellationToken: cancellationToken);
+            cancellationToken: cancellationToken).ConfigureAwait(false);
 
         return keywordResults.Select((r, index) => new HybridSearchResult
         {

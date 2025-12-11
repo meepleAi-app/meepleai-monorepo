@@ -38,7 +38,7 @@ public class CreateApiKeyManagementCommandHandler : ICommandHandler<CreateApiKey
             command.Request.Scopes,
             command.Request.ExpiresAt,
             command.Request.Environment,
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
 
         // Add quota information as metadata if specified
         if (command.Request.MaxRequestsPerDay.HasValue || command.Request.MaxRequestsPerHour.HasValue)

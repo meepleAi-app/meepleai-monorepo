@@ -18,7 +18,7 @@ public class WorkflowErrorLogRepository : RepositoryBase, IWorkflowErrorLogRepos
     {
         var entity = await DbContext.Set<Api.Infrastructure.Entities.WorkflowErrorLogEntity>()
             .AsNoTracking()
-            .FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
+            .FirstOrDefaultAsync(e => e.Id == id, cancellationToken).ConfigureAwait(false);
 
         return entity != null ? MapToDomain(entity) : null;
     }
@@ -28,7 +28,7 @@ public class WorkflowErrorLogRepository : RepositoryBase, IWorkflowErrorLogRepos
         var entities = await DbContext.Set<Api.Infrastructure.Entities.WorkflowErrorLogEntity>()
             .AsNoTracking()
             .OrderByDescending(e => e.CreatedAt)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return entities.Select(MapToDomain).ToList();
     }
@@ -39,7 +39,7 @@ public class WorkflowErrorLogRepository : RepositoryBase, IWorkflowErrorLogRepos
             .AsNoTracking()
             .Where(e => e.WorkflowId == workflowId)
             .OrderByDescending(e => e.CreatedAt)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return entities.Select(MapToDomain).ToList();
     }
@@ -48,7 +48,7 @@ public class WorkflowErrorLogRepository : RepositoryBase, IWorkflowErrorLogRepos
     {
         var entity = await DbContext.Set<Api.Infrastructure.Entities.WorkflowErrorLogEntity>()
             .AsNoTracking()
-            .FirstOrDefaultAsync(e => e.ExecutionId == executionId, cancellationToken);
+            .FirstOrDefaultAsync(e => e.ExecutionId == executionId, cancellationToken).ConfigureAwait(false);
 
         return entity != null ? MapToDomain(entity) : null;
     }
@@ -78,7 +78,7 @@ public class WorkflowErrorLogRepository : RepositoryBase, IWorkflowErrorLogRepos
     public async Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default)
     {
         return await DbContext.Set<Api.Infrastructure.Entities.WorkflowErrorLogEntity>()
-            .AnyAsync(e => e.Id == id, cancellationToken);
+            .AnyAsync(e => e.Id == id, cancellationToken).ConfigureAwait(false);
     }
 
     private static WorkflowErrorLog MapToDomain(Api.Infrastructure.Entities.WorkflowErrorLogEntity entity)

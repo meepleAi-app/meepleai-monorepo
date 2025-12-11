@@ -52,7 +52,7 @@ public sealed class UnlinkOAuthAccountCommandHandler : ICommandHandler<UnlinkOAu
             var oauthAccount = await _oauthAccountRepository.GetByUserIdAndProviderAsync(
                 command.UserId,
                 command.Provider,
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
 
             if (oauthAccount == null)
             {

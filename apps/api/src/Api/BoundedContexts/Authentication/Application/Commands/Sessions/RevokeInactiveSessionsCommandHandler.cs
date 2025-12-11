@@ -48,7 +48,7 @@ public class RevokeInactiveSessionsCommandHandler : ICommandHandler<RevokeInacti
                         s.ExpiresAt > now &&
                         ((s.LastSeenAt != null && s.LastSeenAt < inactivityThreshold) ||
                          (s.LastSeenAt == null && s.CreatedAt < inactivityThreshold)))
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         if (inactiveSessions.Count == 0)
         {

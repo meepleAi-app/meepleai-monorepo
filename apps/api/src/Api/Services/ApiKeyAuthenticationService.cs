@@ -62,7 +62,7 @@ public class ApiKeyAuthenticationService
                 (k.ExpiresAt == null || k.ExpiresAt > now) &&
                 k.RevokedAt == null &&
                 k.KeyPrefix == displayPrefix)
-            .ToListAsync(ct);
+            .ToListAsync(ct).ConfigureAwait(false);
 
         // Find key by verifying hash (need to extract salt from stored hash)
         var apiKeyEntity = candidateKeys.FirstOrDefault(k => VerifyApiKey(apiKey, k.KeyHash));
@@ -226,7 +226,7 @@ public class ApiKeyAuthenticationService
             var now = _timeProvider.GetUtcNow().UtcDateTime;
             await _db.ApiKeys
                 .Where(k => k.Id == keyGuid)
-                .ExecuteUpdateAsync(s => s.SetProperty(k => k.LastUsedAt, now));
+                .ExecuteUpdateAsync(s => s.SetProperty(k => k.LastUsedAt, now)).ConfigureAwait(false);
 
             _logger.LogDebug("Updated last_used_at for API key {KeyId}", keyId);
         }

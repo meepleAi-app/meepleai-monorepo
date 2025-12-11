@@ -32,7 +32,7 @@ public class ResolveRuleCommentCommandHandler : IRequestHandler<ResolveRuleComme
         var comment = await _dbContext.RuleSpecComments
             .Include(c => c.Replies)
             .FirstOrDefaultAsync(c => c.Id == command.CommentId, cancellationToken)
-            ?? throw new InvalidOperationException($"Comment {command.CommentId} not found");
+.ConfigureAwait(false) ?? throw new InvalidOperationException($"Comment {command.CommentId} not found");
 
         // Authorization: Only comment owner or admin can resolve
         if (comment.UserId != command.ResolvedByUserId && !command.IsAdmin)
@@ -60,7 +60,7 @@ public class ResolveRuleCommentCommandHandler : IRequestHandler<ResolveRuleComme
 
         // Reload with navigation properties
         return await LoadCommentWithRelationsAsync(command.CommentId, cancellationToken)
-            ?? throw new InvalidOperationException("Failed to load resolved comment");
+.ConfigureAwait(false) ?? throw new InvalidOperationException("Failed to load resolved comment");
     }
 
     private async Task ResolveRepliesRecursiveAsync(
@@ -100,7 +100,7 @@ public class ResolveRuleCommentCommandHandler : IRequestHandler<ResolveRuleComme
         {
             var children = await _dbContext.RuleSpecComments
                 .Where(c => currentLevel.Contains(c.ParentCommentId!.Value))
-                .ToListAsync(cancellationToken);
+                .ToListAsync(cancellationToken).ConfigureAwait(false);
 
             if (!children.Any())
             {
@@ -136,7 +136,7 @@ public class ResolveRuleCommentCommandHandler : IRequestHandler<ResolveRuleComme
                 .ThenInclude(r => r.ResolvedByUser)
             .Include(c => c.ResolvedByUser)
             .AsNoTrackingWithIdentityResolution()
-            .FirstOrDefaultAsync(c => c.Id == commentId, cancellationToken);
+            .FirstOrDefaultAsync(c => c.Id == commentId, cancellationToken).ConfigureAwait(false);
 
         return comment?.ToDto();
     }

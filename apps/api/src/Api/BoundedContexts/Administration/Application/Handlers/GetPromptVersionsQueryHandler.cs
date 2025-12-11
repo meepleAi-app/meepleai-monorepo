@@ -26,7 +26,7 @@ public class GetPromptVersionsQueryHandler : IQueryHandler<GetPromptVersionsQuer
         // Verify template exists
         var templateExists = await _dbContext.Set<PromptTemplateEntity>()
             .AsNoTracking()
-            .AnyAsync(t => t.Id == query.TemplateId, cancellationToken);
+            .AnyAsync(t => t.Id == query.TemplateId, cancellationToken).ConfigureAwait(false);
 
         if (!templateExists)
         {
@@ -51,7 +51,7 @@ public class GetPromptVersionsQueryHandler : IQueryHandler<GetPromptVersionsQuer
                 CreatedAt = v.CreatedAt,
                 Metadata = v.Metadata
             })
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return versions;
     }

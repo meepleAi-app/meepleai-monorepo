@@ -24,6 +24,6 @@ public class GetAlertHistoryQueryHandler : IQueryHandler<GetAlertHistoryQuery, L
             query.FromDate,
             query.ToDate,
             cancellationToken
-        );
+        ).ConfigureAwait(false);
     }
 }

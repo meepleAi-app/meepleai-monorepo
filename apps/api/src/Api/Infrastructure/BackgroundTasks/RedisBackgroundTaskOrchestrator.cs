@@ -49,7 +49,7 @@ public class RedisBackgroundTaskOrchestrator : IBackgroundTaskOrchestrator
         var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _scheduledTasks.TryAdd(taskId, cts);
 
-        _ = Task.Run(async () => await ExecuteTaskAsync(taskId, taskName, taskFactory, cts.Token, isRecurring: false), cts.Token).ConfigureAwait(false);
+        _ = Task.Run(async () => await ExecuteTaskAsync(taskId, taskName, taskFactory, cts.Token, isRecurring: false).ConfigureAwait(false), cts.Token).ConfigureAwait(false);
     }
 
     public async Task ScheduleDelayedAsync(
@@ -223,7 +223,7 @@ public class RedisBackgroundTaskOrchestrator : IBackgroundTaskOrchestrator
                 fullLockKey,
                 lockValue,
                 lockTimeout,
-                When.NotExists);
+                When.NotExists).ConfigureAwait(false);
 
             if (!lockAcquired)
             {
@@ -304,7 +304,7 @@ public class RedisBackgroundTaskOrchestrator : IBackgroundTaskOrchestrator
             await db.StringSetAsync(
                 TaskStatusKeyPrefix + taskId,
                 status.ToString(),
-                TimeSpan.FromHours(24)); // Status TTL: 24 hours
+                TimeSpan.FromHours(24)).ConfigureAwait(false); // Status TTL: 24 hours
         }
         catch (Exception ex)
         {

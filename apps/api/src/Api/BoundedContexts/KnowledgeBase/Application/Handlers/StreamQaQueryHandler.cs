@@ -118,7 +118,7 @@ public class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagStr
         }
 
         // Stream fresh QA response
-        await foreach (var evt in AskStreamInternalAsync(query, cancellationToken))
+        await foreach (var evt in AskStreamInternalAsync(query, cancellationToken).ConfigureAwait(false))
         {
             yield return evt;
         }
@@ -234,7 +234,7 @@ public class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagStr
         LlmUsage? llmUsage = null;
         LlmCost? llmCost = null;
 
-        await foreach (var chunk in _llmService.GenerateCompletionStreamAsync(systemPrompt, userPrompt, cancellationToken))
+        await foreach (var chunk in _llmService.GenerateCompletionStreamAsync(systemPrompt, userPrompt, cancellationToken).ConfigureAwait(false))
         {
             cancellationToken.ThrowIfCancellationRequested();
 

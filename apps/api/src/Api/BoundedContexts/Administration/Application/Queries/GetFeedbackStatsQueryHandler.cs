@@ -59,19 +59,19 @@ public class GetFeedbackStatsQueryHandler : IQueryHandler<GetFeedbackStatsQuery,
                 HelpfulCount = g.Count(f => f.Outcome == "helpful"),
                 NotHelpfulCount = g.Count(f => f.Outcome == "not-helpful")
             })
-            .FirstOrDefaultAsync(cancellationToken);
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
 
         // Separate query for endpoint breakdown
         var feedbackByEndpoint = await query
             .GroupBy(f => f.Endpoint)
             .Select(g => new { Endpoint = g.Key, Count = g.Count() })
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         // Separate query for outcome breakdown
         var feedbackByOutcome = await query
             .GroupBy(f => f.Outcome)
             .Select(g => new { Outcome = g.Key, Count = g.Count() })
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         if (stats == null)
         {

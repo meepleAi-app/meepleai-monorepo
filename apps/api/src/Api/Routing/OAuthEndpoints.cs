@@ -34,7 +34,7 @@ public static class OAuthEndpoints
             var rateLimitResult = await rateLimiter.CheckRateLimitAsync(
                 $"oauth:login:{ipAddress}",
                 maxTokens,
-                refillRate);
+                refillRate).ConfigureAwait(false);
 
             if (!rateLimitResult.Allowed)
             {
@@ -94,7 +94,7 @@ Rate limited to 10 requests per minute per IP address.
             var rateLimitResult = await rateLimiter.CheckRateLimitAsync(
                 $"oauth:callback:{callbackIp}",
                 maxTokens,
-                refillRate);
+                refillRate).ConfigureAwait(false);
 
             if (!rateLimitResult.Allowed)
             {

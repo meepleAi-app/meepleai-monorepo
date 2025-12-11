@@ -73,7 +73,7 @@ public class DocnetPdfValidator : IPdfValidator
         try
         {
             // Step 1: Technical validation - Magic bytes
-            if (!await ValidateMagicBytesAsync(pdfStream, ct))
+            if (!await ValidateMagicBytesAsync(pdfStream, ct).ConfigureAwait(false))
             {
                 errors["fileFormat"] = "Invalid PDF file format. File does not start with PDF signature.";
             }

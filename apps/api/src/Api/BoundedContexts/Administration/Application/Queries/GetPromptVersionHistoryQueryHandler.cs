@@ -24,7 +24,7 @@ public class GetPromptVersionHistoryQueryHandler : IQueryHandler<GetPromptVersio
         var template = await _db.PromptTemplates
             .AsNoTracking()
             .Include(t => t.CreatedBy)
-            .FirstOrDefaultAsync(t => t.Id == templateGuid, cancellationToken);
+            .FirstOrDefaultAsync(t => t.Id == templateGuid, cancellationToken).ConfigureAwait(false);
 
         if (template == null)
         {
@@ -53,7 +53,7 @@ public class GetPromptVersionHistoryQueryHandler : IQueryHandler<GetPromptVersio
                 ActivatedByUserId = v.ActivatedByUserId.HasValue ? v.ActivatedByUserId.Value.ToString() : null,
                 ActivationReason = v.ActivationReason
             })
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return new PromptVersionHistoryResponse
         {

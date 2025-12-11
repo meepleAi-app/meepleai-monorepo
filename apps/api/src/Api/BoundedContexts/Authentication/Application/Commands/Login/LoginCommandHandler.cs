@@ -52,7 +52,7 @@ public class LoginCommandHandler : ICommandHandler<LoginCommand, LoginResponse>
             var tempSessionToken = await _tempSessionService.CreateTempSessionAsync(
                 user.Id,
                 command.IpAddress
-            );
+            ).ConfigureAwait(false);
 
             return new LoginResponse(
                 RequiresTwoFactor: true,

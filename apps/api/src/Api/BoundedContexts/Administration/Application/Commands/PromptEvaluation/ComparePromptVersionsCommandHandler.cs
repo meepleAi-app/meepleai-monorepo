@@ -36,7 +36,7 @@ public sealed class ComparePromptVersionsCommandHandler : ICommandHandler<Compar
             command.BaselineVersionId,
             command.CandidateVersionId,
             command.DatasetPath,
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Comparison completed - Recommendation: {Recommendation}, Reason: {Reason}",

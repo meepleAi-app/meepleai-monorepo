@@ -64,7 +64,7 @@ public class InitChunkedUploadCommandHandler : ICommandHandler<InitChunkedUpload
             }
 
             // Check for existing active sessions for this user (limit to 3 concurrent uploads)
-            var activeSessions = await _sessionRepository.FindActiveByUserIdAsync(request.UserId, cancellationToken);
+            var activeSessions = await _sessionRepository.FindActiveByUserIdAsync(request.UserId, cancellationToken).ConfigureAwait(false);
             if (activeSessions.Count >= 3)
             {
                 return new InitChunkedUploadResult(
@@ -94,8 +94,8 @@ public class InitChunkedUploadCommandHandler : ICommandHandler<InitChunkedUpload
                 tempDirectory: tempDirectory
             );
 
-            await _sessionRepository.AddAsync(session, cancellationToken);
-            await _dbContext.SaveChangesAsync(cancellationToken);
+            await _sessionRepository.AddAsync(session, cancellationToken).ConfigureAwait(false);
+            await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Chunked upload session {SessionId} initialized for user {UserId}, file {FileName} ({FileSize} bytes, {TotalChunks} chunks)",

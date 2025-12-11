@@ -54,7 +54,7 @@ public sealed class ResilientRetrievalService : IRerankedRetrievalService, IDisp
 
         // Step 1: Perform hybrid search
         var searchStopwatch = Stopwatch.StartNew();
-        var searchResults = await PerformSearchAsync(request, cancellationToken);
+        var searchResults = await PerformSearchAsync(request, cancellationToken).ConfigureAwait(false);
         searchStopwatch.Stop();
         metrics.SearchTimeMs = searchStopwatch.Elapsed.TotalMilliseconds;
         metrics.CandidatesRetrieved = searchResults.Count;
@@ -66,7 +66,7 @@ public sealed class ResilientRetrievalService : IRerankedRetrievalService, IDisp
 
         // Step 2: Attempt reranking (with graceful degradation)
         var (rerankedResults, usedReranker, fallbackReason, rerankTimeMs) =
-            await TryRerankAsync(request.Query, searchResults, request.TopK, cancellationToken);
+            await TryRerankAsync(request.Query, searchResults, request.TopK, cancellationToken).ConfigureAwait(false);
         metrics.RerankTimeMs = rerankTimeMs;
 
         // Step 3: Resolve parent chunks if requested
@@ -74,7 +74,7 @@ public sealed class ResilientRetrievalService : IRerankedRetrievalService, IDisp
         if (request.ExpandToParent && rerankedResults.Count > 0)
         {
             var parentStopwatch = Stopwatch.StartNew();
-            rerankedResults = await ExpandToParentsAsync(rerankedResults, cancellationToken);
+            rerankedResults = await ExpandToParentsAsync(rerankedResults, cancellationToken).ConfigureAwait(false);
             parentStopwatch.Stop();
             parentResolutionTimeMs = parentStopwatch.Elapsed.TotalMilliseconds;
         }
@@ -103,7 +103,7 @@ public sealed class ResilientRetrievalService : IRerankedRetrievalService, IDisp
     /// <inheritdoc />
     public async Task<RerankedRetrievalStatus> GetStatusAsync(CancellationToken cancellationToken = default)
     {
-        await CheckRerankerHealthAsync(cancellationToken);
+        await CheckRerankerHealthAsync(cancellationToken).ConfigureAwait(false);
 
         return new RerankedRetrievalStatus(
             RerankerAvailable: _rerankerAvailable,
@@ -132,7 +132,7 @@ public sealed class ResilientRetrievalService : IRerankedRetrievalService, IDisp
             request.GameId,
             mode,
             candidateCount,
-            cancellationToken: cancellationToken);
+            cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
     private async Task<(List<RerankedSearchResult> Results, bool UsedReranker, string? FallbackReason, double? RerankTimeMs)>
@@ -149,7 +149,7 @@ public sealed class ResilientRetrievalService : IRerankedRetrievalService, IDisp
         }
 
         // Check reranker health periodically
-        await CheckRerankerHealthAsync(cancellationToken);
+        await CheckRerankerHealthAsync(cancellationToken).ConfigureAwait(false);
 
         if (!_rerankerAvailable)
         {
@@ -171,7 +171,7 @@ public sealed class ResilientRetrievalService : IRerankedRetrievalService, IDisp
                 }
             )).ToList();
 
-            var rerankResult = await _reranker.RerankAsync(query, chunks, topK, cancellationToken);
+            var rerankResult = await _reranker.RerankAsync(query, chunks, topK, cancellationToken).ConfigureAwait(false);
 
             rerankStopwatch.Stop();
 
@@ -240,7 +240,7 @@ public sealed class ResilientRetrievalService : IRerankedRetrievalService, IDisp
         CancellationToken cancellationToken)
     {
         var childIds = results.Select(r => r.ChunkId).ToList();
-        var resolvedParents = await _parentResolver.ResolveParentsAsync(childIds, cancellationToken);
+        var resolvedParents = await _parentResolver.ResolveParentsAsync(childIds, cancellationToken).ConfigureAwait(false);
 
         var parentLookup = resolvedParents.ToDictionary(p => p.ChildId);
 
@@ -269,7 +269,7 @@ public sealed class ResilientRetrievalService : IRerankedRetrievalService, IDisp
         }
 
         // Use lock to prevent concurrent health checks
-        if (!await _healthCheckLock.WaitAsync(0, cancellationToken))
+        if (!await _healthCheckLock.WaitAsync(0, cancellationToken).ConfigureAwait(false))
         {
             return;
         }
@@ -282,7 +282,7 @@ public sealed class ResilientRetrievalService : IRerankedRetrievalService, IDisp
                 return;
             }
 
-            _rerankerAvailable = await _reranker.IsHealthyAsync(cancellationToken);
+            _rerankerAvailable = await _reranker.IsHealthyAsync(cancellationToken).ConfigureAwait(false);
             _lastHealthCheck = DateTime.UtcNow;
 
             var currentFailures = Interlocked.CompareExchange(ref _consecutiveFailures, 0, 0);

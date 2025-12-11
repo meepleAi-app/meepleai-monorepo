@@ -65,7 +65,7 @@ public class EmbeddingRepository : IEmbeddingRepository
             queryVector,
             topK,
             minScore,
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
     }
 
     public async Task AddBatchAsync(
@@ -91,6 +91,6 @@ public class EmbeddingRepository : IEmbeddingRepository
         // Query from PostgreSQL VectorDocuments table
         return await _context.VectorDocuments
             .Where(vd => vd.GameId == gameId)
-            .SumAsync(vd => vd.ChunkCount, cancellationToken);
+            .SumAsync(vd => vd.ChunkCount, cancellationToken).ConfigureAwait(false);
     }
 }

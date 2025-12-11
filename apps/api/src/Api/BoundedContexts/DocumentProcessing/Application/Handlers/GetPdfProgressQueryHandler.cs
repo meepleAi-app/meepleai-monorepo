@@ -36,7 +36,7 @@ public class GetPdfProgressQueryHandler : IQueryHandler<GetPdfProgressQuery, Pdf
                     p.UploadedByUserId,
                     p.ProcessingProgressJson
                 ))
-                .FirstOrDefaultAsync(cancellationToken);
+                .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
 
             if (pdf == null)
             {

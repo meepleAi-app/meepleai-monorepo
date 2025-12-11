@@ -42,7 +42,7 @@ public sealed class RunGridSearchHandler : IRequestHandler<RunGridSearchCommand,
             request.MaxSamplesPerConfig);
 
         // Load dataset
-        var dataset = await LoadDatasetAsync(request.DatasetPath, cancellationToken);
+        var dataset = await LoadDatasetAsync(request.DatasetPath, cancellationToken).ConfigureAwait(false);
         _logger.LogInformation(
             "Loaded dataset '{DatasetName}' with {SampleCount} samples",
             dataset.Name,
@@ -69,7 +69,7 @@ public sealed class RunGridSearchHandler : IRequestHandler<RunGridSearchCommand,
                 config,
                 dataset,
                 request.MaxSamplesPerConfig,
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
 
             configurationResults.Add(result);
 
@@ -139,7 +139,7 @@ public sealed class RunGridSearchHandler : IRequestHandler<RunGridSearchCommand,
             throw new FileNotFoundException($"Dataset file not found at path: {path}");
         }
 
-        var json = await File.ReadAllTextAsync(path, cancellationToken);
+        var json = await File.ReadAllTextAsync(path, cancellationToken).ConfigureAwait(false);
         return EvaluationDataset.FromJson(json);
     }
 
@@ -190,7 +190,7 @@ public sealed class RunGridSearchHandler : IRequestHandler<RunGridSearchCommand,
             var result = await _evaluationService.EvaluateDatasetAsync(
                 dataset,
                 options,
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
 
             configStopwatch.Stop();
 

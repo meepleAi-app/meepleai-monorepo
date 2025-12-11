@@ -15,6 +15,12 @@ trim_trailing_whitespace = true
 indent_style = space
 indent_size = 4
 
+# MA0004: Use ConfigureAwait(false) - Enforce Always mode for library best practice (Issue #2067)
+# Mode: Always (enforce ConfigureAwait everywhere, even in ASP.NET Core)
+# This prevents potential deadlocks and is a best practice for service/library code
+dotnet_diagnostic.MA0004.severity = warning
+MA0004.report = Always
+
 # Code quality - Production code (strict enforcement)
 [src/**/*.cs]
 # CA1062: Validate arguments of public methods (SUGGESTION - constructor validation complete, method validation TBD)

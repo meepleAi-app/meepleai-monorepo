@@ -75,11 +75,11 @@ public sealed class CrossEncoderRerankerClient : ICrossEncoderReranker
                 "rerank",
                 request,
                 JsonOptions,
-                cts.Token);
+                cts.Token).ConfigureAwait(false);
 
             response.EnsureSuccessStatusCode();
 
-            var result = await response.Content.ReadFromJsonAsync<RerankResponseDto>(JsonOptions, cts.Token);
+            var result = await response.Content.ReadFromJsonAsync<RerankResponseDto>(JsonOptions, cts.Token).ConfigureAwait(false);
 
             if (result == null)
             {
@@ -129,7 +129,7 @@ public sealed class CrossEncoderRerankerClient : ICrossEncoderReranker
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             cts.CancelAfter(TimeSpan.FromSeconds(5));
 
-            var response = await _httpClient.GetAsync("health", cts.Token);
+            var response = await _httpClient.GetAsync("health", cts.Token).ConfigureAwait(false);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -137,7 +137,7 @@ public sealed class CrossEncoderRerankerClient : ICrossEncoderReranker
                 return false;
             }
 
-            var health = await response.Content.ReadFromJsonAsync<HealthResponseDto>(JsonOptions, cts.Token);
+            var health = await response.Content.ReadFromJsonAsync<HealthResponseDto>(JsonOptions, cts.Token).ConfigureAwait(false);
             var isHealthy = health?.ModelLoaded == true && health.Status == "healthy";
 
             if (!isHealthy)

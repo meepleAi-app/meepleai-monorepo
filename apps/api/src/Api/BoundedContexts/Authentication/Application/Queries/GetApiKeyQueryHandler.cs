@@ -26,7 +26,7 @@ public class GetApiKeyQueryHandler : IQueryHandler<GetApiKeyQuery, ApiKeyDto?>
 
         var key = await _db.ApiKeys
             .AsNoTracking()
-            .FirstOrDefaultAsync(k => k.Id == keyGuid && k.UserId == userGuid, cancellationToken);
+            .FirstOrDefaultAsync(k => k.Id == keyGuid && k.UserId == userGuid, cancellationToken).ConfigureAwait(false);
 
         return key == null ? null : MapToDto(key);
     }

@@ -120,7 +120,7 @@ public sealed class ProviderHealthCheckService : BackgroundService, IProviderHea
                 HealthCheckPrompt,
                 temperature: 0.1,
                 maxTokens: 10,
-                cts.Token);
+                cts.Token).ConfigureAwait(false);
 
             var success = result.Success && !string.IsNullOrWhiteSpace(result.Response);
 

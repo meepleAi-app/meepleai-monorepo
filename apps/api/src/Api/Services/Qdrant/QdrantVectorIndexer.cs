@@ -37,7 +37,7 @@ public class QdrantVectorIndexer : IQdrantVectorIndexer
                 collectionName: collectionName,
                 points: points,
                 cancellationToken: ct
-            );
+            ).ConfigureAwait(false);
 
             _logger.LogDebug("Successfully upserted {Count} points to collection {CollectionName}",
                 points.Count, collectionName);
@@ -122,7 +122,7 @@ public class QdrantVectorIndexer : IQdrantVectorIndexer
                 collectionName: collectionName,
                 filter: filter,
                 cancellationToken: ct
-            );
+            ).ConfigureAwait(false);
 
             _logger.LogDebug("Successfully deleted vectors from collection {CollectionName}", collectionName);
         }

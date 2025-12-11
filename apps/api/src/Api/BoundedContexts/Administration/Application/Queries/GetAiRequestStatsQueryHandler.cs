@@ -51,12 +51,12 @@ public class GetAiRequestStatsQueryHandler : IQueryHandler<GetAiRequestStatsQuer
                 TotalTokens = g.Sum(log => log.TokenCount),
                 SuccessCount = g.Count(log => log.Status == "Success")
             })
-            .FirstOrDefaultAsync(cancellationToken);
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
 
         var endpointCounts = await query
             .GroupBy(log => log.Endpoint)
             .Select(g => new { Endpoint = g.Key, Count = g.Count() })
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         if (stats == null)
         {

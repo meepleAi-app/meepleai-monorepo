@@ -70,7 +70,7 @@ public class CacheWarmingService : BackgroundService
             await Task.Delay(
                 TimeSpan.FromMinutes(_config.WarmingStartupDelayMinutes),
                 _timeProvider,
-                stoppingToken);
+                stoppingToken).ConfigureAwait(false);
 
             // Periodic warming loop
             while (!stoppingToken.IsCancellationRequested)
@@ -87,7 +87,7 @@ public class CacheWarmingService : BackgroundService
                     await Task.Delay(
                         TimeSpan.FromHours(_config.WarmingIntervalHours),
                         _timeProvider,
-                        stoppingToken);
+                        stoppingToken).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -145,7 +145,7 @@ public class CacheWarmingService : BackgroundService
 
                 var queries = await _frequencyTracker.GetTopQueriesAsync(
                     gameId,
-                    _config.WarmingTopQueriesCount);
+                    _config.WarmingTopQueriesCount).ConfigureAwait(false);
 
                 allQueries.AddRange(queries);
             }
@@ -217,7 +217,7 @@ public class CacheWarmingService : BackgroundService
                 frequentQuery.Query,
                 language: null,
                 bypassCache: false,
-                cancellationToken: cancellationToken);
+                cancellationToken: cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Successfully warmed cache for query: {Query} (game {GameId})",
@@ -262,7 +262,7 @@ public class CacheWarmingService : BackgroundService
 
         var gameIds = await dbContext.Games
             .Select(g => g.Id)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return gameIds;
     }

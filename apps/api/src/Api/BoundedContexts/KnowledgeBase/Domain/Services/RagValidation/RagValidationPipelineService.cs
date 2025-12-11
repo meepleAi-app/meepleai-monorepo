@@ -222,7 +222,7 @@ public class RagValidationPipelineService : IRagValidationPipelineService
             return await _hallucinationDetection.DetectHallucinationsAsync(
                 textToValidate,
                 language,
-                CancellationToken.None);
+                CancellationToken.None).ConfigureAwait(false);
         }, cancellationToken).Unwrap();
 
         // Wait for all tasks to complete

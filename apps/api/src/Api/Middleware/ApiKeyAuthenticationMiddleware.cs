@@ -125,7 +125,7 @@ public class ApiKeyAuthenticationMiddleware
                     message = result.InvalidReason ?? "Invalid or expired API key",
                     source = source,
                     correlationId = context.TraceIdentifier
-                });
+                }).ConfigureAwait(false);
                 return;
             }
         }

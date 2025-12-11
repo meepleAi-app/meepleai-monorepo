@@ -36,7 +36,7 @@ public class GetUserSessionsQueryHandler : IQueryHandler<GetUserSessionsQuery, L
                 s.IpAddress,
                 s.UserAgent
             ))
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return sessions;
     }

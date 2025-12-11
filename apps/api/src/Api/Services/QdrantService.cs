@@ -406,7 +406,7 @@ public class QdrantService : IQdrantService
                 filter: filter,
                 limit: limit,
                 ct: ct
-            );
+            ).ConfigureAwait(false);
             var results = _vectorSearcher.ConvertToSearchResults(searchResults);
             _logger.LogInformation("Found {Count} results for language {Language}", results.Count, language);
             activity?.SetTag("results.count", results.Count);

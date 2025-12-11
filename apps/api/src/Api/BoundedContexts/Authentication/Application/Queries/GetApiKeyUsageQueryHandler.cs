@@ -24,7 +24,7 @@ public class GetApiKeyUsageQueryHandler : IQueryHandler<GetApiKeyUsageQuery, Api
         }
 
         var apiKey = await _db.ApiKeys
-            .FirstOrDefaultAsync(k => k.Id == keyGuid && k.UserId == userGuid, cancellationToken);
+            .FirstOrDefaultAsync(k => k.Id == keyGuid && k.UserId == userGuid, cancellationToken).ConfigureAwait(false);
 
         if (apiKey == null)
             return null;

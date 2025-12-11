@@ -82,7 +82,7 @@ public class AuditService
             details,
             ipAddress,
             userAgent,
-            ct);
+            ct).ConfigureAwait(false);
 
         _logger.LogWarning(
             "Access denied: User {UserId} in scope {UserScope} attempted to access {Resource} requiring scope {RequiredScope}",

@@ -75,16 +75,18 @@ public class EnhancedPdfProcessingOrchestrator
             var tempFile = SecureTempFileHelper.CreateSecureTempFilePath(".pdf");
             try
             {
-                await using var fileStream = new FileStream(
+                var fileStream = new FileStream(
                     tempFile,
                     FileMode.Create,
                     FileAccess.Write,
                     FileShare.None,
                     bufferSize: 81920,
                     useAsync: true);
-
-                await pdfStream.CopyToAsync(fileStream, ct).ConfigureAwait(false);
+                await using (fileStream.ConfigureAwait(false))
+                {
+                    await pdfStream.CopyToAsync(fileStream, ct).ConfigureAwait(false);
                 return PdfDataHandle.FromTempFile(tempFile);
+                }
             }
             catch
             {
@@ -151,7 +153,7 @@ public class EnhancedPdfProcessingOrchestrator
                 Stage1QualityThreshold,
                 enableOcrFallback,
                 requestId,
-                ct);
+                ct).ConfigureAwait(false);
 
             if (stage1Result != null)
             {
@@ -168,7 +170,7 @@ public class EnhancedPdfProcessingOrchestrator
                 Stage2QualityThreshold,
                 enableOcrFallback,
                 requestId,
-                ct);
+                ct).ConfigureAwait(false);
 
             if (stage2Result != null)
             {
@@ -182,8 +184,10 @@ public class EnhancedPdfProcessingOrchestrator
                 requestId);
 
             var stage3Stopwatch = Stopwatch.StartNew();
-            await using var fallbackStream = pdfData.GetStream();
-            var stage3Result = await _docnetExtractor.ExtractTextAsync(fallbackStream, enableOcrFallback, ct).ConfigureAwait(false);
+            var fallbackStream = pdfData.GetStream();
+            await using (fallbackStream.ConfigureAwait(false))
+            {
+                var stage3Result = await _docnetExtractor.ExtractTextAsync(fallbackStream, enableOcrFallback, ct).ConfigureAwait(false);
             stage3Stopwatch.Stop();
 
             _logger.LogInformation(
@@ -192,6 +196,7 @@ public class EnhancedPdfProcessingOrchestrator
 
             overallStopwatch.Stop();
             return CreateEnhancedResult(stage3Result, 3, "Docnet", overallStopwatch.Elapsed, requestId);
+            }
         }
         finally
         {
@@ -220,8 +225,10 @@ public class EnhancedPdfProcessingOrchestrator
 
         try
         {
-            await using var stream = pdfData.GetStream();
-            var result = await extractor.ExtractTextAsync(stream, enableOcrFallback, ct).ConfigureAwait(false);
+            var stream = pdfData.GetStream();
+            await using (stream.ConfigureAwait(false))
+            {
+                var result = await extractor.ExtractTextAsync(stream, enableOcrFallback, ct).ConfigureAwait(false);
             stageStopwatch.Stop();
 
             if (!result.Success)
@@ -260,6 +267,7 @@ public class EnhancedPdfProcessingOrchestrator
             RecordStageMetricSafely(stageName, false, stageStopwatch.Elapsed.TotalMilliseconds, qualityScore);
 
             return null;
+            }
         }
         catch (Exception ex)
         {
@@ -377,7 +385,7 @@ public class EnhancedPdfProcessingOrchestrator
                 Stage1QualityThreshold,
                 enableOcrFallback,
                 requestId,
-                ct);
+                ct).ConfigureAwait(false);
 
             if (stage1Result != null)
             {
@@ -394,7 +402,7 @@ public class EnhancedPdfProcessingOrchestrator
                 Stage2QualityThreshold,
                 enableOcrFallback,
                 requestId,
-                ct);
+                ct).ConfigureAwait(false);
 
         if (stage2Result != null)
         {
@@ -408,8 +416,10 @@ public class EnhancedPdfProcessingOrchestrator
                 requestId);
 
             var stage3Stopwatch = Stopwatch.StartNew();
-            await using var fallbackStream = pdfData.GetStream();
-            var stage3Result = await _docnetExtractor.ExtractPagedTextAsync(fallbackStream, enableOcrFallback, ct).ConfigureAwait(false);
+            var fallbackStream = pdfData.GetStream();
+            await using (fallbackStream.ConfigureAwait(false))
+            {
+                var stage3Result = await _docnetExtractor.ExtractPagedTextAsync(fallbackStream, enableOcrFallback, ct).ConfigureAwait(false);
             stage3Stopwatch.Stop();
 
             _logger.LogInformation(
@@ -418,6 +428,7 @@ public class EnhancedPdfProcessingOrchestrator
 
             overallStopwatch.Stop();
             return CreateEnhancedPagedResult(stage3Result, 3, "Docnet", overallStopwatch.Elapsed, requestId);
+            }
         }
         finally
         {
@@ -446,8 +457,10 @@ public class EnhancedPdfProcessingOrchestrator
 
         try
         {
-            await using var stream = pdfData.GetStream();
-            var result = await extractor.ExtractPagedTextAsync(stream, enableOcrFallback, ct).ConfigureAwait(false);
+            var stream = pdfData.GetStream();
+            await using (stream.ConfigureAwait(false))
+            {
+                var result = await extractor.ExtractPagedTextAsync(stream, enableOcrFallback, ct).ConfigureAwait(false);
             stageStopwatch.Stop();
 
             if (!result.Success)
@@ -501,6 +514,7 @@ public class EnhancedPdfProcessingOrchestrator
             RecordStageMetricSafely(stageName, false, stageStopwatch.Elapsed.TotalMilliseconds, qualityScore);
 
             return null;
+            }
         }
         catch (Exception ex)
         {

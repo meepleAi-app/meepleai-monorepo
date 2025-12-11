@@ -65,7 +65,7 @@ public class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunk
         try
         {
             // Get session
-            var session = await _sessionRepository.GetByIdAsync(request.SessionId, cancellationToken);
+            var session = await _sessionRepository.GetByIdAsync(request.SessionId, cancellationToken).ConfigureAwait(false);
 
             if (session == null)
             {
@@ -110,11 +110,11 @@ public class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunk
             if (session.IsExpired)
             {
                 session.MarkAsExpired();
-                await _sessionRepository.UpdateAsync(session, cancellationToken);
-                await _dbContext.SaveChangesAsync(cancellationToken);
+                await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
+                await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
                 // Cleanup temp files
-                await CleanupTempDirectoryAsync(session.TempDirectory);
+                await CleanupTempDirectoryAsync(session.TempDirectory).ConfigureAwait(false);
 
                 return new CompleteChunkedUploadResult(
                     Success: false,
@@ -151,8 +151,8 @@ public class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunk
 
             // Mark as assembling
             session.MarkAsAssembling();
-            await _sessionRepository.UpdateAsync(session, cancellationToken);
-            await _dbContext.SaveChangesAsync(cancellationToken);
+            await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
+            await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Assembling chunked upload {SessionId} ({TotalChunks} chunks, {TotalSize} bytes)",
@@ -163,25 +163,26 @@ public class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunk
 
             // Assemble chunks into a single file
             var assembledFilePath = Path.Combine(session.TempDirectory, sanitizedFileName);
-            await AssembleChunksAsync(session, assembledFilePath, cancellationToken);
+            await AssembleChunksAsync(session, assembledFilePath, cancellationToken).ConfigureAwait(false);
 
             // Store in blob storage (using already sanitized filename)
 
             BlobStorageResult storageResult;
-            await using (var assembledStream = new FileStream(assembledFilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+            var assembledStream = new FileStream(assembledFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            await using (assembledStream.ConfigureAwait(false))
             {
                 storageResult = await _blobStorageService.StoreAsync(
                     assembledStream,
                     sanitizedFileName,
                     session.GameId.ToString(),
-                    cancellationToken);
+                    cancellationToken).ConfigureAwait(false);
             }
 
             if (!storageResult.Success)
             {
                 session.MarkAsFailed(storageResult.ErrorMessage ?? "Failed to store assembled file");
-                await _sessionRepository.UpdateAsync(session, cancellationToken);
-                await _dbContext.SaveChangesAsync(cancellationToken);
+                await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
+                await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
                 return new CompleteChunkedUploadResult(
                     Success: false,
@@ -210,8 +211,8 @@ public class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunk
 
             // Mark session as completed
             session.MarkAsCompleted();
-            await _sessionRepository.UpdateAsync(session, cancellationToken);
-            await _dbContext.SaveChangesAsync(cancellationToken);
+            await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
+            await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Chunked upload {SessionId} completed. Document {DocumentId} created.",
@@ -223,8 +224,8 @@ public class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunk
                 $"cleanup_{request.SessionId}",
                 async (ct) =>
                 {
-                    await Task.Delay(100, ct); // Small delay to ensure file handles are released
-                    await CleanupTempDirectoryAsync(tempDirToClean);
+                    await Task.Delay(100, ct).ConfigureAwait(false); // Small delay to ensure file handles are released
+                    await CleanupTempDirectoryAsync(tempDirToClean).ConfigureAwait(false);
                 });
 
             // Trigger background processing (same as regular upload)
@@ -262,14 +263,16 @@ public class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunk
         string outputPath,
         CancellationToken cancellationToken)
     {
-        await using var outputStream = new FileStream(
+        var outputStream = new FileStream(
             outputPath,
             FileMode.Create,
             FileAccess.Write,
             FileShare.None,
-            bufferSize: 81920); // 80KB buffer for efficiency
-
-        for (int i = 0; i < session.TotalChunks; i++)
+            bufferSize: 81920);
+        await using (outputStream.ConfigureAwait(false))
+        // 80KB buffer for efficiency
+        {
+            for (int i = 0; i < session.TotalChunks; i++)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -280,22 +283,25 @@ public class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunk
                 throw new InvalidOperationException($"Chunk {i} file not found: {chunkPath}");
             }
 
-            await using var chunkStream = new FileStream(
+            var chunkStream = new FileStream(
                 chunkPath,
                 FileMode.Open,
                 FileAccess.Read,
                 FileShare.Read);
-
-            await chunkStream.CopyToAsync(outputStream, cancellationToken);
+            await using (chunkStream.ConfigureAwait(false))
+            {
+                await chunkStream.CopyToAsync(outputStream, cancellationToken).ConfigureAwait(false);
+            }
 
             _logger.LogDebug("Assembled chunk {ChunkIndex}/{TotalChunks}", i + 1, session.TotalChunks);
         }
 
-        await outputStream.FlushAsync(cancellationToken);
+        await outputStream.FlushAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Assembled {TotalChunks} chunks into {OutputPath} ({Size} bytes)",
             session.TotalChunks, outputPath, new FileInfo(outputPath).Length);
+        }
     }
 
     /// <summary>
@@ -347,8 +353,10 @@ public class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunk
 
             // Step 1: Extract text
             var extractionStopwatch = Stopwatch.StartNew();
-            await using var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-            var extractResult = await _pdfTextExtractor.ExtractPagedTextAsync(fileStream, enableOcrFallback: true, ct).ConfigureAwait(false);
+            var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            await using (fileStream.ConfigureAwait(false))
+            {
+                var extractResult = await _pdfTextExtractor.ExtractPagedTextAsync(fileStream, enableOcrFallback: true, ct).ConfigureAwait(false);
             extractionStopwatch.Stop();
 
             _logger.LogDebug("Extraction completed in {ElapsedMs}ms for {PdfId}", extractionStopwatch.ElapsedMilliseconds, pdfId);
@@ -565,6 +573,7 @@ public class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunk
             _logger.LogInformation(
                 "PDF processing completed for chunked upload {PdfId}: {TotalPages} pages, {ChunkCount} chunks, {TotalSeconds}s",
                 pdfId, totalPages, allDocumentChunks.Count, totalTime);
+            }
         }
         catch (Exception ex)
         {

@@ -59,7 +59,7 @@ public class GetVersionTimelineQueryHandler : IQueryHandler<GetVersionTimelineQu
                     ? r.CreatedBy.DisplayName ?? r.CreatedBy.Email ?? "Unknown"
                     : "Unknown"
             })
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         // Build version nodes with parent/merge relationships
         var versionNodes = new List<VersionNodeDto>();

@@ -50,7 +50,7 @@ public class GetRuleCommentsQueryHandler : IRequestHandler<GetRuleCommentsQuery,
         var comments = await dbQuery
             .OrderBy(c => c.CreatedAt)
             .Take(100) // Limit results to prevent memory issues
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogDebug(
             "Retrieved {CommentCount} comments for {GameId} v{Version} (includeResolved: {IncludeResolved})",

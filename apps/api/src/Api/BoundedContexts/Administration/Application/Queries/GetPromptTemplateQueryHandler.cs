@@ -24,7 +24,7 @@ public class GetPromptTemplateQueryHandler : IQueryHandler<GetPromptTemplateQuer
         var template = await _db.PromptTemplates
             .AsNoTracking()
             .Include(t => t.CreatedBy)
-            .FirstOrDefaultAsync(t => t.Id == templateGuid, cancellationToken);
+            .FirstOrDefaultAsync(t => t.Id == templateGuid, cancellationToken).ConfigureAwait(false);
 
         if (template == null)
         {

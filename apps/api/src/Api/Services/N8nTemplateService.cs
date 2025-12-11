@@ -230,7 +230,7 @@ public class N8nTemplateService
         var n8nConfig = await _db.N8nConfigs
             .Where(c => c.IsActive)
             .OrderByDescending(c => c.CreatedAt)
-            .FirstOrDefaultAsync(ct);
+            .FirstOrDefaultAsync(ct).ConfigureAwait(false);
 
         if (n8nConfig == null)
         {
@@ -242,7 +242,7 @@ public class N8nTemplateService
             n8nConfig,
             template.Name,
             workflowJson,
-            ct);
+            ct).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Imported template {TemplateId} as workflow {WorkflowId} for user {UserId}",

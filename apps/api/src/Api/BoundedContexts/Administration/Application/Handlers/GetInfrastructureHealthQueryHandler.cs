@@ -31,11 +31,11 @@ public class GetInfrastructureHealthQueryHandler : IRequestHandler<GetInfrastruc
 
         try
         {
-            var overall = await _healthService.GetOverallHealthAsync(cancellationToken);
+            var overall = await _healthService.GetOverallHealthAsync(cancellationToken).ConfigureAwait(false);
 
             var services = request.ServiceName is not null
-                ? new[] { await _healthService.GetServiceHealthAsync(request.ServiceName, cancellationToken) }
-                : await _healthService.GetAllServicesHealthAsync(cancellationToken);
+                ? new[] { await _healthService.GetServiceHealthAsync(request.ServiceName, cancellationToken).ConfigureAwait(false) }
+                : await _healthService.GetAllServicesHealthAsync(cancellationToken).ConfigureAwait(false);
 
             var serviceDtos = services.Select(s => new ServiceHealthDto(
                 s.ServiceName,

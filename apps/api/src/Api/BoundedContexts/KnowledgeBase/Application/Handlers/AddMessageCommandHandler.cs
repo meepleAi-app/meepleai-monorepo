@@ -27,7 +27,7 @@ public class AddMessageCommandHandler : ICommandHandler<AddMessageCommand, ChatT
     {
         // Load thread
         var thread = await _threadRepository.GetByIdAsync(command.ThreadId, cancellationToken)
-            ?? throw new InvalidOperationException($"Chat thread with ID {command.ThreadId} not found");
+.ConfigureAwait(false) ?? throw new InvalidOperationException($"Chat thread with ID {command.ThreadId} not found");
 
         // Add message via domain method (handles sequencing internally)
         if (string.Equals(command.Role, ChatMessage.UserRole, StringComparison.Ordinal))

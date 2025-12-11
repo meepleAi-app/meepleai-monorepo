@@ -39,7 +39,7 @@ public sealed class TwoFactorDisabledEventHandler : DomainEventHandlerBase<TwoFa
                     user.Email,
                     user.DisplayName,
                     domainEvent.WasAdminOverride,
-                    cancellationToken);
+                    cancellationToken).ConfigureAwait(false);
 
                 Logger.LogInformation(
                     "2FA disabled email sent to user {UserId} (Admin override: {AdminOverride})",

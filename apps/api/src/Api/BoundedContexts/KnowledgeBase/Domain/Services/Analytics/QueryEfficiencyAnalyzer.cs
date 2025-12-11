@@ -99,7 +99,7 @@ public class QueryEfficiencyAnalyzer : IQueryEfficiencyAnalyzer
         CancellationToken ct = default)
     {
         // Placeholder: Real implementation would query detailed operation logs
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
 
         return new Dictionary<string, double>(StringComparer.Ordinal)
         {

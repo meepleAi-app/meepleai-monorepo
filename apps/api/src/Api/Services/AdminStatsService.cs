@@ -62,15 +62,15 @@ public class AdminStatsService : IAdminStatsService
                 var chatMessageTrendTask = GetChatMessageTrendAsync(fromDate, toDate, queryParams.GameId, cancellationToken);
 
                 await Task.WhenAll(metricsTask, userTrendTask, sessionTrendTask,
-                    apiRequestTrendTask, pdfUploadTrendTask, chatMessageTrendTask);
+                    apiRequestTrendTask, pdfUploadTrendTask, chatMessageTrendTask).ConfigureAwait(false);
 
                 return new DashboardStatsDto(
-                    Metrics: await metricsTask,
-                    UserTrend: await userTrendTask,
-                    SessionTrend: await sessionTrendTask,
-                    ApiRequestTrend: await apiRequestTrendTask,
-                    PdfUploadTrend: await pdfUploadTrendTask,
-                    ChatMessageTrend: await chatMessageTrendTask,
+                    Metrics: await metricsTask.ConfigureAwait(false),
+                    UserTrend: await userTrendTask.ConfigureAwait(false),
+                    SessionTrend: await sessionTrendTask.ConfigureAwait(false),
+                    ApiRequestTrend: await apiRequestTrendTask.ConfigureAwait(false),
+                    PdfUploadTrend: await pdfUploadTrendTask.ConfigureAwait(false),
+                    ChatMessageTrend: await chatMessageTrendTask.ConfigureAwait(false),
                     GeneratedAt: _timeProvider.GetUtcNow().UtcDateTime
                 );
             },
@@ -80,7 +80,7 @@ public class AdminStatsService : IAdminStatsService
                 LocalCacheExpiration = TimeSpan.FromSeconds(30) // Issue #879: Proportional to 1min L2 (was 2min for 5min L2)
             },
             cancellationToken: cancellationToken
-        );
+        ).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -184,32 +184,32 @@ public class AdminStatsService : IAdminStatsService
             totalGamesTask, apiRequests7dTask, apiRequests30dTask,
             avgLatency24hTask, avgLatency7dTask, errorCount24hTask, totalCount24hTask,
             activeAlertsTask, resolvedAlertsTask
-        );
+        ).ConfigureAwait(false);
 
         // Calculate error rate (avoid division by zero)
-        var errorCount = await errorCount24hTask;
-        var totalCount = await totalCount24hTask;
+        var errorCount = await errorCount24hTask.ConfigureAwait(false);
+        var totalCount = await totalCount24hTask.ConfigureAwait(false);
         var errorRate = totalCount > 0 ? (double)errorCount / totalCount : 0.0;
 
         return new DashboardMetrics(
-            TotalUsers: await totalUsersTask,
-            ActiveSessions: await activeSessionsTask,
-            ApiRequestsToday: await apiRequestsTodayTask,
-            TotalPdfDocuments: await totalPdfDocumentsTask,
-            TotalChatMessages: await totalChatMessagesTask,
-            AverageConfidenceScore: await avgConfidenceTask ?? 0.0,
-            TotalRagRequests: await totalRagRequestsTask,
-            TotalTokensUsed: await totalTokensTask,
+            TotalUsers: await totalUsersTask.ConfigureAwait(false),
+            ActiveSessions: await activeSessionsTask.ConfigureAwait(false),
+            ApiRequestsToday: await apiRequestsTodayTask.ConfigureAwait(false),
+            TotalPdfDocuments: await totalPdfDocumentsTask.ConfigureAwait(false),
+            TotalChatMessages: await totalChatMessagesTask.ConfigureAwait(false),
+            AverageConfidenceScore: await avgConfidenceTask.ConfigureAwait(false) ?? 0.0,
+            TotalRagRequests: await totalRagRequestsTask.ConfigureAwait(false),
+            TotalTokensUsed: await totalTokensTask.ConfigureAwait(false),
             // Issue #874: Additional metrics
-            TotalGames: await totalGamesTask,
-            ApiRequests7d: await apiRequests7dTask,
-            ApiRequests30d: await apiRequests30dTask,
-            AverageLatency24h: await avgLatency24hTask ?? 0.0,
-            AverageLatency7d: await avgLatency7dTask ?? 0.0,
+            TotalGames: await totalGamesTask.ConfigureAwait(false),
+            ApiRequests7d: await apiRequests7dTask.ConfigureAwait(false),
+            ApiRequests30d: await apiRequests30dTask.ConfigureAwait(false),
+            AverageLatency24h: await avgLatency24hTask.ConfigureAwait(false) ?? 0.0,
+            AverageLatency7d: await avgLatency7dTask.ConfigureAwait(false) ?? 0.0,
             ErrorRate24h: errorRate,
-            ActiveAlerts: await activeAlertsTask,
+            ActiveAlerts: await activeAlertsTask.ConfigureAwait(false),
             ResolvedAlerts: await resolvedAlertsTask
-        );
+.ConfigureAwait(false));
     }
 
     /// <summary>
@@ -241,7 +241,7 @@ public class AdminStatsService : IAdminStatsService
                 Count = g.LongCount()
             })
             .OrderBy(d => d.Date)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return FillMissingDates(
             data.Select(d => new TimeSeriesDataPoint(d.Date, d.Count, null)).ToList(),
@@ -268,7 +268,7 @@ public class AdminStatsService : IAdminStatsService
                 Count = g.LongCount()
             })
             .OrderBy(d => d.Date)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return FillMissingDates(
             data.Select(d => new TimeSeriesDataPoint(d.Date, d.Count, null)).ToList(),
@@ -303,7 +303,7 @@ public class AdminStatsService : IAdminStatsService
                 AvgConfidence = g.Average(log => (double?)log.Confidence)
             })
             .OrderBy(d => d.Date)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return FillMissingDates(
             data.Select(d => new TimeSeriesDataPoint(d.Date, d.Count, d.AvgConfidence)).ToList(),
@@ -338,7 +338,7 @@ public class AdminStatsService : IAdminStatsService
                 AvgPages = g.Average(pdf => (double?)pdf.PageCount)
             })
             .OrderBy(d => d.Date)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return FillMissingDates(
             data.Select(d => new TimeSeriesDataPoint(d.Date, d.Count, d.AvgPages)).ToList(),
@@ -366,7 +366,7 @@ public class AdminStatsService : IAdminStatsService
                 Count = g.LongCount()
             })
             .OrderBy(d => d.Date)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return FillMissingDates(
             data.Select(d => new TimeSeriesDataPoint(d.Date, d.Count, null)).ToList(),

@@ -148,7 +148,7 @@ public static class TelemetryTestEndpoints
             if (childActivity != null)
             {
                 childActivity.SetTag("operation", "data-fetch");
-                await Task.Delay(10); // Simulate work
+                await Task.Delay(10).ConfigureAwait(false); // Simulate work
 
                 logger.LogInformation(
                     "Child span completed. ParentTraceId: {TraceId}, ChildSpanId: {SpanId}",
@@ -286,7 +286,7 @@ public static class TelemetryTestEndpoints
             // Throttle to avoid overwhelming the system
             if (i % 10 == 0)
             {
-                await Task.Delay(10);
+                await Task.Delay(10).ConfigureAwait(false);
             }
         }
 

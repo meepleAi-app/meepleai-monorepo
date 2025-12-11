@@ -36,7 +36,7 @@ public sealed class RunEvaluationCommandHandler : IRequestHandler<RunEvaluationC
         EvaluationDataset dataset;
         try
         {
-            var json = await File.ReadAllTextAsync(request.DatasetPath, cancellationToken);
+            var json = await File.ReadAllTextAsync(request.DatasetPath, cancellationToken).ConfigureAwait(false);
             dataset = EvaluationDataset.FromJson(json);
         }
         catch (Exception ex)
@@ -64,7 +64,7 @@ public sealed class RunEvaluationCommandHandler : IRequestHandler<RunEvaluationC
         };
 
         // Run evaluation
-        var result = await _evaluationService.EvaluateDatasetAsync(dataset, options, cancellationToken);
+        var result = await _evaluationService.EvaluateDatasetAsync(dataset, options, cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Evaluation completed: {SuccessCount}/{TotalCount} samples, Recall@10={Recall:F2}",

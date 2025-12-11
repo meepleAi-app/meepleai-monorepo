@@ -80,7 +80,7 @@ public class UpdateUserTierCommandHandler : ICommandHandler<UpdateUserTierComman
             .Where(s => s.UserId == command.UserId && s.RevokedAt == null)
             .OrderByDescending(s => s.LastSeenAt ?? s.CreatedAt)
             .Select(s => s.LastSeenAt)
-            .FirstOrDefaultAsync(cancellationToken);
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
 
         return new UserDto(
             Id: user.Id.ToString(),

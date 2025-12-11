@@ -20,6 +20,7 @@ import {
   getStoredApiKeySync,
 } from '../apiKeyStore';
 import * as secureStorage from '../secureStorage';
+import { logger } from '@/lib/logger';
 
 // Mock the secure storage module
 vi.mock('../secureStorage');
@@ -99,19 +100,19 @@ describe('apiKeyStore', () => {
     });
 
     it('should handle encryption failures gracefully', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation();
+      const loggerErrorSpy = vi.spyOn(logger, 'error').mockImplementation(() => {});
       mockEncrypt.mockRejectedValueOnce(new Error('Encryption failed'));
 
       const apiKey = 'mpl_dev_testKey123';
       await setStoredApiKey(apiKey);
 
       // Should still work, just without sessionStorage
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(loggerErrorSpy).toHaveBeenCalledWith(
         'Failed to encrypt API key, using in-memory storage only:',
         expect.any(Error)
       );
 
-      consoleSpy.mockRestore();
+      loggerErrorSpy.mockRestore();
     });
   });
 
@@ -127,7 +128,7 @@ describe('apiKeyStore', () => {
     });
 
     it('should handle decryption failures gracefully', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation();
+      const loggerErrorSpy = vi.spyOn(logger, 'error').mockImplementation(() => {});
       mockSessionStorage.setItem('meepleai:apiKey', 'corrupted-data');
       mockDecrypt.mockRejectedValueOnce(new Error('Decryption failed'));
 
@@ -135,16 +136,16 @@ describe('apiKeyStore', () => {
 
       expect(result).toBeNull();
       expect(mockSessionStorage.removeItem).toHaveBeenCalledWith('meepleai:apiKey');
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(loggerErrorSpy).toHaveBeenCalledWith(
         'Failed to decrypt API key, clearing storage:',
         expect.any(Error)
       );
 
-      consoleSpy.mockRestore();
+      loggerErrorSpy.mockRestore();
     });
 
     it('should prevent race condition when cleared during decryption', async () => {
-      const consoleSpy = vi.spyOn(console, 'log').mockImplementation();
+      const loggerDebugSpy = vi.spyOn(logger, 'debug').mockImplementation(() => {});
       const apiKey = 'mpl_dev_testKey123';
       mockSessionStorage.setItem('meepleai:apiKey', `encrypted:${apiKey}`);
 
@@ -159,15 +160,15 @@ describe('apiKeyStore', () => {
 
       // Should return null, not the decrypted value
       expect(result).toBeNull();
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(loggerDebugSpy).toHaveBeenCalledWith(
         'API key was cleared during retrieval, discarding decrypted value'
       );
 
-      consoleSpy.mockRestore();
+      loggerDebugSpy.mockRestore();
     });
 
     it('should prevent race condition when storage removed during decryption', async () => {
-      const consoleSpy = vi.spyOn(console, 'log').mockImplementation();
+      const loggerDebugSpy = vi.spyOn(logger, 'debug').mockImplementation(() => {});
       const apiKey = 'mpl_dev_testKey123';
       mockSessionStorage.setItem('meepleai:apiKey', `encrypted:${apiKey}`);
 
@@ -182,11 +183,11 @@ describe('apiKeyStore', () => {
 
       // Should return null, not the decrypted value
       expect(result).toBeNull();
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(loggerDebugSpy).toHaveBeenCalledWith(
         'API key storage was cleared during retrieval, discarding decrypted value'
       );
 
-      consoleSpy.mockRestore();
+      loggerDebugSpy.mockRestore();
     });
   });
 
@@ -251,7 +252,7 @@ describe('apiKeyStore', () => {
     });
 
     it('should prevent race condition when cleared during hydration', async () => {
-      const consoleSpy = vi.spyOn(console, 'log').mockImplementation();
+      const loggerDebugSpy = vi.spyOn(logger, 'debug').mockImplementation(() => {});
       const apiKey = 'mpl_dev_testKey123';
       mockSessionStorage.setItem('meepleai:apiKey', `encrypted:${apiKey}`);
 
@@ -266,7 +267,7 @@ describe('apiKeyStore', () => {
 
       // Should return false, and key should not be in memory
       expect(result).toBe(false);
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(loggerDebugSpy).toHaveBeenCalledWith(
         'API key was cleared during hydration, discarding decrypted value'
       );
 
@@ -274,11 +275,11 @@ describe('apiKeyStore', () => {
       const syncKey = getStoredApiKeySync();
       expect(syncKey).toBeNull();
 
-      consoleSpy.mockRestore();
+      loggerDebugSpy.mockRestore();
     });
 
     it('should handle decryption errors and clean up', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation();
+      const loggerErrorSpy = vi.spyOn(logger, 'error').mockImplementation(() => {});
       mockSessionStorage.setItem('meepleai:apiKey', 'corrupted-data');
       mockDecrypt.mockRejectedValueOnce(new Error('Decryption failed'));
 
@@ -286,16 +287,16 @@ describe('apiKeyStore', () => {
 
       expect(result).toBe(false);
       expect(mockSessionStorage.removeItem).toHaveBeenCalledWith('meepleai:apiKey');
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(loggerErrorSpy).toHaveBeenCalledWith(
         'Failed to hydrate API key from sessionStorage:',
         expect.any(Error)
       );
 
-      consoleSpy.mockRestore();
+      loggerErrorSpy.mockRestore();
     });
 
     it('should not clean up corrupted data if cleared during decryption', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation();
+      const loggerErrorSpy = vi.spyOn(logger, 'error').mockImplementation(() => {});
       mockSessionStorage.setItem('meepleai:apiKey', 'corrupted-data');
 
       let removeItemCallCount = 0;
@@ -313,7 +314,7 @@ describe('apiKeyStore', () => {
       // but NOT again by the error handler (because generation changed)
       expect(mockSessionStorage.removeItem.mock.calls.length).toBe(removeItemCallCount);
 
-      consoleSpy.mockRestore();
+      loggerErrorSpy.mockRestore();
     });
   });
 
@@ -403,7 +404,7 @@ describe('apiKeyStore', () => {
 
   describe('race condition scenarios', () => {
     it('should handle logout during multiple concurrent hydrations', async () => {
-      const consoleSpy = vi.spyOn(console, 'log').mockImplementation();
+      const loggerDebugSpy = vi.spyOn(logger, 'debug').mockImplementation(() => {});
       const apiKey = 'mpl_dev_testKey123';
       mockSessionStorage.setItem('meepleai:apiKey', `encrypted:${apiKey}`);
 
@@ -436,7 +437,7 @@ describe('apiKeyStore', () => {
       // Key should not be in memory
       expect(getStoredApiKeySync()).toBeNull();
 
-      consoleSpy.mockRestore();
+      loggerDebugSpy.mockRestore();
     });
 
     it('should handle rapid set/clear cycles', async () => {

@@ -99,11 +99,11 @@ public class ReportGeneratorServiceTests
         var markdown = _service.GenerateMarkdownReport(report);
 
         // Assert
-        Assert.Contains("### Best Metrics Achieved", markdown);
-        Assert.Contains("| Metric | Value |", markdown);
-        Assert.Contains("Best Recall@10", markdown);
-        Assert.Contains("Best nDCG@10", markdown);
-        Assert.Contains("Best P95 Latency", markdown);
+        Assert.Contains("### Best Metrics Achieved", markdown, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("| Metric | Value |", markdown, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Best Recall@10", markdown, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Best nDCG@10", markdown, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Best P95 Latency", markdown, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -116,10 +116,10 @@ public class ReportGeneratorServiceTests
         var markdown = _service.GenerateMarkdownReport(report);
 
         // Assert
-        Assert.Contains("## Phase 5 Target Status", markdown);
-        Assert.Contains("| Target | Required | Achieved | Status |", markdown);
-        Assert.Contains("Recall@10", markdown);
-        Assert.Contains("P95 Latency", markdown);
+        Assert.Contains("## Phase 5 Target Status", markdown, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("| Target | Required | Achieved | Status |", markdown, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Recall@10", markdown, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("P95 Latency", markdown, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -132,8 +132,8 @@ public class ReportGeneratorServiceTests
         var markdown = _service.GenerateMarkdownReport(report);
 
         // Assert
-        Assert.Contains("## Configuration Comparison", markdown);
-        Assert.Contains("| Configuration | Chunking | Quantization | Reranking |", markdown);
+        Assert.Contains("## Configuration Comparison", markdown, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("| Configuration | Chunking | Quantization | Reranking |", markdown, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -146,8 +146,8 @@ public class ReportGeneratorServiceTests
         var markdown = _service.GenerateMarkdownReport(report);
 
         // Assert
-        Assert.Contains("## Best Configurations", markdown);
-        Assert.Contains("### Best by Recall@10", markdown);
+        Assert.Contains("## Best Configurations", markdown, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("### Best by Recall@10", markdown, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -160,7 +160,7 @@ public class ReportGeneratorServiceTests
         var markdown = _service.GenerateMarkdownReport(report);
 
         // Assert
-        Assert.Contains("## Recommendations", markdown);
+        Assert.Contains("## Recommendations", markdown, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -173,9 +173,9 @@ public class ReportGeneratorServiceTests
         var markdown = _service.GenerateMarkdownReport(report);
 
         // Assert
-        Assert.Contains("ADR-016 Phase 5 Evaluation Framework", markdown);
-        Assert.Contains("Grid Search ID:", markdown);
-        Assert.Contains("Total Duration:", markdown);
+        Assert.Contains("ADR-016 Phase 5 Evaluation Framework", markdown, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Grid Search ID:", markdown, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Total Duration:", markdown, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -188,7 +188,7 @@ public class ReportGeneratorServiceTests
         var markdown = _service.GenerateMarkdownReport(report);
 
         // Assert
-        Assert.Contains("**PASSED**", markdown);
+        Assert.Contains("**PASSED**", markdown, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -201,7 +201,7 @@ public class ReportGeneratorServiceTests
         var markdown = _service.GenerateMarkdownReport(report);
 
         // Assert
-        Assert.Contains("**NOT MET**", markdown);
+        Assert.Contains("**NOT MET**", markdown, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -214,8 +214,8 @@ public class ReportGeneratorServiceTests
         var markdown = _service.GenerateMarkdownReport(report);
 
         // Assert
-        Assert.Contains("### Phase 5 Target Met", markdown);
-        Assert.Contains("**Next Steps**:", markdown);
+        Assert.Contains("### Phase 5 Target Met", markdown, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("**Next Steps**:", markdown, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -228,8 +228,8 @@ public class ReportGeneratorServiceTests
         var markdown = _service.GenerateMarkdownReport(report);
 
         // Assert
-        Assert.Contains("### Phase 5 Target Not Met", markdown);
-        Assert.Contains("**Improvement Suggestions**:", markdown);
+        Assert.Contains("### Phase 5 Target Not Met", markdown, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("**Improvement Suggestions**:", markdown, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -242,14 +242,14 @@ public class ReportGeneratorServiceTests
         var table = _service.GenerateComparisonTable(gridSearchResult);
 
         // Assert
-        Assert.Contains("## Configuration Comparison", table);
-        Assert.Contains("| Configuration | Chunking | Quantization | Reranking |", table);
-        Assert.Contains("Recall@5", table);
-        Assert.Contains("Recall@10", table);
-        Assert.Contains("nDCG@10", table);
-        Assert.Contains("MRR", table);
-        Assert.Contains("P95 (ms)", table);
-        Assert.Contains("Status", table);
+        Assert.Contains("## Configuration Comparison", table, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("| Configuration | Chunking | Quantization | Reranking |", table, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Recall@5", table, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Recall@10", table, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("nDCG@10", table, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("MRR", table, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("P95 (ms)", table, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Status", table, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

@@ -343,4 +343,50 @@ export const RecentActivityDtoSchema = z.object({
 
 export type RecentActivityDto = z.infer<typeof RecentActivityDtoSchema>;
 
+/**
+ * Infrastructure Monitoring Schemas (Issue #896)
+ * Matches backend domain models from Issues #891-894
+ */
+
+export const HealthStateSchema = z.enum(['Healthy', 'Degraded', 'Unhealthy']);
+export type HealthState = z.infer<typeof HealthStateSchema>;
+
+export const ServiceHealthStatusSchema = z.object({
+  serviceName: z.string(),
+  state: HealthStateSchema,
+  errorMessage: z.string().nullable().optional(),
+  checkedAt: z.string().datetime(),
+  responseTime: z.string(), // TimeSpan from backend (e.g., "00:00:00.0150000")
+});
+
+export type ServiceHealthStatus = z.infer<typeof ServiceHealthStatusSchema>;
+
+export const OverallHealthStatusSchema = z.object({
+  state: HealthStateSchema,
+  totalServices: z.number().int().nonnegative(),
+  healthyServices: z.number().int().nonnegative(),
+  degradedServices: z.number().int().nonnegative(),
+  unhealthyServices: z.number().int().nonnegative(),
+  checkedAt: z.string().datetime(),
+});
+
+export type OverallHealthStatus = z.infer<typeof OverallHealthStatusSchema>;
+
+export const PrometheusMetricsSummarySchema = z.object({
+  apiRequestsLast24h: z.number().int().nonnegative(),
+  avgLatencyMs: z.number().nonnegative(),
+  errorRate: z.number().min(0).max(1),
+  llmCostLast24h: z.number().nonnegative(),
+});
+
+export type PrometheusMetricsSummary = z.infer<typeof PrometheusMetricsSummarySchema>;
+
+export const InfrastructureDetailsSchema = z.object({
+  overall: OverallHealthStatusSchema,
+  services: z.array(ServiceHealthStatusSchema),
+  prometheusMetrics: PrometheusMetricsSummarySchema,
+});
+
+export type InfrastructureDetails = z.infer<typeof InfrastructureDetailsSchema>;
+
 // Note: PagedResult is defined in config.schemas.ts and re-exported via index.ts

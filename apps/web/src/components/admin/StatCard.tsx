@@ -1,20 +1,24 @@
 /**
- * StatCard Component - Issue #874
+ * StatCard Component - Issue #874, #882
  *
  * Reusable metric display card for admin dashboard.
- * Shows value, label, and optional trend indicator.
+ * Shows icon, value, label, trend indicator with loading state.
  */
 
+import type { LucideIcon } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { ArrowUpIcon, ArrowDownIcon, MinusIcon } from 'lucide-react';
 
 export interface StatCardProps {
   label: string;
   value: string | number;
+  icon?: LucideIcon;
   trend?: 'up' | 'down' | 'neutral';
   trendValue?: string;
   variant?: 'default' | 'success' | 'warning' | 'danger';
+  loading?: boolean;
   className?: string;
 }
 
@@ -31,31 +35,75 @@ const trendStyles = {
   neutral: 'text-gray-500',
 };
 
+const iconVariantStyles = {
+  default: 'text-gray-600 bg-gray-100',
+  success: 'text-green-600 bg-green-100',
+  warning: 'text-yellow-600 bg-yellow-100',
+  danger: 'text-red-600 bg-red-100',
+};
+
 export function StatCard({
   label,
   value,
+  icon: Icon,
   trend,
   trendValue,
   variant = 'default',
+  loading = false,
   className,
 }: StatCardProps) {
   const TrendIcon = trend === 'up' ? ArrowUpIcon : trend === 'down' ? ArrowDownIcon : MinusIcon;
 
-  return (
-    <Card className={cn(variantStyles[variant], className)}>
-      <CardContent className="p-6">
-        <div className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">
-          {label}
-        </div>
-        <div className="text-3xl font-bold text-gray-900">{value}</div>
-        {trend && trendValue && (
-          <div
-            className={cn('flex items-center gap-1 mt-2 text-sm font-medium', trendStyles[trend])}
-          >
-            <TrendIcon className="h-4 w-4" aria-hidden="true" />
-            <span>{trendValue}</span>
+  if (loading) {
+    return (
+      <Card className={cn(variantStyles[variant], className)} data-testid="statcard-loading">
+        <CardContent className="p-6">
+          <div className="flex items-start gap-4">
+            {Icon && <Skeleton className="h-10 w-10 rounded-lg shrink-0" />}
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-3 w-20" />
+              <Skeleton className="h-8 w-24" />
+              <Skeleton className="h-4 w-28" />
+            </div>
           </div>
-        )}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card
+      className={cn(
+        variantStyles[variant],
+        'transition-all duration-200 hover:shadow-md hover:border-gray-300',
+        className
+      )}
+    >
+      <CardContent className="p-6">
+        <div className="flex items-start gap-4">
+          {Icon && (
+            <div className={cn('p-2 rounded-lg shrink-0', iconVariantStyles[variant])}>
+              <Icon className="h-6 w-6" aria-hidden="true" />
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <div className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">
+              {label}
+            </div>
+            <div className="text-3xl font-bold text-gray-900">{value}</div>
+            {trend && trendValue && (
+              <div
+                className={cn(
+                  'flex items-center gap-1 mt-2 text-sm font-medium',
+                  trendStyles[trend]
+                )}
+              >
+                <TrendIcon className="h-4 w-4" aria-hidden="true" />
+                <span>{trendValue}</span>
+              </div>
+            )}
+          </div>
+        </div>
       </CardContent>
     </Card>
   );

@@ -27,9 +27,9 @@ permissions:
 env:
   API_BASE_URL: http://localhost:8080
   TEST_GAME_ID: '00000000-0000-0000-0000-000000000001'
-  # Database credentials - use secrets in CI, fallback to defaults for local runs
-  TEST_POSTGRES_USER: ${{ secrets.TEST_POSTGRES_USER || 'postgres' }}
-  TEST_POSTGRES_PASSWORD: ${{ secrets.TEST_POSTGRES_PASSWORD || 'postgres' }}
+  # Database credentials - hardcoded for CI tests (no secrets to avoid GitHub Actions masking)
+  TEST_POSTGRES_USER: 'postgres'
+  TEST_POSTGRES_PASSWORD: 'testpass123'
   TEST_DB_NAME: meepleai_test
 
 jobs:
@@ -44,8 +44,8 @@ jobs:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_USER: ${{ secrets.TEST_POSTGRES_USER || 'postgres' }}
-          POSTGRES_PASSWORD: ${{ secrets.TEST_POSTGRES_PASSWORD || 'postgres' }}
+          POSTGRES_USER: 'postgres'
+          POSTGRES_PASSWORD: 'testpass123'
           POSTGRES_DB: meepleai_test
         options: >-
           --health-cmd pg_isready
@@ -93,7 +93,7 @@ jobs:
         working-directory: apps/api/src/Api
         run: dotnet build --configuration Release --no-restore
         env:
-          ConnectionStrings__Postgres: ${{ secrets.TEST_DB_CONNECTION_STRING || 'Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=postgres' }}
+          ConnectionStrings__Postgres: 'Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=testpass123'
 
       - name: Install EF Core tools
         run: dotnet tool install --global dotnet-ef --version 9.0.11
@@ -102,7 +102,7 @@ jobs:
       - name: Create test database
         run: |
           echo "🗄️  Creating test database..."
-          PGPASSWORD="${{ secrets.TEST_POSTGRES_PASSWORD || 'postgres' }}" psql -h localhost -U "${{ secrets.TEST_POSTGRES_USER || 'postgres' }}" -d postgres <<-EOSQL
+          PGPASSWORD="testpass123" psql -h localhost -U "postgres" -d postgres <<-EOSQL
             SELECT 'CREATE DATABASE meepleai_test'
             WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'meepleai_test')\gexec
           EOSQL
@@ -113,24 +113,28 @@ jobs:
       - name: Verify database connectivity
         run: |
           echo "🔍 Testing PostgreSQL connection..."
-          PGPASSWORD="${{ secrets.TEST_POSTGRES_PASSWORD || 'postgres' }}" psql -h localhost -U "${{ secrets.TEST_POSTGRES_USER || 'postgres' }}" -d postgres -c "SELECT version();"
+          PGPASSWORD="testpass123" psql -h localhost -U "postgres" -d postgres -c "SELECT version();"
           echo "✅ Database connection successful"
 
           echo "🔍 Verifying test database exists..."
-          DB_EXISTS=$(PGPASSWORD="${{ secrets.TEST_POSTGRES_PASSWORD || 'postgres' }}" psql -h localhost -U "${{ secrets.TEST_POSTGRES_USER || 'postgres' }}" -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='meepleai_test'")
+          DB_EXISTS=$(PGPASSWORD="testpass123" psql -h localhost -U "postgres" -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='meepleai_test'")
           if [ "$DB_EXISTS" != "1" ]; then
             echo "❌ Database meepleai_test does not exist!"
             exit 1
           fi
           echo "✅ Test database verified"
 
-      # Issue #1817: Use --connection flag to explicitly pass connection string
-      # This prevents EF Core from defaulting to incorrect 'root' user
+      # Issue #2020: MeepleAiDbContextFactory requires ConnectionStrings__Postgres env var
+      # The --connection flag is ignored when IDesignTimeDbContextFactory exists
+      # EF Core factory reads from Environment.GetEnvironmentVariable() not command args
+      # Note: GitHub Actions secrets.|| fallback doesn't work when secret is undefined
+      # Use direct value for CI tests (no secrets configured in this workflow)
+      # Note: Password MUST be different from TEST_POSTGRES_PASSWORD to avoid GitHub Actions masking!
       - name: Apply migrations
         working-directory: apps/api/src/Api
-        run: |
-          dotnet ef database update --configuration Release \
-            --connection "${{ secrets.TEST_DB_CONNECTION_STRING || 'Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=postgres' }}"
+        run: dotnet ef database update --configuration Release
+        env:
+          ConnectionStrings__Postgres: 'Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=testpass123'
 
       # Issue #1663: Test user is now seeded automatically on API startup via EnsureTestUserExistsAsync
       # No need for separate seeding step - reduces workflow complexity and eliminates race conditions
@@ -141,12 +145,14 @@ jobs:
           nohup dotnet run --configuration Release > ../../../../api.log 2>&1 &
           echo $! > ../../../../api.pid
         env:
-          ConnectionStrings__Postgres: ${{ secrets.TEST_DB_CONNECTION_STRING || 'Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=postgres' }}
+          ConnectionStrings__Postgres: 'Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=testpass123'
           ConnectionStrings__Redis: 'localhost:6379'
           ConnectionStrings__Qdrant: 'http://localhost:6333'
           ASPNETCORE_ENVIRONMENT: Development  # Issue #1663: Dev mode enables test user seeding + relaxed rate limits
           ASPNETCORE_URLS: 'http://0.0.0.0:8080'
 
+      # Issue #2020: Add ConnectionStrings__Postgres to prevent EF Core from defaulting to 'root' user
+      # This step validates API health which may trigger EF Core DbContext initialization
       - name: Wait for API to be ready
         run: |
           for i in {1..30}; do
@@ -161,6 +167,8 @@ jobs:
           echo "Last 100 lines of API logs:"
           tail -n 100 api.log || echo "⚠️ Could not read api.log"
           exit 1
+        env:
+          ConnectionStrings__Postgres: 'Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=testpass123'
 
       - name: Run k6 performance tests
         working-directory: tests/k6

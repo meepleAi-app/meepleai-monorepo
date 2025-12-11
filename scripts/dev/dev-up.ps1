@@ -1,6 +1,6 @@
 Param([switch]$Rebuild)
 
-Set-Location $PSScriptRoot/../infra
+Set-Location $PSScriptRoot/../../infra
 
 foreach ($file in @('api', 'web', 'n8n')) {
   $target = "./env/$file.env.dev"

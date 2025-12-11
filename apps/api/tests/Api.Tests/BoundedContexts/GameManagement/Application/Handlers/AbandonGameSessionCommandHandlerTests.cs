@@ -241,7 +241,7 @@ public class AbandonGameSessionCommandHandlerTests
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => _handler.Handle(command, TestContext.Current.CancellationToken));
 
-        Assert.Contains($"Session with ID {sessionId} not found", exception.Message);
+        Assert.Contains($"Session with ID {sessionId} not found", exception.Message, StringComparison.OrdinalIgnoreCase);
 
         // Verify save was NOT called
         _unitOfWorkMock.Verify(
@@ -271,7 +271,7 @@ public class AbandonGameSessionCommandHandlerTests
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => _handler.Handle(command, TestContext.Current.CancellationToken));
 
-        Assert.Contains("Cannot abandon finished session", exception.Message);
+        Assert.Contains("Cannot abandon finished session", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -298,7 +298,7 @@ public class AbandonGameSessionCommandHandlerTests
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => _handler.Handle(command, TestContext.Current.CancellationToken));
 
-        Assert.Contains("Cannot abandon finished session", exception.Message);
+        Assert.Contains("Cannot abandon finished session", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

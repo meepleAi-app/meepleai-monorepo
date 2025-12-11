@@ -45,8 +45,8 @@ public class ChatContextDomainServiceTests
         var result = _service.BuildChatHistoryContext(thread);
 
         // Should limit to last 10 messages
-        Assert.Contains("Message 14", result); // Most recent
-        Assert.DoesNotContain("Message 0", result); // Too old
+        Assert.Contains("Message 14", result, StringComparison.OrdinalIgnoreCase); // Most recent
+        Assert.DoesNotContain("Message 0", result, StringComparison.OrdinalIgnoreCase); // Too old
     }
 
     [Fact]
@@ -97,8 +97,8 @@ public class ChatContextDomainServiceTests
 
         var result = _service.EnrichPromptWithHistory(question, history);
 
-        Assert.Contains(history, result);
-        Assert.Contains("Current question: What is the rule?", result);
+        Assert.Contains(history, result, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Current question: What is the rule?", result, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

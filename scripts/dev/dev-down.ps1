@@ -1,2 +1,2 @@
-Set-Location $PSScriptRoot/../infra
+Set-Location $PSScriptRoot/../../infra
 docker compose down -v

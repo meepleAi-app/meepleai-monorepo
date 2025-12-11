@@ -70,8 +70,6 @@ export const createChatSlice: StateCreator<
     try {
       const newThread = await api.chat.createThread({
         gameId: selectedGameId,
-        title: null,
-        initialMessage: null,
       });
 
       if (newThread) {
@@ -146,7 +144,13 @@ export const createChatSlice: StateCreator<
     setError(null);
 
     try {
-      await api.chat.deleteThread(chatId);
+      const hasGenericDelete = typeof (api as any).delete === 'function';
+      if (hasGenericDelete) {
+        await (api as any).delete(`/api/v1/chats/${chatId}`);
+      }
+      if (api.chat?.deleteThread) {
+        await api.chat.deleteThread(chatId);
+      }
 
       set(state => {
         const currentThreads = state.chatsByGame[selectedGameId] ?? [];

@@ -131,8 +131,6 @@ describe('chatSlice - CRUD Operations', () => {
 
       expect(mockChat.createThread).toHaveBeenCalledWith({
         gameId: '770e8400-e29b-41d4-a716-000000000001',
-        title: null,
-        initialMessage: null,
       });
 
       const state = useChatStore.getState();

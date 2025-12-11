@@ -410,4 +410,34 @@ public sealed class User : AggregateRoot<Guid>
         EmailNotifications = emailNotifications;
         DataRetentionDays = dataRetentionDays;
     }
+
+    #region Persistence Hydration Methods (internal - S3011 fix)
+
+    /// <summary>
+    /// Restores 2FA state from persistence.
+    /// Internal method for repository use only - avoids reflection (S3011).
+    /// Does NOT trigger domain events (state reconstruction, not domain action).
+    /// </summary>
+    internal void Restore2FAState(TotpSecret? totpSecret, bool isTwoFactorEnabled, DateTime? twoFactorEnabledAt, IEnumerable<BackupCode> backupCodes)
+    {
+        TotpSecret = totpSecret;
+        IsTwoFactorEnabled = isTwoFactorEnabled;
+        TwoFactorEnabledAt = twoFactorEnabledAt;
+
+        _backupCodes.Clear();
+        _backupCodes.AddRange(backupCodes);
+    }
+
+    /// <summary>
+    /// Restores OAuth accounts from persistence.
+    /// Internal method for repository use only - avoids reflection (S3011).
+    /// Does NOT trigger domain events (state reconstruction, not domain action).
+    /// </summary>
+    internal void RestoreOAuthAccounts(IEnumerable<OAuthAccount> oauthAccounts)
+    {
+        _oauthAccounts.Clear();
+        _oauthAccounts.AddRange(oauthAccounts);
+    }
+
+    #endregion
 }

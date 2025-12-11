@@ -12,7 +12,7 @@ export enum LogLevel {
   DEBUG = 'debug',
   INFO = 'info',
   WARN = 'warn',
-  ERROR = 'error'
+  ERROR = 'error',
 }
 
 /**
@@ -46,12 +46,13 @@ export interface LoggerConfig {
  */
 const DEFAULT_CONFIG: LoggerConfig = {
   enableConsole: process.env.NODE_ENV === 'development',
-  enableRemote: true,
-  remoteEndpoint: '/api/v1/logs/client',
+  enableRemote: process.env.NEXT_PUBLIC_ENABLE_REMOTE_LOGS !== 'false',
+  // Prefer explicit env; otherwise fall back to same-origin relative path to avoid mixed-origin failures
+  remoteEndpoint: process.env.NEXT_PUBLIC_LOG_ENDPOINT || '/api/v1/logs',
   minLevel: LogLevel.INFO,
   correlationIdHeader: 'X-Correlation-Id',
   batchSize: 10,
-  flushIntervalMs: 5000
+  flushIntervalMs: 5000,
 };
 
 /**
@@ -121,7 +122,7 @@ class Logger {
       timestamp: new Date().toISOString(),
       context: context as ErrorContext,
       error: error ? sanitizeError(error) : undefined,
-      severity: error ? getErrorSeverity(error) : ErrorSeverity.ERROR
+      severity: error ? getErrorSeverity(error) : ErrorSeverity.ERROR,
     };
 
     this.addToQueue(entry);
@@ -139,7 +140,7 @@ class Logger {
       level,
       message,
       timestamp: new Date().toISOString(),
-      context: context as ErrorContext
+      context: context as ErrorContext,
     };
 
     this.addToQueue(entry);
@@ -232,15 +233,15 @@ class Logger {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(this.correlationId && { [this.config.correlationIdHeader]: this.correlationId })
+          ...(this.correlationId && { [this.config.correlationIdHeader]: this.correlationId }),
         },
         body: JSON.stringify({ logs }),
         credentials: 'include',
-        keepalive: true
+        keepalive: true,
       });
 
       if (fetchPromise && typeof fetchPromise.catch === 'function') {
-        fetchPromise.catch((err) => {
+        fetchPromise.catch(err => {
           // Silent fail - logging shouldn't break the app
           if (this.config.enableConsole) {
             console.warn('Failed to send logs to remote endpoint:', err);

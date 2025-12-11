@@ -149,7 +149,7 @@ public class QuantizationConfigurationTests
         var result = config.ToString();
 
         // Assert
-        Assert.Contains("Int8", result);
+        Assert.Contains("Int8", result, StringComparison.OrdinalIgnoreCase);
         // Quantile can be formatted with '.' or ',' depending on locale
         Assert.True(result.Contains("0.99") || result.Contains("0,99"),
             $"Expected quantile value in ToString output: {result}");
@@ -165,6 +165,6 @@ public class QuantizationConfigurationTests
         var result = config.ToString();
 
         // Assert
-        Assert.Contains("disabled", result);
+        Assert.Contains("disabled", result, StringComparison.OrdinalIgnoreCase);
     }
 }

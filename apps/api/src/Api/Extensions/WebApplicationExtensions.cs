@@ -15,6 +15,12 @@ public static class WebApplicationExtensions
         // PERF-11: Enable Response Compression (must be early in pipeline)
         app.UseResponseCompression();
 
+        // BGAI-081: Cookie Policy (development only - allow SameSite=None without Secure)
+        if (app.Environment.IsDevelopment())
+        {
+            app.UseCookiePolicy();
+        }
+
         // Forwarded headers (if enabled)
         if (forwardedHeadersEnabled)
         {

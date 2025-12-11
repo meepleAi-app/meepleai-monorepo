@@ -575,8 +575,18 @@ services:
       - postgres-password
       - openrouter-api-key
       - initial-admin-password
+    # Direct port binding for development (Next.js proxy handles routing)
     ports:
       - "127.0.0.1:8080:8080"
+    # Traefik labels (ready for production Linux deployment)
+    # Commented out for Windows development - use Next.js proxy instead
+    # labels:
+    #   - "traefik.enable=true"
+    #   - "traefik.http.routers.meepleai-api.rule=Host(`localhost`) && PathPrefix(`/api`)"
+    #   - "traefik.http.routers.meepleai-api.entrypoints=web"
+    #   - "traefik.http.routers.meepleai-api.priority=10"
+    #   - "traefik.http.services.meepleai-api.loadbalancer.server.port=8080"
+    #   - "traefik.http.routers.meepleai-api.middlewares=rate-limit-api@file,security-headers@file"
     depends_on:
       postgres:
         condition: service_healthy
@@ -611,8 +621,18 @@ services:
     profiles: [minimal, dev, observability, ai, automation, full]
     env_file:
       - ./env/web.env.dev
+    # Direct port binding for development (Next.js proxy handles routing)
     ports:
       - "127.0.0.1:3000:3000"
+    # Traefik labels (ready for production Linux deployment)
+    # Commented out for Windows development - use Next.js proxy instead
+    # labels:
+    #   - "traefik.enable=true"
+    #   - "traefik.http.routers.meepleai-web.rule=Host(`localhost`)"
+    #   - "traefik.http.routers.meepleai-web.entrypoints=web"
+    #   - "traefik.http.routers.meepleai-web.priority=1"
+    #   - "traefik.http.services.meepleai-web.loadbalancer.server.port=3000"
+    #   - "traefik.http.routers.meepleai-web.middlewares=security-headers@file"
     depends_on:
       api:
         condition: service_healthy

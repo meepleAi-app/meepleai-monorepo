@@ -22,6 +22,7 @@ export const GameSchema = z.object({
   createdAt: z.string().datetime(),
   // Issue #1830: UI-003 GameCard enhancements
   imageUrl: z.string().url().nullable().optional(),
+  description: z.string().nullable().optional(),
   faqCount: z.number().int().nonnegative().nullable().optional(),
   averageRating: z.number().nullable().optional(),
 });
@@ -37,6 +38,10 @@ export const PaginatedGamesResponseSchema = z.object({
 });
 
 export type PaginatedGamesResponse = z.infer<typeof PaginatedGamesResponseSchema>;
+
+// Simple array response (used by getAll())
+export const GamesArrayResponseSchema = z.array(GameSchema);
+export type GamesArrayResponse = z.infer<typeof GamesArrayResponseSchema>;
 
 // ========== Game Sessions ==========
 

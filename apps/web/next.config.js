@@ -135,6 +135,9 @@ const nextConfig = {
     ];
   },
 
+  // Note: API proxy is now handled by catch-all API route at app/api/[...path]/route.ts
+  // This preserves Set-Cookie headers from backend (Issue #703)
+
   // Turbopack configuration for Next.js 16
   turbopack: {
     // Empty config to silence Turbopack warning

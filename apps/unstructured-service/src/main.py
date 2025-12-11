@@ -175,7 +175,7 @@ async def extract_pdf(
 
         if file_size > settings.max_file_size:
             raise HTTPException(
-                status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
                 detail=ErrorResponse(
                     error=ErrorDetail(
                         code="FILE_TOO_LARGE",

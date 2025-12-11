@@ -11,6 +11,7 @@
 
 import { renderHook, RenderHookResult } from '@testing-library/react';
 import { ReactNode } from 'react';
+import { logger } from '@/lib/logger';
 
 // ============================================================================
 // Types
@@ -87,7 +88,7 @@ function getHeapUsageMB(): number {
     const memory = (performance as Performance & { memory?: { usedJSHeapSize: number } }).memory;
     if (!memory) {
       if (!memoryApiWarningLogged) {
-        console.warn('[PERF] performance.memory unavailable - memory tests will be skipped');
+        logger.warn('[PERF] performance.memory unavailable - memory tests will be skipped');
         memoryApiWarningLogged = true;
       }
       return 0;
@@ -95,7 +96,7 @@ function getHeapUsageMB(): number {
     return memory.usedJSHeapSize / 1024 / 1024;
   }
   if (!memoryApiWarningLogged) {
-    console.warn(
+    logger.warn(
       '[PERF] performance.memory API not supported (non-Chrome browser) - memory tests will be skipped'
     );
     memoryApiWarningLogged = true;
@@ -334,7 +335,7 @@ export async function runPerformanceTest(
 
   // Calculate median memory increase
   const memoryIncreases = results.map(r => r.memoryIncrease).sort((a, b) => a - b);
-  const memianMemoryIncrease =
+  const medianMemoryIncrease =
     memoryIncreases.length % 2 === 0
       ? (memoryIncreases[mid - 1] + memoryIncreases[mid]) / 2
       : memoryIncreases[mid];

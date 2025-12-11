@@ -287,6 +287,10 @@ Ogni 3 mesi:
 | Security | Security Team | #security |
 | Operations | SRE Team | #sre |
 
+## Esempio di utilizzo dell’applicazione
+
+- Quando la dashboard `error-monitoring` (promossa da `infra/dashboards/`) indica che la MeepleAI API ha superato la soglia critica di 500, il team SRE segue `docs/05-operations/runbooks/high-error-rate.md` per eseguire i controlli riportati e verificare i log di `infra/scripts/load-secrets-env.sh`/`infra/prometheus/alerts/api-performance.yml` prima di scalare il servizio.
+
 ## Related Documentation
 
 - `archive/README.md` - Archived documentation

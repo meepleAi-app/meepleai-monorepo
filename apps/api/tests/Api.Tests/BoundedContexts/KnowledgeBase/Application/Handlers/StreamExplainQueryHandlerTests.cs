@@ -158,10 +158,10 @@ public class StreamExplainQueryHandlerTests
         Assert.True(stateUpdates.Count >= 4);
 
         var messages = stateUpdates.Select(s => ((StreamingStateUpdate)s.Data!).message).ToList();
-        Assert.Contains("Generating embeddings for topic...", messages);
-        Assert.Contains("Searching vector database for relevant content...", messages);
-        Assert.Contains("Building outline structure...", messages);
-        Assert.Contains("Generating explanation script...", messages);
+        Assert.Contains("Generating embeddings for topic...", messages, StringComparer.OrdinalIgnoreCase);
+        Assert.Contains("Searching vector database for relevant content...", messages, StringComparer.OrdinalIgnoreCase);
+        Assert.Contains("Building outline structure...", messages, StringComparer.OrdinalIgnoreCase);
+        Assert.Contains("Generating explanation script...", messages, StringComparer.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -390,7 +390,7 @@ public class StreamExplainQueryHandlerTests
         var errorEvent = events.FirstOrDefault(e => e.Type == StreamingEventType.Error);
         Assert.NotNull(errorEvent);
         var error = Assert.IsType<StreamingError>(errorEvent.Data);
-        Assert.Contains("No relevant information found", error.errorMessage);
+        Assert.Contains("No relevant information found", error.errorMessage, StringComparison.OrdinalIgnoreCase);
         Assert.Equal("NO_RESULTS", error.errorCode);
     }
 
@@ -668,4 +668,3 @@ public class StreamExplainQueryHandlerTests
             });
     }
 }
-

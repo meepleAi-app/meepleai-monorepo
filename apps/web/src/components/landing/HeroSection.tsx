@@ -27,46 +27,73 @@ export function HeroSection() {
   };
 
   return (
-    <section className="relative min-h-[calc(100vh-56px)] flex items-center justify-center px-4 py-12 md:py-20 bg-gradient-to-b from-background to-background/95">
-      <div className="container mx-auto max-w-6xl">
+    <section className="relative min-h-[calc(100vh-56px)] flex items-center justify-center px-4 py-12 md:py-20 overflow-hidden bg-gradient-to-b">
+      {/* Animated gradient background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-secondary/5 animate-pulse-slow" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-accent/10 via-transparent to-transparent" />
+
+      {/* Decorative blobs */}
+      <div className="absolute top-20 -left-20 w-72 h-72 bg-primary/10 rounded-full blur-3xl animate-pulse-slow" />
+      <div className="absolute bottom-20 -right-20 w-96 h-96 bg-secondary/10 rounded-full blur-3xl animate-pulse-slow delay-1000" />
+
+      <div className="container mx-auto max-w-6xl relative z-10">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
           {/* Left Column: Content */}
-          <div className="text-center md:text-left space-y-6">
+          <div className="text-center md:text-left space-y-6 animate-fade-in">
             {/* MeepleAvatar - Mobile only */}
-            <div className="md:hidden flex justify-center mb-8">
-              <MeepleAvatar state="confident" size="lg" className="w-48 h-48" />
+            <div className="md:hidden flex justify-center mb-8 animate-scale-in">
+              <div className="relative">
+                <MeepleAvatar state="confident" size="lg" className="w-48 h-48 drop-shadow-2xl" />
+                <div className="absolute inset-0 bg-primary/20 rounded-full blur-2xl -z-10 animate-pulse-slow" />
+              </div>
             </div>
 
             {/* Heading */}
-            <h1 className="font-heading text-4xl md:text-5xl lg:text-6xl font-bold text-foreground leading-tight">
-              Il tuo assistente AI
+            <h1 className="font-heading text-4xl md:text-5xl lg:text-6xl font-bold leading-tight animate-slide-up">
+              <span className="bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent">
+                Il tuo assistente AI
+              </span>
               <br />
-              <span className="text-primary">per giochi da tavolo</span>
+              <span className="bg-gradient-to-r from-primary via-primary/90 to-secondary bg-clip-text text-transparent animate-pulse-slow">
+                per giochi da tavolo
+              </span>
             </h1>
 
             {/* Subheading */}
-            <p className="text-lg md:text-xl text-muted-foreground max-w-lg mx-auto md:mx-0">
+            <p className="text-lg md:text-xl text-muted-foreground max-w-lg mx-auto md:mx-0 animate-slide-up delay-100">
               Risposte immediate alle regole, in italiano. Sempre con te.
             </p>
 
+            {/* Trust indicators */}
+            <div className="flex items-center justify-center md:justify-start gap-6 text-sm text-muted-foreground pt-2 animate-slide-up delay-200">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">✨</span>
+                <span>Oltre 1.250 utenti</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">🎯</span>
+                <span>95% accuratezza</span>
+              </div>
+            </div>
+
             {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start pt-4">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start pt-4 animate-slide-up delay-300">
               <Button
                 asChild
                 size="lg"
-                className="bg-primary hover:bg-primary/90 text-white font-semibold shadow-lg hover:shadow-xl transition-all"
+                className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-white font-semibold shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300"
               >
                 <Link href="/register">
                   Inizia Gratis
-                  <ArrowRight className="ml-2 h-5 w-5" />
+                  <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                 </Link>
               </Button>
 
               <Button
-                variant="ghost"
+                variant="outline"
                 size="lg"
                 onClick={scrollToFeatures}
-                className="group font-semibold"
+                className="group font-semibold border-2 hover:bg-primary/5 hover:border-primary/50 transition-all duration-300"
                 aria-label="Scorri alla sezione caratteristiche"
               >
                 Scopri di più
@@ -76,21 +103,26 @@ export function HeroSection() {
           </div>
 
           {/* Right Column: MeepleAvatar (Desktop) */}
-          <div className="hidden md:flex justify-center items-center">
-            <div className="relative">
-              <MeepleAvatar state="confident" size="lg" className="w-72 h-72 lg:w-80 lg:h-80" />
-              {/* Decorative background */}
-              <div className="absolute inset-0 bg-primary/5 rounded-full blur-3xl -z-10 scale-110" />
+          <div className="hidden md:flex justify-center items-center animate-scale-in">
+            <div className="relative group">
+              <MeepleAvatar
+                state="confident"
+                size="lg"
+                className="w-72 h-72 lg:w-80 lg:h-80 drop-shadow-2xl transition-transform duration-500 group-hover:scale-105"
+              />
+              {/* Decorative background with multiple layers */}
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-secondary/10 to-accent/20 rounded-full blur-3xl -z-10 scale-110 animate-pulse-slow" />
+              <div className="absolute inset-0 bg-primary/10 rounded-full blur-2xl -z-10 scale-125 group-hover:scale-150 transition-transform duration-700" />
             </div>
           </div>
         </div>
       </div>
 
       {/* Scroll indicator */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 hidden md:block">
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 hidden md:block animate-bounce">
         <button
           onClick={scrollToFeatures}
-          className="animate-bounce text-muted-foreground hover:text-primary transition-colors"
+          className="text-muted-foreground hover:text-primary transition-colors p-2 hover:bg-primary/10 rounded-full"
           aria-label="Scorri alle caratteristiche"
         >
           <ChevronDown className="h-8 w-8" />

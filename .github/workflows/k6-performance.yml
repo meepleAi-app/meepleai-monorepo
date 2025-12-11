@@ -147,6 +147,8 @@ jobs:
           ASPNETCORE_ENVIRONMENT: Development  # Issue #1663: Dev mode enables test user seeding + relaxed rate limits
           ASPNETCORE_URLS: 'http://0.0.0.0:8080'
 
+      # Issue #2020: Add ConnectionStrings__Postgres to prevent EF Core from defaulting to 'root' user
+      # This step validates API health which may trigger EF Core DbContext initialization
       - name: Wait for API to be ready
         run: |
           for i in {1..30}; do
@@ -161,6 +163,8 @@ jobs:
           echo "Last 100 lines of API logs:"
           tail -n 100 api.log || echo "⚠️ Could not read api.log"
           exit 1
+        env:
+          ConnectionStrings__Postgres: ${{ secrets.TEST_DB_CONNECTION_STRING || 'Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=postgres' }}
 
       - name: Run k6 performance tests
         working-directory: tests/k6

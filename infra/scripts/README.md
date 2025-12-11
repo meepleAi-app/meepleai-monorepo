@@ -106,3 +106,7 @@ docker secret ls
 3. **Usare set -e** per exit on error
 4. **Loggare operazioni** ma mai valori sensibili
 5. **Documentare parametri** e opzioni
+
+## Esempio di utilizzo dell’applicazione
+
+- Prima di eseguire `docker compose up -d api web n8n`, il team sviluppa sorgente `source ./scripts/load-secrets-env.sh` per caricare `/run/secrets/postgres-password` e `openrouter-api-key` nel proprio ambiente di shell. In questo modo l’app MeepleAI può leggere le stesse variabili che riceverebbe nel container e si evita di inserire valori sensibili nei file `.env`.

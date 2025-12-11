@@ -1,10 +1,13 @@
 /**
- * DashboardClient Component Tests - Issue #874, #886
+ * DashboardClient Component Tests - Issue #874, #886, #889
  *
  * Tests for React Query-based dashboard with:
  * - 30s polling interval
  * - Tab visibility pause
  * - Loading/error states
+ * - Performance (<1s render) - Issue #889
+ *
+ * Note: Accessibility tests moved to E2E (admin-dashboard-performance-a11y.spec.ts)
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -313,5 +316,29 @@ describe('DashboardClient', () => {
 
     // Activity feed should not be rendered when events are empty
     expect(screen.queryByText('Recent Activity')).not.toBeInTheDocument();
+  });
+
+  describe('Issue #889: Performance (<1s render)', () => {
+    it('should render within 1 second', async () => {
+      vi.mocked(apiModule.api.admin.getAnalytics).mockResolvedValue(mockAnalyticsData);
+      vi.mocked(apiModule.api.admin.getRecentActivity).mockResolvedValue(mockActivityData);
+
+      const startTime = performance.now();
+
+      renderWithQueryClient(<DashboardClient />, queryClient);
+
+      await waitFor(() => {
+        expect(screen.queryByText('Loading dashboard...')).not.toBeInTheDocument();
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('Dashboard Overview')).toBeInTheDocument();
+      });
+
+      const renderTime = performance.now() - startTime;
+
+      // Issue #889: <1s render requirement
+      expect(renderTime, `Render time ${renderTime}ms should be < 1000ms`).toBeLessThan(1000);
+    });
   });
 });

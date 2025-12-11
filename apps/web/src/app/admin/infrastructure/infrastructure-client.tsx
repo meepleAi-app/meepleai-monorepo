@@ -4,7 +4,7 @@
  * Issue #899: Complete infrastructure monitoring dashboard with:
  * - Real-time service health matrix
  * - Advanced metrics charts (Prometheus data)
- * - Grafana iframe embeds
+ * - Grafana iframe embeds (Issue #901)
  * - Service filtering, sorting, and search
  * - Export functionality (CSV/JSON)
  * - Auto-refresh with circuit breaker
@@ -23,6 +23,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { ServiceHealthMatrix } from '@/components/admin/ServiceHealthMatrix';
 import { MetricsChart, type DataPoint, type DataSeries } from '@/components/metrics/MetricsChart';
+import { GrafanaEmbed } from '@/components/admin/GrafanaEmbed';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -674,49 +675,13 @@ export function InfrastructureClient() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {/* Grafana Iframe Embed (Issue #901 - partial implementation) */}
-                <div className="aspect-video bg-gray-100 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300">
-                  <div className="text-center p-6">
-                    <ServerIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                    <p className="text-lg font-medium text-gray-700 mb-2">
-                      {locale === 'it' ? 'Dashboard Grafana' : 'Grafana Dashboard'}
-                    </p>
-                    <p className="text-sm text-gray-500 mb-4">
-                      {locale === 'it'
-                        ? 'Integrazione completa in Issue #901'
-                        : 'Full integration in Issue #901'}
-                    </p>
-                    <Button
-                      variant="outline"
-                      onClick={() =>
-                        window.open(
-                          process.env.NEXT_PUBLIC_GRAFANA_URL || 'http://localhost:3001',
-                          '_blank'
-                        )
-                      }
-                    >
-                      {locale === 'it' ? 'Apri Grafana' : 'Open Grafana'}
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Future: Multiple dashboard embeds */}
-                <Alert className="mt-4">
-                  <AlertCircleIcon className="h-4 w-4" />
-                  <AlertDescription>
-                    {locale === 'it' ? (
-                      <>
-                        <strong>Prossimamente (Issue #901):</strong> Iframe embeds per dashboard
-                        Prometheus, Grafana LLM Cost, e metriche custom.
-                      </>
-                    ) : (
-                      <>
-                        <strong>Coming soon (Issue #901):</strong> Iframe embeds for Prometheus
-                        dashboard, Grafana LLM Cost, and custom metrics.
-                      </>
-                    )}
-                  </AlertDescription>
-                </Alert>
+                {/* Grafana Iframe Embed (Issue #901 - IMPLEMENTED) */}
+                <GrafanaEmbed
+                  locale={locale}
+                  defaultDashboard="infrastructure"
+                  autoRefresh="30s"
+                  timeRange={{ from: 'now-1h', to: 'now' }}
+                />
               </CardContent>
             </Card>
           </TabsContent>

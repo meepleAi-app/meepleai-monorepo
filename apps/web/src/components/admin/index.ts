@@ -35,3 +35,6 @@ export { SystemStatus, type SystemStatusProps, type ServiceStatus } from './Syst
 // Issue #896: Infrastructure monitoring components
 export { ServiceCard, type ServiceCardProps } from './ServiceCard';
 export { ServiceHealthMatrix, type ServiceHealthMatrixProps } from './ServiceHealthMatrix';
+
+// Issue #901: Grafana embed iframe
+export { GrafanaEmbed } from './GrafanaEmbed';

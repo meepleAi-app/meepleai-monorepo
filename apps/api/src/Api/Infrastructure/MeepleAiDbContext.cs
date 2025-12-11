@@ -60,6 +60,8 @@ public class MeepleAiDbContext : DbContext
     public DbSet<UsedTotpCodeEntity> UsedTotpCodes => Set<UsedTotpCodeEntity>(); // SEC-07: Issue #1787 TOTP Replay Prevention
     public DbSet<LlmCostLogEntity> LlmCostLogs => Set<LlmCostLogEntity>(); // ISSUE-960: BGAI-018
     public DbSet<ChunkedUploadSessionEntity> ChunkedUploadSessions => Set<ChunkedUploadSessionEntity>(); // Chunked PDF upload
+    public DbSet<AdminReportEntity> AdminReports => Set<AdminReportEntity>(); // ISSUE-916: Report generation + scheduling
+    public DbSet<ReportExecutionEntity> ReportExecutions => Set<ReportExecutionEntity>(); // ISSUE-916: Report execution history
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -88,6 +90,8 @@ public class MeepleAiDbContext : DbContext
         modelBuilder.Ignore<BoundedContexts.Authentication.Domain.Entities.ApiKey>();
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.GameSession>();
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.Game>();
+        modelBuilder.Ignore<BoundedContexts.Administration.Domain.Entities.AdminReport>(); // ISSUE-916
+        modelBuilder.Ignore<BoundedContexts.Administration.Domain.Entities.ReportExecution>(); // ISSUE-916
     }
 
     /// <summary>

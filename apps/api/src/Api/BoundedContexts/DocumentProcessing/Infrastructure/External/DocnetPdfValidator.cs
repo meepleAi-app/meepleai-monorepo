@@ -1,5 +1,6 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
+using Api.BoundedContexts.DocumentProcessing.Infrastructure.Helpers;
 using Docnet.Core;
 using Docnet.Core.Models;
 using Microsoft.Extensions.Logging;
@@ -108,7 +109,8 @@ public class DocnetPdfValidator : IPdfValidator
             try
             {
                 // Save stream to temporary file for Docnet.Core processing
-                var tempFile = Path.GetTempFileName();
+                // S5445: Use secure temp file creation (cryptographically random, isolated directory)
+                var tempFile = SecureTempFileHelper.CreateSecureTempFilePath(".pdf");
                 try
                 {
                     using (var fileStream = new FileStream(tempFile, FileMode.Create, FileAccess.Write, FileShare.None))
@@ -225,7 +227,8 @@ public class DocnetPdfValidator : IPdfValidator
         await DocnetSemaphore.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            var tempFile = Path.GetTempFileName();
+            // S5445: Use secure temp file creation (cryptographically random, isolated directory)
+            var tempFile = SecureTempFileHelper.CreateSecureTempFilePath(".pdf");
             try
             {
                 using (var fileStream = new FileStream(tempFile, FileMode.Create, FileAccess.Write, FileShare.None))

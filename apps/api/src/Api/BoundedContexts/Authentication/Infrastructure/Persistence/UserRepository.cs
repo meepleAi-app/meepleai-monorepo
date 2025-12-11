@@ -228,7 +228,7 @@ public class UserRepository : RepositoryBase, IUserRepository
             entity.EmailNotifications,
             entity.DataRetentionDays);
 
-        // Reconstruct 2FA state using reflection (properties are private set)
+        // Reconstruct 2FA state using internal hydration method (S3011 fix - no reflection)
         if (entity.IsTwoFactorEnabled && !string.IsNullOrEmpty(entity.TotpSecretEncrypted))
         {
             var totpSecret = TotpSecret.FromEncrypted(entity.TotpSecretEncrypted);
@@ -238,47 +238,25 @@ public class UserRepository : RepositoryBase, IUserRepository
                 .Select(bc => BackupCode.FromHashed(bc.CodeHash, bc.IsUsed, bc.UsedAt))
                 .ToList();
 
-            // Set properties directly via reflection to avoid mutating TwoFactorEnabledAt
-            var totpSecretProp = typeof(User).GetProperty("TotpSecret");
-            var isTwoFactorEnabledProp = typeof(User).GetProperty("IsTwoFactorEnabled");
-            var twoFactorEnabledAtProp = typeof(User).GetProperty("TwoFactorEnabledAt");
-            var backupCodesField = typeof(User).GetField("_backupCodes", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-
-            totpSecretProp?.SetValue(user, totpSecret);
-            isTwoFactorEnabledProp?.SetValue(user, entity.IsTwoFactorEnabled);
-            twoFactorEnabledAtProp?.SetValue(user, entity.TwoFactorEnabledAt);
-
-            if (backupCodesField != null)
-            {
-                var backupCodesList = (List<BackupCode>)backupCodesField.GetValue(user)!;
-                backupCodesList.Clear();
-                backupCodesList.AddRange(backupCodes);
-            }
+            // Use internal method instead of reflection (S3011 fix)
+            user.Restore2FAState(totpSecret, entity.IsTwoFactorEnabled, entity.TwoFactorEnabledAt, backupCodes);
         }
 
-        // Reconstruct OAuth accounts collection using reflection
+        // Reconstruct OAuth accounts using internal hydration method (S3011 fix - no reflection)
         if (entity.OAuthAccounts.Any())
         {
-            var oauthAccountsField = typeof(User).GetField("_oauthAccounts", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            if (oauthAccountsField != null)
-            {
-                var oauthAccountsList = (List<OAuthAccount>)oauthAccountsField.GetValue(user)!;
-                oauthAccountsList.Clear();
+            var oauthAccounts = entity.OAuthAccounts.Select(oauthEntity => new OAuthAccount(
+                oauthEntity.Id,
+                oauthEntity.UserId,
+                oauthEntity.Provider,
+                oauthEntity.ProviderUserId,
+                oauthEntity.AccessTokenEncrypted,
+                oauthEntity.RefreshTokenEncrypted,
+                oauthEntity.TokenExpiresAt
+            )).ToList();
 
-                foreach (var oauthEntity in entity.OAuthAccounts)
-                {
-                    var oauthAccount = new OAuthAccount(
-                        oauthEntity.Id,
-                        oauthEntity.UserId,
-                        oauthEntity.Provider,
-                        oauthEntity.ProviderUserId,
-                        oauthEntity.AccessTokenEncrypted,
-                        oauthEntity.RefreshTokenEncrypted,
-                        oauthEntity.TokenExpiresAt
-                    );
-                    oauthAccountsList.Add(oauthAccount);
-                }
-            }
+            // Use internal method instead of reflection (S3011 fix)
+            user.RestoreOAuthAccounts(oauthAccounts);
         }
 
         return user;

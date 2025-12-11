@@ -3,6 +3,7 @@ using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
+using Api.BoundedContexts.DocumentProcessing.Infrastructure.Helpers;
 using Api.Observability;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -70,7 +71,8 @@ public class EnhancedPdfProcessingOrchestrator
                 "[{RequestId}] PDF size {Size}MB ≥ threshold {Threshold}MB - using temp file strategy",
                 requestId, pdfSize / 1_000_000.0, threshold / 1_000_000.0);
 
-            var tempFile = Path.GetTempFileName();
+            // S5445: Use secure temp file creation (cryptographically random, isolated directory)
+            var tempFile = SecureTempFileHelper.CreateSecureTempFilePath(".pdf");
             try
             {
                 await using var fileStream = new FileStream(

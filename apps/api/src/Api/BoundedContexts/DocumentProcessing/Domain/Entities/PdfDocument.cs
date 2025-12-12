@@ -65,6 +65,50 @@ public sealed class PdfDocument : AggregateRoot<Guid>
         SortOrder = sortOrder;
     }
 
+    /// <summary>
+    /// Reconstitutes a PdfDocument from persistence.
+    /// Issue #2140: Replaces reflection-based property mutation
+    /// </summary>
+    public static PdfDocument Reconstitute(
+        Guid id,
+        Guid gameId,
+        FileName fileName,
+        string filePath,
+        FileSize fileSize,
+        Guid uploadedByUserId,
+        DateTime uploadedAt,
+        string processingStatus,
+        DateTime? processedAt,
+        int? pageCount,
+        string? processingError,
+        LanguageCode language,
+        Guid? collectionId = null,
+        DocumentType? documentType = null,
+        int sortOrder = 0)
+    {
+        var document = new PdfDocument
+        {
+            Id = id,
+            GameId = gameId,
+            FileName = fileName,
+            FilePath = filePath,
+            FileSize = fileSize,
+            ContentType = "application/pdf",
+            UploadedByUserId = uploadedByUserId,
+            UploadedAt = uploadedAt,
+            ProcessingStatus = processingStatus,
+            ProcessedAt = processedAt,
+            PageCount = pageCount,
+            ProcessingError = processingError,
+            Language = language,
+            CollectionId = collectionId,
+            DocumentType = documentType ?? ValueObjects.DocumentType.Base,
+            SortOrder = sortOrder
+        };
+
+        return document;
+    }
+
     public void MarkAsProcessing()
     {
         if (string.Equals(ProcessingStatus, "completed", StringComparison.Ordinal))

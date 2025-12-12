@@ -103,36 +103,36 @@ public class DocumentCollectionRepository : RepositoryBase, IDocumentCollectionR
     {
         var collectionName = new CollectionName(entity.Name);
 
-        var collection = new DocumentCollection(
-            id: entity.Id,
-            gameId: entity.GameId,
-            name: collectionName,
-            createdByUserId: entity.CreatedByUserId,
-            description: entity.Description
-        );
-
-        // Deserialize documents JSON and add to collection
+        // Issue #2140: Deserialize documents from JSON to CollectionDocument domain entities
+        var documents = new List<CollectionDocument>();
         if (!string.IsNullOrWhiteSpace(entity.DocumentsJson) && entity.DocumentsJson != "[]")
         {
-            var documents = JsonSerializer.Deserialize<List<CollectionDocumentDto>>(entity.DocumentsJson);
-            if (documents != null)
+            var documentDtos = JsonSerializer.Deserialize<List<CollectionDocumentDto>>(entity.DocumentsJson);
+            if (documentDtos != null)
             {
-                foreach (var doc in documents)
+                documents = documentDtos.Select(dto =>
                 {
-                    var docType = new DocumentType(doc.Type);
-                    collection.AddDocument(doc.PdfDocumentId, docType, doc.SortOrder);
-                }
+                    var docType = new DocumentType(dto.Type);
+                    return new CollectionDocument(
+                        dto.PdfDocumentId,
+                        docType,
+                        dto.SortOrder,
+                        dto.AddedAt);
+                }).ToList();
             }
         }
 
-        // Override properties from DB using reflection
-        var createdAtProp = typeof(DocumentCollection).GetProperty("CreatedAt");
-        createdAtProp?.SetValue(collection, entity.CreatedAt);
-
-        var updatedAtProp = typeof(DocumentCollection).GetProperty("UpdatedAt");
-        updatedAtProp?.SetValue(collection, entity.UpdatedAt);
-
-        return collection;
+        // Issue #2140: Use Reconstitute factory method instead of reflection
+        return DocumentCollection.Reconstitute(
+            id: entity.Id,
+            gameId: entity.GameId,
+            name: collectionName,
+            description: entity.Description,
+            createdByUserId: entity.CreatedByUserId,
+            createdAt: entity.CreatedAt,
+            updatedAt: entity.UpdatedAt,
+            documents: documents
+        );
     }
 
     private static Api.Infrastructure.Entities.DocumentCollectionEntity MapToPersistence(DocumentCollection domain)

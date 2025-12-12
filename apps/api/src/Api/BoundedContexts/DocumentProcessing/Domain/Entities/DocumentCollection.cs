@@ -49,6 +49,37 @@ public sealed class DocumentCollection : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// Reconstitutes a DocumentCollection from persistence.
+    /// Issue #2140: Replaces reflection-based property mutation
+    /// </summary>
+    public static DocumentCollection Reconstitute(
+        Guid id,
+        Guid gameId,
+        CollectionName name,
+        string? description,
+        Guid createdByUserId,
+        DateTime createdAt,
+        DateTime updatedAt,
+        List<CollectionDocument> documents)
+    {
+        var collection = new DocumentCollection
+        {
+            Id = id,
+            GameId = gameId,
+            Name = name,
+            Description = description,
+            CreatedByUserId = createdByUserId,
+            CreatedAt = createdAt,
+            UpdatedAt = updatedAt
+        };
+
+        // Reconstitute documents collection
+        collection._documents.AddRange(documents);
+
+        return collection;
+    }
+
+    /// <summary>
     /// Adds a PDF document to this collection.
     /// Validates: max documents limit, no duplicates, valid document type
     /// </summary>
@@ -170,5 +201,24 @@ public sealed record CollectionDocument
         Type = type;
         SortOrder = sortOrder;
         AddedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Constructor for reconstitution from persistence (Issue #2140)
+    /// </summary>
+    public CollectionDocument(Guid pdfDocumentId, DocumentType type, int sortOrder, DateTime addedAt)
+    {
+        if (pdfDocumentId == Guid.Empty)
+            throw new ArgumentException("PDF document ID cannot be empty", nameof(pdfDocumentId));
+
+        ArgumentNullException.ThrowIfNull(type);
+
+        if (sortOrder < 0)
+            throw new ArgumentException("Sort order cannot be negative", nameof(sortOrder));
+
+        PdfDocumentId = pdfDocumentId;
+        Type = type;
+        SortOrder = sortOrder;
+        AddedAt = addedAt; // From persistence, not DateTime.UtcNow
     }
 }

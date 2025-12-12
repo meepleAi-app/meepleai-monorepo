@@ -17,8 +17,8 @@
 # 3. Configure PostgreSQL access for rotation testing
 #
 # Usage:
-#   docker compose -f docker-compose.infisical.yml up -d
-#   Access UI: http://localhost:8080
+#   docker compose -f docker-compose.infisical.yml --env-file infisical.env up -d
+#   Access UI: http://localhost:8081
 #
 # Documentation:
 # - Setup: https://infisical.com/docs/self-hosting/deployment-options/docker-compose
@@ -31,13 +31,13 @@ services:
     container_name: infisical
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "8081:8080"
     env_file:
-      - ./env/infisical.env
+      - ./infisical.env
     environment:
       # Core Configuration
       - NODE_ENV=production
-      - SITE_URL=http://localhost:8080
+      - SITE_URL=http://localhost:8081
 
       # Database Connection (Infisical's own DB)
       - DB_CONNECTION_URI=postgresql://infisical:${INFISICAL_DB_PASSWORD:-infisical_password}@infisical-db:5432/infisical
@@ -87,7 +87,7 @@ services:
     image: infisical/infisical:latest-postgres
     container_name: infisical-migration
     env_file:
-      - ./env/infisical.env
+      - ./infisical.env
     environment:
       - DB_CONNECTION_URI=postgresql://infisical:${INFISICAL_DB_PASSWORD:-infisical_password}@infisical-db:5432/infisical
       - ENCRYPTION_KEY=${INFISICAL_ENCRYPTION_KEY:?ENCRYPTION_KEY is required}
@@ -196,7 +196,7 @@ volumes:
 #    docker compose -f infra/docker-compose.infisical.yml up -d
 #
 # 5. Access UI:
-#    http://localhost:8080
+#    http://localhost:8081
 #
 # 6. Initial Setup (First Login):
 #    - Create admin account

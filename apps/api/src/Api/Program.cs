@@ -355,7 +355,8 @@ v1Api.MapAnalyticsEndpoints();         // Dashboard statistics & metrics
 v1Api.MapLlmAnalyticsEndpoints();      // ISSUE-1725: LLM cost optimization analytics
 v1Api.MapMonitoringEndpoints();        // Issues #891 + #893: Infrastructure health & Prometheus metrics
 v1Api.MapAlertEndpoints();             // Alert management
-v1Api.MapAlertConfigEndpoints();       // Alert configuration (Issue #921)
+v1Api.MapAlertConfigEndpoints();       // Alert rules (Issue #921)
+v1Api.MapAlertConfigurationEndpoints(); // Alert configuration (Issue #915)
 v1Api.MapAuditEndpoints();             // Audit log retrieval & search
 v1Api.MapFeatureFlagEndpoints();       // Feature flag management
 v1Api.MapPromptManagementEndpoints();  // Prompt templates & evaluation

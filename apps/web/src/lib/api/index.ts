@@ -46,6 +46,10 @@ import {
 // Re-export alert schemas (Issue #921)
 export * from './schemas/alerts.schemas';
 
+// Re-export alert config API and schemas (Issue #915)
+export * from './alert-config.api';
+export * from './schemas/alert-config.schemas';
+
 // Re-export client-specific types for consumer convenience
 export type {
   ExportFormat,

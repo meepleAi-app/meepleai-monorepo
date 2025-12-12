@@ -95,7 +95,8 @@ public sealed class AdminReportRepository : IAdminReportRepository
             IsActive = domain.IsActive,
             CreatedAt = domain.CreatedAt,
             LastExecutedAt = domain.LastExecutedAt,
-            CreatedBy = domain.CreatedBy
+            CreatedBy = domain.CreatedBy,
+            EmailRecipientsJson = JsonSerializer.Serialize(domain.EmailRecipients) // ISSUE-918
         };
     }
 
@@ -115,6 +116,12 @@ public sealed class AdminReportRepository : IAdminReportRepository
             : JsonSerializer.Deserialize<Dictionary<string, object>>(entity.ParametersJson, options)
               ?? new Dictionary<string, object>();
 
+        // ISSUE-918: Deserialize email recipients
+        var emailRecipientsList = string.IsNullOrWhiteSpace(entity.EmailRecipientsJson)
+            ? new List<string>()
+            : JsonSerializer.Deserialize<List<string>>(entity.EmailRecipientsJson, options)
+              ?? new List<string>();
+
         return new AdminReport
         {
             Id = entity.Id,
@@ -127,7 +134,8 @@ public sealed class AdminReportRepository : IAdminReportRepository
             IsActive = entity.IsActive,
             CreatedAt = entity.CreatedAt,
             LastExecutedAt = entity.LastExecutedAt,
-            CreatedBy = entity.CreatedBy
+            CreatedBy = entity.CreatedBy,
+            EmailRecipients = emailRecipientsList.AsReadOnly()
         };
     }
 }

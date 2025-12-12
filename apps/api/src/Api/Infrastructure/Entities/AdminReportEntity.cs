@@ -56,6 +56,10 @@ public sealed class AdminReportEntity
     [MaxLength(100)]
     public string CreatedBy { get; set; } = string.Empty;
 
+    [Required]
+    [Column("email_recipients", TypeName = "jsonb")]
+    public string EmailRecipientsJson { get; set; } = "[]"; // ISSUE-918: Email delivery integration
+
     // Navigation property
     public ICollection<ReportExecutionEntity> Executions { get; set; } = new List<ReportExecutionEntity>();
 }

@@ -86,10 +86,10 @@ public class UploadChunkCommandHandler : ICommandHandler<UploadChunkCommand, Upl
     {
         try
         {
-            // Get session
-            var session = await _sessionRepository.GetByIdAsync(request.SessionId, cancellationToken).ConfigureAwait(false);
-
-            if (session == null)
+            // Validate session and permissions
+            (bool sessionValid, ChunkedUploadSession? session, string? sessionError) = await ValidateChunkSessionAsync(
+                request.SessionId, request.UserId, cancellationToken).ConfigureAwait(false);
+            if (!sessionValid)
             {
                 return new UploadChunkResult(
                     Success: false,
@@ -97,58 +97,14 @@ public class UploadChunkCommandHandler : ICommandHandler<UploadChunkCommand, Upl
                     TotalChunks: 0,
                     ProgressPercentage: 0,
                     IsComplete: false,
-                    ErrorMessage: "Upload session not found"
+                    ErrorMessage: sessionError
                 );
             }
 
-            // Verify ownership
-            if (session.UserId != request.UserId)
-            {
-                return new UploadChunkResult(
-                    Success: false,
-                    ReceivedChunks: 0,
-                    TotalChunks: 0,
-                    ProgressPercentage: 0,
-                    IsComplete: false,
-                    ErrorMessage: "Access denied"
-                );
-            }
-
-            // Validate TempDirectory to prevent path traversal attacks
-            if (!IsValidTempDirectory(session.TempDirectory))
-            {
-                _logger.LogWarning(
-                    "Invalid TempDirectory detected for session {SessionId}: {TempDirectory}",
-                    request.SessionId, session.TempDirectory);
-
-                return new UploadChunkResult(
-                    Success: false,
-                    ReceivedChunks: 0,
-                    TotalChunks: 0,
-                    ProgressPercentage: 0,
-                    IsComplete: false,
-                    ErrorMessage: "Invalid upload session"
-                );
-            }
-
-            // Check session status
-            if (session.IsExpired)
-            {
-                session.MarkAsExpired();
-                await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
-                await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-
-                return new UploadChunkResult(
-                    Success: false,
-                    ReceivedChunks: 0,
-                    TotalChunks: 0,
-                    ProgressPercentage: 0,
-                    IsComplete: false,
-                    ErrorMessage: "Upload session has expired"
-                );
-            }
-
-            if (string.Equals(session.Status, "completed", StringComparison.Ordinal) || string.Equals(session.Status, "failed", StringComparison.Ordinal))
+            // Validate chunk parameters
+            var (chunkValid, chunkError) = ValidateChunkParameters(
+                request.ChunkIndex, request.ChunkData.Length, session!);
+            if (!chunkValid)
             {
                 return new UploadChunkResult(
                     Success: false,
@@ -156,33 +112,7 @@ public class UploadChunkCommandHandler : ICommandHandler<UploadChunkCommand, Upl
                     TotalChunks: session.TotalChunks,
                     ProgressPercentage: session.ProgressPercentage,
                     IsComplete: false,
-                    ErrorMessage: $"Session is already {session.Status}"
-                );
-            }
-
-            // Validate chunk index
-            if (request.ChunkIndex < 0 || request.ChunkIndex >= session.TotalChunks)
-            {
-                return new UploadChunkResult(
-                    Success: false,
-                    ReceivedChunks: session.ReceivedChunks,
-                    TotalChunks: session.TotalChunks,
-                    ProgressPercentage: session.ProgressPercentage,
-                    IsComplete: false,
-                    ErrorMessage: $"Invalid chunk index. Expected 0-{session.TotalChunks - 1}"
-                );
-            }
-
-            // Validate chunk size
-            if (request.ChunkData.Length > ChunkedUploadSession.MaxChunkSizeBytes)
-            {
-                return new UploadChunkResult(
-                    Success: false,
-                    ReceivedChunks: session.ReceivedChunks,
-                    TotalChunks: session.TotalChunks,
-                    ProgressPercentage: session.ProgressPercentage,
-                    IsComplete: false,
-                    ErrorMessage: $"Chunk size exceeds maximum ({ChunkedUploadSession.MaxChunkSizeBytes} bytes)"
+                    ErrorMessage: chunkError
                 );
             }
 
@@ -202,20 +132,8 @@ public class UploadChunkCommandHandler : ICommandHandler<UploadChunkCommand, Upl
                 );
             }
 
-            // Ensure temp directory exists
-            if (!Directory.Exists(session.TempDirectory))
-            {
-                Directory.CreateDirectory(session.TempDirectory);
-            }
-
-            // Save chunk to disk
-            var chunkFilePath = session.GetChunkFilePath(request.ChunkIndex);
-            await File.WriteAllBytesAsync(chunkFilePath, request.ChunkData, cancellationToken).ConfigureAwait(false);
-
-            // Update session
-            session.MarkChunkReceived(request.ChunkIndex);
-            await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
-            await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            // Save chunk and update session
+            await SaveChunkAndUpdateSessionAsync(session, request.ChunkIndex, request.ChunkData, cancellationToken).ConfigureAwait(false);
 
             _logger.LogDebug(
                 "Chunk {ChunkIndex}/{TotalChunks} received for session {SessionId} ({Progress:F1}%)",
@@ -244,6 +162,107 @@ public class UploadChunkCommandHandler : ICommandHandler<UploadChunkCommand, Upl
                 ErrorMessage: "Failed to process chunk"
             );
         }
+    }
+
+    /// <summary>
+    /// Validates upload session, ownership, and status.
+    /// Returns (valid, session, errorMessage).
+    /// </summary>
+    private async Task<(bool valid, ChunkedUploadSession? session, string? errorMessage)> ValidateChunkSessionAsync(
+        Guid sessionId,
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        // Get session
+        var session = await _sessionRepository.GetByIdAsync(sessionId, cancellationToken).ConfigureAwait(false);
+
+        if (session == null)
+        {
+            return (false, null, "Upload session not found");
+        }
+
+        // Verify ownership
+        if (session.UserId != userId)
+        {
+            return (false, null, "Access denied");
+        }
+
+        // Validate TempDirectory to prevent path traversal attacks
+        if (!IsValidTempDirectory(session.TempDirectory))
+        {
+            _logger.LogWarning(
+                "Invalid TempDirectory detected for session {SessionId}: {TempDirectory}",
+                sessionId.ToString(), session.TempDirectory);
+
+            return (false, session, "Invalid upload session");
+        }
+
+        // Check session status
+        if (session.IsExpired)
+        {
+            session.MarkAsExpired();
+            await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
+            await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+            return (false, session, "Upload session has expired");
+        }
+
+        if (string.Equals(session.Status, "completed", StringComparison.Ordinal) || 
+            string.Equals(session.Status, "failed", StringComparison.Ordinal))
+        {
+            return (false, session, $"Session is already {session.Status}");
+        }
+
+        return (true, session, null);
+    }
+
+    /// <summary>
+    /// Validates chunk index and size.
+    /// Returns (valid, errorMessage).
+    /// </summary>
+    private (bool valid, string? errorMessage) ValidateChunkParameters(
+        int chunkIndex,
+        int chunkDataLength,
+        ChunkedUploadSession session)
+    {
+        // Validate chunk index
+        if (chunkIndex < 0 || chunkIndex >= session.TotalChunks)
+        {
+            return (false, $"Invalid chunk index. Expected 0-{session.TotalChunks - 1}");
+        }
+
+        // Validate chunk size
+        if (chunkDataLength > ChunkedUploadSession.MaxChunkSizeBytes)
+        {
+            return (false, $"Chunk size exceeds maximum ({ChunkedUploadSession.MaxChunkSizeBytes} bytes)");
+        }
+
+        return (true, null);
+    }
+
+    /// <summary>
+    /// Saves chunk to disk and updates session progress.
+    /// </summary>
+    private async Task SaveChunkAndUpdateSessionAsync(
+        ChunkedUploadSession session,
+        int chunkIndex,
+        byte[] chunkData,
+        CancellationToken cancellationToken)
+    {
+        // Ensure temp directory exists
+        if (!Directory.Exists(session.TempDirectory))
+        {
+            Directory.CreateDirectory(session.TempDirectory);
+        }
+
+        // Save chunk to disk
+        var chunkFilePath = session.GetChunkFilePath(chunkIndex);
+        await File.WriteAllBytesAsync(chunkFilePath, chunkData, cancellationToken).ConfigureAwait(false);
+
+        // Update session
+        session.MarkChunkReceived(chunkIndex);
+        await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
+        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>

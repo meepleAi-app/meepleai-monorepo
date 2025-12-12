@@ -35,92 +35,20 @@ public class BulkImportUsersCommandHandler : ICommandHandler<BulkImportUsersComm
 
     public async Task<BulkOperationResult> Handle(BulkImportUsersCommand command, CancellationToken cancellationToken)
     {
-        // Validation: Check CSV size
-        if (string.IsNullOrWhiteSpace(command.CsvContent))
-        {
-            throw new DomainException("CSV content cannot be null or empty");
-        }
-
-        var csvSizeBytes = Encoding.UTF8.GetByteCount(command.CsvContent);
-        if (csvSizeBytes > MaxCsvSizeBytes)
-        {
-            throw new DomainException($"CSV file size ({csvSizeBytes} bytes) exceeds maximum limit of {MaxCsvSizeBytes} bytes");
-        }
-
-        _logger.LogInformation("Admin {RequesterId} initiating bulk user import from CSV ({Size} bytes)",
-            command.RequesterId, csvSizeBytes);
-
-        var errors = new List<string>();
-        var successCount = 0;
-        var lineNumber = 0;
+        _logger.LogInformation("Admin {RequesterId} initiating bulk user import from CSV",
+            command.RequesterId);
 
         try
         {
-            // Parse CSV
-            var userRecords = ParseCsv(command.CsvContent, errors);
+            // Step 1: Validate CSV and parse user records
+            var userRecords = await ValidateCsvAndParseUsersAsync(command.CsvContent, cancellationToken).ConfigureAwait(false);
 
-            // Validation: Check bulk size limit
-            if (userRecords.Count > MaxBulkSize)
-            {
-                throw new DomainException($"Bulk operation exceeds maximum limit of {MaxBulkSize} users");
-            }
+            // Step 2: Validate no duplicates (in CSV or database)
+            await ValidateUserDuplicatesAsync(userRecords, cancellationToken).ConfigureAwait(false);
 
-            // Check for duplicate emails in CSV
-            var duplicateEmails = userRecords
-                .GroupBy(u => u.Email.ToLowerInvariant(), StringComparer.Ordinal)
-                .Where(g => g.Count() > 1)
-                .Select(g => g.Key)
-                .ToList();
-
-            if (duplicateEmails.Any())
-            {
-                throw new DomainException($"CSV contains duplicate emails: {string.Join(", ", duplicateEmails)}");
-            }
-
-            // Check for existing users in database
-            var existingEmails = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var record in userRecords)
-            {
-                var email = new Email(record.Email);
-                var exists = await _userRepository.ExistsByEmailAsync(email, cancellationToken).ConfigureAwait(false);
-                if (exists)
-                {
-                    existingEmails.Add(record.Email);
-                }
-            }
-
-            if (existingEmails.Any())
-            {
-                throw new DomainException($"The following emails already exist: {string.Join(", ", existingEmails)}");
-            }
-
-            // Process all users in a single transaction
-            foreach (var record in userRecords)
-            {
-                lineNumber++;
-                try
-                {
-                    var email = new Email(record.Email);
-                    var role = Role.Parse(record.Role);
-                    var passwordHash = PasswordHash.Create(record.Password);
-
-                    var user = new User(
-                        id: Guid.NewGuid(),
-                        email: email,
-                        displayName: record.DisplayName.Trim(),
-                        passwordHash: passwordHash,
-                        role: role
-                    );
-
-                    await _userRepository.AddAsync(user, cancellationToken).ConfigureAwait(false);
-                    successCount++;
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error importing user at line {LineNumber}", lineNumber);
-                    errors.Add($"Line {lineNumber} ({record.Email}): {ex.Message}");
-                }
-            }
+            // Step 3: Process all user imports
+            var (successCount, errors) = await ProcessUserImportsAsync(
+                userRecords, cancellationToken).ConfigureAwait(false);
 
             // Commit transaction if any success
             if (successCount > 0)
@@ -150,6 +78,114 @@ public class BulkImportUsersCommandHandler : ICommandHandler<BulkImportUsersComm
             _logger.LogError(ex, "Critical error during bulk user import");
             throw new DomainException($"Bulk user import failed: {ex.Message}", ex);
         }
+    }
+
+    /// <summary>
+    /// Validates CSV content and parses user records.
+    /// </summary>
+    private async Task<List<UserImportRecord>> ValidateCsvAndParseUsersAsync(
+        string csvContent,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(csvContent))
+        {
+            throw new DomainException("CSV content cannot be null or empty");
+        }
+
+        var csvSizeBytes = Encoding.UTF8.GetByteCount(csvContent);
+        if (csvSizeBytes > MaxCsvSizeBytes)
+        {
+            throw new DomainException($"CSV file size ({csvSizeBytes} bytes) exceeds maximum limit of {MaxCsvSizeBytes} bytes");
+        }
+
+        var errors = new List<string>();
+        var userRecords = ParseCsv(csvContent, errors);
+
+        if (userRecords.Count > MaxBulkSize)
+        {
+            throw new DomainException($"Bulk operation exceeds maximum limit of {MaxBulkSize} users");
+        }
+
+        return await Task.FromResult(userRecords);
+    }
+
+    /// <summary>
+    /// Validates no duplicate emails exist in CSV or database.
+    /// </summary>
+    private async Task ValidateUserDuplicatesAsync(
+        List<UserImportRecord> userRecords,
+        CancellationToken cancellationToken)
+    {
+        // Check for duplicate emails in CSV
+        var duplicateEmails = userRecords
+            .GroupBy(u => u.Email.ToLowerInvariant(), StringComparer.Ordinal)
+            .Where(g => g.Count() > 1)
+            .Select(g => g.Key)
+            .ToList();
+
+        if (duplicateEmails.Any())
+        {
+            throw new DomainException($"CSV contains duplicate emails: {string.Join(", ", duplicateEmails)}");
+        }
+
+        // Check for existing users in database
+        var existingEmails = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var record in userRecords)
+        {
+            var email = new Email(record.Email);
+            var exists = await _userRepository.ExistsByEmailAsync(email, cancellationToken).ConfigureAwait(false);
+            if (exists)
+            {
+                existingEmails.Add(record.Email);
+            }
+        }
+
+        if (existingEmails.Any())
+        {
+            throw new DomainException($"The following emails already exist: {string.Join(", ", existingEmails)}");
+        }
+    }
+
+    /// <summary>
+    /// Processes all user import records and creates users.
+    /// Returns (successCount, errors).
+    /// </summary>
+    private async Task<(int successCount, List<string> errors)> ProcessUserImportsAsync(
+        List<UserImportRecord> userRecords,
+        CancellationToken cancellationToken)
+    {
+        var errors = new List<string>();
+        var successCount = 0;
+        var lineNumber = 0;
+
+        foreach (var record in userRecords)
+        {
+            lineNumber++;
+            try
+            {
+                var email = new Email(record.Email);
+                var role = Role.Parse(record.Role);
+                var passwordHash = PasswordHash.Create(record.Password);
+
+                var user = new User(
+                    id: Guid.NewGuid(),
+                    email: email,
+                    displayName: record.DisplayName.Trim(),
+                    passwordHash: passwordHash,
+                    role: role
+                );
+
+                await _userRepository.AddAsync(user, cancellationToken).ConfigureAwait(false);
+                successCount++;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error importing user at line {LineNumber}", lineNumber);
+                errors.Add($"Line {lineNumber} ({record.Email}): {ex.Message}");
+            }
+        }
+
+        return (successCount, errors);
     }
 
     private static List<UserImportRecord> ParseCsv(string csvContent, List<string> errors)

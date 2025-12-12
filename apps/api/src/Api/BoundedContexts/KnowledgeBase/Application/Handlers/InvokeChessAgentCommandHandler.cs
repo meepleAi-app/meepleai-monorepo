@@ -65,7 +65,7 @@ public sealed class InvokeChessAgentCommandHandler
                 return cachedResponse;
             }
 
-            // Step 1: Validate FEN position if provided
+            // Validate FEN position if provided
             bool hasFenPosition = !string.IsNullOrWhiteSpace(request.FenPosition);
             string? fenValidationError = null;
             if (hasFenPosition)
@@ -80,75 +80,30 @@ public sealed class InvokeChessAgentCommandHandler
                 }
             }
 
-            // Step 2: Search chess knowledge base using CQRS query
-            var searchQuery = BuildSearchQuery(request.Question, request.FenPosition);
-            var searchResult = await _mediator.Send(
-                new SearchChessKnowledgeQuery
-                {
-                    Query = searchQuery,
-                    Limit = 5
-                },
-                cancellationToken).ConfigureAwait(false);
-
-            if (!searchResult.Success || searchResult.Results.Count == 0)
+            // Search chess knowledge base
+            var (searchSuccess, sources, context, searchConfidence) = await SearchChessKnowledgeAsync(
+                request.Question, request.FenPosition, cancellationToken).ConfigureAwait(false);
+            if (!searchSuccess)
             {
-                _logger.LogInformation("No chess knowledge found for query: {Query}", request.Question);
                 return CreateEmptyResponse("I don't have enough information to answer that question about chess.");
             }
 
-            // Step 3: Build context from retrieved chunks
-            var sources = searchResult.Results.Select(r => new Snippet(
-                r.Text,
-                $"ChessKnowledge:{r.ChunkIndex}",
-                r.Page,
-                0,
-                r.Score
-            )).ToList();
-
-            var context = string.Join("\n\n---\n\n", searchResult.Results.Select((r, i) =>
-                $"[Source {i + 1}]\n{r.Text}"));
-
-            // Step 4: Generate response using LLM with chess-specialized prompt
-            var systemPrompt = await BuildChessSystemPromptAsync(hasFenPosition, fenValidationError, cancellationToken).ConfigureAwait(false);
-            var userPrompt = BuildChessUserPrompt(request.Question, request.FenPosition, context, fenValidationError);
-
-            var llmResult = await _llmService.GenerateCompletionAsync(systemPrompt, userPrompt, cancellationToken).ConfigureAwait(false);
-
-            if (!llmResult.Success || string.IsNullOrWhiteSpace(llmResult.Response))
+            // Generate response using LLM
+            var (llmSuccess, parsedResponse, llmResult) = await GenerateChessLlmResponseAsync(
+                request.Question, request.FenPosition, context!, hasFenPosition, fenValidationError, cancellationToken).ConfigureAwait(false);
+            if (!llmSuccess)
             {
-                _logger.LogError("Failed to generate LLM response: {Error}", llmResult.ErrorMessage);
                 return CreateEmptyResponse("Unable to generate answer.", sources);
             }
 
-            // Step 5: Parse LLM response to extract structured information
-            var parsedResponse = ParseLlmResponse(llmResult.Response, request.FenPosition);
-
-            var confidence = searchResult.Results.Count > 0
-                ? (double?)searchResult.Results.Max(r => r.Score)
-                : null;
+            // Build and cache response
+            var response = await BuildAndCacheResponseAsync(
+                parsedResponse!, llmResult!, sources!, searchConfidence, cacheKey, cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Chess agent query answered with {SourceCount} sources, {MoveCount} suggested moves",
-                sources.Count,
-                parsedResponse.SuggestedMoves.Count);
-
-            var metadata = llmResult.Metadata.Count > 0
-                ? new Dictionary<string, string>(llmResult.Metadata, StringComparer.Ordinal)
-                : null;
-
-            var response = new ChessAgentResponse(
-                parsedResponse.Answer,
-                parsedResponse.Analysis,
-                parsedResponse.SuggestedMoves,
-                sources,
-                llmResult.Usage.PromptTokens,
-                llmResult.Usage.CompletionTokens,
-                llmResult.Usage.TotalTokens,
-                confidence,
-                metadata);
-
-            // Cache the response
-            await _cache.SetAsync(cacheKey, response, 86400, cancellationToken).ConfigureAwait(false);
+                sources!.Count,
+                parsedResponse!.SuggestedMoves.Count);
 
             return response;
         }
@@ -165,6 +120,110 @@ public sealed class InvokeChessAgentCommandHandler
             _logger.LogError(ex, "Error during chess agent query");
             return CreateEmptyResponse("An error occurred while processing your question.");
         }
+    }
+
+    /// <summary>
+    /// Searches chess knowledge base and builds context for LLM.
+    /// Returns (success, sources, context, confidence).
+    /// </summary>
+    private async Task<(bool success, List<Snippet>? sources, string? context, double? confidence)> SearchChessKnowledgeAsync(
+        string question,
+        string? fenPosition,
+        CancellationToken cancellationToken)
+    {
+        var searchQuery = BuildSearchQuery(question, fenPosition);
+        var searchResult = await _mediator.Send(
+            new SearchChessKnowledgeQuery
+            {
+                Query = searchQuery,
+                Limit = 5
+            },
+            cancellationToken).ConfigureAwait(false);
+
+        if (!searchResult.Success || searchResult.Results.Count == 0)
+        {
+            _logger.LogInformation("No chess knowledge found for query: {Query}", question);
+            return (false, null, null, null);
+        }
+
+        // Build sources and context
+        var sources = searchResult.Results.Select(r => new Snippet(
+            r.Text,
+            $"ChessKnowledge:{r.ChunkIndex}",
+            r.Page,
+            0,
+            r.Score
+        )).ToList();
+
+        var context = string.Join("\n\n---\n\n", searchResult.Results.Select((r, i) =>
+            $"[Source {i + 1}]\n{r.Text}"));
+
+        var confidence = searchResult.Results.Count > 0
+            ? (double?)searchResult.Results.Max(r => r.Score)
+            : null;
+
+        return (true, sources, context, confidence);
+    }
+
+    /// <summary>
+    /// Generates LLM response for chess query with RAG context.
+    /// Returns (success, parsedResponse, llmResult).
+    /// </summary>
+    private async Task<(bool success, ParsedChessResponse? parsedResponse, LlmCompletionResult? llmResult)> GenerateChessLlmResponseAsync(
+        string question,
+        string? fenPosition,
+        string context,
+        bool hasFenPosition,
+        string? fenValidationError,
+        CancellationToken cancellationToken)
+    {
+        var systemPrompt = await BuildChessSystemPromptAsync(hasFenPosition, fenValidationError, cancellationToken).ConfigureAwait(false);
+        var userPrompt = BuildChessUserPrompt(question, fenPosition, context, fenValidationError);
+
+        var llmResult = await _llmService.GenerateCompletionAsync(systemPrompt, userPrompt, cancellationToken).ConfigureAwait(false);
+
+        if (!llmResult.Success || string.IsNullOrWhiteSpace(llmResult.Response))
+        {
+            _logger.LogError("Failed to generate LLM response: {Error}", llmResult.ErrorMessage);
+            return (false, null, llmResult);
+        }
+
+        // Parse LLM response to extract structured information
+        var parsedResponse = ParseLlmResponse(llmResult.Response, fenPosition);
+
+        return (true, parsedResponse, llmResult);
+    }
+
+    /// <summary>
+    /// Builds ChessAgentResponse object and caches it.
+    /// </summary>
+    private async Task<ChessAgentResponse> BuildAndCacheResponseAsync(
+        ParsedChessResponse parsedResponse,
+        LlmCompletionResult llmResult,
+        List<Snippet> sources,
+        double? confidence,
+        string cacheKey,
+        CancellationToken cancellationToken)
+    {
+        var metadata = llmResult.Metadata.Count > 0
+            ? new Dictionary<string, string>(llmResult.Metadata, StringComparer.Ordinal)
+            : null;
+
+        var response = new ChessAgentResponse(
+            parsedResponse.Answer,
+            parsedResponse.Analysis,
+            parsedResponse.SuggestedMoves,
+            sources,
+            llmResult.Usage.PromptTokens,
+            llmResult.Usage.CompletionTokens,
+            llmResult.Usage.TotalTokens,
+            confidence,
+            metadata);
+
+        // Cache the response
+        await _cache.SetAsync(cacheKey, response, 86400, cancellationToken).ConfigureAwait(false);
+
+        return response;
     }
 
     /// <summary>

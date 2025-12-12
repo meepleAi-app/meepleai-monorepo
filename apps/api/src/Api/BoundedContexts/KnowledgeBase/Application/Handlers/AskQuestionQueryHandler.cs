@@ -58,13 +58,55 @@ public class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespons
             "Processing AskQuestionQuery: GameId={GameId}, Question={Question}",
             query.GameId, query.Question);
 
-        // Step 1: Perform vector search (AI-14: configurable search mode)
+        // Step 1: Perform vector search and calculate confidence
+        var (searchResults, domainSearchResults, searchConfidence) = await PerformSearchAndCalculateConfidenceAsync(
+            query, cancellationToken).ConfigureAwait(false);
+
+        // Step 2: Load chat thread context if ThreadId provided
+        var chatHistoryContext = await LoadChatHistoryContextAsync(
+            query.ThreadId, query.GameId, cancellationToken).ConfigureAwait(false);
+
+        // Step 3: Build LLM prompts
+        var systemPrompt = await _promptTemplateService.GetActivePromptAsync("rag-system-prompt")
+            .ConfigureAwait(false) ?? DefaultSystemPrompt;
+        var context = string.Join("\n\n", searchResults.Select(sr =>
+            $"[Page {sr.PageNumber}] {sr.TextContent}"));
+
+        var baseQuestion = $"Question: {query.Question}\n\nContext:\n{context}";
+        var userPrompt = !string.IsNullOrWhiteSpace(chatHistoryContext)
+            ? _chatContextService.EnrichPromptWithHistory(baseQuestion, chatHistoryContext)
+            : baseQuestion;
+
+        // Step 4: Generate answer with LLM and record metrics
+        var (llmResponse, llmResult) = await GenerateLlmAnswerAndRecordMetricsAsync(
+            systemPrompt, userPrompt, cancellationToken).ConfigureAwait(false);
+
+        // Step 5: Build validated response with quality metrics and citations
+        var response = await BuildValidatedResponseAsync(
+            query, llmResponse, llmResult, searchResults, domainSearchResults, 
+            searchConfidence, systemPrompt, userPrompt, cancellationToken).ConfigureAwait(false);
+
+        _logger.LogInformation(
+            "AskQuestionQuery completed: OverallConfidence={Confidence}, IsLowQuality={IsLowQuality}",
+            response.OverallConfidence, response.IsLowQuality);
+
+        return response;
+    }
+
+    /// <summary>
+    /// Performs vector search and calculates search confidence.
+    /// Returns (searchResults, domainSearchResults, searchConfidence).
+    /// </summary>
+    private async Task<(List<SearchResultDto> searchResults, List<Domain.Entities.SearchResult> domainResults, Confidence confidence)> PerformSearchAndCalculateConfidenceAsync(
+        AskQuestionQuery query,
+        CancellationToken cancellationToken)
+    {
         var searchQuery = new SearchQuery(
             GameId: query.GameId,
             Query: query.Question,
             TopK: 5,
-            MinScore: 0.55, // mxbai-embed-large
-            SearchMode: query.SearchMode ?? "hybrid", // Default to hybrid if not specified
+            MinScore: 0.55,
+            SearchMode: query.SearchMode ?? "hybrid",
             Language: query.Language
         );
 
@@ -84,43 +126,53 @@ public class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespons
         // Calculate search confidence
         var searchConfidence = _qualityTrackingService.CalculateSearchConfidence(domainSearchResults);
 
-        // Step 1.5: Load chat thread context if ThreadId provided (Issue #857)
-        string chatHistoryContext = string.Empty;
-        if (query.ThreadId.HasValue)
+        return (searchResults, domainSearchResults, searchConfidence);
+    }
+
+    /// <summary>
+    /// Loads chat history context if ThreadId provided with security validation.
+    /// </summary>
+    private async Task<string> LoadChatHistoryContextAsync(
+        Guid? threadId,
+        Guid gameId,
+        CancellationToken cancellationToken)
+    {
+        if (!threadId.HasValue)
+            return string.Empty;
+
+        var thread = await _chatThreadRepository.GetByIdAsync(threadId.Value, cancellationToken).ConfigureAwait(false);
+        if (thread == null)
+            return string.Empty;
+
+        // Security: Validate thread belongs to requested game (prevent cross-game data leak)
+        if (thread.GameId.HasValue && thread.GameId.Value != gameId)
         {
-            var thread = await _chatThreadRepository.GetByIdAsync(query.ThreadId.Value, cancellationToken).ConfigureAwait(false);
-            if (thread != null)
-            {
-                // Security: Validate thread belongs to requested game (prevent cross-game data leak)
-                if (thread.GameId.HasValue && thread.GameId.Value != query.GameId)
-                {
-                    _logger.LogWarning(
-                        "Thread {ThreadId} belongs to game {ThreadGameId} but query is for game {QueryGameId}. Ignoring chat history.",
-                        query.ThreadId.Value, thread.GameId.Value, query.GameId);
-                }
-                else if (_chatContextService.ShouldIncludeChatHistory(thread))
-                {
-                    chatHistoryContext = _chatContextService.BuildChatHistoryContext(thread);
-                    _logger.LogInformation(
-                        "Including chat history from thread {ThreadId}: {MessageCount} messages",
-                        query.ThreadId.Value, thread.MessageCount);
-                }
-            }
+            _logger.LogWarning(
+                "Thread {ThreadId} belongs to game {ThreadGameId} but query is for game {QueryGameId}. Ignoring chat history.",
+                threadId.Value, thread.GameId.Value, gameId);
+            return string.Empty;
         }
 
-        // Step 2: Build LLM prompt with context
-        var systemPrompt = await _promptTemplateService.GetActivePromptAsync("rag-system-prompt")
-.ConfigureAwait(false) ?? DefaultSystemPrompt;
-        var context = string.Join("\n\n", searchResults.Select(sr =>
-            $"[Page {sr.PageNumber}] {sr.TextContent}"));
+        if (_chatContextService.ShouldIncludeChatHistory(thread))
+        {
+            _logger.LogInformation(
+                "Including chat history from thread {ThreadId}: {MessageCount} messages",
+                threadId.Value, thread.MessageCount);
+            return _chatContextService.BuildChatHistoryContext(thread);
+        }
 
-        // Enrich user prompt with chat history if available
-        var baseQuestion = $"Question: {query.Question}\n\nContext:\n{context}";
-        var userPrompt = !string.IsNullOrWhiteSpace(chatHistoryContext)
-            ? _chatContextService.EnrichPromptWithHistory(baseQuestion, chatHistoryContext)
-            : baseQuestion;
+        return string.Empty;
+    }
 
-        // Step 3: Generate answer with LLM
+    /// <summary>
+    /// Generates LLM answer and records token usage metrics.
+    /// Returns (llmResponse, llmResult).
+    /// </summary>
+    private async Task<(string llmResponse, LlmCompletionResult llmResult)> GenerateLlmAnswerAndRecordMetricsAsync(
+        string systemPrompt,
+        string userPrompt,
+        CancellationToken cancellationToken)
+    {
         var llmResult = await _llmService.GenerateCompletionAsync(
             systemPrompt,
             userPrompt,
@@ -133,14 +185,13 @@ public class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespons
         {
             var tokenUsage = TokenUsage.FromLlmResult(llmResult.Usage, llmResult.Cost);
 
-            // Record metrics with OpenTelemetry GenAI conventions
             Api.Observability.MeepleAiMetrics.RecordLlmTokenUsage(
                 promptTokens: tokenUsage.PromptTokens,
                 completionTokens: tokenUsage.CompletionTokens,
                 totalTokens: tokenUsage.TotalTokens,
                 modelId: tokenUsage.ModelId,
                 provider: tokenUsage.Provider,
-                operationDurationMs: null, // Duration tracked separately in activity
+                operationDurationMs: null,
                 costUsd: tokenUsage.EstimatedCost);
 
             _logger.LogInformation(
@@ -148,20 +199,29 @@ public class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespons
                 tokenUsage);
         }
 
-        // Calculate LLM confidence
-        var llmConfidence = _qualityTrackingService.CalculateLlmConfidence(
-            llmResponse,
-            domainSearchResults);
+        return (llmResponse, llmResult);
+    }
 
-        // Calculate overall confidence
-        var overallConfidence = _qualityTrackingService.CalculateOverallConfidence(
-            searchConfidence,
-            llmConfidence);
-
-        // Determine quality
+    /// <summary>
+    /// Builds response with quality metrics, citations, and RAG validation.
+    /// </summary>
+    private async Task<QaResponseDto> BuildValidatedResponseAsync(
+        AskQuestionQuery query,
+        string llmResponse,
+        LlmCompletionResult llmResult,
+        List<SearchResultDto> searchResults,
+        List<Domain.Entities.SearchResult> domainSearchResults,
+        Confidence searchConfidence,
+        string systemPrompt,
+        string userPrompt,
+        CancellationToken cancellationToken)
+    {
+        // Calculate quality metrics
+        var llmConfidence = _qualityTrackingService.CalculateLlmConfidence(llmResponse, domainSearchResults);
+        var overallConfidence = _qualityTrackingService.CalculateOverallConfidence(searchConfidence, llmConfidence);
         var isLowQuality = _qualityTrackingService.IsLowQuality(overallConfidence);
 
-        // Extract citations (simplified - can be enhanced)
+        // Extract citations
         var citations = searchResults.Select(sr => new CitationDto(
             DocumentId: sr.VectorDocumentId,
             PageNumber: sr.PageNumber,
@@ -169,11 +229,10 @@ public class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespons
             RelevanceScore: sr.RelevanceScore
         )).ToList();
 
-        // ISSUE-977: BGAI-035 - Run RAG validation pipeline (all 5 layers)
+        // ISSUE-977: BGAI-035 - Run RAG validation pipeline
         RagValidationResultDto? validationResult = null;
         try
         {
-            // Build QaResponse for validation
             var qaResponse = new Api.Models.QaResponse(
                 answer: llmResponse,
                 snippets: searchResults.Select(sr => new Api.Models.Snippet(
@@ -186,7 +245,6 @@ public class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespons
                 confidence: overallConfidence.Value
             );
 
-            // Run validation pipeline (multi-model mode: all 5 layers)
             var validation = await _validationPipeline.ValidateWithMultiModelAsync(
                 qaResponse,
                 query.GameId.ToString(),
@@ -210,11 +268,10 @@ public class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespons
         }
         catch (Exception ex)
         {
-            // Log validation failure but don't block the response
             _logger.LogError(ex, "RAG validation pipeline failed, continuing without validation");
         }
 
-        var response = new QaResponseDto(
+        return new QaResponseDto(
             Answer: llmResponse,
             Sources: searchResults,
             SearchConfidence: searchConfidence.Value,
@@ -224,11 +281,5 @@ public class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespons
             Citations: citations,
             ValidationResult: validationResult
         );
-
-        _logger.LogInformation(
-            "AskQuestionQuery completed: OverallConfidence={Confidence}, IsLowQuality={IsLowQuality}",
-            overallConfidence.Value, isLowQuality);
-
-        return response;
     }
 }

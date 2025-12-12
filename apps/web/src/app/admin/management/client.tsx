@@ -47,6 +47,7 @@ import { ApiKeyFilterPanel } from '@/components/admin/ApiKeyFilterPanel';
 import { ApiKeyCreationModal } from '@/components/modals/ApiKeyCreationModal';
 import { BulkActionBar } from '@/components/admin/BulkActionBar';
 import { UserActivityTimeline } from '@/components/admin/UserActivityTimeline';
+import { ConfirmationDialog } from '@/components/ui/overlays/confirmation-dialog';
 
 import type { ApiKeyFilters } from '@/types';
 import type { ApiKeyWithStatsDto, AdminUser } from '@/lib/api/schemas/admin.schemas';
@@ -60,6 +61,14 @@ type ToastMessage = {
   message: string;
 };
 
+type ConfirmDialogState = {
+  isOpen: boolean;
+  title: string;
+  message: string;
+  variant: 'default' | 'destructive' | 'warning';
+  onConfirm: () => void;
+};
+
 export function ManagementPageClient() {
   const { user, loading: authLoading } = useAuthUser();
 
@@ -68,6 +77,15 @@ export function ManagementPageClient() {
 
   // Toast management
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  // Confirmation dialog state
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState>({
+    isOpen: false,
+    title: '',
+    message: '',
+    variant: 'default',
+    onConfirm: () => {},
+  });
 
   const addToast = useCallback((type: 'success' | 'error' | 'info', message: string) => {
     const id = `toast-${Date.now()}-${Math.random()}`;
@@ -107,24 +125,25 @@ export function ManagementPageClient() {
     }
   }, [activeTab, fetchApiKeys]);
 
-  const handleBulkDeleteKeys = useCallback(async () => {
+  const handleBulkDeleteKeys = useCallback(() => {
     if (selectedKeys.size === 0) return;
-    if (
-      !confirm(
-        `Are you sure you want to delete ${selectedKeys.size} API key(s)? This cannot be undone.`
-      )
-    ) {
-      return;
-    }
 
-    try {
-      await Promise.all(Array.from(selectedKeys).map(id => api.admin.deleteApiKey(id)));
-      addToast('success', `${selectedKeys.size} API key(s) deleted successfully`);
-      setSelectedKeys(new Set());
-      fetchApiKeys();
-    } catch (err) {
-      addToast('error', 'Failed to delete some API keys');
-    }
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Delete API Keys',
+      message: `Are you sure you want to delete ${selectedKeys.size} API key(s)? This action cannot be undone.`,
+      variant: 'destructive',
+      onConfirm: async () => {
+        try {
+          await Promise.all(Array.from(selectedKeys).map(id => api.admin.deleteApiKey(id)));
+          addToast('success', `${selectedKeys.size} API key(s) deleted successfully`);
+          setSelectedKeys(new Set());
+          fetchApiKeys();
+        } catch (err) {
+          addToast('error', 'Failed to delete some API keys');
+        }
+      },
+    });
   }, [selectedKeys, addToast, fetchApiKeys]);
 
   const handleExportKeys = useCallback(async () => {
@@ -209,24 +228,25 @@ export function ManagementPageClient() {
     [addToast, fetchUsers]
   );
 
-  const handleBulkDeleteUsers = useCallback(async () => {
+  const handleBulkDeleteUsers = useCallback(() => {
     if (selectedUsers.size === 0) return;
-    if (
-      !confirm(
-        `Are you sure you want to delete ${selectedUsers.size} user(s)? This cannot be undone.`
-      )
-    ) {
-      return;
-    }
 
-    try {
-      await Promise.all(Array.from(selectedUsers).map(id => api.admin.deleteUser(id)));
-      addToast('success', `${selectedUsers.size} user(s) deleted successfully`);
-      setSelectedUsers(new Set());
-      fetchUsers();
-    } catch (err) {
-      addToast('error', 'Failed to delete some users');
-    }
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Delete Users',
+      message: `Are you sure you want to delete ${selectedUsers.size} user(s)? This action cannot be undone.`,
+      variant: 'destructive',
+      onConfirm: async () => {
+        try {
+          await Promise.all(Array.from(selectedUsers).map(id => api.admin.deleteUser(id)));
+          addToast('success', `${selectedUsers.size} user(s) deleted successfully`);
+          setSelectedUsers(new Set());
+          fetchUsers();
+        } catch (err) {
+          addToast('error', 'Failed to delete some users');
+        }
+      },
+    });
   }, [selectedUsers, addToast, fetchUsers]);
 
   // =========================
@@ -234,6 +254,8 @@ export function ManagementPageClient() {
   // =========================
   const [activities, setActivities] = useState<UserActivityEvent[]>([]);
   const [activitiesLoading, setActivitiesLoading] = useState(false);
+  const [autoRefresh, setAutoRefresh] = useState(false);
+  const [refreshInterval, setRefreshInterval] = useState(30); // seconds
 
   const fetchActivities = useCallback(async () => {
     try {
@@ -277,6 +299,17 @@ export function ManagementPageClient() {
       fetchActivities();
     }
   }, [activeTab, fetchActivities]);
+
+  // Auto-refresh timer for activity timeline
+  useEffect(() => {
+    if (activeTab === 'activity' && autoRefresh) {
+      const intervalId = setInterval(() => {
+        fetchActivities();
+      }, refreshInterval * 1000);
+
+      return () => clearInterval(intervalId);
+    }
+  }, [activeTab, autoRefresh, refreshInterval, fetchActivities]);
 
   if (!user) return null;
 
@@ -481,10 +514,43 @@ export function ManagementPageClient() {
                       Real-time monitoring of system-wide user activity
                     </CardDescription>
                   </div>
-                  <Button variant="outline" size="sm" onClick={fetchActivities}>
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Refresh
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 mr-2">
+                      <label className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={autoRefresh}
+                          onChange={e => setAutoRefresh(e.target.checked)}
+                          className="rounded border-gray-300"
+                        />
+                        Auto-refresh
+                      </label>
+                      {autoRefresh && (
+                        <select
+                          value={refreshInterval}
+                          onChange={e => setRefreshInterval(Number(e.target.value))}
+                          className="text-sm border rounded px-2 py-1"
+                          aria-label="Refresh interval"
+                        >
+                          <option value="10">10s</option>
+                          <option value="30">30s</option>
+                          <option value="60">1m</option>
+                          <option value="300">5m</option>
+                        </select>
+                      )}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={fetchActivities}
+                      disabled={activitiesLoading}
+                    >
+                      <RefreshCw
+                        className={`h-4 w-4 mr-2 ${activitiesLoading ? 'animate-spin' : ''}`}
+                      />
+                      Refresh
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -507,6 +573,16 @@ export function ManagementPageClient() {
             setIsCreateModalOpen(false);
             fetchApiKeys();
           }}
+        />
+
+        {/* Confirmation Dialog */}
+        <ConfirmationDialog
+          isOpen={confirmDialog.isOpen}
+          onClose={() => setConfirmDialog({ ...confirmDialog, isOpen: false })}
+          onConfirm={confirmDialog.onConfirm}
+          title={confirmDialog.title}
+          message={confirmDialog.message}
+          variant={confirmDialog.variant}
         />
       </div>
     </AdminAuthGuard>

@@ -279,6 +279,16 @@ public static class InfrastructureServiceExtensions
         // Background task orchestration with distributed coordination (Redis)
         services.AddSingleton<IBackgroundTaskOrchestrator, RedisBackgroundTaskOrchestrator>();
 
+        // Issue #936: Infisical secrets management client (POC)
+        services.AddHttpClient("Infisical", client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(10); // Secret fetch should be fast
+            client.DefaultRequestHeaders.Add("User-Agent", "MeepleAI/1.0 Infisical-POC");
+        })
+        .AddTransientHttpErrorPolicy(policy =>
+            policy.WaitAndRetryAsync(2, retryAttempt =>
+                TimeSpan.FromSeconds(Math.Pow(2, retryAttempt))));
+
         return services;
     }
 }

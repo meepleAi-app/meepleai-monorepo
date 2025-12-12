@@ -21,9 +21,11 @@ import { CHAT_CONFIG } from '@/config';
 
 /**
  * Search data sources
+ * Issue #2030: Added messagesByChat for chat context association
  */
 interface SearchDataSources {
   messages?: Message[];
+  messagesByChat?: Record<string, Message[]>; // Issue #2030 - Map chatId → messages for context
   chats?: ChatThread[];
   games?: Game[];
   agents?: Agent[];
@@ -59,8 +61,19 @@ const FUSE_OPTIONS: IFuseOptions<SearchResult> = {
 function buildSearchIndex(sources: SearchDataSources): SearchResult[] {
   const results: SearchResult[] = [];
 
+  // Build message → chatId lookup map (Issue #2030)
+  const messageToChatId = new Map<string, string>();
+  if (sources.messagesByChat) {
+    Object.entries(sources.messagesByChat).forEach(([chatId, messages]) => {
+      messages.forEach(msg => {
+        messageToChatId.set(msg.id, chatId);
+      });
+    });
+  }
+
   // Index messages
   sources.messages?.forEach(message => {
+    const chatId = messageToChatId.get(message.id) || '';
     const result: MessageSearchResult = {
       id: message.id,
       type: 'message',
@@ -68,7 +81,7 @@ function buildSearchIndex(sources: SearchDataSources): SearchResult[] {
       subtitle: message.role === 'user' ? 'You' : 'Assistant',
       timestamp: message.timestamp,
       message,
-      chatId: '', // TODO: Issue #2030 - Get from message context
+      chatId, // Issue #2030 - Resolved from messagesByChat mapping
       gameId: message.gameId,
       relevanceScore: 0,
     };
@@ -146,23 +159,31 @@ function applyFilters(results: SearchResult[], filters?: SearchFilters): SearchR
       if (gameId !== filters.gameId) return false;
     }
 
-    // Filter by agent
+    // Filter by chat ID (Issue #2030)
+    if (filters.chatId) {
+      // Messages: filter by chat association
+      if (result.type === 'message' && result.chatId !== filters.chatId) return false;
+
+      // Chats: filter by exact chat ID
+      if (result.type === 'chat' && result.id !== filters.chatId) return false;
+
+      // Other types: not filterable by chat
+      if (result.type === 'agent' || result.type === 'game' || result.type === 'pdf') return false;
+    }
+
+    // Filter by agent (Issue #2030)
     if (filters.agentId) {
       // Agent results: filter by agent ID
       if (result.type === 'agent' && result.id !== filters.agentId) return false;
 
-      // Message results: Cannot filter by agent without chat-message association
-      // Note: message.endpoint is HTTP route ("/qa"), not agentId
-      // TODO: Issue #2030 - Need to pass chat context to properly filter messages by agent
-
-      // Chat results: Cannot filter by agent (ChatThread doesn't have agentId)
-      // TODO: Issue #2030 - If chat needs agent filtering, ChatThread type needs agentId property
+      // Note: Messages and Chats will be filterable by agent after backend implementation
+      // For now, we rely on chatId filtering (users select chat → messages filtered automatically)
 
       // Game results: cannot be filtered by agent (games don't have agents)
       if (result.type === 'game') return false;
 
-      // For now, only agent type itself can be filtered by agentId
-      // Other types pass through (no filtering)
+      // PDF results: not currently filterable by agent
+      if (result.type === 'pdf') return false;
     }
 
     // Filter by date range

@@ -10,6 +10,7 @@ public record ChatThreadDto(
     Guid Id,
     Guid UserId,
     Guid? GameId,
+    Guid? AgentId, // Issue #2030 - Track which agent was used
     string? Title,
     string Status,
     DateTime CreatedAt,

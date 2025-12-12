@@ -371,9 +371,117 @@ await page.locator('.submit-button').click(); // Fragile
 await page.getByRole('button', { name: /submit/i }).click(); // Semantic
 ```
 
+## Docker E2E Infrastructure
+
+**Issue #2009 - Phase 3**: Production-grade containerized testing with full observability
+
+### Quick Start
+
+```bash
+# Build Docker images
+cd apps/web
+./scripts/docker-e2e.sh build
+
+# Run full test suite (4 shards + monitoring)
+./scripts/docker-e2e.sh run
+
+# View monitoring dashboards
+./scripts/docker-e2e.sh dashboard  # Grafana (http://localhost:3001)
+./scripts/docker-e2e.sh metrics    # Prometheus (http://localhost:9090)
+```
+
+### Architecture
+
+**6-Service Stack**:
+- **4 Test Shards**: Parallel Playwright execution (1/4, 2/4, 3/4, 4/4)
+- **Prometheus**: Metrics collection and storage
+- **Grafana**: Visualization, dashboards, and alerting
+
+**Resource Requirements**:
+- Memory: 16GB total (4GB per shard)
+- CPU: 8 cores total (2 cores per shard)
+- Disk: 10GB (images + test results)
+
+### Commands
+
+| Command | Description |
+|---------|-------------|
+| `./scripts/docker-e2e.sh build` | Build Docker images |
+| `./scripts/docker-e2e.sh run` | Run all shards + monitoring |
+| `./scripts/docker-e2e.sh run-shard N` | Run specific shard (1-4) |
+| `./scripts/docker-e2e.sh stop` | Stop all containers |
+| `./scripts/docker-e2e.sh clean` | Stop and remove volumes |
+| `./scripts/docker-e2e.sh logs [service]` | View container logs |
+| `./scripts/docker-e2e.sh status` | Container status + resources |
+| `./scripts/docker-e2e.sh dashboard` | Open Grafana dashboard |
+| `./scripts/docker-e2e.sh metrics` | Open Prometheus UI |
+
+### Monitoring Dashboards
+
+**Grafana** (http://localhost:3001):
+- Login: `admin` / `${GRAFANA_E2E_PASSWORD:-admin}` (default: `admin`, set via .env.test)
+- Dashboard: "E2E Test Monitoring"
+- Panels: Pass Rate, Failure Rate, Duration, Trends, Totals
+
+**Metrics Tracked**:
+- `playwright_test`: Test executions (status: passed/failed/skipped)
+- `playwright_test_duration`: Test execution time
+- `playwright_test_retry_count`: Flaky test detection
+- Labels: environment, project, team, shard, CI
+
+**Alerts Configured**:
+- No tests running (15min threshold)
+- Critical failure rate (>20%)
+- High failure rate (>10%)
+- Slow execution (P95 >30s)
+- Flaky tests detected
+
+### When to Use Docker
+
+**✅ Use Docker for**:
+- CI/CD pipelines (environment parity)
+- Production-like testing (isolated environment)
+- Resource-constrained testing (enforced limits)
+- Full observability (metrics + dashboards)
+
+**❌ Use Local for**:
+- Rapid development and debugging
+- Single test file execution
+- UI mode testing (`--ui`)
+- Fast iteration cycles
+
+### Troubleshooting
+
+**Issue: Container won't start**
+```bash
+# Check Docker daemon
+docker info
+
+# View logs
+./scripts/docker-e2e.sh logs
+
+# Rebuild from scratch
+./scripts/docker-e2e.sh clean
+./scripts/docker-e2e.sh build
+```
+
+**Issue: Metrics not showing**
+```bash
+# Verify Prometheus URL
+echo $PROMETHEUS_REMOTE_WRITE_URL
+
+# Check container environment
+docker exec e2e-shard-1 env | grep PROMETHEUS
+```
+
+**Full Runbook**: `docs/05-operations/runbooks/e2e-docker-runbook.md`
+
+---
+
 ## Getting Help
 
 **Documentation**:
+- Docker Runbook: `docs/05-operations/runbooks/e2e-docker-runbook.md`
 - POM Architecture: `docs/testing/pom-architecture-design.md`
 - Migration Guide: `docs/testing/pom-migration-guide.md`
 - Coding Standards: `docs/testing/pom-coding-standards.md`
@@ -388,6 +496,7 @@ await page.getByRole('button', { name: /submit/i }).click(); // Semantic
 - Playwright Docs: https://playwright.dev/
 - Playwright Inspector: `pnpm exec playwright test --debug`
 - Trace Viewer: `pnpm exec playwright show-trace trace.zip`
+- Docker Helper: `./scripts/docker-e2e.sh help`
 
 ---
 

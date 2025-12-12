@@ -1,0 +1,171 @@
+# =============================================================================
+# Prometheus Configuration for E2E Testing Observability
+# =============================================================================
+# Issue #2009 - Phase 3: Production-Grade Infrastructure
+#
+# Metrics collected:
+# - Playwright test execution metrics (pass/fail rate, duration, retries)
+# - Custom application metrics (API response times, form submissions, etc.)
+# - System metrics (memory, CPU usage from Docker containers)
+#
+# Retention: 30 days (configurable via --storage.tsdb.retention.time)
+# =============================================================================
+
+global:
+  # Scrape interval: how often to scrape targets
+  scrape_interval: 15s
+
+  # Evaluation interval: how often to evaluate rules
+  evaluation_interval: 15s
+
+  # Scrape timeout: global default
+  scrape_timeout: 10s
+
+  # External labels (attached to all metrics)
+  external_labels:
+    monitor: 'e2e-testing'
+    environment: 'test'
+    project: 'meepleai'
+
+# =============================================================================
+# Alerting Configuration
+# =============================================================================
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+          # Add AlertManager if available:
+          # - targets: ['alertmanager:9093']
+
+# =============================================================================
+# Rule Files
+# =============================================================================
+rule_files:
+  - '/etc/prometheus/alerts/e2e-tests.yml'
+  # Add more rule files as needed
+
+# =============================================================================
+# Scrape Configurations
+# =============================================================================
+scrape_configs:
+
+  # ---------------------------------------------------------------------------
+  # Prometheus Self-Monitoring
+  # ---------------------------------------------------------------------------
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'prometheus_.*'
+        action: keep
+
+  # ---------------------------------------------------------------------------
+  # E2E Test Shards (Playwright metrics via remote write)
+  # ---------------------------------------------------------------------------
+  # Note: Playwright test metrics are pushed via remote write reporter
+  # No scraping needed, but we keep this config for documentation
+
+  - job_name: 'e2e-tests-shard-1'
+    honor_labels: true
+    static_configs:
+      - targets: []
+        labels:
+          shard: '1'
+          total_shards: '4'
+
+  - job_name: 'e2e-tests-shard-2'
+    honor_labels: true
+    static_configs:
+      - targets: []
+        labels:
+          shard: '2'
+          total_shards: '4'
+
+  - job_name: 'e2e-tests-shard-3'
+    honor_labels: true
+    static_configs:
+      - targets: []
+        labels:
+          shard: '3'
+          total_shards: '4'
+
+  - job_name: 'e2e-tests-shard-4'
+    honor_labels: true
+    static_configs:
+      - targets: []
+        labels:
+          shard: '4'
+          total_shards: '4'
+
+  # ---------------------------------------------------------------------------
+  # cAdvisor - Container Metrics (Issue #2009: Memory usage alerts)
+  # ---------------------------------------------------------------------------
+  - job_name: 'cadvisor-e2e'
+    static_configs:
+      - targets: ['cadvisor:8080']
+    metric_relabel_configs:
+      # Keep only container metrics for E2E test shards
+      - source_labels: [__name__]
+        regex: 'container_(memory_usage_bytes|memory_working_set_bytes|spec_memory_limit_bytes|cpu_usage_seconds_total|network_.*_bytes_total)'
+        action: keep
+      # Keep only metrics for e2e-shard containers
+      - source_labels: [name]
+        regex: 'e2e-shard-.*'
+        action: keep
+
+# =============================================================================
+# Remote Write Configuration
+# =============================================================================
+# Playwright tests push metrics via remote write reporter
+# This section enables the receiver endpoint
+
+# Already enabled via CLI flag: --web.enable-remote-write-receiver
+
+# =============================================================================
+# Storage Configuration
+# =============================================================================
+# Configured via CLI flags:
+# --storage.tsdb.path=/prometheus
+# --storage.tsdb.retention.time=30d
+# --storage.tsdb.retention.size=10GB (optional, for size-based retention)
+
+# =============================================================================
+# Additional Configuration
+# =============================================================================
+
+# Note: metric_relabel_configs must be defined within scrape_configs jobs, not globally
+# Example of metric filtering (for reference):
+# scrape_configs:
+#   - job_name: 'example'
+#     metric_relabel_configs:
+#       - source_labels: [__name__]
+#         regex: 'playwright_.*|pw_.*'
+#         action: keep
+
+# =============================================================================
+# PromQL Query Examples (for reference)
+# =============================================================================
+#
+# 1. Test Pass Rate:
+#    (sum(rate(playwright_test{status="passed"}[5m])) / sum(rate(playwright_test[5m]))) * 100
+#
+# 2. Test Failure Rate:
+#    (sum(rate(playwright_test{status="failed"}[5m])) / sum(rate(playwright_test[5m]))) * 100
+#
+# 3. Average Test Duration:
+#    avg(playwright_test_duration{status="passed"})
+#
+# 4. P95 Test Duration:
+#    histogram_quantile(0.95, sum(rate(playwright_test_duration_bucket[5m])) by (le))
+#
+# 5. Flaky Tests (retry count > 0):
+#    sum(playwright_test_retry_count) by (test_title) > 0
+#
+# 6. Tests by Shard:
+#    sum(rate(playwright_test[5m])) by (shard)
+#
+# 7. Failed Tests by Project:
+#    sum(rate(playwright_test{status="failed"}[5m])) by (project)
+#
+# =============================================================================

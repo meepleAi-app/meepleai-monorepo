@@ -3,6 +3,44 @@ import { ChromaticConfig } from '@chromatic-com/playwright';
 import { defineCoverageReporterConfig } from '@bgotink/playwright-coverage';
 import path from 'path';
 
+// Issue #2009: Prometheus reporter configuration (typed for TypeScript)
+const prometheusReporter: any[] = process.env.PROMETHEUS_REMOTE_WRITE_URL
+  ? [
+      [
+        'playwright-prometheus-remote-write-reporter',
+        {
+          // Prometheus Remote Write endpoint
+          url: process.env.PROMETHEUS_REMOTE_WRITE_URL || 'http://localhost:9090/api/v1/write',
+
+          // Authentication (if required)
+          headers: process.env.PROMETHEUS_API_KEY
+            ? {
+                Authorization: `Bearer ${process.env.PROMETHEUS_API_KEY}`,
+              }
+            : {},
+
+          // Metric prefix (default: 'pw_', we use 'playwright_' for clarity)
+          prefix: 'playwright_',
+
+          // Additional labels attached to all metrics
+          labels: {
+            environment: process.env.NODE_ENV || 'test',
+            project: 'meepleai',
+            team: 'qa',
+            shard: process.env.SHARD_INDEX || 'unknown',
+            total_shards: process.env.TOTAL_SHARDS || '1',
+          },
+
+          // Environment variables to expose as labels (be careful with secrets!)
+          env: {
+            CI: process.env.CI || 'false',
+            GITHUB_REF_NAME: process.env.GITHUB_REF_NAME || 'local',
+          },
+        },
+      ],
+    ]
+  : [];
+
 export default defineConfig<ChromaticConfig>({
   testDir: './e2e',
   timeout: 60000, // 60s global timeout for dev mode
@@ -14,6 +52,7 @@ export default defineConfig<ChromaticConfig>({
   globalSetup: require.resolve('./e2e/global-setup.ts'),
   globalTeardown: require.resolve('./e2e/global-teardown.ts'),
   // Issue #1498: E2E Code Coverage Reporting
+  // Issue #2009: Prometheus Metrics Export for Production-Grade Observability
   reporter: [
     [process.env.CI === 'true' ? 'dot' : 'html'], // Standard reporters
     [
@@ -57,6 +96,7 @@ export default defineConfig<ChromaticConfig>({
         },
       }),
     ],
+    ...prometheusReporter, // Type-safe spread of Prometheus reporter
   ],
   use: {
     baseURL: 'http://localhost:3000',

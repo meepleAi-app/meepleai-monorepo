@@ -67,6 +67,18 @@ import {
   type UpdateApiKeyRequest,
   type GetAllApiKeysWithStatsResponse,
   type BulkImportApiKeysResult,
+  GenerateReportRequestSchema,
+  ScheduleReportRequestSchema,
+  UpdateReportScheduleRequestSchema,
+  ScheduleReportResponseSchema,
+  GetScheduledReportsResponseSchema,
+  GetReportExecutionsResponseSchema,
+  type GenerateReportRequest,
+  type ScheduleReportRequest,
+  type UpdateReportScheduleRequest,
+  type ScheduledReportDto,
+  type ReportExecutionDto,
+  type ScheduleReportResponse,
 } from '../schemas';
 
 export interface CreateAdminClientParams {
@@ -531,6 +543,89 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
         GetUserActivityResultSchema
       );
       return result ?? { activities: [], totalCount: 0 };
+    },
+
+    // ========== Report Generation & Scheduling (Issue #920) ==========
+
+    /**
+     * Generate a report on-demand (admin only)
+     * POST /api/v1/admin/reports/generate
+     * Returns file download (Blob)
+     */
+    async generateReport(request: GenerateReportRequest): Promise<Blob> {
+      const response = await fetch(`${httpClient['baseUrl']}/api/v1/admin/reports/generate`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(request),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Report generation failed: ${response.statusText}`);
+      }
+
+      return response.blob();
+    },
+
+    /**
+     * Schedule a recurring report (admin only)
+     * POST /api/v1/admin/reports/schedule
+     */
+    async scheduleReport(request: ScheduleReportRequest): Promise<ScheduleReportResponse> {
+      return httpClient.post(
+        '/api/v1/admin/reports/schedule',
+        request,
+        ScheduleReportResponseSchema
+      );
+    },
+
+    /**
+     * Get all scheduled reports (admin only)
+     * GET /api/v1/admin/reports/scheduled
+     */
+    async getScheduledReports(): Promise<ScheduledReportDto[]> {
+      const result = await httpClient.get(
+        '/api/v1/admin/reports/scheduled',
+        GetScheduledReportsResponseSchema
+      );
+      return result ?? [];
+    },
+
+    /**
+     * Get report execution history (admin only)
+     * GET /api/v1/admin/reports/executions
+     */
+    async getReportExecutions(params?: { reportId?: string }): Promise<ReportExecutionDto[]> {
+      const queryParams = new URLSearchParams();
+      if (params?.reportId) queryParams.set('reportId', params.reportId);
+
+      const query = queryParams.toString();
+      const result = await httpClient.get(
+        `/api/v1/admin/reports/executions${query ? `?${query}` : ''}`,
+        GetReportExecutionsResponseSchema
+      );
+      return result ?? [];
+    },
+
+    /**
+     * Update report schedule (admin only)
+     * PATCH /api/v1/admin/reports/{reportId}/schedule
+     */
+    async updateReportSchedule(
+      reportId: string,
+      request: UpdateReportScheduleRequest
+    ): Promise<void> {
+      await httpClient.patch(`/api/v1/admin/reports/${reportId}/schedule`, request);
+    },
+
+    /**
+     * Delete scheduled report (admin only)
+     * DELETE /api/v1/admin/reports/{reportId}
+     */
+    async deleteScheduledReport(reportId: string): Promise<void> {
+      await httpClient.delete(`/api/v1/admin/reports/${reportId}`);
     },
   };
 }

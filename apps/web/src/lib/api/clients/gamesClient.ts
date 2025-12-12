@@ -233,6 +233,20 @@ export function createGamesClient({ httpClient }: CreateGamesClientParams) {
     },
 
     /**
+     * Get all RuleSpecs for a game (Issue #2027)
+     * GET /api/v1/games/{gameId}/rules
+     *
+     * Returns all versions of RuleSpec ordered by creation date (newest first)
+     */
+    async getRules(gameId: string): Promise<RuleSpec[]> {
+      const response = await httpClient.get(
+        `/api/v1/games/${encodeURIComponent(gameId)}/rules`,
+        z.array(RuleSpecSchema)
+      );
+      return response ?? [];
+    },
+
+    /**
      * Create new game
      * POST /api/v1/games
      */

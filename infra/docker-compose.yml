@@ -87,6 +87,40 @@ services:
           cpus: '0.5'
           memory: 512M
 
+  # ISSUE-922: Email testing service for development (Mailpit - modern Mailhog alternative)
+  mailpit:
+    image: axllent/mailpit:v1.22
+    container_name: mailpit
+    restart: unless-stopped
+    profiles: [dev, observability, full]
+    ports:
+      - "127.0.0.1:1025:1025"  # SMTP server
+      - "127.0.0.1:8025:8025"  # Web UI + REST API
+    environment:
+      MP_MAX_MESSAGES: 500
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+      MP_DATABASE: /data/mailpit.db
+      MP_DATA_DIR: /data
+    volumes:
+      - mailpit-data:/data
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8025/api/v1/messages"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    networks:
+      - meepleai
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
+        reservations:
+          cpus: '0.25'
+          memory: 64M
+
   ollama:
     image: ollama/ollama:0.3.14
     restart: unless-stopped
@@ -663,6 +697,8 @@ volumes:
   qdrantdata:
   # seqdata removed - replaced by HyperDX (Issue #1564)
   ollamadata:
+  # ISSUE-922: Mailpit email testing storage
+  mailpit-data:
   # OPS-02: OpenTelemetry volumes
   # jaegerdata removed - using ephemeral storage for development
   # Seq and Jaeger replaced by HyperDX unified observability

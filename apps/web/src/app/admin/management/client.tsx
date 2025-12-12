@@ -49,7 +49,7 @@ import { BulkActionBar } from '@/components/admin/BulkActionBar';
 import { UserActivityTimeline } from '@/components/admin/UserActivityTimeline';
 
 import type { ApiKeyFilters } from '@/types';
-import type { ApiKeyWithStatsDto } from '@/lib/api/schemas/admin.schemas';
+import type { ApiKeyWithStatsDto, AdminUser } from '@/lib/api/schemas/admin.schemas';
 import type { UserActivityEvent } from '@/components/admin/UserActivityItem';
 
 type TabValue = 'api-keys' | 'users' | 'activity';
@@ -94,6 +94,7 @@ export function ManagementPageClient() {
       });
       setApiKeys(result.keys);
     } catch (err) {
+      console.error('Failed to load API keys:', err);
       addToast('error', 'Failed to load API keys');
     } finally {
       setApiKeysLoading(false);
@@ -150,7 +151,7 @@ export function ManagementPageClient() {
   // =========================
   // TAB 2: USER MANAGEMENT
   // =========================
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<AdminUser[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
 
@@ -160,6 +161,7 @@ export function ManagementPageClient() {
       const result = await api.admin.getAllUsers();
       setUsers(result.users);
     } catch (err) {
+      console.error('Failed to load users:', err);
       addToast('error', 'Failed to load users');
     } finally {
       setUsersLoading(false);
@@ -263,6 +265,7 @@ export function ManagementPageClient() {
       }));
       setActivities(events);
     } catch (err) {
+      console.error('Failed to load activity timeline:', err);
       addToast('error', 'Failed to load activity timeline');
     } finally {
       setActivitiesLoading(false);

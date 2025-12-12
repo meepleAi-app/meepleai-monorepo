@@ -27,6 +27,7 @@ public class QdrantVectorStoreAdapter : IQdrantVectorStoreAdapter
         Vector queryVector,
         int topK,
         double minScore,
+        IReadOnlyList<Guid>? documentIds = null,
         CancellationToken cancellationToken = default)
     {
         // Call existing QdrantService with gameId and query vector
@@ -44,24 +45,25 @@ public class QdrantVectorStoreAdapter : IQdrantVectorStoreAdapter
 
         // DIAGNOSTIC: Log raw Qdrant results before filtering
         _logger.LogInformation(
-            "Qdrant returned {TotalResults} results for gameId={GameId}. MinScore threshold={MinScore}",
-            searchResult.Results.Count, gameId, minScore);
+            "Qdrant returned {TotalResults} results for gameId={GameId}. MinScore threshold={MinScore}, DocumentFilter={HasFilter}",
+            searchResult.Results.Count, gameId, minScore, documentIds != null);
 
         foreach (var r in searchResult.Results)
         {
             _logger.LogInformation(
-                "  - Score={Score:F4}, Text={TextPreview}...",
-                r.Score, r.Text.Substring(0, Math.Min(50, r.Text.Length)));
+                "  - Score={Score:F4}, PdfId={PdfId}, Text={TextPreview}...",
+                r.Score, r.PdfId, r.Text.Substring(0, Math.Min(50, r.Text.Length)));
         }
 
         // Map SearchResultItems to domain Embedding entities
         var filteredResults = searchResult.Results
             .Where(r => r.Score >= minScore) // Apply min score filter
+            .Where(r => documentIds == null || documentIds.Contains(Guid.Parse(r.PdfId))) // Issue #2051: Document filter
             .ToList();
 
         _logger.LogInformation(
-            "After minScore filter: {FilteredCount}/{TotalCount} results passed (threshold={MinScore})",
-            filteredResults.Count, searchResult.Results.Count, minScore);
+            "After minScore filter: {FilteredCount}/{TotalCount} results passed (threshold={MinScore}). Document filter: {DocumentFilterApplied}",
+            filteredResults.Count, searchResult.Results.Count, minScore, documentIds != null);
 
         var embeddings = filteredResults
             .Select((result, index) => KnowledgeBaseMappers.CreateEmbeddingFromQdrant(

@@ -93,11 +93,16 @@ public class CreateDocumentCollectionCommandHandler : ICommandHandler<CreateDocu
 
     private async Task<DocumentCollectionDto> MapToDto(DocumentCollection collection, CancellationToken cancellationToken)
     {
+        // PERF-05: Batch query to avoid N+1 problem
+        var pdfIds = collection.Documents.Select(d => d.PdfDocumentId).ToList();
+        var pdfDocs = await _pdfRepository.GetByIdsAsync(pdfIds, cancellationToken).ConfigureAwait(false);
+        var pdfDict = pdfDocs.ToDictionary(p => p.Id);
+
         var documentDtos = new List<CollectionDocumentDto>();
 
         foreach (var doc in collection.GetDocumentsOrdered())
         {
-            var pdfDoc = await _pdfRepository.GetByIdAsync(doc.PdfDocumentId, cancellationToken).ConfigureAwait(false);
+            var pdfDoc = pdfDict.GetValueOrDefault(doc.PdfDocumentId);
 
             documentDtos.Add(new CollectionDocumentDto(
                 PdfDocumentId: doc.PdfDocumentId,

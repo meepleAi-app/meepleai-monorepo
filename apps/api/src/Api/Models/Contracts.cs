@@ -8,12 +8,14 @@ namespace Api.Models;
 
 /// <summary>
 /// AI-14: Updated to support hybrid search modes
+/// Issue #2051: Supports document source filtering
 /// </summary>
 public record QaRequest(
     string gameId,
     string query,
     Guid? chatId = null,
-    SearchMode searchMode = SearchMode.Hybrid); // AI-14: Default to hybrid search
+    SearchMode searchMode = SearchMode.Hybrid, // AI-14: Default to hybrid search
+    IReadOnlyList<Guid>? documentIds = null); // Issue #2051: Filter by document IDs (null = all)
 public record QaResponse(
     string answer,
     IReadOnlyList<Snippet> snippets,

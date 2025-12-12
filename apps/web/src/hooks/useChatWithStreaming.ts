@@ -23,6 +23,7 @@ export function useChatWithStreaming() {
 
   // Extract derived values
   const selectedGameId = store.selectedGameId;
+  const selectedDocumentIds = store.selectedDocumentIds; // Issue #2051
   const activeChatId = selectedGameId ? store.activeChatIds[selectedGameId] : null;
   const chats = selectedGameId ? (store.chatsByGame[selectedGameId] ?? []) : [];
   const messages = activeChatId ? (store.messagesByChat[activeChatId] ?? []) : [];
@@ -72,9 +73,15 @@ export function useChatWithStreaming() {
       const currentActiveChatId = selectedGameId ? store.activeChatIds[selectedGameId] : null;
       if (!currentActiveChatId) return;
 
-      await streamingControls.startStreaming(selectedGameId, content.trim(), currentActiveChatId);
+      // Issue #2051: Pass selectedDocumentIds to streaming
+      await streamingControls.startStreaming(
+        selectedGameId,
+        content.trim(),
+        currentActiveChatId,
+        selectedDocumentIds
+      );
     },
-    [selectedGameId, store, streamingControls]
+    [selectedGameId, selectedDocumentIds, store, streamingControls]
   );
 
   return useMemo(

@@ -42,6 +42,7 @@ public class HybridSearchService : IHybridSearchService
         Guid gameId,
         SearchMode mode = SearchMode.Hybrid,
         int limit = 10,
+        IReadOnlyList<Guid>? documentIds = null,
         float vectorWeight = 0.7f,
         float keywordWeight = 0.3f,
         CancellationToken cancellationToken = default)
@@ -59,21 +60,21 @@ public class HybridSearchService : IHybridSearchService
         var safeLimit = Math.Min(Math.Max(limit, 1), 100); // Min: 1, Max: 100
 
         _logger.LogInformation(
-            "Hybrid search started: query='{Query}', gameId={GameId}, mode={Mode}, vectorWeight={VectorWeight}, keywordWeight={KeywordWeight}, limit={Limit}",
-            query, gameId, mode, vectorWeight, keywordWeight, limit);
+            "Hybrid search started: query='{Query}', gameId={GameId}, mode={Mode}, documentFilter={HasFilter}, vectorWeight={VectorWeight}, keywordWeight={KeywordWeight}, limit={Limit}",
+            query, gameId, mode, documentIds != null, vectorWeight, keywordWeight, limit);
 
         try
         {
             switch (mode)
             {
                 case SearchMode.Semantic:
-                    return await SearchSemanticOnlyAsync(query, gameId, safeLimit, cancellationToken).ConfigureAwait(false);
+                    return await SearchSemanticOnlyAsync(query, gameId, safeLimit, documentIds, cancellationToken).ConfigureAwait(false);
 
                 case SearchMode.Keyword:
-                    return await SearchKeywordOnlyAsync(query, gameId, safeLimit, cancellationToken).ConfigureAwait(false);
+                    return await SearchKeywordOnlyAsync(query, gameId, safeLimit, documentIds, cancellationToken).ConfigureAwait(false);
 
                 case SearchMode.Hybrid:
-                    return await SearchHybridAsync(query, gameId, safeLimit, vectorWeight, keywordWeight, cancellationToken).ConfigureAwait(false);
+                    return await SearchHybridAsync(query, gameId, safeLimit, vectorWeight, keywordWeight, documentIds, cancellationToken).ConfigureAwait(false);
 
                 default:
                     throw new ArgumentException($"Unsupported search mode: {mode}", nameof(mode));
@@ -98,6 +99,7 @@ public class HybridSearchService : IHybridSearchService
         string query,
         Guid gameId,
         int limit,
+        IReadOnlyList<Guid>? documentIds,
         CancellationToken cancellationToken)
     {
         // Generate embedding for the query
@@ -123,7 +125,16 @@ public class HybridSearchService : IHybridSearchService
             return Array.Empty<HybridSearchResult>();
         }
 
-        return vectorResults.Results.Select((r, index) => new HybridSearchResult
+        // Issue #2051: Filter by document IDs if specified
+        var filteredResults = documentIds == null
+            ? vectorResults.Results
+            : vectorResults.Results.Where(r => documentIds.Any(id => id.ToString() == r.PdfId)).ToList();
+
+        _logger.LogInformation(
+            "Semantic search: {TotalResults} results from Qdrant, {FilteredResults} after document filter",
+            vectorResults.Results.Count, filteredResults.Count);
+
+        return filteredResults.Select((r, index) => new HybridSearchResult
         {
             ChunkId = $"{r.PdfId}_{r.ChunkIndex}", // Composite key for chunk identification
             Content = r.Text,
@@ -148,6 +159,7 @@ public class HybridSearchService : IHybridSearchService
         string query,
         Guid gameId,
         int limit,
+        IReadOnlyList<Guid>? documentIds,
         CancellationToken cancellationToken)
     {
         var keywordResults = await _keywordSearchService.SearchAsync(
@@ -158,7 +170,16 @@ public class HybridSearchService : IHybridSearchService
             boostTerms: _config.BoostTerms,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
-        return keywordResults.Select((r, index) => new HybridSearchResult
+        // Issue #2051: Filter by document IDs if specified
+        var filteredResults = documentIds == null
+            ? keywordResults
+            : keywordResults.Where(r => documentIds.Any(id => id.ToString() == r.PdfDocumentId)).ToList();
+
+        _logger.LogInformation(
+            "Keyword search: {TotalResults} results from PostgreSQL, {FilteredResults} after document filter",
+            keywordResults.Count, filteredResults.Count);
+
+        return filteredResults.Select((r, index) => new HybridSearchResult
         {
             ChunkId = r.ChunkId,
             Content = r.Content,
@@ -185,6 +206,7 @@ public class HybridSearchService : IHybridSearchService
         int limit,
         float vectorWeight,
         float keywordWeight,
+        IReadOnlyList<Guid>? documentIds,
         CancellationToken cancellationToken)
     {
         // Fetch more results from each system than needed (to ensure good fusion)
@@ -197,7 +219,7 @@ public class HybridSearchService : IHybridSearchService
         {
             _logger.LogError("Failed to generate query embedding for hybrid search: {Error}", embeddingResult?.ErrorMessage ?? "Embedding result was null");
             // Fall back to keyword-only search if embedding fails
-            return await SearchKeywordOnlyAsync(query, gameId, limit, cancellationToken).ConfigureAwait(false);
+            return await SearchKeywordOnlyAsync(query, gameId, limit, documentIds, cancellationToken).ConfigureAwait(false);
         }
 
         var queryEmbedding = embeddingResult.Embeddings![0];
@@ -225,17 +247,26 @@ public class HybridSearchService : IHybridSearchService
         if (!vectorResults.Success)
         {
             _logger.LogWarning("Vector search failed, using keyword-only results: {Error}", vectorResults.ErrorMessage);
-            return await SearchKeywordOnlyAsync(query, gameId, limit, cancellationToken).ConfigureAwait(false);
+            return await SearchKeywordOnlyAsync(query, gameId, limit, documentIds, cancellationToken).ConfigureAwait(false);
         }
 
+        // Issue #2051: Filter results by document IDs before fusion
+        var filteredVectorResults = documentIds == null
+            ? vectorResults.Results
+            : vectorResults.Results.Where(r => documentIds.Any(id => id.ToString() == r.PdfId)).ToList();
+
+        var filteredKeywordResults = documentIds == null
+            ? keywordResults
+            : keywordResults.Where(r => documentIds.Any(id => id.ToString() == r.PdfDocumentId)).ToList();
+
         _logger.LogInformation(
-            "Retrieved results for fusion: vectorCount={VectorCount}, keywordCount={KeywordCount}",
-            vectorResults.Results.Count, keywordResults.Count);
+            "Retrieved results for fusion: vectorCount={VectorCount} (filtered: {FilteredVector}), keywordCount={KeywordCount} (filtered: {FilteredKeyword})",
+            vectorResults.Results.Count, filteredVectorResults.Count, keywordResults.Count, filteredKeywordResults.Count);
 
         // Apply Reciprocal Rank Fusion (RRF) algorithm
         var fusedResults = FuseSearchResults(
-            vectorResults.Results,
-            keywordResults,
+            filteredVectorResults,
+            filteredKeywordResults,
             gameId,
             vectorWeight,
             keywordWeight,

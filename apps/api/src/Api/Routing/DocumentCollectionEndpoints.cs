@@ -21,12 +21,13 @@ public static class DocumentCollectionEndpoints
 {
     public static RouteGroupBuilder MapDocumentCollectionEndpoints(this RouteGroupBuilder group)
     {
-        var collectionGroup = group.MapGroup("/document-collections")
+        // Game-scoped endpoints (create and list by game)
+        var gameCollectionGroup = group.MapGroup("/games/{gameId:guid}/document-collections")
             .WithTags("DocumentCollections")
             .WithOpenApi();
 
         // Create a new document collection
-        collectionGroup.MapPost("/{gameId:guid}", async (
+        gameCollectionGroup.MapPost("", async (
             Guid gameId,
             HttpContext context,
             [FromBody] CreateCollectionRequest request,
@@ -64,43 +65,14 @@ public static class DocumentCollectionEndpoints
                 "Document collection '{CollectionName}' created successfully with ID {CollectionId}",
                 request.Name, result.Id);
 
-            return Results.Created($"/api/v1/document-collections/{result.Id}", result);
+            return Results.Created($"/api/v1/games/{gameId}/document-collections/{result.Id}", result);
         })
         .RequireSession()
         .WithName("CreateDocumentCollection")
         .WithDescription("Create a new document collection for a game with optional initial documents");
 
-        // Get collection by ID
-        collectionGroup.MapGet("/{collectionId:guid}", async (
-            Guid collectionId,
-            HttpContext context,
-            IMediator mediator,
-            ILogger<Program> logger,
-            CancellationToken ct) =>
-        {
-            var (authenticated, session, error) = context.TryGetActiveSession();
-            if (!authenticated) return error!;
-
-            logger.LogInformation("User {UserId} retrieving collection {CollectionId}",
-                session!.User!.Id, collectionId);
-
-            var result = await mediator.Send(new GetCollectionByIdQuery(collectionId), ct)
-                .ConfigureAwait(false);
-
-            if (result == null)
-            {
-                logger.LogWarning("Collection {CollectionId} not found", collectionId);
-                return Results.NotFound(new { error = "Collection not found" });
-            }
-
-            return Results.Ok(result);
-        })
-        .RequireSession()
-        .WithName("GetCollectionById")
-        .WithDescription("Get a document collection by its ID");
-
         // Get collection by game ID
-        collectionGroup.MapGet("/by-game/{gameId:guid}", async (
+        gameCollectionGroup.MapGet("", async (
             Guid gameId,
             HttpContext context,
             IMediator mediator,
@@ -128,8 +100,56 @@ public static class DocumentCollectionEndpoints
         .WithName("GetCollectionByGame")
         .WithDescription("Get the document collection for a specific game");
 
-        // Get all collections by user ID
-        collectionGroup.MapGet("/by-user/{userId:guid}", async (
+        // Collection-scoped endpoints (operations on existing collections)
+        var collectionGroup = group.MapGroup("/games/{gameId:guid}/document-collections")
+            .WithTags("DocumentCollections")
+            .WithOpenApi();
+
+        // Get collection by ID (within game scope)
+        collectionGroup.MapGet("/{collectionId:guid}", async (
+            Guid gameId,
+            Guid collectionId,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
+
+            logger.LogInformation("User {UserId} retrieving collection {CollectionId} for game {GameId}",
+                session!.User!.Id, collectionId, gameId);
+
+            var result = await mediator.Send(new GetCollectionByIdQuery(collectionId), ct)
+                .ConfigureAwait(false);
+
+            if (result == null)
+            {
+                logger.LogWarning("Collection {CollectionId} not found for game {GameId}", collectionId, gameId);
+                return Results.NotFound(new { error = "Collection not found" });
+            }
+
+            // Verify collection belongs to specified game
+            if (result.GameId != gameId)
+            {
+                logger.LogWarning(
+                    "Collection {CollectionId} does not belong to game {GameId}",
+                    collectionId, gameId);
+                return Results.NotFound(new { error = "Collection not found for this game" });
+            }
+
+            return Results.Ok(result);
+        })
+        .RequireSession()
+        .WithName("GetCollectionById")
+        .WithDescription("Get a document collection by its ID within a game scope");
+
+        // Get all collections by user ID (admin/separate group)
+        var userCollectionGroup = group.MapGroup("/document-collections/by-user")
+            .WithTags("DocumentCollections")
+            .WithOpenApi();
+
+        userCollectionGroup.MapGet("/{userId:guid}", async (
             Guid userId,
             HttpContext context,
             IMediator mediator,
@@ -165,6 +185,7 @@ public static class DocumentCollectionEndpoints
 
         // Add document to collection
         collectionGroup.MapPost("/{collectionId:guid}/documents", async (
+            Guid gameId,
             Guid collectionId,
             HttpContext context,
             [FromBody] AddDocumentToCollectionRequest request,
@@ -183,7 +204,8 @@ public static class DocumentCollectionEndpoints
                 collectionId,
                 request.PdfDocumentId,
                 request.DocumentType,
-                request.SortOrder);
+                request.SortOrder,
+                session!.User!.Id); // Authorization: pass current user ID
 
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
@@ -206,9 +228,10 @@ public static class DocumentCollectionEndpoints
         .WithDescription("Add a PDF document to an existing collection");
 
         // Remove document from collection
-        collectionGroup.MapDelete("/{collectionId:guid}/documents/{pdfId:guid}", async (
+        collectionGroup.MapDelete("/{collectionId:guid}/documents/{documentId:guid}", async (
+            Guid gameId,
             Guid collectionId,
-            Guid pdfId,
+            Guid documentId,
             HttpContext context,
             IMediator mediator,
             ILogger<Program> logger,
@@ -218,24 +241,24 @@ public static class DocumentCollectionEndpoints
             if (!authenticated) return error!;
 
             logger.LogInformation(
-                "User {UserId} removing document {PdfId} from collection {CollectionId}",
-                session!.User!.Id, pdfId, collectionId);
+                "User {UserId} removing document {DocumentId} from collection {CollectionId}",
+                session!.User!.Id, documentId, collectionId);
 
-            var command = new RemoveDocumentFromCollectionCommand(collectionId, pdfId);
+            var command = new RemoveDocumentFromCollectionCommand(collectionId, documentId);
 
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
             if (!result)
             {
                 logger.LogWarning(
-                    "Failed to remove document {PdfId} from collection {CollectionId}",
-                    pdfId, collectionId);
+                    "Failed to remove document {DocumentId} from collection {CollectionId}",
+                    documentId, collectionId);
                 return Results.BadRequest(new { error = "Failed to remove document from collection" });
             }
 
             logger.LogInformation(
-                "Document {PdfId} successfully removed from collection {CollectionId}",
-                pdfId, collectionId);
+                "Document {DocumentId} successfully removed from collection {CollectionId}",
+                documentId, collectionId);
 
             return Results.NoContent();
         })

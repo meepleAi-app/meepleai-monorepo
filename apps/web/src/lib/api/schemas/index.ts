@@ -16,6 +16,9 @@ export * from './chat.schemas';
 // PDF & Document Processing schemas
 export * from './pdf.schemas';
 
+// Document Collections schemas (Issue #2051)
+export * from './documents.schemas';
+
 // System Configuration schemas
 export * from './config.schemas';
 

@@ -14,3 +14,7 @@ export {
   type CollectionSourceFilterProps,
   type DocumentCollection,
 } from './CollectionSourceFilter';
+export {
+  MultiDocumentCollectionUpload,
+  type MultiDocumentCollectionUploadProps,
+} from './MultiDocumentCollectionUpload';

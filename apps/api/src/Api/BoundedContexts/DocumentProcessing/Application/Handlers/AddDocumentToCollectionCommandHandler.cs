@@ -35,14 +35,20 @@ public class AddDocumentToCollectionCommandHandler : ICommandHandler<AddDocument
     public async Task<bool> Handle(AddDocumentToCollectionCommand command, CancellationToken cancellationToken)
     {
         _logger.LogInformation(
-            "Adding document {PdfDocumentId} to collection {CollectionId}",
-            command.PdfDocumentId, command.CollectionId);
+            "Adding document {PdfDocumentId} to collection {CollectionId} by user {UserId}",
+            command.PdfDocumentId, command.CollectionId, command.UserId);
 
         // Fetch collection
         var collection = await _collectionRepository.GetByIdAsync(command.CollectionId, cancellationToken).ConfigureAwait(false);
         if (collection == null)
         {
             throw new DomainException($"Collection {command.CollectionId} not found");
+        }
+
+        // SECURITY: Verify user owns this collection (quality review issue #5)
+        if (collection.CreatedByUserId != command.UserId)
+        {
+            throw new DomainException($"User {command.UserId} is not authorized to modify collection {command.CollectionId}");
         }
 
         // Validate PDF document exists
@@ -80,11 +86,16 @@ public class AddDocumentToCollectionCommandHandler : ICommandHandler<AddDocument
         Domain.Entities.DocumentCollection collection,
         CancellationToken cancellationToken)
     {
+        // PERF-05: Batch query to avoid N+1 problem
+        var pdfIds = collection.Documents.Select(d => d.PdfDocumentId).ToList();
+        var pdfDocs = await _pdfRepository.GetByIdsAsync(pdfIds, cancellationToken).ConfigureAwait(false);
+        var pdfDict = pdfDocs.ToDictionary(p => p.Id);
+
         var documentDtos = new List<CollectionDocumentDto>();
 
         foreach (var doc in collection.GetDocumentsOrdered())
         {
-            var pdfDoc = await _pdfRepository.GetByIdAsync(doc.PdfDocumentId, cancellationToken).ConfigureAwait(false);
+            var pdfDoc = pdfDict.GetValueOrDefault(doc.PdfDocumentId);
 
             documentDtos.Add(new CollectionDocumentDto(
                 PdfDocumentId: doc.PdfDocumentId,

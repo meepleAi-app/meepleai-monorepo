@@ -120,36 +120,24 @@ public class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
             ? DocumentType.Base
             : new DocumentType(entity.DocumentType);
 
-        var doc = new PdfDocument(
+        // Issue #2140: Use Reconstitute factory method instead of reflection
+        return PdfDocument.Reconstitute(
             id: entity.Id,
             gameId: entity.GameId,
             fileName: fileName,
             filePath: entity.FilePath,
             fileSize: fileSize,
             uploadedByUserId: entity.UploadedByUserId,
+            uploadedAt: entity.UploadedAt,
+            processingStatus: entity.ProcessingStatus,
+            processedAt: entity.ProcessedAt,
+            pageCount: entity.PageCount,
+            processingError: entity.ProcessingError,
             language: language,
             collectionId: entity.CollectionId,
             documentType: documentType,
             sortOrder: entity.SortOrder
         );
-
-        // Override properties from DB
-        var processingStatusProp = typeof(PdfDocument).GetProperty("ProcessingStatus");
-        processingStatusProp?.SetValue(doc, entity.ProcessingStatus);
-
-        var processedAtProp = typeof(PdfDocument).GetProperty("ProcessedAt");
-        processedAtProp?.SetValue(doc, entity.ProcessedAt);
-
-        var pageCountProp = typeof(PdfDocument).GetProperty("PageCount");
-        pageCountProp?.SetValue(doc, entity.PageCount);
-
-        var processingErrorProp = typeof(PdfDocument).GetProperty("ProcessingError");
-        processingErrorProp?.SetValue(doc, entity.ProcessingError);
-
-        var uploadedAtProp = typeof(PdfDocument).GetProperty("UploadedAt");
-        uploadedAtProp?.SetValue(doc, entity.UploadedAt);
-
-        return doc;
     }
 
     private static Api.Infrastructure.Entities.PdfDocumentEntity MapToPersistence(PdfDocument domain)

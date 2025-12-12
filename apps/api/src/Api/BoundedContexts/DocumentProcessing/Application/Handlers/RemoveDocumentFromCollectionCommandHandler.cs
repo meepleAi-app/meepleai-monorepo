@@ -34,14 +34,20 @@ public class RemoveDocumentFromCollectionCommandHandler : ICommandHandler<Remove
     public async Task<bool> Handle(RemoveDocumentFromCollectionCommand command, CancellationToken cancellationToken)
     {
         _logger.LogInformation(
-            "Removing document {PdfDocumentId} from collection {CollectionId}",
-            command.PdfDocumentId, command.CollectionId);
+            "User {UserId} removing document {PdfDocumentId} from collection {CollectionId}",
+            command.UserId, command.PdfDocumentId, command.CollectionId);
 
         // Fetch collection
         var collection = await _collectionRepository.GetByIdAsync(command.CollectionId, cancellationToken).ConfigureAwait(false);
         if (collection == null)
         {
             throw new DomainException($"Collection {command.CollectionId} not found");
+        }
+
+        // SECURITY: Verify user owns this collection (same pattern as AddDocumentToCollectionCommandHandler)
+        if (collection.CreatedByUserId != command.UserId)
+        {
+            throw new DomainException($"User {command.UserId} is not authorized to modify collection {command.CollectionId}");
         }
 
         // Remove document from collection (domain validates document exists)

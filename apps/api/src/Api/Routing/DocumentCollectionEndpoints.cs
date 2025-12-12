@@ -244,7 +244,10 @@ public static class DocumentCollectionEndpoints
                 "User {UserId} removing document {DocumentId} from collection {CollectionId}",
                 session!.User!.Id, documentId, collectionId);
 
-            var command = new RemoveDocumentFromCollectionCommand(collectionId, documentId);
+            var command = new RemoveDocumentFromCollectionCommand(
+                collectionId,
+                documentId,
+                session!.User!.Id); // SECURITY: Pass userId for authorization
 
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
 

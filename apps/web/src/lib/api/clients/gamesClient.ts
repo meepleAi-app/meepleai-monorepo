@@ -16,6 +16,8 @@ import {
   RuleSpecHistorySchema,
   VersionTimelineSchema,
   RuleSpecDiffSchema,
+  GameFAQSchema,
+  GetGameFAQsResultSchema,
   type Game,
   type GameSessionDto,
   type PaginatedGamesResponse,
@@ -24,6 +26,8 @@ import {
   type RuleSpecHistory,
   type VersionTimeline,
   type RuleSpecDiff,
+  type GameFAQ,
+  type GetGameFAQsResult,
 } from '../schemas';
 import { AgentDtoSchema, type AgentDto } from '../schemas';
 
@@ -354,6 +358,44 @@ export function createGamesClient({ httpClient }: CreateGamesClientParams) {
         `/api/v1/games/${encodeURIComponent(gameId)}/rulespec/diff?from=${encodeURIComponent(fromVersion)}&to=${encodeURIComponent(toVersion)}`,
         RuleSpecDiffSchema
       );
+    },
+
+    // ========== Game FAQs (Issue #2028) ==========
+
+    /**
+     * Get FAQs for a specific game with pagination
+     * GET /api/v1/games/{gameId}/faqs?limit=10&offset=0
+     * Issue #2028: Backend FAQ system for game-specific FAQs
+     */
+    async getFAQs(
+      gameId: string,
+      limit: number = 10,
+      offset: number = 0
+    ): Promise<GetGameFAQsResult> {
+      const params = new URLSearchParams();
+      params.append('limit', limit.toString());
+      params.append('offset', offset.toString());
+      const queryString = params.toString();
+      const url = `/api/v1/games/${encodeURIComponent(gameId)}/faqs?${queryString}`;
+      const result = await httpClient.get(url, GetGameFAQsResultSchema);
+      return result ?? { faqs: [], totalCount: 0 };
+    },
+
+    /**
+     * Upvote an FAQ
+     * POST /api/v1/faqs/{id}/upvote
+     * Issue #2028: Backend FAQ system for game-specific FAQs
+     */
+    async upvoteFAQ(faqId: string): Promise<GameFAQ> {
+      const result = await httpClient.post(
+        `/api/v1/faqs/${encodeURIComponent(faqId)}/upvote`,
+        {},
+        GameFAQSchema
+      );
+      if (!result) {
+        throw new Error('Failed to upvote FAQ: no response from server');
+      }
+      return result;
     },
   };
 }

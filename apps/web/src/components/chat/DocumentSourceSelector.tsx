@@ -72,8 +72,9 @@ export function DocumentSourceSelector({
 
   const handleToggleDocument = (docId: string) => {
     if (allSelected) {
-      // If "all" selected, clicking one document deselects all others except this one
-      onSelectionChange([docId]);
+      // Issue #2142: When "all" selected, clicking deselects THAT document (not "select only that")
+      const newIds = documents.filter(d => d.id !== docId).map(d => d.id);
+      onSelectionChange(newIds);
     } else {
       const currentIds = selectedIds ?? [];
       const isSelected = currentIds.includes(docId);

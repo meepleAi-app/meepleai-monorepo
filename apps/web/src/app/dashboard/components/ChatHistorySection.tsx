@@ -34,10 +34,10 @@ export interface ChatHistorySectionProps {
 /**
  * ChatHistorySection Component (MVP Placeholder)
  *
- * Note: Full implementation requires backend endpoint for user's global chat history.
- * Current backend API only supports getThreadsByGame(gameId).
+ * Backend endpoint available: GET /api/v1/knowledge-base/my-chats (Issue #2026)
+ * Returns: { chats: Array<{id, gameId, gameName, lastMessage, timestamp, messageCount}>, totalCount }
  *
- * TODO: Issue #2026 - Backend endpoint GET /api/v1/knowledge-base/my-chats
+ * Future Enhancement: Implement data fetching hook and uncomment UI below.
  */
 export function ChatHistorySection({ userId }: ChatHistorySectionProps) {
   return (

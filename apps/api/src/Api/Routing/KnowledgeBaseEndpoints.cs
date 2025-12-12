@@ -234,6 +234,55 @@ public static class KnowledgeBaseEndpoints
         .RequireSession() // Issue #1446: Automatic session validation
         .WithTags("ChatThreads");
 
+        // CHAT-HISTORY-01: Get user's chat history for dashboard (Issue #2026)
+        group.MapGet("/knowledge-base/my-chats", async (
+            [Microsoft.AspNetCore.Mvc.FromQuery] int skip,
+            [Microsoft.AspNetCore.Mvc.FromQuery] int take,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct = default) =>
+        {
+            // Session validated by RequireSessionFilter
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+            var userId = session!.User!.Id;
+
+            // Apply defaults and limits for pagination
+            var safeSkip = skip < 0 ? 0 : skip;
+            var safeTake = take <= 0 ? 50 : Math.Min(take, 100);
+
+            logger.LogInformation(
+                "Fetching chat history for user {UserId} (skip: {Skip}, take: {Take})",
+                userId,
+                safeSkip,
+                safeTake);
+
+            var query = new GetUserChatsQuery(userId, safeSkip, safeTake);
+            var threads = await mediator.Send(query, ct).ConfigureAwait(false);
+
+            // Transform to match dashboard requirements
+            var chatHistory = threads.Select(t => new
+            {
+                id = t.Id,
+                gameId = t.GameId,
+                gameName = (string?)null, // TODO: Add game name lookup in future enhancement
+                lastMessage = t.Messages.LastOrDefault()?.Content ?? string.Empty,
+                timestamp = t.LastMessageAt,
+                messageCount = t.MessageCount
+            }).ToList();
+
+            return Results.Ok(new
+            {
+                chats = chatHistory,
+                totalCount = threads.Count
+            });
+        })
+        .WithName("GetMyChatHistory")
+        .RequireSession() // Issue #1446: Automatic session validation
+        .WithTags("ChatThreads")
+        .WithDescription("Retrieve user's chat history for dashboard display");
+
         // CHAT-THREAD-04: Add message to thread
         group.MapPost("/chat-threads/{threadId:guid}/messages", async (
             Guid threadId,

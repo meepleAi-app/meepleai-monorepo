@@ -7,8 +7,7 @@ using Api.Infrastructure;
 using Api.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.BoundedContexts.Authentication.TestHelpers;
-using DotNet.Testcontainers.Builders;
-using DotNet.Testcontainers.Containers;
+using Api.Tests.Infrastructure;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,7 +21,7 @@ namespace Api.Tests.Integration.Authentication;
 /// <summary>
 /// Integration tests for Admin 2FA Disable CQRS flow (Issue #575).
 /// Tests the complete workflow: admin authorization → 2FA disable → domain event → email notification.
-/// Uses Testcontainers with PostgreSQL for realistic database interactions.
+/// Uses SharedTestcontainersFixture for optimized performance and Docker hijack prevention (Issue #2031).
 /// </summary>
 /// <remarks>
 /// Tests Cover:
@@ -35,13 +34,17 @@ namespace Api.Tests.Integration.Authentication;
 ///
 /// Pattern: AAA (Arrange-Act-Assert), Testcontainers for PostgreSQL
 /// </remarks>
+[Collection("SharedTestcontainers")]
 [Trait("Category", "Integration")]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "Authentication")]
 [Trait("Issue", "575")]
+[Trait("Issue", "2031")]
 public sealed class AdminDisable2FAIntegrationTests : IAsyncLifetime
 {
-    private IContainer? _postgresContainer;
+    private readonly SharedTestcontainersFixture _fixture;
+    private string _isolatedDbConnectionString = string.Empty;
+    private string _databaseName = string.Empty;
     private MeepleAiDbContext? _dbContext;
     private IServiceProvider? _serviceProvider;
     private IMediator? _mediator;
@@ -50,8 +53,9 @@ public sealed class AdminDisable2FAIntegrationTests : IAsyncLifetime
 
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
-    public AdminDisable2FAIntegrationTests()
+    public AdminDisable2FAIntegrationTests(SharedTestcontainersFixture fixture)
     {
+        _fixture = fixture;
         _output = Console.WriteLine;
     }
 
@@ -59,25 +63,13 @@ public sealed class AdminDisable2FAIntegrationTests : IAsyncLifetime
     {
         _output("Initializing AdminDisable2FA integration test infrastructure...");
 
-        // Start isolated Postgres container
-        _postgresContainer = new ContainerBuilder()
-            .WithImage("postgres:16-alpine")
-            .WithEnvironment("POSTGRES_USER", "postgres")
-            .WithEnvironment("POSTGRES_PASSWORD", "postgres")
-            .WithEnvironment("POSTGRES_DB", "admin2fa_test")
-            .WithPortBinding(5432, true)
-            .WithWaitStrategy(Wait.ForUnixContainer()
-                .UntilCommandIsCompleted("pg_isready", "-U", "postgres"))
-            .Build();
-
-        await _postgresContainer.StartAsync(TestCancellationToken);
-        var containerPort = _postgresContainer.GetMappedPublicPort(5432);
-        var connectionString = $"Host=localhost;Port={containerPort};Database=admin2fa_test;Username=postgres;Password=postgres;";
-
-        _output($"PostgreSQL started at localhost:{containerPort}");
+        // Issue #2031: Migrated to SharedTestcontainersFixture for Docker hijack prevention and performance
+        _databaseName = $"test_admin2fa_{Guid.NewGuid():N}";
+        _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
+        _output($"Isolated database created: {_databaseName}");
 
         // Setup dependency injection
-        var enforcedBuilder = new NpgsqlConnectionStringBuilder(connectionString)
+        var enforcedBuilder = new NpgsqlConnectionStringBuilder(_isolatedDbConnectionString)
         {
             SslMode = SslMode.Disable,
             KeepAlive = 30,
@@ -140,9 +132,18 @@ public sealed class AdminDisable2FAIntegrationTests : IAsyncLifetime
             await asyncDisposable.DisposeAsync();
         }
 
-        if (_postgresContainer != null)
+        // Issue #2031: Use SharedTestcontainersFixture for cleanup
+        if (!string.IsNullOrEmpty(_databaseName))
         {
-            await _postgresContainer.DisposeAsync();
+            try
+            {
+                await _fixture.DropIsolatedDatabaseAsync(_databaseName);
+                _output($"Isolated database dropped: {_databaseName}");
+            }
+            catch (Exception ex)
+            {
+                _output($"Warning: Failed to drop database {_databaseName}: {ex.Message}");
+            }
         }
 
         _output("Test infrastructure disposed");

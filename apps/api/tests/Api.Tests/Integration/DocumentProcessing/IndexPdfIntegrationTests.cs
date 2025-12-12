@@ -12,8 +12,9 @@ using Api.Infrastructure.Entities;
 using Api.Services;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Api.Tests.Constants;
+using Api.Tests.Infrastructure;
 using DotNet.Testcontainers.Builders;
-using DotNet.Testcontainers.Containers;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,14 +23,15 @@ using Moq;
 using Npgsql;
 using Testcontainers.Qdrant;
 using Xunit;
-using Api.Tests.Constants;
 using AuthRole = Api.BoundedContexts.Authentication.Domain.ValueObjects.Role;
 
 namespace Api.Tests.Integration.DocumentProcessing;
 
 /// <summary>
+/// Uses SharedTestcontainersFixture for optimized performance and Docker hijack prevention (Issue #2031).
 /// Comprehensive integration tests for PDF indexing workflow (Issue #1690).
-/// Tests the complete indexing pipeline using Testcontainers for real infrastructure.
+/// Tests the complete indexing pipeline using SharedTestcontainersFixture and Qdrant container.
+/// Uses SharedTestcontainersFixture for PostgreSQL (Docker hijack prevention, Issue #2031).
 ///
 /// Test Categories:
 /// 1. Happy Path: Index valid PDF with all steps
@@ -40,36 +42,36 @@ namespace Api.Tests.Integration.DocumentProcessing;
 /// 6. Failure Recovery: Index with failure scenarios
 /// 7. Re-indexing: Re-index existing PDF
 ///
-/// Infrastructure: PostgreSQL + Qdrant (real containers via Testcontainers)
+/// Infrastructure: SharedTestcontainersFixture (PostgreSQL) + Qdrant (individual container)
 /// Coverage Target: ≥90% for IndexPdfCommandHandler
 /// Execution Time Target: <20s
 /// </summary>
+[Collection("SharedTestcontainers")]
+[Trait("Issue", "2031")]
 [Trait("Category", TestCategories.Integration)]
 public sealed class IndexPdfIntegrationTests : IAsyncLifetime
 {
-    private IContainer? _postgresContainer;
+    private readonly SharedTestcontainersFixture _fixture;
+    private string _isolatedDbConnectionString = string.Empty;
+    private string _databaseName = string.Empty;
     private QdrantContainer? _qdrantContainer;
     private MeepleAiDbContext? _dbContext;
     private IServiceProvider? _serviceProvider;
 
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
+    public IndexPdfIntegrationTests(SharedTestcontainersFixture fixture)
+    {
+        _fixture = fixture;
+    }
+
     public async ValueTask InitializeAsync()
     {
-        // Start PostgreSQL container
-        _postgresContainer = new ContainerBuilder()
-            .WithImage("postgres:16-alpine")
-            .WithEnvironment("POSTGRES_USER", "postgres")
-            .WithEnvironment("POSTGRES_PASSWORD", "postgres")
-            .WithEnvironment("POSTGRES_DB", "pdf_index_test")
-            .WithPortBinding(5432, true)
-            .WithWaitStrategy(Wait.ForUnixContainer()
-                .UntilCommandIsCompleted("pg_isready", "-U", "postgres"))
-            .Build();
+        // Issue #2031: Migrated PostgreSQL to SharedTestcontainersFixture for Docker hijack prevention
+        _databaseName = $"test_indexpdf_{Guid.NewGuid():N}";
+        _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
-        await _postgresContainer.StartAsync(TestCancellationToken);
-
-        // Start Qdrant container
+        // Start Qdrant container (kept separate - not in SharedTestcontainersFixture)
         _qdrantContainer = new QdrantBuilder()
             .WithImage("qdrant/qdrant:v1.7.4")
             .WithPortBinding(6333, true)
@@ -80,9 +82,7 @@ public sealed class IndexPdfIntegrationTests : IAsyncLifetime
         await _qdrantContainer.StartAsync(TestCancellationToken);
 
         // Setup services
-        var postgresPort = _postgresContainer.GetMappedPublicPort(5432);
         var qdrantPort = _qdrantContainer.GetMappedPublicPort(6333);
-        var connectionString = $"Host=localhost;Port={postgresPort};Database=pdf_index_test;Username=postgres;Password=postgres;";
         var qdrantUrl = $"http://localhost:{qdrantPort}";
 
         var services = new ServiceCollection();
@@ -90,7 +90,7 @@ public sealed class IndexPdfIntegrationTests : IAsyncLifetime
 
         services.AddDbContext<MeepleAiDbContext>(options =>
         {
-            options.UseNpgsql(connectionString);
+            options.UseNpgsql(_isolatedDbConnectionString);
             options.ConfigureWarnings(w =>
                 w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
         });
@@ -142,12 +142,20 @@ public sealed class IndexPdfIntegrationTests : IAsyncLifetime
         else
             (_serviceProvider as IDisposable)?.Dispose();
 
-        if (_postgresContainer != null)
+        // Issue #2031: Use SharedTestcontainersFixture for PostgreSQL cleanup
+        if (!string.IsNullOrEmpty(_databaseName))
         {
-            await _postgresContainer.StopAsync(TestCancellationToken);
-            await _postgresContainer.DisposeAsync();
+            try
+            {
+                await _fixture.DropIsolatedDatabaseAsync(_databaseName);
+            }
+            catch
+            {
+                // Ignore cleanup errors
+            }
         }
 
+        // Qdrant container still managed individually
         if (_qdrantContainer != null)
         {
             await _qdrantContainer.StopAsync(TestCancellationToken);

@@ -12,6 +12,8 @@ using Api.Services;
 using Api.Services.Pdf;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Api.Tests.Constants;
+using Api.Tests.Infrastructure;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using FluentAssertions;
@@ -23,7 +25,6 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using StackExchange.Redis;
 using Xunit;
-using Api.Tests.Constants;
 using AuthRole = Api.BoundedContexts.Authentication.Domain.ValueObjects.Role;
 
 namespace Api.Tests.Integration;
@@ -31,17 +32,20 @@ namespace Api.Tests.Integration;
 /// <summary>
 /// Integration tests for PDF upload quota enforcement.
 /// Tests the complete quota system: tracking, limits, tier-based quotas, admin bypass.
-/// Uses Testcontainers for PostgreSQL and Redis.
+/// Uses SharedTestcontainersFixture for optimized performance and Docker hijack prevention (Issue #2031).
 ///
 /// Note: Tests run sequentially (via [Collection] attribute) to avoid Redis state
-/// conflicts between tests. Each test creates its own containers, but Redis state
-/// persists within a single container lifecycle, so parallel execution could cause
-/// unpredictable quota counts.
+/// conflicts between tests. Redis state persists within a single container lifecycle,
+/// so parallel execution could cause unpredictable quota counts.
 /// </summary>
+[Collection("SharedTestcontainers")]
 [Trait("Category", TestCategories.Integration)]
+[Trait("Issue", "2031")]
 public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
 {
-    private IContainer? _postgresContainer;
+    private readonly SharedTestcontainersFixture _fixture;
+    private string _isolatedDbConnectionString = string.Empty;
+    private string _databaseName = string.Empty;
     private IContainer? _redisContainer;
     private MeepleAiDbContext? _dbContext;
     private IServiceProvider? _serviceProvider;
@@ -50,41 +54,20 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
 
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
+    public PdfUploadQuotaEnforcementIntegrationTests(SharedTestcontainersFixture fixture)
+    {
+        _fixture = fixture;
+    }
+
     public async ValueTask InitializeAsync()
     {
-        // Prefer external infra if provided
-        var externalConn = Environment.GetEnvironmentVariable("TEST_POSTGRES_CONNSTRING");
-        var externalRedis = Environment.GetEnvironmentVariable("TEST_REDIS_CONNSTRING");
-        string connectionString;
+        // Issue #2031: Migrated to SharedTestcontainersFixture for Docker hijack prevention and performance
+        _databaseName = "test_quota";
+        _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
+
+        // Setup Redis container (not migrated - Redis stays individual container)
         string redisConnectionString;
-
-        if (!string.IsNullOrWhiteSpace(externalConn))
-        {
-            var builder = new Npgsql.NpgsqlConnectionStringBuilder(externalConn)
-            {
-                Database = "quota_test",
-                SslMode = Npgsql.SslMode.Disable,
-                KeepAlive = 30,
-                Pooling = false
-            };
-            connectionString = builder.ConnectionString;
-        }
-        else
-        {
-            _postgresContainer = new ContainerBuilder()
-                .WithImage("postgres:16-alpine")
-                .WithEnvironment("POSTGRES_USER", "postgres")
-                .WithEnvironment("POSTGRES_PASSWORD", "postgres")
-                .WithEnvironment("POSTGRES_DB", "quota_test")
-                .WithPortBinding(5432, true)
-                .WithWaitStrategy(Wait.ForUnixContainer()
-                    .UntilCommandIsCompleted("pg_isready", "-U", "postgres"))
-                .Build();
-
-            await _postgresContainer.StartAsync(TestCancellationToken);
-            var postgresPort = _postgresContainer.GetMappedPublicPort(5432);
-            connectionString = $"Host=localhost;Port={postgresPort};Database=quota_test;Username=postgres;Password=postgres;Ssl Mode=Disable;Trust Server Certificate=true;KeepAlive=30;Pooling=false;";
-        }
+        var externalRedis = Environment.GetEnvironmentVariable("TEST_REDIS_CONNSTRING");
 
         if (!string.IsNullOrWhiteSpace(externalRedis))
         {
@@ -109,7 +92,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
 
         services.AddDbContext<MeepleAiDbContext>(options =>
         {
-            options.UseNpgsql(connectionString);
+            options.UseNpgsql(_isolatedDbConnectionString);
             options.ConfigureWarnings(w =>
                 w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
         });
@@ -156,10 +139,17 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         else
             (_serviceProvider as IDisposable)?.Dispose();
 
-        if (_postgresContainer != null)
+        // Issue #2031: Use SharedTestcontainersFixture for PostgreSQL cleanup
+        if (!string.IsNullOrEmpty(_databaseName))
         {
-            await _postgresContainer.StopAsync(TestCancellationToken);
-            await _postgresContainer.DisposeAsync();
+            try
+            {
+                await _fixture.DropIsolatedDatabaseAsync(_databaseName);
+            }
+            catch
+            {
+                // Ignore cleanup errors
+            }
         }
 
         if (_redisContainer != null)

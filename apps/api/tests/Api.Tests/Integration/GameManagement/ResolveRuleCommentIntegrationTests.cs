@@ -1,10 +1,9 @@
+using Api.Tests.Infrastructure;
 using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.GameManagement.Application.Handlers;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.SharedKernel.Application.Services;
-using DotNet.Testcontainers.Builders;
-using DotNet.Testcontainers.Containers;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -31,11 +30,16 @@ namespace Api.Tests.Integration.GameManagement;
 /// Infrastructure: PostgreSQL (real DB via Testcontainers)
 /// Coverage Target: ≥90% for ResolveRuleCommentCommandHandler
 /// Execution Time Target: <60s
+/// Uses SharedTestcontainersFixture for optimized performance and Docker hijack prevention (Issue #2031).
 /// </summary>
+[Collection("SharedTestcontainers")]
+[Trait("Issue", "2031")]
 [Trait("Category", TestCategories.Integration)]
 public sealed class ResolveRuleCommentIntegrationTests : IAsyncLifetime
 {
-    private IContainer? _postgresContainer;
+    private readonly SharedTestcontainersFixture _fixture;
+    private string _isolatedDbConnectionString = string.Empty;
+    private string _databaseName = string.Empty;
     private MeepleAiDbContext? _dbContext;
     private IServiceProvider? _serviceProvider;
     private Guid _testUserId;
@@ -44,47 +48,23 @@ public sealed class ResolveRuleCommentIntegrationTests : IAsyncLifetime
 
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
+    public ResolveRuleCommentIntegrationTests(SharedTestcontainersFixture fixture)
+    {
+        _fixture = fixture;
+    }
+
     public async ValueTask InitializeAsync()
     {
-        var externalConn = Environment.GetEnvironmentVariable("TEST_POSTGRES_CONNSTRING");
-        string connectionString;
-
-        if (!string.IsNullOrWhiteSpace(externalConn))
-        {
-            var builder = new NpgsqlConnectionStringBuilder(externalConn)
-            {
-                Database = "resolve_comment_test",
-                SslMode = SslMode.Disable,
-                KeepAlive = 30,
-                Pooling = false
-            };
-            connectionString = builder.ConnectionString;
-        }
-        else
-        {
-            // Start PostgreSQL container
-            _postgresContainer = new ContainerBuilder()
-                .WithImage("postgres:16-alpine")
-                .WithEnvironment("POSTGRES_USER", "postgres")
-                .WithEnvironment("POSTGRES_PASSWORD", "postgres")
-                .WithEnvironment("POSTGRES_DB", "resolve_comment_test")
-                .WithPortBinding(5432, true)
-                .WithWaitStrategy(Wait.ForUnixContainer()
-                    .UntilCommandIsCompleted("pg_isready", "-U", "postgres"))
-                .Build();
-
-            await _postgresContainer.StartAsync(TestCancellationToken);
-
-            var postgresPort = _postgresContainer.GetMappedPublicPort(5432);
-            connectionString = $"Host=localhost;Port={postgresPort};Database=resolve_comment_test;Username=postgres;Password=postgres;Ssl Mode=Disable;Trust Server Certificate=true;KeepAlive=30;Pooling=false;";
-        }
+        // Issue #2031: Migrated to SharedTestcontainersFixture for Docker hijack prevention and performance
+        _databaseName = $"test_resolvecomment_{Guid.NewGuid():N}";
+        _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
         var services = new ServiceCollection();
         services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
 
         services.AddDbContext<MeepleAiDbContext>(options =>
         {
-            options.UseNpgsql(connectionString);
+            options.UseNpgsql(_isolatedDbConnectionString);
             options.ConfigureWarnings(w =>
                 w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
         });
@@ -120,10 +100,17 @@ public sealed class ResolveRuleCommentIntegrationTests : IAsyncLifetime
         else
             (_serviceProvider as IDisposable)?.Dispose();
 
-        if (_postgresContainer != null)
+        // Issue #2031: Use SharedTestcontainersFixture for cleanup
+        if (!string.IsNullOrEmpty(_databaseName))
         {
-            await _postgresContainer.StopAsync(TestCancellationToken);
-            await _postgresContainer.DisposeAsync();
+            try
+            {
+                await _fixture.DropIsolatedDatabaseAsync(_databaseName);
+            }
+            catch
+            {
+                // Ignore cleanup errors
+            }
         }
     }
 

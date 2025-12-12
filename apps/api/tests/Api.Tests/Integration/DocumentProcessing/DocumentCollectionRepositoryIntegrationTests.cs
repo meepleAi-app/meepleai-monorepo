@@ -9,8 +9,7 @@ using Api.Infrastructure.Entities;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
-using DotNet.Testcontainers.Builders;
-using DotNet.Testcontainers.Containers;
+using Api.Tests.Infrastructure;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,18 +20,24 @@ using Xunit;
 namespace Api.Tests.Integration.DocumentProcessing;
 
 /// <summary>
+/// Uses SharedTestcontainersFixture for optimized performance and Docker hijack prevention (Issue #2031).
 /// Integration tests for DocumentCollectionRepository.
 /// Tests CRUD operations and query methods with real PostgreSQL database.
+/// Uses SharedTestcontainersFixture for optimized performance and Docker hijack prevention (Issue #2031).
 /// Issue #2051: Multi-document collection persistence
 /// </summary>
+[Collection("SharedTestcontainers")]
+[Trait("Issue", "2031")]
 [Trait("Category", TestCategories.Integration)]
+[Trait("Issue", "2051")]
 public sealed class DocumentCollectionRepositoryIntegrationTests : IAsyncLifetime
 {
-    private IContainer? _postgresContainer;
+    private readonly SharedTestcontainersFixture _fixture;
+    private string _isolatedDbConnectionString = string.Empty;
+    private string _databaseName = string.Empty;
     private MeepleAiDbContext? _dbContext;
     private IDocumentCollectionRepository? _repository;
     private IUnitOfWork? _unitOfWork;
-    private string? _connectionString;
 
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
@@ -43,30 +48,22 @@ public sealed class DocumentCollectionRepositoryIntegrationTests : IAsyncLifetim
     private static readonly Guid TestPdfId1 = new("30000000-0000-0000-0000-000000000001");
     private static readonly Guid TestPdfId2 = new("30000000-0000-0000-0000-000000000002");
 
+    public DocumentCollectionRepositoryIntegrationTests(SharedTestcontainersFixture fixture)
+    {
+        _fixture = fixture;
+    }
+
     public async ValueTask InitializeAsync()
     {
-        // Start PostgreSQL container
-        _postgresContainer = new ContainerBuilder()
-            .WithImage("postgres:16-alpine")
-            .WithEnvironment("POSTGRES_USER", "postgres")
-            .WithEnvironment("POSTGRES_PASSWORD", "postgres")
-            .WithEnvironment("POSTGRES_DB", "collection_repo_test")
-            .WithPortBinding(5432, true)
-            .WithWaitStrategy(Wait.ForUnixContainer()
-                .UntilCommandIsCompleted("pg_isready", "-U", "postgres"))
-            .Build();
-
-        await _postgresContainer.StartAsync(TestCancellationToken);
-
-        // Setup services
-        var postgresPort = _postgresContainer.GetMappedPublicPort(5432);
-        _connectionString = $"Host=localhost;Port={postgresPort};Database=collection_repo_test;Username=postgres;Password=postgres;";
+        // Issue #2031: Migrated to SharedTestcontainersFixture for Docker hijack prevention and performance
+        _databaseName = $"test_docrepo_{Guid.NewGuid():N}";
+        _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
         var services = new ServiceCollection();
         services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
         services.AddDbContext<MeepleAiDbContext>(options =>
         {
-            options.UseNpgsql(_connectionString);
+            options.UseNpgsql(_isolatedDbConnectionString);
             options.ConfigureWarnings(w =>
                 w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
         });
@@ -74,6 +71,9 @@ public sealed class DocumentCollectionRepositoryIntegrationTests : IAsyncLifetim
         services.AddScoped<IDocumentCollectionRepository, DocumentCollectionRepository>();
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
         services.AddScoped<IDomainEventCollector, DomainEventCollector>();
+
+        // MediatR (required by MeepleAiDbContext)
+        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
 
         var serviceProvider = services.BuildServiceProvider();
         _dbContext = serviceProvider.GetRequiredService<MeepleAiDbContext>();
@@ -102,10 +102,17 @@ public sealed class DocumentCollectionRepositoryIntegrationTests : IAsyncLifetim
     {
         _dbContext?.Dispose();
 
-        if (_postgresContainer != null)
+        // Issue #2031: Use SharedTestcontainersFixture for cleanup
+        if (!string.IsNullOrEmpty(_databaseName))
         {
-            await _postgresContainer.StopAsync(TestCancellationToken);
-            await _postgresContainer.DisposeAsync();
+            try
+            {
+                await _fixture.DropIsolatedDatabaseAsync(_databaseName);
+            }
+            catch
+            {
+                // Ignore cleanup errors
+            }
         }
     }
 
@@ -304,9 +311,15 @@ public sealed class DocumentCollectionRepositoryIntegrationTests : IAsyncLifetim
     {
         // Arrange
         var user2Id = new Guid("10000000-0000-0000-0000-000000000002");
+
+        var game1Id = Guid.NewGuid();
+        var game1 = new GameEntity { Id = game1Id, Name = "Test Game 1 for Ordering" };
+        _dbContext!.Games.Add(game1);
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
+
         var collection1 = new DocumentCollection(
             Guid.NewGuid(),
-            Guid.NewGuid(),
+            game1Id,
             new CollectionName("First Collection"),
             user2Id);
 
@@ -315,14 +328,19 @@ public sealed class DocumentCollectionRepositoryIntegrationTests : IAsyncLifetim
 
         await Task.Delay(100); // Ensure different timestamps
 
+        var game2Id = Guid.NewGuid();
+        var game2 = new GameEntity { Id = game2Id, Name = "Test Game 2 for Ordering" };
+        _dbContext!.Games.Add(game2);
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
+
         var collection2 = new DocumentCollection(
             Guid.NewGuid(),
-            Guid.NewGuid(),
+            game2Id,
             new CollectionName("Second Collection"),
             user2Id);
 
-        await _repository.AddAsync(collection2, TestCancellationToken);
-        await _unitOfWork.SaveChangesAsync(TestCancellationToken);
+        await _repository!.AddAsync(collection2, TestCancellationToken);
+        await _unitOfWork!.SaveChangesAsync(TestCancellationToken);
 
         // Act
         var results = await _repository.FindByUserIdAsync(user2Id, TestCancellationToken);
@@ -383,10 +401,10 @@ public sealed class DocumentCollectionRepositoryIntegrationTests : IAsyncLifetim
     [Fact]
     public async Task AddAsync_CollectionWithDocuments_PersistsDocuments()
     {
-        // Arrange
+        // Arrange - Use TestGameId1 to match TestPdfId1 and TestPdfId2
         var collection = new DocumentCollection(
             Guid.NewGuid(),
-            Guid.NewGuid(),
+            TestGameId1,
             new CollectionName("Collection with Docs"),
             TestUserId);
 
@@ -407,10 +425,10 @@ public sealed class DocumentCollectionRepositoryIntegrationTests : IAsyncLifetim
     [Fact]
     public async Task UpdateAsync_RemoveDocument_PersistsRemoval()
     {
-        // Arrange
+        // Arrange - Use TestGameId1 to match TestPdfId1 and TestPdfId2
         var collection = new DocumentCollection(
             Guid.NewGuid(),
-            Guid.NewGuid(),
+            TestGameId1,
             new CollectionName("For Removal"),
             TestUserId);
 
@@ -440,10 +458,10 @@ public sealed class DocumentCollectionRepositoryIntegrationTests : IAsyncLifetim
     [Fact]
     public async Task UpdateAsync_ConcurrentUpdates_LastWriteWins()
     {
-        // Arrange
+        // Arrange - Use TestGameId2 (seeded game)
         var collection = new DocumentCollection(
             Guid.NewGuid(),
-            Guid.NewGuid(),
+            TestGameId2,
             new CollectionName("Concurrent Test"),
             TestUserId);
 
@@ -477,10 +495,10 @@ public sealed class DocumentCollectionRepositoryIntegrationTests : IAsyncLifetim
     [Fact]
     public async Task AddAsync_MaxDocuments_EnforcesByDomain()
     {
-        // Arrange
+        // Arrange - Use TestGameId2 (seeded game)
         var collection = new DocumentCollection(
             Guid.NewGuid(),
-            Guid.NewGuid(),
+            TestGameId2,
             new CollectionName("Max Docs Test"),
             TestUserId);
 
@@ -551,20 +569,33 @@ public sealed class DocumentCollectionRepositoryIntegrationTests : IAsyncLifetim
         _dbContext.Games.Add(game1);
         _dbContext.Games.Add(game2);
 
-        // Create test PDF document
-        var testPdf = new PdfDocumentEntity
+        // Create test PDF documents
+        var testPdf1 = new PdfDocumentEntity
         {
             Id = TestPdfId1,
             GameId = TestGameId1,
-            FileName = "test.pdf",
-            FilePath = "/test/path/test.pdf",
+            FileName = "test1.pdf",
+            FilePath = "/test/path/test1.pdf",
             FileSizeBytes = 5000,
             PageCount = 10,
             ProcessingStatus = "completed",
             UploadedAt = DateTime.UtcNow,
             UploadedByUserId = TestUserId
         };
-        _dbContext.PdfDocuments.Add(testPdf);
+        var testPdf2 = new PdfDocumentEntity
+        {
+            Id = TestPdfId2,
+            GameId = TestGameId1,
+            FileName = "test2.pdf",
+            FilePath = "/test/path/test2.pdf",
+            FileSizeBytes = 5000,
+            PageCount = 10,
+            ProcessingStatus = "completed",
+            UploadedAt = DateTime.UtcNow,
+            UploadedByUserId = TestUserId
+        };
+        _dbContext.PdfDocuments.Add(testPdf1);
+        _dbContext.PdfDocuments.Add(testPdf2);
 
         // Create test collection
         var testCollection = new Api.Infrastructure.Entities.DocumentCollectionEntity

@@ -61,6 +61,35 @@ public class AlertRule
         return rule;
     }
 
+    /// <summary>
+    /// Reconstitute an AlertRule from persistence (repository use only)
+    /// </summary>
+    public static AlertRule Reconstitute(
+        Guid id,
+        string name,
+        string alertType,
+        AlertSeverity severity,
+        AlertThreshold threshold,
+        AlertDuration duration,
+        bool isEnabled,
+        string? description,
+        string? metadata,
+        DateTime createdAt,
+        DateTime updatedAt,
+        string createdBy,
+        string updatedBy)
+    {
+        return new AlertRule(id, name, alertType, severity, threshold, duration, createdBy)
+        {
+            Description = description,
+            IsEnabled = isEnabled,
+            Metadata = metadata,
+            CreatedAt = createdAt,
+            UpdatedAt = updatedAt,
+            UpdatedBy = updatedBy
+        };
+    }
+
     public void Update(string name, AlertSeverity severity, AlertThreshold threshold, AlertDuration duration, string updatedBy, string? description = null)
     {
         Name = name;

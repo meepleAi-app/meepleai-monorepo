@@ -26,5 +26,10 @@ public interface IChatThreadRepository : IRepository<ChatThread, Guid>
     /// <summary>
     /// Finds recent threads (ordered by last message).
     /// </summary>
+    /// <summary>
+    /// Counts total threads for a user (for pagination).
+    /// </summary>
+    Task<int> CountByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<ChatThread>> GetRecentAsync(int limit = 20, CancellationToken cancellationToken = default);
 }

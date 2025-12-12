@@ -235,6 +235,7 @@ public static class KnowledgeBaseEndpoints
         .WithTags("ChatThreads");
 
         // CHAT-HISTORY-01: Get user's chat history for dashboard (Issue #2026)
+        // Code Review: Optimized with lightweight DTO, correct totalCount, input validation
         group.MapGet("/knowledge-base/my-chats", async (
             [Microsoft.AspNetCore.Mvc.FromQuery] int skip,
             [Microsoft.AspNetCore.Mvc.FromQuery] int take,
@@ -243,14 +244,29 @@ public static class KnowledgeBaseEndpoints
             ILogger<Program> logger,
             CancellationToken ct = default) =>
         {
+            // Pagination constants
+            const int DEFAULT_PAGE_SIZE = 50;
+            const int MAX_PAGE_SIZE = 100;
+            const int MAX_SKIP = 10000; // Prevent DoS via excessive skip
+
             // Session validated by RequireSessionFilter
-            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+            var session = context.Items[nameof(SessionStatusDto)] as SessionStatusDto;
+            if (session?.User?.Id is not Guid userId)
+            {
+                logger.LogWarning("GetMyChatHistory called without valid session");
+                return Results.Unauthorized();
+            }
 
-            var userId = session!.User!.Id;
+            // Apply safe defaults and limits for pagination
+            var safeSkip = skip < 0 ? 0 : Math.Min(skip, MAX_SKIP);
+            var safeTake = take <= 0 ? DEFAULT_PAGE_SIZE : Math.Min(take, MAX_PAGE_SIZE);
 
-            // Apply defaults and limits for pagination
-            var safeSkip = skip < 0 ? 0 : skip;
-            var safeTake = take <= 0 ? 50 : Math.Min(take, 100);
+            if (skip > MAX_SKIP)
+            {
+                logger.LogWarning(
+                    "User {UserId} attempted excessive skip ({Skip}), capped at {Max}",
+                    userId, skip, MAX_SKIP);
+            }
 
             logger.LogInformation(
                 "Fetching chat history for user {UserId} (skip: {Skip}, take: {Take})",
@@ -258,30 +274,34 @@ public static class KnowledgeBaseEndpoints
                 safeSkip,
                 safeTake);
 
-            var query = new GetUserChatsQuery(userId, safeSkip, safeTake);
-            var threads = await mediator.Send(query, ct).ConfigureAwait(false);
-
-            // Transform to match dashboard requirements
-            var chatHistory = threads.Select(t => new
+            try
             {
-                id = t.Id,
-                gameId = t.GameId,
-                gameName = (string?)null, // TODO: Add game name lookup in future enhancement
-                lastMessage = t.Messages.LastOrDefault()?.Content ?? string.Empty,
-                timestamp = t.LastMessageAt,
-                messageCount = t.MessageCount
-            }).ToList();
+                var query = new GetMyChatHistoryQuery(userId, safeSkip, safeTake);
+                var result = await mediator.Send(query, ct).ConfigureAwait(false);
 
-            return Results.Ok(new
+                // Match project convention: use 'threads' and 'count' (not 'chats' and 'totalCount')
+                return Results.Ok(new
+                {
+                    threads = result.Chats,
+                    count = result.TotalCount,
+                    page = new
+                    {
+                        skip = safeSkip,
+                        take = safeTake,
+                        hasMore = safeSkip + result.Chats.Count < result.TotalCount
+                    }
+                });
+            }
+            catch (Exception ex)
             {
-                chats = chatHistory,
-                totalCount = threads.Count
-            });
+                logger.LogError(ex, "Failed to fetch chat history for user {UserId}", userId);
+                return Results.Problem("Failed to load chat history");
+            }
         })
         .WithName("GetMyChatHistory")
         .RequireSession() // Issue #1446: Automatic session validation
         .WithTags("ChatThreads")
-        .WithDescription("Retrieve user's chat history for dashboard display");
+        .WithDescription("Retrieve user's chat history for dashboard display (optimized, lightweight)");
 
         // CHAT-THREAD-04: Add message to thread
         group.MapPost("/chat-threads/{threadId:guid}/messages", async (

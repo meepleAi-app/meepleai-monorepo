@@ -347,6 +347,7 @@ v1Api.MapUserProfileEndpoints();
 v1Api.MapGameEndpoints();
 v1Api.MapAiEndpoints();
 v1Api.MapPdfEndpoints();
+v1Api.MapDocumentCollectionEndpoints();
 v1Api.MapRuleSpecEndpoints();
 
 // Issue #1439: Split AdminEndpoints into focused endpoint files

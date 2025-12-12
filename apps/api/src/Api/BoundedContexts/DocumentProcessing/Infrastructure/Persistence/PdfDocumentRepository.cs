@@ -101,6 +101,11 @@ public class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
             ? LanguageCode.English
             : new LanguageCode(entity.Language);
 
+        // Issue #2051: Convert string to DocumentType Value Object
+        var documentType = string.IsNullOrWhiteSpace(entity.DocumentType)
+            ? DocumentType.Base
+            : new DocumentType(entity.DocumentType);
+
         var doc = new PdfDocument(
             id: entity.Id,
             gameId: entity.GameId,
@@ -108,7 +113,10 @@ public class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
             filePath: entity.FilePath,
             fileSize: fileSize,
             uploadedByUserId: entity.UploadedByUserId,
-            language: language
+            language: language,
+            collectionId: entity.CollectionId,
+            documentType: documentType,
+            sortOrder: entity.SortOrder
         );
 
         // Override properties from DB
@@ -146,7 +154,10 @@ public class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
             ProcessedAt = domain.ProcessedAt,
             PageCount = domain.PageCount,
             ProcessingError = domain.ProcessingError,
-            Language = domain.Language.Value // Issue #2029: Extract string from Value Object
+            Language = domain.Language.Value, // Issue #2029: Extract string from Value Object
+            CollectionId = domain.CollectionId, // Issue #2051
+            DocumentType = domain.DocumentType.Value, // Issue #2051: Extract string from Value Object
+            SortOrder = domain.SortOrder // Issue #2051
         };
     }
 }

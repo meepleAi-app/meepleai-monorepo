@@ -316,14 +316,13 @@ cd apps/web && pnpm dev                                        # T3 (3000)
 
 ## Key Docs
 
-**See [docs/INDEX.md](docs/INDEX.md) for complete navigation** (~90 docs consolidated from 140+)
+**See [docs/INDEX.md](docs/INDEX.md) for complete navigation** (~189 docs - professionally maintained)
 
-**Documentation Consolidation**: ✅ **Complete** (Phase 1-5 done, 2025-12-08)
-- **Result**: 140+ → 90 files (-36% reduction)
-- **Consolidated**: 8 comprehensive guides (testing, Docker, design, security, infra, monitoring, workflows)
-- **Deleted**: 50+ obsolete files (no archive maintained)
-- **Standardized**: 100% kebab-case naming compliance
-- **Summary**: [docs/CONSOLIDATION-FINAL-SUMMARY.md](docs/CONSOLIDATION-FINAL-SUMMARY.md)
+**Documentation Consolidation**: ✅ **Complete** (Final cleanup 2025-12-12)
+- **Result**: ~280 → 189 files (-32.5% reduction, 91 files deleted)
+- **Removed**: Historical reports, duplicates, obsolete plans, completed implementations
+- **Retained**: Active guides, ADRs, runbooks, architecture, security, testing
+- **Summary**: [docs/CONSOLIDATION-EXECUTION-2025-12-12.md](docs/CONSOLIDATION-EXECUTION-2025-12-12.md)
 
 | Doc | Path |
 |-----|------|
@@ -337,6 +336,7 @@ cd apps/web && pnpm dev                                        # T3 (3000)
 | **Environment Variables** | `docs/06-security/environment-variables-production.md` |
 | **OAuth Security** | `docs/06-security/oauth-security.md` |
 | **Testing** | `docs/02-development/testing/test-writing-guide.md` |
+| **User Testing** | `docs/02-development/testing/user-testing-guide.md` |
 | **Shadcn/UI** | `docs/04-frontend/shadcn-ui-installation.md` |
 | **AI Provider Config** | `docs/03-api/ai-provider-configuration.md`, `docs/02-development/ai-provider-integration.md` |
 | **Traefik Proxy** | `infra/traefik/README.md`, `infra/traefik/TESTING.md` (Issue #703) |
@@ -443,10 +443,10 @@ bash tools/cleanup-caches.sh                # Run
 ---
 
 **Version**: 1.0-rc (DDD 100%)
-**Last Updated**: 2025-12-07
-**Last Verified**: 2025-12-07 (against codebase)
+**Last Updated**: 2025-12-12
+**Last Verified**: 2025-12-12 (against codebase)
 **Owner**: Engineering Lead
 
 ---
 
-**Note**: For complete documentation index see [docs/INDEX.md](docs/INDEX.md). Docker services and ports updated to reflect full observability stack (17 services total: +cAdvisor, +node-exporter for infrastructure monitoring - Issue #705).
+**Note**: For complete documentation index see [docs/INDEX.md](docs/INDEX.md). Documentation consolidated 2025-12-12: 91 obsolete files removed, 189 active docs maintained. Docker services and ports updated to reflect full observability stack (17 services total).

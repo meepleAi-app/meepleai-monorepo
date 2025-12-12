@@ -2,6 +2,7 @@ using Api.BoundedContexts.Administration.Domain.Repositories;
 using Api.BoundedContexts.Administration.Domain.Services;
 using Api.BoundedContexts.Administration.Infrastructure.External;
 using Api.BoundedContexts.Administration.Infrastructure.Persistence;
+using Api.BoundedContexts.Administration.Infrastructure.Repositories;
 using Api.BoundedContexts.Administration.Infrastructure.Scheduling;
 using Api.BoundedContexts.Administration.Infrastructure.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -18,6 +19,8 @@ public static class AdministrationServiceExtensions
     {
         // Repositories
         services.AddScoped<IAlertRepository, AlertRepository>();
+        services.AddScoped<IAlertConfigurationRepository, AlertConfigurationRepository>();  // Issue #2112: Missing DI registration
+        services.AddScoped<IAlertRuleRepository, AlertRuleRepository>();  // Issue #2112: Missing DI registration
         services.AddScoped<IAuditLogRepository, AuditLogRepository>();
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
 
@@ -47,9 +50,10 @@ public static class AdministrationServiceExtensions
             q.UseInMemoryStore(); // Use in-memory for alpha; can switch to DB persistence later
 
             // Register report generation job
+            // Issue #2112: Job must be durable if defined without triggers
             q.AddJob<GenerateReportJob>(opts => opts
                 .WithIdentity("report-job-template", "reports")
-                .StoreDurably(false));
+                .StoreDurably(true));  // Must be true - job has no default trigger
         });
 
         services.AddQuartzHostedService(options =>

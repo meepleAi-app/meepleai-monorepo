@@ -27,7 +27,9 @@ public class MeepleAiDbContextFactory : IDesignTimeDbContextFactory<MeepleAiDbCo
         var optionsBuilder = new DbContextOptionsBuilder<MeepleAiDbContext>();
 
         // Issue #921: Allow dummy connection for migrations without real DB
+        // Issue #2112: Try both uppercase (Windows) and camelCase (Linux CI) for env var
         var connectionString = Environment.GetEnvironmentVariable("CONNECTIONSTRINGS__POSTGRES")
+            ?? Environment.GetEnvironmentVariable("ConnectionStrings__Postgres")  // Linux CI compatibility
             ?? Environment.GetEnvironmentVariable("POSTGRES_CONNECTION_STRING")
             ?? "Host=localhost;Database=meepleai_migrations;Username=postgres;Password=postgres"; // Dummy for migrations
 

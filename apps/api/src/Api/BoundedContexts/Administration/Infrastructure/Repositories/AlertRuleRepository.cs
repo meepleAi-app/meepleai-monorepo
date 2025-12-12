@@ -61,7 +61,22 @@ public class AlertRuleRepository : IAlertRuleRepository
         if (entity != null) { _context.AlertRules.Remove(entity); await _context.SaveChangesAsync(ct); }
     }
     
-    private static AlertRule MapToDomain(AlertRuleEntity e) => AlertRule.Create(e.Name, e.AlertType, AlertSeverityExtensions.FromString(e.Severity), new AlertThreshold(e.Threshold, e.ThresholdUnit), new AlertDuration(e.DurationMinutes), e.CreatedBy, e.Description);
+    private static AlertRule MapToDomain(AlertRuleEntity e) => 
+        AlertRule.Reconstitute(
+            e.Id,
+            e.Name,
+            e.AlertType,
+            AlertSeverityExtensions.FromString(e.Severity),
+            new AlertThreshold(e.Threshold, e.ThresholdUnit),
+            new AlertDuration(e.DurationMinutes),
+            e.IsEnabled,
+            e.Description,
+            e.Metadata,
+            e.CreatedAt,
+            e.UpdatedAt,
+            e.CreatedBy,
+            e.UpdatedBy
+        );
     
     private static AlertRuleEntity MapToEntity(AlertRule r) => new() { Id = r.Id, Name = r.Name, AlertType = r.AlertType, Severity = r.Severity.ToDisplayString(), Description = r.Description, Threshold = r.Threshold.Value, ThresholdUnit = r.Threshold.Unit, DurationMinutes = r.Duration.Minutes, IsEnabled = r.IsEnabled, Metadata = r.Metadata, CreatedAt = r.CreatedAt, UpdatedAt = r.UpdatedAt, CreatedBy = r.CreatedBy, UpdatedBy = r.UpdatedBy };
 }

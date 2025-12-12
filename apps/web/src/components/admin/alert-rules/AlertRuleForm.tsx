@@ -20,6 +20,14 @@ import {
 } from '@/lib/api/schemas/alert-rules.schemas';
 import { alertRulesApi } from '@/lib/api/alert-rules.api';
 
+// Severity options with visual indicators
+const SEVERITY_OPTIONS = [
+  { value: 'Info', label: 'Info', colorClass: 'text-blue-600' },
+  { value: 'Warning', label: 'Warning', colorClass: 'text-yellow-600' },
+  { value: 'Error', label: 'Error', colorClass: 'text-orange-600' },
+  { value: 'Critical', label: 'Critical', colorClass: 'text-red-600' },
+] as const;
+
 interface AlertRuleFormProps {
   rule: AlertRule | null;
   onSubmit: () => void;
@@ -109,10 +117,14 @@ export function AlertRuleForm({ rule, onSubmit, onCancel }: AlertRuleFormProps) 
                 <SelectValue placeholder="Select severity" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Info">Info</SelectItem>
-                <SelectItem value="Warning">Warning</SelectItem>
-                <SelectItem value="Error">Error</SelectItem>
-                <SelectItem value="Critical">Critical</SelectItem>
+                {SEVERITY_OPTIONS.map(option => (
+                  <SelectItem key={option.value} value={option.value}>
+                    <span className="flex items-center gap-2">
+                      <span className={option.colorClass}>●</span>
+                      {option.label}
+                    </span>
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           )}

@@ -56,6 +56,20 @@ public class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
         return entities.Select(MapToDomain).ToList();
     }
 
+    public async Task<IReadOnlyList<PdfDocument>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default)
+    {
+        var idList = ids.ToList();
+        if (idList.Count == 0)
+            return Array.Empty<PdfDocument>();
+
+        var entities = await DbContext.PdfDocuments
+            .AsNoTracking()
+            .Where(p => idList.Contains(p.Id))
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+        return entities.Select(MapToDomain).ToList();
+    }
+
     public async Task AddAsync(PdfDocument document, CancellationToken cancellationToken = default)
     {
         CollectDomainEvents(document);

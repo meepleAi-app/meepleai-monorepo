@@ -11,5 +11,6 @@ public record AddDocumentToCollectionCommand(
     Guid CollectionId,
     Guid PdfDocumentId,
     string DocumentType,
-    int SortOrder
+    int SortOrder,
+    Guid UserId // For authorization check
 ) : ICommand<bool>;

@@ -365,7 +365,7 @@ public static class AiEndpoints
                 IReadOnlyList<string>? followUpQuestions = null;
                 string? gameName = null;
 
-                var query = new StreamQaQuery(req.gameId, req.query, req.chatId);
+                var query = new StreamQaQuery(req.gameId, req.query, req.chatId, req.documentIds); // Issue #2051
                 await foreach (var evt in mediator.CreateStream(query, ct).ConfigureAwait(false))
                 {
                     // Serialize event as JSON

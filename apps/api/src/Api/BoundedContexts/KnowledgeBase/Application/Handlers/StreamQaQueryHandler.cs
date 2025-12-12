@@ -136,7 +136,7 @@ public class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagStr
             new StreamingStateUpdate("Searching knowledge base..."));
 
         var (searchSuccess, snippets, domainSearchResults, searchConfidence) = await PerformSearchAndBuildCitationsAsync(
-            query.GameId, query.Query, cancellationToken).ConfigureAwait(false);
+            query.GameId, query.Query, query.DocumentIds, cancellationToken).ConfigureAwait(false);
 
         if (!searchSuccess)
         {
@@ -215,6 +215,7 @@ public class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagStr
     private async Task<(bool success, List<Snippet>? snippets, List<Domain.Entities.SearchResult>? domainResults, Confidence? searchConfidence)> PerformSearchAndBuildCitationsAsync(
         string gameId,
         string queryText,
+        IReadOnlyList<Guid>? documentIds,
         CancellationToken cancellationToken)
     {
         var searchQuery = new SearchQuery(
@@ -223,7 +224,8 @@ public class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagStr
             TopK: 5,
             MinScore: 0.55,
             SearchMode: "hybrid",
-            Language: "en"
+            Language: "en",
+            DocumentIds: documentIds // Issue #2051
         );
 
         var searchResults = await _searchQueryHandler.Handle(searchQuery, cancellationToken).ConfigureAwait(false);

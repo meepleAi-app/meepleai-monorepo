@@ -31,6 +31,7 @@ import {
   createAgentsClient,
   createAdminClient,
   createAlertsClient,
+  createDocumentsClient,
   type AuthClient,
   type GamesClient,
   type SessionsClient,
@@ -41,6 +42,7 @@ import {
   type AgentsClient,
   type AdminClient,
   type AlertsClient,
+  type DocumentsClient,
 } from './clients';
 
 // Re-export alert schemas (Issue #921)
@@ -149,6 +151,9 @@ export interface ApiClient {
   /** Alert Management (Issue #921) */
   alerts: AlertsClient;
 
+  /** Document Collections Management (Issue #2051) */
+  documents: DocumentsClient;
+
   /** Generic DELETE helper (used in some legacy tests) */
   delete: (path: string) => Promise<void>;
 }
@@ -209,6 +214,7 @@ export function createApiClient(config?: ApiClientConfig): ApiClient {
     agents: createAgentsClient({ httpClient }),
     admin: createAdminClient({ httpClient }),
     alerts: createAlertsClient({ httpClient }),
+    documents: createDocumentsClient({ httpClient }),
     delete: (path: string) => httpClient.delete(path),
   };
 

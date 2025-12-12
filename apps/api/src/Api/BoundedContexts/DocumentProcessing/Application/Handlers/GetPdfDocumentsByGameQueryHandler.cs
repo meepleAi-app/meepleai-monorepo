@@ -33,7 +33,8 @@ public class GetPdfDocumentsByGameQueryHandler : IQueryHandler<GetPdfDocumentsBy
             ProcessingStatus: doc.ProcessingStatus,
             UploadedAt: doc.UploadedAt,
             ProcessedAt: doc.ProcessedAt,
-            PageCount: doc.PageCount
+            PageCount: doc.PageCount,
+            DocumentType: doc.DocumentType?.Value ?? "base" // Issue #2051
         );
     }
 }

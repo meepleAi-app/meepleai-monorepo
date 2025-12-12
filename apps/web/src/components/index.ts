@@ -5,6 +5,10 @@
 // AI-14: Search mode toggle for hybrid search feature
 export { default as SearchModeToggle, SearchMode } from './search/SearchModeToggle';
 
+// Issue #2051: Document source selector
+export { DocumentSourceSelector } from './chat/DocumentSourceSelector';
+export type { DocumentSource } from './chat/DocumentSourceSelector';
+
 // Issue #1002: BGAI-062 - Response components
 export { ResponseCard } from './response';
 

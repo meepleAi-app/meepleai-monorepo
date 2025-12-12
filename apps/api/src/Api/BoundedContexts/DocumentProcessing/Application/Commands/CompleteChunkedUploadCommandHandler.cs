@@ -64,179 +64,46 @@ public class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunk
     {
         try
         {
-            // Get session
-            var session = await _sessionRepository.GetByIdAsync(request.SessionId, cancellationToken).ConfigureAwait(false);
-
-            if (session == null)
+            // Validate session and permissions
+            (bool validationSuccess, string? validationError, ChunkedUploadSession? session) = await ValidateSessionAndPermissionsAsync(
+                request.SessionId, request.UserId, cancellationToken).ConfigureAwait(false);
+            if (!validationSuccess)
             {
                 return new CompleteChunkedUploadResult(
                     Success: false,
                     DocumentId: null,
-                    FileName: null,
-                    ErrorMessage: "Upload session not found",
-                    MissingChunks: null
+                    FileName: session?.FileName,
+                    ErrorMessage: validationError,
+                    MissingChunks: session != null && !session.IsComplete ? session.GetMissingChunks() : null
                 );
             }
-
-            // Verify ownership
-            if (session.UserId != request.UserId)
-            {
-                return new CompleteChunkedUploadResult(
-                    Success: false,
-                    DocumentId: null,
-                    FileName: null,
-                    ErrorMessage: "Access denied",
-                    MissingChunks: null
-                );
-            }
-
-            // Validate TempDirectory to prevent path traversal attacks
-            if (!IsValidTempDirectory(session.TempDirectory))
-            {
-                _logger.LogWarning(
-                    "Invalid TempDirectory detected for session {SessionId}: {TempDirectory}",
-                    request.SessionId, session.TempDirectory);
-
-                return new CompleteChunkedUploadResult(
-                    Success: false,
-                    DocumentId: null,
-                    FileName: null,
-                    ErrorMessage: "Invalid upload session",
-                    MissingChunks: null
-                );
-            }
-
-            // Check session status
-            if (session.IsExpired)
-            {
-                session.MarkAsExpired();
-                await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
-                await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-
-                // Cleanup temp files
-                await CleanupTempDirectoryAsync(session.TempDirectory).ConfigureAwait(false);
-
-                return new CompleteChunkedUploadResult(
-                    Success: false,
-                    DocumentId: null,
-                    FileName: null,
-                    ErrorMessage: "Upload session has expired",
-                    MissingChunks: null
-                );
-            }
-
-            if (string.Equals(session.Status, "completed", StringComparison.Ordinal))
-            {
-                return new CompleteChunkedUploadResult(
-                    Success: false,
-                    DocumentId: null,
-                    FileName: session.FileName,
-                    ErrorMessage: "Upload session is already completed",
-                    MissingChunks: null
-                );
-            }
-
-            // Check if all chunks received
-            if (!session.IsComplete)
-            {
-                var missingChunks = session.GetMissingChunks();
-                return new CompleteChunkedUploadResult(
-                    Success: false,
-                    DocumentId: null,
-                    FileName: session.FileName,
-                    ErrorMessage: $"Upload incomplete. Missing {missingChunks.Count} chunk(s).",
-                    MissingChunks: missingChunks
-                );
-            }
-
-            // Mark as assembling
-            session.MarkAsAssembling();
-            await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
-            await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Assembling chunked upload {SessionId} ({TotalChunks} chunks, {TotalSize} bytes)",
-                request.SessionId, session.TotalChunks, session.TotalFileSize);
+                request.SessionId, session!.TotalChunks, session.TotalFileSize);
 
-            // Sanitize filename to prevent path traversal attacks
-            var sanitizedFileName = PathSecurity.SanitizeFilename(session.FileName);
-
-            // Assemble chunks into a single file
-            var assembledFilePath = Path.Combine(session.TempDirectory, sanitizedFileName);
-            await AssembleChunksAsync(session, assembledFilePath, cancellationToken).ConfigureAwait(false);
-
-            // Store in blob storage (using already sanitized filename)
-
-            BlobStorageResult storageResult;
-            var assembledStream = new FileStream(assembledFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-            await using (assembledStream.ConfigureAwait(false))
+            // Assemble chunks and store in blob storage
+            (bool storageSuccess, BlobStorageResult? storageResult, string? sanitizedFileName) = await AssembleAndStoreFileAsync(
+                session, cancellationToken).ConfigureAwait(false);
+            if (!storageSuccess)
             {
-                storageResult = await _blobStorageService.StoreAsync(
-                    assembledStream,
-                    sanitizedFileName,
-                    session.GameId.ToString(),
-                    cancellationToken).ConfigureAwait(false);
-            }
-
-            if (!storageResult.Success)
-            {
-                session.MarkAsFailed(storageResult.ErrorMessage ?? "Failed to store assembled file");
-                await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
-                await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-
                 return new CompleteChunkedUploadResult(
                     Success: false,
                     DocumentId: null,
                     FileName: session.FileName,
-                    ErrorMessage: storageResult.ErrorMessage ?? "Failed to store assembled file",
+                    ErrorMessage: storageResult!.ErrorMessage ?? "Failed to store assembled file",
                     MissingChunks: null
                 );
             }
 
-            // Create PDF document record
-            var pdfDoc = new PdfDocumentEntity
-            {
-                Id = Guid.Parse(storageResult.FileId!),
-                GameId = session.GameId,
-                FileName = sanitizedFileName,
-                FilePath = storageResult.FilePath!,
-                FileSizeBytes = storageResult.FileSizeBytes,
-                ContentType = "application/pdf",
-                UploadedByUserId = session.UserId,
-                UploadedAt = _timeProvider.GetUtcNow().UtcDateTime,
-                ProcessingStatus = "pending"
-            };
-
-            _dbContext.PdfDocuments.Add(pdfDoc);
-
-            // Mark session as completed
-            session.MarkAsCompleted();
-            await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
-            await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-
-            _logger.LogInformation(
-                "Chunked upload {SessionId} completed. Document {DocumentId} created.",
-                request.SessionId, pdfDoc.Id);
-
-            // Cleanup temp files (async, non-blocking) via background service
-            var tempDirToClean = session.TempDirectory;
-            _backgroundTaskService.ExecuteWithCancellation(
-                $"cleanup_{request.SessionId}",
-                async (ct) =>
-                {
-                    await Task.Delay(100, ct).ConfigureAwait(false); // Small delay to ensure file handles are released
-                    await CleanupTempDirectoryAsync(tempDirToClean).ConfigureAwait(false);
-                });
-
-            // Trigger background processing (same as regular upload)
-            _backgroundTaskService.ExecuteWithCancellation(
-                storageResult.FileId!,
-                (ct) => TriggerPdfProcessingAsync(storageResult.FileId!, storageResult.FilePath!, ct));
+            // Create PDF document record and trigger background processing
+            var pdfDocId = await CreatePdfRecordAndTriggerProcessingAsync(
+                session, storageResult!, sanitizedFileName!, request.SessionId.ToString(), cancellationToken).ConfigureAwait(false);
 
             return new CompleteChunkedUploadResult(
                 Success: true,
-                DocumentId: pdfDoc.Id,
-                FileName: pdfDoc.FileName,
+                DocumentId: pdfDocId,
+                FileName: sanitizedFileName,
                 ErrorMessage: null,
                 MissingChunks: null
             );
@@ -253,6 +120,164 @@ public class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunk
                 MissingChunks: null
             );
         }
+    }
+
+    /// <summary>
+    /// Validates upload session, permissions, and completeness.
+    /// Returns (success, errorMessage, session).
+    /// </summary>
+    private async Task<(bool success, string? errorMessage, ChunkedUploadSession? session)> ValidateSessionAndPermissionsAsync(
+        Guid sessionId,
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        // Get session
+        var session = await _sessionRepository.GetByIdAsync(sessionId, cancellationToken).ConfigureAwait(false);
+
+        if (session == null)
+        {
+            return (false, "Upload session not found", null);
+        }
+
+        // Verify ownership
+        if (session.UserId != userId)
+        {
+            return (false, "Access denied", session);
+        }
+
+        // Validate TempDirectory to prevent path traversal attacks
+        if (!IsValidTempDirectory(session.TempDirectory))
+        {
+            _logger.LogWarning(
+                "Invalid TempDirectory detected for session {SessionId}: {TempDirectory}",
+                sessionId.ToString(), session.TempDirectory);
+
+            return (false, "Invalid upload session", session);
+        }
+
+        // Check session status
+        if (session.IsExpired)
+        {
+            session.MarkAsExpired();
+            await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
+            await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+            // Cleanup temp files
+            await CleanupTempDirectoryAsync(session.TempDirectory).ConfigureAwait(false);
+
+            return (false, "Upload session has expired", session);
+        }
+
+        if (string.Equals(session.Status, "completed", StringComparison.Ordinal))
+        {
+            return (false, "Upload session is already completed", session);
+        }
+
+        // Check if all chunks received
+        if (!session.IsComplete)
+        {
+            var missingChunks = session.GetMissingChunks();
+            return (false, $"Upload incomplete. Missing {missingChunks.Count} chunk(s).", session);
+        }
+
+        return (true, null, session);
+    }
+
+    /// <summary>
+    /// Assembles chunks into a single file and stores in blob storage.
+    /// Returns (success, storageResult, sanitizedFileName).
+    /// </summary>
+    private async Task<(bool success, BlobStorageResult? storageResult, string? sanitizedFileName)> AssembleAndStoreFileAsync(
+        ChunkedUploadSession session,
+        CancellationToken cancellationToken)
+    {
+        // Mark as assembling
+        session.MarkAsAssembling();
+        await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
+        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // Sanitize filename to prevent path traversal attacks
+        var sanitizedFileName = PathSecurity.SanitizeFilename(session.FileName);
+
+        // Assemble chunks into a single file
+        var assembledFilePath = Path.Combine(session.TempDirectory, sanitizedFileName);
+        await AssembleChunksAsync(session, assembledFilePath, cancellationToken).ConfigureAwait(false);
+
+        // Store in blob storage
+        BlobStorageResult storageResult;
+        var assembledStream = new FileStream(assembledFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        await using (assembledStream.ConfigureAwait(false))
+        {
+            storageResult = await _blobStorageService.StoreAsync(
+                assembledStream,
+                sanitizedFileName,
+                session.GameId.ToString(),
+                cancellationToken).ConfigureAwait(false);
+        }
+
+        if (!storageResult.Success)
+        {
+            session.MarkAsFailed(storageResult.ErrorMessage ?? "Failed to store assembled file");
+            await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
+            await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+            return (false, storageResult, sanitizedFileName);
+        }
+
+        return (true, storageResult, sanitizedFileName);
+    }
+
+    /// <summary>
+    /// Creates PDF document record, marks session as completed, and triggers background processing.
+    /// </summary>
+    private async Task<Guid> CreatePdfRecordAndTriggerProcessingAsync(
+        ChunkedUploadSession session,
+        BlobStorageResult storageResult,
+        string sanitizedFileName,
+        string sessionId,
+        CancellationToken cancellationToken)
+    {
+        // Create PDF document record
+        var pdfDoc = new PdfDocumentEntity
+        {
+            Id = Guid.Parse(storageResult.FileId!),
+            GameId = session.GameId,
+            FileName = sanitizedFileName,
+            FilePath = storageResult.FilePath!,
+            FileSizeBytes = storageResult.FileSizeBytes,
+            ContentType = "application/pdf",
+            UploadedByUserId = session.UserId,
+            UploadedAt = _timeProvider.GetUtcNow().UtcDateTime,
+            ProcessingStatus = "pending"
+        };
+
+        _dbContext.PdfDocuments.Add(pdfDoc);
+
+        // Mark session as completed
+        session.MarkAsCompleted();
+        await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
+        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        _logger.LogInformation(
+            "Chunked upload {SessionId} completed. Document {DocumentId} created.",
+            sessionId, pdfDoc.Id);
+
+        // Cleanup temp files (async, non-blocking) via background service
+        var tempDirToClean = session.TempDirectory;
+        _backgroundTaskService.ExecuteWithCancellation(
+            $"cleanup_{sessionId}",
+            async (ct) =>
+            {
+                await Task.Delay(100, ct).ConfigureAwait(false); // Small delay to ensure file handles are released
+                await CleanupTempDirectoryAsync(tempDirToClean).ConfigureAwait(false);
+            });
+
+        // Trigger background processing (same as regular upload)
+        _backgroundTaskService.ExecuteWithCancellation(
+            storageResult.FileId!,
+            (ct) => TriggerPdfProcessingAsync(storageResult.FileId!, storageResult.FilePath!, ct));
+
+        return pdfDoc.Id;
     }
 
     /// <summary>
@@ -325,8 +350,8 @@ public class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunk
     }
 
     /// <summary>
-    /// Triggers PDF processing for chunked uploads.
-    /// This mirrors the ProcessPdfAsync logic from UploadPdfCommandHandler.
+    /// Triggers asynchronous PDF processing after chunked upload completion.
+    /// Orchestrates extraction, chunking, embedding generation, and indexing.
     /// </summary>
     private async Task TriggerPdfProcessingAsync(string pdfId, string filePath, CancellationToken ct)
     {
@@ -336,6 +361,7 @@ public class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunk
 
         try
         {
+            // Validate PDF document
             if (!Guid.TryParse(pdfId, out var pdfGuid))
             {
                 _logger.LogError("Invalid PDF ID format {PdfId}", pdfId);
@@ -351,252 +377,352 @@ public class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunk
 
             _logger.LogInformation("Starting PDF processing for chunked upload: {PdfId}", pdfId);
 
-            // Step 1: Extract text
-            var extractionStopwatch = Stopwatch.StartNew();
-            var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-            await using (fileStream.ConfigureAwait(false))
-            {
-                var extractResult = await _pdfTextExtractor.ExtractPagedTextAsync(fileStream, enableOcrFallback: true, ct).ConfigureAwait(false);
-                extractionStopwatch.Stop();
+            // Step 1: Extract PDF text and structured content
+            var (extractSuccess, fullText, totalPages) = await ExtractPdfTextAsync(
+                pdfId, filePath, pdfDoc, db, scope, ct).ConfigureAwait(false);
+            if (!extractSuccess) return;
 
-                _logger.LogDebug("Extraction completed in {ElapsedMs}ms for {PdfId}", extractionStopwatch.ElapsedMilliseconds, pdfId);
+            // Step 2: Chunk text for embedding
+            var allDocumentChunks = await ChunkTextContentAsync(
+                pdfId, fullText!, totalPages, scope, ct).ConfigureAwait(false);
 
-                if (!extractResult.Success)
-                {
-                    pdfDoc.ProcessingStatus = "failed";
-                    pdfDoc.ProcessingError = extractResult.ErrorMessage;
-                    pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
-                    await db.SaveChangesAsync(ct).ConfigureAwait(false);
-                    _logger.LogError("Text extraction failed for {PdfId}: {Error}", pdfId, extractResult.ErrorMessage);
-                    return;
-                }
+            // Step 3: Generate embeddings
+            var (embeddingsSuccess, embeddings) = await GenerateEmbeddingsAsync(
+                pdfId, allDocumentChunks, pdfDoc, db, ct, scope).ConfigureAwait(false);
+            if (!embeddingsSuccess) return;
 
-                // Combine all page chunks into full text
-                var fullText = string.Join("\n\n", extractResult.PageChunks
-                    .Where(pc => !pc.IsEmpty)
-                    .Select(pc => pc.Text));
+            // Step 4: Index in vector store and save to PostgreSQL
+            await IndexAndStoreChunksAsync(
+                pdfId, pdfGuid, allDocumentChunks, embeddings!, pdfDoc, fullText!, db, scope, ct).ConfigureAwait(false);
 
-                pdfDoc.ExtractedText = fullText;
-                pdfDoc.PageCount = extractResult.TotalPages;
-                pdfDoc.CharacterCount = extractResult.TotalCharacters;
-                await db.SaveChangesAsync(ct).ConfigureAwait(false);
+            // Mark as completed
+            pdfDoc.ProcessingStatus = "completed";
+            pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
+            await db.SaveChangesAsync(ct).ConfigureAwait(false);
 
-                // Extract structured content (tables, diagrams)
-                var tableExtractor = scope.ServiceProvider.GetService<IPdfTableExtractor>() ?? _tableExtractor;
-                if (tableExtractor != null)
-                {
-                    var structuredResult = await tableExtractor.ExtractStructuredContentAsync(filePath, ct).ConfigureAwait(false);
-                    if (structuredResult.Success)
-                    {
-                        pdfDoc.ExtractedTables = System.Text.Json.JsonSerializer.Serialize(structuredResult.Tables);
-                        pdfDoc.ExtractedDiagrams = System.Text.Json.JsonSerializer.Serialize(
-                            structuredResult.Diagrams.Select(d => new
-                            {
-                                d.PageNumber,
-                                d.DiagramType,
-                                d.Description,
-                                d.Width,
-                                d.Height
-                            }));
-                        pdfDoc.AtomicRules = System.Text.Json.JsonSerializer.Serialize(structuredResult.AtomicRules);
-                        pdfDoc.TableCount = structuredResult.TableCount;
-                        pdfDoc.DiagramCount = structuredResult.DiagramCount;
-                        pdfDoc.AtomicRuleCount = structuredResult.AtomicRuleCount;
-                        await db.SaveChangesAsync(ct).ConfigureAwait(false);
-                    }
-                }
-
-                var totalPages = extractResult.TotalPages;
-
-                // Step 2: Chunk text
-                var chunkingStopwatch = Stopwatch.StartNew();
-                var chunkingService = scope.ServiceProvider.GetRequiredService<ITextChunkingService>();
-                const int chunkSize = 512;
-                const int chunkOverlap = 50;
-
-                var allDocumentChunks = chunkingService.PrepareForEmbedding(fullText, chunkSize, chunkOverlap)
-                    ?.Where(chunk => chunk != null && !string.IsNullOrWhiteSpace(chunk.Text))
-                    .Select(chunk => new DocumentChunkInput
-                    {
-                        Text = chunk.Text,
-                        Page = chunk.Page,
-                        CharStart = chunk.CharStart,
-                        CharEnd = chunk.CharEnd
-                    })
-                    .ToList()
-                    ?? new List<DocumentChunkInput>();
-
-                if (allDocumentChunks.Count == 0)
-                {
-                    foreach (var pageChunk in extractResult.PageChunks.Where(pc => !pc.IsEmpty))
-                    {
-                        var pageTextChunks = chunkingService.ChunkText(pageChunk.Text, chunkSize, chunkOverlap);
-
-                        foreach (var textChunk in pageTextChunks.Where(t => !string.IsNullOrWhiteSpace(t.Text)))
-                        {
-                            allDocumentChunks.Add(new DocumentChunkInput
-                            {
-                                Text = textChunk.Text,
-                                Page = pageChunk.PageNumber,
-                                CharStart = textChunk.CharStart,
-                                CharEnd = textChunk.CharEnd
-                            });
-                        }
-                    }
-                }
-
-                allDocumentChunks = allDocumentChunks
-                    .Where(chunk => chunk != null && !string.IsNullOrWhiteSpace(chunk.Text))
-                    .ToList();
-
-                chunkingStopwatch.Stop();
-                _logger.LogDebug("Chunking completed in {ElapsedMs}ms, {ChunkCount} chunks for {PdfId}",
-                    chunkingStopwatch.ElapsedMilliseconds, allDocumentChunks.Count, pdfId);
-
-                // Step 3: Generate embeddings
-                var embeddingStopwatch = Stopwatch.StartNew();
-                var embeddingService = scope.ServiceProvider.GetRequiredService<IEmbeddingService>();
-                var texts = allDocumentChunks.Select(c => c.Text).ToList();
-                var embeddingResult = await embeddingService.GenerateEmbeddingsAsync(texts).ConfigureAwait(false);
-                embeddingStopwatch.Stop();
-
-                if (!embeddingResult.Success)
-                {
-                    pdfDoc.ProcessingStatus = "failed";
-                    pdfDoc.ProcessingError = embeddingResult.ErrorMessage;
-                    pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
-                    await db.SaveChangesAsync(ct).ConfigureAwait(false);
-                    _logger.LogError("Embedding generation failed for {PdfId}: {Error}", pdfId, embeddingResult.ErrorMessage);
-                    return;
-                }
-
-                var embeddings = embeddingResult.Embeddings ?? new List<float[]>();
-
-                if (embeddings.Count != allDocumentChunks.Count)
-                {
-                    var mismatchMessage = $"Embedding service returned {embeddings.Count} vectors for {allDocumentChunks.Count} chunks";
-                    _logger.LogWarning("Embedding count mismatch for PDF {PdfId}: {Message}", pdfId, mismatchMessage);
-                    pdfDoc.ProcessingStatus = "failed";
-                    pdfDoc.ProcessingError = mismatchMessage;
-                    pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
-                    await db.SaveChangesAsync(ct).ConfigureAwait(false);
-                    return;
-                }
-
-                // Step 4: Index in Qdrant
-                var indexingStopwatch = Stopwatch.StartNew();
-                var qdrantService = scope.ServiceProvider.GetRequiredService<IQdrantService>();
-
-                var documentChunks = new List<DocumentChunk>();
-                for (int i = 0; i < allDocumentChunks.Count; i++)
-                {
-                    documentChunks.Add(new DocumentChunk
-                    {
-                        Text = allDocumentChunks[i].Text,
-                        Embedding = embeddings[i],
-                        Page = allDocumentChunks[i].Page,
-                        CharStart = allDocumentChunks[i].CharStart,
-                        CharEnd = allDocumentChunks[i].CharEnd
-                    });
-                }
-
-                var indexResult = await qdrantService.IndexDocumentChunksAsync(pdfDoc.GameId.ToString(), pdfId, documentChunks).ConfigureAwait(false);
-                indexingStopwatch.Stop();
-
-                if (!indexResult.Success)
-                {
-                    pdfDoc.ProcessingStatus = "failed";
-                    pdfDoc.ProcessingError = indexResult.ErrorMessage;
-                    pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
-                    await db.SaveChangesAsync(ct).ConfigureAwait(false);
-                    _logger.LogError("Qdrant indexing failed for {PdfId}: {Error}", pdfId, indexResult.ErrorMessage);
-                    return;
-                }
-
-                // Update vector document
-                var vectorDoc = await db.VectorDocuments.FirstOrDefaultAsync(v => v.PdfDocumentId == pdfGuid, ct).ConfigureAwait(false);
-                if (vectorDoc == null)
-                {
-                    vectorDoc = new VectorDocumentEntity
-                    {
-                        Id = Guid.NewGuid(),
-                        GameId = pdfDoc.GameId,
-                        PdfDocumentId = pdfGuid,
-                        IndexingStatus = "completed",
-                        ChunkCount = indexResult.IndexedCount,
-                        TotalCharacters = fullText.Length,
-                        IndexedAt = _timeProvider.GetUtcNow().UtcDateTime
-                    };
-                    db.VectorDocuments.Add(vectorDoc);
-                }
-                else
-                {
-                    vectorDoc.IndexingStatus = "completed";
-                    vectorDoc.ChunkCount = indexResult.IndexedCount;
-                    vectorDoc.TotalCharacters = fullText.Length;
-                    vectorDoc.IndexedAt = _timeProvider.GetUtcNow().UtcDateTime;
-                }
-
-                // Save text chunks to PostgreSQL for hybrid search (FTS)
-                var existingChunks = await db.TextChunks
-                    .Where(tc => tc.PdfDocumentId == pdfGuid)
-                    .ToListAsync(ct).ConfigureAwait(false);
-                if (existingChunks.Count > 0)
-                {
-                    db.TextChunks.RemoveRange(existingChunks);
-                }
-
-                var textChunkEntities = new List<TextChunkEntity>();
-                for (int i = 0; i < allDocumentChunks.Count; i++)
-                {
-                    textChunkEntities.Add(new TextChunkEntity
-                    {
-                        Id = Guid.NewGuid(),
-                        GameId = pdfDoc.GameId,
-                        PdfDocumentId = pdfGuid,
-                        ChunkIndex = i,
-                        PageNumber = allDocumentChunks[i].Page,
-                        Content = allDocumentChunks[i].Text,
-                        CharacterCount = allDocumentChunks[i].Text.Length,
-                        CreatedAt = _timeProvider.GetUtcNow().UtcDateTime
-                    });
-                }
-
-                db.TextChunks.AddRange(textChunkEntities);
-
-                // Mark as completed
-                pdfDoc.ProcessingStatus = "completed";
-                pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
-                await db.SaveChangesAsync(ct).ConfigureAwait(false);
-
-                var totalTime = (_timeProvider.GetUtcNow().UtcDateTime - startTime).TotalSeconds;
-                _logger.LogInformation(
-                    "PDF processing completed for chunked upload {PdfId}: {TotalPages} pages, {ChunkCount} chunks, {TotalSeconds}s",
-                    pdfId, totalPages, allDocumentChunks.Count, totalTime);
-            }
+            var totalTime = (_timeProvider.GetUtcNow().UtcDateTime - startTime).TotalSeconds;
+            _logger.LogInformation(
+                "PDF processing completed for chunked upload {PdfId}: {TotalPages} pages, {ChunkCount} chunks, {TotalSeconds}s",
+                pdfId, totalPages, allDocumentChunks.Count, totalTime);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to process PDF {PdfId}", pdfId);
+            await HandleProcessingFailureAsync(pdfId, db, ex, ct).ConfigureAwait(false);
+        }
+    }
 
-            try
+    /// <summary>
+    /// Extracts text and structured content from PDF file.
+    /// </summary>
+    private async Task<(bool success, string? fullText, int totalPages)> ExtractPdfTextAsync(
+        string pdfId,
+        string filePath,
+        PdfDocumentEntity pdfDoc,
+        MeepleAiDbContext db,
+        IServiceScope scope,
+        CancellationToken ct)
+    {
+        var extractionStopwatch = Stopwatch.StartNew();
+        var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        await using (fileStream.ConfigureAwait(false))
+        {
+            var extractResult = await _pdfTextExtractor.ExtractPagedTextAsync(fileStream, enableOcrFallback: true, ct).ConfigureAwait(false);
+            extractionStopwatch.Stop();
+
+            _logger.LogDebug("Extraction completed in {ElapsedMs}ms for {PdfId}", extractionStopwatch.ElapsedMilliseconds, pdfId);
+
+            if (!extractResult.Success)
             {
-                if (Guid.TryParse(pdfId, out var pdfGuid))
+                pdfDoc.ProcessingStatus = "failed";
+                pdfDoc.ProcessingError = extractResult.ErrorMessage;
+                pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
+                await db.SaveChangesAsync(ct).ConfigureAwait(false);
+                _logger.LogError("Text extraction failed for {PdfId}: {Error}", pdfId, extractResult.ErrorMessage);
+                return (false, null, 0);
+            }
+
+            var fullText = string.Join("\n\n", extractResult.PageChunks
+                .Where(pc => !pc.IsEmpty)
+                .Select(pc => pc.Text));
+
+            pdfDoc.ExtractedText = fullText;
+            pdfDoc.PageCount = extractResult.TotalPages;
+            pdfDoc.CharacterCount = extractResult.TotalCharacters;
+            await db.SaveChangesAsync(ct).ConfigureAwait(false);
+
+            // Extract structured content (tables, diagrams)
+            await ExtractStructuredContentAsync(filePath, pdfDoc, db, scope, ct).ConfigureAwait(false);
+
+            return (true, fullText, extractResult.TotalPages);
+        }
+    }
+
+    /// <summary>
+    /// Extracts structured content (tables, diagrams, atomic rules) from PDF.
+    /// </summary>
+    private async Task ExtractStructuredContentAsync(
+        string filePath,
+        PdfDocumentEntity pdfDoc,
+        MeepleAiDbContext db,
+        IServiceScope scope,
+        CancellationToken ct)
+    {
+        var tableExtractor = scope.ServiceProvider.GetService<IPdfTableExtractor>() ?? _tableExtractor;
+        if (tableExtractor == null) return;
+
+        var structuredResult = await tableExtractor.ExtractStructuredContentAsync(filePath, ct).ConfigureAwait(false);
+        if (!structuredResult.Success) return;
+
+        pdfDoc.ExtractedTables = System.Text.Json.JsonSerializer.Serialize(structuredResult.Tables);
+        pdfDoc.ExtractedDiagrams = System.Text.Json.JsonSerializer.Serialize(
+            structuredResult.Diagrams.Select(d => new
+            {
+                d.PageNumber,
+                d.DiagramType,
+                d.Description,
+                d.Width,
+                d.Height
+            }));
+        pdfDoc.AtomicRules = System.Text.Json.JsonSerializer.Serialize(structuredResult.AtomicRules);
+        pdfDoc.TableCount = structuredResult.TableCount;
+        pdfDoc.DiagramCount = structuredResult.DiagramCount;
+        pdfDoc.AtomicRuleCount = structuredResult.AtomicRuleCount;
+        await db.SaveChangesAsync(ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Chunks extracted text into document chunks for embedding.
+    /// </summary>
+    private async Task<List<DocumentChunkInput>> ChunkTextContentAsync(
+        string pdfId,
+        string fullText,
+        int totalPages,
+        IServiceScope scope,
+        CancellationToken ct)
+    {
+        var chunkingStopwatch = Stopwatch.StartNew();
+        var chunkingService = scope.ServiceProvider.GetRequiredService<ITextChunkingService>();
+        const int chunkSize = 512;
+        const int chunkOverlap = 50;
+
+        var allDocumentChunks = chunkingService.PrepareForEmbedding(fullText, chunkSize, chunkOverlap)
+            ?.Where(chunk => chunk != null && !string.IsNullOrWhiteSpace(chunk.Text))
+            .Select(chunk => new DocumentChunkInput
+            {
+                Text = chunk.Text,
+                Page = chunk.Page,
+                CharStart = chunk.CharStart,
+                CharEnd = chunk.CharEnd
+            })
+            .ToList()
+            ?? new List<DocumentChunkInput>();
+
+        allDocumentChunks = allDocumentChunks
+            .Where(chunk => chunk != null && !string.IsNullOrWhiteSpace(chunk.Text))
+            .ToList();
+
+        chunkingStopwatch.Stop();
+        _logger.LogDebug("Chunking completed in {ElapsedMs}ms, {ChunkCount} chunks for {PdfId}",
+            chunkingStopwatch.ElapsedMilliseconds, allDocumentChunks.Count, pdfId);
+
+        return await Task.FromResult(allDocumentChunks);
+    }
+
+    /// <summary>
+    /// Generates embeddings for document chunks.
+    /// </summary>
+    private async Task<(bool success, List<float[]>? embeddings)> GenerateEmbeddingsAsync(
+        string pdfId,
+        List<DocumentChunkInput> allDocumentChunks,
+        PdfDocumentEntity pdfDoc,
+        MeepleAiDbContext db,
+        CancellationToken ct,
+        IServiceScope scope)
+    {
+        var embeddingStopwatch = Stopwatch.StartNew();
+        var embeddingService = scope.ServiceProvider.GetRequiredService<IEmbeddingService>();
+        var texts = allDocumentChunks.Select(c => c.Text).ToList();
+        var embeddingResult = await embeddingService.GenerateEmbeddingsAsync(texts).ConfigureAwait(false);
+        embeddingStopwatch.Stop();
+
+        if (!embeddingResult.Success)
+        {
+            pdfDoc.ProcessingStatus = "failed";
+            pdfDoc.ProcessingError = embeddingResult.ErrorMessage;
+            pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
+            await db.SaveChangesAsync(ct).ConfigureAwait(false);
+            _logger.LogError("Embedding generation failed for {PdfId}: {Error}", pdfId, embeddingResult.ErrorMessage);
+            return (false, null);
+        }
+
+        var embeddings = embeddingResult.Embeddings ?? new List<float[]>();
+
+        if (embeddings.Count != allDocumentChunks.Count)
+        {
+            var mismatchMessage = $"Embedding service returned {embeddings.Count} vectors for {allDocumentChunks.Count} chunks";
+            _logger.LogWarning("Embedding count mismatch for PDF {PdfId}: {Message}", pdfId, mismatchMessage);
+            pdfDoc.ProcessingStatus = "failed";
+            pdfDoc.ProcessingError = mismatchMessage;
+            pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
+            await db.SaveChangesAsync(ct).ConfigureAwait(false);
+            return (false, null);
+        }
+
+        return (true, embeddings);
+    }
+
+    /// <summary>
+    /// Indexes document chunks in Qdrant and saves text chunks to PostgreSQL for hybrid search.
+    /// </summary>
+    private async Task IndexAndStoreChunksAsync(
+        string pdfId,
+        Guid pdfGuid,
+        List<DocumentChunkInput> allDocumentChunks,
+        List<float[]> embeddings,
+        PdfDocumentEntity pdfDoc,
+        string fullText,
+        MeepleAiDbContext db,
+        IServiceScope scope,
+        CancellationToken ct)
+    {
+        // Index in Qdrant
+        var indexingStopwatch = Stopwatch.StartNew();
+        var qdrantService = scope.ServiceProvider.GetRequiredService<IQdrantService>();
+
+        var documentChunks = allDocumentChunks
+            .Select((chunk, index) => new DocumentChunk
+            {
+                Text = chunk.Text,
+                Embedding = embeddings[index],
+                Page = chunk.Page,
+                CharStart = chunk.CharStart,
+                CharEnd = chunk.CharEnd
+            })
+            .ToList();
+
+        var indexResult = await qdrantService.IndexDocumentChunksAsync(pdfDoc.GameId.ToString(), pdfId, documentChunks).ConfigureAwait(false);
+        indexingStopwatch.Stop();
+
+        if (!indexResult.Success)
+        {
+            pdfDoc.ProcessingStatus = "failed";
+            pdfDoc.ProcessingError = indexResult.ErrorMessage;
+            pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
+            await db.SaveChangesAsync(ct).ConfigureAwait(false);
+            _logger.LogError("Qdrant indexing failed for {PdfId}: {Error}", pdfId, indexResult.ErrorMessage);
+            return;
+        }
+
+        // Update vector document
+        await UpdateOrCreateVectorDocumentAsync(pdfGuid, pdfDoc, fullText, indexResult.IndexedCount, db, ct).ConfigureAwait(false);
+
+        // Save text chunks to PostgreSQL for hybrid search (FTS)
+        await SaveTextChunksForHybridSearchAsync(pdfGuid, pdfDoc, allDocumentChunks, db, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Updates or creates VectorDocument entity after successful indexing.
+    /// </summary>
+    private async Task UpdateOrCreateVectorDocumentAsync(
+        Guid pdfGuid,
+        PdfDocumentEntity pdfDoc,
+        string fullText,
+        int indexedCount,
+        MeepleAiDbContext db,
+        CancellationToken ct)
+    {
+        var vectorDoc = await db.VectorDocuments.FirstOrDefaultAsync(v => v.PdfDocumentId == pdfGuid, ct).ConfigureAwait(false);
+        if (vectorDoc == null)
+        {
+            vectorDoc = new VectorDocumentEntity
+            {
+                Id = Guid.NewGuid(),
+                GameId = pdfDoc.GameId,
+                PdfDocumentId = pdfGuid,
+                IndexingStatus = "completed",
+                ChunkCount = indexedCount,
+                TotalCharacters = fullText.Length,
+                IndexedAt = _timeProvider.GetUtcNow().UtcDateTime
+            };
+            db.VectorDocuments.Add(vectorDoc);
+        }
+        else
+        {
+            vectorDoc.IndexingStatus = "completed";
+            vectorDoc.ChunkCount = indexedCount;
+            vectorDoc.TotalCharacters = fullText.Length;
+            vectorDoc.IndexedAt = _timeProvider.GetUtcNow().UtcDateTime;
+        }
+
+        await db.SaveChangesAsync(ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Saves text chunks to PostgreSQL for hybrid search with FTS.
+    /// </summary>
+    private async Task SaveTextChunksForHybridSearchAsync(
+        Guid pdfGuid,
+        PdfDocumentEntity pdfDoc,
+        List<DocumentChunkInput> allDocumentChunks,
+        MeepleAiDbContext db,
+        CancellationToken ct)
+    {
+        // Delete existing chunks
+        var existingChunks = await db.TextChunks
+            .Where(tc => tc.PdfDocumentId == pdfGuid)
+            .ToListAsync(ct).ConfigureAwait(false);
+        if (existingChunks.Count > 0)
+        {
+            db.TextChunks.RemoveRange(existingChunks);
+        }
+
+        // Create new text chunk entities
+        var textChunkEntities = allDocumentChunks
+            .Select((chunk, index) => new TextChunkEntity
+            {
+                Id = Guid.NewGuid(),
+                GameId = pdfDoc.GameId,
+                PdfDocumentId = pdfGuid,
+                ChunkIndex = index,
+                PageNumber = chunk.Page,
+                Content = chunk.Text,
+                CharacterCount = chunk.Text.Length,
+                CreatedAt = _timeProvider.GetUtcNow().UtcDateTime
+            })
+            .ToList();
+
+        db.TextChunks.AddRange(textChunkEntities);
+        await db.SaveChangesAsync(ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Handles PDF processing failure with consistent error logging and status update.
+    /// </summary>
+    private async Task HandleProcessingFailureAsync(
+        string pdfId,
+        MeepleAiDbContext db,
+        Exception ex,
+        CancellationToken ct)
+    {
+        _logger.LogError(ex, "Failed to process PDF {PdfId}", pdfId);
+
+        try
+        {
+            if (Guid.TryParse(pdfId, out var pdfGuid))
+            {
+                var pdfDoc = await db.PdfDocuments.FindAsync(new object[] { pdfGuid }, ct).ConfigureAwait(false);
+                if (pdfDoc != null)
                 {
-                    var pdfDoc = await db.PdfDocuments.FindAsync(new object[] { pdfGuid }, ct).ConfigureAwait(false);
-                    if (pdfDoc != null)
-                    {
-                        pdfDoc.ProcessingStatus = "failed";
-                        pdfDoc.ProcessingError = ex.Message;
-                        pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
-                        await db.SaveChangesAsync(ct).ConfigureAwait(false);
-                    }
+                    pdfDoc.ProcessingStatus = "failed";
+                    pdfDoc.ProcessingError = ex.Message;
+                    pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
+                    await db.SaveChangesAsync(ct).ConfigureAwait(false);
                 }
             }
-            catch (Exception saveEx)
-            {
-                _logger.LogError(saveEx, "Failed to update PDF status after processing error for {PdfId}", pdfId);
-            }
+        }
+        catch (Exception saveEx)
+        {
+            _logger.LogError(saveEx, "Failed to update PDF status after processing error for {PdfId}", pdfId);
         }
     }
 

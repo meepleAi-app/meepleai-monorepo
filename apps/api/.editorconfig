@@ -437,3 +437,11 @@ dotnet_diagnostic.S6377.severity = error
 # MA0016: Prefer collection abstraction over implementation (Issue #2069)
 # Prefer IList<T>, IReadOnlyList<T>, IDictionary<K,V> over concrete types
 dotnet_diagnostic.MA0016.severity = warning
+
+# MA0051: Method is too long (Issue #2090)
+# Enable for BoundedContexts/ to identify methods requiring refactoring
+# Limit: 60 lines per method (Meziantou default)
+# Default: suggestion → warning for business logic code
+[src/Api/BoundedContexts/**/*.cs]
+dotnet_diagnostic.MA0051.severity = warning
+MA0051.maximum_lines_per_method = 60

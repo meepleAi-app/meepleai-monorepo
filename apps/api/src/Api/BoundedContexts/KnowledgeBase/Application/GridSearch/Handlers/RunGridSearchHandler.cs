@@ -41,20 +41,66 @@ public sealed class RunGridSearchHandler : IRequestHandler<RunGridSearchCommand,
             request.QuickMode,
             request.MaxSamplesPerConfig);
 
-        // Load dataset
-        var dataset = await LoadDatasetAsync(request.DatasetPath, cancellationToken).ConfigureAwait(false);
+        // Load dataset and get configurations to run
+        var (dataset, configurations) = await LoadDatasetAndGetConfigurationsAsync(
+            request.DatasetPath, request, cancellationToken).ConfigureAwait(false);
+
         _logger.LogInformation(
-            "Loaded dataset '{DatasetName}' with {SampleCount} samples",
+            "Running evaluation for {ConfigCount} configurations on dataset '{DatasetName}' ({SampleCount} samples)",
+            configurations.Count,
             dataset.Name,
             dataset.Count);
 
-        // Get configurations to evaluate
-        var configurations = GetConfigurationsToRun(request);
-        _logger.LogInformation(
-            "Running evaluation for {ConfigCount} configurations",
-            configurations.Count);
+        // Run configuration evaluations
+        var configurationResults = await RunConfigurationEvaluationsAsync(
+            configurations, dataset, request.MaxSamplesPerConfig, cancellationToken).ConfigureAwait(false);
 
-        // Run evaluations
+        overallStopwatch.Stop();
+        var completedAt = DateTime.UtcNow;
+
+        var gridSearchResult = GridSearchResult.Create(
+            dataset.Name,
+            startedAt,
+            completedAt,
+            configurationResults.AsReadOnly());
+
+        LogSummary(gridSearchResult);
+
+        // ADR-016 Phase 5: Record grid search completion metrics
+        MeepleAiMetrics.RecordGridSearchCompletion(
+            totalDurationMs: gridSearchResult.TotalDurationMs,
+            configsEvaluated: gridSearchResult.ConfigurationCount,
+            successfulConfigs: gridSearchResult.SuccessfulCount,
+            configsMeetingTarget: gridSearchResult.ConfigurationResults.Count(r => r.Metrics.MeetsPhase5Target()),
+            datasetName: dataset.Name);
+
+        return gridSearchResult;
+    }
+
+    /// <summary>
+    /// Loads evaluation dataset and generates grid search configurations.
+    /// Returns (dataset, configurations).
+    /// </summary>
+    private async Task<(EvaluationDataset dataset, IReadOnlyList<GridSearchConfiguration> configurations)> LoadDatasetAndGetConfigurationsAsync(
+        string datasetPath,
+        RunGridSearchCommand request,
+        CancellationToken cancellationToken)
+    {
+        var dataset = await LoadDatasetAsync(datasetPath, cancellationToken).ConfigureAwait(false);
+        var configurations = GetConfigurationsToRun(request);
+
+        return (dataset, configurations);
+    }
+
+    /// <summary>
+    /// Runs evaluation for all grid search configurations.
+    /// </summary>
+    private async Task<List<ConfigurationResult>> RunConfigurationEvaluationsAsync(
+        IReadOnlyList<GridSearchConfiguration> configurations,
+        EvaluationDataset dataset,
+        int? maxSamplesPerConfig,
+        CancellationToken cancellationToken)
+    {
         var configurationResults = new List<ConfigurationResult>();
 
         foreach (var config in configurations)
@@ -68,7 +114,7 @@ public sealed class RunGridSearchHandler : IRequestHandler<RunGridSearchCommand,
             var result = await EvaluateConfigurationAsync(
                 config,
                 dataset,
-                request.MaxSamplesPerConfig,
+                maxSamplesPerConfig,
                 cancellationToken).ConfigureAwait(false);
 
             configurationResults.Add(result);
@@ -92,26 +138,7 @@ public sealed class RunGridSearchHandler : IRequestHandler<RunGridSearchCommand,
                 meetsTarget: result.Metrics.MeetsPhase5Target());
         }
 
-        overallStopwatch.Stop();
-        var completedAt = DateTime.UtcNow;
-
-        var gridSearchResult = GridSearchResult.Create(
-            dataset.Name,
-            startedAt,
-            completedAt,
-            configurationResults.AsReadOnly());
-
-        LogSummary(gridSearchResult);
-
-        // ADR-016 Phase 5: Record grid search completion metrics
-        MeepleAiMetrics.RecordGridSearchCompletion(
-            totalDurationMs: gridSearchResult.TotalDurationMs,
-            configsEvaluated: gridSearchResult.ConfigurationCount,
-            successfulConfigs: gridSearchResult.SuccessfulCount,
-            configsMeetingTarget: gridSearchResult.ConfigurationResults.Count(r => r.Metrics.MeetsPhase5Target()),
-            datasetName: dataset.Name);
-
-        return gridSearchResult;
+        return configurationResults;
     }
 
     private async Task<EvaluationDataset> LoadDatasetAsync(

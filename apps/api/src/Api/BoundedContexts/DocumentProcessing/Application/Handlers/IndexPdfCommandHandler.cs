@@ -49,7 +49,71 @@ public class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, IndexingR
         var pdfId = command.PdfId;
         _logger.LogInformation("Starting indexing for PDF {PdfId}", pdfId);
 
-        // 1. Retrieve PDF document
+        try
+        {
+            // Step 1: Validate PDF and prepare for indexing
+            var (validationSuccess, pdf, vectorDoc, validationError, errorCode) = await ValidateAndPreparePdfForIndexingAsync(
+                pdfId, cancellationToken).ConfigureAwait(false);
+            if (!validationSuccess)
+            {
+                return IndexingResultDto.CreateFailure(validationError!, errorCode!.Value);
+            }
+
+            // Step 2: Chunk text and generate embeddings
+            var (chunkingSuccess, documentChunks, chunkingError, chunkErrorCode) = await ChunkAndEmbedTextAsync(
+                pdfId, pdf!.ExtractedText!, vectorDoc!, cancellationToken).ConfigureAwait(false);
+            if (!chunkingSuccess)
+            {
+                return await MarkIndexingFailedAsync(vectorDoc!, chunkingError!, chunkErrorCode!.Value, cancellationToken).ConfigureAwait(false);
+            }
+
+            // Step 3: Index in Qdrant and update VectorDocument
+            var indexingSuccess = await IndexChunksInVectorStoreAsync(
+                pdfId, pdf.GameId.ToString(), pdf.ExtractedText!, documentChunks!, vectorDoc!, cancellationToken).ConfigureAwait(false);
+            if (!indexingSuccess)
+            {
+                return await MarkIndexingFailedAsync(vectorDoc!, "Qdrant indexing failed", PdfIndexingErrorCode.QdrantIndexingFailed, cancellationToken).ConfigureAwait(false);
+            }
+
+            // Step 4: Save text chunks to PostgreSQL for hybrid search
+            await SaveTextChunksToPostgresAsync(pdfId, pdf.GameId, documentChunks!, cancellationToken).ConfigureAwait(false);
+
+            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+            _logger.LogInformation("Successfully indexed PDF {PdfId}: {ChunkCount} chunks, {TotalChars} characters",
+                pdfId, documentChunks!.Count, pdf.ExtractedText!.Length);
+
+            return IndexingResultDto.CreateSuccess(
+                vectorDoc!.Id.ToString(),
+                documentChunks.Count,
+                vectorDoc.IndexedAt!.Value);
+        }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Service boundary - error state management for complex multi-system operation
+        // PDF indexing involves multiple external systems (Qdrant, DB, file system) that must maintain consistency
+        catch (Exception ex)
+        {
+            // ERROR STATE MANAGEMENT: Top-level catch ensures graceful failure handling
+            // Rationale: PDF indexing involves multiple external systems (Qdrant, DB, file system).
+            // Any unhandled error should be captured, logged, and persisted as a failed indexing
+            // attempt rather than throwing to the caller. This maintains data consistency and
+            // provides operators with debugging context via the indexing_error field.
+            // Context: Covers unforeseen errors after specific exception handlers above
+            _logger.LogError(ex, "Unexpected error indexing PDF {PdfId}", pdfId);
+            return IndexingResultDto.CreateFailure($"Unexpected error: {ex.Message}", PdfIndexingErrorCode.UnexpectedError);
+        }
+#pragma warning restore CA1031
+    }
+
+    /// <summary>
+    /// Validates PDF document and prepares VectorDocument for indexing with idempotency check.
+    /// Returns (success, pdf, vectorDoc, errorMessage, errorCode).
+    /// </summary>
+    private async Task<(bool success, PdfDocumentEntity? pdf, VectorDocumentEntity? vectorDoc, string? errorMessage, PdfIndexingErrorCode? errorCode)> ValidateAndPreparePdfForIndexingAsync(
+        string pdfId,
+        CancellationToken cancellationToken)
+    {
+        // Retrieve PDF document
         var pdf = await _db.PdfDocuments
             .Include(p => p.Game)
             .FirstOrDefaultAsync(p => p.Id.ToString() == pdfId, cancellationToken).ConfigureAwait(false);
@@ -57,28 +121,24 @@ public class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, IndexingR
         if (pdf == null)
         {
             _logger.LogWarning("PDF {PdfId} not found", pdfId);
-            return IndexingResultDto.CreateFailure("PDF not found", PdfIndexingErrorCode.PdfNotFound);
+            return (false, null, null, "PDF not found", PdfIndexingErrorCode.PdfNotFound);
         }
 
-        // 2. Validate text extraction is complete
+        // Validate text extraction is complete
         if (string.IsNullOrWhiteSpace(pdf.ExtractedText))
         {
             _logger.LogWarning("PDF {PdfId} has no extracted text", pdfId);
-            return IndexingResultDto.CreateFailure(
-                "PDF text extraction required. Please extract text before indexing.",
-                PdfIndexingErrorCode.TextExtractionRequired);
+            return (false, pdf, null, "PDF text extraction required. Please extract text before indexing.", PdfIndexingErrorCode.TextExtractionRequired);
         }
 
         if (!string.Equals(pdf.ProcessingStatus, "completed", StringComparison.OrdinalIgnoreCase))
         {
             _logger.LogWarning("PDF {PdfId} processing status is {Status}, expected 'completed'",
                 pdfId, pdf.ProcessingStatus);
-            return IndexingResultDto.CreateFailure(
-                "PDF text extraction not completed",
-                PdfIndexingErrorCode.TextExtractionRequired);
+            return (false, pdf, null, "PDF text extraction not completed", PdfIndexingErrorCode.TextExtractionRequired);
         }
 
-        // 3. Check if already indexed (for idempotency)
+        // Check if already indexed (for idempotency)
         var pdfGuid = Guid.Parse(pdfId);
         var existingVectorDoc = await _db.Set<VectorDocumentEntity>()
             .FirstOrDefaultAsync(v => v.PdfDocumentId == pdfGuid, cancellationToken).ConfigureAwait(false);
@@ -101,8 +161,7 @@ public class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, IndexingR
         }
         else
         {
-            // Create new VectorDocumentEntity with actual embedding configuration
-            // Get actual dimensions from embedding service to ensure consistency
+            // Create new VectorDocumentEntity
             var embeddingDimensions = _embeddingService.GetEmbeddingDimensions();
 
             existingVectorDoc = new VectorDocumentEntity
@@ -118,143 +177,144 @@ public class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, IndexingR
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
 
-        try
+        return (true, pdf, existingVectorDoc, null, null);
+    }
+
+    /// <summary>
+    /// Chunks PDF text and generates embeddings.
+    /// Returns (success, documentChunks, errorMessage, errorCode).
+    /// </summary>
+    private async Task<(bool success, List<DocumentChunk>? documentChunks, string? errorMessage, PdfIndexingErrorCode? errorCode)> ChunkAndEmbedTextAsync(
+        string pdfId,
+        string extractedText,
+        VectorDocumentEntity vectorDoc,
+        CancellationToken cancellationToken)
+    {
+        // Chunk the text
+        _logger.LogInformation("Chunking text for PDF {PdfId} ({CharCount} characters)",
+            pdfId, extractedText.Length);
+
+        var textChunks = _chunkingService.ChunkText(extractedText);
+
+        if (textChunks.Count == 0)
         {
-            // 4. Chunk the text
-            _logger.LogInformation("Chunking text for PDF {PdfId} ({CharCount} characters)",
-                pdfId, pdf.ExtractedText.Length);
-
-            var textChunks = _chunkingService.ChunkText(pdf.ExtractedText);
-
-            if (textChunks.Count == 0)
-            {
-                _logger.LogWarning("No chunks created for PDF {PdfId}", pdfId);
-                return await MarkIndexingFailedAsync(existingVectorDoc,
-                    "No chunks created from text",
-                    PdfIndexingErrorCode.ChunkingFailed, cancellationToken).ConfigureAwait(false);
-            }
-
-            _logger.LogInformation("Created {ChunkCount} chunks for PDF {PdfId}", textChunks.Count, pdfId);
-
-            // 5. Generate embeddings
-            _logger.LogInformation("Generating embeddings for {ChunkCount} chunks", textChunks.Count);
-
-            var texts = textChunks.Select(c => c.Text).ToList();
-            var embeddingResult = await _embeddingService.GenerateEmbeddingsAsync(texts, cancellationToken).ConfigureAwait(false);
-
-            if (!embeddingResult.Success || embeddingResult.Embeddings.Count == 0)
-            {
-                _logger.LogError("Failed to generate embeddings for PDF {PdfId}: {Error}",
-                    pdfId, embeddingResult.ErrorMessage);
-                return await MarkIndexingFailedAsync(existingVectorDoc,
-                    $"Embedding generation failed: {embeddingResult.ErrorMessage}",
-                    PdfIndexingErrorCode.EmbeddingFailed, cancellationToken).ConfigureAwait(false);
-            }
-
-            if (embeddingResult.Embeddings.Count != textChunks.Count)
-            {
-                _logger.LogError("Embedding count mismatch: expected {Expected}, got {Actual}",
-                    textChunks.Count, embeddingResult.Embeddings.Count);
-                return await MarkIndexingFailedAsync(existingVectorDoc,
-                    "Embedding count mismatch",
-                    PdfIndexingErrorCode.EmbeddingFailed, cancellationToken).ConfigureAwait(false);
-            }
-
-            // 6. Prepare document chunks with embeddings
-            var documentChunks = new List<DocumentChunk>();
-            for (int i = 0; i < textChunks.Count; i++)
-            {
-                documentChunks.Add(new DocumentChunk
-                {
-                    Text = textChunks[i].Text,
-                    Embedding = embeddingResult.Embeddings[i],
-                    Page = textChunks[i].Page,
-                    CharStart = textChunks[i].CharStart,
-                    CharEnd = textChunks[i].CharEnd
-                });
-            }
-
-            // 7. Index in Qdrant
-            _logger.LogInformation("Indexing {ChunkCount} chunks in Qdrant for PDF {PdfId}",
-                documentChunks.Count, pdfId);
-
-            var indexResult = await _qdrantService.IndexDocumentChunksAsync(
-                pdf.GameId.ToString(),
-                pdfId,
-                documentChunks,
-                cancellationToken).ConfigureAwait(false);
-
-            if (!indexResult.Success)
-            {
-                _logger.LogError("Failed to index chunks in Qdrant for PDF {PdfId}: {Error}",
-                    pdfId, indexResult.ErrorMessage);
-                return await MarkIndexingFailedAsync(existingVectorDoc,
-                    $"Qdrant indexing failed: {indexResult.ErrorMessage}",
-                    PdfIndexingErrorCode.QdrantIndexingFailed, cancellationToken).ConfigureAwait(false);
-            }
-
-            // 8. Update VectorDocumentEntity to "completed"
-            existingVectorDoc.IndexingStatus = "completed";
-            existingVectorDoc.ChunkCount = documentChunks.Count;
-            existingVectorDoc.TotalCharacters = pdf.ExtractedText.Length;
-            existingVectorDoc.IndexedAt = _timeProvider.GetUtcNow().UtcDateTime;
-            existingVectorDoc.IndexingError = null;
-
-            // 9. Save text chunks to PostgreSQL for hybrid search (FTS)
-            // pdfGuid is already defined above (line 82)
-            var existingChunks = await _db.TextChunks
-                .Where(tc => tc.PdfDocumentId == pdfGuid)
-                .ToListAsync(cancellationToken).ConfigureAwait(false);
-            if (existingChunks.Count > 0)
-            {
-                _db.TextChunks.RemoveRange(existingChunks);
-            }
-
-            var textChunkEntities = new List<TextChunkEntity>();
-            for (int i = 0; i < textChunks.Count; i++)
-            {
-                textChunkEntities.Add(new TextChunkEntity
-                {
-                    Id = Guid.NewGuid(),
-                    GameId = pdf.GameId,
-                    PdfDocumentId = pdfGuid,
-                    Content = textChunks[i].Text,
-                    ChunkIndex = i,
-                    PageNumber = textChunks[i].Page,
-                    CharacterCount = textChunks[i].Text.Length,
-                    CreatedAt = _timeProvider.GetUtcNow().UtcDateTime
-                });
-            }
-            _db.TextChunks.AddRange(textChunkEntities);
-            _logger.LogInformation("Saved {ChunkCount} text chunks to PostgreSQL for hybrid search (PDF {PdfId})",
-                textChunkEntities.Count, pdfId);
-
-            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-
-            _logger.LogInformation("Successfully indexed PDF {PdfId}: {ChunkCount} chunks, {TotalChars} characters",
-                pdfId, documentChunks.Count, pdf.ExtractedText.Length);
-
-            return IndexingResultDto.CreateSuccess(
-                existingVectorDoc.Id.ToString(),
-                documentChunks.Count,
-                existingVectorDoc.IndexedAt.Value);
+            _logger.LogWarning("No chunks created for PDF {PdfId}", pdfId);
+            return (false, null, "No chunks created from text", PdfIndexingErrorCode.ChunkingFailed);
         }
-#pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Service boundary - error state management for complex multi-system operation
-        // PDF indexing involves multiple external systems (Qdrant, DB, file system) that must maintain consistency
-        catch (Exception ex)
+
+        _logger.LogInformation("Created {ChunkCount} chunks for PDF {PdfId}", textChunks.Count, pdfId);
+
+        // Generate embeddings
+        _logger.LogInformation("Generating embeddings for {ChunkCount} chunks", textChunks.Count);
+
+        var texts = textChunks.Select(c => c.Text).ToList();
+        var embeddingResult = await _embeddingService.GenerateEmbeddingsAsync(texts, cancellationToken).ConfigureAwait(false);
+
+        if (!embeddingResult.Success || embeddingResult.Embeddings.Count == 0)
         {
-            // ERROR STATE MANAGEMENT: Top-level catch ensures graceful failure handling
-            // Rationale: PDF indexing involves multiple external systems (Qdrant, DB, file system).
-            // Any unhandled error should be captured, logged, and persisted as a failed indexing
-            // attempt rather than throwing to the caller. This maintains data consistency and
-            // provides operators with debugging context via the indexing_error field.
-            // Context: Covers unforeseen errors after specific exception handlers above
-            _logger.LogError(ex, "Unexpected error indexing PDF {PdfId}", pdfId);
-            return await MarkIndexingFailedAsync(existingVectorDoc,
-                $"Unexpected error: {ex.Message}",
-                PdfIndexingErrorCode.UnexpectedError, cancellationToken).ConfigureAwait(false);
+            _logger.LogError("Failed to generate embeddings for PDF {PdfId}: {Error}",
+                pdfId, embeddingResult.ErrorMessage);
+            return (false, null, $"Embedding generation failed: {embeddingResult.ErrorMessage}", PdfIndexingErrorCode.EmbeddingFailed);
         }
+
+        if (embeddingResult.Embeddings.Count != textChunks.Count)
+        {
+            _logger.LogError("Embedding count mismatch: expected {Expected}, got {Actual}",
+                textChunks.Count, embeddingResult.Embeddings.Count);
+            return (false, null, "Embedding count mismatch", PdfIndexingErrorCode.EmbeddingFailed);
+        }
+
+        // Prepare document chunks with embeddings
+        var documentChunks = textChunks
+            .Select((chunk, index) => new DocumentChunk
+            {
+                Text = chunk.Text,
+                Embedding = embeddingResult.Embeddings[index],
+                Page = chunk.Page,
+                CharStart = chunk.CharStart,
+                CharEnd = chunk.CharEnd
+            })
+            .ToList();
+
+        return (true, documentChunks, null, null);
+    }
+
+    /// <summary>
+    /// Indexes document chunks in Qdrant and updates VectorDocument.
+    /// </summary>
+    private async Task<bool> IndexChunksInVectorStoreAsync(
+        string pdfId,
+        string gameId,
+        string extractedText,
+        List<DocumentChunk> documentChunks,
+        VectorDocumentEntity vectorDoc,
+        CancellationToken cancellationToken)
+    {
+        // Index in Qdrant
+        _logger.LogInformation("Indexing {ChunkCount} chunks in Qdrant for PDF {PdfId}",
+            documentChunks.Count, pdfId);
+
+        var indexResult = await _qdrantService.IndexDocumentChunksAsync(
+            gameId,
+            pdfId,
+            documentChunks,
+            cancellationToken).ConfigureAwait(false);
+
+        if (!indexResult.Success)
+        {
+            _logger.LogError("Failed to index chunks in Qdrant for PDF {PdfId}: {Error}",
+                pdfId, indexResult.ErrorMessage);
+            return false;
+        }
+
+        // Update VectorDocumentEntity to "completed"
+        vectorDoc.IndexingStatus = "completed";
+        vectorDoc.ChunkCount = documentChunks.Count;
+        vectorDoc.TotalCharacters = extractedText.Length;
+        vectorDoc.IndexedAt = _timeProvider.GetUtcNow().UtcDateTime;
+        vectorDoc.IndexingError = null;
+
+        return true;
+    }
+
+    /// <summary>
+    /// Saves text chunks to PostgreSQL for hybrid search with FTS.
+    /// </summary>
+    private async Task SaveTextChunksToPostgresAsync(
+        string pdfId,
+        Guid gameId,
+        List<DocumentChunk> documentChunks,
+        CancellationToken cancellationToken)
+    {
+        var pdfGuid = Guid.Parse(pdfId);
+
+        // Delete existing chunks
+        var existingChunks = await _db.TextChunks
+            .Where(tc => tc.PdfDocumentId == pdfGuid)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+        if (existingChunks.Count > 0)
+        {
+            _db.TextChunks.RemoveRange(existingChunks);
+        }
+
+        // Create new text chunk entities
+        var textChunkEntities = documentChunks
+            .Select((chunk, index) => new TextChunkEntity
+            {
+                Id = Guid.NewGuid(),
+                GameId = gameId,
+                PdfDocumentId = pdfGuid,
+                Content = chunk.Text,
+                ChunkIndex = index,
+                PageNumber = chunk.Page,
+                CharacterCount = chunk.Text.Length,
+                CreatedAt = _timeProvider.GetUtcNow().UtcDateTime
+            })
+            .ToList();
+
+        _db.TextChunks.AddRange(textChunkEntities);
+        _logger.LogInformation("Saved {ChunkCount} text chunks to PostgreSQL for hybrid search (PDF {PdfId})",
+            textChunkEntities.Count, pdfId);
     }
 
     private async Task<IndexingResultDto> MarkIndexingFailedAsync(

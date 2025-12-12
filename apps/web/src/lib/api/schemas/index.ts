@@ -33,3 +33,6 @@ export * from './admin.schemas';
 
 // Report schemas (Issue #920)
 export * from './reports.schemas';
+
+// Testing schemas (Issue #2139)
+export * from './testing.schemas';

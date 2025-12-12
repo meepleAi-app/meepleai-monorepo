@@ -368,6 +368,7 @@ v1Api.MapCacheEndpoints();             // Cache management
 v1Api.MapAdminUserEndpoints();         // User management
 v1Api.MapAdminMiscEndpoints();         // Miscellaneous admin operations
 v1Api.MapReportingEndpoints();         // ISSUE-916: Report generation & scheduling
+v1Api.MapTestingMetricsEndpoints();    // Issue #2139: Testing metrics API
 
 // DDD-PHASE3: KnowledgeBase bounded context endpoints
 v1Api.MapKnowledgeBaseEndpoints();

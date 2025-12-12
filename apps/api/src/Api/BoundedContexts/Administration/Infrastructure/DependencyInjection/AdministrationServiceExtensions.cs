@@ -1,3 +1,4 @@
+using Api.BoundedContexts.Administration.Application.Interfaces;
 using Api.BoundedContexts.Administration.Domain.Repositories;
 using Api.BoundedContexts.Administration.Domain.Services;
 using Api.BoundedContexts.Administration.Infrastructure.External;
@@ -38,6 +39,16 @@ public static class AdministrationServiceExtensions
 
         // Issue #894: Infrastructure details orchestration service
         services.AddScoped<IInfrastructureDetailsService, InfrastructureDetailsService>();
+
+        // Issue #2139: Testing metrics services
+        services.AddScoped<IPrometheusClientService, PrometheusClientService>();
+        services.AddScoped<ILighthouseReportParserService, LighthouseReportParserService>();
+        services.AddScoped<IPlaywrightReportParserService, PlaywrightReportParserService>();
+
+        // Issue #2139: HttpClient for Prometheus queries
+        services.AddHttpClient<PrometheusClientService>()
+            .AddPolicyHandler(GetRetryPolicy())
+            .AddPolicyHandler(GetCircuitBreakerPolicy());
 
         // ISSUE-916: Report generation and scheduling services
         services.AddScoped<IReportGeneratorService, ReportGeneratorService>();
@@ -86,4 +97,3 @@ public static class AdministrationServiceExtensions
                 durationOfBreak: TimeSpan.FromSeconds(30));
     }
 }
-

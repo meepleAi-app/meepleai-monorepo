@@ -27,3 +27,6 @@ export * from './streaming.schemas';
 
 // Admin schemas (Issue #1679)
 export * from './admin.schemas';
+
+// Report schemas (Issue #920)
+export * from './reports.schemas';

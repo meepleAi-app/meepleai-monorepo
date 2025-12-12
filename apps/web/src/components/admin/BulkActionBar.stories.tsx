@@ -112,7 +112,7 @@ export const ApiKeys: Story = {
  * User management with multiple actions.
  * Shows delete, export, and enable/disable actions.
  */
-export const Users: Story = {
+export const UserManagement: Story = {
   args: {
     selectedCount: 7,
     totalCount: 42,

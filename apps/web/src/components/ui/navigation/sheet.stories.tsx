@@ -8,9 +8,9 @@ import {
   SheetTrigger,
   SheetFooter,
 } from './sheet';
-import { Button } from './button';
-import { Label } from './label';
-import { Input } from './input';
+import { Button } from '../primitives/button';
+import { Label } from '../primitives/label';
+import { Input } from '../primitives/input';
 
 /**
  * Sheet component for slide-out panels and drawers.

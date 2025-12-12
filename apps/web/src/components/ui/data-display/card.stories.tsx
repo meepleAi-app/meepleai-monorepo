@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from './card';
-import { Button } from './button';
-import { Input } from './input';
-import { Label } from './label';
+import { Button } from '../primitives/button';
+import { Input } from '../primitives/input';
+import { Label } from '../primitives/label';
 import { Bell, Check } from 'lucide-react';
 
 /**

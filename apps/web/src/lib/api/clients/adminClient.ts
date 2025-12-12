@@ -79,6 +79,12 @@ import {
   type ScheduledReportDto,
   type ReportExecutionDto,
   type ScheduleReportResponse,
+  AccessibilityMetricsSchema,
+  PerformanceMetricsSchema,
+  E2EMetricsSchema,
+  type AccessibilityMetrics,
+  type PerformanceMetrics,
+  type E2EMetrics,
 } from '../schemas';
 
 export interface CreateAdminClientParams {
@@ -733,6 +739,50 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
      */
     async deleteScheduledReport(reportId: string): Promise<void> {
       await httpClient.delete(`/api/v1/admin/reports/${reportId}`);
+    },
+
+    // ========== Testing Dashboard (Issue #2139) ==========
+
+    /**
+     * Get accessibility test metrics (admin only)
+     * GET /api/v1/admin/testing/accessibility
+     */
+    async getAccessibilityMetrics(): Promise<AccessibilityMetrics> {
+      const result = await httpClient.get(
+        '/api/v1/admin/testing/accessibility',
+        AccessibilityMetricsSchema
+      );
+      if (!result) {
+        throw new Error('Failed to fetch accessibility metrics');
+      }
+      return result;
+    },
+
+    /**
+     * Get performance test metrics (admin only)
+     * GET /api/v1/admin/testing/performance
+     */
+    async getPerformanceMetrics(): Promise<PerformanceMetrics> {
+      const result = await httpClient.get(
+        '/api/v1/admin/testing/performance',
+        PerformanceMetricsSchema
+      );
+      if (!result) {
+        throw new Error('Failed to fetch performance metrics');
+      }
+      return result;
+    },
+
+    /**
+     * Get E2E test metrics (admin only)
+     * GET /api/v1/admin/testing/e2e
+     */
+    async getE2EMetrics(): Promise<E2EMetrics> {
+      const result = await httpClient.get('/api/v1/admin/testing/e2e', E2EMetricsSchema);
+      if (!result) {
+        throw new Error('Failed to fetch E2E metrics');
+      }
+      return result;
     },
   };
 }

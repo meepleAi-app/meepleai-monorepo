@@ -26,11 +26,10 @@ public class MeepleAiDbContextFactory : IDesignTimeDbContextFactory<MeepleAiDbCo
     {
         var optionsBuilder = new DbContextOptionsBuilder<MeepleAiDbContext>();
 
+        // Issue #921: Allow dummy connection for migrations without real DB
         var connectionString = Environment.GetEnvironmentVariable("CONNECTIONSTRINGS__POSTGRES")
             ?? Environment.GetEnvironmentVariable("POSTGRES_CONNECTION_STRING")
-            ?? throw new InvalidOperationException(
-                "Database connection string not configured. " +
-                "Set CONNECTIONSTRINGS__POSTGRES or POSTGRES_CONNECTION_STRING environment variable.");
+            ?? "Host=localhost;Database=meepleai_migrations;Username=postgres;Password=postgres"; // Dummy for migrations
 
         optionsBuilder.UseNpgsql(connectionString);
 

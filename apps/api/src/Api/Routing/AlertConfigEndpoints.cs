@@ -1,0 +1,132 @@
+using Api.Authentication;
+using Api.BoundedContexts.Administration.Application.Commands.AlertRules;
+using Api.BoundedContexts.Administration.Application.Queries.AlertRules;
+using MediatR;
+using Microsoft.AspNetCore.Mvc;
+
+namespace Api.Routing;
+
+/// <summary>
+/// Alert configuration endpoints (Issue #921)
+/// </summary>
+public static class AlertConfigEndpoints
+{
+    public static void MapAlertConfigEndpoints(this IEndpointRouteBuilder app)
+    {
+        var group = app.MapGroup("/api/v1/admin/alert-rules").WithTags("Admin", "AlertRules");
+
+        // GET /api/v1/admin/alert-rules
+        group.MapGet("/", async (IMediator mediator, CancellationToken ct) =>
+        {
+            var rules = await mediator.Send(new GetAllAlertRulesQuery(), ct);
+            return Results.Ok(rules);
+        })
+        .RequireAuthorization()
+        .WithName("GetAllAlertRules")
+        .WithOpenApi();
+
+        // GET /api/v1/admin/alert-rules/{id}
+        group.MapGet("/{id:guid}", async (Guid id, IMediator mediator, CancellationToken ct) =>
+        {
+            var rule = await mediator.Send(new GetAlertRuleByIdQuery(id), ct);
+            return rule == null ? Results.NotFound() : Results.Ok(rule);
+        })
+        .RequireAuthorization()
+        .WithName("GetAlertRuleById")
+        .WithOpenApi();
+
+        // POST /api/v1/admin/alert-rules
+        group.MapPost("/", async ([FromBody] CreateAlertRuleRequest request, HttpContext context, IMediator mediator, CancellationToken ct) =>
+        {
+            var userId = context.User.FindFirst("userId")?.Value ?? "system";
+
+            var command = new CreateAlertRuleCommand(
+                request.Name,
+                request.AlertType,
+                request.Severity,
+                request.ThresholdValue,
+                request.ThresholdUnit,
+                request.DurationMinutes,
+                request.Description,
+                userId
+            );
+
+            var id = await mediator.Send(command, ct);
+            return Results.Created($"/api/v1/admin/alert-rules/{id}", new { id });
+        })
+        .RequireAuthorization()
+        .WithName("CreateAlertRule")
+        .WithOpenApi();
+
+        // PUT /api/v1/admin/alert-rules/{id}
+        group.MapPut("/{id:guid}", async (Guid id, [FromBody] UpdateAlertRuleRequest request, HttpContext context, IMediator mediator, CancellationToken ct) =>
+        {
+            var userId = context.User.FindFirst("userId")?.Value ?? "system";
+
+            var command = new UpdateAlertRuleCommand(
+                id,
+                request.Name,
+                request.Severity,
+                request.ThresholdValue,
+                request.ThresholdUnit,
+                request.DurationMinutes,
+                request.Description,
+                userId
+            );
+
+            await mediator.Send(command, ct);
+            return Results.NoContent();
+        })
+        .RequireAuthorization()
+        .WithName("UpdateAlertRule")
+        .WithOpenApi();
+
+        // DELETE /api/v1/admin/alert-rules/{id}
+        group.MapDelete("/{id:guid}", async (Guid id, IMediator mediator, CancellationToken ct) =>
+        {
+            await mediator.Send(new DeleteAlertRuleCommand(id), ct);
+            return Results.NoContent();
+        })
+        .RequireAuthorization()
+        .WithName("DeleteAlertRule")
+        .WithOpenApi();
+
+        // PATCH /api/v1/admin/alert-rules/{id}/toggle
+        group.MapPatch("/{id:guid}/toggle", async (Guid id, HttpContext context, IMediator mediator, CancellationToken ct) =>
+        {
+            var userId = context.User.FindFirst("userId")?.Value ?? "system";
+
+            await mediator.Send(new EnableAlertRuleCommand(id, userId), ct);
+            return Results.NoContent();
+        })
+        .RequireAuthorization()
+        .WithName("ToggleAlertRule")
+        .WithOpenApi();
+
+        // GET /api/v1/admin/alert-templates
+        app.MapGet("/api/v1/admin/alert-templates", async (IMediator mediator, CancellationToken ct) =>
+        {
+            var templates = await mediator.Send(new GetAlertTemplatesQuery(), ct);
+            return Results.Ok(templates);
+        })
+        .RequireAuthorization()
+        .WithTags("Admin", "AlertRules")
+        .WithName("GetAlertTemplates")
+        .WithOpenApi();
+
+        // POST /api/v1/admin/alert-test
+        app.MapPost("/api/v1/admin/alert-test", async ([FromBody] TestAlertRequest request, IMediator mediator, CancellationToken ct) =>
+        {
+            var success = await mediator.Send(new TestAlertCommand(request.AlertType, request.Channel), ct);
+            return success ? Results.Ok(new { success = true }) : Results.BadRequest(new { success = false, error = "Test alert failed" });
+        })
+        .RequireAuthorization()
+        .WithTags("Admin", "AlertRules")
+        .WithName("TestAlert")
+        .WithOpenApi();
+    }
+}
+
+public record CreateAlertRuleRequest(string Name, string AlertType, string Severity, double ThresholdValue, string ThresholdUnit, int DurationMinutes, string? Description);
+public record UpdateAlertRuleRequest(string Name, string Severity, double ThresholdValue, string ThresholdUnit, int DurationMinutes, string? Description);
+public record TestAlertRequest(string AlertType, string Channel);

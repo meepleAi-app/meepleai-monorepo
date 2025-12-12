@@ -35,7 +35,14 @@ export interface ChatHistorySectionProps {
  * ChatHistorySection Component (MVP Placeholder)
  *
  * Backend endpoint available: GET /api/v1/knowledge-base/my-chats (Issue #2026)
- * Returns: { chats: Array<{id, gameId, gameName, lastMessage, timestamp, messageCount}>, totalCount }
+ * Optimized response with lightweight DTOs and correct pagination.
+ *
+ * Response Format:
+ * {
+ *   threads: Array<{id, gameId, gameName, title, lastMessageContent, lastMessageAt, messageCount}>,
+ *   count: number,  // Total threads (for pagination)
+ *   page: { skip, take, hasMore }
+ * }
  *
  * Future Enhancement: Implement data fetching hook and uncomment UI below.
  */

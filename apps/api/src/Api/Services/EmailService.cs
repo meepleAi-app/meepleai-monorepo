@@ -69,7 +69,7 @@ public class EmailService : IEmailService
                 toEmail);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Service boundary - wraps external SMTP exceptions with domain exception
+        // Justification: Infrastructure adapter - Wraps external SMTP service exceptions (authentication, network, timeout) into domain exception
         // External service integration requires catching all SMTP exceptions to provide consistent error handling
         catch (Exception ex)
         {
@@ -116,7 +116,7 @@ public class EmailService : IEmailService
                 wasAdminOverride);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Service boundary - wraps external SMTP exceptions with domain exception
+        // Justification: Infrastructure adapter - Wraps external SMTP service exceptions (authentication, network, timeout) into domain exception
         // External service integration requires catching all SMTP exceptions to provide consistent error handling
         catch (Exception ex)
         {
@@ -301,7 +301,8 @@ public class EmailService : IEmailService
                 "Report email sent successfully: {ReportName} to {RecipientCount} recipients",
                 reportName, recipients.Count);
         }
-#pragma warning disable CA1031
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Infrastructure adapter - Wraps external SMTP service exceptions (authentication, network, timeout) into domain exception
         catch (Exception ex)
         {
             _logger.LogError(
@@ -356,7 +357,8 @@ public class EmailService : IEmailService
                 "Report failure email sent successfully: {ReportName} to {RecipientCount} recipients",
                 reportName, recipients.Count);
         }
-#pragma warning disable CA1031
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Background operation - Failure notification email is best-effort, must not propagate exceptions
         catch (Exception ex)
         {
             _logger.LogError(

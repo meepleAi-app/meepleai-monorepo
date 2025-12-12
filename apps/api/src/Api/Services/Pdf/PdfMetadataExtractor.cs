@@ -39,6 +39,7 @@ public class PdfMetadataExtractor : IPdfMetadataExtractor
             if (!string.IsNullOrEmpty(creationDateStr))
             {
 #pragma warning disable CA1031 // Do not catch general exception types
+                // Justification: Infrastructure adapter - Gracefully handles malformed PDF metadata without failing extraction, vendor-specific date format variations
                 try
                 {
                     metadata.CreationDate = ParsePdfDate(creationDateStr);
@@ -60,6 +61,7 @@ public class PdfMetadataExtractor : IPdfMetadataExtractor
             if (!string.IsNullOrEmpty(modDateStr))
             {
 #pragma warning disable CA1031 // Do not catch general exception types
+                // Justification: Infrastructure adapter - Gracefully handles malformed PDF metadata without failing extraction, vendor-specific date format variations
                 try
                 {
                     metadata.ModificationDate = ParsePdfDate(modDateStr);

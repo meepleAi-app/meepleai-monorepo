@@ -154,6 +154,7 @@ public class QdrantService : IQdrantService
             return IndexResult.CreateSuccess(validChunks.Count);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Infrastructure adapter - Wraps Qdrant gRPC exceptions into domain-friendly IndexResult with telemetry
         // Issue #1444: Use centralized exception handling for Result pattern
         catch (Exception ex)
         {
@@ -210,6 +211,7 @@ public class QdrantService : IQdrantService
             return SearchResult.CreateSuccess(results);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Infrastructure adapter - Wraps Qdrant gRPC exceptions into domain-friendly SearchResult with telemetry
         // Issue #1444: Use centralized exception handling for Result pattern
         catch (Exception ex)
         {
@@ -234,6 +236,7 @@ public class QdrantService : IQdrantService
             return true;
         }
 #pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Infrastructure adapter - Wraps Qdrant gRPC exceptions into boolean result pattern for deletion operations
         // Issue #1444: Use centralized exception handling for Result pattern (boolean return)
         catch (Exception ex)
         {
@@ -273,6 +276,7 @@ public class QdrantService : IQdrantService
             return IndexResult.CreateSuccess(chunks.Count);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Infrastructure adapter - Wraps Qdrant gRPC exceptions into domain-friendly IndexResult with telemetry
         // Issue #1444: Use centralized exception handling for Result pattern
         catch (Exception ex)
         {
@@ -307,6 +311,7 @@ public class QdrantService : IQdrantService
             return SearchResult.CreateSuccess(results);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Infrastructure adapter - Wraps Qdrant gRPC exceptions into domain-friendly SearchResult with telemetry
         // Issue #1444: Use centralized exception handling for Result pattern
         catch (Exception ex)
         {
@@ -366,6 +371,7 @@ public class QdrantService : IQdrantService
             return IndexResult.CreateSuccess(chunks.Count);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Infrastructure adapter - Wraps Qdrant gRPC exceptions into domain-friendly IndexResult with telemetry
         // Issue #1444: Use centralized exception handling for Result pattern
         catch (Exception ex)
         {
@@ -420,6 +426,7 @@ public class QdrantService : IQdrantService
             return SearchResult.CreateSuccess(results);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Infrastructure adapter - Wraps Qdrant gRPC exceptions into domain-friendly SearchResult with telemetry
         // Issue #1444: Use centralized exception handling for Result pattern
         catch (Exception ex)
         {
@@ -444,6 +451,7 @@ public class QdrantService : IQdrantService
             return true;
         }
 #pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Infrastructure adapter - Wraps Qdrant gRPC exceptions into boolean result pattern for deletion operations
         // Issue #1444: Use centralized exception handling for Result pattern (boolean return)
         catch (Exception ex)
         {

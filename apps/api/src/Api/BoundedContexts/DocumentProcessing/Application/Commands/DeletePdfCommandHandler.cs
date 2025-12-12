@@ -82,11 +82,13 @@ public class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDele
                     _logger.LogWarning(ex, "Invalid operation deleting vectors from Qdrant for PDF {PdfId}", pdfId);
                 }
 #pragma warning disable CA1031 // Do not catch general exception types
+                // Justification: Infrastructure adapter - Qdrant vector deletion is best-effort cleanup;
+                // failures must not block PDF metadata deletion
                 catch (Exception ex)
+#pragma warning restore CA1031
                 {
                     _logger.LogWarning(ex, "Unexpected error deleting vectors from Qdrant for PDF {PdfId}", pdfId);
                 }
-#pragma warning restore CA1031
             }
 
             // Delete PDF document record
@@ -101,11 +103,13 @@ public class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDele
                 await _blobStorageService.DeleteAsync(pdfId, gameId.ToString(), cancellationToken).ConfigureAwait(false);
             }
 #pragma warning disable CA1031 // Do not catch general exception types
+            // Justification: Infrastructure adapter - Physical file deletion is best-effort cleanup;
+            // failures must not block PDF metadata deletion (file may already be gone)
             catch (Exception ex)
+#pragma warning restore CA1031
             {
                 _logger.LogWarning(ex, "Error deleting physical file for PDF {PdfId}", pdfId);
             }
-#pragma warning restore CA1031
 
             await InvalidateCacheSafelyAsync(gameId.ToString(), cancellationToken, "PDF deletion").ConfigureAwait(false);
 
@@ -126,12 +130,14 @@ public class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDele
             throw new PdfStorageException("Failed to delete PDF metadata: Database error occurred.", ex);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: CQRS handler boundary - Wrap all unexpected exceptions during PDF deletion
+        // into domain-specific PdfStorageException for consistent error handling upstream
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             _logger.LogError(ex, "Unexpected error deleting PDF {PdfId}", pdfId);
             throw new PdfStorageException($"Failed to delete PDF: {ex.Message}", ex);
         }
-#pragma warning restore CA1031
     }
 
     private async Task InvalidateCacheSafelyAsync(string gameId, CancellationToken ct, string operation)
@@ -149,10 +155,12 @@ public class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDele
             _logger.LogWarning(ex, "Invalid operation invalidating AI cache for game {GameId} after {Operation}", gameId, operation);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Cleanup operation - Cache invalidation is best-effort optimization;
+        // failures must not interrupt PDF deletion workflow
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             _logger.LogWarning(ex, "Unexpected error invalidating AI cache for game {GameId} after {Operation}", gameId, operation);
         }
-#pragma warning restore CA1031
     }
 }

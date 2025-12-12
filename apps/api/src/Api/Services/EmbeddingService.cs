@@ -105,6 +105,7 @@ public class EmbeddingService : IEmbeddingService
             return EmbeddingResult.CreateFailure(result.ErrorMessage ?? "Embedding generation failed");
         }
 #pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Service boundary - Wraps multi-provider embedding failures (network, API errors, timeouts) into domain-friendly EmbeddingResult
         catch (Exception ex)
         {
             return RagExceptionHandler.HandleServiceException(
@@ -159,6 +160,7 @@ public class EmbeddingService : IEmbeddingService
             return await GenerateEmbeddingsAsync(texts, ct).ConfigureAwait(false);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Service boundary - Wraps multi-provider embedding failures (network, API errors, timeouts) into domain-friendly EmbeddingResult
         catch (Exception ex)
         {
             return RagExceptionHandler.HandleServiceException(

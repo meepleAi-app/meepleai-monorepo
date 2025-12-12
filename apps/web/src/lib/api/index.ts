@@ -30,6 +30,7 @@ import {
   createBggClient,
   createAgentsClient,
   createAdminClient,
+  createAlertsClient,
   type AuthClient,
   type GamesClient,
   type SessionsClient,
@@ -39,7 +40,11 @@ import {
   type BggClient,
   type AgentsClient,
   type AdminClient,
+  type AlertsClient,
 } from './clients';
+
+// Re-export alert schemas (Issue #921)
+export * from './schemas/alerts.schemas';
 
 // Re-export client-specific types for consumer convenience
 export type {
@@ -137,6 +142,9 @@ export interface ApiClient {
   /** Administration (Users & Prompts Management) - Issue #1679 */
   admin: AdminClient;
 
+  /** Alert Management (Issue #921) */
+  alerts: AlertsClient;
+
   /** Generic DELETE helper (used in some legacy tests) */
   delete: (path: string) => Promise<void>;
 }
@@ -196,6 +204,7 @@ export function createApiClient(config?: ApiClientConfig): ApiClient {
     bgg: createBggClient({ httpClient }),
     agents: createAgentsClient({ httpClient }),
     admin: createAdminClient({ httpClient }),
+    alerts: createAlertsClient({ httpClient }),
     delete: (path: string) => httpClient.delete(path),
   };
 

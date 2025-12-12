@@ -77,6 +77,27 @@ export const PaginatedSessionsResponseSchema = z.object({
 
 export type PaginatedSessionsResponse = z.infer<typeof PaginatedSessionsResponseSchema>;
 
+// ========== Game FAQs (Issue #2028) ==========
+
+export const GameFAQSchema = z.object({
+  id: z.string().uuid(),
+  gameId: z.string().uuid(),
+  question: z.string().min(1).max(500),
+  answer: z.string().min(1).max(5000),
+  upvotes: z.number().int().nonnegative(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime().nullable(),
+});
+
+export type GameFAQ = z.infer<typeof GameFAQSchema>;
+
+export const GetGameFAQsResultSchema = z.object({
+  faqs: z.array(GameFAQSchema),
+  totalCount: z.number().int().nonnegative(),
+});
+
+export type GetGameFAQsResult = z.infer<typeof GetGameFAQsResultSchema>;
+
 // ========== BoardGameGeek API ==========
 
 export const BggSearchResultSchema = z.object({

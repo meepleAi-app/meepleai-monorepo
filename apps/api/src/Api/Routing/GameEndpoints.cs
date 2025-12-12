@@ -400,6 +400,111 @@ public static class GameEndpoints
         })
         .RequireAuthenticatedUser(); // Issue #1446: Dual authentication (session OR API key)
 
+        // ========================================
+        // GameFAQ CQRS Endpoints (Issue #2028)
+        // ========================================
+
+        // Get FAQs for a game (public, paginated)
+        group.MapGet("/games/{gameId}/faqs", async (
+            Guid gameId,
+            [FromQuery] int? limit,
+            [FromQuery] int? offset,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            // User authenticated via session OR API key (RequireAuthenticatedUserFilter)
+
+            var query = new GetGameFAQsQuery(
+                GameId: gameId,
+                Limit: limit ?? 10,
+                Offset: offset ?? 0
+            );
+
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .RequireAuthenticatedUser(); // Issue #1446: Dual authentication (session OR API key)
+
+        // Create FAQ for a game (admin/editor only)
+        group.MapPost("/games/{gameId}/faqs", async (
+            Guid gameId,
+            CreateGameFAQRequest request,
+            IMediator mediator,
+            HttpContext context,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            // Auth check
+            var (authorized, session, error) = context.RequireAdminOrEditorSession();
+            if (!authorized) return error!;
+
+            var command = new CreateGameFAQCommand(
+                GameId: gameId,
+                Question: request.Question,
+                Answer: request.Answer
+            );
+
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            logger.LogInformation("Created FAQ {FAQId} for game {GameId}", result.Id, gameId);
+            return Results.Created($"/api/v1/faqs/{result.Id}", result);
+        });
+
+        // Update FAQ (admin/editor only)
+        group.MapPut("/faqs/{id}", async (
+            Guid id,
+            UpdateGameFAQRequest request,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            // Auth check
+            var (authorized, session, error) = context.RequireAdminOrEditorSession();
+            if (!authorized) return error!;
+
+            var command = new UpdateGameFAQCommand(
+                Id: id,
+                Question: request.Question,
+                Answer: request.Answer
+            );
+
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        });
+
+        // Delete FAQ (admin/editor only)
+        group.MapDelete("/faqs/{id}", async (
+            Guid id,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            // Auth check
+            var (authorized, session, error) = context.RequireAdminOrEditorSession();
+            if (!authorized) return error!;
+
+            var command = new DeleteGameFAQCommand(Id: id);
+            await mediator.Send(command, ct).ConfigureAwait(false);
+
+            return Results.NoContent();
+        });
+
+        // Upvote FAQ (public)
+        group.MapPost("/faqs/{id}/upvote", async (
+            Guid id,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            // User authenticated via session OR API key (RequireAuthenticatedUserFilter)
+
+            var command = new UpvoteGameFAQCommand(Id: id);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+            return Results.Ok(result);
+        })
+        .RequireAuthenticatedUser(); // Issue #1446: Dual authentication (session OR API key)
+
         return group;
     }
 }

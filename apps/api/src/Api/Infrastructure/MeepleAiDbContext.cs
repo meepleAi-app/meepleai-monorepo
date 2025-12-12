@@ -65,6 +65,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<ChunkedUploadSessionEntity> ChunkedUploadSessions => Set<ChunkedUploadSessionEntity>(); // Chunked PDF upload
     public DbSet<AdminReportEntity> AdminReports => Set<AdminReportEntity>(); // ISSUE-916: Report generation + scheduling
     public DbSet<ReportExecutionEntity> ReportExecutions => Set<ReportExecutionEntity>(); // ISSUE-916: Report execution history
+    public DbSet<GameFAQEntity> GameFAQs => Set<GameFAQEntity>(); // ISSUE-2028: Game-specific FAQs
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -93,6 +94,7 @@ public class MeepleAiDbContext : DbContext
         modelBuilder.Ignore<BoundedContexts.Authentication.Domain.Entities.ApiKey>();
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.GameSession>();
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.Game>();
+        modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.GameFAQ>(); // ISSUE-2028
         modelBuilder.Ignore<BoundedContexts.Administration.Domain.Entities.AdminReport>(); // ISSUE-916
         modelBuilder.Ignore<BoundedContexts.Administration.Domain.Entities.ReportExecution>(); // ISSUE-916
     }

@@ -5,6 +5,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 
 /// <summary>
 /// PdfDocument aggregate root representing an uploaded PDF with extraction metadata.
+/// Issue #2029: Added Language support for PDF language filtering
 /// </summary>
 public sealed class PdfDocument : AggregateRoot<Guid>
 {
@@ -19,6 +20,9 @@ public sealed class PdfDocument : AggregateRoot<Guid>
     public DateTime? ProcessedAt { get; private set; }
     public int? PageCount { get; private set; }
     public string? ProcessingError { get; private set; }
+    
+    // Issue #2029: Language detection for PDF filtering
+    public LanguageCode Language { get; private set; }
 
 #pragma warning disable CS8618
     private PdfDocument() : base() { }
@@ -30,7 +34,8 @@ public sealed class PdfDocument : AggregateRoot<Guid>
         FileName fileName,
         string filePath,
         FileSize fileSize,
-        Guid uploadedByUserId) : base(id)
+        Guid uploadedByUserId,
+        LanguageCode? language = null) : base(id)
     {
         if (string.IsNullOrWhiteSpace(filePath))
             throw new ArgumentException("File path cannot be empty", nameof(filePath));
@@ -43,6 +48,7 @@ public sealed class PdfDocument : AggregateRoot<Guid>
         UploadedByUserId = uploadedByUserId;
         UploadedAt = DateTime.UtcNow;
         ProcessingStatus = "pending";
+        Language = language ?? LanguageCode.English; // Default to English
     }
 
     public void MarkAsProcessing()
@@ -69,5 +75,12 @@ public sealed class PdfDocument : AggregateRoot<Guid>
         ProcessingStatus = "failed";
         ProcessedAt = DateTime.UtcNow;
         ProcessingError = error;
+    }
+    
+    // Issue #2029: Update detected language after processing
+    public void UpdateLanguage(LanguageCode languageCode)
+    {
+        ArgumentNullException.ThrowIfNull(languageCode);
+        Language = languageCode;
     }
 }

@@ -112,11 +112,15 @@ public class HybridSearchService : IHybridSearchService
 
         var queryEmbedding = embeddingResult.Embeddings![0];
 
-        // Search Qdrant with embedding
+        // Issue #2141: Convert Guid documentIds to string[] for Qdrant
+        var documentIdStrings = documentIds?.Select(id => id.ToString()).ToList();
+
+        // Search Qdrant with embedding and native document filtering
         var vectorResults = await _qdrantService.SearchAsync(
             gameId.ToString(),
             queryEmbedding,
             limit: limit,
+            documentIds: documentIdStrings,
             ct: cancellationToken).ConfigureAwait(false);
 
         if (!vectorResults.Success)
@@ -125,16 +129,12 @@ public class HybridSearchService : IHybridSearchService
             return Array.Empty<HybridSearchResult>();
         }
 
-        // Issue #2051: Filter by document IDs if specified
-        var filteredResults = documentIds == null
-            ? vectorResults.Results
-            : vectorResults.Results.Where(r => documentIds.Any(id => id.ToString() == r.PdfId)).ToList();
-
+        // Issue #2141: No post-query filtering needed - Qdrant does native filtering
         _logger.LogInformation(
-            "Semantic search: {TotalResults} results from Qdrant, {FilteredResults} after document filter",
-            vectorResults.Results.Count, filteredResults.Count);
+            "Semantic search: {ResultCount} results from Qdrant (native document filter applied)",
+            vectorResults.Results.Count);
 
-        return filteredResults.Select((r, index) => new HybridSearchResult
+        return vectorResults.Results.Select((r, index) => new HybridSearchResult
         {
             ChunkId = $"{r.PdfId}_{r.ChunkIndex}", // Composite key for chunk identification
             Content = r.Text,
@@ -224,11 +224,15 @@ public class HybridSearchService : IHybridSearchService
 
         var queryEmbedding = embeddingResult.Embeddings![0];
 
+        // Issue #2141: Convert Guid documentIds to string[] for Qdrant native filtering
+        var documentIdStrings = documentIds?.Select(id => id.ToString()).ToList();
+
         // Execute vector and keyword searches in parallel for performance
         var vectorTask = _qdrantService.SearchAsync(
             gameId.ToString(),
             queryEmbedding,
             limit: fetchLimit,
+            documentIds: documentIdStrings,
             ct: cancellationToken);
 
         var keywordTask = _keywordSearchService.SearchAsync(
@@ -250,22 +254,19 @@ public class HybridSearchService : IHybridSearchService
             return await SearchKeywordOnlyAsync(query, gameId, limit, documentIds, cancellationToken).ConfigureAwait(false);
         }
 
-        // Issue #2051: Filter results by document IDs before fusion
-        var filteredVectorResults = documentIds == null
-            ? vectorResults.Results
-            : vectorResults.Results.Where(r => documentIds.Any(id => id.ToString() == r.PdfId)).ToList();
-
+        // Issue #2141: Qdrant now does native filtering - keyword still needs post-query filter
         var filteredKeywordResults = documentIds == null
             ? keywordResults
             : keywordResults.Where(r => documentIds.Any(id => id.ToString() == r.PdfDocumentId)).ToList();
 
         _logger.LogInformation(
-            "Retrieved results for fusion: vectorCount={VectorCount} (filtered: {FilteredVector}), keywordCount={KeywordCount} (filtered: {FilteredKeyword})",
-            vectorResults.Results.Count, filteredVectorResults.Count, keywordResults.Count, filteredKeywordResults.Count);
+            "Retrieved results for fusion: vectorCount={VectorCount} (Qdrant native filter), keywordCount={KeywordCount} (post-filter: {FilteredKeyword})",
+            vectorResults.Results.Count, keywordResults.Count, filteredKeywordResults.Count);
 
         // Apply Reciprocal Rank Fusion (RRF) algorithm
+        // Issue #2141: Vector results already filtered by Qdrant native filter
         var fusedResults = FuseSearchResults(
-            filteredVectorResults,
+            vectorResults.Results,
             filteredKeywordResults,
             gameId,
             vectorWeight,

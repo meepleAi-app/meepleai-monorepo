@@ -185,4 +185,45 @@ public class QdrantVectorSearcher : IQdrantVectorSearcher
             }
         };
     }
+
+    /// <summary>
+    /// Build a combined filter for game ID and multiple document IDs (Issue #2141)
+    /// Uses Must for game_id AND Should for pdf_id (OR logic)
+    /// </summary>
+    public Filter BuildGameAndDocumentsFilter(string gameId, IReadOnlyList<string> documentIds)
+    {
+        var filter = new Filter
+        {
+            Must =
+            {
+                // game_id must match
+                new Condition
+                {
+                    Field = new FieldCondition
+                    {
+                        Key = "game_id",
+                        Match = new Match { Keyword = gameId }
+                    }
+                }
+            }
+        };
+
+        // pdf_id should match ANY of the provided IDs (OR logic)
+        if (documentIds != null && documentIds.Count > 0)
+        {
+            foreach (var docId in documentIds)
+            {
+                filter.Should.Add(new Condition
+                {
+                    Field = new FieldCondition
+                    {
+                        Key = "pdf_id",
+                        Match = new Match { Keyword = docId }
+                    }
+                });
+            }
+        }
+
+        return filter;
+    }
 }

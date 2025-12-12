@@ -142,7 +142,7 @@ public class RagService : IRagService
                 // Step 3: PERF-08 - Search Qdrant with all query variations (parallel execution)
                 // CONFIG-04: Use dynamic topK from configuration
                 var searchTasks = embeddings
-                    .Select(embedding => _qdrantService.SearchAsync(gameId, embedding, language, limit: topK, cancellationToken))
+                    .Select(embedding => _qdrantService.SearchAsync(gameId, embedding, language, limit: topK, documentIds: null, cancellationToken))
                     .ToList();
                 var searchResults = await Task.WhenAll(searchTasks).ConfigureAwait(false);
 
@@ -300,7 +300,7 @@ public class RagService : IRagService
                 // Step 2: Search Qdrant for relevant chunks (get more for comprehensive explanation)
                 // AI-09: Filter search by language
                 // CONFIG-04: Use dynamic topK from configuration
-                var searchResult = await _qdrantService.SearchAsync(gameId, topicEmbedding, language, limit: topK, cancellationToken).ConfigureAwait(false);
+                var searchResult = await _qdrantService.SearchAsync(gameId, topicEmbedding, language, limit: topK, documentIds: null, cancellationToken).ConfigureAwait(false);
 
                 if (!searchResult.Success || searchResult.Results.Count == 0)
                 {

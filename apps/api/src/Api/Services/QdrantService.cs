@@ -173,6 +173,7 @@ public class QdrantService : IQdrantService
         string gameId,
         float[] queryEmbedding,
         int limit = 5,
+        IReadOnlyList<string>? documentIds = null,
         CancellationToken ct = default)
     {
         // Validate parameters
@@ -183,12 +184,20 @@ public class QdrantService : IQdrantService
         activity?.SetTag("limit", limit);
         activity?.SetTag("collection", CollectionName);
         activity?.SetTag("vector.dimension", queryEmbedding.Length);
+        activity?.SetTag("document.filter.enabled", documentIds != null); // Issue #2141
         // OPS-02: Start tracking duration
         var stopwatch = Stopwatch.StartNew();
         try
         {
-            _logger.LogInformation("Searching in game {GameId}, limit {Limit}", gameId, limit);
-            var filter = _vectorSearcher.BuildGameFilter(gameId);
+            _logger.LogInformation(
+                "Searching in game {GameId}, limit {Limit}, documentFilter={HasFilter}",
+                gameId, limit, documentIds != null);
+
+            // Issue #2141: Use combined filter if documentIds provided (native Qdrant filtering)
+            var filter = documentIds != null && documentIds.Count > 0
+                ? _vectorSearcher.BuildGameAndDocumentsFilter(gameId, documentIds)
+                : _vectorSearcher.BuildGameFilter(gameId);
+
             var searchResults = await _vectorSearcher.SearchAsync(
                 collectionName: CollectionName,
                 queryEmbedding: queryEmbedding,
@@ -384,12 +393,14 @@ public class QdrantService : IQdrantService
     }
     /// <summary>
     /// Search for similar chunks filtered by game and language
+    /// Issue #2141: Supports document filtering via native Qdrant filters
     /// </summary>
     public virtual async Task<SearchResult> SearchAsync(
         string gameId,
         float[] queryEmbedding,
         string language,
         int limit = 5,
+        IReadOnlyList<string>? documentIds = null,
         CancellationToken ct = default)
     {
         // Validate parameters
@@ -400,12 +411,33 @@ public class QdrantService : IQdrantService
         activity?.SetTag("limit", limit);
         activity?.SetTag("collection", CollectionName);
         activity?.SetTag("vector.dimension", queryEmbedding.Length);
+        activity?.SetTag("document.filter.enabled", documentIds != null); // Issue #2141
         var stopwatch = Stopwatch.StartNew();
         try
         {
-            _logger.LogInformation("Searching in game {GameId} for language {Language}, limit {Limit}",
-                gameId, language, limit);
+            _logger.LogInformation(
+                "Searching in game {GameId} for language {Language}, limit {Limit}, documentFilter={HasFilter}",
+                gameId, language, limit, documentIds != null);
+
+            // Build filter combining game+language+documents
             var filter = _vectorSearcher.BuildGameLanguageFilter(gameId, language);
+
+            // Issue #2141: Add document ID filtering if specified
+            if (documentIds != null && documentIds.Count > 0)
+            {
+                foreach (var docId in documentIds)
+                {
+                    filter.Should.Add(new Condition
+                    {
+                        Field = new FieldCondition
+                        {
+                            Key = "pdf_id",
+                            Match = new Match { Keyword = docId }
+                        }
+                    });
+                }
+            }
+
             var searchResults = await _vectorSearcher.SearchAsync(
                 collectionName: CollectionName,
                 queryEmbedding: queryEmbedding,

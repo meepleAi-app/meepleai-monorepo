@@ -197,6 +197,7 @@ public class StreamSetupGuideQueryHandler : IStreamingQueryHandler<StreamSetupGu
             gameId,
             queryEmbedding,
             limit: 10,
+            documentIds: null,
             cancellationToken).ConfigureAwait(false);
 
         if (!searchResult.Success || searchResult.Results.Count == 0)

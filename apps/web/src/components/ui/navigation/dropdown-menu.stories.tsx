@@ -14,7 +14,7 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
 } from './dropdown-menu';
-import { Button } from './button';
+import { Button } from '../primitives/button';
 import {
   Cloud,
   CreditCard,

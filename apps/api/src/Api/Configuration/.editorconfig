@@ -1,5 +1,0 @@
-# EditorConfig for folder-specific MA0051 suppression
-root = false
-
-[*.cs]
-dotnet_diagnostic.MA0051.severity = none

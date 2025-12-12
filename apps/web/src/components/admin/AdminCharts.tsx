@@ -221,10 +221,10 @@ export function FeedbackChart({ feedbackCounts }: FeedbackChartProps) {
     </Suspense>
   );
 }
+
 /**
  * Admin charts (Recharts) - dynamically loaded to avoid SSR/bundle bloat.
  */
-('use client');
 
 import dynamic from 'next/dynamic';
 import { Suspense } from 'react';

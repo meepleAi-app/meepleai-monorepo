@@ -13,3 +13,4 @@ export * from './configClient';
 export * from './bggClient';
 export * from './agentsClient';
 export * from './adminClient';
+export * from './alerts';

@@ -237,7 +237,7 @@ public class StreamQaQueryHandlerTests
 
         // Should NOT call search or LLM
         _hybridSearchServiceMock.Verify(
-            x => x.SearchAsync(It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<SearchMode>(), It.IsAny<int>(), It.IsAny<float>(), It.IsAny<float>(), It.IsAny<CancellationToken>()),
+            x => x.SearchAsync(It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<SearchMode>(), It.IsAny<int>(), It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<float>(), It.IsAny<float>(), It.IsAny<CancellationToken>()),
             Times.Never
         );
         _llmServiceMock.Verify(
@@ -435,7 +435,7 @@ public class StreamQaQueryHandlerTests
             });
 
         _hybridSearchServiceMock
-            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<SearchMode>(), It.IsAny<int>(), It.IsAny<float>(), It.IsAny<float>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<SearchMode>(), It.IsAny<int>(), It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<float>(), It.IsAny<float>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<HybridSearchResult>()); // Empty results
 
         // Act
@@ -588,7 +588,7 @@ public class StreamQaQueryHandlerTests
         );
 
         _embeddingRepositoryMock
-            .Setup(x => x.SearchByVectorAsync(It.IsAny<Guid>(), It.IsAny<Vector>(), It.IsAny<int>(), It.IsAny<double>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.SearchByVectorAsync(It.IsAny<Guid>(), It.IsAny<Vector>(), It.IsAny<int>(), It.IsAny<double>(), It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Embedding> { embedding });
 
         // Setup vector search domain service to return results
@@ -631,6 +631,7 @@ public class StreamQaQueryHandlerTests
                 It.IsAny<Guid>(),
                 SearchMode.Keyword,
                 It.IsAny<int>(),
+                It.IsAny<IReadOnlyList<Guid>?>(),
                 It.IsAny<float>(),
                 It.IsAny<float>(),
                 It.IsAny<CancellationToken>()))

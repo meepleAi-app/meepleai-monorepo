@@ -11,8 +11,7 @@ using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
-using DotNet.Testcontainers.Builders;
-using DotNet.Testcontainers.Containers;
+using Api.Tests.Infrastructure;
 using FluentAssertions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -24,13 +23,19 @@ using Xunit;
 namespace Api.Tests.Integration.DocumentProcessing;
 
 /// <summary>
+/// Uses SharedTestcontainersFixture for optimized performance and Docker hijack prevention (Issue #2031).
 /// Integration tests for CreateDocumentCollectionCommandHandler.
 /// Issue #2051: Multi-document collection creation with validation
+/// Uses SharedTestcontainersFixture for optimized performance and Docker hijack prevention (Issue #2031).
 /// </summary>
+[Collection("SharedTestcontainers")]
+[Trait("Issue", "2031")]
 [Trait("Category", TestCategories.Integration)]
 public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLifetime
 {
-    private IContainer? _postgresContainer;
+    private readonly SharedTestcontainersFixture _fixture;
+    private string _isolatedDbConnectionString = string.Empty;
+    private string _databaseName = string.Empty;
     private MeepleAiDbContext? _dbContext;
     private IMediator? _mediator;
     private IDocumentCollectionRepository? _repository;
@@ -44,28 +49,23 @@ public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLife
     private static readonly Guid TestPdfId5 = new("30000000-0000-0000-0000-000000000005");
     private static readonly Guid TestPdfId6 = new("30000000-0000-0000-0000-000000000006");
 
+    public CreateDocumentCollectionHandlerIntegrationTests(SharedTestcontainersFixture fixture)
+    {
+        _fixture = fixture;
+    }
+
     public async ValueTask InitializeAsync()
     {
-        _postgresContainer = new ContainerBuilder()
-            .WithImage("postgres:16-alpine")
-            .WithEnvironment("POSTGRES_USER", "postgres")
-            .WithEnvironment("POSTGRES_PASSWORD", "postgres")
-            .WithEnvironment("POSTGRES_DB", "create_collection_test")
-            .WithPortBinding(5432, true)
-            .WithWaitStrategy(Wait.ForUnixContainer()
-                .UntilCommandIsCompleted("pg_isready", "-U", "postgres"))
-            .Build();
-
-        await _postgresContainer.StartAsync(TestCancellationToken);
-
-        var postgresPort = _postgresContainer.GetMappedPublicPort(5432);
-        var connectionString = $"Host=localhost;Port={postgresPort};Database=create_collection_test;Username=postgres;Password=postgres;";
+        // Issue #2031: Use shared PostgreSQL container with isolated database
+        _databaseName = $"test_doccollection_{Guid.NewGuid():N}";
+        _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
+        Console.WriteLine($"Isolated database created: {_databaseName}");
 
         var services = new ServiceCollection();
         services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
         services.AddDbContext<MeepleAiDbContext>(options =>
         {
-            options.UseNpgsql(connectionString);
+            options.UseNpgsql(_isolatedDbConnectionString);
             options.ConfigureWarnings(w =>
                 w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
         });
@@ -102,10 +102,19 @@ public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLife
     public async ValueTask DisposeAsync()
     {
         _dbContext?.Dispose();
-        if (_postgresContainer != null)
+
+        // Issue #2031: Drop isolated database from shared fixture
+        if (!string.IsNullOrEmpty(_databaseName))
         {
-            await _postgresContainer.StopAsync(TestCancellationToken);
-            await _postgresContainer.DisposeAsync();
+            try
+            {
+                await _fixture.DropIsolatedDatabaseAsync(_databaseName);
+                Console.WriteLine($"Isolated database dropped: {_databaseName}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Warning: Failed to drop database {_databaseName}: {ex.Message}");
+            }
         }
     }
 
@@ -113,16 +122,15 @@ public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLife
     public async Task Handle_CreateEmptyCollection_Succeeds()
     {
         // Arrange
-        var gameId = Guid.NewGuid();
         var command = new CreateDocumentCollectionCommand(
-            gameId, TestUserId, "Basic Collection", "Test", new List<InitialDocumentRequest>());
+            TestGameId, TestUserId, "Basic Collection", "Test", new List<InitialDocumentRequest>());
 
         // Act
         var result = await _mediator!.Send(command, TestCancellationToken);
 
         // Assert
         result.Should().NotBeNull();
-        result.GameId.Should().Be(gameId);
+        result.GameId.Should().Be(TestGameId);
         result.DocumentCount.Should().Be(0);
     }
 
@@ -130,9 +138,8 @@ public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLife
     public async Task Handle_CreateWithOneDocument_PersistsCorrectly()
     {
         // Arrange
-        var gameId = Guid.NewGuid();
         var command = new CreateDocumentCollectionCommand(
-            gameId, TestUserId, "Single Doc", null,
+            TestGameId, TestUserId, "Single Doc", null,
             new List<InitialDocumentRequest> { new(TestPdfId1, "base", 0) });
 
         // Act
@@ -143,7 +150,7 @@ public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLife
         result.Documents[0].PdfDocumentId.Should().Be(TestPdfId1);
 
         // Verify persistence
-        var persisted = await _repository!.FindByGameIdAsync(gameId, TestCancellationToken);
+        var persisted = await _repository!.FindByGameIdAsync(TestGameId, TestCancellationToken);
         persisted.Should().NotBeNull();
         persisted!.DocumentCount.Should().Be(1);
     }
@@ -153,30 +160,33 @@ public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLife
     {
         // Arrange
         var gameId = Guid.NewGuid();
-        var docs = new List<InitialDocumentRequest>();
-        var pdfIds = new[] { TestPdfId1, TestPdfId2, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid() };
 
+        // Create game entity first to avoid FK violation
+        var game = new GameEntity { Id = gameId, Name = "Max Docs Test Game" };
+        _dbContext!.Games.Add(game);
+
+        var docs = new List<InitialDocumentRequest>();
+        var pdfIds = new[] { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid() };
+
+        // Create all 5 PDFs for the new gameId
         for (int i = 0; i < pdfIds.Length; i++)
         {
-            if (i > 1)
+            var pdf = new PdfDocumentEntity
             {
-                var pdf = new PdfDocumentEntity
-                {
-                    Id = pdfIds[i],
-                    GameId = gameId,
-                    FileName = $"doc{i}.pdf",
-                    FilePath = $"/test/doc{i}.pdf",
-                    FileSizeBytes = 5000,
-                    PageCount = 10,
-                    ProcessingStatus = "completed",
-                    UploadedAt = DateTime.UtcNow,
-                    UploadedByUserId = TestUserId
-                };
-                _dbContext!.PdfDocuments.Add(pdf);
-            }
+                Id = pdfIds[i],
+                GameId = gameId,
+                FileName = $"doc{i}.pdf",
+                FilePath = $"/test/doc{i}.pdf",
+                FileSizeBytes = 5000,
+                PageCount = 10,
+                ProcessingStatus = "completed",
+                UploadedAt = DateTime.UtcNow,
+                UploadedByUserId = TestUserId
+            };
+            _dbContext.PdfDocuments.Add(pdf);
             docs.Add(new(pdfIds[i], "base", i));
         }
-        await _dbContext!.SaveChangesAsync(TestCancellationToken);
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         var command = new CreateDocumentCollectionCommand(gameId, TestUserId, "Full", null, docs);
 
@@ -193,6 +203,12 @@ public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLife
     {
         // Arrange
         var gameId = Guid.NewGuid();
+
+        // Create game entity first to avoid FK violation
+        var game = new GameEntity { Id = gameId, Name = "Duplicate Collection Test Game" };
+        _dbContext!.Games.Add(game);
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
+
         var cmd1 = new CreateDocumentCollectionCommand(
             gameId, TestUserId, "First", null, new List<InitialDocumentRequest>());
         await _mediator!.Send(cmd1, TestCancellationToken);
@@ -210,6 +226,11 @@ public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLife
     {
         // Arrange
         var gameId = Guid.NewGuid();
+
+        // Create game entity first to avoid FK violation
+        var game = new GameEntity { Id = gameId, Name = "Too Many Docs Test Game" };
+        _dbContext!.Games.Add(game);
+
         var docs = new List<InitialDocumentRequest>();
         for (int i = 0; i < 6; i++)
         {
@@ -246,10 +267,9 @@ public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLife
     [Fact]
     public async Task Handle_DuplicateDocuments_ThrowsDomainException()
     {
-        // Arrange
-        var gameId = Guid.NewGuid();
+        // Arrange - Use TestGameId (already seeded) to avoid FK violation
         var command = new CreateDocumentCollectionCommand(
-            gameId, TestUserId, "Dup", null,
+            TestGameId, TestUserId, "Dup", null,
             new List<InitialDocumentRequest>
             {
                 new(TestPdfId1, "base", 0),
@@ -279,6 +299,11 @@ public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLife
     {
         // Arrange
         var differentGameId = Guid.NewGuid();
+
+        // Create game entity first to avoid FK violation
+        var differentGame = new GameEntity { Id = differentGameId, Name = "Different Game" };
+        _dbContext!.Games.Add(differentGame);
+
         var pdfForOtherGame = new PdfDocumentEntity
         {
             Id = Guid.NewGuid(),
@@ -291,7 +316,7 @@ public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLife
             UploadedAt = DateTime.UtcNow,
             UploadedByUserId = TestUserId
         };
-        _dbContext!.PdfDocuments.Add(pdfForOtherGame);
+        _dbContext.PdfDocuments.Add(pdfForOtherGame);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         var command = new CreateDocumentCollectionCommand(
@@ -308,6 +333,12 @@ public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLife
     {
         // Arrange
         var gameId = Guid.NewGuid();
+
+        // Create game entity first to avoid FK violation
+        var game = new GameEntity { Id = gameId, Name = "Rollback Test Game" };
+        _dbContext!.Games.Add(game);
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
+
         var command = new CreateDocumentCollectionCommand(
             gameId, TestUserId, "Rollback", null,
             new List<InitialDocumentRequest> { new(Guid.NewGuid(), "base", 0) });

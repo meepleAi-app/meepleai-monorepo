@@ -10,8 +10,8 @@ using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Observability;
-using DotNet.Testcontainers.Builders;
-using DotNet.Testcontainers.Containers;
+using Api.Tests.Infrastructure;
+using Api.Tests.Constants;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -28,6 +28,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Integration;
 /// <summary>
 /// E2E tests for Month 4 Quality Metrics collection and Prometheus integration
 /// Tests complete RAG flow → Quality metrics → Prometheus metrics
+/// Uses SharedTestcontainersFixture for optimized performance and Docker hijack prevention (Issue #2031).
 /// </summary>
 /// <remarks>
 /// Issue #995: BGAI-055 - Month 4 integration testing
@@ -42,14 +43,18 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Integration;
 ///
 /// Infrastructure: Postgres (for data), mocked LLM (no OpenRouter dependency)
 /// </remarks>
+[Collection("SharedTestcontainers")]
 [Trait("Category", "Integration")]
 [Trait("Dependency", "Testcontainers")]
 [Trait("BoundedContext", "KnowledgeBase")]
 [Trait("Issue", "995")]
+[Trait("Issue", "2031")]
 [Trait("Month", "4")]
 public sealed class Month4QualityMetricsE2ETests : IAsyncLifetime
 {
-    private IContainer? _postgresContainer;
+    private readonly SharedTestcontainersFixture _fixture;
+    private string _isolatedDbConnectionString = string.Empty;
+    private string _databaseName = string.Empty;
     private MeepleAiDbContext? _dbContext;
     private IServiceProvider? _serviceProvider;
     private QualityMetrics? _qualityMetrics;
@@ -61,8 +66,9 @@ public sealed class Month4QualityMetricsE2ETests : IAsyncLifetime
     private Guid _testGameId;
     private Guid _testThreadId;
 
-    public Month4QualityMetricsE2ETests()
+    public Month4QualityMetricsE2ETests(SharedTestcontainersFixture fixture)
     {
+        _fixture = fixture;
         _output = Console.WriteLine;
     }
 
@@ -70,25 +76,10 @@ public sealed class Month4QualityMetricsE2ETests : IAsyncLifetime
     {
         _output("=== Initializing Month 4 Quality Metrics E2E Test Infrastructure ===");
 
-        // Start Postgres container
-        _output("Starting PostgreSQL container...");
-        _postgresContainer = new ContainerBuilder()
-            .WithImage("postgres:16-alpine")
-            .WithEnvironment("POSTGRES_USER", "postgres")
-            .WithEnvironment("POSTGRES_PASSWORD", "postgres")
-            .WithEnvironment("POSTGRES_DB", "month4_quality_test")
-            .WithPortBinding(5432, true)
-            .WithWaitStrategy(Wait.ForUnixContainer()
-                .UntilCommandIsCompleted("pg_isready", "-U", "postgres"))
-            .Build();
-
-        await _postgresContainer.StartAsync(TestCancellationToken);
-        var postgresPort = _postgresContainer.GetMappedPublicPort(5432);
-        _output($"✓ PostgreSQL started on port {postgresPort}");
-
-        // Wait for container stability
-        await Task.Delay(TestConstants.Timing.MediumTimeout, TestCancellationToken);
-        _output("✓ Container stability wait completed");
+        // Issue #2031: Migrated to SharedTestcontainersFixture
+        _databaseName = "test_qualitymetrics_" + Guid.NewGuid().ToString("N");
+        _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
+        _output($"✓ Isolated database created: {_databaseName}");
 
         // Setup dependency injection
         var services = new ServiceCollection();
@@ -97,7 +88,7 @@ public sealed class Month4QualityMetricsE2ETests : IAsyncLifetime
         var configBuilder = new ConfigurationBuilder();
         configBuilder.AddInMemoryCollection(new Dictionary<string, string?>
         {
-            ["ConnectionStrings:Postgres"] = $"Host=localhost;Port={postgresPort};Database=month4_quality_test;Username=postgres;Password=postgres;",
+            ["ConnectionStrings:Postgres"] = _isolatedDbConnectionString,
             ["RagValidation:ConfidenceThreshold"] = "0.70"
         });
         var configuration = configBuilder.Build();
@@ -111,8 +102,7 @@ public sealed class Month4QualityMetricsE2ETests : IAsyncLifetime
         services.AddSingleton<TimeProvider>(TimeProvider.System);
 
         // DbContext with enforced connection settings
-        var connectionString = configuration.GetConnectionString("Postgres")!;
-        var enforcedBuilder = new NpgsqlConnectionStringBuilder(connectionString)
+        var enforcedBuilder = new NpgsqlConnectionStringBuilder(_isolatedDbConnectionString)
         {
             SslMode = SslMode.Disable,
             KeepAlive = 30,
@@ -183,10 +173,18 @@ public sealed class Month4QualityMetricsE2ETests : IAsyncLifetime
             _output("✓ ServiceProvider disposed");
         }
 
-        if (_postgresContainer != null)
+        // Issue #2031: Use SharedTestcontainersFixture for cleanup
+        if (!string.IsNullOrEmpty(_databaseName))
         {
-            await _postgresContainer.DisposeAsync();
-            _output("✓ PostgreSQL container stopped");
+            try
+            {
+                await _fixture.DropIsolatedDatabaseAsync(_databaseName);
+                _output($"✓ Isolated database dropped: {_databaseName}");
+            }
+            catch (Exception ex)
+            {
+                _output($"⚠️ Failed to drop database {_databaseName}: {ex.Message}");
+            }
         }
 
         _output("=== Cleanup Complete ===");

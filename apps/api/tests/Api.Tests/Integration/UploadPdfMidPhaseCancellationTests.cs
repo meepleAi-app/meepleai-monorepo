@@ -10,6 +10,8 @@ using Api.BoundedContexts.DocumentProcessing.Infrastructure.Persistence;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Services;
+using Api.Tests.Constants;
+using Api.Tests.Infrastructure;
 using Api.Services.Pdf;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -23,13 +25,13 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using StackExchange.Redis;
 using Xunit;
-using Api.Tests.Constants;
 using AuthRole = Api.BoundedContexts.Authentication.Domain.ValueObjects.Role;
 
 namespace Api.Tests.Integration;
 
 /// <summary>
 /// Mid-Phase Cancellation Tests for PDF Upload (Issue #1819 - #1736 Enhanced).
+/// Uses SharedTestcontainersFixture for optimized performance and Docker hijack prevention (Issue #2031).
 ///
 /// <para><b>Purpose:</b> Test cancellation occurring MID-WAY through pipeline stages, not just at start/end</para>
 /// <para><b>Production Scenarios:</b> Network interruptions, user timeouts, browser crashes during active processing</para>
@@ -43,10 +45,14 @@ namespace Api.Tests.Integration;
 /// 5. Mid-vector store cancellation
 /// 6. Random timing cancellation (stress test)
 /// </summary>
+[Collection("SharedTestcontainers")]
 [Trait("Category", TestCategories.Integration)]
+[Trait("Issue", "2031")]
 public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
 {
-    private IContainer? _postgresContainer;
+    private readonly SharedTestcontainersFixture _fixture;
+    private string _isolatedDbConnectionString = string.Empty;
+    private string _databaseName = string.Empty;
     private IContainer? _redisContainer;
     private MeepleAiDbContext? _dbContext;
     private IServiceProvider? _serviceProvider;
@@ -55,23 +61,19 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
 
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
+    public UploadPdfMidPhaseCancellationTests(SharedTestcontainersFixture fixture)
+    {
+        _fixture = fixture;
+    }
+
     public async ValueTask InitializeAsync()
     {
+        // Issue #2031: Migrated to SharedTestcontainersFixture for Docker hijack prevention and performance
+        _databaseName = "test_uploadcancel";
+        _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
+
         _testDataDirectory = Path.Combine(Path.GetTempPath(), "meepleai-midphase-test-" + Guid.NewGuid());
         Directory.CreateDirectory(_testDataDirectory);
-
-        // Start PostgreSQL container
-        _postgresContainer = new ContainerBuilder()
-            .WithImage("postgres:16-alpine")
-            .WithEnvironment("POSTGRES_USER", "postgres")
-            .WithEnvironment("POSTGRES_PASSWORD", "postgres")
-            .WithEnvironment("POSTGRES_DB", "midphase_test")
-            .WithPortBinding(5432, true)
-            .WithWaitStrategy(Wait.ForUnixContainer()
-                .UntilCommandIsCompleted("pg_isready", "-U", "postgres"))
-            .Build();
-
-        await _postgresContainer.StartAsync(TestCancellationToken);
 
         // Start Redis container
         _redisContainer = new ContainerBuilder()
@@ -85,9 +87,7 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
         await _redisContainer.StartAsync(TestCancellationToken);
 
         // Setup services
-        var postgresPort = _postgresContainer.GetMappedPublicPort(5432);
         var redisPort = _redisContainer.GetMappedPublicPort(6379);
-        var connectionString = $"Host=localhost;Port={postgresPort};Database=midphase_test;Username=postgres;Password=postgres;";
         var redisConnectionString = $"localhost:{redisPort}";
 
         var services = new ServiceCollection();
@@ -95,7 +95,7 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
 
         services.AddDbContext<MeepleAiDbContext>(options =>
         {
-            options.UseNpgsql(connectionString);
+            options.UseNpgsql(_isolatedDbConnectionString);
             options.ConfigureWarnings(w =>
                 w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
         });
@@ -153,10 +153,17 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
         else
             (_serviceProvider as IDisposable)?.Dispose();
 
-        if (_postgresContainer != null)
+        // Issue #2031: Use SharedTestcontainersFixture for PostgreSQL cleanup
+        if (!string.IsNullOrEmpty(_databaseName))
         {
-            await _postgresContainer.StopAsync(TestCancellationToken);
-            await _postgresContainer.DisposeAsync();
+            try
+            {
+                await _fixture.DropIsolatedDatabaseAsync(_databaseName);
+            }
+            catch
+            {
+                // Ignore cleanup errors
+            }
         }
 
         if (_redisContainer != null)
@@ -293,16 +300,14 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
     [Fact(Timeout = 30000)]
     public async Task UploadPdf_WhenCancelledMidBlobWrite_CleansUpPartialData()
     {
-        // Arrange - Override blob storage with mid-write cancellation mock
-        var postgresPort = _postgresContainer!.GetMappedPublicPort(5432);
-        var connectionString = $"Host=localhost;Port={postgresPort};Database=midphase_test;Username=postgres;Password=postgres;";
+        // Arrange - Override blob storage with mid-write cancellation mock using SharedTestcontainersFixture
 
         var services = new ServiceCollection();
         services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
 
         services.AddDbContext<MeepleAiDbContext>(options =>
         {
-            options.UseNpgsql(connectionString);
+            options.UseNpgsql(_isolatedDbConnectionString);
             options.ConfigureWarnings(w =>
                 w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
         });

@@ -377,6 +377,7 @@ public class RagServiceIntegrationTests : IDisposable
                 gameId,
                 It.IsAny<SearchMode>(),
                 It.IsAny<int>(),
+                It.IsAny<IReadOnlyList<Guid>?>(),
                 It.IsAny<float>(),
                 It.IsAny<float>(),
                 It.IsAny<CancellationToken>()))

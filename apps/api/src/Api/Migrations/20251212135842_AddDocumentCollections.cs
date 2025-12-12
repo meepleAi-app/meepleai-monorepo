@@ -142,16 +142,17 @@ namespace Api.Migrations
                     g.""Id"" AS ""GameId"",
                     CONCAT(g.""Name"", ' - Base Collection') AS ""Name"",
                     'Default collection created during multi-document migration' AS ""Description"",
-                    MIN(p.""UploadedByUserId"") AS ""CreatedByUserId"",
+                    (SELECT p.""UploadedByUserId"" FROM pdf_documents p WHERE p.""GameId"" = g.""Id"" LIMIT 1) AS ""CreatedByUserId"",
                     NOW() AS ""CreatedAt"",
                     NOW() AS ""UpdatedAt"",
                     '[]' AS ""DocumentsJson""
                 FROM games g
-                INNER JOIN pdf_documents p ON p.""GameId"" = g.""Id""
-                WHERE NOT EXISTS (
-                    SELECT 1 FROM document_collections WHERE ""GameId"" = g.""Id""
+                WHERE EXISTS (
+                    SELECT 1 FROM pdf_documents WHERE ""GameId"" = g.""Id""
                 )
-                GROUP BY g.""Id"", g.""Name"";
+                AND NOT EXISTS (
+                    SELECT 1 FROM document_collections WHERE ""GameId"" = g.""Id""
+                );
 
                 -- Step 2: Assign all existing PDFs to their game's collection
                 UPDATE pdf_documents p

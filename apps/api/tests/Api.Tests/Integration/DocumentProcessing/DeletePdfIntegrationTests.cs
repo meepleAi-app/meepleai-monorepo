@@ -13,8 +13,8 @@ using Api.Services.Exceptions;
 using Api.Services.Pdf;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
-using DotNet.Testcontainers.Builders;
-using DotNet.Testcontainers.Containers;
+using Api.Tests.Constants;
+using Api.Tests.Infrastructure;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,14 +22,14 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Npgsql;
 using Xunit;
-using Api.Tests.Constants;
 using AuthRole = Api.BoundedContexts.Authentication.Domain.ValueObjects.Role;
 
 namespace Api.Tests.Integration.DocumentProcessing;
 
 /// <summary>
+/// Uses SharedTestcontainersFixture for optimized performance and Docker hijack prevention (Issue #2031).
 /// Comprehensive integration tests for PDF deletion workflow (Issue #1690).
-/// Tests the complete delete pipeline using Testcontainers for real infrastructure.
+/// Tests the complete delete pipeline using SharedTestcontainersFixture for optimized performance and Docker hijack prevention (Issue #2031).
 ///
 /// Test Categories:
 /// 1. Happy Path: Delete existing PDF with all cleanup
@@ -39,44 +39,40 @@ namespace Api.Tests.Integration.DocumentProcessing;
 /// 5. Concurrency: Concurrent deletion attempts
 /// 6. Rollback: Partial failure and transaction rollback
 ///
-/// Infrastructure: PostgreSQL (real DB via Testcontainers)
+/// Infrastructure: SharedTestcontainersFixture (Issue #2031)
 /// Coverage Target: ≥90% for DeletePdfCommandHandler
 /// Execution Time Target: <20s
 /// </summary>
+[Collection("SharedTestcontainers")]
+[Trait("Issue", "2031")]
 [Trait("Category", TestCategories.Integration)]
 public sealed class DeletePdfIntegrationTests : IAsyncLifetime
 {
-    private IContainer? _postgresContainer;
+    private readonly SharedTestcontainersFixture _fixture;
+    private string _isolatedDbConnectionString = string.Empty;
+    private string _databaseName = string.Empty;
     private MeepleAiDbContext? _dbContext;
     private IServiceProvider? _serviceProvider;
 
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
+    public DeletePdfIntegrationTests(SharedTestcontainersFixture fixture)
+    {
+        _fixture = fixture;
+    }
+
     public async ValueTask InitializeAsync()
     {
-        // Start PostgreSQL container
-        _postgresContainer = new ContainerBuilder()
-            .WithImage("postgres:16-alpine")
-            .WithEnvironment("POSTGRES_USER", "postgres")
-            .WithEnvironment("POSTGRES_PASSWORD", "postgres")
-            .WithEnvironment("POSTGRES_DB", "pdf_delete_test")
-            .WithPortBinding(5432, true)
-            .WithWaitStrategy(Wait.ForUnixContainer()
-                .UntilCommandIsCompleted("pg_isready", "-U", "postgres"))
-            .Build();
-
-        await _postgresContainer.StartAsync(TestCancellationToken);
-
-        // Setup services
-        var postgresPort = _postgresContainer.GetMappedPublicPort(5432);
-        var connectionString = $"Host=localhost;Port={postgresPort};Database=pdf_delete_test;Username=postgres;Password=postgres;";
+        // Issue #2031: Migrated to SharedTestcontainersFixture for Docker hijack prevention and performance
+        _databaseName = $"test_deletepdf_{Guid.NewGuid():N}";
+        _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
         var services = new ServiceCollection();
         services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
 
         services.AddDbContext<MeepleAiDbContext>(options =>
         {
-            options.UseNpgsql(connectionString);
+            options.UseNpgsql(_isolatedDbConnectionString);
             options.ConfigureWarnings(w =>
                 w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
         });
@@ -117,10 +113,17 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
         else
             (_serviceProvider as IDisposable)?.Dispose();
 
-        if (_postgresContainer != null)
+        // Issue #2031: Use SharedTestcontainersFixture for cleanup instead of individual container disposal
+        if (!string.IsNullOrEmpty(_databaseName))
         {
-            await _postgresContainer.StopAsync(TestCancellationToken);
-            await _postgresContainer.DisposeAsync();
+            try
+            {
+                await _fixture.DropIsolatedDatabaseAsync(_databaseName);
+            }
+            catch
+            {
+                // Ignore cleanup errors
+            }
         }
     }
 

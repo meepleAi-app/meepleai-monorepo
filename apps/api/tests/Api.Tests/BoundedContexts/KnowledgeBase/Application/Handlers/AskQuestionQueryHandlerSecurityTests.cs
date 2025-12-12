@@ -65,6 +65,7 @@ public class AskQuestionQueryHandlerSecurityTests
                 It.IsAny<Vector>(),
                 It.IsAny<int>(),
                 It.IsAny<double>(),
+                It.IsAny<IReadOnlyList<Guid>?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Embedding>());
 
@@ -89,6 +90,7 @@ public class AskQuestionQueryHandlerSecurityTests
                 It.IsAny<Guid>(),
                 It.IsAny<SearchMode>(),
                 It.IsAny<int>(),
+                It.IsAny<IReadOnlyList<Guid>?>(),
                 It.IsAny<float>(),
                 It.IsAny<float>(),
                 It.IsAny<CancellationToken>()))

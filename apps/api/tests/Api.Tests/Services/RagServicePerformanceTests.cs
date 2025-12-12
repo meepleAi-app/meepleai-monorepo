@@ -341,10 +341,11 @@ public class RagServicePerformanceTests : IDisposable
                 It.IsAny<Guid>(),
                 It.IsAny<SearchMode>(),
                 It.IsAny<int>(),
+                It.IsAny<IReadOnlyList<Guid>?>(),
                 It.IsAny<float>(),
                 It.IsAny<float>(),
                 It.IsAny<CancellationToken>()))
-            .Returns(async (string query, Guid gameId, SearchMode mode, int limit, float vw, float kw, CancellationToken ct) =>
+            .Returns(async (string query, Guid gameId, SearchMode mode, int limit, IReadOnlyList<Guid>? documentIds, float vw, float kw, CancellationToken ct) =>
             {
                 // Simulate realistic hybrid search latency: 150-250ms
                 await Task.Delay(Random.Shared.Next(150, 250), ct);

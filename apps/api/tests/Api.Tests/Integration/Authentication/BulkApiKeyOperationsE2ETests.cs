@@ -7,8 +7,7 @@ using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.Infrastructure;
 using Api.SharedKernel.Infrastructure.Persistence;
-using DotNet.Testcontainers.Builders;
-using DotNet.Testcontainers.Containers;
+using Api.Tests.Infrastructure;
 using FluentAssertions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -22,8 +21,8 @@ namespace Api.Tests.Integration.Authentication;
 
 /// <summary>
 /// E2E Integration tests for bulk API key operations (Issue #907).
-/// Tests complete workflows with Testcontainers: CSV import/export, key generation, security validation.
-/// Uses real PostgreSQL container for realistic database interactions.
+/// Tests complete workflows with SharedTestcontainersFixture: CSV import/export, key generation, security validation.
+/// Uses SharedTestcontainersFixture for optimized performance and Docker hijack prevention (Issue #2031).
 /// </summary>
 /// <remarks>
 /// Test Coverage:
@@ -37,14 +36,18 @@ namespace Api.Tests.Integration.Authentication;
 /// Pattern: AAA (Arrange-Act-Assert), Testcontainers for PostgreSQL
 /// Execution Time Target: <20s for full suite
 /// </remarks>
+[Collection("SharedTestcontainers")]
 [Trait("Category", "Integration")]
 [Trait("Type", "E2E")]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "Authentication")]
 [Trait("Issue", "907")]
+[Trait("Issue", "2031")]
 public sealed class BulkApiKeyOperationsE2ETests : IAsyncLifetime
 {
-    private IContainer? _postgresContainer;
+    private readonly SharedTestcontainersFixture _fixture;
+    private string _isolatedDbConnectionString = string.Empty;
+    private string _databaseName = string.Empty;
     private MeepleAiDbContext? _dbContext;
     private IApiKeyRepository? _apiKeyRepository;
     private IUserRepository? _userRepository;
@@ -53,8 +56,9 @@ public sealed class BulkApiKeyOperationsE2ETests : IAsyncLifetime
 
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
-    public BulkApiKeyOperationsE2ETests()
+    public BulkApiKeyOperationsE2ETests(SharedTestcontainersFixture fixture)
     {
+        _fixture = fixture;
         _output = Console.WriteLine;
     }
 
@@ -62,25 +66,13 @@ public sealed class BulkApiKeyOperationsE2ETests : IAsyncLifetime
     {
         _output("Initializing bulk API key operations E2E test infrastructure...");
 
-        // Start isolated Postgres container
-        _postgresContainer = new ContainerBuilder()
-            .WithImage("postgres:16-alpine")
-            .WithEnvironment("POSTGRES_USER", "postgres")
-            .WithEnvironment("POSTGRES_PASSWORD", "postgres")
-            .WithEnvironment("POSTGRES_DB", "bulk_apikeys_e2e_test")
-            .WithPortBinding(5432, true)
-            .WithWaitStrategy(Wait.ForUnixContainer()
-                .UntilCommandIsCompleted("pg_isready", "-U", "postgres"))
-            .Build();
-
-        await _postgresContainer.StartAsync(TestCancellationToken);
-        var containerPort = _postgresContainer.GetMappedPublicPort(5432);
-        var connectionString = $"Host=localhost;Port={containerPort};Database=bulk_apikeys_e2e_test;Username=postgres;Password=postgres;";
-
-        _output($"PostgreSQL started at localhost:{containerPort}");
+        // Issue #2031: Migrated to SharedTestcontainersFixture for Docker hijack prevention and performance
+        _databaseName = $"test_bulkapi_{Guid.NewGuid():N}";
+        _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
+        _output($"Isolated database created: {_databaseName}");
 
         // Setup dependency injection
-        var enforcedBuilder = new NpgsqlConnectionStringBuilder(connectionString)
+        var enforcedBuilder = new NpgsqlConnectionStringBuilder(_isolatedDbConnectionString)
         {
             SslMode = SslMode.Disable,
             KeepAlive = 30,
@@ -103,7 +95,8 @@ public sealed class BulkApiKeyOperationsE2ETests : IAsyncLifetime
         // Repositories and Unit of Work
         services.AddScoped<IApiKeyRepository, ApiKeyRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
-        services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
+        services.AddScoped<Api.SharedKernel.Application.Services.IDomainEventCollector, Api.SharedKernel.Application.Services.DomainEventCollector>();
 
         // Logging
         services.AddLogging(builder => builder.AddConsole());
@@ -115,7 +108,6 @@ public sealed class BulkApiKeyOperationsE2ETests : IAsyncLifetime
         _unitOfWork = serviceProvider.GetRequiredService<IUnitOfWork>();
 
         // Run migrations
-        await _dbContext.Database.EnsureDeletedAsync(TestCancellationToken);
         await _dbContext.Database.MigrateAsync(TestCancellationToken);
 
         _output("E2E test infrastructure initialized successfully");
@@ -128,10 +120,18 @@ public sealed class BulkApiKeyOperationsE2ETests : IAsyncLifetime
             await _dbContext.DisposeAsync();
         }
 
-        if (_postgresContainer != null)
+        // Issue #2031: Use SharedTestcontainersFixture for cleanup
+        if (!string.IsNullOrEmpty(_databaseName))
         {
-            await _postgresContainer.StopAsync(TestCancellationToken);
-            await _postgresContainer.DisposeAsync();
+            try
+            {
+                await _fixture.DropIsolatedDatabaseAsync(_databaseName);
+                _output($"Isolated database dropped: {_databaseName}");
+            }
+            catch (Exception ex)
+            {
+                _output($"Warning: Failed to drop database {_databaseName}: {ex.Message}");
+            }
         }
 
         _output("E2E test infrastructure disposed");

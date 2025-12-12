@@ -7,14 +7,13 @@ using Api.Infrastructure;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.BoundedContexts.Authentication.TestHelpers;
-using DotNet.Testcontainers.Builders;
-using DotNet.Testcontainers.Containers;
+using Api.Tests.Infrastructure;
+using Api.Tests.Constants;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using Xunit;
-using Api.Tests.Constants;
 using AuthRole = Api.BoundedContexts.Authentication.Domain.ValueObjects.Role;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
@@ -22,13 +21,18 @@ namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 /// <summary>
 /// Integration tests for UpdateUserTierCommandHandler.
 /// Verifies that tier changes are actually persisted to the database.
+/// Uses SharedTestcontainersFixture for optimized performance and Docker hijack prevention (Issue #2031).
 /// </summary>
+[Collection("SharedTestcontainers")]
 [Trait("Category", "Integration")]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "Administration")]
+[Trait("Issue", "2031")]
 public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
 {
-    private IContainer? _postgresContainer;
+    private readonly SharedTestcontainersFixture _fixture;
+    private string _isolatedDbConnectionString = string.Empty;
+    private string _databaseName = string.Empty;
     private MeepleAiDbContext _dbContext = null!;
     private IServiceProvider _serviceProvider = null!;
     private readonly Action<string> _output;
@@ -53,8 +57,9 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
         scope.ServiceProvider.GetRequiredService<IUnitOfWork>(),
         scope.ServiceProvider.GetRequiredService<ILogger<UpdateUserTierCommandHandler>>());
 
-    public UpdateUserTierCommandHandlerTests()
+    public UpdateUserTierCommandHandlerTests(SharedTestcontainersFixture fixture)
     {
+        _fixture = fixture;
         _output = Console.WriteLine;
     }
 
@@ -62,44 +67,10 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
     {
         _output("Initializing UpdateUserTier integration test infrastructure...");
 
-        // Prefer existing infra if provided
-        var externalConn = Environment.GetEnvironmentVariable("TEST_POSTGRES_CONNSTRING");
-        string connectionString;
-
-        if (!string.IsNullOrWhiteSpace(externalConn))
-        {
-            var builder = new Npgsql.NpgsqlConnectionStringBuilder(externalConn)
-            {
-                Database = "meepleai_test",
-                SslMode = Npgsql.SslMode.Disable,
-                KeepAlive = 30,
-                Pooling = false
-            };
-            connectionString = builder.ConnectionString;
-            _output("Using external TEST_POSTGRES_CONNSTRING for UpdateUserTier tests");
-        }
-        else
-        {
-            // Start PostgreSQL container
-            // Issue #895: Removed UntilCommandIsCompleted wait strategy to avoid Docker hijack errors
-            // Default wait strategy uses TCP port check (safer than hijacked pg_isready command)
-            _postgresContainer = new ContainerBuilder()
-                .WithImage("postgres:16-alpine")
-                .WithEnvironment("POSTGRES_USER", "postgres")
-                .WithEnvironment("POSTGRES_PASSWORD", "postgres")
-                .WithEnvironment("POSTGRES_DB", "meepleai_test")
-                .WithPortBinding(5432, true)
-                .Build();
-
-            await _postgresContainer.StartAsync(CancellationToken.None);
-
-            // Wait for PostgreSQL to be fully ready after port opens
-            await Task.Delay(TimeSpan.FromSeconds(2), CancellationToken.None);
-            var containerPort = _postgresContainer.GetMappedPublicPort(5432);
-            connectionString = $"Host=localhost;Port={containerPort};Database=meepleai_test;Username=postgres;Password=postgres;Ssl Mode=Disable;Trust Server Certificate=true;KeepAlive=30;Pooling=false;";
-
-            _output($"PostgreSQL started at localhost:{containerPort}");
-        }
+        // Issue #2031: Migrated to SharedTestcontainersFixture
+        _databaseName = "test_usertier_" + Guid.NewGuid().ToString("N");
+        _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
+        _output($"✓ Isolated database created: {_databaseName}");
 
         // Setup dependency injection
         var services = new ServiceCollection();
@@ -109,7 +80,7 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
         // Register DbContext with PostgreSQL
         services.AddDbContext<MeepleAiDbContext>(options =>
         {
-            options.UseNpgsql(connectionString);
+            options.UseNpgsql(_isolatedDbConnectionString);
             options.ConfigureWarnings(w =>
                 w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
         });
@@ -161,30 +132,19 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
             _output($"Warning: ServiceProvider disposal failed: {ex.Message}");
         }
 
-        try
+        // Issue #2031: Use SharedTestcontainersFixture for cleanup
+        if (!string.IsNullOrEmpty(_databaseName))
         {
-            if (_postgresContainer != null)
+            try
             {
-                await _postgresContainer.StopAsync(TestCancellationToken);
+                await _fixture.DropIsolatedDatabaseAsync(_databaseName);
+                _output($"✓ Isolated database dropped: {_databaseName}");
             }
-        }
-        catch (Exception ex)
-        {
-            firstException ??= ex;
-            _output($"Warning: PostgreSQL container stop failed: {ex.Message}");
-        }
-
-        try
-        {
-            if (_postgresContainer != null)
+            catch (Exception ex)
             {
-                await _postgresContainer.DisposeAsync();
+                firstException ??= ex;
+                _output($"⚠️ Failed to drop database {_databaseName}: {ex.Message}");
             }
-        }
-        catch (Exception ex)
-        {
-            firstException ??= ex;
-            _output($"Warning: PostgreSQL container disposal failed: {ex.Message}");
         }
 
         _output("Test infrastructure disposed");

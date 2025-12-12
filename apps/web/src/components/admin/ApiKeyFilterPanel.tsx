@@ -30,6 +30,7 @@ import { X, Search, Calendar, Clock, Shield } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { DateRangePicker } from '@/components/ui/inputs/date-range-picker';
 import {
   Select,
   SelectContent,
@@ -272,56 +273,30 @@ export const ApiKeyFilterPanel: React.FC<ApiKeyFilterPanelProps> = ({
       </div>
 
       {/* Created Date Range */}
-      <div className="space-y-2">
-        <Label className="text-xs flex items-center gap-1">
-          <Calendar className="w-3 h-3" />
-          Created Date
-        </Label>
-        <div className="grid grid-cols-2 gap-2">
-          <input
-            type="date"
-            value={formatDateForInput(filters.createdFrom)}
-            onChange={handleCreatedFromChange}
-            className="h-8 px-2 text-xs rounded-md border border-input bg-background"
-            placeholder="From"
-            aria-label="Created from date"
-          />
-          <input
-            type="date"
-            value={formatDateForInput(filters.createdTo)}
-            onChange={handleCreatedToChange}
-            className="h-8 px-2 text-xs rounded-md border border-input bg-background"
-            placeholder="To"
-            aria-label="Created to date"
-          />
-        </div>
-      </div>
+      <DateRangePicker
+        label="Created Date"
+        value={{ from: filters.createdFrom, to: filters.createdTo }}
+        onChange={range => {
+          onFiltersChange({
+            ...filters,
+            createdFrom: range.from,
+            createdTo: range.to,
+          });
+        }}
+      />
 
       {/* Expires Date Range */}
-      <div className="space-y-2">
-        <Label className="text-xs flex items-center gap-1">
-          <Calendar className="w-3 h-3" />
-          Expires Date
-        </Label>
-        <div className="grid grid-cols-2 gap-2">
-          <input
-            type="date"
-            value={formatDateForInput(filters.expiresFrom)}
-            onChange={handleExpiresFromChange}
-            className="h-8 px-2 text-xs rounded-md border border-input bg-background"
-            placeholder="From"
-            aria-label="Expires from date"
-          />
-          <input
-            type="date"
-            value={formatDateForInput(filters.expiresTo)}
-            onChange={handleExpiresToChange}
-            className="h-8 px-2 text-xs rounded-md border border-input bg-background"
-            placeholder="To"
-            aria-label="Expires to date"
-          />
-        </div>
-      </div>
+      <DateRangePicker
+        label="Expires Date"
+        value={{ from: filters.expiresFrom, to: filters.expiresTo }}
+        onChange={range => {
+          onFiltersChange({
+            ...filters,
+            expiresFrom: range.from,
+            expiresTo: range.to,
+          });
+        }}
+      />
 
       {/* Last Used Filter */}
       <div className="space-y-2">

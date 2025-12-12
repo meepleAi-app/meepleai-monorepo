@@ -121,6 +121,86 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       await httpClient.delete(`/api/v1/admin/users/${userId}`);
     },
 
+    /**
+     * Get all users (admin only) - Issue #903
+     * GET /api/v1/admin/users
+     */
+    async getAllUsers(params?: {
+      search?: string;
+      role?: string;
+      sortBy?: string;
+      sortOrder?: 'asc' | 'desc';
+      page?: number;
+      limit?: number;
+    }): Promise<{ users: AdminUser[]; total: number }> {
+      const queryParams = new URLSearchParams();
+      if (params?.search) queryParams.set('search', params.search);
+      if (params?.role) queryParams.set('role', params.role);
+      if (params?.sortBy) queryParams.set('sortBy', params.sortBy);
+      if (params?.sortOrder) queryParams.set('sortOrder', params.sortOrder);
+      if (params?.page) queryParams.set('page', params.page.toString());
+      if (params?.limit) queryParams.set('limit', params.limit.toString());
+
+      const query = queryParams.toString();
+      const result = await httpClient.get(
+        `/api/v1/admin/users${query ? `?${query}` : ''}`,
+        z.object({
+          users: z.array(AdminUserSchema),
+          total: z.number(),
+        })
+      );
+
+      return result || { users: [], total: 0 };
+    },
+
+    /**
+     * Export users to CSV (admin only) - Issue #903
+     * GET /api/v1/admin/users/bulk/export
+     */
+    async exportUsersToCSV(params?: { role?: string; search?: string }): Promise<Blob> {
+      const queryParams = new URLSearchParams();
+      if (params?.role) queryParams.set('role', params.role);
+      if (params?.search) queryParams.set('search', params.search);
+
+      const query = queryParams.toString();
+      const response = await fetch(
+        `${httpClient['baseUrl']}/api/v1/admin/users/bulk/export${query ? `?${query}` : ''}`,
+        {
+          method: 'GET',
+          credentials: 'include',
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Export failed: ${response.statusText}`);
+      }
+
+      return response.blob();
+    },
+
+    /**
+     * Import users from CSV (admin only) - Issue #903
+     * POST /api/v1/admin/users/bulk/import
+     */
+    async importUsersFromCSV(
+      csvContent: string
+    ): Promise<{ successCount: number; failureCount: number; errors: string[] }> {
+      return httpClient.post(
+        '/api/v1/admin/users/bulk/import',
+        csvContent,
+        z.object({
+          successCount: z.number(),
+          failureCount: z.number(),
+          errors: z.array(z.string()),
+        }),
+        {
+          headers: {
+            'Content-Type': 'text/csv',
+          },
+        }
+      );
+    },
+
     // ========== Prompt Template Management ==========
 
     /**
@@ -521,6 +601,33 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
     },
 
     // ========== User Activity Timeline (Issue #911) ==========
+
+    /**
+     * Get system-wide activity timeline (admin only) - Issue #903
+     * GET /api/v1/admin/activity
+     */
+    async getSystemActivity(params?: {
+      actionFilter?: string;
+      resourceFilter?: string;
+      startDate?: Date;
+      endDate?: Date;
+      limit?: number;
+    }): Promise<GetUserActivityResult> {
+      const queryParams = new URLSearchParams();
+      if (params?.actionFilter) queryParams.set('actionFilter', params.actionFilter);
+      if (params?.resourceFilter) queryParams.set('resourceFilter', params.resourceFilter);
+      if (params?.startDate) queryParams.set('startDate', params.startDate.toISOString());
+      if (params?.endDate) queryParams.set('endDate', params.endDate.toISOString());
+      if (params?.limit) queryParams.set('limit', params.limit.toString());
+
+      const query = queryParams.toString();
+      const result = await httpClient.get(
+        `/api/v1/admin/activity${query ? `?${query}` : ''}`,
+        GetUserActivityResultSchema
+      );
+
+      return result || { activities: [], totalCount: 0 };
+    },
 
     /**
      * Get user activity timeline (admin - any user)

@@ -148,6 +148,7 @@ public class BggApiService : IBggApiService
             throw new InvalidOperationException("BoardGameGeek API is currently unavailable", ex);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Service boundary - BGG API integration with optional result pattern, gracefully handles XML parsing errors
         // Issue #1444: Use centralized exception handling for optional result pattern (nullable)
         catch (Exception ex)
         {
@@ -204,6 +205,7 @@ public class BggApiService : IBggApiService
             throw new InvalidOperationException("BoardGameGeek API is currently unavailable", ex);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Service boundary - BGG API integration with optional result pattern, gracefully handles XML parsing errors
         // Issue #1444: Use centralized exception handling for optional result pattern (nullable)
         catch (Exception ex)
         {
@@ -238,6 +240,7 @@ public class BggApiService : IBggApiService
             );
         }
 #pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Infrastructure adapter - Gracefully handles malformed BGG XML data, skips invalid search results without failing entire operation
         // Issue #1444: Graceful handling of malformed BGG API data
         catch (Exception ex) when (ex is FormatException or OverflowException)
         {
@@ -340,6 +343,7 @@ public class BggApiService : IBggApiService
             );
         }
 #pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Infrastructure adapter - Gracefully handles malformed BGG XML data, returns null for invalid game details without failing entire operation
         // Issue #1444: Graceful handling of malformed BGG API data
         catch (Exception ex) when (ex is FormatException or OverflowException or ArgumentException)
         {

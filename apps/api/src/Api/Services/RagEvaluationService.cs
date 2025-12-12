@@ -136,7 +136,7 @@ public class RagEvaluationService : IRagEvaluationService
             throw new InvalidOperationException($"Invalid JSON in dataset file: {filePath}", ex);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Service boundary - converts unexpected exceptions to domain exceptions
+        // Justification: Service boundary - File I/O operations may throw various unexpected exceptions (IO, access, format), wrap with domain context
         // File loading may throw various exceptions; we wrap them with context for callers
         catch (Exception ex) when (ex is not FileNotFoundException && ex is not ArgumentException)
         {
@@ -395,6 +395,7 @@ public class RagEvaluationService : IRagEvaluationService
             };
         }
 #pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Service boundary - Evaluation operations coordinate multiple services (embedding, search), gracefully handle all failures in result object
         catch (Exception ex)
 #pragma warning restore CA1031
         {

@@ -107,11 +107,11 @@ public class TesseractOcrAdapter : IOcrService, IDisposable
             return OcrResult.CreateSuccess(text, confidence, pageCount: 1);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Infrastructure adapter - Tesseract OCR can throw various exceptions
+        // from native library; wrap all failures into domain result object
         catch (Exception ex)
 #pragma warning restore CA1031
         {
-            // Service layer: Catches all exceptions to return domain result object
-            // OCR errors logged, returned as failure result with diagnostic message
             _logger.LogError(ex, "OCR failed for page {PageIndex} of {PdfPath}", pageIndex, pdfPath);
             return OcrResult.CreateFailure($"OCR failed: {ex.Message}");
         }
@@ -190,11 +190,11 @@ public class TesseractOcrAdapter : IOcrService, IDisposable
             throw;
         }
 #pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Infrastructure adapter - Tesseract multi-page OCR can throw various exceptions;
+        // wrap all failures into domain result object
         catch (Exception ex)
 #pragma warning restore CA1031
         {
-            // Service layer: Catches all exceptions to return domain result object
-            // Full PDF OCR errors logged, returned as failure result with error details
             _logger.LogError(ex, "OCR failed for PDF: {PdfPath}", pdfPath);
             return OcrResult.CreateFailure($"OCR failed: {ex.Message}");
         }

@@ -70,12 +70,14 @@ public class ConfigurationHelper
                 return dbValue!;
             }
         }
-#pragma warning disable CA1031
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Service boundary - 3-tier configuration fallback (DB → appsettings → default);
+        // database failures must not prevent application startup or config reads
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             _logger.LogWarning(ex, "Failed to load configuration {Key} from database, falling back to appsettings", key);
         }
-#pragma warning restore CA1031
 
         // Tier 2: Try appsettings.json
         try
@@ -98,12 +100,14 @@ public class ConfigurationHelper
                 return configValue!;
             }
         }
-#pragma warning disable CA1031
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Service boundary - 3-tier configuration fallback (DB → appsettings → default);
+        // appsettings parse failures must not prevent application startup or config reads
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             _logger.LogWarning(ex, "Failed to load configuration {Key} from appsettings.json, using default", key);
         }
-#pragma warning restore CA1031
 
         // Tier 3: Use default value
         // SEC-738: Don't log sensitive configuration values (CWE-532 prevention)

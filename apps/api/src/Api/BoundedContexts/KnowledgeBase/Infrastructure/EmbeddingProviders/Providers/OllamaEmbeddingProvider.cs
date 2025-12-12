@@ -86,6 +86,7 @@ public sealed class OllamaEmbeddingProvider : EmbeddingProviderBase
             return EmbeddingProviderResult.CreateSuccess(embeddings, _modelName);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Infrastructure adapter - Wraps Ollama API exceptions (HTTP, JSON, timeout) into domain-friendly EmbeddingProviderResult
         catch (HttpRequestException ex)
         {
             Logger.LogError(ex, "HTTP error calling Ollama API");
@@ -187,6 +188,7 @@ public sealed class OllamaEmbeddingProvider : EmbeddingProviderBase
             return true;
         }
 #pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Service boundary - Health checks must not propagate exceptions, return false to indicate unhealthy state
         catch (Exception ex)
         {
             Logger.LogWarning(ex, "Ollama health check failed");

@@ -342,14 +342,16 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
             _logger.LogError(ex, "Database error during PDF upload for game {GameId}", gameId);
             throw new PdfStorageException("Failed to save PDF metadata: Database error occurred.", ex);
         }
-#pragma warning disable CA1031
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: CQRS handler boundary - Wrap all unexpected exceptions during PDF upload
+        // into domain-specific PdfStorageException for consistent error handling upstream
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             RecordUploadMetricSafely("error_unexpected", file?.Length);
             _logger.LogError(ex, "Unexpected error during PDF upload for game {GameId}", gameId);
             throw new PdfStorageException($"Failed to upload PDF: {ex.Message}", ex);
         }
-#pragma warning restore CA1031
     }
 
     /// <summary>
@@ -521,12 +523,14 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
         {
             await HandleProcessingErrorAsync(pdfId, userId, db, quotaService, startTime, ex, "Database error occurred", ct).ConfigureAwait(false);
         }
-#pragma warning disable CA1031
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Background service - PDF processing runs async; must catch all exceptions
+        // to properly update document status, release quota, and prevent background task crash
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             await HandleProcessingErrorAsync(pdfId, userId, db, quotaService, startTime, ex, ex.Message, ct).ConfigureAwait(false);
         }
-#pragma warning restore CA1031
     }
 
     /// <summary>
@@ -1120,11 +1124,13 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
             _logger.LogWarning(ex, "Database error updating progress for PDF {PdfId}", pdfId);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Cleanup operation - Progress updates are non-critical telemetry;
+        // failures must not interrupt PDF processing workflow
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             _logger.LogWarning(ex, "Unexpected error updating progress for PDF {PdfId}", pdfId);
         }
-#pragma warning restore CA1031
     }
 
     private async Task InvalidateCacheSafelyAsync(string gameId, CancellationToken ct, string operation)
@@ -1142,11 +1148,13 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
             _logger.LogWarning(ex, "Invalid operation invalidating AI cache for game {GameId} after {Operation}", gameId, operation);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Cleanup operation - Cache invalidation is best-effort optimization;
+        // failures must not interrupt PDF processing workflow
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             _logger.LogWarning(ex, "Unexpected error invalidating AI cache for game {GameId} after {Operation}", gameId, operation);
         }
-#pragma warning restore CA1031
     }
 
     private static bool IsInvalidVector(float[]? vector)

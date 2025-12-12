@@ -67,6 +67,7 @@ export interface ChatThread {
   id: string;
   userId?: string; // Added for Issue #858
   gameId: string | null;
+  agentId?: string; // Issue #2030 - Track which agent was used in this thread
   title: string | null;
   status?: string; // Added for Issue #858: "Active" | "Closed"
   createdAt: string;

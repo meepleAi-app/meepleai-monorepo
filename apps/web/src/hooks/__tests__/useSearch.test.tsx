@@ -52,9 +52,7 @@ describe('useSearch', () => {
   });
 
   it('should filter by type', () => {
-    const { result } = renderHook(() =>
-      useSearch({ games: mockGames, messages: mockMessages })
-    );
+    const { result } = renderHook(() => useSearch({ games: mockGames, messages: mockMessages }));
 
     const results = result.current.search({
       query: 'catan',
@@ -108,5 +106,128 @@ describe('useSearch', () => {
     });
 
     expect(result.current.recentSearches).toEqual([]);
+  });
+
+  // Issue #2030: Chat context filtering tests
+  describe('chatId filtering', () => {
+    const mockChats: ChatThread[] = [
+      {
+        id: 'chat-1',
+        gameId: '1',
+        title: 'First Chat',
+        messageCount: 2,
+        createdAt: '2025-01-10T00:00:00Z',
+        lastMessageAt: '2025-01-15T00:00:00Z',
+        messages: [],
+      } as ChatThread,
+      {
+        id: 'chat-2',
+        gameId: '1',
+        title: 'Second Chat',
+        messageCount: 1,
+        createdAt: '2025-01-12T00:00:00Z',
+        lastMessageAt: '2025-01-16T00:00:00Z',
+        messages: [],
+      } as ChatThread,
+    ];
+
+    const mockMessagesWithChat: Message[] = [
+      {
+        id: 'msg-1',
+        content: 'Message in chat-1',
+        role: 'user',
+        gameId: '1',
+        timestamp: new Date('2025-01-15T10:00:00Z'),
+      } as Message,
+      {
+        id: 'msg-2',
+        content: 'Another message in chat-1',
+        role: 'assistant',
+        gameId: '1',
+        timestamp: new Date('2025-01-15T10:05:00Z'),
+      } as Message,
+      {
+        id: 'msg-3',
+        content: 'Message in chat-2',
+        role: 'user',
+        gameId: '1',
+        timestamp: new Date('2025-01-16T10:00:00Z'),
+      } as Message,
+    ];
+
+    const mockMessagesByChat = {
+      'chat-1': [mockMessagesWithChat[0], mockMessagesWithChat[1]],
+      'chat-2': [mockMessagesWithChat[2]],
+    };
+
+    it('should assign chatId to messages from messagesByChat', () => {
+      const { result } = renderHook(() =>
+        useSearch({
+          messages: mockMessagesWithChat,
+          messagesByChat: mockMessagesByChat,
+          chats: mockChats,
+        })
+      );
+
+      const results = result.current.search({ query: '' });
+      const messageResults = results.filter(r => r.type === 'message');
+
+      expect(messageResults.length).toBe(3);
+      expect(messageResults.find(r => r.id === 'msg-1')?.chatId).toBe('chat-1');
+      expect(messageResults.find(r => r.id === 'msg-2')?.chatId).toBe('chat-1');
+      expect(messageResults.find(r => r.id === 'msg-3')?.chatId).toBe('chat-2');
+    });
+
+    it('should filter messages by chatId', () => {
+      const { result } = renderHook(() =>
+        useSearch({
+          messages: mockMessagesWithChat,
+          messagesByChat: mockMessagesByChat,
+          chats: mockChats,
+        })
+      );
+
+      const results = result.current.search({
+        query: '',
+        filters: { chatId: 'chat-1' },
+      });
+
+      const messageResults = results.filter(r => r.type === 'message');
+      expect(messageResults.length).toBe(2);
+      expect(messageResults.every(r => r.chatId === 'chat-1')).toBe(true);
+    });
+
+    it('should filter chats by chatId', () => {
+      const { result } = renderHook(() =>
+        useSearch({
+          chats: mockChats,
+        })
+      );
+
+      const results = result.current.search({
+        query: '',
+        filters: { chatId: 'chat-1' },
+      });
+
+      expect(results.length).toBe(1);
+      expect(results[0].id).toBe('chat-1');
+    });
+
+    it('should exclude non-chat types when chatId filter is active', () => {
+      const { result } = renderHook(() =>
+        useSearch({
+          games: mockGames,
+          chats: mockChats,
+        })
+      );
+
+      const results = result.current.search({
+        query: '',
+        filters: { chatId: 'chat-1' },
+      });
+
+      expect(results.every(r => r.type === 'chat' || r.type === 'message')).toBe(true);
+      expect(results.some(r => r.type === 'game')).toBe(false);
+    });
   });
 });

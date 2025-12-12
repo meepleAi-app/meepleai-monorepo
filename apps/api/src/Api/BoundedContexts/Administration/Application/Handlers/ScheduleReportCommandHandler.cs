@@ -41,7 +41,7 @@ public sealed class ScheduleReportCommandHandler : ICommandHandler<ScheduleRepor
                 nameof(command));
         }
 
-        // Create domain entity
+        // Create domain entity (ISSUE-918: with email recipients)
         var report = AdminReport.Create(
             name: command.Name,
             description: command.Description,
@@ -49,7 +49,8 @@ public sealed class ScheduleReportCommandHandler : ICommandHandler<ScheduleRepor
             format: command.Format,
             parameters: command.Parameters,
             scheduleExpression: command.ScheduleExpression,
-            createdBy: command.CreatedBy);
+            createdBy: command.CreatedBy,
+            emailRecipients: command.EmailRecipients);
 
         // Save to database
         await _repository.AddAsync(report, ct).ConfigureAwait(false);

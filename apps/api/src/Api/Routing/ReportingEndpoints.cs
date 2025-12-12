@@ -73,7 +73,8 @@ public static class ReportingEndpoints
                 Format = request.Format,
                 Parameters = request.Parameters ?? new Dictionary<string, object>(),
                 ScheduleExpression = request.ScheduleExpression,
-                CreatedBy = userId
+                CreatedBy = userId,
+                EmailRecipients = request.EmailRecipients // ISSUE-918
             };
 
             var reportId = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -178,7 +179,8 @@ public sealed record ScheduleReportRequest(
     ReportTemplate Template,
     ReportFormat Format,
     IReadOnlyDictionary<string, object>? Parameters,
-    string ScheduleExpression);
+    string ScheduleExpression,
+    IReadOnlyList<string>? EmailRecipients); // ISSUE-918: Email delivery integration
 
 public sealed record UpdateScheduleRequest(
     string? ScheduleExpression,

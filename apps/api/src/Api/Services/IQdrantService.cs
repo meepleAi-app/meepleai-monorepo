@@ -17,6 +17,7 @@ public interface IQdrantService
         string gameId,
         float[] queryEmbedding,
         int limit = 5,
+        IReadOnlyList<string>? documentIds = null, // Issue #2141: Native Qdrant filtering
         CancellationToken ct = default);
     Task<SearchResult> SearchByCategoryAsync(
         string category,
@@ -45,5 +46,6 @@ public interface IQdrantService
         float[] queryEmbedding,
         string language,
         int limit = 5,
+        IReadOnlyList<string>? documentIds = null, // Issue #2141: Native Qdrant filtering
         CancellationToken ct = default);
 }

@@ -145,7 +145,7 @@ public class StreamExplainQueryHandler : IStreamingQueryHandler<StreamExplainQue
         float[] topicEmbedding,
         CancellationToken cancellationToken)
     {
-        var searchResult = await _qdrantService.SearchAsync(gameId, topicEmbedding, limit: 5, cancellationToken).ConfigureAwait(false);
+        var searchResult = await _qdrantService.SearchAsync(gameId, topicEmbedding, limit: 5, documentIds: null, cancellationToken).ConfigureAwait(false);
 
         if (!searchResult.Success || searchResult.Results.Count == 0)
         {

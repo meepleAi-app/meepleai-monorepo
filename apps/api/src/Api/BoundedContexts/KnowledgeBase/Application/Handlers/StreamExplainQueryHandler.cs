@@ -52,62 +52,46 @@ public class StreamExplainQueryHandler : IStreamingQueryHandler<StreamExplainQue
         _logger.LogInformation("Starting streaming explain for game {GameId}, topic: {Topic}",
             query.GameId, query.Topic);
 
-        // Step 1: Generate embedding
+        // Step 1: Generate embedding for topic
         yield return CreateEvent(StreamingEventType.StateUpdate,
             new StreamingStateUpdate("Generating embeddings for topic..."));
 
-        var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(query.Topic, cancellationToken).ConfigureAwait(false);
-
-        if (!embeddingResult.Success || embeddingResult.Embeddings.Count == 0)
+        var topicEmbedding = await GenerateTopicEmbeddingAsync(query.Topic, cancellationToken).ConfigureAwait(false);
+        if (topicEmbedding == null)
         {
-            _logger.LogError("Failed to generate topic embedding: {Error}", embeddingResult.ErrorMessage);
             yield return CreateEvent(StreamingEventType.Error,
                 new StreamingError("Unable to process topic.", "EMBEDDING_FAILED"));
             yield break;
         }
 
-        var topicEmbedding = embeddingResult.Embeddings[0];
-
-        // Step 2: Search Qdrant
+        // Step 2: Search vector database
         yield return CreateEvent(StreamingEventType.StateUpdate,
             new StreamingStateUpdate("Searching vector database for relevant content..."));
 
-        var searchResult = await _qdrantService.SearchAsync(query.GameId, topicEmbedding, limit: 5, cancellationToken).ConfigureAwait(false);
-
-        if (!searchResult.Success || searchResult.Results.Count == 0)
+        var (searchResults, citations) = await SearchForTopicContentAsync(
+            query.GameId, query.Topic, topicEmbedding, cancellationToken).ConfigureAwait(false);
+        if (citations == null)
         {
-            _logger.LogInformation("No vector results found for topic {Topic} in game {GameId}",
-                query.Topic, query.GameId);
             yield return CreateEvent(StreamingEventType.Error,
                 new StreamingError($"No relevant information found about '{query.Topic}' in the rulebook.", "NO_RESULTS"));
             yield break;
         }
 
-        // Step 3: Emit citations
-        var citations = searchResult.Results.Select(r => new Snippet(
-            r.Text,
-            $"PDF:{r.PdfId}",
-            r.Page,
-            0,
-            r.Score // AI-11: Include actual search score for quality tracking
-        )).ToList();
-
         yield return CreateEvent(StreamingEventType.Citations,
             new StreamingCitations(citations));
 
-        // Step 4: Build and emit outline
+        // Step 3: Build outline
         yield return CreateEvent(StreamingEventType.StateUpdate,
             new StreamingStateUpdate("Building outline structure..."));
 
-        var outline = BuildOutline(query.Topic, searchResult.Results);
+        var (outline, script) = BuildOutlineAndScript(query.Topic, searchResults!);
         yield return CreateEvent(StreamingEventType.Outline,
             new StreamingOutline(outline));
 
-        // Step 5: Build and stream script in chunks
+        // Step 4: Stream script in chunks
         yield return CreateEvent(StreamingEventType.StateUpdate,
             new StreamingStateUpdate("Generating explanation script..."));
 
-        var script = BuildScript(query.Topic, searchResult.Results);
         var scriptChunks = ChunkScript(script);
 
         for (int i = 0; i < scriptChunks.Count; i++)
@@ -117,32 +101,82 @@ public class StreamExplainQueryHandler : IStreamingQueryHandler<StreamExplainQue
             yield return CreateEvent(StreamingEventType.ScriptChunk,
                 new StreamingScriptChunk(scriptChunks[i], i, scriptChunks.Count));
 
-            // Small delay between chunks to simulate progressive generation
-            // and avoid overwhelming the client
+            // Small delay between chunks
             if (i < scriptChunks.Count - 1)
             {
                 await Task.Delay(50, cancellationToken).ConfigureAwait(false);
             }
         }
 
-        // Step 6: Calculate metadata and emit complete
-        var wordCount = script.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
-        var estimatedMinutes = Math.Max(1, (int)Math.Ceiling(wordCount / 200.0));
-        var confidence = searchResult.Results.Count > 0
-            ? (double?)searchResult.Results.Max(r => r.Score)
-            : null;
-
+        // Step 5: Emit completion
         yield return CreateEvent(StreamingEventType.Complete,
-            new StreamingComplete(
-                estimatedMinutes,
-                0, // Token counts not available in non-LLM explain
-                0,
-                0,
-                confidence));
+            new StreamingComplete(0, 0, 0, 0, null));
 
-        _logger.LogInformation(
-            "Streaming explain completed for game {GameId}, topic: {Topic}, {ChunkCount} chunks sent",
-            query.GameId, query.Topic, scriptChunks.Count);
+        _logger.LogInformation("Streaming explain completed for game {GameId}, topic: {Topic}",
+            query.GameId, query.Topic);
+    }
+
+    /// <summary>
+    /// Generates embedding for topic with error handling.
+    /// Returns embedding vector or null if generation failed.
+    /// </summary>
+    private async Task<float[]?> GenerateTopicEmbeddingAsync(
+        string topic,
+        CancellationToken cancellationToken)
+    {
+        var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(topic, cancellationToken).ConfigureAwait(false);
+
+        if (!embeddingResult.Success || embeddingResult.Embeddings.Count == 0)
+        {
+            _logger.LogError("Failed to generate topic embedding: {Error}", embeddingResult.ErrorMessage);
+            return null;
+        }
+
+        return embeddingResult.Embeddings[0];
+    }
+
+    /// <summary>
+    /// Searches for topic content and builds citations.
+    /// Returns (searchResults, citations) or (null, null) if no results found.
+    /// </summary>
+    private async Task<(IReadOnlyList<SearchResultItem>? searchResults, List<Snippet>? citations)> SearchForTopicContentAsync(
+        string gameId,
+        string topic,
+        float[] topicEmbedding,
+        CancellationToken cancellationToken)
+    {
+        var searchResult = await _qdrantService.SearchAsync(gameId, topicEmbedding, limit: 5, cancellationToken).ConfigureAwait(false);
+
+        if (!searchResult.Success || searchResult.Results.Count == 0)
+        {
+            _logger.LogInformation("No vector results found for topic {Topic} in game {GameId}",
+                topic, gameId);
+            return (null, null);
+        }
+
+        var citations = searchResult.Results.Select(r => new Snippet(
+            r.Text,
+            $"PDF:{r.PdfId}",
+            r.Page,
+            0,
+            r.Score
+        )).ToList();
+
+        return (searchResult.Results, citations);
+    }
+
+    /// <summary>
+    /// Builds outline and script from search results.
+    /// Returns (outline, script).
+    /// </summary>
+    private (ExplainOutline outline, string script) BuildOutlineAndScript(
+        string topic,
+        IReadOnlyList<SearchResultItem> searchResults)
+    {
+        var outline = BuildOutline(topic, searchResults);
+        var script = BuildScript(topic, searchResults);
+
+        return (outline, script);
     }
 
     private RagStreamingEvent CreateEvent(StreamingEventType type, object? data)

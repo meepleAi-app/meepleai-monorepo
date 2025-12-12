@@ -97,6 +97,12 @@ public class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResultDt
         var embeddings = await _embeddingRepository.SearchByVectorAsync(
             gameId, queryVector, topK, minScore, cancellationToken).ConfigureAwait(false);
 
+        if (embeddings == null)
+        {
+            _logger.LogWarning("Vector search returned null for gameId={GameId}", gameId);
+            embeddings = new List<Domain.Entities.Embedding>();
+        }
+
         _logger.LogInformation(
             "Vector search returned {Count} embeddings for gameId={GameId}",
             embeddings.Count, gameId);

@@ -73,7 +73,7 @@ public sealed class GenerateFollowUpQuestionsQueryHandler
                 throw new OperationCanceledException(cancellationToken);
             }
 
-            // Apply configuration limits (take minimum of requested and configured max)
+            // Apply configuration limits
             var effectiveMaxQuestions = Math.Min(request.MaxQuestions, _config.MaxQuestionsPerResponse);
 
             // Build prompts
@@ -89,82 +89,24 @@ public sealed class GenerateFollowUpQuestionsQueryHandler
                 effectiveMaxQuestions,
                 request.GameName);
 
-            // Create linked cancellation token with timeout
-            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            timeoutCts.CancelAfter(TimeSpan.FromMilliseconds(_config.GenerationTimeoutMs));
+            // Generate questions with retry
+            var result = await GenerateQuestionsWithRetryAsync(
+                systemPrompt, userPrompt, request.GameName, tags, cancellationToken).ConfigureAwait(false);
 
-            FollowUpQuestionsDto? result = null;
-            int attemptCount = 0;
-
-            // Retry loop (up to MaxRetries)
-            while (attemptCount < _config.MaxRetries && result == null)
-            {
-                attemptCount++;
-
-                try
-                {
-                    // Call LLM service to generate structured JSON response
-                    result = await _llmService.GenerateJsonAsync<FollowUpQuestionsDto>(
-                        systemPrompt,
-                        userPrompt,
-                        timeoutCts.Token).ConfigureAwait(false);
-
-                    if (result == null)
-                    {
-                        _logger.LogWarning(
-                            "LLM returned null for follow-up questions (attempt {Attempt}/{MaxRetries})",
-                            attemptCount,
-                            _config.MaxRetries);
-
-                        // Continue to retry if we haven't reached max retries
-                        if (attemptCount < _config.MaxRetries)
-                        {
-                            continue;
-                        }
-                    }
-                }
-                catch (OperationCanceledException) when (timeoutCts.Token.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
-                {
-                    // Timeout occurred (but not user cancellation)
-                    _logger.LogWarning(
-                        "Follow-up question generation timed out after {TimeoutMs}ms for game {GameName}",
-                        _config.GenerationTimeoutMs,
-                        request.GameName);
-
-                    _errorsCounter.Add(1, tags);
-                    return Array.Empty<string>();
-                }
-            }
-
-            // If we exhausted retries without success, return empty list
             if (result == null)
             {
                 _logger.LogWarning(
-                    "Failed to generate follow-up questions after {Attempts} attempts for game {GameName}",
-                    attemptCount,
+                    "Failed to generate follow-up questions after {MaxRetries} attempts for game {GameName}",
+                    _config.MaxRetries,
                     request.GameName);
 
                 _errorsCounter.Add(1, tags);
                 return Array.Empty<string>();
             }
 
-            // Validate and filter questions
-            var validQuestions = result.Questions
-                .Where(q => !string.IsNullOrWhiteSpace(q))
-                .Take(effectiveMaxQuestions)
-                .ToList();
-
-            stopwatch.Stop();
-
-            // Record success metrics
-            _questionsGeneratedCounter.Add(validQuestions.Count, tags);
-            _generationDurationHistogram.Record(stopwatch.Elapsed.TotalMilliseconds, tags);
-
-            _logger.LogInformation(
-                "Generated {QuestionCount} follow-up questions for game {GameName} in {DurationMs}ms",
-                validQuestions.Count,
-                request.GameName,
-                stopwatch.Elapsed.TotalMilliseconds);
+            // Validate, filter, and record metrics
+            var validQuestions = RecordMetricsAndFilterQuestions(
+                result, effectiveMaxQuestions, request.GameName, stopwatch, tags);
 
             return validQuestions.AsReadOnly();
         }
@@ -201,6 +143,98 @@ public sealed class GenerateFollowUpQuestionsQueryHandler
             // Graceful degradation - return empty list
             return Array.Empty<string>();
         }
+    }
+
+    /// <summary>
+    /// Generates follow-up questions with retry logic and timeout handling.
+    /// Returns FollowUpQuestionsDto or null if all retries failed.
+    /// </summary>
+    private async Task<FollowUpQuestionsDto?> GenerateQuestionsWithRetryAsync(
+        string systemPrompt,
+        string userPrompt,
+        string gameName,
+        TagList tags,
+        CancellationToken cancellationToken)
+    {
+        // Create linked cancellation token with timeout
+        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeoutCts.CancelAfter(TimeSpan.FromMilliseconds(_config.GenerationTimeoutMs));
+
+        FollowUpQuestionsDto? result = null;
+        int attemptCount = 0;
+
+        // Retry loop (up to MaxRetries)
+        while (attemptCount < _config.MaxRetries && result == null)
+        {
+            attemptCount++;
+
+            try
+            {
+                // Call LLM service to generate structured JSON response
+                result = await _llmService.GenerateJsonAsync<FollowUpQuestionsDto>(
+                    systemPrompt,
+                    userPrompt,
+                    timeoutCts.Token).ConfigureAwait(false);
+
+                if (result == null)
+                {
+                    _logger.LogWarning(
+                        "LLM returned null for follow-up questions (attempt {Attempt}/{MaxRetries})",
+                        attemptCount,
+                        _config.MaxRetries);
+
+                    // Continue to retry if we haven't reached max retries
+                    if (attemptCount < _config.MaxRetries)
+                    {
+                        continue;
+                    }
+                }
+            }
+            catch (OperationCanceledException) when (timeoutCts.Token.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+            {
+                // Timeout occurred (but not user cancellation)
+                _logger.LogWarning(
+                    "Follow-up question generation timed out after {TimeoutMs}ms for game {GameName}",
+                    _config.GenerationTimeoutMs,
+                    gameName);
+
+                _errorsCounter.Add(1, tags);
+                return null;
+            }
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Validates, filters questions and records success metrics.
+    /// </summary>
+    private List<string> RecordMetricsAndFilterQuestions(
+        FollowUpQuestionsDto result,
+        int effectiveMaxQuestions,
+        string gameName,
+        Stopwatch stopwatch,
+        TagList tags)
+    {
+        // Validate and filter questions
+        var validQuestions = result.Questions
+            .Where(q => !string.IsNullOrWhiteSpace(q))
+            .Take(effectiveMaxQuestions)
+            .ToList();
+
+        stopwatch.Stop();
+
+        // Record success metrics
+        _questionsGeneratedCounter.Add(validQuestions.Count, tags);
+        _generationDurationHistogram.Record(stopwatch.Elapsed.TotalMilliseconds, tags);
+
+        _logger.LogInformation(
+            "Generated {QuestionCount} follow-up questions for game {GameName} in {DurationMs}ms",
+            validQuestions.Count,
+            gameName,
+            stopwatch.Elapsed.TotalMilliseconds);
+
+        return validQuestions;
     }
 
     /// <summary>

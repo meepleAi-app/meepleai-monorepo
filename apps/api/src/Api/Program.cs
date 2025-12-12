@@ -343,6 +343,7 @@ app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthC
 var v1Api = app.MapGroup("/api/v1");
 
 v1Api.MapAuthEndpoints();
+v1Api.MapShareLinkEndpoints(); // ISSUE-2052: Shareable chat thread links
 v1Api.MapUserProfileEndpoints();
 v1Api.MapGameEndpoints();
 v1Api.MapAiEndpoints();

@@ -15,3 +15,4 @@ export * from './agentsClient';
 export * from './adminClient';
 export * from './alerts';
 export * from './documentsClient';
+export * from './shareLinksClient'; // ISSUE-2052

@@ -36,3 +36,6 @@ export * from './reports.schemas';
 
 // Testing schemas (Issue #2139)
 export * from './testing.schemas';
+
+// ShareLinks schemas (Issue #2052)
+export * from './share-links.schemas';

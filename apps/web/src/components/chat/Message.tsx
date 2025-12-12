@@ -19,10 +19,16 @@ import { FollowUpQuestions } from './FollowUpQuestions';
 
 interface MessageProps {
   message: MessageType;
-  isUser: boolean;
+  isUser?: boolean;
+  /** ISSUE-2052: Hide edit/delete actions in shared view */
+  isSharedView?: boolean;
 }
 
-export const Message = React.memo(function Message({ message, isUser }: MessageProps) {
+export const Message = React.memo(function Message({
+  message,
+  isUser = false,
+  isSharedView = false,
+}: MessageProps) {
   // Issue #1676: Migrated from useChatContext to direct Zustand store
   const {
     editingMessageId,
@@ -44,8 +50,8 @@ export const Message = React.memo(function Message({ message, isUser }: MessageP
   const isDeleted = message.isDeleted;
   const isUpdating = loading.updating || loading.deleting;
 
-  // Don't show actions for deleted messages
-  const showActions = !isDeleted && !isEditing;
+  // Don't show actions for deleted messages or in shared view (ISSUE-2052)
+  const showActions = !isDeleted && !isEditing && !isSharedView;
 
   // CHAT-02: Handle follow-up question click
   const handleFollowUpClick = (question: string) => {

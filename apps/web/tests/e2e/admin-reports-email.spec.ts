@@ -114,6 +114,7 @@ async function getMailpitMessageDetail(
 
 /**
  * Wait for email to arrive in Mailpit (with retry)
+ * Uses environment-aware polling interval for test reliability
  */
 async function waitForEmail(
   request: APIRequestContext,
@@ -124,6 +125,9 @@ async function waitForEmail(
   const pattern =
     typeof subjectPattern === 'string' ? new RegExp(subjectPattern, 'i') : subjectPattern;
 
+  // Environment-aware polling: slower in CI for stability, faster locally for speed
+  const pollInterval = process.env.CI === 'true' ? 1000 : 300;
+
   while (Date.now() - startTime < timeoutMs) {
     const messages = await getMailpitMessages(request);
     const matchingMessage = messages.find(m => pattern.test(m.Subject));
@@ -132,8 +136,8 @@ async function waitForEmail(
       return matchingMessage;
     }
 
-    // Wait 500ms before retry
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Wait before retry (adaptive based on environment)
+    await new Promise(resolve => setTimeout(resolve, pollInterval));
   }
 
   throw new Error(

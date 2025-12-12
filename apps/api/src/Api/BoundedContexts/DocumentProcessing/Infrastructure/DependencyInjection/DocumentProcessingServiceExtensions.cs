@@ -40,6 +40,7 @@ public static class DocumentProcessingServiceExtensions
         // Domain Layer
         services.AddScoped<IPdfDocumentRepository, PdfDocumentRepository>();
         services.AddScoped<IChunkedUploadSessionRepository, ChunkedUploadSessionRepository>();
+        services.AddScoped<IDocumentCollectionRepository, DocumentCollectionRepository>(); // ISSUE-2051: Document collections
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
 
         // Domain Services (stateless, can be singleton for performance)
@@ -48,6 +49,7 @@ public static class DocumentProcessingServiceExtensions
         services.AddScoped<PdfTextProcessingDomainService>(); // DDD-PHASE4: Text processing business rules
         services.AddScoped<PdfQualityValidationDomainService>(); // BGAI-012: Quality threshold enforcement
         services.AddScoped<IPdfUploadQuotaService, PdfUploadQuotaService>(); // User tier-based upload quotas
+        services.AddScoped<CitationPriorityService>(); // ISSUE-2051: Citation priority and deduplication
 
         // Infrastructure Adapters (scoped - may use file I/O)
         services.AddScoped<IPdfTableExtractor, ITextPdfTableExtractor>();

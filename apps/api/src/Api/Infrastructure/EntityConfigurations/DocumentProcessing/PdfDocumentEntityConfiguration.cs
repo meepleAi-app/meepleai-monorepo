@@ -37,5 +37,18 @@ public class PdfDocumentEntityConfiguration : IEntityTypeConfiguration<PdfDocume
         // AI-14: Hybrid search - PostgreSQL tsvector column managed by trigger
         // Ignore in EF Core since it's managed by database trigger, not application
         builder.Ignore(e => e.SearchVector);
+
+        // Issue #2051: Multi-document collection support
+        builder.Property(e => e.CollectionId).HasMaxLength(64);
+        builder.Property(e => e.DocumentType).IsRequired().HasMaxLength(50).HasDefaultValue("base");
+        builder.Property(e => e.SortOrder).IsRequired().HasDefaultValue(0);
+
+        builder.HasOne(e => e.Collection)
+            .WithMany(c => c.PdfDocuments)
+            .HasForeignKey(e => e.CollectionId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasIndex(e => e.CollectionId);
+        builder.HasIndex(e => new { e.CollectionId, e.SortOrder });
     }
 }

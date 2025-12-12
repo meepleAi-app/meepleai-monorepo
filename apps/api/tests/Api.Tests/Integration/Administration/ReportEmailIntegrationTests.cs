@@ -9,6 +9,7 @@ using Quartz;
 using Xunit;
 using ReportFormat = Api.BoundedContexts.Administration.Domain.ValueObjects.ReportFormat;
 using ReportTemplate = Api.BoundedContexts.Administration.Domain.ValueObjects.ReportTemplate;
+using ReportExecutionStatus = Api.BoundedContexts.Administration.Domain.ValueObjects.ReportExecutionStatus;
 
 namespace Api.Tests.Integration.Administration;
 

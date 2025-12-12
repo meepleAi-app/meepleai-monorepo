@@ -27,17 +27,19 @@ dotnet_diagnostic.MA0048.severity = warning
 
 # Code quality - Production code (strict enforcement)
 [src/**/*.cs]
-# CA1062: Validate arguments of public methods (SUGGESTION - constructor validation complete, method validation TBD)
-# Constructor validation: All CommandHandler constructors now enforce null-coalescing pattern
-# Method validation: Requires architectural decision on Handle() method parameter validation strategy
-# Pattern: _field = param ?? throw new ArgumentNullException(nameof(param));
-dotnet_diagnostic.CA1062.severity = suggestion
+# CA1062: Validate arguments of public methods (ELEVATED: suggestion → warning)
+# Constructor validation: Complete via null-coalescing pattern (_field = param ?? throw)
+# Method validation: Null checks applied in Sprint 1-2 refactoring
+# Elevated to warning to enforce argument validation in new code
+dotnet_diagnostic.CA1062.severity = warning
 
 # CA2000: Dispose objects before losing scope (ERROR in production)
 dotnet_diagnostic.CA2000.severity = error
 
-# CA1031: Do not catch general exception types (SUGGESTION in production - allow for graceful degradation patterns)
-dotnet_diagnostic.CA1031.severity = suggestion
+# CA1031: Do not catch general exception types (ELEVATED: suggestion → warning)
+# Allow with #pragma suppressions for documented graceful degradation only
+# Elevated to warning to discourage blanket exception catching
+dotnet_diagnostic.CA1031.severity = warning
 
 # CA1063: Implement IDisposable correctly (ERROR in production)
 dotnet_diagnostic.CA1063.severity = error
@@ -438,10 +440,19 @@ dotnet_diagnostic.S6377.severity = error
 # Prefer IList<T>, IReadOnlyList<T>, IDictionary<K,V> over concrete types
 dotnet_diagnostic.MA0016.severity = warning
 
-# MA0051: Method is too long (Issue #2090)
+# MA0051: Method is too long (Issue #2090, #2070)
 # Enable for BoundedContexts/ to identify methods requiring refactoring
 # Limit: 60 lines per method (Meziantou default)
-# Default: suggestion → warning for business logic code
+# Disable for infrastructure/framework code where long methods are acceptable
 [src/Api/BoundedContexts/**/*.cs]
 dotnet_diagnostic.MA0051.severity = warning
 MA0051.maximum_lines_per_method = 60
+
+# MA0051: Suppress for infrastructure and framework code (Issue #2070)
+# These folders contain bootstrap, routing, migrations, and infrastructure code
+# where method length limits are less critical than in business logic
+[src/Api/{Authentication,Configuration,Extensions,Helpers,Infrastructure,Logging,Middleware,Migrations,Routing,Services}/**/*.cs]
+dotnet_diagnostic.MA0051.severity = none
+
+[src/Api/Infrastructure/EntityConfigurations/**/*.cs]
+dotnet_diagnostic.MA0051.severity = none

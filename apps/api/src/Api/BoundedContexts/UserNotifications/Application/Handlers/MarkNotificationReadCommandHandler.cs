@@ -1,8 +1,10 @@
 using Api.BoundedContexts.UserNotifications.Application.Commands;
 using Api.BoundedContexts.UserNotifications.Domain.Repositories;
+using Api.Observability;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 
 namespace Api.BoundedContexts.UserNotifications.Application.Handlers;
 
@@ -28,6 +30,8 @@ public class MarkNotificationReadCommandHandler : ICommandHandler<MarkNotificati
 
     public async Task<bool> Handle(MarkNotificationReadCommand command, CancellationToken cancellationToken)
     {
+        var stopwatch = Stopwatch.StartNew();
+
         var notification = await _notificationRepository.GetByIdAsync(command.NotificationId, cancellationToken).ConfigureAwait(false);
 
         if (notification == null)
@@ -48,6 +52,9 @@ public class MarkNotificationReadCommandHandler : ICommandHandler<MarkNotificati
         notification.MarkAsRead();
         await _notificationRepository.UpdateAsync(notification, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        stopwatch.Stop();
+        MeepleAiMetrics.RecordNotificationRead(stopwatch.Elapsed.TotalMilliseconds, notification.Type?.ToString());
 
         _logger.LogInformation("Marked notification {NotificationId} as read for user {UserId}",
             notification.Id, command.UserId);

@@ -865,6 +865,49 @@ sum(rate(meepleai_agent_tokens_total[5m])) by (agent_type)
 sum(rate(meepleai_agent_cost_usd[5m])) by (agent_type)
 ```
 
+#### Notification Metrics (Issue #2157)
+
+```csharp
+// Record notification creation (automatically called in NotificationRepository.AddAsync)
+MeepleAiMetrics.RecordNotificationCreated(
+    notificationType: "system",  // e.g., system, game, user
+    severity: "info");           // e.g., info, warning, error, success
+
+// Record mark-as-read operation with timing
+var sw = Stopwatch.StartNew();
+// ... mark notification as read ...
+sw.Stop();
+
+MeepleAiMetrics.RecordNotificationRead(
+    durationMs: sw.Elapsed.TotalMilliseconds,
+    notificationType: "system");  // Optional
+
+// Record bulk mark-all-as-read operation
+MeepleAiMetrics.RecordNotificationMarkAllRead(
+    durationMs: sw.Elapsed.TotalMilliseconds,
+    notificationCount: count);  // Bucketed: 0, 1-5, 6-20, 21-50, 50+
+```
+
+**Prometheus queries**:
+```promql
+# Notifications created by type
+sum(rate(meepleai_notifications_created_total[5m])) by (type)
+
+# Notifications created by severity
+sum(rate(meepleai_notifications_created_total[5m])) by (severity)
+
+# Mark-as-read latency P95
+histogram_quantile(0.95, sum(rate(meepleai_notifications_mark_read_duration_bucket[5m])) by (le))
+
+# Mark-all-as-read latency P95
+histogram_quantile(0.95, sum(rate(meepleai_notifications_mark_all_read_duration_bucket[5m])) by (le))
+
+# Bulk operations by count bucket
+sum(rate(meepleai_notifications_mark_all_read_total[5m])) by (count_bucket)
+```
+
+**Dashboard**: http://localhost:3001/d/notification-metrics (Grafana)
+
 ### Creating Custom Metrics
 
 Se hai bisogno di una nuova metrica:

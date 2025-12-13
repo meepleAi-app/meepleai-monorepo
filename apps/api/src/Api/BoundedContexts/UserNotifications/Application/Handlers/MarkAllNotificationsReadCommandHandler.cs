@@ -1,7 +1,9 @@
 using Api.BoundedContexts.UserNotifications.Application.Commands;
 using Api.BoundedContexts.UserNotifications.Domain.Repositories;
+using Api.Observability;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 
 namespace Api.BoundedContexts.UserNotifications.Application.Handlers;
 
@@ -24,7 +26,12 @@ public class MarkAllNotificationsReadCommandHandler : ICommandHandler<MarkAllNot
 
     public async Task<int> Handle(MarkAllNotificationsReadCommand command, CancellationToken cancellationToken)
     {
+        var stopwatch = Stopwatch.StartNew();
+
         var count = await _notificationRepository.MarkAllAsReadAsync(command.UserId, cancellationToken).ConfigureAwait(false);
+
+        stopwatch.Stop();
+        MeepleAiMetrics.RecordNotificationMarkAllRead(stopwatch.Elapsed.TotalMilliseconds, count);
 
         if (count > 0)
         {

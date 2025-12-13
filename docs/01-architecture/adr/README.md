@@ -156,5 +156,6 @@ When creating a new ADR:
 
 ---
 
-**Last Updated**: 2025-01-19
+**Last Updated**: 2025-12-13T10:59:23.970Z
 **Total ADRs**: 13 (9 Accepted, 4 Proposed)
+

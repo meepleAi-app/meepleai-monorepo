@@ -93,7 +93,7 @@ public sealed class BulkUserOperationsE2ETests : IAsyncLifetime
 
         // Repositories and Unit of Work
         services.AddScoped<IUserRepository, UserRepository>();
-        services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
 
         // Logging
         services.AddLogging(builder => builder.AddConsole());

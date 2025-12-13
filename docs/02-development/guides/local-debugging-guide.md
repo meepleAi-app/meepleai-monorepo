@@ -2,7 +2,7 @@
 
 **MeepleAI Monorepo** - Comprehensive guide to debugging backend (.NET), frontend (Next.js/React), and full-stack scenarios using Visual Studio Code.
 
-**Last Updated**: 2025-11-19
+**Last Updated**: 2025-12-13T10:59:23.970Z
 **Audience**: Developers
 **Prerequisites**: VSCode, .NET 9 SDK, Node.js 20+, pnpm
 
@@ -1609,5 +1609,6 @@ module.exports = {
 **Feedback**: Found an issue or have suggestions? Open an issue on GitHub.
 
 **Version**: 1.0
-**Last Updated**: 2025-11-19
+**Last Updated**: 2025-12-13T10:59:23.970Z
 **Maintainer**: Engineering Team
+

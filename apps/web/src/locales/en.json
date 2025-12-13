@@ -206,6 +206,12 @@
     "upload": "Upload",
     "yes": "Yes"
   },
+  "comments": {
+    "addComment": "Add Comment",
+    "createError": "Unable to create comment",
+    "placeholder": "Write a comment...",
+    "submitting": "Submitting..."
+  },
   "dashboard": {
     "greeting": {
       "afternoon": "Good afternoon",
@@ -307,12 +313,18 @@
       "cta": {
         "getStarted": "Get Started Free",
         "goToChat": "Go to Chat",
+        "learnMore": "Learn More",
         "seeHow": "See How It Works",
         "startChatting": "Start Chatting",
         "tryDemo": "Try Demo Account"
       },
+      "scrollToFeatures": "Scroll to features section",
       "subtitle": "Never argue about rules again. Get instant, accurate answers from any rulebook with AI-powered semantic search.",
-      "title": "Your AI-Powered Board Game Rules Assistant"
+      "title": "Your AI-Powered Board Game Rules Assistant",
+      "trustIndicators": {
+        "accuracy": "95% accuracy",
+        "users": "Over 1,250 users"
+      }
     }
   },
   "n8n": {
@@ -334,6 +346,17 @@
     "register": "Sign Up",
     "settings": "Settings",
     "upload": "Upload"
+  },
+  "questionInput": {
+    "attachFile": "Attach file",
+    "charCount": "{count} of {max} characters",
+    "completeResponse": "Complete response",
+    "fastResponse": "Fast response",
+    "placeholder": "Write question...",
+    "responseModeLabel": "Response mode",
+    "searchLabel": "Game question",
+    "sendQuestion": "Send question",
+    "sending": "Sending..."
   },
   "roles": {
     "admin": "Admin",

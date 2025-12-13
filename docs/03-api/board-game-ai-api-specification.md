@@ -1321,6 +1321,7 @@ games.forEach(game => console.log(`${game.name} (${game.year})`));
 
 **Document Metadata**:
 - **Version**: 1.0.0
-- **Last Updated**: 2025-01-15
+- **Last Updated**: 2025-12-13T10:59:23.970Z
 - **Status**: Draft for Phase 1 Implementation
 - **Maintainer**: API Team <api@meepleai.dev>
+

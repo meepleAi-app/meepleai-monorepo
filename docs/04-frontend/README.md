@@ -3,7 +3,7 @@
 **Framework**: Next.js 16.0.1 + React 19.2.0 + TypeScript 5.9.3
 **UI Library**: Shadcn/UI (Radix + Tailwind CSS 4.1.17)
 **Location**: `apps/web/`
-**Last Updated**: 2025-01-15
+**Last Updated**: 2025-12-13T10:59:23.970Z
 
 ---
 
@@ -364,3 +364,4 @@ pnpm test
 
 **Maintained by**: Frontend Team
 **Review Frequency**: Monthly or on major architecture changes
+

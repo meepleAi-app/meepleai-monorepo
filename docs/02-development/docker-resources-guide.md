@@ -1,7 +1,7 @@
 # Docker Resources Guide - MeepleAI
 
 **Version**: 2.0 (Consolidated)
-**Last Updated**: 2025-12-08
+**Last Updated**: 2025-12-13T10:59:23.970Z
 **Purpose**: Complete guide for Docker resource limits and optimization
 **Location**: Consolidated from `docker-compose-resource-limits.md` + `docker-resource-limits-faq.md` + `docker-resource-limits-quick-reference.md`
 
@@ -779,7 +779,8 @@ See: [Infrastructure Overview](../05-operations/infrastructure-overview.md) for 
 ---
 
 **Version**: 2.0 (Post-Consolidation)
-**Last Updated**: 2025-12-08
+**Last Updated**: 2025-12-13T10:59:23.970Z
 **Services Covered**: 13 (postgres, qdrant, redis, api, web, ollama, embedding, unstructured, smoldocling, prometheus, grafana, hyperdx, n8n)
 **Total Production Resources**: 28 CPU cores, 68GB memory
 **Documentation**: Single comprehensive resource guide
+

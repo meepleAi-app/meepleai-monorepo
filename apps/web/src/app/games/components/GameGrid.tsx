@@ -37,7 +37,10 @@ export function GameGrid({ games, variant, loading = false }: GameGridProps) {
         }
       >
         {Array.from({ length: 20 }).map((_, i) => (
-          <Skeleton key={i} className={variant === 'grid' ? 'h-[300px]' : 'h-[120px]'} />
+          <Skeleton
+            key={`skeleton-${i}`}
+            className={variant === 'grid' ? 'h-[300px]' : 'h-[120px]'}
+          />
         ))}
       </div>
     );

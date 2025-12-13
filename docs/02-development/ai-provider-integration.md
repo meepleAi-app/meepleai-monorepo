@@ -2,7 +2,7 @@
 
 **MeepleAI Backend** - Developer's guide to integrating AI provider configuration in code
 
-**Last Updated**: 2025-11-15
+**Last Updated**: 2025-12-13T10:59:23.970Z
 **Version**: 1.0
 **Related Issues**: #963 (BGAI-021), #1153 (BGAI-022)
 
@@ -1188,5 +1188,6 @@ public LlmRoutingDecision SelectProvider(User? user)
 ---
 
 **Version**: 1.0
-**Last Updated**: 2025-11-15
+**Last Updated**: 2025-12-13T10:59:23.970Z
 **Maintainer**: Engineering Team
+

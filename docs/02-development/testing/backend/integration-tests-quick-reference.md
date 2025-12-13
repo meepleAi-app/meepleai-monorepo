@@ -2,7 +2,7 @@
 
 **Quick cheat sheet for writing performant integration tests in MeepleAI**
 
-Last Updated: 2025-11-16
+Last Updated: 2025-12-13T10:59:23.970Z
 
 ---
 
@@ -373,3 +373,4 @@ dotnet test /p:CollectCoverage=true
 - Check existing tests in `apps/api/tests/Api.Tests/BoundedContexts/`
 - Review DatabaseFixture implementation
 - Ask in team's testing channel
+

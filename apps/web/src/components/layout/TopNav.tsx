@@ -149,7 +149,7 @@ export function TopNav() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem asChild>
+              <DropdownMenuItem asChild data-testid="settings-menu-item">
                 <Link href="/settings" className="flex items-center gap-2">
                   <Settings className="w-4 h-4" />
                   Impostazioni
@@ -160,6 +160,7 @@ export function TopNav() {
                 onClick={handleLogout}
                 disabled={isLoggingOut}
                 className="flex items-center gap-2 text-destructive focus:text-destructive"
+                data-testid="logout-menu-item"
               >
                 <LogOut className="w-4 h-4" />
                 {isLoggingOut ? 'Disconnessione...' : 'Esci'}

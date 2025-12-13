@@ -97,6 +97,15 @@ function getPresetRange(preset: Preset): DateRange {
 export function DateRangePicker({ value, onChange, label, className = '' }: DateRangePickerProps) {
   const [selectedPreset, setSelectedPreset] = useState<Preset>('custom');
 
+  // Generate unique IDs based on label to avoid conflicts with multiple DateRangePickers
+  const labelSlug = label ? label.toLowerCase().replace(/\s+/g, '-') : 'date';
+  const fromId = `${labelSlug}-from`;
+  const toId = `${labelSlug}-to`;
+  // Remove "Date" suffix from label for cleaner aria-labels (e.g., "Created Date" → "Created from date")
+  const labelPrefix = label ? label.replace(/\s*Date$/i, '') : '';
+  const fromAriaLabel = labelPrefix ? `${labelPrefix} from date` : 'From date';
+  const toAriaLabel = labelPrefix ? `${labelPrefix} to date` : 'To date';
+
   const handlePresetChange = (preset: string) => {
     const p = preset as Preset;
     setSelectedPreset(p);
@@ -155,29 +164,29 @@ export function DateRangePicker({ value, onChange, label, className = '' }: Date
       {/* Custom date inputs */}
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <Label htmlFor="date-from" className="text-[10px] text-muted-foreground">
+          <Label htmlFor={fromId} className="text-[10px] text-muted-foreground">
             From
           </Label>
           <input
-            id="date-from"
+            id={fromId}
             type="date"
             value={formatDateForInput(value?.from)}
             onChange={handleFromChange}
             className="h-8 w-full px-2 text-xs rounded-md border border-input bg-background"
-            aria-label="From date"
+            aria-label={fromAriaLabel}
           />
         </div>
         <div>
-          <Label htmlFor="date-to" className="text-[10px] text-muted-foreground">
+          <Label htmlFor={toId} className="text-[10px] text-muted-foreground">
             To
           </Label>
           <input
-            id="date-to"
+            id={toId}
             type="date"
             value={formatDateForInput(value?.to)}
             onChange={handleToChange}
             className="h-8 w-full px-2 text-xs rounded-md border border-input bg-background"
-            aria-label="To date"
+            aria-label={toAriaLabel}
           />
         </div>
       </div>

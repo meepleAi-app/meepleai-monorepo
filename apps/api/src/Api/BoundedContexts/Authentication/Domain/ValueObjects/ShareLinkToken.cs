@@ -124,15 +124,16 @@ public sealed class ShareLinkToken
                 ClockSkew = TimeSpan.Zero
             };
 
-            var principal = tokenHandler.ValidateToken(tokenValue, validationParameters, out var validatedToken);
+            tokenHandler.ValidateToken(tokenValue, validationParameters, out var validatedToken);
 
             if (validatedToken is not JwtSecurityToken jwtToken)
                 return null;
 
-            var shareLinkId = Guid.Parse(GetClaimValue(principal, ShareLinkIdClaimType));
-            var threadId = Guid.Parse(GetClaimValue(principal, ThreadIdClaimType));
-            var role = Enum.Parse<ShareLinkRole>(GetClaimValue(principal, RoleClaimType));
-            var creatorId = Guid.Parse(GetClaimValue(principal, CreatorIdClaimType));
+            // Read claims directly from JwtSecurityToken to avoid claim type mapping issues
+            var shareLinkId = Guid.Parse(GetClaimFromToken(jwtToken, ShareLinkIdClaimType));
+            var threadId = Guid.Parse(GetClaimFromToken(jwtToken, ThreadIdClaimType));
+            var role = Enum.Parse<ShareLinkRole>(GetClaimFromToken(jwtToken, RoleClaimType));
+            var creatorId = Guid.Parse(GetClaimFromToken(jwtToken, CreatorIdClaimType));
             var expiresAt = jwtToken.ValidTo;
 
             return new ShareLinkToken(
@@ -150,9 +151,9 @@ public sealed class ShareLinkToken
         }
     }
 
-    private static string GetClaimValue(ClaimsPrincipal principal, string claimType)
+    private static string GetClaimFromToken(JwtSecurityToken token, string claimType)
     {
-        return principal.FindFirst(claimType)?.Value
+        return token.Claims.FirstOrDefault(c => c.Type == claimType)?.Value
             ?? throw new InvalidOperationException($"Claim '{claimType}' not found in token");
     }
 

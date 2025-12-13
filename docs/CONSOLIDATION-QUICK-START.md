@@ -397,7 +397,7 @@ cat > docs/INDEX.md << 'EOF'
 # MeepleAI Documentation Index
 
 **Total Documents**: ~80 (consolidated)
-**Last Updated**: 2025-12-08
+**Last Updated**: 2025-12-13T10:59:23.970Z
 
 ## Quick Start
 - [Getting Started](00-getting-started/quick-start.md)
@@ -623,3 +623,4 @@ cp docs/archive/2025-12/<file> docs/<location>/
 **Next**: Start Phase 1 (Archive Outdated Docs)
 **Duration**: 2-3 weeks
 **Owner**: Engineering Lead
+

@@ -1,6 +1,6 @@
 # Frontend Improvement Plan - MeepleAI
 
-**Last Updated**: 2025-11-13  
+**Last Updated**: 2025-12-13T10:59:23.970Z
 **Status**: 🔵 Proposed – awaiting prioritization  
 **Timeline**: ~6-8 settimane (can overlap)  
 **Focus**: Next.js 16 features, data layer hardening, consistent UX patterns
@@ -94,4 +94,5 @@
 - Issues dettagliati: [`docs/04-frontend/improvements/issues.md`](./issues.md)  
 - Stack attuale: `apps/web/package.json`  
 - Contesto storico: `docs/planning/frontend-implementation-plan.md`
+
 

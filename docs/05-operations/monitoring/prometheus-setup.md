@@ -1,7 +1,7 @@
 # Prometheus Setup & Configuration
 
 **Version**: 2.0 (Consolidated)
-**Last Updated**: 2025-12-08
+**Last Updated**: 2025-12-13T10:59:23.970Z
 **Status**: Production Ready
 **Location**: Consolidated from `infra/prometheus/README.md` + `infra/prometheus/alerts/README.md`
 
@@ -891,7 +891,8 @@ See: [Prometheus LLM Queries](./prometheus-llm-queries.md) for more examples
 ---
 
 **Version**: 2.0 (Post-Consolidation)
-**Last Updated**: 2025-12-08
+**Last Updated**: 2025-12-13T10:59:23.970Z
 **Maintainer**: Operations Team
 **Alert Rules**: 40+ across 9 categories
 **Metrics**: 50+ custom + standard ASP.NET Core + infrastructure
+

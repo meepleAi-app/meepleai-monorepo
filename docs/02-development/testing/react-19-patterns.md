@@ -216,5 +216,6 @@ When migrating tests to React 19:
 
 ---
 
-**Last Updated**: 2025-11-12
+**Last Updated**: 2025-12-13T10:59:23.970Z
 **Applied To**: Shadcn/UI migration test fixes
+

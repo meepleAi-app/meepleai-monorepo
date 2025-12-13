@@ -1,7 +1,7 @@
 # Entity Framework Core Migration Management
 
 **Version**: 1.0
-**Last Updated**: 2025-11-13
+**Last Updated**: 2025-12-13T10:59:23.970Z
 **Context**: Database Schema Evolution
 
 ---
@@ -428,5 +428,6 @@ dotnet ef database update MigrationName --project src/Api
 ---
 
 **Version**: 1.0
-**Last Updated**: 2025-11-13
+**Last Updated**: 2025-12-13T10:59:23.970Z
 **Maintainer**: Backend Team
+

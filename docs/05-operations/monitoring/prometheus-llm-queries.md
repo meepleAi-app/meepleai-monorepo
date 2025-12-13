@@ -385,5 +385,6 @@ sum(increase(meepleai_llm_cost_usd[1d]))
 ---
 
 **Version**: 1.0
-**Last Updated**: 2025-12-07
+**Last Updated**: 2025-12-13T10:59:23.970Z
 **Owner**: Platform Team
+

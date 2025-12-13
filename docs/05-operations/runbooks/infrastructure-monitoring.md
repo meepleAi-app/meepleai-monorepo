@@ -624,5 +624,5 @@ docker compose stats --no-stream
 
 ---
 
-**Last Updated**: 2025-12-08 (Issue #705)
+**Last Updated**: 2025-12-13T10:59:23.970Z
 **Maintainer**: DevOps Team

@@ -4,7 +4,7 @@
 **Audience**: Frontend Developers
 **Related**: [Architecture](./architecture.md), Issue #1083
 **Version**: 1.0
-**Last Updated**: 2025-11-16
+**Last Updated**: 2025-12-13T10:59:23.970Z
 
 ---
 
@@ -655,3 +655,4 @@ setChats([...chats, newChat]); // Repetitive, error-prone
 **Maintained by**: Frontend Team
 **Review Frequency**: After major Zustand version upgrades
 **Last Reviewed**: 2025-11-16
+

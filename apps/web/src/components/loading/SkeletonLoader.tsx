@@ -36,7 +36,14 @@ export interface SkeletonLoaderProps {
   /**
    * Visual variant matching the content type
    */
-  variant: 'games' | 'agents' | 'message' | 'chatHistory' | 'uploadQueue' | 'processingProgress' | 'gameSelection';
+  variant:
+    | 'games'
+    | 'agents'
+    | 'message'
+    | 'chatHistory'
+    | 'uploadQueue'
+    | 'processingProgress'
+    | 'gameSelection';
 
   /**
    * Number of skeleton placeholders to render
@@ -93,9 +100,9 @@ export function SkeletonLoader({
 
   return (
     <div className="space-y-4">
-      {skeletons.map((index) => (
+      {skeletons.map(index => (
         <div
-          key={index}
+          key={`skeleton-${index}`}
           role="status"
           aria-live="polite"
           aria-label={ariaLabel}

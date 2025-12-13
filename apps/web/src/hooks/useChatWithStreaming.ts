@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection -- Safe Zustand store key access */
 /**
  * useChatWithStreaming - Zustand store + SSE streaming integration
  *
@@ -82,37 +83,34 @@ export function useChatWithStreaming() {
     [selectedGameId, selectedDocumentIds, store, streamingControls]
   );
 
-  return useMemo(
-    () => {
-      // Compute derived values inside useMemo to avoid dependency array issues
-      const chats = selectedGameId ? (store.chatsByGame[selectedGameId] ?? []) : [];
-      const messages = activeChatId ? (store.messagesByChat[activeChatId] ?? []) : [];
+  return useMemo(() => {
+    // Compute derived values inside useMemo to avoid dependency array issues
+    const chats = selectedGameId ? (store.chatsByGame[selectedGameId] ?? []) : [];
+    const messages = activeChatId ? (store.messagesByChat[activeChatId] ?? []) : [];
 
-      return {
-        // Store state
-        ...store,
-        // Derived values
-        chats,
-        activeChatId,
-        messages,
-        // Streaming state
-        isStreaming: streamingState.isStreaming,
-        streamingAnswer: streamingState.currentAnswer,
-        streamingState: streamingState.stateMessage,
-        streamingCitations: streamingState.citations,
-        // Streaming controls
-        stopStreaming: streamingControls.stopStreaming,
-        // Override sendMessage with streaming version
-        sendMessage: sendMessageWithStreaming,
-      };
-    },
-    [
-      store,
-      selectedGameId,
+    return {
+      // Store state
+      ...store,
+      // Derived values
+      chats,
       activeChatId,
-      streamingState,
-      streamingControls,
-      sendMessageWithStreaming,
-    ]
-  );
+      messages,
+      // Streaming state
+      isStreaming: streamingState.isStreaming,
+      streamingAnswer: streamingState.currentAnswer,
+      streamingState: streamingState.stateMessage,
+      streamingCitations: streamingState.citations,
+      // Streaming controls
+      stopStreaming: streamingControls.stopStreaming,
+      // Override sendMessage with streaming version
+      sendMessage: sendMessageWithStreaming,
+    };
+  }, [
+    store,
+    selectedGameId,
+    activeChatId,
+    streamingState,
+    streamingControls,
+    sendMessageWithStreaming,
+  ]);
 }

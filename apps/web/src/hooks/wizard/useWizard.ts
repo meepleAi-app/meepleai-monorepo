@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection -- Safe array index access */
 import { useReducer } from 'react';
 
 export type WizardStep = 'upload' | 'parse' | 'review' | 'publish';
@@ -29,7 +30,7 @@ const initialState: WizardState = {
   documentId: null,
   processingStatus: null,
   processingError: null,
-  error: null
+  error: null,
 };
 
 const steps: WizardStep[] = ['upload', 'parse', 'review', 'publish'];
@@ -43,20 +44,20 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
         currentStep: 'parse',
         processingStatus: 'pending',
         processingError: null,
-        error: null
+        error: null,
       };
 
     case 'PROCESSING_UPDATE':
       return {
         ...state,
-        processingStatus: action.status
+        processingStatus: action.status,
       };
 
     case 'PROCESSING_ERROR':
       return {
         ...state,
         processingError: action.error,
-        processingStatus: 'failed'
+        processingStatus: 'failed',
       };
 
     case 'PARSING_COMPLETE':
@@ -64,13 +65,13 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
         ...state,
         currentStep: 'review',
         processingStatus: 'completed',
-        processingError: null
+        processingError: null,
       };
 
     case 'PUBLISH_COMPLETE':
       return {
         ...state,
-        currentStep: 'publish'
+        currentStep: 'publish',
       };
 
     case 'NEXT_STEP': {
@@ -78,7 +79,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
       const nextIndex = Math.min(currentIndex + 1, steps.length - 1);
       return {
         ...state,
-        currentStep: steps[nextIndex]
+        currentStep: steps[nextIndex],
       };
     }
 
@@ -87,14 +88,14 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
       const prevIndex = Math.max(currentIndex - 1, 0);
       return {
         ...state,
-        currentStep: steps[prevIndex]
+        currentStep: steps[prevIndex],
       };
     }
 
     case 'SET_STEP':
       return {
         ...state,
-        currentStep: action.step
+        currentStep: action.step,
       };
 
     case 'RESET':
@@ -103,7 +104,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
     case 'ERROR':
       return {
         ...state,
-        error: action.error
+        error: action.error,
       };
 
     default:

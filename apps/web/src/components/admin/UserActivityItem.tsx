@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection -- Safe severity/icon map Record access */
 /**
  * UserActivityItem Component - Issue #911
  *

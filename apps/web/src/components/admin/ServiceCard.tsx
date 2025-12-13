@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection -- Safe health state config Record access */
 /**
  * ServiceCard Component - Issue #896
  *
@@ -94,7 +95,6 @@ export function ServiceCard({
   className,
 }: ServiceCardProps) {
   const i18n = getInfrastructureI18n(locale);
-  // eslint-disable-next-line security/detect-object-injection -- status is typed HealthState enum from backend
   const config = stateConfig[status] || stateConfig.Unhealthy;
   const Icon = config.icon;
   // Safe access with known keys
@@ -103,7 +103,6 @@ export function ServiceCard({
   const displayName = (
     serviceKey in i18n.services ? i18n.services[serviceKey] : serviceName
   ) as string;
-  // eslint-disable-next-line security/detect-object-injection -- status is typed HealthState enum
   const stateLabel = i18n.states[status];
 
   if (loading) {

@@ -123,6 +123,7 @@ async function waitForEmail(
 ): Promise<MailpitMessage> {
   const startTime = Date.now();
   const pattern =
+    // eslint-disable-next-line security/detect-non-literal-regexp -- Test helper: pattern from test code, not user input
     typeof subjectPattern === 'string' ? new RegExp(subjectPattern, 'i') : subjectPattern;
 
   // Environment-aware polling: slower in CI for stability, faster locally for speed

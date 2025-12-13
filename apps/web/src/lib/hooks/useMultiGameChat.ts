@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- Type coercion for API response and message mapping */
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { api, ChatThreadDto } from '../api';
 

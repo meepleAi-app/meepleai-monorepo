@@ -207,11 +207,11 @@ export function TestingDashboardClient() {
 
   // Export handlers - use real data when available, fallback to MOCK_DATA
   const handleExportCSV = () => {
-    const metricsToExport = {
+    const metricsToExport: TestingMetrics = {
       accessibility: accessibilityData || MOCK_DATA.accessibility,
       performance: performanceData || MOCK_DATA.performance,
       e2e: e2eData || MOCK_DATA.e2e,
-    } as TestingMetrics;
+    };
     exportTestingMetricsToCSV(metricsToExport);
   };
 

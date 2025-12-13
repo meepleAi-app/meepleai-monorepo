@@ -20,9 +20,9 @@ import type { Citation } from '@/types';
 const MOCK_STREAM_CONFIG = {
   wordsPerSecond: 15, // Simulated typing speed
   mockResponses: [
-    "Ecco la risposta alla tua domanda. Secondo le regole del gioco, dovrai seguire questi passaggi per completare la mossa.",
-    "Ottima domanda! Nel manuale, questa situazione è descritta nella sezione 3.2. Ti consiglio di consultare anche gli esempi a pagina 15.",
-    "In questo scenario, devi considerare due fattori principali: la posizione dei tuoi pezzi e le carte azione disponibili.",
+    'Ecco la risposta alla tua domanda. Secondo le regole del gioco, dovrai seguire questi passaggi per completare la mossa.',
+    'Ottima domanda! Nel manuale, questa situazione è descritta nella sezione 3.2. Ti consiglio di consultare anche gli esempi a pagina 15.',
+    'In questo scenario, devi considerare due fattori principali: la posizione dei tuoi pezzi e le carte azione disponibili.',
   ],
 };
 
@@ -58,7 +58,12 @@ export interface MockStreamingState {
  * Mock streaming controls
  */
 export interface MockStreamingControls {
-  startStreaming: (gameId: string, query: string, chatId?: string, searchMode?: string) => Promise<void>;
+  startStreaming: (
+    gameId: string,
+    query: string,
+    chatId?: string,
+    searchMode?: string
+  ) => Promise<void>;
   stopStreaming: () => void;
   reset: () => void;
 }
@@ -67,7 +72,17 @@ export interface MockStreamingControls {
  * Mock streaming callbacks
  */
 export interface MockStreamingCallbacks {
-  onComplete?: (answer: string, snippets: any[], metadata: { totalTokens: number; confidence: number | null; followUpQuestions?: string[]; citations?: Citation[] }) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Snippets type varies by stream source
+  onComplete?: (
+    answer: string,
+    snippets: any[],
+    metadata: {
+      totalTokens: number;
+      confidence: number | null;
+      followUpQuestions?: string[];
+      citations?: Citation[];
+    }
+  ) => void;
   onError?: (error: string) => void;
 }
 
@@ -134,7 +149,7 @@ export function useMockStreaming(
       clearTimeout(streamTimeoutRef.current);
       streamTimeoutRef.current = null;
     }
-    setState((prev) => ({ ...prev, isStreaming: false }));
+    setState(prev => ({ ...prev, isStreaming: false }));
   }, []);
 
   const reset = useCallback(() => {
@@ -159,8 +174,8 @@ export function useMockStreaming(
 
       try {
         // Simulate initial processing state
-        setState((prev) => ({ ...prev, state: 'Searching documents...' }));
-        await new Promise((resolve) => {
+        setState(prev => ({ ...prev, state: 'Searching documents...' }));
+        await new Promise(resolve => {
           streamTimeoutRef.current = setTimeout(resolve, 200);
         });
 
@@ -169,7 +184,7 @@ export function useMockStreaming(
         }
 
         // Update state to generation phase
-        setState((prev) => ({ ...prev, state: 'Generating answer...' }));
+        setState(prev => ({ ...prev, state: 'Generating answer...' }));
 
         // Select random mock response
         const mockResponse =
@@ -191,10 +206,10 @@ export function useMockStreaming(
         ];
 
         // Add citations during streaming
-        setState((prev) => ({
+        setState(prev => ({
           ...prev,
           citations: mockCitations,
-          snippets: mockCitations.map((c) => ({
+          snippets: mockCitations.map(c => ({
             text: c.snippet || '',
             source: c.documentId,
             page: c.pageNumber,
@@ -211,13 +226,13 @@ export function useMockStreaming(
           }
 
           // Update streamed content
-          setState((prev) => ({
+          setState(prev => ({
             ...prev,
             currentAnswer: chunk,
           }));
 
           // Wait before next word
-          await new Promise((resolve) => {
+          await new Promise(resolve => {
             streamTimeoutRef.current = setTimeout(resolve, msPerWord);
           });
         }
@@ -237,7 +252,7 @@ export function useMockStreaming(
         const finalState = {
           currentAnswer: mockResponse,
           citations: mockCitations,
-          snippets: mockCitations.map((c) => ({
+          snippets: mockCitations.map(c => ({
             text: c.snippet || '',
             source: c.documentId,
             page: c.pageNumber,
@@ -265,7 +280,7 @@ export function useMockStreaming(
       } catch (err) {
         // Don't treat abort as an error
         if (err instanceof Error && err.message === 'Stream cancelled by user') {
-          setState((prev) => ({
+          setState(prev => ({
             ...prev,
             isStreaming: false,
             state: null,
@@ -274,7 +289,7 @@ export function useMockStreaming(
         }
 
         const errorMessage = err instanceof Error ? err.message : 'Mock streaming failed';
-        setState((prev) => ({
+        setState(prev => ({
           ...prev,
           error: errorMessage,
           isStreaming: false,

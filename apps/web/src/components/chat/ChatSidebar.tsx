@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection -- Safe Zustand store key access */
 /**
  * ChatSidebar - Collapsible sidebar with game/agent selection and thread history (Issue #858)
  *

@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection -- Safe category/shortcut array access */
 /**
  * KeyboardShortcutsHelp Component
  * Modal displaying all available keyboard shortcuts (Issue #1100)
@@ -19,19 +20,8 @@ import {
 } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import {
-  Keyboard,
-  MessageSquare,
-  Upload,
-  Search,
-  HelpCircle,
-  X as CloseIcon,
-} from 'lucide-react';
-import {
-  formatShortcut,
-  isMac,
-  type KeyboardShortcut,
-} from '@/hooks/useKeyboardShortcuts';
+import { Keyboard, MessageSquare, Upload, Search, HelpCircle, X as CloseIcon } from 'lucide-react';
+import { formatShortcut, isMac, type KeyboardShortcut } from '@/hooks/useKeyboardShortcuts';
 
 interface KeyboardShortcutsHelpProps {
   isOpen: boolean;
@@ -64,9 +54,7 @@ function ShortcutItem({ shortcut }: { shortcut: KeyboardShortcut }) {
   return (
     <div className="flex items-center justify-between py-2 px-3 rounded-md hover:bg-accent transition-colors">
       <div className="flex items-center gap-3">
-        <div className="text-muted-foreground">
-          {getCategoryIcon(shortcut.category)}
-        </div>
+        <div className="text-muted-foreground">{getCategoryIcon(shortcut.category)}</div>
         <span className="text-sm">{shortcut.description}</span>
       </div>
       <kbd className="pointer-events-none inline-flex h-7 select-none items-center gap-1 rounded border bg-muted px-2 font-mono text-xs font-medium text-muted-foreground opacity-100">
@@ -160,9 +148,7 @@ function groupShortcutsByCategory(shortcuts: KeyboardShortcut[]) {
   }
 
   // Remove empty groups
-  return Object.fromEntries(
-    Object.entries(groups).filter(([, shortcuts]) => shortcuts.length > 0)
-  );
+  return Object.fromEntries(Object.entries(groups).filter(([, shortcuts]) => shortcuts.length > 0));
 }
 
 /**
@@ -219,9 +205,7 @@ export const KeyboardShortcutsHelp: React.FC<KeyboardShortcutsHelpProps> = ({
                 ))}
               </div>
               {Object.keys(groupedShortcuts).indexOf(category) <
-                Object.keys(groupedShortcuts).length - 1 && (
-                <Separator className="mt-4" />
-              )}
+                Object.keys(groupedShortcuts).length - 1 && <Separator className="mt-4" />}
             </div>
           ))}
         </div>
@@ -231,11 +215,14 @@ export const KeyboardShortcutsHelp: React.FC<KeyboardShortcutsHelpProps> = ({
             <HelpCircle className="w-5 h-5 mt-0.5 text-muted-foreground flex-shrink-0" />
             <div className="text-sm text-muted-foreground space-y-1">
               <p>
-                <strong>Tip:</strong> Press <kbd className="px-1.5 py-0.5 text-xs font-semibold border rounded">?</kbd> anytime to open this help dialog.
+                <strong>Tip:</strong> Press{' '}
+                <kbd className="px-1.5 py-0.5 text-xs font-semibold border rounded">?</kbd> anytime
+                to open this help dialog.
               </p>
               <p>
                 Most shortcuts work with {isMac ? '⌘ Command' : 'Ctrl'} key. Press{' '}
-                <kbd className="px-1.5 py-0.5 text-xs font-semibold border rounded">Esc</kbd> to close.
+                <kbd className="px-1.5 py-0.5 text-xs font-semibold border rounded">Esc</kbd> to
+                close.
               </p>
             </div>
           </div>

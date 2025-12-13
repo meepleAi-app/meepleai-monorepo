@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection -- Safe Zustand store key access with typed loading state keys */
 /**
  * UI Slice (Issue #1083)
  *
@@ -45,25 +46,25 @@ export const createUISlice: StateCreator<
   // Actions - Loading & Errors
   // ============================================================================
   setLoading: (key, value) =>
-    set((state) => {
+    set(state => {
       state.loading[key] = value;
     }),
 
-  setError: (error) =>
-    set((state) => {
+  setError: error =>
+    set(state => {
       state.error = error;
     }),
 
   clearError: () =>
-    set((state) => {
+    set(state => {
       state.error = null;
     }),
 
   // ============================================================================
   // Actions - Input
   // ============================================================================
-  setInputValue: (value) =>
-    set((state) => {
+  setInputValue: value =>
+    set(state => {
       state.inputValue = value;
     }),
 
@@ -71,25 +72,25 @@ export const createUISlice: StateCreator<
   // Actions - Message Editing
   // ============================================================================
   startEdit: (messageId, content) =>
-    set((state) => {
+    set(state => {
       state.editingMessageId = messageId;
       state.editContent = content;
     }),
 
   cancelEdit: () =>
-    set((state) => {
+    set(state => {
       state.editingMessageId = null;
       state.editContent = '';
     }),
 
-  saveEdit: async (editMessageFn) => {
+  saveEdit: async editMessageFn => {
     const { editingMessageId, editContent } = get();
 
     if (!editingMessageId) return;
 
     try {
       await editMessageFn(editingMessageId, editContent);
-      set((state) => {
+      set(state => {
         state.editingMessageId = null;
         state.editContent = '';
       });
@@ -103,16 +104,16 @@ export const createUISlice: StateCreator<
     }
   },
 
-  setEditContent: (content) =>
-    set((state) => {
+  setEditContent: content =>
+    set(state => {
       state.editContent = content;
     }),
 
   // ============================================================================
   // Actions - Search Mode
   // ============================================================================
-  setSearchMode: (mode) =>
-    set((state) => {
+  setSearchMode: mode =>
+    set(state => {
       state.searchMode = mode;
     }),
 });

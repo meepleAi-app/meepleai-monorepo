@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection -- Safe typed Record access with status string keys */
 'use client';
 
 /**
@@ -208,7 +209,9 @@ export function ReportsPageClient() {
       await api.admin.scheduleReport({
         name: scheduleForm.name,
         description: scheduleForm.description,
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- Validated above before this code path
         template: scheduleForm.template!,
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- Validated above before this code path
         format: scheduleForm.format!,
         scheduleExpression: cronExpression,
         emailRecipients: scheduleForm.emailRecipients,

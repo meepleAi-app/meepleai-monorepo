@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection -- Safe variant styles Record access */
 /**
  * StatCard Component - Issue #874, #882
  *

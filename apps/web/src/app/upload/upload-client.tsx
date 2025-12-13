@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection -- Safe wizard state object access */
 /**
  * Upload Page - Client Component
  *

@@ -698,6 +698,7 @@ export function ApiKeysPageClient() {
                       variant="ghost"
                       size="sm"
                       onClick={() => {
+                        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- Key exists when dialog shows
                         navigator.clipboard.writeText(createModal.createdKey!.plaintextKey);
                         addToast('success', 'API key copied to clipboard');
                       }}

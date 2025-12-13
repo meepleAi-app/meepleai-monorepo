@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection -- Safe style/icon map Record access */
 /**
  * ActivityFeed Component - Issue #884
  *

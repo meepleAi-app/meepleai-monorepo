@@ -248,8 +248,8 @@ export async function verifyCitationDisplay(
 
   // Verify each expected citation
   for (const expected of expectedCitations) {
-    const found = streamingResult?.citations?.some((c: any) =>
-      c.source === expected.source && c.page === expected.page
+    const found = streamingResult?.citations?.some(
+      (c: any) => c.source === expected.source && c.page === expected.page
     );
 
     if (!found) {
@@ -272,7 +272,9 @@ export async function verifyNoCitations(page: Page) {
   const citationCount = streamingResult?.citations?.length ?? 0;
 
   if (citationCount > 0) {
-    throw new Error(`Expected no citations but found ${citationCount}: ${JSON.stringify(streamingResult?.citations)}`);
+    throw new Error(
+      `Expected no citations but found ${citationCount}: ${JSON.stringify(streamingResult?.citations)}`
+    );
   }
 }
 
@@ -296,19 +298,16 @@ export async function sendQuestionAndWaitForResponse(
   }
 
   // Input should now be enabled
-  const input = page.getByPlaceholder(/fai una domanda|ask a question/i);
+  const input = page.locator('[data-testid="message-input"]');
   await expect(input).toBeEnabled({ timeout: 10000 });
 
   // Send message programmatically via test hooks (bypasses form/UI issues)
-  await page.evaluate(
-    (content) => {
-      if (!window.__MEEPLEAI_TEST_HOOKS__?.chat?.sendMessage) {
-        throw new Error('sendMessage test hook not available');
-      }
-      return window.__MEEPLEAI_TEST_HOOKS__.chat.sendMessage(content);
-    },
-    question
-  );
+  await page.evaluate(content => {
+    if (!window.__MEEPLEAI_TEST_HOOKS__?.chat?.sendMessage) {
+      throw new Error('sendMessage test hook not available');
+    }
+    return window.__MEEPLEAI_TEST_HOOKS__.chat.sendMessage(content);
+  }, question);
 
   // Wait for message POST + SSE streaming to start
   await page.waitForTimeout(2000);

@@ -1,5 +1,7 @@
 /**
- * AI04 QA Snippets E2E Tests - MIGRATED TO POM
+ * QA Snippets E2E Tests - MIGRATED TO POM
+ *
+ * Tests Q&A functionality with citation snippets display
  *
  * @see apps/web/e2e/helpers/qa-test-utils.ts
  */
@@ -161,11 +163,11 @@ test.describe('AI-04: Q&A with Snippets and Not Specified Fallback', () => {
     await waitForAutoSelection(page, 'chess-1', 'agent-qa-1');
 
     // Enter question about en passant
-    const input = page.getByPlaceholder('Fai una domanda sul gioco...');
+    const input = page.locator('[data-testid="message-input"]');
     await input.fill('What is en passant in chess?');
 
     // Send message
-    await page.getByRole('button', { name: 'Invia' }).click();
+    await page.locator('[data-testid="send-message-button"]').click();
 
     // Wait for assistant response
     await expect(page.getByText('En passant is a special pawn capture move in chess')).toBeVisible({
@@ -274,11 +276,11 @@ test.describe('AI-04: Q&A with Snippets and Not Specified Fallback', () => {
     await page.goto('/chat');
 
     // Enter question about something not in the rulebook
-    const input = page.getByPlaceholder('Fai una domanda sul gioco...');
+    const input = page.locator('[data-testid="message-input"]');
     await input.fill('What is the price of this chess set?');
 
     // Send message
-    await page.getByRole('button', { name: 'Invia' }).click();
+    await page.locator('[data-testid="send-message-button"]').click();
 
     // Wait for assistant response showing "Not specified"
     await expect(page.getByText('Not specified')).toBeVisible({ timeout: 10000 });
@@ -388,11 +390,11 @@ test.describe('AI-04: Q&A with Snippets and Not Specified Fallback', () => {
     await page.goto('/chat');
 
     // Enter question
-    const input = page.getByPlaceholder('Fai una domanda sul gioco...');
+    const input = page.locator('[data-testid="message-input"]');
     await input.fill('How do you win Tic-Tac-Toe?');
 
     // Send message
-    await page.getByRole('button', { name: 'Invia' }).click();
+    await page.locator('[data-testid="send-message-button"]').click();
 
     // Wait for response
     await expect(page.getByText(/To win Tic-Tac-Toe/)).toBeVisible({ timeout: 10000 });
@@ -498,9 +500,9 @@ test.describe('AI-04: Q&A with Snippets and Not Specified Fallback', () => {
     await page.goto('/chat');
 
     // Send question
-    const input = page.getByPlaceholder('Fai una domanda sul gioco...');
+    const input = page.locator('[data-testid="message-input"]');
     await input.fill('What is castling?');
-    await page.getByRole('button', { name: 'Invia' }).click();
+    await page.locator('[data-testid="send-message-button"]').click();
 
     // Wait for response
     await expect(page.getByText(/Castling is a special move/)).toBeVisible({ timeout: 10000 });
@@ -599,9 +601,9 @@ test.describe('AI-04: Q&A with Snippets and Not Specified Fallback', () => {
 
     await page.goto('/chat');
 
-    const input = page.getByPlaceholder('Fai una domanda sul gioco...');
+    const input = page.locator('[data-testid="message-input"]');
     await input.fill('Test question');
-    await page.getByRole('button', { name: 'Invia' }).click();
+    await page.locator('[data-testid="send-message-button"]').click();
 
     await expect(page.getByText('Here is the answer.')).toBeVisible({ timeout: 10000 });
 

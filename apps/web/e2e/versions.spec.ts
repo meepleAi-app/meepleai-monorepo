@@ -432,7 +432,7 @@ test.describe('RuleSpec versions history', () => {
     await expect(page.getByText('This version looks good overall')).toBeVisible();
 
     // Add a new comment
-    const commentTextarea = page.getByPlaceholder('Aggiungi un commento su questa versione...');
+    const commentTextarea = page.locator('[data-testid="version-comment-input"]');
     await expect(commentTextarea).toBeVisible();
     await commentTextarea.fill('Great improvements in v2!');
 
@@ -545,6 +545,6 @@ test.describe('RuleSpec versions history', () => {
 
     await expect(page.getByText('Commenti (0)')).toBeVisible();
     await expect(page.getByText(/Nessun commento ancora/)).toBeVisible();
-    await expect(page.getByPlaceholder('Aggiungi un commento su questa versione...')).toBeVisible();
+    await expect(page.locator('[data-testid="version-comment-input"]')).toBeVisible();
   });
 });

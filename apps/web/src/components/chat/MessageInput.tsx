@@ -60,6 +60,7 @@ export function MessageInput() {
         </label>
         <Input
           id="message-input"
+          data-testid="message-input"
           type="text"
           value={inputValue}
           onChange={e => setInputValue(e.target.value)}
@@ -75,6 +76,7 @@ export function MessageInput() {
             isLoading={false}
             disabled={false}
             aria-label="Stop streaming"
+            data-testid="stop-streaming-button"
             className="bg-red-600 hover:bg-red-700"
           >
             ⏹ Stop
@@ -86,6 +88,7 @@ export function MessageInput() {
             loadingText="Invio..."
             disabled={isSendDisabled}
             aria-label="Send message"
+            data-testid="send-message-button"
           >
             Invia
           </LoadingButton>

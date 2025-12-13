@@ -60,7 +60,7 @@ export default function DashboardPage() {
   // Loading state: Show skeleton UI
   if (userLoading) {
     return (
-      <div className="min-h-screen bg-background pb-24 md:pb-0 md:pt-16">
+      <main className="min-h-screen bg-background pb-24 md:pb-0 md:pt-16">
         {/* Top Navigation (desktop) */}
         <TopNav />
         <div className="container mx-auto px-4 py-8 space-y-8">
@@ -88,7 +88,7 @@ export default function DashboardPage() {
         </div>
 
         <BottomNav />
-      </div>
+      </main>
     );
   }
 
@@ -97,7 +97,7 @@ export default function DashboardPage() {
     const errorMessage = userError instanceof Error ? userError.message : String(userError);
 
     return (
-      <div className="min-h-screen bg-background pb-24 md:pb-0 md:pt-16">
+      <main className="min-h-screen bg-background pb-24 md:pb-0 md:pt-16">
         {/* Top Navigation (desktop) */}
         <TopNav />
         <div className="container mx-auto px-4 py-8">
@@ -112,14 +112,14 @@ export default function DashboardPage() {
         </div>
 
         <BottomNav />
-      </div>
+      </main>
     );
   }
 
   // No user data (should not happen with middleware, but defensive)
   if (!user) {
     return (
-      <div className="min-h-screen bg-background pb-24 md:pb-0 md:pt-16">
+      <main className="min-h-screen bg-background pb-24 md:pb-0 md:pt-16">
         {/* Top Navigation (desktop) */}
         <TopNav />
         <div className="container mx-auto px-4 py-8">
@@ -133,13 +133,13 @@ export default function DashboardPage() {
         </div>
 
         <BottomNav />
-      </div>
+      </main>
     );
   }
 
   // Main dashboard content
   return (
-    <div className="min-h-screen bg-background pb-24 md:pb-0 md:pt-16">
+    <main className="min-h-screen bg-background pb-24 md:pb-0 md:pt-16">
       {/* Top Navigation (desktop) */}
       <TopNav />
       <div className="container mx-auto px-4 py-8 space-y-8">
@@ -161,6 +161,6 @@ export default function DashboardPage() {
 
       {/* Bottom Navigation (mobile) */}
       <BottomNav />
-    </div>
+    </main>
   );
 }

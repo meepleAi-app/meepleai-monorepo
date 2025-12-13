@@ -100,7 +100,7 @@ public sealed class BulkUserOperationsE2ETests : IAsyncLifetime
 
         // Repositories and Unit of Work
         services.AddScoped<IUserRepository, UserRepository>();
-        services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
 
         // Logging
         services.AddLogging(builder => builder.AddConsole());
@@ -164,9 +164,9 @@ user3@e2etest.com,User Three,user,Password789!";
 
         // Assert 2: Users persisted correctly
         allUsers.Should().HaveCount(3);
-        allUsers.Should().Contain(u => u.Email.Value == "user1@e2etest.com");
-        allUsers.Should().Contain(u => u.Email.Value == "user2@e2etest.com");
-        allUsers.Should().Contain(u => u.Email.Value == "user3@e2etest.com");
+        allUsers.Should().Contain(u => u.Email == "user1@e2etest.com");
+        allUsers.Should().Contain(u => u.Email == "user2@e2etest.com");
+        allUsers.Should().Contain(u => u.Email == "user3@e2etest.com");
 
         // Act 3: Export
         var exportLogger = new Mock<ILogger<BulkExportUsersQueryHandler>>();

@@ -121,7 +121,7 @@ public static class InfrastructureServiceExtensions
         });
 #pragma warning restore EXTEXP0018
 
-        // Add L2 distributed cache (Redis) if enabled
+        // Add L2 distributed cache (Redis) if enabled, otherwise use in-memory fallback
         if (hybridCacheConfig.EnableL2Cache)
         {
             services.AddStackExchangeRedisCache(options =>
@@ -129,6 +129,12 @@ public static class InfrastructureServiceExtensions
                 options.Configuration = redisUrl;
                 options.InstanceName = "meepleai:hybridcache:";
             });
+        }
+        else
+        {
+            // Fallback to in-memory distributed cache when Redis L2 is disabled
+            // Required for services that depend on IDistributedCache directly
+            services.AddDistributedMemoryCache();
         }
 
         // Register HybridCache service wrapper

@@ -6,6 +6,21 @@
 import { render } from '@testing-library/react';
 import { vi } from 'vitest';
 
+// Use vi.hoisted to create mock before hoisting
+const { mockLoggerWarn } = vi.hoisted(() => ({
+  mockLoggerWarn: vi.fn(),
+}));
+
+// Mock logger BEFORE importing component
+vi.mock('@/lib/logger', () => ({
+  logger: {
+    warn: mockLoggerWarn,
+    info: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  },
+}));
+
 // Mock Prism BEFORE importing component
 vi.mock('prismjs', () => {
   return {
@@ -128,7 +143,7 @@ describe('PrismHighlighter', () => {
 
     it('should fallback to plain text on error', () => {
       const mockPrism = getMockedPrism();
-      const consoleError = vi.spyOn(console, 'error').mockImplementation();
+      mockLoggerWarn.mockClear();
       mockPrism.highlight.mockImplementation(() => {
         throw new Error('Highlighting error');
       });
@@ -141,9 +156,16 @@ describe('PrismHighlighter', () => {
       const codeElement = container.querySelector('code');
 
       expect(codeElement?.textContent).toBe(code);
-      expect(consoleError).toHaveBeenCalledWith('Prism highlighting error:', expect.any(Error));
-
-      consoleError.mockRestore();
+      expect(mockLoggerWarn).toHaveBeenCalledWith(
+        'Prism highlighting error',
+        expect.objectContaining({
+          component: 'PrismHighlighter',
+          metadata: expect.objectContaining({
+            error: 'Highlighting error',
+            language: 'json',
+          }),
+        })
+      );
     });
 
     it('should fallback to json language if specified language not found', () => {

@@ -141,7 +141,8 @@ export function PdfViewerModal({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [open, currentPage, numPages, zoomLevel]);
+    // keyboard handlers use current state via closures
+  }, [open, currentPage, numPages, zoomLevel, goToNextPage, goToPreviousPage, zoomIn, zoomOut]);
 
   const onDocumentLoadSuccess = useCallback(({ numPages: pages }: { numPages: number }) => {
     setNumPages(pages);

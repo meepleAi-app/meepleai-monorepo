@@ -10,6 +10,7 @@
  * Listens on: http://localhost:8081
  */
 
+/* eslint-disable no-console */
 const http = require('http');
 
 const PORT = process.env.MOCK_API_PORT || 8081;

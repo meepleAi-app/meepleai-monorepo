@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /**
  * useStreamingChat Hook (Issue #1007)
  *

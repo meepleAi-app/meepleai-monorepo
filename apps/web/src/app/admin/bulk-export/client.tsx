@@ -81,6 +81,7 @@ export function AdminPageClient() {
     setStatusMessage('');
 
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- API client type narrowing
       await (api.chat as any).bulkExportRuleSpecs({ ruleSpecIds: Array.from(selectedGameIds) });
       setStatusMessage(`Successfully exported ${selectedGameIds.size} rule spec(s).`);
       setSelectedGameIds(new Set()); // Clear selection

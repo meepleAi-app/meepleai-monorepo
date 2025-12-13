@@ -223,9 +223,12 @@ export default function SessionHistoryPage() {
     fetchGames();
   }, []);
 
+  // fetchHistory is stable, only re-run on filter changes
+  /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
     fetchHistory();
   }, [currentPage, selectedGame, startDate, endDate]);
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   /**
    * Reset filters

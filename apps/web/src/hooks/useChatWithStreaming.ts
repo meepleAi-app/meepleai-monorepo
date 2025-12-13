@@ -25,8 +25,6 @@ export function useChatWithStreaming() {
   const selectedGameId = store.selectedGameId;
   const selectedDocumentIds = store.selectedDocumentIds; // Issue #2051
   const activeChatId = selectedGameId ? store.activeChatIds[selectedGameId] : null;
-  const chats = selectedGameId ? (store.chatsByGame[selectedGameId] ?? []) : [];
-  const messages = activeChatId ? (store.messagesByChat[activeChatId] ?? []) : [];
 
   // Streaming hook (Issue #1007)
   const [streamingState, streamingControls] = useStreamingChat({
@@ -85,28 +83,33 @@ export function useChatWithStreaming() {
   );
 
   return useMemo(
-    () => ({
-      // Store state
-      ...store,
-      // Derived values
-      chats,
-      activeChatId,
-      messages,
-      // Streaming state
-      isStreaming: streamingState.isStreaming,
-      streamingAnswer: streamingState.currentAnswer,
-      streamingState: streamingState.stateMessage,
-      streamingCitations: streamingState.citations,
-      // Streaming controls
-      stopStreaming: streamingControls.stopStreaming,
-      // Override sendMessage with streaming version
-      sendMessage: sendMessageWithStreaming,
-    }),
+    () => {
+      // Compute derived values inside useMemo to avoid dependency array issues
+      const chats = selectedGameId ? (store.chatsByGame[selectedGameId] ?? []) : [];
+      const messages = activeChatId ? (store.messagesByChat[activeChatId] ?? []) : [];
+
+      return {
+        // Store state
+        ...store,
+        // Derived values
+        chats,
+        activeChatId,
+        messages,
+        // Streaming state
+        isStreaming: streamingState.isStreaming,
+        streamingAnswer: streamingState.currentAnswer,
+        streamingState: streamingState.stateMessage,
+        streamingCitations: streamingState.citations,
+        // Streaming controls
+        stopStreaming: streamingControls.stopStreaming,
+        // Override sendMessage with streaming version
+        sendMessage: sendMessageWithStreaming,
+      };
+    },
     [
       store,
-      chats,
+      selectedGameId,
       activeChatId,
-      messages,
       streamingState,
       streamingControls,
       sendMessageWithStreaming,

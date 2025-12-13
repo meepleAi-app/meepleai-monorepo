@@ -69,8 +69,8 @@ export async function exportChatAction(
         success: false,
         error: {
           type: 'validation',
-          message: 'ID della chat mancante.'
-        }
+          message: 'ID della chat mancante.',
+        },
       };
     }
 
@@ -79,8 +79,8 @@ export async function exportChatAction(
         success: false,
         error: {
           type: 'validation',
-          message: 'Formato di esportazione non valido.'
-        }
+          message: 'Formato di esportazione non valido.',
+        },
       };
     }
 
@@ -94,8 +94,8 @@ export async function exportChatAction(
           success: false,
           error: {
             type: 'validation',
-            message: 'La data iniziale deve essere precedente alla data finale.'
-          }
+            message: 'La data iniziale deve essere precedente alla data finale.',
+          },
         };
       }
     }
@@ -105,24 +105,28 @@ export async function exportChatAction(
     await (api.chat as any).exportChat(chatId, {
       format,
       dateFrom: dateFrom || undefined,
-      dateTo: dateTo || undefined
+      dateTo: dateTo || undefined,
     });
 
     return {
       success: true,
-      message: successMessages.exportSuccess
+      message: successMessages.exportSuccess,
     };
   } catch (error) {
     logger.error(
       'Export chat action failed',
       error instanceof Error ? error : new Error(String(error)),
-      createErrorContext('ChatActions', 'exportChatAction', { chatId: formData.get('chatId') as string, format: formData.get('format') as string, operation: 'export_chat' })
+      createErrorContext('ChatActions', 'exportChatAction', {
+        chatId: formData.get('chatId') as string,
+        format: formData.get('format') as string,
+        operation: 'export_chat',
+      })
     );
 
     if (error instanceof ApiError) {
       return {
         success: false,
-        error: getLocalizedError(error.statusCode, error.message)
+        error: getLocalizedError(error.statusCode, error.message),
       };
     }
 
@@ -130,8 +134,8 @@ export async function exportChatAction(
       success: false,
       error: {
         type: 'network',
-        message: 'Impossibile esportare la chat. Verifica la tua connessione.'
-      }
+        message: 'Impossibile esportare la chat. Verifica la tua connessione.',
+      },
     };
   }
 }

@@ -1,0 +1,75 @@
+# Pre-push hook for MeepleAI
+# Runs quick tests before pushing to remote
+
+echo "🚀 Running pre-push checks..."
+
+# Get the current branch name
+CURRENT_BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null)
+
+# Skip checks for certain branches if needed
+if [ "$CURRENT_BRANCH" = "main" ]; then
+  echo "⚠️  Warning: Pushing directly to main. Consider using a feature branch."
+fi
+
+# ============================================
+# Quick Frontend Tests
+# ============================================
+
+echo "🧪 Running quick frontend tests..."
+
+if [ -d "apps/web" ]; then
+  # Run a quick subset of tests (smoke tests)
+  # Use --run to prevent watch mode, --reporter=dot for minimal output
+  (cd apps/web && pnpm test -- --run --reporter=dot --testTimeout=10000 2>/dev/null) || {
+    echo ""
+    echo "❌ Frontend tests failed. Please fix failing tests before pushing."
+    echo ""
+    echo "Run 'cd apps/web && pnpm test' to see detailed results."
+    exit 1
+  }
+  echo "✅ Frontend tests passed!"
+else
+  echo "⚠️  Warning: apps/web directory not found, skipping frontend tests."
+fi
+
+# ============================================
+# Quick Backend Build Check
+# ============================================
+
+echo "🔨 Verifying backend builds..."
+
+if [ -d "apps/api" ]; then
+  # Quick build check (no restore if packages are cached)
+  (cd apps/api && dotnet build --no-restore --verbosity quiet 2>/dev/null) || {
+    # If no-restore fails, try with restore
+    (cd apps/api && dotnet build --verbosity quiet) || {
+      echo ""
+      echo "❌ Backend build failed. Please fix build errors before pushing."
+      echo ""
+      echo "Run 'cd apps/api && dotnet build' to see detailed errors."
+      exit 1
+    }
+  }
+  echo "✅ Backend build verified!"
+else
+  echo "⚠️  Warning: apps/api directory not found, skipping backend build check."
+fi
+
+# ============================================
+# Branch Name Validation
+# ============================================
+
+# Validate branch naming convention (optional, warning only)
+if [ -n "$CURRENT_BRANCH" ]; then
+  # Expected patterns: feature/*, fix/*, docs/*, test/*, refactor/*, main
+  if ! echo "$CURRENT_BRANCH" | grep -qE '^(feature|fix|docs|test|refactor|chore|release)/|^main$'; then
+    echo ""
+    echo "⚠️  Warning: Branch name '$CURRENT_BRANCH' doesn't follow naming convention."
+    echo "   Expected: feature/*, fix/*, docs/*, test/*, refactor/*, chore/*, release/*"
+    echo "   This is a warning only - push will continue."
+    echo ""
+  fi
+fi
+
+echo ""
+echo "✅ All pre-push checks passed! Pushing to remote..."

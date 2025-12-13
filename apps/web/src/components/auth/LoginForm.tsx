@@ -121,6 +121,7 @@ export function LoginForm({ onSubmit, loading = false, error, onErrorDismiss }: 
         className="w-full"
         isLoading={isLoading}
         loadingText={t('auth.login.loggingIn')}
+        data-testid="login-submit"
       >
         {t('auth.login.loginButton')}
       </LoadingButton>

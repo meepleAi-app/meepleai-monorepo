@@ -1,8 +1,8 @@
-﻿# MeepleAI Documentation Index
+# MeepleAI Documentation Index
 
 **Project**: Italian Board Game Rules AI Assistant
 **Version**: 3.0 (Post-Consolidation)
-**Last Updated**: 2025-12-08
+**Last Updated**: 2025-12-13T10:59:23.970Z
 **Total Documents**: ~90 (consolidated from 140+)
 
 ---
@@ -204,6 +204,8 @@
 - [Generic Catch Analysis](./06-security/generic-catch-analysis.md)
 - [Null Reference Remediation](./06-security/null-reference-remediation.md)
 - [Sensitive Info Exposure Fix](./06-security/sensitive-info-exposure-fix-733.md)
+- [**Branch Protection Rules**](./06-security/branch-protection-rules.md) ⭐ **NEW** - GitHub branch protection configuration
+- [**Signed Commits Guide**](./06-security/signed-commits-guide.md) ⭐ **NEW** - GPG commit signing setup
 
 ### [07 - Project Management](./07-project-management/)
 **Audience**: Project managers, product owners, leadership
@@ -411,9 +413,10 @@ See [README.md - Contributing Documentation](./README.md#-contributing-documenta
 **Index Metadata**:
 - **Version**: 2.2
 - **Maintainer**: Documentation Team
-- **Last Updated**: 2025-12-04
+- **Last Updated**: 2025-12-13T10:59:23.970Z
 - **Next Review**: 2025-12-24
 - **Recent Changes**: Added User Guide (Italian) for end users (BGAI-084)
+
 
 
 

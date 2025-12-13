@@ -1,7 +1,7 @@
 # n8n Workflow Automation
 
 **Version**: 2.0 (Consolidated)
-**Last Updated**: 2025-12-08
+**Last Updated**: 2025-12-13T10:59:23.970Z
 **Status**: Production Ready
 **Location**: Consolidated from `infra/n8n/README.md` + `templates/README.md` + `workflows/README.md`
 
@@ -333,7 +333,7 @@ See: [Backup Strategy](../backup/backup-strategy.md)
 
 **Status**: ✅ Production-ready
 **Version**: v1.2.0
-**Last Updated**: 2025-11-15
+**Last Updated**: 2025-12-13T10:59:23.970Z
 
 **Purpose**: Orchestrate AI explanations for complex game rules, combining RAG + Vision analysis.
 
@@ -1220,8 +1220,9 @@ if (errors.length > 0) {
 ---
 
 **Version**: 2.0 (Post-Consolidation)
-**Last Updated**: 2025-12-08
+**Last Updated**: 2025-12-13T10:59:23.970Z
 **Maintainer**: Operations Team
 **Templates**: 13 ready-to-use workflows
 **Production Workflows**: 1 (agent-explain-orchestrator)
 **Documentation**: Comprehensive single-source guide
+

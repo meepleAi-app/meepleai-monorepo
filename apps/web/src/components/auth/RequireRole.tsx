@@ -30,6 +30,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, useRef } from 'react';
 import type { ReactNode } from 'react';
 import type { AuthUser } from '@/types/auth';
+import { logger } from '@/lib/logger';
 
 interface RequireRoleProps {
   /**
@@ -110,7 +111,11 @@ export function RequireRole({
         setUser(result.user);
         setLoading(false);
       } catch (error) {
-        console.error('[RequireRole] Auth check failed:', error);
+        logger.error(
+          'Auth check failed',
+          error instanceof Error ? error : new Error(String(error)),
+          { component: 'RequireRole' }
+        );
         // Preserve the current path in 'from' parameter
         const currentPath = window.location.pathname;
         const redirectUrl = `${unauthenticatedRedirect}?from=${encodeURIComponent(currentPath)}`;

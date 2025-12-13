@@ -44,9 +44,9 @@ test.describe('PDF Viewer Modal (BGAI-076)', () => {
         });
       });
 
-      // Send a message to trigger citation response
-      await page.getByRole('textbox', { name: /fai una domanda/i }).fill('Test question');
-      await page.getByRole('button', { name: /invia/i }).click();
+      // Send a message to trigger citation response using data-testid (locale-independent)
+      await page.locator('[data-testid="message-input"]').fill('Test question');
+      await page.locator('[data-testid="send-message-button"]').click();
 
       // Wait for citations to appear
       await expect(page.getByTestId('citation-list')).toBeVisible();
@@ -88,9 +88,9 @@ test.describe('PDF Viewer Modal (BGAI-076)', () => {
         });
       });
 
-      // Send message and wait for citation
-      await page.getByRole('textbox', { name: /fai una domanda/i }).fill('Test');
-      await page.getByRole('button', { name: /invia/i }).click();
+      // Send message and wait for citation using data-testid (locale-independent)
+      await page.locator('[data-testid="message-input"]').fill('Test');
+      await page.locator('[data-testid="send-message-button"]').click();
       await expect(page.getByTestId('citation-list')).toBeVisible();
 
       // Verify citation shows page 10
@@ -131,8 +131,8 @@ test.describe('PDF Viewer Modal (BGAI-076)', () => {
         });
       });
 
-      await page.getByRole('textbox', { name: /fai una domanda/i }).fill('Test');
-      await page.getByRole('button', { name: /invia/i }).click();
+      await page.locator('[data-testid="message-input"]').fill('Test');
+      await page.locator('[data-testid="send-message-button"]').click();
       await expect(page.getByTestId('citation-list')).toBeVisible();
 
       await page.getByTestId('citation-card').first().click();
@@ -172,9 +172,9 @@ test.describe('PDF Viewer Modal (BGAI-076)', () => {
         });
       });
 
-      // Send message and open modal
-      await page.getByRole('textbox', { name: /fai una domanda/i }).fill('Test');
-      await page.getByRole('button', { name: /invia/i }).click();
+      // Send message and open modal using data-testid (locale-independent)
+      await page.locator('[data-testid="message-input"]').fill('Test');
+      await page.locator('[data-testid="send-message-button"]').click();
       await expect(page.getByTestId('citation-list')).toBeVisible();
       await page.getByTestId('citation-card').first().click();
       await expect(page.getByTestId('dialog')).toHaveAttribute('data-open', 'true');
@@ -239,8 +239,8 @@ test.describe('PDF Viewer Modal (BGAI-076)', () => {
         });
       });
 
-      await page.getByRole('textbox', { name: /fai una domanda/i }).fill('Test');
-      await page.getByRole('button', { name: /invia/i }).click();
+      await page.locator('[data-testid="message-input"]').fill('Test');
+      await page.locator('[data-testid="send-message-button"]').click();
       await expect(page.getByTestId('citation-list')).toBeVisible();
       await page.getByTestId('citation-card').first().click();
       await expect(page.getByTestId('dialog')).toHaveAttribute('data-open', 'true');
@@ -321,8 +321,8 @@ test.describe('PDF Viewer Modal (BGAI-076)', () => {
         });
       });
 
-      await page.getByRole('textbox', { name: /fai una domanda/i }).fill('Test');
-      await page.getByRole('button', { name: /invia/i }).click();
+      await page.locator('[data-testid="message-input"]').fill('Test');
+      await page.locator('[data-testid="send-message-button"]').click();
       await expect(page.getByTestId('citation-list')).toBeVisible();
       await page.getByTestId('citation-card').first().click();
       await expect(page.getByTestId('dialog')).toHaveAttribute('data-open', 'true');
@@ -374,9 +374,9 @@ test.describe('PDF Viewer Modal (BGAI-076)', () => {
         });
       });
 
-      // Send message and wait for citations
-      await page.getByRole('textbox', { name: /fai una domanda/i }).fill('Test');
-      await page.getByRole('button', { name: /invia/i }).click();
+      // Send message and wait for citations using data-testid (locale-independent)
+      await page.locator('[data-testid="message-input"]').fill('Test');
+      await page.locator('[data-testid="send-message-button"]').click();
       await expect(page.getByTestId('citation-list')).toBeVisible();
 
       // Should have 2 citations
@@ -425,8 +425,8 @@ test.describe('PDF Viewer Modal (BGAI-076)', () => {
         });
       });
 
-      await page.getByRole('textbox', { name: /fai una domanda/i }).fill('Test');
-      await page.getByRole('button', { name: /invia/i }).click();
+      await page.locator('[data-testid="message-input"]').fill('Test');
+      await page.locator('[data-testid="send-message-button"]').click();
       await expect(page.getByTestId('citation-list')).toBeVisible();
       await page.getByTestId('citation-card').first().click();
       await expect(page.getByTestId('dialog')).toHaveAttribute('data-open', 'true');

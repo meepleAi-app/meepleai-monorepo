@@ -1,7 +1,7 @@
 # PDF Processing Configuration Guide
 
 **Version**: 1.2
-**Last Updated**: 2025-11-15
+**Last Updated**: 2025-12-13T10:59:23.970Z
 **Context**: DocumentProcessing Bounded Context (BGAI-086: Startup validation added)
 
 ---
@@ -498,5 +498,5 @@ grep -A5 "PdfProcessing" apps/api/src/Api/appsettings.json | grep MaxFileSizeByt
 ---
 
 **Version**: 1.1
-**Last Updated**: 2025-11-13
+**Last Updated**: 2025-12-13T10:59:23.970Z
 **Maintainer**: Backend Team

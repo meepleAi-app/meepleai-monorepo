@@ -1,6 +1,6 @@
 # Integration Tests - Known Issues & Limitations
 
-**Last Updated**: 2025-11-14
+**Last Updated**: 2025-12-13T10:59:23.970Z
 **Status**: Documented for Issue #1142
 
 ## EF Core Entity Tracking Conflicts (5 failing tests)
@@ -134,3 +134,4 @@ Remove or simplify complex multi-update scenarios:
 ---
 
 **Status**: Documented limitation, not blocking SPRINT-5 completion ✅
+

@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Authentication;
 using Api.Services;
 using Api.Configuration;
-using Api.Authentication;
+using Api.Infrastructure.Authentication;
 using Api.BoundedContexts.Authentication.Application.Interfaces;
 using Api.BoundedContexts.Authentication.Infrastructure;
 

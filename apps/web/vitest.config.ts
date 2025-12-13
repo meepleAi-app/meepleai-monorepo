@@ -93,6 +93,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      // Mock next-intl for tests to use test-i18n utility
+      'next-intl': path.resolve(__dirname, './src/test-utils/__mocks__/next-intl.ts'),
     },
   },
 });

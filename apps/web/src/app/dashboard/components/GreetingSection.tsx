@@ -48,7 +48,7 @@ export function GreetingSection({ user }: GreetingSectionProps) {
   const displayName = user.displayName || user.email.split('@')[0];
 
   return (
-    <section className="space-y-2" aria-label="Greeting">
+    <section className="space-y-2" aria-label="Greeting" data-testid="dashboard-greeting">
       <h1 className="text-3xl font-quicksand font-bold text-foreground">
         {greeting}, {displayName}! 👋
       </h1>

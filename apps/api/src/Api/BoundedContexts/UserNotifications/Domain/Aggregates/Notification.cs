@@ -72,6 +72,18 @@ public sealed class Notification : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// Restores read status from persistence.
+    /// Used by repository when reconstituting aggregate from database.
+    /// Preserves original read timestamp instead of overwriting with current time.
+    /// </summary>
+    /// <param name="readAt">The original timestamp when notification was read</param>
+    internal void RestoreReadStatus(DateTime readAt)
+    {
+        IsRead = true;
+        ReadAt = readAt;
+    }
+
+    /// <summary>
     /// Marks notification as unread (for testing or user preference).
     /// </summary>
     public void MarkAsUnread()

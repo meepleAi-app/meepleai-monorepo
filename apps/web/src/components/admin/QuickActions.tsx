@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection -- Safe action config Record access */
 /**
  * QuickActions Component - Issue #885
  *

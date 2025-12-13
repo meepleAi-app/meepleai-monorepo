@@ -9,5 +9,6 @@ public record PdfDocumentDto(
     string ProcessingStatus,
     DateTime UploadedAt,
     DateTime? ProcessedAt,
-    int? PageCount
+    int? PageCount,
+    string DocumentType = "base" // Issue #2051: base, expansion, errata, homerule
 );

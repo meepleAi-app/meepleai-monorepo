@@ -1,5 +1,7 @@
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.Administration;
 using Api.Infrastructure.Entities.Authentication;
+using Api.Infrastructure.Entities.UserNotifications;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Interfaces;
 using MediatR;
@@ -55,11 +57,20 @@ public class MeepleAiDbContext : DbContext
     // BGAI-039: Validation Accuracy Baseline Tracking
     public DbSet<ValidationAccuracyBaselineEntity> ValidationAccuracyBaselines => Set<ValidationAccuracyBaselineEntity>();
     public DbSet<AlertEntity> Alerts => Set<AlertEntity>(); // OPS-07
+    public DbSet<AlertRuleEntity> AlertRules => Set<AlertRuleEntity>(); // ISSUE-921: Dynamic alert rules
+    public DbSet<AlertConfigurationEntity> AlertConfigurations => Set<AlertConfigurationEntity>(); // ISSUE-921: Dynamic alert config
     public DbSet<UserBackupCodeEntity> UserBackupCodes => Set<UserBackupCodeEntity>(); // AUTH-07
     public DbSet<TempSessionEntity> TempSessions => Set<TempSessionEntity>(); // AUTH-07
     public DbSet<UsedTotpCodeEntity> UsedTotpCodes => Set<UsedTotpCodeEntity>(); // SEC-07: Issue #1787 TOTP Replay Prevention
     public DbSet<LlmCostLogEntity> LlmCostLogs => Set<LlmCostLogEntity>(); // ISSUE-960: BGAI-018
     public DbSet<ChunkedUploadSessionEntity> ChunkedUploadSessions => Set<ChunkedUploadSessionEntity>(); // Chunked PDF upload
+    public DbSet<AdminReportEntity> AdminReports => Set<AdminReportEntity>(); // ISSUE-916: Report generation + scheduling
+    public DbSet<ReportExecutionEntity> ReportExecutions => Set<ReportExecutionEntity>(); // ISSUE-916: Report execution history
+    public DbSet<GameFAQEntity> GameFAQs => Set<GameFAQEntity>(); // ISSUE-2028: Game-specific FAQs
+    public DbSet<DocumentCollectionEntity> DocumentCollections => Set<DocumentCollectionEntity>(); // ISSUE-2051: Multi-document collections
+    public DbSet<ChatThreadCollectionEntity> ChatThreadCollections => Set<ChatThreadCollectionEntity>(); // ISSUE-2051: Chat-collection junction
+    public DbSet<ShareLinkEntity> ShareLinks => Set<ShareLinkEntity>(); // ISSUE-2052: Shareable chat links
+    public DbSet<NotificationEntity> Notifications => Set<NotificationEntity>(); // ISSUE-2053: User notifications
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -86,8 +97,14 @@ public class MeepleAiDbContext : DbContext
         modelBuilder.Ignore<BoundedContexts.Authentication.Domain.Entities.User>();
         modelBuilder.Ignore<BoundedContexts.Authentication.Domain.Entities.Session>();
         modelBuilder.Ignore<BoundedContexts.Authentication.Domain.Entities.ApiKey>();
+        modelBuilder.Ignore<BoundedContexts.Authentication.Domain.Entities.ShareLink>(); // ISSUE-2052
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.GameSession>();
+        modelBuilder.Ignore<BoundedContexts.UserNotifications.Domain.Aggregates.Notification>(); // ISSUE-2053
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.Game>();
+        modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.GameFAQ>(); // ISSUE-2028
+        modelBuilder.Ignore<BoundedContexts.Administration.Domain.Entities.AdminReport>(); // ISSUE-916
+        modelBuilder.Ignore<BoundedContexts.Administration.Domain.Entities.ReportExecution>(); // ISSUE-916
+        modelBuilder.Ignore<BoundedContexts.DocumentProcessing.Domain.Entities.DocumentCollection>(); // ISSUE-2051
     }
 
     /// <summary>

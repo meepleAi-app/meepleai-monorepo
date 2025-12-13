@@ -180,9 +180,12 @@ public static class InfrastructureServiceExtensions
         });
 
         // OpenRouter client with optimized settings (unified gateway for cloud AI models)
+        // S1075: OpenRouter API endpoint (official public endpoint)
+        const string OpenRouterApiBaseUrl = "https://openrouter.ai/api/v1/";
+
         services.AddHttpClient("OpenRouter", client =>
         {
-            client.BaseAddress = new Uri("https://openrouter.ai/api/v1/");
+            client.BaseAddress = new Uri(OpenRouterApiBaseUrl);
             var timeoutSeconds = configuration.GetValue<int>("AIAgents:DefaultTimeoutSeconds", 30);
             client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
         })
@@ -275,6 +278,16 @@ public static class InfrastructureServiceExtensions
 
         // Background task orchestration with distributed coordination (Redis)
         services.AddSingleton<IBackgroundTaskOrchestrator, RedisBackgroundTaskOrchestrator>();
+
+        // Issue #936: Infisical secrets management client (POC)
+        services.AddHttpClient("Infisical", client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(10); // Secret fetch should be fast
+            client.DefaultRequestHeaders.Add("User-Agent", "MeepleAI/1.0 Infisical-POC");
+        })
+        .AddTransientHttpErrorPolicy(policy =>
+            policy.WaitAndRetryAsync(2, retryAttempt =>
+                TimeSpan.FromSeconds(Math.Pow(2, retryAttempt))));
 
         return services;
     }

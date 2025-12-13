@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { useAuthUser } from '@/components/auth/AuthProvider';
-import { AdminAuthGuard } from '@/components/admin/AdminAuthGuard';
+import { AdminAuthGuard, BulkActionBar } from '@/components/admin';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -508,18 +508,27 @@ export function ApiKeysPageClient() {
             <Download className="h-4 w-4 mr-2" />
             Export CSV
           </Button>
-
-          {selectedKeys.size > 0 && (
-            <Button
-              variant="destructive"
-              onClick={handleBulkDelete}
-              data-testid="bulk-delete-button"
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete Selected ({selectedKeys.size})
-            </Button>
-          )}
         </div>
+
+        {/* Bulk Action Bar */}
+        <BulkActionBar
+          selectedCount={selectedKeys.size}
+          totalCount={filteredKeys.length}
+          itemLabel="keys"
+          itemLabelSingular="key"
+          actions={[
+            {
+              id: 'delete',
+              label: 'Delete',
+              icon: Trash2,
+              variant: 'destructive',
+              onClick: () => handleBulkDelete(),
+              tooltip: 'Delete selected API keys',
+            },
+          ]}
+          onClearSelection={() => setSelectedKeys(new Set())}
+          testId="bulk-action-bar"
+        />
 
         {/* API Keys Table */}
         <Card>
@@ -689,6 +698,7 @@ export function ApiKeysPageClient() {
                       variant="ghost"
                       size="sm"
                       onClick={() => {
+                        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- Key exists when dialog shows
                         navigator.clipboard.writeText(createModal.createdKey!.plaintextKey);
                         addToast('success', 'API key copied to clipboard');
                       }}

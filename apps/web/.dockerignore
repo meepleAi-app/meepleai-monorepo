@@ -12,6 +12,9 @@ coverage
 .env
 .env.*
 
+# Exception: Allow .env*.example for Docker builds (Issue #2009)
+!.env*.example
+
 # Test files and directories
 **/__tests__/**
 **/*.test.ts

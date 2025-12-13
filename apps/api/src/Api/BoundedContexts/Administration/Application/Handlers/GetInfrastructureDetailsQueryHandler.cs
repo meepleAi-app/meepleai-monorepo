@@ -38,10 +38,13 @@ public class GetInfrastructureDetailsQueryHandler : IRequestHandler<GetInfrastru
 
             return details;
         }
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
+        // HANDLER PATTERN: Log details query failures before propagating.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to handle GetInfrastructureDetailsQuery");
             throw;
         }
+#pragma warning restore S2139
     }
 }

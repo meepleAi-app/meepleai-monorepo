@@ -87,6 +87,7 @@ public sealed class OpenRouterEmbeddingProvider : EmbeddingProviderBase
             return EmbeddingProviderResult.CreateSuccess(allEmbeddings, _modelName, totalTokens);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Infrastructure adapter - Wraps OpenRouter API exceptions (HTTP, JSON, timeout) into domain-friendly EmbeddingProviderResult
         catch (HttpRequestException ex)
         {
             Logger.LogError(ex, "HTTP error calling OpenRouter API");
@@ -191,6 +192,7 @@ public sealed class OpenRouterEmbeddingProvider : EmbeddingProviderBase
             return result.Success;
         }
 #pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Service boundary - Health checks must not propagate exceptions, return false to indicate unhealthy state
         catch (Exception ex)
         {
             Logger.LogWarning(ex, "OpenRouter health check failed");

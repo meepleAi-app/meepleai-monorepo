@@ -17,6 +17,7 @@ public interface IHybridSearchService
     /// <param name="gameId">Game ID to filter results</param>
     /// <param name="mode">Search mode: Semantic (vector only), Keyword (full-text only), or Hybrid (combined)</param>
     /// <param name="limit">Maximum number of results</param>
+    /// <param name="documentIds">Optional document IDs to filter sources (Issue #2051)</param>
     /// <param name="vectorWeight">Weight for vector search scores (default: 0.7)</param>
     /// <param name="keywordWeight">Weight for keyword search scores (default: 0.3)</param>
     /// <param name="cancellationToken">Cancellation token</param>
@@ -26,6 +27,7 @@ public interface IHybridSearchService
         Guid gameId,
         SearchMode mode = SearchMode.Hybrid,
         int limit = 10,
+        IReadOnlyList<Guid>? documentIds = null,
         float vectorWeight = 0.7f,
         float keywordWeight = 0.3f,
         CancellationToken cancellationToken = default);

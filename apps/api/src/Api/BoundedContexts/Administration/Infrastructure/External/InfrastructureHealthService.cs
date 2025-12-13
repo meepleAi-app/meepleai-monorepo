@@ -103,11 +103,14 @@ public class InfrastructureHealthService : IInfrastructureHealthService
 
             return serviceStatuses;
         }
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
+        // INFRASTRUCTURE LOGGING PATTERN: Log exceptions at the infrastructure boundary for debugging.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to get health status for all services");
             throw;
         }
+#pragma warning restore S2139
     }
 
     public async Task<OverallHealthStatus> GetOverallHealthAsync(CancellationToken cancellationToken = default)

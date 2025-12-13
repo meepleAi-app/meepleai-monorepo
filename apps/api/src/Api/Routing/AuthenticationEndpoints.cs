@@ -19,6 +19,7 @@ using RevokeSessionCommand = Api.BoundedContexts.Authentication.Application.Comm
 using GetUserSessionsQuery = Api.BoundedContexts.Authentication.Application.Queries.GetUserSessionsQuery;
 using LoginWithApiKeyCommand = Api.BoundedContexts.Authentication.Application.Commands.LoginWithApiKeyCommand;
 using LogoutApiKeyCommand = Api.BoundedContexts.Authentication.Application.Commands.LogoutApiKeyCommand;
+using LogoutAllDevicesCommand = Api.BoundedContexts.Authentication.Application.Commands.LogoutAllDevicesCommand;
 
 namespace Api.Routing;
 
@@ -452,5 +453,72 @@ Clients can also store the key securely and send it via the `Authorization: ApiK
 
             return Results.Json(new { ok = true, message = "Session revoked successfully" });
         }).RequireAuthorization();
+
+        // Issue #2056: Logout from all devices (revoke all sessions except optionally the current one)
+        group.MapPost("/auth/sessions/revoke-all", async (
+            [FromBody] LogoutAllDevicesPayload? payload,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            // Require authentication
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
+
+            var userId = session!.User!.Id;
+
+            // Get current session token hash for optional exclusion
+            string? currentTokenHash = null;
+            var sessionCookieName = getSessionCookieName(context);
+            if (context.Request.Cookies.TryGetValue(sessionCookieName, out var token) && !string.IsNullOrWhiteSpace(token))
+            {
+                var hash = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(token));
+                currentTokenHash = Convert.ToBase64String(hash);
+            }
+
+            // Execute command via CQRS
+            var command = new LogoutAllDevicesCommand(
+                UserId: userId,
+                CurrentSessionTokenHash: currentTokenHash,
+                IncludeCurrentSession: payload?.IncludeCurrentSession ?? false,
+                Password: payload?.Password
+            );
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+            if (!result.Success)
+            {
+                logger.LogWarning("Failed to logout all devices for user {UserId}: {Error}", userId, result.ErrorMessage);
+                return Results.BadRequest(new { error = result.ErrorMessage });
+            }
+
+            // If current session was revoked, clear the cookie
+            if (result.CurrentSessionRevoked)
+            {
+                CookieHelpers.RemoveSessionCookie(context);
+                CookieHelpers.RemoveUserRoleCookie(context);
+            }
+
+            logger.LogInformation(
+                "User {UserId} logged out of {Count} devices. Current session revoked: {CurrentRevoked}",
+                userId, result.RevokedSessionCount, result.CurrentSessionRevoked);
+
+            return Results.Json(new
+            {
+                ok = true,
+                revokedCount = result.RevokedSessionCount,
+                currentSessionRevoked = result.CurrentSessionRevoked,
+                message = result.RevokedSessionCount > 0
+                    ? $"Successfully logged out of {result.RevokedSessionCount} device(s)"
+                    : "No other active sessions to revoke"
+            });
+        }).RequireAuthorization()
+        .WithName("LogoutAllDevices")
+        .WithTags("Authentication", "Sessions")
+        .WithSummary("Logout from all devices")
+        .WithDescription("Revokes all active sessions for the current user. Optionally exclude the current session or include it with confirmation. Password verification can be required for additional security.")
+        .Produces(200)
+        .Produces(400)
+        .Produces(401);
     }
 }

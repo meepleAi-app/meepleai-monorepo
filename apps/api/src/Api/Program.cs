@@ -343,10 +343,12 @@ app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthC
 var v1Api = app.MapGroup("/api/v1");
 
 v1Api.MapAuthEndpoints();
+v1Api.MapShareLinkEndpoints(); // ISSUE-2052: Shareable chat thread links
 v1Api.MapUserProfileEndpoints();
 v1Api.MapGameEndpoints();
 v1Api.MapAiEndpoints();
 v1Api.MapPdfEndpoints();
+v1Api.MapDocumentCollectionEndpoints();
 v1Api.MapRuleSpecEndpoints();
 
 // Issue #1439: Split AdminEndpoints into focused endpoint files
@@ -355,6 +357,9 @@ v1Api.MapAnalyticsEndpoints();         // Dashboard statistics & metrics
 v1Api.MapLlmAnalyticsEndpoints();      // ISSUE-1725: LLM cost optimization analytics
 v1Api.MapMonitoringEndpoints();        // Issues #891 + #893: Infrastructure health & Prometheus metrics
 v1Api.MapAlertEndpoints();             // Alert management
+v1Api.MapAlertConfigEndpoints();       // Alert rules (Issue #921)
+v1Api.MapAlertConfigurationEndpoints(); // Alert configuration (Issue #915)
+v1Api.MapNotificationEndpoints();      // User notifications (Issue #2053)
 v1Api.MapAuditEndpoints();             // Audit log retrieval & search
 v1Api.MapFeatureFlagEndpoints();       // Feature flag management
 v1Api.MapPromptManagementEndpoints();  // Prompt templates & evaluation
@@ -364,6 +369,8 @@ v1Api.MapApiKeyEndpoints();            // API key management
 v1Api.MapCacheEndpoints();             // Cache management
 v1Api.MapAdminUserEndpoints();         // User management
 v1Api.MapAdminMiscEndpoints();         // Miscellaneous admin operations
+v1Api.MapReportingEndpoints();         // ISSUE-916: Report generation & scheduling
+v1Api.MapTestingMetricsEndpoints();    // Issue #2139: Testing metrics API
 
 // DDD-PHASE3: KnowledgeBase bounded context endpoints
 v1Api.MapKnowledgeBaseEndpoints();
@@ -482,7 +489,10 @@ static async Task EnsureInitialAdminUserAsync(WebApplication app, MeepleAiDbCont
         db.AuditLogs.Add(auditLog);
         await db.SaveChangesAsync().ConfigureAwait(false);
     }
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
+    // RACE CONDITION PATTERN: Log unexpected unique constraint violations before propagating.
     catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
+#pragma warning restore S2139
     {
         // Race condition: Another instance created the admin user simultaneously
         // Recheck if an admin user now exists
@@ -501,11 +511,14 @@ static async Task EnsureInitialAdminUserAsync(WebApplication app, MeepleAiDbCont
         app.Logger.LogError(ex, "Unique constraint violation but no admin user found");
         throw;
     }
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
+    // BOOTSTRAP PATTERN: Log critical initialization failures before propagating.
     catch (Exception ex)
     {
         app.Logger.LogError(ex, "Failed to create initial admin user");
         throw;
     }
+#pragma warning restore S2139
 }
 #pragma warning restore MA0051
 

@@ -1,14 +1,15 @@
+/* eslint-disable security/detect-object-injection -- Safe event type config access */
 // UI-04: Timeline filters sidebar component
-import type { TimelineFilters as TimelineFiltersType } from "@/lib/timeline-types";
+import type { TimelineFilters as TimelineFiltersType } from '@/lib/timeline-types';
 import {
   TimelineEventType,
   TimelineEventStatus,
   getEventTypeLabel,
-  getEventTypeColor
-} from "@/lib/timeline-types";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+  getEventTypeColor,
+} from '@/lib/timeline-types';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 interface TimelineFiltersProps {
   filters: TimelineFiltersType;
@@ -18,21 +19,21 @@ interface TimelineFiltersProps {
 }
 
 const ALL_EVENT_TYPES: TimelineEventType[] = [
-  "message",
-  "rag_search",
-  "rag_retrieval",
-  "rag_generation",
-  "rag_complete",
-  "error"
+  'message',
+  'rag_search',
+  'rag_retrieval',
+  'rag_generation',
+  'rag_complete',
+  'error',
 ];
 
-const ALL_STATUSES: TimelineEventStatus[] = ["pending", "in_progress", "success", "error"];
+const ALL_STATUSES: TimelineEventStatus[] = ['pending', 'in_progress', 'success', 'error'];
 
 export function TimelineFilters({
   filters,
   onFiltersChange,
   isCollapsed,
-  onToggleCollapse
+  onToggleCollapse,
 }: TimelineFiltersProps) {
   const toggleEventType = (type: TimelineEventType) => {
     const newTypes = new Set(filters.eventTypes);
@@ -121,17 +122,14 @@ export function TimelineFilters({
       <div className="flex-1 overflow-y-auto p-4">
         {/* Search */}
         <div className="mb-6">
-          <label
-            htmlFor="timeline-search"
-            className="block mb-2 text-sm font-semibold"
-          >
+          <label htmlFor="timeline-search" className="block mb-2 text-sm font-semibold">
             Cerca
           </label>
           <Input
             id="timeline-search"
             type="text"
-            value={filters.searchText || ""}
-            onChange={(e) => handleSearchChange(e.target.value)}
+            value={filters.searchText || ''}
+            onChange={e => handleSearchChange(e.target.value)}
             placeholder="Cerca nei messaggi, citazioni..."
           />
         </div>
@@ -161,17 +159,21 @@ export function TimelineFilters({
               </Button>
             </div>
           </div>
-          {ALL_EVENT_TYPES.map((type) => {
+          {ALL_EVENT_TYPES.map(type => {
             const isChecked = filters.eventTypes.has(type);
             const color = getEventTypeColor(type);
             return (
               <label
                 key={type}
                 className={cn(
-                  "flex items-center gap-2 p-2 mb-1 rounded cursor-pointer text-xs transition-all",
-                  isChecked ? "bg-blue-50" : "bg-white"
+                  'flex items-center gap-2 p-2 mb-1 rounded cursor-pointer text-xs transition-all',
+                  isChecked ? 'bg-blue-50' : 'bg-white'
                 )}
-                style={isChecked ? { borderColor: color, borderWidth: "1px", borderStyle: "solid" } : { border: "1px solid #dadce0" }}
+                style={
+                  isChecked
+                    ? { borderColor: color, borderWidth: '1px', borderStyle: 'solid' }
+                    : { border: '1px solid #dadce0' }
+                }
               >
                 <input
                   type="checkbox"
@@ -179,10 +181,7 @@ export function TimelineFilters({
                   onChange={() => toggleEventType(type)}
                   className="cursor-pointer"
                 />
-                <div
-                  className="w-3 h-3 rounded-full"
-                  style={{ background: color }}
-                />
+                <div className="w-3 h-3 rounded-full" style={{ background: color }} />
                 <span className="flex-1">{getEventTypeLabel(type)}</span>
               </label>
             );
@@ -214,21 +213,21 @@ export function TimelineFilters({
               </Button>
             </div>
           </div>
-          {ALL_STATUSES.map((status) => {
+          {ALL_STATUSES.map(status => {
             const isChecked = filters.statuses.has(status);
             const statusLabels: Record<TimelineEventStatus, string> = {
-              pending: "In Attesa",
-              in_progress: "In Corso",
-              success: "Completato",
-              error: "Errore"
+              pending: 'In Attesa',
+              in_progress: 'In Corso',
+              success: 'Completato',
+              error: 'Errore',
             };
             return (
               <label
                 key={status}
                 className={cn(
-                  "flex items-center gap-2 p-2 mb-1 rounded cursor-pointer text-xs transition-all",
-                  isChecked ? "bg-blue-50 border-blue-600" : "bg-white border-gray-300",
-                  "border"
+                  'flex items-center gap-2 p-2 mb-1 rounded cursor-pointer text-xs transition-all',
+                  isChecked ? 'bg-blue-50 border-blue-600' : 'bg-white border-gray-300',
+                  'border'
                 )}
               >
                 <input
@@ -249,7 +248,7 @@ export function TimelineFilters({
             onFiltersChange({
               eventTypes: new Set(ALL_EVENT_TYPES),
               statuses: new Set(ALL_STATUSES),
-              searchText: undefined
+              searchText: undefined,
             })
           }
           aria-label="Reset all filters"

@@ -80,6 +80,7 @@ public record RuleAtomDto(
 
 /// <summary>
 /// DTO for rule specification.
+/// Issue #2055: Includes ETag for optimistic concurrency control.
 /// </summary>
 public record RuleSpecDto(
     Guid Id,
@@ -88,5 +89,32 @@ public record RuleSpecDto(
     DateTime CreatedAt,
     Guid? CreatedByUserId,
     Guid? ParentVersionId,
-    IReadOnlyList<RuleAtomDto> Atoms
+    IReadOnlyList<RuleAtomDto> Atoms,
+    /// <summary>
+    /// Issue #2055: ETag (base64-encoded RowVersion) for optimistic concurrency.
+    /// Send this value back when updating to detect concurrent modifications.
+    /// </summary>
+    string? ETag = null
+);
+
+/// <summary>
+/// Issue #2055: Lock status information for collaborative editing.
+/// </summary>
+public record EditorLockDto(
+    Guid GameId,
+    Guid? LockedByUserId,
+    string? LockedByUserEmail,
+    DateTime? LockedAt,
+    DateTime? ExpiresAt,
+    bool IsLocked,
+    bool IsCurrentUserLock
+);
+
+/// <summary>
+/// Issue #2055: Conflict information when concurrent edit is detected.
+/// </summary>
+public record RuleSpecConflictDto(
+    RuleSpecDto LocalVersion,
+    RuleSpecDto RemoteVersion,
+    string ConflictReason
 );

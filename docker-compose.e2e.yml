@@ -1,0 +1,326 @@
+# =============================================================================
+# docker-compose.e2e.yml - E2E Testing Infrastructure with Full Observability
+# =============================================================================
+# Issue #2009 - Phase 3: Production-Grade Infrastructure
+#
+# Services:
+# - 4 Playwright test shards (parallel execution)
+# - Prometheus (metrics collection)
+# - Grafana (visualization and alerting)
+# - cAdvisor (container metrics)
+#
+# IMPORTANT: Execute from repository root, not apps/web/
+# Usage:
+#   cd /path/to/meepleai-monorepo  # Repository root
+#   docker-compose -f apps/web/docker-compose.e2e.yml up --build
+#   docker-compose -f apps/web/docker-compose.e2e.yml down -v
+# =============================================================================
+
+version: '3.8'
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  e2e-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+# =============================================================================
+# Volumes
+# =============================================================================
+volumes:
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+  test-results:
+    driver: local
+
+# =============================================================================
+# Services
+# =============================================================================
+services:
+
+  # ---------------------------------------------------------------------------
+  # Prometheus - Metrics Collection
+  # ---------------------------------------------------------------------------
+  prometheus:
+    image: prom/prometheus:v2.48.0
+    container_name: e2e-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-remote-write-receiver'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ./infra/prometheus/prometheus.e2e.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infra/prometheus/alerts:/etc/prometheus/alerts:ro
+      - prometheus-data:/prometheus
+    networks:
+      - e2e-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # ---------------------------------------------------------------------------
+  # Grafana - Visualization and Alerting
+  # ---------------------------------------------------------------------------
+  grafana:
+    image: grafana/grafana:10.2.2
+    container_name: e2e-grafana
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      # Admin credentials (configurable via host .env file or default to 'admin')
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_E2E_PASSWORD:-admin}
+
+      # Security settings
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+
+      # Provisioning
+      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+
+      # Alerting (Grafana 10+: Use only unified alerting)
+      - GF_UNIFIED_ALERTING_ENABLED=true
+    volumes:
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./infra/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    networks:
+      - e2e-network
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  # ---------------------------------------------------------------------------
+  # cAdvisor - Container Metrics (Issue #2009: Required for memory alerts)
+  # ---------------------------------------------------------------------------
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.47.0
+    container_name: e2e-cadvisor
+    restart: unless-stopped
+    ports:
+      - "8082:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    privileged: true
+    devices:
+      - /dev/kmsg
+    networks:
+      - e2e-network
+    command:
+      - '--docker_only=true'
+      - '--housekeeping_interval=30s'
+      - '--disable_metrics=percpu,sched,tcp,udp,disk,diskIO,accelerator,hugetlb,referenced_memory,cpu_topology,resctrl'
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # ---------------------------------------------------------------------------
+  # Playwright Test Shard 1/4
+  # ---------------------------------------------------------------------------
+  e2e-shard-1:
+    build:
+      context: apps/web
+      dockerfile: Dockerfile.e2e
+    container_name: e2e-shard-1
+    shm_size: '2gb'
+    mem_limit: 4g
+    mem_reservation: 2g
+    cpus: '2.0'
+    environment:
+      - CI=true
+      - NODE_ENV=production
+      - SHARD_INDEX=1
+      - TOTAL_SHARDS=4
+      - PROMETHEUS_REMOTE_WRITE_URL=http://prometheus:9090/api/v1/write
+      - PLAYWRIGHT_WORKERS=1
+    command: ["--shard=1/4", "--project=desktop-chrome"]
+    volumes:
+      - ./apps/web/test-results/shard-1:/app/test-results
+      - ./apps/web/playwright-report/shard-1:/app/playwright-report
+    networks:
+      - e2e-network
+    depends_on:
+      prometheus:
+        condition: service_healthy
+
+  # ---------------------------------------------------------------------------
+  # Playwright Test Shard 2/4
+  # ---------------------------------------------------------------------------
+  e2e-shard-2:
+    build:
+      context: apps/web
+      dockerfile: Dockerfile.e2e
+    container_name: e2e-shard-2
+    shm_size: '2gb'
+    mem_limit: 4g
+    mem_reservation: 2g
+    cpus: '2.0'
+    environment:
+      - CI=true
+      - NODE_ENV=production
+      - SHARD_INDEX=2
+      - TOTAL_SHARDS=4
+      - PROMETHEUS_REMOTE_WRITE_URL=http://prometheus:9090/api/v1/write
+      - PLAYWRIGHT_WORKERS=1
+    command: ["--shard=2/4", "--project=desktop-chrome"]
+    volumes:
+      - ./apps/web/test-results/shard-2:/app/test-results
+      - ./apps/web/playwright-report/shard-2:/app/playwright-report
+    networks:
+      - e2e-network
+    depends_on:
+      prometheus:
+        condition: service_healthy
+
+  # ---------------------------------------------------------------------------
+  # Playwright Test Shard 3/4
+  # ---------------------------------------------------------------------------
+  e2e-shard-3:
+    build:
+      context: apps/web
+      dockerfile: Dockerfile.e2e
+    container_name: e2e-shard-3
+    shm_size: '2gb'
+    mem_limit: 4g
+    mem_reservation: 2g
+    cpus: '2.0'
+    environment:
+      - CI=true
+      - NODE_ENV=production
+      - SHARD_INDEX=3
+      - TOTAL_SHARDS=4
+      - PROMETHEUS_REMOTE_WRITE_URL=http://prometheus:9090/api/v1/write
+      - PLAYWRIGHT_WORKERS=1
+    command: ["--shard=3/4", "--project=desktop-chrome"]
+    volumes:
+      - ./apps/web/test-results/shard-3:/app/test-results
+      - ./apps/web/playwright-report/shard-3:/app/playwright-report
+    networks:
+      - e2e-network
+    depends_on:
+      prometheus:
+        condition: service_healthy
+
+  # ---------------------------------------------------------------------------
+  # Playwright Test Shard 4/4
+  # ---------------------------------------------------------------------------
+  e2e-shard-4:
+    build:
+      context: apps/web
+      dockerfile: Dockerfile.e2e
+    container_name: e2e-shard-4
+    shm_size: '2gb'
+    mem_limit: 4g
+    mem_reservation: 2g
+    cpus: '2.0'
+    environment:
+      - CI=true
+      - NODE_ENV=production
+      - SHARD_INDEX=4
+      - TOTAL_SHARDS=4
+      - PROMETHEUS_REMOTE_WRITE_URL=http://prometheus:9090/api/v1/write
+      - PLAYWRIGHT_WORKERS=1
+    command: ["--shard=4/4", "--project=desktop-chrome"]
+    volumes:
+      - ./apps/web/test-results/shard-4:/app/test-results
+      - ./apps/web/playwright-report/shard-4:/app/playwright-report
+    networks:
+      - e2e-network
+    depends_on:
+      prometheus:
+        condition: service_healthy
+
+  # ---------------------------------------------------------------------------
+  # Result Aggregator (Optional)
+  # ---------------------------------------------------------------------------
+  aggregator:
+    image: alpine:3.19
+    container_name: e2e-aggregator
+    command: >
+      sh -c "
+      echo '=== E2E Test Results Aggregation ===';
+      echo 'Waiting for all shards to complete...';
+      sleep 10;
+      find /results -name '*.xml' -o -name '*.json' | wc -l | xargs echo 'Total test result files:';
+      echo '=== Aggregation Complete ===';
+      "
+    volumes:
+      - ./apps/web/test-results:/results:ro
+    networks:
+      - e2e-network
+    depends_on:
+      - e2e-shard-1
+      - e2e-shard-2
+      - e2e-shard-3
+      - e2e-shard-4
+
+# =============================================================================
+# Usage Commands
+# =============================================================================
+#
+# 1. Build and run all services:
+#    docker-compose -f docker-compose.e2e.yml up --build
+#
+# 2. Run in detached mode:
+#    docker-compose -f docker-compose.e2e.yml up -d --build
+#
+# 3. View logs:
+#    docker-compose -f docker-compose.e2e.yml logs -f e2e-shard-1
+#
+# 4. Stop all services:
+#    docker-compose -f docker-compose.e2e.yml down
+#
+# 5. Stop and remove volumes:
+#    docker-compose -f docker-compose.e2e.yml down -v
+#
+# 6. Run specific shard only:
+#    docker-compose -f docker-compose.e2e.yml up e2e-shard-1
+#
+# 7. Access Prometheus:
+#    http://localhost:9090
+#
+# 8. Access Grafana:
+#    http://localhost:3001 (admin/meepleai-e2e)
+#
+# 9. Check service health:
+#    docker-compose -f docker-compose.e2e.yml ps
+#
+# 10. View resource usage:
+#     docker stats $(docker-compose -f docker-compose.e2e.yml ps -q)
+#
+# =============================================================================
+# Resource Summary
+# =============================================================================
+# Total Memory: 16GB (4 shards × 4GB)
+# Total CPUs: 8 cores (4 shards × 2 cores)
+# Network: Isolated bridge network (172.28.0.0/16)
+# Storage: Local volumes for persistence
+# =============================================================================

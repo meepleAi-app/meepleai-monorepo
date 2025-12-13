@@ -36,8 +36,11 @@ public sealed class OllamaEmbeddingProvider : EmbeddingProviderBase
         _modelName = !string.IsNullOrWhiteSpace(config.Model) ? config.Model : providerType.GetModelName();
         _dimensions = config.Dimensions ?? providerType.GetDimensions();
 
+        // S1075: Default Ollama URL extracted to const
+        const string DefaultOllamaUrl = "http://localhost:11434";
+
         // Configure HttpClient for Ollama
-        var ollamaUrl = config.OllamaUrl ?? "http://localhost:11434";
+        var ollamaUrl = config.OllamaUrl ?? DefaultOllamaUrl;
         HttpClient.BaseAddress = new Uri(ollamaUrl);
         HttpClient.Timeout = TimeSpan.FromSeconds(Math.Max(config.TimeoutSeconds, 60)); // Ollama may need longer timeout
     }
@@ -83,6 +86,7 @@ public sealed class OllamaEmbeddingProvider : EmbeddingProviderBase
             return EmbeddingProviderResult.CreateSuccess(embeddings, _modelName);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Infrastructure adapter - Wraps Ollama API exceptions (HTTP, JSON, timeout) into domain-friendly EmbeddingProviderResult
         catch (HttpRequestException ex)
         {
             Logger.LogError(ex, "HTTP error calling Ollama API");
@@ -184,6 +188,7 @@ public sealed class OllamaEmbeddingProvider : EmbeddingProviderBase
             return true;
         }
 #pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Service boundary - Health checks must not propagate exceptions, return false to indicate unhealthy state
         catch (Exception ex)
         {
             Logger.LogWarning(ex, "Ollama health check failed");

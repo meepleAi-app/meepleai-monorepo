@@ -1,9 +1,9 @@
-import { useState, useCallback } from "react";
-import type { RuleSpecComment } from "@/lib/api";
-import { MentionInput } from "../chat/MentionInput";
-import { cn } from "@/lib/utils";
-import { useConfirmDialog } from "@/hooks/useConfirmDialog";
-import { useAlertDialog } from "@/hooks/useAlertDialog";
+import { useState, useCallback } from 'react';
+import type { RuleSpecComment } from '@/lib/api';
+import { MentionInput } from '../chat/MentionInput';
+import { cn } from '@/lib/utils';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { useAlertDialog } from '@/hooks/useAlertDialog';
 import { logger } from '@/lib/logger';
 import { createErrorContext } from '@/lib/errors';
 
@@ -32,19 +32,19 @@ export function CommentItem({
   onDelete,
   onReply,
   onResolve,
-  onUnresolve
+  onUnresolve,
 }: CommentItemProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(comment.commentText);
   const [isReplying, setIsReplying] = useState(false);
-  const [replyText, setReplyText] = useState("");
+  const [replyText, setReplyText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { confirm, ConfirmDialogComponent } = useConfirmDialog();
   const { alert: showAlert, AlertDialogComponent } = useAlertDialog();
 
   const canEdit = comment.userId === currentUserId && !disabled;
-  const canDelete = (comment.userId === currentUserId || currentUserRole === "Admin") && !disabled;
-  const canResolve = (currentUserRole === "Admin" || currentUserRole === "Editor") && !disabled;
+  const canDelete = (comment.userId === currentUserId || currentUserRole === 'Admin') && !disabled;
+  const canResolve = (currentUserRole === 'Admin' || currentUserRole === 'Editor') && !disabled;
   const isDisabled = disabled || isSubmitting;
 
   const handleSaveEdit = async () => {
@@ -63,9 +63,9 @@ export function CommentItem({
         createErrorContext('CommentItem', 'handleSaveEdit', { commentId: comment.id })
       );
       await showAlert({
-        title: "Errore",
-        message: "Impossibile modificare il commento",
-        variant: "error",
+        title: 'Errore',
+        message: 'Impossibile modificare il commento',
+        variant: 'error',
       });
     } finally {
       setIsSubmitting(false);
@@ -79,11 +79,12 @@ export function CommentItem({
 
   const handleDelete = async () => {
     const confirmed = await confirm({
-      title: "Elimina commento",
-      message: "Sei sicuro di voler eliminare questo commento? Questa azione non può essere annullata.",
-      variant: "destructive",
-      confirmText: "Elimina",
-      cancelText: "Annulla",
+      title: 'Elimina commento',
+      message:
+        'Sei sicuro di voler eliminare questo commento? Questa azione non può essere annullata.',
+      variant: 'destructive',
+      confirmText: 'Elimina',
+      cancelText: 'Annulla',
     });
 
     if (!confirmed) {
@@ -100,9 +101,9 @@ export function CommentItem({
         createErrorContext('CommentItem', 'handleDelete', { commentId: comment.id })
       );
       await showAlert({
-        title: "Errore",
-        message: "Impossibile eliminare il commento",
-        variant: "error",
+        title: 'Errore',
+        message: 'Impossibile eliminare il commento',
+        variant: 'error',
       });
     } finally {
       setIsSubmitting(false);
@@ -117,7 +118,7 @@ export function CommentItem({
     setIsSubmitting(true);
     try {
       await onReply(comment.id, replyText);
-      setReplyText("");
+      setReplyText('');
       setIsReplying(false);
     } catch (error) {
       logger.error(
@@ -126,17 +127,17 @@ export function CommentItem({
         createErrorContext('CommentItem', 'handleReply', { commentId: comment.id })
       );
       await showAlert({
-        title: "Errore",
-        message: "Impossibile aggiungere la risposta",
-        variant: "error",
+        title: 'Errore',
+        message: 'Impossibile aggiungere la risposta',
+        variant: 'error',
       });
     } finally {
       setIsSubmitting(false);
     }
-  }, [comment.id, replyText, onReply]);
+  }, [comment.id, replyText, onReply, showAlert]);
 
   const handleCancelReply = useCallback(() => {
-    setReplyText("");
+    setReplyText('');
     setIsReplying(false);
   }, []);
 
@@ -151,9 +152,9 @@ export function CommentItem({
         createErrorContext('CommentItem', 'handleResolve', { commentId: comment.id })
       );
       await showAlert({
-        title: "Errore",
-        message: "Impossibile contrassegnare come risolto",
-        variant: "error",
+        title: 'Errore',
+        message: 'Impossibile contrassegnare come risolto',
+        variant: 'error',
       });
     } finally {
       setIsSubmitting(false);
@@ -171,9 +172,9 @@ export function CommentItem({
         createErrorContext('CommentItem', 'handleUnresolve', { commentId: comment.id })
       );
       await showAlert({
-        title: "Errore",
-        message: "Impossibile riaprire il commento",
-        variant: "error",
+        title: 'Errore',
+        message: 'Impossibile riaprire il commento',
+        variant: 'error',
       });
     } finally {
       setIsSubmitting(false);
@@ -186,7 +187,8 @@ export function CommentItem({
     const parts = text.split(mentionRegex);
 
     return parts.map((part, i) => {
-      if (i % 2 === 1) { // Odd indices are captured groups (usernames)
+      if (i % 2 === 1) {
+        // Odd indices are captured groups (usernames)
         return (
           <span
             key={i}
@@ -204,8 +206,8 @@ export function CommentItem({
   return (
     <div
       className={cn(
-        "p-3 border border-gray-300 rounded mb-3",
-        comment.isResolved ? "bg-gray-100 opacity-70" : "bg-gray-50"
+        'p-3 border border-gray-300 rounded mb-3',
+        comment.isResolved ? 'bg-gray-100 opacity-70' : 'bg-gray-50'
       )}
     >
       <div className="flex justify-between items-start mb-2">
@@ -224,7 +226,7 @@ export function CommentItem({
           {comment.isResolved && (
             <span
               className="ml-2 px-2 py-0.5 bg-green-50 text-green-800 rounded text-xs"
-              title={`Resolved by ${comment.resolvedByDisplayName || "Unknown"} on ${comment.resolvedAt ? new Date(comment.resolvedAt).toLocaleString() : "Unknown"}`}
+              title={`Resolved by ${comment.resolvedByDisplayName || 'Unknown'} on ${comment.resolvedAt ? new Date(comment.resolvedAt).toLocaleString() : 'Unknown'}`}
             >
               ✓ Resolved
             </span>
@@ -232,7 +234,7 @@ export function CommentItem({
         </div>
         <div className="text-xs text-gray-600">
           {new Date(comment.createdAt).toLocaleString()}
-          {comment.updatedAt && " (modificato)"}
+          {comment.updatedAt && ' (modificato)'}
         </div>
       </div>
 
@@ -240,7 +242,7 @@ export function CommentItem({
         <div>
           <textarea
             value={editText}
-            onChange={(e) => setEditText(e.target.value)}
+            onChange={e => setEditText(e.target.value)}
             disabled={isDisabled}
             className="w-full min-h-[80px] p-2 border border-gray-400 rounded text-sm font-[inherit] mb-2 resize-y"
           />
@@ -249,20 +251,20 @@ export function CommentItem({
               onClick={handleSaveEdit}
               disabled={isDisabled || !editText.trim()}
               className={cn(
-                "px-3 py-1.5 text-white border-0 rounded text-sm",
+                'px-3 py-1.5 text-white border-0 rounded text-sm',
                 isDisabled || !editText.trim()
-                  ? "bg-gray-400 cursor-not-allowed"
-                  : "bg-green-600 cursor-pointer hover:bg-green-700"
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-green-600 cursor-pointer hover:bg-green-700'
               )}
             >
-              {isSubmitting ? "Salvataggio..." : "Salva"}
+              {isSubmitting ? 'Salvataggio...' : 'Salva'}
             </button>
             <button
               onClick={handleCancelEdit}
               disabled={isDisabled}
               className={cn(
-                "px-3 py-1.5 bg-gray-600 text-white border-0 rounded text-sm",
-                isDisabled ? "cursor-not-allowed" : "cursor-pointer hover:bg-gray-700"
+                'px-3 py-1.5 bg-gray-600 text-white border-0 rounded text-sm',
+                isDisabled ? 'cursor-not-allowed' : 'cursor-pointer hover:bg-gray-700'
               )}
             >
               Annulla
@@ -280,10 +282,7 @@ export function CommentItem({
 
           {/* Comment text with mention rendering */}
           <p
-            className={cn(
-              "m-0 mb-2 text-sm leading-normal",
-              comment.isResolved && "line-through"
-            )}
+            className={cn('m-0 mb-2 text-sm leading-normal', comment.isResolved && 'line-through')}
           >
             {renderTextWithMentions(comment.commentText)}
           </p>
@@ -291,9 +290,7 @@ export function CommentItem({
           {/* Mentioned users display */}
           {comment.mentionedUserIds && comment.mentionedUserIds.length > 0 && (
             <div className="text-xs text-gray-600 mb-2">
-              <span className="italic">
-                Mentioned: {comment.mentionedUserIds.length} user(s)
-              </span>
+              <span className="italic">Mentioned: {comment.mentionedUserIds.length} user(s)</span>
             </div>
           )}
 
@@ -304,8 +301,10 @@ export function CommentItem({
                 onClick={() => setIsEditing(true)}
                 disabled={isDisabled}
                 className={cn(
-                  "px-2.5 py-1 text-white border-0 rounded text-xs",
-                  isDisabled ? "bg-gray-400 cursor-not-allowed" : "bg-blue-500 cursor-pointer hover:bg-blue-600"
+                  'px-2.5 py-1 text-white border-0 rounded text-xs',
+                  isDisabled
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-blue-500 cursor-pointer hover:bg-blue-600'
                 )}
                 aria-label="Edit comment"
               >
@@ -317,12 +316,14 @@ export function CommentItem({
                 onClick={handleDelete}
                 disabled={isDisabled}
                 className={cn(
-                  "px-2.5 py-1 text-white border-0 rounded text-xs",
-                  isDisabled ? "bg-gray-400 cursor-not-allowed" : "bg-red-600 cursor-pointer hover:bg-red-700"
+                  'px-2.5 py-1 text-white border-0 rounded text-xs',
+                  isDisabled
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-red-600 cursor-pointer hover:bg-red-700'
                 )}
                 aria-label="Delete comment"
               >
-                {isSubmitting ? "Eliminazione..." : "Elimina"}
+                {isSubmitting ? 'Eliminazione...' : 'Elimina'}
               </button>
             )}
             {/* Reply button */}
@@ -331,12 +332,14 @@ export function CommentItem({
                 onClick={() => setIsReplying(!isReplying)}
                 disabled={isDisabled}
                 className={cn(
-                  "px-2.5 py-1 text-white border-0 rounded text-xs",
-                  isDisabled ? "bg-gray-400 cursor-not-allowed" : "bg-blue-500 cursor-pointer hover:bg-blue-600"
+                  'px-2.5 py-1 text-white border-0 rounded text-xs',
+                  isDisabled
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-blue-500 cursor-pointer hover:bg-blue-600'
                 )}
                 aria-label="Reply to comment"
               >
-                {isReplying ? "Annulla" : "Rispondi"}
+                {isReplying ? 'Annulla' : 'Rispondi'}
               </button>
             )}
             {/* Resolve/Unresolve button */}
@@ -345,20 +348,16 @@ export function CommentItem({
                 onClick={comment.isResolved ? handleUnresolve : handleResolve}
                 disabled={isDisabled}
                 className={cn(
-                  "px-2.5 py-1 text-white border-0 rounded text-xs",
+                  'px-2.5 py-1 text-white border-0 rounded text-xs',
                   isDisabled
-                    ? "bg-gray-400 cursor-not-allowed"
+                    ? 'bg-gray-400 cursor-not-allowed'
                     : comment.isResolved
-                      ? "bg-gray-600 cursor-pointer hover:bg-gray-700"
-                      : "bg-green-600 cursor-pointer hover:bg-green-700"
+                      ? 'bg-gray-600 cursor-pointer hover:bg-gray-700'
+                      : 'bg-green-600 cursor-pointer hover:bg-green-700'
                 )}
-                aria-label={comment.isResolved ? "Reopen comment" : "Mark as resolved"}
+                aria-label={comment.isResolved ? 'Reopen comment' : 'Mark as resolved'}
               >
-                {isSubmitting
-                  ? "..."
-                  : comment.isResolved
-                  ? "Riapri"
-                  : "Risolvi"}
+                {isSubmitting ? '...' : comment.isResolved ? 'Riapri' : 'Risolvi'}
               </button>
             )}
           </div>
@@ -379,20 +378,20 @@ export function CommentItem({
               onClick={handleReply}
               disabled={isDisabled || !replyText.trim()}
               className={cn(
-                "px-3 py-1.5 text-white border-0 rounded text-sm",
+                'px-3 py-1.5 text-white border-0 rounded text-sm',
                 isDisabled || !replyText.trim()
-                  ? "bg-gray-400 cursor-not-allowed"
-                  : "bg-green-600 cursor-pointer hover:bg-green-700"
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-green-600 cursor-pointer hover:bg-green-700'
               )}
             >
-              {isSubmitting ? "Invio..." : "Invia risposta"}
+              {isSubmitting ? 'Invio...' : 'Invia risposta'}
             </button>
             <button
               onClick={handleCancelReply}
               disabled={isDisabled}
               className={cn(
-                "px-3 py-1.5 bg-gray-600 text-white border-0 rounded text-sm",
-                isDisabled ? "cursor-not-allowed" : "cursor-pointer hover:bg-gray-700"
+                'px-3 py-1.5 bg-gray-600 text-white border-0 rounded text-sm',
+                isDisabled ? 'cursor-not-allowed' : 'cursor-pointer hover:bg-gray-700'
               )}
             >
               Annulla
@@ -404,7 +403,7 @@ export function CommentItem({
       {/* Threaded replies (recursive rendering) */}
       {comment.replies && comment.replies.length > 0 && depth < maxDepth && (
         <div className="ml-5 mt-3 border-l-2 border-gray-300 pl-3">
-          {comment.replies.map((reply) => (
+          {comment.replies.map(reply => (
             <CommentItem
               key={reply.id}
               comment={reply}

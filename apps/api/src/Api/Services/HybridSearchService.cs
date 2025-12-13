@@ -15,7 +15,6 @@ public class HybridSearchService : IHybridSearchService
     private readonly IQdrantService _qdrantService;
     private readonly IKeywordSearchService _keywordSearchService;
     private readonly IEmbeddingService _embeddingService;
-    private readonly MeepleAiDbContext _dbContext;
     private readonly ILogger<HybridSearchService> _logger;
     private readonly HybridSearchConfiguration _config;
 
@@ -28,14 +27,12 @@ public class HybridSearchService : IHybridSearchService
         IQdrantService qdrantService,
         IKeywordSearchService keywordSearchService,
         IEmbeddingService embeddingService,
-        MeepleAiDbContext dbContext,
         ILogger<HybridSearchService> logger,
         IOptions<HybridSearchConfiguration> config)
     {
         _qdrantService = qdrantService;
         _keywordSearchService = keywordSearchService;
         _embeddingService = embeddingService;
-        _dbContext = dbContext;
         _logger = logger;
         _config = config.Value;
     }
@@ -45,6 +42,7 @@ public class HybridSearchService : IHybridSearchService
         Guid gameId,
         SearchMode mode = SearchMode.Hybrid,
         int limit = 10,
+        IReadOnlyList<Guid>? documentIds = null,
         float vectorWeight = 0.7f,
         float keywordWeight = 0.3f,
         CancellationToken cancellationToken = default)
@@ -62,27 +60,28 @@ public class HybridSearchService : IHybridSearchService
         var safeLimit = Math.Min(Math.Max(limit, 1), 100); // Min: 1, Max: 100
 
         _logger.LogInformation(
-            "Hybrid search started: query='{Query}', gameId={GameId}, mode={Mode}, vectorWeight={VectorWeight}, keywordWeight={KeywordWeight}, limit={Limit}",
-            query, gameId, mode, vectorWeight, keywordWeight, limit);
+            "Hybrid search started: query='{Query}', gameId={GameId}, mode={Mode}, documentFilter={HasFilter}, vectorWeight={VectorWeight}, keywordWeight={KeywordWeight}, limit={Limit}",
+            query, gameId, mode, documentIds != null, vectorWeight, keywordWeight, limit);
 
         try
         {
             switch (mode)
             {
                 case SearchMode.Semantic:
-                    return await SearchSemanticOnlyAsync(query, gameId, safeLimit, cancellationToken).ConfigureAwait(false);
+                    return await SearchSemanticOnlyAsync(query, gameId, safeLimit, documentIds, cancellationToken).ConfigureAwait(false);
 
                 case SearchMode.Keyword:
-                    return await SearchKeywordOnlyAsync(query, gameId, safeLimit, cancellationToken).ConfigureAwait(false);
+                    return await SearchKeywordOnlyAsync(query, gameId, safeLimit, documentIds, cancellationToken).ConfigureAwait(false);
 
                 case SearchMode.Hybrid:
-                    return await SearchHybridAsync(query, gameId, safeLimit, vectorWeight, keywordWeight, cancellationToken).ConfigureAwait(false);
+                    return await SearchHybridAsync(query, gameId, safeLimit, vectorWeight, keywordWeight, documentIds, cancellationToken).ConfigureAwait(false);
 
                 default:
                     throw new ArgumentException($"Unsupported search mode: {mode}", nameof(mode));
             }
         }
 #pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Service boundary - Coordinates vector (Qdrant) and keyword (PostgreSQL) search with centralized exception logging
         catch (Exception ex)
         {
             // Issue #1444: Use centralized exception handling (log and re-throw pattern)
@@ -100,6 +99,7 @@ public class HybridSearchService : IHybridSearchService
         string query,
         Guid gameId,
         int limit,
+        IReadOnlyList<Guid>? documentIds,
         CancellationToken cancellationToken)
     {
         // Generate embedding for the query
@@ -112,11 +112,15 @@ public class HybridSearchService : IHybridSearchService
 
         var queryEmbedding = embeddingResult.Embeddings![0];
 
-        // Search Qdrant with embedding
+        // Issue #2141: Convert Guid documentIds to string[] for Qdrant
+        var documentIdStrings = documentIds?.Select(id => id.ToString()).ToList();
+
+        // Search Qdrant with embedding and native document filtering
         var vectorResults = await _qdrantService.SearchAsync(
             gameId.ToString(),
             queryEmbedding,
             limit: limit,
+            documentIds: documentIdStrings,
             ct: cancellationToken).ConfigureAwait(false);
 
         if (!vectorResults.Success)
@@ -124,6 +128,11 @@ public class HybridSearchService : IHybridSearchService
             _logger.LogError("Qdrant search failed: {Error}", vectorResults.ErrorMessage);
             return Array.Empty<HybridSearchResult>();
         }
+
+        // Issue #2141: No post-query filtering needed - Qdrant does native filtering
+        _logger.LogInformation(
+            "Semantic search: {ResultCount} results from Qdrant (native document filter applied)",
+            vectorResults.Results.Count);
 
         return vectorResults.Results.Select((r, index) => new HybridSearchResult
         {
@@ -150,6 +159,7 @@ public class HybridSearchService : IHybridSearchService
         string query,
         Guid gameId,
         int limit,
+        IReadOnlyList<Guid>? documentIds,
         CancellationToken cancellationToken)
     {
         var keywordResults = await _keywordSearchService.SearchAsync(
@@ -160,7 +170,16 @@ public class HybridSearchService : IHybridSearchService
             boostTerms: _config.BoostTerms,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
-        return keywordResults.Select((r, index) => new HybridSearchResult
+        // Issue #2051: Filter by document IDs if specified
+        var filteredResults = documentIds == null
+            ? keywordResults
+            : keywordResults.Where(r => documentIds.Any(id => id.ToString() == r.PdfDocumentId)).ToList();
+
+        _logger.LogInformation(
+            "Keyword search: {TotalResults} results from PostgreSQL, {FilteredResults} after document filter",
+            keywordResults.Count, filteredResults.Count);
+
+        return filteredResults.Select((r, index) => new HybridSearchResult
         {
             ChunkId = r.ChunkId,
             Content = r.Content,
@@ -187,6 +206,7 @@ public class HybridSearchService : IHybridSearchService
         int limit,
         float vectorWeight,
         float keywordWeight,
+        IReadOnlyList<Guid>? documentIds,
         CancellationToken cancellationToken)
     {
         // Fetch more results from each system than needed (to ensure good fusion)
@@ -199,16 +219,20 @@ public class HybridSearchService : IHybridSearchService
         {
             _logger.LogError("Failed to generate query embedding for hybrid search: {Error}", embeddingResult?.ErrorMessage ?? "Embedding result was null");
             // Fall back to keyword-only search if embedding fails
-            return await SearchKeywordOnlyAsync(query, gameId, limit, cancellationToken).ConfigureAwait(false);
+            return await SearchKeywordOnlyAsync(query, gameId, limit, documentIds, cancellationToken).ConfigureAwait(false);
         }
 
         var queryEmbedding = embeddingResult.Embeddings![0];
+
+        // Issue #2141: Convert Guid documentIds to string[] for Qdrant native filtering
+        var documentIdStrings = documentIds?.Select(id => id.ToString()).ToList();
 
         // Execute vector and keyword searches in parallel for performance
         var vectorTask = _qdrantService.SearchAsync(
             gameId.ToString(),
             queryEmbedding,
             limit: fetchLimit,
+            documentIds: documentIdStrings,
             ct: cancellationToken);
 
         var keywordTask = _keywordSearchService.SearchAsync(
@@ -227,17 +251,23 @@ public class HybridSearchService : IHybridSearchService
         if (!vectorResults.Success)
         {
             _logger.LogWarning("Vector search failed, using keyword-only results: {Error}", vectorResults.ErrorMessage);
-            return await SearchKeywordOnlyAsync(query, gameId, limit, cancellationToken).ConfigureAwait(false);
+            return await SearchKeywordOnlyAsync(query, gameId, limit, documentIds, cancellationToken).ConfigureAwait(false);
         }
 
+        // Issue #2141: Qdrant now does native filtering - keyword still needs post-query filter
+        var filteredKeywordResults = documentIds == null
+            ? keywordResults
+            : keywordResults.Where(r => documentIds.Any(id => id.ToString() == r.PdfDocumentId)).ToList();
+
         _logger.LogInformation(
-            "Retrieved results for fusion: vectorCount={VectorCount}, keywordCount={KeywordCount}",
-            vectorResults.Results.Count, keywordResults.Count);
+            "Retrieved results for fusion: vectorCount={VectorCount} (Qdrant native filter), keywordCount={KeywordCount} (post-filter: {FilteredKeyword})",
+            vectorResults.Results.Count, keywordResults.Count, filteredKeywordResults.Count);
 
         // Apply Reciprocal Rank Fusion (RRF) algorithm
+        // Issue #2141: Vector results already filtered by Qdrant native filter
         var fusedResults = FuseSearchResults(
             vectorResults.Results,
-            keywordResults,
+            filteredKeywordResults,
             gameId,
             vectorWeight,
             keywordWeight,

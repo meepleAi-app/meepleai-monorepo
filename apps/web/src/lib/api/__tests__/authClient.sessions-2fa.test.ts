@@ -86,6 +86,113 @@ describe('AuthClient - Sessions & 2FA', () => {
         );
       });
     });
+
+    describe('revokeAllSessions (Issue #2056)', () => {
+      it('should revoke all sessions excluding current by default', async () => {
+        const mockResponse = {
+          ok: true,
+          revokedCount: 3,
+          currentSessionRevoked: false,
+          message: 'Successfully revoked 3 sessions',
+        };
+
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => mockResponse,
+          headers: new Headers(),
+        });
+
+        const result = await authClient.revokeAllSessions();
+
+        expect(result).toEqual(mockResponse);
+        expect(mockFetch).toHaveBeenCalledWith(
+          expect.stringContaining('/api/v1/auth/sessions/revoke-all'),
+          expect.objectContaining({
+            method: 'POST',
+            body: JSON.stringify({}),
+          })
+        );
+      });
+
+      it('should include current session when specified', async () => {
+        const mockResponse = {
+          ok: true,
+          revokedCount: 4,
+          currentSessionRevoked: true,
+          message: 'Successfully revoked 4 sessions',
+        };
+
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => mockResponse,
+          headers: new Headers(),
+        });
+
+        const result = await authClient.revokeAllSessions({
+          includeCurrentSession: true,
+        });
+
+        expect(result).toEqual(mockResponse);
+        expect(mockFetch).toHaveBeenCalledWith(
+          expect.stringContaining('/api/v1/auth/sessions/revoke-all'),
+          expect.objectContaining({
+            method: 'POST',
+            body: JSON.stringify({ includeCurrentSession: true }),
+          })
+        );
+      });
+
+      it('should send password when provided', async () => {
+        const mockResponse = {
+          ok: true,
+          revokedCount: 2,
+          currentSessionRevoked: false,
+          message: 'Successfully revoked 2 sessions',
+        };
+
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => mockResponse,
+          headers: new Headers(),
+        });
+
+        const result = await authClient.revokeAllSessions({
+          includeCurrentSession: false,
+          password: 'myPassword123',
+        });
+
+        expect(result).toEqual(mockResponse);
+        expect(mockFetch).toHaveBeenCalledWith(
+          expect.stringContaining('/api/v1/auth/sessions/revoke-all'),
+          expect.objectContaining({
+            method: 'POST',
+            body: JSON.stringify({
+              includeCurrentSession: false,
+              password: 'myPassword123',
+            }),
+          })
+        );
+      });
+
+      it('should handle invalid password error', async () => {
+        mockFetch.mockResolvedValueOnce({
+          ok: false,
+          status: 400,
+          json: async () => ({
+            ok: false,
+            revokedCount: 0,
+            currentSessionRevoked: false,
+            message: 'Invalid password',
+          }),
+          headers: new Headers(),
+        });
+
+        await expect(authClient.revokeAllSessions({ password: 'wrongPassword' })).rejects.toThrow();
+      });
+    });
   });
 
   describe('Two-Factor Authentication', () => {

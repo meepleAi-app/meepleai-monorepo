@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection -- Safe variant icon/style config Record access */
 'use client';
 
 import * as React from 'react';

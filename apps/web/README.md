@@ -467,6 +467,49 @@ pnpm test:e2e:debug      # Debug mode
 pnpm test LoginForm      # Run tests matching "LoginForm"
 ```
 
+### Docker E2E Testing (Issue #2009)
+
+**Production-grade containerized E2E testing with full observability.**
+
+```bash
+# Build Docker images (one-time setup)
+./scripts/docker-e2e.sh build
+
+# Run all tests (4 shards + Prometheus + Grafana)
+./scripts/docker-e2e.sh run
+
+# Run specific shard
+./scripts/docker-e2e.sh run-shard 1
+
+# View monitoring
+./scripts/docker-e2e.sh dashboard  # Grafana UI
+./scripts/docker-e2e.sh metrics    # Prometheus UI
+
+# Container management
+./scripts/docker-e2e.sh status     # Check status
+./scripts/docker-e2e.sh logs       # View logs
+./scripts/docker-e2e.sh stop       # Stop all
+./scripts/docker-e2e.sh clean      # Remove volumes
+```
+
+**Monitoring Access**:
+- **Grafana**: http://localhost:3001 (admin / ${GRAFANA_E2E_PASSWORD:-admin})
+- **Prometheus**: http://localhost:9090
+
+**Resource Requirements**:
+- Docker memory: 16GB
+- Docker CPUs: 8 cores
+- Disk space: 10GB
+
+**When to Use**:
+- ✅ CI/CD validation (environment parity)
+- ✅ Production-like testing (isolated)
+- ✅ Full observability needs
+- ❌ Rapid local debugging (use `pnpm test:e2e` instead)
+
+**Documentation**: `docs/02-development/testing/e2e-contribution-guide.md#docker-e2e-infrastructure`
+**Runbook**: `docs/05-operations/runbooks/e2e-docker-runbook.md`
+
 ---
 
 ## 🎨 Styling & Design

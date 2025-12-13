@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /**
  * useStreamingChat Hook (Issue #1007)
  *
@@ -82,8 +83,13 @@ export interface StreamingChatState {
  * Streaming chat controls
  */
 export interface StreamingChatControls {
-  /** Start streaming chat response */
-  startStreaming: (gameId: string, query: string, chatId?: string) => Promise<void>;
+  /** Start streaming chat response (Issue #2051: supports document filtering) */
+  startStreaming: (
+    gameId: string,
+    query: string,
+    chatId?: string,
+    documentIds?: string[] | null
+  ) => Promise<void>;
 
   /** Stop streaming (cancel request) */
   stopStreaming: () => void;
@@ -260,9 +266,10 @@ export function useStreamingChat(
 
   /**
    * Start streaming chat response
+   * Issue #2051: Supports document filtering via documentIds
    */
   const startStreaming = useCallback(
-    async (gameId: string, query: string, chatId?: string) => {
+    async (gameId: string, query: string, chatId?: string, documentIds?: string[] | null) => {
       // Reset and mark streaming in a single update for consistency
       setState({ ...initialState, isStreaming: true, stateMessage: 'Connecting...' });
 
@@ -286,7 +293,12 @@ export function useStreamingChat(
             'Content-Type': 'application/json',
           },
           credentials: 'include', // Send session cookies
-          body: JSON.stringify({ gameId, query, chatId: chatId || null }),
+          body: JSON.stringify({
+            gameId,
+            query,
+            chatId: chatId || null,
+            documentIds: documentIds ?? null, // Issue #2051: Document filtering
+          }),
           signal: controller.signal,
         });
 

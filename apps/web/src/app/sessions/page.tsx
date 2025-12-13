@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection -- Safe session data object access */
 /**
  * SPRINT-4: Active Sessions Dashboard (Issue #1134)
  *
@@ -14,7 +15,6 @@
  */
 
 'use client';
-
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -45,7 +45,7 @@ function SessionStatusBadge({ status }: { status: string }) {
   const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
     InProgress: 'default',
     Paused: 'secondary',
-    Setup: 'outline'
+    Setup: 'outline',
   };
 
   return (
@@ -63,7 +63,7 @@ function SessionActions({
   onPause,
   onResume,
   onEnd,
-  isLoading
+  isLoading,
 }: {
   session: GameSessionDto;
   onPause: (id: string) => void;
@@ -169,12 +169,14 @@ export default function ActiveSessionsPage() {
   };
 
   /**
-   * Initialize component
+   * Initialize component - fetch functions are stable, only re-run on page change
    */
+  /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
     fetchSessions();
     fetchGames();
   }, [currentPage]);
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   /**
    * Handle pause session action
@@ -235,9 +237,8 @@ export default function ActiveSessionsPage() {
   /**
    * Filter sessions by selected game
    */
-  const filteredSessions = selectedGame === 'all'
-    ? sessions
-    : sessions.filter(s => s.gameId === selectedGame);
+  const filteredSessions =
+    selectedGame === 'all' ? sessions : sessions.filter(s => s.gameId === selectedGame);
 
   /**
    * Format duration for display
@@ -258,7 +259,7 @@ export default function ActiveSessionsPage() {
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     }).format(date);
   };
 
@@ -267,9 +268,7 @@ export default function ActiveSessionsPage() {
       <Card>
         <CardHeader>
           <CardTitle>Active Game Sessions</CardTitle>
-          <CardDescription>
-            Manage your currently active and paused game sessions
-          </CardDescription>
+          <CardDescription>Manage your currently active and paused game sessions</CardDescription>
         </CardHeader>
         <CardContent>
           {/* Filters */}
@@ -280,7 +279,7 @@ export default function ActiveSessionsPage() {
             <select
               id="game-filter"
               value={selectedGame}
-              onChange={(e) => setSelectedGame(e.target.value)}
+              onChange={e => setSelectedGame(e.target.value)}
               className="border rounded px-3 py-2"
               aria-label="Filter sessions by game"
             >
@@ -304,7 +303,12 @@ export default function ActiveSessionsPage() {
 
           {/* Loading State */}
           {loading && (
-            <div className="space-y-4" role="status" aria-live="polite" aria-label="Loading sessions">
+            <div
+              className="space-y-4"
+              role="status"
+              aria-live="polite"
+              aria-label="Loading sessions"
+            >
               {[1, 2, 3].map(i => (
                 <Skeleton key={i} className="h-20 w-full" />
               ))}
@@ -314,10 +318,11 @@ export default function ActiveSessionsPage() {
           {/* Empty State */}
           {!loading && filteredSessions.length === 0 && (
             <div className="text-center py-12" role="status">
-              <p className="text-muted-foreground text-lg mb-4">
-                No active sessions found
-              </p>
-              <Button onClick={() => router.push('/games')} aria-label="Go to games library to start a session">
+              <p className="text-muted-foreground text-lg mb-4">No active sessions found</p>
+              <Button
+                onClick={() => router.push('/games')}
+                aria-label="Go to games library to start a session"
+              >
                 Start a New Session
               </Button>
             </div>
@@ -345,7 +350,7 @@ export default function ActiveSessionsPage() {
                       onClick={() => viewSession(session.id)}
                       role="button"
                       tabIndex={0}
-                      onKeyDown={(e) => {
+                      onKeyDown={e => {
                         if (e.key === 'Enter' || e.key === ' ') {
                           e.preventDefault();
                           viewSession(session.id);
@@ -364,10 +369,7 @@ export default function ActiveSessionsPage() {
                       </TableCell>
                       <TableCell>{formatDate(session.startedAt)}</TableCell>
                       <TableCell>{formatDuration(session.durationMinutes)}</TableCell>
-                      <TableCell
-                        className="text-right"
-                        onClick={(e) => e.stopPropagation()}
-                      >
+                      <TableCell className="text-right" onClick={e => e.stopPropagation()}>
                         <SessionActions
                           session={session}
                           onPause={handlePause}
@@ -383,7 +385,11 @@ export default function ActiveSessionsPage() {
 
               {/* Pagination */}
               {totalPages > 1 && (
-                <div className="mt-6 flex justify-center gap-2" role="navigation" aria-label="Pagination">
+                <div
+                  className="mt-6 flex justify-center gap-2"
+                  role="navigation"
+                  aria-label="Pagination"
+                >
                   <Button
                     variant="outline"
                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}

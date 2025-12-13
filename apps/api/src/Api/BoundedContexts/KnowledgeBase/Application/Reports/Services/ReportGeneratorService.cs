@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using Api.BoundedContexts.KnowledgeBase.Domain.GridSearch;
 using Api.BoundedContexts.KnowledgeBase.Domain.Reports;
@@ -52,11 +53,12 @@ public sealed class ReportGeneratorService : IReportGeneratorService
 
     private static void AppendHeader(StringBuilder sb, BenchmarkReport report)
     {
-        sb.AppendLine($"# {report.Title}");
+        // FIX MA0011: Use IFormatProvider for culture-aware formatting
+        sb.AppendLine(CultureInfo.InvariantCulture, $"# {report.Title}");
         sb.AppendLine();
-        sb.AppendLine($"**Generated**: {report.GeneratedAt:yyyy-MM-dd HH:mm:ss} UTC");
-        sb.AppendLine($"**Dataset**: {report.DatasetName}");
-        sb.AppendLine($"**Samples**: {report.SampleCount}");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"**Generated**: {report.GeneratedAt:yyyy-MM-dd HH:mm:ss} UTC");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"**Dataset**: {report.DatasetName}");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"**Samples**: {report.SampleCount}");
         sb.AppendLine();
     }
 
@@ -66,17 +68,18 @@ public sealed class ReportGeneratorService : IReportGeneratorService
 
         sb.AppendLine("## Executive Summary");
         sb.AppendLine();
-        sb.AppendLine($"- **Configurations Evaluated**: {summary.TotalConfigurations}");
-        sb.AppendLine($"- **Successful Evaluations**: {summary.SuccessfulConfigurations}");
-        sb.AppendLine($"- **Meeting Phase 5 Target**: {summary.ConfigurationsMeetingTarget}");
+        // FIX MA0011: Use IFormatProvider for culture-aware formatting
+        sb.AppendLine(CultureInfo.InvariantCulture, $"- **Configurations Evaluated**: {summary.TotalConfigurations}");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"- **Successful Evaluations**: {summary.SuccessfulConfigurations}");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"- **Meeting Phase 5 Target**: {summary.ConfigurationsMeetingTarget}");
         sb.AppendLine();
         sb.AppendLine("### Best Metrics Achieved");
         sb.AppendLine();
-        sb.AppendLine($"| Metric | Value |");
-        sb.AppendLine($"|--------|-------|");
-        sb.AppendLine($"| Best Recall@10 | {summary.BestRecallAt10:P1} |");
-        sb.AppendLine($"| Best nDCG@10 | {summary.BestNdcgAt10:P1} |");
-        sb.AppendLine($"| Best P95 Latency | {summary.BestP95LatencyMs:F0}ms |");
+        sb.AppendLine("| Metric | Value |");
+        sb.AppendLine("|--------|-------|");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"| Best Recall@10 | {summary.BestRecallAt10:P1} |");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"| Best nDCG@10 | {summary.BestNdcgAt10:P1} |");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"| Best P95 Latency | {summary.BestP95LatencyMs:F0}ms |");
         sb.AppendLine();
     }
 
@@ -94,10 +97,11 @@ public sealed class ReportGeneratorService : IReportGeneratorService
 
         sb.AppendLine("| Target | Required | Achieved | Status |");
         sb.AppendLine("|--------|----------|----------|--------|");
-        sb.AppendLine($"| Recall@10 | ≥{targets.MinRecallAt10:P0} | {summary.BestRecallAt10:P1} | {recallStatus} |");
-        sb.AppendLine($"| P95 Latency | <{targets.MaxP95LatencyMs:F0}ms | {summary.BestP95LatencyMs:F0}ms | {latencyStatus} |");
+        // FIX MA0011: Use IFormatProvider for culture-aware formatting
+        sb.AppendLine(CultureInfo.InvariantCulture, $"| Recall@10 | ≥{targets.MinRecallAt10:P0} | {summary.BestRecallAt10:P1} | {recallStatus} |");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"| P95 Latency | <{targets.MaxP95LatencyMs:F0}ms | {summary.BestP95LatencyMs:F0}ms | {latencyStatus} |");
         sb.AppendLine();
-        sb.AppendLine($"**Overall Status**: {overallStatus}");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"**Overall Status**: {overallStatus}");
         sb.AppendLine();
     }
 
@@ -114,14 +118,15 @@ public sealed class ReportGeneratorService : IReportGeneratorService
             var quantization = config.Configuration.Quantization.DisplayName;
             var reranking = config.Configuration.Reranking.DisplayName;
 
+            // FIX MA0011: Use IFormatProvider for culture-aware formatting
             if (config.IsSuccess)
             {
                 var meetsTarget = config.Metrics.MeetsPhase5Target() ? "✅" : "⚠️";
-                sb.AppendLine($"| {config.Configuration.ConfigurationId} | {chunking} | {quantization} | {reranking} | {config.Metrics.RecallAt5:P1} | {config.Metrics.RecallAt10:P1} | {config.Metrics.NdcgAt10:P1} | {config.Metrics.Mrr:F3} | {config.Metrics.P95LatencyMs:F0} | {meetsTarget} |");
+                sb.AppendLine(CultureInfo.InvariantCulture, $"| {config.Configuration.ConfigurationId} | {chunking} | {quantization} | {reranking} | {config.Metrics.RecallAt5:P1} | {config.Metrics.RecallAt10:P1} | {config.Metrics.NdcgAt10:P1} | {config.Metrics.Mrr:F3} | {config.Metrics.P95LatencyMs:F0} | {meetsTarget} |");
             }
             else
             {
-                sb.AppendLine($"| {config.Configuration.ConfigurationId} | {chunking} | {quantization} | {reranking} | - | - | - | - | - | ❌ Failed |");
+                sb.AppendLine(CultureInfo.InvariantCulture, $"| {config.Configuration.ConfigurationId} | {chunking} | {quantization} | {reranking} | - | - | - | - | - | ❌ Failed |");
             }
         }
 
@@ -156,21 +161,22 @@ public sealed class ReportGeneratorService : IReportGeneratorService
     {
         var c = config.Configuration;
         sb.AppendLine();
-        sb.AppendLine($"**Configuration**: `{c.ConfigurationId}`");
+        // FIX MA0011: Use IFormatProvider for culture-aware formatting
+        sb.AppendLine(CultureInfo.InvariantCulture, $"**Configuration**: `{c.ConfigurationId}`");
         sb.AppendLine();
         sb.AppendLine("| Setting | Value |");
         sb.AppendLine("|---------|-------|");
-        sb.AppendLine($"| Chunking | {c.Chunking.DisplayName} ({c.Chunking.SizeTokens} tokens, {c.Chunking.OverlapPercent:P0} overlap) |");
-        sb.AppendLine($"| Quantization | {c.Quantization.DisplayName} |");
-        sb.AppendLine($"| Reranking | {c.Reranking.DisplayName} |");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"| Chunking | {c.Chunking.DisplayName} ({c.Chunking.SizeTokens} tokens, {c.Chunking.OverlapPercent:P0} overlap) |");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"| Quantization | {c.Quantization.DisplayName} |");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"| Reranking | {c.Reranking.DisplayName} |");
         sb.AppendLine();
         sb.AppendLine("**Metrics**:");
         sb.AppendLine();
-        sb.AppendLine($"- Recall@5: {config.Metrics.RecallAt5:P1}");
-        sb.AppendLine($"- Recall@10: {config.Metrics.RecallAt10:P1}");
-        sb.AppendLine($"- nDCG@10: {config.Metrics.NdcgAt10:P1}");
-        sb.AppendLine($"- MRR: {config.Metrics.Mrr:F3}");
-        sb.AppendLine($"- P95 Latency: {config.Metrics.P95LatencyMs:F0}ms");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"- Recall@5: {config.Metrics.RecallAt5:P1}");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"- Recall@10: {config.Metrics.RecallAt10:P1}");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"- nDCG@10: {config.Metrics.NdcgAt10:P1}");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"- MRR: {config.Metrics.Mrr:F3}");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"- P95 Latency: {config.Metrics.P95LatencyMs:F0}ms");
         sb.AppendLine();
     }
 
@@ -181,9 +187,10 @@ public sealed class ReportGeneratorService : IReportGeneratorService
 
         var summary = report.Summary;
 
+        // FIX MA0011: Use IFormatProvider for culture-aware formatting
         if (summary.RecommendedConfiguration != null)
         {
-            sb.AppendLine($"**Recommended Configuration**: `{summary.RecommendedConfiguration}`");
+            sb.AppendLine(CultureInfo.InvariantCulture, $"**Recommended Configuration**: `{summary.RecommendedConfiguration}`");
             sb.AppendLine();
         }
 
@@ -230,8 +237,9 @@ public sealed class ReportGeneratorService : IReportGeneratorService
     {
         sb.AppendLine("---");
         sb.AppendLine();
-        sb.AppendLine($"*Report generated by ADR-016 Phase 5 Evaluation Framework*");
-        sb.AppendLine($"*Grid Search ID: {report.GridSearchResult.GridSearchId}*");
-        sb.AppendLine($"*Total Duration: {report.GridSearchResult.TotalDurationMs:F0}ms*");
+        // FIX MA0011: Use IFormatProvider for culture-aware formatting
+        sb.AppendLine("*Report generated by ADR-016 Phase 5 Evaluation Framework*");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"*Grid Search ID: {report.GridSearchResult.GridSearchId}*");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"*Total Duration: {report.GridSearchResult.TotalDurationMs:F0}ms*");
     }
 }

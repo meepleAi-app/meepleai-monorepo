@@ -151,9 +151,13 @@ public static class ObservabilityServiceExtensions
         IConfiguration configuration,
         IWebHostEnvironment environment)
     {
+        // S1075: Default URLs extracted to const
+        const string DefaultRedisConnectionString = "localhost:6379";
+        const string DefaultQdrantUrl = "http://localhost:6333";
+
         // OPS-01: Health checks for observability
-        var healthCheckRedisConnectionString = configuration["REDIS_URL"] ?? "localhost:6379";
-        var healthCheckQdrantUrl = configuration["QDRANT_URL"] ?? "http://localhost:6333";
+        var healthCheckRedisConnectionString = configuration["REDIS_URL"] ?? DefaultRedisConnectionString;
+        var healthCheckQdrantUrl = configuration["QDRANT_URL"] ?? DefaultQdrantUrl;
 
         var healthChecksBuilder = services.AddHealthChecks();
 
@@ -191,9 +195,13 @@ public static class ObservabilityServiceExtensions
                 "qdrant-collection",
                 tags: new[] { "vector", "qdrant", "collection" });
 
+        // S1075: Default service URLs extracted to const
+        const string DefaultN8nUrl = "http://n8n:5678";
+        const string DefaultHyperDxUrl = "http://meepleai-hyperdx:8000";
+
         // Issue #892: Additional health checks for n8n and HyperDX
-        var n8nUrl = configuration["N8N_URL"] ?? "http://n8n:5678";
-        var hyperDxUrl = configuration["HYPERDX_URL"] ?? "http://meepleai-hyperdx:8000";
+        var n8nUrl = configuration["N8N_URL"] ?? DefaultN8nUrl;
+        var hyperDxUrl = configuration["HYPERDX_URL"] ?? DefaultHyperDxUrl;
 
         healthChecksBuilder
             .AddUrlGroup(

@@ -89,12 +89,17 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
                     .WithEnvironment("POSTGRES_PASSWORD", "postgres")
                     .WithEnvironment("POSTGRES_DB", "test_shared")
                     .WithPortBinding(5432, true)
-                    .WithWaitStrategy(Wait.ForUnixContainer()
-                        .UntilCommandIsCompleted("pg_isready", "-U", "postgres"))
+                    // Issue #2031: Removed .UntilCommandIsCompleted("pg_isready") to prevent Docker hijack errors
+                    // Default TCP port check + 2s delay is more reliable than hijacked command execution
                     .WithCleanUp(true)
                     .Build();
 
                 await _postgresContainer.StartAsync();
+
+                // Issue #2031: Wait 2s for full readiness after TCP port check
+                // Prevents race conditions without hijack-prone command execution
+                await Task.Delay(TimeSpan.FromSeconds(2));
+
                 var postgresPort = _postgresContainer.GetMappedPublicPort(5432);
                 PostgresConnectionString = $"Host=localhost;Port={postgresPort};Database=test_shared;Username=postgres;Password=postgres;Ssl Mode=Disable;Trust Server Certificate=true;KeepAlive=30;Pooling=false;";
             }
@@ -109,12 +114,17 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
                 _redisContainer = new ContainerBuilder()
                     .WithImage("redis:7-alpine")
                     .WithPortBinding(6379, true)
-                    .WithWaitStrategy(Wait.ForUnixContainer()
-                        .UntilCommandIsCompleted("redis-cli", "ping"))
+                    // Issue #2031: Removed .UntilCommandIsCompleted("redis-cli", "ping") to prevent Docker hijack errors
+                    // Default TCP port check + 2s delay is more reliable than hijacked command execution
                     .WithCleanUp(true)
                     .Build();
 
                 await _redisContainer.StartAsync();
+
+                // Issue #2031: Wait 2s for full readiness after TCP port check
+                // Prevents race conditions without hijack-prone command execution
+                await Task.Delay(TimeSpan.FromSeconds(2));
+
                 var redisPort = _redisContainer.GetMappedPublicPort(6379);
                 RedisConnectionString = $"localhost:{redisPort},abortConnect=false,connectTimeout=5000,syncTimeout=5000,connectRetry=3";
             }
@@ -143,16 +153,15 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
                 await _redisContainer.StopAsync();
                 await _redisContainer.DisposeAsync();
             }
-
-            _initLock.Dispose();
         }
         finally
         {
-            if (_initLock.CurrentCount == 0)
-            {
-                _initLock.Release();
-            }
+            // Issue #2031: Release lock before disposing to avoid ObjectDisposedException
+            _initLock.Release();
         }
+
+        // Issue #2031: Dispose lock after try-finally to avoid accessing disposed object in finally
+        _initLock.Dispose();
     }
 
     /// <summary>

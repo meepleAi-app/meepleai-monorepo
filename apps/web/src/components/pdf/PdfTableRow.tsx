@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection -- Safe status badge config Record access */
 import React from 'react';
 import { FileText, RotateCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -38,7 +39,7 @@ function formatDate(dateString: string): string {
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     });
   } catch {
     return dateString;
@@ -51,7 +52,7 @@ function getLanguageDisplay(languageCode?: string | null): { code: string; name:
     it: 'Italiano',
     de: 'Deutsch',
     fr: 'Français',
-    es: 'Español'
+    es: 'Español',
   };
 
   const code = (languageCode ?? 'en').toUpperCase();
@@ -69,7 +70,7 @@ export const PdfTableRow = React.memo(function PdfTableRow({
   pdf,
   isRetrying = false,
   onRetryParsing,
-  onOpenLog
+  onOpenLog,
 }: PdfTableRowProps) {
   const { code, name } = getLanguageDisplay(pdf.language);
 
@@ -99,11 +100,7 @@ export const PdfTableRow = React.memo(function PdfTableRow({
       <TableCell>
         <div className="flex gap-2">
           {onOpenLog && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onOpenLog(pdf)}
-            >
+            <Button variant="outline" size="sm" onClick={() => onOpenLog(pdf)}>
               <FileText className="w-4 h-4 mr-1" />
               Log
             </Button>
@@ -115,9 +112,7 @@ export const PdfTableRow = React.memo(function PdfTableRow({
               onClick={() => onRetryParsing(pdf)}
               disabled={isRetrying}
             >
-              <RotateCw
-                className={`w-4 h-4 mr-1 ${isRetrying ? 'animate-spin' : ''}`}
-              />
+              <RotateCw className={`w-4 h-4 mr-1 ${isRetrying ? 'animate-spin' : ''}`} />
               {isRetrying ? 'Retrying...' : 'Retry'}
             </Button>
           )}

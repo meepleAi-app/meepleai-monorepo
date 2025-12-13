@@ -131,104 +131,35 @@ public class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagStr
         var startTime = _timeProvider.GetUtcNow();
         var cacheKey = _cache.GenerateQaCacheKey(query.GameId, query.Query);
 
-        // Step 1: Perform vector search
+        // Step 1: Perform search and build citations
         yield return CreateEvent(StreamingEventType.StateUpdate,
             new StreamingStateUpdate("Searching knowledge base..."));
 
-        var searchQuery = new SearchQuery(
-            GameId: Guid.Parse(query.GameId),
-            Query: query.Query,
-            TopK: 5,
-            MinScore: 0.55, // mxbai-embed-large
-            SearchMode: "hybrid",
-            Language: "en"
-        );
+        var (searchSuccess, snippets, domainSearchResults, searchConfidence) = await PerformSearchAndBuildCitationsAsync(
+            query.GameId, query.Query, query.DocumentIds, cancellationToken).ConfigureAwait(false);
 
-        var searchResults = await _searchQueryHandler.Handle(searchQuery, cancellationToken).ConfigureAwait(false);
-
-        if (searchResults.Count == 0)
+        if (!searchSuccess)
         {
-            _logger.LogInformation("No vector results found for query in game {GameId}", query.GameId);
             yield return CreateEvent(StreamingEventType.Error,
                 new StreamingError("No relevant information found in the rulebook.", "NO_RESULTS"));
             yield break;
         }
 
-        // Map search results to domain entities for quality tracking
-        var domainSearchResults = searchResults.Select(sr => new Domain.Entities.SearchResult(
-            id: Guid.NewGuid(),
-            vectorDocumentId: Guid.Parse(sr.VectorDocumentId),
-            textContent: sr.TextContent,
-            pageNumber: Math.Max(1, sr.PageNumber),
-            relevanceScore: new Confidence(sr.RelevanceScore),
-            rank: sr.Rank,
-            searchMethod: sr.SearchMethod ?? "hybrid"
-        )).ToList();
-
-        // Calculate search confidence
-        var searchConfidence = _qualityTrackingService.CalculateSearchConfidence(domainSearchResults);
-
-        // Step 2: Emit citations
-        var snippets = searchResults.Select(r => new Snippet(
-            r.TextContent,
-            $"PDF:{r.VectorDocumentId}",
-            r.PageNumber,
-            0,
-            (float)r.RelevanceScore // AI-11: Include actual search score
-        )).ToList();
-
         yield return CreateEvent(StreamingEventType.Citations,
-            new StreamingCitations(snippets));
+            new StreamingCitations(snippets!));
 
-        // Step 3: Load chat thread context if ThreadId provided (Issue #857)
-        string chatHistoryContext = string.Empty;
-        if (query.ThreadId.HasValue)
-        {
-            var thread = await _chatThreadRepository.GetByIdAsync(query.ThreadId.Value, cancellationToken).ConfigureAwait(false);
-            if (thread != null)
-            {
-                // Security: Validate thread belongs to requested game
-                if (thread.GameId.HasValue && !string.Equals(thread.GameId.Value.ToString(), query.GameId, StringComparison.Ordinal))
-                {
-                    _logger.LogWarning(
-                        "Thread {ThreadId} belongs to game {ThreadGameId} but query is for game {QueryGameId}. Ignoring chat history.",
-                        query.ThreadId.Value, thread.GameId.Value, query.GameId);
-                }
-                else if (_chatContextService.ShouldIncludeChatHistory(thread))
-                {
-                    chatHistoryContext = _chatContextService.BuildChatHistoryContext(thread);
-                    _logger.LogInformation(
-                        "Including chat history from thread {ThreadId}: {MessageCount} messages",
-                        query.ThreadId.Value, thread.MessageCount);
-                }
-            }
-        }
+        // Step 2: Load chat thread context if ThreadId provided
+        var chatHistoryContext = await LoadChatThreadContextAsync(
+            query.ThreadId, query.GameId, cancellationToken).ConfigureAwait(false);
 
-        // Step 4: Build LLM prompt with context
+        // Step 3: Build LLM prompts with context
         yield return CreateEvent(StreamingEventType.StateUpdate,
             new StreamingStateUpdate("Generating answer..."));
 
-        var context = string.Join("\n\n", searchResults.Select(sr =>
-            $"[Page {sr.PageNumber}] {sr.TextContent}"));
+        var (systemPrompt, userPrompt) = await BuildLlmPromptsAsync(
+            query.GameId, query.Query, snippets!, chatHistoryContext, cancellationToken).ConfigureAwait(false);
 
-        // Use PromptTemplateService for advanced prompt engineering
-        var questionType = _promptTemplateService.ClassifyQuestion(query.Query);
-        Guid? gameGuid = Guid.TryParse(query.GameId, out var guid) ? guid : null;
-        var template = await _promptTemplateService.GetTemplateAsync(gameGuid, questionType).ConfigureAwait(false);
-
-        var systemPrompt = _promptTemplateService.RenderSystemPrompt(template);
-        var baseUserPrompt = _promptTemplateService.RenderUserPrompt(template, context, query.Query);
-
-        // Enrich with chat history if available
-        var userPrompt = !string.IsNullOrWhiteSpace(chatHistoryContext)
-            ? _chatContextService.EnrichPromptWithHistory(baseUserPrompt, chatHistoryContext)
-            : baseUserPrompt;
-
-        _logger.LogDebug(
-            "Using prompt template for game {GameId}, question type {QuestionType}",
-            query.GameId, questionType);
-
-        // Step 5: Stream tokens from LLM
+        // Step 4: Stream tokens from LLM
         var answerBuilder = new StringBuilder();
         var tokenCount = 0;
         LlmUsage? llmUsage = null;
@@ -246,7 +177,7 @@ public class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagStr
                 _logger.LogInformation(
                     "Streaming usage received: {PromptTokens}p + {CompletionTokens}c = {TotalTokens}t (${Cost:F6})",
                     llmUsage.PromptTokens, llmUsage.CompletionTokens, llmUsage.TotalTokens, llmCost.TotalCost);
-                continue; // Don't append content from final chunk (it's null)
+                continue;
             }
 
             // Regular content chunk
@@ -260,6 +191,160 @@ public class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagStr
 
         var answer = answerBuilder.ToString().Trim();
 
+        // Step 5: Calculate quality metrics, cache response, emit completion
+        var overallConfidence = await CalculateAndCacheResponseAsync(
+            answer, snippets!, domainSearchResults!, searchConfidence, 
+            tokenCount, cacheKey, llmUsage, llmCost, cancellationToken).ConfigureAwait(false);
+
+        yield return CreateEvent(StreamingEventType.Complete,
+            new StreamingComplete(0, 0, tokenCount, tokenCount, overallConfidence.Value));
+
+        // Record metrics
+        var duration = (_timeProvider.GetUtcNow() - startTime).TotalMilliseconds;
+        MeepleAiMetrics.RecordRagRequest(duration, query.GameId, true);
+        MeepleAiMetrics.TokensUsed.Record(tokenCount,
+            new System.Diagnostics.TagList { { "game.id", query.GameId }, { "operation", "qa-stream" } });
+        MeepleAiMetrics.ConfidenceScore.Record(overallConfidence.Value,
+            new System.Diagnostics.TagList { { "game.id", query.GameId }, { "operation", "qa-stream" } });
+    }
+
+    /// <summary>
+    /// Performs vector search and builds citations from results.
+    /// Returns (success, snippets, domainResults, confidence).
+    /// </summary>
+    private async Task<(bool success, List<Snippet>? snippets, List<Domain.Entities.SearchResult>? domainResults, Confidence? searchConfidence)> PerformSearchAndBuildCitationsAsync(
+        string gameId,
+        string queryText,
+        IReadOnlyList<Guid>? documentIds,
+        CancellationToken cancellationToken)
+    {
+        var searchQuery = new SearchQuery(
+            GameId: Guid.Parse(gameId),
+            Query: queryText,
+            TopK: 5,
+            MinScore: 0.55,
+            SearchMode: "hybrid",
+            Language: "en",
+            DocumentIds: documentIds // Issue #2051
+        );
+
+        var searchResults = await _searchQueryHandler.Handle(searchQuery, cancellationToken).ConfigureAwait(false);
+
+        if (searchResults == null || searchResults.Count == 0)
+        {
+            _logger.LogInformation("No vector results found for query in game {GameId}", gameId);
+            return (false, null, null, null);
+        }
+
+        // Map search results to domain entities for quality tracking
+        var domainSearchResults = searchResults.Select(sr => new Domain.Entities.SearchResult(
+            id: Guid.NewGuid(),
+            vectorDocumentId: Guid.Parse(sr.VectorDocumentId),
+            textContent: sr.TextContent,
+            pageNumber: Math.Max(1, sr.PageNumber),
+            relevanceScore: new Confidence(sr.RelevanceScore),
+            rank: sr.Rank,
+            searchMethod: sr.SearchMethod ?? "hybrid"
+        )).ToList();
+
+        // Calculate search confidence
+        var searchConfidence = _qualityTrackingService.CalculateSearchConfidence(domainSearchResults);
+
+        // Build citations
+        var snippets = searchResults.Select(r => new Snippet(
+            r.TextContent,
+            $"PDF:{r.VectorDocumentId}",
+            r.PageNumber,
+            0,
+            (float)r.RelevanceScore
+        )).ToList();
+
+        return (true, snippets, domainSearchResults, searchConfidence);
+    }
+
+    /// <summary>
+    /// Loads chat thread context if ThreadId provided.
+    /// </summary>
+    private async Task<string> LoadChatThreadContextAsync(
+        Guid? threadId,
+        string gameId,
+        CancellationToken cancellationToken)
+    {
+        if (!threadId.HasValue)
+            return string.Empty;
+
+        var thread = await _chatThreadRepository.GetByIdAsync(threadId.Value, cancellationToken).ConfigureAwait(false);
+        if (thread == null)
+            return string.Empty;
+
+        // Security: Validate thread belongs to requested game
+        if (thread.GameId.HasValue && !string.Equals(thread.GameId.Value.ToString(), gameId, StringComparison.Ordinal))
+        {
+            _logger.LogWarning(
+                "Thread {ThreadId} belongs to game {ThreadGameId} but query is for game {QueryGameId}. Ignoring chat history.",
+                threadId.Value, thread.GameId.Value, gameId);
+            return string.Empty;
+        }
+
+        if (_chatContextService.ShouldIncludeChatHistory(thread))
+        {
+            _logger.LogInformation(
+                "Including chat history from thread {ThreadId}: {MessageCount} messages",
+                threadId.Value, thread.MessageCount);
+            return _chatContextService.BuildChatHistoryContext(thread);
+        }
+
+        return string.Empty;
+    }
+
+    /// <summary>
+    /// Builds LLM prompts using templates and chat history enrichment.
+    /// Returns (systemPrompt, userPrompt).
+    /// </summary>
+    private async Task<(string systemPrompt, string userPrompt)> BuildLlmPromptsAsync(
+        string gameId,
+        string queryText,
+        List<Snippet> snippets,
+        string chatHistoryContext,
+        CancellationToken cancellationToken)
+    {
+        var context = string.Join("\n\n", snippets.Select(s =>
+            $"[Page {s.page}] {s.text}"));
+
+        // Use PromptTemplateService for advanced prompt engineering
+        var questionType = _promptTemplateService.ClassifyQuestion(queryText);
+        Guid? gameGuid = Guid.TryParse(gameId, out var guid) ? guid : null;
+        var template = await _promptTemplateService.GetTemplateAsync(gameGuid, questionType).ConfigureAwait(false);
+
+        var systemPrompt = _promptTemplateService.RenderSystemPrompt(template);
+        var baseUserPrompt = _promptTemplateService.RenderUserPrompt(template, context, queryText);
+
+        // Enrich with chat history if available
+        var userPrompt = !string.IsNullOrWhiteSpace(chatHistoryContext)
+            ? _chatContextService.EnrichPromptWithHistory(baseUserPrompt, chatHistoryContext)
+            : baseUserPrompt;
+
+        _logger.LogDebug(
+            "Using prompt template for game {GameId}, question type {QuestionType}",
+            gameId, questionType);
+
+        return (systemPrompt, userPrompt);
+    }
+
+    /// <summary>
+    /// Calculates quality metrics, caches response, and records LLM usage.
+    /// </summary>
+    private async Task<Confidence> CalculateAndCacheResponseAsync(
+        string answer,
+        List<Snippet> snippets,
+        List<Domain.Entities.SearchResult> domainSearchResults,
+        Confidence searchConfidence,
+        int tokenCount,
+        string cacheKey,
+        LlmUsage? llmUsage,
+        LlmCost? llmCost,
+        CancellationToken cancellationToken)
+    {
         // ISSUE-1725: Record LLM token usage with OpenTelemetry GenAI semantic conventions
         if (llmUsage != null && llmCost != null)
         {
@@ -269,7 +354,7 @@ public class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagStr
                 totalTokens: llmUsage.TotalTokens,
                 modelId: llmCost.ModelId,
                 provider: llmCost.Provider,
-                operationDurationMs: null, // Not tracked for streaming
+                operationDurationMs: null,
                 costUsd: llmCost.TotalCost);
         }
 
@@ -279,39 +364,19 @@ public class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagStr
             searchConfidence,
             llmConfidence);
 
-        _logger.LogInformation(
-            "Streaming QA completed for game {GameId}, {TokenCount} tokens sent, confidence: {Confidence}",
-            query.GameId, tokenCount, overallConfidence.Value);
-
-        // Build response for caching
+        // Build and cache response
         var response = new QaResponse(
             answer,
             snippets,
-            0, // Prompt tokens not available from streaming
+            0,
             tokenCount,
             tokenCount,
             overallConfidence.Value,
             null);
 
-        // Cache the complete response
         await _cache.SetAsync(cacheKey, response, 86400, cancellationToken).ConfigureAwait(false);
 
-        // Emit complete event
-        yield return CreateEvent(StreamingEventType.Complete,
-            new StreamingComplete(
-                0, // Not applicable for QA
-                0,
-                tokenCount,
-                tokenCount,
-                overallConfidence.Value));
-
-        // Record metrics
-        var duration = (_timeProvider.GetUtcNow() - startTime).TotalMilliseconds;
-        MeepleAiMetrics.RecordRagRequest(duration, query.GameId, true);
-        MeepleAiMetrics.TokensUsed.Record(tokenCount,
-            new System.Diagnostics.TagList { { "game.id", query.GameId }, { "operation", "qa-stream" } });
-        MeepleAiMetrics.ConfidenceScore.Record(overallConfidence.Value,
-            new System.Diagnostics.TagList { { "game.id", query.GameId }, { "operation", "qa-stream" } });
+        return overallConfidence;
     }
 
     private RagStreamingEvent CreateEvent(StreamingEventType type, object? data)

@@ -11,10 +11,10 @@ import {
   FormLabel,
   FormMessage,
 } from './form';
-import { Input } from './input';
-import { Button } from './button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select';
-import { Checkbox } from './checkbox';
+import { Input } from '../primitives/input';
+import { Button } from '../primitives/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../overlays/select';
+import { Checkbox } from '../primitives/checkbox';
 
 /**
  * Form component for building accessible forms with react-hook-form.

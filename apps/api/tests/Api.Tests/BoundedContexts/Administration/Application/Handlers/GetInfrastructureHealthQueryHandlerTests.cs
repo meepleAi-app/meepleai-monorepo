@@ -62,8 +62,8 @@ public class GetInfrastructureHealthQueryHandlerTests
         Assert.NotNull(result);
         Assert.Equal("Healthy", result.Overall.State.ToString());
         Assert.Single(result.Services);
-        Assert.Equal("postgres", result.Services.First().ServiceName);
-        Assert.Equal("Healthy", result.Services.First().State);
+        Assert.Equal("postgres", result.Services.ElementAt(0).ServiceName);
+        Assert.Equal("Healthy", result.Services.ElementAt(0).State);
 
         _mockHealthService.Verify(s => s.GetServiceHealthAsync("postgres", It.IsAny<CancellationToken>()), Times.Once);
     }

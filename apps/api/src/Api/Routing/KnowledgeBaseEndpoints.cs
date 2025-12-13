@@ -234,6 +234,75 @@ public static class KnowledgeBaseEndpoints
         .RequireSession() // Issue #1446: Automatic session validation
         .WithTags("ChatThreads");
 
+        // CHAT-HISTORY-01: Get user's chat history for dashboard (Issue #2026)
+        // Code Review: Optimized with lightweight DTO, correct totalCount, input validation
+        group.MapGet("/knowledge-base/my-chats", async (
+            [Microsoft.AspNetCore.Mvc.FromQuery] int skip,
+            [Microsoft.AspNetCore.Mvc.FromQuery] int take,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct = default) =>
+        {
+            // Pagination constants
+            const int DEFAULT_PAGE_SIZE = 50;
+            const int MAX_PAGE_SIZE = 100;
+            const int MAX_SKIP = 10000; // Prevent DoS via excessive skip
+
+            // Session validated by RequireSessionFilter
+            var session = context.Items[nameof(SessionStatusDto)] as SessionStatusDto;
+            if (session?.User?.Id is not Guid userId)
+            {
+                logger.LogWarning("GetMyChatHistory called without valid session");
+                return Results.Unauthorized();
+            }
+
+            // Apply safe defaults and limits for pagination
+            var safeSkip = skip < 0 ? 0 : Math.Min(skip, MAX_SKIP);
+            var safeTake = take <= 0 ? DEFAULT_PAGE_SIZE : Math.Min(take, MAX_PAGE_SIZE);
+
+            if (skip > MAX_SKIP)
+            {
+                logger.LogWarning(
+                    "User {UserId} attempted excessive skip ({Skip}), capped at {Max}",
+                    userId, skip, MAX_SKIP);
+            }
+
+            logger.LogInformation(
+                "Fetching chat history for user {UserId} (skip: {Skip}, take: {Take})",
+                userId,
+                safeSkip,
+                safeTake);
+
+            try
+            {
+                var query = new GetMyChatHistoryQuery(userId, safeSkip, safeTake);
+                var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+                // Match project convention: use 'threads' and 'count' (not 'chats' and 'totalCount')
+                return Results.Ok(new
+                {
+                    threads = result.Chats,
+                    count = result.TotalCount,
+                    page = new
+                    {
+                        skip = safeSkip,
+                        take = safeTake,
+                        hasMore = safeSkip + result.Chats.Count < result.TotalCount
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to fetch chat history for user {UserId}", userId);
+                return Results.Problem("Failed to load chat history");
+            }
+        })
+        .WithName("GetMyChatHistory")
+        .RequireSession() // Issue #1446: Automatic session validation
+        .WithTags("ChatThreads")
+        .WithDescription("Retrieve user's chat history for dashboard display (optimized, lightweight)");
+
         // CHAT-THREAD-04: Add message to thread
         group.MapPost("/chat-threads/{threadId:guid}/messages", async (
             Guid threadId,
@@ -398,13 +467,13 @@ public static class KnowledgeBaseEndpoints
             var command = new ExportChatCommand(threadId, exportFormat);
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
-            // Generate filename
+            // Generate filename for logging purposes
             var threadTitle = existingThread.Title?.Replace(" ", "_") ?? "chat";
             var sanitizedTitle = new string(threadTitle.Where(c => char.IsLetterOrDigit(c) || c == '_' || c == '-').ToArray());
             var filename = $"{sanitizedTitle}_{threadId.ToString()[..8]}.{result.FileExtension}";
 
-            logger.LogInformation("User {UserId} exported thread {ThreadId} in {Format} format",
-                userId, threadId, result.Format);
+            logger.LogInformation("User {UserId} exported thread {ThreadId} in {Format} format as {Filename}",
+                userId, threadId, result.Format, filename);
 
             // Return file with appropriate content type
             return Results.Content(

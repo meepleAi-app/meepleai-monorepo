@@ -30,12 +30,14 @@ public interface IEmbeddingRepository
 
     /// <summary>
     /// Performs vector similarity search using the provided query vector.
+    /// Issue #2051: Supports document filtering via documentIds
     /// </summary>
     Task<List<Embedding>> SearchByVectorAsync(
         Guid gameId,
         Vector queryVector,
         int topK,
         double minScore,
+        IReadOnlyList<Guid>? documentIds = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>

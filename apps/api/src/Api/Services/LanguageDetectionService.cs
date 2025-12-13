@@ -175,8 +175,7 @@ public class LanguageDetectionService : ILanguageDetectionService
         }
 
         var best = scores
-            .OrderByDescending(kv => kv.Value)
-            .First();
+            .MaxBy(kv => kv.Value);
 
         // If no language has meaningful score, default to English.
         if (best.Value <= 0.5)

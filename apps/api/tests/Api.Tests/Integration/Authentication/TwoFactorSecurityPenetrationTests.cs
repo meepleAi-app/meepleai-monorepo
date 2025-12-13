@@ -6,8 +6,7 @@ using Api.Models;
 using Api.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.BoundedContexts.Authentication.TestHelpers;
-using DotNet.Testcontainers.Builders;
-using DotNet.Testcontainers.Containers;
+using Api.Tests.Infrastructure;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -23,6 +22,7 @@ namespace Api.Tests.Integration.Authentication;
 /// <summary>
 /// Security Penetration Testing Suite for 2FA Implementation (Issue #576).
 /// Tests authentication security against OWASP Top 10 2024 threats.
+/// Uses SharedTestcontainersFixture for optimized performance and Docker hijack prevention (Issue #2031).
 /// </summary>
 /// <remarks>
 /// Security Focus Areas:
@@ -35,17 +35,21 @@ namespace Api.Tests.Integration.Authentication;
 /// - OWASP ASVS 2.0: Authentication Verification Requirements
 /// - OWASP Testing Guide: Testing Multi-Factor Authentication (WSTG-ATHN-11)
 ///
-/// Pattern: Testcontainers (PostgreSQL), AAA Testing, Security-First Design
+/// Pattern: SharedTestcontainersFixture, AAA Testing, Security-First Design (Issue #2031)
 /// </remarks>
+[Collection("SharedTestcontainers")]
 [Trait("Category", "Security")]
 [Trait("Category", "Integration")]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "Authentication")]
 [Trait("Issue", "576")]
+[Trait("Issue", "2031")]
 [Trait("OWASP", "A07-Authentication")]
 public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
 {
-    private IContainer? _postgresContainer;
+    private readonly SharedTestcontainersFixture _fixture;
+    private string _isolatedDbConnectionString = string.Empty;
+    private string _databaseName = string.Empty;
     private MeepleAiDbContext? _dbContext;
     private IServiceProvider? _serviceProvider;
     private ITotpService? _totpService;
@@ -61,8 +65,9 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
     private const int TimingAttackSampleSize = 1000; // Statistical significance
     private const double TimingVarianceThreshold = 0.05; // 5% max timing variance (constant-time)
 
-    public TwoFactorSecurityPenetrationTests()
+    public TwoFactorSecurityPenetrationTests(SharedTestcontainersFixture fixture)
     {
+        _fixture = fixture;
         _output = Console.WriteLine;
     }
 
@@ -70,25 +75,14 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
     {
         _output("🔒 Initializing Security Penetration Test Infrastructure...");
 
-        // Start isolated Postgres container
-        _postgresContainer = new ContainerBuilder()
-            .WithImage("postgres:16-alpine")
-            .WithEnvironment("POSTGRES_USER", "postgres")
-            .WithEnvironment("POSTGRES_PASSWORD", "postgres")
-            .WithEnvironment("POSTGRES_DB", "security_test")
-            .WithPortBinding(5432, true)
-            .WithWaitStrategy(Wait.ForUnixContainer()
-                .UntilCommandIsCompleted("pg_isready", "-U", "postgres"))
-            .Build();
+        // Issue #2031: Migrated to SharedTestcontainersFixture for Docker hijack prevention and performance
+        _databaseName = $"test_2fa_security_{Guid.NewGuid():N}";
+        _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
-        await _postgresContainer.StartAsync(TestCancellationToken);
-        var containerPort = _postgresContainer.GetMappedPublicPort(5432);
-        var connectionString = $"Host=localhost;Port={containerPort};Database=security_test;Username=postgres;Password=postgres;";
+        _output($"Isolated database created: {_databaseName}");
 
-        _output($"PostgreSQL started at localhost:{containerPort}");
-
-        // Setup dependency injection
-        var enforcedBuilder = new NpgsqlConnectionStringBuilder(connectionString)
+        // Setup dependency injection with optimized connection settings
+        var enforcedBuilder = new NpgsqlConnectionStringBuilder(_isolatedDbConnectionString)
         {
             SslMode = SslMode.Disable,
             KeepAlive = 30,
@@ -221,9 +215,18 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
             await asyncDisposable.DisposeAsync();
         }
 
-        if (_postgresContainer != null)
+        // Issue #2031: Use SharedTestcontainersFixture for cleanup instead of individual container disposal
+        if (!string.IsNullOrEmpty(_databaseName))
         {
-            await _postgresContainer.DisposeAsync();
+            try
+            {
+                await _fixture.DropIsolatedDatabaseAsync(_databaseName);
+                _output($"Isolated database dropped: {_databaseName}");
+            }
+            catch (Exception ex)
+            {
+                _output($"Warning: Failed to drop database {_databaseName}: {ex.Message}");
+            }
         }
 
         _output("🧹 Test infrastructure disposed");
@@ -527,7 +530,7 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
         // Arrange
         _output("🔴 SECURITY TEST: Backup code single-use enforcement");
         var (user, backupCodes) = await SeedUserWith2FAAndBackupCodesAsync();
-        var validBackupCode = backupCodes.First();
+        var validBackupCode = backupCodes[0];
 
         // Act - Use same backup code twice
         var firstAttempt = await _totpService!.VerifyBackupCodeAsync(user.Id, validBackupCode, TestCancellationToken);
@@ -551,7 +554,7 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
         // Arrange
         _output("🔴 SECURITY TEST: Race condition prevention for backup code usage");
         var (user, backupCodes) = await SeedUserWith2FAAndBackupCodesAsync();
-        var targetBackupCode = backupCodes.First();
+        var targetBackupCode = backupCodes[0];
 
         // Act - Simulate concurrent usage from 2 different sessions
         var task1 = _totpService!.VerifyBackupCodeAsync(user.Id, targetBackupCode, TestCancellationToken);
@@ -645,7 +648,7 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
         // Arrange
         _output("🔴 SECURITY TEST: Timing attack resistance (backup code verification)");
         var (user, backupCodes) = await SeedUserWith2FAAndBackupCodesAsync();
-        var validBackupCode = backupCodes.First();
+        var validBackupCode = backupCodes[0];
 
         var validTimings = new List<long>();
         var invalidTimings = new List<long>();
@@ -668,7 +671,7 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
 
         // Assert
         var invalidAvg = invalidTimings.Average();
-        var validTime = validTimings.First();
+        var validTime = validTimings[0];
         var timingDifference = Math.Abs(validTime - invalidAvg) / Math.Max(validTime, invalidAvg);
 
         _output($"Valid backup code: {validTime:F2} ticks");

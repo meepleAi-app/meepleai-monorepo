@@ -22,7 +22,8 @@ public partial class CreateRuleCommentCommandHandler : IRequestHandler<CreateRul
 
     private const int MaxCommentLength = 2000;
 
-    [GeneratedRegex(@"@(\w{1,50})", RegexOptions.Compiled, matchTimeoutMilliseconds: 100)]
+    // FIX MA0023: Add ExplicitCapture to prevent capturing unneeded groups
+    [GeneratedRegex(@"@(\w{1,50})", RegexOptions.Compiled | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 100)]
     private static partial Regex MentionRegex();
 
     public CreateRuleCommentCommandHandler(
@@ -89,11 +90,15 @@ public partial class CreateRuleCommentCommandHandler : IRequestHandler<CreateRul
                 return new List<string>();
             }
 
+            // MA0011/MA0074: ToLower() required for EF Core SQL translation - ToLowerInvariant() not supported
+            // EF Core translates ToLower() to SQL LOWER() which is deterministic and culture-safe in database context
+#pragma warning disable MA0011, MA0074 // EF Core SQL translation limitation
             var users = await _dbContext.Users
                 .AsNoTracking()
                 .Where(u =>
                     (u.DisplayName != null && mentionedUsernames.Contains(u.DisplayName.ToLower()))
                     || (u.Email != null && mentionedUsernames.Any(m => u.Email.ToLower().StartsWith(m))))
+#pragma warning restore MA0011, MA0074
                 .Select(u => u.Id.ToString())
                 .Distinct()
                 .ToListAsync(cancellationToken).ConfigureAwait(false);

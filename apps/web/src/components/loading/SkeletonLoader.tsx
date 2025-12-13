@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection -- Safe variant config Record access */
 /**
  * SkeletonLoader Component
  *

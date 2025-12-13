@@ -70,6 +70,7 @@ public class AddMessageCommandHandler : ICommandHandler<AddMessageCommand, ChatT
             Id: thread.Id,
             UserId: thread.UserId,
             GameId: thread.GameId,
+            AgentId: thread.AgentId, // Issue #2030
             Title: thread.Title,
             Status: thread.Status.Value,
             CreatedAt: thread.CreatedAt,

@@ -1,13 +1,11 @@
 using Api.Tests.BoundedContexts.Authentication.TestHelpers;
+using Api.Tests.Infrastructure;
 using Api.BoundedContexts.Administration.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.Authentication;
 using Api.Models;
 using Api.Services;
-using Docker.DotNet;
-using DotNet.Testcontainers.Builders;
-using DotNet.Testcontainers.Containers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -22,7 +20,7 @@ namespace Api.Tests.Integration.Authentication;
 /// <summary>
 /// Security penetration tests for TOTP Replay Attack Prevention (Issue #1787).
 /// Tests OWASP ASVS 2.8.3 compliance: OTP codes must not be reusable.
-/// Uses Testcontainers with PostgreSQL for realistic database interactions.
+/// Uses SharedTestcontainersFixture for optimized performance and Docker hijack prevention (Issue #2031).
 /// </summary>
 /// <remarks>
 /// SECURITY: Issue #1787 - SEC-07 TOTP Replay Attack Prevention
@@ -36,17 +34,21 @@ namespace Api.Tests.Integration.Authentication;
 /// 4. Audit logging for replay attack attempts
 /// 5. Normal TOTP verification still works
 ///
-/// Pattern: AAA (Arrange-Act-Assert), Testcontainers for PostgreSQL
+/// Pattern: AAA (Arrange-Act-Assert), SharedTestcontainersFixture (Issue #2031)
 /// </remarks>
+[Collection("SharedTestcontainers")]
 [Trait("Category", "Integration")]
 [Trait("Category", "Security")]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "Authentication")]
 [Trait("Issue", "1787")]
+[Trait("Issue", "2031")]
 [Trait("OWASP", "ASVS-2.8.3")]
 public sealed class TotpReplayAttackPreventionTests : IAsyncLifetime
 {
-    private IContainer? _postgresContainer;
+    private readonly SharedTestcontainersFixture _fixture;
+    private string _isolatedDbConnectionString = string.Empty;
+    private string _databaseName = string.Empty;
     private MeepleAiDbContext? _dbContext;
     private IServiceProvider? _serviceProvider;
     private ITotpService? _totpService;
@@ -58,8 +60,9 @@ public sealed class TotpReplayAttackPreventionTests : IAsyncLifetime
     private const string TestUserEmail = "security-test@meepleai.dev";
     private const string TestPassword = "SecurePassword123!";
 
-    public TotpReplayAttackPreventionTests()
+    public TotpReplayAttackPreventionTests(SharedTestcontainersFixture fixture)
     {
+        _fixture = fixture;
         _output = Console.WriteLine;
     }
 
@@ -68,7 +71,7 @@ public sealed class TotpReplayAttackPreventionTests : IAsyncLifetime
     {
         if (_totpService == null || _dbContext == null)
         {
-            Assert.Skip("Docker not available. TOTP replay attack tests require Docker to run Postgres container.");
+            Assert.Skip("Shared Testcontainers fixture not available. TOTP replay attack tests require PostgreSQL.");
         }
     }
 
@@ -76,42 +79,19 @@ public sealed class TotpReplayAttackPreventionTests : IAsyncLifetime
     {
         _output("Initializing TOTP Replay Attack Prevention test infrastructure...");
 
-        // Check if Docker is available before attempting to start container
+        // Issue #2031: Migrated to SharedTestcontainersFixture for Docker hijack prevention and performance
         try
         {
-            using var client = new DockerClientConfiguration().CreateClient();
-            await client.System.PingAsync(TestCancellationToken);
-        }
-        catch (Exception ex)
-        {
-            _output($"Docker check failed: {ex.Message}. Tests will be skipped.");
-            _output("To run these tests, ensure Docker is running.");
-            return; // Skip initialization - tests will be skipped
-        }
+            // Create isolated database for this test class
+            _databaseName = $"test_totp_replay_{Guid.NewGuid():N}";
+            _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
-        // Start isolated Postgres container
-        try
-        {
-            _postgresContainer = new ContainerBuilder()
-                .WithImage("postgres:16-alpine")
-                .WithEnvironment("POSTGRES_USER", "postgres")
-                .WithEnvironment("POSTGRES_PASSWORD", "postgres")
-                .WithEnvironment("POSTGRES_DB", "totp_replay_test")
-                .WithPortBinding(5432, true)
-                .WithWaitStrategy(Wait.ForUnixContainer()
-                    .UntilCommandIsCompleted("pg_isready", "-U", "postgres"))
-                .Build();
-
-            await _postgresContainer.StartAsync(TestCancellationToken);
-            var containerPort = _postgresContainer.GetMappedPublicPort(5432);
-            var connectionString = $"Host=localhost;Port={containerPort};Database=totp_replay_test;Username=postgres;Password=postgres";
-
-            _output($"PostgreSQL container started on port {containerPort}");
+            _output($"Isolated database created: {_databaseName}");
 
             // Create DbContext with EF Core migrations
             var services = new ServiceCollection();
             services.AddDbContext<MeepleAiDbContext>(options =>
-                options.UseNpgsql(connectionString)
+                options.UseNpgsql(_isolatedDbConnectionString)
                     .ConfigureWarnings(warnings =>
                         warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)));
 
@@ -182,6 +162,11 @@ public sealed class TotpReplayAttackPreventionTests : IAsyncLifetime
             _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
             _totpService = _serviceProvider.GetRequiredService<ITotpService>();
 
+            // Debug: Verify connection string
+            var actualConnString = _dbContext.Database.GetConnectionString();
+            _output($"DEBUG: DbContext connection string: {actualConnString}");
+            _output($"DEBUG: Expected connection contains database: {_databaseName}");
+
             // Apply EF Core migrations with retry policy (Issue #2005: Testcontainers race condition)
             var retryPolicy = Policy
                 .Handle<Npgsql.NpgsqlException>()
@@ -194,16 +179,23 @@ public sealed class TotpReplayAttackPreventionTests : IAsyncLifetime
                         _output($"⚠️ Migration attempt {retryCount} failed: {exception.Message}. Retrying in {timeSpan.TotalSeconds}s...");
                     });
 
+            _output($"DEBUG: About to run Database.MigrateAsync()...");
             await retryPolicy.ExecuteAsync(async () =>
                 await _dbContext.Database.MigrateAsync(TestCancellationToken));
             _output("✓ Database migrations applied successfully");
+
+            // Debug: Verify tables exist
+            var tableCount = await _dbContext.Database.ExecuteSqlRawAsync(
+                "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public'",
+                TestCancellationToken);
+            _output($"DEBUG: Tables in database: {tableCount}");
 
             // Create test user with 2FA enabled
             await SeedTestUserAsync();
         }
         catch (Exception ex)
         {
-            _output($"Container initialization failed: {ex.Message}. Tests will be skipped.");
+            _output($"Database initialization failed: {ex.Message}. Tests will be skipped.");
             return; // Skip initialization - tests will be skipped
         }
     }
@@ -215,10 +207,18 @@ public sealed class TotpReplayAttackPreventionTests : IAsyncLifetime
             await _dbContext.DisposeAsync();
         }
 
-        if (_postgresContainer != null)
+        // Issue #2031: Use SharedTestcontainersFixture for cleanup instead of individual container disposal
+        if (!string.IsNullOrEmpty(_databaseName))
         {
-            await _postgresContainer.StopAsync(TestCancellationToken);
-            await _postgresContainer.DisposeAsync();
+            try
+            {
+                await _fixture.DropIsolatedDatabaseAsync(_databaseName);
+                _output($"Isolated database dropped: {_databaseName}");
+            }
+            catch (Exception ex)
+            {
+                _output($"Warning: Failed to drop database {_databaseName}: {ex.Message}");
+            }
         }
 
         if (_serviceProvider is IDisposable disposable)

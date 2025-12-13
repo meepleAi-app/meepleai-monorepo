@@ -34,6 +34,7 @@ export function GameOverviewTab({ game }: GameOverviewTabProps) {
       setLoading(true);
       setError(null);
       try {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- bggId checked in useEffect dependency
         const details = await api.bgg.getGameDetails(game.bggId!);
         setBggDetails(details);
       } catch (err) {
@@ -113,7 +114,9 @@ export function GameOverviewTab({ game }: GameOverviewTabProps) {
             {/* BGG ID */}
             {game.bggId && (
               <div>
-                <label className="text-sm font-medium text-muted-foreground">BoardGameGeek ID</label>
+                <label className="text-sm font-medium text-muted-foreground">
+                  BoardGameGeek ID
+                </label>
                 <div className="flex items-center gap-2">
                   <Badge variant="secondary">{game.bggId}</Badge>
                 </div>
@@ -148,9 +151,7 @@ export function GameOverviewTab({ game }: GameOverviewTabProps) {
               </div>
             )}
 
-            {error && (
-              <div className="text-sm text-destructive">{error}</div>
-            )}
+            {error && <div className="text-sm text-destructive">{error}</div>}
 
             {bggDetails && (
               <div className="space-y-6">
@@ -170,7 +171,9 @@ export function GameOverviewTab({ game }: GameOverviewTabProps) {
                   {bggDetails.averageRating && (
                     <div className="flex flex-col items-center p-4 bg-slate-100 dark:bg-slate-800 rounded-lg">
                       <Star className="h-5 w-5 text-yellow-500 mb-2" />
-                      <div className="text-2xl font-bold">{bggDetails.averageRating.toFixed(2)}</div>
+                      <div className="text-2xl font-bold">
+                        {bggDetails.averageRating.toFixed(2)}
+                      </div>
                       <div className="text-xs text-muted-foreground">Average Rating</div>
                     </div>
                   )}
@@ -178,7 +181,9 @@ export function GameOverviewTab({ game }: GameOverviewTabProps) {
                   {bggDetails.averageWeight && (
                     <div className="flex flex-col items-center p-4 bg-slate-100 dark:bg-slate-800 rounded-lg">
                       <TrendingUp className="h-5 w-5 text-muted-foreground mb-2" />
-                      <div className="text-2xl font-bold">{bggDetails.averageWeight.toFixed(2)}</div>
+                      <div className="text-2xl font-bold">
+                        {bggDetails.averageWeight.toFixed(2)}
+                      </div>
                       <div className="text-xs text-muted-foreground">Complexity (1-5)</div>
                     </div>
                   )}
@@ -186,7 +191,9 @@ export function GameOverviewTab({ game }: GameOverviewTabProps) {
                   {bggDetails.usersRated && (
                     <div className="flex flex-col items-center p-4 bg-slate-100 dark:bg-slate-800 rounded-lg">
                       <Users className="h-5 w-5 text-muted-foreground mb-2" />
-                      <div className="text-2xl font-bold">{bggDetails.usersRated.toLocaleString()}</div>
+                      <div className="text-2xl font-bold">
+                        {bggDetails.usersRated.toLocaleString()}
+                      </div>
                       <div className="text-xs text-muted-foreground">User Ratings</div>
                     </div>
                   )}
@@ -223,7 +230,7 @@ export function GameOverviewTab({ game }: GameOverviewTabProps) {
                         <div>
                           <h4 className="font-semibold mb-2">Categories</h4>
                           <div className="flex flex-wrap gap-2">
-                            {bggDetails.categories.map((category) => (
+                            {bggDetails.categories.map(category => (
                               <Badge key={category} variant="secondary">
                                 {category}
                               </Badge>
@@ -236,7 +243,7 @@ export function GameOverviewTab({ game }: GameOverviewTabProps) {
                         <div>
                           <h4 className="font-semibold mb-2">Mechanics</h4>
                           <div className="flex flex-wrap gap-2">
-                            {bggDetails.mechanics.map((mechanic) => (
+                            {bggDetails.mechanics.map(mechanic => (
                               <Badge key={mechanic} variant="outline">
                                 {mechanic}
                               </Badge>
@@ -257,7 +264,7 @@ export function GameOverviewTab({ game }: GameOverviewTabProps) {
                         <div>
                           <h4 className="font-semibold mb-2">Designers</h4>
                           <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
-                            {bggDetails.designers.map((designer) => (
+                            {bggDetails.designers.map(designer => (
                               <li key={designer}>{designer}</li>
                             ))}
                           </ul>
@@ -268,11 +275,13 @@ export function GameOverviewTab({ game }: GameOverviewTabProps) {
                         <div>
                           <h4 className="font-semibold mb-2">Publishers</h4>
                           <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
-                            {bggDetails.publishers.slice(0, 5).map((publisher) => (
+                            {bggDetails.publishers.slice(0, 5).map(publisher => (
                               <li key={publisher}>{publisher}</li>
                             ))}
                             {bggDetails.publishers.length > 5 && (
-                              <li className="italic">and {bggDetails.publishers.length - 5} more...</li>
+                              <li className="italic">
+                                and {bggDetails.publishers.length - 5} more...
+                              </li>
                             )}
                           </ul>
                         </div>
@@ -283,12 +292,7 @@ export function GameOverviewTab({ game }: GameOverviewTabProps) {
 
                 {/* BGG Link */}
                 <Separator />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  asChild
-                  className="w-full"
-                >
+                <Button variant="outline" size="sm" asChild className="w-full">
                   <a
                     href={`https://boardgamegeek.com/boardgame/${game.bggId}`}
                     target="_blank"

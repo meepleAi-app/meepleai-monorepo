@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection -- Safe session history data access */
 /**
  * SPRINT-4: Session History View (Issue #1134)
  *
@@ -13,7 +14,6 @@
  */
 
 'use client';
-
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -45,7 +45,7 @@ function SessionStatusBadge({ status }: { status: string }) {
     Completed: 'default',
     Abandoned: 'destructive',
     InProgress: 'secondary',
-    Paused: 'outline'
+    Paused: 'outline',
   };
 
   return (
@@ -63,9 +63,10 @@ function StatisticsCard({ sessions }: { sessions: GameSessionDto[] }) {
   const completedSessions = sessions.filter(s => s.status === 'Completed').length;
   const abandonedSessions = sessions.filter(s => s.status === 'Abandoned').length;
 
-  const averageDuration = sessions.length > 0
-    ? Math.round(sessions.reduce((sum, s) => sum + s.durationMinutes, 0) / sessions.length)
-    : 0;
+  const averageDuration =
+    sessions.length > 0
+      ? Math.round(sessions.reduce((sum, s) => sum + s.durationMinutes, 0) / sessions.length)
+      : 0;
 
   // Calculate win rates
   const winCounts: { [key: string]: number } = {};
@@ -177,7 +178,7 @@ export default function SessionHistoryPage() {
       const offset = (currentPage - 1) * pageSize;
       const filters: SessionHistoryFilters = {
         limit: pageSize,
-        offset
+        offset,
       };
 
       if (selectedGame !== 'all') {
@@ -223,9 +224,12 @@ export default function SessionHistoryPage() {
     fetchGames();
   }, []);
 
+  // fetchHistory is stable, only re-run on filter changes
+  /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
     fetchHistory();
   }, [currentPage, selectedGame, startDate, endDate]);
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   /**
    * Reset filters
@@ -264,23 +268,19 @@ export default function SessionHistoryPage() {
       day: 'numeric',
       year: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     }).format(date);
   };
 
   return (
     <div className="container mx-auto py-8 px-4">
       {/* Statistics */}
-      {!loading && sessions.length > 0 && (
-        <StatisticsCard sessions={sessions} />
-      )}
+      {!loading && sessions.length > 0 && <StatisticsCard sessions={sessions} />}
 
       <Card>
         <CardHeader>
           <CardTitle>Session History</CardTitle>
-          <CardDescription>
-            View and analyze your past game sessions
-          </CardDescription>
+          <CardDescription>View and analyze your past game sessions</CardDescription>
         </CardHeader>
         <CardContent>
           {/* Filters */}
@@ -290,7 +290,7 @@ export default function SessionHistoryPage() {
               <select
                 id="game-filter"
                 value={selectedGame}
-                onChange={(e) => {
+                onChange={e => {
                   setSelectedGame(e.target.value);
                   setCurrentPage(1);
                 }}
@@ -312,7 +312,7 @@ export default function SessionHistoryPage() {
                 id="start-date"
                 type="date"
                 value={startDate}
-                onChange={(e) => {
+                onChange={e => {
                   setStartDate(e.target.value);
                   setCurrentPage(1);
                 }}
@@ -326,7 +326,7 @@ export default function SessionHistoryPage() {
                 id="end-date"
                 type="date"
                 value={endDate}
-                onChange={(e) => {
+                onChange={e => {
                   setEndDate(e.target.value);
                   setCurrentPage(1);
                 }}
@@ -357,7 +357,12 @@ export default function SessionHistoryPage() {
 
           {/* Loading State */}
           {loading && (
-            <div className="space-y-4" role="status" aria-live="polite" aria-label="Loading session history">
+            <div
+              className="space-y-4"
+              role="status"
+              aria-live="polite"
+              aria-label="Loading session history"
+            >
               {[1, 2, 3].map(i => (
                 <Skeleton key={i} className="h-20 w-full" />
               ))}
@@ -367,9 +372,7 @@ export default function SessionHistoryPage() {
           {/* Empty State */}
           {!loading && sessions.length === 0 && (
             <div className="text-center py-12" role="status">
-              <p className="text-muted-foreground text-lg mb-4">
-                No session history found
-              </p>
+              <p className="text-muted-foreground text-lg mb-4">No session history found</p>
               {(selectedGame !== 'all' || startDate || endDate) && (
                 <Button variant="outline" onClick={resetFilters}>
                   Clear Filters
@@ -401,7 +404,7 @@ export default function SessionHistoryPage() {
                       onClick={() => viewSession(session.id)}
                       role="button"
                       tabIndex={0}
-                      onKeyDown={(e) => {
+                      onKeyDown={e => {
                         if (e.key === 'Enter' || e.key === ' ') {
                           e.preventDefault();
                           viewSession(session.id);
@@ -433,7 +436,11 @@ export default function SessionHistoryPage() {
 
               {/* Pagination */}
               {totalPages > 1 && (
-                <div className="mt-6 flex justify-center gap-2" role="navigation" aria-label="Pagination">
+                <div
+                  className="mt-6 flex justify-center gap-2"
+                  role="navigation"
+                  aria-label="Pagination"
+                >
                   <Button
                     variant="outline"
                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}

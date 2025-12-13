@@ -39,120 +39,23 @@ public class BulkImportApiKeysCommandHandler : ICommandHandler<BulkImportApiKeys
 
     public async Task<BulkOperationResult<ApiKeyImportResultDto>> Handle(BulkImportApiKeysCommand command, CancellationToken cancellationToken)
     {
-        // Validation: Check CSV size
-        if (string.IsNullOrWhiteSpace(command.CsvContent))
-        {
-            throw new DomainException("CSV content cannot be null or empty");
-        }
-
-        var csvSizeBytes = Encoding.UTF8.GetByteCount(command.CsvContent);
-        if (csvSizeBytes > MaxCsvSizeBytes)
-        {
-            throw new DomainException($"CSV file size ({csvSizeBytes} bytes) exceeds maximum limit of {MaxCsvSizeBytes} bytes");
-        }
-
-        _logger.LogInformation("Admin {RequesterId} initiating bulk API key import from CSV ({Size} bytes)",
-            command.RequesterId, csvSizeBytes);
-
-        var errors = new List<string>();
-        var successCount = 0;
-        var lineNumber = 0;
-        var importedKeys = new List<ApiKeyImportResultDto>();
+        _logger.LogInformation("Admin {RequesterId} initiating bulk API key import from CSV",
+            command.RequesterId);
 
         try
         {
-            // Parse CSV
-            var keyRecords = ParseCsv(command.CsvContent, errors);
+            // Step 1: Validate CSV and parse records
+            var keyRecords = await ValidateCsvAndParseAsync(command.CsvContent, cancellationToken).ConfigureAwait(false);
 
-            // Validation: Check bulk size limit
-            if (keyRecords.Count > MaxBulkSize)
-            {
-                throw new DomainException($"Bulk operation exceeds maximum limit of {MaxBulkSize} API keys");
-            }
+            // Step 2: Validate all user IDs exist
+            await ValidateUserExistenceAsync(keyRecords, cancellationToken).ConfigureAwait(false);
 
-            // Validate all user IDs exist
-            var userIds = keyRecords.Select(r => r.UserId).Distinct().ToList();
-            var existingUserIds = new HashSet<Guid>();
-            
-            foreach (var userId in userIds)
-            {
-                var userExists = await _userRepository.ExistsAsync(userId, cancellationToken).ConfigureAwait(false);
-                if (userExists)
-                {
-                    existingUserIds.Add(userId);
-                }
-            }
+            // Step 3: Validate no duplicates (in CSV or database)
+            await ValidateDuplicatesAsync(keyRecords, cancellationToken).ConfigureAwait(false);
 
-            var missingUserIds = userIds.Except(existingUserIds).ToList();
-            if (missingUserIds.Any())
-            {
-                throw new DomainException($"The following user IDs do not exist: {string.Join(", ", missingUserIds)}");
-            }
-
-            // Check for duplicate key names per user in CSV
-            var duplicateKeys = keyRecords
-                .GroupBy(k => new { k.UserId, KeyName = k.KeyName.ToLowerInvariant() }, (key, group) => new { key.UserId, key.KeyName, Count = group.Count() })
-                .Where(g => g.Count > 1)
-                .Select(g => $"{g.KeyName} (User: {g.UserId})")
-                .ToList();
-
-            if (duplicateKeys.Any())
-            {
-                throw new DomainException($"CSV contains duplicate key names for same user: {string.Join(", ", duplicateKeys)}");
-            }
-
-            // Check for existing key names per user in database
-            var existingKeyNames = new List<string>();
-            foreach (var record in keyRecords)
-            {
-                var userKeys = await _apiKeyRepository.GetByUserIdAsync(record.UserId, cancellationToken).ConfigureAwait(false);
-                var nameExists = userKeys.Any(k => k.KeyName.Equals(record.KeyName, StringComparison.OrdinalIgnoreCase));
-                if (nameExists)
-                {
-                    existingKeyNames.Add($"{record.KeyName} (User: {record.UserId})");
-                }
-            }
-
-            if (existingKeyNames.Any())
-            {
-                throw new DomainException($"The following key names already exist for their users: {string.Join(", ", existingKeyNames)}");
-            }
-
-            // Process all API keys in a single transaction
-            foreach (var record in keyRecords)
-            {
-                lineNumber++;
-                try
-                {
-                    // Generate new API key with plaintext key
-                    var (apiKey, plaintextKey) = ApiKey.Create(
-                        id: Guid.NewGuid(),
-                        userId: record.UserId,
-                        keyName: record.KeyName.Trim(),
-                        scopes: record.Scopes,
-                        expiresAt: record.ExpiresAt,
-                        metadata: record.Metadata
-                    );
-
-                    await _apiKeyRepository.AddAsync(apiKey, cancellationToken).ConfigureAwait(false);
-                    
-                    importedKeys.Add(new ApiKeyImportResultDto(
-                        Id: apiKey.Id,
-                        KeyName: apiKey.KeyName,
-                        PlaintextKey: plaintextKey,
-                        UserId: apiKey.UserId,
-                        Scopes: apiKey.Scopes,
-                        ExpiresAt: apiKey.ExpiresAt
-                    ));
-                    
-                    successCount++;
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error importing API key at line {LineNumber}", lineNumber);
-                    errors.Add($"Line {lineNumber} ({record.KeyName}): {ex.Message}");
-                }
-            }
+            // Step 4: Process all API key imports
+            var (successCount, errors, importedKeys) = await ProcessApiKeyImportsAsync(
+                keyRecords, cancellationToken).ConfigureAwait(false);
 
             // Commit transaction if any success
             if (successCount > 0)
@@ -183,6 +86,149 @@ public class BulkImportApiKeysCommandHandler : ICommandHandler<BulkImportApiKeys
             _logger.LogError(ex, "Critical error during bulk API key import");
             throw new DomainException($"Bulk API key import failed: {ex.Message}", ex);
         }
+    }
+
+    /// <summary>
+    /// Validates CSV content and parses API key records.
+    /// </summary>
+    private async Task<List<ApiKeyImportRecord>> ValidateCsvAndParseAsync(
+        string csvContent,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(csvContent))
+        {
+            throw new DomainException("CSV content cannot be null or empty");
+        }
+
+        var csvSizeBytes = Encoding.UTF8.GetByteCount(csvContent);
+        if (csvSizeBytes > MaxCsvSizeBytes)
+        {
+            throw new DomainException($"CSV file size ({csvSizeBytes} bytes) exceeds maximum limit of {MaxCsvSizeBytes} bytes");
+        }
+
+        var errors = new List<string>();
+        var keyRecords = ParseCsv(csvContent, errors);
+
+        if (keyRecords.Count > MaxBulkSize)
+        {
+            throw new DomainException($"Bulk operation exceeds maximum limit of {MaxBulkSize} API keys");
+        }
+
+        return await Task.FromResult(keyRecords);
+    }
+
+    /// <summary>
+    /// Validates that all user IDs in import records exist in database.
+    /// </summary>
+    private async Task ValidateUserExistenceAsync(
+        List<ApiKeyImportRecord> keyRecords,
+        CancellationToken cancellationToken)
+    {
+        var userIds = keyRecords.Select(r => r.UserId).Distinct().ToList();
+        var existingUserIds = new HashSet<Guid>();
+        
+        foreach (var userId in userIds)
+        {
+            var userExists = await _userRepository.ExistsAsync(userId, cancellationToken).ConfigureAwait(false);
+            if (userExists)
+            {
+                existingUserIds.Add(userId);
+            }
+        }
+
+        var missingUserIds = userIds.Except(existingUserIds).ToList();
+        if (missingUserIds.Any())
+        {
+            throw new DomainException($"The following user IDs do not exist: {string.Join(", ", missingUserIds)}");
+        }
+    }
+
+    /// <summary>
+    /// Validates no duplicate key names exist in CSV or database.
+    /// </summary>
+    private async Task ValidateDuplicatesAsync(
+        List<ApiKeyImportRecord> keyRecords,
+        CancellationToken cancellationToken)
+    {
+        // Check for duplicate key names per user in CSV
+        var duplicateKeys = keyRecords
+            .GroupBy(k => new { k.UserId, KeyName = k.KeyName.ToLowerInvariant() }, (key, group) => new { key.UserId, key.KeyName, Count = group.Count() })
+            .Where(g => g.Count > 1)
+            .Select(g => $"{g.KeyName} (User: {g.UserId})")
+            .ToList();
+
+        if (duplicateKeys.Any())
+        {
+            throw new DomainException($"CSV contains duplicate key names for same user: {string.Join(", ", duplicateKeys)}");
+        }
+
+        // Check for existing key names per user in database
+        var existingKeyNames = new List<string>();
+        foreach (var record in keyRecords)
+        {
+            var userKeys = await _apiKeyRepository.GetByUserIdAsync(record.UserId, cancellationToken).ConfigureAwait(false);
+            var nameExists = userKeys.Any(k => k.KeyName.Equals(record.KeyName, StringComparison.OrdinalIgnoreCase));
+            if (nameExists)
+            {
+                existingKeyNames.Add($"{record.KeyName} (User: {record.UserId})");
+            }
+        }
+
+        if (existingKeyNames.Any())
+        {
+            throw new DomainException($"The following key names already exist for their users: {string.Join(", ", existingKeyNames)}");
+        }
+    }
+
+    /// <summary>
+    /// Processes all API key import records and creates keys.
+    /// Returns (successCount, errors, importedKeys).
+    /// </summary>
+    private async Task<(int successCount, List<string> errors, List<ApiKeyImportResultDto> importedKeys)> ProcessApiKeyImportsAsync(
+        List<ApiKeyImportRecord> keyRecords,
+        CancellationToken cancellationToken)
+    {
+        var errors = new List<string>();
+        var successCount = 0;
+        var lineNumber = 0;
+        var importedKeys = new List<ApiKeyImportResultDto>();
+
+        foreach (var record in keyRecords)
+        {
+            lineNumber++;
+            try
+            {
+                // Generate new API key with plaintext key
+                var (apiKey, plaintextKey) = ApiKey.Create(
+                    id: Guid.NewGuid(),
+                    userId: record.UserId,
+                    keyName: record.KeyName.Trim(),
+                    scopes: record.Scopes,
+                    expiresAt: record.ExpiresAt,
+                    metadata: record.Metadata
+                );
+
+                await _apiKeyRepository.AddAsync(apiKey, cancellationToken).ConfigureAwait(false);
+                
+                importedKeys.Add(new ApiKeyImportResultDto(
+                    Id: apiKey.Id,
+                    KeyName: apiKey.KeyName,
+                    PlaintextKey: plaintextKey,
+                    UserId: apiKey.UserId,
+                    Scopes: apiKey.Scopes,
+                    ExpiresAt: apiKey.ExpiresAt
+                ));
+                
+                successCount++;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error importing API key at line {LineNumber}", lineNumber);
+                errors.Add($"Line {lineNumber} ({record.KeyName}): {ex.Message}");
+            }
+        }
+
+        return (successCount, errors, importedKeys);
     }
 
     private static List<ApiKeyImportRecord> ParseCsv(string csvContent, List<string> errors)
@@ -283,7 +329,9 @@ public class BulkImportApiKeysCommandHandler : ICommandHandler<BulkImportApiKeys
         var currentField = new StringBuilder();
         var insideQuotes = false;
 
-        for (int i = 0; i < line.Length; i++)
+        // S127: Use while loop to avoid modifying loop counter in body
+        int i = 0;
+        while (i < line.Length)
         {
             var c = line[i];
 
@@ -293,7 +341,7 @@ public class BulkImportApiKeysCommandHandler : ICommandHandler<BulkImportApiKeys
                 {
                     // Escaped quote
                     currentField.Append('"');
-                    i++; // Skip next quote
+                    i++; // Skip next quote (safe in while loop)
                 }
                 else
                 {
@@ -311,6 +359,8 @@ public class BulkImportApiKeysCommandHandler : ICommandHandler<BulkImportApiKeys
             {
                 currentField.Append(c);
             }
+
+            i++; // Advance to next character
         }
 
         // Add last field

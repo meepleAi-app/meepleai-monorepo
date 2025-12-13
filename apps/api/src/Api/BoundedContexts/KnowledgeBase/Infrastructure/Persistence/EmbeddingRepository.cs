@@ -57,14 +57,17 @@ public class EmbeddingRepository : IEmbeddingRepository
         Vector queryVector,
         int topK,
         double minScore,
+        IReadOnlyList<Guid>? documentIds = null,
         CancellationToken cancellationToken = default)
     {
         // Delegate to Qdrant adapter for vector similarity search
+        // Issue #2051: Pass documentIds for filtering
         return await _qdrantAdapter.SearchAsync(
             gameId,
             queryVector,
             topK,
             minScore,
+            documentIds,
             cancellationToken).ConfigureAwait(false);
     }
 

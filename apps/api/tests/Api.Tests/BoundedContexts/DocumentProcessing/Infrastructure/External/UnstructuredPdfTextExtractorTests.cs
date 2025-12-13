@@ -50,8 +50,7 @@ public class UnstructuredPdfTextExtractorTests
 
         return new UnstructuredPdfTextExtractor(
             _mockHttpClientFactory.Object,
-            _mockLogger.Object,
-            _domainService);
+            _mockLogger.Object);
     }
 
     private Stream CreateTestPdfStream()

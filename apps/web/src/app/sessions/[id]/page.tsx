@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection -- Safe session data object access */
 /**
  * SPRINT-4: Session Details Page (Issue #1134)
  *
@@ -13,7 +14,6 @@
  */
 
 'use client';
-
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
@@ -37,7 +37,7 @@ function SessionStatusBadge({ status }: { status: string }) {
     Paused: 'secondary',
     Completed: 'default',
     Abandoned: 'destructive',
-    Setup: 'outline'
+    Setup: 'outline',
   };
 
   return (
@@ -70,9 +70,7 @@ function PlayerList({ players }: { players: GameSessionDto['players'] }) {
             <p className="font-medium">{player.playerName}</p>
             <p className="text-sm text-muted-foreground">
               Player {player.playerOrder}
-              {player.color && (
-                <span className="ml-2">• Color: {player.color}</span>
-              )}
+              {player.color && <span className="ml-2">• Color: {player.color}</span>}
             </p>
           </div>
         </div>
@@ -89,15 +87,15 @@ function SessionTimeline({ session }: { session: GameSessionDto }) {
     {
       label: 'Session Started',
       timestamp: session.startedAt,
-      icon: '▶️'
-    }
+      icon: '▶️',
+    },
   ];
 
   if (session.status === 'Paused') {
     events.push({
       label: 'Session Paused',
       timestamp: new Date().toISOString(), // Would come from backend in real implementation
-      icon: '⏸️'
+      icon: '⏸️',
     });
   }
 
@@ -105,7 +103,7 @@ function SessionTimeline({ session }: { session: GameSessionDto }) {
     events.push({
       label: session.status === 'Completed' ? 'Session Completed' : 'Session Abandoned',
       timestamp: session.completedAt,
-      icon: session.status === 'Completed' ? '✅' : '❌'
+      icon: session.status === 'Completed' ? '✅' : '❌',
     });
   }
 
@@ -117,7 +115,7 @@ function SessionTimeline({ session }: { session: GameSessionDto }) {
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
-      second: '2-digit'
+      second: '2-digit',
     }).format(date);
   };
 
@@ -135,9 +133,7 @@ function SessionTimeline({ session }: { session: GameSessionDto }) {
           </div>
           <div className="flex-1 pb-4">
             <p className="font-medium">{event.label}</p>
-            <p className="text-sm text-muted-foreground">
-              {formatTimestamp(event.timestamp)}
-            </p>
+            <p className="text-sm text-muted-foreground">{formatTimestamp(event.timestamp)}</p>
           </div>
         </div>
       ))}
@@ -187,13 +183,15 @@ export default function SessionDetailsPage() {
   };
 
   /**
-   * Initialize component
+   * Initialize component - fetchSession is stable, only re-run on id change
    */
+  /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
     if (id) {
       fetchSession();
     }
   }, [id]);
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   // Handle missing ID (after hooks)
   if (!id) {
@@ -202,9 +200,7 @@ export default function SessionDetailsPage() {
         <div className="bg-white rounded-xl shadow-lg overflow-hidden p-8">
           <h1 className="text-2xl font-bold mb-4">Invalid Session ID</h1>
           <p className="text-muted-foreground mb-4">No session ID provided.</p>
-          <Button onClick={() => router.push('/sessions')}>
-            Back to Sessions
-          </Button>
+          <Button onClick={() => router.push('/sessions')}>Back to Sessions</Button>
         </div>
       </div>
     );
@@ -303,9 +299,7 @@ export default function SessionDetailsPage() {
     return (
       <div className="container mx-auto py-8 px-4">
         <p className="text-muted-foreground mb-4">Session not found</p>
-        <Button onClick={() => router.push('/sessions')}>
-          Back to Sessions
-        </Button>
+        <Button onClick={() => router.push('/sessions')}>Back to Sessions</Button>
       </div>
     );
   }
@@ -318,7 +312,10 @@ export default function SessionDetailsPage() {
     <div className="container mx-auto py-8 px-4">
       {/* Header */}
       <div className="mb-6">
-        <Link href="/sessions" className="text-sm text-muted-foreground hover:text-foreground mb-2 inline-block">
+        <Link
+          href="/sessions"
+          className="text-sm text-muted-foreground hover:text-foreground mb-2 inline-block"
+        >
           ← Back to Sessions
         </Link>
         <div className="flex justify-between items-start">
@@ -326,9 +323,7 @@ export default function SessionDetailsPage() {
             <h1 className="text-3xl font-bold mb-2">Session Details</h1>
             <div className="flex gap-2 items-center">
               <SessionStatusBadge status={session.status} />
-              {session.winnerName && (
-                <Badge variant="outline">Winner: {session.winnerName}</Badge>
-              )}
+              {session.winnerName && <Badge variant="outline">Winner: {session.winnerName}</Badge>}
             </div>
           </div>
 
@@ -429,9 +424,7 @@ export default function SessionDetailsPage() {
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Session Timeline</CardTitle>
-            <CardDescription>
-              Track the progression of this game session
-            </CardDescription>
+            <CardDescription>Track the progression of this game session</CardDescription>
           </CardHeader>
           <CardContent>
             <SessionTimeline session={session} />

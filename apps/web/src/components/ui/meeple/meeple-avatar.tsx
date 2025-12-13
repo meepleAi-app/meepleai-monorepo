@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection -- Safe state/size config Record access */
 /**
  * MeepleAvatar Component - AI Chat Avatar with 5 States
  *

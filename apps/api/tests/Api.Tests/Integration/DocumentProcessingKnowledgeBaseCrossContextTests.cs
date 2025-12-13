@@ -14,8 +14,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.Infrastructure;
 using Api.SharedKernel.Infrastructure.Persistence;
-using DotNet.Testcontainers.Builders;
-using DotNet.Testcontainers.Containers;
+using Api.Tests.Infrastructure;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -29,54 +28,39 @@ namespace Api.Tests.Integration;
 /// <summary>
 /// Cross-context integration tests: DocumentProcessing ↔ KnowledgeBase.
 /// Tests PDF upload, processing, vector embedding, and RAG search integration.
+/// Uses SharedTestcontainersFixture for optimized performance and Docker hijack prevention (Issue #2031).
 /// </summary>
+[Collection("SharedTestcontainers")]
 [Trait("Category", TestCategories.Integration)]
+[Trait("Issue", "2031")]
 public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLifetime
 {
-    private IContainer? _postgresContainer;
+    private readonly SharedTestcontainersFixture _fixture;
+    private string _isolatedDbConnectionString = string.Empty;
+    private string _databaseName = string.Empty;
     private MeepleAiDbContext? _dbContext;
     private IServiceProvider? _serviceProvider;
     private IServiceProvider ServiceProvider => _serviceProvider ?? throw new InvalidOperationException("Service provider not initialized");
+
+    public DocumentProcessingKnowledgeBaseCrossContextTests(SharedTestcontainersFixture fixture)
+    {
+        _fixture = fixture;
+    }
 
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
     public async ValueTask InitializeAsync()
     {
-        // Always start isolated Postgres for this suite
-        _postgresContainer = new ContainerBuilder()
-            .WithImage("postgres:16-alpine")
-            .WithEnvironment("POSTGRES_USER", "postgres")
-            .WithEnvironment("POSTGRES_PASSWORD", "postgres")
-            .WithEnvironment("POSTGRES_DB", "doc_kb_test")
-            .WithPortBinding(5432, true)
-            .WithWaitStrategy(Wait.ForUnixContainer()
-                .UntilCommandIsCompleted("pg_isready", "-U", "postgres"))
-            .Build();
-
-        await _postgresContainer.StartAsync(TestCancellationToken);
-        var containerPort = _postgresContainer.GetMappedPublicPort(5432);
-        var connectionString = $"Host=localhost;Port={containerPort};Database=doc_kb_test;Username=postgres;Password=postgres;";
-
-        // Enforce SSL disabled and stable connection settings
-        var enforcedBuilder = new NpgsqlConnectionStringBuilder(connectionString)
-        {
-            SslMode = SslMode.Disable,
-            KeepAlive = 30,
-            Pooling = false,
-            Timeout = 15,
-            CommandTimeout = 30
-        };
-        enforcedBuilder.Host = string.IsNullOrWhiteSpace(enforcedBuilder.Host) || enforcedBuilder.Host == "localhost"
-            ? "127.0.0.1"
-            : enforcedBuilder.Host;
-        connectionString = enforcedBuilder.ConnectionString;
+        // Issue #2031: Migrated to SharedTestcontainersFixture for Docker hijack prevention and performance
+        _databaseName = $"test_docknowledge_{Guid.NewGuid():N}";
+        _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
         var services = new ServiceCollection();
         services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
 
         services.AddDbContext<MeepleAiDbContext>(options =>
         {
-            options.UseNpgsql(connectionString);
+            options.UseNpgsql(_isolatedDbConnectionString);
             options.ConfigureWarnings(w =>
                 w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
         });
@@ -110,10 +94,17 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
         else
             (_serviceProvider as IDisposable)?.Dispose();
 
-        if (_postgresContainer != null)
+        // Issue #2031: Use SharedTestcontainersFixture for cleanup
+        if (!string.IsNullOrEmpty(_databaseName))
         {
-            await _postgresContainer.StopAsync(TestCancellationToken);
-            await _postgresContainer.DisposeAsync();
+            try
+            {
+                await _fixture.DropIsolatedDatabaseAsync(_databaseName);
+            }
+            catch
+            {
+                // Ignore cleanup errors
+            }
         }
     }
 
@@ -363,7 +354,7 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
 
         var gameVectors = await vectorRepository.GetByGameIdAsync(game.Id, TestCancellationToken);
         gameVectors.Should().ContainSingle();
-        gameVectors.First().Metadata.Should().Contain("outbreak");
+        gameVectors[0].Metadata.Should().Contain("outbreak");
     }
 
     [Fact]

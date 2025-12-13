@@ -255,7 +255,6 @@ public class RagServicePerformanceTests : IDisposable
         var mockConfigProvider = RagTestHelpers.CreateDefaultConfigProvider().Object;
 
         return new RagService(
-            _dbContext,
             mockEmbeddingService,
             mockQdrantService,
             mockHybridSearchService,
@@ -265,7 +264,6 @@ public class RagServicePerformanceTests : IDisposable
             mockLogger.Object,
             mockQueryExpansion,
             mockReranker,
-            mockCitationExtractor.Object,
             mockConfigProvider);
     }
 
@@ -319,8 +317,9 @@ public class RagServicePerformanceTests : IDisposable
                 It.IsAny<float[]>(),
                 It.IsAny<string>(),
                 It.IsAny<int>(),
+                It.IsAny<IReadOnlyList<string>?>(),
                 It.IsAny<CancellationToken>()))
-            .Returns(async (string gameId, float[] embedding, string lang, int limit, CancellationToken ct) =>
+            .Returns(async (string gameId, float[] embedding, string lang, int limit, IReadOnlyList<string>? documentIds, CancellationToken ct) =>
             {
                 // Simulate realistic vector search latency: 100-200ms
                 await Task.Delay(Random.Shared.Next(100, 200), ct);
@@ -343,10 +342,11 @@ public class RagServicePerformanceTests : IDisposable
                 It.IsAny<Guid>(),
                 It.IsAny<SearchMode>(),
                 It.IsAny<int>(),
+                It.IsAny<IReadOnlyList<Guid>?>(),
                 It.IsAny<float>(),
                 It.IsAny<float>(),
                 It.IsAny<CancellationToken>()))
-            .Returns(async (string query, Guid gameId, SearchMode mode, int limit, float vw, float kw, CancellationToken ct) =>
+            .Returns(async (string query, Guid gameId, SearchMode mode, int limit, IReadOnlyList<Guid>? documentIds, float vw, float kw, CancellationToken ct) =>
             {
                 // Simulate realistic hybrid search latency: 150-250ms
                 await Task.Delay(Random.Shared.Next(150, 250), ct);

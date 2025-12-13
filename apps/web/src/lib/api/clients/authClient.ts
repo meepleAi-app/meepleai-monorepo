@@ -60,6 +60,9 @@ import {
   GetUserActivityResultSchema,
   type GetUserActivityResult,
   type UserActivityFilters,
+  RevokeAllSessionsResponseSchema,
+  type RevokeAllSessionsResponse,
+  type RevokeAllSessionsRequest,
 } from '../schemas';
 
 export interface CreateAuthClientParams {
@@ -257,6 +260,21 @@ export function createAuthClient({ httpClient }: CreateAuthClientParams) {
         `/api/v1/auth/sessions/${encodeURIComponent(sessionId)}/revoke`,
         {},
         RevokeSessionResponseSchema
+      );
+    },
+
+    /**
+     * Revoke all sessions for current user (Issue #2056)
+     * POST /api/v1/auth/sessions/revoke-all
+     * @param request Optional request with includeCurrentSession and password
+     */
+    async revokeAllSessions(
+      request?: RevokeAllSessionsRequest
+    ): Promise<RevokeAllSessionsResponse> {
+      return httpClient.post(
+        '/api/v1/auth/sessions/revoke-all',
+        request ?? {},
+        RevokeAllSessionsResponseSchema
       );
     },
 

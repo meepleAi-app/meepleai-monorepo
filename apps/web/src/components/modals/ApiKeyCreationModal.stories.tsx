@@ -7,7 +7,7 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { ApiKeyCreationModal } from './ApiKeyCreationModal';
 import { useState } from 'react';
-import { fn } from '@storybook/test';
+import { fn } from 'storybook/test';
 
 const meta: Meta<typeof ApiKeyCreationModal> = {
   title: 'Modals/ApiKeyCreationModal',

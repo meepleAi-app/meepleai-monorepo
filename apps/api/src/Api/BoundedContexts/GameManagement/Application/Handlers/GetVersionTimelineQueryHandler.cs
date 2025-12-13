@@ -102,7 +102,7 @@ public class GetVersionTimelineQueryHandler : IQueryHandler<GetVersionTimelineQu
         // Mark the most recent version as current
         if (versionNodes.Any())
         {
-            var latestVersion = versionNodes.OrderByDescending(v => v.CreatedAt).First();
+            var latestVersion = versionNodes.MaxBy(v => v.CreatedAt)!;
             for (int i = 0; i < versionNodes.Count; i++)
             {
                 if (versionNodes[i].Id == latestVersion.Id)

@@ -1,4 +1,6 @@
+using Api.BoundedContexts.Authentication.Domain.Repositories;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
+using Api.BoundedContexts.Authentication.Infrastructure.Repositories;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -20,6 +22,7 @@ public static class AuthenticationServiceExtensions
         services.AddScoped<IApiKeyRepository, ApiKeyRepository>();
         services.AddScoped<IApiKeyUsageLogRepository, ApiKeyUsageLogRepository>();
         services.AddScoped<IOAuthAccountRepository, OAuthAccountRepository>();
+        services.AddScoped<IShareLinkRepository, ShareLinkRepository>(); // ISSUE-2052
 
         // Register Unit of Work
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();

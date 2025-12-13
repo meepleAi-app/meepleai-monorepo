@@ -10,12 +10,8 @@ namespace Api.BoundedContexts.SystemConfiguration.Application.Handlers;
 /// </summary>
 public class ValidateConfigCommandHandler : ICommandHandler<ValidateConfigCommand, ConfigurationValidationResult>
 {
-    private readonly ConfigurationValidator _validator;
-
-    public ValidateConfigCommandHandler(ConfigurationValidator validator)
-    {
-        _validator = validator ?? throw new ArgumentNullException(nameof(validator));
-    }
+    // Note: Using static Validate method from ConfigurationValidator
+    // No instance fields needed
 
     public Task<ConfigurationValidationResult> Handle(ValidateConfigCommand command, CancellationToken cancellationToken)
     {

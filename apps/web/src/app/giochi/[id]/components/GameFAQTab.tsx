@@ -2,17 +2,14 @@
  * GameFAQTab Component - FAQ Tab Content
  *
  * Displays frequently asked questions using Shadcn Accordion.
- * Currently uses placeholder/mock data.
- *
- * TODO: Issue #2028 - Backend FAQ system implementation
- * via GameManagement.Application.Queries.GetGameFAQsQuery
+ * Issue #2028: Backend FAQ system implementation complete.
  *
  * Issue #1841 (PAGE-005)
  */
 
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Accordion,
   AccordionContent,
@@ -20,55 +17,20 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { HelpCircle } from 'lucide-react';
+import { HelpCircle, ThumbsUp, Info } from 'lucide-react';
+import { api, type GameFAQ } from '@/lib/api';
+import { Spinner } from '@/components/loading';
+import { Button } from '@/components/ui/button';
 
 // ============================================================================
 // Types
 // ============================================================================
 
-interface FAQ {
-  id: string;
-  question: string;
-  answer: string;
-}
-
 export interface GameFAQTabProps {
-  /** Game ID for future backend query */
+  /** Game ID for backend query */
   gameId: string;
   /** Game title for context */
   gameTitle: string;
-}
-
-// ============================================================================
-// Mock Data (Placeholder)
-// ============================================================================
-
-function getMockFAQs(gameTitle: string): FAQ[] {
-  return [
-    {
-      id: 'faq-1',
-      question: 'Come si vince al gioco?',
-      answer: `Le condizioni di vittoria per ${gameTitle} verranno caricate dal sistema FAQ. Attualmente questo è un placeholder. In futuro, il backend fornirà FAQ specifiche per ogni gioco tramite query dedicate.`,
-    },
-    {
-      id: 'faq-2',
-      question: 'Quali sono le fasi di gioco?',
-      answer:
-        'Le fasi di gioco saranno specificate nel sistema FAQ. Per ora, questa è una risposta placeholder che verrà sostituita con contenuti reali caricati dal backend.',
-    },
-    {
-      id: 'faq-3',
-      question: 'Come si svolgono i turni?',
-      answer:
-        'La spiegazione dei turni di gioco verrà fornita dal sistema FAQ una volta implementato. Attualmente questo è un esempio di come verranno visualizzate le risposte.',
-    },
-    {
-      id: 'faq-4',
-      question: 'Ci sono espansioni disponibili?',
-      answer:
-        'Le informazioni sulle espansioni saranno integrate dal backend. Per ora, questa sezione mostra come verranno organizzate le FAQ nel layout accordion.',
-    },
-  ];
 }
 
 // ============================================================================
@@ -76,39 +38,104 @@ function getMockFAQs(gameTitle: string): FAQ[] {
 // ============================================================================
 
 export function GameFAQTab({ gameId, gameTitle }: GameFAQTabProps) {
-  const faqs = getMockFAQs(gameTitle);
+  const [faqs, setFaqs] = useState<GameFAQ[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [upvoting, setUpvoting] = useState<string | null>(null);
+
+  // Fetch FAQs from backend
+  useEffect(() => {
+    const fetchFAQs = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const result = await api.games.getFAQs(gameId, 10, 0);
+        setFaqs(result.faqs);
+      } catch (err) {
+        console.error('Failed to fetch FAQs:', err);
+        setError('Errore nel caricamento delle FAQ. Riprova più tardi.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFAQs();
+  }, [gameId]);
+
+  // Handle upvote
+  const handleUpvote = async (faqId: string) => {
+    try {
+      setUpvoting(faqId);
+      const updatedFAQ = await api.games.upvoteFAQ(faqId);
+
+      // Update local state
+      setFaqs(prev => prev.map(faq => (faq.id === faqId ? updatedFAQ : faq)));
+    } catch (err) {
+      console.error('Failed to upvote FAQ:', err);
+    } finally {
+      setUpvoting(null);
+    }
+  };
 
   return (
     <div className="space-y-6" data-testid="faq-tab">
-      {/* Development Notice */}
-      <Alert>
-        <HelpCircle className="h-4 w-4" />
-        <AlertDescription>
-          <strong>Nota:</strong> Le FAQ sono attualmente placeholder. In futuro, verranno caricate
-          dinamicamente dal backend per ogni gioco.
-        </AlertDescription>
-      </Alert>
+      {/* Loading State */}
+      {loading && (
+        <div className="flex justify-center py-12">
+          <Spinner size="lg" />
+        </div>
+      )}
 
-      {/* FAQ Accordion */}
-      <Accordion type="single" collapsible className="w-full">
-        {faqs.map(faq => (
-          <AccordionItem key={faq.id} value={faq.id}>
-            <AccordionTrigger className="text-left font-medium hover:no-underline">
-              {faq.question}
-            </AccordionTrigger>
-            <AccordionContent className="text-muted-foreground leading-relaxed">
-              {faq.answer}
-            </AccordionContent>
-          </AccordionItem>
-        ))}
-      </Accordion>
+      {/* Error State */}
+      {error && !loading && (
+        <Alert variant="destructive">
+          <HelpCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
 
-      {/* Backend TODO Comment */}
-      {/* TODO: Issue #2028 - Replace mock FAQ data with backend query:
-          const { data: faqs } = useGameFAQs(gameId);
-          Backend Query: GameManagement.Application.Queries.GetGameFAQsQuery
-          Expected response: Array<{ id: string; question: string; answer: string; }>
-      */}
+      {/* Empty State */}
+      {!loading && !error && faqs.length === 0 && (
+        <Alert>
+          <Info className="h-4 w-4" />
+          <AlertDescription>
+            <strong>Nessuna FAQ disponibile</strong> per {gameTitle}.
+            <br />
+            Le FAQ verranno aggiunte dagli amministratori nel tempo.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* FAQ List */}
+      {!loading && !error && faqs.length > 0 && (
+        <Accordion type="single" collapsible className="w-full">
+          {faqs.map(faq => (
+            <AccordionItem key={faq.id} value={faq.id}>
+              <AccordionTrigger className="text-left font-medium hover:no-underline">
+                <div className="flex items-center gap-3 w-full">
+                  <span className="flex-1">{faq.question}</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="shrink-0"
+                    onClick={e => {
+                      e.stopPropagation();
+                      handleUpvote(faq.id);
+                    }}
+                    disabled={upvoting === faq.id}
+                  >
+                    <ThumbsUp className="h-4 w-4 mr-1" />
+                    {faq.upvotes}
+                  </Button>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="text-muted-foreground leading-relaxed">
+                {faq.answer}
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
+      )}
     </div>
   );
 }

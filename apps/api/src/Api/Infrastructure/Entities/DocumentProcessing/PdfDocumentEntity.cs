@@ -46,6 +46,11 @@ public class PdfDocumentEntity
     [Column("search_vector")]
     public string? SearchVector { get; set; }
 
+    // Issue #2051: Multi-document collection support
+    public Guid? CollectionId { get; set; }
+    public string DocumentType { get; set; } = "base"; // base, expansion, errata, homerule
+    public int SortOrder { get; set; } = 0;
+
     [NotMapped]
     public ProcessingProgress? ProcessingProgress
     {
@@ -59,4 +64,7 @@ public class PdfDocumentEntity
 
     public GameEntity Game { get; set; } = default!;
     public UserEntity UploadedBy { get; set; } = default!;
+
+    // Issue #2051: Navigation to collection
+    public DocumentCollectionEntity? Collection { get; set; }
 }

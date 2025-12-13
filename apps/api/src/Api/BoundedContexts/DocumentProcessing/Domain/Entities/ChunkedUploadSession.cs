@@ -1,4 +1,5 @@
 using Api.SharedKernel.Domain.Entities;
+using System.Globalization;
 
 namespace Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 
@@ -185,8 +186,9 @@ public sealed class ChunkedUploadSession : AggregateRoot<Guid>
         if (string.IsNullOrEmpty(trimmed))
             return new HashSet<int>();
 
+        // FIX MA0011: Use IFormatProvider for culture-aware parsing
         return trimmed.Split(',', StringSplitOptions.RemoveEmptyEntries)
-            .Select(s => int.Parse(s.Trim()))
+            .Select(s => int.Parse(s.Trim(), CultureInfo.InvariantCulture))
             .ToHashSet();
     }
 }

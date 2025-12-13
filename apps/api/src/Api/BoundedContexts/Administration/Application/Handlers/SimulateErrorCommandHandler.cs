@@ -45,10 +45,10 @@ public class SimulateErrorCommandHandler : IRequestHandler<SimulateErrorCommand,
         return request.ErrorType.ToLowerInvariant() switch
         {
             "500" => throw new InvalidOperationException($"Simulated 500 Internal Server Error (test endpoint)"),
-            "400" => throw new ArgumentException($"Simulated 400 Bad Request (test endpoint)"),
+            "400" => throw new ArgumentException($"Simulated 400 Bad Request (test endpoint)", nameof(request)),
             "timeout" => await SimulateTimeoutAsync(cancellationToken).ConfigureAwait(false),
             "exception" => throw new ApplicationException($"Simulated unhandled exception (test endpoint)"),
-            _ => throw new ArgumentException($"Invalid error type: {request.ErrorType}. Valid types: 500, 400, timeout, exception")
+            _ => throw new ArgumentException($"Invalid error type: {request.ErrorType}. Valid types: 500, 400, timeout, exception", nameof(request))
         };
     }
 

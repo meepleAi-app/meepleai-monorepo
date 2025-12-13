@@ -30,6 +30,10 @@ import {
   createBggClient,
   createAgentsClient,
   createAdminClient,
+  createAlertsClient,
+  createDocumentsClient,
+  createShareLinksClient,
+  createNotificationsClient,
   type AuthClient,
   type GamesClient,
   type SessionsClient,
@@ -39,7 +43,21 @@ import {
   type BggClient,
   type AgentsClient,
   type AdminClient,
+  type AlertsClient,
+  type DocumentsClient,
+  type ShareLinksClient,
+  type NotificationsClient,
 } from './clients';
+
+// Re-export alert schemas (Issue #921)
+export * from './schemas/alerts.schemas';
+
+// Re-export alert config API and schemas (Issue #915)
+export * from './alert-config.api';
+export * from './schemas/alert-config.schemas';
+
+// Re-export notification schemas (Issue #2053)
+export * from './schemas/notifications.schemas';
 
 // Re-export client-specific types for consumer convenience
 export type {
@@ -137,6 +155,18 @@ export interface ApiClient {
   /** Administration (Users & Prompts Management) - Issue #1679 */
   admin: AdminClient;
 
+  /** Alert Management (Issue #921) */
+  alerts: AlertsClient;
+
+  /** Document Collections Management (Issue #2051) */
+  documents: DocumentsClient;
+
+  /** Shareable Chat Thread Links (Issue #2052) */
+  shareLinks: ShareLinksClient;
+
+  /** User Notifications (Issue #2053) */
+  notifications: NotificationsClient;
+
   /** Generic DELETE helper (used in some legacy tests) */
   delete: (path: string) => Promise<void>;
 }
@@ -196,6 +226,10 @@ export function createApiClient(config?: ApiClientConfig): ApiClient {
     bgg: createBggClient({ httpClient }),
     agents: createAgentsClient({ httpClient }),
     admin: createAdminClient({ httpClient }),
+    alerts: createAlertsClient({ httpClient }),
+    documents: createDocumentsClient({ httpClient }),
+    shareLinks: createShareLinksClient({ httpClient }), // ISSUE-2052
+    notifications: createNotificationsClient({ httpClient }), // ISSUE-2053
     delete: (path: string) => httpClient.delete(path),
   };
 

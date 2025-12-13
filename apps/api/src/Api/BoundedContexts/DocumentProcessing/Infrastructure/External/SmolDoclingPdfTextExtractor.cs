@@ -20,7 +20,6 @@ public class SmolDoclingPdfTextExtractor : IPdfTextExtractor
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<SmolDoclingPdfTextExtractor> _logger;
-    private readonly PdfTextProcessingDomainService _domainService;
     private readonly IConfiguration _configuration;
 
     // Default timeout for VLM processing (longer than Unstructured due to GPU inference)
@@ -29,12 +28,10 @@ public class SmolDoclingPdfTextExtractor : IPdfTextExtractor
     public SmolDoclingPdfTextExtractor(
         IHttpClientFactory httpClientFactory,
         ILogger<SmolDoclingPdfTextExtractor> logger,
-        PdfTextProcessingDomainService domainService,
         IConfiguration configuration)
     {
         _httpClientFactory = httpClientFactory;
         _logger = logger;
-        _domainService = domainService;
         _configuration = configuration;
     }
 
@@ -214,8 +211,8 @@ public class SmolDoclingPdfTextExtractor : IPdfTextExtractor
             {
                 var errorContent = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
                 _logger.LogError(
-                    "[{RequestId}] SmolDocling service error: {StatusCode}",
-                    requestId, response.StatusCode);
+                    "[{RequestId}] SmolDocling service error: {StatusCode} - {ErrorContent}",
+                    requestId, response.StatusCode, errorContent);
 
                 return PagedTextExtractionResult.CreateFailure(
                     $"Service error: {response.StatusCode}");

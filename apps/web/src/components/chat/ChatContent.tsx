@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection -- Safe Zustand store key access */
 /**
  * ChatContent - Main chat content area (Issue #858, BGAI-074)
  *

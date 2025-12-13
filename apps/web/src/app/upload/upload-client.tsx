@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection -- Safe wizard state object access */
 /**
  * Upload Page - Client Component
  *
@@ -29,6 +30,7 @@ import { categorizeError, type CategorizedError } from '@/lib/errorUtils';
 import { ErrorDisplay } from '@/components/errors';
 import { ProcessingProgress } from '@/components/progress';
 import { MultiFileUpload } from '@/components/upload';
+import { MultiDocumentCollectionUpload } from '@/components/documents';
 import { WizardSteps } from '@/components/wizard/WizardSteps';
 import { GamePicker } from '@/components/game/GamePicker';
 import { PdfUploadForm } from '@/components/pdf/PdfUploadForm';
@@ -79,6 +81,7 @@ export function UploadClient({
   const [publishing, setPublishing] = useState(false);
   const [retryingPdfId, setRetryingPdfId] = useState<string | null>(null);
   const [autoAdvanceTriggered, setAutoAdvanceTriggered] = useState(false);
+  const [uploadMode, setUploadMode] = useState<'single' | 'collection'>('single');
 
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
@@ -350,40 +353,87 @@ export function UploadClient({
 
             {confirmedGameId && confirmedGame && (
               <>
-                <PdfUploadForm
-                  gameId={confirmedGameId}
-                  gameName={confirmedGame.title}
-                  onUploadSuccess={handleUploadSuccess}
-                  onUploadError={handleUploadError}
-                  onUploadStart={onUploadStart}
-                />
+                {/* Upload Mode Toggle */}
+                <Card className="p-4 mb-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-semibold">Upload Mode</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Choose single file upload or multi-document collection
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant={uploadMode === 'single' ? 'default' : 'outline'}
+                        onClick={() => setUploadMode('single')}
+                        size="sm"
+                      >
+                        Single File
+                      </Button>
+                      <Button
+                        variant={uploadMode === 'collection' ? 'default' : 'outline'}
+                        onClick={() => setUploadMode('collection')}
+                        size="sm"
+                      >
+                        Document Collection
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
 
-                <div className="mt-8">
-                  <MultiFileUpload
+                {/* Single File Upload Mode (Original) */}
+                {uploadMode === 'single' && (
+                  <>
+                    <PdfUploadForm
+                      gameId={confirmedGameId}
+                      gameName={confirmedGame.title}
+                      onUploadSuccess={handleUploadSuccess}
+                      onUploadError={handleUploadError}
+                      onUploadStart={onUploadStart}
+                    />
+
+                    <div className="mt-8">
+                      <MultiFileUpload
+                        gameId={confirmedGameId}
+                        gameName={confirmedGame.title}
+                        language="en"
+                        autoUpload={autoUpload}
+                        onUploadComplete={refetchPdfs}
+                        onUploadStart={() => onUploadStart?.()}
+                        onUploadSuccess={item => {
+                          // When an individual file upload succeeds, trigger the wizard flow
+                          if (item.pdfId) {
+                            handleUploadSuccess(item.pdfId);
+                          }
+                        }}
+                        onUploadError={() => onUploadError?.()}
+                      />
+                    </div>
+
+                    <PdfTable
+                      pdfs={pdfs}
+                      loading={loadingPdfs}
+                      error={pdfsError}
+                      retryingPdfId={retryingPdfId}
+                      onRetryParsing={handleRetryParsing}
+                      onOpenLog={handleOpenLog}
+                    />
+                  </>
+                )}
+
+                {/* Multi-Document Collection Upload Mode (New) */}
+                {uploadMode === 'collection' && (
+                  <MultiDocumentCollectionUpload
                     gameId={confirmedGameId}
                     gameName={confirmedGame.title}
-                    language="en"
-                    autoUpload={autoUpload}
-                    onUploadComplete={refetchPdfs}
-                    onUploadStart={() => onUploadStart?.()}
-                    onUploadSuccess={item => {
-                      // When an individual file upload succeeds, trigger the wizard flow
-                      if (item.pdfId) {
-                        handleUploadSuccess(item.pdfId);
-                      }
+                    onSuccess={collectionId => {
+                      // Optionally navigate to collection view or show success
+                      void refetchPdfs();
+                      setUploadMode('single'); // Return to single mode after success
                     }}
-                    onUploadError={() => onUploadError?.()}
+                    onCancel={() => setUploadMode('single')}
                   />
-                </div>
-
-                <PdfTable
-                  pdfs={pdfs}
-                  loading={loadingPdfs}
-                  error={pdfsError}
-                  retryingPdfId={retryingPdfId}
-                  onRetryParsing={handleRetryParsing}
-                  onOpenLog={handleOpenLog}
-                />
+                )}
               </>
             )}
           </div>

@@ -6,7 +6,8 @@ import Link from 'next/link';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { useAuthUser } from '@/components/auth/AuthProvider';
-import { AdminAuthGuard } from '@/components/admin/AdminAuthGuard';
+import { AdminAuthGuard, BulkActionBar } from '@/components/admin';
+import { Trash2 } from 'lucide-react';
 
 // Types
 type User = {
@@ -125,6 +126,7 @@ export function AdminPageClient() {
         role: roleFilter !== 'all' ? roleFilter : undefined,
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- API response type coercion
       setUsers(result.items as any);
       setTotal(result.total);
       setDataLoading(false);
@@ -330,15 +332,27 @@ export function AdminPageClient() {
           >
             Create User
           </button>
-          {selectedUsers.size > 0 && (
-            <button
-              onClick={handleBulkDelete}
-              className="px-4 py-2 bg-red-600 text-white border-none rounded cursor-pointer hover:bg-red-700"
-            >
-              Delete Selected ({selectedUsers.size})
-            </button>
-          )}
         </div>
+
+        {/* Bulk Action Bar */}
+        <BulkActionBar
+          selectedCount={selectedUsers.size}
+          totalCount={users.length}
+          itemLabel="users"
+          itemLabelSingular="user"
+          actions={[
+            {
+              id: 'delete',
+              label: 'Delete',
+              icon: Trash2,
+              variant: 'destructive',
+              onClick: () => handleBulkDelete(),
+              tooltip: 'Delete selected users',
+            },
+          ]}
+          onClearSelection={() => setSelectedUsers(new Set())}
+          testId="users-bulk-action-bar"
+        />
 
         {/* User Table */}
         <div className="overflow-x-auto mb-4">

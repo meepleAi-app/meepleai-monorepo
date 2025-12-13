@@ -149,7 +149,7 @@ public class CitationValidationService : ICitationValidationService
         Snippet snippet,
         Dictionary<string, int> pdfDict,
         List<CitationValidationError> errors,
-        CancellationToken cancellationToken)
+        CancellationToken _)
     {
         // Parse source format (expected: "PDF:guid")
         if (string.IsNullOrWhiteSpace(snippet.source))

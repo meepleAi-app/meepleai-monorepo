@@ -93,7 +93,9 @@ export function AdminPageClient({ user }: AdminPageClientProps) {
         api.admin.getPromptVersions(id),
       ]);
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- API response type coercion
       setTemplate(templateResult as any);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- API response type coercion
       setVersions(versionsResult as any);
     } catch (err) {
       setError(getErrorMessage(err, 'Failed to fetch template'));

@@ -34,6 +34,7 @@ import React from 'react';
 import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 import { useGames } from '@/hooks/queries/useGames';
 import { BottomNav } from '@/components/layout/BottomNav';
+import { TopNav } from '@/components/layout/TopNav';
 import { GreetingSection } from './components/GreetingSection';
 import { RecentGamesSection } from './components/RecentGamesSection';
 import { ChatHistorySection } from './components/ChatHistorySection';
@@ -59,7 +60,9 @@ export default function DashboardPage() {
   // Loading state: Show skeleton UI
   if (userLoading) {
     return (
-      <div className="min-h-screen bg-background pb-24 md:pb-0">
+      <div className="min-h-screen bg-background pb-24 md:pb-0 md:pt-16">
+        {/* Top Navigation (desktop) */}
+        <TopNav />
         <div className="container mx-auto px-4 py-8 space-y-8">
           {/* Greeting Skeleton */}
           <div className="space-y-2">
@@ -94,7 +97,9 @@ export default function DashboardPage() {
     const errorMessage = userError instanceof Error ? userError.message : String(userError);
 
     return (
-      <div className="min-h-screen bg-background pb-24 md:pb-0">
+      <div className="min-h-screen bg-background pb-24 md:pb-0 md:pt-16">
+        {/* Top Navigation (desktop) */}
+        <TopNav />
         <div className="container mx-auto px-4 py-8">
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
@@ -114,7 +119,9 @@ export default function DashboardPage() {
   // No user data (should not happen with middleware, but defensive)
   if (!user) {
     return (
-      <div className="min-h-screen bg-background pb-24 md:pb-0">
+      <div className="min-h-screen bg-background pb-24 md:pb-0 md:pt-16">
+        {/* Top Navigation (desktop) */}
+        <TopNav />
         <div className="container mx-auto px-4 py-8">
           <Alert>
             <AlertCircle className="h-4 w-4" />
@@ -132,7 +139,9 @@ export default function DashboardPage() {
 
   // Main dashboard content
   return (
-    <div className="min-h-screen bg-background pb-24 md:pb-0">
+    <div className="min-h-screen bg-background pb-24 md:pb-0 md:pt-16">
+      {/* Top Navigation (desktop) */}
+      <TopNav />
       <div className="container mx-auto px-4 py-8 space-y-8">
         {/* Greeting Section */}
         <GreetingSection user={user} />

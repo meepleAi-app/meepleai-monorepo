@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection -- Safe mock game data array access */
 /**
  * Game Catalog Page Stories (Issue #1838: PAGE-003)
  *

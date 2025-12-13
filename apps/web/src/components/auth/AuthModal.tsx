@@ -28,6 +28,7 @@ export interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
   defaultMode?: 'login' | 'register';
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Auth provider user type varies
   onSuccess?: (user: any) => void;
   sessionExpiredMessage?: boolean;
 }

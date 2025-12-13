@@ -14,17 +14,14 @@ public class UnstructuredPdfTextExtractor : IPdfTextExtractor
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<UnstructuredPdfTextExtractor> _logger;
-    private readonly PdfTextProcessingDomainService _domainService;
     private readonly JsonSerializerOptions _jsonOptions;
 
     public UnstructuredPdfTextExtractor(
         IHttpClientFactory httpClientFactory,
-        ILogger<UnstructuredPdfTextExtractor> logger,
-        PdfTextProcessingDomainService domainService)
+        ILogger<UnstructuredPdfTextExtractor> logger)
     {
         _httpClientFactory = httpClientFactory;
         _logger = logger;
-        _domainService = domainService;
         _jsonOptions = new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,

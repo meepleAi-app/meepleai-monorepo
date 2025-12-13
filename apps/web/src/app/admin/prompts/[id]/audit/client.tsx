@@ -77,6 +77,7 @@ export function AdminPageClient({ user }: AdminPageClientProps) {
         pageSize: 20,
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- API response type coercion
       setLogs((result.logs as any) || []);
       setTotalPages(result.totalPages || 1);
     } catch (err) {

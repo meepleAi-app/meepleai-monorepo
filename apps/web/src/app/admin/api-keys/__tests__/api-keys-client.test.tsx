@@ -320,7 +320,8 @@ describe('ApiKeysPageClient', () => {
     const firstKeyCheckbox = checkboxes[1]; // Skip the "select all" checkbox
     await user.click(firstKeyCheckbox);
 
-    const bulkDeleteButton = await screen.findByTestId('bulk-delete-button');
+    // Find the delete button in BulkActionBar
+    const bulkDeleteButton = await screen.findByTestId('bulk-action-bar-action-delete');
     await user.click(bulkDeleteButton);
 
     await waitFor(() => {

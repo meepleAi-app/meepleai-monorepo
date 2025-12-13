@@ -259,8 +259,7 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
         var unstructuredClient = new HttpClient { BaseAddress = new Uri($"http://localhost:{unstructuredPort}") };
         var unstructuredExtractor = new UnstructuredPdfTextExtractor(
             new TestHttpClientFactory(unstructuredClient),
-            Mock.Of<ILogger<UnstructuredPdfTextExtractor>>(),
-            new PdfTextProcessingDomainService(_configuration));
+            Mock.Of<ILogger<UnstructuredPdfTextExtractor>>());
 
         var smoldoclingExtractor = new FakeExtractor(success: false, name: "SmolDocling"); // Skip Stage 2 for speed
         var docnetExtractor = new FakeExtractor(success: true, quality: ExtractionQuality.Medium, name: "Docnet");

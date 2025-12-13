@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection -- Safe variant config Record access */
 /**
  * EmptyState - Reusable empty state component for consistent UI
  *

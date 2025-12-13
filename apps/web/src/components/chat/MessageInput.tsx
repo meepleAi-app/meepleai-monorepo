@@ -4,13 +4,17 @@
  * Handles user message input and submission.
  * Integrates with ChatProvider for state and submission.
  * AI-14: Includes SearchModeToggle for hybrid search feature.
+ * Issue #2051: Includes DocumentSourceSelector for multi-document filtering.
  * Migrated to shadcn/ui components.
  */
 
 import React, { FormEvent } from 'react';
 import { useChatWithStreaming } from '@/hooks/useChatWithStreaming';
+import { useChatStore } from '@/store/chat/store';
+import { useDocumentsByGame } from '@/hooks/queries/useDocumentsByGame';
 import { LoadingButton } from '../loading/LoadingButton';
-import { SearchModeToggle, SearchMode } from '@/components';
+import { SearchModeToggle, SearchMode, DocumentSourceSelector } from '@/components';
+import type { DocumentSource } from '@/components';
 import { Input } from '@/components/ui/input';
 
 export function MessageInput() {
@@ -29,6 +33,18 @@ export function MessageInput() {
     stopStreaming,
   } = useChatWithStreaming();
 
+  // Issue #2051: Document source selection
+  const { selectedDocumentIds, setSelectedDocuments } = useChatStore(state => ({
+    selectedDocumentIds: state.selectedDocumentIds,
+    setSelectedDocuments: state.setSelectedDocuments,
+  }));
+
+  // Fetch documents for selected game
+  const { data: documents = [], isLoading: documentsLoading } = useDocumentsByGame({
+    gameId: selectedGameId,
+    enabled: selectedGameId !== null,
+  });
+
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!inputValue.trim() || !selectedGameId || !selectedAgentId) {
@@ -44,8 +60,27 @@ export function MessageInput() {
   const isDisabled = loading.sending || isStreaming || !selectedGameId || !selectedAgentId;
   const isSendDisabled = !inputValue.trim() || isDisabled;
 
+  // Map PDFs to DocumentSource format
+  const documentSources: DocumentSource[] = documents.map(pdf => ({
+    id: pdf.id,
+    fileName: pdf.fileName,
+    documentType: (pdf.documentType ?? 'base') as DocumentSource['documentType'], // Issue #2051
+    uploadedAt: pdf.uploadedAt,
+    pageCount: pdf.pageCount,
+  }));
+
   return (
     <div className="p-4 border-t border-[#dadce0] bg-white flex flex-col gap-3">
+      {/* Issue #2051: Document Source Selector */}
+      {documents.length > 0 && (
+        <DocumentSourceSelector
+          documents={documentSources}
+          selectedIds={selectedDocumentIds}
+          onSelectionChange={setSelectedDocuments}
+          disabled={isDisabled || documentsLoading}
+        />
+      )}
+
       {/* AI-14: Search Mode Toggle */}
       <SearchModeToggle
         value={searchMode as SearchMode}

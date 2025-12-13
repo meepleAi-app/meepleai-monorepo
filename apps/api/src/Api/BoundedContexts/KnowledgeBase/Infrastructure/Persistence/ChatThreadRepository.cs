@@ -73,6 +73,14 @@ public class ChatThreadRepository : RepositoryBase, IChatThreadRepository
         return threadEntities.Select(MapToDomain).ToList();
     }
 
+    public async Task<int> CountByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        return await DbContext.ChatThreads
+            .AsNoTracking()
+            .CountAsync(t => t.UserId == userId, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
     public async Task<IReadOnlyList<ChatThread>> GetRecentAsync(int limit = 20, CancellationToken cancellationToken = default)
     {
         var threadEntities = await DbContext.ChatThreads

@@ -14,6 +14,7 @@ public sealed class ChatThread : AggregateRoot<Guid>
 {
     public Guid UserId { get; private set; }
     public Guid? GameId { get; private set; }
+    public Guid? AgentId { get; private set; } // Issue #2030 - Track which agent was used
     public string? Title { get; private set; }
     public ThreadStatus Status { get; private set; }
     public DateTime CreatedAt { get; private set; }
@@ -38,13 +39,15 @@ public sealed class ChatThread : AggregateRoot<Guid>
         Guid id,
         Guid userId,
         Guid? gameId = null,
-        string? title = null) : base(id)
+        string? title = null,
+        Guid? agentId = null) : base(id) // Issue #2030 - Positioned after title for backward compatibility
     {
         if (userId == Guid.Empty)
             throw new ArgumentException("UserId cannot be empty", nameof(userId));
 
         UserId = userId;
         GameId = gameId;
+        AgentId = agentId; // Issue #2030
         Title = title?.Trim();
         Status = ThreadStatus.Active;
         CreatedAt = DateTime.UtcNow;

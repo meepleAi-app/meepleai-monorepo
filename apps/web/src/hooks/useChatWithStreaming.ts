@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection -- Safe Zustand store key access */
 /**
  * useChatWithStreaming - Zustand store + SSE streaming integration
  *
@@ -23,9 +24,8 @@ export function useChatWithStreaming() {
 
   // Extract derived values
   const selectedGameId = store.selectedGameId;
+  const selectedDocumentIds = store.selectedDocumentIds; // Issue #2051
   const activeChatId = selectedGameId ? store.activeChatIds[selectedGameId] : null;
-  const chats = selectedGameId ? (store.chatsByGame[selectedGameId] ?? []) : [];
-  const messages = activeChatId ? (store.messagesByChat[activeChatId] ?? []) : [];
 
   // Streaming hook (Issue #1007)
   const [streamingState, streamingControls] = useStreamingChat({
@@ -72,13 +72,23 @@ export function useChatWithStreaming() {
       const currentActiveChatId = selectedGameId ? store.activeChatIds[selectedGameId] : null;
       if (!currentActiveChatId) return;
 
-      await streamingControls.startStreaming(selectedGameId, content.trim(), currentActiveChatId);
+      // Issue #2051: Pass selectedDocumentIds to streaming
+      await streamingControls.startStreaming(
+        selectedGameId,
+        content.trim(),
+        currentActiveChatId,
+        selectedDocumentIds
+      );
     },
-    [selectedGameId, store, streamingControls]
+    [selectedGameId, selectedDocumentIds, store, streamingControls]
   );
 
-  return useMemo(
-    () => ({
+  return useMemo(() => {
+    // Compute derived values inside useMemo to avoid dependency array issues
+    const chats = selectedGameId ? (store.chatsByGame[selectedGameId] ?? []) : [];
+    const messages = activeChatId ? (store.messagesByChat[activeChatId] ?? []) : [];
+
+    return {
       // Store state
       ...store,
       // Derived values
@@ -94,15 +104,13 @@ export function useChatWithStreaming() {
       stopStreaming: streamingControls.stopStreaming,
       // Override sendMessage with streaming version
       sendMessage: sendMessageWithStreaming,
-    }),
-    [
-      store,
-      chats,
-      activeChatId,
-      messages,
-      streamingState,
-      streamingControls,
-      sendMessageWithStreaming,
-    ]
-  );
+    };
+  }, [
+    store,
+    selectedGameId,
+    activeChatId,
+    streamingState,
+    streamingControls,
+    sendMessageWithStreaming,
+  ]);
 }

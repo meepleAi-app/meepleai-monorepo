@@ -1,7 +1,6 @@
 services:
   postgres:
     image: postgres:16.4-alpine3.20
-    container_name: db-meepleai-postgres
     restart: unless-stopped
     profiles: [minimal, dev, observability, ai, automation, full]
     environment:
@@ -16,7 +15,7 @@ services:
     ports:
       - "127.0.0.1:5432:5432"
     volumes:
-      - meepleai-postgres-data:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql/data
       - ./init/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     secrets:
       - postgres-password
@@ -39,14 +38,13 @@ services:
 
   qdrant:
     image: qdrant/qdrant:v1.12.4
-    container_name: db-meepleai-qdrant
     restart: unless-stopped
     profiles: [minimal, dev, observability, ai, automation, full]
     ports:
       - "127.0.0.1:6333:6333"  # HTTP REST API
       - "127.0.0.1:6334:6334"  # gRPC API
     volumes:
-      - meepleai-qdrant-data:/qdrant/storage
+      - qdrantdata:/qdrant/storage
     healthcheck:
       test: ["CMD-SHELL", "kill -0 1 || exit 1"]
       interval: 10s
@@ -66,7 +64,6 @@ services:
 
   redis:
     image: redis:7.4.1-alpine3.20
-    container_name: cache-meepleai-redis
     restart: unless-stopped
     profiles: [minimal, dev, observability, ai, automation, full]
     command: ["sh","-c","redis-server --appendonly yes --requirepass $(cat /run/secrets/redis-password) --maxmemory 768mb --maxmemory-policy allkeys-lru"]
@@ -90,9 +87,43 @@ services:
           cpus: '0.5'
           memory: 512M
 
+  # ISSUE-922: Email testing service for development (Mailpit - modern Mailhog alternative)
+  mailpit:
+    image: axllent/mailpit:v1.22
+    container_name: mailpit
+    restart: unless-stopped
+    profiles: [dev, observability, full]
+    ports:
+      - "127.0.0.1:1025:1025"  # SMTP server
+      - "127.0.0.1:8025:8025"  # Web UI + REST API
+    environment:
+      MP_MAX_MESSAGES: 500
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+      MP_DATABASE: /data/mailpit.db
+      MP_DATA_DIR: /data
+    volumes:
+      - mailpit-data:/data
+    healthcheck:
+      # Comprehensive health check: HTTP API + SMTP port
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8025/api/v1/messages && nc -z localhost 1025"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    networks:
+      - meepleai
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
+        reservations:
+          cpus: '0.25'
+          memory: 64M
+
   ollama:
     image: ollama/ollama:0.3.14
-    container_name: ai-meepleai-ollama
     restart: unless-stopped
     profiles: [ai, full]
     environment:
@@ -104,7 +135,7 @@ services:
     ports:
       - "11434:11434"
     volumes:
-      - meepleai-ollama-data:/root/.ollama
+      - ollamadata:/root/.ollama
     healthcheck:
       test: ["CMD-SHELL", "ollama list || exit 1"]
       interval: 10s
@@ -131,7 +162,7 @@ services:
 
   ollama-pull:
     image: curlimages/curl:8.12.1
-    container_name: ai-meepleai-ollama-pull
+    container_name: ollama-pull
     profiles: [ai, full]
     depends_on:
       ollama:
@@ -159,7 +190,6 @@ services:
     build:
       context: ../apps/embedding-service
       dockerfile: ./Dockerfile
-    container_name: ai-meepleai-embedding
     restart: unless-stopped
     profiles: [ai, full]
     ports:
@@ -193,7 +223,7 @@ services:
     build:
       context: ../apps/unstructured-service
       dockerfile: ./Dockerfile
-    container_name: ai-meepleai-unstructured
+    container_name: meepleai-unstructured
     restart: unless-stopped
     profiles: [ai, full]
     ports:
@@ -211,7 +241,7 @@ services:
       - ENABLE_METRICS=true
       - ENABLE_STRUCTURED_LOGGING=true
     volumes:
-      - meepleai-unstructured-temp:/tmp/pdf-extraction
+      - unstructured-temp:/tmp/pdf-extraction
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
       interval: 30s
@@ -234,7 +264,7 @@ services:
     build:
       context: ../apps/smoldocling-service
       dockerfile: ./Dockerfile
-    container_name: ai-meepleai-smoldocling
+    container_name: meepleai-smoldocling
     restart: unless-stopped
     profiles: [ai, full]
     ports:
@@ -256,8 +286,8 @@ services:
       - ENABLE_STRUCTURED_LOGGING=true
       - ENABLE_MODEL_WARMUP=true  # Enable warmup so health checks pass
     volumes:
-      - meepleai-smoldocling-temp:/tmp/pdf-processing
-      - meepleai-smoldocling-models:/root/.cache/huggingface
+      - smoldocling-temp:/tmp/pdf-processing
+      - smoldocling-models:/root/.cache/huggingface
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
       interval: 60s
@@ -287,7 +317,7 @@ services:
     build:
       context: ../apps/reranker-service
       dockerfile: ./Dockerfile
-    container_name: ai-meepleai-reranker
+    container_name: meepleai-reranker
     restart: unless-stopped
     profiles: [ai, full]
     ports:
@@ -298,7 +328,7 @@ services:
       - LOG_LEVEL=INFO
       - ENABLE_MODEL_WARMUP=true
     volumes:
-      - meepleai-reranker-models:/home/reranker/.cache/huggingface
+      - reranker-models:/home/reranker/.cache/huggingface
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
       interval: 30s
@@ -331,7 +361,6 @@ services:
 
   prometheus:
     image: prom/prometheus:v3.7.0
-    container_name: monitoring-meepleai-prometheus
     restart: unless-stopped
     profiles: [dev, observability, full]
     command:
@@ -343,7 +372,7 @@ services:
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./prometheus-rules.yml:/etc/prometheus/prometheus-rules.yml:ro
-      - meepleai-prometheus-data:/prometheus
+      - prometheusdata:/prometheus
     ports:
       - "127.0.0.1:9090:9090"
     healthcheck:
@@ -365,7 +394,6 @@ services:
   # OPS-05: Error Monitoring & Alerting
   alertmanager:
     image: prom/alertmanager:v0.27.0
-    container_name: monitoring-meepleai-alertmanager
     restart: unless-stopped
     profiles: [observability, full]
     env_file:
@@ -375,7 +403,7 @@ services:
     volumes:
       - ./scripts/load-secrets-env.sh:/scripts/load-secrets-env.sh:ro
       - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
-      - meepleai-alertmanager-data:/alertmanager
+      - alertmanagerdata:/alertmanager
     entrypoint: ["/scripts/load-secrets-env.sh"]
     command:
       - '/bin/alertmanager'
@@ -425,7 +453,6 @@ services:
   # P3-705: cAdvisor for container metrics
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:v0.49.1
-    container_name: monitoring-meepleai-cadvisor
     restart: unless-stopped
     profiles: [observability, full]
     privileged: true
@@ -435,6 +462,7 @@ services:
       - /sys:/sys:ro
       - /var/lib/docker/:/var/lib/docker:ro
       - /dev/disk/:/dev/disk:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro  # Required for Docker API access
     ports:
       - "127.0.0.1:8082:8080"
     networks:
@@ -451,7 +479,6 @@ services:
   # P3-705: node-exporter for host metrics
   node-exporter:
     image: prom/node-exporter:v1.8.2
-    container_name: monitoring-meepleai-node-exporter
     restart: unless-stopped
     profiles: [observability, full]
     command:
@@ -476,7 +503,6 @@ services:
 
   grafana:
     image: grafana/grafana:11.4.0
-    container_name: monitoring-meepleai-grafana
     restart: unless-stopped
     profiles: [dev, observability, full]
     environment:
@@ -489,7 +515,7 @@ services:
       GF_AUTH_ANONYMOUS_ENABLED: "true"
       GF_AUTH_ANONYMOUS_ORG_ROLE: "Viewer"
     volumes:
-      - meepleai-grafana-data:/var/lib/grafana
+      - grafanadata:/var/lib/grafana
       - ./grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
       - ./grafana-dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:ro
       - ./dashboards:/var/lib/grafana/dashboards:ro
@@ -519,7 +545,6 @@ services:
 
   n8n:
     image: n8nio/n8n:1.114.4
-    container_name: automation-meepleai-n8n
     restart: unless-stopped
     profiles: [automation, full]
     environment:
@@ -555,7 +580,6 @@ services:
     build:
       context: ../apps/api
       dockerfile: ./src/Api/Dockerfile
-    container_name: app-meepleai-api
     restart: unless-stopped
     profiles: [minimal, dev, observability, ai, automation, full]
     env_file:
@@ -633,7 +657,6 @@ services:
     build:
       context: ../apps/web
       dockerfile: ./Dockerfile
-    container_name: app-meepleai-web
     restart: unless-stopped
     profiles: [minimal, dev, observability, ai, automation, full]
     env_file:
@@ -671,24 +694,26 @@ services:
           memory: 512M
 
 volumes:
-  meepleai-postgres-data:
-  meepleai-qdrant-data:
+  pgdata:
+  qdrantdata:
   # seqdata removed - replaced by HyperDX (Issue #1564)
-  meepleai-ollama-data:
+  ollamadata:
+  # ISSUE-922: Mailpit email testing storage
+  mailpit-data:
   # OPS-02: OpenTelemetry volumes
   # jaegerdata removed - using ephemeral storage for development
   # Seq and Jaeger replaced by HyperDX unified observability
-  meepleai-prometheus-data:
-  meepleai-grafana-data:
+  prometheusdata:
+  grafanadata:
   # OPS-05: Error Monitoring & Alerting volumes
-  meepleai-alertmanager-data:
+  alertmanagerdata:
   # BGAI-001-v2: Unstructured PDF extraction temporary storage
-  meepleai-unstructured-temp:
+  unstructured-temp:
   # BGAI-005: SmolDocling VLM service storage
-  meepleai-smoldocling-temp:
-  meepleai-smoldocling-models:  # Hugging Face model cache
+  smoldocling-temp:
+  smoldocling-models:  # Hugging Face model cache
   # ADR-016 Phase 4: Reranker service model cache
-  meepleai-reranker-models:
+  reranker-models:
 
 networks:
   meepleai:

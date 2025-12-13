@@ -83,7 +83,7 @@ public class MonthlyOptimizationReportService : IMonthlyOptimizationReportServic
 
     private static decimal CalculateModelSwitchSavings(
         QueryEfficiencyReport efficiency,
-        ModelRecommendation recommendation)
+        ModelRecommendation _)
     {
         // Estimate savings if switching to recommended model
         // Simplified: Assume 20% cost reduction from optimization
@@ -107,12 +107,12 @@ public class MonthlyOptimizationReportService : IMonthlyOptimizationReportServic
         // Add top recommendations from each analyzer
         if (efficiency.OptimizationRecommendations.Any())
         {
-            summary.Add($"⚡ **Efficiency**: {efficiency.OptimizationRecommendations.First()}");
+            summary.Add($"⚡ **Efficiency**: {efficiency.OptimizationRecommendations[0]}");
         }
 
         if (cache.Recommendations.Any())
         {
-            summary.Add($"🔍 **Caching**: {cache.Recommendations.First()}");
+            summary.Add($"🔍 **Caching**: {cache.Recommendations[0]}");
         }
 
         return summary;

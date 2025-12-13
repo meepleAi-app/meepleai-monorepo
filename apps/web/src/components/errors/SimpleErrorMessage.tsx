@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection -- Safe variant style Record access */
 /**
  * SimpleErrorMessage - Lightweight inline error message component
  *
@@ -45,7 +46,7 @@ export function SimpleErrorMessage({
   message,
   variant = 'error',
   onDismiss,
-  className = ''
+  className = '',
 }: SimpleErrorMessageProps) {
   // Don't render anything if no message
   if (!message) {
@@ -57,21 +58,19 @@ export function SimpleErrorMessage({
     error: 'bg-red-500/10 border-red-500/30 text-red-400',
     warning: 'bg-yellow-500/10 border-yellow-500/30 text-yellow-400',
     info: 'bg-blue-500/10 border-blue-500/30 text-blue-400',
-    success: 'bg-green-500/10 border-green-500/30 text-green-400'
+    success: 'bg-green-500/10 border-green-500/30 text-green-400',
   };
 
   const baseStyles = `
     border px-4 py-3 rounded-lg
     ${variantStyles[variant]}
     ${className}
-  `.trim().replace(/\s+/g, ' ');
+  `
+    .trim()
+    .replace(/\s+/g, ' ');
 
   return (
-    <div
-      role="alert"
-      aria-live="polite"
-      className={baseStyles}
-    >
+    <div role="alert" aria-live="polite" className={baseStyles}>
       <div className="flex items-start justify-between gap-3">
         <p className="flex-1 text-sm leading-relaxed">{message}</p>
         {onDismiss && (

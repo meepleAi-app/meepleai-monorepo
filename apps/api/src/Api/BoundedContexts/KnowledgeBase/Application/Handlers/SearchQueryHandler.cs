@@ -61,10 +61,10 @@ public class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResultDt
         var searchResults = query.SearchMode.ToLowerInvariant() switch
         {
             "vector" => await PerformVectorSearchAsync(
-                query.GameId, queryVector, query.TopK, query.MinScore, cancellationToken).ConfigureAwait(false),
+                query.GameId, queryVector, query.TopK, query.MinScore, query.DocumentIds, cancellationToken).ConfigureAwait(false),
 
             "hybrid" => await PerformHybridSearchAsync(
-                query.GameId, queryVector, query.Query, query.TopK, query.MinScore, cancellationToken).ConfigureAwait(false),
+                query.GameId, queryVector, query.Query, query.TopK, query.MinScore, query.DocumentIds, cancellationToken).ConfigureAwait(false),
 
             _ => throw new ArgumentException($"Invalid search mode: {query.SearchMode}", nameof(query))
         } ?? new List<Domain.Entities.SearchResult>();
@@ -91,11 +91,18 @@ public class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResultDt
         Vector queryVector,
         int topK,
         double minScore,
+        IReadOnlyList<Guid>? documentIds,
         CancellationToken cancellationToken)
     {
         // Get candidate embeddings from repository (already filtered and ranked by Qdrant)
         var embeddings = await _embeddingRepository.SearchByVectorAsync(
-            gameId, queryVector, topK, minScore, cancellationToken).ConfigureAwait(false);
+            gameId, queryVector, topK, minScore, documentIds, cancellationToken).ConfigureAwait(false);
+
+        if (embeddings == null)
+        {
+            _logger.LogWarning("Vector search returned null for gameId={GameId}", gameId);
+            embeddings = new List<Domain.Entities.Embedding>();
+        }
 
         _logger.LogInformation(
             "Vector search returned {Count} embeddings for gameId={GameId}",
@@ -136,11 +143,12 @@ public class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResultDt
         string query,
         int topK,
         double minScore,
+        IReadOnlyList<Guid>? documentIds,
         CancellationToken cancellationToken)
     {
         // Vector search
         var vectorResults = await PerformVectorSearchAsync(
-            gameId, queryVector, topK, minScore, cancellationToken).ConfigureAwait(false);
+            gameId, queryVector, topK, minScore, documentIds, cancellationToken).ConfigureAwait(false);
 
         // Keyword search (use HybridSearchService with Keyword mode)
         var hybridSearchResults = await _hybridSearchService.SearchAsync(
@@ -148,6 +156,7 @@ public class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResultDt
             gameId,
             SearchMode.Keyword,
             topK,
+            documentIds, // Issue #2051: Pass document filter
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         // Map keyword results to domain entities

@@ -223,51 +223,60 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
       // Test observability: notify immediately after queue update (synchronous)
       onQueueAdd?.(newItems);
     },
-    [onQueueAdd]
+    [safeSetQueue, onQueueAdd]
   );
 
   /**
    * Removes a file from the queue (only if not uploading)
    */
-  const removeFile = useCallback((id: string) => {
-    safeSetQueue(prev => {
-      const item = prev.find(i => i.id === id);
-      if (item && item.status === 'uploading') {
-        // Can't remove while uploading, must cancel first
-        return prev;
-      }
-      return prev.filter(i => i.id !== id);
-    });
-  }, []);
+  const removeFile = useCallback(
+    (id: string) => {
+      safeSetQueue(prev => {
+        const item = prev.find(i => i.id === id);
+        if (item && item.status === 'uploading') {
+          // Can't remove while uploading, must cancel first
+          return prev;
+        }
+        return prev.filter(i => i.id !== id);
+      });
+    },
+    [safeSetQueue]
+  );
 
   /**
    * Cancels an ongoing upload
    */
-  const cancelUpload = useCallback((id: string) => {
-    const operation = activeUploadsRef.current.get(id);
-    if (operation) {
-      operation.abortController.abort();
-      activeUploadsRef.current.delete(id);
-    }
+  const cancelUpload = useCallback(
+    (id: string) => {
+      const operation = activeUploadsRef.current.get(id);
+      if (operation) {
+        operation.abortController.abort();
+        activeUploadsRef.current.delete(id);
+      }
 
-    safeSetQueue(prev =>
-      prev.map(item =>
-        item.id === id ? { ...item, status: 'cancelled' as UploadStatus, progress: 0 } : item
-      )
-    );
-  }, []);
+      safeSetQueue(prev =>
+        prev.map(item =>
+          item.id === id ? { ...item, status: 'cancelled' as UploadStatus, progress: 0 } : item
+        )
+      );
+    },
+    [safeSetQueue]
+  );
 
   /**
    * Retries a failed upload
    */
-  const retryUpload = useCallback((id: string) => {
-    safeSetQueue(prev =>
-      prev.map(item =>
-        item.id === id ? { ...item, status: 'pending', progress: 0, error: undefined } : item
-      )
-    );
-    allCompleteNotifiedRef.current = false;
-  }, []);
+  const retryUpload = useCallback(
+    (id: string) => {
+      safeSetQueue(prev =>
+        prev.map(item =>
+          item.id === id ? { ...item, status: 'pending', progress: 0, error: undefined } : item
+        )
+      );
+      allCompleteNotifiedRef.current = false;
+    },
+    [safeSetQueue]
+  );
 
   /**
    * Clears all completed uploads from the queue
@@ -278,7 +287,7 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
         item => item.status !== 'success' && item.status !== 'failed' && item.status !== 'cancelled'
       )
     );
-  }, []);
+  }, [safeSetQueue]);
 
   /**
    * Clears the entire queue (cancels active uploads)
@@ -292,7 +301,7 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
 
     safeSetQueue(() => []);
     allCompleteNotifiedRef.current = false;
-  }, []);
+  }, [safeSetQueue]);
 
   /**
    * Gets current queue statistics
@@ -514,7 +523,16 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
         activeUploadsRef.current.delete(item.id);
       }
     },
-    [maxRetries, onUploadComplete, onUploadError, onUploadStart, onUploadSuccess, onRetry, queue]
+    [
+      safeSetQueue,
+      maxRetries,
+      onUploadComplete,
+      onUploadError,
+      onUploadStart,
+      onUploadSuccess,
+      onRetry,
+      queue,
+    ]
   );
 
   /**
@@ -586,12 +604,14 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
   }, [queue, getStats, onAllComplete]);
 
   useEffect(() => {
+    // Capture ref value for cleanup to avoid stale closure warning
+    const activeUploads = activeUploadsRef.current;
     return () => {
       isMountedRef.current = false;
-      activeUploadsRef.current.forEach(operation => {
+      activeUploads.forEach(operation => {
         operation.abortController.abort();
       });
-      activeUploadsRef.current.clear();
+      activeUploads.clear();
     };
   }, []);
 

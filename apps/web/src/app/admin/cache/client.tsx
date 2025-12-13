@@ -82,6 +82,7 @@ export function AdminPageClient() {
       setError(null);
 
       const gameId = selectedGameId === 'all' ? undefined : selectedGameId;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- API client type narrowing
       const statsData = await (api.chat as any).getCacheStats(gameId);
 
       if (!statsData) {
@@ -113,6 +114,7 @@ export function AdminPageClient() {
       message: `Are you sure you want to invalidate all cached responses for "${gameTitle}"? This action cannot be undone.`,
       onConfirm: async () => {
         try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- API client type narrowing
           await (api.chat as any).invalidateGameCache(gameId);
           addToast('success', `Cache invalidated successfully for "${gameTitle}"`);
           setConfirmation({ ...confirmation, isOpen: false });
@@ -141,6 +143,7 @@ export function AdminPageClient() {
       message: `Are you sure you want to invalidate all cached responses with tag "${tagInput}"? This action cannot be undone.`,
       onConfirm: async () => {
         try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- API client type narrowing
           await (api.chat as any).invalidateCacheByTag(tagInput.trim());
           addToast('success', `Cache invalidated successfully for tag "${tagInput}"`);
           setTagInput('');

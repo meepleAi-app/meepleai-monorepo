@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection -- Safe Zustand store key access */
 /**
  * ChatHistory - List of chat threads (Issue #858)
  *

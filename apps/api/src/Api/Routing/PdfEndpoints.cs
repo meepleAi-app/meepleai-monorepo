@@ -1,3 +1,4 @@
+using System.Globalization;
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Application.Queries;
@@ -555,7 +556,8 @@ public static class PdfEndpoints
                 return Results.BadRequest(new { error = "invalid_session_id", message = "Invalid or missing session ID" });
             }
 
-            if (!int.TryParse(form["chunkIndex"].ToString(), out var chunkIndex))
+            // FIX MA0011: Use IFormatProvider for culture-aware parsing
+            if (!int.TryParse(form["chunkIndex"].ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var chunkIndex))
             {
                 return Results.BadRequest(new { error = "invalid_chunk_index", message = "Invalid or missing chunk index" });
             }

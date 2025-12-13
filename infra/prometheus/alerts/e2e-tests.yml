@@ -1,0 +1,294 @@
+# =============================================================================
+# Prometheus Alert Rules for E2E Testing
+# =============================================================================
+# Issue #2009 - Phase 3: Production-Grade Infrastructure
+#
+# Alert Severity Levels:
+# - critical: Immediate action required (test suite completely broken)
+# - warning: Investigation needed (degraded performance or high failure rate)
+# - info: Informational (flaky tests detected, performance trends)
+#
+# Notification channels configured in Grafana Contact Points
+# =============================================================================
+
+groups:
+  # ===========================================================================
+  # Group 1: Test Execution Health
+  # ===========================================================================
+  - name: e2e_test_execution
+    interval: 1m
+    rules:
+
+      # -------------------------------------------------------------------------
+      # Critical: No Tests Running
+      # -------------------------------------------------------------------------
+      - alert: E2E_NoTestsRunning
+        expr: |
+          absent(playwright_test) or
+          sum(rate(playwright_test[5m])) == 0
+        for: 15m
+        labels:
+          severity: critical
+          team: qa
+          component: e2e-testing
+        annotations:
+          summary: "E2E tests not executing"
+          description: |
+            No Playwright test executions detected in the last 15 minutes.
+            This may indicate:
+            - Test infrastructure is down
+            - Docker containers failed to start
+            - Configuration error
+
+            **Action Required:**
+            1. Check Docker containers: `docker-compose -f docker-compose.e2e.yml ps`
+            2. Review container logs: `docker-compose -f docker-compose.e2e.yml logs`
+            3. Verify Prometheus remote write endpoint is accessible
+          dashboard_url: "http://localhost:3001/d/e2e-testing/e2e-test-monitoring"
+          runbook_url: "https://github.com/meepleai/meepleai-monorepo/blob/main/docs/05-operations/runbooks/e2e-no-tests-running.md"
+
+      # -------------------------------------------------------------------------
+      # Critical: Very High Failure Rate (>20%)
+      # -------------------------------------------------------------------------
+      - alert: E2E_CriticalFailureRate
+        expr: |
+          (
+            sum(rate(playwright_test{status="failed"}[5m]))
+            /
+            sum(rate(playwright_test[5m]))
+          ) > 0.20
+        for: 5m
+        labels:
+          severity: critical
+          team: qa
+          component: e2e-testing
+        annotations:
+          summary: "Critical E2E test failure rate: {{ $value | humanizePercentage }}"
+          description: |
+            Test failure rate is {{ $value | humanizePercentage }} (threshold: 20%).
+
+            **Impact:**
+            - Application stability is severely degraded
+            - Multiple critical user flows are broken
+            - Immediate investigation required
+
+            **Action Required:**
+            1. Check failed test reports in Grafana dashboard
+            2. Review test-results/ directory for error details
+            3. Check application logs for backend errors
+            4. Consider halting deployments until fixed
+          dashboard_url: "http://localhost:3001/d/e2e-testing/e2e-test-monitoring"
+
+      # -------------------------------------------------------------------------
+      # Warning: High Failure Rate (>10%)
+      # -------------------------------------------------------------------------
+      - alert: E2E_HighFailureRate
+        expr: |
+          (
+            sum(rate(playwright_test{status="failed"}[5m]))
+            /
+            sum(rate(playwright_test[5m]))
+          ) > 0.10
+        for: 10m
+        labels:
+          severity: warning
+          team: qa
+          component: e2e-testing
+        annotations:
+          summary: "High E2E test failure rate: {{ $value | humanizePercentage }}"
+          description: |
+            Test failure rate is {{ $value | humanizePercentage }} (threshold: 10%).
+
+            **Potential Causes:**
+            - Recent code changes introduced bugs
+            - Test environment instability
+            - Infrastructure resource constraints
+
+            **Recommended Actions:**
+            1. Review recent commits and PRs
+            2. Check test failure patterns in dashboard
+            3. Investigate flaky test trends
+            4. Monitor for escalation to critical threshold
+          dashboard_url: "http://localhost:3001/d/e2e-testing/e2e-test-monitoring"
+
+  # ===========================================================================
+  # Group 2: Test Performance
+  # ===========================================================================
+  - name: e2e_test_performance
+    interval: 1m
+    rules:
+
+      # -------------------------------------------------------------------------
+      # Warning: Slow Test Execution (P95 > 30s)
+      # -------------------------------------------------------------------------
+      - alert: E2E_SlowTestExecution
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(playwright_test_duration_bucket[5m])) by (le)
+          ) > 30000
+        for: 10m
+        labels:
+          severity: warning
+          team: qa
+          component: e2e-testing
+        annotations:
+          summary: "Slow E2E test execution detected"
+          description: |
+            95th percentile test duration is {{ $value | humanizeDuration }} (threshold: 30s).
+
+            **Impact:**
+            - Slower CI/CD feedback loops
+            - Increased infrastructure costs
+            - Developer productivity impact
+
+            **Recommended Actions:**
+            1. Identify slow tests in Grafana duration panel
+            2. Review test optimization opportunities
+            3. Check for resource constraints (CPU, memory)
+            4. Consider increasing test parallelization
+          dashboard_url: "http://localhost:3001/d/e2e-testing/e2e-test-monitoring?viewPanel=test-duration"
+
+      # -------------------------------------------------------------------------
+      # Info: High Retry Rate (>5%)
+      # -------------------------------------------------------------------------
+      - alert: E2E_HighRetryRate
+        expr: |
+          (
+            sum(rate(playwright_test_retry_count[1h]))
+            /
+            sum(rate(playwright_test[1h]))
+          ) > 0.05
+        for: 30m
+        labels:
+          severity: info
+          team: qa
+          component: e2e-testing
+        annotations:
+          summary: "High test retry rate: {{ $value | humanizePercentage }}"
+          description: |
+            Test retry rate is {{ $value | humanizePercentage }} over the last hour (threshold: 5%).
+
+            **Potential Causes:**
+            - Flaky tests due to race conditions
+            - Intermittent network/API failures
+            - Test environment instability
+
+            **Recommended Actions:**
+            1. Identify flaky tests in Grafana flaky tests table
+            2. Review test code for race conditions
+            3. Consider adding explicit waits or retry logic
+            4. Document known flaky tests for tracking
+          dashboard_url: "http://localhost:3001/d/e2e-testing/e2e-test-monitoring?viewPanel=flaky-tests"
+
+  # ===========================================================================
+  # Group 3: Flaky Test Detection
+  # ===========================================================================
+  - name: e2e_flaky_tests
+    interval: 5m
+    rules:
+
+      # -------------------------------------------------------------------------
+      # Info: Flaky Tests Detected
+      # -------------------------------------------------------------------------
+      - alert: E2E_FlakyTestsDetected
+        expr: |
+          sum(rate(playwright_test_retry_count[1h])) by (test_title) > 0
+        for: 30m
+        labels:
+          severity: info
+          team: qa
+          component: e2e-testing
+        annotations:
+          summary: "Flaky test detected: {{ $labels.test_title }}"
+          description: |
+            Test '{{ $labels.test_title }}' has required {{ $value }} retries in the last hour.
+
+            **Impact:**
+            - Reduced test reliability
+            - False positives in CI/CD
+            - Developer time wasted on investigation
+
+            **Recommended Actions:**
+            1. Review test code for race conditions
+            2. Add explicit waits for dynamic elements
+            3. Check for external dependencies (APIs, databases)
+            4. Consider marking as known flaky or fixing root cause
+          dashboard_url: "http://localhost:3001/d/e2e-testing/e2e-test-monitoring?viewPanel=flaky-tests&var-test={{ $labels.test_title }}"
+
+  # ===========================================================================
+  # Group 4: Resource Utilization
+  # ===========================================================================
+  - name: e2e_resource_utilization
+    interval: 1m
+    rules:
+
+      # -------------------------------------------------------------------------
+      # Warning: High Memory Usage (>90%)
+      # -------------------------------------------------------------------------
+      - alert: E2E_HighMemoryUsage
+        expr: |
+          (
+            sum(container_memory_usage_bytes{name=~"e2e-shard-.*"})
+            /
+            sum(container_spec_memory_limit_bytes{name=~"e2e-shard-.*"})
+          ) > 0.90
+        for: 5m
+        labels:
+          severity: warning
+          team: qa
+          component: e2e-testing
+        annotations:
+          summary: "High memory usage in E2E test containers"
+          description: |
+            Memory usage is {{ $value | humanizePercentage }} of allocated limit.
+
+            **Impact:**
+            - Risk of OOM kills
+            - Test crashes and failures
+            - Reduced parallelization capacity
+
+            **Recommended Actions:**
+            1. Check for memory leaks in tests
+            2. Review NODE_OPTIONS --max-old-space-size setting
+            3. Consider increasing container memory limits
+            4. Investigate memory-intensive test patterns
+          dashboard_url: "http://localhost:3001/d/e2e-testing/e2e-test-monitoring?viewPanel=memory-usage"
+
+# =============================================================================
+# Alert Routing Examples (configured in Grafana)
+# =============================================================================
+#
+# Critical alerts → Slack + Email (immediate notification)
+# Warning alerts → Slack only (within 5 minutes)
+# Info alerts → Slack only (batched hourly)
+#
+# Example Grafana Contact Point configuration:
+#
+# contact_points:
+#   - name: slack-qa-critical
+#     type: slack
+#     settings:
+#       url: https://hooks.slack.com/services/YOUR/WEBHOOK/URL
+#       title: "🚨 CRITICAL E2E Alert"
+#
+#   - name: email-qa-team
+#     type: email
+#     settings:
+#       addresses: qa-team@meepleai.com
+#
+# notification_policies:
+#   - receiver: slack-qa-critical
+#     matchers:
+#       - severity = critical
+#     group_wait: 10s
+#     group_interval: 1m
+#     repeat_interval: 30m
+#
+#   - receiver: slack-qa-critical
+#     matchers:
+#       - severity = warning
+#     group_wait: 30s
+#     group_interval: 5m
+#     repeat_interval: 4h
+#
+# =============================================================================

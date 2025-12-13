@@ -367,9 +367,12 @@ public class OAuthService : IOAuthService
     private async Task<string> GetGitHubPrimaryEmailAsync(string accessToken)
     {
 #pragma warning disable CA2000 // HttpClient lifetime managed by IHttpClientFactory
+        // S1075: GitHub API endpoint (official public endpoint)
+        const string GitHubUserEmailsApiUrl = "https://api.github.com/user/emails";
+
         var httpClient = _httpClientFactory.CreateClient();
 #pragma warning restore CA2000
-        using var request = new HttpRequestMessage(HttpMethod.Get, "https://api.github.com/user/emails");
+        using var request = new HttpRequestMessage(HttpMethod.Get, GitHubUserEmailsApiUrl);
         request.Headers.Add("Authorization", $"Bearer {accessToken}");
         request.Headers.Add("User-Agent", "MeepleAI");
 

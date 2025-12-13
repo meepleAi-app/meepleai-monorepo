@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection -- Safe Zustand store key access with typed state keys */
 /**
  * Chat Store Hooks (Issue #1083)
  *
@@ -21,10 +22,9 @@ type WithSelectors<S> = S extends { getState: () => infer T }
   ? S & { use: { [K in keyof T]: () => T[K] } }
   : never;
 
-const createSelectors = <S extends UseBoundStore<StoreApi<object>>>(
-  _store: S,
-) => {
+const createSelectors = <S extends UseBoundStore<StoreApi<object>>>(_store: S) => {
   const store = _store as WithSelectors<typeof _store>;
+  // eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Store extension requires type assertion
   store.use = {} as WithSelectors<typeof _store>['use'];
 
   for (const k of Object.keys(store.getState())) {
@@ -63,7 +63,7 @@ export const useChatStoreWithSelectors = createSelectors(useChatStore);
  * Combines selectedGameId + chatsByGame for convenience
  */
 export function useCurrentChats() {
-  return useChatStore((state) => {
+  return useChatStore(state => {
     const gameId = state.selectedGameId;
     if (!gameId) return [];
     return state.chatsByGame[gameId] ?? [];
@@ -75,7 +75,7 @@ export function useCurrentChats() {
  * Combines selectedGameId + activeChatIds + chatsByGame
  */
 export function useActiveChat() {
-  return useChatStore((state) => {
+  return useChatStore(state => {
     const gameId = state.selectedGameId;
     if (!gameId) return null;
 
@@ -83,7 +83,7 @@ export function useActiveChat() {
     if (!activeChatId) return null;
 
     const chats = state.chatsByGame[gameId] ?? [];
-    return chats.find((c) => c.id === activeChatId) ?? null;
+    return chats.find(c => c.id === activeChatId) ?? null;
   });
 }
 
@@ -92,7 +92,7 @@ export function useActiveChat() {
  * Combines selectedGameId + activeChatIds + messagesByChat
  */
 export function useActiveMessages() {
-  return useChatStore((state) => {
+  return useChatStore(state => {
     const gameId = state.selectedGameId;
     if (!gameId) return [];
 
@@ -107,10 +107,10 @@ export function useActiveMessages() {
  * Get selected game object
  */
 export function useSelectedGame() {
-  return useChatStore((state) => {
+  return useChatStore(state => {
     const gameId = state.selectedGameId;
     if (!gameId) return undefined;
-    return state.games.find((g) => g.id === gameId);
+    return state.games.find(g => g.id === gameId);
   });
 }
 
@@ -118,10 +118,10 @@ export function useSelectedGame() {
  * Get selected agent object
  */
 export function useSelectedAgent() {
-  return useChatStore((state) => {
+  return useChatStore(state => {
     const agentId = state.selectedAgentId;
     if (!agentId) return undefined;
-    return state.agents.find((a) => a.id === agentId);
+    return state.agents.find(a => a.id === agentId);
   });
 }
 
@@ -129,21 +129,19 @@ export function useSelectedAgent() {
  * Check if loading state is active for any operation
  */
 export function useIsLoading() {
-  return useChatStore((state) =>
-    Object.values(state.loading).some((isLoading) => isLoading)
-  );
+  return useChatStore(state => Object.values(state.loading).some(isLoading => isLoading));
 }
 
 /**
  * Check if creating a new chat
  */
 export function useIsCreating() {
-  return useChatStore((state) => state.loading.creating);
+  return useChatStore(state => state.loading.creating);
 }
 
 /**
  * Check if sending a message
  */
 export function useIsSending() {
-  return useChatStore((state) => state.loading.sending);
+  return useChatStore(state => state.loading.sending);
 }

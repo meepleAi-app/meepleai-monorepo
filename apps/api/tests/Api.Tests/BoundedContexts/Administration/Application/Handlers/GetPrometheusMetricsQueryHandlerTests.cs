@@ -73,7 +73,7 @@ public class GetPrometheusMetricsQueryHandlerTests
         Assert.Equal("matrix", result.ResultType);
         Assert.Single(result.TimeSeries);
 
-        var ts = result.TimeSeries.First();
+        var ts = result.TimeSeries.ElementAt(0);
         Assert.Equal("gpt-4", ts.Metric["model_id"]);
         Assert.Equal(3, ts.Values.Count);
         Assert.Equal(15.7, ts.Values.Last().Value);
@@ -157,8 +157,8 @@ public class GetPrometheusMetricsQueryHandlerTests
         var status200 = result.TimeSeries.First(ts => ts.Metric.ContainsKey("status") && ts.Metric["status"] == "200");
         var status500 = result.TimeSeries.First(ts => ts.Metric.ContainsKey("status") && ts.Metric["status"] == "500");
 
-        Assert.Equal(95.5, status200.Values.First().Value);
-        Assert.Equal(4.5, status500.Values.First().Value);
+        Assert.Equal(95.5, status200.Values.ElementAt(0).Value);
+        Assert.Equal(4.5, status500.Values.ElementAt(0).Value);
     }
 
     [Fact]

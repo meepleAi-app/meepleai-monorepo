@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection -- Safe version data array access */
 import React, { useEffect, useState } from 'react';
 import { Chrono } from 'react-chrono';
 import { useRouter } from 'next/navigation';
@@ -20,10 +21,7 @@ interface VersionTimelineProps {
   onVersionClick?: (version: string) => void;
 }
 
-export const VersionTimeline: React.FC<VersionTimelineProps> = ({
-  gameId,
-  onVersionClick
-}) => {
+export const VersionTimeline: React.FC<VersionTimelineProps> = ({ gameId, onVersionClick }) => {
   const [versions, setVersions] = useState<VersionNode[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -60,8 +58,16 @@ export const VersionTimeline: React.FC<VersionTimelineProps> = ({
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-8" role="status" aria-live="polite" aria-label="Loading timeline">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" aria-hidden="true"></div>
+      <div
+        className="flex items-center justify-center p-8"
+        role="status"
+        aria-live="polite"
+        aria-label="Loading timeline"
+      >
+        <div
+          className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"
+          aria-hidden="true"
+        ></div>
         <span className="sr-only">Loading version timeline…</span>
       </div>
     );

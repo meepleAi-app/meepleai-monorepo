@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection -- Safe spec data object access */
 /**
  * Editor Page - Client Component
  *

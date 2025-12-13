@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection -- Safe typed Record access with event type string keys */
 /**
  * UserActivityFilters Component - Issue #911
  *
@@ -15,14 +16,14 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { XIcon } from 'lucide-react';
 
-export interface UserActivityFilters {
+export interface UserActivityFiltersState {
   eventTypes: Set<string>;
   severities: Set<string>;
 }
 
 export interface UserActivityFiltersProps {
-  filters: UserActivityFilters;
-  onFiltersChange: (filters: UserActivityFilters) => void;
+  filters: UserActivityFiltersState;
+  onFiltersChange: (filters: UserActivityFiltersState) => void;
   availableEventTypes: string[];
   className?: string;
 }

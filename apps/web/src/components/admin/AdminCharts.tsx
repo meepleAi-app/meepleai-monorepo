@@ -76,6 +76,7 @@ export function buildTimeSeries(requests: Array<{ createdAt: string; status: str
       acc.set(hour, { time: hour, success: 0, error: 0, total: 0 });
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- Key guaranteed by has() check above
     const entry = acc.get(hour)!;
     entry.total++;
     if (req.status === 'Success') {

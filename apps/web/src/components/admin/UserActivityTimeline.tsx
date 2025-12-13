@@ -15,7 +15,7 @@ import { useState, useMemo } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { UserActivityItem, UserActivityEvent } from './UserActivityItem';
-import { UserActivityFilters, UserActivityFilters as FilterType } from './UserActivityFilters';
+import { UserActivityFilters, UserActivityFiltersState } from './UserActivityFilters';
 import { ActivityIcon, FilterIcon } from 'lucide-react';
 
 export interface UserActivityTimelineProps {
@@ -111,7 +111,7 @@ export function UserActivityTimeline({
     [events]
   );
 
-  const [filters, setFilters] = useState<FilterType>({
+  const [filters, setFilters] = useState<UserActivityFiltersState>({
     eventTypes: new Set(availableEventTypes),
     severities: new Set(['Info', 'Warning', 'Error', 'Critical']),
   });

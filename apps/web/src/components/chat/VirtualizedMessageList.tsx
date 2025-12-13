@@ -157,6 +157,7 @@ export function VirtualizedMessageList({
           <FixedSizeList
             listRef={listRef}
             defaultHeight={height}
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Component type requires generic any for row rendering
             rowComponent={RowComponent as any}
             rowCount={messages.length}
             rowHeight={FIXED_MESSAGE_HEIGHT}

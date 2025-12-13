@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection -- Safe Zustand store key access with typed thread/message IDs */
 /**
  * Messages Slice (Issue #1083)
  *
@@ -31,7 +32,7 @@ export const createMessagesSlice: StateCreator<
   // ============================================================================
   // Actions
   // ============================================================================
-  loadMessages: async (threadId) => {
+  loadMessages: async threadId => {
     const { setLoading, setError } = get();
     setLoading('messages', true);
     setError(null);
@@ -50,11 +51,11 @@ export const createMessagesSlice: StateCreator<
           feedback: msg.feedback ?? null,
         }));
 
-        set((state) => {
+        set(state => {
           state.messagesByChat[threadId] = uiMessages;
         });
       } else {
-        set((state) => {
+        set(state => {
           state.messagesByChat[threadId] = [];
         });
       }
@@ -65,7 +66,7 @@ export const createMessagesSlice: StateCreator<
         createErrorContext('MessagesSlice', 'loadMessages', { threadId })
       );
       setError('Errore nel caricamento dei messaggi');
-      set((state) => {
+      set(state => {
         state.messagesByChat[threadId] = [];
       });
     } finally {
@@ -73,8 +74,15 @@ export const createMessagesSlice: StateCreator<
     }
   },
 
-  sendMessage: async (content) => {
-    const { selectedGameId, selectedAgentId, activeChatIds, setLoading, setError, updateChatTitle } = get();
+  sendMessage: async content => {
+    const {
+      selectedGameId,
+      selectedAgentId,
+      activeChatIds,
+      setLoading,
+      setError,
+      updateChatTitle,
+    } = get();
 
     if (!selectedGameId || !selectedAgentId || !content.trim()) return;
 
@@ -98,7 +106,9 @@ export const createMessagesSlice: StateCreator<
       // Create thread if none exists
 
       if (!threadId) {
-        const autoTitle = content.trim().substring(0, CHAT_CONFIG.AUTO_TITLE_MAX_LENGTH) + (content.length > CHAT_CONFIG.AUTO_TITLE_MAX_LENGTH ? '...' : '');
+        const autoTitle =
+          content.trim().substring(0, CHAT_CONFIG.AUTO_TITLE_MAX_LENGTH) +
+          (content.length > CHAT_CONFIG.AUTO_TITLE_MAX_LENGTH ? '...' : '');
         const newThread = await api.chat.createThread({
           gameId: selectedGameId,
           title: autoTitle,
@@ -110,7 +120,7 @@ export const createMessagesSlice: StateCreator<
         threadId = newThread.id;
         isNewThread = true;
 
-        set((state) => {
+        set(state => {
           if (!state.chatsByGame[selectedGameId]) {
             state.chatsByGame[selectedGameId] = [];
           }
@@ -121,7 +131,7 @@ export const createMessagesSlice: StateCreator<
       }
 
       // Optimistic update
-      set((state) => {
+      set(state => {
         if (!state.messagesByChat[threadId]) {
           state.messagesByChat[threadId] = [];
         }
@@ -138,20 +148,21 @@ export const createMessagesSlice: StateCreator<
       if (!isNewThread) {
         const messages = get().messagesByChat[threadId] ?? [];
         if (messages.length === 1) {
-          const autoTitle = content.trim().substring(0, CHAT_CONFIG.AUTO_TITLE_MAX_LENGTH) + (content.length > CHAT_CONFIG.AUTO_TITLE_MAX_LENGTH ? '...' : '');
+          const autoTitle =
+            content.trim().substring(0, CHAT_CONFIG.AUTO_TITLE_MAX_LENGTH) +
+            (content.length > CHAT_CONFIG.AUTO_TITLE_MAX_LENGTH ? '...' : '');
           updateChatTitle(threadId, autoTitle);
         }
       }
 
       // Remove optimistic flag
-      set((state) => {
+      set(state => {
         const messages = state.messagesByChat[threadId] ?? [];
         const messageIndex = messages.findIndex(m => m.id === tempUserId);
         if (messageIndex !== -1) {
           state.messagesByChat[threadId][messageIndex].isOptimistic = false;
         }
       });
-
     } catch (err) {
       logger.error(
         'Failed to send message',
@@ -159,7 +170,7 @@ export const createMessagesSlice: StateCreator<
         createErrorContext('MessagesSlice', 'sendMessage', {
           selectedGameId,
           selectedAgentId,
-          contentLength: content.trim().length
+          contentLength: content.trim().length,
         })
       );
       setError("Errore nell'invio del messaggio");
@@ -168,7 +179,7 @@ export const createMessagesSlice: StateCreator<
       // Use the threadId from try block scope (not activeChatIds snapshot)
       // This ensures rollback works even for newly created threads
       if (threadId) {
-        set((state) => {
+        set(state => {
           const messages = state.messagesByChat[threadId] ?? [];
           state.messagesByChat[threadId] = messages.filter(m => m.id !== tempUserId);
         });
@@ -204,7 +215,7 @@ export const createMessagesSlice: StateCreator<
     }
   },
 
-  deleteMessage: async (messageId) => {
+  deleteMessage: async messageId => {
     const { selectedGameId, activeChatIds, loadMessages, setLoading, setError } = get();
 
     if (!selectedGameId) return;
@@ -252,7 +263,7 @@ export const createMessagesSlice: StateCreator<
     const feedbackMessageId = targetMessage.backendMessageId ?? messageId;
 
     // Optimistic update
-    set((state) => {
+    set(state => {
       const messages = state.messagesByChat[threadId] ?? [];
       const messageIndex = messages.findIndex(m => m.id === messageId);
       if (messageIndex !== -1) {
@@ -277,12 +288,12 @@ export const createMessagesSlice: StateCreator<
         createErrorContext('MessagesSlice', 'setMessageFeedback', {
           threadId,
           messageId,
-          feedback: nextFeedback
+          feedback: nextFeedback,
         })
       );
 
       // Revert optimistic update
-      set((state) => {
+      set(state => {
         const messages = state.messagesByChat[threadId] ?? [];
         const messageIndex = messages.findIndex(m => m.id === messageId);
         if (messageIndex !== -1) {
@@ -293,7 +304,7 @@ export const createMessagesSlice: StateCreator<
   },
 
   addOptimisticMessage: (message, threadId) =>
-    set((state) => {
+    set(state => {
       if (!state.messagesByChat[threadId]) {
         state.messagesByChat[threadId] = [];
       }
@@ -301,13 +312,13 @@ export const createMessagesSlice: StateCreator<
     }),
 
   removeOptimisticMessage: (messageId, threadId) =>
-    set((state) => {
+    set(state => {
       const messages = state.messagesByChat[threadId] ?? [];
       state.messagesByChat[threadId] = messages.filter(m => m.id !== messageId);
     }),
 
   updateMessageInThread: (threadId, messageId, updates) =>
-    set((state) => {
+    set(state => {
       const messages = state.messagesByChat[threadId] ?? [];
       const messageIndex = messages.findIndex(m => m.id === messageId);
       if (messageIndex !== -1) {

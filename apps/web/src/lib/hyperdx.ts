@@ -60,6 +60,7 @@ export function initializeHyperDX(): void {
       tracePropagationTargets: [
         /localhost:8080/, // Local development API
         /api\.meepleai\.dev/, // Production API domain
+        // eslint-disable-next-line security/detect-non-literal-regexp -- Safe: apiBase from env config, not user input
         new RegExp(apiBase.replace(/https?:\/\//, '')), // Dynamic API base from environment
       ],
 

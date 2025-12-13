@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection -- Safe Zustand store key access with typed game/chat IDs */
 /**
  * Chat Slice (Issue #1083)
  *
@@ -144,8 +145,10 @@ export const createChatSlice: StateCreator<
     setError(null);
 
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- API client method check
       const hasGenericDelete = typeof (api as any).delete === 'function';
       if (hasGenericDelete) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- API client method call
         await (api as any).delete(`/api/v1/chats/${chatId}`);
       }
       if (api.chat?.deleteThread) {

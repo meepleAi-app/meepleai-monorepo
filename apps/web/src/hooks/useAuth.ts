@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- Error handling requires any for catch clause */
 /**
  * useAuth Hook - Centralized Authentication Logic
  *

@@ -120,6 +120,7 @@ export function MultiDocumentCollectionUpload({
             progress: Math.round(((prev.uploadedCount + 1) / prev.totalCount) * 100),
           }));
 
+          // eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Type assertion needed for partial object return
           return {
             pdfDocumentId: pdfId,
             documentType: fileItem.documentType,

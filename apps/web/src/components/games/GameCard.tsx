@@ -125,7 +125,9 @@ export const GameCard = React.memo(function GameCard({
   className,
 }: GameCardProps) {
   const hasClickHandler = !!onClick;
+  // eslint-disable-next-line eqeqeq -- Intentional null/undefined coalescing check
   const hasRating = showRating && game.averageRating != null;
+  // eslint-disable-next-line eqeqeq -- Intentional null/undefined coalescing check
   const hasFaqCount = game.faqCount != null && game.faqCount > 0;
 
   return (
@@ -225,7 +227,7 @@ export const GameCard = React.memo(function GameCard({
           {hasRating && (
             <div className="mb-2">
               <RatingStars
-                rating={game.averageRating!}
+                rating={game.averageRating ?? 0}
                 maxRating={10}
                 size={variant === 'grid' ? 'sm' : 'md'}
                 showHalfStars

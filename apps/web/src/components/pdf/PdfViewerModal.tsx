@@ -64,13 +64,17 @@ export function PdfViewerModal({
   const [showThumbnails, setShowThumbnails] = useState(true);
 
   const mainCanvasRef = useRef<HTMLDivElement>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- FixedSizeList ref type is complex
   const thumbnailListRef = useRef<any>(null);
 
   // Memoize file config to prevent unnecessary PDF reloads (BGAI-074)
-  const fileConfig = useMemo(() => ({
-    url: pdfUrl,
-    withCredentials: true,
-  }), [pdfUrl]);
+  const fileConfig = useMemo(
+    () => ({
+      url: pdfUrl,
+      withCredentials: true,
+    }),
+    [pdfUrl]
+  );
 
   // Reset to initial page when modal opens or initialPage changes
   useEffect(() => {
@@ -106,7 +110,68 @@ export function PdfViewerModal({
     return () => window.removeEventListener('resize', updateWidth);
   }, []);
 
-  // Keyboard navigation
+  const onDocumentLoadSuccess = useCallback(({ numPages: pages }: { numPages: number }) => {
+    setNumPages(pages);
+    setLoading(false);
+    setError(null);
+  }, []);
+
+  const onDocumentLoadError = useCallback(
+    (err: Error) => {
+      logger.error(
+        'PDF load error',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('PdfViewerModal', 'onDocumentLoadError', { pdfUrl })
+      );
+      setError('Failed to load PDF. Please try again.');
+      setLoading(false);
+    },
+    [pdfUrl]
+  );
+
+  const goToPage = useCallback(
+    (page: number) => {
+      if (numPages && page >= 1 && page <= numPages) {
+        setCurrentPage(page);
+        if (
+          thumbnailListRef.current &&
+          showThumbnails &&
+          typeof thumbnailListRef.current.scrollToItem === 'function'
+        ) {
+          thumbnailListRef.current.scrollToItem(page - 1, 'center');
+        }
+      }
+    },
+    [numPages, showThumbnails]
+  );
+
+  const goToNextPage = useCallback(() => {
+    if (numPages && currentPage < numPages) {
+      goToPage(currentPage + 1);
+    }
+  }, [currentPage, numPages, goToPage]);
+
+  const goToPreviousPage = useCallback(() => {
+    if (currentPage > 1) {
+      goToPage(currentPage - 1);
+    }
+  }, [currentPage, goToPage]);
+
+  const zoomIn = useCallback(() => {
+    const currentIndex = ZOOM_LEVELS.indexOf(zoomLevel);
+    if (currentIndex < ZOOM_LEVELS.length - 1) {
+      setZoomLevel(ZOOM_LEVELS[currentIndex + 1]);
+    }
+  }, [zoomLevel]);
+
+  const zoomOut = useCallback(() => {
+    const currentIndex = ZOOM_LEVELS.indexOf(zoomLevel);
+    if (currentIndex > 0) {
+      setZoomLevel(ZOOM_LEVELS[currentIndex - 1]);
+    }
+  }, [zoomLevel]);
+
+  // Keyboard navigation (must be after function definitions)
   useEffect(() => {
     if (!open) return;
 
@@ -141,113 +206,69 @@ export function PdfViewerModal({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-    // keyboard handlers use current state via closures
-  }, [open, currentPage, numPages, zoomLevel, goToNextPage, goToPreviousPage, zoomIn, zoomOut]);
+  }, [open, goToNextPage, goToPreviousPage, zoomIn, zoomOut]);
 
-  const onDocumentLoadSuccess = useCallback(({ numPages: pages }: { numPages: number }) => {
-    setNumPages(pages);
-    setLoading(false);
-    setError(null);
-  }, []);
-
-  const onDocumentLoadError = useCallback((err: Error) => {
-    logger.error(
-      'PDF load error',
-      err instanceof Error ? err : new Error(String(err)),
-      createErrorContext('PdfViewerModal', 'onDocumentLoadError', { pdfUrl })
-    );
-    setError('Failed to load PDF. Please try again.');
-    setLoading(false);
-  }, [pdfUrl]);
-
-  const goToPage = useCallback((page: number) => {
-    if (numPages && page >= 1 && page <= numPages) {
-      setCurrentPage(page);
-      if (thumbnailListRef.current && showThumbnails && typeof thumbnailListRef.current.scrollToItem === 'function') {
-        thumbnailListRef.current.scrollToItem(page - 1, 'center');
+  const handleJumpToPage = useCallback(
+    (e: React.FormEvent) => {
+      e.preventDefault();
+      const page = parseInt(jumpToPageInput, 10);
+      if (!isNaN(page)) {
+        goToPage(page);
+        setJumpToPageInput('');
       }
-    }
-  }, [numPages, showThumbnails]);
+    },
+    [jumpToPageInput, goToPage]
+  );
 
-  const goToNextPage = useCallback(() => {
-    if (numPages && currentPage < numPages) {
-      goToPage(currentPage + 1);
-    }
-  }, [currentPage, numPages, goToPage]);
-
-  const goToPreviousPage = useCallback(() => {
-    if (currentPage > 1) {
-      goToPage(currentPage - 1);
-    }
-  }, [currentPage, goToPage]);
-
-  const zoomIn = useCallback(() => {
-    const currentIndex = ZOOM_LEVELS.indexOf(zoomLevel);
-    if (currentIndex < ZOOM_LEVELS.length - 1) {
-      setZoomLevel(ZOOM_LEVELS[currentIndex + 1]);
-    }
-  }, [zoomLevel]);
-
-  const zoomOut = useCallback(() => {
-    const currentIndex = ZOOM_LEVELS.indexOf(zoomLevel);
-    if (currentIndex > 0) {
-      setZoomLevel(ZOOM_LEVELS[currentIndex - 1]);
-    }
-  }, [zoomLevel]);
-
-  const handleJumpToPage = useCallback((e: React.FormEvent) => {
-    e.preventDefault();
-    const page = parseInt(jumpToPageInput, 10);
-    if (!isNaN(page)) {
+  const handleThumbnailClick = useCallback(
+    (page: number) => {
       goToPage(page);
-      setJumpToPageInput('');
-    }
-  }, [jumpToPageInput, goToPage]);
+    },
+    [goToPage]
+  );
 
-  const handleThumbnailClick = useCallback((page: number) => {
-    goToPage(page);
-  }, [goToPage]);
+  const renderThumbnail = useCallback(
+    (props: { index: number; style: React.CSSProperties }) => {
+      const { index, style } = props;
+      const pageNumber = index + 1;
+      const isActive = pageNumber === currentPage;
 
-  const renderThumbnail = useCallback((props: { index: number; style: React.CSSProperties }) => {
-    const { index, style } = props;
-    const pageNumber = index + 1;
-    const isActive = pageNumber === currentPage;
-
-    return (
-      <div
-        style={{ ...style, padding: '8px', cursor: 'pointer' }}
-        onClick={() => handleThumbnailClick(pageNumber)}
-        data-testid={`thumbnail-${pageNumber}`}
-      >
+      return (
         <div
-          className={cn(
-            "rounded overflow-hidden bg-white transition-colors",
-            isActive ? "border-[3px] border-blue-500" : "border border-gray-300"
-          )}
+          style={{ ...style, padding: '8px', cursor: 'pointer' }}
+          onClick={() => handleThumbnailClick(pageNumber)}
+          data-testid={`thumbnail-${pageNumber}`}
         >
-          <Document
-            file={fileConfig}
-            onLoadError={() => {}}
-          >
-            <Page
-              pageNumber={pageNumber}
-              width={THUMBNAIL_WIDTH}
-              renderTextLayer={false}
-              renderAnnotationLayer={false}
-            />
-          </Document>
           <div
             className={cn(
-              "text-center p-1 text-xs",
-              isActive ? "text-blue-500 font-semibold bg-blue-50" : "text-gray-600 font-normal bg-gray-50"
+              'rounded overflow-hidden bg-white transition-colors',
+              isActive ? 'border-[3px] border-blue-500' : 'border border-gray-300'
             )}
           >
-            {pageNumber}
+            <Document file={fileConfig} onLoadError={() => {}}>
+              <Page
+                pageNumber={pageNumber}
+                width={THUMBNAIL_WIDTH}
+                renderTextLayer={false}
+                renderAnnotationLayer={false}
+              />
+            </Document>
+            <div
+              className={cn(
+                'text-center p-1 text-xs',
+                isActive
+                  ? 'text-blue-500 font-semibold bg-blue-50'
+                  : 'text-gray-600 font-normal bg-gray-50'
+              )}
+            >
+              {pageNumber}
+            </div>
           </div>
         </div>
-      </div>
-    );
-  }, [currentPage, fileConfig, handleThumbnailClick]);
+      );
+    },
+    [currentPage, fileConfig, handleThumbnailClick]
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -284,15 +305,15 @@ export function PdfViewerModal({
                   data-testid="zoom-out"
                   aria-label="Zoom out"
                   className={cn(
-                    "px-3 py-1.5 border border-gray-300 rounded font-medium text-sm",
+                    'px-3 py-1.5 border border-gray-300 rounded font-medium text-sm',
                     zoomLevel === ZOOM_LEVELS[0]
-                      ? "bg-gray-300 cursor-not-allowed"
-                      : "bg-white cursor-pointer hover:bg-gray-50"
+                      ? 'bg-gray-300 cursor-not-allowed'
+                      : 'bg-white cursor-pointer hover:bg-gray-50'
                   )}
                 >
                   -
                 </button>
-                {ZOOM_LEVELS.map((level) => (
+                {ZOOM_LEVELS.map(level => (
                   <button
                     key={level}
                     onClick={() => setZoomLevel(level)}
@@ -300,10 +321,10 @@ export function PdfViewerModal({
                     aria-label={`Zoom ${level * 100}%`}
                     aria-pressed={zoomLevel === level}
                     className={cn(
-                      "px-3 py-1.5 border border-gray-300 rounded cursor-pointer text-xs",
+                      'px-3 py-1.5 border border-gray-300 rounded cursor-pointer text-xs',
                       zoomLevel === level
-                        ? "bg-blue-500 text-white font-semibold"
-                        : "bg-white text-black font-normal hover:bg-gray-50"
+                        ? 'bg-blue-500 text-white font-semibold'
+                        : 'bg-white text-black font-normal hover:bg-gray-50'
                     )}
                   >
                     {level * 100}%
@@ -315,10 +336,10 @@ export function PdfViewerModal({
                   data-testid="zoom-in"
                   aria-label="Zoom in"
                   className={cn(
-                    "px-3 py-1.5 border border-gray-300 rounded font-medium text-sm",
+                    'px-3 py-1.5 border border-gray-300 rounded font-medium text-sm',
                     zoomLevel === ZOOM_LEVELS[ZOOM_LEVELS.length - 1]
-                      ? "bg-gray-300 cursor-not-allowed"
-                      : "bg-white cursor-pointer hover:bg-gray-50"
+                      ? 'bg-gray-300 cursor-not-allowed'
+                      : 'bg-white cursor-pointer hover:bg-gray-50'
                   )}
                 >
                   +
@@ -333,10 +354,10 @@ export function PdfViewerModal({
                   aria-label={showThumbnails ? 'Hide thumbnails' : 'Show thumbnails'}
                   aria-pressed={showThumbnails}
                   className={cn(
-                    "px-3 py-1.5 border border-gray-300 rounded cursor-pointer font-medium text-sm",
+                    'px-3 py-1.5 border border-gray-300 rounded cursor-pointer font-medium text-sm',
                     showThumbnails
-                      ? "bg-blue-500 text-white"
-                      : "bg-white text-black hover:bg-gray-50"
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-white text-black hover:bg-gray-50'
                   )}
                 >
                   Pages
@@ -351,8 +372,10 @@ export function PdfViewerModal({
                 <div
                   data-testid="thumbnail-sidebar"
                   className={cn(
-                    "border-gray-300 bg-white overflow-hidden",
-                    isMobile ? "w-full absolute z-10 h-full" : `w-[${THUMBNAIL_WIDTH + 32}px] relative z-[1] border-r`
+                    'border-gray-300 bg-white overflow-hidden',
+                    isMobile
+                      ? 'w-full absolute z-10 h-full'
+                      : `w-[${THUMBNAIL_WIDTH + 32}px] relative z-[1] border-r`
                   )}
                   role="navigation"
                   aria-label="Page thumbnails"
@@ -404,7 +427,7 @@ export function PdfViewerModal({
                             className="bg-white flex items-center justify-center rounded"
                             style={{
                               width: pageWidth * zoomLevel,
-                              height: pageWidth * 1.4 * zoomLevel
+                              height: pageWidth * 1.4 * zoomLevel,
                             }}
                             role="status"
                             aria-live="polite"
@@ -429,10 +452,10 @@ export function PdfViewerModal({
                         data-testid="prev-page"
                         aria-label="Previous page"
                         className={cn(
-                          "px-4 py-2 border-0 rounded font-medium text-sm",
+                          'px-4 py-2 border-0 rounded font-medium text-sm',
                           currentPage === 1
-                            ? "bg-gray-300 text-gray-600 cursor-not-allowed"
-                            : "bg-blue-500 text-white cursor-pointer hover:bg-blue-600"
+                            ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                            : 'bg-blue-500 text-white cursor-pointer hover:bg-blue-600'
                         )}
                       >
                         Previous
@@ -453,10 +476,10 @@ export function PdfViewerModal({
                         data-testid="next-page"
                         aria-label="Next page"
                         className={cn(
-                          "px-4 py-2 border-0 rounded font-medium text-sm",
+                          'px-4 py-2 border-0 rounded font-medium text-sm',
                           currentPage === numPages
-                            ? "bg-gray-300 text-gray-600 cursor-not-allowed"
-                            : "bg-blue-500 text-white cursor-pointer hover:bg-blue-600"
+                            ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                            : 'bg-blue-500 text-white cursor-pointer hover:bg-blue-600'
                         )}
                       >
                         Next
@@ -472,7 +495,7 @@ export function PdfViewerModal({
                           min={1}
                           max={numPages}
                           value={jumpToPageInput}
-                          onChange={(e) => setJumpToPageInput(e.target.value)}
+                          onChange={e => setJumpToPageInput(e.target.value)}
                           data-testid="jump-to-page-input"
                           aria-label="Jump to page number"
                           placeholder="Page #"

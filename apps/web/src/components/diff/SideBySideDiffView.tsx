@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection -- Safe Map/array access operations */
 import React, { useState, useCallback } from 'react';
 import { ProcessedDiff, CollapsibleSection } from '../../lib/diffProcessor';
 import { DiffCodePanel } from './DiffCodePanel';
@@ -21,25 +22,31 @@ export function SideBySideDiffView({
   currentChangeIndex,
   collapsibleSections,
   onToggleSection,
-  maxHeight = '600px'
+  maxHeight = '600px',
 }: SideBySideDiffViewProps) {
   const [leftScrollTop, setLeftScrollTop] = useState<number>();
   const [rightScrollTop, setRightScrollTop] = useState<number>();
   const [lastScrolledSide, setLastScrolledSide] = useState<'old' | 'new' | null>(null);
 
-  const handleLeftScroll = useCallback((scrollTop: number) => {
-    if (lastScrolledSide !== 'old') {
-      setLastScrolledSide('old');
-      setRightScrollTop(scrollTop);
-    }
-  }, [lastScrolledSide]);
+  const handleLeftScroll = useCallback(
+    (scrollTop: number) => {
+      if (lastScrolledSide !== 'old') {
+        setLastScrolledSide('old');
+        setRightScrollTop(scrollTop);
+      }
+    },
+    [lastScrolledSide]
+  );
 
-  const handleRightScroll = useCallback((scrollTop: number) => {
-    if (lastScrolledSide !== 'new') {
-      setLastScrolledSide('new');
-      setLeftScrollTop(scrollTop);
-    }
-  }, [lastScrolledSide]);
+  const handleRightScroll = useCallback(
+    (scrollTop: number) => {
+      if (lastScrolledSide !== 'new') {
+        setLastScrolledSide('new');
+        setLeftScrollTop(scrollTop);
+      }
+    },
+    [lastScrolledSide]
+  );
 
   const oldSections = Array.from(collapsibleSections.values()).filter(
     s => s.startLine <= processedDiff.oldLines.length
@@ -55,7 +62,7 @@ export function SideBySideDiffView({
           side="old"
           lines={processedDiff.oldLines}
           collapsibleSections={oldSections}
-          onToggleSection={(startLine) => onToggleSection(`old-${startLine}`)}
+          onToggleSection={startLine => onToggleSection(`old-${startLine}`)}
           searchQuery={searchQuery}
           highlightedChangeId={processedDiff.changes[currentChangeIndex]?.id}
           onScroll={handleLeftScroll}
@@ -65,7 +72,7 @@ export function SideBySideDiffView({
           side="new"
           lines={processedDiff.newLines}
           collapsibleSections={newSections}
-          onToggleSection={(startLine) => onToggleSection(`new-${startLine}`)}
+          onToggleSection={startLine => onToggleSection(`new-${startLine}`)}
           searchQuery={searchQuery}
           highlightedChangeId={processedDiff.changes[currentChangeIndex]?.id}
           onScroll={handleRightScroll}

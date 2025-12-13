@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection -- Safe status label/style Record access */
 /**
  * PDF-05: Upload queue item component
  * Displays a single file in the upload queue with progress bar and actions
@@ -21,7 +22,7 @@ const STATUS_LABELS: Record<UploadStatus, string> = {
   processing: 'Processing',
   success: 'Success',
   failed: 'Failed',
-  cancelled: 'Cancelled'
+  cancelled: 'Cancelled',
 };
 
 const STATUS_COLORS: Record<UploadStatus, string> = {
@@ -30,7 +31,7 @@ const STATUS_COLORS: Record<UploadStatus, string> = {
   processing: '#ff9800',
   success: '#34a853',
   failed: '#d93025',
-  cancelled: '#999'
+  cancelled: '#999',
 };
 
 const STATUS_BG_COLORS: Record<UploadStatus, string> = {
@@ -39,7 +40,7 @@ const STATUS_BG_COLORS: Record<UploadStatus, string> = {
   processing: '#fff3e0',
   success: '#e8f5e9',
   failed: '#ffebee',
-  cancelled: '#fafafa'
+  cancelled: '#fafafa',
 };
 
 function formatFileSize(bytes: number): string {
@@ -69,7 +70,7 @@ export function UploadQueueItem({ item, onCancel, onRetry, onRemove }: UploadQue
       data-testid={`upload-queue-item-${id}`}
       className="p-4 border border-gray-300 rounded-md mb-3 transition-colors duration-300"
       style={{
-        backgroundColor: statusBgColor
+        backgroundColor: statusBgColor,
       }}
     >
       {/* Header: Filename and Status */}
@@ -87,7 +88,9 @@ export function UploadQueueItem({ item, onCancel, onRetry, onRemove }: UploadQue
           </div>
         </div>
         <Badge
-          variant={status === 'success' ? 'default' : status === 'failed' ? 'destructive' : 'secondary'}
+          variant={
+            status === 'success' ? 'default' : status === 'failed' ? 'destructive' : 'secondary'
+          }
           role="status"
           aria-live="polite"
           aria-label={`Upload status: ${statusLabel}`}
@@ -105,9 +108,7 @@ export function UploadQueueItem({ item, onCancel, onRetry, onRemove }: UploadQue
             className="h-2 mb-2"
             aria-label={`Upload progress for ${file.name}`}
           />
-          <div className="text-xs text-gray-600 mb-2">
-            {progress}% complete
-          </div>
+          <div className="text-xs text-gray-600 mb-2">{progress}% complete</div>
         </>
       )}
 
@@ -119,11 +120,7 @@ export function UploadQueueItem({ item, onCancel, onRetry, onRemove }: UploadQue
           className="text-xs text-red-600 p-2 bg-white border border-red-600 rounded mb-2"
         >
           <div>Error: {error}</div>
-          {correlationId && (
-            <div className="mt-1 text-[11px]">
-              Error ID: {correlationId}
-            </div>
-          )}
+          {correlationId && <div className="mt-1 text-[11px]">Error ID: {correlationId}</div>}
         </div>
       )}
 
@@ -141,11 +138,7 @@ export function UploadQueueItem({ item, onCancel, onRetry, onRemove }: UploadQue
         )}
 
         {showRetryButton && (
-          <Button
-            onClick={() => onRetry(id)}
-            size="sm"
-            aria-label={`Retry upload of ${file.name}`}
-          >
+          <Button onClick={() => onRetry(id)} size="sm" aria-label={`Retry upload of ${file.name}`}>
             Retry
           </Button>
         )}

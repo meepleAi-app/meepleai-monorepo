@@ -5,6 +5,7 @@ using Api.BoundedContexts.GameManagement.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.EmbeddingProviders;
 using Api.BoundedContexts.SystemConfiguration.Infrastructure.DependencyInjection;
+using Api.BoundedContexts.UserNotifications.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.WorkflowIntegration.Infrastructure.DependencyInjection;
 using Api.Helpers;
 using Api.Services;
@@ -52,6 +53,9 @@ public static class ApplicationServiceExtensions
         // DDD-PHASE4: DocumentProcessing bounded context
         // BGAI-001-v2: Pass configuration for PDF extractor provider selection
         services.AddDocumentProcessingContext(configuration);
+
+        // ISSUE-2053: UserNotifications bounded context
+        services.AddUserNotificationsContext();
 
         return services;
     }

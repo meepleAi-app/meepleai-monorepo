@@ -317,8 +317,9 @@ public class RagServicePerformanceTests : IDisposable
                 It.IsAny<float[]>(),
                 It.IsAny<string>(),
                 It.IsAny<int>(),
+                It.IsAny<IReadOnlyList<string>?>(),
                 It.IsAny<CancellationToken>()))
-            .Returns(async (string gameId, float[] embedding, string lang, int limit, CancellationToken ct) =>
+            .Returns(async (string gameId, float[] embedding, string lang, int limit, IReadOnlyList<string>? documentIds, CancellationToken ct) =>
             {
                 // Simulate realistic vector search latency: 100-200ms
                 await Task.Delay(Random.Shared.Next(100, 200), ct);

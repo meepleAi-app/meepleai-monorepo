@@ -344,6 +344,7 @@ public class RagServiceIntegrationTests : IDisposable
                 It.IsAny<float[]>(),
                 It.IsAny<string>(),
                 It.IsAny<int>(),
+                It.IsAny<IReadOnlyList<string>?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new SearchResult
             {

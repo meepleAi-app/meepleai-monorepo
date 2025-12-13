@@ -16,3 +16,4 @@ export * from './adminClient';
 export * from './alerts';
 export * from './documentsClient';
 export * from './shareLinksClient'; // ISSUE-2052
+export * from './notifications'; // ISSUE-2053

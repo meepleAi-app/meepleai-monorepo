@@ -877,7 +877,15 @@ Get notifications for authenticated user.
 
 **Query Parameters**:
 - `unreadOnly`: Boolean, filter for unread notifications only
-- `limit`: Integer, max number of notifications to return
+- `limit`: Integer, max number of notifications to return (default: 50, capped at `Notifications:MaxPageSize` configuration value)
+
+**Configuration**:
+The maximum allowed page size is configurable via `Notifications:MaxPageSize` system configuration:
+- **Default**: 50
+- **Type**: Integer
+- **Admin UI**: `/admin/configuration`
+
+If a client requests a `limit` higher than the configured maximum, the system will cap the response to the configured maximum.
 
 **Response 200 OK**:
 ```json

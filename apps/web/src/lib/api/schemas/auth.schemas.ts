@@ -265,3 +265,27 @@ export const UserSearchResultSchema = z.object({
 });
 
 export type UserSearchResult = z.infer<typeof UserSearchResultSchema>;
+
+// ========== Revoke All Sessions (Issue #2056) ==========
+
+/**
+ * Schema for RevokeAllSessions request payload
+ */
+export const RevokeAllSessionsRequestSchema = z.object({
+  includeCurrentSession: z.boolean().default(false),
+  password: z.string().nullable().optional(),
+});
+
+export type RevokeAllSessionsRequest = z.infer<typeof RevokeAllSessionsRequestSchema>;
+
+/**
+ * Schema for RevokeAllSessions response
+ */
+export const RevokeAllSessionsResponseSchema = z.object({
+  ok: z.boolean(),
+  revokedCount: z.number().int().nonnegative(),
+  currentSessionRevoked: z.boolean(),
+  message: z.string(),
+});
+
+export type RevokeAllSessionsResponse = z.infer<typeof RevokeAllSessionsResponseSchema>;

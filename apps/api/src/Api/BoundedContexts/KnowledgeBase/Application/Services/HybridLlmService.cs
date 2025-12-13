@@ -129,7 +129,7 @@ public class HybridLlmService : ILlmService
         {
             _logger.LogError(
                 "No available provider found (circuit breakers may be open), using first client as fallback");
-            client = _clients.First();
+            client = _clients.ToList()[0]; // Safe: constructor ensures _clients.Any()
 
             var originalProvider = decision.ProviderName;
             decision = new LlmRoutingDecision(
@@ -250,7 +250,7 @@ public class HybridLlmService : ILlmService
             _logger.LogError(
                 "No client found for provider {Provider}, falling back to first available",
                 decision.ProviderName);
-            client = _clients.First();
+            client = _clients.ToList()[0]; // Safe: constructor ensures _clients.Any()
         }
 
         _logger.LogInformation(

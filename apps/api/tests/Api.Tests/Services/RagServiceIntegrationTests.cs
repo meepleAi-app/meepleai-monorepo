@@ -248,7 +248,6 @@ public class RagServiceIntegrationTests : IDisposable
         var mockLlmService = CreateMockLlmService();
 
         return new RagService(
-            _dbContext,
             _mockEmbeddingService.Object,
             _mockQdrantService.Object,
             _mockHybridSearchService.Object,
@@ -258,7 +257,6 @@ public class RagServiceIntegrationTests : IDisposable
             _mockLogger.Object,
             _mockQueryExpansion.Object,
             _mockReranker.Object,
-            _mockCitationExtractor.Object,
             _mockConfigProvider.Object);
     }
 
@@ -346,6 +344,7 @@ public class RagServiceIntegrationTests : IDisposable
                 It.IsAny<float[]>(),
                 It.IsAny<string>(),
                 It.IsAny<int>(),
+                It.IsAny<IReadOnlyList<string>?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new SearchResult
             {
@@ -379,6 +378,7 @@ public class RagServiceIntegrationTests : IDisposable
                 gameId,
                 It.IsAny<SearchMode>(),
                 It.IsAny<int>(),
+                It.IsAny<IReadOnlyList<Guid>?>(),
                 It.IsAny<float>(),
                 It.IsAny<float>(),
                 It.IsAny<CancellationToken>()))
@@ -795,7 +795,6 @@ public class RagServiceIntegrationTests : IDisposable
         var mockLlmService = CreateMockLlmService();
 
         return new RagService(
-            _dbContext,
             _mockEmbeddingService.Object,
             _mockQdrantService.Object,
             _mockHybridSearchService.Object,
@@ -805,7 +804,6 @@ public class RagServiceIntegrationTests : IDisposable
             _mockLogger.Object,
             _mockQueryExpansion.Object,
             _mockReranker.Object,
-            _mockCitationExtractor.Object,
             configMock.Object);
     }
 }

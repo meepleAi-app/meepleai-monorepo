@@ -99,6 +99,7 @@ export function AdminPageClient({ user }: AdminPageClientProps) {
         payload.metadata = JSON.parse(metadata);
       }
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- API payload type coercion
       const result = await api.admin.createPromptVersion(id, payload as any);
 
       showToast('Version created successfully', 'success');

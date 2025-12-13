@@ -1,3 +1,4 @@
+using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.Services;
 using Api.BoundedContexts.GameManagement.Infrastructure.Persistence;
@@ -19,6 +20,7 @@ public static class GameManagementServiceExtensions
         // Register repositories
         services.AddScoped<IGameRepository, GameRepository>();
         services.AddScoped<IGameSessionRepository, GameSessionRepository>();
+        services.AddScoped<IGameFAQRepository, GameFAQRepository>(); // ISSUE-2028
 
         // Register Unit of Work (shared across bounded contexts)
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
@@ -28,6 +30,9 @@ public static class GameManagementServiceExtensions
         services.AddScoped<RuleAtomParsingDomainService>();
         services.AddScoped<RuleSpecDiffDomainService>();
         services.AddScoped<MoveValidationDomainService>();
+
+        // Issue #2055: Register collaborative editing services
+        services.AddScoped<IEditorLockService, EditorLockService>();
 
         // MediatR handlers are auto-registered via assembly scanning in Program.cs
 

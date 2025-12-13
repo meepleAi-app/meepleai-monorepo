@@ -46,10 +46,13 @@ public class GetPrometheusMetricsQueryHandler : IRequestHandler<GetPrometheusMet
 
             return new PrometheusMetricsResponse(result.ResultType, timeSeriesDtos);
         }
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
+        // HANDLER PATTERN: Log query failures before propagating.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to execute Prometheus query: {Query}", request.Query);
             throw;
         }
+#pragma warning restore S2139
     }
 }

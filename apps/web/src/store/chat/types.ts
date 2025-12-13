@@ -36,6 +36,7 @@ export interface SessionState {
   selectedGameId: string | null;
   selectedAgentId: string | null;
   sidebarCollapsed: boolean;
+  selectedDocumentIds: string[] | null; // Issue #2051: Document source filtering (null = all documents)
 }
 
 export interface SessionActions {
@@ -43,6 +44,7 @@ export interface SessionActions {
   selectAgent: (agentId: string | null) => void;
   toggleSidebar: () => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
+  setSelectedDocuments: (documentIds: string[] | null) => void; // Issue #2051
 }
 
 export type SessionSlice = SessionState & SessionActions;

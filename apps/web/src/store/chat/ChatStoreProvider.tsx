@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection -- Safe Zustand store key access with typed game IDs */
 /**
  * ChatStoreProvider - Initialization wrapper for Zustand chat store (Issue #1083)
  *

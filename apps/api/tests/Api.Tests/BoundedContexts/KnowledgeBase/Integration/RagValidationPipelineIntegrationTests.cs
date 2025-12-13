@@ -3,8 +3,8 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
-using DotNet.Testcontainers.Builders;
-using DotNet.Testcontainers.Containers;
+using Api.Tests.Infrastructure;
+using Api.Tests.Constants;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -18,6 +18,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Integration;
 /// <summary>
 /// Integration tests for RAG validation pipeline (question → validated response)
 /// Tests validation flow with minimal infrastructure (Postgres only)
+/// Uses SharedTestcontainersFixture for optimized performance and Docker hijack prevention (Issue #2031).
 /// </summary>
 /// <remarks>
 /// Issue #978: BGAI-036 - End-to-end testing (question → validated response)
@@ -35,13 +36,17 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Integration;
 ///
 /// Note: Real OpenRouter integration tests deferred to Issue #979 (requires complex DI setup)
 /// </remarks>
+[Collection("SharedTestcontainers")]
 [Trait("Category", "Integration")]
 [Trait("Dependency", "Testcontainers")]
 [Trait("BoundedContext", "KnowledgeBase")]
 [Trait("Issue", "978")]
+[Trait("Issue", "2031")]
 public class RagValidationPipelineIntegrationTests : IAsyncLifetime
 {
-    private IContainer? _postgresContainer;
+    private readonly SharedTestcontainersFixture _fixture;
+    private string _isolatedDbConnectionString = string.Empty;
+    private string _databaseName = string.Empty;
     private MeepleAiDbContext? _dbContext;
     private IServiceProvider? _serviceProvider;
     private IRagValidationPipelineService? _validationPipeline;
@@ -53,8 +58,9 @@ public class RagValidationPipelineIntegrationTests : IAsyncLifetime
     private Guid _testGameId;
     private Guid _testVectorDocId;
 
-    public RagValidationPipelineIntegrationTests()
+    public RagValidationPipelineIntegrationTests(SharedTestcontainersFixture fixture)
     {
+        _fixture = fixture;
         _output = Console.WriteLine;
         _mockMultiModel = new Mock<IMultiModelValidationService>();
     }
@@ -63,25 +69,10 @@ public class RagValidationPipelineIntegrationTests : IAsyncLifetime
     {
         _output("=== Initializing RAG Validation Pipeline Integration Test Infrastructure ===");
 
-        // Start Postgres container (for citation validation)
-        _output("Starting PostgreSQL container...");
-        _postgresContainer = new ContainerBuilder()
-            .WithImage("postgres:16-alpine")
-            .WithEnvironment("POSTGRES_USER", "postgres")
-            .WithEnvironment("POSTGRES_PASSWORD", "postgres")
-            .WithEnvironment("POSTGRES_DB", "rag_validation_test")
-            .WithPortBinding(5432, true)
-            .WithWaitStrategy(Wait.ForUnixContainer()
-                .UntilCommandIsCompleted("pg_isready", "-U", "postgres"))
-            .Build();
-
-        await _postgresContainer.StartAsync(TestCancellationToken);
-        var postgresPort = _postgresContainer.GetMappedPublicPort(5432);
-        _output($"✓ PostgreSQL started on port {postgresPort}");
-
-        // Wait additional time for container to be fully ready (Testcontainers race condition mitigation)
-        await Task.Delay(TestConstants.Timing.MediumTimeout, TestCancellationToken);
-        _output("✓ Additional wait completed for container stability");
+        // Issue #2031: Migrated to SharedTestcontainersFixture
+        _databaseName = "test_ragvalidation_" + Guid.NewGuid().ToString("N");
+        _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
+        _output($"✓ Isolated database created: {_databaseName}");
 
         // Setup dependency injection
         var services = new ServiceCollection();
@@ -90,7 +81,7 @@ public class RagValidationPipelineIntegrationTests : IAsyncLifetime
         var configBuilder = new ConfigurationBuilder();
         configBuilder.AddInMemoryCollection(new Dictionary<string, string?>
         {
-            ["ConnectionStrings:Postgres"] = $"Host=localhost;Port={postgresPort};Database=rag_validation_test;Username=postgres;Password=postgres;",
+            ["ConnectionStrings:Postgres"] = _isolatedDbConnectionString,
             ["RagValidation:ConfidenceThreshold"] = "0.70",
             ["RagValidation:EnableMultiModel"] = "true",
             ["RagValidation:EnableHallucinationDetection"] = "true",
@@ -107,8 +98,7 @@ public class RagValidationPipelineIntegrationTests : IAsyncLifetime
         services.AddSingleton<TimeProvider>(TimeProvider.System);
 
         // DbContext with enforced connection settings
-        var connectionString = configuration.GetConnectionString("Postgres")!;
-        var enforcedBuilder = new NpgsqlConnectionStringBuilder(connectionString)
+        var enforcedBuilder = new NpgsqlConnectionStringBuilder(_isolatedDbConnectionString)
         {
             SslMode = SslMode.Disable,
             KeepAlive = 30,
@@ -194,9 +184,18 @@ public class RagValidationPipelineIntegrationTests : IAsyncLifetime
             await asyncDisposable.DisposeAsync();
         }
 
-        if (_postgresContainer != null)
+        // Issue #2031: Use SharedTestcontainersFixture for cleanup
+        if (!string.IsNullOrEmpty(_databaseName))
         {
-            await _postgresContainer.DisposeAsync();
+            try
+            {
+                await _fixture.DropIsolatedDatabaseAsync(_databaseName);
+                _output($"✓ Isolated database dropped: {_databaseName}");
+            }
+            catch (Exception ex)
+            {
+                _output($"⚠️ Failed to drop database {_databaseName}: {ex.Message}");
+            }
         }
 
         _output("✓ Test infrastructure disposed");

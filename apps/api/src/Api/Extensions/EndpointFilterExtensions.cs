@@ -95,4 +95,27 @@ public static class EndpointFilterExtensions
     {
         return builder.AddEndpointFilter<RequireAuthenticatedUserFilter>();
     }
+
+    /// <summary>
+    /// Applies notification-specific rate limiting for bulk operations.
+    /// Uses stricter limits than global rate limiting to prevent abuse.
+    ///
+    /// Default limits: 10 requests per minute (fixed window).
+    /// Returns 429 Too Many Requests when limit exceeded.
+    /// </summary>
+    /// <param name="builder">The route handler builder.</param>
+    /// <returns>The builder for method chaining.</returns>
+    /// <example>
+    /// <code>
+    /// group.MapPost("/notifications/mark-all-read", handler)
+    ///     .RequireNotificationRateLimit();
+    /// </code>
+    /// </example>
+    /// <remarks>
+    /// Issue: #2155 - Rate limiting for mark-all endpoint
+    /// </remarks>
+    public static RouteHandlerBuilder RequireNotificationRateLimit(this RouteHandlerBuilder builder)
+    {
+        return builder.AddEndpointFilter<NotificationRateLimitFilter>();
+    }
 }

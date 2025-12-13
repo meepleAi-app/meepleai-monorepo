@@ -101,7 +101,8 @@ public class StreamSetupGuideQueryHandler : IStreamingQueryHandler<StreamSetupGu
         }
     }
     /// <summary>
-    /// Internal method to generate setup guide with try-catch (no yield statements)
+    /// Generates setup guide steps for a game using RAG and LLM.
+    /// Returns default steps if RAG/LLM pipeline fails.
     /// </summary>
     private async Task<SetupGuideGenerationResult> GenerateSetupGuideInternalAsync(
         string gameId,
@@ -110,73 +111,39 @@ public class StreamSetupGuideQueryHandler : IStreamingQueryHandler<StreamSetupGu
         try
         {
             // Step 1: Generate embedding for setup query
-            var setupQuery = "game setup preparation initial components placement player starting conditions";
-            var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(setupQuery, cancellationToken).ConfigureAwait(false);
-
-            if (!embeddingResult.Success || embeddingResult.Embeddings.Count == 0)
+            var (embeddingSuccess, queryEmbedding) = await GenerateSetupQueryEmbeddingAsync(
+                gameId, cancellationToken).ConfigureAwait(false);
+            if (!embeddingSuccess)
             {
-                _logger.LogWarning("Failed to generate embedding for setup query: {GameId}", gameId);
                 return SetupGuideGenerationResult.CreateDefault();
             }
-
-            var queryEmbedding = embeddingResult.Embeddings[0];
 
             // Step 2: Search Qdrant for setup-related chunks
-            var searchResult = await _qdrantService.SearchAsync(
-                gameId,
-                queryEmbedding,
-                limit: 10,
-                cancellationToken).ConfigureAwait(false);
-
-            if (!searchResult.Success || searchResult.Results.Count == 0)
+            var (searchSuccess, context, allReferences, confidence) = await SearchSetupContextAsync(
+                gameId, queryEmbedding!, cancellationToken).ConfigureAwait(false);
+            if (!searchSuccess)
             {
-                _logger.LogInformation("No RAG results found for game {GameId}, using default steps", gameId);
                 return SetupGuideGenerationResult.CreateDefault();
             }
-
-            // Build context from retrieved chunks
-            var context = string.Join("\n\n---\n\n", searchResult.Results.Select(r =>
-                $"[Page {r.Page}]\n{r.Text}"));
-
-            // Build references for all steps
-            var allReferences = searchResult.Results.Select(r => new Snippet(
-                r.Text,
-                $"PDF:{r.PdfId}",
-                r.Page,
-                0,
-                r.Score
-            )).ToList();
-
-            var confidence = (double?)searchResult.Results.Max(r => r.Score);
 
             // Step 3: Generate setup steps with LLM
-            var systemPrompt = await GetSetupGuideSystemPromptAsync(cancellationToken).ConfigureAwait(false);
-            var userPrompt = $@"CONTEXT FROM RULEBOOK:
-{context}
-
-TASK: Generate a step-by-step setup guide for this board game. Focus on the initial setup before gameplay begins.";
-
-            var llmResult = await _llmService.GenerateCompletionAsync(systemPrompt, userPrompt, cancellationToken).ConfigureAwait(false);
-
-            if (!llmResult.Success || string.IsNullOrWhiteSpace(llmResult.Response))
+            var (llmSuccess, steps, tokenUsage) = await GenerateLlmSetupStepsAsync(
+                gameId, context!, allReferences!, cancellationToken).ConfigureAwait(false);
+            if (!llmSuccess)
             {
-                _logger.LogWarning("LLM generation failed for game {GameId}, falling back to default", gameId);
                 return SetupGuideGenerationResult.CreateDefault();
             }
-
-            // Parse LLM response into steps
-            var steps = ParseLlmStepsResponse(llmResult.Response, allReferences);
 
             _logger.LogInformation(
                 "LLM generated {StepCount} setup steps for game {GameId}, tokens: {TotalTokens}",
-                steps.Count, gameId, llmResult.Usage.TotalTokens);
+                steps!.Count, gameId, tokenUsage.TotalTokens);
 
             return new SetupGuideGenerationResult(
                 Success: true,
                 Steps: steps,
-                TotalTokens: llmResult.Usage.TotalTokens,
-                PromptTokens: llmResult.Usage.PromptTokens,
-                CompletionTokens: llmResult.Usage.CompletionTokens,
+                TotalTokens: tokenUsage.TotalTokens,
+                PromptTokens: tokenUsage.PromptTokens,
+                CompletionTokens: tokenUsage.CompletionTokens,
                 Confidence: confidence,
                 ErrorMessage: null,
                 ErrorCode: null
@@ -195,6 +162,102 @@ TASK: Generate a step-by-step setup guide for this board game. Focus on the init
             return SetupGuideGenerationResult.CreateError(ex.Message);
         }
 #pragma warning restore CA1031
+    }
+
+    /// <summary>
+    /// Generates embedding for setup query.
+    /// Returns (success, queryEmbedding).
+    /// </summary>
+    private async Task<(bool success, float[]? queryEmbedding)> GenerateSetupQueryEmbeddingAsync(
+        string gameId,
+        CancellationToken cancellationToken)
+    {
+        var setupQuery = "game setup preparation initial components placement player starting conditions";
+        var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(setupQuery, cancellationToken).ConfigureAwait(false);
+
+        if (!embeddingResult.Success || embeddingResult.Embeddings.Count == 0)
+        {
+            _logger.LogWarning("Failed to generate embedding for setup query: {GameId}", gameId);
+            return (false, null);
+        }
+
+        return (true, embeddingResult.Embeddings[0]);
+    }
+
+    /// <summary>
+    /// Searches Qdrant for setup-related context chunks.
+    /// Returns (success, context, references, confidence).
+    /// </summary>
+    private async Task<(bool success, string? context, List<Snippet>? references, double? confidence)> SearchSetupContextAsync(
+        string gameId,
+        float[] queryEmbedding,
+        CancellationToken cancellationToken)
+    {
+        var searchResult = await _qdrantService.SearchAsync(
+            gameId,
+            queryEmbedding,
+            limit: 10,
+            documentIds: null,
+            cancellationToken).ConfigureAwait(false);
+
+        if (!searchResult.Success || searchResult.Results.Count == 0)
+        {
+            _logger.LogInformation("No RAG results found for game {GameId}, using default steps", gameId);
+            return (false, null, null, null);
+        }
+
+        // Build context from retrieved chunks
+        var context = string.Join("\n\n---\n\n", searchResult.Results.Select(r =>
+            $"[Page {r.Page}]\n{r.Text}"));
+
+        // Build references for all steps
+        var allReferences = searchResult.Results.Select(r => new Snippet(
+            r.Text,
+            $"PDF:{r.PdfId}",
+            r.Page,
+            0,
+            r.Score
+        )).ToList();
+
+        var confidence = (double?)searchResult.Results.Max(r => r.Score);
+
+        return (true, context, allReferences, confidence);
+    }
+
+    /// <summary>
+    /// Generates setup steps using LLM with RAG context.
+    /// Returns (success, steps, tokenUsage).
+    /// </summary>
+    private async Task<(bool success, List<SetupGuideStep>? steps, (int TotalTokens, int PromptTokens, int CompletionTokens) tokenUsage)> GenerateLlmSetupStepsAsync(
+        string gameId,
+        string context,
+        List<Snippet> allReferences,
+        CancellationToken cancellationToken)
+    {
+        var systemPrompt = await GetSetupGuideSystemPromptAsync(cancellationToken).ConfigureAwait(false);
+        var userPrompt = $@"CONTEXT FROM RULEBOOK:
+{context}
+
+TASK: Generate a step-by-step setup guide for this board game. Focus on the initial setup before gameplay begins.";
+
+        var llmResult = await _llmService.GenerateCompletionAsync(systemPrompt, userPrompt, cancellationToken).ConfigureAwait(false);
+
+        if (!llmResult.Success || string.IsNullOrWhiteSpace(llmResult.Response))
+        {
+            _logger.LogWarning("LLM generation failed for game {GameId}, falling back to default", gameId);
+            return (false, null, (0, 0, 0));
+        }
+
+        // Parse LLM response into steps
+        var steps = ParseLlmStepsResponse(llmResult.Response, allReferences);
+
+        var tokenUsage = (
+            TotalTokens: llmResult.Usage.TotalTokens,
+            PromptTokens: llmResult.Usage.PromptTokens,
+            CompletionTokens: llmResult.Usage.CompletionTokens
+        );
+
+        return (true, steps, tokenUsage);
     }
     /// <summary>
     /// Stream individual setup steps with delays between each step

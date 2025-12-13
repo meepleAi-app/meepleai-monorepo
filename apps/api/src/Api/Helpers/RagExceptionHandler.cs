@@ -117,9 +117,12 @@ public static class RagExceptionHandler
         var exceptionTypeName = exception.GetType().Name;
 
         // Get the appropriate error response factory, defaulting to generic Exception handler
+        if (errorResponseFactories.Count == 0)
+            throw new ArgumentException("Error response factories dictionary cannot be empty", nameof(errorResponseFactories));
+
         var errorResponseFactory = errorResponseFactories.TryGetValue(exceptionTypeName, out var factory)
             ? factory
-            : errorResponseFactories.GetValueOrDefault("Exception", errorResponseFactories.Values.First());
+            : errorResponseFactories.GetValueOrDefault("Exception") ?? errorResponseFactories.Values.ToList()[0];
 
         var logAction = GetLogAction(exceptionTypeName, context, gameId, additionalInfo);
 

@@ -56,6 +56,20 @@ public class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
         return entities.Select(MapToDomain).ToList();
     }
 
+    public async Task<IReadOnlyList<PdfDocument>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default)
+    {
+        var idList = ids.ToList();
+        if (idList.Count == 0)
+            return Array.Empty<PdfDocument>();
+
+        var entities = await DbContext.PdfDocuments
+            .AsNoTracking()
+            .Where(p => idList.Contains(p.Id))
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+        return entities.Select(MapToDomain).ToList();
+    }
+
     public async Task AddAsync(PdfDocument document, CancellationToken cancellationToken = default)
     {
         CollectDomainEvents(document);
@@ -96,32 +110,34 @@ public class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
         var fileName = new FileName(entity.FileName);
         var fileSize = new FileSize(entity.FileSizeBytes);
 
-        var doc = new PdfDocument(
+        // Issue #2029: Convert string to LanguageCode Value Object
+        var language = string.IsNullOrWhiteSpace(entity.Language)
+            ? LanguageCode.English
+            : new LanguageCode(entity.Language);
+
+        // Issue #2051: Convert string to DocumentType Value Object
+        var documentType = string.IsNullOrWhiteSpace(entity.DocumentType)
+            ? DocumentType.Base
+            : new DocumentType(entity.DocumentType);
+
+        // Issue #2140: Use Reconstitute factory method instead of reflection
+        return PdfDocument.Reconstitute(
             id: entity.Id,
             gameId: entity.GameId,
             fileName: fileName,
             filePath: entity.FilePath,
             fileSize: fileSize,
-            uploadedByUserId: entity.UploadedByUserId
+            uploadedByUserId: entity.UploadedByUserId,
+            uploadedAt: entity.UploadedAt,
+            processingStatus: entity.ProcessingStatus,
+            processedAt: entity.ProcessedAt,
+            pageCount: entity.PageCount,
+            processingError: entity.ProcessingError,
+            language: language,
+            collectionId: entity.CollectionId,
+            documentType: documentType,
+            sortOrder: entity.SortOrder
         );
-
-        // Override properties from DB
-        var processingStatusProp = typeof(PdfDocument).GetProperty("ProcessingStatus");
-        processingStatusProp?.SetValue(doc, entity.ProcessingStatus);
-
-        var processedAtProp = typeof(PdfDocument).GetProperty("ProcessedAt");
-        processedAtProp?.SetValue(doc, entity.ProcessedAt);
-
-        var pageCountProp = typeof(PdfDocument).GetProperty("PageCount");
-        pageCountProp?.SetValue(doc, entity.PageCount);
-
-        var processingErrorProp = typeof(PdfDocument).GetProperty("ProcessingError");
-        processingErrorProp?.SetValue(doc, entity.ProcessingError);
-
-        var uploadedAtProp = typeof(PdfDocument).GetProperty("UploadedAt");
-        uploadedAtProp?.SetValue(doc, entity.UploadedAt);
-
-        return doc;
     }
 
     private static Api.Infrastructure.Entities.PdfDocumentEntity MapToPersistence(PdfDocument domain)
@@ -139,7 +155,11 @@ public class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
             ProcessingStatus = domain.ProcessingStatus,
             ProcessedAt = domain.ProcessedAt,
             PageCount = domain.PageCount,
-            ProcessingError = domain.ProcessingError
+            ProcessingError = domain.ProcessingError,
+            Language = domain.Language.Value, // Issue #2029: Extract string from Value Object
+            CollectionId = domain.CollectionId, // Issue #2051
+            DocumentType = domain.DocumentType.Value, // Issue #2051: Extract string from Value Object
+            SortOrder = domain.SortOrder // Issue #2051
         };
     }
 }

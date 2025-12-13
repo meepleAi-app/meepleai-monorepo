@@ -19,6 +19,7 @@ export const PdfDocumentDtoSchema = z.object({
   uploadedAt: z.string().datetime(),
   processedAt: z.string().datetime().nullable(),
   pageCount: z.number().int().positive().nullable(),
+  documentType: z.enum(['base', 'expansion', 'errata', 'homerule']).default('base'), // Issue #2051
 });
 
 export type PdfDocumentDto = z.infer<typeof PdfDocumentDtoSchema>;

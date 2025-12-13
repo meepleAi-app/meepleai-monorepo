@@ -667,7 +667,7 @@ public class RagValidationPipelineIntegrationTests : IAsyncLifetime
 - Test validation pipeline logic, not LLM integration
 - Run with: `dotnet test --filter "FullyQualifiedName~RagValidationPipelineIntegrationTests"`
 
-### ⚠️ Docker Hijack Prevention (Issue #895)
+### ⚠️ Docker Hijack Prevention (Issue #2031)
 
 **CRITICAL**: Avoid `.UntilCommandIsCompleted()` wait strategy in Testcontainers tests.
 
@@ -680,11 +680,14 @@ System.InvalidOperationException: cannot hijack chunked or content length stream
 ```csharp
 .WithWaitStrategy(Wait.ForUnixContainer()
     .UntilCommandIsCompleted("pg_isready", "-U", "postgres"))
+
+.WithWaitStrategy(Wait.ForUnixContainer()
+    .UntilCommandIsCompleted("redis-cli", "ping"))
 ```
 
 **✅ PREFER** (robust alternatives):
 ```csharp
-// Option 1: Default TCP wait + delay (simplest)
+// Option 1: Default TCP wait + delay (simplest, recommended)
 .WithPortBinding(5432, true)
 .Build();
 
@@ -704,7 +707,11 @@ await Task.Delay(TimeSpan.FromSeconds(2)); // Wait for full readiness
 - Docker API under load
 - Windows + WSL2 + Docker Desktop
 
-**Pattern Documented**: Issue #2031 tracks preventive fixes for 20+ vulnerable tests
+**Centralized Fix Applied** (Issue #2031):
+- ✅ `SharedTestcontainersFixture.cs`: PostgreSQL + Redis containers fixed
+- ✅ Impacts 30+ test classes automatically via shared fixture
+- ✅ No individual test modifications required
+- Related: Issue #895 (initial discovery), Issue #2005 (migration retry)
 
 ---
 

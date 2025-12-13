@@ -75,7 +75,7 @@ public class StreamExplainQueryHandlerTests
         };
 
         _qdrantServiceMock
-            .Setup(x => x.SearchAsync(gameId, embedding, 5, It.IsAny<CancellationToken>()))
+            .Setup(x => x.SearchAsync(gameId, embedding, 5, It.IsAny<IReadOnlyList<string>?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new SearchResult
             {
                 Success = true,
@@ -331,7 +331,7 @@ public class StreamExplainQueryHandlerTests
 
         // Should not proceed to search
         _qdrantServiceMock.Verify(
-            x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<CancellationToken>()),
+            x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<IReadOnlyList<string>?>(), It.IsAny<CancellationToken>()),
             Times.Never
         );
     }
@@ -372,7 +372,7 @@ public class StreamExplainQueryHandlerTests
         SetupEmbeddingMock("test topic");
 
         _qdrantServiceMock
-            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<IReadOnlyList<string>?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new SearchResult
             {
                 Success = false,
@@ -402,7 +402,7 @@ public class StreamExplainQueryHandlerTests
         SetupEmbeddingMock("test topic");
 
         _qdrantServiceMock
-            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<IReadOnlyList<string>?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new SearchResult
             {
                 Success = true,
@@ -532,7 +532,7 @@ public class StreamExplainQueryHandlerTests
         Assert.NotNull(citationsEvent);
         var citations = Assert.IsType<StreamingCitations>(citationsEvent.Data);
 
-        var citation = citations.citations.First();
+        var citation = citations.citations[0];
         Assert.Equal("Sample rule text", citation.text);
         Assert.Equal($"PDF:{pdfId}", citation.source);
         Assert.Equal(42, citation.page);
@@ -645,7 +645,7 @@ public class StreamExplainQueryHandlerTests
         SetupQdrantMock("game123", searchResults);
     }
 
-    private void SetupEmbeddingMock(string topic)
+    private void SetupEmbeddingMock(string _)
     {
         var embedding = new float[] { 0.1f, 0.2f, 0.3f };
         _embeddingServiceMock
@@ -660,7 +660,7 @@ public class StreamExplainQueryHandlerTests
     private void SetupQdrantMock(string gameId, List<SearchResultItem> results)
     {
         _qdrantServiceMock
-            .Setup(x => x.SearchAsync(gameId, It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.SearchAsync(gameId, It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<IReadOnlyList<string>?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new SearchResult
             {
                 Success = true,

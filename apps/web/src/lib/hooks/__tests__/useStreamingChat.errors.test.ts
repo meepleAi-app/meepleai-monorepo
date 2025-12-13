@@ -325,7 +325,12 @@ describe('useStreamingChat', () => {
           method: 'POST',
           credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ gameId: 'game-456', query: 'test query', chatId: 'chat-789' }),
+          body: JSON.stringify({
+            gameId: 'game-456',
+            query: 'test query',
+            chatId: 'chat-789',
+            documentIds: null,
+          }),
         })
       );
     });

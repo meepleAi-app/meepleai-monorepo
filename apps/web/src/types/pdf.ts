@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection -- Safe typed Record access with ProcessingStep enum keys */
 /**
  * PDF Processing Types (PDF-08)
  * Type definitions for PDF processing progress tracking
@@ -13,7 +14,7 @@ export enum ProcessingStep {
   Embedding = 'Embedding',
   Indexing = 'Indexing',
   Completed = 'Completed',
-  Failed = 'Failed'
+  Failed = 'Failed',
 }
 
 /**
@@ -45,7 +46,7 @@ export function getStepLabel(step: ProcessingStep): string {
     [ProcessingStep.Embedding]: 'Generating embeddings',
     [ProcessingStep.Indexing]: 'Indexing in vector database',
     [ProcessingStep.Completed]: 'Processing completed',
-    [ProcessingStep.Failed]: 'Processing failed'
+    [ProcessingStep.Failed]: 'Processing failed',
   };
   return labels[step];
 }
@@ -61,7 +62,7 @@ export function getStepOrder(step: ProcessingStep): number {
     [ProcessingStep.Embedding]: 3,
     [ProcessingStep.Indexing]: 4,
     [ProcessingStep.Completed]: 5,
-    [ProcessingStep.Failed]: 5
+    [ProcessingStep.Failed]: 5,
   };
   return order[step];
 }

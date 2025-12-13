@@ -21,8 +21,11 @@ public class QdrantClientAdapter : IQdrantClientAdapter
         ILogger<QdrantClientAdapter> logger,
         Func<string, int, bool, QdrantClient>? clientFactory = null)
     {
+        // S1075: Default Qdrant URL extracted to const
+        const string DefaultQdrantUrl = "http://localhost:6333";
+
         _logger = logger;
-        var qdrantUrl = configuration["QDRANT_URL"] ?? "http://localhost:6333";
+        var qdrantUrl = configuration["QDRANT_URL"] ?? DefaultQdrantUrl;
 
         if (!Uri.TryCreate(qdrantUrl, UriKind.Absolute, out var uri))
         {

@@ -264,7 +264,7 @@ public class TextChunkingService : ITextChunkingService
     /// Estimate page number based on character position
     /// Assumes ~2000 characters per page (rough estimate)
     /// </summary>
-    private static int EstimatePageNumber(int charPosition, int totalLength)
+    private static int EstimatePageNumber(int charPosition, int _)
     {
         const int charsPerPage = 2000;
         return (charPosition / charsPerPage) + 1;

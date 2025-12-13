@@ -7,6 +7,13 @@ namespace Api.SharedKernel.Domain.Entities;
 /// Provides equality comparison based on ID.
 /// </summary>
 /// <typeparam name="TId">The type of the entity's identifier</typeparam>
+/// <remarks>
+/// This class implements IEquatable{T} but is intentionally left abstract (not sealed)
+/// to support DDD aggregate hierarchies. The equality contract is fixed to ID-based comparison
+/// and should not be overridden in derived classes to maintain domain model integrity.
+/// S4035 is suppressed as this design is intentional for DDD base classes.
+/// </remarks>
+#pragma warning disable S4035 // Classes implementing "IEquatable<T>" should be sealed or implement "IEqualityComparer<T>"
 public abstract class Entity<TId> : IEntity<TId>, IEquatable<Entity<TId>>
     where TId : notnull
 {
@@ -60,3 +67,4 @@ public abstract class Entity<TId> : IEntity<TId>, IEquatable<Entity<TId>>
         return !Equals(left, right);
     }
 }
+#pragma warning restore S4035

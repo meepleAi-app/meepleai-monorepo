@@ -81,6 +81,7 @@ public class ChatExportService : IChatExportService
             throw;
         }
 #pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Service boundary - Returns domain result object (ExportResult) instead of throwing, multi-tier error handling for export operations
         catch (Exception ex)
 #pragma warning restore CA1031
         {

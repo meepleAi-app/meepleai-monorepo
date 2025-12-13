@@ -155,13 +155,16 @@ public sealed class ChunkingStrategySelector
     private static int CountParagraphBreaks(string content)
     {
         var doubleNewlineCount = 0;
-        for (var i = 0; i < content.Length - 1; i++)
+        // S127: Use while loop to avoid modifying counter in body
+        var i = 0;
+        while (i < content.Length - 1)
         {
             if (content[i] == '\n' && content[i + 1] == '\n')
             {
                 doubleNewlineCount++;
-                i++; // Skip the second newline
+                i++; // Skip the second newline (safe in while loop)
             }
+            i++; // Advance to next character
         }
         return doubleNewlineCount;
     }

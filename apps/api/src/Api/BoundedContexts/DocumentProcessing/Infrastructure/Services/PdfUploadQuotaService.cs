@@ -246,7 +246,7 @@ public class PdfUploadQuotaService : IPdfUploadQuotaService
         }
     }
 
-    private async Task DecrementUploadCountAsync(Guid userId, CancellationToken ct = default)
+    private async Task DecrementUploadCountAsync(Guid userId, CancellationToken _ = default)
     {
         try
         {
@@ -289,7 +289,6 @@ public class PdfUploadQuotaService : IPdfUploadQuotaService
         // Admin and Editor have unlimited quota
         if (userRole.IsAdmin() || userRole.IsEditor())
         {
-            var now = _timeProvider.GetUtcNow().UtcDateTime;
             return new PdfUploadQuotaInfo
             {
                 DailyUploadsUsed = 0,
@@ -326,13 +325,16 @@ public class PdfUploadQuotaService : IPdfUploadQuotaService
                 IsUnlimited = false
             };
         }
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
+        // INFRASTRUCTURE LOGGING PATTERN: Log exceptions at the infrastructure boundary for debugging.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting quota info for user {UserId}", userId);
             throw;
         }
+#pragma warning restore S2139
     }
-    private async Task<(int dailyLimit, int weeklyLimit)> GetLimitsForTierAsync(UserTier tier, CancellationToken ct = default)
+    private async Task<(int dailyLimit, int weeklyLimit)> GetLimitsForTierAsync(UserTier tier, CancellationToken _ = default)
     {
         var tierValue = tier.Value;
         var dailyKey = $"UploadLimits:{tierValue}:DailyLimit";
@@ -351,7 +353,7 @@ public class PdfUploadQuotaService : IPdfUploadQuotaService
         );
     }
 
-    private async Task<(int dailyUsed, int weeklyUsed)> GetUsageAsync(Guid userId, CancellationToken ct = default)
+    private async Task<(int dailyUsed, int weeklyUsed)> GetUsageAsync(Guid userId, CancellationToken _ = default)
     {
         var db = _redis.GetDatabase();
         var now = _timeProvider.GetUtcNow().UtcDateTime;

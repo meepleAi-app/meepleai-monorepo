@@ -45,6 +45,10 @@ public class QdrantVectorSearcher : IQdrantVectorSearcher
 
             return searchResults.ToList();
         }
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
+        // INFRASTRUCTURE LOGGING PATTERN: Log exceptions at the infrastructure boundary to provide
+        // debugging context (collection name, operation type, error details) before propagating.
+        // Callers may not have this context, so logging here is intentional.
         catch (ArgumentNullException ex)
         {
             _logger.LogError(ex, "Null argument during search in collection {CollectionName}", collectionName);
@@ -71,6 +75,7 @@ public class QdrantVectorSearcher : IQdrantVectorSearcher
             _logger.LogError(ex, "Operation cancelled during search in collection {CollectionName}", collectionName);
             throw;
         }
+#pragma warning restore S2139
     }
 
     /// <summary>
@@ -179,5 +184,46 @@ public class QdrantVectorSearcher : IQdrantVectorSearcher
                 }
             }
         };
+    }
+
+    /// <summary>
+    /// Build a combined filter for game ID and multiple document IDs (Issue #2141)
+    /// Uses Must for game_id AND Should for pdf_id (OR logic)
+    /// </summary>
+    public Filter BuildGameAndDocumentsFilter(string gameId, IReadOnlyList<string> documentIds)
+    {
+        var filter = new Filter
+        {
+            Must =
+            {
+                // game_id must match
+                new Condition
+                {
+                    Field = new FieldCondition
+                    {
+                        Key = "game_id",
+                        Match = new Match { Keyword = gameId }
+                    }
+                }
+            }
+        };
+
+        // pdf_id should match ANY of the provided IDs (OR logic)
+        if (documentIds != null && documentIds.Count > 0)
+        {
+            foreach (var docId in documentIds)
+            {
+                filter.Should.Add(new Condition
+                {
+                    Field = new FieldCondition
+                    {
+                        Key = "pdf_id",
+                        Match = new Match { Keyword = docId }
+                    }
+                });
+            }
+        }
+
+        return filter;
     }
 }

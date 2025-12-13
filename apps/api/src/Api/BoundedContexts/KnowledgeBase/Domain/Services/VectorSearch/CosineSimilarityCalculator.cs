@@ -145,8 +145,9 @@ public class CosineSimilarityCalculator
         var magnitude1 = Math.Sqrt(vector1.Values.Sum(v => v * v));
         var magnitude2 = Math.Sqrt(vector2.Values.Sum(v => v * v));
 
-        // Avoid division by zero
-        if (magnitude1 == 0.0 || magnitude2 == 0.0)
+        // S1244: Avoid division by zero with tolerance-based comparison
+        const double epsilon = 1e-10;
+        if (Math.Abs(magnitude1) < epsilon || Math.Abs(magnitude2) < epsilon)
         {
             return 0.0;
         }

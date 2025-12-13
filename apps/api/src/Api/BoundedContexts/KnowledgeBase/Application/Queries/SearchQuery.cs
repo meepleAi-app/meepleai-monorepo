@@ -5,6 +5,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 
 /// <summary>
 /// Query to perform vector/hybrid search.
+/// Issue #2051: Supports document filtering via DocumentIds
 /// </summary>
 public record SearchQuery(
     Guid GameId,
@@ -12,5 +13,6 @@ public record SearchQuery(
     int TopK = 5,
     double MinScore = 0.55, // Adjusted for mxbai-embed-large
     string SearchMode = "hybrid", // "vector", "keyword", "hybrid"
-    string Language = "en"
+    string Language = "en",
+    IReadOnlyList<Guid>? DocumentIds = null // Issue #2051: Filter by document IDs (null = all)
 ) : IQuery<List<SearchResultDto>>;

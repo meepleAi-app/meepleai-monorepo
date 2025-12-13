@@ -87,14 +87,15 @@ public sealed record ChunkingConfiguration
     /// <returns>True if valid, throws otherwise.</returns>
     public bool Validate()
     {
+        // MA0015: Use InvalidOperationException for property validation (not parameter validation)
         if (ChunkSizeTokens <= 0)
-            throw new ArgumentException("ChunkSizeTokens must be positive", nameof(ChunkSizeTokens));
+            throw new InvalidOperationException($"{nameof(ChunkSizeTokens)} must be positive");
 
         if (OverlapPercentage is < 0 or > 0.5)
-            throw new ArgumentException("OverlapPercentage must be between 0 and 0.5", nameof(OverlapPercentage));
+            throw new InvalidOperationException($"{nameof(OverlapPercentage)} must be between 0 and 0.5");
 
         if (CharsPerToken <= 0)
-            throw new ArgumentException("CharsPerToken must be positive", nameof(CharsPerToken));
+            throw new InvalidOperationException($"{nameof(CharsPerToken)} must be positive");
 
         return true;
     }

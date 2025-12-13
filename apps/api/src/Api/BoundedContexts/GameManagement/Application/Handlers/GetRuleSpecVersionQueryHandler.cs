@@ -32,6 +32,11 @@ public class GetRuleSpecVersionQueryHandler : IQueryHandler<GetRuleSpecVersionQu
             return null;
         }
 
+        // Issue #2055: Include ETag for optimistic concurrency
+        var etag = specEntity.RowVersion != null
+            ? Convert.ToBase64String(specEntity.RowVersion)
+            : null;
+
         return new RuleSpecDto(
             Id: specEntity.Id,
             GameId: specEntity.GameId,
@@ -48,7 +53,8 @@ public class GetRuleSpecVersionQueryHandler : IQueryHandler<GetRuleSpecVersionQu
                     Page: a.PageNumber?.ToString(CultureInfo.InvariantCulture),
                     Line: a.LineNumber?.ToString(CultureInfo.InvariantCulture)
                 ))
-                .ToList()
+                .ToList(),
+            ETag: etag
         );
     }
 }

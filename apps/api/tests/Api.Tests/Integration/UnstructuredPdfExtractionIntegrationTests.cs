@@ -131,8 +131,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
 
         _extractor = new UnstructuredPdfTextExtractor(
             serviceProvider.GetRequiredService<IHttpClientFactory>(),
-            logger,
-            domainService);
+            logger);
 
         _output("Test infrastructure initialized");
     }
@@ -423,7 +422,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
 
         // Verify page numbers are sequential and valid
         var pageNumbers = result.PageChunks.Select(c => c.PageNumber).OrderBy(p => p).ToList();
-        Assert.Equal(1, pageNumbers.First());
+        Assert.Equal(1, pageNumbers[0]);
         Assert.True(pageNumbers.Count > 0, "Should have page numbers");
 
         // Verify character indices are sequential

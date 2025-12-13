@@ -12,7 +12,6 @@ namespace Api.Services;
 /// </summary>
 public class EmbeddingService : IEmbeddingService
 {
-    private readonly IEmbeddingProviderFactory _providerFactory;
     private readonly IEmbeddingProvider _primaryProvider;
     private readonly IEmbeddingProvider? _fallbackProvider;
     private readonly ILogger<EmbeddingService> _logger;
@@ -23,13 +22,14 @@ public class EmbeddingService : IEmbeddingService
         IOptions<EmbeddingConfiguration> config,
         ILogger<EmbeddingService> logger)
     {
-        _providerFactory = providerFactory ?? throw new ArgumentNullException(nameof(providerFactory));
+        // S1450: providerFactory used only locally for initialization
+        ArgumentNullException.ThrowIfNull(providerFactory);
         _config = config?.Value ?? throw new ArgumentNullException(nameof(config));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         // Initialize providers
-        _primaryProvider = _providerFactory.GetPrimaryProvider();
-        _fallbackProvider = _providerFactory.GetFallbackProvider();
+        _primaryProvider = providerFactory.GetPrimaryProvider();
+        _fallbackProvider = providerFactory.GetFallbackProvider();
 
         _logger.LogInformation(
             "EmbeddingService initialized with primary provider {Primary} ({Model}, {Dimensions}d){Fallback}",
@@ -105,6 +105,7 @@ public class EmbeddingService : IEmbeddingService
             return EmbeddingResult.CreateFailure(result.ErrorMessage ?? "Embedding generation failed");
         }
 #pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Service boundary - Wraps multi-provider embedding failures (network, API errors, timeouts) into domain-friendly EmbeddingResult
         catch (Exception ex)
         {
             return RagExceptionHandler.HandleServiceException(
@@ -159,6 +160,7 @@ public class EmbeddingService : IEmbeddingService
             return await GenerateEmbeddingsAsync(texts, ct).ConfigureAwait(false);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Service boundary - Wraps multi-provider embedding failures (network, API errors, timeouts) into domain-friendly EmbeddingResult
         catch (Exception ex)
         {
             return RagExceptionHandler.HandleServiceException(

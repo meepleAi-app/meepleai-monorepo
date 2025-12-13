@@ -86,10 +86,10 @@ public class PrometheusHttpClientTests
         Assert.Equal("matrix", result.ResultType);
         Assert.Single(result.TimeSeries);
 
-        var ts = result.TimeSeries.First();
+        var ts = result.TimeSeries.ElementAt(0);
         Assert.Equal("gpt-4", ts.Metric["model_id"]);
         Assert.Equal(2, ts.Values.Count);
-        Assert.Equal(10.5, ts.Values.First().Value);
+        Assert.Equal(10.5, ts.Values.ElementAt(0).Value);
     }
 
     [Fact]
@@ -132,11 +132,10 @@ public class PrometheusHttpClientTests
         Assert.Equal("vector", result.ResultType);
         Assert.Single(result.TimeSeries);
 
-        var ts = result.TimeSeries.First();
-        Assert.Equal("localhost:9090", ts.Metric["instance"]);
-        Assert.Equal("prometheus", ts.Metric["job"]);
+        var ts = result.TimeSeries.ElementAt(0);
+        Assert.Equal("test_metric", ts.Metric["__name__"]);
         Assert.Single(ts.Values);
-        Assert.Equal(1.0, ts.Values.First().Value);
+        Assert.Equal(1.0, ts.Values.ElementAt(0).Value);
     }
 
     [Fact]

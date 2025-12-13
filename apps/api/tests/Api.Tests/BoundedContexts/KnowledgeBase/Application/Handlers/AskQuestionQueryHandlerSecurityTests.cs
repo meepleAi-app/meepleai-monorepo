@@ -65,6 +65,7 @@ public class AskQuestionQueryHandlerSecurityTests
                 It.IsAny<Vector>(),
                 It.IsAny<int>(),
                 It.IsAny<double>(),
+                It.IsAny<IReadOnlyList<Guid>?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Embedding>());
 
@@ -89,6 +90,7 @@ public class AskQuestionQueryHandlerSecurityTests
                 It.IsAny<Guid>(),
                 It.IsAny<SearchMode>(),
                 It.IsAny<int>(),
+                It.IsAny<IReadOnlyList<Guid>?>(),
                 It.IsAny<float>(),
                 It.IsAny<float>(),
                 It.IsAny<CancellationToken>()))
@@ -418,7 +420,7 @@ public class AskQuestionQueryHandlerSecurityTests
             "Chat history should not be built when ShouldIncludeChatHistory returns false");
     }
 
-    private void SetupDefaultMocks(Guid gameId)
+    private void SetupDefaultMocks(Guid _)
     {
         // Note: SearchQueryHandler is a real instance, not mocked
         // It will return empty results by default when its dependencies return empty data

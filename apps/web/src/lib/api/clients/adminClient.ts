@@ -67,6 +67,24 @@ import {
   type UpdateApiKeyRequest,
   type GetAllApiKeysWithStatsResponse,
   type BulkImportApiKeysResult,
+  GenerateReportRequestSchema,
+  ScheduleReportRequestSchema,
+  UpdateReportScheduleRequestSchema,
+  ScheduleReportResponseSchema,
+  GetScheduledReportsResponseSchema,
+  GetReportExecutionsResponseSchema,
+  type GenerateReportRequest,
+  type ScheduleReportRequest,
+  type UpdateReportScheduleRequest,
+  type ScheduledReportDto,
+  type ReportExecutionDto,
+  type ScheduleReportResponse,
+  AccessibilityMetricsSchema,
+  PerformanceMetricsSchema,
+  E2EMetricsSchema,
+  type AccessibilityMetrics,
+  type PerformanceMetrics,
+  type E2EMetrics,
 } from '../schemas';
 
 export interface CreateAdminClientParams {
@@ -107,6 +125,86 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
      */
     async deleteUser(userId: string): Promise<void> {
       await httpClient.delete(`/api/v1/admin/users/${userId}`);
+    },
+
+    /**
+     * Get all users (admin only) - Issue #903
+     * GET /api/v1/admin/users
+     */
+    async getAllUsers(params?: {
+      search?: string;
+      role?: string;
+      sortBy?: string;
+      sortOrder?: 'asc' | 'desc';
+      page?: number;
+      limit?: number;
+    }): Promise<{ users: AdminUser[]; total: number }> {
+      const queryParams = new URLSearchParams();
+      if (params?.search) queryParams.set('search', params.search);
+      if (params?.role) queryParams.set('role', params.role);
+      if (params?.sortBy) queryParams.set('sortBy', params.sortBy);
+      if (params?.sortOrder) queryParams.set('sortOrder', params.sortOrder);
+      if (params?.page) queryParams.set('page', params.page.toString());
+      if (params?.limit) queryParams.set('limit', params.limit.toString());
+
+      const query = queryParams.toString();
+      const result = await httpClient.get(
+        `/api/v1/admin/users${query ? `?${query}` : ''}`,
+        z.object({
+          users: z.array(AdminUserSchema),
+          total: z.number(),
+        })
+      );
+
+      return result || { users: [], total: 0 };
+    },
+
+    /**
+     * Export users to CSV (admin only) - Issue #903
+     * GET /api/v1/admin/users/bulk/export
+     */
+    async exportUsersToCSV(params?: { role?: string; search?: string }): Promise<Blob> {
+      const queryParams = new URLSearchParams();
+      if (params?.role) queryParams.set('role', params.role);
+      if (params?.search) queryParams.set('search', params.search);
+
+      const query = queryParams.toString();
+      const response = await fetch(
+        `${httpClient['baseUrl']}/api/v1/admin/users/bulk/export${query ? `?${query}` : ''}`,
+        {
+          method: 'GET',
+          credentials: 'include',
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Export failed: ${response.statusText}`);
+      }
+
+      return response.blob();
+    },
+
+    /**
+     * Import users from CSV (admin only) - Issue #903
+     * POST /api/v1/admin/users/bulk/import
+     */
+    async importUsersFromCSV(
+      csvContent: string
+    ): Promise<{ successCount: number; failureCount: number; errors: string[] }> {
+      return httpClient.post(
+        '/api/v1/admin/users/bulk/import',
+        csvContent,
+        z.object({
+          successCount: z.number(),
+          failureCount: z.number(),
+          errors: z.array(z.string()),
+        }),
+        {
+          headers: {
+            'Content-Type': 'text/csv',
+          },
+        }
+      );
     },
 
     // ========== Prompt Template Management ==========
@@ -511,6 +609,33 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
     // ========== User Activity Timeline (Issue #911) ==========
 
     /**
+     * Get system-wide activity timeline (admin only) - Issue #903
+     * GET /api/v1/admin/activity
+     */
+    async getSystemActivity(params?: {
+      actionFilter?: string;
+      resourceFilter?: string;
+      startDate?: Date;
+      endDate?: Date;
+      limit?: number;
+    }): Promise<GetUserActivityResult> {
+      const queryParams = new URLSearchParams();
+      if (params?.actionFilter) queryParams.set('actionFilter', params.actionFilter);
+      if (params?.resourceFilter) queryParams.set('resourceFilter', params.resourceFilter);
+      if (params?.startDate) queryParams.set('startDate', params.startDate.toISOString());
+      if (params?.endDate) queryParams.set('endDate', params.endDate.toISOString());
+      if (params?.limit) queryParams.set('limit', params.limit.toString());
+
+      const query = queryParams.toString();
+      const result = await httpClient.get(
+        `/api/v1/admin/activity${query ? `?${query}` : ''}`,
+        GetUserActivityResultSchema
+      );
+
+      return result || { activities: [], totalCount: 0 };
+    },
+
+    /**
      * Get user activity timeline (admin - any user)
      * GET /api/v1/admin/users/{userId}/activity
      */
@@ -531,6 +656,133 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
         GetUserActivityResultSchema
       );
       return result ?? { activities: [], totalCount: 0 };
+    },
+
+    // ========== Report Generation & Scheduling (Issue #920) ==========
+
+    /**
+     * Generate a report on-demand (admin only)
+     * POST /api/v1/admin/reports/generate
+     * Returns file download (Blob)
+     */
+    async generateReport(request: GenerateReportRequest): Promise<Blob> {
+      const response = await fetch(`${httpClient['baseUrl']}/api/v1/admin/reports/generate`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(request),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Report generation failed: ${response.statusText}`);
+      }
+
+      return response.blob();
+    },
+
+    /**
+     * Schedule a recurring report (admin only)
+     * POST /api/v1/admin/reports/schedule
+     */
+    async scheduleReport(request: ScheduleReportRequest): Promise<ScheduleReportResponse> {
+      return httpClient.post(
+        '/api/v1/admin/reports/schedule',
+        request,
+        ScheduleReportResponseSchema
+      );
+    },
+
+    /**
+     * Get all scheduled reports (admin only)
+     * GET /api/v1/admin/reports/scheduled
+     */
+    async getScheduledReports(): Promise<ScheduledReportDto[]> {
+      const result = await httpClient.get(
+        '/api/v1/admin/reports/scheduled',
+        GetScheduledReportsResponseSchema
+      );
+      return result ?? [];
+    },
+
+    /**
+     * Get report execution history (admin only)
+     * GET /api/v1/admin/reports/executions
+     */
+    async getReportExecutions(params?: { reportId?: string }): Promise<ReportExecutionDto[]> {
+      const queryParams = new URLSearchParams();
+      if (params?.reportId) queryParams.set('reportId', params.reportId);
+
+      const query = queryParams.toString();
+      const result = await httpClient.get(
+        `/api/v1/admin/reports/executions${query ? `?${query}` : ''}`,
+        GetReportExecutionsResponseSchema
+      );
+      return result ?? [];
+    },
+
+    /**
+     * Update report schedule (admin only)
+     * PATCH /api/v1/admin/reports/{reportId}/schedule
+     */
+    async updateReportSchedule(
+      reportId: string,
+      request: UpdateReportScheduleRequest
+    ): Promise<void> {
+      await httpClient.patch(`/api/v1/admin/reports/${reportId}/schedule`, request);
+    },
+
+    /**
+     * Delete scheduled report (admin only)
+     * DELETE /api/v1/admin/reports/{reportId}
+     */
+    async deleteScheduledReport(reportId: string): Promise<void> {
+      await httpClient.delete(`/api/v1/admin/reports/${reportId}`);
+    },
+
+    // ========== Testing Dashboard (Issue #2139) ==========
+
+    /**
+     * Get accessibility test metrics (admin only)
+     * GET /api/v1/admin/testing/accessibility
+     */
+    async getAccessibilityMetrics(): Promise<AccessibilityMetrics> {
+      const result = await httpClient.get(
+        '/api/v1/admin/testing/accessibility',
+        AccessibilityMetricsSchema
+      );
+      if (!result) {
+        throw new Error('Failed to fetch accessibility metrics');
+      }
+      return result;
+    },
+
+    /**
+     * Get performance test metrics (admin only)
+     * GET /api/v1/admin/testing/performance
+     */
+    async getPerformanceMetrics(): Promise<PerformanceMetrics> {
+      const result = await httpClient.get(
+        '/api/v1/admin/testing/performance',
+        PerformanceMetricsSchema
+      );
+      if (!result) {
+        throw new Error('Failed to fetch performance metrics');
+      }
+      return result;
+    },
+
+    /**
+     * Get E2E test metrics (admin only)
+     * GET /api/v1/admin/testing/e2e
+     */
+    async getE2EMetrics(): Promise<E2EMetrics> {
+      const result = await httpClient.get('/api/v1/admin/testing/e2e', E2EMetricsSchema);
+      if (!result) {
+        throw new Error('Failed to fetch E2E metrics');
+      }
+      return result;
     },
   };
 }

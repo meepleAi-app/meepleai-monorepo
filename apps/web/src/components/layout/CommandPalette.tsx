@@ -5,16 +5,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Command } from 'cmdk';
-import {
-  Search,
-  MessageSquare,
-  FileText,
-  Gamepad2,
-  Bot,
-  Clock,
-  X,
-  Filter
-} from 'lucide-react';
+import { Search, MessageSquare, FileText, Gamepad2, Bot, Clock, X, Filter } from 'lucide-react';
 import { useSearch } from '@/hooks/useSearch';
 import { SearchFilters as SearchFiltersComponent } from '@/components/search/SearchFilters';
 import type { SearchResult, SearchFilters, Game, Agent, Message, ChatThread } from '@/types';
@@ -25,6 +16,7 @@ interface CommandPaletteProps {
   onSelectResult?: (result: SearchResult) => void;
   dataSources: {
     messages?: Message[];
+    messagesByChat?: Record<string, Message[]>; // Issue #2030 - For chat context
     chats?: ChatThread[];
     games?: Game[];
     agents?: Agent[];
@@ -77,27 +69,26 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   const [selectedFilters, setSelectedFilters] = useState<SearchFilters>({});
   const [results, setResults] = useState<SearchResult[]>([]);
 
-  const {
-    search,
-    recentSearches,
-    addToRecentSearches,
-    removeRecentSearch,
-  } = useSearch(dataSources);
+  const { search, recentSearches, addToRecentSearches, removeRecentSearch } =
+    useSearch(dataSources);
 
   // Handle search
-  const performSearch = useCallback((searchQuery: string, filters: SearchFilters) => {
-    const searchResults = search({
-      query: searchQuery,
-      filters,
-      limit: 50
-    });
-    setResults(searchResults);
+  const performSearch = useCallback(
+    (searchQuery: string, filters: SearchFilters) => {
+      const searchResults = search({
+        query: searchQuery,
+        filters,
+        limit: 50,
+      });
+      setResults(searchResults);
 
-    // Add to recent searches if query is not empty
-    if (searchQuery.trim()) {
-      addToRecentSearches(searchQuery, filters, searchResults.length);
-    }
-  }, [search, addToRecentSearches]);
+      // Add to recent searches if query is not empty
+      if (searchQuery.trim()) {
+        addToRecentSearches(searchQuery, filters, searchResults.length);
+      }
+    },
+    [search, addToRecentSearches]
+  );
 
   // Update search when query or filters change
   useEffect(() => {
@@ -123,13 +114,16 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   }, [isOpen, onClose]);
 
   // Handle result selection
-  const handleSelectResult = useCallback((result: SearchResult) => {
-    onSelectResult?.(result);
-    onClose();
-  }, [onSelectResult, onClose]);
+  const handleSelectResult = useCallback(
+    (result: SearchResult) => {
+      onSelectResult?.(result);
+      onClose();
+    },
+    [onSelectResult, onClose]
+  );
 
   // Handle recent search selection
-  const handleSelectRecentSearch = useCallback((recentSearch: typeof recentSearches[number]) => {
+  const handleSelectRecentSearch = useCallback((recentSearch: (typeof recentSearches)[number]) => {
     setQuery(recentSearch.query);
     setSelectedFilters(recentSearch.filters || {});
   }, []);
@@ -138,7 +132,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
 
   return (
     <div className="command-palette-overlay" onClick={onClose}>
-      <div className="command-palette-container" onClick={(e) => e.stopPropagation()}>
+      <div className="command-palette-container" onClick={e => e.stopPropagation()}>
         <Command className="command-palette">
           <div className="command-palette-header">
             <Search className="command-palette-search-icon" />
@@ -156,11 +150,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
             >
               <Filter className={`w-4 h-4 ${showFilters ? 'text-blue-500' : ''}`} />
             </button>
-            <button
-              onClick={onClose}
-              className="command-palette-close-button"
-              aria-label="Close"
-            >
+            <button onClick={onClose} className="command-palette-close-button" aria-label="Close">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -177,13 +167,11 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
           )}
 
           <Command.List className="command-palette-list">
-            <Command.Empty className="command-palette-empty">
-              No results found.
-            </Command.Empty>
+            <Command.Empty className="command-palette-empty">No results found.</Command.Empty>
 
             {query === '' && recentSearches.length > 0 && (
               <Command.Group heading="Recent Searches" className="command-palette-group">
-                {recentSearches.slice(0, 5).map((recent) => (
+                {recentSearches.slice(0, 5).map(recent => (
                   <Command.Item
                     key={recent.id}
                     onSelect={() => handleSelectRecentSearch(recent)}
@@ -197,7 +185,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                       </div>
                     </div>
                     <button
-                      onClick={(e) => {
+                      onClick={e => {
                         e.stopPropagation();
                         removeRecentSearch(recent.id);
                       }}
@@ -213,7 +201,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
 
             {results.length > 0 && (
               <Command.Group heading="Search Results" className="command-palette-group">
-                {results.map((result) => (
+                {results.map(result => (
                   <Command.Item
                     key={result.id}
                     onSelect={() => handleSelectResult(result)}

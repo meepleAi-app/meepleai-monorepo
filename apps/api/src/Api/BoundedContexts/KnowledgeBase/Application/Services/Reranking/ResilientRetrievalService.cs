@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.External.Reranking;
 using Api.Services;
@@ -19,7 +20,6 @@ public sealed class ResilientRetrievalService : IRerankedRetrievalService, IDisp
     private readonly IHybridSearchService _hybridSearchService;
     private readonly ICrossEncoderReranker _reranker;
     private readonly IParentChunkResolver _parentResolver;
-    private readonly HybridCache _cache;
     private readonly ILogger<ResilientRetrievalService> _logger;
     private readonly ResilientRetrievalOptions _options;
 
@@ -33,14 +33,12 @@ public sealed class ResilientRetrievalService : IRerankedRetrievalService, IDisp
         IHybridSearchService hybridSearchService,
         ICrossEncoderReranker reranker,
         IParentChunkResolver parentResolver,
-        HybridCache cache,
         ILogger<ResilientRetrievalService> logger,
         IOptions<ResilientRetrievalOptions> options)
     {
         _hybridSearchService = hybridSearchService ?? throw new ArgumentNullException(nameof(hybridSearchService));
         _reranker = reranker ?? throw new ArgumentNullException(nameof(reranker));
         _parentResolver = parentResolver ?? throw new ArgumentNullException(nameof(parentResolver));
-        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
     }
@@ -186,8 +184,9 @@ public sealed class ResilientRetrievalService : IRerankedRetrievalService, IDisp
                 OriginalScore: c.OriginalScore,
                 RerankScore: c.RerankScore,
                 FinalRank: index + 1,
+                // FIX MA0011: Use IFormatProvider for culture-aware conversion
                 PageNumber: c.Metadata?.TryGetValue("page_number", out var pageObj) == true
-                    ? Convert.ToInt32(pageObj)
+                    ? Convert.ToInt32(pageObj, CultureInfo.InvariantCulture)
                     : null,
                 Metadata: c.Metadata
             )).ToList();

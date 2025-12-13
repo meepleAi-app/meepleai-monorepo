@@ -71,6 +71,20 @@ jobs:
           - 6333:6333
           - 6334:6334
 
+      # Issue #2112: Add n8n and hyperdx for health checks
+      n8n:
+        image: n8nio/n8n:latest
+        env:
+          N8N_BASIC_AUTH_ACTIVE: 'false'
+          DB_TYPE: 'sqlite'
+        ports:
+          - 5678:5678
+
+      hyperdx:
+        image: hyperdx/hyperdx:latest
+        ports:
+          - 8000:8000
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -148,15 +162,18 @@ jobs:
           ConnectionStrings__Postgres: 'Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=testpass123'
           ConnectionStrings__Redis: 'localhost:6379'
           ConnectionStrings__Qdrant: 'http://localhost:6333'
+          N8N_URL: 'http://localhost:5678'  # Issue #2112: Override for CI service containers
+          HYPERDX_URL: 'http://localhost:8000'  # Issue #2112: Override for CI service containers
           ASPNETCORE_ENVIRONMENT: Development  # Issue #1663: Dev mode enables test user seeding + relaxed rate limits
           ASPNETCORE_URLS: 'http://0.0.0.0:8080'
 
       # Issue #2020: Add ConnectionStrings__Postgres to prevent EF Core from defaulting to 'root' user
       # This step validates API health which may trigger EF Core DbContext initialization
+      # Issue #2112: Use /health/live instead of /health to skip optional service health checks
       - name: Wait for API to be ready
         run: |
           for i in {1..30}; do
-            if curl -f http://localhost:8080/health; then
+            if curl -f http://localhost:8080/health/live; then
               echo "✅ API is ready"
               exit 0
             fi

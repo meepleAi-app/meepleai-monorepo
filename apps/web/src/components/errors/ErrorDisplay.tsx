@@ -4,7 +4,7 @@
  * Enhanced with toast integration and retry logic for Issue #1095
  */
 
-import { type CSSProperties, useState, useEffect } from 'react';
+import { type CSSProperties, useState, useEffect, useCallback } from 'react';
 import { type CategorizedError, getErrorIcon, getErrorTitle } from '@/lib/errorUtils';
 import { showErrorToast, shouldShowToast } from '@/lib/toastUtils';
 import { UI_CONFIG } from '@/config';
@@ -38,7 +38,7 @@ export function ErrorDisplay({
   showTechnicalDetails = false,
   showToast = true,
   autoRetry = false,
-  maxRetries = UI_CONFIG.ERROR_DISPLAY_MAX_RETRIES
+  maxRetries = UI_CONFIG.ERROR_DISPLAY_MAX_RETRIES,
 }: ErrorDisplayProps) {
   const [showDetails, setShowDetails] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
@@ -66,7 +66,7 @@ export function ErrorDisplay({
   }, [error, showToast]);
 
   // Handle automatic retry with exponential backoff
-  const handleRetry = async () => {
+  const handleRetry = useCallback(async () => {
     if (!onRetry) return;
 
     setIsRetrying(true);
@@ -77,7 +77,7 @@ export function ErrorDisplay({
     } finally {
       setIsRetrying(false);
     }
-  };
+  }, [onRetry]);
 
   // Auto-retry logic
   useEffect(() => {
@@ -95,48 +95,49 @@ export function ErrorDisplay({
     }, delay);
 
     return () => clearTimeout(timeout);
-  }, [autoRetry, error.canRetry, retryCount, maxRetries, onRetry]);
+  }, [autoRetry, error.canRetry, retryCount, maxRetries, onRetry, handleRetry]);
 
   const containerStyle: CSSProperties = {
     padding: '20px',
     border: '2px solid',
     borderColor: error.category === 'network' ? 'hsl(var(--accent))' : 'hsl(var(--destructive))',
     borderRadius: '8px',
-    backgroundColor: error.category === 'network' ? 'hsl(var(--accent) / 0.1)' : 'hsl(var(--destructive) / 0.1)',
-    marginBottom: '20px'
+    backgroundColor:
+      error.category === 'network' ? 'hsl(var(--accent) / 0.1)' : 'hsl(var(--destructive) / 0.1)',
+    marginBottom: '20px',
   };
 
   const headerStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
     gap: '12px',
-    marginBottom: '16px'
+    marginBottom: '16px',
   };
 
   const iconStyle: CSSProperties = {
     fontSize: '32px',
-    lineHeight: 1
+    lineHeight: 1,
   };
 
   const titleStyle: CSSProperties = {
     margin: 0,
     fontSize: '20px',
     fontWeight: 600,
-    color: 'hsl(var(--foreground))'
+    color: 'hsl(var(--foreground))',
   };
 
   const messageStyle: CSSProperties = {
     marginBottom: '16px',
     fontSize: '16px',
     lineHeight: 1.5,
-    color: 'hsl(var(--foreground))'
+    color: 'hsl(var(--foreground))',
   };
 
   const suggestionsStyle: CSSProperties = {
     marginBottom: '16px',
     padding: '12px',
     backgroundColor: 'hsl(var(--muted))',
-    borderRadius: '4px'
+    borderRadius: '4px',
   };
 
   const suggestionsTitleStyle: CSSProperties = {
@@ -144,14 +145,14 @@ export function ErrorDisplay({
     marginBottom: '8px',
     fontSize: '14px',
     fontWeight: 600,
-    color: 'hsl(var(--foreground))'
+    color: 'hsl(var(--foreground))',
   };
 
   const suggestionListStyle: CSSProperties = {
     margin: 0,
     paddingLeft: '20px',
     fontSize: '14px',
-    color: 'hsl(var(--muted-foreground))'
+    color: 'hsl(var(--muted-foreground))',
   };
 
   const correlationIdStyle: CSSProperties = {
@@ -164,14 +165,14 @@ export function ErrorDisplay({
     color: 'hsl(var(--muted-foreground))',
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'space-between'
+    justifyContent: 'space-between',
   };
 
   const buttonContainerStyle: CSSProperties = {
     display: 'flex',
     gap: '12px',
     flexWrap: 'wrap',
-    marginTop: '16px'
+    marginTop: '16px',
   };
 
   const buttonStyle: CSSProperties = {
@@ -181,27 +182,27 @@ export function ErrorDisplay({
     fontSize: '14px',
     fontWeight: 500,
     cursor: 'pointer',
-    transition: 'background-color 0.2s'
+    transition: 'background-color 0.2s',
   };
 
   // Use semantic tokens for WCAG 2.1 AA compliance (Issue #841)
   const retryButtonStyle: CSSProperties = {
     ...buttonStyle,
-    backgroundColor: 'hsl(var(--secondary))',  // WCAG AA compliant green
-    color: 'hsl(var(--secondary-foreground))'
+    backgroundColor: 'hsl(var(--secondary))', // WCAG AA compliant green
+    color: 'hsl(var(--secondary-foreground))',
   };
 
   const dismissButtonStyle: CSSProperties = {
     ...buttonStyle,
     backgroundColor: 'hsl(var(--muted))',
-    color: 'hsl(var(--muted-foreground))'
+    color: 'hsl(var(--muted-foreground))',
   };
 
   const detailsButtonStyle: CSSProperties = {
     ...buttonStyle,
     backgroundColor: 'transparent',
     color: 'hsl(var(--primary))',
-    border: '1px solid hsl(var(--primary))'
+    border: '1px solid hsl(var(--primary))',
   };
 
   const technicalDetailsStyle: CSSProperties = {
@@ -213,7 +214,7 @@ export function ErrorDisplay({
     fontFamily: 'monospace',
     color: 'hsl(var(--foreground))',
     whiteSpace: 'pre-wrap',
-    wordBreak: 'break-word'
+    wordBreak: 'break-word',
   };
 
   const copyCorrelationId = () => {
@@ -257,8 +258,7 @@ export function ErrorDisplay({
       {error.correlationId && (
         <div style={correlationIdStyle}>
           <span>
-            <strong>Error ID:</strong>{' '}
-            <span id="correlation-id-text">{error.correlationId}</span>
+            <strong>Error ID:</strong> <span id="correlation-id-text">{error.correlationId}</span>
           </span>
           <button
             onClick={copyCorrelationId}
@@ -267,7 +267,7 @@ export function ErrorDisplay({
               padding: '4px 8px',
               fontSize: '12px',
               backgroundColor: 'hsl(var(--muted))',
-              color: 'hsl(var(--foreground))'
+              color: 'hsl(var(--foreground))',
             }}
             title="Copy to clipboard"
           >
@@ -279,7 +279,11 @@ export function ErrorDisplay({
       <div style={buttonContainerStyle}>
         {onRetry && error.canRetry && (
           <button onClick={handleRetry} style={retryButtonStyle} disabled={isRetrying}>
-            {isRetrying ? 'Retrying...' : retryCount > 0 ? `Retry (${retryCount}/${maxRetries})` : 'Retry'}
+            {isRetrying
+              ? 'Retrying...'
+              : retryCount > 0
+                ? `Retry (${retryCount}/${maxRetries})`
+                : 'Retry'}
           </button>
         )}
 

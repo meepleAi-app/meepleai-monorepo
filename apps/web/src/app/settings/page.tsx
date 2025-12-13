@@ -34,6 +34,15 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { LoadingButton } from '@/components/loading/LoadingButton';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/overlays/dialog';
 import {
   api,
   type UserProfile,
@@ -107,6 +116,12 @@ export default function SettingsPage() {
   const [sessions, setSessions] = useState<UserSessionInfo[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [revokingSessionId, setRevokingSessionId] = useState<string | null>(null);
+
+  // Logout all devices state (Issue #2056)
+  const [showRevokeAllDialog, setShowRevokeAllDialog] = useState(false);
+  const [revokeAllIncludeCurrent, setRevokeAllIncludeCurrent] = useState(false);
+  const [revokeAllPassword, setRevokeAllPassword] = useState('');
+  const [revokeAllLoading, setRevokeAllLoading] = useState(false);
 
   // Load initial data
   useEffect(() => {
@@ -525,6 +540,54 @@ export default function SettingsPage() {
       setError(getErrorMessage(error, 'Failed to revoke session'));
     } finally {
       setRevokingSessionId(null);
+    }
+  };
+
+  // Revoke all sessions handler (Issue #2056)
+  const handleRevokeAllSessions = async () => {
+    setRevokeAllLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const result = await (api.auth as any).revokeAllSessions({
+        includeCurrentSession: revokeAllIncludeCurrent,
+        password: revokeAllPassword || null,
+      });
+
+      setSuccess(
+        `Successfully logged out of ${result.revokedCount} device${result.revokedCount !== 1 ? 's' : ''}.${
+          result.currentSessionRevoked ? ' You will need to log in again.' : ''
+        }`
+      );
+
+      // Close dialog and reset state
+      setShowRevokeAllDialog(false);
+      setRevokeAllIncludeCurrent(false);
+      setRevokeAllPassword('');
+
+      // If current session was revoked, redirect to login
+      if (result.currentSessionRevoked) {
+        setTimeout(() => {
+          router.push('/login');
+        }, 2000);
+      } else {
+        // Reload sessions list
+        await loadUserSessions();
+      }
+    } catch (error) {
+      logger.error(
+        'Failed to revoke all sessions',
+        error instanceof Error ? error : new Error(String(error)),
+        createErrorContext('SettingsPage', 'handleRevokeAllSessions', {
+          operation: 'revoke_all_sessions',
+          includeCurrentSession: revokeAllIncludeCurrent,
+        })
+      );
+      setError(getErrorMessage(error, 'Failed to logout from all devices'));
+    } finally {
+      setRevokeAllLoading(false);
     }
   };
 
@@ -1184,7 +1247,7 @@ export default function SettingsPage() {
                       );
                     })}
 
-                    <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
+                    <div className="pt-4 border-t border-slate-200 dark:border-slate-700 flex gap-2">
                       <Button
                         variant="outline"
                         size="sm"
@@ -1193,11 +1256,88 @@ export default function SettingsPage() {
                       >
                         {sessionsLoading ? 'Refreshing...' : 'Refresh Sessions'}
                       </Button>
+                      {sessions.length > 1 && (
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => setShowRevokeAllDialog(true)}
+                          disabled={sessionsLoading}
+                        >
+                          Logout All Devices
+                        </Button>
+                      )}
                     </div>
                   </div>
                 )}
               </CardContent>
             </Card>
+
+            {/* Logout All Devices Dialog (Issue #2056) */}
+            <Dialog open={showRevokeAllDialog} onOpenChange={setShowRevokeAllDialog}>
+              <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle>Logout from All Devices</DialogTitle>
+                  <DialogDescription>
+                    This will revoke all your active sessions across all devices. You will need to
+                    log in again on those devices.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="flex items-start space-x-3">
+                    <Checkbox
+                      id="includeCurrentSession"
+                      checked={revokeAllIncludeCurrent}
+                      onCheckedChange={(checked: boolean) => setRevokeAllIncludeCurrent(checked)}
+                    />
+                    <div className="grid gap-1.5 leading-none">
+                      <label
+                        htmlFor="includeCurrentSession"
+                        className="text-sm font-medium cursor-pointer"
+                      >
+                        Include current session
+                      </label>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        If checked, you will be logged out immediately and need to log in again.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="revokeAllPassword">Password (optional)</Label>
+                    <Input
+                      id="revokeAllPassword"
+                      type="password"
+                      placeholder="Enter your password for extra security"
+                      value={revokeAllPassword}
+                      onChange={e => setRevokeAllPassword(e.target.value)}
+                      disabled={revokeAllLoading}
+                    />
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Providing your password adds an extra layer of security verification.
+                    </p>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowRevokeAllDialog(false);
+                      setRevokeAllIncludeCurrent(false);
+                      setRevokeAllPassword('');
+                    }}
+                    disabled={revokeAllLoading}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={handleRevokeAllSessions}
+                    disabled={revokeAllLoading}
+                  >
+                    {revokeAllLoading ? 'Logging out...' : 'Logout All Devices'}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
 
             <Card>
               <CardHeader>

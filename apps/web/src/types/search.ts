@@ -93,6 +93,7 @@ export type SearchResult =
 export interface SearchFilters {
   gameId?: string;
   agentId?: string;
+  chatId?: string; // Issue #2030 - Filter by chat thread
   dateFrom?: Date;
   dateTo?: Date;
   types?: SearchResultType[];

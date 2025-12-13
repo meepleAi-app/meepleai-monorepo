@@ -42,6 +42,10 @@ public class QdrantVectorIndexer : IQdrantVectorIndexer
             _logger.LogDebug("Successfully upserted {Count} points to collection {CollectionName}",
                 points.Count, collectionName);
         }
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
+        // INFRASTRUCTURE LOGGING PATTERN: Log exceptions at the infrastructure boundary to provide
+        // debugging context (collection name, operation type, error details) before propagating.
+        // Callers may not have this context, so logging here is intentional.
         catch (ArgumentNullException ex)
         {
             _logger.LogError(ex, "Null argument while upserting points to collection {CollectionName}", collectionName);
@@ -68,6 +72,7 @@ public class QdrantVectorIndexer : IQdrantVectorIndexer
             _logger.LogError(ex, "Operation cancelled while upserting points to collection {CollectionName}", collectionName);
             throw;
         }
+#pragma warning restore S2139
     }
 
     /// <summary>
@@ -126,6 +131,8 @@ public class QdrantVectorIndexer : IQdrantVectorIndexer
 
             _logger.LogDebug("Successfully deleted vectors from collection {CollectionName}", collectionName);
         }
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
+        // INFRASTRUCTURE LOGGING PATTERN: Log exceptions at the infrastructure boundary for debugging.
         catch (ArgumentException ex)
         {
             _logger.LogError(ex, "Invalid argument while deleting vectors from collection {CollectionName}", collectionName);
@@ -147,5 +154,6 @@ public class QdrantVectorIndexer : IQdrantVectorIndexer
             _logger.LogError(ex, "Operation cancelled while deleting vectors from collection {CollectionName}", collectionName);
             throw;
         }
+#pragma warning restore S2139
     }
 }

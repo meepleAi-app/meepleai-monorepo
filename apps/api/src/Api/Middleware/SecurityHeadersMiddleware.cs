@@ -251,15 +251,16 @@ public class SecurityHeadersOptionsValidator : IValidateOptions<SecurityHeadersO
             {
                 // Extract max-age value and validate it's a number
                 // FIX MA0009: Add timeout to prevent ReDoS attacks
+                // Issue #2112: Use named capture group with ExplicitCapture to avoid empty Groups[1]
                 var maxAgeMatch = System.Text.RegularExpressions.Regex.Match(
                     options.HstsPolicy,
-                    @"max-age=(\d+)",
-                    System.Text.RegularExpressions.RegexOptions.IgnoreCase,
+                    @"max-age=(?<maxage>\d+)",  // Named group for ExplicitCapture compatibility
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.ExplicitCapture,
                     TimeSpan.FromSeconds(1));
 
                 if (maxAgeMatch.Success)
                 {
-                    var maxAge = int.Parse(maxAgeMatch.Groups[1].Value, CultureInfo.InvariantCulture);
+                    var maxAge = int.Parse(maxAgeMatch.Groups["maxage"].Value, CultureInfo.InvariantCulture);
                     if (maxAge < 0)
                     {
                         errors.Add("HSTS max-age must be a positive number");

@@ -42,8 +42,6 @@ public class InvokeAgentCommandHandlerTests
             _mockAgentRepo.Object,
             _mockEmbeddingRepo.Object,
             _mockEmbeddingService.Object,
-            _orchestrationService,
-            _vectorSearchService,
             _qualityTrackingService,
             _mockLogger.Object
         );
@@ -68,6 +66,7 @@ public class InvokeAgentCommandHandlerTests
             It.IsAny<Vector>(),
             It.IsAny<int>(),
             It.IsAny<double>(),
+            It.IsAny<IReadOnlyList<Guid>?>(),
             It.IsAny<CancellationToken>()))
             .ReturnsAsync(embeddings);
         _mockAgentRepo.Setup(r => r.UpdateAsync(It.IsAny<Agent>(), It.IsAny<CancellationToken>()))
@@ -177,6 +176,7 @@ public class InvokeAgentCommandHandlerTests
             It.IsAny<Vector>(),
             It.IsAny<int>(),
             It.IsAny<double>(),
+            It.IsAny<IReadOnlyList<Guid>?>(),
             It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Embedding>());
 
@@ -245,6 +245,7 @@ public class InvokeAgentCommandHandlerTests
             It.IsAny<Vector>(),
             It.IsAny<int>(),
             It.IsAny<double>(),
+            It.IsAny<IReadOnlyList<Guid>?>(),
             It.IsAny<CancellationToken>()))
             .ReturnsAsync(embeddings);
         _mockAgentRepo.Setup(r => r.UpdateAsync(It.IsAny<Agent>(), It.IsAny<CancellationToken>()))
@@ -283,6 +284,7 @@ public class InvokeAgentCommandHandlerTests
             It.IsAny<Vector>(),
             It.IsAny<int>(),
             It.IsAny<double>(),
+            It.IsAny<IReadOnlyList<Guid>?>(),
             It.IsAny<CancellationToken>()))
             .ReturnsAsync(embeddings);
         _mockAgentRepo.Setup(r => r.UpdateAsync(It.IsAny<Agent>(), It.IsAny<CancellationToken>()))

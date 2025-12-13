@@ -74,6 +74,7 @@ public sealed class HuggingFaceEmbeddingProvider : EmbeddingProviderBase
             return EmbeddingProviderResult.CreateSuccess(allEmbeddings, _modelName);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Infrastructure adapter - Wraps HuggingFace API exceptions (HTTP, JSON, timeout) into domain-friendly EmbeddingProviderResult
         catch (HttpRequestException ex)
         {
             Logger.LogError(ex, "HTTP error calling HuggingFace API");
@@ -234,6 +235,7 @@ public sealed class HuggingFaceEmbeddingProvider : EmbeddingProviderBase
             return result.Success;
         }
 #pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Service boundary - Health checks must not propagate exceptions, return false to indicate unhealthy state
         catch (Exception ex)
         {
             Logger.LogWarning(ex, "HuggingFace health check failed");

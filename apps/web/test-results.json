@@ -1,0 +1,4 @@
+
+> @meepleai/web@ test D:\Repositories\meepleai-monorepo-frontend\meepleai-monorepo\apps\web
+> vitest run "--run" "--reporter=json"
+

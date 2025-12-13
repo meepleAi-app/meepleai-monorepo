@@ -1,6 +1,7 @@
 using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.GameManagement.Application.DTOs;
 using Api.BoundedContexts.GameManagement.Application.Queries;
+using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.Extensions;
 using Api.Infrastructure;
@@ -439,6 +440,120 @@ public static class RuleSpecEndpoints
 
             return Results.File(zipBytes, "application/zip", fileName);
         });
+
+        // Issue #2055: Collaborative editing lock endpoints
+        // 1. Acquire lock
+        group.MapPost("/games/{gameId:guid}/rulespec/lock", async (
+            Guid gameId,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            var (authorized, session, error) = context.RequireAdminOrEditorSession();
+            if (!authorized) return error!;
+
+            var userId = session!.User!.Id;
+            var userEmail = session.User.Email ?? "unknown@user.com";
+
+            logger.LogInformation("User {UserId} attempting to acquire lock for game {GameId}", userId, gameId);
+
+            var command = new AcquireEditorLockCommand(gameId, userId, userEmail);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+            if (!result.Success)
+            {
+                logger.LogInformation("Lock acquisition denied for game {GameId}: {Message}", gameId, result.Message);
+                return Results.Conflict(new { error = result.Message, lockStatus = result.LockStatus });
+            }
+
+            logger.LogInformation("Lock acquired for game {GameId} by user {UserId}", gameId, userId);
+            return Results.Ok(result.LockStatus);
+        })
+        .WithName("AcquireEditorLock")
+        .WithTags("EditorLocks")
+        .WithDescription("Acquire a collaborative editing lock for a RuleSpec");
+
+        // 2. Release lock
+        group.MapDelete("/games/{gameId:guid}/rulespec/lock", async (
+            Guid gameId,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            var (authorized, session, error) = context.RequireAdminOrEditorSession();
+            if (!authorized) return error!;
+
+            var userId = session!.User!.Id;
+
+            logger.LogInformation("User {UserId} releasing lock for game {GameId}", userId, gameId);
+
+            var command = new ReleaseEditorLockCommand(gameId, userId);
+            var released = await mediator.Send(command, ct).ConfigureAwait(false);
+
+            if (!released)
+            {
+                logger.LogWarning("User {UserId} could not release lock for game {GameId} (not owner)", userId, gameId);
+                return Results.BadRequest(new { error = "You do not hold the lock for this RuleSpec" });
+            }
+
+            return Results.NoContent();
+        })
+        .WithName("ReleaseEditorLock")
+        .WithTags("EditorLocks")
+        .WithDescription("Release a collaborative editing lock for a RuleSpec");
+
+        // 3. Refresh lock (extend TTL)
+        group.MapPost("/games/{gameId:guid}/rulespec/lock/refresh", async (
+            Guid gameId,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            var (authorized, session, error) = context.RequireAdminOrEditorSession();
+            if (!authorized) return error!;
+
+            var userId = session!.User!.Id;
+
+            var command = new RefreshEditorLockCommand(gameId, userId);
+            var refreshed = await mediator.Send(command, ct).ConfigureAwait(false);
+
+            if (!refreshed)
+            {
+                logger.LogDebug("Lock refresh failed for game {GameId} by user {UserId}", gameId, userId);
+                return Results.BadRequest(new { error = "You do not hold the lock or it has expired" });
+            }
+
+            logger.LogDebug("Lock refreshed for game {GameId} by user {UserId}", gameId, userId);
+            return Results.Ok(new { message = "Lock refreshed" });
+        })
+        .WithName("RefreshEditorLock")
+        .WithTags("EditorLocks")
+        .WithDescription("Refresh (extend) a collaborative editing lock TTL");
+
+        // 4. Get lock status
+        group.MapGet("/games/{gameId:guid}/rulespec/lock", async (
+            Guid gameId,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            var (authorized, session, error) = context.RequireAdminOrEditorSession();
+            if (!authorized) return error!;
+
+            var userId = session!.User!.Id;
+
+            var query = new GetEditorLockStatusQuery(gameId, userId);
+            var status = await mediator.Send(query, ct).ConfigureAwait(false);
+
+            return Results.Ok(status);
+        })
+        .WithName("GetEditorLockStatus")
+        .WithTags("EditorLocks")
+        .WithDescription("Get the current lock status for a RuleSpec");
 
         return group;
     }

@@ -5,6 +5,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 
 /// <summary>
 /// PdfDocument aggregate root representing an uploaded PDF with extraction metadata.
+/// Issue #2029: Added Language support for PDF language filtering
 /// </summary>
 public sealed class PdfDocument : AggregateRoot<Guid>
 {
@@ -20,6 +21,14 @@ public sealed class PdfDocument : AggregateRoot<Guid>
     public int? PageCount { get; private set; }
     public string? ProcessingError { get; private set; }
 
+    // Issue #2029: Language detection for PDF filtering
+    public LanguageCode Language { get; private set; }
+
+    // Issue #2051: Multi-document collection support
+    public Guid? CollectionId { get; private set; }
+    public DocumentType DocumentType { get; private set; }
+    public int SortOrder { get; private set; }
+
 #pragma warning disable CS8618
     private PdfDocument() : base() { }
 #pragma warning restore CS8618
@@ -30,10 +39,17 @@ public sealed class PdfDocument : AggregateRoot<Guid>
         FileName fileName,
         string filePath,
         FileSize fileSize,
-        Guid uploadedByUserId) : base(id)
+        Guid uploadedByUserId,
+        LanguageCode? language = null,
+        Guid? collectionId = null,
+        DocumentType? documentType = null,
+        int sortOrder = 0) : base(id)
     {
         if (string.IsNullOrWhiteSpace(filePath))
             throw new ArgumentException("File path cannot be empty", nameof(filePath));
+
+        if (sortOrder < 0)
+            throw new ArgumentException("Sort order cannot be negative", nameof(sortOrder));
 
         GameId = gameId;
         FileName = fileName;
@@ -43,6 +59,54 @@ public sealed class PdfDocument : AggregateRoot<Guid>
         UploadedByUserId = uploadedByUserId;
         UploadedAt = DateTime.UtcNow;
         ProcessingStatus = "pending";
+        Language = language ?? LanguageCode.English; // Default to English
+        CollectionId = collectionId;
+        DocumentType = documentType ?? ValueObjects.DocumentType.Base; // Default to base
+        SortOrder = sortOrder;
+    }
+
+    /// <summary>
+    /// Reconstitutes a PdfDocument from persistence.
+    /// Issue #2140: Replaces reflection-based property mutation
+    /// </summary>
+    public static PdfDocument Reconstitute(
+        Guid id,
+        Guid gameId,
+        FileName fileName,
+        string filePath,
+        FileSize fileSize,
+        Guid uploadedByUserId,
+        DateTime uploadedAt,
+        string processingStatus,
+        DateTime? processedAt,
+        int? pageCount,
+        string? processingError,
+        LanguageCode language,
+        Guid? collectionId = null,
+        DocumentType? documentType = null,
+        int sortOrder = 0)
+    {
+        var document = new PdfDocument
+        {
+            Id = id,
+            GameId = gameId,
+            FileName = fileName,
+            FilePath = filePath,
+            FileSize = fileSize,
+            ContentType = "application/pdf",
+            UploadedByUserId = uploadedByUserId,
+            UploadedAt = uploadedAt,
+            ProcessingStatus = processingStatus,
+            ProcessedAt = processedAt,
+            PageCount = pageCount,
+            ProcessingError = processingError,
+            Language = language,
+            CollectionId = collectionId,
+            DocumentType = documentType ?? ValueObjects.DocumentType.Base,
+            SortOrder = sortOrder
+        };
+
+        return document;
     }
 
     public void MarkAsProcessing()
@@ -69,5 +133,36 @@ public sealed class PdfDocument : AggregateRoot<Guid>
         ProcessingStatus = "failed";
         ProcessedAt = DateTime.UtcNow;
         ProcessingError = error;
+    }
+    
+    // Issue #2029: Update detected language after processing
+    public void UpdateLanguage(LanguageCode languageCode)
+    {
+        ArgumentNullException.ThrowIfNull(languageCode);
+        Language = languageCode;
+    }
+
+    // Issue #2051: Assign document to collection
+    public void AssignToCollection(Guid collectionId, DocumentType documentType, int sortOrder)
+    {
+        if (collectionId == Guid.Empty)
+            throw new ArgumentException("Collection ID cannot be empty", nameof(collectionId));
+
+        ArgumentNullException.ThrowIfNull(documentType);
+
+        if (sortOrder < 0)
+            throw new ArgumentException("Sort order cannot be negative", nameof(sortOrder));
+
+        CollectionId = collectionId;
+        DocumentType = documentType;
+        SortOrder = sortOrder;
+    }
+
+    // Issue #2051: Remove from collection
+    public void RemoveFromCollection()
+    {
+        CollectionId = null;
+        DocumentType = ValueObjects.DocumentType.Base; // Reset to default
+        SortOrder = 0;
     }
 }

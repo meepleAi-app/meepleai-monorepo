@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/consistent-type-assertions -- Type assertions required for TypedStreamingEvent narrowing */
 /**
  * Streaming SSE Schemas (Issue #1007)
  *
@@ -176,9 +177,7 @@ export type TypedStreamingEvent<T extends StreamingEventType> = {
  * Validate and parse event data based on event type
  * Provides type-safe validation for each event type
  */
-export function parseEventData(
-  event: RagStreamingEvent
-): TypedStreamingEvent<StreamingEventType> {
+export function parseEventData(event: RagStreamingEvent): TypedStreamingEvent<StreamingEventType> {
   switch (event.type) {
     case StreamingEventType.StateUpdate:
       return {

@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection -- Safe typed Record access with Locale keys and message paths */
 /**
  * i18n Locales Configuration
  *
@@ -65,16 +66,19 @@ export function flattenMessages(
   nestedMessages: Record<string, unknown>,
   prefix = ''
 ): Record<string, string> {
-  return Object.keys(nestedMessages).reduce((messages, key) => {
-    const value = nestedMessages[key];
-    const prefixedKey = prefix ? `${prefix}.${key}` : key;
+  return Object.keys(nestedMessages).reduce(
+    (messages, key) => {
+      const value = nestedMessages[key];
+      const prefixedKey = prefix ? `${prefix}.${key}` : key;
 
-    if (typeof value === 'string') {
-      messages[prefixedKey] = value;
-    } else if (typeof value === 'object' && value !== null) {
-      Object.assign(messages, flattenMessages(value as Record<string, unknown>, prefixedKey));
-    }
+      if (typeof value === 'string') {
+        messages[prefixedKey] = value;
+      } else if (typeof value === 'object' && value !== null) {
+        Object.assign(messages, flattenMessages(value as Record<string, unknown>, prefixedKey));
+      }
 
-    return messages;
-  }, {} as Record<string, string>);
+      return messages;
+    },
+    {} as Record<string, string>
+  );
 }

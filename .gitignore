@@ -38,6 +38,8 @@ Thumbs.db
 *.env.staging
 **/.env
 **/.env.*
+# Exception: Allow .env*.example files for documentation
+!**/.env*.example
 # Secrets and passwords
 infra/secrets/*.txt
 infra/env/*.env

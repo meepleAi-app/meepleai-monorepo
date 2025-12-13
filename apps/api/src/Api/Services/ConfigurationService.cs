@@ -52,13 +52,15 @@ public class ConfigurationService : IConfigurationService
         {
             return DeserializeValue<T>(config.Value, config.ValueType);
         }
-#pragma warning disable CA1031
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Service boundary - Configuration deserialization failures must not crash application;
+        // return default value to allow graceful degradation
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             _logger.LogError(ex, "Failed to deserialize configuration {Key} of type {ValueType}", key, config.ValueType);
             return defaultValue;
         }
-#pragma warning restore CA1031
     }
 
     /// <summary>

@@ -11,12 +11,14 @@ public interface IQdrantVectorStoreAdapter
 {
     /// <summary>
     /// Performs vector similarity search in Qdrant.
+    /// Issue #2051: Supports document filtering via documentIds
     /// </summary>
     Task<List<Embedding>> SearchAsync(
         Guid gameId,
         Vector queryVector,
         int topK,
         double minScore,
+        IReadOnlyList<Guid>? documentIds = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>

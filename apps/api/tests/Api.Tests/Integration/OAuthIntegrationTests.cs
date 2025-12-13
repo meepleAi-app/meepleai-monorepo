@@ -6,10 +6,9 @@ using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.Infrastructure;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Api.Tests.Infrastructure;
 using System;
 using System.Linq;
-using DotNet.Testcontainers.Builders;
-using DotNet.Testcontainers.Containers;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,7 +21,7 @@ namespace Api.Tests.Integration;
 /// <summary>
 /// Integration tests for OAuth CQRS flow end-to-end.
 /// Tests the complete OAuth workflow: callback, account linking, unlinking, and retrieval.
-/// Uses Testcontainers with PostgreSQL for realistic database interactions.
+/// Uses SharedTestcontainersFixture for optimized performance and Docker hijack prevention (Issue #2031).
 /// </summary>
 /// <remarks>
 /// Tests Cover:
@@ -36,11 +35,15 @@ namespace Api.Tests.Integration;
 ///
 /// Pattern: AAA (Arrange-Act-Assert), Testcontainers for PostgreSQL, transaction rollback between tests
 /// </remarks>
+[Collection("SharedTestcontainers")]
 [Trait("Category", "Integration")]
 [Trait("Dependency", "PostgreSQL")]
+[Trait("Issue", "2031")]
 public class OAuthIntegrationTests : IAsyncLifetime
 {
-    private IContainer? _postgresContainer;
+    private readonly SharedTestcontainersFixture _fixture;
+    private string _isolatedDbConnectionString = string.Empty;
+    private string _databaseName = string.Empty;
     private MeepleAiDbContext? _dbContext;
     private IServiceProvider? _serviceProvider;
     private IMediator? _mediator;
@@ -59,8 +62,9 @@ public class OAuthIntegrationTests : IAsyncLifetime
     private const string AccessToken = "access_token_encrypted";
     private const string RefreshToken = "refresh_token_encrypted";
 
-    public OAuthIntegrationTests()
+    public OAuthIntegrationTests(SharedTestcontainersFixture fixture)
     {
+        _fixture = fixture;
         _output = Console.WriteLine;
     }
 
@@ -68,26 +72,13 @@ public class OAuthIntegrationTests : IAsyncLifetime
     {
         _output("Initializing OAuth integration test infrastructure...");
 
-        // Always start an isolated Postgres container for stability
-        _postgresContainer = new ContainerBuilder()
-            .WithImage("postgres:16-alpine")
-            .WithEnvironment("POSTGRES_USER", "postgres")
-            .WithEnvironment("POSTGRES_PASSWORD", "postgres")
-            .WithEnvironment("POSTGRES_DB", "meepleai_test")
-            .WithPortBinding(5432, true)
-            .WithWaitStrategy(Wait.ForUnixContainer()
-                .UntilCommandIsCompleted("pg_isready", "-U", "postgres"))
-            .Build();
-
-        await _postgresContainer.StartAsync(TestCancellationToken);
-        var containerPort = _postgresContainer.GetMappedPublicPort(5432);
-        var connectionString = $"Host=localhost;Port={containerPort};Database=meepleai_test;Username=postgres;Password=postgres;";
-
-        _output($"PostgreSQL started at localhost:{containerPort}");
+        // Issue #2031: Migrated to SharedTestcontainersFixture for Docker hijack prevention and performance
+        _databaseName = $"test_oauth_{Guid.NewGuid():N}";
+        _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
+        _output($"Isolated database created: {_databaseName}");
 
         // Setup dependency injection
-        // Final guard: enforce SSL disabled
-        var enforcedBuilder = new NpgsqlConnectionStringBuilder(connectionString)
+        var enforcedBuilder = new NpgsqlConnectionStringBuilder(_isolatedDbConnectionString)
         {
             SslMode = SslMode.Disable,
             KeepAlive = 30,
@@ -95,12 +86,6 @@ public class OAuthIntegrationTests : IAsyncLifetime
             Timeout = 15,
             CommandTimeout = 30
         };
-        // Force IPv4 loopback to avoid IPv6/localhost socket quirks in some environments
-        enforcedBuilder.Host = string.IsNullOrWhiteSpace(enforcedBuilder.Host) || enforcedBuilder.Host == "localhost"
-            ? "127.0.0.1"
-            : enforcedBuilder.Host;
-        connectionString = enforcedBuilder.ConnectionString;
-        _output($"Using connection string for OAuth tests: {connectionString}");
 
         var services = new ServiceCollection();
 
@@ -109,7 +94,7 @@ public class OAuthIntegrationTests : IAsyncLifetime
         // Register DbContext with PostgreSQL
         services.AddDbContext<MeepleAiDbContext>(options =>
         {
-            options.UseNpgsql(connectionString);
+            options.UseNpgsql(enforcedBuilder.ConnectionString);
             // Suppress pending model changes warning for integration tests
             // since we're using migrations to manage schema
             options.ConfigureWarnings(w =>
@@ -162,10 +147,18 @@ public class OAuthIntegrationTests : IAsyncLifetime
             (_serviceProvider as IDisposable)?.Dispose();
         }
 
-        if (_postgresContainer != null)
+        // Issue #2031: Use SharedTestcontainersFixture for cleanup
+        if (!string.IsNullOrEmpty(_databaseName))
         {
-            await _postgresContainer.StopAsync(TestCancellationToken);
-            await _postgresContainer.DisposeAsync();
+            try
+            {
+                await _fixture.DropIsolatedDatabaseAsync(_databaseName);
+                _output($"Isolated database dropped: {_databaseName}");
+            }
+            catch (Exception ex)
+            {
+                _output($"Warning: Failed to drop database {_databaseName}: {ex.Message}");
+            }
         }
 
         _output("✓ Cleanup complete");
@@ -216,7 +209,7 @@ public class OAuthIntegrationTests : IAsyncLifetime
         Assert.Equal(NewUserEmail, userInDb.Email.Value);
         Assert.NotEmpty(linkedAccounts);
 
-        var linkedAccount = linkedAccounts.First();
+        var linkedAccount = linkedAccounts[0];
         Assert.Equal(GoogleProvider, linkedAccount.Provider);
         Assert.Equal(GoogleUserId, linkedAccount.ProviderUserId);
         Assert.Equal(AccessToken, linkedAccount.AccessTokenEncrypted);
@@ -273,7 +266,7 @@ public class OAuthIntegrationTests : IAsyncLifetime
 
         Assert.NotEmpty(linkedAccounts);
         Assert.Single(linkedAccounts);
-        Assert.Equal(DiscordProvider, linkedAccounts.First().Provider);
+        Assert.Equal(DiscordProvider, linkedAccounts[0].Provider);
 
         _output("✓ Test 2 passed: OAuth callback linked account to existing user");
     }
@@ -343,7 +336,7 @@ public class OAuthIntegrationTests : IAsyncLifetime
         var accountsAfterUnlink = await oauthAccountRepository.GetByUserIdAsync(userId, TestCancellationToken);
 
         Assert.Single(accountsAfterUnlink);
-        Assert.Equal(GoogleProvider, accountsAfterUnlink.First().Provider);
+        Assert.Equal(GoogleProvider, accountsAfterUnlink[0].Provider);
 
         // Discord account deleted
         var discordAccountInDb = await oauthAccountRepository.GetByIdAsync(discordAccountId, TestCancellationToken);
@@ -570,7 +563,7 @@ public class OAuthIntegrationTests : IAsyncLifetime
         // Step 4: Verify only Discord remains
         var result3 = await mediator.Send(query, TestCancellationToken);
         Assert.Single(result3.Accounts);
-        Assert.Equal(DiscordProvider, result3.Accounts.First().Provider);
+        Assert.Equal(DiscordProvider, result3.Accounts[0].Provider);
 
         _output("✓ Test 6 passed: Progressive OAuth account management");
     }

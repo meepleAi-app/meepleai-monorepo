@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection -- Safe style/icon map Record access */
 /**
  * ActivityFeed Component - Issue #884
  *
@@ -13,17 +14,8 @@ import { useMemo } from 'react';
 import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { formatDistanceToNow } from 'date-fns';
-import { it } from 'date-fns/locale';
-import {
-  UserPlusIcon,
-  FileUpIcon,
-  AlertTriangleIcon,
-  CheckCircleIcon,
-  XCircleIcon,
-  ActivityIcon,
-  ArrowRightIcon,
-} from 'lucide-react';
+import { ActivityIcon, ArrowRightIcon } from 'lucide-react';
+import { severityStyles, eventIcons, formatRelativeTimestamp } from './utils/activityUtils';
 
 export interface ActivityEvent {
   id: string;
@@ -43,42 +35,6 @@ export interface ActivityFeedProps {
   maxEvents?: number;
   viewAllHref?: string;
   showViewAll?: boolean;
-}
-
-const severityStyles = {
-  Info: 'text-blue-600 bg-blue-50',
-  Warning: 'text-yellow-600 bg-yellow-50',
-  Error: 'text-red-600 bg-red-50',
-  Critical: 'text-red-700 bg-red-100',
-};
-
-const eventIcons = {
-  UserRegistered: UserPlusIcon,
-  UserLogin: UserPlusIcon,
-  PdfUploaded: FileUpIcon,
-  PdfProcessed: CheckCircleIcon,
-  AlertCreated: AlertTriangleIcon,
-  AlertResolved: CheckCircleIcon,
-  GameAdded: ActivityIcon,
-  ConfigurationChanged: ActivityIcon,
-  ErrorOccurred: XCircleIcon,
-  SystemEvent: ActivityIcon,
-};
-
-/**
- * Formats a timestamp as a relative time string in Italian.
- * Falls back to ISO string if parsing fails.
- */
-function formatRelativeTimestamp(timestamp: string): string {
-  try {
-    const date = new Date(timestamp);
-    if (isNaN(date.getTime())) {
-      return timestamp;
-    }
-    return formatDistanceToNow(date, { addSuffix: true, locale: it });
-  } catch {
-    return timestamp;
-  }
 }
 
 export function ActivityFeed({

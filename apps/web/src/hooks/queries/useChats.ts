@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- API client type coercion for chat methods */
 /**
  * useChats - TanStack Query hooks for chat threads
  *
@@ -6,8 +7,20 @@
  * Provides automatic caching for chat threads and messages.
  */
 
-import { useQuery, useMutation, useQueryClient, UseQueryResult, UseMutationResult } from '@tanstack/react-query';
-import { api, ChatThreadDto, ChatMessageResponse, CreateChatThreadRequest, AddMessageRequest } from '@/lib/api';
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  UseQueryResult,
+  UseMutationResult,
+} from '@tanstack/react-query';
+import {
+  api,
+  ChatThreadDto,
+  ChatMessageResponse,
+  CreateChatThreadRequest,
+  AddMessageRequest,
+} from '@/lib/api';
 
 /**
  * Query key factory for chat queries
@@ -30,7 +43,10 @@ export const chatKeys = {
  * @param enabled Whether to run the query (default: true)
  * @returns UseQueryResult with chat threads
  */
-export function useChats(gameId: string, enabled: boolean = true): UseQueryResult<ChatThreadDto[], Error> {
+export function useChats(
+  gameId: string,
+  enabled: boolean = true
+): UseQueryResult<ChatThreadDto[], Error> {
   return useQuery({
     queryKey: chatKeys.byGame(gameId),
     queryFn: async (): Promise<ChatThreadDto[]> => {
@@ -49,7 +65,10 @@ export function useChats(gameId: string, enabled: boolean = true): UseQueryResul
  * @param enabled Whether to run the query (default: true)
  * @returns UseQueryResult with chat thread details
  */
-export function useChatThread(threadId: string, enabled: boolean = true): UseQueryResult<ChatThreadDto | null, Error> {
+export function useChatThread(
+  threadId: string,
+  enabled: boolean = true
+): UseQueryResult<ChatThreadDto | null, Error> {
   return useQuery({
     queryKey: chatKeys.detail(threadId),
     queryFn: async (): Promise<ChatThreadDto | null> => {
@@ -68,7 +87,10 @@ export function useChatThread(threadId: string, enabled: boolean = true): UseQue
  * @param enabled Whether to run the query (default: true)
  * @returns UseQueryResult with chat thread (includes messages)
  */
-export function useMessages(chatId: string, enabled: boolean = true): UseQueryResult<ChatThreadDto | null, Error> {
+export function useMessages(
+  chatId: string,
+  enabled: boolean = true
+): UseQueryResult<ChatThreadDto | null, Error> {
   return useChatThread(chatId, enabled);
 }
 
@@ -88,7 +110,7 @@ export function useCreateChat(): UseMutationResult<ChatThreadDto, Error, CreateC
     mutationFn: async (request: CreateChatThreadRequest): Promise<ChatThreadDto> => {
       return (api.chat as any).createThread(request);
     },
-    onSuccess: (newChat) => {
+    onSuccess: newChat => {
       // Invalidate the game's chat list to refetch
       if (newChat.gameId) {
         queryClient.invalidateQueries({ queryKey: chatKeys.byGame(newChat.gameId) });

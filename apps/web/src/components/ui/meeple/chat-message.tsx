@@ -207,6 +207,7 @@ export const ChatMessage = React.forwardRef<HTMLDivElement, ChatMessageProps>(
       >
         {/* Avatar */}
         {isAssistant ? (
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- avatarState set by isAssistant path
           <MeepleAvatar state={avatarState!} size="md" className="shrink-0" />
         ) : (
           <Avatar className="shrink-0 w-10 h-10">

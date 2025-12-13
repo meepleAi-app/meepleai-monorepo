@@ -19,7 +19,6 @@ public class QdrantService : IQdrantService
     private readonly IQdrantCollectionManager _collectionManager;
     private readonly IQdrantVectorIndexer _vectorIndexer;
     private readonly IQdrantVectorSearcher _vectorSearcher;
-    private readonly IEmbeddingService _embeddingService;
     private readonly ILogger<QdrantService> _logger;
     private const string CollectionName = "meepleai_documents";
     // Vector size is determined by the embedding model configured in EmbeddingService
@@ -35,11 +34,10 @@ public class QdrantService : IQdrantService
         _collectionManager = collectionManager;
         _vectorIndexer = vectorIndexer;
         _vectorSearcher = vectorSearcher;
-        _embeddingService = embeddingService;
         _logger = logger;
 
-        // Get vector size from embedding service to ensure consistency
-        _vectorSize = (uint)_embeddingService.GetEmbeddingDimensions();
+        // S1450: embeddingService used only locally for initialization
+        _vectorSize = (uint)embeddingService.GetEmbeddingDimensions();
 
         var provider = configuration["EMBEDDING_PROVIDER"]?.ToLowerInvariant() ?? "ollama";
         var model = configuration["EMBEDDING_MODEL"] ?? "unknown";
@@ -156,6 +154,7 @@ public class QdrantService : IQdrantService
             return IndexResult.CreateSuccess(validChunks.Count);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Infrastructure adapter - Wraps Qdrant gRPC exceptions into domain-friendly IndexResult with telemetry
         // Issue #1444: Use centralized exception handling for Result pattern
         catch (Exception ex)
         {
@@ -174,6 +173,7 @@ public class QdrantService : IQdrantService
         string gameId,
         float[] queryEmbedding,
         int limit = 5,
+        IReadOnlyList<string>? documentIds = null,
         CancellationToken ct = default)
     {
         // Validate parameters
@@ -184,12 +184,20 @@ public class QdrantService : IQdrantService
         activity?.SetTag("limit", limit);
         activity?.SetTag("collection", CollectionName);
         activity?.SetTag("vector.dimension", queryEmbedding.Length);
+        activity?.SetTag("document.filter.enabled", documentIds != null); // Issue #2141
         // OPS-02: Start tracking duration
         var stopwatch = Stopwatch.StartNew();
         try
         {
-            _logger.LogInformation("Searching in game {GameId}, limit {Limit}", gameId, limit);
-            var filter = _vectorSearcher.BuildGameFilter(gameId);
+            _logger.LogInformation(
+                "Searching in game {GameId}, limit {Limit}, documentFilter={HasFilter}",
+                gameId, limit, documentIds != null);
+
+            // Issue #2141: Use combined filter if documentIds provided (native Qdrant filtering)
+            var filter = documentIds != null && documentIds.Count > 0
+                ? _vectorSearcher.BuildGameAndDocumentsFilter(gameId, documentIds)
+                : _vectorSearcher.BuildGameFilter(gameId);
+
             var searchResults = await _vectorSearcher.SearchAsync(
                 collectionName: CollectionName,
                 queryEmbedding: queryEmbedding,
@@ -212,6 +220,7 @@ public class QdrantService : IQdrantService
             return SearchResult.CreateSuccess(results);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Infrastructure adapter - Wraps Qdrant gRPC exceptions into domain-friendly SearchResult with telemetry
         // Issue #1444: Use centralized exception handling for Result pattern
         catch (Exception ex)
         {
@@ -236,6 +245,7 @@ public class QdrantService : IQdrantService
             return true;
         }
 #pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Infrastructure adapter - Wraps Qdrant gRPC exceptions into boolean result pattern for deletion operations
         // Issue #1444: Use centralized exception handling for Result pattern (boolean return)
         catch (Exception ex)
         {
@@ -275,6 +285,7 @@ public class QdrantService : IQdrantService
             return IndexResult.CreateSuccess(chunks.Count);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Infrastructure adapter - Wraps Qdrant gRPC exceptions into domain-friendly IndexResult with telemetry
         // Issue #1444: Use centralized exception handling for Result pattern
         catch (Exception ex)
         {
@@ -309,6 +320,7 @@ public class QdrantService : IQdrantService
             return SearchResult.CreateSuccess(results);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Infrastructure adapter - Wraps Qdrant gRPC exceptions into domain-friendly SearchResult with telemetry
         // Issue #1444: Use centralized exception handling for Result pattern
         catch (Exception ex)
         {
@@ -368,6 +380,7 @@ public class QdrantService : IQdrantService
             return IndexResult.CreateSuccess(chunks.Count);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Infrastructure adapter - Wraps Qdrant gRPC exceptions into domain-friendly IndexResult with telemetry
         // Issue #1444: Use centralized exception handling for Result pattern
         catch (Exception ex)
         {
@@ -380,12 +393,14 @@ public class QdrantService : IQdrantService
     }
     /// <summary>
     /// Search for similar chunks filtered by game and language
+    /// Issue #2141: Supports document filtering via native Qdrant filters
     /// </summary>
     public virtual async Task<SearchResult> SearchAsync(
         string gameId,
         float[] queryEmbedding,
         string language,
         int limit = 5,
+        IReadOnlyList<string>? documentIds = null,
         CancellationToken ct = default)
     {
         // Validate parameters
@@ -396,12 +411,33 @@ public class QdrantService : IQdrantService
         activity?.SetTag("limit", limit);
         activity?.SetTag("collection", CollectionName);
         activity?.SetTag("vector.dimension", queryEmbedding.Length);
+        activity?.SetTag("document.filter.enabled", documentIds != null); // Issue #2141
         var stopwatch = Stopwatch.StartNew();
         try
         {
-            _logger.LogInformation("Searching in game {GameId} for language {Language}, limit {Limit}",
-                gameId, language, limit);
+            _logger.LogInformation(
+                "Searching in game {GameId} for language {Language}, limit {Limit}, documentFilter={HasFilter}",
+                gameId, language, limit, documentIds != null);
+
+            // Build filter combining game+language+documents
             var filter = _vectorSearcher.BuildGameLanguageFilter(gameId, language);
+
+            // Issue #2141: Add document ID filtering if specified
+            if (documentIds != null && documentIds.Count > 0)
+            {
+                foreach (var docId in documentIds)
+                {
+                    filter.Should.Add(new Condition
+                    {
+                        Field = new FieldCondition
+                        {
+                            Key = "pdf_id",
+                            Match = new Match { Keyword = docId }
+                        }
+                    });
+                }
+            }
+
             var searchResults = await _vectorSearcher.SearchAsync(
                 collectionName: CollectionName,
                 queryEmbedding: queryEmbedding,
@@ -422,6 +458,7 @@ public class QdrantService : IQdrantService
             return SearchResult.CreateSuccess(results);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Infrastructure adapter - Wraps Qdrant gRPC exceptions into domain-friendly SearchResult with telemetry
         // Issue #1444: Use centralized exception handling for Result pattern
         catch (Exception ex)
         {
@@ -446,6 +483,7 @@ public class QdrantService : IQdrantService
             return true;
         }
 #pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Infrastructure adapter - Wraps Qdrant gRPC exceptions into boolean result pattern for deletion operations
         // Issue #1444: Use centralized exception handling for Result pattern (boolean return)
         catch (Exception ex)
         {

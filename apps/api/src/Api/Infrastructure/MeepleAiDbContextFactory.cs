@@ -26,11 +26,12 @@ public class MeepleAiDbContextFactory : IDesignTimeDbContextFactory<MeepleAiDbCo
     {
         var optionsBuilder = new DbContextOptionsBuilder<MeepleAiDbContext>();
 
+        // Issue #921: Allow dummy connection for migrations without real DB
+        // Issue #2112: Try both uppercase (Windows) and camelCase (Linux CI) for env var
         var connectionString = Environment.GetEnvironmentVariable("CONNECTIONSTRINGS__POSTGRES")
+            ?? Environment.GetEnvironmentVariable("ConnectionStrings__Postgres")  // Linux CI compatibility
             ?? Environment.GetEnvironmentVariable("POSTGRES_CONNECTION_STRING")
-            ?? throw new InvalidOperationException(
-                "Database connection string not configured. " +
-                "Set CONNECTIONSTRINGS__POSTGRES or POSTGRES_CONNECTION_STRING environment variable.");
+            ?? "Host=localhost;Database=meepleai_migrations;Username=postgres;Password=postgres"; // Dummy for migrations
 
         optionsBuilder.UseNpgsql(connectionString);
 
@@ -48,12 +49,13 @@ public class MeepleAiDbContextFactory : IDesignTimeDbContextFactory<MeepleAiDbCo
     {
         public IAsyncEnumerable<TResponse> CreateStream<TResponse>(IStreamRequest<TResponse> request, CancellationToken cancellationToken = default)
         {
-            throw new NotImplementedException("Stream not supported in design-time context");
+            // MA0025: NotSupportedException for intentionally unsupported operations
+            throw new NotSupportedException("Stream not supported in design-time context");
         }
 
         public IAsyncEnumerable<object?> CreateStream(object request, CancellationToken cancellationToken = default)
         {
-            throw new NotImplementedException("Stream not supported in design-time context");
+            throw new NotSupportedException("Stream not supported in design-time context");
         }
 
         public Task Publish(object notification, CancellationToken cancellationToken = default)
@@ -70,17 +72,17 @@ public class MeepleAiDbContextFactory : IDesignTimeDbContextFactory<MeepleAiDbCo
 
         public Task<TResponse> Send<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default)
         {
-            throw new NotImplementedException("Send not supported in design-time context");
+            throw new NotSupportedException("Send not supported in design-time context");
         }
 
         public Task Send<TRequest>(TRequest request, CancellationToken cancellationToken = default) where TRequest : IRequest
         {
-            throw new NotImplementedException("Send not supported in design-time context");
+            throw new NotSupportedException("Send not supported in design-time context");
         }
 
         public Task<object?> Send(object request, CancellationToken cancellationToken = default)
         {
-            throw new NotImplementedException("Send not supported in design-time context");
+            throw new NotSupportedException("Send not supported in design-time context");
         }
     }
 

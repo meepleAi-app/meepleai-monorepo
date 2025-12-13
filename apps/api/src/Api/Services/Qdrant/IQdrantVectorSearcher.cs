@@ -41,4 +41,9 @@ public interface IQdrantVectorSearcher
     /// Build a filter for PDF ID
     /// </summary>
     Filter BuildPdfFilter(string pdfId);
+
+    /// <summary>
+    /// Build a combined filter for game ID and multiple document IDs (Issue #2141)
+    /// </summary>
+    Filter BuildGameAndDocumentsFilter(string gameId, IReadOnlyList<string> documentIds);
 }

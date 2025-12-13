@@ -27,13 +27,18 @@ public class QdrantVectorStoreAdapter : IQdrantVectorStoreAdapter
         Vector queryVector,
         int topK,
         double minScore,
+        IReadOnlyList<Guid>? documentIds = null,
         CancellationToken cancellationToken = default)
     {
-        // Call existing QdrantService with gameId and query vector
+        // Issue #2141: Convert Guid documentIds to string[] for Qdrant native filtering
+        var documentIdStrings = documentIds?.Select(id => id.ToString()).ToList();
+
+        // Call QdrantService with native document filtering
         var searchResult = await _qdrantService.SearchAsync(
             gameId.ToString(),
             queryVector.Values.ToArray(),
             topK,
+            documentIdStrings,
             cancellationToken).ConfigureAwait(false);
 
         if (!searchResult.Success)
@@ -42,21 +47,21 @@ public class QdrantVectorStoreAdapter : IQdrantVectorStoreAdapter
             return new List<Embedding>();
         }
 
-        // DIAGNOSTIC: Log raw Qdrant results before filtering
+        // DIAGNOSTIC: Log Qdrant results (already filtered natively)
         _logger.LogInformation(
-            "Qdrant returned {TotalResults} results for gameId={GameId}. MinScore threshold={MinScore}",
+            "Qdrant returned {TotalResults} results for gameId={GameId} with native document filter. MinScore threshold={MinScore}",
             searchResult.Results.Count, gameId, minScore);
 
         foreach (var r in searchResult.Results)
         {
             _logger.LogInformation(
-                "  - Score={Score:F4}, Text={TextPreview}...",
-                r.Score, r.Text.Substring(0, Math.Min(50, r.Text.Length)));
+                "  - Score={Score:F4}, PdfId={PdfId}, Text={TextPreview}...",
+                r.Score, r.PdfId, r.Text.Substring(0, Math.Min(50, r.Text.Length)));
         }
 
-        // Map SearchResultItems to domain Embedding entities
+        // Issue #2141: Only apply minScore filter now (document filter done by Qdrant natively)
         var filteredResults = searchResult.Results
-            .Where(r => r.Score >= minScore) // Apply min score filter
+            .Where(r => r.Score >= minScore)
             .ToList();
 
         _logger.LogInformation(
@@ -86,7 +91,7 @@ public class QdrantVectorStoreAdapter : IQdrantVectorStoreAdapter
             return;
 
         // Group embeddings by VectorDocumentId (they should all be from same document)
-        var firstEmbedding = embeddings.First();
+        var firstEmbedding = embeddings[0];
         var gameId = "unknown"; // GameId not available in Embedding entity
         var pdfId = firstEmbedding.VectorDocumentId.ToString();
 

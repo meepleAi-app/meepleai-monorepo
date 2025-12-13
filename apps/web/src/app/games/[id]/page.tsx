@@ -23,7 +23,7 @@ import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { BggGameDetails, Game, GameSessionDto, api } from '@/lib/api';
+import { BggGameDetails, Game, GameSessionDto, api, RuleSpec } from '@/lib/api';
 import { createErrorContext } from '@/lib/errors';
 import { logger } from '@/lib/logger';
 import {
@@ -60,13 +60,16 @@ export default function GameDetailPage() {
   const [game, setGame] = useState<Game | null>(null);
   const [bggDetails, setBggDetails] = useState<BggGameDetails | null>(null);
   const [sessions, setSessions] = useState<GameSessionDto[]>([]);
+  const [rules, setRules] = useState<RuleSpec[]>([]);
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(true);
   const [bggLoading, setBggLoading] = useState(false);
   const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [rulesLoading, setRulesLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [bggError, setBggError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
+  const [rulesPagination, setRulesPagination] = useState<Record<string, number>>({});
 
   // Load game data
   useEffect(() => {
@@ -154,6 +157,33 @@ export default function GameDetailPage() {
     };
 
     loadSessions();
+  }, [gameId, activeTab]);
+
+  // Load rules when tab is activated (Issue #2027)
+  useEffect(() => {
+    if (!gameId || activeTab !== 'rules') return;
+
+    const loadRules = async () => {
+      setRulesLoading(true);
+      try {
+        const rulesData = await api.games.getRules(gameId);
+        setRules(rulesData);
+      } catch (err) {
+        logger.error(
+          'Failed to load game rules',
+          err instanceof Error ? err : new Error(String(err)),
+          createErrorContext('GameDetailPage', 'loadRules', {
+            gameId,
+            operation: 'fetch_rules',
+          })
+        );
+        setRules([]);
+      } finally {
+        setRulesLoading(false);
+      }
+    };
+
+    loadRules();
   }, [gameId, activeTab]);
 
   // Load notes from localStorage
@@ -462,29 +492,130 @@ export default function GameDetailPage() {
         </TabsContent>
 
         {/* Rules Tab */}
-        <TabsContent value="rules">
+        <TabsContent value="rules" className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle>Game Rules</CardTitle>
-              <CardDescription>Rules specification and reference</CardDescription>
+              <CardDescription>Rule specifications and versions (Issue #2027)</CardDescription>
             </CardHeader>
             <CardContent>
-              <Alert>
-                <BookOpen className="h-4 w-4" />
-                <AlertDescription>
-                  Rules integration coming soon. Backend query (GetRuleSpecsQuery) will be
-                  implemented in a separate issue.
-                </AlertDescription>
-              </Alert>
-              <div className="mt-4 text-sm text-muted-foreground">
-                <p>Future features:</p>
-                <ul className="list-disc list-inside mt-2 space-y-1">
-                  <li>View rule specifications</li>
-                  <li>Search rules by keyword</li>
-                  <li>Version history</li>
-                  <li>PDF rule document viewer</li>
-                </ul>
-              </div>
+              {rulesLoading && (
+                <div className="space-y-3">
+                  <Skeleton className="h-32 w-full" />
+                  <Skeleton className="h-32 w-full" />
+                </div>
+              )}
+
+              {!rulesLoading && rules.length === 0 && (
+                <Alert>
+                  <BookOpen className="h-4 w-4" />
+                  <AlertDescription>
+                    No rule specifications available for this game yet.
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {!rulesLoading && rules.length > 0 && (
+                <div className="space-y-6">
+                  {rules.map((ruleSpec, index) => {
+                    const currentPage = rulesPagination[ruleSpec.id] || 1;
+                    const itemsPerPage = 10;
+                    const totalPages = Math.ceil(ruleSpec.atoms.length / itemsPerPage);
+                    const startIndex = (currentPage - 1) * itemsPerPage;
+                    const paginatedAtoms = ruleSpec.atoms.slice(
+                      startIndex,
+                      startIndex + itemsPerPage
+                    );
+
+                    const handlePageChange = (newPage: number) => {
+                      setRulesPagination(prev => ({
+                        ...prev,
+                        [ruleSpec.id]: newPage,
+                      }));
+                    };
+
+                    return (
+                      <Card key={ruleSpec.id} className="border-2">
+                        <CardHeader>
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <CardTitle className="flex items-center gap-2">
+                                <Badge variant={index === 0 ? 'default' : 'secondary'}>
+                                  Version {ruleSpec.version}
+                                </Badge>
+                                {index === 0 && <Badge variant="outline">Latest</Badge>}
+                              </CardTitle>
+                              <CardDescription className="mt-2">
+                                Created: {new Date(ruleSpec.createdAt).toLocaleString()} •{' '}
+                                {ruleSpec.atoms.length} rule{ruleSpec.atoms.length !== 1 ? 's' : ''}
+                              </CardDescription>
+                            </div>
+                          </div>
+                        </CardHeader>
+
+                        <CardContent className="space-y-3">
+                          {paginatedAtoms.length === 0 && (
+                            <p className="text-sm text-muted-foreground">
+                              No rules in this version
+                            </p>
+                          )}
+
+                          {paginatedAtoms.map((atom, atomIndex) => (
+                            <div key={atom.id} className="border-l-2 border-primary/20 pl-4 py-2">
+                              <div className="flex items-start gap-2">
+                                <Badge variant="outline" className="text-xs shrink-0">
+                                  #{startIndex + atomIndex + 1}
+                                </Badge>
+                                <div className="flex-1">
+                                  <p className="text-sm">{atom.text}</p>
+                                  <div className="flex gap-3 mt-1 text-xs text-muted-foreground">
+                                    {atom.section && <span>Section: {atom.section}</span>}
+                                    {atom.page && <span>Page: {atom.page}</span>}
+                                    {atom.line && <span>Line: {atom.line}</span>}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+
+                          {totalPages > 1 && (
+                            <>
+                              <Separator className="my-4" />
+                              <div className="flex items-center justify-between">
+                                <p className="text-sm text-muted-foreground">
+                                  Showing {startIndex + 1}-
+                                  {Math.min(startIndex + itemsPerPage, ruleSpec.atoms.length)} of{' '}
+                                  {ruleSpec.atoms.length} rules
+                                </p>
+                                <div className="flex gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                                    disabled={currentPage === 1}
+                                  >
+                                    Previous
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() =>
+                                      handlePageChange(Math.min(totalPages, currentPage + 1))
+                                    }
+                                    disabled={currentPage === totalPages}
+                                  >
+                                    Next
+                                  </Button>
+                                </div>
+                              </div>
+                            </>
+                          )}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

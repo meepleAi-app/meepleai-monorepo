@@ -607,7 +607,7 @@ public class UserDomainTests
         user.UseBackupCode(codeHash, usedAt);
 
         // Assert
-        var code = user.BackupCodes.First();
+        var code = user.BackupCodes.ElementAt(0);
         Assert.True(code.IsUsed);
         Assert.Equal(usedAt, code.UsedAt);
     }

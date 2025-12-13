@@ -3,6 +3,7 @@ using Api.BoundedContexts.Authentication.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using MediatR;
+using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Queries.GetSharedThread;
 
@@ -15,15 +16,18 @@ public sealed class GetSharedThreadQueryHandler : IRequestHandler<GetSharedThrea
     private readonly IChatThreadRepository _threadRepository;
     private readonly IShareLinkRepository _shareLinkRepository;
     private readonly IMediator _mediator;
+    private readonly ILogger<GetSharedThreadQueryHandler> _logger;
 
     public GetSharedThreadQueryHandler(
         IChatThreadRepository threadRepository,
         IShareLinkRepository shareLinkRepository,
-        IMediator mediator)
+        IMediator mediator,
+        ILogger<GetSharedThreadQueryHandler> logger)
     {
         _threadRepository = threadRepository;
         _shareLinkRepository = shareLinkRepository;
         _mediator = mediator;
+        _logger = logger;
     }
 
     public async Task<GetSharedThreadResult?> Handle(
@@ -50,24 +54,28 @@ public sealed class GetSharedThreadQueryHandler : IRequestHandler<GetSharedThrea
             return null;
         }
 
-        // Record access for analytics (fire and forget)
-        _ = Task.Run(async () =>
+        // Record access for analytics (synchronous to avoid DI scope violation)
+        // Note: Fire-and-forget with Task.Run was removed because _shareLinkRepository
+        // is a scoped service that may be disposed before the background task completes,
+        // causing ObjectDisposedException under load. The ~20-50ms overhead is acceptable
+        // for analytics tracking. For Beta/Prod, consider IBackgroundTaskQueue with
+        // IServiceScopeFactory for zero response penalty. See Issue #2150 for details.
+        try
         {
-            try
-            {
-                var shareLink = await _shareLinkRepository.GetByIdAsync(validation.ShareLinkId, CancellationToken.None);
+            var shareLink = await _shareLinkRepository.GetByIdAsync(validation.ShareLinkId, cancellationToken);
 
-                if (shareLink != null)
-                {
-                    shareLink.RecordAccess();
-                    await _shareLinkRepository.UpdateAsync(shareLink, CancellationToken.None);
-                }
-            }
-            catch
+            if (shareLink != null)
             {
-                // Ignore analytics errors
+                shareLink.RecordAccess();
+                await _shareLinkRepository.UpdateAsync(shareLink, cancellationToken);
+                _logger.LogDebug("Recorded share link access for ShareLinkId {ShareLinkId}", validation.ShareLinkId);
             }
-        }, CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            // Analytics errors should not fail the main request
+            _logger.LogWarning(ex, "Failed to record share link access for ShareLinkId {ShareLinkId}", validation.ShareLinkId);
+        }
 
         // Convert messages to DTO (filter deleted messages for shared view)
         var messageDtos = thread.Messages

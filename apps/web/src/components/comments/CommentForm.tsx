@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { logger } from '@/lib/logger';
 import { createErrorContext } from '@/lib/errors';
 
@@ -12,12 +13,16 @@ interface CommentFormProps {
 export function CommentForm({
   onSubmit,
   atomId = null,
-  placeholder = "Scrivi un commento...",
-  disabled = false
+  placeholder,
+  disabled = false,
 }: CommentFormProps) {
-  const [commentText, setCommentText] = useState("");
+  const t = useTranslations('comments');
+  const [commentText, setCommentText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isDisabled = disabled || isSubmitting;
+
+  // Use provided placeholder or i18n default
+  const effectivePlaceholder = placeholder || t('placeholder');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,14 +34,14 @@ export function CommentForm({
     setIsSubmitting(true);
     try {
       await onSubmit(commentText, atomId);
-      setCommentText("");
+      setCommentText('');
     } catch (error) {
       logger.error(
         'Failed to create comment',
         error instanceof Error ? error : new Error(String(error)),
         createErrorContext('CommentForm', 'handleSubmit', { atomId })
       );
-      alert("Impossibile creare il commento");
+      alert(t('createError'));
     } finally {
       setIsSubmitting(false);
     }
@@ -46,8 +51,8 @@ export function CommentForm({
     <form onSubmit={handleSubmit} className="mb-4">
       <textarea
         value={commentText}
-        onChange={(e) => setCommentText(e.target.value)}
-        placeholder={placeholder}
+        onChange={e => setCommentText(e.target.value)}
+        placeholder={effectivePlaceholder}
         disabled={isDisabled}
         className="w-full min-h-20 p-3 border border-gray-300 rounded text-sm font-inherit mb-2 resize-vertical"
       />
@@ -56,11 +61,11 @@ export function CommentForm({
         disabled={isDisabled || !commentText.trim()}
         className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
           isDisabled || !commentText.trim()
-            ? "bg-gray-300 text-white cursor-not-allowed"
-            : "bg-blue-600 text-white hover:bg-blue-700 cursor-pointer"
+            ? 'bg-gray-300 text-white cursor-not-allowed'
+            : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
         }`}
       >
-        {isSubmitting ? "Invio in corso..." : "Aggiungi Commento"}
+        {isSubmitting ? t('submitting') : t('addComment')}
       </button>
     </form>
   );

@@ -206,6 +206,12 @@
     "upload": "Upload",
     "yes": "Yes"
   },
+  "comments": {
+    "addComment": "Add Comment",
+    "createError": "Unable to create comment",
+    "placeholder": "Write a comment...",
+    "submitting": "Submitting..."
+  },
   "dashboard": {
     "greeting": {
       "afternoon": "Good afternoon",
@@ -340,6 +346,17 @@
     "register": "Sign Up",
     "settings": "Settings",
     "upload": "Upload"
+  },
+  "questionInput": {
+    "attachFile": "Attach file",
+    "charCount": "{count} of {max} characters",
+    "completeResponse": "Complete response",
+    "fastResponse": "Fast response",
+    "placeholder": "Write question...",
+    "responseModeLabel": "Response mode",
+    "searchLabel": "Game question",
+    "sendQuestion": "Send question",
+    "sending": "Sending..."
   },
   "roles": {
     "admin": "Admin",

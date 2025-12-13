@@ -206,6 +206,12 @@
     "upload": "Carica",
     "yes": "Sì"
   },
+  "comments": {
+    "addComment": "Aggiungi Commento",
+    "createError": "Impossibile creare il commento",
+    "placeholder": "Scrivi un commento...",
+    "submitting": "Invio in corso..."
+  },
   "dashboard": {
     "greeting": {
       "afternoon": "Buon pomeriggio",
@@ -340,6 +346,17 @@
     "register": "Registrati",
     "settings": "Impostazioni",
     "upload": "Carica"
+  },
+  "questionInput": {
+    "attachFile": "Allega file",
+    "charCount": "{count} di {max} caratteri",
+    "completeResponse": "Risposta completa",
+    "fastResponse": "Risposta veloce",
+    "placeholder": "Scrivi domanda...",
+    "responseModeLabel": "Modalità risposta",
+    "searchLabel": "Domanda sul gioco",
+    "sendQuestion": "Invia domanda",
+    "sending": "Invio in corso..."
   },
   "roles": {
     "admin": "Amministratore",

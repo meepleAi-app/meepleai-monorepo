@@ -2,6 +2,21 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { CommentForm } from '../comments/CommentForm';
 import React from 'react';
+import { t, getTextMatcher } from '@/test-utils/test-i18n';
+
+// Mock next-intl to use test-i18n utility with interpolation support
+vi.mock('next-intl', () => ({
+  useTranslations:
+    (namespace: string) => (key: string, values?: Record<string, string | number>) => {
+      let translation = t(`${namespace}.${key}`);
+      if (values) {
+        Object.entries(values).forEach(([k, v]) => {
+          translation = translation.replace(new RegExp(`\\{${k}\\}`, 'g'), String(v));
+        });
+      }
+      return translation;
+    },
+}));
 
 // Mock the logger
 const mockLoggerError = vi.fn();
@@ -53,7 +68,7 @@ describe('CommentForm', () => {
     it('renders textarea with default placeholder', () => {
       render(<CommentForm onSubmit={mockOnSubmit} />);
 
-      expect(screen.getByPlaceholderText('Scrivi un commento...')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText(t('comments.placeholder'))).toBeInTheDocument();
     });
 
     it('renders textarea with custom placeholder', () => {
@@ -65,14 +80,18 @@ describe('CommentForm', () => {
     it('renders submit button with default text', () => {
       render(<CommentForm onSubmit={mockOnSubmit} />);
 
-      expect(screen.getByRole('button', { name: 'Aggiungi Commento' })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: getTextMatcher('comments.addComment') })
+      ).toBeInTheDocument();
     });
 
     it('renders textarea and button', () => {
       render(<CommentForm onSubmit={mockOnSubmit} />);
 
       expect(screen.getByRole('textbox')).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Aggiungi Commento' })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: getTextMatcher('comments.addComment') })
+      ).toBeInTheDocument();
     });
   });
 
@@ -81,7 +100,7 @@ describe('CommentForm', () => {
       render(<CommentForm onSubmit={mockOnSubmit} />);
 
       const submitButton = screen.getByRole('button', {
-        name: 'Aggiungi Commento',
+        name: getTextMatcher('comments.addComment'),
       });
       expect(submitButton).toBeDisabled();
     });
@@ -91,7 +110,7 @@ describe('CommentForm', () => {
 
       const textarea = screen.getByRole('textbox');
       const submitButton = screen.getByRole('button', {
-        name: 'Aggiungi Commento',
+        name: getTextMatcher('comments.addComment'),
       });
 
       await user.type(textarea, '   ');
@@ -104,7 +123,7 @@ describe('CommentForm', () => {
 
       const textarea = screen.getByRole('textbox');
       const submitButton = screen.getByRole('button', {
-        name: 'Aggiungi Commento',
+        name: getTextMatcher('comments.addComment'),
       });
 
       await user.type(textarea, 'Valid comment');
@@ -116,7 +135,7 @@ describe('CommentForm', () => {
       render(<CommentForm onSubmit={mockOnSubmit} />);
 
       const submitButton = screen.getByRole('button', {
-        name: 'Aggiungi Commento',
+        name: getTextMatcher('comments.addComment'),
       });
 
       // Check Tailwind class instead of inline style
@@ -128,7 +147,7 @@ describe('CommentForm', () => {
 
       const textarea = screen.getByRole('textbox');
       const submitButton = screen.getByRole('button', {
-        name: 'Aggiungi Commento',
+        name: getTextMatcher('comments.addComment'),
       });
 
       await user.type(textarea, 'Valid comment');
@@ -144,7 +163,7 @@ describe('CommentForm', () => {
 
       const textarea = screen.getByRole('textbox');
       const submitButton = screen.getByRole('button', {
-        name: 'Aggiungi Commento',
+        name: getTextMatcher('comments.addComment'),
       });
 
       await user.type(textarea, 'Test comment');
@@ -160,7 +179,7 @@ describe('CommentForm', () => {
 
       const textarea = screen.getByRole('textbox');
       const submitButton = screen.getByRole('button', {
-        name: 'Aggiungi Commento',
+        name: getTextMatcher('comments.addComment'),
       });
 
       await user.type(textarea, 'Test comment');
@@ -175,7 +194,7 @@ describe('CommentForm', () => {
       render(<CommentForm onSubmit={mockOnSubmit} />);
 
       const submitButton = screen.getByRole('button', {
-        name: 'Aggiungi Commento',
+        name: getTextMatcher('comments.addComment'),
       });
 
       // Try to click (button should be disabled, but try anyway)
@@ -206,7 +225,7 @@ describe('CommentForm', () => {
 
       const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
       const submitButton = screen.getByRole('button', {
-        name: 'Aggiungi Commento',
+        name: getTextMatcher('comments.addComment'),
       });
 
       await user.type(textarea, 'Test comment');
@@ -222,7 +241,7 @@ describe('CommentForm', () => {
 
       const textarea = screen.getByRole('textbox');
       const submitButton = screen.getByRole('button', {
-        name: 'Aggiungi Commento',
+        name: getTextMatcher('comments.addComment'),
       });
 
       await user.type(textarea, '  Comment with spaces  ');
@@ -242,7 +261,7 @@ describe('CommentForm', () => {
 
       const textarea = screen.getByRole('textbox');
       const submitButton = screen.getByRole('button', {
-        name: 'Aggiungi Commento',
+        name: getTextMatcher('comments.addComment'),
       });
 
       await user.type(textarea, 'Test comment');
@@ -265,12 +284,16 @@ describe('CommentForm', () => {
       const textarea = screen.getByRole('textbox');
 
       await user.type(textarea, 'Test comment');
-      await user.click(screen.getByRole('button', { name: 'Aggiungi Commento' }));
+      await user.click(screen.getByRole('button', { name: getTextMatcher('comments.addComment') }));
 
-      expect(screen.getByRole('button', { name: 'Invio in corso...' })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: getTextMatcher('comments.submitting') })
+      ).toBeInTheDocument();
 
       await waitFor(() => {
-        expect(screen.queryByRole('button', { name: 'Invio in corso...' })).not.toBeInTheDocument();
+        expect(
+          screen.queryByRole('button', { name: getTextMatcher('comments.submitting') })
+        ).not.toBeInTheDocument();
       });
     });
 
@@ -283,7 +306,7 @@ describe('CommentForm', () => {
 
       await user.type(textarea, 'Test comment');
       const submitButton = screen.getByRole('button', {
-        name: 'Aggiungi Commento',
+        name: getTextMatcher('comments.addComment'),
       });
 
       await user.click(submitButton);
@@ -315,14 +338,14 @@ describe('CommentForm', () => {
 
       const textarea = screen.getByRole('textbox');
       const submitButton = screen.getByRole('button', {
-        name: 'Aggiungi Commento',
+        name: getTextMatcher('comments.addComment'),
       });
 
       await user.type(textarea, 'Test comment');
       await user.click(submitButton);
 
       await waitFor(() => {
-        expect(alertSpy).toHaveBeenCalledWith('Impossibile creare il commento');
+        expect(alertSpy).toHaveBeenCalledWith(t('comments.createError'));
       });
     });
 
@@ -334,7 +357,7 @@ describe('CommentForm', () => {
 
       const textarea = screen.getByRole('textbox');
       const submitButton = screen.getByRole('button', {
-        name: 'Aggiungi Commento',
+        name: getTextMatcher('comments.addComment'),
       });
 
       await user.type(textarea, 'Test comment');
@@ -356,7 +379,7 @@ describe('CommentForm', () => {
 
       const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
       const submitButton = screen.getByRole('button', {
-        name: 'Aggiungi Commento',
+        name: getTextMatcher('comments.addComment'),
       });
 
       await user.type(textarea, 'Test comment');
@@ -376,7 +399,7 @@ describe('CommentForm', () => {
 
       const textarea = screen.getByRole('textbox');
       const submitButton = screen.getByRole('button', {
-        name: 'Aggiungi Commento',
+        name: getTextMatcher('comments.addComment'),
       });
 
       await user.type(textarea, 'Test comment');
@@ -396,7 +419,7 @@ describe('CommentForm', () => {
 
       const textarea = screen.getByRole('textbox');
       const submitButton = screen.getByRole('button', {
-        name: 'Aggiungi Commento',
+        name: getTextMatcher('comments.addComment'),
       });
 
       const specialText = 'Test <>&"\' @#$%^&*() 测试';
@@ -413,7 +436,7 @@ describe('CommentForm', () => {
 
       const textarea = screen.getByRole('textbox');
       const submitButton = screen.getByRole('button', {
-        name: 'Aggiungi Commento',
+        name: getTextMatcher('comments.addComment'),
       });
 
       const longText = 'a'.repeat(1000);
@@ -432,7 +455,7 @@ describe('CommentForm', () => {
 
       const textarea = screen.getByRole('textbox');
       const submitButton = screen.getByRole('button', {
-        name: 'Aggiungi Commento',
+        name: getTextMatcher('comments.addComment'),
       });
 
       const textWithNewlines = 'Line 1\nLine 2\nLine 3';
@@ -451,7 +474,7 @@ describe('CommentForm', () => {
 
       const textarea = screen.getByRole('textbox');
       const submitButton = screen.getByRole('button', {
-        name: 'Aggiungi Commento',
+        name: getTextMatcher('comments.addComment'),
       });
 
       await user.click(textarea);
@@ -468,7 +491,7 @@ describe('CommentForm', () => {
 
       const textarea = screen.getByRole('textbox');
       const submitButton = screen.getByRole('button', {
-        name: 'Aggiungi Commento',
+        name: getTextMatcher('comments.addComment'),
       });
 
       await user.click(textarea);
@@ -500,7 +523,7 @@ describe('CommentForm', () => {
 
       const textarea = screen.getByRole('textbox');
       const submitButton = screen.getByRole('button', {
-        name: 'Aggiungi Commento',
+        name: getTextMatcher('comments.addComment'),
       });
 
       expect(submitButton).toBeDisabled();
@@ -517,7 +540,7 @@ describe('CommentForm', () => {
 
       const textarea = screen.getByRole('textbox');
       const submitButton = screen.getByRole('button', {
-        name: 'Aggiungi Commento',
+        name: getTextMatcher('comments.addComment'),
       });
 
       await user.click(textarea);

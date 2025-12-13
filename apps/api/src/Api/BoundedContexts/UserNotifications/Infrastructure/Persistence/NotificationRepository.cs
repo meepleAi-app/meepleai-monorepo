@@ -151,11 +151,10 @@ public class NotificationRepository : RepositoryBase, INotificationRepository
             metadata: entity.Metadata
         );
 
-        // Restore read status (use reflection or make constructor more flexible)
-        // For now, if IsRead is true, mark as read
-        if (entity.IsRead)
+        // Restore read status with original timestamp (not MarkAsRead which overwrites)
+        if (entity.IsRead && entity.ReadAt.HasValue)
         {
-            notification.MarkAsRead();
+            notification.RestoreReadStatus(entity.ReadAt.Value);
         }
 
         return notification;

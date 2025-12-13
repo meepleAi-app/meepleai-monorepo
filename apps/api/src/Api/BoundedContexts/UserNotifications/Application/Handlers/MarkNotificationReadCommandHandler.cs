@@ -1,6 +1,7 @@
 using Api.BoundedContexts.UserNotifications.Application.Commands;
 using Api.BoundedContexts.UserNotifications.Domain.Repositories;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Infrastructure.Persistence;
 
 namespace Api.BoundedContexts.UserNotifications.Application.Handlers;
 
@@ -11,10 +12,14 @@ namespace Api.BoundedContexts.UserNotifications.Application.Handlers;
 public class MarkNotificationReadCommandHandler : ICommandHandler<MarkNotificationReadCommand, bool>
 {
     private readonly INotificationRepository _notificationRepository;
+    private readonly IUnitOfWork _unitOfWork;
 
-    public MarkNotificationReadCommandHandler(INotificationRepository notificationRepository)
+    public MarkNotificationReadCommandHandler(
+        INotificationRepository notificationRepository,
+        IUnitOfWork unitOfWork)
     {
         _notificationRepository = notificationRepository ?? throw new ArgumentNullException(nameof(notificationRepository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
 
     public async Task<bool> Handle(MarkNotificationReadCommand command, CancellationToken cancellationToken)
@@ -34,6 +39,7 @@ public class MarkNotificationReadCommandHandler : ICommandHandler<MarkNotificati
 
         notification.MarkAsRead();
         await _notificationRepository.UpdateAsync(notification, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         return true;
     }

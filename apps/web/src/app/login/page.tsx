@@ -36,14 +36,14 @@ function LoginPageContent() {
   // Prevent SSR issues with TanStack Query (FE-IMP-005)
   if (!mounted) {
     return (
-      <div className="min-h-dvh flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 px-4">
+      <main className="min-h-dvh flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 px-4">
         <div className="animate-pulse text-slate-500">Loading...</div>
-      </div>
+      </main>
     );
   }
 
   return (
-    <div className="min-h-dvh flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 px-4">
+    <main className="min-h-dvh flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 px-4">
       {/* Unified Auth Modal */}
       <AuthModal
         isOpen={showAuthModal}
@@ -51,16 +51,16 @@ function LoginPageContent() {
         defaultMode="login"
         sessionExpiredMessage={isSessionExpired}
       />
-    </div>
+    </main>
   );
 }
 
 function LoginFallback() {
   const { t } = useTranslation();
   return (
-    <div className="min-h-dvh flex items-center justify-center bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-300">
+    <main className="min-h-dvh flex items-center justify-center bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-300">
       {t('auth.login.loadingMessage')}
-    </div>
+    </main>
   );
 }
 

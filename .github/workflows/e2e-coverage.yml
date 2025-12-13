@@ -1,3 +1,6 @@
+# E2E Coverage Workflow
+# Uses @bgotink/playwright-coverage integrated in playwright.config.ts
+# Coverage reports: LCOV, HTML, JSON, text-summary
 name: e2e-coverage
 
 on:
@@ -36,42 +39,60 @@ jobs:
       - name: Install Playwright browsers
         run: |
           cd apps/web
-          npx playwright install --with-deps
+          npx playwright install chromium --with-deps
 
-      - name: Build and start Next.js (production)
+      # Barrier 1: Validate critical test infrastructure exists
+      - name: Validate E2E test infrastructure
         run: |
           cd apps/web
-          pnpm build
-          nohup pnpm start &> ../next.log &
-          echo $! > /tmp/next_pid
-          # wait for server to be ready
-          for i in $(seq 1 30); do
-            curl -sS http://localhost:3000 >/dev/null && break || sleep 2
-          done
+          # Check playwright.config.ts exists and has coverage config
+          if ! grep -q "@bgotink/playwright-coverage" playwright.config.ts; then
+            echo "ERROR: playwright-coverage not configured in playwright.config.ts"
+            exit 1
+          fi
+          # Check e2e directory exists with tests
+          if [ ! -d "e2e" ] || [ -z "$(ls -A e2e/*.spec.ts 2>/dev/null)" ]; then
+            echo "ERROR: No E2E tests found in e2e/ directory"
+            exit 1
+          fi
+          echo "✅ E2E infrastructure validated"
 
-      - name: Collect V8 coverage
+      # Run Playwright tests with coverage (uses playwright.config.ts settings)
+      # @bgotink/playwright-coverage automatically collects V8 coverage and converts to LCOV/HTML
+      - name: Run E2E tests with coverage
         run: |
           cd apps/web
-          node scripts/collect-v8-coverage-local.js || node ../../scripts/collect-v8-coverage.js
+          # Use Chrome projects only for consistent coverage (Firefox/Safari don't support V8 coverage)
+          pnpm test:e2e --project=desktop-chrome --project=mobile-chrome --project=tablet-chrome
+        env:
+          CI: 'true'
 
-      - name: Convert V8 coverage to LCOV/HTML
+      # Barrier 2: Validate coverage was actually generated
+      - name: Validate coverage output
         run: |
           cd apps/web
-          node scripts/convert-v8-to-lcov.js
+          if [ ! -d "coverage-e2e" ]; then
+            echo "ERROR: coverage-e2e directory not created"
+            exit 1
+          fi
+          if [ ! -f "coverage-e2e/lcov.info" ]; then
+            echo "ERROR: lcov.info not generated"
+            exit 1
+          fi
+          echo "✅ Coverage files generated successfully"
+          echo "Coverage summary:"
+          head -20 coverage-e2e/lcov.info || true
 
       - name: Upload HTML coverage report
         uses: actions/upload-artifact@v4
         with:
           name: e2e-coverage-html
-          path: apps/web/coverage-e2e/html
+          path: apps/web/coverage-e2e
+          if-no-files-found: error
 
       - name: Upload LCOV file
         uses: actions/upload-artifact@v4
         with:
           name: e2e-coverage-lcov
-          path: apps/web/coverage-e2e/html/lcov.info
-
-      - name: Stop Next.js
-        if: always()
-        run: |
-          if [ -f /tmp/next_pid ]; then kill $(cat /tmp/next_pid) || true; fi
+          path: apps/web/coverage-e2e/lcov.info
+          if-no-files-found: error

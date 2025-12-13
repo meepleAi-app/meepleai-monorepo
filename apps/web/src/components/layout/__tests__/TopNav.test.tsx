@@ -11,7 +11,8 @@
  * - NotificationBell integration
  */
 
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { usePathname, useRouter } from 'next/navigation';
 import { vi } from 'vitest';
 import { TopNav } from '../TopNav';
@@ -276,48 +277,48 @@ describe('TopNav', () => {
     });
 
     it('should open dropdown menu when clicking user button', async () => {
+      const user = userEvent.setup();
       render(<TopNav />);
 
-      // Get the user menu button by finding button with aria-haspopup
-      const userButtons = screen.getAllByRole('button');
-      const userButton = userButtons.find(btn => btn.getAttribute('aria-haspopup') === 'menu');
-      expect(userButton).toBeTruthy();
-      fireEvent.click(userButton!);
+      // Find the dropdown trigger button
+      const userButton = screen.getByRole('button', { name: /mario rossi/i });
+      await user.click(userButton);
 
+      // Wait for dropdown content to appear - use data-testid for language independence
       await waitFor(() => {
-        expect(screen.getByText('Impostazioni')).toBeInTheDocument();
-        expect(screen.getByText('Esci')).toBeInTheDocument();
+        expect(screen.getByTestId('settings-menu-item')).toBeInTheDocument();
       });
+      expect(screen.getByTestId('logout-menu-item')).toBeInTheDocument();
     });
 
     it('should have logout button in dropdown', async () => {
+      const user = userEvent.setup();
       render(<TopNav />);
 
-      // Get the user menu button by finding button with aria-haspopup
-      const userButtons = screen.getAllByRole('button');
-      const userButton = userButtons.find(btn => btn.getAttribute('aria-haspopup') === 'menu');
-      expect(userButton).toBeTruthy();
-      fireEvent.click(userButton!);
+      // Find and click the dropdown trigger
+      const userButton = screen.getByRole('button', { name: /mario rossi/i });
+      await user.click(userButton);
 
+      // Use data-testid for language independence
       await waitFor(() => {
-        expect(screen.getByText('Esci')).toBeInTheDocument();
+        expect(screen.getByTestId('logout-menu-item')).toBeInTheDocument();
       });
     });
   });
 
   describe('Logout Functionality', () => {
     it('should call logoutAction when clicking logout', async () => {
+      const user = userEvent.setup();
       render(<TopNav />);
 
-      // Get the user menu button by finding button with aria-haspopup
-      const userButtons = screen.getAllByRole('button');
-      const userButton = userButtons.find(btn => btn.getAttribute('aria-haspopup') === 'menu');
-      expect(userButton).toBeTruthy();
-      fireEvent.click(userButton!);
+      // Open dropdown
+      const userButton = screen.getByRole('button', { name: /mario rossi/i });
+      await user.click(userButton);
 
-      await waitFor(() => {
-        const logoutButton = screen.getByText('Esci');
-        fireEvent.click(logoutButton);
+      // Click logout button - use data-testid for language independence
+      await waitFor(async () => {
+        const logoutButton = screen.getByTestId('logout-menu-item');
+        await user.click(logoutButton);
       });
 
       await waitFor(() => {
@@ -326,18 +327,18 @@ describe('TopNav', () => {
     });
 
     it('should redirect to /login after successful logout', async () => {
+      const user = userEvent.setup();
       mockLogoutAction.mockResolvedValue({ success: true });
       render(<TopNav />);
 
-      // Get the user menu button by finding button with aria-haspopup
-      const userButtons = screen.getAllByRole('button');
-      const userButton = userButtons.find(btn => btn.getAttribute('aria-haspopup') === 'menu');
-      expect(userButton).toBeTruthy();
-      fireEvent.click(userButton!);
+      // Open dropdown
+      const userButton = screen.getByRole('button', { name: /mario rossi/i });
+      await user.click(userButton);
 
-      await waitFor(() => {
-        const logoutButton = screen.getByText('Esci');
-        fireEvent.click(logoutButton);
+      // Click logout button - use data-testid for language independence
+      await waitFor(async () => {
+        const logoutButton = screen.getByTestId('logout-menu-item');
+        await user.click(logoutButton);
       });
 
       await waitFor(() => {
@@ -346,6 +347,7 @@ describe('TopNav', () => {
     });
 
     it('should show loading state during logout', async () => {
+      const user = userEvent.setup();
       // Create a promise that we can control
       let resolveLogout: (value: { success: boolean }) => void;
       mockLogoutAction.mockImplementation(
@@ -357,15 +359,14 @@ describe('TopNav', () => {
 
       render(<TopNav />);
 
-      // Get the user menu button by finding button with aria-haspopup
-      const userButtons = screen.getAllByRole('button');
-      const userButton = userButtons.find(btn => btn.getAttribute('aria-haspopup') === 'menu');
-      expect(userButton).toBeTruthy();
-      fireEvent.click(userButton!);
+      // Open dropdown
+      const userButton = screen.getByRole('button', { name: /mario rossi/i });
+      await user.click(userButton);
 
-      await waitFor(() => {
-        const logoutButton = screen.getByText('Esci');
-        fireEvent.click(logoutButton);
+      // Click logout - use data-testid for language independence
+      await waitFor(async () => {
+        const logoutButton = screen.getByTestId('logout-menu-item');
+        await user.click(logoutButton);
       });
 
       // Verify logout action was called

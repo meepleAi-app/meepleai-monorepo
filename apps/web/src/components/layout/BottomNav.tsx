@@ -29,6 +29,7 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   ariaLabel: string;
+  testId: string;
 }
 
 const navItems: NavItem[] = [
@@ -37,30 +38,35 @@ const navItems: NavItem[] = [
     icon: Home,
     label: 'Home',
     ariaLabel: 'Navigate to dashboard home',
+    testId: 'bottomnav-home',
   },
   {
     href: '/games',
     icon: Gamepad2,
     label: 'Giochi',
     ariaLabel: 'Navigate to games catalog',
+    testId: 'bottomnav-games',
   },
   {
     href: '/chat',
     icon: MessageSquare,
     label: 'Chat',
     ariaLabel: 'Navigate to chat interface',
+    testId: 'bottomnav-chat',
   },
   {
     href: '/settings',
     icon: Settings,
     label: 'Config',
     ariaLabel: 'Navigate to settings',
+    testId: 'bottomnav-settings',
   },
   {
     href: '/profile',
     icon: User,
     label: 'Profilo',
     ariaLabel: 'Navigate to user profile',
+    testId: 'bottomnav-profile',
   },
 ];
 
@@ -81,7 +87,7 @@ export function BottomNav() {
       aria-label="Primary mobile navigation"
     >
       <div className="flex justify-around items-center h-full px-4">
-        {navItems.map(({ href, icon: Icon, label, ariaLabel }) => {
+        {navItems.map(({ href, icon: Icon, label, ariaLabel, testId }) => {
           const active = isActive(href);
           return (
             <Link
@@ -89,6 +95,7 @@ export function BottomNav() {
               href={href}
               aria-label={ariaLabel}
               aria-current={active ? 'page' : undefined}
+              data-testid={testId}
               className={cn(
                 'flex flex-col items-center justify-center gap-1',
                 'min-w-[44px] min-h-[44px]', // Touch target WCAG 2.1 AA

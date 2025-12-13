@@ -133,7 +133,7 @@ public static class InfrastructureServiceExtensions
         }
         else
         {
-            // Fallback: In-memory distributed cache for development/testing environments
+            // Fallback to in-memory distributed cache when Redis L2 is disabled
             // This ensures IDistributedCache is always available for services that require it
             services.AddDistributedMemoryCache();
         }

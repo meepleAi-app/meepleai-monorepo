@@ -284,11 +284,11 @@ describe('TopNav', () => {
       const userButton = screen.getByRole('button', { name: /mario rossi/i });
       await user.click(userButton);
 
-      // Wait for dropdown content to appear
+      // Wait for dropdown content to appear - use data-testid for language independence
       await waitFor(() => {
-        expect(screen.getByRole('menuitem', { name: /impostazioni/i })).toBeInTheDocument();
+        expect(screen.getByTestId('settings-menu-item')).toBeInTheDocument();
       });
-      expect(screen.getByRole('menuitem', { name: /esci/i })).toBeInTheDocument();
+      expect(screen.getByTestId('logout-menu-item')).toBeInTheDocument();
     });
 
     it('should have logout button in dropdown', async () => {
@@ -299,8 +299,9 @@ describe('TopNav', () => {
       const userButton = screen.getByRole('button', { name: /mario rossi/i });
       await user.click(userButton);
 
+      // Use data-testid for language independence
       await waitFor(() => {
-        expect(screen.getByRole('menuitem', { name: /esci/i })).toBeInTheDocument();
+        expect(screen.getByTestId('logout-menu-item')).toBeInTheDocument();
       });
     });
   });
@@ -314,9 +315,9 @@ describe('TopNav', () => {
       const userButton = screen.getByRole('button', { name: /mario rossi/i });
       await user.click(userButton);
 
-      // Click logout button
+      // Click logout button - use data-testid for language independence
       await waitFor(async () => {
-        const logoutButton = screen.getByRole('menuitem', { name: /esci/i });
+        const logoutButton = screen.getByTestId('logout-menu-item');
         await user.click(logoutButton);
       });
 
@@ -334,9 +335,9 @@ describe('TopNav', () => {
       const userButton = screen.getByRole('button', { name: /mario rossi/i });
       await user.click(userButton);
 
-      // Click logout button
+      // Click logout button - use data-testid for language independence
       await waitFor(async () => {
-        const logoutButton = screen.getByRole('menuitem', { name: /esci/i });
+        const logoutButton = screen.getByTestId('logout-menu-item');
         await user.click(logoutButton);
       });
 
@@ -362,9 +363,9 @@ describe('TopNav', () => {
       const userButton = screen.getByRole('button', { name: /mario rossi/i });
       await user.click(userButton);
 
-      // Click logout
+      // Click logout - use data-testid for language independence
       await waitFor(async () => {
-        const logoutButton = screen.getByRole('menuitem', { name: /esci/i });
+        const logoutButton = screen.getByTestId('logout-menu-item');
         await user.click(logoutButton);
       });
 

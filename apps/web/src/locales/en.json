@@ -307,12 +307,18 @@
       "cta": {
         "getStarted": "Get Started Free",
         "goToChat": "Go to Chat",
+        "learnMore": "Learn More",
         "seeHow": "See How It Works",
         "startChatting": "Start Chatting",
         "tryDemo": "Try Demo Account"
       },
+      "scrollToFeatures": "Scroll to features section",
       "subtitle": "Never argue about rules again. Get instant, accurate answers from any rulebook with AI-powered semantic search.",
-      "title": "Your AI-Powered Board Game Rules Assistant"
+      "title": "Your AI-Powered Board Game Rules Assistant",
+      "trustIndicators": {
+        "accuracy": "95% accuracy",
+        "users": "Over 1,250 users"
+      }
     }
   },
   "n8n": {

@@ -307,12 +307,18 @@
       "cta": {
         "getStarted": "Inizia Gratis",
         "goToChat": "Vai alla Chat",
+        "learnMore": "Scopri di più",
         "seeHow": "Scopri Come Funziona",
         "startChatting": "Inizia a Chattare",
         "tryDemo": "Prova Account Demo"
       },
+      "scrollToFeatures": "Scorri alla sezione caratteristiche",
       "subtitle": "Mai più discussioni sulle regole. Ottieni risposte istantanee e accurate da qualsiasi regolamento con la ricerca semantica basata su AI.",
-      "title": "Il tuo Assistente AI per Regolamenti di Giochi da Tavolo"
+      "title": "Il tuo Assistente AI per Regolamenti di Giochi da Tavolo",
+      "trustIndicators": {
+        "accuracy": "95% accuratezza",
+        "users": "Oltre 1.250 utenti"
+      }
     }
   },
   "n8n": {

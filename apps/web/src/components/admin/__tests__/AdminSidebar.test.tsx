@@ -71,7 +71,7 @@ describe('AdminSidebar', () => {
   });
 
   it('exports default navigation', () => {
-    expect(defaultNavigation).toHaveLength(9);
+    expect(defaultNavigation).toHaveLength(11);
     expect(defaultNavigation[0]).toMatchObject({
       href: '/admin',
       label: 'Dashboard',

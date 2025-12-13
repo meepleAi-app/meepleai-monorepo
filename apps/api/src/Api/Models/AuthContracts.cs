@@ -149,3 +149,20 @@ public class OAuthConfiguration
     public required string CallbackBaseUrl { get; init; }
     public required IDictionary<string, OAuthProviderConfig> Providers { get; init; }
 }
+
+/// <summary>
+/// Payload for logout-all-devices endpoint (Issue #2056).
+/// Allows user to revoke all active sessions with optional password verification.
+/// </summary>
+public record LogoutAllDevicesPayload(
+    /// <summary>
+    /// Whether to also revoke the current session (requires user confirmation).
+    /// If false, the current session is preserved and the user remains logged in.
+    /// </summary>
+    bool IncludeCurrentSession = false,
+
+    /// <summary>
+    /// Optional password for additional security verification.
+    /// When provided, the password is verified before revoking sessions.
+    /// </summary>
+    string? Password = null);

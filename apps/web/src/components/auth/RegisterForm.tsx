@@ -127,6 +127,7 @@ export function RegisterForm({
           error={errors.email?.message}
           required
           disabled={isLoading}
+          data-testid="register-email"
           {...register('email')}
         />
       </div>
@@ -141,6 +142,7 @@ export function RegisterForm({
           autoComplete="name"
           error={errors.displayName?.message}
           disabled={isLoading}
+          data-testid="register-display-name"
           {...register('displayName')}
         />
       </div>
@@ -156,6 +158,7 @@ export function RegisterForm({
           error={errors.password?.message}
           required
           disabled={isLoading}
+          data-testid="register-password"
           {...register('password')}
         />
         <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -174,6 +177,7 @@ export function RegisterForm({
           error={errors.confirmPassword?.message}
           required
           disabled={isLoading}
+          data-testid="register-confirm-password"
           {...register('confirmPassword')}
         />
       </div>
@@ -221,6 +225,7 @@ export function RegisterForm({
         className="w-full"
         isLoading={isLoading}
         loadingText={t('auth.register.creatingAccount')}
+        data-testid="register-submit"
       >
         {t('auth.register.createAccount')}
       </LoadingButton>

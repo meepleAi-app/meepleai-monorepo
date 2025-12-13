@@ -10,6 +10,25 @@ import { HeroSection } from '../HeroSection';
 
 import { vi } from 'vitest';
 
+// Mock translations - matches it.json locale file
+const mockTranslations: Record<string, string> = {
+  'home.hero.title': 'Il tuo Assistente AI per Regolamenti di Giochi da Tavolo',
+  'home.hero.subtitle':
+    'Mai più discussioni sulle regole. Ottieni risposte istantanee e accurate da qualsiasi regolamento con la ricerca semantica basata su AI.',
+  'home.hero.cta.getStarted': 'Inizia Gratis',
+  'home.hero.cta.learnMore': 'Scopri di più',
+  'home.hero.scrollToFeatures': 'Scorri alla sezione caratteristiche',
+  'home.hero.trustIndicators.users': 'Oltre 1.250 utenti',
+  'home.hero.trustIndicators.accuracy': '95% accuratezza',
+};
+
+// Mock useTranslation hook
+vi.mock('@/hooks/useTranslation', () => ({
+  useTranslation: () => ({
+    t: (key: string) => mockTranslations[key] || key,
+  }),
+}));
+
 // Mock Next.js Link
 vi.mock('next/link', () => ({
   default: ({ children, href }: { children: React.ReactNode; href: string }) => {
@@ -35,20 +54,17 @@ describe('HeroSection', () => {
       expect(screen.getAllByTestId('meeple-avatar')).toHaveLength(2); // Mobile + Desktop
     });
 
-    it('displays heading with Italian text', () => {
+    it('displays heading with translated text', () => {
       render(<HeroSection />);
 
       const heading = screen.getByRole('heading', { level: 1 });
-      expect(heading).toHaveTextContent('Il tuo assistente AI');
-      expect(heading).toHaveTextContent('per giochi da tavolo');
+      expect(heading).toHaveTextContent(mockTranslations['home.hero.title']);
     });
 
     it('displays subheading description', () => {
       render(<HeroSection />);
 
-      expect(
-        screen.getByText('Risposte immediate alle regole, in italiano. Sempre con te.')
-      ).toBeInTheDocument();
+      expect(screen.getByText(mockTranslations['home.hero.subtitle'])).toBeInTheDocument();
     });
   });
 
@@ -56,7 +72,9 @@ describe('HeroSection', () => {
     it('renders primary CTA button linking to /register', () => {
       render(<HeroSection />);
 
-      const ctaButton = screen.getByRole('link', { name: /inizia gratis/i });
+      const ctaButton = screen.getByRole('link', {
+        name: new RegExp(mockTranslations['home.hero.cta.getStarted'], 'i'),
+      });
       expect(ctaButton).toBeInTheDocument();
       expect(ctaButton).toHaveAttribute('href', '/register');
     });
@@ -64,10 +82,13 @@ describe('HeroSection', () => {
     it('renders secondary CTA button for scrolling', () => {
       render(<HeroSection />);
 
-      const secondaryButton = screen.getByRole('button', {
-        name: /scorri alla sezione caratteristiche/i,
+      // There are 2 buttons with scroll aria-label: secondary CTA and scroll indicator
+      const scrollButtons = screen.getAllByRole('button', {
+        name: new RegExp(mockTranslations['home.hero.scrollToFeatures'], 'i'),
       });
-      expect(secondaryButton).toBeInTheDocument();
+      expect(scrollButtons.length).toBe(2);
+      // First one is the secondary CTA (contains "Scopri di più" text)
+      expect(scrollButtons[0]).toHaveTextContent(mockTranslations['home.hero.cta.learnMore']);
     });
 
     it('scroll button triggers smooth scroll to features section', () => {
@@ -78,10 +99,10 @@ describe('HeroSection', () => {
 
       render(<HeroSection />);
 
-      const scrollButton = screen.getByRole('button', {
-        name: /scorri alla sezione caratteristiche/i,
+      const scrollButtons = screen.getAllByRole('button', {
+        name: new RegExp(mockTranslations['home.hero.scrollToFeatures'], 'i'),
       });
-      fireEvent.click(scrollButton);
+      fireEvent.click(scrollButtons[0]);
 
       expect(mockGetElementById).toHaveBeenCalledWith('features');
       expect(mockScrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth' });
@@ -94,12 +115,12 @@ describe('HeroSection', () => {
 
       render(<HeroSection />);
 
-      const scrollButton = screen.getByRole('button', {
-        name: /scorri alla sezione caratteristiche/i,
+      const scrollButtons = screen.getAllByRole('button', {
+        name: new RegExp(mockTranslations['home.hero.scrollToFeatures'], 'i'),
       });
 
       // Should not throw error
-      expect(() => fireEvent.click(scrollButton)).not.toThrow();
+      expect(() => fireEvent.click(scrollButtons[0])).not.toThrow();
 
       mockGetElementById.mockRestore();
     });
@@ -149,8 +170,11 @@ describe('HeroSection', () => {
     it('scroll indicator has aria-label', () => {
       render(<HeroSection />);
 
-      const scrollIndicator = screen.getByLabelText('Scorri alle caratteristiche');
-      expect(scrollIndicator).toBeInTheDocument();
+      // Both secondary CTA and scroll indicator share the same aria-label
+      const scrollIndicators = screen.getAllByLabelText(
+        mockTranslations['home.hero.scrollToFeatures']
+      );
+      expect(scrollIndicators.length).toBe(2);
     });
 
     it('heading has proper hierarchy', () => {
@@ -172,7 +196,9 @@ describe('HeroSection', () => {
     it('CTA button has primary styling', () => {
       render(<HeroSection />);
 
-      const ctaLink = screen.getByRole('link', { name: /inizia gratis/i });
+      const ctaLink = screen.getByRole('link', {
+        name: new RegExp(mockTranslations['home.hero.cta.getStarted'], 'i'),
+      });
       // Button is wrapped, check that link exists (styling applied via Button component)
       expect(ctaLink).toBeInTheDocument();
       expect(ctaLink).toHaveAttribute('href', '/register');

@@ -103,7 +103,7 @@ export function SkeletonLoader({
     <div className="space-y-4">
       {skeletons.map(index => (
         <div
-          key={index}
+          key={`skeleton-${index}`}
           role="status"
           aria-live="polite"
           aria-label={ariaLabel}

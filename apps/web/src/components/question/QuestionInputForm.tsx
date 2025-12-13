@@ -18,6 +18,7 @@
 
 import React, { FormEvent, useCallback, useRef, KeyboardEvent } from 'react';
 import { Send, Paperclip, Loader2, Zap, Target } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -73,7 +74,7 @@ export function QuestionInputForm({
   value,
   onChange,
   onSubmit,
-  placeholder = 'Scrivi domanda...',
+  placeholder,
   disabled = false,
   isLoading = false,
   showAttachment = false,
@@ -85,7 +86,11 @@ export function QuestionInputForm({
   className,
   autoFocus = false,
 }: QuestionInputFormProps) {
+  const t = useTranslations('questionInput');
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Use provided placeholder or i18n default
+  const effectivePlaceholder = placeholder || t('placeholder');
 
   const isSubmitDisabled = disabled || isLoading || !value.trim();
 
@@ -133,11 +138,11 @@ export function QuestionInputForm({
     <div
       className={cn('flex flex-col gap-3 p-4 bg-card border-t border-border shadow-lg', className)}
       role="search"
-      aria-label="Domanda sul gioco"
+      aria-label={t('searchLabel')}
     >
       {/* Response Mode Toggle */}
       {showResponseModeToggle && (
-        <div className="flex gap-2" role="radiogroup" aria-label="Modalita risposta">
+        <div className="flex gap-2" role="radiogroup" aria-label={t('responseModeLabel')}>
           <Button
             type="button"
             variant={responseMode === 'fast' ? 'default' : 'outline'}
@@ -149,10 +154,10 @@ export function QuestionInputForm({
               responseMode === 'fast' && 'bg-primary text-primary-foreground hover:bg-primary/90'
             )}
             aria-pressed={responseMode === 'fast'}
-            aria-label="Risposta veloce"
+            aria-label={t('fastResponse')}
           >
             <Zap className="h-4 w-4" aria-hidden="true" />
-            <span>Veloce</span>
+            <span>{t('fastResponse')}</span>
           </Button>
           <Button
             type="button"
@@ -166,10 +171,10 @@ export function QuestionInputForm({
                 'bg-secondary text-secondary-foreground hover:bg-secondary/90'
             )}
             aria-pressed={responseMode === 'complete'}
-            aria-label="Risposta completa"
+            aria-label={t('completeResponse')}
           >
             <Target className="h-4 w-4" aria-hidden="true" />
-            <span>Completa</span>
+            <span>{t('completeResponse')}</span>
           </Button>
         </div>
       )}
@@ -185,7 +190,7 @@ export function QuestionInputForm({
             onClick={handleAttachClick}
             disabled={disabled || isLoading}
             className="shrink-0 h-10 w-10 text-muted-foreground hover:text-foreground transition-colors"
-            aria-label="Allega file"
+            aria-label={t('attachFile')}
           >
             <Paperclip className="h-5 w-5" aria-hidden="true" />
           </Button>
@@ -194,7 +199,7 @@ export function QuestionInputForm({
         {/* Text Input */}
         <div className="relative flex-1">
           <label htmlFor="question-input" className="sr-only">
-            {placeholder}
+            {effectivePlaceholder}
           </label>
           <Input
             ref={inputRef}
@@ -203,7 +208,7 @@ export function QuestionInputForm({
             value={value}
             onChange={e => onChange(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={placeholder}
+            placeholder={effectivePlaceholder}
             disabled={disabled || isLoading}
             maxLength={maxLength}
             autoFocus={autoFocus}
@@ -215,10 +220,10 @@ export function QuestionInputForm({
             )}
             aria-describedby={maxLength ? 'char-count' : undefined}
           />
-          {/* Character Counter (hidden, for screen readers and optional display) */}
+          {/* Character Counter */}
           {maxLength && (
             <span id="char-count" className="sr-only" aria-live="polite" aria-atomic="true">
-              {value.length} di {maxLength} caratteri
+              {t('charCount', { count: value.length, max: maxLength })}
             </span>
           )}
         </div>
@@ -237,7 +242,7 @@ export function QuestionInputForm({
             'transition-all duration-200',
             'disabled:opacity-50 disabled:cursor-not-allowed'
           )}
-          aria-label={isLoading ? 'Invio in corso...' : 'Invia domanda'}
+          aria-label={isLoading ? t('sending') : t('sendQuestion')}
         >
           {isLoading ? (
             <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />

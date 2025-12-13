@@ -19,8 +19,8 @@ test.describe('Landing Page', () => {
     await expect(page.getByRole('heading', { name: /il tuo assistente ai/i })).toBeVisible();
     await expect(page.getByRole('link', { name: /inizia gratis/i })).toBeVisible();
 
-    // Features section
-    await expect(page.getByRole('heading', { name: /caratteristiche/i })).toBeVisible();
+    // Features section - heading is "Tutto quello che ti serve", badge has "Caratteristiche Principali"
+    await expect(page.getByRole('heading', { name: /tutto quello che ti serve/i })).toBeVisible();
     await expect(page.getByText('AI Intelligente')).toBeVisible();
     await expect(page.getByText('Catalogo Ampio')).toBeVisible();
     await expect(page.getByText('Mobile-First')).toBeVisible();
@@ -39,7 +39,10 @@ test.describe('Landing Page', () => {
   });
 
   test('scroll to features works', async ({ page }) => {
-    const scrollButton = page.getByRole('button', { name: /scopri di più/i });
+    // Use aria-label which is more reliable - "Scorri alla sezione caratteristiche"
+    const scrollButton = page
+      .getByRole('button', { name: /scorri alla sezione caratteristiche/i })
+      .first();
     await scrollButton.click();
 
     // Wait for scroll animation
@@ -65,7 +68,7 @@ test.describe('Landing Page', () => {
 
     await expect(page.getByRole('link', { name: /privacy/i })).toBeVisible();
     await expect(page.getByRole('link', { name: /termini/i })).toBeVisible();
-    await expect(page.getByRole('link', { name: /api docs/i })).toBeVisible();
+    await expect(page.getByRole('link', { name: /api documentation/i })).toBeVisible();
   });
 
   test('has proper SEO metadata', async ({ page }) => {

@@ -25,18 +25,20 @@ export class LoginPage extends BasePage {
 
   /**
    * Perform login with email and password
+   * Uses data-testid for reliable selection across locales
    */
   async login(email: string, password: string): Promise<void> {
     await this.fill(this.page.getByLabel(/email/i), email);
     await this.fill(this.page.getByLabel(/password/i), password);
-    await this.click(this.page.getByRole('button', { name: /log in|sign in/i }));
+    await this.click(this.page.locator('[data-testid="login-submit"]'));
   }
 
   /**
    * Click OAuth provider button
+   * Uses data-testid for reliable selection across locales
    */
   async clickOAuthProvider(provider: 'google' | 'github' | 'discord'): Promise<void> {
-    await this.click(this.page.getByRole('button', { name: new RegExp(provider, 'i') }));
+    await this.click(this.page.locator(`[data-testid="oauth-${provider}"]`));
   }
 
   /**
@@ -55,10 +57,11 @@ export class LoginPage extends BasePage {
 
   /**
    * Verify all OAuth buttons are visible
+   * Uses data-testid for reliable selection across locales
    */
   async verifyOAuthButtonsVisible(): Promise<void> {
-    await this.waitForElement(this.page.getByRole('button', { name: /google/i }));
-    await this.waitForElement(this.page.getByRole('button', { name: /github/i }));
-    await this.waitForElement(this.page.getByRole('button', { name: /discord/i }));
+    await this.waitForElement(this.page.locator('[data-testid="oauth-google"]'));
+    await this.waitForElement(this.page.locator('[data-testid="oauth-github"]'));
+    await this.waitForElement(this.page.locator('[data-testid="oauth-discord"]'));
   }
 }

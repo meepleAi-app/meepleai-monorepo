@@ -3,7 +3,7 @@
 **Standard**: WCAG 2.1 Level AA (Minimum)
 **Stretch Goal**: WCAG 2.1 AAA for core journeys (chat, upload)
 **Status**: Production
-**Last Updated**: 2025-01-15
+**Last Updated**: 2025-12-13T10:59:23.970Z
 
 ---
 
@@ -89,3 +89,4 @@ test('ChatInterface has no accessibility violations', async () => {
 
 **Maintained by**: Frontend Team
 **Review Frequency**: Quarterly
+

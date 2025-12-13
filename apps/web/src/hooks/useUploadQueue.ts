@@ -229,45 +229,54 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
   /**
    * Removes a file from the queue (only if not uploading)
    */
-  const removeFile = useCallback((id: string) => {
-    safeSetQueue(prev => {
-      const item = prev.find(i => i.id === id);
-      if (item && item.status === 'uploading') {
-        // Can't remove while uploading, must cancel first
-        return prev;
-      }
-      return prev.filter(i => i.id !== id);
-    });
-  }, [safeSetQueue]);
+  const removeFile = useCallback(
+    (id: string) => {
+      safeSetQueue(prev => {
+        const item = prev.find(i => i.id === id);
+        if (item && item.status === 'uploading') {
+          // Can't remove while uploading, must cancel first
+          return prev;
+        }
+        return prev.filter(i => i.id !== id);
+      });
+    },
+    [safeSetQueue]
+  );
 
   /**
    * Cancels an ongoing upload
    */
-  const cancelUpload = useCallback((id: string) => {
-    const operation = activeUploadsRef.current.get(id);
-    if (operation) {
-      operation.abortController.abort();
-      activeUploadsRef.current.delete(id);
-    }
+  const cancelUpload = useCallback(
+    (id: string) => {
+      const operation = activeUploadsRef.current.get(id);
+      if (operation) {
+        operation.abortController.abort();
+        activeUploadsRef.current.delete(id);
+      }
 
-    safeSetQueue(prev =>
-      prev.map(item =>
-        item.id === id ? { ...item, status: 'cancelled' as UploadStatus, progress: 0 } : item
-      )
-    );
-  }, [safeSetQueue]);
+      safeSetQueue(prev =>
+        prev.map(item =>
+          item.id === id ? { ...item, status: 'cancelled' as UploadStatus, progress: 0 } : item
+        )
+      );
+    },
+    [safeSetQueue]
+  );
 
   /**
    * Retries a failed upload
    */
-  const retryUpload = useCallback((id: string) => {
-    safeSetQueue(prev =>
-      prev.map(item =>
-        item.id === id ? { ...item, status: 'pending', progress: 0, error: undefined } : item
-      )
-    );
-    allCompleteNotifiedRef.current = false;
-  }, [safeSetQueue]);
+  const retryUpload = useCallback(
+    (id: string) => {
+      safeSetQueue(prev =>
+        prev.map(item =>
+          item.id === id ? { ...item, status: 'pending', progress: 0, error: undefined } : item
+        )
+      );
+      allCompleteNotifiedRef.current = false;
+    },
+    [safeSetQueue]
+  );
 
   /**
    * Clears all completed uploads from the queue
@@ -514,7 +523,16 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
         activeUploadsRef.current.delete(item.id);
       }
     },
-    [safeSetQueue, maxRetries, onUploadComplete, onUploadError, onUploadStart, onUploadSuccess, onRetry, queue]
+    [
+      safeSetQueue,
+      maxRetries,
+      onUploadComplete,
+      onUploadError,
+      onUploadStart,
+      onUploadSuccess,
+      onRetry,
+      queue,
+    ]
   );
 
   /**

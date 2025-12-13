@@ -312,6 +312,7 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 ---
 
 **Version**: 1.0
-**Last Updated**: 2025-11-21
+**Last Updated**: 2025-12-13T10:59:23.970Z
 **Issue**: #1449
 **Owner**: Engineering Lead
+

@@ -67,7 +67,7 @@ test.describe('Authenticated journeys', () => {
     await expect(page.getByRole('heading', { name: 'MeepleAI Chat' })).toBeVisible();
 
     // Send message and verify response
-    const input = page.getByPlaceholder('Fai una domanda sul gioco...');
+    const input = page.locator('[data-testid="message-input"]');
     await input.fill('Qual è la durata media?');
     await page.getByRole('button', { name: 'Invia' }).click();
 

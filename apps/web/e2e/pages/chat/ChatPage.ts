@@ -34,16 +34,18 @@ export class ChatPage extends BasePage implements IChatPage {
 
   /**
    * Question input field
+   * Uses data-testid for reliable selection across locales
    */
   private get questionInput(): Locator {
-    return this.page.getByPlaceholder(getTextMatcher('chat.placeholder'));
+    return this.page.locator('[data-testid="message-input"]');
   }
 
   /**
    * Send button
+   * Uses data-testid for reliable selection across locales
    */
   private get sendButton(): Locator {
-    return this.page.getByRole('button', { name: getTextMatcher('chat.send') });
+    return this.page.locator('[data-testid="send-message-button"]');
   }
 
   /**
@@ -167,12 +169,10 @@ export class ChatPage extends BasePage implements IChatPage {
    * @returns Array of citation objects with title and page number
    */
   async getCitations(): Promise<ChatSource[]> {
-    const citations = await this.messagesContainer
-      .locator('[data-testid="citation"]')
-      .all();
+    const citations = await this.messagesContainer.locator('[data-testid="citation"]').all();
 
     return Promise.all(
-      citations.map(async (citation) => {
+      citations.map(async citation => {
         const text = await citation.textContent();
         // Parse "Title (Pagina 5)" format
         const match = text?.match(/(.+?)\s*\(Pagina\s+(\d+)\)/);
@@ -189,9 +189,7 @@ export class ChatPage extends BasePage implements IChatPage {
    * @param index - Citation index (0-based)
    */
   async clickCitation(index: number): Promise<void> {
-    const citation = this.messagesContainer
-      .locator('[data-testid="citation"]')
-      .nth(index);
+    const citation = this.messagesContainer.locator('[data-testid="citation"]').nth(index);
     await this.click(citation);
   }
 
@@ -203,9 +201,7 @@ export class ChatPage extends BasePage implements IChatPage {
    * Click "Like" button on last answer
    */
   async likeAnswer(): Promise<void> {
-    const likeButton = this.messagesContainer
-      .last()
-      .getByRole('button', { name: /👍|utile/i });
+    const likeButton = this.messagesContainer.last().getByRole('button', { name: /👍|utile/i });
     await this.click(likeButton);
   }
 
@@ -224,12 +220,8 @@ export class ChatPage extends BasePage implements IChatPage {
    * @returns True if like button is active
    */
   async isLikeActive(): Promise<boolean> {
-    const likeButton = this.messagesContainer
-      .last()
-      .getByRole('button', { name: /👍|utile/i });
-    const bgColor = await likeButton.evaluate((el) =>
-      window.getComputedStyle(el).backgroundColor
-    );
+    const likeButton = this.messagesContainer.last().getByRole('button', { name: /👍|utile/i });
+    const bgColor = await likeButton.evaluate(el => window.getComputedStyle(el).backgroundColor);
     // Green background: rgb(52, 168, 83)
     return bgColor === 'rgb(52, 168, 83)';
   }
@@ -280,9 +272,7 @@ export class ChatPage extends BasePage implements IChatPage {
    */
   async exportConversation(format: 'json' | 'txt'): Promise<void> {
     await this.click(this.exportButton);
-    await this.click(
-      this.page.getByRole('button', { name: new RegExp(format, 'i') })
-    );
+    await this.click(this.page.getByRole('button', { name: new RegExp(format, 'i') }));
   }
 
   // ========================================================================
@@ -314,7 +304,9 @@ export class ChatPage extends BasePage implements IChatPage {
     // Wait for at least one option to be available
     await this.page.waitForFunction(
       () => {
-        const select = document.querySelector<HTMLSelectElement>('[aria-label*="game" i], [aria-label*="gioco" i]');
+        const select = document.querySelector<HTMLSelectElement>(
+          '[aria-label*="game" i], [aria-label*="gioco" i]'
+        );
         return select && select.options.length > 0;
       },
       { timeout: 10000 }
@@ -330,7 +322,9 @@ export class ChatPage extends BasePage implements IChatPage {
       const selectedValue = await this.getSelectedGame();
       if (selectedValue) {
         // Get the text content of the selected option
-        const selectedOption = await this.gameSelect.locator(`option[value="${selectedValue}"]`).textContent();
+        const selectedOption = await this.gameSelect
+          .locator(`option[value="${selectedValue}"]`)
+          .textContent();
         return selectedOption?.trim() || selectedValue;
       }
       return null;
@@ -426,9 +420,7 @@ export class ChatPage extends BasePage implements IChatPage {
    * @param title - Citation title
    */
   async assertCitationVisible(title: string): Promise<void> {
-    await this.waitForElement(
-      this.messagesContainer.getByText(new RegExp(title))
-    );
+    await this.waitForElement(this.messagesContainer.getByText(new RegExp(title)));
   }
 
   /**

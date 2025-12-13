@@ -478,6 +478,7 @@ When adding new information:
 
 ---
 
-**Last Updated**: 2025-12-08
+**Last Updated**: 2025-12-13T10:59:23.970Z
 **Status**: Complete - All sources verified and accessible
 **Coverage**: Docker resource limits best practices across all MeepleAI services
+

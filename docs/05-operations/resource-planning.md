@@ -2,7 +2,7 @@
 
 > **Issue**: [#701 - Add resource limits to all Docker services](https://github.com/meepleai/monorepo/issues/701)
 > **Status**: ✅ Implemented
-> **Last Updated**: 2025-12-08
+> **Last Updated**: 2025-12-13T10:59:23.970Z
 
 ## Overview
 
@@ -653,3 +653,4 @@ Before deploying to production, verify:
 **Last Verified**: 2025-12-08
 **Issue**: [#701](https://github.com/meepleai/monorepo/issues/701)
 **Owner**: Platform Engineering Team
+

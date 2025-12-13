@@ -369,7 +369,7 @@ docker ps --filter "status=exited"
 
 ---
 
-**Last Updated**: 2025-12-08
+**Last Updated**: 2025-12-13T10:59:23.970Z
 **Status**: Complete & Ready for Use
 **Version**: 1.0
 
@@ -382,3 +382,4 @@ docker ps --filter "status=exited"
 - ❓ **Something broken**: [FAQ](./docker-resource-limits-faq.md)
 - 📋 **Template**: [docker-compose.resource-limits-template.yml](../../infra/docker-compose.resource-limits-template.yml)
 - 🛠️ **Monitor**: [docker-resource-monitor.sh](../../scripts/docker-resource-monitor.sh)
+

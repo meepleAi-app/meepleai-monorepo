@@ -469,5 +469,6 @@ trackEvent('redesign_settings_updated', { section });
 
 **Document Owner**: Frontend Lead
 **Review Cadence**: Weekly (sprint retrospectives)
-**Last Updated**: 2025-11-30
+**Last Updated**: 2025-12-13T10:59:23.970Z
 **Next Review**: 2025-12-07
+

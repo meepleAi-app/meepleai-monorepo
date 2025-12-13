@@ -1,7 +1,7 @@
 # MeepleAI Infrastructure Overview
 
 **Version**: 2.0 (Post-Consolidation)
-**Last Updated**: 2025-12-08
+**Last Updated**: 2025-12-13T10:59:23.970Z
 **Status**: Production Ready
 **Location**: Consolidated from `infra/README.md` + `infra/INFRASTRUCTURE.md`
 
@@ -707,7 +707,8 @@ See: [Traefik Testing Guide](deployment/traefik-testing.md)
 ---
 
 **Version**: 2.0 (Post-Consolidation)
-**Last Updated**: 2025-12-08
+**Last Updated**: 2025-12-13T10:59:23.970Z
 **Maintainer**: Infrastructure Team
 **Total Services**: 17 (with infrastructure monitoring)
 **Profiles**: 6 (minimal, dev, observability, ai, automation, full)
+

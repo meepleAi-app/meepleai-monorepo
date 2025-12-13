@@ -1,0 +1,28 @@
+# Commit message hook for MeepleAI
+# Validates commit messages against Conventional Commits specification
+
+echo "📝 Validating commit message..."
+
+# Get the absolute path to the commit message file
+COMMIT_MSG_FILE="$(pwd)/$1"
+
+# Run commitlint from apps/web where it's installed
+# Use absolute path to commit message file
+(cd apps/web && npx --yes commitlint --config ../../commitlint.config.js --edit "$COMMIT_MSG_FILE") || {
+  echo ""
+  echo "❌ Commit message does not follow Conventional Commits format."
+  echo ""
+  echo "Expected format: <type>(<scope>): <subject>"
+  echo ""
+  echo "Types: feat, fix, docs, test, refactor, perf, ci, chore, style, build, revert"
+  echo ""
+  echo "Examples:"
+  echo "  feat(frontend): add dark mode toggle"
+  echo "  fix(api): resolve null reference in auth handler"
+  echo "  docs: update README with installation steps"
+  echo ""
+  echo "See CONTRIBUTING.md for more details."
+  exit 1
+}
+
+echo "✅ Commit message validation passed!"

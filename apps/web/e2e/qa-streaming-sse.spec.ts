@@ -39,7 +39,7 @@ test.describe('Q&A Interface - SSE Streaming (Issue #1009)', () => {
     await waitForAutoSelection(page, gameId, agents[0].id);
 
     // Send question
-    const input = page.getByPlaceholder('Fai una domanda sul gioco...');
+    const input = page.locator('[data-testid="message-input"]');
     await input.fill('What is en passant?');
     await page.getByRole('button', { name: 'Invia' }).click();
 
@@ -71,7 +71,7 @@ test.describe('Q&A Interface - SSE Streaming (Issue #1009)', () => {
     await page.goto('/chat');
     await waitForAutoSelection(page, gameId, agents[0].id);
 
-    const input = page.getByPlaceholder('Fai una domanda sul gioco...');
+    const input = page.locator('[data-testid="message-input"]');
     await input.fill('How many players?');
     await page.getByRole('button', { name: 'Invia' }).click();
 

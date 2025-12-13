@@ -43,6 +43,7 @@ export default function OAuthButtons({ onOAuthLogin }: OAuthButtonsProps) {
         <button
           type="button"
           onClick={() => handleOAuthLogin('google')}
+          data-testid="oauth-google"
           className="
             w-full flex items-center justify-center gap-3
             px-4 py-3
@@ -81,6 +82,7 @@ export default function OAuthButtons({ onOAuthLogin }: OAuthButtonsProps) {
         <button
           type="button"
           onClick={() => handleOAuthLogin('discord')}
+          data-testid="oauth-discord"
           className="
             w-full flex items-center justify-center gap-3
             px-4 py-3
@@ -103,6 +105,7 @@ export default function OAuthButtons({ onOAuthLogin }: OAuthButtonsProps) {
         <button
           type="button"
           onClick={() => handleOAuthLogin('github')}
+          data-testid="oauth-github"
           className="
             w-full flex items-center justify-center gap-3
             px-4 py-3

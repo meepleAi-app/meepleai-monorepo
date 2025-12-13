@@ -129,9 +129,7 @@ test.describe('Timeline RAG Feature', () => {
       await messageInput.fill('What are the basic rules?');
 
       // Send message
-      const sendButton = page
-        .locator('button[type="submit"]')
-        .or(page.getByRole('button', { name: /send/i }));
+      const sendButton = page.locator('[data-testid="send-message-button"]');
       await sendButton.click({ force: true });
 
       // Wait a bit for events to be tracked

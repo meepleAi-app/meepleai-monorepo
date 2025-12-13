@@ -26,6 +26,7 @@ const quicksand = Quicksand({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || 'https://meepleai.com'),
   title: 'MeepleAI - AI-Powered Board Game Rules Assistant',
   description:
     "Never argue about rules again. Get instant, accurate answers from any game's rulebook with AI-powered semantic search.",

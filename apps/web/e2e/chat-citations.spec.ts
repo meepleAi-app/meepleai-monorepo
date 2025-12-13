@@ -38,9 +38,9 @@ test.describe('Chat Citations Display (#859)', () => {
       ]
     );
 
-    // Send a message
-    await page.getByRole('textbox', { name: /fai una domanda/i }).fill('Test question');
-    await page.getByRole('button', { name: /invia/i }).click();
+    // Send a message using data-testid (locale-independent selectors)
+    await page.locator('[data-testid="message-input"]').fill('Test question');
+    await page.locator('[data-testid="send-message-button"]').click();
 
     // Wait for assistant response
     await expect(page.getByText('MeepleAI')).toBeVisible();
@@ -80,8 +80,8 @@ test.describe('Chat Citations Display (#859)', () => {
       ]
     );
 
-    await page.getByRole('textbox', { name: /fai una domanda/i }).fill('Test');
-    await page.getByRole('button', { name: /invia/i }).click();
+    await page.locator('[data-testid="message-input"]').fill('Test');
+    await page.locator('[data-testid="send-message-button"]').click();
 
     // Wait for citations
     await expect(page.getByTestId('citation-list')).toBeVisible();
@@ -99,9 +99,9 @@ test.describe('Chat Citations Display (#859)', () => {
   });
 
   test('does not show citations for user messages', async ({ page }) => {
-    // Send a message
-    await page.getByRole('textbox', { name: /fai una domanda/i }).fill('User message');
-    await page.getByRole('button', { name: /invia/i }).click();
+    // Send a message using data-testid (locale-independent selectors)
+    await page.locator('[data-testid="message-input"]').fill('User message');
+    await page.locator('[data-testid="send-message-button"]').click();
 
     // Wait for user message to appear
     await expect(page.getByText('Tu')).toBeVisible();
@@ -117,8 +117,8 @@ test.describe('Chat Citations Display (#859)', () => {
     // Mock stream without citations
     await chatHelper.mockQAStreamWithCitations(['Answer without citations'], []);
 
-    await page.getByRole('textbox', { name: /fai una domanda/i }).fill('Test');
-    await page.getByRole('button', { name: /invia/i }).click();
+    await page.locator('[data-testid="message-input"]').fill('Test');
+    await page.locator('[data-testid="send-message-button"]').click();
 
     // Wait for response
     await expect(page.getByText('MeepleAI')).toBeVisible();

@@ -351,6 +351,20 @@ export default [
       "@typescript-eslint/no-explicit-any": "off", // Relaxed type checking for Storybook stories
       "react-hooks/rules-of-hooks": "off", // Storybook render functions can call hooks
       "no-console": "off", // Allow console in Storybook stories for debugging
+      // SB-001: Prevent deprecated @storybook/test import (Storybook 10+)
+      // Use 'storybook/test' instead - @storybook/test was removed in v10
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@storybook/test",
+              message:
+                "Import from 'storybook/test' instead (Storybook 10+). @storybook/test was deprecated.",
+            },
+          ],
+        },
+      ],
     },
   },
   // Configuration for admin pages - Must come after TypeScript config to override

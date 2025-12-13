@@ -188,7 +188,7 @@ const wrongRandom = Math.random(); // Non-deterministic
 ```typescript
 import type { Meta, StoryObj } from '@storybook/react';
 import { Component } from './Component';
-import { fn } from '@storybook/test'; // For action handlers
+import { fn } from 'storybook/test'; // For action handlers (Storybook 10+)
 
 /**
  * Component - Brief description
@@ -243,7 +243,7 @@ export const DarkTheme: Story = {
 
 ### 4. **Action Handlers** ✅
 ```typescript
-import { fn } from '@storybook/test';
+import { fn } from 'storybook/test'; // Storybook 10+
 
 export const Default: Story = {
   args: {

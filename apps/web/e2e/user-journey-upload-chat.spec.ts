@@ -211,7 +211,7 @@ test.describe('Complete User Journey: Real Backend Integration', () => {
     // ========================================================================
 
     await test.step('Ask game setup question in Italian', async () => {
-      const questionInput = page.getByPlaceholder(/fai una domanda|ask a question/i);
+      const questionInput = page.locator('[data-testid="message-input"]');
 
       // Wait for input to be enabled (means game is selected)
       await expect(questionInput).toBeEnabled({ timeout: 10000 });

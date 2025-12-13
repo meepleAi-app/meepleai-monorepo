@@ -49,8 +49,8 @@ test.describe('Login Flow with Screenshots', () => {
     await page.screenshot({ path: 'test-results/04-password-filled.png', fullPage: true });
     console.log('✓ Screenshot 4: Password Filled');
 
-    // Step 4: Submit login using getByRole (accessible selector)
-    const loginButton = page.getByRole('button', { name: /accedi/i });
+    // Step 4: Submit login using data-testid (locale-independent selector)
+    const loginButton = page.locator('[data-testid="login-submit"]');
     await expect(loginButton).toBeVisible({ timeout: 5000 });
     await loginButton.click();
 

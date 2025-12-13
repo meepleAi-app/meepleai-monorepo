@@ -19,8 +19,11 @@ import Link from 'next/link';
 import { MeepleAvatar } from '@/components/ui/meeple-avatar';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, ChevronDown } from 'lucide-react';
+import { useTranslation } from '@/hooks/useTranslation';
 
 export function HeroSection() {
+  const { t } = useTranslation();
+
   const scrollToFeatures = () => {
     const featuresSection = document.getElementById('features');
     featuresSection?.scrollIntoView({ behavior: 'smooth' });
@@ -49,30 +52,24 @@ export function HeroSection() {
             </div>
 
             {/* Heading */}
-            <h1 className="font-heading text-4xl md:text-5xl lg:text-6xl font-bold leading-tight animate-slide-up">
-              <span className="bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent">
-                Il tuo assistente AI
-              </span>
-              <br />
-              <span className="bg-gradient-to-r from-primary via-primary/90 to-secondary bg-clip-text text-transparent animate-pulse-slow">
-                per giochi da tavolo
-              </span>
+            <h1 className="font-heading text-4xl md:text-5xl lg:text-6xl font-bold leading-tight animate-slide-up bg-gradient-to-r from-primary via-primary/90 to-secondary bg-clip-text text-transparent">
+              {t('home.hero.title')}
             </h1>
 
             {/* Subheading */}
             <p className="text-lg md:text-xl text-muted-foreground max-w-lg mx-auto md:mx-0 animate-slide-up delay-100">
-              Risposte immediate alle regole, in italiano. Sempre con te.
+              {t('home.hero.subtitle')}
             </p>
 
             {/* Trust indicators */}
             <div className="flex items-center justify-center md:justify-start gap-6 text-sm text-muted-foreground pt-2 animate-slide-up delay-200">
               <div className="flex items-center gap-2">
                 <span className="text-2xl">✨</span>
-                <span>Oltre 1.250 utenti</span>
+                <span>{t('home.hero.trustIndicators.users')}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-2xl">🎯</span>
-                <span>95% accuratezza</span>
+                <span>{t('home.hero.trustIndicators.accuracy')}</span>
               </div>
             </div>
 
@@ -84,7 +81,7 @@ export function HeroSection() {
                 className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-white font-semibold shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300"
               >
                 <Link href="/register">
-                  Inizia Gratis
+                  {t('home.hero.cta.getStarted')}
                   <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                 </Link>
               </Button>
@@ -94,9 +91,9 @@ export function HeroSection() {
                 size="lg"
                 onClick={scrollToFeatures}
                 className="group font-semibold border-2 hover:bg-primary/5 hover:border-primary/50 transition-all duration-300"
-                aria-label="Scorri alla sezione caratteristiche"
+                aria-label={t('home.hero.scrollToFeatures')}
               >
-                Scopri di più
+                {t('home.hero.cta.learnMore')}
                 <ChevronDown className="ml-2 h-5 w-5 group-hover:translate-y-1 transition-transform" />
               </Button>
             </div>
@@ -123,7 +120,7 @@ export function HeroSection() {
         <button
           onClick={scrollToFeatures}
           className="text-muted-foreground hover:text-primary transition-colors p-2 hover:bg-primary/10 rounded-full"
-          aria-label="Scorri alle caratteristiche"
+          aria-label={t('home.hero.scrollToFeatures')}
         >
           <ChevronDown className="h-8 w-8" />
         </button>

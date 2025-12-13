@@ -126,6 +126,7 @@ public static class NotificationEndpoints
         .WithDescription("Marks a single notification as read for authenticated user. Returns 404 if notification not found or unauthorized.");
 
         // Mark all notifications as read
+        // Issue #2155: Rate limited to prevent abuse (10 req/min)
         group.MapPost("/notifications/mark-all-read", async (
             IMediator mediator,
             HttpContext context,
@@ -154,10 +155,12 @@ public static class NotificationEndpoints
             return Results.Ok(new { updatedCount });
         })
         .RequireAuthenticatedUser()
+        .RequireNotificationRateLimit()
         .Produces<object>(200)
+        .Produces(429)
         .WithTags("Notifications")
         .WithSummary("Mark all notifications as read")
-        .WithDescription("Bulk operation to mark all unread notifications as read for authenticated user. Returns count of updated notifications.");
+        .WithDescription("Bulk operation to mark all unread notifications as read for authenticated user. Returns count of updated notifications. Rate limited: 10 requests per minute.");
 
         return group;
     }

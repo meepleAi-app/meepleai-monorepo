@@ -1,0 +1,75 @@
+name: e2e-coverage
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [ main ]
+  pull_request: {}
+
+jobs:
+  e2e-coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Enable Corepack (pnpm)
+        run: |
+          corepack enable
+          corepack prepare pnpm@latest --activate
+
+      - name: Install dependencies (apps/web)
+        run: |
+          cd apps/web
+          pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: |
+          cd apps/web
+          npx playwright install --with-deps
+
+      - name: Build and start Next.js (production)
+        run: |
+          cd apps/web
+          pnpm build
+          nohup pnpm start &> ../next.log &
+          echo $! > /tmp/next_pid
+          # wait for server to be ready
+          for i in $(seq 1 30); do
+            curl -sS http://localhost:3000 >/dev/null && break || sleep 2
+          done
+
+      - name: Collect V8 coverage
+        run: |
+          cd apps/web
+          node scripts/collect-v8-coverage-local.js || node ../../scripts/collect-v8-coverage.js
+
+      - name: Convert V8 coverage to LCOV/HTML
+        run: |
+          cd apps/web
+          node scripts/convert-v8-to-lcov.js
+
+      - name: Upload HTML coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-coverage-html
+          path: apps/web/coverage-e2e/html
+
+      - name: Upload LCOV file
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-coverage-lcov
+          path: apps/web/coverage-e2e/html/lcov.info
+
+      - name: Stop Next.js
+        if: always()
+        run: |
+          if [ -f /tmp/next_pid ]; then kill $(cat /tmp/next_pid) || true; fi

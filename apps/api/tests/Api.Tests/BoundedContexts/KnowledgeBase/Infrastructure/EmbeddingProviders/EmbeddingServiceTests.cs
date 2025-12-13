@@ -493,7 +493,7 @@ public class EmbeddingServiceTests
         // Arrange
         var texts = new List<string> { "Test text" };
         var cts = new CancellationTokenSource();
-        cts.Cancel();
+        await cts.CancelAsync();
 
         _primaryProviderMock
             .Setup(x => x.GenerateBatchEmbeddingsAsync(

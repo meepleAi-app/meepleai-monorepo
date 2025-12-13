@@ -445,7 +445,7 @@ public class StreamExplainQueryHandlerTests
                 // Cancel after 3 events
                 if (eventCount == 3)
                 {
-                    cts.Cancel();
+                    await cts.CancelAsync();
                 }
             }
         }
@@ -495,7 +495,7 @@ public class StreamExplainQueryHandlerTests
                 // Cancel after a few events to ensure we're in the chunking phase
                 if (eventCount == 5)
                 {
-                    cts.Cancel();
+                    await cts.CancelAsync();
                 }
             }
         });

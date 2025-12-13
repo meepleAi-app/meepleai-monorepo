@@ -96,7 +96,8 @@ public sealed class FullStackCrossContextWorkflowTests : IAsyncLifetime
 
     public async ValueTask DisposeAsync()
     {
-        _dbContext?.Dispose();
+        if (_dbContext != null)
+            await _dbContext.DisposeAsync();
 
         if (_serviceProvider is IAsyncDisposable asyncDisposable)
             await asyncDisposable.DisposeAsync();

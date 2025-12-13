@@ -47,11 +47,10 @@ public class ErrorHandlingTests : IAsyncLifetime
         await ResetDatabaseAsync();
     }
 
-    public ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         _client?.Dispose();
-        _dbContext?.Dispose();
-        return ValueTask.CompletedTask;
+        if (_dbContext != null) await _dbContext.DisposeAsync();
     }
 
     private async Task ResetDatabaseAsync()
@@ -105,7 +104,7 @@ public class ErrorHandlingTests : IAsyncLifetime
         // Response should be valid JSON
         if (response.StatusCode == HttpStatusCode.BadRequest)
         {
-            content.Should().Match(c => c.StartsWith("{") || c.StartsWith("["));
+            content.Should().Match(c => c.StartsWith('{') || c.StartsWith('['));
         }
     }
 
@@ -175,7 +174,7 @@ public class ErrorHandlingTests : IAsyncLifetime
         // Should be JSON or plain text (not HTML error page)
         if (content.Length > 0)
         {
-            content.Should().Match(c => c.StartsWith("{") || c.StartsWith("\"") || c.StartsWith("[") || !c.Contains("<html"));
+            content.Should().Match(c => c.StartsWith('{') || c.StartsWith('"') || c.StartsWith('[') || !c.Contains("<html"));
         }
     }
 
@@ -367,7 +366,7 @@ public class ErrorHandlingTests : IAsyncLifetime
         // Not HTML error pages
         if (content.Length > 0)
         {
-            content.Should().Match(c => c.StartsWith("{") || c.StartsWith("\"") || c.StartsWith("[") || !c.Contains("<html"));
+            content.Should().Match(c => c.StartsWith('{') || c.StartsWith('"') || c.StartsWith('[') || !c.Contains("<html"));
         }
 
         // Frontend SDK should be able to parse error message and display it to user
@@ -393,7 +392,7 @@ public class ErrorHandlingTests : IAsyncLifetime
         var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/games");
 
         // Act - Cancel immediately
-        cts.Cancel();
+        await cts.CancelAsync();
 
         // Assert
         await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>

@@ -219,7 +219,7 @@ public sealed class ValidationBehaviorTests
         );
 
         var cts = new CancellationTokenSource();
-        cts.Cancel();
+        await cts.CancelAsync();
 
         var mockValidator = new Mock<IValidator<LoginCommand>>();
         mockValidator

@@ -338,7 +338,7 @@ public class RedisBackgroundTaskOrchestratorTests
             executionCount++;
             if (executionCount >= 2)
             {
-                cts.Cancel(); // Stop after 2 executions
+                await cts.CancelAsync(); // Stop after 2 executions
             }
         };
 

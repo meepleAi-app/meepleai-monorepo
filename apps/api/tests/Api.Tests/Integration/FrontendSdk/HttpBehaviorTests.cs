@@ -47,11 +47,10 @@ public class HttpBehaviorTests : IAsyncLifetime
         await ResetDatabaseAsync();
     }
 
-    public ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         _client?.Dispose();
-        _dbContext?.Dispose();
-        return ValueTask.CompletedTask;
+        if (_dbContext != null) await _dbContext.DisposeAsync();
     }
 
     private async Task ResetDatabaseAsync()

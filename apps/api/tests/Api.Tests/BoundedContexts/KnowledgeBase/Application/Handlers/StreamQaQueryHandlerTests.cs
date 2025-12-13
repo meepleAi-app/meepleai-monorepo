@@ -492,7 +492,7 @@ public class StreamQaQueryHandlerTests
                 // Cancel after a few events
                 if (eventCount == 5)
                 {
-                    cts.Cancel();
+                    await cts.CancelAsync();
                 }
             }
         }

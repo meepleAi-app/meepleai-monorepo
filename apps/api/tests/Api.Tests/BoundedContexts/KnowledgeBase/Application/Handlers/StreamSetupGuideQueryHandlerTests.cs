@@ -421,7 +421,7 @@ This is required.";
                 // Cancel after initial state update
                 if (eventCount == 2)
                 {
-                    cts.Cancel();
+                    await cts.CancelAsync();
                 }
             }
         }

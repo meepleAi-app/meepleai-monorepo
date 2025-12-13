@@ -213,7 +213,7 @@ export function createChatClient({ httpClient }: CreateChatClientParams): ChatCl
       }
       const blob = await response.blob();
       const disposition = response.headers.get('content-disposition');
-      const filenameMatch = disposition?.match(/filename="?([^\";]+)"?/i);
+      const filenameMatch = disposition?.match(/filename="?([^";]+)"?/i);
       const filename = filenameMatch?.[1] ?? `chat-${chatId}.zip`;
       downloadFile(blob, filename);
     },

@@ -48,8 +48,12 @@ export class UploadPage extends BasePage implements IUploadPage {
 
     // Game selection elements
     this.gameSelect = this.page.getByRole('combobox', { name: /select game|game/i });
-    this.newGameNameInput = this.page.getByRole('textbox', { name: /new game name|game name/i });
-    this.createGameButton = this.page.getByRole('button', { name: /create game|create new/i });
+    // GamePicker has: id="new-game", label "Create New Game", placeholder "e.g., Gloomhaven"
+    this.newGameNameInput = this.page
+      .locator('#new-game')
+      .or(this.page.getByLabel(/create new game/i));
+    // GamePicker button text is just "Create" (not "Create Game")
+    this.createGameButton = this.page.getByRole('button', { name: /^create$/i });
     this.confirmGameButton = this.page.getByRole('button', { name: /confirm|proceed/i });
 
     // File upload elements
@@ -60,7 +64,9 @@ export class UploadPage extends BasePage implements IUploadPage {
     // Status indicators
     this.uploadingIndicator = this.page.getByText(/uploading|caricamento/i);
     this.processingIndicator = this.page.getByText(/processing|elaborazione/i);
-    this.successMessage = this.page.getByText(/success|uploaded successfully|caricato con successo/i);
+    this.successMessage = this.page.getByText(
+      /success|uploaded successfully|caricato con successo/i
+    );
     this.errorMessage = this.page.locator('[role="alert"]');
     this.validationError = this.page.locator('.validation-error, [data-testid="validation-error"]');
 
@@ -102,8 +108,8 @@ export class UploadPage extends BasePage implements IUploadPage {
     await this.click(this.createGameButton);
 
     // Wait for game creation to complete
-    await this.page.waitForResponse(resp =>
-      resp.url().includes('/api/v1/games') && resp.status() === 201,
+    await this.page.waitForResponse(
+      resp => resp.url().includes('/api/v1/games') && resp.status() === 201,
       { timeout: 10000 }
     );
   }
@@ -171,7 +177,7 @@ export class UploadPage extends BasePage implements IUploadPage {
       this.page.waitForResponse(
         resp => resp.url().includes('/api/v1/pdfs') && resp.request().method() === 'POST',
         { timeout: 5000 }
-      )
+      ),
     ]);
   }
 
@@ -201,9 +207,12 @@ export class UploadPage extends BasePage implements IUploadPage {
         if (resp.status() !== 200) return false;
 
         // Check if response indicates completion
-        resp.json().then(data => {
-          return data.processingStatus === 'completed';
-        }).catch(() => false);
+        resp
+          .json()
+          .then(data => {
+            return data.processingStatus === 'completed';
+          })
+          .catch(() => false);
 
         return true;
       },
@@ -290,9 +299,12 @@ export class UploadPage extends BasePage implements IUploadPage {
         if (!resp.url().includes(`/pdfs/${documentId}/processing`)) return false;
         if (resp.status() !== 200) return false;
 
-        resp.json().then(data => {
-          return data.processingStatus === 'completed';
-        }).catch(() => false);
+        resp
+          .json()
+          .then(data => {
+            return data.processingStatus === 'completed';
+          })
+          .catch(() => false);
 
         return true;
       },

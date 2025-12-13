@@ -174,7 +174,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
             }
         }
 
-        _dbContext?.Dispose();
+        if (_dbContext != null) await _dbContext.DisposeAsync();
         _redis?.Dispose();
 
         if (_serviceProvider is IAsyncDisposable asyncDisposable)

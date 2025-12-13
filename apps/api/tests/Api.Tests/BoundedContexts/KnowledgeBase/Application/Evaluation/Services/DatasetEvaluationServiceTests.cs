@@ -569,12 +569,12 @@ public class DatasetEvaluationServiceTests
                 It.IsAny<string?>(),
                 It.IsAny<bool>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(() =>
+            .Returns(async () =>
             {
                 callCount++;
                 if (callCount >= 5)
                 {
-                    cts.Cancel();
+                    await cts.CancelAsync();
                 }
                 return CreateQaResponse();
             });

@@ -241,7 +241,7 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
 
         // Act - Cancel immediately to test cancellation handling
         using var cts = new CancellationTokenSource();
-        cts.Cancel(); // Cancel before calling
+        await cts.CancelAsync(); // Cancel before calling
 
         // Assert - should throw TaskCanceledException
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, TestCancellationToken);

@@ -136,16 +136,13 @@ public class OAuthIntegrationTests : IAsyncLifetime
     {
         _output("Cleaning up OAuth integration test infrastructure...");
 
-        _dbContext?.Dispose();
+        if (_dbContext != null)
+            await _dbContext.DisposeAsync();
 
         if (_serviceProvider is IAsyncDisposable asyncDisposable)
-        {
             await asyncDisposable.DisposeAsync();
-        }
         else
-        {
             (_serviceProvider as IDisposable)?.Dispose();
-        }
 
         // Issue #2031: Use SharedTestcontainersFixture for cleanup
         if (!string.IsNullOrEmpty(_databaseName))

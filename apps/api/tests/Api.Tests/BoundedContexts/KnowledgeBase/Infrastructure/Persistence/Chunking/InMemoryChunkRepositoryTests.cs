@@ -213,7 +213,7 @@ public class InMemoryChunkRepositoryTests
         // Arrange
         var chunk = CreateTestChunk();
         var cts = new CancellationTokenSource();
-        cts.Cancel();
+        await cts.CancelAsync();
 
         // Act
         var act = () => _repository.SaveAsync(chunk, cts.Token);

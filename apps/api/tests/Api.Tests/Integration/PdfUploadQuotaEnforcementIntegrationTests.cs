@@ -131,8 +131,10 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
 
     public async ValueTask DisposeAsync()
     {
-        _dbContext?.Dispose();
-        _redis?.Dispose();
+        if (_dbContext != null)
+            await _dbContext.DisposeAsync();
+        if (_redis != null)
+            await _redis.DisposeAsync();
 
         if (_serviceProvider is IAsyncDisposable asyncDisposable)
             await asyncDisposable.DisposeAsync();

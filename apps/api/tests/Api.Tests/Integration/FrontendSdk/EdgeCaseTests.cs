@@ -52,11 +52,10 @@ public class EdgeCaseTests : IAsyncLifetime
         await ResetDatabaseAsync();
     }
 
-    public ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         _client?.Dispose();
-        _dbContext?.Dispose();
-        return ValueTask.CompletedTask;
+        if (_dbContext != null) await _dbContext.DisposeAsync();
     }
 
     private async Task ResetDatabaseAsync()
@@ -426,7 +425,7 @@ public class EdgeCaseTests : IAsyncLifetime
         // Act - Start request and cancel after short delay
         var task = _client.SendAsync(request, cts.Token);
         await Task.Delay(10); // Allow request to start
-        cts.Cancel();
+        await cts.CancelAsync();
 
         // Assert
         try

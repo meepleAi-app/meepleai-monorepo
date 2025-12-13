@@ -167,7 +167,7 @@ public class WeeklyEvaluationServiceTests : IDisposable
         // Wait for execution to complete in real time
         await Task.Delay(TestConstants.Timing.SmallDelay, CancellationToken.None);
 
-        _cts.Cancel();
+        await _cts.CancelAsync();
         await service.StopAsync(_cts.Token);
 
         // Assert
@@ -218,7 +218,7 @@ public class WeeklyEvaluationServiceTests : IDisposable
 
         await Task.Delay(TestConstants.Timing.SmallDelay, CancellationToken.None);
 
-        _cts.Cancel();
+        await _cts.CancelAsync();
         await service.StopAsync(_cts.Token);
 
         // Assert

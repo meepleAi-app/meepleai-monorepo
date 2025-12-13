@@ -204,6 +204,8 @@
 - [Generic Catch Analysis](./06-security/generic-catch-analysis.md)
 - [Null Reference Remediation](./06-security/null-reference-remediation.md)
 - [Sensitive Info Exposure Fix](./06-security/sensitive-info-exposure-fix-733.md)
+- [**Branch Protection Rules**](./06-security/branch-protection-rules.md) ⭐ **NEW** - GitHub branch protection configuration
+- [**Signed Commits Guide**](./06-security/signed-commits-guide.md) ⭐ **NEW** - GPG commit signing setup
 
 ### [07 - Project Management](./07-project-management/)
 **Audience**: Project managers, product owners, leadership

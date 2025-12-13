@@ -1,5 +1,5 @@
 # Pre-commit hook for MeepleAI
-# Runs linting and type checking on staged files
+# Runs linting and type checking on staged files for both frontend and backend
 
 echo "🚀 Running pre-commit checks..."
 
@@ -9,18 +9,52 @@ if [ ! -d "apps/web" ]; then
   exit 1
 fi
 
+# ============================================
+# Frontend Checks
+# ============================================
+
 # Run lint-staged for frontend
-echo "🔍 Running lint-staged..."
+echo "🔍 Running frontend lint-staged..."
 (cd apps/web && npx lint-staged) || {
   echo "❌ Lint-staged checks failed. Please fix the issues before committing."
   exit 1
 }
 
 # Run TypeScript type checking (frontend)
-echo "📘 Running TypeScript type check..."
+echo "📘 Running frontend TypeScript type check..."
 (cd apps/web && pnpm typecheck) || {
-  echo "❌ TypeScript errors found. Please fix them before committing."
+  echo "❌ Frontend TypeScript errors found. Please fix them before committing."
   exit 1
 }
+
+# ============================================
+# Backend Checks (if .NET files are staged)
+# ============================================
+
+# Check if any C# files are staged
+STAGED_CS_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.cs$' || true)
+
+if [ -n "$STAGED_CS_FILES" ]; then
+  echo "🔧 Running backend code formatting check..."
+
+  # Validate that apps/api directory exists
+  if [ -d "apps/api" ]; then
+    # Run dotnet format to verify formatting (verify-only mode)
+    (cd apps/api && dotnet format --verify-no-changes --verbosity quiet) || {
+      echo ""
+      echo "❌ Backend code formatting issues found."
+      echo ""
+      echo "Run the following command to fix formatting:"
+      echo "  cd apps/api && dotnet format"
+      echo ""
+      exit 1
+    }
+    echo "✅ Backend formatting check passed!"
+  else
+    echo "⚠️  Warning: apps/api directory not found, skipping backend checks."
+  fi
+else
+  echo "ℹ️  No C# files staged, skipping backend formatting check."
+fi
 
 echo "✅ Pre-commit checks passed!"

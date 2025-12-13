@@ -18,6 +18,7 @@
    - [Games Management](#games-management)
    - [Rulebooks Management](#rulebooks-management)
    - [User Management](#user-management)
+   - [Notifications](#notifications)
    - [Admin](#admin)
 6. [Data Models](#data-models)
 7. [Examples](#examples)
@@ -145,6 +146,16 @@ Retry-After: 42                  # Seconds to wait (if 429 error)
   }
 }
 ```
+
+### Endpoint-Specific Rate Limits
+
+Some endpoints have stricter rate limits to prevent abuse:
+
+| Endpoint | Limit | Window | Reason |
+|----------|-------|--------|--------|
+| `POST /v1/notifications/mark-all-read` | 10 | 1 minute | Bulk operation protection |
+
+These limits apply in addition to the tier-based limits above.
 
 ---
 
@@ -850,6 +861,105 @@ Get current user profile.
     "updated_at": "2025-01-15T14:00:00Z"
   }
 }
+```
+
+---
+
+### Notifications
+
+User notification endpoints for upload/processing completion alerts.
+
+#### GET /v1/notifications
+
+Get notifications for authenticated user.
+
+**Authentication**: Required (Session or API Key)
+
+**Query Parameters**:
+- `unreadOnly`: Boolean, filter for unread notifications only
+- `limit`: Integer, max number of notifications to return
+
+**Response 200 OK**:
+```json
+{
+  "data": [
+    {
+      "id": "notif_a1b2c3d4",
+      "type": "pdf_processing_complete",
+      "title": "PDF Processing Complete",
+      "message": "Your rulebook 'Catan Rules' has been processed",
+      "read": false,
+      "created_at": "2025-01-15T14:00:00Z"
+    }
+  ]
+}
+```
+
+#### GET /v1/notifications/unread-count
+
+Get count of unread notifications (optimized for badge display).
+
+**Authentication**: Required (Session or API Key)
+
+**Response 200 OK**:
+```json
+{
+  "count": 5
+}
+```
+
+#### POST /v1/notifications/{notificationId}/mark-read
+
+Mark a single notification as read.
+
+**Authentication**: Required (Session or API Key)
+
+**Response 200 OK**:
+```json
+{
+  "success": true
+}
+```
+
+**Response 404 Not Found** (Notification not found or unauthorized):
+```json
+{
+  "error": {
+    "code": "NOT_FOUND",
+    "message": "Notification not found"
+  }
+}
+```
+
+#### POST /v1/notifications/mark-all-read
+
+Bulk operation to mark all unread notifications as read.
+
+**Authentication**: Required (Session or API Key)
+
+**Rate Limiting**: 10 requests per minute (stricter limit for bulk operations)
+
+**Response 200 OK**:
+```json
+{
+  "updatedCount": 12
+}
+```
+
+**Response 429 Too Many Requests** (Rate limit exceeded):
+```json
+{
+  "error": "Rate limit exceeded",
+  "retryAfter": 45,
+  "message": "Too many mark-all requests. Please wait before retrying."
+}
+```
+
+**Rate Limit Headers** (Always included):
+```
+X-RateLimit-Limit: 10
+X-RateLimit-Remaining: 7
+Retry-After: 45  (only when rate limited)
 ```
 
 ---

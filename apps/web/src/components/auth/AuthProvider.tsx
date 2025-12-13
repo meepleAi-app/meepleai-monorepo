@@ -22,6 +22,7 @@ import React, {
 import { AuthUser } from '@/types';
 import { api } from '@/lib/api';
 import { identifyUser } from '@/lib/hyperdx';
+import { logger } from '@/lib/logger';
 
 // ============================================================================
 // Types
@@ -72,7 +73,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
       const user = await api.auth.getMe();
       setUser(user);
     } catch (err) {
-      console.error('Failed to load current user:', err);
+      logger.warn('Failed to load current user', {
+        component: 'AuthProvider',
+        metadata: { error: err instanceof Error ? err.message : String(err) },
+      });
       setUser(null);
     } finally {
       setLoading(false);
@@ -102,7 +106,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
       setUser(authUser);
       return authUser;
     } catch (err) {
-      console.error('Login failed:', err);
+      logger.error('Login failed', err instanceof Error ? err : new Error(String(err)), {
+        component: 'AuthProvider',
+      });
       setError(err instanceof Error ? err.message : 'Login failed');
       throw err;
     } finally {
@@ -118,7 +124,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
       setUser(authUser);
       return authUser;
     } catch (err) {
-      console.error('Registration failed:', err);
+      logger.error('Registration failed', err instanceof Error ? err : new Error(String(err)), {
+        component: 'AuthProvider',
+      });
       setError(err instanceof Error ? err.message : 'Registration failed');
       throw err;
     } finally {
@@ -132,7 +140,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
     try {
       await api.auth.logout();
     } catch (err) {
-      console.error('Logout failed:', err);
+      logger.error('Logout failed', err instanceof Error ? err : new Error(String(err)), {
+        component: 'AuthProvider',
+      });
       setError(err instanceof Error ? err.message : 'Logout failed');
     } finally {
       // Always clear user, even if API call fails

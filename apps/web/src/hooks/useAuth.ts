@@ -92,8 +92,9 @@ export function useAuth(): UseAuthReturn {
 
       setUser(authUser);
       return authUser;
-    } catch (err: any) {
-      const errorMessage = err?.message || 'Login failed. Please check your credentials.';
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error ? err.message : 'Login failed. Please check your credentials.';
       setError(errorMessage);
       throw new Error(errorMessage);
     } finally {
@@ -119,8 +120,9 @@ export function useAuth(): UseAuthReturn {
 
       setUser(authUser);
       return authUser;
-    } catch (err: any) {
-      const errorMessage = err?.message || 'Registration failed. Please try again.';
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error ? err.message : 'Registration failed. Please try again.';
       setError(errorMessage);
       throw new Error(errorMessage);
     } finally {
@@ -140,8 +142,7 @@ export function useAuth(): UseAuthReturn {
       await api.auth.logout();
       setUser(null);
       await router.push('/');
-    } catch (err: any) {
-      console.error('Logout error:', err);
+    } catch (err: unknown) {
       // Clear user state even if API call fails
       setUser(null);
       await router.push('/');

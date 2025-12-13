@@ -265,7 +265,7 @@ git rm infra/n8n/workflows/README.md
 # MeepleAI Documentation Index
 
 **Total Documents**: ~65 (consolidated from 115+)
-**Last Updated**: 2025-12-08
+**Last Updated**: 2025-12-13T10:59:23.970Z
 
 ## Quick Start
 - [Getting Started](00-getting-started/quick-start.md)
@@ -552,3 +552,4 @@ meepleai-monorepo/
 **Owner**: Engineering Lead
 **Timeline**: 3 weeks
 **Expected Reduction**: 140 → 65 files (-54%)
+

@@ -174,5 +174,6 @@ Evaluate Ollama's capability to handle Italian board game rules Q&A with ≥80% 
 ---
 
 **Document Status**: 🔄 In Progress (awaiting test results)
-**Last Updated**: 2025-01-12 10:22 UTC
+**Last Updated**: 2025-12-13T10:59:23.970Z
 **Next Update**: After Ollama test execution
+

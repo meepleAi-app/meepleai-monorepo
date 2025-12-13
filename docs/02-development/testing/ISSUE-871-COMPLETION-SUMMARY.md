@@ -436,6 +436,7 @@ For issues or questions about the test automation pipeline:
 ---
 
 **Document Version**: 1.0.0
-**Last Updated**: 2025-11-14
+**Last Updated**: 2025-12-13T10:59:23.970Z
 **Next Review**: After PR #1139 merge
 **Maintainer**: QA & DevOps Team
+

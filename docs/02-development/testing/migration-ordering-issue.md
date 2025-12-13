@@ -181,6 +181,7 @@ dotnet ef database update --connection "Host=localhost;Port=5433;Database=test;U
 
 ---
 
-**Last Updated**: 2025-11-14
+**Last Updated**: 2025-12-13T10:59:23.970Z
 **Discovered By**: Claude Code (root-cause-analyst)
 **Workaround**: EnsureCreatedAsync() in tests ✅
+

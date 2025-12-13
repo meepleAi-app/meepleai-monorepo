@@ -313,5 +313,6 @@ SELECT SUM(total_cost_usd) FROM llm_cost_logs WHERE request_date = CURRENT_DATE;
 ---
 
 **Version**: 1.0
-**Last Updated**: 2025-12-07
+**Last Updated**: 2025-12-13T10:59:23.970Z
 **Owner**: Platform Team
+

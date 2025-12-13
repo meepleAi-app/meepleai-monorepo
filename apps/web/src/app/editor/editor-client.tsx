@@ -195,12 +195,14 @@ export function EditorClient() {
     }
   }, [user, gameId, loadRuleSpec]);
 
-  // Auto-save effect
+  // Auto-save effect - triggers only on debounced content change
+  /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
     if (hasUnsavedChanges && isValid && debouncedContent) {
       void handleAutoSave();
     }
   }, [debouncedContent]);
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   const handleAutoSave = async () => {
     if (!isValid || !gameId || typeof gameId !== 'string') {

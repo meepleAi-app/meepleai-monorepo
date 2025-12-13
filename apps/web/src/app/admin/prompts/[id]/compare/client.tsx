@@ -70,6 +70,7 @@ export function AdminPageClient({ user }: AdminPageClientProps) {
     try {
       const result = await api.admin.getPromptVersions(id);
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- API response type coercion
       setVersions(result as any);
 
       // Auto-select latest two versions if available

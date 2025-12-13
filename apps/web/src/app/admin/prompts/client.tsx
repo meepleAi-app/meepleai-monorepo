@@ -121,6 +121,7 @@ export function AdminPageClient() {
         sortDirection: sortOrder as 'asc' | 'desc',
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- API response type coercion
       setTemplates((result.items as any) || []);
       setTotalPages(Math.ceil((result.total || 0) / 20));
     } catch (err) {

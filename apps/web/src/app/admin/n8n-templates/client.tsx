@@ -65,6 +65,7 @@ export function AdminPageClient() {
     setError(null);
     try {
       const data = await api.admin.getWorkflowTemplates(category || undefined);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- API response type coercion
       setTemplates(data as any);
     } catch (err) {
       logger.error(
@@ -89,6 +90,7 @@ export function AdminPageClient() {
     try {
       const data = await api.admin.getWorkflowTemplateById(templateId);
       if (data) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- API response type coercion
         setSelectedTemplate(data as any);
       } else {
         setError('Template not found');

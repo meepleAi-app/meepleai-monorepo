@@ -133,7 +133,7 @@ export function CommentItem({
     } finally {
       setIsSubmitting(false);
     }
-  }, [comment.id, replyText, onReply]);
+  }, [comment.id, replyText, onReply, showAlert]);
 
   const handleCancelReply = useCallback(() => {
     setReplyText("");

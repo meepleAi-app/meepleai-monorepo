@@ -395,6 +395,7 @@ export function ReportsPageClient() {
         <Separator />
 
         {/* Tabs */}
+        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any -- Tabs value type coercion */}
         <Tabs value={activeTab} onValueChange={v => setActiveTab(v as any)}>
           <TabsList>
             <TabsTrigger value="generate">Generate</TabsTrigger>

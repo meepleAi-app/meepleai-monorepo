@@ -4,6 +4,7 @@ import { defineCoverageReporterConfig } from '@bgotink/playwright-coverage';
 import path from 'path';
 
 // Issue #2009: Prometheus reporter configuration (typed for TypeScript)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Playwright reporter config allows flexible structure
 const prometheusReporter: any[] = process.env.PROMETHEUS_REMOTE_WRITE_URL
   ? [
       [

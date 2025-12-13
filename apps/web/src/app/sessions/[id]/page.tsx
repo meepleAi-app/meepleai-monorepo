@@ -187,13 +187,15 @@ export default function SessionDetailsPage() {
   };
 
   /**
-   * Initialize component
+   * Initialize component - fetchSession is stable, only re-run on id change
    */
+  /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
     if (id) {
       fetchSession();
     }
   }, [id]);
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   // Handle missing ID (after hooks)
   if (!id) {

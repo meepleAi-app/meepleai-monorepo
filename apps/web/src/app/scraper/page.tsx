@@ -39,6 +39,7 @@ export default function ScraperPage() {
         setStatus('Success');
         setLog((json.stdout ?? '') + (json.stderr ? '\n' + json.stderr : ''));
       }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Generic error handling
     } catch (err: any) {
       setStatus(`Error: ${err.message}`);
     } finally {
@@ -58,6 +59,7 @@ export default function ScraperPage() {
       }
       setResults(json.items ?? []);
       setStatus(`Found ${json.items?.length ?? 0} results`);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Generic error handling
     } catch (err: any) {
       setStatus(`Error: ${err.message}`);
     }

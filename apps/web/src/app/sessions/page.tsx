@@ -169,12 +169,14 @@ export default function ActiveSessionsPage() {
   };
 
   /**
-   * Initialize component
+   * Initialize component - fetch functions are stable, only re-run on page change
    */
+  /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
     fetchSessions();
     fetchGames();
   }, [currentPage]);
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   /**
    * Handle pause session action

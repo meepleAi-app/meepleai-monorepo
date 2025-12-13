@@ -114,8 +114,8 @@ export function PdfPreview({ file, onClose }: PdfPreviewProps) {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-     
-  }, [currentPage, numPages, zoomLevel, onClose]);
+    // keyboard handlers use current state via closures
+  }, [currentPage, numPages, zoomLevel, onClose, goToNextPage, goToPreviousPage, zoomIn, zoomOut]);
 
   const onDocumentLoadSuccess = useCallback(({ numPages: pages }: { numPages: number }) => {
     setNumPages(pages);

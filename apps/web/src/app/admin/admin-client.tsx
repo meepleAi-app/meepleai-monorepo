@@ -77,7 +77,7 @@ export function AdminClient() {
       setError(err instanceof Error ? err.message : 'An error occurred');
       setLoading(false);
     }
-  }, [endpointFilter, startDate, endDate, page, pageSize]);
+  }, [filter, endpointFilter, startDate, endDate, page, pageSize]);
 
   // Reset to page 1 when filters change (must run before fetchData)
   useEffect(() => {

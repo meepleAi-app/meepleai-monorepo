@@ -4,7 +4,7 @@
  * Enhanced with toast integration and retry logic for Issue #1095
  */
 
-import { type CSSProperties, useState, useEffect } from 'react';
+import { type CSSProperties, useState, useEffect, useCallback } from 'react';
 import { type CategorizedError, getErrorIcon, getErrorTitle } from '@/lib/errorUtils';
 import { showErrorToast, shouldShowToast } from '@/lib/toastUtils';
 import { UI_CONFIG } from '@/config';
@@ -66,7 +66,7 @@ export function ErrorDisplay({
   }, [error, showToast]);
 
   // Handle automatic retry with exponential backoff
-  const handleRetry = async () => {
+  const handleRetry = useCallback(async () => {
     if (!onRetry) return;
 
     setIsRetrying(true);
@@ -77,7 +77,7 @@ export function ErrorDisplay({
     } finally {
       setIsRetrying(false);
     }
-  };
+  }, [onRetry]);
 
   // Auto-retry logic
   useEffect(() => {
@@ -95,7 +95,7 @@ export function ErrorDisplay({
     }, delay);
 
     return () => clearTimeout(timeout);
-  }, [autoRetry, error.canRetry, retryCount, maxRetries, onRetry]);
+  }, [autoRetry, error.canRetry, retryCount, maxRetries, onRetry, handleRetry]);
 
   const containerStyle: CSSProperties = {
     padding: '20px',

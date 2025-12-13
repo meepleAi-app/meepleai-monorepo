@@ -80,6 +80,7 @@ export function AdminPageClient({ user }: AdminPageClientProps) {
     try {
       const result = await api.admin.getPromptVersion(id, versionId);
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- API response type coercion
       setVersion(result as any);
     } catch (err) {
       setError(getErrorMessage(err, 'Failed to fetch version'));

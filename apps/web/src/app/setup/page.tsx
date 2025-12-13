@@ -170,12 +170,14 @@ export default function SetupPage() {
     void loadCurrentUser();
   }, []);
 
-  // Load games after user is authenticated
+  // Load games after user is authenticated - loadGames is stable, only re-run when auth state changes
+  /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
     if (authUser) {
       void loadGames();
     }
   }, [authUser]);
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   const loadCurrentUser = async () => {
     try {

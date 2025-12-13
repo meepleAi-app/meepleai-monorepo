@@ -223,7 +223,7 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
       // Test observability: notify immediately after queue update (synchronous)
       onQueueAdd?.(newItems);
     },
-    [onQueueAdd]
+    [safeSetQueue, onQueueAdd]
   );
 
   /**
@@ -238,7 +238,7 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
       }
       return prev.filter(i => i.id !== id);
     });
-  }, []);
+  }, [safeSetQueue]);
 
   /**
    * Cancels an ongoing upload
@@ -255,7 +255,7 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
         item.id === id ? { ...item, status: 'cancelled' as UploadStatus, progress: 0 } : item
       )
     );
-  }, []);
+  }, [safeSetQueue]);
 
   /**
    * Retries a failed upload
@@ -267,7 +267,7 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
       )
     );
     allCompleteNotifiedRef.current = false;
-  }, []);
+  }, [safeSetQueue]);
 
   /**
    * Clears all completed uploads from the queue
@@ -278,7 +278,7 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
         item => item.status !== 'success' && item.status !== 'failed' && item.status !== 'cancelled'
       )
     );
-  }, []);
+  }, [safeSetQueue]);
 
   /**
    * Clears the entire queue (cancels active uploads)
@@ -292,7 +292,7 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
 
     safeSetQueue(() => []);
     allCompleteNotifiedRef.current = false;
-  }, []);
+  }, [safeSetQueue]);
 
   /**
    * Gets current queue statistics
@@ -514,7 +514,7 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
         activeUploadsRef.current.delete(item.id);
       }
     },
-    [maxRetries, onUploadComplete, onUploadError, onUploadStart, onUploadSuccess, onRetry, queue]
+    [safeSetQueue, maxRetries, onUploadComplete, onUploadError, onUploadStart, onUploadSuccess, onRetry, queue]
   );
 
   /**
@@ -586,12 +586,14 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
   }, [queue, getStats, onAllComplete]);
 
   useEffect(() => {
+    // Capture ref value for cleanup to avoid stale closure warning
+    const activeUploads = activeUploadsRef.current;
     return () => {
       isMountedRef.current = false;
-      activeUploadsRef.current.forEach(operation => {
+      activeUploads.forEach(operation => {
         operation.abortController.abort();
       });
-      activeUploadsRef.current.clear();
+      activeUploads.clear();
     };
   }, []);
 

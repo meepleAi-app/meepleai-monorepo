@@ -126,6 +126,7 @@ export function AdminPageClient() {
         role: roleFilter !== 'all' ? roleFilter : undefined,
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- API response type coercion
       setUsers(result.items as any);
       setTotal(result.total);
       setDataLoading(false);

@@ -3,6 +3,7 @@ using Api.BoundedContexts.UserNotifications.Domain.Repositories;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.UserNotifications;
+using Api.Observability;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -87,6 +88,9 @@ public class NotificationRepository : RepositoryBase, INotificationRepository
 
         var notificationEntity = MapToPersistence(notification);
         await DbContext.Set<NotificationEntity>().AddAsync(notificationEntity, cancellationToken).ConfigureAwait(false);
+
+        // Record metric for notification creation
+        MeepleAiMetrics.RecordNotificationCreated(notification.Type.Value, notification.Severity.Value);
     }
 
     public async Task UpdateAsync(Notification notification, CancellationToken cancellationToken = default)

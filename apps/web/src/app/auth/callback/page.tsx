@@ -71,7 +71,7 @@ function OAuthCallbackPageContent() {
               {isNewUser === 'true' ? 'Welcome!' : 'Login successful!'}
             </h2>
             <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-              Redirecting to home page...
+              Redirecting to dashboard...
             </p>
           </>
         )}

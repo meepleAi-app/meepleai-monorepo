@@ -1,6 +1,7 @@
 services:
   postgres:
     image: postgres:16.4-alpine3.20
+    container_name: db-meepleai-postgres
     restart: unless-stopped
     profiles: [minimal, dev, observability, ai, automation, full]
     environment:
@@ -15,7 +16,7 @@ services:
     ports:
       - "127.0.0.1:5432:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - meepleai-postgres-data:/var/lib/postgresql/data
       - ./init/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     secrets:
       - postgres-password
@@ -38,13 +39,14 @@ services:
 
   qdrant:
     image: qdrant/qdrant:v1.12.4
+    container_name: db-meepleai-qdrant
     restart: unless-stopped
     profiles: [minimal, dev, observability, ai, automation, full]
     ports:
       - "127.0.0.1:6333:6333"  # HTTP REST API
       - "127.0.0.1:6334:6334"  # gRPC API
     volumes:
-      - qdrantdata:/qdrant/storage
+      - meepleai-qdrant-data:/qdrant/storage
     healthcheck:
       test: ["CMD-SHELL", "kill -0 1 || exit 1"]
       interval: 10s
@@ -64,6 +66,7 @@ services:
 
   redis:
     image: redis:7.4.1-alpine3.20
+    container_name: cache-meepleai-redis
     restart: unless-stopped
     profiles: [minimal, dev, observability, ai, automation, full]
     command: ["sh","-c","redis-server --appendonly yes --requirepass $(cat /run/secrets/redis-password) --maxmemory 768mb --maxmemory-policy allkeys-lru"]
@@ -89,6 +92,7 @@ services:
 
   ollama:
     image: ollama/ollama:0.3.14
+    container_name: ai-meepleai-ollama
     restart: unless-stopped
     profiles: [ai, full]
     environment:
@@ -100,7 +104,7 @@ services:
     ports:
       - "11434:11434"
     volumes:
-      - ollamadata:/root/.ollama
+      - meepleai-ollama-data:/root/.ollama
     healthcheck:
       test: ["CMD-SHELL", "ollama list || exit 1"]
       interval: 10s
@@ -127,7 +131,7 @@ services:
 
   ollama-pull:
     image: curlimages/curl:8.12.1
-    container_name: ollama-pull
+    container_name: ai-meepleai-ollama-pull
     profiles: [ai, full]
     depends_on:
       ollama:
@@ -155,6 +159,7 @@ services:
     build:
       context: ../apps/embedding-service
       dockerfile: ./Dockerfile
+    container_name: ai-meepleai-embedding
     restart: unless-stopped
     profiles: [ai, full]
     ports:
@@ -188,7 +193,7 @@ services:
     build:
       context: ../apps/unstructured-service
       dockerfile: ./Dockerfile
-    container_name: meepleai-unstructured
+    container_name: ai-meepleai-unstructured
     restart: unless-stopped
     profiles: [ai, full]
     ports:
@@ -206,7 +211,7 @@ services:
       - ENABLE_METRICS=true
       - ENABLE_STRUCTURED_LOGGING=true
     volumes:
-      - unstructured-temp:/tmp/pdf-extraction
+      - meepleai-unstructured-temp:/tmp/pdf-extraction
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
       interval: 30s
@@ -229,7 +234,7 @@ services:
     build:
       context: ../apps/smoldocling-service
       dockerfile: ./Dockerfile
-    container_name: meepleai-smoldocling
+    container_name: ai-meepleai-smoldocling
     restart: unless-stopped
     profiles: [ai, full]
     ports:
@@ -251,8 +256,8 @@ services:
       - ENABLE_STRUCTURED_LOGGING=true
       - ENABLE_MODEL_WARMUP=true  # Enable warmup so health checks pass
     volumes:
-      - smoldocling-temp:/tmp/pdf-processing
-      - smoldocling-models:/root/.cache/huggingface
+      - meepleai-smoldocling-temp:/tmp/pdf-processing
+      - meepleai-smoldocling-models:/root/.cache/huggingface
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
       interval: 60s
@@ -282,7 +287,7 @@ services:
     build:
       context: ../apps/reranker-service
       dockerfile: ./Dockerfile
-    container_name: meepleai-reranker
+    container_name: ai-meepleai-reranker
     restart: unless-stopped
     profiles: [ai, full]
     ports:
@@ -293,7 +298,7 @@ services:
       - LOG_LEVEL=INFO
       - ENABLE_MODEL_WARMUP=true
     volumes:
-      - reranker-models:/home/reranker/.cache/huggingface
+      - meepleai-reranker-models:/home/reranker/.cache/huggingface
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
       interval: 30s
@@ -326,6 +331,7 @@ services:
 
   prometheus:
     image: prom/prometheus:v3.7.0
+    container_name: monitoring-meepleai-prometheus
     restart: unless-stopped
     profiles: [dev, observability, full]
     command:
@@ -337,7 +343,7 @@ services:
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./prometheus-rules.yml:/etc/prometheus/prometheus-rules.yml:ro
-      - prometheusdata:/prometheus
+      - meepleai-prometheus-data:/prometheus
     ports:
       - "127.0.0.1:9090:9090"
     healthcheck:
@@ -359,6 +365,7 @@ services:
   # OPS-05: Error Monitoring & Alerting
   alertmanager:
     image: prom/alertmanager:v0.27.0
+    container_name: monitoring-meepleai-alertmanager
     restart: unless-stopped
     profiles: [observability, full]
     env_file:
@@ -368,7 +375,7 @@ services:
     volumes:
       - ./scripts/load-secrets-env.sh:/scripts/load-secrets-env.sh:ro
       - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
-      - alertmanagerdata:/alertmanager
+      - meepleai-alertmanager-data:/alertmanager
     entrypoint: ["/scripts/load-secrets-env.sh"]
     command:
       - '/bin/alertmanager'
@@ -418,6 +425,7 @@ services:
   # P3-705: cAdvisor for container metrics
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:v0.49.1
+    container_name: monitoring-meepleai-cadvisor
     restart: unless-stopped
     profiles: [observability, full]
     privileged: true
@@ -443,6 +451,7 @@ services:
   # P3-705: node-exporter for host metrics
   node-exporter:
     image: prom/node-exporter:v1.8.2
+    container_name: monitoring-meepleai-node-exporter
     restart: unless-stopped
     profiles: [observability, full]
     command:
@@ -467,6 +476,7 @@ services:
 
   grafana:
     image: grafana/grafana:11.4.0
+    container_name: monitoring-meepleai-grafana
     restart: unless-stopped
     profiles: [dev, observability, full]
     environment:
@@ -479,7 +489,7 @@ services:
       GF_AUTH_ANONYMOUS_ENABLED: "true"
       GF_AUTH_ANONYMOUS_ORG_ROLE: "Viewer"
     volumes:
-      - grafanadata:/var/lib/grafana
+      - meepleai-grafana-data:/var/lib/grafana
       - ./grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
       - ./grafana-dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:ro
       - ./dashboards:/var/lib/grafana/dashboards:ro
@@ -509,6 +519,7 @@ services:
 
   n8n:
     image: n8nio/n8n:1.114.4
+    container_name: automation-meepleai-n8n
     restart: unless-stopped
     profiles: [automation, full]
     environment:
@@ -544,6 +555,7 @@ services:
     build:
       context: ../apps/api
       dockerfile: ./src/Api/Dockerfile
+    container_name: app-meepleai-api
     restart: unless-stopped
     profiles: [minimal, dev, observability, ai, automation, full]
     env_file:
@@ -621,6 +633,7 @@ services:
     build:
       context: ../apps/web
       dockerfile: ./Dockerfile
+    container_name: app-meepleai-web
     restart: unless-stopped
     profiles: [minimal, dev, observability, ai, automation, full]
     env_file:
@@ -658,24 +671,24 @@ services:
           memory: 512M
 
 volumes:
-  pgdata:
-  qdrantdata:
+  meepleai-postgres-data:
+  meepleai-qdrant-data:
   # seqdata removed - replaced by HyperDX (Issue #1564)
-  ollamadata:
+  meepleai-ollama-data:
   # OPS-02: OpenTelemetry volumes
   # jaegerdata removed - using ephemeral storage for development
   # Seq and Jaeger replaced by HyperDX unified observability
-  prometheusdata:
-  grafanadata:
+  meepleai-prometheus-data:
+  meepleai-grafana-data:
   # OPS-05: Error Monitoring & Alerting volumes
-  alertmanagerdata:
+  meepleai-alertmanager-data:
   # BGAI-001-v2: Unstructured PDF extraction temporary storage
-  unstructured-temp:
+  meepleai-unstructured-temp:
   # BGAI-005: SmolDocling VLM service storage
-  smoldocling-temp:
-  smoldocling-models:  # Hugging Face model cache
+  meepleai-smoldocling-temp:
+  meepleai-smoldocling-models:  # Hugging Face model cache
   # ADR-016 Phase 4: Reranker service model cache
-  reranker-models:
+  meepleai-reranker-models:
 
 networks:
   meepleai:

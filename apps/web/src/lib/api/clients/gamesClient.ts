@@ -18,6 +18,8 @@ import {
   RuleSpecDiffSchema,
   GameFAQSchema,
   GetGameFAQsResultSchema,
+  EditorLockSchema,
+  AcquireLockResultSchema,
   type Game,
   type GameSessionDto,
   type PaginatedGamesResponse,
@@ -28,6 +30,8 @@ import {
   type RuleSpecDiff,
   type GameFAQ,
   type GetGameFAQsResult,
+  type EditorLock,
+  type AcquireLockResult,
 } from '../schemas';
 import { AgentDtoSchema, type AgentDto } from '../schemas';
 
@@ -394,6 +398,82 @@ export function createGamesClient({ httpClient }: CreateGamesClientParams) {
       );
       if (!result) {
         throw new Error('Failed to upvote FAQ: no response from server');
+      }
+      return result;
+    },
+
+    // ========== Editor Locks (Issue #2055) ==========
+
+    /**
+     * Acquire editor lock for a game's RuleSpec
+     * POST /api/v1/games/{gameId}/rulespec/lock
+     * Issue #2055: Collaborative editing lock acquisition
+     */
+    async acquireEditorLock(gameId: string): Promise<AcquireLockResult> {
+      const result = await httpClient.post(
+        `/api/v1/games/${encodeURIComponent(gameId)}/rulespec/lock`,
+        {},
+        AcquireLockResultSchema
+      );
+      return result ?? { success: false, lock: null, message: 'No response from server' };
+    },
+
+    /**
+     * Release editor lock for a game's RuleSpec
+     * DELETE /api/v1/games/{gameId}/rulespec/lock
+     * Issue #2055: Release lock when done editing
+     */
+    async releaseEditorLock(gameId: string): Promise<void> {
+      await httpClient.delete(`/api/v1/games/${encodeURIComponent(gameId)}/rulespec/lock`);
+    },
+
+    /**
+     * Get current lock status for a game's RuleSpec
+     * GET /api/v1/games/{gameId}/rulespec/lock
+     * Issue #2055: Check if someone else has the lock
+     */
+    async getEditorLockStatus(gameId: string): Promise<EditorLock | null> {
+      return httpClient.get(
+        `/api/v1/games/${encodeURIComponent(gameId)}/rulespec/lock`,
+        EditorLockSchema
+      );
+    },
+
+    /**
+     * Refresh editor lock to extend TTL
+     * POST /api/v1/games/{gameId}/rulespec/lock/refresh
+     * Issue #2055: Keep lock alive during active editing
+     */
+    async refreshEditorLock(gameId: string): Promise<AcquireLockResult> {
+      const result = await httpClient.post(
+        `/api/v1/games/${encodeURIComponent(gameId)}/rulespec/lock/refresh`,
+        {},
+        AcquireLockResultSchema
+      );
+      return result ?? { success: false, lock: null, message: 'No response from server' };
+    },
+
+    /**
+     * Update RuleSpec with optimistic concurrency check
+     * PUT /api/v1/games/{gameId}/rulespec
+     * Issue #2055: Extended to include expectedETag for conflict detection
+     */
+    async updateRuleSpecWithETag(
+      gameId: string,
+      ruleSpecData: Partial<RuleSpec>,
+      expectedETag?: string
+    ): Promise<RuleSpec> {
+      const payload = {
+        ...ruleSpecData,
+        ...(expectedETag && { expectedETag }),
+      };
+      const result = await httpClient.put(
+        `/api/v1/games/${encodeURIComponent(gameId)}/rulespec`,
+        payload,
+        RuleSpecSchema
+      );
+      if (!result) {
+        throw new Error('Failed to update RuleSpec: no response from server');
       }
       return result;
     },

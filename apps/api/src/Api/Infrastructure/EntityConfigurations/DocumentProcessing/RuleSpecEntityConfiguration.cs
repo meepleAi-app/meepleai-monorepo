@@ -33,5 +33,9 @@ public class RuleSpecEntityConfiguration : IEntityTypeConfiguration<RuleSpecEnti
             .OnDelete(DeleteBehavior.SetNull);
         builder.HasIndex(e => new { e.GameId, e.Version }).IsUnique();
         builder.HasIndex(e => e.ParentVersionId);
+
+        // Issue #2055: Optimistic concurrency control for collaborative editing
+        builder.Property(e => e.RowVersion)
+            .IsRowVersion();
     }
 }

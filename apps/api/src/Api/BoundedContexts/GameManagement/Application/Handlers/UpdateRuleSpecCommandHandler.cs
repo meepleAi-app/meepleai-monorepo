@@ -56,6 +56,29 @@ public class UpdateRuleSpecCommandHandler : ICommandHandler<UpdateRuleSpecComman
             throw new InvalidOperationException($"User {command.UserId} not found");
         }
 
+        // Issue #2055: Optimistic concurrency check
+        RuleSpecEntity? latestSpec = null;
+        if (!string.IsNullOrEmpty(command.ExpectedETag))
+        {
+            latestSpec = await _dbContext.RuleSpecs
+                .AsNoTracking()
+                .Where(r => r.GameId == command.GameId)
+                .OrderByDescending(r => r.CreatedAt)
+                .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+
+            if (latestSpec != null && latestSpec.RowVersion != null)
+            {
+                var currentETag = Convert.ToBase64String(latestSpec.RowVersion);
+                if (!string.Equals(currentETag, command.ExpectedETag, StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException(
+                        $"Conflict detected: RuleSpec has been modified by another user. " +
+                        $"Expected version ETag {command.ExpectedETag} but found {currentETag}. " +
+                        $"Please refresh and try again.");
+                }
+            }
+        }
+
         // Determine version
         var versionProvided = !string.IsNullOrWhiteSpace(command.Version);
         var version = command.Version?.Trim() ?? string.Empty;
@@ -73,6 +96,9 @@ public class UpdateRuleSpecCommandHandler : ICommandHandler<UpdateRuleSpecComman
             }
         }
 
+        // Issue #2055: Set parent version ID if provided or use latest
+        var parentVersionId = command.ParentVersionId ?? latestSpec?.Id;
+
         // Create new RuleSpec version
         var specEntity = new RuleSpecEntity
         {
@@ -80,6 +106,7 @@ public class UpdateRuleSpecCommandHandler : ICommandHandler<UpdateRuleSpecComman
             Version = version,
             CreatedAt = _timeProvider.GetUtcNow().UtcDateTime,
             CreatedByUserId = command.UserId,
+            ParentVersionId = parentVersionId, // Issue #2055: Link to parent version
         };
 
         int sortOrder = 1;
@@ -115,6 +142,11 @@ public class UpdateRuleSpecCommandHandler : ICommandHandler<UpdateRuleSpecComman
             command.UserAgent,
             cancellationToken).ConfigureAwait(false);
 
+        // Issue #2055: Include ETag for optimistic concurrency
+        var etag = specEntity.RowVersion != null
+            ? Convert.ToBase64String(specEntity.RowVersion)
+            : null;
+
         return new RuleSpecDto(
             Id: specEntity.Id,
             GameId: specEntity.GameId,
@@ -131,7 +163,8 @@ public class UpdateRuleSpecCommandHandler : ICommandHandler<UpdateRuleSpecComman
                     Page: a.PageNumber?.ToString(CultureInfo.InvariantCulture),
                     Line: a.LineNumber?.ToString(CultureInfo.InvariantCulture)
                 ))
-                .ToList()
+                .ToList(),
+            ETag: etag
         );
     }
 }

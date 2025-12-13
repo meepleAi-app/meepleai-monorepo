@@ -82,9 +82,7 @@ test.describe('Chess page - User registration and access journey', () => {
     // Verify chat interface is present
     await expect(page.getByRole('heading', { name: "Chat con l'Agente" })).toBeVisible();
     await expect(page.getByText('Benvenuto nella Chess Chat!')).toBeVisible();
-    await expect(
-      page.getByPlaceholder('Chiedi consigli o analisi della posizione...')
-    ).toBeVisible();
+    await expect(page.locator('[data-testid="chess-message-input"]')).toBeVisible();
 
     // Verify game status is displayed
     await expect(page.getByText('Turno:')).toBeVisible();
@@ -107,10 +105,10 @@ test.describe('Chess page - User registration and access journey', () => {
     await expect(page.getByText('Benvenuto nella Chess Chat!')).toBeVisible();
 
     // Ask a question to the chess agent
-    const input = page.getByPlaceholder('Chiedi consigli o analisi della posizione...');
+    const input = page.locator('[data-testid="chess-message-input"]');
     await input.fill('Qual è la migliore apertura per il bianco?');
 
-    await page.getByRole('button', { name: 'Invia' }).click();
+    await page.locator('[data-testid="chess-send-button"]').click();
 
     // Wait for response (skip checking for loading state as it may be too fast with mocked API)
     await expect(page.getByText(/Risposta alla domanda:/)).toBeVisible({ timeout: 10000 });
@@ -149,9 +147,9 @@ test.describe('Chess page - User registration and access journey', () => {
     await expect(page.getByRole('heading', { name: 'Chess Assistant' })).toBeVisible();
 
     // Send a message first to populate chat
-    const input = page.getByPlaceholder('Chiedi consigli o analisi della posizione...');
+    const input = page.locator('[data-testid="chess-message-input"]');
     await input.fill('Analizza questa posizione');
-    await page.getByRole('button', { name: 'Invia' }).click();
+    await page.locator('[data-testid="chess-send-button"]').click();
 
     // Wait for response
     await expect(page.getByText(/Risposta alla domanda:/)).toBeVisible();
@@ -221,15 +219,15 @@ test.describe('Chess page - User registration and access journey', () => {
     await expect(page.getByRole('heading', { name: 'Chess Assistant' })).toBeVisible();
 
     // 3. Ask first question
-    let input = page.getByPlaceholder('Chiedi consigli o analisi della posizione...');
+    let input = page.locator('[data-testid="chess-message-input"]');
     await input.fill('Come si muove il cavallo?');
-    await page.getByRole('button', { name: 'Invia' }).click();
+    await page.locator('[data-testid="chess-send-button"]').click();
     await expect(page.getByText(/Risposta alla domanda: Come si muove il cavallo/)).toBeVisible();
 
     // 4. Ask second question
-    input = page.getByPlaceholder('Chiedi consigli o analisi della posizione...');
+    input = page.locator('[data-testid="chess-message-input"]');
     await input.fill("Spiegami l'arrocco");
-    await page.getByRole('button', { name: 'Invia' }).click();
+    await page.locator('[data-testid="chess-send-button"]').click();
     await expect(page.getByText(/Risposta alla domanda: Spiegami l'arrocco/)).toBeVisible();
 
     // 5. Verify both messages are in chat history (use .first() as messages appear twice: user + AI)
@@ -245,9 +243,9 @@ test.describe('Chess page - User registration and access journey', () => {
     await expect(page.getByText(/Spiegami l'arrocco/)).not.toBeVisible();
 
     // 7. Ask new question after reset
-    input = page.getByPlaceholder('Chiedi consigli o analisi della posizione...');
+    input = page.locator('[data-testid="chess-message-input"]');
     await input.fill("Qual è l'apertura italiana?");
-    await page.getByRole('button', { name: 'Invia' }).click();
+    await page.locator('[data-testid="chess-send-button"]').click();
     await expect(page.getByText(/Risposta alla domanda: Qual è l'apertura italiana/)).toBeVisible();
   });
 });

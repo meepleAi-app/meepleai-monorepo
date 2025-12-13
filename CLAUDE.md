@@ -443,7 +443,7 @@ bash tools/cleanup-caches.sh                # Run
 ---
 
 **Version**: 1.0-rc (DDD 100%)
-**Last Updated**: 2025-12-07
+**Last Updated**: 2025-12-13T10:53:57.588Z
 **Last Verified**: 2025-12-07 (against codebase)
 **Owner**: Engineering Lead
 

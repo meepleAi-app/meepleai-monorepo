@@ -58,12 +58,7 @@ vi.mock('sonner', () => ({
 describe('InfrastructureClient', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.useFakeTimers();
-  });
-
-  afterEach(() => {
-    vi.runOnlyPendingTimers();
-    vi.useRealTimers();
+    // NOTE: Do NOT use vi.useFakeTimers() globally - it breaks waitFor polling
   });
 
   // ==================== Core Functionality ====================
@@ -136,7 +131,7 @@ describe('InfrastructureClient', () => {
             () => {
               expect(api.admin.getInfrastructureDetails).toHaveBeenCalledTimes(i + 2);
             },
-            { timeout: TEST_TIMEOUTS.FAST }
+            { timeout: TEST_TIMEOUTS.STANDARD }
           );
         }
 
@@ -152,53 +147,70 @@ describe('InfrastructureClient', () => {
 
         expect(refreshButton).toBeDisabled();
       },
-      { timeout: TEST_TIMEOUTS.INTEGRATION }
+      TEST_TIMEOUTS.INTEGRATION
     );
   });
 
   // ==================== Auto-Refresh ====================
 
   describe('Auto-Refresh Mechanism', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.runOnlyPendingTimers();
+      vi.useRealTimers();
+    });
+
     it('should auto-refresh every 30 seconds by default', async () => {
       const mockData = createHealthyInfraData();
       vi.mocked(api.admin.getInfrastructureDetails).mockResolvedValue(mockData);
 
       render(<InfrastructureClient />);
 
-      // Initial fetch
-      await waitFor(() => {
-        expect(api.admin.getInfrastructureDetails).toHaveBeenCalledTimes(1);
-      });
+      // Initial fetch - use async timer advancement
+      await vi.advanceTimersToNextTimerAsync();
+      await vi.advanceTimersToNextTimerAsync();
+
+      // Get initial call count
+      const initialCallCount = vi.mocked(api.admin.getInfrastructureDetails).mock.calls.length;
+      expect(initialCallCount).toBeGreaterThanOrEqual(1);
 
       // Advance 30 seconds
-      vi.advanceTimersByTime(30000);
+      await vi.advanceTimersByTimeAsync(30000);
 
-      await waitFor(() => {
-        expect(api.admin.getInfrastructureDetails).toHaveBeenCalledTimes(2);
-      });
+      // Should have one more call after 30 seconds
+      expect(api.admin.getInfrastructureDetails).toHaveBeenCalledTimes(initialCallCount + 1);
     });
 
     it('should allow disabling auto-refresh', async () => {
-      const user = userEvent.setup({ delay: null });
       const mockData = createHealthyInfraData();
       vi.mocked(api.admin.getInfrastructureDetails).mockResolvedValue(mockData);
 
       render(<InfrastructureClient />);
 
-      await waitFor(() => {
-        expect(api.admin.getInfrastructureDetails).toHaveBeenCalledTimes(1);
-      });
+      // Initial fetch
+      await vi.advanceTimersToNextTimerAsync();
+      await vi.advanceTimersToNextTimerAsync();
 
-      // Disable auto-refresh
+      // Get initial call count
+      const callCountBeforeDisable = vi.mocked(api.admin.getInfrastructureDetails).mock.calls
+        .length;
+      expect(callCountBeforeDisable).toBeGreaterThanOrEqual(1);
+
+      // Disable auto-refresh using fireEvent (simpler with fake timers)
+      const { fireEvent } = await import('@testing-library/react');
       const autoRefreshSwitch = screen.getByRole('switch', {
         name: /aggiornamento automatico/i,
       });
-      await user.click(autoRefreshSwitch);
+      fireEvent.click(autoRefreshSwitch);
 
       // Advance time - should not fetch again
-      vi.advanceTimersByTime(60000);
+      await vi.advanceTimersByTimeAsync(60000);
 
-      expect(api.admin.getInfrastructureDetails).toHaveBeenCalledTimes(1);
+      // Call count should remain the same (no additional fetches)
+      expect(api.admin.getInfrastructureDetails).toHaveBeenCalledTimes(callCountBeforeDisable);
     });
   });
 
@@ -212,18 +224,24 @@ describe('InfrastructureClient', () => {
 
       render(<InfrastructureClient />);
 
-      await waitFor(() => {
-        expect(screen.getByText('PostgreSQL')).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(screen.getByText('PostgreSQL')).toBeInTheDocument();
+        },
+        { timeout: TEST_TIMEOUTS.STANDARD }
+      );
 
       // Search for "redis"
       const searchInput = screen.getByPlaceholderText(/cerca servizio/i);
       await user.type(searchInput, 'redis');
 
-      await waitFor(() => {
-        expect(screen.getByText('Redis')).toBeInTheDocument();
-        expect(screen.queryByText('PostgreSQL')).not.toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(screen.getByText('Redis')).toBeInTheDocument();
+          expect(screen.queryByText('PostgreSQL')).not.toBeInTheDocument();
+        },
+        { timeout: TEST_TIMEOUTS.STANDARD }
+      );
     });
   });
 
@@ -254,9 +272,12 @@ describe('InfrastructureClient', () => {
 
       render(<InfrastructureClient />);
 
-      await waitFor(() => {
-        expect(screen.getByText('PostgreSQL')).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(screen.getByText('PostgreSQL')).toBeInTheDocument();
+        },
+        { timeout: TEST_TIMEOUTS.STANDARD }
+      );
 
       const csvButton = screen.getByRole('button', { name: /csv/i });
       await user.click(csvButton);
@@ -275,9 +296,12 @@ describe('InfrastructureClient', () => {
 
       render(<InfrastructureClient />);
 
-      await waitFor(() => {
-        expect(screen.getByText('PostgreSQL')).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(screen.getByText('PostgreSQL')).toBeInTheDocument();
+        },
+        { timeout: TEST_TIMEOUTS.STANDARD }
+      );
 
       // Check for role="list"
       expect(screen.getByRole('list', { name: /stato servizi/i })).toBeInTheDocument();

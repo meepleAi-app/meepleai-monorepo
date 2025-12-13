@@ -114,28 +114,47 @@ describe('InfrastructureClient', () => {
 
         render(<InfrastructureClient />);
 
-        // Wait for initial failure
+        // Wait for initial failure and error message
         await waitFor(
           () => {
             expect(api.admin.getInfrastructureDetails).toHaveBeenCalledTimes(1);
+            expect(screen.getByText(/errore caricamento dati infrastruttura/i)).toBeInTheDocument();
           },
           { timeout: TEST_TIMEOUTS.STANDARD }
         );
 
         // Trigger 4 more failures via manual refresh
-        const refreshButton = screen.getByRole('button', { name: /aggiorna/i });
-
+        // Each iteration: click → wait for API call → wait for error to appear
         for (let i = 0; i < 4; i++) {
+          const refreshButton = screen.getByRole('button', { name: /aggiorna/i });
+
+          // Skip if button is disabled (circuit opened early)
+          if (refreshButton.hasAttribute('disabled')) break;
+
           await user.click(refreshButton);
+
+          const expectedCalls = i + 2;
           await waitFor(
             () => {
-              expect(api.admin.getInfrastructureDetails).toHaveBeenCalledTimes(i + 2);
+              expect(api.admin.getInfrastructureDetails).toHaveBeenCalledTimes(expectedCalls);
             },
             { timeout: TEST_TIMEOUTS.STANDARD }
           );
+
+          // Wait for the error state to update before next iteration
+          await waitFor(
+            () => {
+              // After 5 failures, circuit opens with different message
+              const errorElement =
+                screen.queryByText(/errore caricamento/i) ||
+                screen.queryByText(/troppe richieste fallite/i);
+              expect(errorElement).toBeInTheDocument();
+            },
+            { timeout: TEST_TIMEOUTS.FAST }
+          );
         }
 
-        // Circuit should be open
+        // Circuit should be open after 5 failures
         await waitFor(
           () => {
             expect(
@@ -145,7 +164,9 @@ describe('InfrastructureClient', () => {
           { timeout: TEST_TIMEOUTS.STANDARD }
         );
 
-        expect(refreshButton).toBeDisabled();
+        // Verify refresh button is disabled
+        const finalRefreshButton = screen.getByRole('button', { name: /aggiorna/i });
+        expect(finalRefreshButton).toBeDisabled();
       },
       TEST_TIMEOUTS.INTEGRATION
     );

@@ -68,14 +68,16 @@ export interface MockStreamingControls {
   reset: () => void;
 }
 
+/** Snippet type for mock streaming state */
+type MockSnippet = { text: string; source: string; page?: number | null; line?: number | null };
+
 /**
  * Mock streaming callbacks
  */
 export interface MockStreamingCallbacks {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Snippets type varies by stream source
   onComplete?: (
     answer: string,
-    snippets: any[],
+    snippets: MockSnippet[],
     metadata: {
       totalTokens: number;
       confidence: number | null;

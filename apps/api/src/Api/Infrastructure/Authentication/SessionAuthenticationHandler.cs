@@ -7,7 +7,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
 
-namespace Api.Authentication;
+namespace Api.Infrastructure.Authentication;
 
 /// <summary>
 /// Authentication handler that integrates SessionAuthenticationMiddleware with ASP.NET Core's authentication system.

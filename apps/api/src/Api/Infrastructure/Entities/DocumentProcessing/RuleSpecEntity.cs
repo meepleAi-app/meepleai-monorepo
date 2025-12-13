@@ -1,5 +1,12 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace Api.Infrastructure.Entities;
 
+/// <summary>
+/// Persistence entity for RuleSpec.
+/// Issue #2055: Collaborative editing with optimistic concurrency control.
+/// Uses RowVersion (ETag) to prevent lost updates when concurrent modifications occur.
+/// </summary>
 public class RuleSpecEntity
 {
     public Guid Id { get; set; }
@@ -14,6 +21,10 @@ public class RuleSpecEntity
     // EDIT-06: Version timeline and branching support
     public Guid? ParentVersionId { get; set; }
     public string? MergedFromVersionIds { get; set; } // Comma-separated GUIDs
+
+    // Issue #2055: Optimistic concurrency control for collaborative editing
+    [Timestamp]
+    public byte[]? RowVersion { get; set; }
 
     public GameEntity Game { get; set; } = default!;
     public UserEntity? CreatedBy { get; set; }

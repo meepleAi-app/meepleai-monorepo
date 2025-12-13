@@ -298,3 +298,55 @@ export const RuleSpecDiffSchema = z.object({
 });
 
 export type RuleSpecDiff = z.infer<typeof RuleSpecDiffSchema>;
+
+// ========== Editor Locks (Issue #2055) ==========
+
+/**
+ * Editor Lock DTO Schema (Issue #2055)
+ * Collaborative editing lock information for conflict prevention
+ */
+export const EditorLockSchema = z.object({
+  gameId: z.string().uuid(),
+  lockedByUserId: z.string().uuid().nullable(),
+  lockedByUserEmail: z.string().nullable(),
+  lockedAt: z.string().datetime().nullable(),
+  expiresAt: z.string().datetime().nullable(),
+  isLocked: z.boolean(),
+  isCurrentUserLock: z.boolean(),
+});
+
+export type EditorLock = z.infer<typeof EditorLockSchema>;
+
+/**
+ * Acquire Lock Result Schema (Issue #2055)
+ * Response from lock acquisition attempt
+ */
+export const AcquireLockResultSchema = z.object({
+  success: z.boolean(),
+  lock: EditorLockSchema.nullable(),
+  message: z.string().nullable().optional(),
+});
+
+export type AcquireLockResult = z.infer<typeof AcquireLockResultSchema>;
+
+/**
+ * RuleSpec Conflict DTO Schema (Issue #2055)
+ * Conflict information when concurrent modifications detected
+ */
+export const RuleSpecConflictSchema = z.object({
+  localVersion: RuleSpecSchema,
+  remoteVersion: RuleSpecSchema,
+  conflictReason: z.string(),
+});
+
+export type RuleSpecConflict = z.infer<typeof RuleSpecConflictSchema>;
+
+/**
+ * Extended RuleSpec with ETag (Issue #2055)
+ * RuleSpec with optimistic concurrency control ETag
+ */
+export const RuleSpecWithETagSchema = RuleSpecSchema.extend({
+  etag: z.string().nullable().optional(),
+});
+
+export type RuleSpecWithETag = z.infer<typeof RuleSpecWithETagSchema>;

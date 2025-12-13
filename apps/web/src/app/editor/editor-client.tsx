@@ -3,12 +3,15 @@
  * Editor Page - Client Component
  *
  * Issue #1611 Phase 2: SSR Auth Protection Migration
+ * Issue #2055: Collaborative editing with optimistic locks
  *
  * This Client Component handles all interactive logic:
  * - RuleSpec editing (rich text + JSON modes)
  * - Auto-save functionality
  * - Undo/Redo history
  * - Validation and publishing
+ * - Editor lock management (Issue #2055)
+ * - Conflict detection and resolution (Issue #2055)
  *
  * Server Component (page.tsx) handles:
  * - Server-side authentication check
@@ -23,7 +26,12 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import type { AuthUser } from '@/types/auth';
 import { api } from '@/lib/api';
-import { RichTextEditor, ViewModeToggle } from '@/components/editor';
+import {
+  RichTextEditor,
+  ViewModeToggle,
+  ConflictResolutionModal,
+  PresenceIndicator,
+} from '@/components/editor';
 import { useDebounce } from '@/hooks/useDebounce';
 import { cn } from '@/lib/utils';
 import { getErrorMessage } from '@/lib/utils/errorHandler';
@@ -31,6 +39,17 @@ import { logger } from '@/lib/logger';
 import { createErrorContext } from '@/lib/errors';
 import { useAuthUser } from '@/hooks/useAuthUser';
 import type { RuleAtom, RuleSpec } from '@/lib/api/schemas';
+import {
+  useRuleSpecLockStore,
+  selectHasLock,
+  selectLockStatus,
+  selectAcquisitionStatus,
+  selectLockError,
+  selectShowConflictModal,
+  selectConflict,
+  selectCurrentETag,
+  type LockApiClient,
+} from '@/stores/RuleSpecLockStore';
 
 type AuthResponse = {
   user: AuthUser;
@@ -65,6 +84,35 @@ export function EditorClient() {
   // Undo/Redo state
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [historyIndex, setHistoryIndex] = useState<number>(-1);
+
+  // Issue #2055: Lock state from Zustand store
+  const hasLock = useRuleSpecLockStore(selectHasLock);
+  const lockStatus = useRuleSpecLockStore(selectLockStatus);
+  const acquisitionStatus = useRuleSpecLockStore(selectAcquisitionStatus);
+  const lockError = useRuleSpecLockStore(selectLockError);
+  const showConflictModal = useRuleSpecLockStore(selectShowConflictModal);
+  const conflict = useRuleSpecLockStore(selectConflict);
+  const currentETag = useRuleSpecLockStore(selectCurrentETag);
+  const {
+    initializeLock,
+    releaseLock,
+    setCurrentETag,
+    handleConflict,
+    resolveConflict,
+    closeConflictModal,
+    cleanup: cleanupLock,
+  } = useRuleSpecLockStore();
+
+  // Issue #2055: Lock API client adapter
+  const lockApiClient: LockApiClient = useMemo(
+    () => ({
+      acquireEditorLock: api.games.acquireEditorLock.bind(api.games),
+      releaseEditorLock: api.games.releaseEditorLock.bind(api.games),
+      refreshEditorLock: api.games.refreshEditorLock.bind(api.games),
+      getEditorLockStatus: api.games.getEditorLockStatus.bind(api.games),
+    }),
+    []
+  );
 
   // Debounced content for auto-save (2 second delay)
   const debouncedContent = useDebounce(viewMode === 'rich' ? richContent : jsonContent, 2000);
@@ -195,6 +243,35 @@ export function EditorClient() {
       void loadRuleSpec(gameId);
     }
   }, [user, gameId, loadRuleSpec]);
+
+  // Issue #2055: Initialize lock when entering editor
+  useEffect(() => {
+    if (user && gameId && typeof gameId === 'string') {
+      void initializeLock(gameId, lockApiClient);
+    }
+
+    // Cleanup lock on unmount
+    return () => {
+      if (gameId) {
+        void releaseLock(lockApiClient);
+      }
+      cleanupLock();
+    };
+  }, [user, gameId, initializeLock, releaseLock, cleanupLock, lockApiClient]);
+
+  // Issue #2055: Handle beforeunload to release lock
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (gameId && hasLock) {
+        // Use sendBeacon for reliable delivery on page unload
+        const url = `/api/v1/games/${encodeURIComponent(gameId)}/rulespec/lock`;
+        navigator.sendBeacon?.(url, JSON.stringify({ _method: 'DELETE' }));
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [gameId, hasLock]);
 
   // Auto-save effect - triggers only on debounced content change
   /* eslint-disable react-hooks/exhaustive-deps */
@@ -335,6 +412,12 @@ export function EditorClient() {
       return;
     }
 
+    // Issue #2055: Check if we have the lock
+    if (!hasLock) {
+      setErrorMessage("Non hai il controllo esclusivo. Attendi che l'altro utente finisca.");
+      return;
+    }
+
     try {
       const contentToSave = viewMode === 'rich' ? convertRichToJson(richContent) : jsonContent;
       const parsed: RuleSpec = JSON.parse(contentToSave);
@@ -342,19 +425,94 @@ export function EditorClient() {
       setErrorMessage('');
       setStatusMessage('');
 
-      const updated = await api.games.updateRuleSpec(gameId, parsed);
+      // Issue #2055: Use ETag for optimistic concurrency
+      const updated = await api.games.updateRuleSpecWithETag(
+        gameId,
+        parsed,
+        currentETag ?? undefined
+      );
       setRuleSpec(updated);
       setHasUnsavedChanges(false);
+
+      // Issue #2055: Update ETag after successful save
+      // Extract ETag from response if available (backend returns it in RuleSpecDto)
+      const newETag = (updated as RuleSpec & { etag?: string }).etag;
+      if (newETag) {
+        setCurrentETag(newETag);
+      }
+
       setStatusMessage(`RuleSpec salvato con successo (versione ${updated.version})`);
     } catch (err) {
-      logger.error(
-        'Failed to save rule spec',
-        err instanceof Error ? err : new Error(String(err)),
-        createErrorContext('EditorPage', 'handleSave', { gameId, operation: 'save_rule_spec' })
-      );
-      setErrorMessage(getErrorMessage(err, 'Impossibile salvare RuleSpec'));
+      // Issue #2055: Handle conflict errors
+      const errorMsg = getErrorMessage(err, 'Impossibile salvare RuleSpec');
+
+      if (errorMsg.includes('Conflict detected') || errorMsg.includes('modified by another user')) {
+        // Fetch the latest version from server
+        try {
+          const remoteVersion = await api.games.getRuleSpec(gameId);
+          if (remoteVersion) {
+            const contentToSave =
+              viewMode === 'rich' ? convertRichToJson(richContent) : jsonContent;
+            const localVersion: RuleSpec = JSON.parse(contentToSave);
+            handleConflict(localVersion, remoteVersion, errorMsg);
+          }
+        } catch (fetchErr) {
+          setErrorMessage('Conflitto rilevato ma impossibile recuperare la versione remota');
+        }
+      } else {
+        logger.error(
+          'Failed to save rule spec',
+          err instanceof Error ? err : new Error(String(err)),
+          createErrorContext('EditorPage', 'handleSave', { gameId, operation: 'save_rule_spec' })
+        );
+        setErrorMessage(errorMsg);
+      }
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  // Issue #2055: Handle conflict resolution
+  const handleConflictResolve = async (choice: 'local' | 'remote' | 'merge') => {
+    const resolvedVersion = resolveConflict(choice);
+
+    if (!resolvedVersion || !gameId) {
+      return;
+    }
+
+    // Update local state with resolved version
+    setRuleSpec(resolvedVersion);
+    const formatted = JSON.stringify(resolvedVersion, null, 2);
+    setJsonContent(formatted);
+    validateJson(formatted);
+
+    if (choice !== 'remote') {
+      // Need to save the resolved version
+      setHasUnsavedChanges(true);
+      // Trigger save with the resolved content
+      try {
+        setIsSaving(true);
+        const updated = await api.games.updateRuleSpecWithETag(gameId, resolvedVersion);
+        setRuleSpec(updated);
+        setHasUnsavedChanges(false);
+        const newETag = (updated as RuleSpec & { etag?: string }).etag;
+        if (newETag) {
+          setCurrentETag(newETag);
+        }
+        setStatusMessage(`Conflitto risolto e salvato (versione ${updated.version})`);
+      } catch (err) {
+        setErrorMessage(getErrorMessage(err, 'Impossibile salvare la versione risolta'));
+      } finally {
+        setIsSaving(false);
+      }
+    } else {
+      // Remote was chosen, just update ETag
+      const newETag = (resolvedVersion as RuleSpec & { etag?: string }).etag;
+      if (newETag) {
+        setCurrentETag(newETag);
+      }
+      setStatusMessage('Versione remota accettata');
+      setHasUnsavedChanges(false);
     }
   };
 
@@ -400,6 +558,15 @@ export function EditorClient() {
 
   return (
     <main className="p-6 font-sans max-w-[1400px] mx-auto">
+      {/* Issue #2055: Conflict Resolution Modal */}
+      <ConflictResolutionModal
+        open={showConflictModal}
+        onOpenChange={closeConflictModal}
+        conflict={conflict}
+        onResolve={handleConflictResolve}
+        isResolving={isSaving}
+      />
+
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="m-0">Editor RuleSpec</h1>
@@ -411,6 +578,12 @@ export function EditorClient() {
           </p>
         </div>
         <div className="flex gap-3 items-center">
+          {/* Issue #2055: Presence Indicator */}
+          <PresenceIndicator
+            lockStatus={lockStatus}
+            acquisitionStatus={acquisitionStatus}
+            lockError={lockError}
+          />
           <ViewModeToggle mode={viewMode} onModeChange={handleViewModeChange} />
           <Link
             href={`/versions?gameId=${gameId}`}

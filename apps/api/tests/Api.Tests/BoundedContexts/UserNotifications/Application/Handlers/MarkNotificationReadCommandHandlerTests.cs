@@ -5,6 +5,7 @@ using Api.BoundedContexts.UserNotifications.Domain.Repositories;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.BoundedContexts.UserNotifications.TestHelpers;
 using Api.Tests.Constants;
+using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 
@@ -19,15 +20,18 @@ public class MarkNotificationReadCommandHandlerTests
 {
     private readonly Mock<INotificationRepository> _notificationRepositoryMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
+    private readonly Mock<ILogger<MarkNotificationReadCommandHandler>> _loggerMock;
     private readonly MarkNotificationReadCommandHandler _handler;
 
     public MarkNotificationReadCommandHandlerTests()
     {
         _notificationRepositoryMock = new Mock<INotificationRepository>();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
+        _loggerMock = new Mock<ILogger<MarkNotificationReadCommandHandler>>();
         _handler = new MarkNotificationReadCommandHandler(
             _notificationRepositoryMock.Object,
-            _unitOfWorkMock.Object);
+            _unitOfWorkMock.Object,
+            _loggerMock.Object);
     }
 
     [Fact]

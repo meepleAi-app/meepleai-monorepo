@@ -1,4 +1,3 @@
-using Api.Authentication;
 using Api.BoundedContexts.Administration.Application.Commands.AlertRules;
 using Api.BoundedContexts.Administration.Application.Queries.AlertRules;
 using MediatR;

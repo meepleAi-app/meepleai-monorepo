@@ -229,9 +229,11 @@ public class N8NConfigService
         }
 
         var apiKey = DecryptApiKey(config.ApiKeyEncrypted);
-#pragma warning disable CA2000 // HttpClient lifetime managed by IHttpClientFactory
+        // CA2000 suppression: HttpClient from IHttpClientFactory MUST NOT be disposed manually.
+        // The factory manages HttpMessageHandler pooling and lifetime. See: https://learn.microsoft.com/en-us/dotnet/architecture/microservices/implement-resilient-applications/use-httpclientfactory-to-implement-resilient-http-requests
+#pragma warning disable CA2000 // Dispose objects before losing scope - False positive: IHttpClientFactory manages HttpClient lifetime
         var httpClient = _httpClientFactory.CreateClient();
-#pragma warning restore CA2000
+#pragma warning restore CA2000 // Dispose objects before losing scope
 
         try
         {

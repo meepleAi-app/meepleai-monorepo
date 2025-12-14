@@ -51,6 +51,9 @@ public class PdfDocumentEntity
     public string DocumentType { get; set; } = "base"; // base, expansion, errata, homerule
     public int SortOrder { get; set; } = 0;
 
+    // Admin Wizard: Public library visibility (visible to all registered users)
+    public bool IsPublic { get; set; } = false;
+
     [NotMapped]
     public ProcessingProgress? ProcessingProgress
     {

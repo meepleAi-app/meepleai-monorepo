@@ -90,6 +90,11 @@ export interface AccessibleModalProps {
    * @default 'md'
    */
   size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
+
+  /**
+   * Test ID for E2E testing (language-independent selector)
+   */
+  'data-testid'?: string;
 }
 
 /**
@@ -106,6 +111,7 @@ export function AccessibleModal({
   showCloseButton = true,
   className = '',
   size = 'md',
+  'data-testid': dataTestId,
 }: AccessibleModalProps) {
   // Generate unique IDs for ARIA labels
   const titleId = useRef(`modal-title-${Math.random().toString(36).substr(2, 9)}`);
@@ -154,6 +160,7 @@ export function AccessibleModal({
         aria-describedby={descriptionId.current}
         onInteractOutside={handleInteractOutside}
         hideCloseButton={!showCloseButton}
+        data-testid={dataTestId}
       >
         {/* Title - direct child of DialogContent for Radix requirements */}
         <DialogTitle id={titleId.current}>{title}</DialogTitle>

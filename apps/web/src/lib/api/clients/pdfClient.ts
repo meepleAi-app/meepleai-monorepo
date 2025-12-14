@@ -6,10 +6,7 @@
  */
 
 import { getApiBase, type HttpClient } from '../core/httpClient';
-import {
-  ProcessingProgressSchema,
-  type ProcessingProgress,
-} from '../schemas';
+import { ProcessingProgressSchema, type ProcessingProgress } from '../schemas';
 
 export interface CreatePdfClientParams {
   httpClient: HttpClient;
@@ -49,6 +46,24 @@ export function createPdfClient({ httpClient }: CreatePdfClientParams) {
     getPdfDownloadUrl(pdfId: string): string {
       const baseUrl = getApiBase();
       return `${baseUrl}/api/v1/pdfs/${encodeURIComponent(pdfId)}/download`;
+    },
+
+    /**
+     * Set PDF visibility in public library (Admin Wizard)
+     * PATCH /api/v1/pdfs/{pdfId}/visibility
+     * @param pdfId PDF document ID (GUID format)
+     * @param isPublic Whether the PDF should be publicly visible
+     * @returns Result with success status and message
+     */
+    async setVisibility(
+      pdfId: string,
+      isPublic: boolean
+    ): Promise<{ success: boolean; message: string; pdfId?: string }> {
+      const result = await httpClient.patch<{ success: boolean; message: string; pdfId?: string }>(
+        `/api/v1/pdfs/${encodeURIComponent(pdfId)}/visibility`,
+        { isPublic }
+      );
+      return result ?? { success: false, message: 'No response from server' };
     },
   };
 }

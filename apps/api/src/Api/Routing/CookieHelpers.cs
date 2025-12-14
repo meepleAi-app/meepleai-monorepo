@@ -15,6 +15,7 @@ public static class CookieHelpers
 
     public static void WriteSessionCookie(HttpContext context, string token, DateTime expiresAt)
     {
+        ArgumentNullException.ThrowIfNull(context);
         var options = CreateSessionCookieOptions(context, expiresAt);
         var sessionCookieName = GetSessionCookieName(context);
 
@@ -46,6 +47,7 @@ public static class CookieHelpers
 
     public static void RemoveSessionCookie(HttpContext context)
     {
+        ArgumentNullException.ThrowIfNull(context);
         var options = BuildSessionCookieOptions(context);
         options.Expires = DateTimeOffset.UnixEpoch;
 
@@ -57,6 +59,7 @@ public static class CookieHelpers
 
     public static void WriteUserRoleCookie(HttpContext context, string role, DateTime expiresAt)
     {
+        ArgumentNullException.ThrowIfNull(context);
         var options = CreateUserRoleCookieOptions(context, expiresAt);
         const string roleCookieName = "meepleai_user_role";
         context.Response.Cookies.Append(roleCookieName, role, options);
@@ -64,6 +67,7 @@ public static class CookieHelpers
 
     public static void RemoveUserRoleCookie(HttpContext context)
     {
+        ArgumentNullException.ThrowIfNull(context);
         var options = BuildUserRoleCookieOptions(context);
         options.Expires = DateTimeOffset.UnixEpoch;
 
@@ -75,6 +79,7 @@ public static class CookieHelpers
 
     public static void WriteApiKeyCookie(HttpContext context, string apiKey, DateTime? expiresAt = null)
     {
+        ArgumentNullException.ThrowIfNull(context);
         var options = CreateApiKeyCookieOptions(context, expiresAt);
         const string apiKeyCookieName = "meeple_apikey";
         context.Response.Cookies.Append(apiKeyCookieName, apiKey, options);
@@ -82,6 +87,7 @@ public static class CookieHelpers
 
     public static void RemoveApiKeyCookie(HttpContext context)
     {
+        ArgumentNullException.ThrowIfNull(context);
         var options = BuildApiKeyCookieOptions(context);
         options.Expires = DateTimeOffset.UnixEpoch;
 
@@ -91,6 +97,7 @@ public static class CookieHelpers
 
     public static string GetSessionCookieName(HttpContext context)
     {
+        ArgumentNullException.ThrowIfNull(context);
         var configuration = GetSessionCookieConfiguration(context);
         return string.IsNullOrWhiteSpace(configuration.Name)
             ? "meepleai_session" // Default session cookie name (matches external documentation/spec)
@@ -99,6 +106,7 @@ public static class CookieHelpers
 
     private static CookieOptions CreateSessionCookieOptions(HttpContext context, DateTime expiresAt)
     {
+        ArgumentNullException.ThrowIfNull(context);
         var options = BuildSessionCookieOptions(context);
         options.Expires = expiresAt;
         return options;
@@ -106,6 +114,7 @@ public static class CookieHelpers
 
     private static CookieOptions BuildSessionCookieOptions(HttpContext context)
     {
+        ArgumentNullException.ThrowIfNull(context);
         var configuration = GetSessionCookieConfiguration(context);
 
         var isHttps = context.Request.IsHttps;
@@ -180,6 +189,7 @@ public static class CookieHelpers
 
     private static CookieOptions CreateApiKeyCookieOptions(HttpContext context, DateTime? expiresAt)
     {
+        ArgumentNullException.ThrowIfNull(context);
         var options = BuildApiKeyCookieOptions(context);
         if (expiresAt.HasValue)
         {
@@ -195,6 +205,7 @@ public static class CookieHelpers
 
     private static CookieOptions BuildApiKeyCookieOptions(HttpContext context)
     {
+        ArgumentNullException.ThrowIfNull(context);
         var configuration = GetSessionCookieConfiguration(context);
         var isHttps = context.Request.IsHttps;
 
@@ -232,6 +243,7 @@ public static class CookieHelpers
 
     private static CookieOptions CreateUserRoleCookieOptions(HttpContext context, DateTime expiresAt)
     {
+        ArgumentNullException.ThrowIfNull(context);
         var options = BuildUserRoleCookieOptions(context);
         options.Expires = expiresAt;
         return options;
@@ -239,6 +251,7 @@ public static class CookieHelpers
 
     private static CookieOptions BuildUserRoleCookieOptions(HttpContext context)
     {
+        ArgumentNullException.ThrowIfNull(context);
         var configuration = GetSessionCookieConfiguration(context);
         var isHttps = context.Request.IsHttps;
 

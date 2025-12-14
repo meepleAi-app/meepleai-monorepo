@@ -20,6 +20,10 @@ public sealed class Game : AggregateRoot<Guid>
     public int? BggId { get; private set; }
     public string? BggMetadata { get; private set; }
 
+    // Admin Wizard: Game images
+    public string? IconUrl { get; private set; }
+    public string? ImageUrl { get; private set; }
+
     /// <summary>
     /// Private constructor for EF Core.
     /// </summary>
@@ -67,6 +71,15 @@ public sealed class Game : AggregateRoot<Guid>
         if (playTime != null) PlayTime = playTime;
 
         AddDomainEvent(new GameUpdatedEvent(Id, Title.Value));
+    }
+
+    /// <summary>
+    /// Sets game images (icon and cover image).
+    /// </summary>
+    public void SetImages(string? iconUrl, string? imageUrl)
+    {
+        IconUrl = iconUrl;
+        ImageUrl = imageUrl;
     }
 
     /// <summary>

@@ -69,6 +69,7 @@ public class QdrantService : IQdrantService
         List<DocumentChunk> chunks,
         CancellationToken ct = default)
     {
+        ArgumentNullException.ThrowIfNull(chunks);
         using var activity = MeepleAiActivitySources.VectorSearch.StartActivity("QdrantService.IndexDocumentChunks");
         activity?.SetTag("game.id", gameId);
         activity?.SetTag("pdf.id", pdfId);
@@ -263,6 +264,7 @@ public class QdrantService : IQdrantService
         List<DocumentChunk> chunks,
         CancellationToken ct = default)
     {
+        ArgumentNullException.ThrowIfNull(metadata, nameof(metadata));
         if (chunks == null || chunks.Count == 0)
         {
             return IndexResult.CreateFailure("No chunks to index");
@@ -341,6 +343,7 @@ public class QdrantService : IQdrantService
         string language,
         CancellationToken ct = default)
     {
+        ArgumentNullException.ThrowIfNull(chunks);
         using var activity = MeepleAiActivitySources.VectorSearch.StartActivity("QdrantService.IndexDocumentChunks");
         activity?.SetTag("game.id", gameId);
         activity?.SetTag("pdf.id", pdfId);

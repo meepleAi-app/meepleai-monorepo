@@ -10,37 +10,40 @@ public class AlertRuleRepository : IAlertRuleRepository
 {
     private readonly MeepleAiDbContext _context;
     public AlertRuleRepository(MeepleAiDbContext context) => _context = context;
-    
+
     public async Task<AlertRule?> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
-        var entity = await _context.AlertRules.FindAsync(new object[] { id }, ct);
+        var entity = await _context.AlertRules.FindAsync(new object[] { id }, ct).ConfigureAwait(false);
         return entity == null ? null : MapToDomain(entity);
     }
-    
+
     public async Task<AlertRule?> GetByNameAsync(string name, CancellationToken ct = default)
     {
-        var entity = await _context.AlertRules.FirstOrDefaultAsync(r => r.Name == name, ct);
+        ArgumentNullException.ThrowIfNull(name);
+        var entity = await _context.AlertRules.FirstOrDefaultAsync(r => r.Name == name, ct).ConfigureAwait(false);
         return entity == null ? null : MapToDomain(entity);
     }
-    
+
     public async Task<List<AlertRule>> GetAllAsync(CancellationToken ct = default) =>
-        (await _context.AlertRules.ToListAsync(ct)).Select(MapToDomain).ToList();
-    
+        (await _context.AlertRules.ToListAsync(ct).ConfigureAwait(false)).Select(MapToDomain).ToList();
+
     public async Task<List<AlertRule>> GetEnabledAsync(CancellationToken ct = default) =>
-        (await _context.AlertRules.Where(r => r.IsEnabled).ToListAsync(ct)).Select(MapToDomain).ToList();
-    
+        (await _context.AlertRules.Where(r => r.IsEnabled).ToListAsync(ct).ConfigureAwait(false)).Select(MapToDomain).ToList();
+
     public async Task<List<AlertRule>> GetByAlertTypeAsync(string alertType, CancellationToken ct = default) =>
-        (await _context.AlertRules.Where(r => r.AlertType == alertType).ToListAsync(ct)).Select(MapToDomain).ToList();
-    
+        (await _context.AlertRules.Where(r => r.AlertType == alertType).ToListAsync(ct).ConfigureAwait(false)).Select(MapToDomain).ToList();
+
     public async Task AddAsync(AlertRule alertRule, CancellationToken ct = default)
     {
-        await _context.AlertRules.AddAsync(MapToEntity(alertRule), ct);
-        await _context.SaveChangesAsync(ct);
+        ArgumentNullException.ThrowIfNull(alertRule);
+        await _context.AlertRules.AddAsync(MapToEntity(alertRule), ct).ConfigureAwait(false);
+        await _context.SaveChangesAsync(ct).ConfigureAwait(false);
     }
-    
+
     public async Task UpdateAsync(AlertRule alertRule, CancellationToken ct = default)
     {
-        var entity = await _context.AlertRules.FindAsync(new object[] { alertRule.Id }, ct);
+        ArgumentNullException.ThrowIfNull(alertRule);
+        var entity = await _context.AlertRules.FindAsync(new object[] { alertRule.Id }, ct).ConfigureAwait(false);
         if (entity == null) throw new InvalidOperationException($"AlertRule {alertRule.Id} not found");
         entity.Name = alertRule.Name;
         entity.Severity = alertRule.Severity.ToDisplayString();
@@ -52,16 +55,16 @@ public class AlertRuleRepository : IAlertRuleRepository
         entity.Metadata = alertRule.Metadata;
         entity.UpdatedAt = alertRule.UpdatedAt;
         entity.UpdatedBy = alertRule.UpdatedBy;
-        await _context.SaveChangesAsync(ct);
+        await _context.SaveChangesAsync(ct).ConfigureAwait(false);
     }
-    
+
     public async Task DeleteAsync(Guid id, CancellationToken ct = default)
     {
-        var entity = await _context.AlertRules.FindAsync(new object[] { id }, ct);
-        if (entity != null) { _context.AlertRules.Remove(entity); await _context.SaveChangesAsync(ct); }
+        var entity = await _context.AlertRules.FindAsync(new object[] { id }, ct).ConfigureAwait(false);
+        if (entity != null) { _context.AlertRules.Remove(entity); await _context.SaveChangesAsync(ct).ConfigureAwait(false); }
     }
-    
-    private static AlertRule MapToDomain(AlertRuleEntity e) => 
+
+    private static AlertRule MapToDomain(AlertRuleEntity e) =>
         AlertRule.Reconstitute(
             e.Id,
             e.Name,
@@ -77,6 +80,6 @@ public class AlertRuleRepository : IAlertRuleRepository
             e.CreatedBy,
             e.UpdatedBy
         );
-    
+
     private static AlertRuleEntity MapToEntity(AlertRule r) => new() { Id = r.Id, Name = r.Name, AlertType = r.AlertType, Severity = r.Severity.ToDisplayString(), Description = r.Description, Threshold = r.Threshold.Value, ThresholdUnit = r.Threshold.Unit, DurationMinutes = r.Duration.Minutes, IsEnabled = r.IsEnabled, Metadata = r.Metadata, CreatedAt = r.CreatedAt, UpdatedAt = r.UpdatedAt, CreatedBy = r.CreatedBy, UpdatedBy = r.UpdatedBy };
 }

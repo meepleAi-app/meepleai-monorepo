@@ -62,6 +62,7 @@ public class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunk
         CompleteChunkedUploadCommand request,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         try
         {
             // Validate session and permissions
@@ -191,6 +192,7 @@ public class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunk
         ChunkedUploadSession session,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(session);
         // Mark as assembling
         session.MarkAsAssembling();
         await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
@@ -496,9 +498,9 @@ public class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunk
     private async Task<List<DocumentChunkInput>> ChunkTextContentAsync(
         string pdfId,
         string fullText,
-        int totalPages,
-        IServiceScope scope,
-        CancellationToken ct)
+                IServiceScope scope
+        )
+
     {
         var chunkingStopwatch = Stopwatch.StartNew();
         var chunkingService = scope.ServiceProvider.GetRequiredService<ITextChunkingService>();
@@ -525,7 +527,7 @@ public class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunk
         _logger.LogDebug("Chunking completed in {ElapsedMs}ms, {ChunkCount} chunks for {PdfId}",
             chunkingStopwatch.ElapsedMilliseconds, allDocumentChunks.Count, pdfId);
 
-        return await Task.FromResult(allDocumentChunks);
+        return await Task.FromResult(allDocumentChunks).ConfigureAwait(false);
     }
 
     /// <summary>

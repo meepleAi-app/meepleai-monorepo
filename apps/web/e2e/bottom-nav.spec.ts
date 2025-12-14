@@ -31,13 +31,12 @@ test.describe('BottomNav - Mobile Navigation', () => {
   });
 
   test('should render all 5 navigation items with correct labels', async ({ page }) => {
-    const bottomNav = page.locator('nav[aria-label="Primary mobile navigation"]');
-
-    await expect(bottomNav.getByText('Home')).toBeVisible();
-    await expect(bottomNav.getByText('Giochi')).toBeVisible();
-    await expect(bottomNav.getByText('Chat')).toBeVisible();
-    await expect(bottomNav.getByText('Config')).toBeVisible();
-    await expect(bottomNav.getByText('Profilo')).toBeVisible();
+    // Use data-testid for language-independent selectors (Issue #2007)
+    await expect(page.getByTestId('bottomnav-home')).toBeVisible();
+    await expect(page.getByTestId('bottomnav-games')).toBeVisible();
+    await expect(page.getByTestId('bottomnav-chat')).toBeVisible();
+    await expect(page.getByTestId('bottomnav-settings')).toBeVisible();
+    await expect(page.getByTestId('bottomnav-profile')).toBeVisible();
   });
 
   test('should have correct ARIA labels for screen readers', async ({ page }) => {
@@ -254,12 +253,12 @@ test.describe('BottomNav - Responsive Breakpoints', () => {
       if (viewport.width < 768) {
         await expect(bottomNav).toBeVisible();
 
-        // Verify all items are still readable
-        await expect(bottomNav.getByText('Home')).toBeVisible();
-        await expect(bottomNav.getByText('Giochi')).toBeVisible();
-        await expect(bottomNav.getByText('Chat')).toBeVisible();
-        await expect(bottomNav.getByText('Config')).toBeVisible();
-        await expect(bottomNav.getByText('Profilo')).toBeVisible();
+        // Verify all items are still visible using data-testid (Issue #2007)
+        await expect(page.getByTestId('bottomnav-home')).toBeVisible();
+        await expect(page.getByTestId('bottomnav-games')).toBeVisible();
+        await expect(page.getByTestId('bottomnav-chat')).toBeVisible();
+        await expect(page.getByTestId('bottomnav-settings')).toBeVisible();
+        await expect(page.getByTestId('bottomnav-profile')).toBeVisible();
       } else {
         await expect(bottomNav).toBeHidden();
       }

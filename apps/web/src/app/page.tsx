@@ -135,7 +135,7 @@ const structuredData = {
  */
 export default function LandingPage() {
   return (
-    <main className="min-h-screen flex flex-col">
+    <main id="main-content" className="min-h-screen flex flex-col">
       {/* Auto-redirect authenticated users to dashboard */}
       <AuthRedirect />
 

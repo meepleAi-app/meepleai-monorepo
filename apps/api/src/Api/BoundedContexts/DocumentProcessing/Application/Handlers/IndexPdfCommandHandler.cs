@@ -187,8 +187,7 @@ public class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, IndexingR
     private async Task<(bool success, List<DocumentChunk>? documentChunks, string? errorMessage, PdfIndexingErrorCode? errorCode)> ChunkAndEmbedTextAsync(
         string pdfId,
         string extractedText,
-        VectorDocumentEntity vectorDoc,
-        CancellationToken cancellationToken)
+                CancellationToken cancellationToken)
     {
         // Chunk the text
         _logger.LogInformation("Chunking text for PDF {PdfId} ({CharCount} characters)",

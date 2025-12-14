@@ -34,6 +34,12 @@ public static class RagExceptionHandler
         Stopwatch stopwatch,
         Func<TResponse> errorResponseFactory)
     {
+        // Validate arguments
+        ArgumentNullException.ThrowIfNull(exception);
+        ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(logAction);
+        ArgumentNullException.ThrowIfNull(errorResponseFactory);
+
         // Log the error with context
         logAction(logger, exception);
 
@@ -114,6 +120,10 @@ public static class RagExceptionHandler
         Dictionary<string, Func<TResponse>> errorResponseFactories,
         string? additionalInfo = null)
     {
+        ArgumentNullException.ThrowIfNull(exception);
+        ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(errorResponseFactories);
+
         var exceptionTypeName = exception.GetType().Name;
 
         // Get the appropriate error response factory, defaulting to generic Exception handler

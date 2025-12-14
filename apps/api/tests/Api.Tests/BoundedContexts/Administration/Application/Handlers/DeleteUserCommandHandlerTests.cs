@@ -315,7 +315,7 @@ public class DeleteUserCommandHandlerTests
             UserId: userId.ToString(),
             RequestingUserId: requestingUserId.ToString());
 
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         var cancellationToken = cts.Token;
 
         // Act

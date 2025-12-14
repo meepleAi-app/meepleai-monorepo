@@ -13,7 +13,7 @@ public class UpdateAlertRuleCommandHandler : IRequestHandler<UpdateAlertRuleComm
 
     public async Task<Unit> Handle(UpdateAlertRuleCommand request, CancellationToken ct)
     {
-        var rule = await _repository.GetByIdAsync(request.Id, ct);
+        var rule = await _repository.GetByIdAsync(request.Id, ct).ConfigureAwait(false);
         if (rule == null) throw new InvalidOperationException($"AlertRule {request.Id} not found");
 
         var severity = AlertSeverityExtensions.FromString(request.Severity);
@@ -21,7 +21,7 @@ public class UpdateAlertRuleCommandHandler : IRequestHandler<UpdateAlertRuleComm
         var duration = new AlertDuration(request.DurationMinutes);
 
         rule.Update(request.Name, severity, threshold, duration, request.UpdatedBy, request.Description);
-        await _repository.UpdateAsync(rule, ct);
+        await _repository.UpdateAsync(rule, ct).ConfigureAwait(false);
         return Unit.Value;
     }
 }

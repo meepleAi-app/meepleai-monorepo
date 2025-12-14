@@ -23,9 +23,18 @@ public class InfisicalSecretsClient : IInfisicalClient
         IOptions<InfisicalOptions> options,
         ILogger<InfisicalSecretsClient> logger)
     {
+        if (httpClientFactory is null) throw new ArgumentNullException(nameof(httpClientFactory));
+        if (options is null) throw new ArgumentNullException(nameof(options));
+        if (logger is null) throw new ArgumentNullException(nameof(logger));
+
         _httpClient = httpClientFactory.CreateClient("Infisical");
-        _options = options.Value;
+        _options = options.Value ?? throw new ArgumentException("Infisical options value is missing", nameof(options));
         _logger = logger;
+
+        if (string.IsNullOrWhiteSpace(_options.HostUrl))
+        {
+            throw new ArgumentException("Infisical HostUrl is not configured", nameof(options));
+        }
 
         // Configure base URL
         _httpClient.BaseAddress = new Uri(_options.HostUrl);
@@ -37,7 +46,11 @@ public class InfisicalSecretsClient : IInfisicalClient
         string secretPath = "/",
         CancellationToken cancellationToken = default)
     {
-        await EnsureAuthenticatedAsync(cancellationToken);
+        if (secretName is null) throw new ArgumentNullException(nameof(secretName));
+        if (environment is null) throw new ArgumentNullException(nameof(environment));
+        if (secretPath is null) throw new ArgumentNullException(nameof(secretPath));
+
+        await EnsureAuthenticatedAsync(cancellationToken).ConfigureAwait(false);
 
         try
         {
@@ -50,14 +63,15 @@ public class InfisicalSecretsClient : IInfisicalClient
                       $"&environment={environment}" +
                       $"&secretPath={Uri.EscapeDataString(secretPath)}";
 
+            var token = _accessToken ?? throw new InvalidOperationException("Infisical client not authenticated");
             _httpClient.DefaultRequestHeaders.Authorization =
-                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _accessToken);
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-            var response = await _httpClient.GetAsync(url, cancellationToken);
+            var response = await _httpClient.GetAsync(url, cancellationToken).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
 
             var secretResponse = await response.Content
-                .ReadFromJsonAsync<InfisicalSecretResponse>(cancellationToken);
+                .ReadFromJsonAsync<InfisicalSecretResponse>(cancellationToken).ConfigureAwait(false);
 
             if (secretResponse?.Secret == null)
             {
@@ -93,7 +107,11 @@ public class InfisicalSecretsClient : IInfisicalClient
         string secretPath = "/",
         CancellationToken cancellationToken = default)
     {
-        await EnsureAuthenticatedAsync(cancellationToken);
+        if (secretName is null) throw new ArgumentNullException(nameof(secretName));
+        if (environment is null) throw new ArgumentNullException(nameof(environment));
+        if (secretPath is null) throw new ArgumentNullException(nameof(secretPath));
+
+        await EnsureAuthenticatedAsync(cancellationToken).ConfigureAwait(false);
 
         try
         {
@@ -106,14 +124,15 @@ public class InfisicalSecretsClient : IInfisicalClient
                       $"&environment={environment}" +
                       $"&secretPath={Uri.EscapeDataString(secretPath)}";
 
+            var token = _accessToken ?? throw new InvalidOperationException("Infisical client not authenticated");
             _httpClient.DefaultRequestHeaders.Authorization =
-                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _accessToken);
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-            var response = await _httpClient.GetAsync(url, cancellationToken);
+            var response = await _httpClient.GetAsync(url, cancellationToken).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
 
             var versionResponse = await response.Content
-                .ReadFromJsonAsync<InfisicalVersionsResponse>(cancellationToken);
+                .ReadFromJsonAsync<InfisicalVersionsResponse>(cancellationToken).ConfigureAwait(false);
 
             if (versionResponse?.SecretVersions == null || versionResponse.SecretVersions.Length == 0)
             {
@@ -157,15 +176,16 @@ public class InfisicalSecretsClient : IInfisicalClient
         {
             _logger.LogDebug("Performing Infisical health check");
 
-            await EnsureAuthenticatedAsync(cancellationToken);
+            await EnsureAuthenticatedAsync(cancellationToken).ConfigureAwait(false);
 
             // Test connection by fetching project info
             var url = $"/api/v1/workspace/{_options.ProjectId}";
 
+            var token = _accessToken ?? throw new InvalidOperationException("Infisical client not authenticated");
             _httpClient.DefaultRequestHeaders.Authorization =
-                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _accessToken);
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-            var response = await _httpClient.GetAsync(url, cancellationToken);
+            var response = await _httpClient.GetAsync(url, cancellationToken).ConfigureAwait(false);
 
             if (response.IsSuccessStatusCode)
             {
@@ -197,6 +217,11 @@ public class InfisicalSecretsClient : IInfisicalClient
         {
             _logger.LogInformation("Authenticating with Infisical Universal Auth");
 
+            if (string.IsNullOrWhiteSpace(_options.ClientId) || string.IsNullOrWhiteSpace(_options.ClientSecret))
+            {
+                throw new InvalidOperationException("Infisical client credentials are not configured");
+            }
+
             var loginRequest = new
             {
                 clientId = _options.ClientId,
@@ -206,12 +231,12 @@ public class InfisicalSecretsClient : IInfisicalClient
             var response = await _httpClient.PostAsJsonAsync(
                 "/api/v1/auth/universal-auth/login",
                 loginRequest,
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
 
             response.EnsureSuccessStatusCode();
 
             var authResponse = await response.Content
-                .ReadFromJsonAsync<InfisicalAuthResponse>(cancellationToken);
+                .ReadFromJsonAsync<InfisicalAuthResponse>(cancellationToken).ConfigureAwait(false);
 
             if (authResponse?.AccessToken == null)
             {

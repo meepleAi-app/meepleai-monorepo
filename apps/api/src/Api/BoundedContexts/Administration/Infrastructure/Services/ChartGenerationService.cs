@@ -20,6 +20,8 @@ public sealed class ChartGenerationService
         int width = 800,
         int height = 400)
     {
+        ArgumentNullException.ThrowIfNull(xLabels);
+        ArgumentNullException.ThrowIfNull(yValues);
         using var plot = new Plot();
 
         // Add data
@@ -64,6 +66,8 @@ public sealed class ChartGenerationService
         int width = 800,
         int height = 400)
     {
+        ArgumentNullException.ThrowIfNull(categories);
+        ArgumentNullException.ThrowIfNull(values);
         using var plot = new Plot();
 
         // Add bars
@@ -105,11 +109,13 @@ public sealed class ChartGenerationService
     public byte[] GenerateMultiLineChart(
         string title,
         string[] xLabels,
-        Dictionary<string, double[]> series,
+        IReadOnlyDictionary<string, double[]> series,
         string yAxisLabel,
         int width = 800,
         int height = 400)
     {
+        ArgumentNullException.ThrowIfNull(xLabels);
+        ArgumentNullException.ThrowIfNull(series);
         using var plot = new Plot();
         var xPositions = Enumerable.Range(0, xLabels.Length).Select(i => (double)i).ToArray();
 
@@ -155,7 +161,7 @@ public sealed class ChartGenerationService
     public byte[] GenerateStackedBarChart(
         string title,
         string[] categories,
-        Dictionary<string, double[]> series,
+        IReadOnlyDictionary<string, double[]> series,
         string yAxisLabel,
         int width = 800,
         int height = 400)

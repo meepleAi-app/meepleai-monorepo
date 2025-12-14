@@ -17,7 +17,7 @@ public static class AlertConfigEndpoints
         // GET /api/v1/admin/alert-rules
         group.MapGet("/", async (IMediator mediator, CancellationToken ct) =>
         {
-            var rules = await mediator.Send(new GetAllAlertRulesQuery(), ct);
+            var rules = await mediator.Send(new GetAllAlertRulesQuery(), ct).ConfigureAwait(false);
             return Results.Ok(rules);
         })
         .RequireAuthorization()
@@ -27,7 +27,7 @@ public static class AlertConfigEndpoints
         // GET /api/v1/admin/alert-rules/{id}
         group.MapGet("/{id:guid}", async (Guid id, IMediator mediator, CancellationToken ct) =>
         {
-            var rule = await mediator.Send(new GetAlertRuleByIdQuery(id), ct);
+            var rule = await mediator.Send(new GetAlertRuleByIdQuery(id), ct).ConfigureAwait(false);
             return rule == null ? Results.NotFound() : Results.Ok(rule);
         })
         .RequireAuthorization()
@@ -37,6 +37,7 @@ public static class AlertConfigEndpoints
         // POST /api/v1/admin/alert-rules
         group.MapPost("/", async ([FromBody] CreateAlertRuleRequest request, HttpContext context, IMediator mediator, CancellationToken ct) =>
         {
+            ArgumentNullException.ThrowIfNull(request);
             var userId = context.User.FindFirst("userId")?.Value ?? "system";
 
             var command = new CreateAlertRuleCommand(
@@ -50,7 +51,7 @@ public static class AlertConfigEndpoints
                 userId
             );
 
-            var id = await mediator.Send(command, ct);
+            var id = await mediator.Send(command, ct).ConfigureAwait(false);
             return Results.Created($"/api/v1/admin/alert-rules/{id}", new { id });
         })
         .RequireAuthorization()
@@ -60,6 +61,7 @@ public static class AlertConfigEndpoints
         // PUT /api/v1/admin/alert-rules/{id}
         group.MapPut("/{id:guid}", async (Guid id, [FromBody] UpdateAlertRuleRequest request, HttpContext context, IMediator mediator, CancellationToken ct) =>
         {
+            ArgumentNullException.ThrowIfNull(request);
             var userId = context.User.FindFirst("userId")?.Value ?? "system";
 
             var command = new UpdateAlertRuleCommand(
@@ -73,7 +75,7 @@ public static class AlertConfigEndpoints
                 userId
             );
 
-            await mediator.Send(command, ct);
+            await mediator.Send(command, ct).ConfigureAwait(false);
             return Results.NoContent();
         })
         .RequireAuthorization()
@@ -83,7 +85,7 @@ public static class AlertConfigEndpoints
         // DELETE /api/v1/admin/alert-rules/{id}
         group.MapDelete("/{id:guid}", async (Guid id, IMediator mediator, CancellationToken ct) =>
         {
-            await mediator.Send(new DeleteAlertRuleCommand(id), ct);
+            await mediator.Send(new DeleteAlertRuleCommand(id), ct).ConfigureAwait(false);
             return Results.NoContent();
         })
         .RequireAuthorization()
@@ -95,7 +97,7 @@ public static class AlertConfigEndpoints
         {
             var userId = context.User.FindFirst("userId")?.Value ?? "system";
 
-            await mediator.Send(new EnableAlertRuleCommand(id, userId), ct);
+            await mediator.Send(new EnableAlertRuleCommand(id, userId), ct).ConfigureAwait(false);
             return Results.NoContent();
         })
         .RequireAuthorization()
@@ -105,7 +107,7 @@ public static class AlertConfigEndpoints
         // GET /api/v1/admin/alert-templates
         app.MapGet("/api/v1/admin/alert-templates", async (IMediator mediator, CancellationToken ct) =>
         {
-            var templates = await mediator.Send(new GetAlertTemplatesQuery(), ct);
+            var templates = await mediator.Send(new GetAlertTemplatesQuery(), ct).ConfigureAwait(false);
             return Results.Ok(templates);
         })
         .RequireAuthorization()
@@ -116,7 +118,8 @@ public static class AlertConfigEndpoints
         // POST /api/v1/admin/alert-test
         app.MapPost("/api/v1/admin/alert-test", async ([FromBody] TestAlertRequest request, IMediator mediator, CancellationToken ct) =>
         {
-            var success = await mediator.Send(new TestAlertCommand(request.AlertType, request.Channel), ct);
+            ArgumentNullException.ThrowIfNull(request);
+            var success = await mediator.Send(new TestAlertCommand(request.AlertType, request.Channel), ct).ConfigureAwait(false);
             return success ? Results.Ok(new { success = true }) : Results.BadRequest(new { success = false, error = "Test alert failed" });
         })
         .RequireAuthorization()

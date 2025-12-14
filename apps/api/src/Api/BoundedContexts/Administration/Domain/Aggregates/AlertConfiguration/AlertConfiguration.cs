@@ -14,7 +14,7 @@ public class AlertConfiguration
     public string UpdatedBy { get; private set; }
 
     public Guid Id { get; private set; }
-    
+
     private AlertConfiguration(Guid id, string configKey, string configValue, ConfigCategory category, string updatedBy)
     {
         Id = id;

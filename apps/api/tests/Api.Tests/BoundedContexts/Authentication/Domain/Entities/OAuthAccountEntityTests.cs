@@ -580,19 +580,19 @@ public class OAuthAccountEntityTests
     [Fact]
     public void SupportedProviders_ContainsExpectedProviders()
     {
-        // Assert - Use .Contains() method directly to avoid xUnit ambiguity with FrozenSet
-        Assert.True(OAuthAccount.SupportedProviders.Contains("google"));
-        Assert.True(OAuthAccount.SupportedProviders.Contains("discord"));
-        Assert.True(OAuthAccount.SupportedProviders.Contains("github"));
+        // Assert - Use Assert.Contains for collection membership checks
+        Assert.Contains("google", (System.Collections.Generic.IEnumerable<string>)OAuthAccount.SupportedProviders);
+        Assert.Contains("discord", (System.Collections.Generic.IEnumerable<string>)OAuthAccount.SupportedProviders);
+        Assert.Contains("github", (System.Collections.Generic.IEnumerable<string>)OAuthAccount.SupportedProviders);
         Assert.Equal(3, OAuthAccount.SupportedProviders.Count);
     }
 
     [Fact]
     public void SupportedProviders_IsCaseInsensitive()
     {
-        // Assert - Use .Contains() method directly to avoid xUnit ambiguity with FrozenSet
-        Assert.True(OAuthAccount.SupportedProviders.Contains("GOOGLE"));
-        Assert.True(OAuthAccount.SupportedProviders.Contains("Discord"));
-        Assert.True(OAuthAccount.SupportedProviders.Contains("github"));
+        // Assert - Use Assert.Contains for collection membership checks (case-insensitive support tested elsewhere)
+        Assert.Contains("GOOGLE", (System.Collections.Generic.IEnumerable<string>)OAuthAccount.SupportedProviders);
+        Assert.Contains("Discord", (System.Collections.Generic.IEnumerable<string>)OAuthAccount.SupportedProviders);
+        Assert.Contains("github", (System.Collections.Generic.IEnumerable<string>)OAuthAccount.SupportedProviders);
     }
 }

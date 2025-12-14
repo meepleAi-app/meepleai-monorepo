@@ -30,6 +30,7 @@ public sealed partial class ReportGeneratorService
         IReadOnlyDictionary<string, object> parameters,
         CancellationToken ct)
     {
+        ArgumentNullException.ThrowIfNull(parameters);
         var startDate = (DateTime)parameters["startDate"];
         var endDate = (DateTime)parameters["endDate"];
 
@@ -74,7 +75,7 @@ public sealed partial class ReportGeneratorService
                 Description: "AI request tokens and costs over time",
                 Data: aiRequests.Select(r => new ReportDataRow(
                     new Dictionary<string, object>
-                    {
+(StringComparer.Ordinal) {
                         ["Date"] = r.Date.ToString("yyyy-MM-dd"),
                         ["Requests"] = r.Count,
                         ["Tokens"] = r.TotalTokens,
@@ -84,7 +85,7 @@ public sealed partial class ReportGeneratorService
                     Type: ChartType.MultiLine,
                     Labels: dateLabels,
                     Series: new Dictionary<string, double[]>
-                    {
+(StringComparer.Ordinal) {
                         ["Tokens (÷1000)"] = tokensValues.Select(t => t / 1000.0).ToArray(),
                         ["Cost (USD × 100)"] = costValues.Select(c => c * 100.0).ToArray()
                     },
@@ -94,7 +95,7 @@ public sealed partial class ReportGeneratorService
                 Description: "Usage and cost by AI model",
                 Data: modelUsage.Select(m => new ReportDataRow(
                     new Dictionary<string, object>
-                    {
+(StringComparer.Ordinal) {
                         ["Model"] = m.Model ?? "Unknown",
                         ["Requests"] = m.Count,
                         ["Total Cost (USD)"] = $"{m.TotalCost:F4}"
@@ -103,7 +104,7 @@ public sealed partial class ReportGeneratorService
                     Type: ChartType.Bar,
                     Labels: modelUsage.Select(m => m.Model ?? "Unknown").ToArray(),
                     Series: new Dictionary<string, double[]>
-                    {
+(StringComparer.Ordinal) {
                         ["Total Cost (USD)"] = modelUsage.Select(m => (double)m.TotalCost).ToArray()
                     },
                     YAxisLabel: "Cost (USD)"))
@@ -114,6 +115,7 @@ public sealed partial class ReportGeneratorService
             Description: $"AI/LLM usage from {startDate:yyyy-MM-dd} to {endDate:yyyy-MM-dd}",
             GeneratedAt: DateTime.UtcNow,
             Metadata: new Dictionary<string, object>
+(StringComparer.Ordinal)
             {
                 ["startDate"] = startDate,
                 ["endDate"] = endDate,

@@ -157,6 +157,7 @@ public class PdfUploadQuotaService : IPdfUploadQuotaService
         string pdfId,
         CancellationToken ct = default)
     {
+        ArgumentNullException.ThrowIfNull(pdfId);
         try
         {
             var db = _redis.GetDatabase();
@@ -191,6 +192,7 @@ public class PdfUploadQuotaService : IPdfUploadQuotaService
 
     public async Task ConfirmQuotaAsync(Guid userId, string pdfId, CancellationToken ct = default)
     {
+        ArgumentNullException.ThrowIfNull(pdfId);
         try
         {
             var db = _redis.GetDatabase();
@@ -219,6 +221,7 @@ public class PdfUploadQuotaService : IPdfUploadQuotaService
 
     public async Task ReleaseQuotaAsync(Guid userId, string pdfId, CancellationToken ct = default)
     {
+        ArgumentNullException.ThrowIfNull(pdfId);
         try
         {
             var db = _redis.GetDatabase();
@@ -246,7 +249,7 @@ public class PdfUploadQuotaService : IPdfUploadQuotaService
         }
     }
 
-    private async Task DecrementUploadCountAsync(Guid userId, CancellationToken _ = default)
+    private async Task DecrementUploadCountAsync(Guid userId)
     {
         try
         {
@@ -286,6 +289,7 @@ public class PdfUploadQuotaService : IPdfUploadQuotaService
         AuthRole userRole,
         CancellationToken ct = default)
     {
+        ArgumentNullException.ThrowIfNull(userTier);
         // Admin and Editor have unlimited quota
         if (userRole.IsAdmin() || userRole.IsEditor())
         {
@@ -334,7 +338,7 @@ public class PdfUploadQuotaService : IPdfUploadQuotaService
         }
 #pragma warning restore S2139
     }
-    private async Task<(int dailyLimit, int weeklyLimit)> GetLimitsForTierAsync(UserTier tier, CancellationToken _ = default)
+    private async Task<(int dailyLimit, int weeklyLimit)> GetLimitsForTierAsync(UserTier tier)
     {
         var tierValue = tier.Value;
         var dailyKey = $"UploadLimits:{tierValue}:DailyLimit";
@@ -353,7 +357,7 @@ public class PdfUploadQuotaService : IPdfUploadQuotaService
         );
     }
 
-    private async Task<(int dailyUsed, int weeklyUsed)> GetUsageAsync(Guid userId, CancellationToken _ = default)
+    private async Task<(int dailyUsed, int weeklyUsed)> GetUsageAsync(Guid userId)
     {
         var db = _redis.GetDatabase();
         var now = _timeProvider.GetUtcNow().UtcDateTime;

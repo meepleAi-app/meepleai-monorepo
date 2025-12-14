@@ -53,8 +53,8 @@ public class GameFAQRepository : RepositoryBase, IGameFAQRepository
 
         await Task.WhenAll(countTask, entitiesTask).ConfigureAwait(false);
 
-        var totalCount = await countTask;
-        var entities = await entitiesTask;
+        var totalCount = await countTask.ConfigureAwait(false);
+        var entities = await entitiesTask.ConfigureAwait(false);
 
         return (entities.Select(MapToDomain).ToList(), totalCount);
     }

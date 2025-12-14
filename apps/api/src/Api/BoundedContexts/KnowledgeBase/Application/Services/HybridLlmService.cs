@@ -116,6 +116,8 @@ public class HybridLlmService : ILlmService
         User? user,
         CancellationToken ct = default)
     {
+        ArgumentNullException.ThrowIfNull(systemPrompt);
+        ArgumentNullException.ThrowIfNull(userPrompt);
         if (string.IsNullOrWhiteSpace(userPrompt))
         {
             return LlmCompletionResult.CreateFailure("No user prompt provided");
@@ -235,6 +237,8 @@ public class HybridLlmService : ILlmService
         User? user,
         [EnumeratorCancellation] CancellationToken ct = default)
     {
+        ArgumentNullException.ThrowIfNull(systemPrompt);
+        ArgumentNullException.ThrowIfNull(userPrompt);
         if (string.IsNullOrWhiteSpace(userPrompt))
         {
             _logger.LogWarning("Empty user prompt for streaming completion");
@@ -291,6 +295,8 @@ public class HybridLlmService : ILlmService
         User? user,
         CancellationToken ct = default) where T : class
     {
+        ArgumentNullException.ThrowIfNull(systemPrompt);
+        ArgumentNullException.ThrowIfNull(userPrompt);
         // Enhance system prompt for JSON mode
         var enhancedSystemPrompt = $"""
             {systemPrompt}

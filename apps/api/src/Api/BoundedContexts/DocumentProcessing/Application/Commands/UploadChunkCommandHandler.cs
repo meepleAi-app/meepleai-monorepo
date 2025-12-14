@@ -108,16 +108,16 @@ public class UploadChunkCommandHandler : ICommandHandler<UploadChunkCommand, Upl
             {
                 return new UploadChunkResult(
                     Success: false,
-                    ReceivedChunks: session.ReceivedChunks,
-                    TotalChunks: session.TotalChunks,
-                    ProgressPercentage: session.ProgressPercentage,
+                    ReceivedChunks: session!.ReceivedChunks,
+                    TotalChunks: session!.TotalChunks,
+                    ProgressPercentage: session!.ProgressPercentage,
                     IsComplete: false,
                     ErrorMessage: chunkError
                 );
             }
 
             // Check if chunk already received (idempotent)
-            if (session.HasChunk(request.ChunkIndex))
+            if (session!.HasChunk(request.ChunkIndex))
             {
                 _logger.LogDebug("Chunk {ChunkIndex} already received for session {SessionId}",
                     request.ChunkIndex, request.SessionId);
@@ -207,7 +207,7 @@ public class UploadChunkCommandHandler : ICommandHandler<UploadChunkCommand, Upl
             return (false, session, "Upload session has expired");
         }
 
-        if (string.Equals(session.Status, "completed", StringComparison.Ordinal) || 
+        if (string.Equals(session.Status, "completed", StringComparison.Ordinal) ||
             string.Equals(session.Status, "failed", StringComparison.Ordinal))
         {
             return (false, session, $"Session is already {session.Status}");

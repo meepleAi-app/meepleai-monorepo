@@ -177,7 +177,7 @@ public class RateLimitService : IRateLimitService
     /// Get a specific rate limit value with fallback chain.
     /// Issue #1663: Applies 10x multiplier in Dev/Test environments for K6 performance testing.
     /// </summary>
-    private async Task<T> GetRateLimitValueAsync<T>(string limitType, string role, CancellationToken _) where T : struct
+    private async Task<T> GetRateLimitValueAsync<T>(string limitType, string role) where T : struct
     {
         // Guard: This method should only be called when _configService is not null
         if (_configService == null)

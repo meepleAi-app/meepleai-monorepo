@@ -181,13 +181,15 @@ export default defineConfig<ChromaticConfig>({
       : process.env.PARALLEL_E2E === 'true'
         ? undefined
         : {
-            // Issue #2007 Phase 2: Always use dev server (alpha phase priority)
-            // Rationale: Dev server detects dev-only bugs, faster feedback loop
-            // Memory managed via sharding (4 shards) + health checks + 4GB heap
-            // Production build can be added via ENV_VAR in beta phase if needed
-            command: 'node --max-old-space-size=4096 ./node_modules/next/dist/bin/next dev -p 3000',
+            // Issue #2007 Phase 2: Use production server in CI for stability
+            // Dev server crashes after ~48 minutes under sustained test load
+            // Production build is already created by CI workflow (pnpm build)
+            command:
+              process.env.CI === 'true'
+                ? 'node ./node_modules/next/dist/bin/next start -p 3000'
+                : 'node --max-old-space-size=4096 ./node_modules/next/dist/bin/next dev -p 3000',
             url: 'http://localhost:3000',
             reuseExistingServer: !process.env.CI,
-            timeout: 180 * 1000, // 3min for dev server startup
+            timeout: 180 * 1000, // 3min for server startup
           },
 });

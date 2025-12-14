@@ -329,7 +329,7 @@ public class RedisBackgroundTaskOrchestratorTests
         var taskName = "Recurring Task";
         var interval = TestConstants.Timing.TinyDelay;
         var executionCount = 0;
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, TestCancellationToken);
 
         Func<CancellationToken, Task> taskFactory = async ct =>

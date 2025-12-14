@@ -24,6 +24,7 @@ public class GetFeedbackStatsQueryHandler : IQueryHandler<GetFeedbackStatsQuery,
 
     public async Task<FeedbackStatsDto> Handle(GetFeedbackStatsQuery request, CancellationToken cancellationToken)
     {
+        if (request is null) throw new ArgumentNullException(nameof(request));
         _logger.LogInformation(
             "Getting feedback stats: StartDate={StartDate}, EndDate={EndDate}, Endpoint={Endpoint}",
             request.StartDate,

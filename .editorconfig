@@ -89,7 +89,9 @@ dotnet_diagnostic.CA1031.severity = warning
 
 # MA0048: File name must match type name
 # CODE ORGANIZATION: Enforce one-type-per-file rule (Issue #2068)
-dotnet_diagnostic.MA0048.severity = warning
+# Disabled: CQRS pattern allows DTOs/Validators co-located with Commands/Queries
+# This is an intentional architectural decision for DDD bounded contexts
+dotnet_diagnostic.MA0048.severity = none
 
 # CODE-02: Null Reference Safety Rules
 # CS8600: Converting null literal or possible null value to non-nullable type
@@ -216,3 +218,24 @@ dotnet_diagnostic.MA0023.severity = error
 
 # MA0074: Avoid implicit culture-sensitive string methods (ToLower, ToUpper, Contains)
 dotnet_diagnostic.MA0074.severity = error
+
+# ========================================
+# SonarSource Rules Configuration
+# ========================================
+
+# S125: Remove commented-out code
+# Disabled: Too many false positives on pragma justification comments
+# The pattern "// Justification: ..." is intentional documentation, not dead code
+dotnet_diagnostic.S125.severity = none
+
+# S101: Types should be named in PascalCase
+# Keep as warning for legitimate naming issues
+dotnet_diagnostic.S101.severity = warning
+
+# Enable additional important rules
+# S3881: Fix IDisposable implementation pattern in tests and production code
+dotnet_diagnostic.S3881.severity = warning
+# S2139: Either log this exception and handle it, or rethrow it with some contextual information
+dotnet_diagnostic.S2139.severity = warning
+# CA1062: Validate arguments of public methods to avoid null dereferences
+dotnet_diagnostic.CA1062.severity = warning

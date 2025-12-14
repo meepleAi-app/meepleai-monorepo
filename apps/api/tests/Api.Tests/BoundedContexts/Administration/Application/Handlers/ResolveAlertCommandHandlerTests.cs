@@ -66,7 +66,7 @@ public class ResolveAlertCommandHandlerTests
     {
         // Arrange
         var command = new ResolveAlertCommand("ApiError");
-        var cancellationTokenSource = new CancellationTokenSource();
+        using var cancellationTokenSource = new CancellationTokenSource();
         var cancellationToken = cancellationTokenSource.Token;
 
         _mockAlertingService
@@ -82,3 +82,4 @@ public class ResolveAlertCommandHandlerTests
             Times.Once);
     }
 }
+

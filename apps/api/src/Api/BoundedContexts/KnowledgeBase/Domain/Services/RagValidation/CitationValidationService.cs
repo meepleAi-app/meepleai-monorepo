@@ -148,8 +148,8 @@ public class CitationValidationService : ICitationValidationService
     private Task<bool> ValidateSingleCitationInternalAsync(
         Snippet snippet,
         Dictionary<string, int> pdfDict,
-        List<CitationValidationError> errors,
-        CancellationToken _)
+        List<CitationValidationError> errors
+                )
     {
         // Parse source format (expected: "PDF:guid")
         if (string.IsNullOrWhiteSpace(snippet.source))

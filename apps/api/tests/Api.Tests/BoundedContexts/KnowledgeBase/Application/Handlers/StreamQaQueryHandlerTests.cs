@@ -476,7 +476,7 @@ public class StreamQaQueryHandlerTests
 
         SetupQualityTrackingMocks();
 
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
 
         // Act
         var events = new List<RagStreamingEvent>();

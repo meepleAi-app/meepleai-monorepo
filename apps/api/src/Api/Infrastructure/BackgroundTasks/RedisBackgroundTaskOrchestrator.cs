@@ -24,6 +24,8 @@ public class RedisBackgroundTaskOrchestrator : IBackgroundTaskOrchestrator
         IConnectionMultiplexer redis,
         ILogger<RedisBackgroundTaskOrchestrator> logger)
     {
+        ArgumentNullException.ThrowIfNull(redis);
+        ArgumentNullException.ThrowIfNull(logger);
         _redis = redis ?? throw new ArgumentNullException(nameof(redis));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _runningTasks = new ConcurrentDictionary<string, CancellationTokenSource>(StringComparer.Ordinal);

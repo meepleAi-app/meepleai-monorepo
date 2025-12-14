@@ -178,7 +178,7 @@ public sealed class AdvancedChunkingService : IAdvancedChunkingService
             // Create parent chunk for the paragraph
             var parentMetadata = new ChunkMetadata
             {
-                Page = EstimatePageNumber(charPosition, text.Length),
+                Page = (charPosition / 2000) + 1,
                 Heading = null,
                 ElementType = "text",
                 GameId = gameId,
@@ -283,7 +283,7 @@ public sealed class AdvancedChunkingService : IAdvancedChunkingService
     /// Estimates page number based on character position.
     /// Uses long arithmetic to prevent integer overflow with large documents.
     /// </summary>
-    private static int EstimatePageNumber(int charPosition, int _)
+    private static int EstimatePageNumber(int charPosition)
     {
         const long charsPerPage = 2000L;
         // Use long division to prevent overflow, then safely cast result

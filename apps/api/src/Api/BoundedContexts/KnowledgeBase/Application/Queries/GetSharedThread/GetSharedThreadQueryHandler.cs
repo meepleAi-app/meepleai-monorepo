@@ -37,7 +37,7 @@ public sealed class GetSharedThreadQueryHandler : IRequestHandler<GetSharedThrea
         // Validate share link token
         var validation = await _mediator.Send(
             new ValidateShareLinkQuery(request.Token),
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
 
         if (validation == null || !validation.IsValid)
         {
@@ -46,7 +46,7 @@ public sealed class GetSharedThreadQueryHandler : IRequestHandler<GetSharedThrea
         }
 
         // Load chat thread via repository
-        var thread = await _threadRepository.GetByIdAsync(validation.ThreadId, cancellationToken);
+        var thread = await _threadRepository.GetByIdAsync(validation.ThreadId, cancellationToken).ConfigureAwait(false);
 
         if (thread == null)
         {
@@ -62,12 +62,12 @@ public sealed class GetSharedThreadQueryHandler : IRequestHandler<GetSharedThrea
         // IServiceScopeFactory for zero response penalty. See Issue #2150 for details.
         try
         {
-            var shareLink = await _shareLinkRepository.GetByIdAsync(validation.ShareLinkId, cancellationToken);
+            var shareLink = await _shareLinkRepository.GetByIdAsync(validation.ShareLinkId, cancellationToken).ConfigureAwait(false);
 
             if (shareLink != null)
             {
                 shareLink.RecordAccess();
-                await _shareLinkRepository.UpdateAsync(shareLink, cancellationToken);
+                await _shareLinkRepository.UpdateAsync(shareLink, cancellationToken).ConfigureAwait(false);
                 _logger.LogDebug("Recorded share link access for ShareLinkId {ShareLinkId}", validation.ShareLinkId);
             }
         }

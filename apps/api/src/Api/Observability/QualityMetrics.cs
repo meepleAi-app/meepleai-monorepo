@@ -22,10 +22,12 @@ public class QualityMetrics
 
     public QualityMetrics(IMeterFactory meterFactory)
     {
-        // CA2000: Meter lifetime managed by IMeterFactory (long-lived, singleton)
-#pragma warning disable CA2000
+        // CA2000 suppression: Meter lifetime is managed by IMeterFactory (DI singleton).
+        // IMeterFactory.Create() returns Meters that are cached and disposed when the factory itself is disposed.
+        // Manually disposing here would break metric collection. See: https://learn.microsoft.com/en-us/dotnet/core/diagnostics/metrics-instrumentation#create-a-custom-metric
+#pragma warning disable CA2000 // Dispose objects before losing scope - False positive: IMeterFactory manages Meter lifetime
         var meter = meterFactory.Create("MeepleAI.Api", "1.0.0");
-#pragma warning restore CA2000
+#pragma warning restore CA2000 // Dispose objects before losing scope
 
         _qualityScoreHistogram = meter.CreateHistogram<double>(
             name: "meepleai.quality.score",

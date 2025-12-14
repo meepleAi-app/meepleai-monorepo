@@ -222,9 +222,11 @@ public class OAuthService : IOAuthService
         string provider,
         string code)
     {
-#pragma warning disable CA2000 // HttpClient lifetime managed by IHttpClientFactory
+        // CA2000 suppression: HttpClient from IHttpClientFactory MUST NOT be disposed manually.
+        // The factory manages HttpMessageHandler pooling and lifetime. See: https://learn.microsoft.com/en-us/dotnet/architecture/microservices/implement-resilient-applications/use-httpclientfactory-to-implement-resilient-http-requests
+#pragma warning disable CA2000 // Dispose objects before losing scope - False positive: IHttpClientFactory manages HttpClient lifetime
         var httpClient = _httpClientFactory.CreateClient();
-#pragma warning restore CA2000
+#pragma warning restore CA2000 // Dispose objects before losing scope
         var callbackUrl = GetCallbackUrl(provider);
 
         var requestData = new Dictionary<string, string>
@@ -289,9 +291,11 @@ public class OAuthService : IOAuthService
         string provider,
         string accessToken)
     {
-#pragma warning disable CA2000 // HttpClient lifetime managed by IHttpClientFactory
+        // CA2000 suppression: HttpClient from IHttpClientFactory MUST NOT be disposed manually.
+        // The factory manages HttpMessageHandler pooling and lifetime. See: https://learn.microsoft.com/en-us/dotnet/architecture/microservices/implement-resilient-applications/use-httpclientfactory-to-implement-resilient-http-requests
+#pragma warning disable CA2000 // Dispose objects before losing scope - False positive: IHttpClientFactory manages HttpClient lifetime
         var httpClient = _httpClientFactory.CreateClient();
-#pragma warning restore CA2000
+#pragma warning restore CA2000 // Dispose objects before losing scope
         using var request = new HttpRequestMessage(HttpMethod.Get, config.UserInfoUrl);
         request.Headers.Add("Authorization", $"Bearer {accessToken}");
 
@@ -366,12 +370,14 @@ public class OAuthService : IOAuthService
 
     private async Task<string> GetGitHubPrimaryEmailAsync(string accessToken)
     {
-#pragma warning disable CA2000 // HttpClient lifetime managed by IHttpClientFactory
         // S1075: GitHub API endpoint (official public endpoint)
         const string GitHubUserEmailsApiUrl = "https://api.github.com/user/emails";
 
+        // CA2000 suppression: HttpClient from IHttpClientFactory MUST NOT be disposed manually.
+        // The factory manages HttpMessageHandler pooling and lifetime. See: https://learn.microsoft.com/en-us/dotnet/architecture/microservices/implement-resilient-applications/use-httpclientfactory-to-implement-resilient-http-requests
+#pragma warning disable CA2000 // Dispose objects before losing scope - False positive: IHttpClientFactory manages HttpClient lifetime
         var httpClient = _httpClientFactory.CreateClient();
-#pragma warning restore CA2000
+#pragma warning restore CA2000 // Dispose objects before losing scope
         using var request = new HttpRequestMessage(HttpMethod.Get, GitHubUserEmailsApiUrl);
         request.Headers.Add("Authorization", $"Bearer {accessToken}");
         request.Headers.Add("User-Agent", "MeepleAI");
@@ -487,9 +493,11 @@ public class OAuthService : IOAuthService
         string provider,
         string refreshToken)
     {
-#pragma warning disable CA2000 // HttpClient lifetime managed by IHttpClientFactory
+        // CA2000 suppression: HttpClient from IHttpClientFactory MUST NOT be disposed manually.
+        // The factory manages HttpMessageHandler pooling and lifetime. See: https://learn.microsoft.com/en-us/dotnet/architecture/microservices/implement-resilient-applications/use-httpclientfactory-to-implement-resilient-http-requests
+#pragma warning disable CA2000 // Dispose objects before losing scope - False positive: IHttpClientFactory manages HttpClient lifetime
         var httpClient = _httpClientFactory.CreateClient();
-#pragma warning restore CA2000
+#pragma warning restore CA2000 // Dispose objects before losing scope
 
         var requestData = new Dictionary<string, string>
 (StringComparer.Ordinal)

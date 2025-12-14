@@ -40,6 +40,7 @@ public class GameRepository : RepositoryBase, IGameRepository
 
     public async Task<IReadOnlyList<Game>> FindByTitleAsync(string titlePattern, CancellationToken cancellationToken = default)
     {
+        if (titlePattern is null) throw new ArgumentNullException(nameof(titlePattern));
         var gameEntities = await DbContext.Games
             .AsNoTracking()
             .Where(g => EF.Functions.ILike(g.Name, $"%{titlePattern}%"))
@@ -51,6 +52,7 @@ public class GameRepository : RepositoryBase, IGameRepository
 
     public async Task AddAsync(Game game, CancellationToken cancellationToken = default)
     {
+        if (game is null) throw new ArgumentNullException(nameof(game));
         // Collect domain events BEFORE mapping to persistence entity
         CollectDomainEvents(game);
 
@@ -60,6 +62,7 @@ public class GameRepository : RepositoryBase, IGameRepository
 
     public Task UpdateAsync(Game game, CancellationToken cancellationToken = default)
     {
+        if (game is null) throw new ArgumentNullException(nameof(game));
         // Collect domain events BEFORE updating persistence entity
         CollectDomainEvents(game);
 
@@ -70,6 +73,7 @@ public class GameRepository : RepositoryBase, IGameRepository
 
     public Task DeleteAsync(Game game, CancellationToken cancellationToken = default)
     {
+        if (game is null) throw new ArgumentNullException(nameof(game));
         var gameEntity = MapToPersistence(game);
         DbContext.Games.Remove(gameEntity);
         return Task.CompletedTask;
@@ -129,6 +133,7 @@ public class GameRepository : RepositoryBase, IGameRepository
     /// </summary>
     private static Api.Infrastructure.Entities.GameEntity MapToPersistence(Game domainEntity)
     {
+        if (domainEntity is null) throw new ArgumentNullException(nameof(domainEntity));
         return new Api.Infrastructure.Entities.GameEntity
         {
             Id = domainEntity.Id,

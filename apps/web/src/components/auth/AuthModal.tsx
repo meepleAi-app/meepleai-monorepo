@@ -95,6 +95,7 @@ export function AuthModal({
       title={activeTab === 'login' ? 'Sign In to MeepleAI' : 'Create Your Account'}
       description="Access AI-powered board game rules assistance"
       size="md"
+      data-testid="auth-modal"
     >
       <div className="space-y-6">
         {/* Session Expired Warning */}
@@ -122,8 +123,12 @@ export function AuthModal({
         {/* Auth Tabs */}
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="login">Login</TabsTrigger>
-            <TabsTrigger value="register">Register</TabsTrigger>
+            <TabsTrigger value="login" data-testid="auth-tab-login">
+              Login
+            </TabsTrigger>
+            <TabsTrigger value="register" data-testid="auth-tab-register">
+              Register
+            </TabsTrigger>
           </TabsList>
 
           {/* Login Tab */}

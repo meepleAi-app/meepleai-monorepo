@@ -122,6 +122,7 @@ public static class InfrastructureServiceExtensions
 #pragma warning restore EXTEXP0018
 
         // Add L2 distributed cache (Redis) if enabled, otherwise use in-memory fallback
+        // IDistributedCache is required by: EditorLockService, ShareLink handlers, AddCommentToSharedThread
         if (hybridCacheConfig.EnableL2Cache)
         {
             services.AddStackExchangeRedisCache(options =>

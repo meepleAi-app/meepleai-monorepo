@@ -14,6 +14,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
+import { getQueryClient } from '@/lib/queryClient';
+import { userKeys } from '@/hooks/queries/useCurrentUser';
 
 // ============================================================================
 // Types
@@ -79,6 +81,9 @@ export function useAuth(): UseAuthReturn {
   /**
    * Login with email and password
    * Returns user on success, throws on failure
+   *
+   * After successful login, invalidates TanStack Query cache to ensure
+   * dashboard and other components fetch fresh user data (fixes #XXXX)
    */
   const login = useCallback(async (data: LoginData): Promise<AuthUser> => {
     setLoading(true);
@@ -91,6 +96,12 @@ export function useAuth(): UseAuthReturn {
       });
 
       setUser(authUser);
+
+      // Invalidate TanStack Query cache to ensure fresh data on dashboard
+      // This fixes the desync between useAuth (local state) and useCurrentUser (TanStack Query)
+      const queryClient = getQueryClient();
+      await queryClient.invalidateQueries({ queryKey: userKeys.current() });
+
       return authUser;
     } catch (err: unknown) {
       const errorMessage =
@@ -105,6 +116,9 @@ export function useAuth(): UseAuthReturn {
   /**
    * Register new user account
    * Returns user on success, throws on failure
+   *
+   * After successful registration, invalidates TanStack Query cache to ensure
+   * dashboard shows user data instead of "Nessun Utente" error (fixes #XXXX)
    */
   const register = useCallback(async (data: RegisterData): Promise<AuthUser> => {
     setLoading(true);
@@ -119,6 +133,12 @@ export function useAuth(): UseAuthReturn {
       });
 
       setUser(authUser);
+
+      // Invalidate TanStack Query cache to ensure fresh data on dashboard
+      // This fixes the desync between useAuth (local state) and useCurrentUser (TanStack Query)
+      const queryClient = getQueryClient();
+      await queryClient.invalidateQueries({ queryKey: userKeys.current() });
+
       return authUser;
     } catch (err: unknown) {
       const errorMessage =
@@ -133,6 +153,8 @@ export function useAuth(): UseAuthReturn {
   /**
    * Logout current user
    * Redirects to home page on success
+   *
+   * After logout, invalidates TanStack Query cache to clear user data
    */
   const logout = useCallback(async () => {
     setLoading(true);
@@ -141,10 +163,20 @@ export function useAuth(): UseAuthReturn {
     try {
       await api.auth.logout();
       setUser(null);
+
+      // Invalidate TanStack Query cache to clear stale user data
+      const queryClient = getQueryClient();
+      await queryClient.invalidateQueries({ queryKey: userKeys.current() });
+
       await router.push('/');
     } catch (err: unknown) {
       // Clear user state even if API call fails
       setUser(null);
+
+      // Still invalidate cache on logout failure
+      const queryClient = getQueryClient();
+      await queryClient.invalidateQueries({ queryKey: userKeys.current() });
+
       await router.push('/');
     } finally {
       setLoading(false);

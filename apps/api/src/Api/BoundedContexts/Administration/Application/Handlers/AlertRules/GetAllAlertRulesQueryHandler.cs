@@ -13,7 +13,7 @@ public class GetAllAlertRulesQueryHandler : IRequestHandler<GetAllAlertRulesQuer
 
     public async Task<List<AlertRuleDto>> Handle(GetAllAlertRulesQuery request, CancellationToken ct)
     {
-        var rules = await _repository.GetAllAsync(ct);
+        var rules = await _repository.GetAllAsync(ct).ConfigureAwait(false);
         return rules.Select(r => new AlertRuleDto(r.Id, r.Name, r.AlertType, r.Severity.ToDisplayString(), r.Threshold.Value, r.Threshold.Unit, r.Duration.Minutes, r.IsEnabled, r.Description, r.CreatedAt, r.UpdatedAt)).ToList();
     }
 }

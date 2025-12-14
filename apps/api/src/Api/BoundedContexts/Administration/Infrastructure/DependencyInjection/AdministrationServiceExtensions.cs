@@ -16,6 +16,7 @@ namespace Api.BoundedContexts.Administration.Infrastructure.DependencyInjection;
 
 public static class AdministrationServiceExtensions
 {
+    [Obsolete]
     public static IServiceCollection AddAdministrationContext(this IServiceCollection services)
     {
         // Repositories

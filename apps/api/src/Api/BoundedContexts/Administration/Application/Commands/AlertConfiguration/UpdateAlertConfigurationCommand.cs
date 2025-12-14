@@ -27,7 +27,7 @@ public class UpdateAlertConfigurationCommandValidator : AbstractValidator<Update
 
         RuleFor(x => x.Category)
             .NotEmpty().WithMessage("Category is required")
-            .Must(c => new[] { "Email", "Slack", "PagerDuty", "Global" }.Contains(c))
+            .Must(c => new[] { "Email", "Slack", "PagerDuty", "Global" }.Contains(c, StringComparer.Ordinal))
             .WithMessage("Category must be one of: Email, Slack, PagerDuty, Global");
 
         RuleFor(x => x.UpdatedBy)

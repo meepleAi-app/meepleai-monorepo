@@ -42,7 +42,7 @@ public class BulkImportApiKeysCommandHandlerTests
         var userId = Guid.NewGuid();
         var requesterId = Guid.NewGuid();
         var expiresAt = DateTime.UtcNow.AddYears(1).ToString("yyyy-MM-dd HH:mm:ss");
-        
+
         var csvContent = $@"userId,keyName,scopes,expiresAt,metadata
 {userId},Test Key 1,read:games,{expiresAt},{{""env"":""prod""}}
 {userId},Test Key 2,write:games,{expiresAt},null";
@@ -66,10 +66,10 @@ public class BulkImportApiKeysCommandHandlerTests
         Assert.Equal(0, result.FailedCount);
         Assert.Empty(result.Errors);
         Assert.Equal(2, result.Data.Count);
-        
+
         // Verify plaintext keys are returned
         Assert.All(result.Data, dto => Assert.False(string.IsNullOrWhiteSpace(dto.PlaintextKey)));
-        
+
         // Verify repository was called
         _mockApiKeyRepository.Verify(r => r.AddAsync(It.IsAny<ApiKey>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
@@ -117,13 +117,13 @@ guid1,Test Key,read:games,2026-12-31 23:59:59,null";
         // Arrange
         var userId = Guid.NewGuid();
         var lines = new List<string> { "userId,keyName,scopes,expiresAt,metadata" };
-        
+
         // Generate 1001 rows
         for (int i = 0; i < 1001; i++)
         {
             lines.Add($"{userId},Key {i},read:games,2026-12-31 23:59:59,null");
         }
-        
+
         var csvContent = string.Join("\n", lines);
         var command = new BulkImportApiKeysCommand(csvContent, Guid.NewGuid());
 
@@ -184,7 +184,7 @@ guid1,Test Key,read:games,2026-12-31 23:59:59,null";
             .ReturnsAsync(true);
 
         var (existingKey, _) = ApiKey.Create(Guid.NewGuid(), userId, "Existing Key", "read:games", DateTime.UtcNow.AddYears(1));
-        
+
         _mockApiKeyRepository
             .Setup(r => r.GetByUserIdAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<ApiKey> { existingKey });
@@ -393,7 +393,7 @@ invalid-guid,Invalid Key,read:games,2026-12-31 23:59:59,null
         var userId1 = Guid.NewGuid();
         var userId2 = Guid.NewGuid();
         var expiresAt = DateTime.UtcNow.AddYears(1).ToString("yyyy-MM-dd HH:mm:ss");
-        
+
         var csvContent = $@"userId,keyName,scopes,expiresAt,metadata
 {userId1},User1 Key,read:games,{expiresAt},null
 {userId2},User2 Key,write:games,{expiresAt},null";
@@ -417,7 +417,7 @@ invalid-guid,Invalid Key,read:games,2026-12-31 23:59:59,null
         Assert.Equal(0, result.FailedCount);
         Assert.Empty(result.Errors);
         Assert.Equal(2, result.Data.Count);
-        
+
         // Verify different user IDs
         Assert.Contains(result.Data, dto => dto.UserId == userId1);
         Assert.Contains(result.Data, dto => dto.UserId == userId2);

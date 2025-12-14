@@ -121,7 +121,7 @@ public class PlaywrightReportParserService : IPlaywrightReportParserService
     /// <summary>
     /// Gets the latest Playwright report file path
     /// </summary>
-    private async Task<string?> GetLatestReportAsync(CancellationToken cancellationToken = default)
+    private async Task<string?> GetLatestReportAsync()
     {
         await Task.CompletedTask.ConfigureAwait(false);
 

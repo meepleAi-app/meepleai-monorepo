@@ -153,14 +153,14 @@ public sealed class ShareLinkToken
 
     private static string GetClaimFromToken(JwtSecurityToken token, string claimType)
     {
-        return token.Claims.FirstOrDefault(c => c.Type == claimType)?.Value
+        return token.Claims.FirstOrDefault(c => string.Equals(c.Type, claimType, StringComparison.Ordinal))?.Value
             ?? throw new InvalidOperationException($"Claim '{claimType}' not found in token");
     }
 
     public override string ToString() => Value;
 
     public override bool Equals(object? obj) =>
-        obj is ShareLinkToken other && Value == other.Value;
+        obj is ShareLinkToken other && string.Equals(Value, other.Value, StringComparison.Ordinal);
 
-    public override int GetHashCode() => Value.GetHashCode();
+    public override int GetHashCode() => StringComparer.Ordinal.GetHashCode(Value);
 }

@@ -43,6 +43,7 @@ public class HybridCacheService : IHybridCacheService
     }
 
     /// <inheritdoc />
+#pragma warning disable MA0051
     public async Task<T> GetOrCreateAsync<T>(
         string cacheKey,
         Func<CancellationToken, Task<T>> factory,
@@ -50,6 +51,7 @@ public class HybridCacheService : IHybridCacheService
         TimeSpan? expiration = null,
         CancellationToken ct = default) where T : class
     {
+        ArgumentNullException.ThrowIfNull(cacheKey);
         if (string.IsNullOrWhiteSpace(cacheKey))
         {
             throw new ArgumentException("Cache key cannot be null or whitespace", nameof(cacheKey));
@@ -133,6 +135,7 @@ public class HybridCacheService : IHybridCacheService
         }
     }
 
+#pragma warning restore MA0051
     /// <inheritdoc />
     public async Task RemoveAsync(string cacheKey, CancellationToken ct = default)
     {
@@ -140,34 +143,12 @@ public class HybridCacheService : IHybridCacheService
         {
             throw new ArgumentException("Cache key cannot be null or whitespace", nameof(cacheKey));
         }
+        await _hybridCache.RemoveAsync(cacheKey, ct).ConfigureAwait(false);
 
-        try
-        {
-            await _hybridCache.RemoveAsync(cacheKey, ct).ConfigureAwait(false);
+        // Remove tag tracking for this key
+        UntrackKey(cacheKey);
 
-            // Remove tag tracking for this key
-            UntrackKey(cacheKey);
-
-            _logger.LogInformation("Removed cache entry: {CacheKey}", cacheKey);
-        }
-#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
-        // INFRASTRUCTURE LOGGING PATTERN: Log cache operation failures before propagating.
-        catch (RedisConnectionException ex)
-        {
-            _logger.LogError(ex, "Redis connection failed removing key {CacheKey}", cacheKey);
-            throw;
-        }
-        catch (RedisTimeoutException ex)
-        {
-            _logger.LogWarning(ex, "Redis timeout removing key {CacheKey}", cacheKey);
-            throw;
-        }
-        catch (InvalidOperationException ex)
-        {
-            _logger.LogError(ex, "Invalid operation removing key {CacheKey}", cacheKey);
-            throw;
-        }
-#pragma warning restore S2139
+        _logger.LogInformation("Removed cache entry: {CacheKey}", cacheKey);
     }
 
     /// <inheritdoc />
@@ -183,42 +164,23 @@ public class HybridCacheService : IHybridCacheService
             _logger.LogWarning("Tag-based invalidation is disabled in configuration");
             return 0;
         }
+        // Get all keys associated with this tag
+        var keysToRemove = GetKeysByTag(tag);
 
-        try
+        if (keysToRemove.Count == 0)
         {
-            // Get all keys associated with this tag
-            var keysToRemove = GetKeysByTag(tag);
+            _logger.LogDebug("No cache entries found for tag: {Tag}", tag);
+            return 0;
+        }
 
-            if (keysToRemove.Count == 0)
-            {
-                _logger.LogDebug("No cache entries found for tag: {Tag}", tag);
-                return 0;
-            }
+        // Remove each key
+        foreach (var key in keysToRemove)
+        {
+            await RemoveAsync(key, ct).ConfigureAwait(false);
+        }
 
-            // Remove each key
-            foreach (var key in keysToRemove)
-            {
-                await RemoveAsync(key, ct).ConfigureAwait(false);
-            }
-
-            _logger.LogInformation("Removed {Count} cache entries for tag: {Tag}", keysToRemove.Count, tag);
-            return keysToRemove.Count;
-        }
-        catch (RedisConnectionException ex)
-        {
-            _logger.LogError(ex, "Redis connection failed removing entries for tag {Tag}", tag);
-            throw;
-        }
-        catch (RedisTimeoutException ex)
-        {
-            _logger.LogWarning(ex, "Redis timeout removing entries for tag {Tag}", tag);
-            throw;
-        }
-        catch (InvalidOperationException ex)
-        {
-            _logger.LogError(ex, "Invalid operation removing entries for tag {Tag}", tag);
-            throw;
-        }
+        _logger.LogInformation("Removed {Count} cache entries for tag: {Tag}", keysToRemove.Count, tag);
+        return keysToRemove.Count;
     }
 
     /// <inheritdoc />
@@ -234,46 +196,27 @@ public class HybridCacheService : IHybridCacheService
             _logger.LogWarning("Tag-based invalidation is disabled in configuration");
             return 0;
         }
+        // Find keys that have ALL specified tags (AND logic)
+        var keysToRemove = GetKeysByTags(tags);
 
-        try
+        if (keysToRemove.Count == 0)
         {
-            // Find keys that have ALL specified tags (AND logic)
-            var keysToRemove = GetKeysByTags(tags);
-
-            if (keysToRemove.Count == 0)
-            {
-                _logger.LogDebug("No cache entries found with all tags: {Tags}", string.Join(", ", tags));
-                return 0;
-            }
-
-            // Remove each key
-            foreach (var key in keysToRemove)
-            {
-                await RemoveAsync(key, ct).ConfigureAwait(false);
-            }
-
-            _logger.LogInformation(
-                "Removed {Count} cache entries for tags: {Tags}",
-                keysToRemove.Count,
-                string.Join(", ", tags));
-
-            return keysToRemove.Count;
+            _logger.LogDebug("No cache entries found with all tags: {Tags}", string.Join(", ", tags));
+            return 0;
         }
-        catch (RedisConnectionException ex)
+
+        // Remove each key
+        foreach (var key in keysToRemove)
         {
-            _logger.LogError(ex, "Redis connection failed removing entries for tags {Tags}", string.Join(", ", tags));
-            throw;
+            await RemoveAsync(key, ct).ConfigureAwait(false);
         }
-        catch (RedisTimeoutException ex)
-        {
-            _logger.LogWarning(ex, "Redis timeout removing entries for tags {Tags}", string.Join(", ", tags));
-            throw;
-        }
-        catch (InvalidOperationException ex)
-        {
-            _logger.LogError(ex, "Invalid operation removing entries for tags {Tags}", string.Join(", ", tags));
-            throw;
-        }
+
+        _logger.LogInformation(
+            "Removed {Count} cache entries for tags: {Tags}",
+            keysToRemove.Count,
+            string.Join(", ", tags));
+
+        return keysToRemove.Count;
     }
 
     /// <inheritdoc />

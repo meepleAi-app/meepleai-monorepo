@@ -1,3 +1,4 @@
+using DotNetEnv;
 using Api.Configuration; // CHAT-02
 using Api.Extensions;
 using Api.Infrastructure;
@@ -36,6 +37,33 @@ using AspNetIpNetwork = Microsoft.AspNetCore.HttpOverrides.IPNetwork;
 // This allows gRPC connections over http:// (insecure) instead of requiring https://
 // Required for local development with HyperDX
 AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
+
+// Load environment variables from .env.development file (single source of truth for secrets)
+// SECURITY: Only load .env files in Development environment - NEVER in Production
+// Uses clobberExistingVars: false so launchSettings.json values (localhost) take priority
+// This allows: OAuth credentials from .env.development + localhost connections from launchSettings.json
+var aspNetCoreEnv = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+var isDevelopmentEnv = string.Equals(aspNetCoreEnv, "Development", StringComparison.OrdinalIgnoreCase);
+
+if (isDevelopmentEnv)
+{
+    var envFilePath = Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..", "..", ".env.development");
+    if (File.Exists(envFilePath))
+    {
+        Env.Load(envFilePath, new LoadOptions(setEnvVars: true, clobberExistingVars: false));
+        Console.WriteLine("[DotNetEnv] Loaded .env.development for local development");
+    }
+    else
+    {
+        // Try alternative path (when running from solution root)
+        var altEnvPath = Path.Combine(Directory.GetCurrentDirectory(), ".env.development");
+        if (File.Exists(altEnvPath))
+        {
+            Env.Load(altEnvPath, new LoadOptions(setEnvVars: true, clobberExistingVars: false));
+            Console.WriteLine("[DotNetEnv] Loaded .env.development for local development");
+        }
+    }
+}
 
 var builder = WebApplication.CreateBuilder(args);
 

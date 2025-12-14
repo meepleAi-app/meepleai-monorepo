@@ -766,6 +766,7 @@ public class PromptEvaluationService : IPromptEvaluationService
     /// </summary>
     public string GenerateReport(PromptEvaluationResult result, ReportFormat format = ReportFormat.Markdown)
     {
+        ArgumentNullException.ThrowIfNull(result, nameof(result));
         return format switch
         {
             ReportFormat.Markdown => GenerateMarkdownReport(result),
@@ -861,6 +862,7 @@ public class PromptEvaluationService : IPromptEvaluationService
     /// </summary>
     public async Task StoreResultsAsync(PromptEvaluationResult result, CancellationToken ct = default)
     {
+        ArgumentNullException.ThrowIfNull(result, nameof(result));
         _logger.LogInformation("Storing evaluation result {EvaluationId} to database", result.EvaluationId);
 
         try

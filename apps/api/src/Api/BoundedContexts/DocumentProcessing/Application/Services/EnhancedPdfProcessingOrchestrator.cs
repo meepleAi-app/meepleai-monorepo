@@ -118,6 +118,7 @@ public class EnhancedPdfProcessingOrchestrator
         bool enableOcrFallback = true,
         CancellationToken ct = default)
     {
+        ArgumentNullException.ThrowIfNull(pdfStream);
         var requestId = Guid.NewGuid().ToString();
         var overallStopwatch = Stopwatch.StartNew();
 
@@ -341,6 +342,7 @@ public class EnhancedPdfProcessingOrchestrator
         bool enableOcrFallback = true,
         CancellationToken ct = default)
     {
+        ArgumentNullException.ThrowIfNull(pdfStream);
         var requestId = Guid.NewGuid().ToString();
         var overallStopwatch = Stopwatch.StartNew();
 

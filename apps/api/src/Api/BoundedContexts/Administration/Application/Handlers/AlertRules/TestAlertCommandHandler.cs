@@ -23,24 +23,25 @@ public class TestAlertCommandHandler : IRequestHandler<TestAlertCommand, bool>
         try
         {
             _logger.LogInformation(
-                "Testing alert: Type={AlertType}, Channel={Channel}", 
-                request.AlertType, 
+                "Testing alert: Type={AlertType}, Channel={Channel}",
+                request.AlertType,
                 request.Channel);
 
             await _alertingService.SendAlertAsync(
-                request.AlertType, 
-                "Critical", 
-                $"Test alert for {request.AlertType} via {request.Channel}", 
-                new Dictionary<string, object> 
-                { 
-                    ["test"] = true, 
-                    ["channel"] = request.Channel 
-                }, 
-                ct);
+                request.AlertType,
+                "Critical",
+                $"Test alert for {request.AlertType} via {request.Channel}",
+                new Dictionary<string, object>
+(StringComparer.Ordinal)
+                {
+                    ["test"] = true,
+                    ["channel"] = request.Channel
+                },
+                ct).ConfigureAwait(false);
 
             _logger.LogInformation(
-                "Test alert sent successfully: Type={AlertType}, Channel={Channel}", 
-                request.AlertType, 
+                "Test alert sent successfully: Type={AlertType}, Channel={Channel}",
+                request.AlertType,
                 request.Channel);
 
             return true;

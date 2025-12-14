@@ -69,12 +69,14 @@ public class DocumentCollectionRepository : RepositoryBase, IDocumentCollectionR
 
     public async Task AddAsync(DocumentCollection collection, CancellationToken cancellationToken = default)
     {
+        if (collection is null) throw new ArgumentNullException(nameof(collection));
         var entity = MapToPersistence(collection);
         await DbContext.DocumentCollections.AddAsync(entity, cancellationToken).ConfigureAwait(false);
     }
 
     public Task UpdateAsync(DocumentCollection collection, CancellationToken cancellationToken = default)
     {
+        if (collection is null) throw new ArgumentNullException(nameof(collection));
         var entity = MapToPersistence(collection);
 
         // Check if already tracked
@@ -89,8 +91,22 @@ public class DocumentCollectionRepository : RepositoryBase, IDocumentCollectionR
 
     public Task DeleteAsync(DocumentCollection collection, CancellationToken cancellationToken = default)
     {
-        var entity = MapToPersistence(collection);
-        DbContext.DocumentCollections.Remove(entity);
+        if (collection is null) throw new ArgumentNullException(nameof(collection));
+
+        // Check if already tracked
+        var tracked = DbContext.ChangeTracker.Entries<Api.Infrastructure.Entities.DocumentCollectionEntity>()
+            .FirstOrDefault(e => e.Entity.Id == collection.Id);
+
+        if (tracked != null)
+        {
+            DbContext.DocumentCollections.Remove(tracked.Entity);
+        }
+        else
+        {
+            var entity = MapToPersistence(collection);
+            DbContext.DocumentCollections.Remove(entity);
+        }
+
         return Task.CompletedTask;
     }
 
@@ -105,7 +121,7 @@ public class DocumentCollectionRepository : RepositoryBase, IDocumentCollectionR
 
         // Issue #2140: Deserialize documents from JSON to CollectionDocument domain entities
         var documents = new List<CollectionDocument>();
-        if (!string.IsNullOrWhiteSpace(entity.DocumentsJson) && entity.DocumentsJson != "[]")
+        if (!string.IsNullOrWhiteSpace(entity.DocumentsJson) && !string.Equals(entity.DocumentsJson, "[]", StringComparison.Ordinal))
         {
             var documentDtos = JsonSerializer.Deserialize<List<CollectionDocumentDto>>(entity.DocumentsJson);
             if (documentDtos != null)

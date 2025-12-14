@@ -267,7 +267,7 @@ public class UpdateN8NConfigCommandHandlerTests
             IsActive: null
         );
 
-        var cancellationTokenSource = new CancellationTokenSource();
+        using var cancellationTokenSource = new CancellationTokenSource();
         var cancellationToken = cancellationTokenSource.Token;
 
         _mockRepository

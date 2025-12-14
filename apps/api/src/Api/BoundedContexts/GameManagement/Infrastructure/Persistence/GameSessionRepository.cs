@@ -161,8 +161,20 @@ public class GameSessionRepository : RepositoryBase, IGameSessionRepository
 
     public Task DeleteAsync(GameSession session, CancellationToken cancellationToken = default)
     {
-        var sessionEntity = MapToPersistence(session);
-        DbContext.GameSessions.Remove(sessionEntity);
+        // Check if already tracked to avoid EF Core tracking conflicts
+        var tracked = DbContext.ChangeTracker.Entries<GameSessionEntity>()
+            .FirstOrDefault(e => e.Entity.Id == session.Id);
+
+        if (tracked != null)
+        {
+            DbContext.GameSessions.Remove(tracked.Entity);
+        }
+        else
+        {
+            var sessionEntity = MapToPersistence(session);
+            DbContext.GameSessions.Remove(sessionEntity);
+        }
+
         return Task.CompletedTask;
     }
 

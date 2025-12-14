@@ -176,7 +176,7 @@
   --secondary: 142 76% 36%;         /* #16A34A - Verde Carcassonne */
   --secondary-foreground: 0 0% 100%;
   --muted: 30 20% 90%;              /* Beige medio - muted backgrounds */
-  --muted-foreground: 30 12% 45%;
+  --muted-foreground: 30 12% 40%;   /* Darkened from 45% for WCAG AA contrast (4.5:1) */
   --accent: 271 91% 65%;            /* #A855F7 - Viola giochi */
   --accent-foreground: 0 0% 100%;
   --destructive: 0 84.2% 60.2%;

@@ -34,7 +34,7 @@ public static class ReportingEndpoints
             {
                 Template = request.Template,
                 Format = request.Format,
-                Parameters = request.Parameters ?? new Dictionary<string, object>()
+                Parameters = request.Parameters ?? new Dictionary<string, object>(StringComparer.Ordinal)
             };
 
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -71,7 +71,7 @@ public static class ReportingEndpoints
                 Description = request.Description,
                 Template = request.Template,
                 Format = request.Format,
-                Parameters = request.Parameters ?? new Dictionary<string, object>(),
+                Parameters = request.Parameters ?? new Dictionary<string, object>(StringComparer.Ordinal),
                 ScheduleExpression = request.ScheduleExpression,
                 CreatedBy = userId,
                 EmailRecipients = request.EmailRecipients // ISSUE-918

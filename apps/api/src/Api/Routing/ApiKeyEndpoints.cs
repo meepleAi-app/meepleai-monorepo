@@ -286,7 +286,7 @@ public static class ApiKeyEndpoints
             var csv = await mediator.Send(query, ct).ConfigureAwait(false);
 
             var fileName = $"apikeys-export-{DateTime.UtcNow:yyyyMMdd-HHmmss}.csv";
-            
+
             return Results.File(
                 System.Text.Encoding.UTF8.GetBytes(csv),
                 "text/csv",

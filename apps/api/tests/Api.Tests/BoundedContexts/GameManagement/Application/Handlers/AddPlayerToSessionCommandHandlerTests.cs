@@ -463,7 +463,7 @@ public class AddPlayerToSessionCommandHandlerTests
             PlayerName: "Test Player",
             PlayerOrder: 3);
 
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         var cancellationToken = cts.Token;
 
         // Act

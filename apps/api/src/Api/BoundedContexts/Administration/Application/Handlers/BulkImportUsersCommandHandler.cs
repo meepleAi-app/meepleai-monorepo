@@ -84,8 +84,8 @@ public class BulkImportUsersCommandHandler : ICommandHandler<BulkImportUsersComm
     /// Validates CSV content and parses user records.
     /// </summary>
     private async Task<List<UserImportRecord>> ValidateCsvAndParseUsersAsync(
-        string csvContent,
-        CancellationToken cancellationToken)
+        string csvContent
+                )
     {
         if (string.IsNullOrWhiteSpace(csvContent))
         {
@@ -106,7 +106,7 @@ public class BulkImportUsersCommandHandler : ICommandHandler<BulkImportUsersComm
             throw new DomainException($"Bulk operation exceeds maximum limit of {MaxBulkSize} users");
         }
 
-        return await Task.FromResult(userRecords);
+        return await Task.FromResult(userRecords).ConfigureAwait(false);
     }
 
     /// <summary>

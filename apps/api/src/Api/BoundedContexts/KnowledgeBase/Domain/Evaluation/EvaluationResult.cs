@@ -232,12 +232,11 @@ public sealed record EvaluationResult
     }
 
     private static IReadOnlyDictionary<string, EvaluationMetrics> CalculateMetricsByGroup(
-        IReadOnlyList<EvaluationSampleResult> _,
-        bool __)
+                                )
     {
         // Note: This is a simplified implementation. In practice, you'd need to
-        // join with the original samples to get difficulty/category metadata.
-        // For now, returning empty as the sample results don't carry this metadata.
+        // group samples by difficulty or category and calculate metrics per group.
+        // For now, returning empty to satisfy the caller signatures.
         return new Dictionary<string, EvaluationMetrics>(StringComparer.Ordinal);
     }
 }

@@ -520,6 +520,7 @@ public static class MeepleAiMetrics
         string? endpoint = null,
         bool isUnhandled = false)
     {
+        ArgumentNullException.ThrowIfNull(exception);
         // Determine severity based on HTTP status code
         var severity = httpStatusCode switch
         {
@@ -751,6 +752,8 @@ public static class MeepleAiMetrics
         string? userSegment = null,
         string? userIdHash = null)
     {
+        ArgumentNullException.ThrowIfNull(modelId);
+        ArgumentNullException.ThrowIfNull(provider);
         // OpenTelemetry GenAI Semantic Convention: gen_ai.client.token.usage
         var baseTags = new TagList
         {

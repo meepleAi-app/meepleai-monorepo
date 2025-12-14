@@ -145,8 +145,9 @@ public class PdfQualityValidationDomainService
     /// <summary>
     /// Generates actionable recommendation based on quality score
     /// </summary>
-    private static string GenerateRecommendation(double score, ExtractionQuality _, string source)
+    private static string GenerateRecommendation(double score, string source)
     {
+        // Currently quality param is unused but kept for extensibility in rules
         if (score >= 0.80)
         {
             return "Quality meets threshold - suitable for RAG pipeline";

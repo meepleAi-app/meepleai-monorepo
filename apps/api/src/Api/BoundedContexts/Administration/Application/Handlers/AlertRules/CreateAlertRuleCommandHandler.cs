@@ -18,7 +18,7 @@ public class CreateAlertRuleCommandHandler : IRequestHandler<CreateAlertRuleComm
         var duration = new AlertDuration(request.DurationMinutes);
 
         var rule = AlertRule.Create(request.Name, request.AlertType, severity, threshold, duration, request.CreatedBy, request.Description);
-        await _repository.AddAsync(rule, ct);
+        await _repository.AddAsync(rule, ct).ConfigureAwait(false);
         return rule.Id;
     }
 }

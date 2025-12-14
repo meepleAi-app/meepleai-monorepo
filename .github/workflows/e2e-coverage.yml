@@ -41,6 +41,11 @@ jobs:
           cd apps/web
           npx playwright install chromium --with-deps
 
+      - name: Build Next.js application
+        run: |
+          cd apps/web
+          pnpm build
+
       # Barrier 1: Validate critical test infrastructure exists
       - name: Validate E2E test infrastructure
         run: |

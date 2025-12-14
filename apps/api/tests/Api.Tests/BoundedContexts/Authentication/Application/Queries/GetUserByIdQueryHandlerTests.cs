@@ -192,7 +192,7 @@ public class GetUserByIdQueryHandlerTests
         var user = CreateTestUser("user@example.com");
         var query = new GetUserByIdQuery(user.Id);
 
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         var token = cts.Token;
 
         _userRepositoryMock

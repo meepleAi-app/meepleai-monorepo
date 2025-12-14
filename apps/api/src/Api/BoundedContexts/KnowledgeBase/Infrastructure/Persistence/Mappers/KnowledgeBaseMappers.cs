@@ -16,6 +16,7 @@ public static class KnowledgeBaseMappers
     /// </summary>
     public static VectorDocumentEntity ToEntity(this VectorDocument domain)
     {
+        ArgumentNullException.ThrowIfNull(domain);
         return new VectorDocumentEntity
         {
             Id = domain.Id,
@@ -37,6 +38,7 @@ public static class KnowledgeBaseMappers
     /// </summary>
     public static VectorDocument ToDomain(this VectorDocumentEntity entity)
     {
+        ArgumentNullException.ThrowIfNull(entity);
         var domain = new VectorDocument(
             id: entity.Id,
             gameId: entity.GameId,

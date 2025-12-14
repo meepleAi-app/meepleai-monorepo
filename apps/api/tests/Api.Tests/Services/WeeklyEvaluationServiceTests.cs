@@ -137,8 +137,8 @@ public class WeeklyEvaluationServiceTests : IDisposable
         var options = Options.Create(_config);
         var expectedReport = new QualityReport
         {
-            StartDate = new DateTime(2025, 1, 8, 12, 0, 0),
-            EndDate = new DateTime(2025, 1, 15, 12, 0, 0),
+            StartDate = new DateTime(2025, 1, 8, 12, 0, 0, DateTimeKind.Utc),
+            EndDate = new DateTime(2025, 1, 15, 12, 0, 0, DateTimeKind.Utc),
             TotalResponses = 100,
             LowQualityCount = 5,
             LowQualityPercentage = 5.0,
@@ -174,8 +174,8 @@ public class WeeklyEvaluationServiceTests : IDisposable
         _mediatorMock.Verify(
             x => x.Send(
                 It.Is<GenerateQualityReportQuery>(q =>
-                    q.StartDate.Date == new DateTime(2025, 1, 8).Date &&
-                    q.EndDate.Date == new DateTime(2025, 1, 15).Date &&
+                    q.StartDate.Date == new DateTime(2025, 1, 8, 0, 0, 0, DateTimeKind.Utc).Date &&
+                    q.EndDate.Date == new DateTime(2025, 1, 15, 0, 0, 0, DateTimeKind.Utc).Date &&
                     q.Days == 7),
                 It.IsAny<CancellationToken>()),
             Times.AtLeastOnce);
@@ -224,8 +224,8 @@ public class WeeklyEvaluationServiceTests : IDisposable
         // Assert
         Assert.NotNull(capturedQuery);
         // Compare dates only to tolerate time shift from FakeTimeProvider.Advance
-        Assert.Equal(new DateTime(2025, 2, 13).Date, capturedQuery.StartDate.Date);
-        Assert.Equal(new DateTime(2025, 2, 20).Date, capturedQuery.EndDate.Date);
+        Assert.Equal(new DateTime(2025, 2, 13, 0, 0, 0, DateTimeKind.Utc).Date, capturedQuery.StartDate.Date);
+        Assert.Equal(new DateTime(2025, 2, 20, 0, 0, 0, DateTimeKind.Utc).Date, capturedQuery.EndDate.Date);
         Assert.Equal(7, capturedQuery.Days);
     }
 

@@ -25,8 +25,9 @@ public sealed class RevokeShareLinkCommandHandler : IRequestHandler<RevokeShareL
         RevokeShareLinkCommand request,
         CancellationToken cancellationToken)
     {
+        if (request is null) throw new ArgumentNullException(nameof(request));
         // Load share link via repository
-        var shareLink = await _shareLinkRepository.GetByIdAsync(request.ShareLinkId, cancellationToken);
+        var shareLink = await _shareLinkRepository.GetByIdAsync(request.ShareLinkId, cancellationToken).ConfigureAwait(false);
 
         if (shareLink == null || shareLink.CreatorId != request.UserId)
         {
@@ -38,7 +39,7 @@ public sealed class RevokeShareLinkCommandHandler : IRequestHandler<RevokeShareL
         shareLink.Revoke();
 
         // Save changes via repository
-        await _shareLinkRepository.UpdateAsync(shareLink, cancellationToken);
+        await _shareLinkRepository.UpdateAsync(shareLink, cancellationToken).ConfigureAwait(false);
 
         // Add token to Redis blacklist
         // Key format: "revoked_share_link:{share_link_id}"
@@ -58,7 +59,7 @@ public sealed class RevokeShareLinkCommandHandler : IRequestHandler<RevokeShareL
                 blacklistKey,
                 shareLink.RevokedAt!.Value.ToString("O"),
                 options,
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
         }
 
         return true;

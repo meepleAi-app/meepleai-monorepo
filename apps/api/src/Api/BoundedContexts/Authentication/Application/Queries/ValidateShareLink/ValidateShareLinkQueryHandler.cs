@@ -41,7 +41,7 @@ public sealed class ValidateShareLinkQueryHandler : IRequestHandler<ValidateShar
 
         // Check Redis blacklist for revocation
         var blacklistKey = $"revoked_share_link:{token.ShareLinkId}";
-        var isRevoked = await _cache.GetStringAsync(blacklistKey, cancellationToken);
+        var isRevoked = await _cache.GetStringAsync(blacklistKey, cancellationToken).ConfigureAwait(false);
 
         if (isRevoked != null)
         {

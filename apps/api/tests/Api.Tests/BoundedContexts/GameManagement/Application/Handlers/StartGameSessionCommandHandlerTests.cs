@@ -234,7 +234,7 @@ public class StartGameSessionCommandHandlerTests
                 new("Player 2", 2, null)
             });
 
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         var cancellationToken = cts.Token;
 
         // Act

@@ -19,7 +19,7 @@ public class AlertRule
     public string UpdatedBy { get; private set; }
 
     public Guid Id { get; private set; }
-    
+
     private AlertRule(
         Guid id,
         string name,

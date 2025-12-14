@@ -53,6 +53,7 @@ public static class PromptManagementEndpoints
         {
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
+            ArgumentNullException.ThrowIfNull(request);
 
             var result = await mediator.Send(
                 new CreatePromptTemplateCommand(
@@ -212,6 +213,7 @@ public static class PromptManagementEndpoints
         {
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
+            ArgumentNullException.ThrowIfNull(request);
 
             logger.LogInformation("Admin {AdminId} evaluating prompt template {TemplateId}, version {VersionId}",
                 session!.User!.Id, templateId, versionId);
@@ -248,6 +250,7 @@ public static class PromptManagementEndpoints
         {
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
+            ArgumentNullException.ThrowIfNull(request);
 
             logger.LogInformation(
                 "Admin {AdminId} comparing prompt versions: Baseline {BaselineId} vs Candidate {CandidateId}",

@@ -83,7 +83,7 @@ public class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespons
 
         // Step 5: Build validated response with quality metrics and citations
         var response = await BuildValidatedResponseAsync(
-            query, llmResponse, llmResult, searchResults, domainSearchResults, 
+            query, llmResponse, searchResults, domainSearchResults,
             searchConfidence, systemPrompt, userPrompt, cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
@@ -208,8 +208,7 @@ public class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespons
     private async Task<QaResponseDto> BuildValidatedResponseAsync(
         AskQuestionQuery query,
         string llmResponse,
-        LlmCompletionResult llmResult,
-        List<SearchResultDto> searchResults,
+                List<SearchResultDto> searchResults,
         List<Domain.Entities.SearchResult> domainSearchResults,
         Confidence searchConfidence,
         string systemPrompt,

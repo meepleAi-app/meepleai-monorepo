@@ -272,7 +272,7 @@ public class EmailService : IEmailService
 
             using var message = new MailMessage();
             message.From = new MailAddress(_fromAddress, _fromName);
-            
+
             foreach (var recipient in recipients)
             {
                 message.To.Add(new MailAddress(recipient));
@@ -333,7 +333,7 @@ public class EmailService : IEmailService
 
             using var message = new MailMessage();
             message.From = new MailAddress(_fromAddress, _fromName);
-            
+
             foreach (var recipient in recipients)
             {
                 message.To.Add(new MailAddress(recipient));

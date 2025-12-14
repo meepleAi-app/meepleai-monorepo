@@ -182,7 +182,7 @@ public class GetGameDetailsQueryHandlerTests
         var sessions = new List<GameSession>();
         var query = new GetGameDetailsQuery(game.Id);
 
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         var token = cts.Token;
 
         _gameRepositoryMock

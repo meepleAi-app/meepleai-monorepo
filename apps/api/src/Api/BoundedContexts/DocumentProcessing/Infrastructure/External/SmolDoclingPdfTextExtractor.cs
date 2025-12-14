@@ -40,6 +40,7 @@ public class SmolDoclingPdfTextExtractor : IPdfTextExtractor
         bool enableOcrFallback = true,
         CancellationToken ct = default)
     {
+        ArgumentNullException.ThrowIfNull(pdfStream);
         var startTime = DateTime.UtcNow;
         var requestId = Guid.NewGuid().ToString();
 
@@ -175,6 +176,7 @@ public class SmolDoclingPdfTextExtractor : IPdfTextExtractor
         bool enableOcrFallback = true,
         CancellationToken ct = default)
     {
+        ArgumentNullException.ThrowIfNull(pdfStream);
         var startTime = DateTime.UtcNow;
         var requestId = Guid.NewGuid().ToString();
 
@@ -271,6 +273,7 @@ public class SmolDoclingPdfTextExtractor : IPdfTextExtractor
     /// </summary>
     private List<PageTextChunk> ConvertToPageChunks(IList<SmolDoclingChunk> chunks)
     {
+        ArgumentNullException.ThrowIfNull(chunks);
         var pageChunks = new List<PageTextChunk>();
         int charIndex = 0;
 

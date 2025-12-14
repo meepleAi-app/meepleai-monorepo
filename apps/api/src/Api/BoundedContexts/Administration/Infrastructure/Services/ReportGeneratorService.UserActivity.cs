@@ -38,6 +38,7 @@ public sealed partial class ReportGeneratorService
         IReadOnlyDictionary<string, object> parameters,
         CancellationToken ct)
     {
+        ArgumentNullException.ThrowIfNull(parameters);
         var startDate = (DateTime)parameters["startDate"];
         var endDate = (DateTime)parameters["endDate"];
 
@@ -80,7 +81,7 @@ public sealed partial class ReportGeneratorService
                 Description: "Daily new user registrations",
                 Data: registrations.Select(r => new ReportDataRow(
                     new Dictionary<string, object>
-                    {
+(StringComparer.Ordinal) {
                         ["Date"] = r.Date.ToString("yyyy-MM-dd"),
                         ["Registrations"] = r.Count
                     })).ToList(),
@@ -88,7 +89,7 @@ public sealed partial class ReportGeneratorService
                     Type: ChartType.Line,
                     Labels: dateLabels,
                     Series: new Dictionary<string, double[]>
-                    {
+(StringComparer.Ordinal) {
                         ["Registrations"] = registrationValues
                     },
                     YAxisLabel: "Count")),
@@ -97,7 +98,7 @@ public sealed partial class ReportGeneratorService
                 Description: "Daily login and session activity comparison",
                 Data: logins.Select(l => new ReportDataRow(
                     new Dictionary<string, object>
-                    {
+(StringComparer.Ordinal) {
                         ["Date"] = l.Date.ToString("yyyy-MM-dd"),
                         ["Logins"] = l.Count
                     })).ToList(),
@@ -105,7 +106,7 @@ public sealed partial class ReportGeneratorService
                     Type: ChartType.MultiLine,
                     Labels: dateLabels,
                     Series: new Dictionary<string, double[]>
-                    {
+(StringComparer.Ordinal) {
                         ["Logins"] = loginValues,
                         ["Sessions"] = sessions.Select(s => (double)s.Count).ToArray()
                     },
@@ -117,6 +118,7 @@ public sealed partial class ReportGeneratorService
             Description: $"User engagement from {startDate:yyyy-MM-dd} to {endDate:yyyy-MM-dd}",
             GeneratedAt: DateTime.UtcNow,
             Metadata: new Dictionary<string, object>
+(StringComparer.Ordinal)
             {
                 ["startDate"] = startDate,
                 ["endDate"] = endDate,

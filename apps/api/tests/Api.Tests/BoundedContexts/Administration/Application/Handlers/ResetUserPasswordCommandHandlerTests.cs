@@ -218,7 +218,7 @@ public class ResetUserPasswordCommandHandlerTests
             UserId: userId.ToString(),
             NewPassword: "NewPassword123!");
 
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         var cancellationToken = cts.Token;
 
         // Act

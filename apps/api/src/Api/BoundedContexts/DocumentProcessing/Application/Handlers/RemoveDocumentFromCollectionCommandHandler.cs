@@ -63,47 +63,4 @@ public class RemoveDocumentFromCollectionCommandHandler : ICommandHandler<Remove
 
         return true;
     }
-
-    private async Task<DocumentCollectionDto> MapToDto(
-        Domain.Entities.DocumentCollection collection,
-        CancellationToken cancellationToken)
-    {
-        var documentDtos = new List<CollectionDocumentDto>();
-
-        foreach (var doc in collection.GetDocumentsOrdered())
-        {
-            var pdfDoc = await _pdfRepository.GetByIdAsync(doc.PdfDocumentId, cancellationToken).ConfigureAwait(false);
-
-            documentDtos.Add(new CollectionDocumentDto(
-                PdfDocumentId: doc.PdfDocumentId,
-                DocumentType: doc.Type.Value,
-                SortOrder: doc.SortOrder,
-                AddedAt: doc.AddedAt,
-                PdfDocument: pdfDoc != null ? new PdfDocumentDto(
-                    Id: pdfDoc.Id,
-                    GameId: pdfDoc.GameId,
-                    FileName: pdfDoc.FileName.Value,
-                    FilePath: pdfDoc.FilePath,
-                    FileSizeBytes: pdfDoc.FileSize.Bytes,
-                    ProcessingStatus: pdfDoc.ProcessingStatus,
-                    UploadedAt: pdfDoc.UploadedAt,
-                    ProcessedAt: pdfDoc.ProcessedAt,
-                    PageCount: pdfDoc.PageCount
-                ) : null
-            ));
-        }
-
-        return new DocumentCollectionDto(
-            Id: collection.Id,
-            GameId: collection.GameId,
-            Name: collection.Name.Value,
-            Description: collection.Description,
-            CreatedByUserId: collection.CreatedByUserId,
-            CreatedAt: collection.CreatedAt,
-            UpdatedAt: collection.UpdatedAt,
-            Documents: documentDtos,
-            DocumentCount: collection.DocumentCount,
-            IsFull: collection.IsFull
-        );
-    }
 }

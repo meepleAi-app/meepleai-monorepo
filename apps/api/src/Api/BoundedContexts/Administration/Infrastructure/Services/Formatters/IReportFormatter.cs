@@ -54,7 +54,7 @@ public sealed record ReportDataRow(IReadOnlyDictionary<string, object> Values);
 public sealed record ChartData(
     ChartType Type,
     string[] Labels,
-    Dictionary<string, double[]> Series,
+    IReadOnlyDictionary<string, double[]> Series,
     string? YAxisLabel = null);
 
 /// <summary>

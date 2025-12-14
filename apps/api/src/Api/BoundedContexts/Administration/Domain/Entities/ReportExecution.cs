@@ -35,7 +35,7 @@ public sealed record ReportExecution
             OutputPath = null,
             FileSizeBytes = null,
             Duration = null,
-            ExecutionMetadata = new Dictionary<string, object>()
+            ExecutionMetadata = new Dictionary<string, object>(StringComparer.Ordinal)
         };
     }
 
@@ -75,7 +75,7 @@ public sealed record ReportExecution
     /// </summary>
     public ReportExecution WithMetadata(string key, object value)
     {
-        var metadata = new Dictionary<string, object>(ExecutionMetadata)
+        var metadata = new Dictionary<string, object>(ExecutionMetadata, StringComparer.Ordinal)
         {
             [key] = value
         };

@@ -29,6 +29,9 @@ public sealed class PdfDocument : AggregateRoot<Guid>
     public DocumentType DocumentType { get; private set; }
     public int SortOrder { get; private set; }
 
+    // Admin Wizard: Public library visibility (visible to all registered users)
+    public bool IsPublic { get; private set; }
+
 #pragma warning disable CS8618
     private PdfDocument() : base() { }
 #pragma warning restore CS8618
@@ -84,7 +87,8 @@ public sealed class PdfDocument : AggregateRoot<Guid>
         LanguageCode language,
         Guid? collectionId = null,
         DocumentType? documentType = null,
-        int sortOrder = 0)
+        int sortOrder = 0,
+        bool isPublic = false)
     {
         var document = new PdfDocument
         {
@@ -103,7 +107,8 @@ public sealed class PdfDocument : AggregateRoot<Guid>
             Language = language,
             CollectionId = collectionId,
             DocumentType = documentType ?? ValueObjects.DocumentType.Base,
-            SortOrder = sortOrder
+            SortOrder = sortOrder,
+            IsPublic = isPublic
         };
 
         return document;
@@ -165,4 +170,14 @@ public sealed class PdfDocument : AggregateRoot<Guid>
         DocumentType = ValueObjects.DocumentType.Base; // Reset to default
         SortOrder = 0;
     }
+
+    /// <summary>
+    /// Makes this PDF visible in the public library (for registered users).
+    /// </summary>
+    public void MakePublic() => IsPublic = true;
+
+    /// <summary>
+    /// Makes this PDF private (only visible to uploader and admins).
+    /// </summary>
+    public void MakePrivate() => IsPublic = false;
 }

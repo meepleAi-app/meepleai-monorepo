@@ -13,5 +13,7 @@ public record CreateGameCommand(
     int? MinPlayers = null,
     int? MaxPlayers = null,
     int? MinPlayTimeMinutes = null,
-    int? MaxPlayTimeMinutes = null
+    int? MaxPlayTimeMinutes = null,
+    string? IconUrl = null,
+    string? ImageUrl = null
 ) : ICommand<GameDto>;

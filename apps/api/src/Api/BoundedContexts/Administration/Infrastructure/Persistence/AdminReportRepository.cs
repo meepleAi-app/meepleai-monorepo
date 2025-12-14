@@ -112,9 +112,9 @@ public sealed class AdminReportRepository : IAdminReportRepository
         };
 
         var parameters = string.IsNullOrWhiteSpace(entity.ParametersJson)
-            ? new Dictionary<string, object>()
+            ? new Dictionary<string, object>(StringComparer.Ordinal)
             : JsonSerializer.Deserialize<Dictionary<string, object>>(entity.ParametersJson, options)
-              ?? new Dictionary<string, object>();
+              ?? new Dictionary<string, object>(StringComparer.Ordinal);
 
         // ISSUE-918: Deserialize email recipients
         var emailRecipientsList = string.IsNullOrWhiteSpace(entity.EmailRecipientsJson)

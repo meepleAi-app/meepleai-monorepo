@@ -12,6 +12,7 @@ public sealed partial class ReportGeneratorService
     private static (bool IsValid, string? ErrorMessage) ValidateSystemHealthParameters(
         IReadOnlyDictionary<string, object> parameters)
     {
+        ArgumentNullException.ThrowIfNull(parameters);
         // Optional: hours parameter (default: 24)
         if (parameters.TryGetValue("hours", out var hoursObj))
         {
@@ -65,22 +66,22 @@ public sealed partial class ReportGeneratorService
                 Data: new List<ReportDataRow>
                 {
                     new(new Dictionary<string, object>
-                    {
+(StringComparer.Ordinal) {
                         ["Metric"] = "Total Users",
                         ["Value"] = totalUsers
                     }),
                     new(new Dictionary<string, object>
-                    {
+(StringComparer.Ordinal) {
                         ["Metric"] = "Active Users",
                         ["Value"] = activeUsers
                     }),
                     new(new Dictionary<string, object>
-                    {
+(StringComparer.Ordinal) {
                         ["Metric"] = "Total Sessions",
                         ["Value"] = totalSessions
                     }),
                     new(new Dictionary<string, object>
-                    {
+(StringComparer.Ordinal) {
                         ["Metric"] = "Active Sessions",
                         ["Value"] = activeSessions
                     })
@@ -89,7 +90,7 @@ public sealed partial class ReportGeneratorService
                     Type: ChartType.Bar,
                     Labels: ["Total Users", "Active Users", "Total Sessions", "Active Sessions"],
                     Series: new Dictionary<string, double[]>
-                    {
+(StringComparer.Ordinal) {
                         ["Value"] = [totalUsers, activeUsers, totalSessions, activeSessions]
                     },
                     YAxisLabel: "Count")),
@@ -99,27 +100,27 @@ public sealed partial class ReportGeneratorService
                 Data: new List<ReportDataRow>
                 {
                     new(new Dictionary<string, object>
-                    {
+(StringComparer.Ordinal) {
                         ["Metric"] = "Total Games",
                         ["Value"] = totalGames
                     }),
                     new(new Dictionary<string, object>
-                    {
+(StringComparer.Ordinal) {
                         ["Metric"] = "Total PDFs",
                         ["Value"] = totalPdfs
                     }),
                     new(new Dictionary<string, object>
-                    {
+(StringComparer.Ordinal) {
                         ["Metric"] = "Recent PDFs",
                         ["Value"] = recentPdfs
                     }),
                     new(new Dictionary<string, object>
-                    {
+(StringComparer.Ordinal) {
                         ["Metric"] = "Total Chat Threads",
                         ["Value"] = totalChatThreads
                     }),
                     new(new Dictionary<string, object>
-                    {
+(StringComparer.Ordinal) {
                         ["Metric"] = "Recent Chats",
                         ["Value"] = recentChats
                     })
@@ -128,7 +129,7 @@ public sealed partial class ReportGeneratorService
                     Type: ChartType.Bar,
                     Labels: ["Games", "Total PDFs", "Recent PDFs", "Threads", "Recent Chats"],
                     Series: new Dictionary<string, double[]>
-                    {
+(StringComparer.Ordinal) {
                         ["Value"] = [totalGames, totalPdfs, recentPdfs, totalChatThreads, recentChats]
                     },
                     YAxisLabel: "Count"))
@@ -139,6 +140,7 @@ public sealed partial class ReportGeneratorService
             Description: $"System health metrics for the last {hours} hours",
             GeneratedAt: DateTime.UtcNow,
             Metadata: new Dictionary<string, object>
+(StringComparer.Ordinal)
             {
                 ["hours"] = hours,
                 ["since"] = since

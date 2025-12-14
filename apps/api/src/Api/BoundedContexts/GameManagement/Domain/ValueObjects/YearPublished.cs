@@ -51,5 +51,9 @@ public sealed class YearPublished : ValueObject
 
     public override string ToString() => Value.ToString();
 
-    public static implicit operator int(YearPublished year) => year.Value;
+    public static implicit operator int(YearPublished year)
+    {
+        if (year is null) throw new ArgumentNullException(nameof(year));
+        return year.Value;
+    }
 }

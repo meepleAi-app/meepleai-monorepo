@@ -492,7 +492,7 @@ public class EmbeddingServiceTests
     {
         // Arrange
         var texts = new List<string> { "Test text" };
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
 
         _primaryProviderMock
@@ -516,3 +516,4 @@ public class EmbeddingServiceTests
         result.Success.Should().BeFalse();
     }
 }
+

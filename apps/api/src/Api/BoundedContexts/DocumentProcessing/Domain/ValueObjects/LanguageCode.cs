@@ -38,7 +38,7 @@ public sealed class LanguageCode : ValueObject
 
         if (!SupportedLanguages.Contains(normalized))
             throw new ValidationException(nameof(LanguageCode),
-                $"Language code must be one of: {string.Join(", ", SupportedLanguages.OrderBy(x => x))}. Got: {code}");
+                $"Language code must be one of: {string.Join(", ", SupportedLanguages.OrderBy(x => x, StringComparer.Ordinal))}. Got: {code}");
 
         Value = normalized;
     }

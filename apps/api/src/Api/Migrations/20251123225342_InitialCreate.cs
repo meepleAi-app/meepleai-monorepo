@@ -13,6 +13,7 @@ namespace Api.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            ArgumentNullException.ThrowIfNull(migrationBuilder, nameof(migrationBuilder));
             migrationBuilder.CreateTable(
                 name: "agent_feedback",
                 columns: table => new

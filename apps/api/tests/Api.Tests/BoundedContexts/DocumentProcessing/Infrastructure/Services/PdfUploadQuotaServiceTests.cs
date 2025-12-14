@@ -10,6 +10,7 @@ using FluentAssertions;
 using AuthRole = Api.BoundedContexts.Authentication.Domain.ValueObjects.Role;
 using UserTier = Api.BoundedContexts.Authentication.Domain.ValueObjects.UserTier;
 using Api.Tests.Constants;
+using System.Globalization;
 
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Infrastructure.Services;
 
@@ -530,7 +531,7 @@ public class PdfUploadQuotaServiceTests
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var testDate = DateTime.Parse(dateString + " 10:00:00", null, System.Globalization.DateTimeStyles.AssumeUniversal);
+        var testDate = DateTime.Parse(dateString + " 10:00:00", CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AssumeUniversal);
         var utcTestDate = DateTime.SpecifyKind(testDate, DateTimeKind.Utc);
         _timeProvider.SetUtcNow(utcTestDate);
 
@@ -620,8 +621,8 @@ public class PdfUploadQuotaServiceTests
         var userTier = UserTier.Free;
         var userRole = AuthRole.User;
 
-        var currentDate = DateTime.Parse(currentDateString + " 10:00:00", null, System.Globalization.DateTimeStyles.AssumeUniversal | System.Globalization.DateTimeStyles.AdjustToUniversal);
-        var expectedReset = DateTime.Parse(expectedResetDateString + " 00:00:00", null, System.Globalization.DateTimeStyles.AssumeUniversal | System.Globalization.DateTimeStyles.AdjustToUniversal);
+        var currentDate = DateTime.Parse(currentDateString + " 10:00:00", CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AssumeUniversal | System.Globalization.DateTimeStyles.AdjustToUniversal);
+        var expectedReset = DateTime.Parse(expectedResetDateString + " 00:00:00", CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AssumeUniversal | System.Globalization.DateTimeStyles.AdjustToUniversal);
 
         _timeProvider.SetUtcNow(DateTime.SpecifyKind(currentDate, DateTimeKind.Utc));
 

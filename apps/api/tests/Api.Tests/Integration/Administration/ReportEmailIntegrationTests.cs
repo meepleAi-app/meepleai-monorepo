@@ -47,7 +47,7 @@ public sealed class ReportEmailIntegrationTests
         // Arrange
         var reportId = Guid.NewGuid();
         var recipients = new List<string> { "admin@test.com", "user@test.com" }.AsReadOnly();
-        
+
         var report = new AdminReport
         {
             Id = reportId,
@@ -136,7 +136,7 @@ public sealed class ReportEmailIntegrationTests
     {
         // Arrange
         var reportId = Guid.NewGuid();
-        
+
         var report = new AdminReport
         {
             Id = reportId,
@@ -215,7 +215,7 @@ public sealed class ReportEmailIntegrationTests
         // Arrange
         var reportId = Guid.NewGuid();
         var recipients = new List<string> { "admin@test.com" }.AsReadOnly();
-        
+
         var report = new AdminReport
         {
             Id = reportId,
@@ -289,7 +289,7 @@ public sealed class ReportEmailIntegrationTests
         // Arrange
         var reportId = Guid.NewGuid();
         var recipients = new List<string> { "admin@test.com" }.AsReadOnly();
-        
+
         var report = new AdminReport
         {
             Id = reportId,

@@ -6,6 +6,7 @@ using Api.Services;
 using Moq;
 using Xunit;
 using Api.Tests.Constants;
+using System.Globalization;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 
@@ -129,8 +130,8 @@ public class SendAlertCommandHandlerTests
         {
             { "Issues", new List<string> { "Low quality percentage high", "Overall confidence low" } },
             { "IssueCount", 2 },
-            { "StartDate", DateTime.Parse("2025-01-08") },
-            { "EndDate", DateTime.Parse("2025-01-15") },
+            { "StartDate", DateTime.Parse("2025-01-08", CultureInfo.InvariantCulture) },
+            { "EndDate", DateTime.Parse("2025-01-15", CultureInfo.InvariantCulture) },
             { "LowQualityPercentage", 15.0 }
         };
 

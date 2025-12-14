@@ -410,7 +410,7 @@ public class AbandonGameSessionCommandHandlerTests
             SessionId: sessionId,
             Reason: "Test");
 
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         var cancellationToken = cts.Token;
 
         // Act

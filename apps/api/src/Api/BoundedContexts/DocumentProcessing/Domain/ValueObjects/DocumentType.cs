@@ -41,7 +41,7 @@ public sealed class DocumentType : ValueObject
 
         if (!ValidTypes.Contains(normalized))
             throw new ValidationException(nameof(DocumentType),
-                $"Document type must be one of: {string.Join(", ", ValidTypes.OrderBy(x => x))}. Got: {type}");
+                $"Document type must be one of: {string.Join(", ", ValidTypes.OrderBy(x => x, StringComparer.Ordinal))}. Got: {type}");
 
         Value = normalized;
     }

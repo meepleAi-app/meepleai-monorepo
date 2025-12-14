@@ -68,7 +68,7 @@ public class PrometheusHttpClient : IPrometheusQueryService
                 PropertyNameCaseInsensitive = true
             });
 
-            if (!string.Equals(prometheusResponse?.Status, "success", StringComparison.Ordinal))
+            if (prometheusResponse is null || !string.Equals(prometheusResponse.Status, "success", StringComparison.Ordinal))
             {
                 var errorMsg = prometheusResponse?.Error ?? "Unknown error from Prometheus";
                 _logger.LogError("Prometheus query failed: {Error}", errorMsg);
@@ -116,7 +116,7 @@ public class PrometheusHttpClient : IPrometheusQueryService
                 PropertyNameCaseInsensitive = true
             });
 
-            if (!string.Equals(prometheusResponse?.Status, "success", StringComparison.Ordinal))
+            if (prometheusResponse is null || !string.Equals(prometheusResponse.Status, "success", StringComparison.Ordinal))
             {
                 var errorMsg = prometheusResponse?.Error ?? "Unknown error from Prometheus";
                 _logger.LogError("Prometheus query failed: {Error}", errorMsg);

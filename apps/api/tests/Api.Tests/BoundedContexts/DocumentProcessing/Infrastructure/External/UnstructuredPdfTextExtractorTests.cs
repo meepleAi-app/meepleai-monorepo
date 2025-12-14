@@ -270,7 +270,7 @@ public class UnstructuredPdfTextExtractorTests
         // Arrange
         var extractor = CreateExtractor();
         var pdfStream = CreateTestPdfStream();
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
 
         // Cancel the token to simulate user cancellation
         await cts.CancelAsync();
@@ -461,7 +461,7 @@ public class UnstructuredPdfTextExtractorTests
         // Arrange
         var extractor = CreateExtractor();
         var pdfStream = CreateTestPdfStream();
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
 
         _mockHttpMessageHandler

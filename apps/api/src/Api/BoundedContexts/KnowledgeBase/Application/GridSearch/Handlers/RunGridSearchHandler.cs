@@ -43,7 +43,7 @@ public sealed class RunGridSearchHandler : IRequestHandler<RunGridSearchCommand,
 
         // Load dataset and get configurations to run
         var (dataset, configurations) = await LoadDatasetAndGetConfigurationsAsync(
-            request.DatasetPath, request, cancellationToken).ConfigureAwait(false);
+            request.DatasetPath ?? DefaultDatasetPath, request, cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Running evaluation for {ConfigCount} configurations on dataset '{DatasetName}' ({SampleCount} samples)",

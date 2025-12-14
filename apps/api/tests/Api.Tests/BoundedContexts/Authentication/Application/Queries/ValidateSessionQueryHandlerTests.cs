@@ -471,7 +471,7 @@ public class ValidateSessionQueryHandlerTests
 
         var query = new ValidateSessionQuery(sessionToken.Value);
 
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         var token = cts.Token;
 
         _sessionRepositoryMock

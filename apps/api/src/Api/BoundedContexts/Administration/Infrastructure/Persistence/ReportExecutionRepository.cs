@@ -105,9 +105,9 @@ public sealed class ReportExecutionRepository : IReportExecutionRepository
         };
 
         var metadata = string.IsNullOrWhiteSpace(entity.ExecutionMetadataJson)
-            ? new Dictionary<string, object>()
+            ? new Dictionary<string, object>(StringComparer.Ordinal)
             : JsonSerializer.Deserialize<Dictionary<string, object>>(entity.ExecutionMetadataJson, options)
-              ?? new Dictionary<string, object>();
+              ?? new Dictionary<string, object>(StringComparer.Ordinal);
 
         return new ReportExecution
         {

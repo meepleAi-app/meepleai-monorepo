@@ -429,8 +429,7 @@ public class StreamExplainQueryHandlerTests
         var query = new StreamExplainQuery("game123", "test topic");
         SetupHappyPathMocks();
 
-        var cts = new CancellationTokenSource();
-
+        using var cts = new CancellationTokenSource();
         // Act
         var events = new List<RagStreamingEvent>();
         var eventCount = 0;
@@ -483,8 +482,7 @@ public class StreamExplainQueryHandlerTests
         SetupEmbeddingMock("test topic");
         SetupQdrantMock("game123", searchResults);
 
-        var cts = new CancellationTokenSource();
-
+        using var cts = new CancellationTokenSource();
         // Act & Assert
         await Assert.ThrowsAsync<OperationCanceledException>(async () =>
         {
@@ -668,3 +666,4 @@ public class StreamExplainQueryHandlerTests
             });
     }
 }
+

@@ -167,7 +167,7 @@ public class GetActiveN8NConfigQueryHandlerTests
     {
         // Arrange
         var query = new GetActiveN8NConfigQuery();
-        var cancellationTokenSource = new CancellationTokenSource();
+        using var cancellationTokenSource = new CancellationTokenSource();
         var cancellationToken = cancellationTokenSource.Token;
 
         _mockRepository

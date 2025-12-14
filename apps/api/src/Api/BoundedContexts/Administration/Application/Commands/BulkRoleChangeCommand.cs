@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.Administration.Application.Commands;
 /// <param name="NewRole">The new role to assign (admin/user/editor).</param>
 /// <param name="RequesterId">The ID of the admin requesting the operation.</param>
 public record BulkRoleChangeCommand(
-    List<Guid> UserIds,
+    IReadOnlyList<Guid> UserIds,
     string NewRole,
     Guid RequesterId
 ) : ICommand<BulkOperationResult>;

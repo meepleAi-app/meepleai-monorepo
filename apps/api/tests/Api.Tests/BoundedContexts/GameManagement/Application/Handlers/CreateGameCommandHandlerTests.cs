@@ -289,7 +289,7 @@ public class CreateGameCommandHandlerTests
     {
         // Arrange
         var command = new CreateGameCommand(Title: "Catan");
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         var cancellationToken = cts.Token;
 
         // Act

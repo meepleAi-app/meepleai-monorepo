@@ -74,6 +74,7 @@ public sealed partial class ReportGeneratorService : IReportGeneratorService
             FileName: fileName,
             FileSizeBytes: bytes.Length,
             Metadata: new Dictionary<string, object>
+(StringComparer.Ordinal)
             {
                 ["template"] = template.ToString(),
                 ["format"] = format.ToString(),

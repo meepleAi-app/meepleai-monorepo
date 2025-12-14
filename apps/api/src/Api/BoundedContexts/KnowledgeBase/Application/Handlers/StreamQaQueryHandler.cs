@@ -193,7 +193,7 @@ public class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagStr
 
         // Step 5: Calculate quality metrics, cache response, emit completion
         var overallConfidence = await CalculateAndCacheResponseAsync(
-            answer, snippets!, domainSearchResults!, searchConfidence, 
+            answer, snippets!, domainSearchResults!, searchConfidence ?? Confidence.Parse(0.5),
             tokenCount, cacheKey, llmUsage, llmCost, cancellationToken).ConfigureAwait(false);
 
         yield return CreateEvent(StreamingEventType.Complete,
@@ -306,7 +306,8 @@ public class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagStr
         string queryText,
         List<Snippet> snippets,
         string chatHistoryContext,
-        CancellationToken cancellationToken)
+        CancellationToken ct = default)
+        
     {
         var context = string.Join("\n\n", snippets.Select(s =>
             $"[Page {s.page}] {s.text}"));

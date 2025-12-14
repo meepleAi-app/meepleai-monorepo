@@ -31,7 +31,7 @@ public sealed class ReportGeneratorServiceTests : IDisposable
         _dbContext = new MeepleAiDbContext(options, mediatorMock.Object, eventCollectorMock.Object);
         _loggerMock = new Mock<ILogger<ReportGeneratorService>>();
         _sut = new ReportGeneratorService(_dbContext, _loggerMock.Object);
-        
+
         // Note: DB is empty - tests will generate reports with zero counts, which is valid for testing report generation logic
     }
 

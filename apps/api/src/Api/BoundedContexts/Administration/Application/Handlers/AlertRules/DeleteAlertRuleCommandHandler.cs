@@ -12,7 +12,7 @@ public class DeleteAlertRuleCommandHandler : IRequestHandler<DeleteAlertRuleComm
 
     public async Task<Unit> Handle(DeleteAlertRuleCommand request, CancellationToken ct)
     {
-        await _repository.DeleteAsync(request.Id, ct);
+        await _repository.DeleteAsync(request.Id, ct).ConfigureAwait(false);
         return Unit.Value;
     }
 }

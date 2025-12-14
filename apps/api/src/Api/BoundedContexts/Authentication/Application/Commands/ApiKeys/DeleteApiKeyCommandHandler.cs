@@ -19,6 +19,7 @@ public class DeleteApiKeyCommandHandler : ICommandHandler<DeleteApiKeyCommand, b
 
     public async Task<bool> Handle(DeleteApiKeyCommand command, CancellationToken cancellationToken)
     {
+        if (command is null) throw new ArgumentNullException(nameof(command));
         if (!Guid.TryParse(command.KeyId, out var keyGuid))
         {
             return false;

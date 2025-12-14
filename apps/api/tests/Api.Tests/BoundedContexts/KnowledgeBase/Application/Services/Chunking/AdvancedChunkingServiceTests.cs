@@ -273,7 +273,7 @@ public class AdvancedChunkingServiceTests
     {
         // Arrange
         var document = new ExtractedDocument { Id = Guid.NewGuid(), Content = "Test" };
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
 
         // Act

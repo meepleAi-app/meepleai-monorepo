@@ -12,6 +12,7 @@ public sealed partial class ReportGeneratorService
     private static (bool IsValid, string? ErrorMessage) ValidateContentMetricsParameters(
         IReadOnlyDictionary<string, object> parameters)
     {
+        ArgumentNullException.ThrowIfNull(parameters);
         // Required: startDate, endDate
         if (!parameters.TryGetValue("startDate", out var startObj) || startObj is not DateTime)
         {
@@ -30,6 +31,7 @@ public sealed partial class ReportGeneratorService
         IReadOnlyDictionary<string, object> parameters,
         CancellationToken ct)
     {
+        ArgumentNullException.ThrowIfNull(parameters);
         var startDate = (DateTime)parameters["startDate"];
         var endDate = (DateTime)parameters["endDate"];
 
@@ -83,7 +85,7 @@ public sealed partial class ReportGeneratorService
                 Description: "Daily PDF upload statistics",
                 Data: pdfMetrics.Select(m => new ReportDataRow(
                     new Dictionary<string, object>
-                    {
+(StringComparer.Ordinal) {
                         ["Date"] = m.Date.ToString("yyyy-MM-dd"),
                         ["Uploads"] = m.Count,
                         ["Total Size (MB)"] = $"{m.TotalSize / 1024.0 / 1024.0:F2}"
@@ -92,7 +94,7 @@ public sealed partial class ReportGeneratorService
                     Type: ChartType.Line,
                     Labels: dateLabels,
                     Series: new Dictionary<string, double[]>
-                    {
+(StringComparer.Ordinal) {
                         ["Uploads"] = pdfCountValues
                     },
                     YAxisLabel: "Count")),
@@ -101,7 +103,7 @@ public sealed partial class ReportGeneratorService
                 Description: "PDF uploads vs Vector embeddings over time",
                 Data: vectorMetrics.Select(v => new ReportDataRow(
                     new Dictionary<string, object>
-                    {
+(StringComparer.Ordinal) {
                         ["Date"] = v.Date.ToString("yyyy-MM-dd"),
                         ["Documents"] = v.Count
                     })).ToList(),
@@ -109,7 +111,7 @@ public sealed partial class ReportGeneratorService
                     Type: ChartType.MultiLine,
                     Labels: dateLabels,
                     Series: new Dictionary<string, double[]>
-                    {
+(StringComparer.Ordinal) {
                         ["PDF Uploads"] = pdfCountValues,
                         ["Vector Docs"] = vectorCountValues
                     },
@@ -120,7 +122,7 @@ public sealed partial class ReportGeneratorService
                 Data: new List<ReportDataRow>
                 {
                     new(new Dictionary<string, object>
-                    {
+(StringComparer.Ordinal) {
                         ["Metric"] = "Total Games",
                         ["Value"] = gameMetrics?.TotalGames ?? 0
                     })
@@ -132,6 +134,7 @@ public sealed partial class ReportGeneratorService
             Description: $"Content statistics from {startDate:yyyy-MM-dd} to {endDate:yyyy-MM-dd}",
             GeneratedAt: DateTime.UtcNow,
             Metadata: new Dictionary<string, object>
+(StringComparer.Ordinal)
             {
                 ["startDate"] = startDate,
                 ["endDate"] = endDate,

@@ -215,7 +215,7 @@ public class GetRuleSpecsQueryHandlerTests
         var gameId = Guid.NewGuid();
         var query = new GetRuleSpecsQuery(gameId);
 
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
 
         // Act & Assert

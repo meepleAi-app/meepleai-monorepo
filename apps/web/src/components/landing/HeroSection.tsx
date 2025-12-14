@@ -75,16 +75,18 @@ export function HeroSection() {
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start pt-4 animate-slide-up delay-300">
-              <Button
-                asChild
-                size="lg"
-                className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-white font-semibold shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300"
-              >
-                <Link href="/register">
-                  {t('home.hero.cta.getStarted')}
-                  <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                </Link>
-              </Button>
+              <div data-testid="get-started-button">
+                <Button
+                  asChild
+                  size="lg"
+                  className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-white font-semibold shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300"
+                >
+                  <Link href="/register">
+                    {t('home.hero.cta.getStarted')}
+                    <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                  </Link>
+                </Button>
+              </div>
 
               <Button
                 variant="outline"

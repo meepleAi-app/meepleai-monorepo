@@ -22,6 +22,8 @@ export const GameSchema = z.object({
   createdAt: z.string().datetime(),
   // Issue #1830: UI-003 GameCard enhancements
   imageUrl: z.string().url().nullable().optional(),
+  // Admin Wizard: Game icon URL
+  iconUrl: z.string().url().nullable().optional(),
   description: z.string().nullable().optional(),
   faqCount: z.number().int().nonnegative().nullable().optional(),
   averageRating: z.number().nullable().optional(),

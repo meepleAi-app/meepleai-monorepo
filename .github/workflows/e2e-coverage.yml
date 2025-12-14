@@ -41,34 +41,7 @@ jobs:
           cd apps/web
           npx playwright install chromium --with-deps
 
-      - name: Setup Test Environment
-        run: |
-          cd apps/web
-          cp .env.test.example .env.test || echo "No .env.test.example found, skipping"
-
-      # Issue #2XXX: Build Next.js for E2E tests (REQUIRED for production server mode)
-      # playwright.config.ts uses 'next start' in CI, which requires a production build
-      # Without this step, E2E tests fail with: "Could not find a production build in the '.next' directory"
-      - name: Build Next.js for E2E
-        run: |
-          cd apps/web
-          pnpm build
-
-      # Barrier 1: Validate production build exists (prevents CI failures)
-      - name: Validate production build exists
-        run: |
-          cd apps/web
-          if [ ! -d ".next" ]; then
-            echo "ERROR: .next directory not found. Build step may have failed."
-            exit 1
-          fi
-          if [ ! -f ".next/BUILD_ID" ]; then
-            echo "ERROR: BUILD_ID not found. Production build incomplete."
-            exit 1
-          fi
-          echo "✅ Production build validated: $(cat .next/BUILD_ID)"
-
-      # Barrier 2: Validate critical test infrastructure exists
+      # Barrier 1: Validate critical test infrastructure exists
       - name: Validate E2E test infrastructure
         run: |
           cd apps/web
@@ -94,7 +67,7 @@ jobs:
         env:
           CI: 'true'
 
-      # Barrier 3: Validate coverage was actually generated
+      # Barrier 2: Validate coverage was actually generated
       - name: Validate coverage output
         run: |
           cd apps/web

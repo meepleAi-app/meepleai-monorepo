@@ -123,7 +123,7 @@ export default function DashboardPage() {
         {/* Top Navigation (desktop) */}
         <TopNav />
         <div className="container mx-auto px-4 py-8">
-          <Alert>
+          <Alert data-testid="dashboard-no-user-error">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Nessun Utente</AlertTitle>
             <AlertDescription>

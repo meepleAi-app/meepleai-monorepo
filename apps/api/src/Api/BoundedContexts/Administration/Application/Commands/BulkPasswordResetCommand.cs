@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.Administration.Application.Commands;
 /// <param name="NewPassword">The new password to set for all users.</param>
 /// <param name="RequesterId">The ID of the admin requesting the operation.</param>
 public record BulkPasswordResetCommand(
-    List<Guid> UserIds,
+    IReadOnlyList<Guid> UserIds,
     string NewPassword,
     Guid RequesterId
 ) : ICommand<BulkOperationResult>;
@@ -25,7 +25,7 @@ public record BulkOperationResult(
     int TotalRequested,
     int SuccessCount,
     int FailedCount,
-    List<string> Errors
+    IReadOnlyList<string> Errors
 );
 
 /// <summary>
@@ -41,6 +41,6 @@ public record BulkOperationResult<TData>(
     int TotalRequested,
     int SuccessCount,
     int FailedCount,
-    List<string> Errors,
-    List<TData> Data
+    IReadOnlyList<string> Errors,
+    IReadOnlyList<TData> Data
 );

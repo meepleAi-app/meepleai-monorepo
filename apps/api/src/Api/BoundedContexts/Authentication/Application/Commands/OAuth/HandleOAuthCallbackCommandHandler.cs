@@ -122,7 +122,8 @@ public sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<HandleOA
         string provider,
         string state,
         string code,
-        CancellationToken cancellationToken)
+        CancellationToken ct = default
+        )
     {
         // Validate CSRF state token
         var isStateValid = await _oauthService.ValidateStateAsync(state).ConfigureAwait(false);
@@ -244,14 +245,14 @@ public sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<HandleOA
     /// </summary>
     private async Task<string> CreateSessionForUserAsync(
         Guid userId,
-        string ipAddress,
-        string userAgent,
+        string? ipAddress,
+        string? userAgent,
         CancellationToken cancellationToken)
     {
         var createSessionCommand = new CreateSessionCommand(
             UserId: userId,
-            IpAddress: ipAddress,
-            UserAgent: userAgent);
+            IpAddress: ipAddress ?? "unknown",
+            UserAgent: userAgent ?? "unknown");
 
         var sessionResponse = await _mediator.Send(createSessionCommand, cancellationToken).ConfigureAwait(false);
 

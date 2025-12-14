@@ -233,7 +233,7 @@ public class GetPdfOwnershipQueryHandlerTests
             .WithId(pdfId)
             .Build();
 
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         var cancellationToken = cts.Token;
 
         _documentRepositoryMock

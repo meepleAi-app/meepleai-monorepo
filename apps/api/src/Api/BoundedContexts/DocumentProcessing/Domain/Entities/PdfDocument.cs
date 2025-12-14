@@ -134,7 +134,7 @@ public sealed class PdfDocument : AggregateRoot<Guid>
         ProcessedAt = DateTime.UtcNow;
         ProcessingError = error;
     }
-    
+
     // Issue #2029: Update detected language after processing
     public void UpdateLanguage(LanguageCode languageCode)
     {

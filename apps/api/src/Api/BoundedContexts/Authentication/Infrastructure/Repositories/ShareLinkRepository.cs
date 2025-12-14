@@ -16,18 +16,19 @@ public sealed class ShareLinkRepository : IShareLinkRepository
 
     public ShareLinkRepository(MeepleAiDbContext context)
     {
+        ArgumentNullException.ThrowIfNull(context);
         _context = context;
     }
 
     public async Task<ShareLink?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var entity = await _context.ShareLinks.FindAsync(new object[] { id }, cancellationToken);
+        var entity = await _context.ShareLinks.FindAsync(new object[] { id }, cancellationToken).ConfigureAwait(false);
         return entity == null ? null : MapToDomain(entity);
     }
 
     public async Task<IReadOnlyList<ShareLink>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        var entities = await _context.ShareLinks.ToListAsync(cancellationToken);
+        var entities = await _context.ShareLinks.ToListAsync(cancellationToken).ConfigureAwait(false);
         return entities.Select(MapToDomain).ToList();
     }
 
@@ -35,7 +36,7 @@ public sealed class ShareLinkRepository : IShareLinkRepository
     {
         var entities = await _context.ShareLinks
             .Where(sl => sl.ThreadId == threadId)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
         return entities.Select(MapToDomain).ToList();
     }
 
@@ -43,7 +44,7 @@ public sealed class ShareLinkRepository : IShareLinkRepository
     {
         var entities = await _context.ShareLinks
             .Where(sl => sl.CreatorId == creatorId)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
         return entities.Select(MapToDomain).ToList();
     }
 
@@ -52,7 +53,7 @@ public sealed class ShareLinkRepository : IShareLinkRepository
         var entity = await _context.ShareLinks
             .FirstOrDefaultAsync(
                 sl => sl.ThreadId == threadId && sl.CreatorId == creatorId,
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
         return entity == null ? null : MapToDomain(entity);
     }
 
@@ -63,20 +64,22 @@ public sealed class ShareLinkRepository : IShareLinkRepository
             .Where(sl => sl.ThreadId == threadId
                       && sl.RevokedAt == null
                       && sl.ExpiresAt > now)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
         return entities.Select(MapToDomain).ToList();
     }
 
     public async Task AddAsync(ShareLink entity, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(entity);
         var infrastructureEntity = MapToInfrastructure(entity);
-        await _context.ShareLinks.AddAsync(infrastructureEntity, cancellationToken);
-        await _context.SaveChangesAsync(cancellationToken);
+        await _context.ShareLinks.AddAsync(infrastructureEntity, cancellationToken).ConfigureAwait(false);
+        await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public async Task UpdateAsync(ShareLink entity, CancellationToken cancellationToken = default)
     {
-        var existingEntity = await _context.ShareLinks.FindAsync(new object[] { entity.Id }, cancellationToken);
+        ArgumentNullException.ThrowIfNull(entity);
+        var existingEntity = await _context.ShareLinks.FindAsync(new object[] { entity.Id }, cancellationToken).ConfigureAwait(false);
         if (existingEntity == null)
         {
             throw new InvalidOperationException($"ShareLink {entity.Id} not found");
@@ -89,22 +92,23 @@ public sealed class ShareLinkRepository : IShareLinkRepository
         existingEntity.AccessCount = entity.AccessCount;
         existingEntity.LastAccessedAt = entity.LastAccessedAt;
 
-        await _context.SaveChangesAsync(cancellationToken);
+        await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public async Task DeleteAsync(ShareLink entity, CancellationToken cancellationToken = default)
     {
-        var existingEntity = await _context.ShareLinks.FindAsync(new object[] { entity.Id }, cancellationToken);
+        ArgumentNullException.ThrowIfNull(entity);
+        var existingEntity = await _context.ShareLinks.FindAsync(new object[] { entity.Id }, cancellationToken).ConfigureAwait(false);
         if (existingEntity != null)
         {
             _context.ShareLinks.Remove(existingEntity);
-            await _context.SaveChangesAsync(cancellationToken);
+            await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
     }
 
     public async Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return await _context.ShareLinks.AnyAsync(sl => sl.Id == id, cancellationToken);
+        return await _context.ShareLinks.AnyAsync(sl => sl.Id == id, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>

@@ -202,7 +202,7 @@ public class GetGameByIdQueryHandlerTests
             .WithTitle("Test Game")
             .Build();
 
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         var cancellationToken = cts.Token;
 
         _gameRepositoryMock
@@ -246,4 +246,5 @@ public class GetGameByIdQueryHandlerTests
         Assert.Equal(game.CreatedAt, result.CreatedAt);
     }
 }
+
 

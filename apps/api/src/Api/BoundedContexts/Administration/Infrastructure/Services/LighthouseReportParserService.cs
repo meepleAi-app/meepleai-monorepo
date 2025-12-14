@@ -19,6 +19,7 @@ public class LighthouseReportParserService : ILighthouseReportParserService
         IConfiguration configuration,
         ILogger<LighthouseReportParserService> logger)
     {
+        ArgumentNullException.ThrowIfNull(configuration);
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         // Default to relative path from API project
@@ -158,7 +159,7 @@ public class LighthouseReportParserService : ILighthouseReportParserService
     /// <summary>
     /// Gets the latest Lighthouse report file path
     /// </summary>
-    private async Task<string?> GetLatestReportAsync(CancellationToken cancellationToken = default)
+    private async Task<string?> GetLatestReportAsync(CancellationToken ct = default)
     {
         await Task.CompletedTask.ConfigureAwait(false);
 

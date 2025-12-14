@@ -311,7 +311,7 @@ public class GetAdminStatsQueryHandlerTests
     {
         // Arrange
         var query = new GetAdminStatsQuery(Days: 7);
-        var cancellationTokenSource = new CancellationTokenSource();
+        using var cancellationTokenSource = new CancellationTokenSource();
         var cancellationToken = cancellationTokenSource.Token;
 
         var expectedStats = new DashboardStatsDto(

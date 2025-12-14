@@ -185,7 +185,7 @@ public class CreateConfigurationCommandHandlerTests
             RequiresRestart: false,
             CreatedByUserId: userId
         );
-        var cancellationTokenSource = new CancellationTokenSource();
+        using var cancellationTokenSource = new CancellationTokenSource();
         var cancellationToken = cancellationTokenSource.Token;
 
         // Act
@@ -202,4 +202,5 @@ public class CreateConfigurationCommandHandlerTests
             Times.Once);
     }
 }
+
 

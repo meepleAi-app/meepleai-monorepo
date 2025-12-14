@@ -25,6 +25,10 @@ public class N8NTemplateService
         IConfiguration configuration,
         ILogger<N8NTemplateService> logger)
     {
+        ArgumentNullException.ThrowIfNull(db);
+        ArgumentNullException.ThrowIfNull(httpClientFactory);
+        ArgumentNullException.ThrowIfNull(configuration);
+        ArgumentNullException.ThrowIfNull(logger);
         _db = db;
         _httpClientFactory = httpClientFactory;
         _configuration = configuration;
@@ -140,6 +144,7 @@ public class N8NTemplateService
         string templateId,
         CancellationToken ct = default)
     {
+        ArgumentNullException.ThrowIfNull(templateId);
         // SECURITY: Validate templateId to prevent path traversal
         PathSecurity.ValidateIdentifier(templateId, nameof(templateId));
 
@@ -213,6 +218,8 @@ public class N8NTemplateService
         string userId,
         CancellationToken ct = default)
     {
+        ArgumentNullException.ThrowIfNull(templateId);
+        ArgumentNullException.ThrowIfNull(parameters, nameof(parameters));
         // Load template
         var template = await GetTemplateAsync(templateId, ct).ConfigureAwait(false);
         if (template == null)
@@ -261,6 +268,7 @@ public class N8NTemplateService
     /// </summary>
     public ValidateTemplateResponse ValidateTemplate(string templateJson)
     {
+        ArgumentNullException.ThrowIfNull(templateJson);
         var errors = new List<string>();
 
         try
@@ -336,6 +344,8 @@ public class N8NTemplateService
         IList<TemplateParameterDto> templateParams,
         IDictionary<string, string> providedParams)
     {
+        ArgumentNullException.ThrowIfNull(templateParams);
+        ArgumentNullException.ThrowIfNull(providedParams);
         var missingParams = new List<string>();
 
         foreach (var param in templateParams.Where(p => p.Required))
@@ -394,6 +404,7 @@ public class N8NTemplateService
         object workflow,
         IDictionary<string, string> parameters)
     {
+        ArgumentNullException.ThrowIfNull(parameters);
         // Serialize workflow to JSON string
         var workflowJson = JsonSerializer.Serialize(workflow);
 

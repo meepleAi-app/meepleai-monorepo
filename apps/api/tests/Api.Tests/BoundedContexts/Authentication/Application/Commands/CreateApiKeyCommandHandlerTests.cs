@@ -397,7 +397,7 @@ public class CreateApiKeyCommandHandlerTests
         var userId = Guid.NewGuid();
         var command = new CreateApiKeyCommand(userId, "Test Key", "read", null, null);
 
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         var token = cts.Token;
 
         // Act

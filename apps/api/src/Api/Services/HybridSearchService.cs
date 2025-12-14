@@ -173,7 +173,7 @@ public class HybridSearchService : IHybridSearchService
         // Issue #2051: Filter by document IDs if specified
         var filteredResults = documentIds == null
             ? keywordResults
-            : keywordResults.Where(r => documentIds.Any(id => id.ToString() == r.PdfDocumentId)).ToList();
+            : keywordResults.Where(r => documentIds.Any(id => string.Equals(id.ToString(), r.PdfDocumentId, StringComparison.Ordinal))).ToList();
 
         _logger.LogInformation(
             "Keyword search: {TotalResults} results from PostgreSQL, {FilteredResults} after document filter",
@@ -257,7 +257,7 @@ public class HybridSearchService : IHybridSearchService
         // Issue #2141: Qdrant now does native filtering - keyword still needs post-query filter
         var filteredKeywordResults = documentIds == null
             ? keywordResults
-            : keywordResults.Where(r => documentIds.Any(id => id.ToString() == r.PdfDocumentId)).ToList();
+            : keywordResults.Where(r => documentIds.Any(id => string.Equals(id.ToString(), r.PdfDocumentId, StringComparison.Ordinal))).ToList();
 
         _logger.LogInformation(
             "Retrieved results for fusion: vectorCount={VectorCount} (Qdrant native filter), keywordCount={KeywordCount} (post-filter: {FilteredKeyword})",

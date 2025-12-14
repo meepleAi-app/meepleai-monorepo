@@ -391,7 +391,7 @@ public class ValidateApiKeyQueryHandlerTests
 
         var query = new ValidateApiKeyQuery(plaintextKey);
 
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         var token = cts.Token;
 
         _apiKeyRepositoryMock

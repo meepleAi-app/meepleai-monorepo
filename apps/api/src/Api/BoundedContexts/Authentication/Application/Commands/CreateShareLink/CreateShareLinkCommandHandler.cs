@@ -34,7 +34,7 @@ public sealed class CreateShareLinkCommandHandler : IRequestHandler<CreateShareL
         var threadExists = await _context.ChatThreads
             .AnyAsync(
                 t => t.Id == request.ThreadId && t.UserId == request.UserId,
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
 
         if (!threadExists)
         {
@@ -52,7 +52,7 @@ public sealed class CreateShareLinkCommandHandler : IRequestHandler<CreateShareL
         );
 
         // Save to database for audit trail via repository
-        await _shareLinkRepository.AddAsync(shareLink, cancellationToken);
+        await _shareLinkRepository.AddAsync(shareLink, cancellationToken).ConfigureAwait(false);
 
         // Generate JWT token
         var secretKey = _configuration["Jwt:ShareLinks:SecretKey"]

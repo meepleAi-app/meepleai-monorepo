@@ -343,7 +343,7 @@ public class UpdateGameCommandHandlerTests
             GameId: gameId,
             Title: "Updated");
 
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         var cancellationToken = cts.Token;
 
         // Act

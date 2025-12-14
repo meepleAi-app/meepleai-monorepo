@@ -102,9 +102,6 @@ public sealed class DocumentCollection : AggregateRoot<Guid>
         var collectionDoc = new CollectionDocument(pdfDocumentId, documentType, sortOrder);
         _documents.Add(collectionDoc);
         UpdatedAt = DateTime.UtcNow;
-
-        // Domain event for auditing
-        // AddDomainEvent(new DocumentAddedToCollectionEvent(Id, pdfDocumentId, documentType));
     }
 
     /// <summary>
@@ -119,9 +116,6 @@ public sealed class DocumentCollection : AggregateRoot<Guid>
 
         _documents.Remove(document);
         UpdatedAt = DateTime.UtcNow;
-
-        // Domain event for auditing
-        // AddDomainEvent(new DocumentRemovedFromCollectionEvent(Id, pdfDocumentId));
     }
 
     /// <summary>
@@ -157,7 +151,7 @@ public sealed class DocumentCollection : AggregateRoot<Guid>
     /// </summary>
     public bool ContainsDocumentType(DocumentType type)
     {
-        return _documents.Any(d => d.Type.Value == type.Value);
+        return _documents.Any(d => string.Equals(d.Type.Value, type.Value, StringComparison.Ordinal));
     }
 
     /// <summary>

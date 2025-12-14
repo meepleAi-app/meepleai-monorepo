@@ -59,7 +59,7 @@ public class AdminStatsService : IAdminStatsService
                 var sessionTrendTask = GetSessionTrendAsync(fromDate, toDate, cancellationToken);
                 var apiRequestTrendTask = GetApiRequestTrendAsync(fromDate, toDate, queryParams.GameId, cancellationToken);
                 var pdfUploadTrendTask = GetPdfUploadTrendAsync(fromDate, toDate, queryParams.GameId, cancellationToken);
-                var chatMessageTrendTask = GetChatMessageTrendAsync(fromDate, toDate, queryParams.GameId, cancellationToken);
+                var chatMessageTrendTask = GetChatMessageTrendAsync(fromDate, toDate, cancellationToken);
 
                 await Task.WhenAll(metricsTask, userTrendTask, sessionTrendTask,
                     apiRequestTrendTask, pdfUploadTrendTask, chatMessageTrendTask).ConfigureAwait(false);
@@ -353,8 +353,7 @@ public class AdminStatsService : IAdminStatsService
     private async Task<IReadOnlyList<TimeSeriesDataPoint>> GetChatMessageTrendAsync(
         DateTime fromDate,
         DateTime toDate,
-        string? _,
-        CancellationToken cancellationToken)
+                CancellationToken cancellationToken)
     {
         var data = await _dbContext.ChatLogs
             .AsNoTracking()

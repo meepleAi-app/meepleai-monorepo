@@ -56,7 +56,7 @@ public sealed class CitationPriorityService
 
         // Group by content hash, take first (already ordered by priority)
         var deduplicated = citations
-            .GroupBy(c => GetContentHash(c.Citation.Text))
+            .GroupBy(c => GetContentHash(c.Citation.Text), StringComparer.Ordinal)
             .Select(g => g.First()) // First = highest priority due to prior ordering
             .ToList();
 

@@ -157,7 +157,7 @@ public class ITextPdfTableExtractorTests
     {
         // Arrange
         var tempPdfPath = CreateTempPdfFile();
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         await cts.CancelAsync(); // Cancel immediately
 
         try
@@ -180,7 +180,7 @@ public class ITextPdfTableExtractorTests
     {
         // Arrange
         var tempPdfPath = CreateTempPdfFile();
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         await cts.CancelAsync(); // Cancel immediately
 
         try
@@ -375,3 +375,4 @@ startxref
         return tempPath;
     }
 }
+

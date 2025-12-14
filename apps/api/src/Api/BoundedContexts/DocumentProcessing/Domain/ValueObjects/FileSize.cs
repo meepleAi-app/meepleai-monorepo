@@ -137,7 +137,11 @@ public sealed class FileSize : ValueObject
     /// <summary>
     /// Implicit conversion to long for convenience.
     /// </summary>
-    public static implicit operator long(FileSize fileSize) => fileSize.Bytes;
+    public static implicit operator long(FileSize fileSize)
+    {
+        if (fileSize is null) throw new ArgumentNullException(nameof(fileSize));
+        return fileSize.Bytes;
+    }
 
     /// <summary>
     /// Common file sizes as static constants.

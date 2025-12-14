@@ -383,9 +383,9 @@ public record UpdateUserTierRequest(string Tier);
 /// <summary>
 /// Request payload for bulk password reset.
 /// </summary>
-public record BulkPasswordResetRequest(List<Guid> UserIds, string NewPassword);
+public record BulkPasswordResetRequest(IReadOnlyList<Guid> UserIds, string NewPassword);
 
 /// <summary>
 /// Request payload for bulk role change.
 /// </summary>
-public record BulkRoleChangeRequest(List<Guid> UserIds, string NewRole);
+public record BulkRoleChangeRequest(IReadOnlyList<Guid> UserIds, string NewRole);

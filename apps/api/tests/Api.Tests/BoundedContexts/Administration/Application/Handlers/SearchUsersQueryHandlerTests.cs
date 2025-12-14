@@ -273,7 +273,7 @@ public class SearchUsersQueryHandlerTests
             SearchQuery: "test",
             MaxResults: 10);
 
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         var cancellationToken = cts.Token;
 
         // Act
@@ -316,3 +316,4 @@ public class SearchUsersQueryHandlerTests
             Times.Once);
     }
 }
+

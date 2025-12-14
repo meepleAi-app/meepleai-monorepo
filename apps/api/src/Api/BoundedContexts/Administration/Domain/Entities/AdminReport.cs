@@ -47,7 +47,7 @@ public sealed record AdminReport
             Description = description,
             Template = template,
             Format = format,
-            Parameters = parameters ?? new Dictionary<string, object>(),
+            Parameters = parameters ?? new Dictionary<string, object>(StringComparer.Ordinal),
             ScheduleExpression = scheduleExpression,
             IsActive = true,
             CreatedAt = DateTime.UtcNow,
@@ -126,7 +126,7 @@ public sealed record AdminReport
                 throw new ArgumentException($"Invalid email address: {email}", nameof(recipients));
             }
 
-            if (!validatedList.Contains(trimmedEmail))
+            if (!validatedList.Contains(trimmedEmail, StringComparer.Ordinal))
             {
                 validatedList.Add(trimmedEmail);
             }

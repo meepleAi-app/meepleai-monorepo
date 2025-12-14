@@ -153,7 +153,7 @@ public class CreateN8NConfigCommandHandlerTests
             ApiKeyEncrypted: "key",
             CreatedByUserId: userId
         );
-        var cancellationTokenSource = new CancellationTokenSource();
+        using var cancellationTokenSource = new CancellationTokenSource();
         var cancellationToken = cancellationTokenSource.Token;
 
         // Act

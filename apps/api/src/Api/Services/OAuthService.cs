@@ -422,6 +422,7 @@ public class OAuthService : IOAuthService
     /// <inheritdoc />
     public async Task<OAuthTokenResponse?> RefreshTokenAsync(Guid userId, string provider)
     {
+        ArgumentNullException.ThrowIfNull(provider, nameof(provider));
         // GitHub doesn't support refresh tokens
         if (provider.Equals("github", StringComparison.OrdinalIgnoreCase))
         {

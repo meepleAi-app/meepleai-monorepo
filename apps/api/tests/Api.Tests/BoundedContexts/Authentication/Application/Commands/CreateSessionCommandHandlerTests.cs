@@ -223,7 +223,7 @@ public class CreateSessionCommandHandlerTests
             UserAgent: "TestAgent"
         );
 
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         var token = cts.Token;
 
         _userRepositoryMock

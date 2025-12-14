@@ -93,7 +93,8 @@ public class BulkImportApiKeysCommandHandler : ICommandHandler<BulkImportApiKeys
     /// </summary>
     private async Task<List<ApiKeyImportRecord>> ValidateCsvAndParseAsync(
         string csvContent,
-        CancellationToken cancellationToken)
+        CancellationToken ct = default
+        )
     {
         if (string.IsNullOrWhiteSpace(csvContent))
         {
@@ -114,7 +115,7 @@ public class BulkImportApiKeysCommandHandler : ICommandHandler<BulkImportApiKeys
             throw new DomainException($"Bulk operation exceeds maximum limit of {MaxBulkSize} API keys");
         }
 
-        return await Task.FromResult(keyRecords);
+        return await Task.FromResult(keyRecords).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -126,7 +127,7 @@ public class BulkImportApiKeysCommandHandler : ICommandHandler<BulkImportApiKeys
     {
         var userIds = keyRecords.Select(r => r.UserId).Distinct().ToList();
         var existingUserIds = new HashSet<Guid>();
-        
+
         foreach (var userId in userIds)
         {
             var userExists = await _userRepository.ExistsAsync(userId, cancellationToken).ConfigureAwait(false);
@@ -209,7 +210,7 @@ public class BulkImportApiKeysCommandHandler : ICommandHandler<BulkImportApiKeys
                 );
 
                 await _apiKeyRepository.AddAsync(apiKey, cancellationToken).ConfigureAwait(false);
-                
+
                 importedKeys.Add(new ApiKeyImportResultDto(
                     Id: apiKey.Id,
                     KeyName: apiKey.KeyName,
@@ -218,7 +219,7 @@ public class BulkImportApiKeysCommandHandler : ICommandHandler<BulkImportApiKeys
                     Scopes: apiKey.Scopes,
                     ExpiresAt: apiKey.ExpiresAt
                 ));
-                
+
                 successCount++;
             }
             catch (Exception ex)
@@ -297,7 +298,7 @@ public class BulkImportApiKeysCommandHandler : ICommandHandler<BulkImportApiKeys
                 if (DateTime.TryParseExact(expiresAtStr, "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var parsedDate))
                 {
                     expiresAt = parsedDate.ToUniversalTime();
-                    
+
                     // Validate expiry is in the future
                     if (expiresAt <= DateTime.UtcNow)
                     {
@@ -313,8 +314,8 @@ public class BulkImportApiKeysCommandHandler : ICommandHandler<BulkImportApiKeys
             }
 
             // Metadata can be null or empty
-            var metadataValue = string.IsNullOrWhiteSpace(metadata) || metadata.Equals("null", StringComparison.OrdinalIgnoreCase) 
-                ? null 
+            var metadataValue = string.IsNullOrWhiteSpace(metadata) || metadata.Equals("null", StringComparison.OrdinalIgnoreCase)
+                ? null
                 : metadata;
 
             records.Add(new ApiKeyImportRecord(userId, keyName, scopes, expiresAt, metadataValue));

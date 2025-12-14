@@ -42,6 +42,8 @@ public sealed class CrossEncoderRerankerClient : ICrossEncoderReranker
         int? topK = null,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(query);
+        ArgumentNullException.ThrowIfNull(chunks);
         if (string.IsNullOrWhiteSpace(query))
             throw new ArgumentException("Query cannot be empty", nameof(query));
 
@@ -174,22 +176,22 @@ public sealed class CrossEncoderRerankerClient : ICrossEncoderReranker
     {
         public List<RerankResultDto> Results { get; set; } = new();
         public string Model { get; set; } = string.Empty;
-        public double ProcessingTimeMs { get; set; }
+        public double ProcessingTimeMs { get; }
     }
 
     private sealed class RerankResultDto
     {
         public string Id { get; set; } = string.Empty;
         public string Content { get; set; } = string.Empty;
-        public double OriginalScore { get; set; }
-        public double RerankScore { get; set; }
+        public double OriginalScore { get; }
+        public double RerankScore { get; }
         public Dictionary<string, object> Metadata { get; set; } = new(StringComparer.Ordinal);
     }
 
     private sealed class HealthResponseDto
     {
         public string Status { get; set; } = string.Empty;
-        public bool ModelLoaded { get; set; }
+        public bool ModelLoaded { get; }
         public string ModelName { get; set; } = string.Empty;
         public string Device { get; set; } = string.Empty;
     }

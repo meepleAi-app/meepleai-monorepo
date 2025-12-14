@@ -20,7 +20,7 @@ public static class AlertConfigurationEndpoints
         // GET /api/v1/admin/alert-configuration
         group.MapGet("/", async (IMediator mediator, CancellationToken ct) =>
         {
-            var configurations = await mediator.Send(new GetAllAlertConfigurationsQuery(), ct);
+            var configurations = await mediator.Send(new GetAllAlertConfigurationsQuery(), ct).ConfigureAwait(false);
             return Results.Ok(configurations);
         })
         .WithName("GetAllAlertConfigurations")
@@ -32,7 +32,7 @@ public static class AlertConfigurationEndpoints
         {
             try
             {
-                var configuration = await mediator.Send(new GetAlertConfigurationQuery(category), ct);
+                var configuration = await mediator.Send(new GetAlertConfigurationQuery(category), ct).ConfigureAwait(false);
                 return Results.Ok(configuration);
             }
             catch (InvalidOperationException)
@@ -60,7 +60,7 @@ public static class AlertConfigurationEndpoints
                 userId,
                 request.Description);
 
-            var success = await mediator.Send(command, ct);
+            var success = await mediator.Send(command, ct).ConfigureAwait(false);
 
             return success
                 ? Results.Ok(new { message = "Configuration updated successfully" })

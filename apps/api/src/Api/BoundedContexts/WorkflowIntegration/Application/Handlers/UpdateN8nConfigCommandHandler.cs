@@ -24,6 +24,7 @@ public class UpdateN8NConfigCommandHandler : ICommandHandler<UpdateN8NConfigComm
 
     public async Task<N8NConfigurationDto> Handle(UpdateN8NConfigCommand command, CancellationToken cancellationToken)
     {
+        if (command is null) throw new ArgumentNullException(nameof(command));
         var config = await _repository.GetByIdAsync(command.ConfigId, cancellationToken).ConfigureAwait(false);
         if (config == null)
             throw new DomainException($"N8NConfiguration with ID {command.ConfigId} not found");

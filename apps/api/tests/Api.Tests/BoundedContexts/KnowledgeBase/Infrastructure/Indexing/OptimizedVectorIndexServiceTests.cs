@@ -299,7 +299,7 @@ public class OptimizedVectorIndexServiceTests
             x => x.UpdateCollectionConfigAsync(
                 "test_collection",
                 It.Is<HnswConfigDiff>(h => h.M == 32 && h.EfConstruct == 200),
-                It.Is<QuantizationConfigDiff>(q => q.Scalar.Quantile == 0.999f),
+                It.Is<QuantizationConfigDiff>(q => System.Math.Abs(q.Scalar.Quantile - 0.999f) < 1e-6f),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }

@@ -16,7 +16,9 @@ public record GameDto(
     int? MinPlayTimeMinutes,
     int? MaxPlayTimeMinutes,
     int? BggId,
-    DateTime CreatedAt
+    DateTime CreatedAt,
+    string? IconUrl = null,
+    string? ImageUrl = null
 );
 
 /// <summary>
@@ -29,7 +31,9 @@ public record CreateGameRequest(
     int? MinPlayers = null,
     int? MaxPlayers = null,
     int? MinPlayTimeMinutes = null,
-    int? MaxPlayTimeMinutes = null
+    int? MaxPlayTimeMinutes = null,
+    string? IconUrl = null,
+    string? ImageUrl = null
 );
 
 /// <summary>
@@ -64,7 +68,10 @@ public record GameDetailsDto(
     bool SupportsSolo,
     // Play statistics (optional - null if no sessions exist)
     int? TotalSessionsPlayed,
-    DateTime? LastPlayedAt
+    DateTime? LastPlayedAt,
+    // Game images
+    string? IconUrl = null,
+    string? ImageUrl = null
 );
 
 /// <summary>

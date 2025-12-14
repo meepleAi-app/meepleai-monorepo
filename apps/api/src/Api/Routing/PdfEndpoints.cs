@@ -483,6 +483,78 @@ public static class PdfEndpoints
             });
         });
 
+        // Admin Wizard: Set PDF visibility in public library
+        group.MapPatch("/pdfs/{pdfId:guid}/visibility", async (
+            Guid pdfId,
+            HttpContext context,
+            [FromBody] SetPdfVisibilityRequest request,
+            IMediator mediator,
+            AuditService auditService,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            // Session validated by RequireSessionFilter
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+            var userId = session!.User!.Id;
+
+            // Check ownership using CQRS Query
+            var pdf = await mediator.Send(new GetPdfOwnershipQuery(pdfId), ct).ConfigureAwait(false);
+
+            if (pdf == null)
+            {
+                return Results.NotFound(new { error = "PDF not found" });
+            }
+
+            // Authorization: Only admin or owner can change visibility
+            bool isAdmin = string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+            bool isOwner = pdf.UploadedByUserId == userId;
+
+            if (!isAdmin && !isOwner)
+            {
+                await auditService.LogAsync(
+                    userId.ToString(),
+                    "ACCESS_DENIED",
+                    "PdfDocument",
+                    pdfId.ToString(),
+                    "Denied",
+                    $"User attempted to change PDF visibility without permission. User role: {session!.User!.Role}, Owner: {pdf.UploadedByUserId}",
+                    null,
+                    null,
+                    ct).ConfigureAwait(false);
+
+                logger.LogWarning("User {UserId} denied access to change visibility of PDF {PdfId} (owner: {OwnerId})",
+                    userId, pdfId, pdf.UploadedByUserId);
+
+                return Results.Forbid();
+            }
+
+            var result = await mediator.Send(new SetPdfVisibilityCommand(pdfId, request.IsPublic), ct).ConfigureAwait(false);
+
+            if (!result.Success)
+            {
+                logger.LogWarning("Failed to set visibility for PDF {PdfId}: {Error}", pdfId, result.Message);
+                return Results.BadRequest(new { error = result.Message });
+            }
+
+            logger.LogInformation("User {UserId} set PDF {PdfId} visibility to {IsPublic}", userId, pdfId, request.IsPublic);
+
+            await auditService.LogAsync(
+                userId.ToString(),
+                "UPDATE_VISIBILITY",
+                "PdfDocument",
+                pdfId.ToString(),
+                "Success",
+                $"PDF visibility changed to {(request.IsPublic ? "public" : "private")} by user with role: {session!.User!.Role}",
+                null,
+                null,
+                ct).ConfigureAwait(false);
+
+            return Results.Ok(new { success = true, message = result.Message, isPublic = request.IsPublic });
+        })
+        .RequireSession()
+        .RequireAuthorization()
+        .WithName("SetPdfVisibility");
+
         // ============================================
         // Chunked Upload Endpoints (for large PDFs > 30 MB)
         // ============================================
@@ -687,4 +759,11 @@ public record InitChunkedUploadRequest(
 /// </summary>
 public record CompleteChunkedUploadRequest(
     Guid SessionId
+);
+
+/// <summary>
+/// Request model for setting PDF visibility in the public library.
+/// </summary>
+public record SetPdfVisibilityRequest(
+    bool IsPublic
 );

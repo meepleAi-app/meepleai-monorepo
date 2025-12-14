@@ -53,6 +53,12 @@ public class CreateGameCommandHandler : ICommandHandler<CreateGameCommand, GameD
             playTime: playTime
         );
 
+        // Set images if provided
+        if (!string.IsNullOrWhiteSpace(command.IconUrl) || !string.IsNullOrWhiteSpace(command.ImageUrl))
+        {
+            game.SetImages(command.IconUrl, command.ImageUrl);
+        }
+
         // Persist
         await _gameRepository.AddAsync(game, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -73,7 +79,9 @@ public class CreateGameCommandHandler : ICommandHandler<CreateGameCommand, GameD
             MinPlayTimeMinutes: game.PlayTime?.MinMinutes,
             MaxPlayTimeMinutes: game.PlayTime?.MaxMinutes,
             BggId: game.BggId,
-            CreatedAt: game.CreatedAt
+            CreatedAt: game.CreatedAt,
+            IconUrl: game.IconUrl,
+            ImageUrl: game.ImageUrl
         );
     }
 }

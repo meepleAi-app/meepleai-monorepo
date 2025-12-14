@@ -65,6 +65,21 @@ export interface GameSortOptions {
 }
 
 /**
+ * Admin Wizard: Create game request with optional image URLs
+ */
+export interface CreateGameRequest {
+  name: string;
+  publisher?: string | null;
+  yearPublished?: number | null;
+  minPlayers?: number | null;
+  maxPlayers?: number | null;
+  minPlayTimeMinutes?: number | null;
+  maxPlayTimeMinutes?: number | null;
+  iconUrl?: string | null;
+  imageUrl?: string | null;
+}
+
+/**
  * Games API client with Zod validation
  */
 export function createGamesClient({ httpClient }: CreateGamesClientParams) {
@@ -257,11 +272,17 @@ export function createGamesClient({ httpClient }: CreateGamesClientParams) {
     /**
      * Create new game
      * POST /api/v1/games
+     * Admin Wizard: Extended to support iconUrl and imageUrl
      */
-    async create(name: string): Promise<{ id: string; title: string; createdAt: string }> {
-      return httpClient.post<{ id: string; title: string; createdAt: string }>('/api/v1/games', {
-        name,
-      });
+    async create(
+      request: CreateGameRequest | string
+    ): Promise<{ id: string; title: string; createdAt: string }> {
+      // Support both legacy (string) and new (object) signatures
+      const payload = typeof request === 'string' ? { name: request } : request;
+      return httpClient.post<{ id: string; title: string; createdAt: string }>(
+        '/api/v1/games',
+        payload
+      );
     },
 
     // ========== RuleSpec Management ==========

@@ -4,7 +4,7 @@ namespace Api.Infrastructure.Entities;
 /// Database entity for storing system-wide configuration values.
 /// Supports dynamic runtime configuration changes without redeployment.
 /// </summary>
-internal class SystemConfigurationEntity
+public class SystemConfigurationEntity
 {
     /// <summary>
     /// Unique identifier for the configuration entry.

@@ -4,7 +4,7 @@ namespace Api.Infrastructure.Entities;
 /// Represents a template for LLM prompts.
 /// A template can have multiple versions, with one version active at a time.
 /// </summary>
-internal class PromptTemplateEntity
+public class PromptTemplateEntity
 {
     /// <summary>
     /// Unique identifier for the prompt template.

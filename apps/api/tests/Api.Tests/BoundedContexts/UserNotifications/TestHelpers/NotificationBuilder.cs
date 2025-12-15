@@ -6,7 +6,7 @@ namespace Api.Tests.BoundedContexts.UserNotifications.TestHelpers;
 /// <summary>
 /// Builder for creating Notification test fixtures.
 /// </summary>
-public class NotificationBuilder
+internal class NotificationBuilder
 {
     private Guid _id = Guid.NewGuid();
     private Guid _userId = Guid.NewGuid();

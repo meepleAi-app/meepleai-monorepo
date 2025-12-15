@@ -7,7 +7,7 @@ namespace Api.Tests.BoundedContexts.Authentication.TestHelpers;
 /// Fluent builder for creating test Session entities.
 /// Provides convenient methods for constructing sessions with various configurations.
 /// </summary>
-public class SessionBuilder
+internal class SessionBuilder
 {
     private Guid _id = Guid.NewGuid();
     private Guid _userId = Guid.NewGuid();

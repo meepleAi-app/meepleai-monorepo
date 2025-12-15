@@ -14,7 +14,7 @@ namespace Api.SharedKernel.Domain.Entities;
 /// S4035 is suppressed as this design is intentional for DDD base classes.
 /// </remarks>
 #pragma warning disable S4035 // Classes implementing "IEquatable<T>" should be sealed or implement "IEqualityComparer<T>"
-internal abstract class Entity<TId> : IEntity<TId>, IEquatable<Entity<TId>>
+public abstract class Entity<TId> : IEntity<TId>, IEquatable<Entity<TId>>
     where TId : notnull
 {
     /// <summary>

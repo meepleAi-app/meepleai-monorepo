@@ -12,7 +12,7 @@ namespace Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 /// EF Core implementation of OAuth account repository.
 /// Maps between domain OAuthAccount entity and OAuthAccountEntity persistence model.
 /// </summary>
-internal class OAuthAccountRepository : RepositoryBase, IOAuthAccountRepository
+public class OAuthAccountRepository : RepositoryBase, IOAuthAccountRepository
 {
     private readonly ILogger<OAuthAccountRepository> _logger;
 

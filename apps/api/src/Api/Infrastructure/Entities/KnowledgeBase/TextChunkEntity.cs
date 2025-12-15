@@ -6,7 +6,7 @@ namespace Api.Infrastructure.Entities;
 /// Represents a text chunk extracted from a PDF document for hybrid search.
 /// This table mirrors the data stored in Qdrant vector database but enables PostgreSQL full-text search.
 /// </summary>
-internal class TextChunkEntity
+public class TextChunkEntity
 {
     // DDD-PHASE2: Converted to Guid for domain alignment
     public Guid Id { get; set; } = Guid.NewGuid();

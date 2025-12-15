@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Authentication.Domain.ValueObjects;
 /// Encapsulates the encrypted secret string for two-factor authentication.
 /// The actual encryption/decryption is handled by infrastructure services.
 /// </summary>
-internal sealed class TotpSecret : ValueObject
+public sealed class TotpSecret : ValueObject
 {
     public string EncryptedValue { get; }
 

@@ -16,7 +16,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Infrastructure.Persistence;
 /// Tests session lifecycle, expiration queries, and token-based lookups.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
-internal class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
+public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
 {
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 

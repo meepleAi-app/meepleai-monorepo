@@ -7,7 +7,7 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.TestHelpers;
 /// <summary>
 /// Builder for creating PdfDocument test instances with sensible defaults.
 /// </summary>
-public class PdfDocumentBuilder
+internal class PdfDocumentBuilder
 {
     private Guid _id = Guid.NewGuid();
     private Guid _gameId = Guid.NewGuid();

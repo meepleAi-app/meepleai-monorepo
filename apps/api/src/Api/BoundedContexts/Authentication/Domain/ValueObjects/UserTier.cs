@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Authentication.Domain.ValueObjects;
 /// Determines upload quotas and feature access.
 /// Tiers are independent from roles (admin/editor/user).
 /// </summary>
-internal sealed class UserTier : ValueObject
+public sealed class UserTier : ValueObject
 {
     public static readonly UserTier Free = new("free");
     public static readonly UserTier Normal = new("normal");

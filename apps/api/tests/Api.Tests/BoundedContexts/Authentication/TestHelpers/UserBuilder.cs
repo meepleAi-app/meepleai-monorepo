@@ -7,7 +7,7 @@ namespace Api.Tests.BoundedContexts.Authentication.TestHelpers;
 /// Fluent builder for creating test User entities.
 /// Provides convenient methods for constructing users with various configurations.
 /// </summary>
-public class UserBuilder
+internal class UserBuilder
 {
     private Guid _id = Guid.NewGuid();
     private Email _email = new("test@example.com");

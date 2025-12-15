@@ -7,7 +7,7 @@ namespace Api.Infrastructure.Entities;
 /// Issue #2055: Collaborative editing with optimistic concurrency control.
 /// Uses RowVersion (ETag) to prevent lost updates when concurrent modifications occur.
 /// </summary>
-internal class RuleSpecEntity
+public class RuleSpecEntity
 {
     public Guid Id { get; set; }
         = Guid.NewGuid();

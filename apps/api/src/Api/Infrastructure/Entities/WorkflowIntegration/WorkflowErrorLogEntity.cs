@@ -1,6 +1,6 @@
 namespace Api.Infrastructure.Entities;
 
-internal class WorkflowErrorLogEntity
+public class WorkflowErrorLogEntity
 {
     public Guid Id { get; set; }
     public required string WorkflowId { get; set; }

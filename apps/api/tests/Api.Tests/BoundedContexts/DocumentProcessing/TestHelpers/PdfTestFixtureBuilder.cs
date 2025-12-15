@@ -33,7 +33,7 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.TestHelpers;
 /// var handler = fixture.CreateHandler();
 /// </code>
 /// </remarks>
-public class PdfTestFixtureBuilder
+internal class PdfTestFixtureBuilder
 {
     private MeepleAiDbContext? _dbContext;
     private Mock<IServiceScopeFactory>? _scopeFactoryMock;
@@ -346,7 +346,7 @@ public class PdfTestFixtureBuilder
 /// Test fixture containing all configured mocks for PDF upload testing.
 /// Provides helper methods for creating handler instances and accessing mocks.
 /// </summary>
-public class PdfTestFixture : IDisposable
+internal class PdfTestFixture : IDisposable
 {
     public MeepleAiDbContext DbContext { get; }
     public Mock<IServiceScopeFactory> ScopeFactoryMock { get; }

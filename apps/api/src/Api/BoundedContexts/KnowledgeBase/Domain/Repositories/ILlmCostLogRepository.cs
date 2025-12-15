@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 /// Repository for LLM cost log persistence
 /// ISSUE-960: BGAI-018 - Cost tracking persistence layer
 /// </summary>
-internal interface ILlmCostLogRepository
+public interface ILlmCostLogRepository
 {
     /// <summary>
     /// Log an LLM request cost

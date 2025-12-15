@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 /// <summary>
 /// ChatThread aggregate root representing a conversation thread with Q&A history.
 /// </summary>
-public sealed class ChatThread : AggregateRoot<Guid>
+internal sealed class ChatThread : AggregateRoot<Guid>
 {
     public Guid UserId { get; private set; }
     public Guid? GameId { get; private set; }

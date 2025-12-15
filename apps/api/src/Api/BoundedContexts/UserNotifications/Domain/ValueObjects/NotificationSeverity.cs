@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
 /// Value object representing notification severity level.
 /// Determines UI presentation and user attention priority.
 /// </summary>
-public sealed class NotificationSeverity : ValueObject
+internal sealed class NotificationSeverity : ValueObject
 {
     public string Value { get; }
 

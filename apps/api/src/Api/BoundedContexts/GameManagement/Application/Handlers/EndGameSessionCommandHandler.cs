@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Handlers;
 /// <summary>
 /// Handles end game session command (business alias for Complete).
 /// </summary>
-public class EndGameSessionCommandHandler : ICommandHandler<EndGameSessionCommand, GameSessionDto>
+internal class EndGameSessionCommandHandler : ICommandHandler<EndGameSessionCommand, GameSessionDto>
 {
     private readonly IGameSessionRepository _sessionRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -25,6 +25,7 @@ public class EndGameSessionCommandHandler : ICommandHandler<EndGameSessionComman
 
     public async Task<GameSessionDto> Handle(EndGameSessionCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         // Fetch session
         var session = await _sessionRepository.GetByIdAsync(command.SessionId, cancellationToken).ConfigureAwait(false);
         if (session == null)

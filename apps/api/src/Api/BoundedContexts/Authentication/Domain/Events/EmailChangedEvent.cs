@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.Authentication.Domain.Events;
 /// <summary>
 /// Domain event raised when a user's email address is changed.
 /// </summary>
-public sealed class EmailChangedEvent : DomainEventBase
+internal sealed class EmailChangedEvent : DomainEventBase
 {
     /// <summary>
     /// Gets the ID of the user whose email was changed.

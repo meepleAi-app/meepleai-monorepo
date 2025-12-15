@@ -3,7 +3,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 /// <summary>
 /// Result of PDF text extraction operation.
 /// </summary>
-public record ExtractPdfTextResultDto(
+internal record ExtractPdfTextResultDto(
     bool Success,
     string? ErrorMessage,
     int? CharacterCount,

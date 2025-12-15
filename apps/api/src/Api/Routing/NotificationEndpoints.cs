@@ -13,7 +13,7 @@ namespace Api.Routing;
 /// Handles notification retrieval, marking as read, and unread count.
 /// Issue #2053: User notifications for upload/processing completion.
 /// </summary>
-public static class NotificationEndpoints
+internal static class NotificationEndpoints
 {
     public static RouteGroupBuilder MapNotificationEndpoints(this RouteGroupBuilder group)
     {

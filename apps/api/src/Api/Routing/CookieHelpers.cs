@@ -9,7 +9,7 @@ namespace Api.Routing;
 /// Helper methods for session and API key cookie management shared across endpoints.
 /// Extracted from Program.cs to support modular routing architecture.
 /// </summary>
-public static class CookieHelpers
+internal static class CookieHelpers
 {
     // Session Cookie Methods
 

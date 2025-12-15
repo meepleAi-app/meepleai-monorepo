@@ -6,7 +6,7 @@ namespace Api.Configuration;
 /// Startup validator for AI provider configuration (BGAI-021, Issue #963).
 /// Validates configuration on application startup to fail fast.
 /// </summary>
-public class AiProviderValidator : IValidateOptions<AiProviderSettings>
+internal class AiProviderValidator : IValidateOptions<AiProviderSettings>
 {
     public ValidateOptionsResult Validate(string? name, AiProviderSettings options)
     {

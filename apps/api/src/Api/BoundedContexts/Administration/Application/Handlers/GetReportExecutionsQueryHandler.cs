@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.Administration.Application.Handlers;
 /// Handler for GetReportExecutionsQuery
 /// ISSUE-916: Execution history retrieval
 /// </summary>
-public sealed class GetReportExecutionsQueryHandler : IQueryHandler<GetReportExecutionsQuery, IReadOnlyList<ReportExecutionDto>>
+internal sealed class GetReportExecutionsQueryHandler : IQueryHandler<GetReportExecutionsQuery, IReadOnlyList<ReportExecutionDto>>
 {
     private readonly IReportExecutionRepository _repository;
     private readonly ILogger<GetReportExecutionsQueryHandler> _logger;

@@ -13,7 +13,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.Persistence;
 /// Repository implementation for DocumentCollection aggregate.
 /// Issue #2051: Persistence for multi-document collections
 /// </summary>
-public class DocumentCollectionRepository : RepositoryBase, IDocumentCollectionRepository
+internal class DocumentCollectionRepository : RepositoryBase, IDocumentCollectionRepository
 {
     public DocumentCollectionRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
         : base(dbContext, eventCollector)

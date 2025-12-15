@@ -19,7 +19,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Domain.Services;
 /// - Independent of PDF parsing technology
 /// - Testable without external dependencies
 /// </remarks>
-public class TableToAtomicRuleConverter
+internal static class TableToAtomicRuleConverter
 {
     /// <summary>
     /// Converts a PDF table to a list of atomic game rules

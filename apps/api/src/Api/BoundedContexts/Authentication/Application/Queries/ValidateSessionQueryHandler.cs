@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.Authentication.Application.Queries;
 /// <summary>
 /// Handles session validation and returns user information if valid.
 /// </summary>
-public class ValidateSessionQueryHandler : IQueryHandler<ValidateSessionQuery, SessionStatusDto>
+internal class ValidateSessionQueryHandler : IQueryHandler<ValidateSessionQuery, SessionStatusDto>
 {
     private readonly ISessionRepository _sessionRepository;
     private readonly IUserRepository _userRepository;
@@ -27,6 +27,7 @@ public class ValidateSessionQueryHandler : IQueryHandler<ValidateSessionQuery, S
 
     public async Task<SessionStatusDto> Handle(ValidateSessionQuery query, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(query);
         // Parse and hash the token
         var sessionToken = SessionToken.FromStored(query.SessionToken);
         var tokenHash = sessionToken.ComputeHash();

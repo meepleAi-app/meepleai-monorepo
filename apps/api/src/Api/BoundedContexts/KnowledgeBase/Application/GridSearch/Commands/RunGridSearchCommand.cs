@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.GridSearch.Commands;
 /// <summary>
 /// ADR-016 Phase 5: Command to run grid search evaluation across multiple configurations.
 /// </summary>
-public sealed record RunGridSearchCommand : IRequest<GridSearchResult>
+internal sealed record RunGridSearchCommand : IRequest<GridSearchResult>
 {
     /// <summary>
     /// Path to the dataset file to use for evaluation.

@@ -26,7 +26,7 @@ namespace Api.Helpers;
 /// - Single source of truth for query validation rules
 /// - Easy to update validation logic in one place
 /// </remarks>
-public static class QueryValidator
+internal static class QueryValidator
 {
     /// <summary>
     /// Minimum allowed query length (3 characters).

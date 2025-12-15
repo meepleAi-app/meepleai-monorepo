@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.WorkflowIntegration.Application.EventHandlers;
 /// <summary>
 /// Handler for WorkflowRetriedEvent domain event.
 /// </summary>
-public sealed class WorkflowRetriedEventHandler : DomainEventHandlerBase<WorkflowRetriedEvent>
+internal sealed class WorkflowRetriedEventHandler : DomainEventHandlerBase<WorkflowRetriedEvent>
 {
     public WorkflowRetriedEventHandler(
         MeepleAiDbContext dbContext,

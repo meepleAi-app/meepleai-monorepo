@@ -23,7 +23,7 @@ namespace Api.Routing;
 /// PDF management endpoints.
 /// Handles PDF upload, retrieval, deletion, indexing, and rule spec generation.
 /// </summary>
-public static class PdfEndpoints
+internal static class PdfEndpoints
 {
     public static RouteGroupBuilder MapPdfEndpoints(this RouteGroupBuilder group)
     {
@@ -748,7 +748,7 @@ public static class PdfEndpoints
 /// <summary>
 /// Request model for initializing a chunked upload session.
 /// </summary>
-public record InitChunkedUploadRequest(
+internal record InitChunkedUploadRequest(
     Guid GameId,
     string FileName,
     long TotalFileSize
@@ -757,13 +757,13 @@ public record InitChunkedUploadRequest(
 /// <summary>
 /// Request model for completing a chunked upload.
 /// </summary>
-public record CompleteChunkedUploadRequest(
+internal record CompleteChunkedUploadRequest(
     Guid SessionId
 );
 
 /// <summary>
 /// Request model for setting PDF visibility in the public library.
 /// </summary>
-public record SetPdfVisibilityRequest(
+internal record SetPdfVisibilityRequest(
     bool IsPublic
 );

@@ -6,7 +6,7 @@ namespace Api.Services;
 /// ADMIN-01 Enhanced: Service for managing RAG prompt templates with database-driven configuration
 /// Combines AI-07.1 few-shot learning with ADMIN-01 admin-configurable prompt management
 /// </summary>
-public interface IPromptTemplateService
+internal interface IPromptTemplateService
 {
     // AI-07.1: Configuration-based prompt management (backward compatibility)
 

@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
 /// Domain service for RAG quality tracking and confidence scoring.
 /// Determines if responses meet quality thresholds.
 /// </summary>
-public class QualityTrackingDomainService
+internal class QualityTrackingDomainService
 {
     private const double LowQualityThreshold = 0.5;
     private const double HighQualityThreshold = 0.8;

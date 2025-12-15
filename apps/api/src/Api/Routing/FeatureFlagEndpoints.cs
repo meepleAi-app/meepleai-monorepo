@@ -13,7 +13,7 @@ namespace Api.Routing;
 /// Feature flags are stored as configurations with category "Features".
 /// Provides a simplified interface for toggling and querying feature flags.
 /// </summary>
-public static class FeatureFlagEndpoints
+internal static class FeatureFlagEndpoints
 {
     public static RouteGroupBuilder MapFeatureFlagEndpoints(this RouteGroupBuilder group)
     {
@@ -209,7 +209,7 @@ public static class FeatureFlagEndpoints
 /// <summary>
 /// Request model for creating a new feature flag.
 /// </summary>
-public record CreateFeatureFlagRequest(
+internal record CreateFeatureFlagRequest(
     string Key,
     bool Enabled,
     string? Description = null,

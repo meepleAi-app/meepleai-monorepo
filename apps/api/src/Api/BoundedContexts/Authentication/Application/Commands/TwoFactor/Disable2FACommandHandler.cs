@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands;
 /// Handler for Disable2FACommand.
 /// DDD: Thin wrapper - delegates to ITotpService for disable logic.
 /// </summary>
-public class Disable2FACommandHandler : ICommandHandler<Disable2FACommand, Disable2FAResult>
+internal class Disable2FACommandHandler : ICommandHandler<Disable2FACommand, Disable2FAResult>
 {
     private readonly ITotpService _totpService;
     private readonly ILogger<Disable2FACommandHandler> _logger;
@@ -22,6 +22,7 @@ public class Disable2FACommandHandler : ICommandHandler<Disable2FACommand, Disab
 
     public async Task<Disable2FAResult> Handle(Disable2FACommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         try
         {
             // Delegate to existing TotpService (handles password + code verification)

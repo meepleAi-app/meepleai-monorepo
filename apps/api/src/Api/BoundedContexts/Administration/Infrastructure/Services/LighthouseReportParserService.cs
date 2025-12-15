@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.Administration.Infrastructure.Services;
 /// Service for parsing Lighthouse CI reports (Issue #2139)
 /// Reads JSON reports from apps/web/.lighthouseci/
 /// </summary>
-public class LighthouseReportParserService : ILighthouseReportParserService
+internal class LighthouseReportParserService : ILighthouseReportParserService
 {
     private readonly ILogger<LighthouseReportParserService> _logger;
     private readonly string _reportDirectory;
@@ -159,7 +159,7 @@ public class LighthouseReportParserService : ILighthouseReportParserService
     /// <summary>
     /// Gets the latest Lighthouse report file path
     /// </summary>
-    private async Task<string?> GetLatestReportAsync(CancellationToken ct = default)
+    private async Task<string?> GetLatestReportAsync()
     {
         await Task.CompletedTask.ConfigureAwait(false);
 

@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 /// Repository implementation for ApiKeyUsageLog aggregate.
 /// Handles persistence of API key usage logs.
 /// </summary>
-public class ApiKeyUsageLogRepository : IApiKeyUsageLogRepository
+internal class ApiKeyUsageLogRepository : IApiKeyUsageLogRepository
 {
     private readonly MeepleAiDbContext _context;
 

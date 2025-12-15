@@ -8,7 +8,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 
 namespace Api.BoundedContexts.Administration.Application.Handlers;
 
-public class ChangeUserRoleCommandHandler : ICommandHandler<ChangeUserRoleCommand, UserDto>
+internal class ChangeUserRoleCommandHandler : ICommandHandler<ChangeUserRoleCommand, UserDto>
 {
     private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -23,6 +23,7 @@ public class ChangeUserRoleCommandHandler : ICommandHandler<ChangeUserRoleComman
 
     public async Task<UserDto> Handle(ChangeUserRoleCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         var userId = Guid.Parse(command.UserId);
         var user = await _userRepository.GetByIdAsync(userId, cancellationToken).ConfigureAwait(false);
         if (user == null)

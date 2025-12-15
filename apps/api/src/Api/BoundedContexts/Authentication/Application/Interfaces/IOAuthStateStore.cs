@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.Authentication.Application.Interfaces;
 /// Provides storage and validation for OAuth CSRF state tokens.
 /// Implementations must ensure thread-safety and support distributed deployments.
 /// </summary>
-public interface IOAuthStateStore
+internal interface IOAuthStateStore
 {
     /// <summary>
     /// Stores an OAuth state token with expiration.

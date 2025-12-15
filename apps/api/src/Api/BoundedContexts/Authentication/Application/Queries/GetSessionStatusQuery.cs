@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.Authentication.Application.Queries;
 /// Query to get the status of a specific session.
 /// User must own the session OR have Admin role.
 /// </summary>
-public record GetSessionStatusQuery(
+internal record GetSessionStatusQuery(
     Guid SessionId,
     Guid RequestingUserId,
     bool IsRequestingUserAdmin

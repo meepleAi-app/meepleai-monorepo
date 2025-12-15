@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 namespace Api.Infrastructure.EntityConfigurations;
 
 // ADMIN-01 Phase 4: Prompt Evaluation Results
-public class PromptEvaluationResultEntityConfiguration : IEntityTypeConfiguration<PromptEvaluationResultEntity>
+internal class PromptEvaluationResultEntityConfiguration : IEntityTypeConfiguration<PromptEvaluationResultEntity>
 {
     public void Configure(EntityTypeBuilder<PromptEvaluationResultEntity> builder)
     {

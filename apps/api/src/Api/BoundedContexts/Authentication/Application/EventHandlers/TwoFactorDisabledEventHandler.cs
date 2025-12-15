@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.Authentication.Application.EventHandlers;
 /// Handles the TwoFactorDisabledEvent domain event.
 /// Creates audit log entry automatically via base class and sends email notification.
 /// </summary>
-public sealed class TwoFactorDisabledEventHandler : DomainEventHandlerBase<TwoFactorDisabledEvent>
+internal sealed class TwoFactorDisabledEventHandler : DomainEventHandlerBase<TwoFactorDisabledEvent>
 {
     private readonly IUserRepository _userRepository;
     private readonly IEmailService _emailService;

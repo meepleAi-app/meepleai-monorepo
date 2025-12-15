@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Commands.AddCommentToSha
 /// </summary>
 /// <param name="Token">JWT share link token</param>
 /// <param name="Content">Message content</param>
-public sealed record AddCommentToSharedThreadCommand(
+internal sealed record AddCommentToSharedThreadCommand(
     string Token,
     string Content
 ) : IRequest<AddCommentToSharedThreadResult?>;
@@ -17,7 +17,7 @@ public sealed record AddCommentToSharedThreadCommand(
 /// </summary>
 /// <param name="MessageId">Unique identifier for the created message</param>
 /// <param name="Timestamp">Message creation timestamp</param>
-public sealed record AddCommentToSharedThreadResult(
+internal sealed record AddCommentToSharedThreadResult(
     Guid MessageId,
     DateTime Timestamp
 );

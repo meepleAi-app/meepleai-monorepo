@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 /// Represents a citation to a source document.
 /// Ensures citation has required information for traceability.
 /// </summary>
-public sealed class Citation : ValueObject
+internal sealed class Citation : ValueObject
 {
     public Guid DocumentId { get; }
     public int PageNumber { get; }

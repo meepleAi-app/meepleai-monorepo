@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 /// <summary>
 /// Repository interface for Agent aggregate persistence.
 /// </summary>
-public interface IAgentRepository
+internal interface IAgentRepository
 {
     /// <summary>
     /// Gets an agent by ID.

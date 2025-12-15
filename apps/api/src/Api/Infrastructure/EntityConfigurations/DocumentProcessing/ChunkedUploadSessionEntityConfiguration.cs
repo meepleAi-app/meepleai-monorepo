@@ -7,7 +7,7 @@ namespace Api.Infrastructure.EntityConfigurations;
 /// <summary>
 /// EF Core configuration for ChunkedUploadSessionEntity.
 /// </summary>
-public class ChunkedUploadSessionEntityConfiguration : IEntityTypeConfiguration<ChunkedUploadSessionEntity>
+internal class ChunkedUploadSessionEntityConfiguration : IEntityTypeConfiguration<ChunkedUploadSessionEntity>
 {
     public void Configure(EntityTypeBuilder<ChunkedUploadSessionEntity> builder)
     {

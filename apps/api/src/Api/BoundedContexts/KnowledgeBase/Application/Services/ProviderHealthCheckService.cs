@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
 /// Background service for periodic LLM provider health checks
 /// ISSUE-962 (BGAI-020): Monitors provider availability and updates health status
 /// </summary>
-public sealed class ProviderHealthCheckService : BackgroundService, IProviderHealthCheckService
+internal sealed class ProviderHealthCheckService : BackgroundService, IProviderHealthCheckService
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<ProviderHealthCheckService> _logger;
@@ -59,7 +59,7 @@ public sealed class ProviderHealthCheckService : BackgroundService, IProviderHea
     /// <summary>
     /// Initialize health status tracking for all providers
     /// </summary>
-    private Task InitializeHealthStatuses(CancellationToken ct = default)
+    private Task InitializeHealthStatuses()
     {
         using var scope = _scopeFactory.CreateScope();
         var clients = scope.ServiceProvider.GetRequiredService<IEnumerable<ILlmClient>>();

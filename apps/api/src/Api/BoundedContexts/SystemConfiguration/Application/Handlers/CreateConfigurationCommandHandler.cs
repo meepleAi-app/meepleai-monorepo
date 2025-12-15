@@ -7,7 +7,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 
 namespace Api.BoundedContexts.SystemConfiguration.Application.Handlers;
 
-public class CreateConfigurationCommandHandler : ICommandHandler<CreateConfigurationCommand, ConfigurationDto>
+internal class CreateConfigurationCommandHandler : ICommandHandler<CreateConfigurationCommand, ConfigurationDto>
 {
     private readonly IConfigurationRepository _configurationRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -22,6 +22,7 @@ public class CreateConfigurationCommandHandler : ICommandHandler<CreateConfigura
 
     public async Task<ConfigurationDto> Handle(CreateConfigurationCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         var key = new ConfigKey(command.Key);
 
         var config = new Domain.Entities.SystemConfiguration(

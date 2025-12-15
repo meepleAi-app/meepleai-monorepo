@@ -7,6 +7,6 @@ namespace Api.BoundedContexts.Authentication.Application.Queries;
 /// Query to get the current 2FA status for a user.
 /// DDD CQRS: Query for read-only operation.
 /// </summary>
-public sealed record Get2FAStatusQuery(
+internal sealed record Get2FAStatusQuery(
     Guid UserId
 ) : IQuery<TwoFactorStatusDto?>;

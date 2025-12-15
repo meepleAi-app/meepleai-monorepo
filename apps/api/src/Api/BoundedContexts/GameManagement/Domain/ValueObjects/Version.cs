@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 /// <summary>
 /// Value object representing semantic version (major.minor.patch).
 /// </summary>
-public sealed class Version : ValueObject
+internal sealed class Version : ValueObject
 {
     // FIX MA0009: Add timeout to prevent ReDoS attacks
     // FIX MA0023: Add ExplicitCapture to prevent capturing unneeded groups

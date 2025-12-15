@@ -15,7 +15,7 @@ namespace Api.BoundedContexts.Administration.Infrastructure.Scheduling;
 /// ISSUE-918: Email delivery integration
 /// </summary>
 [DisallowConcurrentExecution]
-public sealed class GenerateReportJob : IJob
+internal sealed class GenerateReportJob : IJob
 {
     private readonly IReportGeneratorService _reportGenerator;
     private readonly IAdminReportRepository _reportRepository;

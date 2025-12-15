@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Administration.Application.Commands.PromptEvaluati
 /// Handler for A/B comparison of prompt versions
 /// Delegates to IPromptEvaluationService (infrastructure adapter for complex comparison logic)
 /// </summary>
-public sealed class ComparePromptVersionsCommandHandler : ICommandHandler<ComparePromptVersionsCommand, PromptComparisonResult>
+internal sealed class ComparePromptVersionsCommandHandler : ICommandHandler<ComparePromptVersionsCommand, PromptComparisonResult>
 {
     private readonly IPromptEvaluationService _evaluationService;
     private readonly ILogger<ComparePromptVersionsCommandHandler> _logger;
@@ -23,6 +23,7 @@ public sealed class ComparePromptVersionsCommandHandler : ICommandHandler<Compar
 
     public async Task<PromptComparisonResult> Handle(ComparePromptVersionsCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         _logger.LogInformation(
             "Comparing prompt versions for template {TemplateId}: Baseline {BaselineId} vs Candidate {CandidateId}",
             command.TemplateId, command.BaselineVersionId, command.CandidateVersionId);

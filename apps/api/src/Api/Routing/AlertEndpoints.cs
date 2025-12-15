@@ -9,7 +9,7 @@ namespace Api.Routing;
 /// Alert management endpoints.
 /// Handles Prometheus webhook integration, alert retrieval, and manual alert resolution.
 /// </summary>
-public static class AlertEndpoints
+internal static class AlertEndpoints
 {
     public static RouteGroupBuilder MapAlertEndpoints(this RouteGroupBuilder group)
     {

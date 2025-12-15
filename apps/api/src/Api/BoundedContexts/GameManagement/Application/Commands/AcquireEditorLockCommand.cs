@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands;
 /// <summary>
 /// Issue #2055: Command to acquire an editor lock for a RuleSpec.
 /// </summary>
-public record AcquireEditorLockCommand(
+internal record AcquireEditorLockCommand(
     Guid GameId,
     Guid UserId,
     string UserEmail

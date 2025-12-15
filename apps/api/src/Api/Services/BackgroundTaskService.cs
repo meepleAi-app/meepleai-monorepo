@@ -5,7 +5,7 @@ namespace Api.Services;
 /// <summary>
 /// Production implementation of background task execution using Task.Run
 /// </summary>
-public class BackgroundTaskService : IBackgroundTaskService
+internal class BackgroundTaskService : IBackgroundTaskService
 {
     private readonly ILogger<BackgroundTaskService> _logger;
     private readonly ConcurrentDictionary<string, CancellationTokenSource> _activeTasks = new(StringComparer.Ordinal);

@@ -5,7 +5,7 @@ namespace Api.BoundedContexts.Authentication.Domain.Events;
 /// <summary>
 /// Domain event raised when a user's password is reset by an administrator.
 /// </summary>
-public sealed class PasswordResetEvent : DomainEventBase
+internal sealed class PasswordResetEvent : DomainEventBase
 {
     /// <summary>
     /// Gets the ID of the user whose password was reset.

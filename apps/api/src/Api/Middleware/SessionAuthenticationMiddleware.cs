@@ -14,7 +14,7 @@ namespace Api.Middleware;
 ///
 /// Issue #1676 Phase 3: Migrated from ActiveSession (legacy) to SessionStatusDto (DDD)
 /// </summary>
-public class SessionAuthenticationMiddleware
+internal class SessionAuthenticationMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly ILogger<SessionAuthenticationMiddleware> _logger;
@@ -82,7 +82,7 @@ public class SessionAuthenticationMiddleware
     }
 }
 
-public static class SessionAuthenticationMiddlewareExtensions
+internal static class SessionAuthenticationMiddlewareExtensions
 {
     public static IApplicationBuilder UseSessionAuthentication(this IApplicationBuilder app)
     {

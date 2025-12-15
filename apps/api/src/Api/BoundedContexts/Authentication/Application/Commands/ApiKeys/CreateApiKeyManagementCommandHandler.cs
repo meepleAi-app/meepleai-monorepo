@@ -6,7 +6,7 @@ using Api.SharedKernel.Application.Interfaces;
 
 namespace Api.BoundedContexts.Authentication.Application.Commands;
 
-public class CreateApiKeyManagementCommandHandler : ICommandHandler<CreateApiKeyManagementCommand, CreateApiKeyResponse>
+internal class CreateApiKeyManagementCommandHandler : ICommandHandler<CreateApiKeyManagementCommand, CreateApiKeyResponse>
 {
     private readonly MeepleAiDbContext _db;
     private readonly ApiKeyAuthenticationService _authService;
@@ -27,6 +27,7 @@ public class CreateApiKeyManagementCommandHandler : ICommandHandler<CreateApiKey
 
     public async Task<CreateApiKeyResponse> Handle(CreateApiKeyManagementCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         // Validate request
         if (string.IsNullOrWhiteSpace(command.Request.KeyName))
             throw new ArgumentException("Key name is required", nameof(command));

@@ -5,7 +5,7 @@ namespace Api.BoundedContexts.GameManagement.Domain.Events;
 /// <summary>
 /// Domain event raised when a game session is paused.
 /// </summary>
-public sealed class GameSessionPausedEvent : DomainEventBase
+internal sealed class GameSessionPausedEvent : DomainEventBase
 {
     /// <summary>
     /// Gets the ID of the game session.

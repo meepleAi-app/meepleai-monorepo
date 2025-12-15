@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// Handler for GetAgentByIdQuery.
 /// Retrieves a single agent by ID.
 /// </summary>
-public class GetAgentByIdQueryHandler : IRequestHandler<GetAgentByIdQuery, AgentDto?>
+internal class GetAgentByIdQueryHandler : IRequestHandler<GetAgentByIdQuery, AgentDto?>
 {
     private readonly IAgentRepository _agentRepository;
     private readonly ILogger<GetAgentByIdQueryHandler> _logger;
@@ -28,6 +28,7 @@ public class GetAgentByIdQueryHandler : IRequestHandler<GetAgentByIdQuery, Agent
         GetAgentByIdQuery request,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         var agent = await _agentRepository.GetByIdAsync(request.AgentId, cancellationToken).ConfigureAwait(false);
 
         if (agent == null)

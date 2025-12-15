@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.Administration.Application.Handlers;
 /// Handler for ExportStatsCommand.
 /// Delegates to AdminStatsService (service will be refactored in future iterations).
 /// </summary>
-public class ExportStatsCommandHandler : ICommandHandler<ExportStatsCommand, string>
+internal class ExportStatsCommandHandler : ICommandHandler<ExportStatsCommand, string>
 {
     private readonly IAdminStatsService _adminStatsService;
 
@@ -20,6 +20,7 @@ public class ExportStatsCommandHandler : ICommandHandler<ExportStatsCommand, str
 
     public async Task<string> Handle(ExportStatsCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         var request = new ExportDataRequest(
             Format: command.Format,
             FromDate: command.FromDate,

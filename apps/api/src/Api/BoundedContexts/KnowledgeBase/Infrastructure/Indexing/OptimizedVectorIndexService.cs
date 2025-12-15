@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.Indexing;
 /// ADR-016 Phase 3: Optimized vector index service with HNSW and quantization configuration.
 /// Provides a domain-driven interface for Qdrant collection management with Phase 3 optimizations.
 /// </summary>
-public class OptimizedVectorIndexService : IOptimizedVectorIndexService
+internal class OptimizedVectorIndexService : IOptimizedVectorIndexService
 {
     private readonly IQdrantClientAdapter _clientAdapter;
     private readonly ILogger<OptimizedVectorIndexService> _logger;

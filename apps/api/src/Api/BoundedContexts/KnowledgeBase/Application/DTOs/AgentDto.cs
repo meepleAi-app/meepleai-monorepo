@@ -3,7 +3,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 /// <summary>
 /// Data Transfer Object for Agent aggregate.
 /// </summary>
-public record AgentDto(
+internal record AgentDto(
     Guid Id,
     string Name,
     string Type,

@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
 /// Redis-based implementation of PDF upload quota service.
 /// Tracks daily and weekly upload counts with automatic TTL-based reset.
 /// </summary>
-public class PdfUploadQuotaService : IPdfUploadQuotaService
+internal class PdfUploadQuotaService : IPdfUploadQuotaService
 {
     /// <summary>
     /// Default upload quotas for each tier.
@@ -249,7 +249,7 @@ public class PdfUploadQuotaService : IPdfUploadQuotaService
         }
     }
 
-    private async Task DecrementUploadCountAsync(Guid userId, CancellationToken ct = default)
+    private async Task DecrementUploadCountAsync(Guid userId)
     {
         try
         {
@@ -338,7 +338,7 @@ public class PdfUploadQuotaService : IPdfUploadQuotaService
         }
 #pragma warning restore S2139
     }
-    private async Task<(int dailyLimit, int weeklyLimit)> GetLimitsForTierAsync(UserTier tier, CancellationToken ct = default)
+    private async Task<(int dailyLimit, int weeklyLimit)> GetLimitsForTierAsync(UserTier tier)
     {
         var tierValue = tier.Value;
         var dailyKey = $"UploadLimits:{tierValue}:DailyLimit";
@@ -357,7 +357,7 @@ public class PdfUploadQuotaService : IPdfUploadQuotaService
         );
     }
 
-    private async Task<(int dailyUsed, int weeklyUsed)> GetUsageAsync(Guid userId, CancellationToken ct = default)
+    private async Task<(int dailyUsed, int weeklyUsed)> GetUsageAsync(Guid userId)
     {
         var db = _redis.GetDatabase();
         var now = _timeProvider.GetUtcNow().UtcDateTime;

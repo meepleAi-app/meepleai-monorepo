@@ -3,7 +3,7 @@ namespace Api.Services;
 /// <summary>
 /// Interface for rate limiting service.
 /// </summary>
-public interface IRateLimitService
+internal interface IRateLimitService
 {
     /// <summary>
     /// Check if a request is allowed under the rate limit.

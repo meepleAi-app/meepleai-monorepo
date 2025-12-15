@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
 /// ISSUE-1725: Implementation of ILlmModelOverrideService for budget-based model downgrading.
 /// Thread-safe in-memory service for managing model overrides during budget constraints.
 /// </summary>
-public class LlmModelOverrideService : ILlmModelOverrideService
+internal class LlmModelOverrideService : ILlmModelOverrideService
 {
     private readonly ILogger<LlmModelOverrideService> _logger;
     private readonly Dictionary<string, string> _downgradeMappings;

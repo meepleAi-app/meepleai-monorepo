@@ -5,7 +5,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 /// <summary>
 /// Thread status value object representing the lifecycle state of a chat thread.
 /// </summary>
-public sealed class ThreadStatus : IEquatable<ThreadStatus>
+internal sealed class ThreadStatus : IEquatable<ThreadStatus>
 {
     public string Value { get; }
 

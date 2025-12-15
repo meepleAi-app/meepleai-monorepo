@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Authentication.Application.Queries;
 /// <summary>
 /// Handles API key validation and returns user information if valid.
 /// </summary>
-public class ValidateApiKeyQueryHandler : IQueryHandler<ValidateApiKeyQuery, UserDto?>
+internal class ValidateApiKeyQueryHandler : IQueryHandler<ValidateApiKeyQuery, UserDto?>
 {
     private readonly IApiKeyRepository _apiKeyRepository;
     private readonly IUserRepository _userRepository;
@@ -23,6 +23,7 @@ public class ValidateApiKeyQueryHandler : IQueryHandler<ValidateApiKeyQuery, Use
 
     public async Task<UserDto?> Handle(ValidateApiKeyQuery query, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(query);
         // Extract key prefix (first 8 characters)
         if (query.PlaintextKey.Length < 8)
             return null;

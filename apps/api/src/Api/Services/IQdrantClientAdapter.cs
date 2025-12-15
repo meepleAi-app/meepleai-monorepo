@@ -5,7 +5,7 @@ using Qdrant.Client.Grpc;
 
 namespace Api.Services;
 
-public interface IQdrantClientAdapter
+internal interface IQdrantClientAdapter
 {
     Task<IReadOnlyList<string>> ListCollectionsAsync(CancellationToken cancellationToken = default);
     Task CreateCollectionAsync(

@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.Authentication.Application.DTOs;
 /// <summary>
 /// Data transfer object for user information.
 /// </summary>
-public record UserDto(
+internal record UserDto(
     Guid Id,
     string Email,
     string DisplayName,
@@ -19,7 +19,7 @@ public record UserDto(
 /// <summary>
 /// DTO for user registration.
 /// </summary>
-public record RegisterUserRequest(
+internal record RegisterUserRequest(
     string Email,
     string Password,
     string DisplayName,
@@ -29,7 +29,7 @@ public record RegisterUserRequest(
 /// <summary>
 /// DTO for user registration response.
 /// </summary>
-public record RegisterUserResponse(
+internal record RegisterUserResponse(
     Guid UserId,
     string Email,
     string DisplayName,
@@ -39,7 +39,7 @@ public record RegisterUserResponse(
 /// <summary>
 /// DTO for login request.
 /// </summary>
-public record LoginRequest(
+internal record LoginRequest(
     string Email,
     string Password
 );
@@ -47,7 +47,7 @@ public record LoginRequest(
 /// <summary>
 /// DTO for login response.
 /// </summary>
-public record LoginResponse(
+internal record LoginResponse(
     bool RequiresTwoFactor,
     string? TempSessionToken,
     UserDto? User,
@@ -57,7 +57,7 @@ public record LoginResponse(
 /// <summary>
 /// DTO for 2FA verification request.
 /// </summary>
-public record Verify2FARequest(
+internal record Verify2FARequest(
     string TempSessionToken,
     string Code
 );
@@ -65,7 +65,7 @@ public record Verify2FARequest(
 /// <summary>
 /// DTO for 2FA verification response.
 /// </summary>
-public record Verify2FAResponse(
+internal record Verify2FAResponse(
     UserDto User,
     string SessionToken
 );

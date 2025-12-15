@@ -3,7 +3,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 /// <summary>
 /// DTO for exported chat thread data.
 /// </summary>
-public record ExportedChatDto(
+internal record ExportedChatDto(
     string Format,
     string Content,
     string ContentType,

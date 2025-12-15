@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Handlers;
 /// <summary>
 /// Handles get game session by ID query.
 /// </summary>
-public class GetGameSessionByIdQueryHandler : IQueryHandler<GetGameSessionByIdQuery, GameSessionDto?>
+internal class GetGameSessionByIdQueryHandler : IQueryHandler<GetGameSessionByIdQuery, GameSessionDto?>
 {
     private readonly IGameSessionRepository _sessionRepository;
 
@@ -20,6 +20,7 @@ public class GetGameSessionByIdQueryHandler : IQueryHandler<GetGameSessionByIdQu
 
     public async Task<GameSessionDto?> Handle(GetGameSessionByIdQuery query, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(query);
         var session = await _sessionRepository.GetByIdAsync(query.SessionId, cancellationToken).ConfigureAwait(false);
 
         return session != null ? MapToDto(session) : null;

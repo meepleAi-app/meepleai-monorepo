@@ -6,4 +6,4 @@ namespace Api.BoundedContexts.WorkflowIntegration.Application.Commands;
 /// Command to delete an n8n configuration.
 /// Returns true if deleted, false if not found.
 /// </summary>
-public record DeleteN8NConfigCommand(Guid ConfigId) : ICommand<bool>;
+internal record DeleteN8NConfigCommand(Guid ConfigId) : ICommand<bool>;

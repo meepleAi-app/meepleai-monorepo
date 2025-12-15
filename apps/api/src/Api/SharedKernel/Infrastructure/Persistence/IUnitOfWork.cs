@@ -4,7 +4,7 @@ namespace Api.SharedKernel.Infrastructure.Persistence;
 /// Unit of Work pattern for managing transactions across repositories.
 /// Ensures that all changes are committed or rolled back together.
 /// </summary>
-public interface IUnitOfWork : IDisposable
+internal interface IUnitOfWork : IDisposable
 {
     /// <summary>
     /// Saves all changes made in this unit of work to the database.

@@ -9,7 +9,7 @@ namespace Api.Routing;
 /// <summary>
 /// Test endpoints for OpenTelemetry telemetry verification (Issue #1567)
 /// </summary>
-public static class TestTelemetryEndpoints
+internal static class TestTelemetryEndpoints
 {
     private static readonly ActivitySource TestActivitySource = new("test-telemetry", "1.0.0");
 

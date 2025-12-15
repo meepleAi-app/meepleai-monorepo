@@ -6,6 +6,6 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands;
 /// <summary>
 /// Command to pause an active game session.
 /// </summary>
-public record PauseGameSessionCommand(
+internal record PauseGameSessionCommand(
     Guid SessionId
 ) : ICommand<GameSessionDto>;

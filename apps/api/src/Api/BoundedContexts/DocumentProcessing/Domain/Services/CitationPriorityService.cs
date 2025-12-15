@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Domain.Services;
 /// Domain service for determining citation priority across multiple documents in a collection.
 /// Issue #2051: Implements priority logic - homerule > (errata/expansion by date) > base
 /// </summary>
-public sealed class CitationPriorityService
+internal sealed class CitationPriorityService
 {
     /// <summary>
     /// Orders citations by document priority and date.
@@ -102,7 +102,7 @@ public sealed class CitationPriorityService
 /// <summary>
 /// Citation with priority metadata for ordering.
 /// </summary>
-public sealed record PrioritizedCitation(
+internal sealed record PrioritizedCitation(
     Citation Citation,
     int Priority,
     DateTime UploadedAt,
@@ -111,7 +111,7 @@ public sealed record PrioritizedCitation(
 /// <summary>
 /// Basic citation record (placeholder - should match actual Citation from KnowledgeBase context).
 /// </summary>
-public sealed record Citation(
+internal sealed record Citation(
     Guid PdfDocumentId,
     string Text,
     int PageNumber,

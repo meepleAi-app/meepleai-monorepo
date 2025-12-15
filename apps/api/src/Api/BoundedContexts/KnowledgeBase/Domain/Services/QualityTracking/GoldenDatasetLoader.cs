@@ -12,7 +12,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services.QualityTracking;
 /// BGAI-059: Quality test implementation for accuracy validation.
 /// Loads test cases from tests/data/golden_dataset.json and adversarial_dataset.json
 /// </summary>
-public interface IGoldenDatasetLoader
+internal interface IGoldenDatasetLoader
 {
     /// <summary>
     /// Loads all test cases from the golden dataset
@@ -54,7 +54,7 @@ public interface IGoldenDatasetLoader
 /// <summary>
 /// Implementation of IGoldenDatasetLoader
 /// </summary>
-public class GoldenDatasetLoader : IGoldenDatasetLoader
+internal class GoldenDatasetLoader : IGoldenDatasetLoader
 {
     private readonly string _datasetPath;
     private readonly ILogger<GoldenDatasetLoader> _logger;

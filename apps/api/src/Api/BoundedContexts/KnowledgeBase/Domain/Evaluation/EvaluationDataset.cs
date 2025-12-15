@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Evaluation;
 /// A collection of evaluation samples forming a benchmark dataset.
 /// Supports both Mozilla Structured QA and MeepleAI custom formats.
 /// </summary>
-public sealed class EvaluationDataset
+internal sealed class EvaluationDataset
 {
     private readonly List<EvaluationSample> _samples = [];
 

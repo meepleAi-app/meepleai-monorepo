@@ -12,7 +12,7 @@ namespace Api.Models;
 /// <summary>
 /// Single evaluation query with ground truth
 /// </summary>
-public record RagEvaluationQuery
+internal record RagEvaluationQuery
 {
     /// <summary>
     /// Unique identifier for this query
@@ -54,7 +54,7 @@ public record RagEvaluationQuery
 /// <summary>
 /// Dataset containing multiple evaluation queries
 /// </summary>
-public record RagEvaluationDataset
+internal record RagEvaluationDataset
 {
     /// <summary>
     /// Dataset name/identifier
@@ -86,7 +86,7 @@ public record RagEvaluationDataset
 /// <summary>
 /// Result for a single query evaluation
 /// </summary>
-public record RagEvaluationQueryResult
+internal record RagEvaluationQueryResult
 {
     /// <summary>
     /// Query ID
@@ -173,7 +173,7 @@ public record RagEvaluationQueryResult
 /// <summary>
 /// Aggregated evaluation report with statistics
 /// </summary>
-public record RagEvaluationReport
+internal record RagEvaluationReport
 {
     /// <summary>
     /// Dataset name
@@ -280,7 +280,7 @@ public record RagEvaluationReport
 /// <summary>
 /// Quality thresholds for RAG evaluation
 /// </summary>
-public record RagQualityThresholds
+internal record RagQualityThresholds
 {
     /// <summary>
     /// Minimum acceptable Precision@5 (default: 0.70)

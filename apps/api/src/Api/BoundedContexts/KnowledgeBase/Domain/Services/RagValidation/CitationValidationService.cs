@@ -17,7 +17,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
 ///
 /// Prevents hallucinated citations and ensures response quality.
 /// </remarks>
-public class CitationValidationService : ICitationValidationService
+internal class CitationValidationService : ICitationValidationService
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly ILogger<CitationValidationService> _logger;
@@ -148,9 +148,8 @@ public class CitationValidationService : ICitationValidationService
     private Task<bool> ValidateSingleCitationInternalAsync(
         Snippet snippet,
         Dictionary<string, int> pdfDict,
-        List<CitationValidationError> errors,
-        CancellationToken ct = default
-        )
+        List<CitationValidationError> errors
+                )
     {
         // Parse source format (expected: "PDF:guid")
         if (string.IsNullOrWhiteSpace(snippet.source))

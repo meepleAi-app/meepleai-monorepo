@@ -16,7 +16,7 @@ namespace Api.BoundedContexts.Authentication.Application.Handlers;
 /// CSV format: userId,keyName,scopes,expiresAt,metadata
 /// Generates new API keys for security and returns plaintext keys (shown once).
 /// </summary>
-public class BulkImportApiKeysCommandHandler : ICommandHandler<BulkImportApiKeysCommand, BulkOperationResult<ApiKeyImportResultDto>>
+internal class BulkImportApiKeysCommandHandler : ICommandHandler<BulkImportApiKeysCommand, BulkOperationResult<ApiKeyImportResultDto>>
 {
     private const int MaxBulkSize = 1000;
     private const int MaxCsvSizeBytes = 10 * 1024 * 1024; // 10MB
@@ -92,9 +92,8 @@ public class BulkImportApiKeysCommandHandler : ICommandHandler<BulkImportApiKeys
     /// Validates CSV content and parses API key records.
     /// </summary>
     private async Task<List<ApiKeyImportRecord>> ValidateCsvAndParseAsync(
-        string csvContent,
-        CancellationToken ct = default
-        )
+        string csvContent
+                )
     {
         if (string.IsNullOrWhiteSpace(csvContent))
         {

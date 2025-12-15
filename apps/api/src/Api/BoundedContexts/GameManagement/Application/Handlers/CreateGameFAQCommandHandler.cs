@@ -12,7 +12,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Handlers;
 /// Handles CreateGameFAQCommand.
 /// Issue #2028: Backend FAQ system for game-specific FAQs.
 /// </summary>
-public class CreateGameFAQCommandHandler : ICommandHandler<CreateGameFAQCommand, GameFAQDto>
+internal class CreateGameFAQCommandHandler : ICommandHandler<CreateGameFAQCommand, GameFAQDto>
 {
     private readonly IGameFAQRepository _faqRepository;
     private readonly IGameRepository _gameRepository;
@@ -30,6 +30,7 @@ public class CreateGameFAQCommandHandler : ICommandHandler<CreateGameFAQCommand,
 
     public async Task<GameFAQDto> Handle(CreateGameFAQCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         // Validate game exists
         var gameExists = await _gameRepository.ExistsAsync(command.GameId, cancellationToken).ConfigureAwait(false);
         if (!gameExists)

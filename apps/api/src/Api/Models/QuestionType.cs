@@ -4,7 +4,7 @@ namespace Api.Models;
 /// AI-07.1: Question type classification for prompt template selection
 /// Used to select appropriate few-shot examples and prompt structure
 /// </summary>
-public enum QuestionType
+internal enum QuestionType
 {
     /// <summary>
     /// Questions about game setup (e.g., "How do I set up Chess?")

@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.Authentication.Application.EventHandlers;
 /// Handles the PasswordResetEvent domain event.
 /// Creates audit log entry automatically via base class.
 /// </summary>
-public sealed class PasswordResetEventHandler : DomainEventHandlerBase<PasswordResetEvent>
+internal sealed class PasswordResetEventHandler : DomainEventHandlerBase<PasswordResetEvent>
 {
     public PasswordResetEventHandler(
         MeepleAiDbContext dbContext,

@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.Authentication.Domain.ValueObjects;
 /// Value Object representing a JWT token for shareable chat links.
 /// Encapsulates token generation, validation, and claims management.
 /// </summary>
-public sealed class ShareLinkToken
+internal sealed class ShareLinkToken
 {
     private const string ThreadIdClaimType = "thread_id";
     private const string RoleClaimType = "role";

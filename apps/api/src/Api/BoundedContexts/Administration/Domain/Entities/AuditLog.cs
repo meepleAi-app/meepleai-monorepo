@@ -2,7 +2,7 @@ using Api.SharedKernel.Domain.Entities;
 
 namespace Api.BoundedContexts.Administration.Domain.Entities;
 
-public sealed class AuditLog : AggregateRoot<Guid>
+internal sealed class AuditLog : AggregateRoot<Guid>
 {
     public Guid? UserId { get; private set; }
     public string Action { get; private set; }

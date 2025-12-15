@@ -5,7 +5,7 @@ namespace Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 /// <summary>
 /// Value object representing the status of a game session.
 /// </summary>
-public sealed class SessionStatus : ValueObject
+internal sealed class SessionStatus : ValueObject
 {
     public string Value { get; }
 

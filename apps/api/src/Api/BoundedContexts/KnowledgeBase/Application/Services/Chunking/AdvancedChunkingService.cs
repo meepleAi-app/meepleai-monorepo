@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Services.Chunking;
 /// ADR-016 Phase 1: Advanced hierarchical chunking service implementation.
 /// Creates parent/child chunk relationships using sentence-based baseline strategy.
 /// </summary>
-public sealed class AdvancedChunkingService : IAdvancedChunkingService
+internal sealed class AdvancedChunkingService : IAdvancedChunkingService
 {
     private readonly ITextChunkingService _textChunkingService;
     private readonly ChunkingStrategySelector _strategySelector;
@@ -277,17 +277,5 @@ public sealed class AdvancedChunkingService : IAdvancedChunkingService
             .Select(p => p.Trim())
             .Where(p => !string.IsNullOrWhiteSpace(p))
             .ToList();
-    }
-
-    /// <summary>
-    /// Estimates page number based on character position.
-    /// Uses long arithmetic to prevent integer overflow with large documents.
-    /// </summary>
-    private static int EstimatePageNumber(int charPosition)
-    {
-        const long charsPerPage = 2000L;
-        // Use long division to prevent overflow, then safely cast result
-        var pageNumber = ((long)charPosition / charsPerPage) + 1;
-        return (int)Math.Min(pageNumber, int.MaxValue);
     }
 }

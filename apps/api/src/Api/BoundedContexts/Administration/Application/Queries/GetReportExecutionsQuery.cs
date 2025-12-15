@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.Administration.Application.Queries;
 /// Query to get report execution history
 /// ISSUE-916: Execution tracking
 /// </summary>
-public sealed record GetReportExecutionsQuery : IQuery<IReadOnlyList<ReportExecutionDto>>
+internal sealed record GetReportExecutionsQuery : IQuery<IReadOnlyList<ReportExecutionDto>>
 {
     public Guid? ReportId { get; init; }
     public int Limit { get; init; } = 100;
@@ -16,7 +16,7 @@ public sealed record GetReportExecutionsQuery : IQuery<IReadOnlyList<ReportExecu
 /// <summary>
 /// DTO for report execution
 /// </summary>
-public sealed record ReportExecutionDto(
+internal sealed record ReportExecutionDto(
     Guid Id,
     Guid ReportId,
     DateTime StartedAt,

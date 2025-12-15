@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.Administration.Domain.ValueObjects;
 /// Value object for E2E testing metrics (Issue #2139)
 /// Represents Playwright test execution results
 /// </summary>
-public sealed class E2EMetrics : ValueObject
+internal sealed class E2EMetrics : ValueObject
 {
     /// <summary>
     /// Test coverage percentage (0-100)

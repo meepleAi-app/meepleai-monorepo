@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands.TwoFactor;
 /// Business logic: User validation → Secret generation → QR code creation → Backup codes generation.
 /// Infrastructure delegation: TOTP crypto operations via ITotpService.
 /// </summary>
-public sealed class GenerateTotpSetupCommandHandler : ICommandHandler<GenerateTotpSetupCommand, GenerateTotpSetupResult>
+internal sealed class GenerateTotpSetupCommandHandler : ICommandHandler<GenerateTotpSetupCommand, GenerateTotpSetupResult>
 {
     private readonly ITotpService _totpService;
     private readonly ILogger<GenerateTotpSetupCommandHandler> _logger;
@@ -24,6 +24,7 @@ public sealed class GenerateTotpSetupCommandHandler : ICommandHandler<GenerateTo
 
     public async Task<GenerateTotpSetupResult> Handle(GenerateTotpSetupCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         // Business logic validation
         if (command.UserId == Guid.Empty)
         {

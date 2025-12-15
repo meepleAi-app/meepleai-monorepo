@@ -14,7 +14,7 @@ namespace Api.BoundedContexts.Administration.Application.Handlers;
 /// Handler for UpdateUserTierCommand.
 /// Updates a user's subscription tier (admin-only operation).
 /// </summary>
-public class UpdateUserTierCommandHandler : ICommandHandler<UpdateUserTierCommand, UserDto>
+internal class UpdateUserTierCommandHandler : ICommandHandler<UpdateUserTierCommand, UserDto>
 {
     private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -35,6 +35,7 @@ public class UpdateUserTierCommandHandler : ICommandHandler<UpdateUserTierComman
 
     public async Task<UserDto> Handle(UpdateUserTierCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         if (command is null) throw new ArgumentNullException(nameof(command));
         // Authorization: While endpoint checks admin role, we verify again for defense in depth
         // and to ensure handler can be safely called from any context

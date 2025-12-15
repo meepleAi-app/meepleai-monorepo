@@ -672,4 +672,4 @@ static bool ShouldSkipMigrations(WebApplication app, MeepleAiDbContext db)
 }
 
 #pragma warning disable S1118 // Utility classes should not have public constructors - Required for test integration
-public partial class Program { }
+internal partial class Program { }

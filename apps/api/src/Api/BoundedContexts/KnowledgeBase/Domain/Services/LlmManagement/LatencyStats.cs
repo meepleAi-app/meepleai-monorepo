@@ -4,7 +4,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
 /// Latency statistics tracking for LLM provider performance monitoring
 /// ISSUE-962 (BGAI-020): Tracks response time metrics per provider
 /// </summary>
-public sealed class LatencyStats
+internal sealed class LatencyStats
 {
     private const int MaxSamples = 100; // Rolling window size
     private readonly Queue<double> _samples = new();

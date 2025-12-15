@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Handlers;
 /// <summary>
 /// Handles query to get all active game sessions.
 /// </summary>
-public class GetActiveSessionsQueryHandler : IQueryHandler<GetActiveSessionsQuery, List<GameSessionDto>>
+internal class GetActiveSessionsQueryHandler : IQueryHandler<GetActiveSessionsQuery, List<GameSessionDto>>
 {
     private readonly IGameSessionRepository _sessionRepository;
 

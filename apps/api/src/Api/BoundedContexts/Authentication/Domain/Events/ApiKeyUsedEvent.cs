@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.Authentication.Domain.Events;
 /// Domain event raised when an API key is successfully used for authentication.
 /// This event triggers usage logging and analytics.
 /// </summary>
-public sealed class ApiKeyUsedEvent : DomainEventBase
+internal sealed class ApiKeyUsedEvent : DomainEventBase
 {
     /// <summary>
     /// Unique identifier of the API key that was used.

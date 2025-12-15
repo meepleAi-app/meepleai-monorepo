@@ -6,4 +6,4 @@ namespace Api.BoundedContexts.WorkflowIntegration.Application.Queries;
 /// <summary>
 /// Query to get all n8n configurations.
 /// </summary>
-public record GetAllN8NConfigsQuery() : IQuery<List<N8NConfigurationDto>>;
+internal record GetAllN8NConfigsQuery() : IQuery<List<N8NConfigurationDto>>;

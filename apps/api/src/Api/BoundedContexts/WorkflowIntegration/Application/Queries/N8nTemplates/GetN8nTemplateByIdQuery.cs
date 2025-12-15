@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.WorkflowIntegration.Application.Queries.N8NTemplat
 /// Query to get a specific n8n workflow template by ID with full details including workflow JSON.
 /// Returns null if template not found.
 /// </summary>
-public sealed record GetN8NTemplateByIdQuery : IQuery<WorkflowTemplateDetailDto?>
+internal sealed record GetN8NTemplateByIdQuery : IQuery<WorkflowTemplateDetailDto?>
 {
     public string TemplateId { get; init; } = string.Empty;
 }

@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.GameManagement.Domain.Entities;
 /// GameFAQ aggregate root representing a frequently asked question for a game.
 /// Issue #2028: Backend FAQ system for game-specific FAQs.
 /// </summary>
-public sealed class GameFAQ : AggregateRoot<Guid>
+internal sealed class GameFAQ : AggregateRoot<Guid>
 {
     public Guid GameId { get; private set; }
     public FAQQuestion Question { get; private set; }

@@ -7,7 +7,7 @@ namespace Api.SharedKernel.Domain.Interfaces;
 /// Integration events are published across bounded contexts for cross-context communication.
 /// Unlike domain events (internal to a bounded context), integration events cross context boundaries.
 /// </summary>
-public interface IIntegrationEvent : INotification
+internal interface IIntegrationEvent : INotification
 {
     /// <summary>
     /// Gets the date and time when this integration event occurred.

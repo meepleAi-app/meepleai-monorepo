@@ -22,7 +22,7 @@ namespace Api.Logging;
 /// Without sanitization: Creates fake log entry
 /// With sanitization: "testINFO: Admin deleted user" (newline removed)
 /// </summary>
-public class LogForgingSanitizationPolicy : IDestructuringPolicy
+internal class LogForgingSanitizationPolicy : IDestructuringPolicy
 {
     /// <summary>
     /// Sanitizes a string by removing carriage return and line feed characters.
@@ -181,7 +181,7 @@ public class LogForgingSanitizationPolicy : IDestructuringPolicy
 /// _logger.LogInformation("Query: {Query}", userInput);
 /// Enricher sanitizes the {Query} property value before writing to logs.
 /// </summary>
-public class LogForgingSanitizationEnricher : ILogEventEnricher
+internal class LogForgingSanitizationEnricher : ILogEventEnricher
 {
     public void Enrich(LogEvent logEvent, ILogEventPropertyFactory propertyFactory)
     {

@@ -1,6 +1,6 @@
 namespace Api.Infrastructure.Entities;
 
-public class RuleAtomEntity
+internal class RuleAtomEntity
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid RuleSpecId { get; set; } = Guid.Empty;

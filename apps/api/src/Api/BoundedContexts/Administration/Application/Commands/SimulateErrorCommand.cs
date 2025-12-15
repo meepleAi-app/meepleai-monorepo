@@ -8,4 +8,4 @@ namespace Api.BoundedContexts.Administration.Application.Commands;
 /// Issue #2004: Enable runbook validation for high-error-rate and error-spike scenarios.
 /// </summary>
 /// <param name="ErrorType">Type of error to simulate: "500", "400", "timeout", "exception"</param>
-public record SimulateErrorCommand(string ErrorType) : IRequest<Unit>;
+internal record SimulateErrorCommand(string ErrorType) : IRequest<Unit>;

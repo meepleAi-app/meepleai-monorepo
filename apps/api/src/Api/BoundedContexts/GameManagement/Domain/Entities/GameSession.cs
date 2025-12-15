@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.GameManagement.Domain.Entities;
 /// <summary>
 /// GameSession aggregate root representing an active or completed game play session.
 /// </summary>
-public sealed class GameSession : AggregateRoot<Guid>
+internal sealed class GameSession : AggregateRoot<Guid>
 {
     public Guid GameId { get; private set; }
     public SessionStatus Status { get; private set; }

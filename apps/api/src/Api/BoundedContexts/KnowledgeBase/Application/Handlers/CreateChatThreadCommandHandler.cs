@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// <summary>
 /// Handles chat thread creation command.
 /// </summary>
-public class CreateChatThreadCommandHandler : ICommandHandler<CreateChatThreadCommand, ChatThreadDto>
+internal class CreateChatThreadCommandHandler : ICommandHandler<CreateChatThreadCommand, ChatThreadDto>
 {
     private readonly IChatThreadRepository _threadRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -26,6 +26,7 @@ public class CreateChatThreadCommandHandler : ICommandHandler<CreateChatThreadCo
 
     public async Task<ChatThreadDto> Handle(CreateChatThreadCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         // Create ChatThread aggregate
         var thread = new ChatThread(
             id: Guid.NewGuid(),

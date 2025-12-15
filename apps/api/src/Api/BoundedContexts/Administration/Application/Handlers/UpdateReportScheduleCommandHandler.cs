@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.Administration.Application.Handlers;
 /// Handler for UpdateReportScheduleCommand
 /// ISSUE-916: Schedule update/cancellation
 /// </summary>
-public sealed class UpdateReportScheduleCommandHandler : ICommandHandler<UpdateReportScheduleCommand, bool>
+internal sealed class UpdateReportScheduleCommandHandler : ICommandHandler<UpdateReportScheduleCommand, bool>
 {
     private readonly IAdminReportRepository _repository;
     private readonly IReportSchedulerService _schedulerService;
@@ -28,6 +28,7 @@ public sealed class UpdateReportScheduleCommandHandler : ICommandHandler<UpdateR
 
     public async Task<bool> Handle(UpdateReportScheduleCommand command, CancellationToken ct)
     {
+        ArgumentNullException.ThrowIfNull(command);
         _logger.LogInformation(
             "Updating schedule for report {ReportId}",
             command.ReportId);

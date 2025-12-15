@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands;
 /// Command to register a new user.
 /// Returns LoginResponse with session token for immediate authentication.
 /// </summary>
-public record RegisterCommand(
+internal record RegisterCommand(
     string Email,
     string Password,
     string DisplayName,
@@ -21,7 +21,7 @@ public record RegisterCommand(
 /// Response for user registration.
 /// Includes user details and session token for immediate login.
 /// </summary>
-public record RegisterResponse(
+internal record RegisterResponse(
     UserDto User,
     string SessionToken,
     DateTime ExpiresAt

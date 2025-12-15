@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.Administration.Application.EventHandlers;
 /// Issue #879: Invalidates dashboard cache when system configuration changes.
 /// Ensures dashboard stats reflect configuration updates within 1 minute (or immediately on config change).
 /// </summary>
-public sealed class DashboardCacheInvalidationEventHandler :
+internal sealed class DashboardCacheInvalidationEventHandler :
     INotificationHandler<ConfigurationUpdatedEvent>,
     INotificationHandler<ConfigurationToggledEvent>
 {
@@ -31,6 +31,7 @@ public sealed class DashboardCacheInvalidationEventHandler :
     /// </summary>
     public async Task Handle(ConfigurationUpdatedEvent notification, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(notification);
         _logger.LogInformation(
             "Configuration updated: {Key} → invalidating dashboard cache",
             notification.Key.Value);
@@ -43,6 +44,7 @@ public sealed class DashboardCacheInvalidationEventHandler :
     /// </summary>
     public async Task Handle(ConfigurationToggledEvent notification, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(notification);
         _logger.LogInformation(
             "Configuration toggled: {Key} (Active: {IsActive}) → invalidating dashboard cache",
             notification.Key.Value,

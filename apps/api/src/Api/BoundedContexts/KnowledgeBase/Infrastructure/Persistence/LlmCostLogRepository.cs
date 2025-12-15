@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 /// Repository implementation for LLM cost log persistence
 /// ISSUE-960: BGAI-018 - Cost tracking database operations
 /// </summary>
-public class LlmCostLogRepository : ILlmCostLogRepository
+internal class LlmCostLogRepository : ILlmCostLogRepository
 {
     private readonly MeepleAiDbContext _context;
     private readonly ILogger<LlmCostLogRepository> _logger;

@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.WorkflowIntegration.Domain.ValueObjects;
 /// <summary>
 /// Value object representing a validated workflow URL.
 /// </summary>
-public sealed class WorkflowUrl : ValueObject
+internal sealed class WorkflowUrl : ValueObject
 {
     public string Value { get; }
 

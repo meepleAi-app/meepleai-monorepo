@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
 /// BGAI-086: Strongly-typed configuration for PDF processing pipeline
 /// BGAI-087: Added large PDF optimization settings
 /// </summary>
-public class PdfProcessingOptions
+internal class PdfProcessingOptions
 {
     public QualityOptions Quality { get; set; } = new();
     public long MaxFileSizeBytes { get; set; } = 104857600; // 100 MB default
@@ -28,7 +28,7 @@ public class PdfProcessingOptions
 /// <summary>
 /// Quality validation thresholds for PDF extraction
 /// </summary>
-public class QualityOptions
+internal class QualityOptions
 {
     /// <summary>
     /// Minimum acceptable quality score (0.0-1.0). Extraction fails below this threshold.
@@ -49,7 +49,7 @@ public class QualityOptions
 /// <summary>
 /// PDF text extractor configuration
 /// </summary>
-public class ExtractorOptions
+internal class ExtractorOptions
 {
     public string Provider { get; set; } = "Orchestrator";
     public UnstructuredOptions Unstructured { get; set; } = new();
@@ -59,7 +59,7 @@ public class ExtractorOptions
 /// <summary>
 /// Unstructured.io service configuration
 /// </summary>
-public class UnstructuredOptions
+internal class UnstructuredOptions
 {
     public string ApiUrl { get; set; } = "http://unstructured-service:8001";
     public int TimeoutSeconds { get; set; } = 35;
@@ -71,7 +71,7 @@ public class UnstructuredOptions
 /// <summary>
 /// SmolDocling VLM service configuration
 /// </summary>
-public class SmolDoclingOptions
+internal class SmolDoclingOptions
 {
     public string ApiUrl { get; set; } = "http://smoldocling-service:8002";
     public int TimeoutSeconds { get; set; } = 30;

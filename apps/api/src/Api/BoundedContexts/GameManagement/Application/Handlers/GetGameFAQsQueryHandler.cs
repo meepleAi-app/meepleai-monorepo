@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Handlers;
 /// Handles GetGameFAQsQuery.
 /// Issue #2028: Backend FAQ system for game-specific FAQs.
 /// </summary>
-public class GetGameFAQsQueryHandler : IQueryHandler<GetGameFAQsQuery, GetGameFAQsQueryResult>
+internal class GetGameFAQsQueryHandler : IQueryHandler<GetGameFAQsQuery, GetGameFAQsQueryResult>
 {
     private readonly IGameFAQRepository _faqRepository;
 
@@ -21,6 +21,7 @@ public class GetGameFAQsQueryHandler : IQueryHandler<GetGameFAQsQuery, GetGameFA
 
     public async Task<GetGameFAQsQueryResult> Handle(GetGameFAQsQuery query, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(query);
         // Optimized single query (prevents N+1 problem)
         var (faqs, totalCount) = await _faqRepository.GetByGameIdWithCountAsync(
             query.GameId,

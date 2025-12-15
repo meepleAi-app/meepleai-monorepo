@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.GridSearch;
 /// ADR-016 Phase 5: Result of a grid search evaluation run.
 /// Contains aggregated metrics and comparison data across configurations.
 /// </summary>
-public sealed record GridSearchResult
+internal sealed record GridSearchResult
 {
     /// <summary>
     /// Unique identifier for this grid search run.
@@ -96,7 +96,7 @@ public sealed record GridSearchResult
 /// <summary>
 /// Result for a single configuration evaluation.
 /// </summary>
-public sealed record ConfigurationResult
+internal sealed record ConfigurationResult
 {
     /// <summary>
     /// Configuration that was evaluated.

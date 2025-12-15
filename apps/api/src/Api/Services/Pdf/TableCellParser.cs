@@ -6,7 +6,7 @@ namespace Api.Services.Pdf;
 /// <summary>
 /// Service responsible for parsing individual table cells and columns
 /// </summary>
-public class TableCellParser : ITableCellParser
+internal class TableCellParser : ITableCellParser
 {
 #pragma warning disable MA0051 // Method is too long
     /// <param name="existingBoundaries">Optional pre-computed column boundaries to maintain consistency across rows</param>

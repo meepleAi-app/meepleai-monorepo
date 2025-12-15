@@ -8,7 +8,7 @@ namespace Api.Services;
 /// <summary>
 /// Exports chat conversations as plain text with timestamps and citations.
 /// </summary>
-public class TxtExportFormatter : IExportFormatter
+internal class TxtExportFormatter : IExportFormatter
 {
     private readonly ILogger<TxtExportFormatter>? _logger;
 

@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Administration.Application.Commands;
 /// Deactivates all other versions of the same template.
 /// Creates audit log entries for activation and deactivation.
 /// </summary>
-public record ActivatePromptVersionCommand(
+internal record ActivatePromptVersionCommand(
     Guid TemplateId,
     Guid VersionId,
     Guid ActivatedByUserId,

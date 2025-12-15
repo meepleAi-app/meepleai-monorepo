@@ -14,7 +14,7 @@ namespace Api.BoundedContexts.UserNotifications.Infrastructure.Persistence;
 /// EF Core implementation of Notification repository.
 /// Maps between domain Notification aggregate and NotificationEntity persistence model.
 /// </summary>
-public class NotificationRepository : RepositoryBase, INotificationRepository
+internal class NotificationRepository : RepositoryBase, INotificationRepository
 {
     public NotificationRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
         : base(dbContext, eventCollector)

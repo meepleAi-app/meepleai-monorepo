@@ -9,7 +9,7 @@ namespace Api.Observability;
 /// Provides OpenTelemetry metrics for AI response quality tracking.
 /// Records multi-dimensional quality scores and low-quality response counts.
 /// </summary>
-public class QualityMetrics
+internal class QualityMetrics
 {
     private readonly Histogram<double> _qualityScoreHistogram;
     private readonly Counter<long> _lowQualityCounter;

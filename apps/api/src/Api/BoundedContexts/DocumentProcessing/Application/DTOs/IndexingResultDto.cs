@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 /// <summary>
 /// Result of PDF indexing operation
 /// </summary>
-public record IndexingResultDto
+internal record IndexingResultDto
 {
     public bool Success { get; init; }
     public string? ErrorMessage { get; init; }
@@ -37,7 +37,7 @@ public record IndexingResultDto
 /// <summary>
 /// Error codes for PDF indexing failures
 /// </summary>
-public enum PdfIndexingErrorCode
+internal enum PdfIndexingErrorCode
 {
     PdfNotFound,
     TextExtractionRequired,

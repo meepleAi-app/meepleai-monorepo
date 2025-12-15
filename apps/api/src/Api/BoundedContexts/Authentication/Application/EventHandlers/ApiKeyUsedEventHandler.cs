@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.Authentication.Application.EventHandlers;
 /// Handles ApiKeyUsedEvent by logging usage to the database.
 /// Provides audit trail and analytics for API key usage.
 /// </summary>
-public class ApiKeyUsedEventHandler : INotificationHandler<ApiKeyUsedEvent>
+internal class ApiKeyUsedEventHandler : INotificationHandler<ApiKeyUsedEvent>
 {
     private readonly IApiKeyUsageLogRepository _usageLogRepository;
     private readonly ILogger<ApiKeyUsedEventHandler> _logger;
@@ -25,6 +25,7 @@ public class ApiKeyUsedEventHandler : INotificationHandler<ApiKeyUsedEvent>
 
     public async Task Handle(ApiKeyUsedEvent notification, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(notification);
         try
         {
             var usageLog = ApiKeyUsageLog.Create(

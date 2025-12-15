@@ -5,7 +5,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Indexing;
 /// Maps hierarchical chunks (from Phase 1) to Qdrant points with enhanced metadata payload.
 /// Entity - identity by Id.
 /// </summary>
-public sealed class ChunkIndexEntry
+internal sealed class ChunkIndexEntry
 {
     /// <summary>
     /// Unique identifier for this index entry (maps to Qdrant point ID).

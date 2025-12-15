@@ -20,7 +20,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands.OAuth;
 /// Business logic: CSRF validation → Token exchange → User creation/linking → Token encryption → Session creation.
 /// Infrastructure delegation: Provider HTTP communication via IOAuthService.
 /// </summary>
-public sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<HandleOAuthCallbackCommand, HandleOAuthCallbackResult>
+internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<HandleOAuthCallbackCommand, HandleOAuthCallbackResult>
 {
     private const string EncryptionPurpose = "OAuthTokens";
 
@@ -49,6 +49,7 @@ public sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<HandleOA
 
     public async Task<HandleOAuthCallbackResult> Handle(HandleOAuthCallbackCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         try
         {
             // Step 1: Validate state and exchange code for user info
@@ -121,9 +122,8 @@ public sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<HandleOA
     private async Task<(bool success, object userInfoOrError, OAuthTokenResponse? tokenResponse)> ValidateAndExchangeTokenAsync(
         string provider,
         string state,
-        string code,
-        CancellationToken ct = default
-        )
+        string code
+                )
     {
         // Validate CSRF state token
         var isStateValid = await _oauthService.ValidateStateAsync(state).ConfigureAwait(false);

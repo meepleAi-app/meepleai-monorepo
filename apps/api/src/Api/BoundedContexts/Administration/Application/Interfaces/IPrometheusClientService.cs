@@ -3,7 +3,7 @@ namespace Api.BoundedContexts.Administration.Application.Interfaces;
 /// <summary>
 /// Service interface for querying Prometheus metrics API (Issue #2139)
 /// </summary>
-public interface IPrometheusClientService
+internal interface IPrometheusClientService
 {
     /// <summary>
     /// Executes a PromQL query against Prometheus

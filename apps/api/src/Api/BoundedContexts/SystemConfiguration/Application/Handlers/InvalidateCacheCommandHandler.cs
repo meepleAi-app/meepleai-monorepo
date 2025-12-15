@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.SystemConfiguration.Application.Handlers;
 /// Handles cache invalidation for configurations.
 /// Uses IHybridCacheService for tag-based invalidation support.
 /// </summary>
-public class InvalidateCacheCommandHandler : ICommandHandler<InvalidateCacheCommand, Unit>
+internal class InvalidateCacheCommandHandler : ICommandHandler<InvalidateCacheCommand, Unit>
 {
     private readonly IHybridCacheService _cache;
 
@@ -19,6 +19,7 @@ public class InvalidateCacheCommandHandler : ICommandHandler<InvalidateCacheComm
 
     public async Task<Unit> Handle(InvalidateCacheCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         if (command.Key != null)
         {
             // Invalidate specific key across all environments

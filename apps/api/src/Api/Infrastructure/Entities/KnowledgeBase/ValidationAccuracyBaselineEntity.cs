@@ -9,7 +9,7 @@ namespace Api.Infrastructure.Entities;
 /// Table: validation_accuracy_baselines
 /// </summary>
 [Table("validation_accuracy_baselines")]
-public class ValidationAccuracyBaselineEntity
+internal class ValidationAccuracyBaselineEntity
 {
     /// <summary>Unique baseline measurement ID (Primary Key)</summary>
     [Key]

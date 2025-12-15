@@ -6,6 +6,6 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 /// <summary>
 /// Query to retrieve a chat thread by ID.
 /// </summary>
-public record GetChatThreadByIdQuery(
+internal record GetChatThreadByIdQuery(
     Guid ThreadId
 ) : IQuery<ChatThreadDto?>;

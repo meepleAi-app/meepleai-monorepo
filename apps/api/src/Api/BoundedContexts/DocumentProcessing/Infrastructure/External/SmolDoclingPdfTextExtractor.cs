@@ -16,7 +16,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 /// References: ADR-003 (3-Stage PDF Pipeline), Issue #947 (BGAI-007)
 /// Stage 2: Fallback when Unstructured quality &lt;0.70
 /// </remarks>
-public class SmolDoclingPdfTextExtractor : IPdfTextExtractor
+internal class SmolDoclingPdfTextExtractor : IPdfTextExtractor
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<SmolDoclingPdfTextExtractor> _logger;

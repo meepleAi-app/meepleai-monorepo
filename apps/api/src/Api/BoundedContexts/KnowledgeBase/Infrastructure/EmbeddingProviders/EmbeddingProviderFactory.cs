@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.EmbeddingProviders;
 /// Factory for creating embedding providers based on configuration.
 /// Supports primary provider with optional fallback.
 /// </summary>
-public sealed class EmbeddingProviderFactory : IEmbeddingProviderFactory
+internal sealed class EmbeddingProviderFactory : IEmbeddingProviderFactory
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILoggerFactory _loggerFactory;
@@ -97,7 +97,7 @@ public sealed class EmbeddingProviderFactory : IEmbeddingProviderFactory
 /// <summary>
 /// Interface for embedding provider factory
 /// </summary>
-public interface IEmbeddingProviderFactory
+internal interface IEmbeddingProviderFactory
 {
     /// <summary>
     /// Get the primary embedding provider based on configuration

@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Administration.Infrastructure.Services.Formatters;
 /// PDF report formatter using QuestPDF
 /// ISSUE-917: Professional PDF generation with charts
 /// </summary>
-public sealed class PdfReportFormatter : IReportFormatter
+internal sealed class PdfReportFormatter : IReportFormatter
 {
     private readonly ChartGenerationService _chartService;
 

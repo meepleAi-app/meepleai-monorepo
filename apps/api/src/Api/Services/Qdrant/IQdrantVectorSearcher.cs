@@ -5,7 +5,7 @@ namespace Api.Services.Qdrant;
 /// <summary>
 /// Handles vector search operations in Qdrant
 /// </summary>
-public interface IQdrantVectorSearcher
+internal interface IQdrantVectorSearcher
 {
     /// <summary>
     /// Search for similar vectors using the query embedding and filter

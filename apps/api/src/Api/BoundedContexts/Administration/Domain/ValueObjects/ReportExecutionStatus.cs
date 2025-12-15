@@ -4,7 +4,7 @@ namespace Api.BoundedContexts.Administration.Domain.ValueObjects;
 /// Value object representing report execution status
 /// ISSUE-916: Tracks lifecycle of report generation
 /// </summary>
-public enum ReportExecutionStatus
+internal enum ReportExecutionStatus
 {
     /// <summary>Report generation is in progress</summary>
     Running = 1,

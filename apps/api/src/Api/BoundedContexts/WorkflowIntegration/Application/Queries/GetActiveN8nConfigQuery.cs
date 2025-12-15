@@ -3,4 +3,4 @@ using Api.SharedKernel.Application.Interfaces;
 
 namespace Api.BoundedContexts.WorkflowIntegration.Application.Queries;
 
-public record GetActiveN8NConfigQuery() : IQuery<N8NConfigurationDto?>;
+internal record GetActiveN8NConfigQuery() : IQuery<N8NConfigurationDto?>;

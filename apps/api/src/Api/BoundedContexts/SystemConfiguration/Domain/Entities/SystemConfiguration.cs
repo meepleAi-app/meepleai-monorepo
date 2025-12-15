@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.SystemConfiguration.Domain.Entities;
 /// <summary>
 /// SystemConfiguration aggregate root representing a system configuration entry.
 /// </summary>
-public sealed class SystemConfiguration : AggregateRoot<Guid>
+internal sealed class SystemConfiguration : AggregateRoot<Guid>
 {
     public ConfigKey Key { get; private set; }
     public string Value { get; private set; }

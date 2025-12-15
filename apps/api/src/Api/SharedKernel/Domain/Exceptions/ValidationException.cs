@@ -3,7 +3,7 @@ namespace Api.SharedKernel.Domain.Exceptions;
 /// <summary>
 /// Exception thrown when entity or value object validation fails.
 /// </summary>
-public class ValidationException : DomainException
+internal class ValidationException : DomainException
 {
     /// <summary>
     /// Gets the collection of validation errors.
@@ -34,5 +34,8 @@ public class ValidationException : DomainException
         {
             [propertyName] = new[] { errorMessage }
         };
+    }
+    public ValidationException(string message, Exception innerException) : base(message, innerException)
+    {
     }
 }

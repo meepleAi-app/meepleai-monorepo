@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.Administration.Application.Handlers;
 /// Uses IUserRepository to search users for autocomplete scenarios.
 /// API-01: Authentication endpoints (versioned)
 /// </summary>
-public class SearchUsersQueryHandler : IQueryHandler<SearchUsersQuery, IReadOnlyList<UserSearchResultDto>>
+internal class SearchUsersQueryHandler : IQueryHandler<SearchUsersQuery, IReadOnlyList<UserSearchResultDto>>
 {
     private readonly IUserRepository _userRepository;
     private readonly ILogger<SearchUsersQueryHandler> _logger;

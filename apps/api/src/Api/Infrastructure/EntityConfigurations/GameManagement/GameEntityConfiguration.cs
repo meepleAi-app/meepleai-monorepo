@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Api.Infrastructure.EntityConfigurations;
 
-public class GameEntityConfiguration : IEntityTypeConfiguration<GameEntity>
+internal class GameEntityConfiguration : IEntityTypeConfiguration<GameEntity>
 {
     public void Configure(EntityTypeBuilder<GameEntity> builder)
     {

@@ -9,7 +9,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 
 namespace Api.BoundedContexts.WorkflowIntegration.Application.Handlers;
 
-public class UpdateN8NConfigCommandHandler : ICommandHandler<UpdateN8NConfigCommand, N8NConfigurationDto>
+internal class UpdateN8NConfigCommandHandler : ICommandHandler<UpdateN8NConfigCommand, N8NConfigurationDto>
 {
     private readonly IN8NConfigurationRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
@@ -24,6 +24,7 @@ public class UpdateN8NConfigCommandHandler : ICommandHandler<UpdateN8NConfigComm
 
     public async Task<N8NConfigurationDto> Handle(UpdateN8NConfigCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         if (command is null) throw new ArgumentNullException(nameof(command));
         var config = await _repository.GetByIdAsync(command.ConfigId, cancellationToken).ConfigureAwait(false);
         if (config == null)

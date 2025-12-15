@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 /// Represents a search result from vector/hybrid search.
 /// Not an aggregate root - created during search operations.
 /// </summary>
-public sealed class SearchResult : Entity<Guid>
+internal sealed class SearchResult : Entity<Guid>
 {
     public Guid VectorDocumentId { get; private set; }
     public string TextContent { get; private set; }

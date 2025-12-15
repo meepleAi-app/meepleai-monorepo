@@ -4,7 +4,7 @@ namespace Api.Models;
 /// Result of API key validation operation.
 /// Contains information about whether the key is valid and associated user details.
 /// </summary>
-public class ApiKeyValidationResult
+internal class ApiKeyValidationResult
 {
     /// <summary>
     /// Whether the API key is valid and can be used for authentication.

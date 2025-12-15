@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.Authentication.Application.Queries;
 /// Handler for GetSessionStatusQuery with authorization.
 /// Verifies that requesting user owns the session OR has Admin role.
 /// </summary>
-public class GetSessionStatusQueryHandler : IQueryHandler<GetSessionStatusQuery, SessionInfo?>
+internal class GetSessionStatusQueryHandler : IQueryHandler<GetSessionStatusQuery, SessionInfo?>
 {
     private readonly MeepleAiDbContext _db;
     private readonly ILogger<GetSessionStatusQueryHandler> _logger;
@@ -25,6 +25,7 @@ public class GetSessionStatusQueryHandler : IQueryHandler<GetSessionStatusQuery,
 
     public async Task<SessionInfo?> Handle(GetSessionStatusQuery request, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         var session = await _db.UserSessions
             .AsNoTracking()
             .Include(s => s.User)

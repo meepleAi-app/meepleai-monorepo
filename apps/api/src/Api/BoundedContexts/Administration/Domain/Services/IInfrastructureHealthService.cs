@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.Administration.Domain.Services;
 /// Domain service for infrastructure health monitoring.
 /// Issue #891: Aggregates health checks from all infrastructure services.
 /// </summary>
-public interface IInfrastructureHealthService
+internal interface IInfrastructureHealthService
 {
     /// <summary>
     /// Gets the health status of a specific service.
@@ -35,7 +35,7 @@ public interface IInfrastructureHealthService
 /// <summary>
 /// Represents the health status of a single service.
 /// </summary>
-public record ServiceHealthStatus(
+internal record ServiceHealthStatus(
     string ServiceName,
     HealthState State,
     string? ErrorMessage,
@@ -45,7 +45,7 @@ public record ServiceHealthStatus(
 /// <summary>
 /// Represents the overall health status of all infrastructure.
 /// </summary>
-public record OverallHealthStatus(
+internal record OverallHealthStatus(
     HealthState State,
     int TotalServices,
     int HealthyServices,
@@ -56,7 +56,7 @@ public record OverallHealthStatus(
 /// <summary>
 /// Health state enumeration.
 /// </summary>
-public enum HealthState
+internal enum HealthState
 {
     /// <summary>Service is healthy and responding</summary>
     Healthy = 0,

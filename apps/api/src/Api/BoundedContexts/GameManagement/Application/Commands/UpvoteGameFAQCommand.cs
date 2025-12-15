@@ -7,4 +7,4 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands;
 /// Command to upvote an FAQ.
 /// Issue #2028: Backend FAQ system for game-specific FAQs.
 /// </summary>
-public record UpvoteGameFAQCommand(Guid Id) : ICommand<GameFAQDto>;
+internal record UpvoteGameFAQCommand(Guid Id) : ICommand<GameFAQDto>;

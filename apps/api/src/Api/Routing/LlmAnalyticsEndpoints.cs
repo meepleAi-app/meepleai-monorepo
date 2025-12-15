@@ -9,7 +9,7 @@ namespace Api.Routing;
 /// ISSUE-1725: Admin endpoints for LLM analytics and cost optimization.
 /// Provides efficiency reports, model recommendations, and optimization insights.
 /// </summary>
-public static class LlmAnalyticsEndpoints
+internal static class LlmAnalyticsEndpoints
 {
     public static void MapLlmAnalyticsEndpoints(this IEndpointRouteBuilder app)
     {

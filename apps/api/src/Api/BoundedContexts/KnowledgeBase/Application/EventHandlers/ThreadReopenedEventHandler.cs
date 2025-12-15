@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.EventHandlers;
 
-public sealed class ThreadReopenedEventHandler : DomainEventHandlerBase<ThreadReopenedEvent>
+internal sealed class ThreadReopenedEventHandler : DomainEventHandlerBase<ThreadReopenedEvent>
 {
     public ThreadReopenedEventHandler(
         MeepleAiDbContext dbContext,

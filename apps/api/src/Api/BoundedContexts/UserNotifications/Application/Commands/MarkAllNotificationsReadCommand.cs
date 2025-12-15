@@ -6,4 +6,4 @@ namespace Api.BoundedContexts.UserNotifications.Application.Commands;
 /// Command to mark all notifications as read for a user.
 /// Bulk operation for "clear all" functionality.
 /// </summary>
-public record MarkAllNotificationsReadCommand(Guid UserId) : ICommand<int>;
+internal record MarkAllNotificationsReadCommand(Guid UserId) : ICommand<int>;

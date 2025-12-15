@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.Administration.Application.Commands;
 /// Command to update a user's subscription tier.
 /// Only admin users can change user tiers.
 /// </summary>
-public record UpdateUserTierCommand(
+internal record UpdateUserTierCommand(
     Guid UserId,
     string NewTier,
     Guid RequesterUserId

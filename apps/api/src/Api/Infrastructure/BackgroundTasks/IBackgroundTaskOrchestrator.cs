@@ -9,7 +9,7 @@ namespace Api.Infrastructure.BackgroundTasks;
 /// Provides centralized orchestration for background tasks with distributed coordination via Redis.
 /// Supports task scheduling, status tracking, cancellation, and distributed locking.
 /// </summary>
-public interface IBackgroundTaskOrchestrator
+internal interface IBackgroundTaskOrchestrator
 {
     /// <summary>
     /// Schedules a background task for immediate execution.
@@ -90,7 +90,7 @@ public interface IBackgroundTaskOrchestrator
 /// <summary>
 /// Represents the status of a background task.
 /// </summary>
-public enum BackgroundTaskStatus
+internal enum BackgroundTaskStatus
 {
     /// <summary>
     /// Task is scheduled but not yet running.

@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands;
 /// Handler for RevokeSessionCommand with authorization and audit tracking.
 /// Verifies that requesting user owns the session OR has Admin role.
 /// </summary>
-public class RevokeSessionCommandHandler : ICommandHandler<RevokeSessionCommand, RevokeSessionResponse>
+internal class RevokeSessionCommandHandler : ICommandHandler<RevokeSessionCommand, RevokeSessionResponse>
 {
     private readonly ISessionRepository _sessionRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -30,6 +30,7 @@ public class RevokeSessionCommandHandler : ICommandHandler<RevokeSessionCommand,
 
     public async Task<RevokeSessionResponse> Handle(RevokeSessionCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         // Retrieve session
         var session = await _sessionRepository.GetByIdAsync(command.SessionId, cancellationToken).ConfigureAwait(false);
 

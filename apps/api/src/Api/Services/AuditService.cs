@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Api.Services;
 
-public class AuditService
+internal class AuditService
 {
     private readonly MeepleAiDbContext _db;
     private readonly ILogger<AuditService> _logger;

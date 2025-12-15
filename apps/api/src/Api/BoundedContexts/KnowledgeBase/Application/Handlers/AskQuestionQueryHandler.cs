@@ -15,7 +15,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// 2. LLM generation with context
 /// 3. Quality tracking and confidence scoring
 /// </summary>
-public class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaResponseDto>
+internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaResponseDto>
 {
     private const string DefaultSystemPrompt =
         "You are MeepleAI, a helpful board game assistant. Answer using only the provided context. "
@@ -54,6 +54,7 @@ public class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespons
         AskQuestionQuery query,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(query);
         _logger.LogInformation(
             "Processing AskQuestionQuery: GameId={GameId}, Question={Question}",
             query.GameId, query.Question);

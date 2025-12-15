@@ -6,6 +6,6 @@ namespace Api.BoundedContexts.Authentication.Application.Queries;
 /// <summary>
 /// Query to validate an API key and retrieve associated user information.
 /// </summary>
-public record ValidateApiKeyQuery(
+internal record ValidateApiKeyQuery(
     string PlaintextKey
 ) : IQuery<UserDto?>;

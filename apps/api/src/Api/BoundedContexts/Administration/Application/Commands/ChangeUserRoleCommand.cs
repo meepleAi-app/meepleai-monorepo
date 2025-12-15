@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.Administration.Application.Commands;
 /// <summary>
 /// Command to change a user's role.
 /// </summary>
-public record ChangeUserRoleCommand(
+internal record ChangeUserRoleCommand(
     string UserId,
     string NewRole
 ) : ICommand<UserDto>;

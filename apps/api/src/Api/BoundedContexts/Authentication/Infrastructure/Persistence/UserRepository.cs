@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 /// EF Core implementation of User repository.
 /// Maps between domain User entity and UserEntity persistence model.
 /// </summary>
-public class UserRepository : RepositoryBase, IUserRepository
+internal class UserRepository : RepositoryBase, IUserRepository
 {
     public UserRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
         : base(dbContext, eventCollector)

@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Handlers;
 /// Uses thread-safe in-memory cache with bounded size.
 /// ISSUE-1674: Consider persisting to database for durability in production.
 /// </summary>
-public sealed class GetEvaluationResultsQueryHandler : IRequestHandler<GetEvaluationResultsQuery, IReadOnlyList<EvaluationResult>>
+internal sealed class GetEvaluationResultsQueryHandler : IRequestHandler<GetEvaluationResultsQuery, IReadOnlyList<EvaluationResult>>
 {
     private readonly ILogger<GetEvaluationResultsQueryHandler> _logger;
 
@@ -90,7 +90,7 @@ public sealed class GetEvaluationResultsQueryHandler : IRequestHandler<GetEvalua
 /// <summary>
 /// Handler for GetBaselineMetricsQuery.
 /// </summary>
-public sealed class GetBaselineMetricsQueryHandler : IRequestHandler<GetBaselineMetricsQuery, EvaluationMetrics?>
+internal sealed class GetBaselineMetricsQueryHandler : IRequestHandler<GetBaselineMetricsQuery, EvaluationMetrics?>
 {
     private readonly ILogger<GetBaselineMetricsQueryHandler> _logger;
 
@@ -101,6 +101,7 @@ public sealed class GetBaselineMetricsQueryHandler : IRequestHandler<GetBaseline
 
     public Task<EvaluationMetrics?> Handle(GetBaselineMetricsQuery request, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         // Use thread-safe snapshot to avoid race conditions
         var query = GetEvaluationResultsQueryHandler.GetCachedResultsSnapshot()
             .Where(r => r.Configuration.Equals("baseline", StringComparison.OrdinalIgnoreCase));

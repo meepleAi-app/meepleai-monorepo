@@ -5,7 +5,7 @@ namespace Api.BoundedContexts.Authentication.Domain.Events;
 /// <summary>
 /// Domain event raised when OAuth tokens are refreshed for an account.
 /// </summary>
-public sealed class OAuthTokensRefreshedEvent : DomainEventBase
+internal sealed class OAuthTokensRefreshedEvent : DomainEventBase
 {
     /// <summary>
     /// Gets the ID of the OAuth account whose tokens were refreshed.

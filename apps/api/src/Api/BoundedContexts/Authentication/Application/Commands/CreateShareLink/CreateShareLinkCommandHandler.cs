@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands.CreateShareLin
 /// <summary>
 /// Handler for creating shareable chat thread links.
 /// </summary>
-public sealed class CreateShareLinkCommandHandler : IRequestHandler<CreateShareLinkCommand, CreateShareLinkResult>
+internal sealed class CreateShareLinkCommandHandler : IRequestHandler<CreateShareLinkCommand, CreateShareLinkResult>
 {
     private readonly MeepleAiDbContext _context;
     private readonly IShareLinkRepository _shareLinkRepository;
@@ -30,6 +30,7 @@ public sealed class CreateShareLinkCommandHandler : IRequestHandler<CreateShareL
         CreateShareLinkCommand request,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         // Verify that the chat thread exists and belongs to the requesting user
         var threadExists = await _context.ChatThreads
             .AnyAsync(

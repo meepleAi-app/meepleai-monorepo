@@ -8,7 +8,7 @@ namespace Api.Observability;
 /// Provides custom metrics for the MeepleAI application.
 /// These metrics are exported via OpenTelemetry to Prometheus.
 /// </summary>
-public static class MeepleAiMetrics
+internal static class MeepleAiMetrics
 {
     /// <summary>
     /// Meter name for MeepleAI metrics (matches the meter name in OpenTelemetry configuration)

@@ -4,7 +4,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Evaluation;
 /// A single Q&A sample for RAG evaluation.
 /// Format aligned with both Mozilla Structured QA and MeepleAI custom datasets.
 /// </summary>
-public sealed record EvaluationSample
+internal sealed record EvaluationSample
 {
     /// <summary>
     /// Unique identifier for the sample.

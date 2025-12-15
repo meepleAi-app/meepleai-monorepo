@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands;
 /// Handles password change requests.
 /// Verifies current password before allowing change to new password.
 /// </summary>
-public class ChangePasswordCommandHandler : ICommandHandler<ChangePasswordCommand>
+internal class ChangePasswordCommandHandler : ICommandHandler<ChangePasswordCommand>
 {
     private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -26,6 +26,7 @@ public class ChangePasswordCommandHandler : ICommandHandler<ChangePasswordComman
 
     public async Task Handle(ChangePasswordCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         // Validate new password is not empty
         if (string.IsNullOrWhiteSpace(command.NewPassword))
         {

@@ -14,7 +14,7 @@ namespace Api.Routing;
 /// Two-Factor Authentication endpoints.
 /// Handles 2FA setup, enable, disable, verification, and status management.
 /// </summary>
-public static class TwoFactorEndpoints
+internal static class TwoFactorEndpoints
 {
     // AUTH-07: Two-Factor Authentication endpoints
     public static RouteGroupBuilder MapTwoFactorEndpoints(this RouteGroupBuilder group)

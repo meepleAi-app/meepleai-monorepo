@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands;
 /// Handler for LogoutAllDevicesCommand.
 /// Revokes all sessions for a user with optional current session exclusion and password verification.
 /// </summary>
-public class LogoutAllDevicesCommandHandler : ICommandHandler<LogoutAllDevicesCommand, LogoutAllDevicesResult>
+internal class LogoutAllDevicesCommandHandler : ICommandHandler<LogoutAllDevicesCommand, LogoutAllDevicesResult>
 {
     private readonly ISessionRepository _sessionRepository;
     private readonly IUserRepository _userRepository;

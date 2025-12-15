@@ -3,7 +3,7 @@ using MediatR;
 
 namespace Api.BoundedContexts.Administration.Application.Handlers.AlertRules;
 
-public class GetAlertTemplatesQueryHandler : IRequestHandler<GetAlertTemplatesQuery, List<AlertTemplateDto>>
+internal class GetAlertTemplatesQueryHandler : IRequestHandler<GetAlertTemplatesQuery, List<AlertTemplateDto>>
 {
     public Task<List<AlertTemplateDto>> Handle(GetAlertTemplatesQuery request, CancellationToken ct)
     {

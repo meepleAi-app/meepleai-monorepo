@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Administration.Application.Handlers.AlertConfigura
 /// <summary>
 /// Handler for GetAlertConfigurationQuery (Issue #915)
 /// </summary>
-public class GetAlertConfigurationQueryHandler : IRequestHandler<GetAlertConfigurationQuery, AlertConfigurationDto>
+internal class GetAlertConfigurationQueryHandler : IRequestHandler<GetAlertConfigurationQuery, AlertConfigurationDto>
 {
     private readonly IAlertConfigurationRepository _repository;
 
@@ -19,6 +19,7 @@ public class GetAlertConfigurationQueryHandler : IRequestHandler<GetAlertConfigu
 
     public async Task<AlertConfigurationDto> Handle(GetAlertConfigurationQuery request, CancellationToken ct)
     {
+        ArgumentNullException.ThrowIfNull(request);
         var category = ConfigCategoryExtensions.FromString(request.Category);
         var configs = await _repository.GetByCategoryAsync(category, ct).ConfigureAwait(false);
 

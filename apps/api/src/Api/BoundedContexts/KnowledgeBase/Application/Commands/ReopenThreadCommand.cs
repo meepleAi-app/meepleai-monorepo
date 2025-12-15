@@ -6,6 +6,6 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 /// <summary>
 /// Command to reopen a closed chat thread.
 /// </summary>
-public record ReopenThreadCommand(
+internal record ReopenThreadCommand(
     Guid ThreadId
 ) : ICommand<ChatThreadDto>;

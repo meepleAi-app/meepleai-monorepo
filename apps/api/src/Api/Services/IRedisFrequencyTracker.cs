@@ -8,7 +8,7 @@ namespace Api.Services;
 /// AI-10: Cache Optimization - Provides data for dynamic TTL calculation and cache warming.
 /// Uses atomic Redis ZINCRBY for concurrent-safe frequency tracking.
 /// </summary>
-public interface IRedisFrequencyTracker
+internal interface IRedisFrequencyTracker
 {
     /// <summary>
     /// Increments access count for a query by 1 using Redis ZINCRBY.
@@ -53,7 +53,7 @@ public interface IRedisFrequencyTracker
 /// Represents a frequently accessed query with its access count.
 /// Used by GetTopQueriesAsync to return ranked query list.
 /// </summary>
-public class FrequentQuery
+internal class FrequentQuery
 {
     /// <summary>
     /// Game ID the query belongs to

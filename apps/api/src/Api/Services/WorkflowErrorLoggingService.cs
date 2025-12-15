@@ -6,7 +6,7 @@ using Microsoft.Extensions.Caching.Hybrid;
 
 namespace Api.Services;
 
-public class WorkflowErrorLoggingService : IWorkflowErrorLoggingService
+internal class WorkflowErrorLoggingService : IWorkflowErrorLoggingService
 {
     private readonly MeepleAiDbContext _db;
     private readonly HybridCache _cache;

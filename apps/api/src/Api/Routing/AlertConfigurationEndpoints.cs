@@ -9,7 +9,7 @@ namespace Api.Routing;
 /// Alert configuration endpoints (Issue #915)
 /// Manages Email, Slack, PagerDuty configuration for alerting system
 /// </summary>
-public static class AlertConfigurationEndpoints
+internal static class AlertConfigurationEndpoints
 {
     public static void MapAlertConfigurationEndpoints(this IEndpointRouteBuilder app)
     {
@@ -75,7 +75,7 @@ public static class AlertConfigurationEndpoints
 /// <summary>
 /// Request DTO for updating alert configuration (Issue #915)
 /// </summary>
-public record UpdateAlertConfigurationRequest(
+internal record UpdateAlertConfigurationRequest(
     string ConfigKey,
     string ConfigValue,
     string Category,

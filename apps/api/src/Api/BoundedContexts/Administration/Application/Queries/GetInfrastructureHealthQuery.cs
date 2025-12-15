@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Administration.Application.Queries;
 /// Query to get infrastructure health status.
 /// Issue #891: Infrastructure monitoring service.
 /// </summary>
-public record GetInfrastructureHealthQuery : IRequest<InfrastructureHealthResponse>
+internal record GetInfrastructureHealthQuery : IRequest<InfrastructureHealthResponse>
 {
     /// <summary>
     /// Optional service name to filter health check.
@@ -20,14 +20,14 @@ public record GetInfrastructureHealthQuery : IRequest<InfrastructureHealthRespon
 /// <summary>
 /// Response DTO for infrastructure health query.
 /// </summary>
-public record InfrastructureHealthResponse(
+internal record InfrastructureHealthResponse(
     OverallHealthStatus Overall,
     IReadOnlyCollection<ServiceHealthDto> Services);
 
 /// <summary>
 /// DTO for individual service health.
 /// </summary>
-public record ServiceHealthDto(
+internal record ServiceHealthDto(
     string ServiceName,
     string State,
     string? ErrorMessage,

@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands;
 /// Command to update user preferences (language, theme, notifications, data retention).
 /// Returns updated UserProfileDto with all profile information.
 /// </summary>
-public record UpdatePreferencesCommand : ICommand<UserProfileDto>
+internal record UpdatePreferencesCommand : ICommand<UserProfileDto>
 {
     public Guid UserId { get; init; }
     public string Language { get; init; } = null!;

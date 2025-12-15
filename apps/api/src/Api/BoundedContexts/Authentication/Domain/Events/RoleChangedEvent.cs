@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.Authentication.Domain.Events;
 /// <summary>
 /// Domain event raised when a user's role is changed.
 /// </summary>
-public sealed class RoleChangedEvent : DomainEventBase
+internal sealed class RoleChangedEvent : DomainEventBase
 {
     /// <summary>
     /// Gets the ID of the user whose role was changed.

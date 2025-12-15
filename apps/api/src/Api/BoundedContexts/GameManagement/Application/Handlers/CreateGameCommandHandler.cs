@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Handlers;
 /// <summary>
 /// Handles game creation command.
 /// </summary>
-public class CreateGameCommandHandler : ICommandHandler<CreateGameCommand, GameDto>
+internal class CreateGameCommandHandler : ICommandHandler<CreateGameCommand, GameDto>
 {
     private readonly IGameRepository _gameRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -26,6 +26,7 @@ public class CreateGameCommandHandler : ICommandHandler<CreateGameCommand, GameD
 
     public async Task<GameDto> Handle(CreateGameCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         // Create value objects
         var title = new GameTitle(command.Title);
         var publisher = command.Publisher != null ? new Publisher(command.Publisher) : null;

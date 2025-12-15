@@ -8,13 +8,13 @@ namespace Api.BoundedContexts.Authentication.Application.Commands;
 /// Command to create a new session for an authenticated user.
 /// Used after OAuth callback or 2FA verification.
 /// </summary>
-public record CreateSessionCommand(
+internal record CreateSessionCommand(
     Guid UserId,
     string? IpAddress = null,
     string? UserAgent = null
 ) : ICommand<CreateSessionResponse>;
 
-public record CreateSessionResponse(
+internal record CreateSessionResponse(
     UserDto User,
     string SessionToken,
     DateTime ExpiresAt

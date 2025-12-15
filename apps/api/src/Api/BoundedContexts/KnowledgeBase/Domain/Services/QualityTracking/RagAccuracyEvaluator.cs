@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services.QualityTracking;
 /// BGAI-059: Quality test implementation for accuracy validation.
 /// Validates answer keywords, citations, and hallucination detection.
 /// </summary>
-public interface IRagAccuracyEvaluator
+internal interface IRagAccuracyEvaluator
 {
     /// <summary>
     /// Evaluates a RAG response against a golden dataset test case
@@ -43,7 +43,7 @@ public interface IRagAccuracyEvaluator
 /// <summary>
 /// Implementation of IRagAccuracyEvaluator
 /// </summary>
-public class RagAccuracyEvaluator : IRagAccuracyEvaluator
+internal class RagAccuracyEvaluator : IRagAccuracyEvaluator
 {
     private readonly ILogger<RagAccuracyEvaluator> _logger;
 

@@ -4,7 +4,7 @@ namespace Api.Services.Rag;
 /// Service for expanding queries with synonyms and alternative phrasings
 /// to improve RAG recall (PERF-08)
 /// </summary>
-public interface IQueryExpansionService
+internal interface IQueryExpansionService
 {
     /// <summary>
     /// Generates query variations for improved recall

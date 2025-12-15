@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries.GetSharedThread;
 /// Handler for retrieving shared chat threads via share link token.
 /// Validates token and returns thread with read-only message view.
 /// </summary>
-public sealed class GetSharedThreadQueryHandler : IRequestHandler<GetSharedThreadQuery, GetSharedThreadResult?>
+internal sealed class GetSharedThreadQueryHandler : IRequestHandler<GetSharedThreadQuery, GetSharedThreadResult?>
 {
     private readonly IChatThreadRepository _threadRepository;
     private readonly IShareLinkRepository _shareLinkRepository;
@@ -34,6 +34,7 @@ public sealed class GetSharedThreadQueryHandler : IRequestHandler<GetSharedThrea
         GetSharedThreadQuery request,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         // Validate share link token
         var validation = await _mediator.Send(
             new ValidateShareLinkQuery(request.Token),

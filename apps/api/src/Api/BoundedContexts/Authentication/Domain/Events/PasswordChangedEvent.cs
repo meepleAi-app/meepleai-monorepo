@@ -5,7 +5,7 @@ namespace Api.BoundedContexts.Authentication.Domain.Events;
 /// <summary>
 /// Domain event raised when a user changes their password.
 /// </summary>
-public sealed class PasswordChangedEvent : DomainEventBase
+internal sealed class PasswordChangedEvent : DomainEventBase
 {
     /// <summary>
     /// Gets the ID of the user who changed their password.

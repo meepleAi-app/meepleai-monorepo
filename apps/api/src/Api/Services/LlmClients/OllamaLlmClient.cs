@@ -18,7 +18,7 @@ namespace Api.Services.LlmClients;
 /// Supports models like llama3:8b, llama3.1:8b, mistral, etc.
 /// Used for anonymous/low-tier users or A/B testing traffic routing.
 /// </remarks>
-public class OllamaLlmClient : ILlmClient
+internal class OllamaLlmClient : ILlmClient
 {
     private readonly HttpClient _httpClient;
     private readonly ILogger<OllamaLlmClient> _logger;

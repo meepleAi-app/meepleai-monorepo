@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 /// <summary>
 /// Command to create a new chat thread.
 /// </summary>
-public record CreateChatThreadCommand(
+internal record CreateChatThreadCommand(
     Guid UserId,
     Guid? GameId = null,
     string? Title = null,

@@ -7,7 +7,7 @@ namespace Api.Services;
 /// AI-05: Cache service for AI-generated responses (QA, Explain, Setup)
 /// Provides Redis-backed caching to reduce latency for frequently asked questions.
 /// </summary>
-public interface IAiResponseCacheService
+internal interface IAiResponseCacheService
 {
     /// <summary>
     /// Get cached response for a given cache key.
@@ -94,7 +94,7 @@ public interface IAiResponseCacheService
 /// <summary>
 /// Namespaces for AI cache entries.
 /// </summary>
-public enum AiCacheEndpoint
+internal enum AiCacheEndpoint
 {
     Qa,
     Explain,
@@ -104,7 +104,7 @@ public enum AiCacheEndpoint
 /// <summary>
 /// PERF-03: Cache statistics response.
 /// </summary>
-public class CacheStats
+internal class CacheStats
 {
     /// <summary>
     /// Total cache hits across all questions.
@@ -140,7 +140,7 @@ public class CacheStats
 /// <summary>
 /// PERF-03: Top cached question entry.
 /// </summary>
-public class TopQuestion
+internal class TopQuestion
 {
     /// <summary>
     /// Hash of the question.

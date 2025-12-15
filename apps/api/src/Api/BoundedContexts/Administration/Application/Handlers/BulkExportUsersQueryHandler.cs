@@ -12,7 +12,7 @@ namespace Api.BoundedContexts.Administration.Application.Handlers;
 /// Handler for bulk user export to CSV.
 /// Returns CSV string with format: email,displayName,role,createdAt
 /// </summary>
-public class BulkExportUsersQueryHandler : IQueryHandler<BulkExportUsersQuery, string>
+internal class BulkExportUsersQueryHandler : IQueryHandler<BulkExportUsersQuery, string>
 {
     private readonly IUserRepository _userRepository;
     private readonly ILogger<BulkExportUsersQueryHandler> _logger;
@@ -27,6 +27,7 @@ public class BulkExportUsersQueryHandler : IQueryHandler<BulkExportUsersQuery, s
 
     public async Task<string> Handle(BulkExportUsersQuery query, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(query);
         _logger.LogInformation("Exporting users to CSV with filters: Role={Role}, SearchTerm={SearchTerm}",
             query.Role, query.SearchTerm);
 

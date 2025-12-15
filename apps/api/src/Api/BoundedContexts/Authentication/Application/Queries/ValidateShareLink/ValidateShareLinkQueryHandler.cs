@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.Authentication.Application.Queries.ValidateShareLi
 /// Handler for validating share link JWT tokens.
 /// Performs signature validation, expiry check, and revocation check via Redis blacklist.
 /// </summary>
-public sealed class ValidateShareLinkQueryHandler : IRequestHandler<ValidateShareLinkQuery, ValidateShareLinkResult?>
+internal sealed class ValidateShareLinkQueryHandler : IRequestHandler<ValidateShareLinkQuery, ValidateShareLinkResult?>
 {
     private readonly IDistributedCache _cache;
     private readonly IConfiguration _configuration;
@@ -26,6 +26,7 @@ public sealed class ValidateShareLinkQueryHandler : IRequestHandler<ValidateShar
         ValidateShareLinkQuery request,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         // Get JWT secret key from configuration
         var secretKey = _configuration["Jwt:ShareLinks:SecretKey"]
             ?? throw new InvalidOperationException("JWT secret key not configured");

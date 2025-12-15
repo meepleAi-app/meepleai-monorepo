@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.Administration.Infrastructure.Services;
 /// Service for generating charts using ScottPlot
 /// ISSUE-917: Chart generation for report templates
 /// </summary>
-public sealed class ChartGenerationService
+internal sealed class ChartGenerationService
 {
     /// <summary>
     /// Generates a line chart and returns the image as byte array
@@ -41,8 +41,8 @@ public sealed class ChartGenerationService
         plot.Axes.Bottom.TickGenerator = new NumericManual(ticks);
         plot.Axes.Bottom.MajorTickStyle.Length = 5;
 
-        // Save to temporary file and read bytes
-        var tempFile = Path.GetTempFileName();
+        // Fix S5445: Use Path.GetRandomFileName() instead of Path.GetTempFileName()
+        var tempFile = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + ".png");
         try
         {
             plot.SavePng(tempFile, width, height);
@@ -89,8 +89,8 @@ public sealed class ChartGenerationService
         plot.Axes.Bottom.MajorTickStyle.Length = 0;
         plot.Axes.Margins(bottom: 0);
 
-        // Save to temporary file and read bytes
-        var tempFile = Path.GetTempFileName();
+        // Fix S5445: Use Path.GetRandomFileName() instead of Path.GetTempFileName()
+        var tempFile = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + ".png");
         try
         {
             plot.SavePng(tempFile, width, height);
@@ -140,8 +140,8 @@ public sealed class ChartGenerationService
         plot.Axes.Bottom.TickGenerator = new NumericManual(ticks);
         plot.Axes.Bottom.MajorTickStyle.Length = 5;
 
-        // Save to temporary file and read bytes
-        var tempFile = Path.GetTempFileName();
+        // Fix S5445: Use Path.GetRandomFileName() instead of Path.GetTempFileName()
+        var tempFile = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + ".png");
         try
         {
             plot.SavePng(tempFile, width, height);
@@ -197,8 +197,8 @@ public sealed class ChartGenerationService
         plot.Axes.Bottom.MajorTickStyle.Length = 0;
         plot.Axes.Margins(bottom: 0);
 
-        // Save to temporary file and read bytes
-        var tempFile = Path.GetTempFileName();
+        // Fix S5445: Use Path.GetRandomFileName() instead of Path.GetTempFileName()
+        var tempFile = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + ".png");
         try
         {
             plot.SavePng(tempFile, width, height);

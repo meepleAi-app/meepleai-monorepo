@@ -8,7 +8,7 @@ namespace Api.Infrastructure.EntityConfigurations;
 /// EF Core configuration for LlmCostLogEntity
 /// ISSUE-960: BGAI-018 - Cost tracking database schema
 /// </summary>
-public class LlmCostLogConfiguration : IEntityTypeConfiguration<LlmCostLogEntity>
+internal class LlmCostLogConfiguration : IEntityTypeConfiguration<LlmCostLogEntity>
 {
     public void Configure(EntityTypeBuilder<LlmCostLogEntity> builder)
     {

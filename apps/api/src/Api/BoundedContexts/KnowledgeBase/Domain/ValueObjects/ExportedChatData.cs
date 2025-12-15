@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 /// Value Object representing exported chat thread data.
 /// Encapsulates the format and serialized content of an exported chat.
 /// </summary>
-public sealed class ExportedChatData : ValueObject
+internal sealed class ExportedChatData : ValueObject
 {
     public ExportFormat Format { get; }
     public string Content { get; }

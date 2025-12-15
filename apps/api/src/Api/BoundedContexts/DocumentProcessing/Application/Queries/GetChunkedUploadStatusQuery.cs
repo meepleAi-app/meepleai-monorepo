@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Queries;
 /// <summary>
 /// Query to get the status of a chunked upload session.
 /// </summary>
-public record GetChunkedUploadStatusQuery(
+internal record GetChunkedUploadStatusQuery(
     Guid SessionId,
     Guid UserId
 ) : IQuery<ChunkedUploadStatusResult?>;
@@ -14,7 +14,7 @@ public record GetChunkedUploadStatusQuery(
 /// <summary>
 /// Result containing chunked upload session status.
 /// </summary>
-public record ChunkedUploadStatusResult(
+internal record ChunkedUploadStatusResult(
     Guid SessionId,
     string FileName,
     long TotalFileSize,

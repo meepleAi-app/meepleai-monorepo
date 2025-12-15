@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands;
 /// Handles API key validation and returns the associated user profile.
 /// Browser clients must store API keys outside of cookies (e.g., secure storage) and send them via headers.
 /// </summary>
-public class LoginWithApiKeyCommandHandler : ICommandHandler<LoginWithApiKeyCommand, ApiKeyLoginResponse>
+internal class LoginWithApiKeyCommandHandler : ICommandHandler<LoginWithApiKeyCommand, ApiKeyLoginResponse>
 {
     private readonly ApiKeyAuthenticationService _apiKeyService;
     private readonly IUserRepository _userRepository;
@@ -25,6 +25,7 @@ public class LoginWithApiKeyCommandHandler : ICommandHandler<LoginWithApiKeyComm
 
     public async Task<ApiKeyLoginResponse> Handle(LoginWithApiKeyCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         // Validate API key
         var validationResult = await _apiKeyService.ValidateApiKeyAsync(command.ApiKey, cancellationToken).ConfigureAwait(false);
 

@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services.Analytics;
 /// ISSUE-1725: Implementation of IModelRecommendationService for cost/quality optimization.
 /// Provides data-driven model selection recommendations.
 /// </summary>
-public class ModelRecommendationService : IModelRecommendationService
+internal class ModelRecommendationService : IModelRecommendationService
 {
     private readonly ILlmCostCalculator _costCalculator;
     private readonly ILogger<ModelRecommendationService> _logger;

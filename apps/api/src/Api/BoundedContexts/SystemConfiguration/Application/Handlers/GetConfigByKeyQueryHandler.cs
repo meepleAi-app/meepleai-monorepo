@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.SystemConfiguration.Application.Handlers;
 /// Handles retrieval of configuration by key.
 /// Returns null if configuration not found.
 /// </summary>
-public class GetConfigByKeyQueryHandler : IQueryHandler<GetConfigByKeyQuery, ConfigurationDto?>
+internal class GetConfigByKeyQueryHandler : IQueryHandler<GetConfigByKeyQuery, ConfigurationDto?>
 {
     private readonly IConfigurationRepository _configurationRepository;
 
@@ -20,6 +20,7 @@ public class GetConfigByKeyQueryHandler : IQueryHandler<GetConfigByKeyQuery, Con
 
     public async Task<ConfigurationDto?> Handle(GetConfigByKeyQuery query, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(query);
         var config = await _configurationRepository.GetByKeyAsync(
             query.Key,
             query.Environment,

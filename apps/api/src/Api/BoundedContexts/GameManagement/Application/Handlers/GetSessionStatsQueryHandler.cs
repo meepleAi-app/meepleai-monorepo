@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Handlers;
 /// <summary>
 /// Handles query to get aggregated session statistics.
 /// </summary>
-public class GetSessionStatsQueryHandler : IQueryHandler<GetSessionStatsQuery, SessionStatsDto>
+internal class GetSessionStatsQueryHandler : IQueryHandler<GetSessionStatsQuery, SessionStatsDto>
 {
     private readonly IGameSessionRepository _sessionRepository;
 
@@ -20,6 +20,7 @@ public class GetSessionStatsQueryHandler : IQueryHandler<GetSessionStatsQuery, S
 
     public async Task<SessionStatsDto> Handle(GetSessionStatsQuery query, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(query);
         // Retrieve all historical sessions matching filters (no pagination for stats)
         var sessions = await _sessionRepository.FindHistoryAsync(
             gameId: query.GameId,

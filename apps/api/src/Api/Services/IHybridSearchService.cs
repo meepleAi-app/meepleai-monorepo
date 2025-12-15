@@ -8,7 +8,7 @@ namespace Api.Services;
 /// Uses Reciprocal Rank Fusion (RRF) algorithm to merge and rank results.
 /// Part of AI-14 implementation.
 /// </summary>
-public interface IHybridSearchService
+internal interface IHybridSearchService
 {
     /// <summary>
     /// Performs hybrid search using specified search mode.
@@ -36,7 +36,7 @@ public interface IHybridSearchService
 /// <summary>
 /// Search modes for hybrid search.
 /// </summary>
-public enum SearchMode
+internal enum SearchMode
 {
     /// <summary>
     /// Vector similarity search only (semantic search via Qdrant embeddings).
@@ -61,7 +61,7 @@ public enum SearchMode
 /// <summary>
 /// Result from hybrid search with RRF-fused scores.
 /// </summary>
-public record HybridSearchResult
+internal record HybridSearchResult
 {
     public required string ChunkId { get; init; }
     public required string Content { get; init; }

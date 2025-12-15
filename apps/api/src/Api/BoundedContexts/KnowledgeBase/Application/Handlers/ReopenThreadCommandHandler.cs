@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// <summary>
 /// Handles chat thread reopening command.
 /// </summary>
-public class ReopenThreadCommandHandler : ICommandHandler<ReopenThreadCommand, ChatThreadDto>
+internal class ReopenThreadCommandHandler : ICommandHandler<ReopenThreadCommand, ChatThreadDto>
 {
     private readonly IChatThreadRepository _threadRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -24,6 +24,7 @@ public class ReopenThreadCommandHandler : ICommandHandler<ReopenThreadCommand, C
 
     public async Task<ChatThreadDto> Handle(ReopenThreadCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         // Retrieve thread
         var thread = await _threadRepository.GetByIdAsync(command.ThreadId, cancellationToken).ConfigureAwait(false);
         if (thread == null)

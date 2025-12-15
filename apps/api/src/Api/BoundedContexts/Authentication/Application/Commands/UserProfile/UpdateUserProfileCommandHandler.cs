@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands;
 /// Handles updating user profile information.
 /// Updates display name and/or email for the authenticated user.
 /// </summary>
-public class UpdateUserProfileCommandHandler : ICommandHandler<UpdateUserProfileCommand>
+internal class UpdateUserProfileCommandHandler : ICommandHandler<UpdateUserProfileCommand>
 {
     private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -26,6 +26,7 @@ public class UpdateUserProfileCommandHandler : ICommandHandler<UpdateUserProfile
 
     public async Task Handle(UpdateUserProfileCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         // Retrieve user
         var user = await _userRepository.GetByIdAsync(command.UserId, cancellationToken).ConfigureAwait(false);
         if (user == null)

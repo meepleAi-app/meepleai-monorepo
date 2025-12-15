@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 /// <summary>
 /// Handler for setting PDF visibility in the public library.
 /// </summary>
-public class SetPdfVisibilityCommandHandler : ICommandHandler<SetPdfVisibilityCommand, SetPdfVisibilityResult>
+internal class SetPdfVisibilityCommandHandler : ICommandHandler<SetPdfVisibilityCommand, SetPdfVisibilityResult>
 {
     private readonly IPdfDocumentRepository _pdfRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -25,6 +25,7 @@ public class SetPdfVisibilityCommandHandler : ICommandHandler<SetPdfVisibilityCo
 
     public async Task<SetPdfVisibilityResult> Handle(SetPdfVisibilityCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         var pdf = await _pdfRepository.GetByIdAsync(command.PdfId, cancellationToken).ConfigureAwait(false);
 
         if (pdf is null)

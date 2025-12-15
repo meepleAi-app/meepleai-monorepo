@@ -24,7 +24,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// CHAT-01: Integrates with ChatContextDomainService for conversation continuity
 /// AI-11: Tracks quality metrics and confidence scoring
 /// </summary>
-public class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagStreamingEvent>
+internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagStreamingEvent>
 {
     private readonly SearchQueryHandler _searchQueryHandler;
     private readonly QualityTrackingDomainService _qualityTrackingService;
@@ -157,7 +157,7 @@ public class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagStr
             new StreamingStateUpdate("Generating answer..."));
 
         var (systemPrompt, userPrompt) = await BuildLlmPromptsAsync(
-            query.GameId, query.Query, snippets!, chatHistoryContext, cancellationToken).ConfigureAwait(false);
+            query.GameId, query.Query, snippets!, chatHistoryContext).ConfigureAwait(false);
 
         // Step 4: Stream tokens from LLM
         var answerBuilder = new StringBuilder();

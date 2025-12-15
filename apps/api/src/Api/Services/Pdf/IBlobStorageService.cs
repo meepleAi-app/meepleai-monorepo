@@ -7,7 +7,7 @@ namespace Api.Services.Pdf;
 /// Generic file storage service for managing blob storage operations
 /// Reusable for any file type beyond PDFs
 /// </summary>
-public interface IBlobStorageService
+internal interface IBlobStorageService
 {
     /// <summary>
     /// Stores a file from a stream
@@ -58,7 +58,7 @@ public interface IBlobStorageService
 /// <summary>
 /// Result of blob storage operation
 /// </summary>
-public record BlobStorageResult(
+internal record BlobStorageResult(
     bool Success,
     string? FileId,
     string? FilePath,

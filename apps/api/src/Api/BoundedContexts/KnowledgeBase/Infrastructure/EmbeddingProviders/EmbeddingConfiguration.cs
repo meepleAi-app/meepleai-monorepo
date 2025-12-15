@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.EmbeddingProviders;
 /// Configuration for embedding providers per ADR-016 Phase 2.
 /// Supports primary provider, fallback, and batch settings.
 /// </summary>
-public sealed class EmbeddingConfiguration
+internal sealed class EmbeddingConfiguration
 {
     /// <summary>
     /// Configuration section name in appsettings.json

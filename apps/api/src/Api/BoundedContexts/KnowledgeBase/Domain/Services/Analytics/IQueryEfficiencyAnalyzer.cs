@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services.Analytics;
 /// ISSUE-1725: Analyzes LLM query efficiency by token usage patterns.
 /// Identifies inefficient queries and provides optimization recommendations.
 /// </summary>
-public interface IQueryEfficiencyAnalyzer
+internal interface IQueryEfficiencyAnalyzer
 {
     /// <summary>
     /// Analyze query efficiency metrics for a date range
@@ -42,7 +42,7 @@ public interface IQueryEfficiencyAnalyzer
 /// <summary>
 /// Query efficiency analysis report
 /// </summary>
-public record QueryEfficiencyReport
+internal record QueryEfficiencyReport
 {
     public required DateOnly StartDate { get; init; }
     public required DateOnly EndDate { get; init; }
@@ -59,7 +59,7 @@ public record QueryEfficiencyReport
 /// <summary>
 /// Cost breakdown by query type
 /// </summary>
-public record QueryTypeCost
+internal record QueryTypeCost
 {
     public required string QueryType { get; init; }
     public required int QueryCount { get; init; }

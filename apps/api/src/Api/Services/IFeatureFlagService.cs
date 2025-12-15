@@ -6,7 +6,7 @@ namespace Api.Services;
 /// Service for managing feature flags - runtime feature toggling without deployment.
 /// Supports role-based access control and integrates with CONFIG-01 infrastructure.
 /// </summary>
-public interface IFeatureFlagService
+internal interface IFeatureFlagService
 {
     /// <summary>
     /// Check if a feature is enabled for the current context.

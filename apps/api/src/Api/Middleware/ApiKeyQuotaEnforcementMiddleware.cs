@@ -15,7 +15,7 @@ namespace Api.Middleware;
 /// Middleware that enforces API key quota limits based on daily and hourly request counts.
 /// This middleware tracks request usage and blocks requests that exceed configured quota limits.
 /// </summary>
-public class ApiKeyQuotaEnforcementMiddleware
+internal class ApiKeyQuotaEnforcementMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly ILogger<ApiKeyQuotaEnforcementMiddleware> _logger;

@@ -7,7 +7,7 @@ namespace Api.Services.Pdf;
 /// <summary>
 /// Custom extraction strategy for images
 /// </summary>
-public class ImageExtractionStrategy : IEventListener
+internal class ImageExtractionStrategy : IEventListener
 {
     private readonly List<ExtractedImage> _images = new();
 

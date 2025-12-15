@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands.ApiKeys;
 /// </summary>
 /// <param name="CsvContent">CSV file content as string.</param>
 /// <param name="RequesterId">The ID of the admin requesting the operation.</param>
-public record BulkImportApiKeysCommand(
+internal record BulkImportApiKeysCommand(
     string CsvContent,
     Guid RequesterId
 ) : ICommand<BulkOperationResult<ApiKeyImportResultDto>>;
@@ -18,7 +18,7 @@ public record BulkImportApiKeysCommand(
 /// <summary>
 /// Result DTO for imported API key with plaintext key.
 /// </summary>
-public record ApiKeyImportResultDto(
+internal record ApiKeyImportResultDto(
     Guid Id,
     string KeyName,
     string PlaintextKey,

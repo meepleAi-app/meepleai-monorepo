@@ -12,7 +12,7 @@ namespace Api.Services;
 /// Part of AI-14 hybrid search implementation.
 /// ADR-016 Phase 3: Supports Italian (meepleai_italian) and English FTS configurations.
 /// </summary>
-public class KeywordSearchService : IKeywordSearchService
+internal class KeywordSearchService : IKeywordSearchService
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly ILogger<KeywordSearchService> _logger;
@@ -140,13 +140,9 @@ public class KeywordSearchService : IKeywordSearchService
 #pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
         {
-            // SERVICE BOUNDARY PATTERN: Search service must log all errors before re-throwing
-            // Rationale: This is a service entry point that executes PostgreSQL full-text searches. We catch
-            // all exceptions to add diagnostic logging context (query details) before re-throwing to the caller.
-            // This ensures comprehensive error logging while maintaining exception propagation for proper handling.
-            // Context: PostgreSQL full-text search can fail in various ways (syntax errors, timeout, connection)
-            _logger.LogError(ex, "Error during keyword search for query '{Query}'", query);
-            throw;
+            // S2139: Logging removed. Wrapped for context.
+            // CA1031: We catch all exceptions to ensure comprehensive error handling for the service boundary.
+            throw new InvalidOperationException($"Error during keyword search for query '{query}': {ex.Message}", ex);
         }
 #pragma warning restore CA1031 // Do not catch general exception types
     }
@@ -222,13 +218,9 @@ public class KeywordSearchService : IKeywordSearchService
 #pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
         {
-            // SERVICE BOUNDARY PATTERN: Search service must log all errors before re-throwing
-            // Rationale: This is a service entry point that executes PostgreSQL document searches. We catch
-            // all exceptions to add diagnostic logging context (query details) before re-throwing to the caller.
-            // This ensures comprehensive error logging while maintaining exception propagation for proper handling.
-            // Context: PostgreSQL full-text search can fail in various ways (syntax errors, timeout, connection)
-            _logger.LogError(ex, "Error during document keyword search for query '{Query}'", query);
-            throw;
+            // S2139: Logging removed. Wrapped for context.
+            // CA1031: We catch all exceptions to ensure comprehensive error handling for the service boundary.
+            throw new InvalidOperationException($"Error during document keyword search for query '{query}': {ex.Message}", ex);
         }
 #pragma warning restore CA1031 // Do not catch general exception types
     }

@@ -4,7 +4,7 @@ namespace Api.Infrastructure.Entities;
 /// Database entity for storing system-wide configuration values.
 /// Supports dynamic runtime configuration changes without redeployment.
 /// </summary>
-public class SystemConfigurationEntity
+internal class SystemConfigurationEntity
 {
     /// <summary>
     /// Unique identifier for the configuration entry.
@@ -52,7 +52,7 @@ public class SystemConfigurationEntity
     /// Whether this configuration requires application restart to take effect.
     /// True for configurations that cannot be hot-reloaded.
     /// </summary>
-    public bool RequiresRestart { get; set; } = false;
+    public bool RequiresRestart { get; set; }
 
     /// <summary>
     /// Environment where this configuration applies (e.g., "Development", "Production", "All").

@@ -5,7 +5,7 @@ using Microsoft.Extensions.Configuration;
 
 namespace Api.Services;
 
-public class EmailService : IEmailService
+internal class EmailService : IEmailService
 {
     private readonly ILogger<EmailService> _logger;
     private readonly string _fromAddress;

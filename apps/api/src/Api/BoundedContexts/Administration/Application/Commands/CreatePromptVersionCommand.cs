@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.Administration.Application.Commands;
 /// <summary>
 /// Command to create a new version for an existing prompt template.
 /// </summary>
-public record CreatePromptVersionCommand(
+internal record CreatePromptVersionCommand(
     Guid TemplateId,
     string Content,
     string? Metadata,

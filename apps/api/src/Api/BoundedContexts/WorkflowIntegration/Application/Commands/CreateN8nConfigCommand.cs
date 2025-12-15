@@ -3,7 +3,7 @@ using Api.SharedKernel.Application.Interfaces;
 
 namespace Api.BoundedContexts.WorkflowIntegration.Application.Commands;
 
-public record CreateN8NConfigCommand(
+internal record CreateN8NConfigCommand(
     string Name,
     string BaseUrl,
     string ApiKeyEncrypted,

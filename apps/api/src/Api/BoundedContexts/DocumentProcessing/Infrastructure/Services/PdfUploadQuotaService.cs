@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
 /// Redis-based implementation of PDF upload quota service.
 /// Tracks daily and weekly upload counts with automatic TTL-based reset.
 /// </summary>
-public class PdfUploadQuotaService : IPdfUploadQuotaService
+internal class PdfUploadQuotaService : IPdfUploadQuotaService
 {
     /// <summary>
     /// Default upload quotas for each tier.
@@ -61,8 +61,8 @@ public class PdfUploadQuotaService : IPdfUploadQuotaService
 
         try
         {
-            var (dailyLimit, weeklyLimit) = await GetLimitsForTierAsync(userTier, ct).ConfigureAwait(false);
-            var (dailyUsed, weeklyUsed) = await GetUsageAsync(userId, ct).ConfigureAwait(false);
+            var (dailyLimit, weeklyLimit) = await GetLimitsForTierAsync(userTier).ConfigureAwait(false);
+            var (dailyUsed, weeklyUsed) = await GetUsageAsync(userId).ConfigureAwait(false);
 
             var now = _timeProvider.GetUtcNow().UtcDateTime;
             var dailyReset = GetNextDailyReset(now);
@@ -236,7 +236,7 @@ public class PdfUploadQuotaService : IPdfUploadQuotaService
                 return;
             }
 
-            await DecrementUploadCountAsync(userId, ct).ConfigureAwait(false);
+            await DecrementUploadCountAsync(userId).ConfigureAwait(false);
             await db.KeyDeleteAsync(reservationKey).ConfigureAwait(false);
 
             _logger.LogInformation(
@@ -309,8 +309,8 @@ public class PdfUploadQuotaService : IPdfUploadQuotaService
 
         try
         {
-            var (dailyLimit, weeklyLimit) = await GetLimitsForTierAsync(userTier, ct).ConfigureAwait(false);
-            var (dailyUsed, weeklyUsed) = await GetUsageAsync(userId, ct).ConfigureAwait(false);
+            var (dailyLimit, weeklyLimit) = await GetLimitsForTierAsync(userTier).ConfigureAwait(false);
+            var (dailyUsed, weeklyUsed) = await GetUsageAsync(userId).ConfigureAwait(false);
 
             var currentTime = _timeProvider.GetUtcNow().UtcDateTime;
             var dailyReset = GetNextDailyReset(currentTime);

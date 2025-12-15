@@ -2,7 +2,7 @@ using Api.SharedKernel.Domain.Events;
 
 namespace Api.BoundedContexts.KnowledgeBase.Domain.Events;
 
-public sealed class ThreadReopenedEvent : DomainEventBase
+internal sealed class ThreadReopenedEvent : DomainEventBase
 {
     public Guid ThreadId { get; }
 

@@ -5,7 +5,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.EmbeddingProviders.Pr
 /// <summary>
 /// Base class for embedding providers with common functionality.
 /// </summary>
-public abstract class EmbeddingProviderBase : IEmbeddingProvider
+internal abstract class EmbeddingProviderBase : IEmbeddingProvider
 {
     protected readonly HttpClient HttpClient;
     protected readonly ILogger Logger;

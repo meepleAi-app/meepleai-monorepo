@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 /// PdfDocument aggregate root representing an uploaded PDF with extraction metadata.
 /// Issue #2029: Added Language support for PDF language filtering
 /// </summary>
-public sealed class PdfDocument : AggregateRoot<Guid>
+internal sealed class PdfDocument : AggregateRoot<Guid>
 {
     public Guid GameId { get; private set; }
     public FileName FileName { get; private set; }

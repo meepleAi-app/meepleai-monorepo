@@ -11,7 +11,7 @@ namespace Api.Observability;
 /// - ActivitySource = Distributed Tracing (spans, traces)
 /// - Meter = Metrics (counters, histograms, gauges)
 /// </summary>
-public static class MeepleAiActivitySources
+internal static class MeepleAiActivitySources
 {
     /// <summary>
     /// Main Activity Source for the MeepleAI API.

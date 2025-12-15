@@ -12,7 +12,7 @@ namespace Api.BoundedContexts.GameManagement.Infrastructure.Persistence;
 /// EF Core implementation of Game repository.
 /// Maps between domain Game entity and GameEntity persistence model.
 /// </summary>
-public class GameRepository : RepositoryBase, IGameRepository
+internal class GameRepository : RepositoryBase, IGameRepository
 {
     public GameRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
         : base(dbContext, eventCollector)

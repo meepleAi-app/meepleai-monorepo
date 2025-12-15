@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 /// Note: OAuthAccount is not an aggregate root - it belongs to the User aggregate.
 /// This repository provides specialized queries for OAuth account management.
 /// </summary>
-public interface IOAuthAccountRepository
+internal interface IOAuthAccountRepository
 {
     /// <summary>
     /// Gets an OAuth account by its ID.

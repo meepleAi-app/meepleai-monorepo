@@ -8,7 +8,7 @@ namespace Api.Helpers;
 /// Helper for standardizing the 3-tier configuration fallback pattern:
 /// Database → appsettings.json → hardcoded defaults
 /// </summary>
-public class ConfigurationHelper
+internal class ConfigurationHelper
 {
     private readonly IConfigurationService _configService;
     private readonly IConfigurationWrapper _fallbackConfigWrapper;

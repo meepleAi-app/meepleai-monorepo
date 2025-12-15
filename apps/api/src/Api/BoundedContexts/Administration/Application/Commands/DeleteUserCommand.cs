@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.Administration.Application.Commands;
 /// Command to delete a user account.
 /// Prevents self-deletion and deletion of the last admin.
 /// </summary>
-public record DeleteUserCommand(
+internal record DeleteUserCommand(
     string UserId,
     string RequestingUserId
 ) : ICommand;

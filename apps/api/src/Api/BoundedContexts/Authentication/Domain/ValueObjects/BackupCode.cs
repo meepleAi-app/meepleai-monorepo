@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Authentication.Domain.ValueObjects;
 /// Backup codes are single-use recovery codes in case TOTP is unavailable.
 /// Stores the PBKDF2 hash of the code, not the plaintext.
 /// </summary>
-public sealed class BackupCode : ValueObject
+internal sealed class BackupCode : ValueObject
 {
     public string HashedValue { get; }
     public bool IsUsed { get; private set; }

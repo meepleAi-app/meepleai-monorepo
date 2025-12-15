@@ -16,7 +16,7 @@ namespace Api.Services;
 /// Combines AI-07.1 few-shot learning with admin-configurable prompt management
 /// Architecture: Redis cache-first → PostgreSQL fallback → Configuration fallback
 /// </summary>
-public class PromptTemplateService : IPromptTemplateService
+internal class PromptTemplateService : IPromptTemplateService
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly IConnectionMultiplexer _redis;
@@ -57,10 +57,13 @@ ANSWER:",
         ILogger<PromptTemplateService> logger,
         TimeProvider? timeProvider = null)
     {
-        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
-        _redis = redis ?? throw new ArgumentNullException(nameof(redis));
+        ArgumentNullException.ThrowIfNull(dbContext);
+        _dbContext = dbContext;
+        ArgumentNullException.ThrowIfNull(redis);
+        _redis = redis;
         _config = config?.Value ?? new RagPromptsConfiguration();
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(logger);
+        _logger = logger;
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
@@ -139,10 +142,7 @@ ANSWER:",
     /// </summary>
     public string RenderSystemPrompt(PromptTemplate template)
     {
-        if (template == null)
-        {
-            throw new ArgumentNullException(nameof(template));
-        }
+        ArgumentNullException.ThrowIfNull(template);
 
         if (template.FewShotExamples == null || template.FewShotExamples.Count == 0)
         {
@@ -175,10 +175,7 @@ ANSWER:",
     /// </summary>
     public string RenderUserPrompt(PromptTemplate template, string context, string query)
     {
-        if (template == null)
-        {
-            throw new ArgumentNullException(nameof(template));
-        }
+        ArgumentNullException.ThrowIfNull(template);
 
         if (string.IsNullOrEmpty(template.UserPromptTemplate))
         {
@@ -246,10 +243,7 @@ ANSWER:",
         Guid? gameId,
         QuestionType questionType)
     {
-        if (config == null)
-        {
-            throw new ArgumentNullException(nameof(config));
-        }
+        ArgumentNullException.ThrowIfNull(config);
 
         var fewShotExamples = config.FewShotExamples?
             .Select(e => new FewShotExample

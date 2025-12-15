@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.Administration.Domain.Services;
 /// Domain service for querying Prometheus historical metrics.
 /// Issue #893: Provides access to Prometheus HTTP API for range queries.
 /// </summary>
-public interface IPrometheusQueryService
+internal interface IPrometheusQueryService
 {
     /// <summary>
     /// Executes a PromQL range query over a time period.
@@ -41,20 +41,20 @@ public interface IPrometheusQueryService
 /// <summary>
 /// Represents a Prometheus query result.
 /// </summary>
-public record PrometheusQueryResult(
+internal record PrometheusQueryResult(
     string ResultType,
     IReadOnlyCollection<PrometheusTimeSeries> TimeSeries);
 
 /// <summary>
 /// Represents a single Prometheus time series.
 /// </summary>
-public record PrometheusTimeSeries(
+internal record PrometheusTimeSeries(
     IReadOnlyDictionary<string, string> Metric,
     IReadOnlyCollection<PrometheusDataPoint> Values);
 
 /// <summary>
 /// Represents a single data point in a Prometheus time series.
 /// </summary>
-public record PrometheusDataPoint(
+internal record PrometheusDataPoint(
     DateTime Timestamp,
     double Value);

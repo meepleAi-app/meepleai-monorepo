@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
 /// Value object representing notification type.
 /// Defines event types that trigger user notifications.
 /// </summary>
-public sealed class NotificationType : ValueObject
+internal sealed class NotificationType : ValueObject
 {
     public string Value { get; }
 

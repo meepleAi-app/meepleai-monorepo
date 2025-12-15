@@ -13,7 +13,7 @@ namespace Api.Services;
 /// ADMIN-02: Service for retrieving analytics dashboard statistics.
 /// Provides aggregated metrics from database with HybridCache optimization.
 /// </summary>
-public class AdminStatsService : IAdminStatsService
+internal class AdminStatsService : IAdminStatsService
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly HybridCache _cache;

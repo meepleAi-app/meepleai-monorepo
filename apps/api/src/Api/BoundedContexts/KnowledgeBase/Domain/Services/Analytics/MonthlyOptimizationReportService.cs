@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services.Analytics;
 /// ISSUE-1725: Implementation of IMonthlyOptimizationReportService.
 /// Generates comprehensive monthly reports for LLM cost optimization.
 /// </summary>
-public class MonthlyOptimizationReportService : IMonthlyOptimizationReportService
+internal class MonthlyOptimizationReportService : IMonthlyOptimizationReportService
 {
     private readonly IQueryEfficiencyAnalyzer _efficiencyAnalyzer;
     private readonly IModelRecommendationService _recommendationService;
@@ -58,7 +58,7 @@ public class MonthlyOptimizationReportService : IMonthlyOptimizationReportServic
 
         // Calculate total savings opportunity
         var cacheSavings = cacheAnalysis.EstimatedSavingsUsd;
-        var modelSavings = CalculateModelSwitchSavings(efficiencyAnalysis, recommendation);
+        var modelSavings = CalculateModelSwitchSavings(efficiencyAnalysis);
         var totalSavings = cacheSavings + modelSavings;
 
         // Generate executive summary
@@ -107,12 +107,12 @@ public class MonthlyOptimizationReportService : IMonthlyOptimizationReportServic
         };
 
         // Add top recommendations from each analyzer
-        if (efficiency.OptimizationRecommendations.Any())
+        if (efficiency.OptimizationRecommendations.Count > 0)
         {
             summary.Add($"⚡ **Efficiency**: {efficiency.OptimizationRecommendations[0]}");
         }
 
-        if (cache.Recommendations.Any())
+        if (cache.Recommendations.Count > 0)
         {
             summary.Add($"🔍 **Caching**: {cache.Recommendations[0]}");
         }

@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.GameManagement.Application.IntegrationEvents;
 /// Integration event published when a game is created.
 /// Subscribers: WorkflowIntegration (trigger game setup workflows), KnowledgeBase (prepare vector indices)
 /// </summary>
-public sealed class GameCreatedIntegrationEvent : IntegrationEventBase
+internal sealed class GameCreatedIntegrationEvent : IntegrationEventBase
 {
     public Guid GameId { get; }
     public string GameName { get; }

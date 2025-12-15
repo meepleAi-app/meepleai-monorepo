@@ -10,7 +10,7 @@ namespace Api.Services.Rag;
 /// Priority: 1) Database (via ConfigurationService) → 2) appsettings.json → 3) Hardcoded defaults
 /// Issue #1441: Extracted from RagService to reduce complexity and improve testability.
 /// </summary>
-public class RagConfigurationProvider : IRagConfigurationProvider
+internal class RagConfigurationProvider : IRagConfigurationProvider
 {
     private readonly IConfigurationService? _configurationService;
     private readonly IConfiguration? _configuration;

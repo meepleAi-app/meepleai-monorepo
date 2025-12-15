@@ -8,7 +8,7 @@ namespace Api.Logging;
 /// OPS-04: Centralized logging configuration for environment-based log levels and structured logging.
 /// Provides consistent Serilog setup across all environments with appropriate defaults.
 /// </summary>
-public static class LoggingConfiguration
+internal static class LoggingConfiguration
 {
     /// <summary>
     /// Configures Serilog with environment-specific settings.
@@ -72,7 +72,7 @@ public static class LoggingConfiguration
                 ["deployment.environment"] = environment.EnvironmentName,
                 ["service.namespace"] = "meepleai"
             };
-            options.RestrictedToMinimumLevel = GetHyperDxLogLevel(environment.EnvironmentName, configuration);
+            options.RestrictedToMinimumLevel = GetHyperDxLogLevel(configuration);
         });
 
         return loggerConfig;

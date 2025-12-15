@@ -4,7 +4,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Evaluation;
 /// Standard RAG evaluation metrics for retrieval quality assessment.
 /// Implements Recall@K, nDCG@K, and MRR as defined in ADR-016.
 /// </summary>
-public sealed record EvaluationMetrics
+internal sealed record EvaluationMetrics
 {
     /// <summary>
     /// Recall at K - proportion of relevant documents retrieved in top K results.

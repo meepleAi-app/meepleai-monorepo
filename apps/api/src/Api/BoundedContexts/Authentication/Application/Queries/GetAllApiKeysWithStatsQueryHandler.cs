@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.Authentication.Application.Queries;
 /// Handler for GetAllApiKeysWithStatsQuery.
 /// Returns all API keys with comprehensive usage statistics (admin only).
 /// </summary>
-public class GetAllApiKeysWithStatsQueryHandler : IQueryHandler<GetAllApiKeysWithStatsQuery, List<ApiKeyWithStatsDto>>
+internal class GetAllApiKeysWithStatsQueryHandler : IQueryHandler<GetAllApiKeysWithStatsQuery, List<ApiKeyWithStatsDto>>
 {
     private readonly MeepleAiDbContext _db;
     private readonly IApiKeyUsageLogRepository _usageLogRepository;

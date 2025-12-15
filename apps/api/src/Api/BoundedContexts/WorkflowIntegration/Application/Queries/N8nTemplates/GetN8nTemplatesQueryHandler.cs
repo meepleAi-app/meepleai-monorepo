@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.WorkflowIntegration.Application.Queries.N8NTemplat
 /// Business logic: Category filtering, sorting by category and name.
 /// Infrastructure delegation: File I/O and JSON deserialization via N8NTemplateService.
 /// </summary>
-public sealed class GetN8NTemplatesQueryHandler : IQueryHandler<GetN8NTemplatesQuery, List<WorkflowTemplateDto>>
+internal sealed class GetN8NTemplatesQueryHandler : IQueryHandler<GetN8NTemplatesQuery, List<WorkflowTemplateDto>>
 {
     private readonly N8NTemplateService _templateService;
     private readonly ILogger<GetN8NTemplatesQueryHandler> _logger;

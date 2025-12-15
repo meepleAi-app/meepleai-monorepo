@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Handlers;
 /// <summary>
 /// Handles query to get all sessions for a specific game with optional pagination.
 /// </summary>
-public class GetGameSessionsQueryHandler : IQueryHandler<GetGameSessionsQuery, List<GameSessionDto>>
+internal class GetGameSessionsQueryHandler : IQueryHandler<GetGameSessionsQuery, List<GameSessionDto>>
 {
     private readonly IGameSessionRepository _sessionRepository;
 

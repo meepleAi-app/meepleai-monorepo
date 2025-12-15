@@ -7,7 +7,7 @@ namespace Api.Services.Pdf;
 /// Generic file storage service for managing blob storage operations
 /// Reusable for any file type beyond PDFs
 /// </summary>
-public class BlobStorageService : IBlobStorageService
+internal class BlobStorageService : IBlobStorageService
 {
     private readonly string _storageBasePath;
     private readonly ILogger<BlobStorageService> _logger;

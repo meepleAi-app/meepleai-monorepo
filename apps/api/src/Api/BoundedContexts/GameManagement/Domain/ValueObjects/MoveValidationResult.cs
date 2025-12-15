@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 /// Result of move validation against game rules.
 /// Immutable value object containing validation outcome and details.
 /// </summary>
-public sealed record MoveValidationResult
+internal sealed record MoveValidationResult
 {
     /// <summary>
     /// Whether the move is valid according to the rules.

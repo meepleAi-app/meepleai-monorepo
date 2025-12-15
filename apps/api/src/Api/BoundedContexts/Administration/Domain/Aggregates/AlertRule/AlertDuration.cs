@@ -1,6 +1,6 @@
 namespace Api.BoundedContexts.Administration.Domain.Aggregates.AlertRules;
 
-public record AlertDuration
+internal record AlertDuration
 {
     public int Minutes { get; init; }
 

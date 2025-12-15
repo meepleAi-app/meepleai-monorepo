@@ -13,7 +13,7 @@ namespace Api.BoundedContexts.Administration.Application.Handlers;
 /// Handler for CreateUserCommand.
 /// Admin users can create users with any role, bypassing normal registration restrictions.
 /// </summary>
-public class CreateUserCommandHandler : ICommandHandler<CreateUserCommand, UserDto>
+internal class CreateUserCommandHandler : ICommandHandler<CreateUserCommand, UserDto>
 {
     private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -28,6 +28,8 @@ public class CreateUserCommandHandler : ICommandHandler<CreateUserCommand, UserD
 
     public async Task<UserDto> Handle(CreateUserCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
+
         // Validate and create email
         var email = new Email(command.Email);
 

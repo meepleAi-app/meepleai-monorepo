@@ -5,7 +5,7 @@ namespace Api.BoundedContexts.GameManagement.Domain.Events;
 /// <summary>
 /// Domain event raised when a game is updated.
 /// </summary>
-public sealed class GameUpdatedEvent : DomainEventBase
+internal sealed class GameUpdatedEvent : DomainEventBase
 {
     /// <summary>
     /// Gets the ID of the updated game.

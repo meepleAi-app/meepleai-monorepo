@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.Administration.Application.Commands;
 /// Command to generate a report on-demand
 /// ISSUE-916: Report generation
 /// </summary>
-public sealed record GenerateReportCommand : ICommand<GenerateReportResult>
+internal sealed record GenerateReportCommand : ICommand<GenerateReportResult>
 {
     public required ReportTemplate Template { get; init; }
     public required ReportFormat Format { get; init; }
@@ -17,7 +17,7 @@ public sealed record GenerateReportCommand : ICommand<GenerateReportResult>
 /// <summary>
 /// Result of report generation
 /// </summary>
-public sealed record GenerateReportResult(
+internal sealed record GenerateReportResult(
     Guid ExecutionId,
     string FileName,
     byte[] Content,

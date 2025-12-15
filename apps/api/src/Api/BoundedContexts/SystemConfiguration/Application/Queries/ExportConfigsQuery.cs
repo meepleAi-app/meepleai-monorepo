@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.SystemConfiguration.Application.Queries;
 /// <summary>
 /// Query to export configurations for backup/migration.
 /// </summary>
-public record ExportConfigsQuery(
+internal record ExportConfigsQuery(
     string Environment,
     bool ActiveOnly = true
 ) : IQuery<ConfigurationExportDto>;
@@ -15,7 +15,7 @@ public record ExportConfigsQuery(
 /// <summary>
 /// Result of configuration export operation.
 /// </summary>
-public record ConfigurationExportDto(
+internal record ConfigurationExportDto(
     IReadOnlyList<ConfigurationDto> Configurations,
     DateTime ExportedAt,
     string Environment

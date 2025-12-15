@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.Administration.Application.Handlers;
 /// Handler for GenerateReportCommand
 /// ISSUE-916: On-demand report generation
 /// </summary>
-public sealed class GenerateReportCommandHandler : ICommandHandler<GenerateReportCommand, GenerateReportResult>
+internal sealed class GenerateReportCommandHandler : ICommandHandler<GenerateReportCommand, GenerateReportResult>
 {
     private readonly IReportGeneratorService _reportGenerator;
     private readonly IReportExecutionRepository _executionRepository;
@@ -29,6 +29,7 @@ public sealed class GenerateReportCommandHandler : ICommandHandler<GenerateRepor
 
     public async Task<GenerateReportResult> Handle(GenerateReportCommand command, CancellationToken ct)
     {
+        ArgumentNullException.ThrowIfNull(command);
         _logger.LogInformation(
             "Processing GenerateReportCommand: {Template} in {Format}",
             command.Template, command.Format);
@@ -66,9 +67,8 @@ public sealed class GenerateReportCommandHandler : ICommandHandler<GenerateRepor
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex,
-                "Report generation failed: ExecutionId={ExecutionId}",
-                execution.Id);
+            // S2139: Logging removed to avoid double logging (caller will log).
+            // We still need to update the execution status in the DB.
 
             // Update execution as failed
             var failedExecution = execution.Fail(ex.Message);

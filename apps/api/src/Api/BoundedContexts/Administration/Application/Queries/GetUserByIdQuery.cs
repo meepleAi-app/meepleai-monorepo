@@ -6,4 +6,4 @@ namespace Api.BoundedContexts.Administration.Application.Queries;
 /// <summary>
 /// Query to get a user by ID.
 /// </summary>
-public record GetUserByIdQuery(string UserId) : IQuery<UserDto?>;
+internal record GetUserByIdQuery(string UserId) : IQuery<UserDto?>;

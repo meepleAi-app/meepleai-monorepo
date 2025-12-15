@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands.TwoFactor;
 /// DDD: Admin override to disable 2FA for users who lost authenticator + backup codes.
 /// Requires admin authorization and sends email notification to affected user.
 /// </summary>
-public class AdminDisable2FACommandHandler : ICommandHandler<AdminDisable2FACommand, AdminDisable2FAResult>
+internal class AdminDisable2FACommandHandler : ICommandHandler<AdminDisable2FACommand, AdminDisable2FAResult>
 {
     private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -28,6 +28,7 @@ public class AdminDisable2FACommandHandler : ICommandHandler<AdminDisable2FAComm
 
     public async Task<AdminDisable2FAResult> Handle(AdminDisable2FACommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         try
         {
             // Verify admin user exists and has admin role

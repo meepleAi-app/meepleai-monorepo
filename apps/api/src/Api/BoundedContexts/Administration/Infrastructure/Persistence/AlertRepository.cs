@@ -9,7 +9,7 @@ using System.Globalization;
 
 namespace Api.BoundedContexts.Administration.Infrastructure.Persistence;
 
-public class AlertRepository : RepositoryBase, IAlertRepository
+internal class AlertRepository : RepositoryBase, IAlertRepository
 {
     public AlertRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
         : base(dbContext, eventCollector)

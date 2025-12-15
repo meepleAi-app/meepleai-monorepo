@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// Handler for GetUserChatsQuery.
 /// Retrieves all chat threads for a user with pagination.
 /// </summary>
-public class GetUserChatsQueryHandler : IQueryHandler<GetUserChatsQuery, IReadOnlyList<ChatThreadDto>>
+internal class GetUserChatsQueryHandler : IQueryHandler<GetUserChatsQuery, IReadOnlyList<ChatThreadDto>>
 {
     private readonly IChatThreadRepository _threadRepository;
 

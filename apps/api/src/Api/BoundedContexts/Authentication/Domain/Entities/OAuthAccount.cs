@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.Authentication.Domain.Entities;
 /// Supports Google, Discord, and GitHub OAuth 2.0.
 /// Aggregate root for OAuth account lifecycle management.
 /// </summary>
-public sealed class OAuthAccount : AggregateRoot<Guid>
+internal sealed class OAuthAccount : AggregateRoot<Guid>
 {
     public Guid UserId { get; private set; }
     public string Provider { get; private set; }

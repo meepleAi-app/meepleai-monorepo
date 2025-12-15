@@ -12,27 +12,25 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Handlers;
 /// Handler for removing a PDF document from a collection.
 /// Issue #2051: Remove document from collection
 /// </summary>
-public class RemoveDocumentFromCollectionCommandHandler : ICommandHandler<RemoveDocumentFromCollectionCommand, bool>
+internal class RemoveDocumentFromCollectionCommandHandler : ICommandHandler<RemoveDocumentFromCollectionCommand, bool>
 {
     private readonly IDocumentCollectionRepository _collectionRepository;
-    private readonly IPdfDocumentRepository _pdfRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<RemoveDocumentFromCollectionCommandHandler> _logger;
 
     public RemoveDocumentFromCollectionCommandHandler(
         IDocumentCollectionRepository collectionRepository,
-        IPdfDocumentRepository pdfRepository,
         IUnitOfWork unitOfWork,
         ILogger<RemoveDocumentFromCollectionCommandHandler> logger)
     {
-        _collectionRepository = collectionRepository ?? throw new ArgumentNullException(nameof(collectionRepository));
-        _pdfRepository = pdfRepository ?? throw new ArgumentNullException(nameof(pdfRepository));
-        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _collectionRepository = collectionRepository;
+        _unitOfWork = unitOfWork;
+        _logger = logger;
     }
 
     public async Task<bool> Handle(RemoveDocumentFromCollectionCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         _logger.LogInformation(
             "User {UserId} removing document {PdfDocumentId} from collection {CollectionId}",
             command.UserId, command.PdfDocumentId, command.CollectionId);

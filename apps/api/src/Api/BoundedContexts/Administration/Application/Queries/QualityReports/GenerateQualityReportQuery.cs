@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.Administration.Application.Queries.QualityReports;
 /// Query to generate a quality report for AI responses within a specified date range.
 /// Aggregates metrics: RAG confidence, LLM confidence, citation quality, overall confidence, low-quality percentage.
 /// </summary>
-public sealed record GenerateQualityReportQuery : IQuery<QualityReport>
+internal sealed record GenerateQualityReportQuery : IQuery<QualityReport>
 {
     public DateTime StartDate { get; init; }
     public DateTime EndDate { get; init; }

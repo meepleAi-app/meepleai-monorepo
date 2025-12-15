@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.Administration.Domain.Services;
 /// Domain service for generating reports based on templates
 /// ISSUE-916: Core report generation logic
 /// </summary>
-public interface IReportGeneratorService
+internal interface IReportGeneratorService
 {
     /// <summary>
     /// Generates a report based on template and parameters
@@ -37,7 +37,7 @@ public interface IReportGeneratorService
 /// <summary>
 /// Report data with content and metadata
 /// </summary>
-public sealed record ReportData(
+internal sealed record ReportData(
     byte[] Content,
     string FileName,
     long FileSizeBytes,

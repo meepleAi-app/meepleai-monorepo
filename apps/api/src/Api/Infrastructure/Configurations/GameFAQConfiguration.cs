@@ -8,7 +8,7 @@ namespace Api.Infrastructure.Configurations;
 /// EF Core configuration for GameFAQEntity.
 /// Issue #2028: Backend FAQ system for game-specific FAQs.
 /// </summary>
-public class GameFAQConfiguration : IEntityTypeConfiguration<GameFAQEntity>
+internal class GameFAQConfiguration : IEntityTypeConfiguration<GameFAQEntity>
 {
     public void Configure(EntityTypeBuilder<GameFAQEntity> builder)
     {

@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries.GetSharedThread;
 /// Query to retrieve a shared chat thread via share link token.
 /// </summary>
 /// <param name="Token">JWT token from share link URL</param>
-public sealed record GetSharedThreadQuery(string Token) : IRequest<GetSharedThreadResult?>;
+internal sealed record GetSharedThreadQuery(string Token) : IRequest<GetSharedThreadResult?>;
 
 /// <summary>
 /// Result of shared thread retrieval.
@@ -20,7 +20,7 @@ public sealed record GetSharedThreadQuery(string Token) : IRequest<GetSharedThre
 /// <param name="GameId">Associated game ID (if any)</param>
 /// <param name="CreatedAt">Thread creation timestamp</param>
 /// <param name="LastMessageAt">Last message timestamp</param>
-public sealed record GetSharedThreadResult(
+internal sealed record GetSharedThreadResult(
     Guid ThreadId,
     string? Title,
     IReadOnlyList<ChatMessageDto> Messages,

@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Api.Infrastructure.EntityConfigurations;
 
-public class ChatEntityConfiguration : IEntityTypeConfiguration<ChatEntity>
+internal class ChatEntityConfiguration : IEntityTypeConfiguration<ChatEntity>
 {
     public void Configure(EntityTypeBuilder<ChatEntity> builder)
     {

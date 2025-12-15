@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
 /// Domain service for validating AI response confidence against quality thresholds
 /// ISSUE-970: BGAI-028 - Confidence validation layer (threshold ≥0.70)
 /// </summary>
-public interface IConfidenceValidationService
+internal interface IConfidenceValidationService
 {
     /// <summary>
     /// Validate response confidence score against threshold
@@ -25,7 +25,7 @@ public interface IConfidenceValidationService
 /// <summary>
 /// Result of confidence validation
 /// </summary>
-public record ConfidenceValidationResult
+internal record ConfidenceValidationResult
 {
     /// <summary>
     /// Whether confidence meets minimum threshold
@@ -56,7 +56,7 @@ public record ConfidenceValidationResult
 /// <summary>
 /// Severity level for confidence validation
 /// </summary>
-public enum ValidationSeverity
+internal enum ValidationSeverity
 {
     /// <summary>
     /// Confidence meets threshold (≥0.70)

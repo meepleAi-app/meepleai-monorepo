@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// Handler for GetLlmCostReportQuery
 /// ISSUE-960: BGAI-018 - Cost reporting handler
 /// </summary>
-public class GetLlmCostReportQueryHandler : IRequestHandler<GetLlmCostReportQuery, LlmCostReportDto>
+internal class GetLlmCostReportQueryHandler : IRequestHandler<GetLlmCostReportQuery, LlmCostReportDto>
 {
     private readonly ILlmCostLogRepository _costLogRepository;
     private readonly ILogger<GetLlmCostReportQueryHandler> _logger;
@@ -26,6 +26,7 @@ public class GetLlmCostReportQueryHandler : IRequestHandler<GetLlmCostReportQuer
 
     public async Task<LlmCostReportDto> Handle(GetLlmCostReportQuery request, CancellationToken ct)
     {
+        ArgumentNullException.ThrowIfNull(request);
         _logger.LogInformation(
             "Generating LLM cost report for {StartDate} to {EndDate} (UserId: {UserId})",
             request.StartDate, request.EndDate, request.UserId);

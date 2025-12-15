@@ -1,6 +1,6 @@
 namespace Api.Infrastructure.Entities;
 
-public class AgentFeedbackEntity
+internal class AgentFeedbackEntity
 {
     // DDD-PHASE2: Converted to Guid for domain alignment
     public Guid Id { get; set; } = Guid.NewGuid();

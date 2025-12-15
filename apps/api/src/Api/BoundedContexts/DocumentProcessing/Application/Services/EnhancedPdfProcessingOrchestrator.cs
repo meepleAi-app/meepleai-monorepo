@@ -20,7 +20,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Services;
 /// Architecture: ADR-003 (3-Stage PDF Pipeline)
 /// Success Rate Estimate: 80% Stage 1, 15% Stage 2, 5% Stage 3
 /// </remarks>
-public class EnhancedPdfProcessingOrchestrator
+internal class EnhancedPdfProcessingOrchestrator
 {
     private readonly IPdfTextExtractor _unstructuredExtractor;
     private readonly IPdfTextExtractor _smolDoclingExtractor;
@@ -684,7 +684,7 @@ public class EnhancedPdfProcessingOrchestrator
 /// <summary>
 /// Enhanced extraction result with orchestration metadata
 /// </summary>
-public record EnhancedExtractionResult(
+internal record EnhancedExtractionResult(
     bool Success,
     string ExtractedText,
     int PageCount,
@@ -740,7 +740,7 @@ public record EnhancedExtractionResult(
 /// <summary>
 /// Enhanced paged extraction result with orchestration metadata
 /// </summary>
-public record EnhancedPagedExtractionResult(
+internal record EnhancedPagedExtractionResult(
     bool Success,
     IList<PageTextChunk> PageChunks,
     int TotalPages,

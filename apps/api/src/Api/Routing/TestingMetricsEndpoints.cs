@@ -8,7 +8,7 @@ namespace Api.Routing;
 /// Testing metrics endpoints for admin dashboard (Issue #2139)
 /// Provides real-time testing metrics from Lighthouse, Playwright, and Prometheus
 /// </summary>
-public static class TestingMetricsEndpoints
+internal static class TestingMetricsEndpoints
 {
     public static RouteGroupBuilder MapTestingMetricsEndpoints(this RouteGroupBuilder group)
     {

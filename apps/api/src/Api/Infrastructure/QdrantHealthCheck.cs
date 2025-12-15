@@ -3,7 +3,7 @@ using Api.Services;
 
 namespace Api.Infrastructure;
 
-public class QdrantHealthCheck : IHealthCheck
+internal class QdrantHealthCheck : IHealthCheck
 {
     private readonly IQdrantService _qdrantService;
     private readonly ILogger<QdrantHealthCheck> _logger;

@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.Authentication.Domain.Entities;
 /// Sessions have a limited lifetime and can be revoked.
 /// Aggregate root for session lifecycle management.
 /// </summary>
-public sealed class Session : AggregateRoot<Guid>
+internal sealed class Session : AggregateRoot<Guid>
 {
     public Guid UserId { get; private set; }
     public string TokenHash { get; private set; }

@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.WorkflowIntegration.Domain.Repositories;
 /// <summary>
 /// Repository interface for N8NConfiguration aggregate.
 /// </summary>
-public interface IN8NConfigurationRepository : IRepository<N8NConfiguration, Guid>
+internal interface IN8NConfigurationRepository : IRepository<N8NConfiguration, Guid>
 {
     /// <summary>
     /// Gets active configuration.

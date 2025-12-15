@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 /// PDF version identifier (e.g., 1.4, 1.7, 2.0).
 /// Represents the PDF specification version used to create the document.
 /// </summary>
-public sealed class PdfVersion : ValueObject
+internal sealed class PdfVersion : ValueObject
 {
     /// <summary>
     /// Major version number (e.g., 1 for PDF 1.x, 2 for PDF 2.x)

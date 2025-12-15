@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// <summary>
 /// Handles chat thread closure command.
 /// </summary>
-public class CloseThreadCommandHandler : ICommandHandler<CloseThreadCommand, ChatThreadDto>
+internal class CloseThreadCommandHandler : ICommandHandler<CloseThreadCommand, ChatThreadDto>
 {
     private readonly IChatThreadRepository _threadRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -24,6 +24,7 @@ public class CloseThreadCommandHandler : ICommandHandler<CloseThreadCommand, Cha
 
     public async Task<ChatThreadDto> Handle(CloseThreadCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         // Retrieve thread
         var thread = await _threadRepository.GetByIdAsync(command.ThreadId, cancellationToken).ConfigureAwait(false);
         if (thread == null)

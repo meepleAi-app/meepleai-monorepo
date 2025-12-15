@@ -8,7 +8,7 @@ using SystemConfigurationAggregate = Api.BoundedContexts.SystemConfiguration.Dom
 
 namespace Api.BoundedContexts.SystemConfiguration.Infrastructure.Persistence;
 
-public class ConfigurationRepository : RepositoryBase, IConfigurationRepository
+internal class ConfigurationRepository : RepositoryBase, IConfigurationRepository
 {
     public ConfigurationRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
         : base(dbContext, eventCollector)

@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Handlers;
 /// <summary>
 /// Issue #2055: Handler for acquiring editor locks.
 /// </summary>
-public class AcquireEditorLockCommandHandler : ICommandHandler<AcquireEditorLockCommand, EditorLockResult>
+internal class AcquireEditorLockCommandHandler : ICommandHandler<AcquireEditorLockCommand, EditorLockResult>
 {
     private readonly IEditorLockService _lockService;
 
@@ -18,6 +18,7 @@ public class AcquireEditorLockCommandHandler : ICommandHandler<AcquireEditorLock
 
     public Task<EditorLockResult> Handle(AcquireEditorLockCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         return _lockService.AcquireLockAsync(
             command.GameId,
             command.UserId,

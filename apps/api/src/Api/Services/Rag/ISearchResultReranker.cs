@@ -3,7 +3,7 @@ namespace Api.Services.Rag;
 /// <summary>
 /// Service for reranking search results using Reciprocal Rank Fusion (RRF)
 /// </summary>
-public interface ISearchResultReranker
+internal interface ISearchResultReranker
 {
     /// <summary>
     /// Fuses multiple search result lists using RRF algorithm

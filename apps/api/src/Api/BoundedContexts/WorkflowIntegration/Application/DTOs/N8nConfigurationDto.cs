@@ -3,7 +3,7 @@
 #pragma warning disable MA0048 // File name must match type name - Contains related Request/Response DTOs
 namespace Api.BoundedContexts.WorkflowIntegration.Application.DTOs;
 
-public record N8NConfigurationDto(
+internal record N8NConfigurationDto(
     Guid Id,
     string Name,
     string BaseUrl,
@@ -15,14 +15,14 @@ public record N8NConfigurationDto(
     DateTime UpdatedAt
 );
 
-public record CreateN8NConfigRequest(
+internal record CreateN8NConfigRequest(
     string Name,
     string BaseUrl,
     string ApiKey,
     string? WebhookUrl = null
 );
 
-public record WorkflowErrorLogDto(
+internal record WorkflowErrorLogDto(
     Guid Id,
     string WorkflowId,
     string ExecutionId,

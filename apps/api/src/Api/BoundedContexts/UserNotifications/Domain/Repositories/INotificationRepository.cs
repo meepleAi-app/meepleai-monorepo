@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.UserNotifications.Domain.Repositories;
 /// Repository interface for Notification aggregate.
 /// Extends IRepository with notification-specific queries.
 /// </summary>
-public interface INotificationRepository : IRepository<Notification, Guid>
+internal interface INotificationRepository : IRepository<Notification, Guid>
 {
     /// <summary>
     /// Gets notifications for a specific user with optional filtering.

@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.SystemConfiguration.Application.EventHandlers;
 /// Handler for ConfigurationDeletedEvent domain event.
 /// Automatically creates audit log entry and invalidates cache via base class.
 /// </summary>
-public sealed class ConfigurationDeletedEventHandler : DomainEventHandlerBase<ConfigurationDeletedEvent>
+internal sealed class ConfigurationDeletedEventHandler : DomainEventHandlerBase<ConfigurationDeletedEvent>
 {
     private readonly IHybridCacheService _cache;
 

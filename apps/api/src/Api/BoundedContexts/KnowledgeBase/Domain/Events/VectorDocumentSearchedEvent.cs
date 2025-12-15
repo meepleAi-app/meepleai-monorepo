@@ -2,7 +2,7 @@ using Api.SharedKernel.Domain.Events;
 
 namespace Api.BoundedContexts.KnowledgeBase.Domain.Events;
 
-public sealed class VectorDocumentSearchedEvent : DomainEventBase
+internal sealed class VectorDocumentSearchedEvent : DomainEventBase
 {
     public Guid DocumentId { get; }
     public string Query { get; }

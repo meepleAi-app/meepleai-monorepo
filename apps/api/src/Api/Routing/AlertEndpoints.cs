@@ -9,7 +9,7 @@ namespace Api.Routing;
 /// Alert management endpoints.
 /// Handles Prometheus webhook integration, alert retrieval, and manual alert resolution.
 /// </summary>
-public static class AlertEndpoints
+internal static class AlertEndpoints
 {
     public static RouteGroupBuilder MapAlertEndpoints(this RouteGroupBuilder group)
     {
@@ -78,7 +78,7 @@ public static class AlertEndpoints
             bool? activeOnly = true,
             CancellationToken ct = default) =>
         {
-            var (authorized, session, error) = context.RequireAdminSession();
+            var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             var alerts = activeOnly == true
@@ -104,7 +104,7 @@ public static class AlertEndpoints
             string alertType,
             CancellationToken ct = default) =>
         {
-            var (authorized, session, error) = context.RequireAdminSession();
+            var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             var resolved = await alertingService.ResolveAlertAsync(alertType, ct).ConfigureAwait(false);

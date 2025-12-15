@@ -8,7 +8,7 @@ namespace Api.Services;
 /// Redis-based cache for session validation (Phase 2 optimization)
 /// Reduces database queries for session validation by ~90%
 /// </summary>
-public class SessionCacheService : ISessionCacheService
+internal class SessionCacheService : ISessionCacheService
 {
     private readonly IConnectionMultiplexer _redis;
     private readonly ILogger<SessionCacheService> _logger;

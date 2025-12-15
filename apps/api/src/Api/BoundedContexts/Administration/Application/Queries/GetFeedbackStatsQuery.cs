@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.Administration.Application.Queries;
 /// <param name="StartDate">Optional start date filter (inclusive).</param>
 /// <param name="EndDate">Optional end date filter (inclusive).</param>
 /// <param name="Endpoint">Optional endpoint filter (e.g., "/api/v1/chat").</param>
-public record GetFeedbackStatsQuery(
+internal record GetFeedbackStatsQuery(
     DateTime? StartDate = null,
     DateTime? EndDate = null,
     string? Endpoint = null

@@ -12,7 +12,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 /// Saves a chunk to disk and updates session progress.
 /// Uses optimistic concurrency with retry logic for concurrent chunk uploads.
 /// </summary>
-public class UploadChunkCommandHandler : ICommandHandler<UploadChunkCommand, UploadChunkResult>
+internal class UploadChunkCommandHandler : ICommandHandler<UploadChunkCommand, UploadChunkResult>
 {
     private const int MaxConcurrencyRetries = 3;
     private static readonly string UploadTempBasePath = Path.Combine(Path.GetTempPath(), "meepleai_uploads");
@@ -35,6 +35,7 @@ public class UploadChunkCommandHandler : ICommandHandler<UploadChunkCommand, Upl
         UploadChunkCommand request,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         // Retry loop for handling concurrent chunk uploads
         for (int attempt = 0; attempt < MaxConcurrencyRetries; attempt++)
         {

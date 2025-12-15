@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 /// Represents a valid file size (minimum 1 byte).
 /// Note: Maximum size validation is a business rule enforced by PdfValidationDomainService.
 /// </summary>
-public sealed class FileSize : ValueObject
+internal sealed class FileSize : ValueObject
 {
     /// <summary>
     /// Size in bytes (minimum 1)
@@ -149,4 +149,9 @@ public sealed class FileSize : ValueObject
     public static readonly FileSize OneByte = new(1);
     public static readonly FileSize OneKilobyte = new(1024);
     public static readonly FileSize OneMegabyte = new(1024 * 1024);
+
+    public long ToInt64()
+    {
+        throw new NotImplementedException();
+    }
 }

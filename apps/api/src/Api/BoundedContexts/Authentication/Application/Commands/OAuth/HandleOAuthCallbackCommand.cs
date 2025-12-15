@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands.OAuth;
 /// Command to handle OAuth callback after user authorization.
 /// Orchestrates token exchange, user creation/linking, and session establishment.
 /// </summary>
-public sealed record HandleOAuthCallbackCommand : ICommand<HandleOAuthCallbackResult>
+internal sealed record HandleOAuthCallbackCommand : ICommand<HandleOAuthCallbackResult>
 {
     public string Provider { get; init; } = string.Empty;
     public string Code { get; init; } = string.Empty;
@@ -20,7 +20,7 @@ public sealed record HandleOAuthCallbackCommand : ICommand<HandleOAuthCallbackRe
 /// Result of OAuth callback processing.
 /// Contains user information and session token if successful.
 /// </summary>
-public sealed record HandleOAuthCallbackResult
+internal sealed record HandleOAuthCallbackResult
 {
     public Guid? UserId { get; init; }
     public bool IsNewUser { get; init; }

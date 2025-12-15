@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.Administration.Infrastructure.External;
 /// HTTP client for querying Prometheus via HTTP API.
 /// Issue #893: Implements PromQL range queries and instant queries.
 /// </summary>
-public class PrometheusHttpClient : IPrometheusQueryService
+internal class PrometheusHttpClient : IPrometheusQueryService
 {
     private readonly HttpClient _httpClient;
     private readonly ILogger<PrometheusHttpClient> _logger;
@@ -209,7 +209,7 @@ public class PrometheusHttpClient : IPrometheusQueryService
 /// <summary>
 /// Configuration options for Prometheus client.
 /// </summary>
-public class PrometheusOptions
+internal class PrometheusOptions
 {
     public const string SectionName = "Prometheus";
 

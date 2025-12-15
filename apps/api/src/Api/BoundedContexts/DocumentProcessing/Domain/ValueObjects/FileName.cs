@@ -3,7 +3,7 @@ using Api.SharedKernel.Domain.Validation;
 
 namespace Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 
-public sealed class FileName : ValueObject
+internal sealed class FileName : ValueObject
 {
     public string Value { get; }
 

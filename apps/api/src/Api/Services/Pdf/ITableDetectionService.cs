@@ -5,7 +5,7 @@ namespace Api.Services.Pdf;
 /// <summary>
 /// Service responsible for identifying table regions in PDF pages
 /// </summary>
-public interface ITableDetectionService
+internal interface ITableDetectionService
 {
     /// <summary>
     /// Detects tables in a PDF page using positioned text analysis

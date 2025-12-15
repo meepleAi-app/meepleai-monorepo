@@ -5,7 +5,7 @@ namespace Api.BoundedContexts.SystemConfiguration.Domain.Entities;
 /// <summary>
 /// FeatureFlag aggregate root for runtime feature toggles.
 /// </summary>
-public sealed class FeatureFlag : AggregateRoot<Guid>
+internal sealed class FeatureFlag : AggregateRoot<Guid>
 {
     public string Name { get; private set; }
     public bool IsEnabled { get; private set; }

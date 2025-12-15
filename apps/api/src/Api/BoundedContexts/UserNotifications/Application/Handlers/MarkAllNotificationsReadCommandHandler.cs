@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.UserNotifications.Application.Handlers;
 /// Handler for MarkAllNotificationsReadCommand.
 /// Bulk operation to mark all user notifications as read.
 /// </summary>
-public class MarkAllNotificationsReadCommandHandler : ICommandHandler<MarkAllNotificationsReadCommand, int>
+internal class MarkAllNotificationsReadCommandHandler : ICommandHandler<MarkAllNotificationsReadCommand, int>
 {
     private readonly INotificationRepository _notificationRepository;
     private readonly ILogger<MarkAllNotificationsReadCommandHandler> _logger;
@@ -26,6 +26,7 @@ public class MarkAllNotificationsReadCommandHandler : ICommandHandler<MarkAllNot
 
     public async Task<int> Handle(MarkAllNotificationsReadCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         var stopwatch = Stopwatch.StartNew();
 
         var count = await _notificationRepository.MarkAllAsReadAsync(command.UserId, cancellationToken).ConfigureAwait(false);

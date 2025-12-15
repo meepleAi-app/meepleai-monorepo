@@ -3,7 +3,7 @@ namespace Api.Services.Pdf;
 /// <summary>
 /// Service responsible for parsing individual table cells and columns
 /// </summary>
-public interface ITableCellParser
+internal interface ITableCellParser
 {
     /// <summary>
     /// Splits a line into columns based on character positioning

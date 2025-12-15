@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.Helpers;
 /// Addresses S5445: Uses Path.GetRandomFileName() instead of Path.GetTempFileName()
 /// to prevent TOCTOU (Time-of-check to time-of-use) race condition vulnerabilities.
 /// </summary>
-public static class SecureTempFileHelper
+internal static class SecureTempFileHelper
 {
     private const string TempSubdirectory = "meepleai-pdf";
 

@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// Handler for DeleteChessKnowledgeCommand.
 /// Deletes all chess knowledge from the vector database.
 /// </summary>
-public sealed class DeleteChessKnowledgeCommandHandler
+internal sealed class DeleteChessKnowledgeCommandHandler
     : IRequestHandler<DeleteChessKnowledgeCommand, bool>
 {
     private readonly IQdrantService _qdrantService;
@@ -28,6 +28,7 @@ public sealed class DeleteChessKnowledgeCommandHandler
         DeleteChessKnowledgeCommand request,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         try
         {
             _logger.LogInformation("Deleting all chess knowledge");

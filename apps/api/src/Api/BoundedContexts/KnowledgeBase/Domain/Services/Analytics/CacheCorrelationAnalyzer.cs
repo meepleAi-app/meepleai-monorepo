@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services.Analytics;
 /// ISSUE-1725: Implementation of ICacheCorrelationAnalyzer for cache ROI analysis.
 /// Quantifies cost savings from caching and identifies optimization opportunities.
 /// </summary>
-public class CacheCorrelationAnalyzer : ICacheCorrelationAnalyzer
+internal class CacheCorrelationAnalyzer : ICacheCorrelationAnalyzer
 {
     private readonly ILlmCostLogRepository _costLogRepository;
     private readonly ILogger<CacheCorrelationAnalyzer> _logger;

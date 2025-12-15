@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.Authentication.Application.Commands;
 
-public class RevokeAllUserSessionsCommandHandler : ICommandHandler<RevokeAllUserSessionsCommand, int>
+internal class RevokeAllUserSessionsCommandHandler : ICommandHandler<RevokeAllUserSessionsCommand, int>
 {
     private readonly MeepleAiDbContext _db;
     private readonly TimeProvider _timeProvider;
@@ -26,6 +26,7 @@ public class RevokeAllUserSessionsCommandHandler : ICommandHandler<RevokeAllUser
 
     public async Task<int> Handle(RevokeAllUserSessionsCommand request, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         var sessions = await _db.UserSessions

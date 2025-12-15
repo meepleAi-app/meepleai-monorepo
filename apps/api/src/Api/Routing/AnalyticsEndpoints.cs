@@ -14,7 +14,7 @@ namespace Api.Routing;
 /// Analytics dashboard and reporting endpoints (Admin only).
 /// Handles AI request statistics, quality metrics, LLM health monitoring, and cost reporting.
 /// </summary>
-public static class AnalyticsEndpoints
+internal static class AnalyticsEndpoints
 {
     public static RouteGroupBuilder MapAnalyticsEndpoints(this RouteGroupBuilder group)
     {

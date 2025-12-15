@@ -4,7 +4,7 @@ using Api.SharedKernel.Application.Interfaces;
 #pragma warning disable MA0048 // File name must match type name - Contains Query with Result record
 namespace Api.BoundedContexts.SystemConfiguration.Application.Queries;
 
-public record GetAllConfigsQuery(
+internal record GetAllConfigsQuery(
     string? Category = null,
     string? Environment = null,
     bool ActiveOnly = true,
@@ -15,7 +15,7 @@ public record GetAllConfigsQuery(
 /// <summary>
 /// Paginated result wrapper for configurations.
 /// </summary>
-public record PagedConfigurationResult(
+internal record PagedConfigurationResult(
     IReadOnlyList<ConfigurationDto> Items,
     int Total,
     int Page,

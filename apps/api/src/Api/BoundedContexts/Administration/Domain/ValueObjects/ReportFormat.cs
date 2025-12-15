@@ -4,7 +4,7 @@ namespace Api.BoundedContexts.Administration.Domain.ValueObjects;
 /// Value object representing report output formats
 /// ISSUE-916: CSV, JSON export formats (PDF pending full implementation)
 /// </summary>
-public enum ReportFormat
+internal enum ReportFormat
 {
     /// <summary>CSV format for data analysis</summary>
     Csv = 1,
@@ -20,7 +20,7 @@ public enum ReportFormat
 /// <summary>
 /// Extension methods for ReportFormat
 /// </summary>
-public static class ReportFormatExtensions
+internal static class ReportFormatExtensions
 {
     public static string ToFileExtension(this ReportFormat format)
     {

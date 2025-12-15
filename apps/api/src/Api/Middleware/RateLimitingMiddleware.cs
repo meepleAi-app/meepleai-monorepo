@@ -15,7 +15,7 @@ namespace Api.Middleware;
 /// Adds X-RateLimit-Limit, X-RateLimit-Remaining, and Retry-After (when limited).
 /// Returns 429 JSON body when limited.
 /// </summary>
-public class RateLimitingMiddleware
+internal class RateLimitingMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly ILogger<RateLimitingMiddleware> _logger;
@@ -93,7 +93,7 @@ public class RateLimitingMiddleware
     }
 }
 
-public static class RateLimitingMiddlewareExtensions
+internal static class RateLimitingMiddlewareExtensions
 {
     public static IApplicationBuilder UseRoleAwareRateLimiting(this IApplicationBuilder app)
     {

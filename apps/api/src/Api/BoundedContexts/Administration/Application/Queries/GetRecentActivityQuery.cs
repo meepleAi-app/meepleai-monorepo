@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Administration.Application.Queries;
 /// Returns last N system events (user registrations, uploads, errors, alerts, etc.)
 /// Handler: GetRecentActivityQueryHandler serves as ActivityFeedService per Issue #878.
 /// </summary>
-public record GetRecentActivityQuery(
+internal record GetRecentActivityQuery(
     int Limit = 10,
     DateTime? Since = null
 ) : IQuery<RecentActivityDto>;

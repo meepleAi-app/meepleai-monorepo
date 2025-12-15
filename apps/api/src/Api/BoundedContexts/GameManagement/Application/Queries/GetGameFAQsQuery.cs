@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Queries;
 /// Query to retrieve FAQs for a specific game with pagination.
 /// Issue #2028: Backend FAQ system for game-specific FAQs.
 /// </summary>
-public record GetGameFAQsQuery(
+internal record GetGameFAQsQuery(
     Guid GameId,
     int Limit = 10,
     int Offset = 0
@@ -16,7 +16,7 @@ public record GetGameFAQsQuery(
 /// <summary>
 /// Result containing paginated FAQs and total count.
 /// </summary>
-public record GetGameFAQsQueryResult(
+internal record GetGameFAQsQueryResult(
     IReadOnlyList<GameFAQDto> FAQs,
     int TotalCount
 );

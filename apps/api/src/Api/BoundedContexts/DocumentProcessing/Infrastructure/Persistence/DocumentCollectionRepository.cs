@@ -13,7 +13,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.Persistence;
 /// Repository implementation for DocumentCollection aggregate.
 /// Issue #2051: Persistence for multi-document collections
 /// </summary>
-public class DocumentCollectionRepository : RepositoryBase, IDocumentCollectionRepository
+internal class DocumentCollectionRepository : RepositoryBase, IDocumentCollectionRepository
 {
     public DocumentCollectionRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
         : base(dbContext, eventCollector)
@@ -92,21 +92,8 @@ public class DocumentCollectionRepository : RepositoryBase, IDocumentCollectionR
     public Task DeleteAsync(DocumentCollection collection, CancellationToken cancellationToken = default)
     {
         if (collection is null) throw new ArgumentNullException(nameof(collection));
-
-        // Check if already tracked
-        var tracked = DbContext.ChangeTracker.Entries<Api.Infrastructure.Entities.DocumentCollectionEntity>()
-            .FirstOrDefault(e => e.Entity.Id == collection.Id);
-
-        if (tracked != null)
-        {
-            DbContext.DocumentCollections.Remove(tracked.Entity);
-        }
-        else
-        {
-            var entity = MapToPersistence(collection);
-            DbContext.DocumentCollections.Remove(entity);
-        }
-
+        var entity = MapToPersistence(collection);
+        DbContext.DocumentCollections.Remove(entity);
         return Task.CompletedTask;
     }
 

@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands;
 /// <summary>
 /// Command to create a new game in the catalog.
 /// </summary>
-public record CreateGameCommand(
+internal record CreateGameCommand(
     string Title,
     string? Publisher = null,
     int? YearPublished = null,

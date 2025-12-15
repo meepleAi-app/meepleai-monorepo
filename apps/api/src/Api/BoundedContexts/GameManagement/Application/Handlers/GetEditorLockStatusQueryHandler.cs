@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Handlers;
 /// <summary>
 /// Issue #2055: Handler for getting editor lock status.
 /// </summary>
-public class GetEditorLockStatusQueryHandler : IQueryHandler<GetEditorLockStatusQuery, EditorLockDto>
+internal class GetEditorLockStatusQueryHandler : IQueryHandler<GetEditorLockStatusQuery, EditorLockDto>
 {
     private readonly IEditorLockService _lockService;
 
@@ -19,6 +19,7 @@ public class GetEditorLockStatusQueryHandler : IQueryHandler<GetEditorLockStatus
 
     public Task<EditorLockDto> Handle(GetEditorLockStatusQuery query, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(query);
         return _lockService.GetLockStatusAsync(
             query.GameId,
             query.CurrentUserId,

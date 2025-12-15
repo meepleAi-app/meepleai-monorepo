@@ -11,7 +11,7 @@ namespace Api.Services;
 /// Configuration for weekly automated quality evaluation.
 /// BGAI-042: Weekly automated quality evaluation job.
 /// </summary>
-public class WeeklyEvaluationConfiguration
+internal class WeeklyEvaluationConfiguration
 {
     /// <summary>Evaluation interval in days (default: 7 days = weekly)</summary>
     public int IntervalDays { get; set; } = 7;
@@ -29,7 +29,7 @@ public class WeeklyEvaluationConfiguration
     public string? RagDatasetPath { get; set; }
 
     /// <summary>Enable RAG evaluation (default: false, requires dataset)</summary>
-    public bool EnableRagEvaluation { get; set; } = false;
+    public bool EnableRagEvaluation { get; set; }
 
     /// <summary>Quality thresholds for alerts</summary>
     public QualityThresholds Thresholds { get; set; } = new();
@@ -38,7 +38,7 @@ public class WeeklyEvaluationConfiguration
 /// <summary>
 /// Quality thresholds for triggering alerts.
 /// </summary>
-public class QualityThresholds
+internal class QualityThresholds
 {
     /// <summary>Maximum acceptable low-quality percentage (default: 10%)</summary>
     public double MaxLowQualityPercentage { get; set; } = 10.0;
@@ -61,7 +61,7 @@ public class QualityThresholds
 /// - Alert generation on quality degradation
 /// - Comprehensive logging and monitoring
 /// </summary>
-public class WeeklyEvaluationService : BackgroundService
+internal class WeeklyEvaluationService : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<WeeklyEvaluationService> _logger;

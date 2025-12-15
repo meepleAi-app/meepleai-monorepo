@@ -22,7 +22,7 @@ using System.Diagnostics;
 #pragma warning disable MA0048 // File name must match type name - Contains Handler with related types
 namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 
-public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUploadResult>
+internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUploadResult>
 {
     private readonly MeepleAiDbContext _db;
     private readonly IServiceScopeFactory _scopeFactory;
@@ -72,7 +72,7 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
         var userId = command.UserId;
 
         // Validate file input
-        var validationResult = await ValidateFileInputAsync(file, gameId, cancellationToken).ConfigureAwait(false);
+        var validationResult = await ValidateFileInputAsync(file, cancellationToken).ConfigureAwait(false);
         if (!validationResult.IsValid)
         {
             return new PdfUploadResult(false, validationResult.ErrorMessage!, null);
@@ -140,7 +140,7 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
         // Validate PDF file structure (Issue #1688)
         using (var validationStream = file.OpenReadStream())
         {
-            var (isValid, validationError) = await ValidatePdfStructureAsync(validationStream, file.FileName, cancellationToken).ConfigureAwait(false);
+            var (isValid, validationError) = await ValidatePdfStructureAsync(validationStream, cancellationToken).ConfigureAwait(false);
             if (!isValid)
             {
                 RecordUploadMetricSafely("validation_failed_structure", file.Length);

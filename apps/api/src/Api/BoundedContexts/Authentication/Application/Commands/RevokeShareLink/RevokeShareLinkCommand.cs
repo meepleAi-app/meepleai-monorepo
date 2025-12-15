@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands.RevokeShareLin
 /// </summary>
 /// <param name="ShareLinkId">Share link to revoke</param>
 /// <param name="UserId">User requesting revocation (must be creator or admin)</param>
-public sealed record RevokeShareLinkCommand(
+internal sealed record RevokeShareLinkCommand(
     Guid ShareLinkId,
     Guid UserId
 ) : IRequest<bool>;

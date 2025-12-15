@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Api.Infrastructure.EntityConfigurations;
 
-public class PromptVersionEntityConfiguration : IEntityTypeConfiguration<PromptVersionEntity>
+internal class PromptVersionEntityConfiguration : IEntityTypeConfiguration<PromptVersionEntity>
 {
     public void Configure(EntityTypeBuilder<PromptVersionEntity> builder)
     {

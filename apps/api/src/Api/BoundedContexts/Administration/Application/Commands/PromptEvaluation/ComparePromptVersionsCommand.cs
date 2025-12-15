@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Administration.Application.Commands.PromptEvaluati
 /// Evaluates both versions and generates recommendation (Activate, Reject, or Manual Review)
 /// ADMIN-01 Phase 4: Prompt Testing Framework
 /// </summary>
-public sealed record ComparePromptVersionsCommand : ICommand<PromptComparisonResult>
+internal sealed record ComparePromptVersionsCommand : ICommand<PromptComparisonResult>
 {
     /// <summary>Prompt template ID</summary>
     public required string TemplateId { get; init; }

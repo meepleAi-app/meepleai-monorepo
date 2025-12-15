@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands.OAuth;
 /// Command to link an OAuth provider account to a user.
 /// Enforces business rule: Only one account per provider is allowed.
 /// </summary>
-public sealed record LinkOAuthAccountCommand : ICommand<LinkOAuthAccountResult>
+internal sealed record LinkOAuthAccountCommand : ICommand<LinkOAuthAccountResult>
 {
     public Guid UserId { get; init; }
     public string Provider { get; init; } = string.Empty;
@@ -20,7 +20,7 @@ public sealed record LinkOAuthAccountCommand : ICommand<LinkOAuthAccountResult>
 /// <summary>
 /// Result of OAuth account linking operation.
 /// </summary>
-public sealed record LinkOAuthAccountResult
+internal sealed record LinkOAuthAccountResult
 {
     public Guid? OAuthAccountId { get; init; }
     public bool Success { get; init; }

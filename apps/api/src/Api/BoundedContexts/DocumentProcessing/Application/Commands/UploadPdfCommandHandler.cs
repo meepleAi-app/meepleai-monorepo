@@ -68,7 +68,6 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         ArgumentNullException.ThrowIfNull(command);
 
         var file = command.File;
-        var gameId = command.GameId;
         var userId = command.UserId;
 
         // Validate file input
@@ -80,12 +79,16 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
 
         var fileName = validationResult.SanitizedFileName!;
 
-        // Check user quota and permissions
-        var (quotaAllowed, quotaError, _) = await CheckUserQuotaAsync(userId, gameId, file, cancellationToken).ConfigureAwait(false);
-        if (!quotaAllowed)
+        // Check user quota and permissions (also resolves/creates game)
+        var (quotaAllowed, quotaError, _, resolvedGameId) = await CheckUserQuotaAsync(
+            userId, command.GameId, command.Metadata, file, cancellationToken).ConfigureAwait(false);
+
+        if (!quotaAllowed || !resolvedGameId.HasValue)
         {
             return new PdfUploadResult(false, quotaError!, null);
         }
+
+        var gameId = resolvedGameId.Value.ToString();
 
         // Store file and create database record
         var (storageSuccess, storageResult, pdfDoc) = await StoreFileAndCreateRecordAsync(
@@ -169,24 +172,24 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
 
     /// <summary>
     /// Checks user quota and permissions for PDF upload.
-    /// Returns (allowed, errorMessage, userTier).
+    /// Returns (allowed, errorMessage, userTier, gameId).
     /// </summary>
-    private async Task<(bool Allowed, string? ErrorMessage, string? UserTier)> CheckUserQuotaAsync(
+    private async Task<(bool Allowed, string? ErrorMessage, string? UserTier, Guid? GameId)> CheckUserQuotaAsync(
         Guid userId,
-        string gameId,
+        string? gameId,
+        PdfUploadMetadata? metadata,
         IFormFile file,
         CancellationToken cancellationToken)
     {
         try
         {
-            // Verify game exists
-            var game = await _db.Games
-                .Where(g => g.Id.ToString() == gameId)
-                .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+            // Find or create game based on input
+            var (gameSuccess, gameError, resolvedGameId) = await FindOrCreateGameAsync(
+                gameId, metadata, cancellationToken).ConfigureAwait(false);
 
-            if (game == null)
+            if (!gameSuccess || !resolvedGameId.HasValue)
             {
-                return (false, "Game not found. Please select a valid game before uploading.", null);
+                return (false, gameError!, null, null);
             }
 
             // Check upload quota
@@ -200,7 +203,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
             {
                 RecordUploadMetricSafely("user_not_found", file.Length);
                 _logger.LogError("User {UserId} not found during PDF upload", userId);
-                return (false, "User not found. Please ensure you are authenticated.", null);
+                return (false, "User not found. Please ensure you are authenticated.", null, null);
             }
 
             var userTier = UserTier.Parse(user.Tier);
@@ -220,7 +223,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
                     userId,
                     userTier.Value,
                     quotaResult.ErrorMessage);
-                return (false, quotaResult.ErrorMessage!, userTier.Value);
+                return (false, quotaResult.ErrorMessage!, userTier.Value, null);
             }
 
             _logger.LogDebug(
@@ -232,7 +235,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
                 quotaResult.WeeklyUploadsUsed,
                 quotaResult.WeeklyLimit);
 
-            return (true, null, userTier.Value);
+            return (true, null, userTier.Value, resolvedGameId.Value);
         }
         catch (OperationCanceledException)
         {
@@ -241,9 +244,91 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         catch (Exception ex) when (ex is ObjectDisposedException or Npgsql.NpgsqlException or DbUpdateException or InvalidOperationException)
         {
             RecordUploadMetricSafely("db_unavailable", file.Length);
-            _logger.LogError(ex, "Database unavailable during PDF upload for game {GameId}", gameId);
-            return (false, "Database unavailable. Please retry the upload.", null);
+            _logger.LogError(ex, "Database unavailable during PDF upload");
+            return (false, "Database unavailable. Please retry the upload.", null, null);
         }
+    }
+
+    /// <summary>
+    /// Finds an existing game or creates a new one based on provided gameId or metadata.
+    /// Returns (success, errorMessage, gameId).
+    /// </summary>
+    private async Task<(bool Success, string? ErrorMessage, Guid? GameId)> FindOrCreateGameAsync(
+        string? gameId,
+        PdfUploadMetadata? metadata,
+        CancellationToken cancellationToken)
+    {
+        // Legacy path: gameId provided (backward compatibility)
+        if (!string.IsNullOrWhiteSpace(gameId))
+        {
+            if (!Guid.TryParse(gameId, out var parsedGameId))
+            {
+                return (false, "Invalid game ID format.", null);
+            }
+
+            var existingGame = await _db.Games
+                .Where(g => g.Id == parsedGameId)
+                .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+
+            if (existingGame == null)
+            {
+                return (false, "Game not found. Please select a valid game before uploading.", null);
+            }
+
+            _logger.LogInformation("Using existing game {GameId} for PDF upload", parsedGameId);
+            return (true, null, parsedGameId);
+        }
+
+        // New path: metadata provided (auto-create)
+        if (metadata != null)
+        {
+            // Validate metadata
+            if (string.IsNullOrWhiteSpace(metadata.GameName))
+            {
+                return (false, "Game name is required when using metadata.", null);
+            }
+
+            // Search for existing game with same characteristics
+            var existingGame = await _db.Games
+                .Where(g =>
+                    g.Name == metadata.GameName &&
+                    g.VersionType == metadata.VersionType &&
+                    g.Language == metadata.Language &&
+                    g.VersionNumber == metadata.VersionNumber)
+                .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+
+            if (existingGame != null)
+            {
+                _logger.LogInformation(
+                    "Found existing game {GameId} for {GameName} ({VersionType}, {Language}, v{Version})",
+                    existingGame.Id, metadata.GameName, metadata.VersionType, metadata.Language, metadata.VersionNumber);
+
+                return (true, null, existingGame.Id);
+            }
+
+            // Create new game
+            var newGame = new GameEntity
+            {
+                Id = Guid.NewGuid(),
+                Name = metadata.GameName,
+                VersionType = metadata.VersionType,
+                Language = metadata.Language,
+                VersionNumber = metadata.VersionNumber,
+                CreatedAt = _timeProvider.GetUtcNow().UtcDateTime
+            };
+
+            _db.Games.Add(newGame);
+            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+            _logger.LogInformation(
+                "Created new game {GameId} for {GameName} ({VersionType}, {Language}, v{Version})",
+                newGame.Id, metadata.GameName, metadata.VersionType, metadata.Language, metadata.VersionNumber);
+
+            return (true, null, newGame.Id);
+        }
+
+        // Neither gameId nor metadata provided
+        return (false, "Either gameId or game metadata (gameName, versionType, language, versionNumber) must be provided.", null);
     }
 
     /// <summary>

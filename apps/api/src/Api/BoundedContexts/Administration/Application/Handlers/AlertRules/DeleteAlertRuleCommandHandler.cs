@@ -8,7 +8,8 @@ internal class DeleteAlertRuleCommandHandler : IRequestHandler<DeleteAlertRuleCo
 {
     private readonly IAlertRuleRepository _repository;
 
-    public DeleteAlertRuleCommandHandler(IAlertRuleRepository repository) => _repository = repository;
+    public DeleteAlertRuleCommandHandler(IAlertRuleRepository repository) =>
+        _repository = repository ?? throw new ArgumentNullException(nameof(repository));
 
     public async Task<Unit> Handle(DeleteAlertRuleCommand request, CancellationToken ct)
     {

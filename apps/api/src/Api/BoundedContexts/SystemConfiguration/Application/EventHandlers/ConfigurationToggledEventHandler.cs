@@ -20,7 +20,7 @@ internal sealed class ConfigurationToggledEventHandler : DomainEventHandlerBase<
         ILogger<DomainEventHandlerBase<ConfigurationToggledEvent>> logger)
         : base(dbContext, logger)
     {
-        _cache = cache;
+        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
     }
 
     protected override async Task HandleEventAsync(ConfigurationToggledEvent domainEvent, CancellationToken cancellationToken)

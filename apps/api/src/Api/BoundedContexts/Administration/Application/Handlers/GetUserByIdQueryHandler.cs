@@ -13,7 +13,7 @@ internal class GetUserByIdQueryHandler : IQueryHandler<GetUserByIdQuery, UserDto
 
     public GetUserByIdQueryHandler(MeepleAiDbContext dbContext)
     {
-        _dbContext = dbContext;
+        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
     }
 
     public async Task<UserDto?> Handle(GetUserByIdQuery query, CancellationToken cancellationToken)

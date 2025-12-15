@@ -1,0 +1,102 @@
+Rule,Category,Description,Severity,Status,File,Line,Justification
+CA2100,Security,Review SQL queries for security vulnerabilities,error,enabled,N/A,N/A,No violations
+CA3001,Security,Review code for SQL injection vulnerabilities,error,enabled,N/A,N/A,No violations
+CA3002,Security,Review code for XSS vulnerabilities,error,enabled,N/A,N/A,No violations
+CA3003,Security,Review code for file path injection vulnerabilities,error,enabled,N/A,N/A,No violations
+CA3004,Security,Review code for information disclosure vulnerabilities,error,enabled,N/A,N/A,No violations
+CA3005,Security,Review code for LDAP injection vulnerabilities,error,enabled,N/A,N/A,No violations
+CA3006,Security,Review code for process command injection vulnerabilities,error,enabled,N/A,N/A,No violations
+CA3007,Security,Review code for open redirect vulnerabilities,error,enabled,N/A,N/A,No violations
+CA3008,Security,Review code for XPath injection vulnerabilities,error,enabled,N/A,N/A,No violations
+CA3009,Security,Review code for XML injection vulnerabilities,error,enabled,N/A,N/A,No violations
+CA3010,Security,Review code for XAML injection vulnerabilities,error,enabled,N/A,N/A,No violations
+CA3011,Security,Review code for DLL injection vulnerabilities,error,enabled,N/A,N/A,No violations
+CA3012,Security,Review code for regex injection vulnerabilities,error,enabled,N/A,N/A,No violations
+CA5350,Security,Do Not Use Weak Cryptographic Algorithms,error,enabled,N/A,N/A,No violations
+CA5351,Security,Do Not Use Broken Cryptographic Algorithms,error,enabled,N/A,N/A,No violations
+CA5359,Security,Do Not Disable Certificate Validation,error,enabled,N/A,N/A,No violations
+CA5360,Security,Do Not Call Dangerous Methods In Deserialization,error,enabled,N/A,N/A,No violations
+CA5361,Security,Do Not Disable SChannel Use of Strong Crypto,error,enabled,N/A,N/A,No violations
+CA5363,Security,Do Not Disable Request Validation,error,enabled,N/A,N/A,No violations
+CA5364,Security,Do Not Use Deprecated Security Protocols,error,enabled,N/A,N/A,No violations
+CA5365,Security,Do Not Disable HTTP Header Checking,error,enabled,N/A,N/A,No violations
+CA5373,Security,Do not use obsolete key derivation function,error,enabled,N/A,N/A,No violations
+CA5374,Security,Do Not Use XslTransform,error,enabled,N/A,N/A,No violations
+CA5378,Security,Do not disable ServicePointManagerSecurityProtocols,error,enabled,N/A,N/A,No violations
+CA5379,Security,Ensure Key Derivation Function algorithm is sufficiently strong,error,enabled,N/A,N/A,No violations
+CA5380,Security,Do Not Add Certificates To Root Store,error,enabled,N/A,N/A,No violations
+CA5381,Security,Ensure Certificates Are Not Added To Root Store,error,enabled,N/A,N/A,No violations
+CA5382,Security,Use Secure Cookies In ASP.NET Core,error,enabled,N/A,N/A,No violations
+CA5383,Security,Ensure Use Secure Cookies In ASP.NET Core,error,enabled,N/A,N/A,No violations
+CA5384,Security,Do Not Use Digital Signature Algorithm (DSA),error,enabled,N/A,N/A,No violations
+CA5385,Security,Use Rivest-Shamir-Adleman (RSA) Algorithm With Sufficient Key Size,error,enabled,N/A,N/A,No violations
+CA5386,Security,Avoid hardcoding SecurityProtocolType value,error,enabled,N/A,N/A,No violations
+CA5387,Security,Do Not Use Weak Key Derivation Function With Insufficient Iteration Count,error,enabled,N/A,N/A,No violations
+CA5388,Security,Ensure Sufficient Iteration Count When Using Weak Key Derivation Function,error,enabled,N/A,N/A,No violations
+CA5389,Security,Do Not Add Archive Item Path To The Target File System Path,error,enabled,N/A,N/A,No violations
+CA5390,Security,Do not hard-code encryption key,error,enabled,N/A,N/A,No violations
+CA5391,Security,Use antiforgery tokens in ASP.NET Core MVC controllers,error,enabled,N/A,N/A,No violations
+CA5392,Security,Use DefaultDllImportSearchPaths attribute for P/Invokes,error,enabled,N/A,N/A,No violations
+CA5393,Security,Do not use unsafe DllImportSearchPath value,error,enabled,N/A,N/A,No violations
+CA5394,Security,Do not use insecure randomness,error,suppressed,Api.Tests/Services/RagServicePerformanceTests.cs,30,Random.Shared used for test latency simulation only - not cryptographic
+CA5395,Security,Miss HttpVerb attribute for action methods,error,enabled,N/A,N/A,No violations
+CA5396,Security,Set HttpOnly to true for HttpCookie,error,enabled,N/A,N/A,No violations
+CA5397,Security,Do not use deprecated SslProtocols values,error,enabled,N/A,N/A,No violations
+CA5398,Security,Avoid hardcoded SslProtocols values,error,enabled,N/A,N/A,No violations
+CA5399,Security,HttpClients should enable certificate revocation list checks,error,suppressed,Api.Tests/Integration/FirstAccuracyBaselineTest.cs,69,HttpClient for localhost test - cert revocation not needed
+CA5400,Security,Ensure HttpClient certificate revocation list check is not disabled,error,enabled,N/A,N/A,No violations
+CA5401,Security,Do not use CreateEncryptor with non-default IV,error,enabled,N/A,N/A,No violations
+CA5402,Security,Use CreateEncryptor with the default IV,error,enabled,N/A,N/A,No violations
+CA5403,Security,Do not hard-code certificate,error,enabled,N/A,N/A,No violations
+CA2300,Deserialization,Do not use insecure deserializer BinaryFormatter,error,enabled,N/A,N/A,No violations
+CA2301,Deserialization,Do not call BinaryFormatter.Deserialize without first setting Binder,error,enabled,N/A,N/A,No violations
+CA2302,Deserialization,Ensure BinaryFormatter.Binder is set before calling Deserialize,error,enabled,N/A,N/A,No violations
+CA2305,Deserialization,Do not use insecure deserializer LosFormatter,error,enabled,N/A,N/A,No violations
+CA2310,Deserialization,Do not use insecure deserializer NetDataContractSerializer,error,enabled,N/A,N/A,No violations
+CA2311,Deserialization,Do not deserialize without first setting Binder,error,enabled,N/A,N/A,No violations
+CA2312,Deserialization,Ensure NetDataContractSerializer.Binder is set before deserializing,error,enabled,N/A,N/A,No violations
+CA2315,Deserialization,Do not use insecure deserializer ObjectStateFormatter,error,enabled,N/A,N/A,No violations
+CA2321,Deserialization,Do not deserialize with JavaScriptSerializer using SimpleTypeResolver,error,enabled,N/A,N/A,No violations
+CA2322,Deserialization,Ensure JavaScriptSerializer is not initialized with SimpleTypeResolver,error,enabled,N/A,N/A,No violations
+CA2326,Deserialization,Do not use TypeNameHandling values other than None,error,enabled,N/A,N/A,No violations
+CA2327,Deserialization,Do not use insecure JsonSerializerSettings,error,enabled,N/A,N/A,No violations
+CA2328,Deserialization,Ensure that JsonSerializerSettings are secure,error,enabled,N/A,N/A,No violations
+CA2329,Deserialization,Do not deserialize with JsonSerializer using insecure configuration,error,enabled,N/A,N/A,No violations
+CA2330,Deserialization,Ensure that JsonSerializer has a secure configuration,error,enabled,N/A,N/A,No violations
+CA2350,Deserialization,Do not use DataTable.ReadXml() with untrusted data,error,enabled,N/A,N/A,No violations
+CA2351,Deserialization,Do not use DataSet.ReadXml() with untrusted data,error,enabled,N/A,N/A,No violations
+CA2352,Deserialization,Unsafe DataSet or DataTable in serializable type can be vulnerable,error,enabled,N/A,N/A,No violations
+CA2353,Deserialization,Unsafe DataSet or DataTable in serializable type,error,enabled,N/A,N/A,No violations
+CA2354,Deserialization,Unsafe DataSet or DataTable in deserialized object graph vulnerable to RCE,error,enabled,N/A,N/A,No violations
+CA2355,Deserialization,Unsafe DataSet or DataTable in deserialized object graph,error,enabled,N/A,N/A,No violations
+CA2356,Deserialization,Unsafe DataSet or DataTable type in web deserialized object graph,error,enabled,N/A,N/A,No violations
+CA2361,Deserialization,Ensure auto-generated class with DataSet.ReadXml() is not used with untrusted data,error,enabled,N/A,N/A,No violations
+CA2362,Deserialization,Unsafe DataSet or DataTable in auto-generated serializable type,error,enabled,N/A,N/A,No violations
+CA5362,Deserialization,Potential reference cycle in deserialized object graph,error,enabled,N/A,N/A,No violations
+CA5366,Deserialization,Use XmlReader for DataSet.ReadXml(),error,enabled,N/A,N/A,No violations
+CA5369,Deserialization,Use XmlReader for XmlSerializer.Deserialize(),error,enabled,N/A,N/A,No violations
+CA5370,Deserialization,Use XmlReader for XmlValidatingReader constructor,error,enabled,N/A,N/A,No violations
+CA5371,Deserialization,Use XmlReader for XmlSchema.Read(),error,enabled,N/A,N/A,No violations
+CA5372,Deserialization,Use XmlReader for XPathDocument constructor,error,enabled,N/A,N/A,No violations
+S2068,Security,Credentials should not be hard-coded,error,enabled,N/A,N/A,No violations
+S2245,Security,Using pseudorandom number generators is security-sensitive,error,enabled,N/A,N/A,No violations
+S2255,Security,Writing cookies is security-sensitive,error,enabled,N/A,N/A,No violations
+S2257,Security,Using non-standard cryptographic algorithms is security-sensitive,error,enabled,N/A,N/A,No violations
+S2278,Security,Neither DES nor DESede (3DES) should be used,error,enabled,N/A,N/A,No violations
+S2612,Security,Setting loose POSIX file permissions is security-sensitive,error,enabled,N/A,N/A,No violations
+S2631,Security,Regular expressions should not be vulnerable to DoS attacks,error,enabled,N/A,N/A,No violations
+S3330,Security,Creating cookies without HttpOnly flag is security-sensitive,error,enabled,N/A,N/A,No violations
+S3649,Security,User-provided values should be sanitized before use in SQL,error,enabled,N/A,N/A,No violations
+S4426,Security,Cryptographic keys should be robust,error,enabled,N/A,N/A,No violations
+S4507,Security,Delivering code in production with debug features is security-sensitive,error,enabled,N/A,N/A,No violations
+S4790,Security,Using weak hashing algorithms is security-sensitive,error,enabled,N/A,N/A,No violations
+S5042,Security,Expanding archive files without controlling resource consumption,error,enabled,N/A,N/A,No violations
+S5122,Security,Having a permissive CORS policy is security-sensitive,error,enabled,N/A,N/A,No violations
+S5131,Security,Endpoints should not be vulnerable to reflected XSS attacks,error,enabled,N/A,N/A,No violations
+S5144,Security,Server-side requests should be validated,error,enabled,N/A,N/A,No violations
+S5145,Security,Log injection vulnerabilities should be avoided,error,enabled,N/A,N/A,No violations
+S5334,Security,ASP.NET HTTP request validation feature should not be disabled,error,enabled,N/A,N/A,No violations
+S5693,Security,Allowing requests with excessive content length is security-sensitive,error,enabled,N/A,N/A,No violations
+S5766,Security,Deserializing objects without performing data validation,error,enabled,N/A,N/A,No violations
+S5773,Security,Types allowed to be deserialized should be restricted,error,enabled,N/A,N/A,No violations
+S6377,Security,XML parsers should not be vulnerable to XXE attacks,error,enabled,N/A,N/A,No violations

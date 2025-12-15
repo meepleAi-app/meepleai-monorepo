@@ -22,8 +22,8 @@ internal class GetLowQualityResponsesQueryHandler : IQueryHandler<GetLowQualityR
         MeepleAiDbContext dbContext,
         ILogger<GetLowQualityResponsesQueryHandler> logger)
     {
-        _dbContext = dbContext;
-        _logger = logger;
+        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<LowQualityResponsesResult> Handle(GetLowQualityResponsesQuery query, CancellationToken cancellationToken)

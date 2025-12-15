@@ -1,6 +1,9 @@
 using Api.Infrastructure;
 using Api.Services;
+using Api.Tests.Infrastructure;
 using Api.SharedKernel.Application.Services;
+using DotNet.Testcontainers.Builders;
+using DotNet.Testcontainers.Containers;
 using MediatR;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -10,8 +13,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Moq;
+using Npgsql;
 using StackExchange.Redis;
-using Testcontainers.PostgreSql;
 using Xunit;
 
 namespace Api.Tests.Integration.FrontendSdk;
@@ -32,7 +35,7 @@ namespace Api.Tests.Integration.FrontendSdk;
 /// </summary>
 public class FrontendSdkTestFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
-    private PostgreSqlContainer? _postgresContainer;
+    private IContainer? _postgresContainer;
     private string? _connectionString;
 
     /// <summary>
@@ -49,17 +52,24 @@ public class FrontendSdkTestFactory : WebApplicationFactory<Program>, IAsyncLife
         }
         else
         {
-            // Create Testcontainer for local development
-            _postgresContainer = new PostgreSqlBuilder()
+            // Issue #2031 fix: Use ContainerBuilder instead of PostgreSqlBuilder
+            // to avoid exec-based wait strategy that causes "cannot hijack" errors
+            _postgresContainer = new ContainerBuilder()
                 .WithImage("postgres:16-alpine")
-                .WithDatabase("frontend_sdk_test")
-                .WithUsername("testuser")
-                .WithPassword("testpass")
+                .WithEnvironment("POSTGRES_USER", "testuser")
+                .WithEnvironment("POSTGRES_PASSWORD", "testpass")
+                .WithEnvironment("POSTGRES_DB", "frontend_sdk_test")
                 .WithPortBinding(5432, assignRandomHostPort: true)
+                .WithCleanUp(true)
                 .Build();
 
             await _postgresContainer.StartAsync();
-            _connectionString = _postgresContainer.GetConnectionString();
+
+            var postgresPort = _postgresContainer.GetMappedPublicPort(5432);
+            _connectionString = $"Host=localhost;Port={postgresPort};Database=frontend_sdk_test;Username=testuser;Password=testpass;Ssl Mode=Disable;Trust Server Certificate=true;KeepAlive=30;Pooling=false;";
+
+            // Issue #2031: Wait for PostgreSQL to accept connections with retry
+            await TestcontainersWaitHelpers.WaitForPostgresReadyAsync(_connectionString);
         }
 
         // Initialize database schema with migrations

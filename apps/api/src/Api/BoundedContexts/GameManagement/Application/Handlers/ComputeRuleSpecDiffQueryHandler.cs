@@ -22,9 +22,9 @@ internal class ComputeRuleSpecDiffQueryHandler : IRequestHandler<ComputeRuleSpec
         RuleSpecDiffDomainService diffService,
         ILogger<ComputeRuleSpecDiffQueryHandler> logger)
     {
-        _dbContext = dbContext;
-        _diffService = diffService;
-        _logger = logger;
+        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
+        _diffService = diffService ?? throw new ArgumentNullException(nameof(diffService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<RuleSpecDiff> Handle(ComputeRuleSpecDiffQuery query, CancellationToken cancellationToken)

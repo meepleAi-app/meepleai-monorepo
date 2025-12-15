@@ -46,6 +46,7 @@ internal class HybridCacheService : IHybridCacheService
     }
 
     /// <inheritdoc />
+#pragma warning disable MA0051
     public async Task<T> GetOrCreateAsync<T>(
         string cacheKey,
         Func<CancellationToken, Task<T>> factory,

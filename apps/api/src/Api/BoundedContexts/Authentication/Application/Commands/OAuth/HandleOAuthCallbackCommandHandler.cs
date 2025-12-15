@@ -39,12 +39,12 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
         TimeProvider timeProvider,
         MeepleAiDbContext db)
     {
-        _oauthService = oauthService;
-        _mediator = mediator;
-        _logger = logger;
-        _encryptionService = encryptionService;
-        _timeProvider = timeProvider;
-        _db = db;
+        _oauthService = oauthService ?? throw new ArgumentNullException(nameof(oauthService));
+        _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _encryptionService = encryptionService ?? throw new ArgumentNullException(nameof(encryptionService));
+        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+        _db = db ?? throw new ArgumentNullException(nameof(db));
     }
 
     public async Task<HandleOAuthCallbackResult> Handle(HandleOAuthCallbackCommand command, CancellationToken cancellationToken)

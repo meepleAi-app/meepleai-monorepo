@@ -13,7 +13,7 @@ internal class GetUserByEmailQueryHandler : IQueryHandler<GetUserByEmailQuery, U
 
     public GetUserByEmailQueryHandler(MeepleAiDbContext dbContext)
     {
-        _dbContext = dbContext;
+        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
     }
 
     public async Task<UserDto?> Handle(GetUserByEmailQuery query, CancellationToken cancellationToken)

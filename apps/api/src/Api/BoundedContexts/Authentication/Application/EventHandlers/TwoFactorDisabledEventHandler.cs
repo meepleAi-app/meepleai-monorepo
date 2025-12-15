@@ -23,8 +23,8 @@ internal sealed class TwoFactorDisabledEventHandler : DomainEventHandlerBase<Two
         ILogger<DomainEventHandlerBase<TwoFactorDisabledEvent>> logger)
         : base(dbContext, logger)
     {
-        _userRepository = userRepository;
-        _emailService = emailService;
+        _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
+        _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
     }
 
     protected override async Task HandleEventAsync(TwoFactorDisabledEvent domainEvent, CancellationToken cancellationToken)

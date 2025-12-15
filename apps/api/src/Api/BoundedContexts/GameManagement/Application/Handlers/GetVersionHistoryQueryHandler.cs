@@ -14,7 +14,7 @@ internal class GetVersionHistoryQueryHandler : IQueryHandler<GetVersionHistoryQu
 
     public GetVersionHistoryQueryHandler(MeepleAiDbContext dbContext)
     {
-        _dbContext = dbContext;
+        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
     }
 
     public async Task<RuleSpecHistoryDto> Handle(GetVersionHistoryQuery query, CancellationToken cancellationToken)

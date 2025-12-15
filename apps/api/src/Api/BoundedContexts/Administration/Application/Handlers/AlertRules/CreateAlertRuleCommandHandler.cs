@@ -9,7 +9,8 @@ internal class CreateAlertRuleCommandHandler : IRequestHandler<CreateAlertRuleCo
 {
     private readonly IAlertRuleRepository _repository;
 
-    public CreateAlertRuleCommandHandler(IAlertRuleRepository repository) => _repository = repository;
+    public CreateAlertRuleCommandHandler(IAlertRuleRepository repository) =>
+        _repository = repository ?? throw new ArgumentNullException(nameof(repository));
 
     public async Task<Guid> Handle(CreateAlertRuleCommand request, CancellationToken ct)
     {

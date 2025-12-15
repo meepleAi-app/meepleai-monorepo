@@ -1,12 +1,13 @@
 using Api.Infrastructure;
 using Api.SharedKernel.Application.Services;
 using Api.Tests.Infrastructure;
+using DotNet.Testcontainers.Builders;
+using DotNet.Testcontainers.Containers;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Moq;
-using Testcontainers.PostgreSql;
-using Xunit;
 using Npgsql;
+using Xunit;
 
 namespace Api.Tests.Infrastructure;
 
@@ -17,7 +18,7 @@ namespace Api.Tests.Infrastructure;
 public abstract class IntegrationTestBase<TRepository> : IAsyncLifetime
     where TRepository : class
 {
-    private PostgreSqlContainer? _postgresContainer;
+    private IContainer? _postgresContainer;
     private string? _connectionString;
 
     protected MeepleAiDbContext DbContext { get; private set; } = null!;
@@ -56,17 +57,24 @@ public abstract class IntegrationTestBase<TRepository> : IAsyncLifetime
         }
         else
         {
-            _postgresContainer = new PostgreSqlBuilder()
+            // Issue #2031 fix: Use ContainerBuilder instead of PostgreSqlBuilder
+            // to avoid exec-based wait strategy that causes "cannot hijack" errors
+            _postgresContainer = new ContainerBuilder()
                 .WithImage("postgres:16-alpine")
-                .WithDatabase(DatabaseName)
-                .WithUsername("testuser")
-                .WithPassword("testpass")
+                .WithEnvironment("POSTGRES_USER", "testuser")
+                .WithEnvironment("POSTGRES_PASSWORD", "testpass")
+                .WithEnvironment("POSTGRES_DB", DatabaseName)
                 .WithPortBinding(5432, assignRandomHostPort: true)
+                .WithCleanUp(true)
                 .Build();
 
             await _postgresContainer.StartAsync();
 
-            _connectionString = _postgresContainer.GetConnectionString();
+            var postgresPort = _postgresContainer.GetMappedPublicPort(5432);
+            _connectionString = $"Host=localhost;Port={postgresPort};Database={DatabaseName};Username=testuser;Password=testpass;Ssl Mode=Disable;Trust Server Certificate=true;KeepAlive=30;Pooling=false;";
+
+            // Issue #2031: Wait for PostgreSQL to accept connections with retry
+            await TestcontainersWaitHelpers.WaitForPostgresReadyAsync(_connectionString);
         }
 
         // Create initial DbContext to run migrations
@@ -216,4 +224,3 @@ public abstract class IntegrationTestBase<TRepository> : IAsyncLifetime
         CreateFreshDbContext();
     }
 }
-

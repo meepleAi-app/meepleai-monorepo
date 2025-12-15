@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Evaluation;
 /// <summary>
 /// Result of evaluating a single sample in the RAG pipeline.
 /// </summary>
-public sealed record EvaluationSampleResult
+internal sealed record EvaluationSampleResult
 {
     /// <summary>
     /// Sample ID that was evaluated.
@@ -97,7 +97,7 @@ public sealed record EvaluationSampleResult
 /// <summary>
 /// Complete evaluation result for a dataset run.
 /// </summary>
-public sealed record EvaluationResult
+internal sealed record EvaluationResult
 {
     /// <summary>
     /// Unique identifier for this evaluation run.
@@ -232,8 +232,7 @@ public sealed record EvaluationResult
     }
 
     private static IReadOnlyDictionary<string, EvaluationMetrics> CalculateMetricsByGroup(
-                IReadOnlyList<EvaluationSampleResult> samples,
-                bool byDifficulty)
+                                )
     {
         // Note: This is a simplified implementation. In practice, you'd need to
         // group samples by difficulty or category and calculate metrics per group.

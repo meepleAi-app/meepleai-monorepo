@@ -14,7 +14,7 @@ namespace Api.Routing;
 /// ISSUE-2052: Shareable chat thread link endpoints.
 /// Provides functionality to create, revoke, and access shared chat threads.
 /// </summary>
-public static class ShareLinkEndpoints
+internal static class ShareLinkEndpoints
 {
     public static RouteGroupBuilder MapShareLinkEndpoints(this RouteGroupBuilder group)
     {
@@ -228,7 +228,7 @@ public static class ShareLinkEndpoints
 /// <summary>
 /// Request payload for creating a share link.
 /// </summary>
-public record CreateShareLinkRequest(
+internal record CreateShareLinkRequest(
     string ThreadId,
     string Role,
     int? ExpiryDays,
@@ -238,7 +238,7 @@ public record CreateShareLinkRequest(
 /// <summary>
 /// Request payload for adding a comment to shared thread.
 /// </summary>
-public record AddCommentRequest(
+internal record AddCommentRequest(
     string Token,
     string Content
 );

@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 /// Command to invoke the chess agent for question answering.
 /// CHESS-04: Specialized chess conversational agent.
 /// </summary>
-public sealed record InvokeChessAgentCommand : IRequest<ChessAgentResponse>
+internal sealed record InvokeChessAgentCommand : IRequest<ChessAgentResponse>
 {
     /// <summary>
     /// Chess-related question from the user.

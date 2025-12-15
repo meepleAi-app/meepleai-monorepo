@@ -4,7 +4,7 @@ namespace Api.Constants;
 /// Centralized timeout and duration constants used across the application.
 /// All values are in seconds unless otherwise specified.
 /// </summary>
-public static class TimeoutConstants
+internal static class TimeoutConstants
 {
     // ========================================
     // AI/Embedding Service Timeouts

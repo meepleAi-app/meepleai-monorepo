@@ -25,7 +25,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 /// - PDF version requirements
 /// - MIME type validation
 /// </summary>
-public class DocnetPdfValidator : IPdfValidator
+internal class DocnetPdfValidator : IPdfValidator
 {
     private readonly ILogger<DocnetPdfValidator> _logger;
     private readonly PdfValidationDomainService _domainService;
@@ -414,8 +414,11 @@ public class DocnetPdfValidator : IPdfValidator
 /// Exception thrown when PDF validation fails unexpectedly.
 /// Wraps underlying exceptions for consistent error handling.
 /// </summary>
-public class PdfValidationException : Exception
+internal class PdfValidationException : Exception
 {
     public PdfValidationException(string message) : base(message) { }
     public PdfValidationException(string message, Exception innerException) : base(message, innerException) { }
+    public PdfValidationException()
+    {
+    }
 }

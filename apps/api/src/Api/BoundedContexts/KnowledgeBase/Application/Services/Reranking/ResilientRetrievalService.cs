@@ -15,7 +15,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Services.Reranking;
 /// Orchestrates: hybrid search → reranking → parent resolution.
 /// Provides graceful degradation when reranker is unavailable.
 /// </summary>
-public sealed class ResilientRetrievalService : IRerankedRetrievalService, IDisposable
+internal sealed class ResilientRetrievalService : IRerankedRetrievalService, IDisposable
 {
     private readonly IHybridSearchService _hybridSearchService;
     private readonly ICrossEncoderReranker _reranker;
@@ -342,7 +342,7 @@ public sealed class ResilientRetrievalService : IRerankedRetrievalService, IDisp
 /// <summary>
 /// Configuration options for resilient retrieval service.
 /// </summary>
-public sealed class ResilientRetrievalOptions
+internal sealed class ResilientRetrievalOptions
 {
     /// <summary>
     /// Whether reranking is enabled.

@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.Administration.Domain.Services;
 /// Issue #894: Domain service for aggregated infrastructure details.
 /// Orchestrates health checks and Prometheus metrics in a single view.
 /// </summary>
-public interface IInfrastructureDetailsService
+internal interface IInfrastructureDetailsService
 {
     /// <summary>
     /// Gets comprehensive infrastructure details including health status and metrics.

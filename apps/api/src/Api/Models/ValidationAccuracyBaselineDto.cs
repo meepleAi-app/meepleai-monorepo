@@ -7,7 +7,7 @@ namespace Api.Models;
 /// DTO for validation accuracy baseline measurement.
 /// BGAI-039: Tracks how accurately the validation system identifies correct vs. incorrect responses.
 /// </summary>
-public class ValidationAccuracyBaselineDto
+internal class ValidationAccuracyBaselineDto
 {
     /// <summary>Unique baseline measurement ID</summary>
     [JsonPropertyName("id")]
@@ -93,7 +93,7 @@ public class ValidationAccuracyBaselineDto
 /// <summary>
 /// Request to measure validation accuracy baseline.
 /// </summary>
-public class MeasureValidationAccuracyRequest
+internal class MeasureValidationAccuracyRequest
 {
     /// <summary>Context/description of what is being measured</summary>
     [JsonPropertyName("context")]

@@ -8,7 +8,7 @@ namespace Api.Infrastructure.EntityConfigurations;
 /// EF Core configuration for DocumentCollectionEntity.
 /// Issue #2051: Multi-document collection persistence
 /// </summary>
-public class DocumentCollectionEntityConfiguration : IEntityTypeConfiguration<DocumentCollectionEntity>
+internal class DocumentCollectionEntityConfiguration : IEntityTypeConfiguration<DocumentCollectionEntity>
 {
     public void Configure(EntityTypeBuilder<DocumentCollectionEntity> builder)
     {

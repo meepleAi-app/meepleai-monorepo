@@ -11,7 +11,7 @@ using System.Globalization;
 
 namespace Api.Services;
 
-public class QdrantClientAdapter : IQdrantClientAdapter
+internal class QdrantClientAdapter : IQdrantClientAdapter
 {
     private readonly QdrantClient _client;
     private readonly ILogger<QdrantClientAdapter> _logger;

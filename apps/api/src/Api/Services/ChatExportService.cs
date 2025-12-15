@@ -9,7 +9,7 @@ namespace Api.Services;
 /// <summary>
 /// Orchestrates chat export operations using pluggable formatter strategies.
 /// </summary>
-public class ChatExportService : IChatExportService
+internal class ChatExportService : IChatExportService
 {
     private readonly MeepleAiDbContext _db;
     private readonly IEnumerable<IExportFormatter> _formatters;

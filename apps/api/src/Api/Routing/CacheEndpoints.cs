@@ -10,7 +10,7 @@ namespace Api.Routing;
 /// Cache management endpoints (Admin only).
 /// Handles cache statistics retrieval and cache invalidation operations.
 /// </summary>
-public static class CacheEndpoints
+internal static class CacheEndpoints
 {
     public static RouteGroupBuilder MapCacheEndpoints(this RouteGroupBuilder group)
     {

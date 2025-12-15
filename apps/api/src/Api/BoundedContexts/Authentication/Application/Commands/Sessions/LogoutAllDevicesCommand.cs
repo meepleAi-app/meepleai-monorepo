@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands;
 /// <param name="CurrentSessionTokenHash">Optional hash of the current session token to exclude from revocation.</param>
 /// <param name="IncludeCurrentSession">Whether to also revoke the current session (requires confirmation).</param>
 /// <param name="Password">Optional password for additional verification (security feature).</param>
-public record LogoutAllDevicesCommand(
+internal record LogoutAllDevicesCommand(
     Guid UserId,
     string? CurrentSessionTokenHash = null,
     bool IncludeCurrentSession = false,
@@ -24,7 +24,7 @@ public record LogoutAllDevicesCommand(
 /// <param name="RevokedSessionCount">Number of sessions that were revoked.</param>
 /// <param name="CurrentSessionRevoked">Whether the current session was also revoked.</param>
 /// <param name="ErrorMessage">Error message if the operation failed.</param>
-public record LogoutAllDevicesResult(
+internal record LogoutAllDevicesResult(
     bool Success,
     int RevokedSessionCount,
     bool CurrentSessionRevoked,

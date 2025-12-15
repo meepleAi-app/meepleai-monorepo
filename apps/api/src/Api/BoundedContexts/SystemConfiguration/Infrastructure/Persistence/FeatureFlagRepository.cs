@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.SystemConfiguration.Infrastructure.Persistence;
 /// <summary>
 /// Feature flag repository - stores flags as SystemConfiguration entries with "Features:" prefix.
 /// </summary>
-public class FeatureFlagRepository : RepositoryBase, IFeatureFlagRepository
+internal class FeatureFlagRepository : RepositoryBase, IFeatureFlagRepository
 {
     private const string FlagPrefix = "Features:";
 

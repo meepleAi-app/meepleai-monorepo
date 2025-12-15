@@ -16,7 +16,7 @@ namespace Api.Services;
 /// Service for evaluating prompt quality through automated testing
 /// ADMIN-01 Phase 4: Prompt Testing Framework
 /// </summary>
-public class PromptEvaluationService : IPromptEvaluationService
+internal class PromptEvaluationService : IPromptEvaluationService
 {
     private readonly IRagService _ragService;
     private readonly MeepleAiDbContext _dbContext;

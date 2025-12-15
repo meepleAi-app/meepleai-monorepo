@@ -9,7 +9,7 @@ namespace Api.Helpers;
 /// Centralized exception handling for RAG service operations.
 /// Eliminates duplicate exception handling code across multiple methods.
 /// </summary>
-public static class RagExceptionHandler
+internal static class RagExceptionHandler
 {
     /// <summary>
     /// Handles RAG operation exceptions with consistent logging, metrics, and tracing.
@@ -74,24 +74,19 @@ public static class RagExceptionHandler
         return exceptionType switch
         {
             "HttpRequestException" => (logger, ex) =>
-                logger.LogError(ex, $"HTTP request failed during {context} for game {{GameId}}" +
-                    (additionalInfo != null ? $" - {additionalInfo}" : ""), gameId),
+                logger.LogError(ex, "HTTP request failed during {Context} for game {GameId} - {AdditionalInfo}", context, gameId, additionalInfo ?? string.Empty),
 
             "TaskCanceledException" => (logger, ex) =>
-                logger.LogError(ex, $"{context} timed out for game {{GameId}}" +
-                    (additionalInfo != null ? $" - {additionalInfo}" : ""), gameId),
+                logger.LogError(ex, "{Context} timed out for game {GameId} - {AdditionalInfo}", context, gameId, additionalInfo ?? string.Empty),
 
             "InvalidOperationException" => (logger, ex) =>
-                logger.LogError(ex, $"Invalid operation during {context} for game {{GameId}}" +
-                    (additionalInfo != null ? $" - {additionalInfo}" : ""), gameId),
+                logger.LogError(ex, "Invalid operation during {Context} for game {GameId} - {AdditionalInfo}", context, gameId, additionalInfo ?? string.Empty),
 
             "DbUpdateException" => (logger, ex) =>
-                logger.LogError(ex, $"Database error during {context} for game {{GameId}}" +
-                    (additionalInfo != null ? $" - {additionalInfo}" : ""), gameId),
+                logger.LogError(ex, "Database error during {Context} for game {GameId} - {AdditionalInfo}", context, gameId, additionalInfo ?? string.Empty),
 
             _ => (logger, ex) =>
-                logger.LogError(ex, $"Unexpected error during {context} for game {{GameId}}" +
-                    (additionalInfo != null ? $" - {additionalInfo}" : ""), gameId)
+                logger.LogError(ex, "Unexpected error during {Context} for game {GameId} - {AdditionalInfo}", context, gameId, additionalInfo ?? string.Empty)
         };
     }
 
@@ -206,7 +201,7 @@ public static class RagExceptionHandler
         // Log with context before re-throwing
         if (additionalContext.Length > 0)
         {
-            logger.LogError(exception, $"Error during {context} - Additional context: {{@Context}}", additionalContext);
+            logger.LogError(exception, "Error during {Context} - Additional context: {@Context}", context, additionalContext);
         }
         else
         {
@@ -214,7 +209,9 @@ public static class RagExceptionHandler
         }
 
         // Re-throw for upstream handling (use 'throw;' to preserve stack trace)
+#pragma warning disable S2139 // Log and rethrow is intentional for this helper
         throw exception;
+#pragma warning restore S2139
     }
 
     /// <summary>

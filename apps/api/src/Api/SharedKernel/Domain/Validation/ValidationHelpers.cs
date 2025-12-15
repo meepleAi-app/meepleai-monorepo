@@ -6,7 +6,7 @@ namespace Api.SharedKernel.Domain.Validation;
 /// <summary>
 /// Helper methods for working with validation results.
 /// </summary>
-public static class ValidationHelpers
+internal static class ValidationHelpers
 {
     /// <summary>
     /// Throws a ValidationException if the result is a failure.

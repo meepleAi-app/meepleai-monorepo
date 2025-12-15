@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Api.Infrastructure.EntityConfigurations;
 
-public class AgentEntityConfiguration : IEntityTypeConfiguration<AgentEntity>
+internal class AgentEntityConfiguration : IEntityTypeConfiguration<AgentEntity>
 {
     public void Configure(EntityTypeBuilder<AgentEntity> builder)
     {

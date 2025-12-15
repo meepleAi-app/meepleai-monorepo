@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.SystemConfiguration.Application.Handlers;
 /// <summary>
 /// Handles export of configurations for backup/migration.
 /// </summary>
-public class ExportConfigsQueryHandler : IQueryHandler<ExportConfigsQuery, ConfigurationExportDto>
+internal class ExportConfigsQueryHandler : IQueryHandler<ExportConfigsQuery, ConfigurationExportDto>
 {
     private readonly IConfigurationRepository _configurationRepository;
 
@@ -19,6 +19,7 @@ public class ExportConfigsQueryHandler : IQueryHandler<ExportConfigsQuery, Confi
 
     public async Task<ConfigurationExportDto> Handle(ExportConfigsQuery query, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(query);
         // Get all configurations for the environment
         var allConfigs = await _configurationRepository.GetAllAsync(cancellationToken).ConfigureAwait(false);
 

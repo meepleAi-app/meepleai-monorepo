@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.Administration.Application.Commands;
 /// Command to update or cancel a scheduled report
 /// ISSUE-916: Schedule management
 /// </summary>
-public sealed record UpdateReportScheduleCommand : ICommand<bool>
+internal sealed record UpdateReportScheduleCommand : ICommand<bool>
 {
     public required Guid ReportId { get; init; }
     public required string? ScheduleExpression { get; init; } // null to cancel

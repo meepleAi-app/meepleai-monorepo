@@ -5,7 +5,7 @@ namespace Api.BoundedContexts.Administration.Application.Commands;
 /// <summary>
 /// Command to reset a user's password.
 /// </summary>
-public record ResetUserPasswordCommand(
+internal record ResetUserPasswordCommand(
     string UserId,
     string NewPassword
 ) : ICommand;

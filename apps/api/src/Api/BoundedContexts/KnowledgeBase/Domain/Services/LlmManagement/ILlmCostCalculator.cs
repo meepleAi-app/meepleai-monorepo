@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
 /// Domain service for calculating LLM request costs
 /// ISSUE-960: BGAI-018 - Cost tracking implementation
 /// </summary>
-public interface ILlmCostCalculator
+internal interface ILlmCostCalculator
 {
     /// <summary>
     /// Calculate cost for an LLM request given token usage

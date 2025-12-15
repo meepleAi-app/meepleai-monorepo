@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Handlers;
 /// <summary>
 /// Handles game session completion command.
 /// </summary>
-public class CompleteGameSessionCommandHandler : ICommandHandler<CompleteGameSessionCommand, GameSessionDto>
+internal class CompleteGameSessionCommandHandler : ICommandHandler<CompleteGameSessionCommand, GameSessionDto>
 {
     private readonly IGameSessionRepository _sessionRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -26,6 +26,7 @@ public class CompleteGameSessionCommandHandler : ICommandHandler<CompleteGameSes
 
     public async Task<GameSessionDto> Handle(CompleteGameSessionCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         // Load session
         var session = await _sessionRepository.GetByIdAsync(command.SessionId, cancellationToken)
 .ConfigureAwait(false) ?? throw new InvalidOperationException($"Session with ID {command.SessionId} not found");

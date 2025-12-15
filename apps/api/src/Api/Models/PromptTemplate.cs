@@ -7,7 +7,7 @@ namespace Api.Models;
 /// AI-07.1: Prompt template with few-shot examples for RAG responses
 /// Supports LangChain-style prompt engineering with structured examples
 /// </summary>
-public record PromptTemplate
+internal record PromptTemplate
 {
     /// <summary>
     /// System prompt with instructions and guidelines
@@ -40,7 +40,7 @@ public record PromptTemplate
 /// AI-07.1: Few-shot example for prompt engineering
 /// Demonstrates desired response format and quality to the LLM
 /// </summary>
-public record FewShotExample
+internal record FewShotExample
 {
     /// <summary>
     /// Example question
@@ -61,7 +61,7 @@ public record FewShotExample
 /// <summary>
 /// AI-07.1: Configuration model for RAG prompts section in appsettings.json
 /// </summary>
-public class RagPromptsConfiguration
+internal class RagPromptsConfiguration
 {
     /// <summary>
     /// Default template for generic board game questions
@@ -82,7 +82,7 @@ public class RagPromptsConfiguration
 /// <summary>
 /// AI-07.1: Prompt template configuration model
 /// </summary>
-public class PromptTemplateConfig
+internal class PromptTemplateConfig
 {
     public required string SystemPrompt { get; set; }
     public required string UserPromptTemplate { get; set; }
@@ -92,7 +92,7 @@ public class PromptTemplateConfig
 /// <summary>
 /// AI-07.1: Few-shot example configuration model
 /// </summary>
-public class FewShotExampleConfig
+internal class FewShotExampleConfig
 {
     public required string Question { get; set; }
     public required string Answer { get; set; }

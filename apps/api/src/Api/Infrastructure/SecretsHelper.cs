@@ -20,7 +20,7 @@ namespace Api.Infrastructure;
 ///   2. OPENROUTER_API_KEY environment variable (direct value)
 ///   3. Throws InvalidOperationException if neither is found
 /// </summary>
-public static class SecretsHelper
+internal static class SecretsHelper
 {
     /// <summary>
     /// Gets a secret value from either a _FILE path or direct configuration value.

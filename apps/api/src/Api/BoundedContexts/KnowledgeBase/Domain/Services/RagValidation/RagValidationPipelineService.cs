@@ -29,7 +29,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
 /// - Comprehensive logging for quality tracking
 /// - Thread-safe and stateless for singleton lifecycle
 /// </remarks>
-public class RagValidationPipelineService : IRagValidationPipelineService
+internal class RagValidationPipelineService : IRagValidationPipelineService
 {
     private readonly IConfidenceValidationService _confidenceValidation;
     private readonly IMultiModelValidationService _multiModelValidation;

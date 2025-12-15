@@ -12,7 +12,7 @@ namespace Api.Services;
 /// Part of AI-14 hybrid search implementation.
 /// ADR-016 Phase 3: Supports Italian (meepleai_italian) and English FTS configurations.
 /// </summary>
-public class KeywordSearchService : IKeywordSearchService
+internal class KeywordSearchService : IKeywordSearchService
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly ILogger<KeywordSearchService> _logger;

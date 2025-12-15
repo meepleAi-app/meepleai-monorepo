@@ -12,7 +12,7 @@ namespace Api.BoundedContexts.Administration.Infrastructure.Persistence;
 /// EF Core repository for AdminReport aggregate
 /// ISSUE-916: Repository implementation with domain/entity mapping
 /// </summary>
-public sealed class AdminReportRepository : IAdminReportRepository
+internal sealed class AdminReportRepository : IAdminReportRepository
 {
     private readonly MeepleAiDbContext _dbContext;
 

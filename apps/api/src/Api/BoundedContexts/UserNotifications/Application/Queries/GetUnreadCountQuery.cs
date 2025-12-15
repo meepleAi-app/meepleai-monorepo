@@ -6,4 +6,4 @@ namespace Api.BoundedContexts.UserNotifications.Application.Queries;
 /// Query to get unread notification count for a user.
 /// Optimized for badge display (count only, no full notifications).
 /// </summary>
-public record GetUnreadCountQuery(Guid UserId) : IQuery<int>;
+internal record GetUnreadCountQuery(Guid UserId) : IQuery<int>;

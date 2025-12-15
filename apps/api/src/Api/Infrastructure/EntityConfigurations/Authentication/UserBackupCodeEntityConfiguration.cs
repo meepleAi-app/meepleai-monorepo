@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 namespace Api.Infrastructure.EntityConfigurations;
 
 // AUTH-07: User backup codes for 2FA recovery
-public class UserBackupCodeEntityConfiguration : IEntityTypeConfiguration<UserBackupCodeEntity>
+internal class UserBackupCodeEntityConfiguration : IEntityTypeConfiguration<UserBackupCodeEntity>
 {
     public void Configure(EntityTypeBuilder<UserBackupCodeEntity> builder)
     {

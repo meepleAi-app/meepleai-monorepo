@@ -12,7 +12,7 @@ namespace Api.Routing;
 /// System configuration management endpoints (Admin only).
 /// Handles CRUD operations, validation, versioning, import/export, and cache management.
 /// </summary>
-public static class ConfigurationEndpoints
+internal static class ConfigurationEndpoints
 {
     public static RouteGroupBuilder MapConfigurationEndpoints(this RouteGroupBuilder group)
     {

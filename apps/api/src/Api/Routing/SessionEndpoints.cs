@@ -9,7 +9,7 @@ namespace Api.Routing;
 /// Session management endpoints (Admin only).
 /// Handles session retrieval, revocation, and bulk operations.
 /// </summary>
-public static class SessionEndpoints
+internal static class SessionEndpoints
 {
     public static RouteGroupBuilder MapSessionEndpoints(this RouteGroupBuilder group)
     {

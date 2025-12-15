@@ -6,7 +6,7 @@ namespace Api.Infrastructure.Entities.Administration;
 /// Alert configuration entity for dynamic multi-channel settings (Issue #921)
 /// Stores configuration for Email, Slack, PagerDuty, and global settings.
 /// </summary>
-public class AlertConfigurationEntity
+internal class AlertConfigurationEntity
 {
     public Guid Id { get; set; }
 

@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
 /// Orchestrates hybrid search → reranking → parent resolution pipeline.
 /// Provides graceful degradation when reranker is unavailable.
 /// </summary>
-public interface IRerankedRetrievalService
+internal interface IRerankedRetrievalService
 {
     /// <summary>
     /// Performs reranked retrieval with parent chunk resolution.
@@ -31,7 +31,7 @@ public interface IRerankedRetrievalService
 /// <summary>
 /// Request for reranked retrieval.
 /// </summary>
-public sealed record RerankedRetrievalRequest(
+internal sealed record RerankedRetrievalRequest(
     string Query,
     Guid GameId,
     int TopK = 10,
@@ -42,7 +42,7 @@ public sealed record RerankedRetrievalRequest(
 /// <summary>
 /// Mode for initial retrieval.
 /// </summary>
-public enum RetrievalMode
+internal enum RetrievalMode
 {
     /// <summary>Vector-only search.</summary>
     Vector,
@@ -57,7 +57,7 @@ public enum RetrievalMode
 /// <summary>
 /// Result of reranked retrieval.
 /// </summary>
-public sealed record RerankedRetrievalResult(
+internal sealed record RerankedRetrievalResult(
     IReadOnlyList<RerankedSearchResult> Results,
     RetrievalMetrics Metrics,
     bool UsedReranker,
@@ -67,7 +67,7 @@ public sealed record RerankedRetrievalResult(
 /// <summary>
 /// Individual search result with reranking information.
 /// </summary>
-public sealed record RerankedSearchResult(
+internal sealed record RerankedSearchResult(
     string ChunkId,
     string Content,
     double OriginalScore,
@@ -88,7 +88,7 @@ public sealed record RerankedSearchResult(
 /// <summary>
 /// Metrics for retrieval operation.
 /// </summary>
-public sealed record RetrievalMetrics(
+internal sealed record RetrievalMetrics(
     double TotalTimeMs,
     double SearchTimeMs,
     double? RerankTimeMs,
@@ -100,7 +100,7 @@ public sealed record RetrievalMetrics(
 /// <summary>
 /// Status of the reranked retrieval pipeline.
 /// </summary>
-public sealed record RerankedRetrievalStatus(
+internal sealed record RerankedRetrievalStatus(
     bool RerankerAvailable,
     string RerankerModel,
     DateTime LastHealthCheck,

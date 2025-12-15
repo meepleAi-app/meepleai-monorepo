@@ -11,7 +11,7 @@ namespace Api.Infrastructure.BackgroundTasks;
 /// Redis-backed implementation of background task orchestration with distributed coordination.
 /// Uses Redis for distributed locking and task status tracking.
 /// </summary>
-public class RedisBackgroundTaskOrchestrator : IBackgroundTaskOrchestrator
+internal class RedisBackgroundTaskOrchestrator : IBackgroundTaskOrchestrator
 {
     private readonly IConnectionMultiplexer _redis;
     private readonly ILogger<RedisBackgroundTaskOrchestrator> _logger;

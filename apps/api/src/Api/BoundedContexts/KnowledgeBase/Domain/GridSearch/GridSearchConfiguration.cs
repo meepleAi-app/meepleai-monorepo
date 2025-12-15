@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.GridSearch;
 /// ADR-016 Phase 5: Grid search configuration for RAG pipeline evaluation.
 /// Defines all possible configuration combinations for benchmarking.
 /// </summary>
-public sealed record GridSearchConfiguration
+internal sealed record GridSearchConfiguration
 {
     /// <summary>
     /// Unique identifier for this configuration.
@@ -86,7 +86,7 @@ public sealed record GridSearchConfiguration
 /// <summary>
 /// Chunking configuration for grid search.
 /// </summary>
-public sealed record ChunkingConfig
+internal sealed record ChunkingConfig
 {
     /// <summary>
     /// Configuration identifier.
@@ -140,7 +140,7 @@ public sealed record ChunkingConfig
 /// <summary>
 /// Quantization configuration for grid search.
 /// </summary>
-public sealed record QuantizationConfig
+internal sealed record QuantizationConfig
 {
     /// <summary>
     /// Configuration identifier.
@@ -180,7 +180,7 @@ public sealed record QuantizationConfig
 /// <summary>
 /// Quantization type enumeration.
 /// </summary>
-public enum QuantizationType
+internal enum QuantizationType
 {
     /// <summary>
     /// No quantization - full precision vectors.
@@ -196,7 +196,7 @@ public enum QuantizationType
 /// <summary>
 /// Reranking configuration for grid search.
 /// </summary>
-public sealed record RerankingConfig
+internal sealed record RerankingConfig
 {
     /// <summary>
     /// Configuration identifier.

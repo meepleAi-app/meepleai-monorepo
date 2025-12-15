@@ -12,7 +12,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Handlers;
 /// Retrieves user's PDF upload quota information including usage and limits.
 /// DDD: Uses repository pattern instead of direct DbContext access.
 /// </summary>
-public class GetUserUploadQuotaQueryHandler : IQueryHandler<GetUserUploadQuotaQuery, PdfUploadQuotaInfo>
+internal class GetUserUploadQuotaQueryHandler : IQueryHandler<GetUserUploadQuotaQuery, PdfUploadQuotaInfo>
 {
     private readonly IUserRepository _userRepository;
     private readonly IPdfUploadQuotaService _quotaService;
@@ -30,6 +30,7 @@ public class GetUserUploadQuotaQueryHandler : IQueryHandler<GetUserUploadQuotaQu
 
     public async Task<PdfUploadQuotaInfo> Handle(GetUserUploadQuotaQuery query, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(query);
         // Get user from repository (DDD pattern)
         var user = await _userRepository.GetByIdAsync(query.UserId, cancellationToken).ConfigureAwait(false);
 

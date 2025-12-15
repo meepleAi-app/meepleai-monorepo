@@ -3,7 +3,7 @@ namespace Api.Infrastructure.Entities;
 /// <summary>
 /// Tracks which PDF documents have been indexed in Qdrant
 /// </summary>
-public class VectorDocumentEntity
+internal class VectorDocumentEntity
 {
     // DDD-PHASE2: Converted to Guid for domain alignment
     public Guid Id { get; set; } = Guid.NewGuid();

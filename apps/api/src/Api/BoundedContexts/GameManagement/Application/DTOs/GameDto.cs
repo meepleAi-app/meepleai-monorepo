@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.GameManagement.Application.DTOs;
 /// <summary>
 /// Data transfer object for game information.
 /// </summary>
-public record GameDto(
+internal record GameDto(
     Guid Id,
     string Title,
     string? Publisher,
@@ -24,7 +24,7 @@ public record GameDto(
 /// <summary>
 /// DTO for creating a game.
 /// </summary>
-public record CreateGameRequest(
+internal record CreateGameRequest(
     string Title,
     string? Publisher = null,
     int? YearPublished = null,
@@ -39,7 +39,7 @@ public record CreateGameRequest(
 /// <summary>
 /// DTO for updating game details.
 /// </summary>
-public record UpdateGameRequest(
+internal record UpdateGameRequest(
     string? Title = null,
     string? Publisher = null,
     int? YearPublished = null,
@@ -52,7 +52,7 @@ public record UpdateGameRequest(
 /// <summary>
 /// Extended DTO for game detail page with additional metadata and statistics.
 /// </summary>
-public record GameDetailsDto(
+internal record GameDetailsDto(
     Guid Id,
     string Title,
     string? Publisher,
@@ -77,7 +77,7 @@ public record GameDetailsDto(
 /// <summary>
 /// DTO for rule atom (atomic rule element).
 /// </summary>
-public record RuleAtomDto(
+internal record RuleAtomDto(
     string Id,
     string Text,
     string? Section,
@@ -89,7 +89,7 @@ public record RuleAtomDto(
 /// DTO for rule specification.
 /// Issue #2055: Includes ETag for optimistic concurrency control.
 /// </summary>
-public record RuleSpecDto(
+internal record RuleSpecDto(
     Guid Id,
     Guid GameId,
     string Version,
@@ -107,7 +107,7 @@ public record RuleSpecDto(
 /// <summary>
 /// Issue #2055: Lock status information for collaborative editing.
 /// </summary>
-public record EditorLockDto(
+internal record EditorLockDto(
     Guid GameId,
     Guid? LockedByUserId,
     string? LockedByUserEmail,
@@ -120,7 +120,7 @@ public record EditorLockDto(
 /// <summary>
 /// Issue #2055: Conflict information when concurrent edit is detected.
 /// </summary>
-public record RuleSpecConflictDto(
+internal record RuleSpecConflictDto(
     RuleSpecDto LocalVersion,
     RuleSpecDto RemoteVersion,
     string ConflictReason

@@ -7,14 +7,14 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Queries;
 /// Query to get extracted text from a PDF document.
 /// Returns full text content for display/download.
 /// </summary>
-public sealed record GetPdfTextQuery(
+internal sealed record GetPdfTextQuery(
     Guid PdfId
 ) : IQuery<PdfTextResult?>;
 
 /// <summary>
 /// Result containing PDF text and metadata.
 /// </summary>
-public record PdfTextResult(
+internal record PdfTextResult(
     Guid Id,
     string FileName,
     string? ExtractedText,

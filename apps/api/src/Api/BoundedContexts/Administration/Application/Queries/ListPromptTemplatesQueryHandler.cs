@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.Administration.Application.Queries;
 
-public class ListPromptTemplatesQueryHandler : IQueryHandler<ListPromptTemplatesQuery, PromptTemplateListResponse>
+internal class ListPromptTemplatesQueryHandler : IQueryHandler<ListPromptTemplatesQuery, PromptTemplateListResponse>
 {
     private readonly MeepleAiDbContext _db;
 
@@ -17,6 +17,7 @@ public class ListPromptTemplatesQueryHandler : IQueryHandler<ListPromptTemplates
 
     public async Task<PromptTemplateListResponse> Handle(ListPromptTemplatesQuery request, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         var query = _db.PromptTemplates
             .AsNoTracking()
             .Include(t => t.CreatedBy)

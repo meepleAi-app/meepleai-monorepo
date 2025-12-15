@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.Administration.Application.Handlers;
 /// Handler for Prometheus metrics queries.
 /// Issue #893: Executes PromQL range queries via Prometheus HTTP API.
 /// </summary>
-public class GetPrometheusMetricsQueryHandler : IRequestHandler<GetPrometheusMetricsQuery, PrometheusMetricsResponse>
+internal class GetPrometheusMetricsQueryHandler : IRequestHandler<GetPrometheusMetricsQuery, PrometheusMetricsResponse>
 {
     private readonly IPrometheusQueryService _prometheusService;
     private readonly ILogger<GetPrometheusMetricsQueryHandler> _logger;
@@ -26,6 +26,7 @@ public class GetPrometheusMetricsQueryHandler : IRequestHandler<GetPrometheusMet
         GetPrometheusMetricsQuery request,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         _logger.LogInformation(
             "Executing Prometheus range query. Query: {Query}, Start: {Start}, End: {End}, Step: {Step}",
             request.Query, request.Start, request.End, request.Step);

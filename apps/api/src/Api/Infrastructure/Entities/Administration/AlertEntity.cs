@@ -8,7 +8,7 @@ namespace Api.Infrastructure.Entities;
 /// OPS-07: Alerting system for critical errors and anomalies.
 /// </summary>
 [Table("alerts")]
-public class AlertEntity
+internal class AlertEntity
 {
     [Key]
     [Column("id")]

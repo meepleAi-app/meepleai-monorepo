@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Handlers;
 /// Handler for retrieving all document collections created by a specific user.
 /// Issue #2051: Get collections by user ID
 /// </summary>
-public class GetCollectionsByUserQueryHandler : IQueryHandler<GetCollectionsByUserQuery, IReadOnlyList<DocumentCollectionDto>>
+internal class GetCollectionsByUserQueryHandler : IQueryHandler<GetCollectionsByUserQuery, IReadOnlyList<DocumentCollectionDto>>
 {
     private readonly IDocumentCollectionRepository _collectionRepository;
     private readonly IPdfDocumentRepository _pdfRepository;

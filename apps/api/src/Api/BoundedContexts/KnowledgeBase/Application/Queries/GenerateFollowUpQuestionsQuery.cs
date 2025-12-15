@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 /// Query to generate AI-powered follow-up questions based on Q&A context.
 /// CHAT-02: AI-Generated Follow-Up Questions
 /// </summary>
-public sealed record GenerateFollowUpQuestionsQuery : IRequest<IReadOnlyList<string>>
+internal sealed record GenerateFollowUpQuestionsQuery : IRequest<IReadOnlyList<string>>
 {
     /// <summary>
     /// The user's original question.

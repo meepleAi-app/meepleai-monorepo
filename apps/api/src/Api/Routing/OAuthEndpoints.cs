@@ -13,7 +13,7 @@ namespace Api.Routing;
 /// OAuth 2.0 authentication endpoints.
 /// Handles OAuth provider integrations (Google, Discord, GitHub), account linking, and unlinking.
 /// </summary>
-public static class OAuthEndpoints
+internal static class OAuthEndpoints
 {
     // AUTH-06: OAuth 2.0 endpoints (Google, Discord, GitHub)
     public static RouteGroupBuilder MapOAuthEndpoints(this RouteGroupBuilder group, Action<HttpContext, string, DateTime> writeSessionCookie)

@@ -12,7 +12,7 @@ namespace Api.BoundedContexts.Administration.Application.Handlers;
 /// Handler for bulk password reset operations.
 /// Resets passwords for multiple users in a single transaction.
 /// </summary>
-public class BulkPasswordResetCommandHandler : ICommandHandler<BulkPasswordResetCommand, BulkOperationResult>
+internal class BulkPasswordResetCommandHandler : ICommandHandler<BulkPasswordResetCommand, BulkOperationResult>
 {
     private const int MaxBulkSize = 1000;
     private readonly IUserRepository _userRepository;
@@ -31,6 +31,7 @@ public class BulkPasswordResetCommandHandler : ICommandHandler<BulkPasswordReset
 
     public async Task<BulkOperationResult> Handle(BulkPasswordResetCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         // Validation: Check bulk size limit
         if (command.UserIds == null || command.UserIds.Count == 0)
         {

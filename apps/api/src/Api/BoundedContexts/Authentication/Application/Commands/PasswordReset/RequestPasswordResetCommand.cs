@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands.PasswordReset;
 /// Command to initiate password reset flow.
 /// Generates reset token and sends email to user.
 /// </summary>
-public sealed record RequestPasswordResetCommand : ICommand<RequestPasswordResetResult>
+internal sealed record RequestPasswordResetCommand : ICommand<RequestPasswordResetResult>
 {
     public string Email { get; init; } = string.Empty;
 }
@@ -16,7 +16,7 @@ public sealed record RequestPasswordResetCommand : ICommand<RequestPasswordReset
 /// Result of password reset request.
 /// Always returns success to prevent email enumeration attacks.
 /// </summary>
-public sealed record RequestPasswordResetResult
+internal sealed record RequestPasswordResetResult
 {
     public bool Success { get; init; }
     public string Message { get; init; } = string.Empty;

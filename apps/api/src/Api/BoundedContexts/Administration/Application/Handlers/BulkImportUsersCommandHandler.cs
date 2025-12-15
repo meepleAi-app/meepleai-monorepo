@@ -15,7 +15,7 @@ namespace Api.BoundedContexts.Administration.Application.Handlers;
 /// Handler for bulk user import from CSV.
 /// CSV format: email,displayName,role,password
 /// </summary>
-public class BulkImportUsersCommandHandler : ICommandHandler<BulkImportUsersCommand, BulkOperationResult>
+internal class BulkImportUsersCommandHandler : ICommandHandler<BulkImportUsersCommand, BulkOperationResult>
 {
     private const int MaxBulkSize = 1000;
     private const int MaxCsvSizeBytes = 10 * 1024 * 1024; // 10MB
@@ -35,6 +35,7 @@ public class BulkImportUsersCommandHandler : ICommandHandler<BulkImportUsersComm
 
     public async Task<BulkOperationResult> Handle(BulkImportUsersCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         _logger.LogInformation("Admin {RequesterId} initiating bulk user import from CSV",
             command.RequesterId);
 
@@ -84,9 +85,8 @@ public class BulkImportUsersCommandHandler : ICommandHandler<BulkImportUsersComm
     /// Validates CSV content and parses user records.
     /// </summary>
     private async Task<List<UserImportRecord>> ValidateCsvAndParseUsersAsync(
-        string csvContent,
-        CancellationToken ct = default
-        )
+        string csvContent
+                )
     {
         if (string.IsNullOrWhiteSpace(csvContent))
         {

@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.WorkflowIntegration.Application.Queries.N8NTemplat
 /// Query to validate n8n workflow template JSON structure.
 /// Validates required fields, workflow structure, and parameter definitions.
 /// </summary>
-public sealed record ValidateN8NTemplateQuery : IQuery<ValidateTemplateResponse>
+internal sealed record ValidateN8NTemplateQuery : IQuery<ValidateTemplateResponse>
 {
     public string TemplateJson { get; init; } = string.Empty;
 }

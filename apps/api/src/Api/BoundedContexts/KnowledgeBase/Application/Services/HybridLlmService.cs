@@ -43,7 +43,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
 /// - AI:FallbackChain: Circuit breaker fallback order
 /// - Backward compatible: Works without AI section (uses defaults)
 /// </remarks>
-public class HybridLlmService : ILlmService
+internal class HybridLlmService : ILlmService
 {
     private readonly IEnumerable<ILlmClient> _clients;
     private readonly ILlmRoutingStrategy _routingStrategy;

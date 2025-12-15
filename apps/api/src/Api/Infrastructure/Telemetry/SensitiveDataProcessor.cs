@@ -13,7 +13,7 @@ namespace Api.Infrastructure.Telemetry;
 ///
 /// Based on code review fix P1-SEC3 from hyperdx-implementation-plan.md
 /// </remarks>
-public class SensitiveDataProcessor : BaseProcessor<Activity>
+internal class SensitiveDataProcessor : BaseProcessor<Activity>
 {
     private static readonly string[] SensitiveKeys =
     {

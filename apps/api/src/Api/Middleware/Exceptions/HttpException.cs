@@ -4,7 +4,7 @@ namespace Api.Middleware.Exceptions;
 /// Base exception for HTTP-specific errors with status codes.
 /// Provides a consistent way to throw exceptions that map to specific HTTP responses.
 /// </summary>
-public class HttpException : Exception
+internal class HttpException : Exception
 {
     /// <summary>
     /// Gets the HTTP status code for this exception.
@@ -35,5 +35,8 @@ public class HttpException : Exception
     {
         StatusCode = statusCode;
         ErrorCode = errorCode;
+    }
+    public HttpException()
+    {
     }
 }

@@ -1,6 +1,6 @@
 namespace Api.BoundedContexts.Administration.Domain.Aggregates.AlertConfigurations;
 
-public enum ConfigCategory
+internal enum ConfigCategory
 {
     Global,
     Email,
@@ -8,7 +8,7 @@ public enum ConfigCategory
     PagerDuty
 }
 
-public static class ConfigCategoryExtensions
+internal static class ConfigCategoryExtensions
 {
     public static string ToDisplayString(this ConfigCategory category) => category switch
     {

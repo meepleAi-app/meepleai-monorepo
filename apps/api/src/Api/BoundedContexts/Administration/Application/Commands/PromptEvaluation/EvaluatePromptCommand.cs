@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Administration.Application.Commands.PromptEvaluati
 /// Runs automated tests and calculates quality metrics
 /// ADMIN-01 Phase 4: Prompt Testing Framework
 /// </summary>
-public sealed record EvaluatePromptCommand : ICommand<PromptEvaluationResult>
+internal sealed record EvaluatePromptCommand : ICommand<PromptEvaluationResult>
 {
     /// <summary>Prompt template ID</summary>
     public required string TemplateId { get; init; }

@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// Handler for SearchChessKnowledgeQuery.
 /// Searches the chess knowledge base using vector similarity.
 /// </summary>
-public sealed class SearchChessKnowledgeQueryHandler
+internal sealed class SearchChessKnowledgeQueryHandler
     : IRequestHandler<SearchChessKnowledgeQuery, Api.Services.SearchResult>
 {
     private readonly IQdrantService _qdrantService;
@@ -32,6 +32,7 @@ public sealed class SearchChessKnowledgeQueryHandler
         SearchChessKnowledgeQuery request,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         try
         {
             _logger.LogInformation("Searching chess knowledge: {Query}", request.Query);

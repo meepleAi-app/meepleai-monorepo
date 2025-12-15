@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.Authentication.Application.Queries;
 /// <param name="UserId">Optional user ID filter.</param>
 /// <param name="IsActive">Optional active status filter.</param>
 /// <param name="SearchTerm">Optional search term for key name.</param>
-public record BulkExportApiKeysQuery(
+internal record BulkExportApiKeysQuery(
     Guid? UserId = null,
     bool? IsActive = null,
     string? SearchTerm = null

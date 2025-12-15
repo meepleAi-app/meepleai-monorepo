@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Api.Infrastructure.EntityConfigurations;
 
-public class AuditLogEntityConfiguration : IEntityTypeConfiguration<AuditLogEntity>
+internal class AuditLogEntityConfiguration : IEntityTypeConfiguration<AuditLogEntity>
 {
     public void Configure(EntityTypeBuilder<AuditLogEntity> builder)
     {

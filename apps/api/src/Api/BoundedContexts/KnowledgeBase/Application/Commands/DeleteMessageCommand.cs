@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 /// Command to delete a chat message.
 /// Soft-deletes the message and invalidates subsequent AI responses.
 /// </summary>
-public record DeleteMessageCommand(
+internal record DeleteMessageCommand(
     Guid ThreadId,
     Guid MessageId,
     Guid UserId,

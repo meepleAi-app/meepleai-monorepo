@@ -18,7 +18,7 @@ namespace Api.Services;
 /// Business logic delegated to CQRS handlers (HandleOAuthCallbackCommand, UnlinkOAuthAccountCommand, etc).
 /// This service is a pure infrastructure adapter for provider-specific HTTP operations.
 /// </summary>
-public class OAuthService : IOAuthService
+internal class OAuthService : IOAuthService
 {
     private readonly MeepleAiDbContext _db;
     private readonly IEncryptionService _encryption;
@@ -176,7 +176,7 @@ public class OAuthService : IOAuthService
                 return value;
             }
 
-            if (value.StartsWith("${", StringComparison.Ordinal) && value.EndsWith("}", StringComparison.Ordinal))
+            if (value.StartsWith("${", StringComparison.Ordinal) && value.EndsWith('}'))
             {
                 var envName = value.Substring(2, value.Length - 3);
                 var envValue = Environment.GetEnvironmentVariable(envName);

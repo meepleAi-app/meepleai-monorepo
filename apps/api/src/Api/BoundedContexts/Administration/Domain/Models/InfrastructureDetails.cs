@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Administration.Domain.Models;
 /// <param name="Overall">Overall infrastructure health status</param>
 /// <param name="Services">Individual service health statuses</param>
 /// <param name="Metrics">Prometheus metrics summary</param>
-public record InfrastructureDetails(
+internal record InfrastructureDetails(
     OverallHealthStatus Overall,
     IReadOnlyCollection<ServiceHealthStatus> Services,
     PrometheusMetricsSummary Metrics

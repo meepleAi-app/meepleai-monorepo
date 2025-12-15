@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.Administration.Application.Handlers;
 /// <summary>
 /// Handles creation of a new version for an existing prompt template.
 /// </summary>
-public class CreatePromptVersionCommandHandler : ICommandHandler<CreatePromptVersionCommand, PromptVersionDto>
+internal class CreatePromptVersionCommandHandler : ICommandHandler<CreatePromptVersionCommand, PromptVersionDto>
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly TimeProvider _timeProvider;
@@ -27,6 +27,7 @@ public class CreatePromptVersionCommandHandler : ICommandHandler<CreatePromptVer
         CreatePromptVersionCommand command,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         // Load template with versions
         var template = await _dbContext.Set<PromptTemplateEntity>()
             .Include(t => t.Versions)

@@ -8,7 +8,7 @@ namespace Api.SharedKernel.Application.Services;
 /// repositories must explicitly collect events from domain aggregates and register them
 /// with this collector so they can be dispatched after SaveChangesAsync.
 /// </summary>
-public interface IDomainEventCollector
+internal interface IDomainEventCollector
 {
     /// <summary>
     /// Collects domain events from an aggregate root.

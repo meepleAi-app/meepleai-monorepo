@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Handlers;
 /// <summary>
 /// Handles updating existing rule comments with ownership validation.
 /// </summary>
-public class UpdateRuleCommentCommandHandler : IRequestHandler<UpdateRuleCommentCommand, RuleCommentDto>
+internal class UpdateRuleCommentCommandHandler : IRequestHandler<UpdateRuleCommentCommand, RuleCommentDto>
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly TimeProvider _timeProvider;
@@ -31,6 +31,7 @@ public class UpdateRuleCommentCommandHandler : IRequestHandler<UpdateRuleComment
 
     public async Task<RuleCommentDto> Handle(UpdateRuleCommentCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         ValidateCommentText(command.CommentText);
 
         var comment = await _dbContext.RuleSpecComments

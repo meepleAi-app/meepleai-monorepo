@@ -8,7 +8,7 @@ namespace Api.Services.Rag;
 /// <summary>
 /// Validates citation references in RAG responses
 /// </summary>
-public class CitationExtractorService : ICitationExtractorService
+internal class CitationExtractorService : ICitationExtractorService
 {
     private readonly ILogger<CitationExtractorService> _logger;
 

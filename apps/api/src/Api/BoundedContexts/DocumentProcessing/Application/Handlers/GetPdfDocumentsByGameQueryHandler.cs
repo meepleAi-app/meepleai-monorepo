@@ -6,7 +6,7 @@ using Api.SharedKernel.Application.Interfaces;
 
 namespace Api.BoundedContexts.DocumentProcessing.Application.Handlers;
 
-public class GetPdfDocumentsByGameQueryHandler : IQueryHandler<GetPdfDocumentsByGameQuery, IReadOnlyList<PdfDocumentDto>>
+internal class GetPdfDocumentsByGameQueryHandler : IQueryHandler<GetPdfDocumentsByGameQuery, IReadOnlyList<PdfDocumentDto>>
 {
     private readonly IPdfDocumentRepository _documentRepository;
 

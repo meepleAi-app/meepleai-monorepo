@@ -12,7 +12,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.External.Reranking;
 /// ADR-016 Phase 4: HTTP client for cross-encoder reranking service.
 /// Implements resilient communication with Python reranker service.
 /// </summary>
-public sealed class CrossEncoderRerankerClient : ICrossEncoderReranker
+internal sealed class CrossEncoderRerankerClient : ICrossEncoderReranker
 {
     private readonly HttpClient _httpClient;
     private readonly ILogger<CrossEncoderRerankerClient> _logger;
@@ -200,7 +200,7 @@ public sealed class CrossEncoderRerankerClient : ICrossEncoderReranker
 /// <summary>
 /// Configuration options for reranker client.
 /// </summary>
-public sealed class RerankerClientOptions
+internal sealed class RerankerClientOptions
 {
     /// <summary>
     /// Base URL of the reranker service.
@@ -216,9 +216,12 @@ public sealed class RerankerClientOptions
 /// <summary>
 /// Exception thrown when reranker service communication fails.
 /// </summary>
-public sealed class RerankerServiceException : Exception
+internal sealed class RerankerServiceException : Exception
 {
     public RerankerServiceException(string message) : base(message) { }
     public RerankerServiceException(string message, Exception innerException)
         : base(message, innerException) { }
+    public RerankerServiceException()
+    {
+    }
 }

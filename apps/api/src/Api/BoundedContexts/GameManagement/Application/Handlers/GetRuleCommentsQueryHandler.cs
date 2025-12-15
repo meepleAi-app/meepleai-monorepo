@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Handlers;
 /// <summary>
 /// Handles retrieval of rule comments for a specific game version.
 /// </summary>
-public class GetRuleCommentsQueryHandler : IRequestHandler<GetRuleCommentsQuery, IReadOnlyList<RuleCommentDto>>
+internal class GetRuleCommentsQueryHandler : IRequestHandler<GetRuleCommentsQuery, IReadOnlyList<RuleCommentDto>>
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly ILogger<GetRuleCommentsQueryHandler> _logger;

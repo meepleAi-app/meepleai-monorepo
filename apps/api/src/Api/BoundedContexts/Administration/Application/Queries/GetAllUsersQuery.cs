@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.Administration.Application.Queries;
 /// <summary>
 /// Query to get paginated list of users with optional filtering and sorting.
 /// </summary>
-public record GetAllUsersQuery(
+internal record GetAllUsersQuery(
     string? SearchTerm = null,
     string? RoleFilter = null,
     string? SortBy = null,

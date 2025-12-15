@@ -7,7 +7,7 @@ namespace Api.Services.Qdrant;
 /// <summary>
 /// Manages Qdrant collection lifecycle operations
 /// </summary>
-public class QdrantCollectionManager : IQdrantCollectionManager
+internal class QdrantCollectionManager : IQdrantCollectionManager
 {
     private readonly IQdrantClientAdapter _clientAdapter;
     private readonly ILogger<QdrantCollectionManager> _logger;

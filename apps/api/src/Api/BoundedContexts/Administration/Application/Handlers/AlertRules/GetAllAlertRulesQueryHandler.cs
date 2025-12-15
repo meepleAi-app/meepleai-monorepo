@@ -5,7 +5,7 @@ using MediatR;
 
 namespace Api.BoundedContexts.Administration.Application.Handlers.AlertRules;
 
-public class GetAllAlertRulesQueryHandler : IRequestHandler<GetAllAlertRulesQuery, List<AlertRuleDto>>
+internal class GetAllAlertRulesQueryHandler : IRequestHandler<GetAllAlertRulesQuery, List<AlertRuleDto>>
 {
     private readonly IAlertRuleRepository _repository;
 

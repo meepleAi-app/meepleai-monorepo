@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Handlers;
 /// <summary>
 /// Handles pause game session command.
 /// </summary>
-public class PauseGameSessionCommandHandler : ICommandHandler<PauseGameSessionCommand, GameSessionDto>
+internal class PauseGameSessionCommandHandler : ICommandHandler<PauseGameSessionCommand, GameSessionDto>
 {
     private readonly IGameSessionRepository _sessionRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -25,6 +25,7 @@ public class PauseGameSessionCommandHandler : ICommandHandler<PauseGameSessionCo
 
     public async Task<GameSessionDto> Handle(PauseGameSessionCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         // Fetch session
         var session = await _sessionRepository.GetByIdAsync(command.SessionId, cancellationToken).ConfigureAwait(false);
         if (session == null)

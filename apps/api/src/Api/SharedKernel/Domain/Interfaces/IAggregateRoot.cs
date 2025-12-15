@@ -5,7 +5,7 @@ namespace Api.SharedKernel.Domain.Interfaces;
 /// An aggregate root is an entity that acts as the entry point to an aggregate.
 /// All operations on the aggregate must go through the aggregate root.
 /// </summary>
-public interface IAggregateRoot
+internal interface IAggregateRoot
 {
     /// <summary>
     /// Gets the collection of domain events raised by this aggregate root.

@@ -3,7 +3,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Validation;
 /// <summary>
 /// Provides safe GUID parsing with validation and descriptive error messages.
 /// </summary>
-public static class GuidValidator
+internal static class GuidValidator
 {
     /// <summary>
     /// Parses a string to Guid with validation.

@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands.RevokeShareLin
 /// Handler for revoking shareable chat thread links.
 /// Updates database and adds token to Redis blacklist.
 /// </summary>
-public sealed class RevokeShareLinkCommandHandler : IRequestHandler<RevokeShareLinkCommand, bool>
+internal sealed class RevokeShareLinkCommandHandler : IRequestHandler<RevokeShareLinkCommand, bool>
 {
     private readonly IShareLinkRepository _shareLinkRepository;
     private readonly IDistributedCache _cache;
@@ -25,6 +25,7 @@ public sealed class RevokeShareLinkCommandHandler : IRequestHandler<RevokeShareL
         RevokeShareLinkCommand request,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         if (request is null) throw new ArgumentNullException(nameof(request));
         // Load share link via repository
         var shareLink = await _shareLinkRepository.GetByIdAsync(request.ShareLinkId, cancellationToken).ConfigureAwait(false);

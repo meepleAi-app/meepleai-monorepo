@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
 ///
 /// Lifecycle: In-memory state, reset on app restart or when budget drops below critical.
 /// </remarks>
-public interface ILlmModelOverrideService
+internal interface ILlmModelOverrideService
 {
     /// <summary>
     /// Check if budget mode is currently active (cheaper models enforced)

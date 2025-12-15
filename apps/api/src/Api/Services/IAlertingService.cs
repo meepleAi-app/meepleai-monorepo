@@ -6,7 +6,7 @@ namespace Api.Services;
 /// Service for managing system alerts from Prometheus AlertManager.
 /// OPS-07: Alerting system for critical errors and anomalies.
 /// </summary>
-public interface IAlertingService
+internal interface IAlertingService
 {
     /// <summary>
     /// Send an alert through configured channels (Email, Slack, PagerDuty).

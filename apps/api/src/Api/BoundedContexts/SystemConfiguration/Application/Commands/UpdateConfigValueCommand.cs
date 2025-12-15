@@ -3,7 +3,7 @@ using Api.SharedKernel.Application.Interfaces;
 
 namespace Api.BoundedContexts.SystemConfiguration.Application.Commands;
 
-public record UpdateConfigValueCommand(
+internal record UpdateConfigValueCommand(
     Guid ConfigId,
     string NewValue,
     Guid UpdatedByUserId

@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Administration.Application.Queries;
 /// Query to retrieve historical metrics from Prometheus.
 /// Issue #893: Prometheus client integration for range queries.
 /// </summary>
-public record GetPrometheusMetricsQuery : IRequest<PrometheusMetricsResponse>
+internal record GetPrometheusMetricsQuery : IRequest<PrometheusMetricsResponse>
 {
     /// <summary>
     /// PromQL query string (e.g., "sum(rate(http_requests_total[5m]))")
@@ -34,20 +34,20 @@ public record GetPrometheusMetricsQuery : IRequest<PrometheusMetricsResponse>
 /// <summary>
 /// Response DTO for Prometheus metrics query.
 /// </summary>
-public record PrometheusMetricsResponse(
+internal record PrometheusMetricsResponse(
     string ResultType,
     IReadOnlyCollection<PrometheusTimeSeriesDto> TimeSeries);
 
 /// <summary>
 /// DTO for a single Prometheus time series.
 /// </summary>
-public record PrometheusTimeSeriesDto(
+internal record PrometheusTimeSeriesDto(
     IReadOnlyDictionary<string, string> Metric,
     IReadOnlyCollection<PrometheusDataPointDto> Values);
 
 /// <summary>
 /// DTO for a single data point.
 /// </summary>
-public record PrometheusDataPointDto(
+internal record PrometheusDataPointDto(
     DateTime Timestamp,
     double Value);

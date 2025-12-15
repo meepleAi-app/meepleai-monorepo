@@ -5,7 +5,7 @@ namespace Api.BoundedContexts.Administration.Domain.Repositories;
 /// <summary>
 /// Repository for AlertConfiguration aggregate (Issue #921)
 /// </summary>
-public interface IAlertConfigurationRepository
+internal interface IAlertConfigurationRepository
 {
     Task<AlertConfiguration?> GetByIdAsync(Guid id, CancellationToken ct = default);
     Task<AlertConfiguration?> GetByKeyAsync(string configKey, CancellationToken ct = default);

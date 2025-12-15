@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Api.Infrastructure.EntityConfigurations;
 
-public class AiRequestLogEntityConfiguration : IEntityTypeConfiguration<AiRequestLogEntity>
+internal class AiRequestLogEntityConfiguration : IEntityTypeConfiguration<AiRequestLogEntity>
 {
     public void Configure(EntityTypeBuilder<AiRequestLogEntity> builder)
     {

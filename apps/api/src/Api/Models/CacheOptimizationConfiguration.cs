@@ -5,7 +5,7 @@ namespace Api.Models;
 /// cache warming, and dynamic TTL strategies.
 /// AI-10: Cache Optimization - Configuration for hot/warm/cold query classification.
 /// </summary>
-public class CacheOptimizationConfiguration
+internal class CacheOptimizationConfiguration
 {
     /// <summary>
     /// Enables cache metrics recording (hits/misses/evictions) via OpenTelemetry.

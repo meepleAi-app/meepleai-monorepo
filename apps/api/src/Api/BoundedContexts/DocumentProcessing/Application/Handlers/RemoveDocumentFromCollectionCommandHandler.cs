@@ -12,7 +12,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Handlers;
 /// Handler for removing a PDF document from a collection.
 /// Issue #2051: Remove document from collection
 /// </summary>
-public class RemoveDocumentFromCollectionCommandHandler : ICommandHandler<RemoveDocumentFromCollectionCommand, bool>
+internal class RemoveDocumentFromCollectionCommandHandler : ICommandHandler<RemoveDocumentFromCollectionCommand, bool>
 {
     private readonly IDocumentCollectionRepository _collectionRepository;
     private readonly IPdfDocumentRepository _pdfRepository;
@@ -33,6 +33,7 @@ public class RemoveDocumentFromCollectionCommandHandler : ICommandHandler<Remove
 
     public async Task<bool> Handle(RemoveDocumentFromCollectionCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         _logger.LogInformation(
             "User {UserId} removing document {PdfDocumentId} from collection {CollectionId}",
             command.UserId, command.PdfDocumentId, command.CollectionId);

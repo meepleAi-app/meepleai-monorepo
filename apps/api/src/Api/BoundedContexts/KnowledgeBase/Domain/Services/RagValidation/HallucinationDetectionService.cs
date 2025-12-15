@@ -22,7 +22,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
 /// - Medium: 3-4 keywords (significant uncertainty)
 /// - High: 5+ keywords or critical phrases
 /// </remarks>
-public class HallucinationDetectionService : IHallucinationDetectionService
+internal class HallucinationDetectionService : IHallucinationDetectionService
 {
     private readonly ILanguageDetectionService? _languageDetection;
     private readonly ILogger<HallucinationDetectionService> _logger;

@@ -21,7 +21,7 @@ namespace Api.Extensions;
 /// // Use session...
 /// </code>
 /// </summary>
-public static class SessionValidationExtensions
+internal static class SessionValidationExtensions
 {
     /// <summary>
     /// Validates that an active session exists in the HttpContext.Items collection.

@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.Administration.Application.Queries;
 
-public class GetPromptTemplateQueryHandler : IQueryHandler<GetPromptTemplateQuery, PromptTemplateDto?>
+internal class GetPromptTemplateQueryHandler : IQueryHandler<GetPromptTemplateQuery, PromptTemplateDto?>
 {
     private readonly MeepleAiDbContext _db;
 
@@ -16,6 +16,7 @@ public class GetPromptTemplateQueryHandler : IQueryHandler<GetPromptTemplateQuer
 
     public async Task<PromptTemplateDto?> Handle(GetPromptTemplateQuery request, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         if (!Guid.TryParse(request.TemplateId, out var templateGuid))
         {
             return null;

@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Api.Infrastructure.EntityConfigurations;
 
-public class CacheStatEntityConfiguration : IEntityTypeConfiguration<CacheStatEntity>
+internal class CacheStatEntityConfiguration : IEntityTypeConfiguration<CacheStatEntity>
 {
     public void Configure(EntityTypeBuilder<CacheStatEntity> builder)
     {

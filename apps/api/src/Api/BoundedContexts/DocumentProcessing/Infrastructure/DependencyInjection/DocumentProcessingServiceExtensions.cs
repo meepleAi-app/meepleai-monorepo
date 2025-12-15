@@ -14,12 +14,12 @@ using Polly.Extensions.Http;
 
 namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.DependencyInjection;
 
-public static class DocumentProcessingServiceExtensions
+internal static class DocumentProcessingServiceExtensions
 {
     /// <summary>
     /// Keyed service keys for PDF text extractors (ISSUE-1174: Post-merge enhancement)
     /// </summary>
-    public static class PdfExtractorKeys
+    internal static class PdfExtractorKeys
     {
         public const string Unstructured = "unstructured";
         public const string SmolDocling = "smoldocling";

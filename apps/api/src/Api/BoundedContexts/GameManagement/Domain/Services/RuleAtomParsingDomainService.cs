@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.GameManagement.Domain.Services;
 /// Domain service for parsing atomic rules from various formats.
 /// Handles JSON parsing and plain text extraction.
 /// </summary>
-public partial class RuleAtomParsingDomainService
+internal partial class RuleAtomParsingDomainService
 {
     /// <summary>
     /// Parses atomic rules from JSON format.

@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.EmbeddingProviders.Pr
 /// Ollama embedding provider supporting nomic-embed-text and mxbai-embed-large.
 /// Uses local Ollama server for free, privacy-preserving embeddings.
 /// </summary>
-public sealed class OllamaEmbeddingProvider : EmbeddingProviderBase
+internal sealed class OllamaEmbeddingProvider : EmbeddingProviderBase
 {
     private readonly EmbeddingProviderType _providerType;
     private readonly string _modelName;

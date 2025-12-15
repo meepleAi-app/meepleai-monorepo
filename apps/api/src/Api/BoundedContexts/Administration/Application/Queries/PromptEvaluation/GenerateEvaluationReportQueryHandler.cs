@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.Administration.Application.Queries.PromptEvaluatio
 /// Handler for generating evaluation reports in Markdown or JSON format
 /// Delegates to IPromptEvaluationService (infrastructure adapter)
 /// </summary>
-public sealed class GenerateEvaluationReportQueryHandler : IQueryHandler<GenerateEvaluationReportQuery, (string Report, string ContentType)>
+internal sealed class GenerateEvaluationReportQueryHandler : IQueryHandler<GenerateEvaluationReportQuery, (string Report, string ContentType)>
 {
     private readonly IPromptEvaluationService _evaluationService;
     private readonly ILogger<GenerateEvaluationReportQueryHandler> _logger;
@@ -22,6 +22,7 @@ public sealed class GenerateEvaluationReportQueryHandler : IQueryHandler<Generat
 
     public async Task<(string Report, string ContentType)> Handle(GenerateEvaluationReportQuery query, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(query);
         _logger.LogInformation(
             "Generating {Format} report for evaluation {EvaluationId}",
             query.Format, query.EvaluationId);

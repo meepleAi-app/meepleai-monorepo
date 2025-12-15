@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands.TwoFactor;
 /// Command to generate TOTP setup for two-factor authentication.
 /// Creates secret, QR code URL, and backup codes for user enrollment.
 /// </summary>
-public sealed record GenerateTotpSetupCommand : ICommand<GenerateTotpSetupResult>
+internal sealed record GenerateTotpSetupCommand : ICommand<GenerateTotpSetupResult>
 {
     public Guid UserId { get; init; }
     public string UserEmail { get; init; } = string.Empty;
@@ -18,7 +18,7 @@ public sealed record GenerateTotpSetupCommand : ICommand<GenerateTotpSetupResult
 /// Result of TOTP setup generation.
 /// Contains secret key, QR code URL, and backup codes for user.
 /// </summary>
-public sealed record GenerateTotpSetupResult
+internal sealed record GenerateTotpSetupResult
 {
     public string Secret { get; init; } = string.Empty;
     public string QrCodeUrl { get; init; } = string.Empty;

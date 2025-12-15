@@ -20,7 +20,7 @@ namespace Api.Routing;
 /// AI and Agent endpoints.
 /// Handles RAG QA, explain, setup guide, chess agent, BGG API, and chess knowledge indexing.
 /// </summary>
-public static class AiEndpoints
+internal static class AiEndpoints
 {
     public static RouteGroupBuilder MapAiEndpoints(this RouteGroupBuilder group)
     {

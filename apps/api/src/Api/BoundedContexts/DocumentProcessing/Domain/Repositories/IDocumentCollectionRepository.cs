@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 /// Repository interface for DocumentCollection aggregate.
 /// Issue #2051: Multi-document collection persistence
 /// </summary>
-public interface IDocumentCollectionRepository : IRepository<DocumentCollection, Guid>
+internal interface IDocumentCollectionRepository : IRepository<DocumentCollection, Guid>
 {
     /// <summary>
     /// Finds collection by game ID. Returns null if not found.

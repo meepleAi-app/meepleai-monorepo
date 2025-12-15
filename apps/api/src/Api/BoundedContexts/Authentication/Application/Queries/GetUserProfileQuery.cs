@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.Authentication.Application.Queries;
 /// Query to retrieve user profile information.
 /// Returns detailed profile data for the authenticated user.
 /// </summary>
-public record GetUserProfileQuery : IQuery<UserProfileDto?>
+internal record GetUserProfileQuery : IQuery<UserProfileDto?>
 {
     public Guid UserId { get; init; }
 }

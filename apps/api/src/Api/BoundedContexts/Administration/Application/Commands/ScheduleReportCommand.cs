@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Administration.Application.Commands;
 /// ISSUE-916: Report scheduling
 /// ISSUE-918: Email delivery integration
 /// </summary>
-public sealed record ScheduleReportCommand : ICommand<Guid>
+internal sealed record ScheduleReportCommand : ICommand<Guid>
 {
     public required string Name { get; init; }
     public required string Description { get; init; }

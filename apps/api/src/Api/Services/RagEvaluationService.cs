@@ -18,7 +18,7 @@ namespace Api.Services;
 /// AI-06: Service for offline RAG evaluation
 /// Implements information retrieval metrics: Precision@K, Recall@K, MRR, latency percentiles
 /// </summary>
-public interface IRagEvaluationService
+internal interface IRagEvaluationService
 {
     /// <summary>
     /// Load evaluation dataset from JSON file
@@ -45,7 +45,7 @@ public interface IRagEvaluationService
     string GenerateJsonReport(RagEvaluationReport report);
 }
 
-public class RagEvaluationService : IRagEvaluationService
+internal class RagEvaluationService : IRagEvaluationService
 {
     private readonly IQdrantService _qdrantService;
     private readonly IEmbeddingService _embeddingService;

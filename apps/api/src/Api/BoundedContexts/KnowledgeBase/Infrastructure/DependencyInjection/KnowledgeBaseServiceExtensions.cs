@@ -24,7 +24,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.DependencyInjection;
 /// DDD-PHASE3: Dependency injection extensions for KnowledgeBase bounded context.
 /// Registers domain services, repositories, adapters, and handlers.
 /// </summary>
-public static class KnowledgeBaseServiceExtensions
+internal static class KnowledgeBaseServiceExtensions
 {
     public static IServiceCollection AddKnowledgeBaseServices(this IServiceCollection services, IConfiguration? configuration = null)
     {

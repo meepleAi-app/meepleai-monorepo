@@ -12,7 +12,7 @@ namespace Api.BoundedContexts.Authentication.Application.Handlers;
 /// Returns CSV string with metadata only (no actual keys for security).
 /// Format: userId,keyName,scopes,expiresAt,metadata
 /// </summary>
-public class BulkExportApiKeysQueryHandler : IQueryHandler<BulkExportApiKeysQuery, string>
+internal class BulkExportApiKeysQueryHandler : IQueryHandler<BulkExportApiKeysQuery, string>
 {
     private readonly IApiKeyRepository _apiKeyRepository;
     private readonly ILogger<BulkExportApiKeysQueryHandler> _logger;
@@ -27,6 +27,7 @@ public class BulkExportApiKeysQueryHandler : IQueryHandler<BulkExportApiKeysQuer
 
     public async Task<string> Handle(BulkExportApiKeysQuery query, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(query);
         _logger.LogInformation("Exporting API keys to CSV with filters: UserId={UserId}, IsActive={IsActive}, SearchTerm={SearchTerm}",
             query.UserId, query.IsActive, query.SearchTerm);
 

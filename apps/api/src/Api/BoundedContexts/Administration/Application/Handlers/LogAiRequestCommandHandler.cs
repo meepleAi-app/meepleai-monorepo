@@ -5,7 +5,7 @@ using Api.SharedKernel.Application.Interfaces;
 
 namespace Api.BoundedContexts.Administration.Application.Handlers;
 
-public class LogAiRequestCommandHandler : ICommandHandler<LogAiRequestCommand>
+internal class LogAiRequestCommandHandler : ICommandHandler<LogAiRequestCommand>
 {
     private readonly MeepleAiDbContext _db;
     private readonly TimeProvider _timeProvider;
@@ -23,6 +23,7 @@ public class LogAiRequestCommandHandler : ICommandHandler<LogAiRequestCommand>
 
     public async Task Handle(LogAiRequestCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         try
         {
             var log = new AiRequestLogEntity

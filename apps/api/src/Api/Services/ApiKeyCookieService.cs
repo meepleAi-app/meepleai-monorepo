@@ -7,7 +7,7 @@ namespace Api.Services;
 /// Protects API key values before they are stored inside cookies and unprotects them on reads.
 /// Prevents plaintext API keys from leaking via Set-Cookie headers, logs, or support captures.
 /// </summary>
-public class ApiKeyCookieService
+internal class ApiKeyCookieService
 {
     private const string ProtectorPurpose = "MeepleAI.ApiKeyCookie";
     private readonly IDataProtector _protector;

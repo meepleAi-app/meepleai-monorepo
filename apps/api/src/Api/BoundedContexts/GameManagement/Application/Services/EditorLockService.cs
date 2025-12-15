@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Services;
 /// Issue #2055: Service for managing collaborative editor locks using Redis TTL.
 /// Implements soft locking with automatic expiry for RuleSpec editing.
 /// </summary>
-public interface IEditorLockService
+internal interface IEditorLockService
 {
     /// <summary>
     /// Attempts to acquire a lock for editing a RuleSpec.
@@ -58,7 +58,7 @@ public interface IEditorLockService
 /// <summary>
 /// Result of a lock acquisition attempt.
 /// </summary>
-public record EditorLockResult(
+internal record EditorLockResult(
     bool Success,
     EditorLockDto LockStatus,
     string? Message = null
@@ -79,7 +79,7 @@ internal sealed record EditorLockData(
 /// Issue #2055: Redis-based implementation of editor lock service.
 /// Uses distributed cache with TTL for automatic lock expiry.
 /// </summary>
-public class EditorLockService : IEditorLockService
+internal class EditorLockService : IEditorLockService
 {
     private readonly IDistributedCache _cache;
     private readonly ILogger<EditorLockService> _logger;

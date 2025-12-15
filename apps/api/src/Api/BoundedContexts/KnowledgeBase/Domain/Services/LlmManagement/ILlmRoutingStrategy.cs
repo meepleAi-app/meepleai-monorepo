@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
 /// Strategy for determining which LLM client and model to use for a given request
 /// ISSUE-958: Hybrid LLM architecture with adaptive routing
 /// </summary>
-public interface ILlmRoutingStrategy
+internal interface ILlmRoutingStrategy
 {
     /// <summary>
     /// Select the appropriate LLM provider and model based on routing logic
@@ -21,7 +21,7 @@ public interface ILlmRoutingStrategy
 /// <summary>
 /// Result of LLM routing decision
 /// </summary>
-public record LlmRoutingDecision(
+internal record LlmRoutingDecision(
     string ProviderName,
     string ModelId,
     string Reason)

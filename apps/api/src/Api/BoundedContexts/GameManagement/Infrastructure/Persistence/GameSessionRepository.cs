@@ -14,7 +14,7 @@ namespace Api.BoundedContexts.GameManagement.Infrastructure.Persistence;
 /// EF Core implementation of GameSession repository.
 /// Maps between domain GameSession entity and GameSessionEntity persistence model.
 /// </summary>
-public class GameSessionRepository : RepositoryBase, IGameSessionRepository
+internal class GameSessionRepository : RepositoryBase, IGameSessionRepository
 {
     public GameSessionRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
         : base(dbContext, eventCollector)

@@ -7,7 +7,7 @@ namespace Api.Services;
 /// Service for calculating multi-dimensional quality scores for AI responses.
 /// AI-11: Provides RAG confidence, LLM confidence, citation quality, and overall confidence metrics.
 /// </summary>
-public class ResponseQualityService : IResponseQualityService
+internal class ResponseQualityService : IResponseQualityService
 {
     // Heuristic constants for LLM confidence calculation
     private const double BaseConfidence = 0.85;
@@ -170,7 +170,7 @@ public class ResponseQualityService : IResponseQualityService
 /// <summary>
 /// Interface for response quality service.
 /// </summary>
-public interface IResponseQualityService
+internal interface IResponseQualityService
 {
     /// <summary>
     /// Calculate quality scores for an AI response.
@@ -186,7 +186,7 @@ public interface IResponseQualityService
 /// RAG search result with confidence score.
 /// Used for quality scoring calculations.
 /// </summary>
-public class RagSearchResult
+internal class RagSearchResult
 {
     public double Score { get; set; }
     // Additional properties can be added as needed
@@ -196,7 +196,7 @@ public class RagSearchResult
 /// Citation reference in an AI response.
 /// Links response content back to source documents.
 /// </summary>
-public class Citation
+internal class Citation
 {
     public Guid DocumentId { get; set; }
     public int PageNumber { get; set; }

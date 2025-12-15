@@ -17,7 +17,7 @@ namespace Api.Routing;
 /// DDD-PHASE3: KnowledgeBase bounded context endpoints.
 /// Provides vector search and RAG Q&A via CQRS handlers.
 /// </summary>
-public static class KnowledgeBaseEndpoints
+internal static class KnowledgeBaseEndpoints
 {
     public static RouteGroupBuilder MapKnowledgeBaseEndpoints(this RouteGroupBuilder group)
     {
@@ -585,7 +585,7 @@ public static class KnowledgeBaseEndpoints
 /// <summary>
 /// Request model for knowledge base search.
 /// </summary>
-public record KnowledgeBaseSearchRequest(
+internal record KnowledgeBaseSearchRequest(
     string gameId,
     string query,
     int? topK = null,

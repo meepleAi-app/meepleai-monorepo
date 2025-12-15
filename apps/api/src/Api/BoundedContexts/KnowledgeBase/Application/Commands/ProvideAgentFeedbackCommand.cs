@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 /// Command to record user feedback for an agent response.
 /// Used to track agent effectiveness and improve AI interactions.
 /// </summary>
-public sealed record ProvideAgentFeedbackCommand : IRequest
+internal sealed record ProvideAgentFeedbackCommand : IRequest
 {
     /// <summary>
     /// ID of the message being rated.

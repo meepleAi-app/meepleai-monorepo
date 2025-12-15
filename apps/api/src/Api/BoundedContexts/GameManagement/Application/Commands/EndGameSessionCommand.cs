@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands;
 /// Command to end (complete) a game session with optional winner.
 /// Business alias for CompleteGameSessionCommand.
 /// </summary>
-public record EndGameSessionCommand(
+internal record EndGameSessionCommand(
     Guid SessionId,
     string? WinnerName = null
 ) : ICommand<GameSessionDto>;

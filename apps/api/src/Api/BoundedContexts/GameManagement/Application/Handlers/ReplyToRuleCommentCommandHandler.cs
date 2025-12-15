@@ -13,7 +13,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Handlers;
 /// <summary>
 /// Handles replying to existing rule comments with thread depth validation.
 /// </summary>
-public partial class ReplyToRuleCommentCommandHandler : IRequestHandler<ReplyToRuleCommentCommand, RuleCommentDto>
+internal partial class ReplyToRuleCommentCommandHandler : IRequestHandler<ReplyToRuleCommentCommand, RuleCommentDto>
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly TimeProvider _timeProvider;
@@ -38,6 +38,7 @@ public partial class ReplyToRuleCommentCommandHandler : IRequestHandler<ReplyToR
 
     public async Task<RuleCommentDto> Handle(ReplyToRuleCommentCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         ValidateCommentText(command.CommentText);
 
         // Load parent comment with validation

@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Queries.BggApi;
 /// Infrastructure delegation: HTTP calls, XML parsing, caching via BggApiService.
 /// External API: BoardGameGeek XML API v2 (thing endpoint).
 /// </summary>
-public sealed class GetBggGameDetailsQueryHandler : IQueryHandler<GetBggGameDetailsQuery, BggGameDetailsDto?>
+internal sealed class GetBggGameDetailsQueryHandler : IQueryHandler<GetBggGameDetailsQuery, BggGameDetailsDto?>
 {
     private readonly IBggApiService _bggApiService;
     private readonly ILogger<GetBggGameDetailsQueryHandler> _logger;
@@ -26,6 +26,7 @@ public sealed class GetBggGameDetailsQueryHandler : IQueryHandler<GetBggGameDeta
 
     public async Task<BggGameDetailsDto?> Handle(GetBggGameDetailsQuery query, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(query);
         // Business logic validation
         if (query.BggId <= 0)
         {

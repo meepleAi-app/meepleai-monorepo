@@ -21,7 +21,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Domain.Services;
 ///
 /// <para>Limits are configurable via SystemConfiguration with keys: UploadLimits:{tier}:{DailyLimit|WeeklyLimit}</para>
 /// </summary>
-public interface IPdfUploadQuotaService
+internal interface IPdfUploadQuotaService
 {
     /// <summary>
     /// Checks if a user can upload a PDF based on their tier limits.
@@ -101,7 +101,7 @@ public interface IPdfUploadQuotaService
 /// <summary>
 /// Result of quota check operation.
 /// </summary>
-public record PdfUploadQuotaResult
+internal record PdfUploadQuotaResult
 {
     public bool Allowed { get; init; }
     public string? ErrorMessage { get; init; }
@@ -159,7 +159,7 @@ public record PdfUploadQuotaResult
 /// <summary>
 /// Information about user's current quota status.
 /// </summary>
-public record PdfUploadQuotaInfo
+internal record PdfUploadQuotaInfo
 {
     public int DailyUploadsUsed { get; init; }
     public int DailyLimit { get; init; }
@@ -175,7 +175,7 @@ public record PdfUploadQuotaInfo
 /// <summary>
 /// Result of quota reservation operation (Two-Phase Commit Phase 1).
 /// </summary>
-public record QuotaReservationResult
+internal record QuotaReservationResult
 {
     public bool Reserved { get; init; }
     public string? ErrorMessage { get; init; }

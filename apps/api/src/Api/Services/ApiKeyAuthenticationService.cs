@@ -11,7 +11,7 @@ namespace Api.Services;
 /// Provides methods to validate API keys, generate new keys, and manage key lifecycle.
 /// Uses PBKDF2 with SHA256 for key hashing, consistent with the existing password hashing strategy.
 /// </summary>
-public class ApiKeyAuthenticationService
+internal class ApiKeyAuthenticationService
 {
     private const string KeyPrefix = "mpl";
     private const int KeyLengthBytes = 32; // 256 bits = 32 bytes

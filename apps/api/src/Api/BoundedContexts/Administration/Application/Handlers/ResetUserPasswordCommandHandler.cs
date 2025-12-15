@@ -7,7 +7,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 
 namespace Api.BoundedContexts.Administration.Application.Handlers;
 
-public class ResetUserPasswordCommandHandler : ICommandHandler<ResetUserPasswordCommand>
+internal class ResetUserPasswordCommandHandler : ICommandHandler<ResetUserPasswordCommand>
 {
     private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -22,6 +22,7 @@ public class ResetUserPasswordCommandHandler : ICommandHandler<ResetUserPassword
 
     public async Task Handle(ResetUserPasswordCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         var userId = Guid.Parse(command.UserId);
         var user = await _userRepository.GetByIdAsync(userId, cancellationToken).ConfigureAwait(false);
         if (user == null)

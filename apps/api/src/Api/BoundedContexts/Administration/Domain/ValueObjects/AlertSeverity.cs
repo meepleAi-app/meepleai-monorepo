@@ -2,7 +2,7 @@ using Api.SharedKernel.Domain.ValueObjects;
 
 namespace Api.BoundedContexts.Administration.Domain.ValueObjects;
 
-public sealed class AlertSeverity : ValueObject
+internal sealed class AlertSeverity : ValueObject
 {
     public string Value { get; }
 

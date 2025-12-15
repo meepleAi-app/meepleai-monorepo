@@ -18,7 +18,7 @@ namespace Api.Services;
 /// - Auto-resolution when metrics return to normal
 /// - Alert history tracking
 /// </summary>
-public class AlertingService : IAlertingService
+internal class AlertingService : IAlertingService
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly IEnumerable<IAlertChannel> _alertChannels;
@@ -253,7 +253,7 @@ public class AlertingService : IAlertingService
 /// Configuration for the alerting system.
 /// Bind from appsettings.json:Alerting section.
 /// </summary>
-public class AlertingConfiguration
+internal class AlertingConfiguration
 {
     public bool Enabled { get; set; } = true;
     public int ThrottleMinutes { get; set; } = 60;
@@ -262,7 +262,7 @@ public class AlertingConfiguration
     public PagerDutyConfiguration PagerDuty { get; set; } = new();
 }
 
-public class EmailConfiguration
+internal class EmailConfiguration
 {
     public bool Enabled { get; set; }
     public string SmtpHost { get; set; } = string.Empty;
@@ -274,14 +274,14 @@ public class EmailConfiguration
     public string? Password { get; set; }
 }
 
-public class SlackConfiguration
+internal class SlackConfiguration
 {
     public bool Enabled { get; set; }
     public string WebhookUrl { get; set; } = string.Empty;
     public string Channel { get; set; } = "#alerts";
 }
 
-public class PagerDutyConfiguration
+internal class PagerDutyConfiguration
 {
     public bool Enabled { get; set; }
     public string IntegrationKey { get; set; } = string.Empty;

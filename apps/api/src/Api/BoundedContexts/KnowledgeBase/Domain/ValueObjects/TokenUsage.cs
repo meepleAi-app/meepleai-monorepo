@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 /// - gen_ai.usage.completion_tokens
 /// - gen_ai.usage.total_tokens
 /// </remarks>
-public sealed record TokenUsage
+internal sealed record TokenUsage
 {
     /// <summary>
     /// Number of tokens in the prompt/input.

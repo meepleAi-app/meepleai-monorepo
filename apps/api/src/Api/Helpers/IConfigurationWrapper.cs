@@ -6,7 +6,7 @@ namespace Api.Helpers;
 /// Wrapper interface for IConfiguration to enable mocking of extension methods.
 /// Solves TEST-900 RC-1: Moq cannot mock extension methods like Exists() and GetValue<T>().
 /// </summary>
-public interface IConfigurationWrapper
+internal interface IConfigurationWrapper
 {
     /// <summary>
     /// Checks if a configuration key exists.

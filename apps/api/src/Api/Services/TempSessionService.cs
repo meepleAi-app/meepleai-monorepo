@@ -10,7 +10,7 @@ namespace Api.Services;
 /// Service for temporary 2FA sessions
 /// AUTH-07: Manages short-lived, single-use tokens between password and 2FA verification
 /// </summary>
-public class TempSessionService : ITempSessionService
+internal class TempSessionService : ITempSessionService
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly ILogger<TempSessionService> _logger;

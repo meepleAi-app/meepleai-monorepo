@@ -8,7 +8,7 @@ namespace Api.Infrastructure.EntityConfigurations;
 /// Entity configuration for ValidationAccuracyBaselineEntity.
 /// BGAI-039: Validation accuracy baseline measurement tracking.
 /// </summary>
-public class ValidationAccuracyBaselineEntityConfiguration : IEntityTypeConfiguration<ValidationAccuracyBaselineEntity>
+internal class ValidationAccuracyBaselineEntityConfiguration : IEntityTypeConfiguration<ValidationAccuracyBaselineEntity>
 {
     public void Configure(EntityTypeBuilder<ValidationAccuracyBaselineEntity> builder)
     {

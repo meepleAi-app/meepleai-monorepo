@@ -31,7 +31,7 @@ namespace Api.Infrastructure.Authentication;
 ///
 /// Issue #1676 Phase 3: Migrated from ActiveSession (legacy) to SessionStatusDto (DDD)
 /// </summary>
-public class SessionAuthenticationHandler : AuthenticationHandler<AuthenticationSchemeOptions>
+internal class SessionAuthenticationHandler : AuthenticationHandler<AuthenticationSchemeOptions>
 {
     private readonly IMediator _mediator;
 

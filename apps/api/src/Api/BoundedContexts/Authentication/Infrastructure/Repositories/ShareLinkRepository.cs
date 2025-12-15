@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.Authentication.Infrastructure.Repositories;
 /// Repository implementation for ShareLink aggregate.
 /// Handles mapping between domain and infrastructure entities.
 /// </summary>
-public sealed class ShareLinkRepository : IShareLinkRepository
+internal sealed class ShareLinkRepository : IShareLinkRepository
 {
     private readonly MeepleAiDbContext _context;
 

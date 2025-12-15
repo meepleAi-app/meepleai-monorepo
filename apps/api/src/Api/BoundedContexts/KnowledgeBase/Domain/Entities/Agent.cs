@@ -13,7 +13,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 /// Design Decision (ADR-004): Agents reside in KnowledgeBase context following "Bounded Context as Workspace" pattern.
 /// They are domain entities that orchestrate VectorSearchDomainService and QualityTrackingDomainService.
 /// </remarks>
-public sealed class Agent : AggregateRoot<Guid>
+internal sealed class Agent : AggregateRoot<Guid>
 {
     public string Name { get; private set; }
     public AgentType Type { get; private set; }

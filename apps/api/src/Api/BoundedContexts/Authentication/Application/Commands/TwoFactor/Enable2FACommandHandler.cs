@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands;
 /// DDD: Thin wrapper around ITotpService (infrastructure handles crypto logic).
 /// Uses existing TotpService.EnableTwoFactorAsync which already implements all business logic.
 /// </summary>
-public class Enable2FACommandHandler : ICommandHandler<Enable2FACommand, Enable2FAResult>
+internal class Enable2FACommandHandler : ICommandHandler<Enable2FACommand, Enable2FAResult>
 {
     private readonly ITotpService _totpService;
     private readonly ILogger<Enable2FACommandHandler> _logger;
@@ -23,6 +23,7 @@ public class Enable2FACommandHandler : ICommandHandler<Enable2FACommand, Enable2
 
     public async Task<Enable2FAResult> Handle(Enable2FACommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         try
         {
             // Delegate to existing TotpService (handles all logic: verification, domain updates, persistence)

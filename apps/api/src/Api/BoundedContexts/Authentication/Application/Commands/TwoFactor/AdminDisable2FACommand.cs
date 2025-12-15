@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands.TwoFactor;
 /// DDD CQRS: Admin-only operation for users who lost authenticator + backup codes.
 /// Does not require password or 2FA code verification.
 /// </summary>
-public sealed record AdminDisable2FACommand(
+internal sealed record AdminDisable2FACommand(
     Guid AdminUserId,
     Guid TargetUserId
 ) : ICommand<AdminDisable2FAResult>;
@@ -16,7 +16,7 @@ public sealed record AdminDisable2FACommand(
 /// <summary>
 /// Result of admin 2FA disable operation.
 /// </summary>
-public sealed record AdminDisable2FAResult(
+internal sealed record AdminDisable2FAResult(
     bool Success,
     string? ErrorMessage = null
 );

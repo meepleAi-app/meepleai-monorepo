@@ -5,7 +5,7 @@ namespace Api.BoundedContexts.Authentication.Domain.Events;
 /// <summary>
 /// Domain event raised when a user enables two-factor authentication.
 /// </summary>
-public sealed class TwoFactorEnabledEvent : DomainEventBase
+internal sealed class TwoFactorEnabledEvent : DomainEventBase
 {
     /// <summary>
     /// Gets the ID of the user who enabled 2FA.

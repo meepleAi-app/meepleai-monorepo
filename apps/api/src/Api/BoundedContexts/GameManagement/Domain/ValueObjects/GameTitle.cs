@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 /// <summary>
 /// Value object representing a validated game title with normalization capabilities.
 /// </summary>
-public sealed class GameTitle : ValueObject
+internal sealed class GameTitle : ValueObject
 {
     private const int MaxLength = 200;
     private const int MinLength = 1;

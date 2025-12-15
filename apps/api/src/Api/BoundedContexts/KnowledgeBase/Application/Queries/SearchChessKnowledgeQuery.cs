@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 /// Query to search chess knowledge base.
 /// Returns relevant chess knowledge chunks based on the query.
 /// </summary>
-public sealed record SearchChessKnowledgeQuery : IRequest<Api.Services.SearchResult>
+internal sealed record SearchChessKnowledgeQuery : IRequest<Api.Services.SearchResult>
 {
     /// <summary>
     /// Search query text.

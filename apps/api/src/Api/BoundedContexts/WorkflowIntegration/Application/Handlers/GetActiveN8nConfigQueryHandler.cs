@@ -5,7 +5,7 @@ using Api.SharedKernel.Application.Interfaces;
 
 namespace Api.BoundedContexts.WorkflowIntegration.Application.Handlers;
 
-public class GetActiveN8NConfigQueryHandler : IQueryHandler<GetActiveN8NConfigQuery, N8NConfigurationDto?>
+internal class GetActiveN8NConfigQueryHandler : IQueryHandler<GetActiveN8NConfigQuery, N8NConfigurationDto?>
 {
     private readonly IN8NConfigurationRepository _configRepository;
 
@@ -16,6 +16,7 @@ public class GetActiveN8NConfigQueryHandler : IQueryHandler<GetActiveN8NConfigQu
 
     public async Task<N8NConfigurationDto?> Handle(GetActiveN8NConfigQuery query, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(query);
         var config = await _configRepository.GetActiveConfigurationAsync(cancellationToken).ConfigureAwait(false);
 
         if (config == null)

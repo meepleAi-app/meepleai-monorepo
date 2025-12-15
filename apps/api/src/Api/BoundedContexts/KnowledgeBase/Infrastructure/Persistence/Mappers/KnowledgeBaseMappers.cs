@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence.Mappers;
 /// Mapping extensions between domain entities and persistence entities.
 /// Handles impedance mismatch between domain (Guid) and persistence (Guid after Phase 2 migration).
 /// </summary>
-public static class KnowledgeBaseMappers
+internal static class KnowledgeBaseMappers
 {
     /// <summary>
     /// Maps domain VectorDocument to persistence VectorDocumentEntity.

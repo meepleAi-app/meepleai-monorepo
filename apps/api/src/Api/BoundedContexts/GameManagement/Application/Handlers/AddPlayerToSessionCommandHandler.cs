@@ -12,7 +12,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Handlers;
 /// Handler for AddPlayerToSessionCommand.
 /// Adds a new player to an existing game session.
 /// </summary>
-public class AddPlayerToSessionCommandHandler : ICommandHandler<AddPlayerToSessionCommand, GameSessionDto>
+internal class AddPlayerToSessionCommandHandler : ICommandHandler<AddPlayerToSessionCommand, GameSessionDto>
 {
     private readonly IGameSessionRepository _sessionRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -27,6 +27,7 @@ public class AddPlayerToSessionCommandHandler : ICommandHandler<AddPlayerToSessi
 
     public async Task<GameSessionDto> Handle(AddPlayerToSessionCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         // Get existing session
         var session = await _sessionRepository.GetByIdAsync(command.SessionId, cancellationToken).ConfigureAwait(false);
         if (session == null)

@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.Authentication.Domain.Entities;
 /// User aggregate root.
 /// Represents an authenticated user in the system with identity, credentials, and role.
 /// </summary>
-public sealed class User : AggregateRoot<Guid>
+internal sealed class User : AggregateRoot<Guid>
 {
     public Email Email { get; private set; }
     public string DisplayName { get; private set; }

@@ -2,7 +2,7 @@ using Api.Models;
 
 namespace Api.Services;
 
-public interface IWorkflowErrorLoggingService
+internal interface IWorkflowErrorLoggingService
 {
     /// <summary>
     /// Logs a workflow error from n8n.

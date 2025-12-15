@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Handlers;
 /// NOTE: Uses DbContext directly for ProcessingProgressJson field (not in domain entity).
 /// PDF-08: Get PDF processing progress
 /// </summary>
-public class GetPdfProgressQueryHandler : IQueryHandler<GetPdfProgressQuery, PdfProgressResult?>
+internal class GetPdfProgressQueryHandler : IQueryHandler<GetPdfProgressQuery, PdfProgressResult?>
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly ILogger<GetPdfProgressQueryHandler> _logger;
@@ -26,6 +26,7 @@ public class GetPdfProgressQueryHandler : IQueryHandler<GetPdfProgressQuery, Pdf
 
     public async Task<PdfProgressResult?> Handle(GetPdfProgressQuery query, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(query);
         try
         {
             var pdf = await _dbContext.PdfDocuments

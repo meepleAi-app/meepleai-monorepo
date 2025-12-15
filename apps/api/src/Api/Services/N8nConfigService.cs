@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Api.Services;
 
-public class N8NConfigService
+internal class N8NConfigService
 {
     private readonly MeepleAiDbContext _db;
     private readonly IHttpClientFactory _httpClientFactory;

@@ -11,7 +11,7 @@ namespace Api.Services;
 /// Exports chat conversations as professionally formatted PDF documents.
 /// Uses QuestPDF library for document generation.
 /// </summary>
-public class PdfExportFormatter : IExportFormatter
+internal class PdfExportFormatter : IExportFormatter
 {
     private readonly ILogger<PdfExportFormatter>? _logger;
 

@@ -3,6 +3,6 @@ using Api.SharedKernel.Application.Interfaces;
 
 namespace Api.BoundedContexts.DocumentProcessing.Application.Queries;
 
-public record GetPdfDocumentsByGameQuery(
+internal record GetPdfDocumentsByGameQuery(
     Guid GameId
 ) : IQuery<IReadOnlyList<PdfDocumentDto>>;

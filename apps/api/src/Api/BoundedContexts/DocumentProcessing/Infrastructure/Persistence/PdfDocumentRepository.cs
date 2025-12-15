@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.Persistence;
 
-public class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
+internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
 {
     public PdfDocumentRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
         : base(dbContext, eventCollector)

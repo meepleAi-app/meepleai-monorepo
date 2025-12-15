@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.Administration.Application.Queries;
 
-public class GetAiRequestsQueryHandler : IQueryHandler<GetAiRequestsQuery, AiRequestListResult>
+internal class GetAiRequestsQueryHandler : IQueryHandler<GetAiRequestsQuery, AiRequestListResult>
 {
     private readonly MeepleAiDbContext _db;
 
@@ -17,6 +17,7 @@ public class GetAiRequestsQueryHandler : IQueryHandler<GetAiRequestsQuery, AiReq
 
     public async Task<AiRequestListResult> Handle(GetAiRequestsQuery request, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         var query = _db.AiRequestLogs
             .AsNoTracking() // PERF-05: Read-only analytics query
             .AsQueryable();

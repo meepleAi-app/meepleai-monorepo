@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.Authentication.Application.Queries.OAuth;
 /// Query to retrieve all OAuth accounts linked to a user.
 /// Returns list of linked accounts with provider and status information.
 /// </summary>
-public sealed record GetLinkedOAuthAccountsQuery : IQuery<GetLinkedOAuthAccountsResult>
+internal sealed record GetLinkedOAuthAccountsQuery : IQuery<GetLinkedOAuthAccountsResult>
 {
     public Guid UserId { get; init; }
 }
@@ -15,7 +15,7 @@ public sealed record GetLinkedOAuthAccountsQuery : IQuery<GetLinkedOAuthAccounts
 /// <summary>
 /// Result containing all linked OAuth accounts for a user.
 /// </summary>
-public sealed record GetLinkedOAuthAccountsResult
+internal sealed record GetLinkedOAuthAccountsResult
 {
     public IList<OAuthAccountDto> Accounts { get; init; } = new List<OAuthAccountDto>();
 }
@@ -23,7 +23,7 @@ public sealed record GetLinkedOAuthAccountsResult
 /// <summary>
 /// DTO representing an OAuth account linked to a user.
 /// </summary>
-public sealed record OAuthAccountDto
+internal sealed record OAuthAccountDto
 {
     public Guid Id { get; init; }
     public string Provider { get; init; } = string.Empty;

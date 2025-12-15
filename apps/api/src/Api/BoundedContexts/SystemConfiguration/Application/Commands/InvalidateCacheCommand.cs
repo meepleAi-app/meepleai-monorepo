@@ -7,11 +7,11 @@ namespace Api.BoundedContexts.SystemConfiguration.Application.Commands;
 /// Command to invalidate configuration cache.
 /// If key is null, invalidates entire cache.
 /// </summary>
-public record InvalidateCacheCommand(
+internal record InvalidateCacheCommand(
     string? Key = null
 ) : ICommand<Unit>;
 
 /// <summary>
 /// Unit type for commands with no return value.
 /// </summary>
-public readonly record struct Unit;
+internal readonly record struct Unit;

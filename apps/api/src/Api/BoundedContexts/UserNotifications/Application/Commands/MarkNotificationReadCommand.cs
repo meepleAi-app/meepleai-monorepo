@@ -5,7 +5,7 @@ namespace Api.BoundedContexts.UserNotifications.Application.Commands;
 /// <summary>
 /// Command to mark a single notification as read.
 /// </summary>
-public record MarkNotificationReadCommand(
+internal record MarkNotificationReadCommand(
     Guid NotificationId,
     Guid UserId
 ) : ICommand<bool>;

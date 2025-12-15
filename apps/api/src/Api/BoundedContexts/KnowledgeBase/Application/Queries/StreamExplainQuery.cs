@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 /// </summary>
 /// <param name="GameId">The game ID to explain topic for</param>
 /// <param name="Topic">The topic to explain</param>
-public record StreamExplainQuery(
+internal record StreamExplainQuery(
     string GameId,
     string Topic
 ) : IStreamingQuery<RagStreamingEvent>;

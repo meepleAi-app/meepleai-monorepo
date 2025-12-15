@@ -6,14 +6,14 @@ namespace Api.BoundedContexts.Administration.Application.Commands.AlertConfigura
 /// <summary>
 /// Command to update alert configuration (Issue #915)
 /// </summary>
-public record UpdateAlertConfigurationCommand(
+internal record UpdateAlertConfigurationCommand(
     string ConfigKey,
     string ConfigValue,
     string Category,
     string UpdatedBy,
     string? Description = null) : IRequest<bool>;
 
-public class UpdateAlertConfigurationCommandValidator : AbstractValidator<UpdateAlertConfigurationCommand>
+internal class UpdateAlertConfigurationCommandValidator : AbstractValidator<UpdateAlertConfigurationCommand>
 {
     public UpdateAlertConfigurationCommandValidator()
     {

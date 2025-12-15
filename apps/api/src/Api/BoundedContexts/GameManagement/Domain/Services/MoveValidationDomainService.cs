@@ -12,7 +12,7 @@ namespace Api.BoundedContexts.GameManagement.Domain.Services;
 /// Domain service for validating player moves against game rules (RuleSpec).
 /// Part of the GameManagement bounded context, integrates with RuleSpec v2.
 /// </summary>
-public class MoveValidationDomainService
+internal class MoveValidationDomainService
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly ILogger<MoveValidationDomainService> _logger;

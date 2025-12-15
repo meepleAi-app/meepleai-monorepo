@@ -5,7 +5,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 
 namespace Api.BoundedContexts.SystemConfiguration.Application.Handlers;
 
-public class DeleteConfigurationCommandHandler : ICommandHandler<DeleteConfigurationCommand, bool>
+internal class DeleteConfigurationCommandHandler : ICommandHandler<DeleteConfigurationCommand, bool>
 {
     private readonly IConfigurationRepository _configurationRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -20,6 +20,7 @@ public class DeleteConfigurationCommandHandler : ICommandHandler<DeleteConfigura
 
     public async Task<bool> Handle(DeleteConfigurationCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         var config = await _configurationRepository.GetByIdAsync(command.ConfigId, cancellationToken).ConfigureAwait(false);
 
         if (config == null)

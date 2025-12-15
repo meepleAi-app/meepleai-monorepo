@@ -1,6 +1,6 @@
 namespace Api.Infrastructure.Entities;
 
-public class ChatLogEntity
+internal class ChatLogEntity
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid ChatId { get; set; } = Guid.Empty;

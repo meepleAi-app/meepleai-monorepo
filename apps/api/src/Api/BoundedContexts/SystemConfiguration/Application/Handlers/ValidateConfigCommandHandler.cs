@@ -8,13 +8,14 @@ namespace Api.BoundedContexts.SystemConfiguration.Application.Handlers;
 /// Handles configuration value validation.
 /// Delegates to ConfigurationValidator domain service.
 /// </summary>
-public class ValidateConfigCommandHandler : ICommandHandler<ValidateConfigCommand, ConfigurationValidationResult>
+internal class ValidateConfigCommandHandler : ICommandHandler<ValidateConfigCommand, ConfigurationValidationResult>
 {
     // Note: Using static Validate method from ConfigurationValidator
     // No instance fields needed
 
     public Task<ConfigurationValidationResult> Handle(ValidateConfigCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         var domainResult = ConfigurationValidator.Validate(command.Key, command.Value, command.ValueType);
 
         var result = new ConfigurationValidationResult(

@@ -5,7 +5,7 @@ namespace Api.Services.Rag;
 /// <summary>
 /// Service for extracting and validating citations from RAG responses
 /// </summary>
-public interface ICitationExtractorService
+internal interface ICitationExtractorService
 {
     /// <summary>
     /// Validates that citation references are accurate and complete

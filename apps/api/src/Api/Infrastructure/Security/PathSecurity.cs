@@ -7,7 +7,7 @@ namespace Api.Infrastructure.Security;
 /// Path security utility for preventing path traversal and injection attacks
 /// Implements defense-in-depth validation for file system operations
 /// </summary>
-public static partial class PathSecurity
+internal static partial class PathSecurity
 {
     /// <summary>
     /// Validates that resolved path is within allowed directory (prevents directory traversal)

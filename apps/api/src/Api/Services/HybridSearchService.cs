@@ -10,7 +10,7 @@ namespace Api.Services;
 /// Implements Reciprocal Rank Fusion (RRF) algorithm for score merging.
 /// Part of AI-14 implementation.
 /// </summary>
-public class HybridSearchService : IHybridSearchService
+internal class HybridSearchService : IHybridSearchService
 {
     private readonly IQdrantService _qdrantService;
     private readonly IKeywordSearchService _keywordSearchService;
@@ -405,7 +405,7 @@ public class HybridSearchService : IHybridSearchService
 /// Configuration for hybrid search.
 /// Loaded from appsettings.json HybridSearch section.
 /// </summary>
-public class HybridSearchConfiguration
+internal class HybridSearchConfiguration
 {
     /// <summary>
     /// Weight for vector search results (default: 0.7).

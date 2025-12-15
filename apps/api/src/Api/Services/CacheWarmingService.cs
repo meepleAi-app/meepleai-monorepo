@@ -12,7 +12,7 @@ namespace Api.Services;
 /// AI-10: Cache Optimization - Reduces latency by pre-caching hot queries during off-peak periods.
 /// Runs periodically (configurable interval) with startup delay to avoid interfering with application startup.
 /// </summary>
-public class CacheWarmingService : BackgroundService
+internal class CacheWarmingService : BackgroundService
 {
     private readonly ILogger<CacheWarmingService> _logger;
     private readonly IRedisFrequencyTracker _frequencyTracker;

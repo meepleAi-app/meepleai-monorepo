@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.Authentication.Application.Commands;
 
-public class RotateApiKeyCommandHandler : ICommandHandler<RotateApiKeyCommand, RotateApiKeyResponse?>
+internal class RotateApiKeyCommandHandler : ICommandHandler<RotateApiKeyCommand, RotateApiKeyResponse?>
 {
     private readonly MeepleAiDbContext _db;
     private readonly ApiKeyAuthenticationService _authService;
@@ -28,6 +28,7 @@ public class RotateApiKeyCommandHandler : ICommandHandler<RotateApiKeyCommand, R
 
     public async Task<RotateApiKeyResponse?> Handle(RotateApiKeyCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         if (!Guid.TryParse(command.KeyId, out var keyGuid) || !Guid.TryParse(command.UserId, out var userGuid))
         {
             return null;

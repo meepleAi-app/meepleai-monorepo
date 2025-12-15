@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 /// Adapter interface for Qdrant vector database operations.
 /// Abstracts Qdrant SDK details from domain layer.
 /// </summary>
-public interface IQdrantVectorStoreAdapter
+internal interface IQdrantVectorStoreAdapter
 {
     /// <summary>
     /// Performs vector similarity search in Qdrant.

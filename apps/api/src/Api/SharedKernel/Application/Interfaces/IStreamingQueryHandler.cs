@@ -13,7 +13,7 @@ namespace Api.SharedKernel.Application.Interfaces;
 /// Inherits Handle method from IStreamRequestHandler that returns IAsyncEnumerable&lt;TResponse&gt;
 /// with signature: Handle(TQuery request, CancellationToken cancellationToken)
 /// </remarks>
-public interface IStreamingQueryHandler<in TQuery, TResponse> : IStreamRequestHandler<TQuery, TResponse>
+internal interface IStreamingQueryHandler<in TQuery, TResponse> : IStreamRequestHandler<TQuery, TResponse>
     where TQuery : IStreamingQuery<TResponse>
 {
 }

@@ -9,7 +9,7 @@ using System.Diagnostics;
 
 namespace Api.Extensions;
 
-public static class ObservabilityServiceExtensions
+internal static class ObservabilityServiceExtensions
 {
     public static IServiceCollection AddObservabilityServices(
         this IServiceCollection services,

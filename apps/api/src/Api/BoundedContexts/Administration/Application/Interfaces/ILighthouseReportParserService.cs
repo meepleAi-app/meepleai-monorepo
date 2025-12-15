@@ -5,7 +5,7 @@ namespace Api.BoundedContexts.Administration.Application.Interfaces;
 /// <summary>
 /// Service interface for parsing Lighthouse CI reports (Issue #2139)
 /// </summary>
-public interface ILighthouseReportParserService
+internal interface ILighthouseReportParserService
 {
     /// <summary>
     /// Parses latest Lighthouse report and extracts accessibility metrics

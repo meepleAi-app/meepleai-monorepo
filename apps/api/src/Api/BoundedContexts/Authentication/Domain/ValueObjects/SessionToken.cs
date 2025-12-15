@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Authentication.Domain.ValueObjects;
 /// Represents a session token value object.
 /// Generates cryptographically secure random tokens for session identification.
 /// </summary>
-public sealed class SessionToken : ValueObject
+internal sealed class SessionToken : ValueObject
 {
     private const int TokenSizeBytes = 32; // 256 bits
 

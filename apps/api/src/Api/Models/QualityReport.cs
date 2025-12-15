@@ -4,7 +4,7 @@ namespace Api.Models;
 /// Quality report for AI responses over a specified time period.
 /// Contains aggregated statistics about response quality metrics.
 /// </summary>
-public class QualityReport
+internal class QualityReport
 {
     /// <summary>
     /// Start date of the reporting period (inclusive).

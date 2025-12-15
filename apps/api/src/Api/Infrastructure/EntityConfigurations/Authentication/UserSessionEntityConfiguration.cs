@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Api.Infrastructure.EntityConfigurations;
 
-public class UserSessionEntityConfiguration : IEntityTypeConfiguration<UserSessionEntity>
+internal class UserSessionEntityConfiguration : IEntityTypeConfiguration<UserSessionEntity>
 {
     public void Configure(EntityTypeBuilder<UserSessionEntity> builder)
     {

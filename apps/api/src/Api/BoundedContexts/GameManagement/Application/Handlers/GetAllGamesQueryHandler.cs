@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Handlers;
 /// <summary>
 /// Handles get all games query.
 /// </summary>
-public class GetAllGamesQueryHandler : IQueryHandler<GetAllGamesQuery, IReadOnlyList<GameDto>>
+internal class GetAllGamesQueryHandler : IQueryHandler<GetAllGamesQuery, IReadOnlyList<GameDto>>
 {
     private readonly IGameRepository _gameRepository;
 

@@ -9,7 +9,7 @@ namespace Api.Routing;
 /// Infrastructure monitoring endpoints (Admin only).
 /// Issues #891 + #893: Health checks and Prometheus metrics queries.
 /// </summary>
-public static class MonitoringEndpoints
+internal static class MonitoringEndpoints
 {
     public static RouteGroupBuilder MapMonitoringEndpoints(this RouteGroupBuilder group)
     {

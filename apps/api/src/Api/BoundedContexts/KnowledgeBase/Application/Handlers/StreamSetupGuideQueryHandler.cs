@@ -20,7 +20,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// Implements streaming setup guide generation with progressive step delivery.
 /// AI-03: RAG-based setup guide generation with streaming delivery
 /// </summary>
-public class StreamSetupGuideQueryHandler : IStreamingQueryHandler<StreamSetupGuideQuery, RagStreamingEvent>
+internal class StreamSetupGuideQueryHandler : IStreamingQueryHandler<StreamSetupGuideQuery, RagStreamingEvent>
 {
     private readonly IEmbeddingService _embeddingService;
     private readonly IQdrantService _qdrantService;

@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.UserNotifications.Domain.Aggregates;
 /// Aggregate root representing a user notification.
 /// Tracks notification lifecycle: creation, read status, and metadata.
 /// </summary>
-public sealed class Notification : AggregateRoot<Guid>
+internal sealed class Notification : AggregateRoot<Guid>
 {
     public Guid UserId { get; private set; }
     public NotificationType Type { get; private set; }

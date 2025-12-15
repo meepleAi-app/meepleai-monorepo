@@ -4,7 +4,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 /// Request DTO for adding a document to an existing collection.
 /// Issue #2051: Add document to collection operation
 /// </summary>
-public record AddDocumentToCollectionRequest(
+internal record AddDocumentToCollectionRequest(
     Guid PdfDocumentId,
     string DocumentType,
     int SortOrder

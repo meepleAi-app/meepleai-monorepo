@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.Administration.Infrastructure.Scheduling;
 /// Service for scheduling reports with Quartz.NET
 /// ISSUE-916: Background job scheduling abstraction
 /// </summary>
-public interface IReportSchedulerService
+internal interface IReportSchedulerService
 {
     /// <summary>
     /// Schedules a report for recurring execution
@@ -32,7 +32,7 @@ public interface IReportSchedulerService
 /// <summary>
 /// Scheduler status information
 /// </summary>
-public sealed record SchedulerStatus(
+internal sealed record SchedulerStatus(
     bool IsRunning,
     int ActiveJobs,
     DateTime? LastExecutionTime,

@@ -6,7 +6,7 @@ namespace Api.Services.LlmClients;
 /// Abstraction for LLM provider clients (OpenRouter, Ollama, etc.)
 /// ISSUE-958: Hybrid LLM architecture with provider abstraction
 /// </summary>
-public interface ILlmClient
+internal interface ILlmClient
 {
     /// <summary>
     /// Get the name of this LLM provider (e.g., "OpenRouter", "Ollama")

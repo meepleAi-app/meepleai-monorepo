@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.External.Models;
 /// Response from SmolDocling PDF extraction service (VLM-based)
 /// Matches Python schema: PdfExtractionResponse
 /// </summary>
-public class SmolDoclingResponse
+internal class SmolDoclingResponse
 {
     [JsonPropertyName("text")]
     public string Text { get; set; } = string.Empty;
@@ -32,7 +32,7 @@ public class SmolDoclingResponse
 /// Text chunk from SmolDocling extraction
 /// Matches Python schema: TextChunkSchema
 /// </summary>
-public class SmolDoclingChunk
+internal class SmolDoclingChunk
 {
     [JsonPropertyName("text")]
     public string Text { get; set; } = string.Empty;
@@ -51,7 +51,7 @@ public class SmolDoclingChunk
 /// Single page extraction result from SmolDocling
 /// Matches Python schema: PageResultSchema
 /// </summary>
-public class SmolDoclingPageResult
+internal class SmolDoclingPageResult
 {
     [JsonPropertyName("page_number")]
     public int PageNumber { get; set; }
@@ -76,7 +76,7 @@ public class SmolDoclingPageResult
 /// Quality breakdown from SmolDocling extraction
 /// Matches Python schema: QualityBreakdownSchema
 /// </summary>
-public class SmolDoclingQualityBreakdown
+internal class SmolDoclingQualityBreakdown
 {
     [JsonPropertyName("text_coverage_score")]
     public double TextCoverageScore { get; set; }
@@ -95,7 +95,7 @@ public class SmolDoclingQualityBreakdown
 /// Error response from SmolDocling service
 /// Matches Python schema: ErrorResponse
 /// </summary>
-public class SmolDoclingErrorResponse
+internal class SmolDoclingErrorResponse
 {
     [JsonPropertyName("error")]
     public SmolDoclingErrorDetail Error { get; set; } = new();
@@ -105,7 +105,7 @@ public class SmolDoclingErrorResponse
 /// Error detail from SmolDocling service
 /// Matches Python schema: ErrorDetail
 /// </summary>
-public class SmolDoclingErrorDetail
+internal class SmolDoclingErrorDetail
 {
     [JsonPropertyName("code")]
     public string Code { get; set; } = string.Empty;

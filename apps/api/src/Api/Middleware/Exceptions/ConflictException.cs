@@ -5,7 +5,7 @@ namespace Api.Middleware.Exceptions;
 /// Typically used for duplicate resources or constraint violations.
 /// Maps to HTTP 409 Conflict.
 /// </summary>
-public class ConflictException : HttpException
+internal class ConflictException : HttpException
 {
     public ConflictException(string message)
         : base(StatusCodes.Status409Conflict, "conflict", message)
@@ -14,6 +14,9 @@ public class ConflictException : HttpException
 
     public ConflictException(string message, Exception innerException)
         : base(StatusCodes.Status409Conflict, "conflict", message, innerException)
+    {
+    }
+    public ConflictException()
     {
     }
 }

@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// Handler for ConfigureAgentCommand.
 /// Applies DDD pattern: Domain logic in aggregate, handler orchestrates.
 /// </summary>
-public class ConfigureAgentCommandHandler : IRequestHandler<ConfigureAgentCommand, ConfigureAgentResult>
+internal class ConfigureAgentCommandHandler : IRequestHandler<ConfigureAgentCommand, ConfigureAgentResult>
 {
     private readonly IAgentRepository _agentRepository;
     private readonly ILogger<ConfigureAgentCommandHandler> _logger;
@@ -27,6 +27,7 @@ public class ConfigureAgentCommandHandler : IRequestHandler<ConfigureAgentComman
         ConfigureAgentCommand request,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         try
         {
             // Retrieve agent

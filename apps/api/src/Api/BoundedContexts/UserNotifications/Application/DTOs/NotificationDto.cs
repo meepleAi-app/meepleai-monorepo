@@ -4,7 +4,7 @@ namespace Api.BoundedContexts.UserNotifications.Application.DTOs;
 /// Data transfer object for user notification.
 /// Flat structure for API responses.
 /// </summary>
-public record NotificationDto(
+internal record NotificationDto(
     Guid Id,
     Guid UserId,
     string Type,

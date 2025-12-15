@@ -5,7 +5,7 @@ namespace Api.Helpers;
 /// <summary>
 /// Centralized string utility methods to eliminate code duplication.
 /// </summary>
-public static class StringHelper
+internal static class StringHelper
 {
     /// <summary>
     /// Truncates a string to a maximum length and appends an ellipsis if truncated.
@@ -130,7 +130,7 @@ public static class StringHelper
         int maxLength = 200)
     {
         // Ensure extension has leading dot
-        if (!string.IsNullOrEmpty(extension) && !extension.StartsWith(".", StringComparison.Ordinal))
+        if (!string.IsNullOrEmpty(extension) && !extension.StartsWith('.'))
         {
             extension = "." + extension;
         }

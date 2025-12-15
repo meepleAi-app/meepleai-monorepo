@@ -16,7 +16,7 @@ namespace Api.Services;
 /// Combines AI-07.1 few-shot learning with admin-configurable prompt management
 /// Architecture: Redis cache-first → PostgreSQL fallback → Configuration fallback
 /// </summary>
-public class PromptTemplateService : IPromptTemplateService
+internal class PromptTemplateService : IPromptTemplateService
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly IConnectionMultiplexer _redis;

@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
 /// Domain service for monitoring LLM costs and triggering alerts
 /// ISSUE-960: BGAI-018 - Cost monitoring and alerting
 /// </summary>
-public class LlmCostAlertService
+internal class LlmCostAlertService
 {
     private readonly ILlmCostLogRepository _costLogRepository;
     private readonly IAlertingService _alertingService;

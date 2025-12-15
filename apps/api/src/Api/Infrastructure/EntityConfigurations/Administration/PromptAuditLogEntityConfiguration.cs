@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Api.Infrastructure.EntityConfigurations;
 
-public class PromptAuditLogEntityConfiguration : IEntityTypeConfiguration<PromptAuditLogEntity>
+internal class PromptAuditLogEntityConfiguration : IEntityTypeConfiguration<PromptAuditLogEntity>
 {
     public void Configure(EntityTypeBuilder<PromptAuditLogEntity> builder)
     {

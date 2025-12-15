@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands;
 /// <summary>
 /// Handles API key creation for a user.
 /// </summary>
-public class CreateApiKeyCommandHandler : ICommandHandler<CreateApiKeyCommand, CreateApiKeyResponse>
+internal class CreateApiKeyCommandHandler : ICommandHandler<CreateApiKeyCommand, CreateApiKeyResponse>
 {
     private readonly IApiKeyRepository _apiKeyRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -24,6 +24,7 @@ public class CreateApiKeyCommandHandler : ICommandHandler<CreateApiKeyCommand, C
 
     public async Task<CreateApiKeyResponse> Handle(CreateApiKeyCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         // Create API key (returns entity + plaintext key)
         var apiKeyId = Guid.NewGuid();
         var (apiKey, plaintextKey) = ApiKey.Create(

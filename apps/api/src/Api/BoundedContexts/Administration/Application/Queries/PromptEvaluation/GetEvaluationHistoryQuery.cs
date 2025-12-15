@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.Administration.Application.Queries.PromptEvaluatio
 /// Query to retrieve historical evaluation results for a prompt template
 /// ADMIN-01 Phase 4: Prompt Testing Framework
 /// </summary>
-public sealed record GetEvaluationHistoryQuery : IQuery<List<PromptEvaluationResult>>
+internal sealed record GetEvaluationHistoryQuery : IQuery<List<PromptEvaluationResult>>
 {
     /// <summary>Template ID to get evaluation history for</summary>
     public required Guid TemplateId { get; init; }

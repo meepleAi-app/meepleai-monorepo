@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.WorkflowIntegration.Application.Queries.WorkflowEr
 /// Query to retrieve a specific workflow error by ID.
 /// Returns null if not found. Uses HybridCache for performance (10-minute expiration).
 /// </summary>
-public sealed record GetWorkflowErrorByIdQuery : IQuery<WorkflowErrorDto?>
+internal sealed record GetWorkflowErrorByIdQuery : IQuery<WorkflowErrorDto?>
 {
     public Guid ErrorId { get; init; }
 }

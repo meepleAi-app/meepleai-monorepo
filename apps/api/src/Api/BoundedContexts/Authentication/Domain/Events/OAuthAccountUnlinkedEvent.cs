@@ -5,7 +5,7 @@ namespace Api.BoundedContexts.Authentication.Domain.Events;
 /// <summary>
 /// Domain event raised when an OAuth account is unlinked from a user.
 /// </summary>
-public sealed class OAuthAccountUnlinkedEvent : DomainEventBase
+internal sealed class OAuthAccountUnlinkedEvent : DomainEventBase
 {
     /// <summary>
     /// Gets the ID of the user who unlinked the OAuth account.

@@ -4,7 +4,7 @@ namespace Api.BoundedContexts.Administration.Application.DTOs;
 /// Statistics about agent feedback for analytics and monitoring.
 /// Provides aggregated metrics on user feedback for AI agent responses.
 /// </summary>
-public record FeedbackStatsDto
+internal record FeedbackStatsDto
 {
     /// <summary>
     /// Total number of feedback submissions.

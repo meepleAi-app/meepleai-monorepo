@@ -12,7 +12,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// Handler for CreateAgentCommand.
 /// Creates a new agent with specified configuration.
 /// </summary>
-public class CreateAgentCommandHandler : IRequestHandler<CreateAgentCommand, AgentDto>
+internal class CreateAgentCommandHandler : IRequestHandler<CreateAgentCommand, AgentDto>
 {
     private readonly IAgentRepository _agentRepository;
     private readonly ILogger<CreateAgentCommandHandler> _logger;
@@ -29,6 +29,7 @@ public class CreateAgentCommandHandler : IRequestHandler<CreateAgentCommand, Age
         CreateAgentCommand request,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         // Validate name uniqueness
         var exists = await _agentRepository.ExistsAsync(request.Name, cancellationToken).ConfigureAwait(false);
         if (exists)

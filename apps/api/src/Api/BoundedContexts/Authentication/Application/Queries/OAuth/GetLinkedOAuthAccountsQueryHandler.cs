@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.Authentication.Application.Queries.OAuth;
 /// Handles retrieval of all OAuth accounts linked to a user.
 /// Maps domain entities to DTOs with status information.
 /// </summary>
-public sealed class GetLinkedOAuthAccountsQueryHandler : IQueryHandler<GetLinkedOAuthAccountsQuery, GetLinkedOAuthAccountsResult>
+internal sealed class GetLinkedOAuthAccountsQueryHandler : IQueryHandler<GetLinkedOAuthAccountsQuery, GetLinkedOAuthAccountsResult>
 {
     private readonly IOAuthAccountRepository _oauthAccountRepository;
     private readonly ILogger<GetLinkedOAuthAccountsQueryHandler> _logger;
@@ -24,6 +24,7 @@ public sealed class GetLinkedOAuthAccountsQueryHandler : IQueryHandler<GetLinked
 
     public async Task<GetLinkedOAuthAccountsResult> Handle(GetLinkedOAuthAccountsQuery query, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(query);
         try
         {
             // Get all OAuth accounts for user

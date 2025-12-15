@@ -9,7 +9,7 @@ namespace Api.Infrastructure.Entities;
 /// Table: prompt_evaluation_results
 /// </summary>
 [Table("prompt_evaluation_results")]
-public class PromptEvaluationResultEntity
+internal class PromptEvaluationResultEntity
 {
     /// <summary>Unique evaluation run ID (Primary Key)</summary>
     // DDD-PHASE2: Converted to Guid for domain alignment

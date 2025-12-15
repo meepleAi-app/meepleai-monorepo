@@ -10,7 +10,7 @@ namespace Api.Services;
 /// Service for password and secret hashing using PBKDF2.
 /// Centralizes cryptographic hashing logic used across authentication services.
 /// </summary>
-public interface IPasswordHashingService
+internal interface IPasswordHashingService
 {
     /// <summary>
     /// Hashes a secret (password, API key, backup code) using PBKDF2 with SHA256 using default iterations.
@@ -44,7 +44,7 @@ public interface IPasswordHashingService
 /// <summary>
 /// Implementation of password hashing service using PBKDF2-HMAC-SHA256.
 /// </summary>
-public class PasswordHashingService : IPasswordHashingService
+internal class PasswordHashingService : IPasswordHashingService
 {
     private const string HashVersion = "v1";
     private const int SaltSizeBytes = 16;

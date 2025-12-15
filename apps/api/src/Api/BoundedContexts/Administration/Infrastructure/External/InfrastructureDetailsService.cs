@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.Administration.Infrastructure.External;
 /// Issue #894: Infrastructure service orchestrating health checks and Prometheus metrics.
 /// Executes parallel queries for optimal performance.
 /// </summary>
-public class InfrastructureDetailsService : IInfrastructureDetailsService
+internal class InfrastructureDetailsService : IInfrastructureDetailsService
 {
     private readonly IInfrastructureHealthService _healthService;
     private readonly IPrometheusQueryService _prometheusService;

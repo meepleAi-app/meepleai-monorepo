@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.WorkflowIntegration.Application.IntegrationEventHa
 /// Handles GameCreatedIntegrationEvent from GameManagement context.
 /// Triggers workflow setup for new games (e.g., n8n workflows for game notifications).
 /// </summary>
-public sealed class GameCreatedIntegrationEventHandler : INotificationHandler<GameCreatedIntegrationEvent>
+internal sealed class GameCreatedIntegrationEventHandler : INotificationHandler<GameCreatedIntegrationEvent>
 {
     private readonly ILogger<GameCreatedIntegrationEventHandler> _logger;
 
@@ -19,6 +19,7 @@ public sealed class GameCreatedIntegrationEventHandler : INotificationHandler<Ga
 
     public async Task Handle(GameCreatedIntegrationEvent notification, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(notification);
         _logger.LogInformation(
             "Handling GameCreatedIntegrationEvent from {SourceContext}: GameId={GameId}, Name={GameName}",
             notification.SourceContext,

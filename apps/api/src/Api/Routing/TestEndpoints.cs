@@ -18,7 +18,7 @@ namespace Api.Routing;
 /// - high-error-rate.md: Burst 200 POST /api/v1/test/error in 120 seconds
 /// - error-spike.md: Burst 200 POST /api/v1/test/error, validate 3x baseline increase
 /// </summary>
-public static class TestEndpoints
+internal static class TestEndpoints
 {
     public static RouteGroupBuilder MapTestEndpoints(this RouteGroupBuilder group)
     {
@@ -112,4 +112,4 @@ public static class TestEndpoints
 /// Request model for SimulateError endpoint.
 /// </summary>
 /// <param name="ErrorType">Type of error to simulate: "500", "400", "timeout", "exception"</param>
-public record SimulateErrorRequest(string ErrorType);
+internal record SimulateErrorRequest(string ErrorType);

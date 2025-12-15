@@ -11,7 +11,7 @@ namespace Api.Infrastructure.BackgroundTasks;
 /// SECURITY: Issue #1787 - Removes expired used_totp_codes entries hourly
 /// Pattern: IHostedService with scheduled execution
 /// </summary>
-public class UsedTotpCodeCleanupTask : IHostedService, IDisposable
+internal class UsedTotpCodeCleanupTask : IHostedService, IDisposable
 {
     private Timer? _timer;
     private readonly IServiceProvider _serviceProvider;

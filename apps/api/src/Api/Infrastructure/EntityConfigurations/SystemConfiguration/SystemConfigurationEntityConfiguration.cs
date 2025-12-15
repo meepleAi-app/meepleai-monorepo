@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 namespace Api.Infrastructure.EntityConfigurations;
 
 // CONFIG-01: System configurations
-public class SystemConfigurationEntityConfiguration : IEntityTypeConfiguration<SystemConfigurationEntity>
+internal class SystemConfigurationEntityConfiguration : IEntityTypeConfiguration<SystemConfigurationEntity>
 {
     public void Configure(EntityTypeBuilder<SystemConfigurationEntity> builder)
     {

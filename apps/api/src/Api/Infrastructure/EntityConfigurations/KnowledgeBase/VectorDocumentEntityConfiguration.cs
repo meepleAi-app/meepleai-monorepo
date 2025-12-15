@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Api.Infrastructure.EntityConfigurations;
 
-public class VectorDocumentEntityConfiguration : IEntityTypeConfiguration<VectorDocumentEntity>
+internal class VectorDocumentEntityConfiguration : IEntityTypeConfiguration<VectorDocumentEntity>
 {
     public void Configure(EntityTypeBuilder<VectorDocumentEntity> builder)
     {

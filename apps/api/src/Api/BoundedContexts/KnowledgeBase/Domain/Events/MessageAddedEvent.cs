@@ -2,7 +2,7 @@ using Api.SharedKernel.Domain.Events;
 
 namespace Api.BoundedContexts.KnowledgeBase.Domain.Events;
 
-public sealed class MessageAddedEvent : DomainEventBase
+internal sealed class MessageAddedEvent : DomainEventBase
 {
     public Guid ThreadId { get; }
     public Guid MessageId { get; }

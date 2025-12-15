@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands;
 /// Command to delete a rule comment.
 /// Only the comment author or an admin can delete a comment.
 /// </summary>
-public record DeleteRuleCommentCommand(
+internal record DeleteRuleCommentCommand(
     Guid CommentId,
     Guid UserId,
     bool IsAdmin

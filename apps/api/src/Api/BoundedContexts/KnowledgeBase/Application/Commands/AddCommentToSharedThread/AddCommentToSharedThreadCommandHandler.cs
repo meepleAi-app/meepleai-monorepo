@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Commands.AddCommentToSha
 /// Handler for adding comments to shared chat threads.
 /// Validates share link token, enforces comment role requirement, and applies rate limiting.
 /// </summary>
-public sealed class AddCommentToSharedThreadCommandHandler
+internal sealed class AddCommentToSharedThreadCommandHandler
     : IRequestHandler<AddCommentToSharedThreadCommand, AddCommentToSharedThreadResult?>
 {
     private readonly IChatThreadRepository _threadRepository;

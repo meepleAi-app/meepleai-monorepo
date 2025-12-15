@@ -14,7 +14,7 @@ namespace Api.SharedKernel.Application.Behaviors;
 /// </summary>
 /// <typeparam name="TRequest">The request type (Command or Query)</typeparam>
 /// <typeparam name="TResponse">The response type</typeparam>
-public sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
+internal sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
     where TRequest : IRequest<TResponse>
 {
     private readonly IReadOnlyCollection<IValidator<TRequest>> _validators;

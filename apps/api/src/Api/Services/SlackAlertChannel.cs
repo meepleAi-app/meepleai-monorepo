@@ -9,7 +9,7 @@ namespace Api.Services;
 /// Slack alert channel using Incoming Webhooks.
 /// OPS-07: Slack notifications for alerts.
 /// </summary>
-public class SlackAlertChannel : IAlertChannel
+internal class SlackAlertChannel : IAlertChannel
 {
     private readonly SlackConfiguration _config;
     private readonly IHttpClientFactory _httpClientFactory;

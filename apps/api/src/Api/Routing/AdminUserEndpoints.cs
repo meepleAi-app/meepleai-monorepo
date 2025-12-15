@@ -14,7 +14,7 @@ namespace Api.Routing;
 /// User management endpoints (Admin only).
 /// Handles user CRUD operations and user search functionality.
 /// </summary>
-public static class AdminUserEndpoints
+internal static class AdminUserEndpoints
 {
     public static RouteGroupBuilder MapAdminUserEndpoints(this RouteGroupBuilder group)
     {
@@ -378,14 +378,14 @@ public static class AdminUserEndpoints
 /// <summary>
 /// Request payload for updating user tier.
 /// </summary>
-public record UpdateUserTierRequest(string Tier);
+internal record UpdateUserTierRequest(string Tier);
 
 /// <summary>
 /// Request payload for bulk password reset.
 /// </summary>
-public record BulkPasswordResetRequest(IReadOnlyList<Guid> UserIds, string NewPassword);
+internal record BulkPasswordResetRequest(IReadOnlyList<Guid> UserIds, string NewPassword);
 
 /// <summary>
 /// Request payload for bulk role change.
 /// </summary>
-public record BulkRoleChangeRequest(IReadOnlyList<Guid> UserIds, string NewRole);
+internal record BulkRoleChangeRequest(IReadOnlyList<Guid> UserIds, string NewRole);

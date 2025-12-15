@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.Authentication.Application.EventHandlers;
 /// Handles the SessionRevokedEvent domain event.
 /// Creates audit log entry automatically via base class.
 /// </summary>
-public sealed class SessionRevokedEventHandler : DomainEventHandlerBase<SessionRevokedEvent>
+internal sealed class SessionRevokedEventHandler : DomainEventHandlerBase<SessionRevokedEvent>
 {
     public SessionRevokedEventHandler(
         MeepleAiDbContext dbContext,

@@ -13,7 +13,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// Handler for SearchQuery.
 /// Orchestrates vector/hybrid search using domain services.
 /// </summary>
-public class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResultDto>>
+internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResultDto>>
 {
     private readonly IEmbeddingRepository _embeddingRepository;
     private readonly VectorSearchDomainService _vectorSearchService;

@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services.Analytics;
 /// ISSUE-1725: Implementation of IMonthlyOptimizationReportService.
 /// Generates comprehensive monthly reports for LLM cost optimization.
 /// </summary>
-public class MonthlyOptimizationReportService : IMonthlyOptimizationReportService
+internal class MonthlyOptimizationReportService : IMonthlyOptimizationReportService
 {
     private readonly IQueryEfficiencyAnalyzer _efficiencyAnalyzer;
     private readonly IModelRecommendationService _recommendationService;
@@ -82,8 +82,8 @@ public class MonthlyOptimizationReportService : IMonthlyOptimizationReportServic
     }
 
     private static decimal CalculateModelSwitchSavings(
-        QueryEfficiencyReport efficiency,
-        ModelRecommendation recommendation)
+        QueryEfficiencyReport efficiency
+        )
     {
         // Estimate savings if switching to recommended model
         // Simplified: Assume 20% cost reduction from optimization, adjusted by recommendation confidence

@@ -8,4 +8,4 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 /// Orchestrates: text extraction → chunking → embedding → Qdrant indexing
 /// </summary>
 /// <param name="PdfId">PDF document identifier</param>
-public record IndexPdfCommand(string PdfId) : ICommand<IndexingResultDto>;
+internal record IndexPdfCommand(string PdfId) : ICommand<IndexingResultDto>;

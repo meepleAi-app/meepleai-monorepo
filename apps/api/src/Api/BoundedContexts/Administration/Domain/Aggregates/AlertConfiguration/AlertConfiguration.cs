@@ -3,7 +3,7 @@ namespace Api.BoundedContexts.Administration.Domain.Aggregates.AlertConfiguratio
 /// <summary>
 /// AlertConfiguration Aggregate Root (Issue #921)
 /// </summary>
-public class AlertConfiguration
+internal class AlertConfiguration
 {
     public string ConfigKey { get; private set; }
     public string ConfigValue { get; private set; }

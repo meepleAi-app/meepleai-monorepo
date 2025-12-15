@@ -6,6 +6,6 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands;
 /// Command to export multiple rule specifications as a ZIP archive.
 /// Maximum 100 rule specs per export.
 /// </summary>
-public record ExportRuleSpecsCommand(
+internal record ExportRuleSpecsCommand(
     IReadOnlyList<Guid> GameIds
 ) : ICommand<byte[]>;

@@ -6,7 +6,7 @@ namespace Api.Services.Pdf;
 /// <summary>
 /// Service responsible for identifying table regions in PDF pages
 /// </summary>
-public class TableDetectionService : ITableDetectionService
+internal class TableDetectionService : ITableDetectionService
 {
     private readonly ITableCellParser _cellParser;
 

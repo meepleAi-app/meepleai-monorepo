@@ -4,7 +4,7 @@ namespace Api.Models;
 /// Multi-dimensional quality scores for an AI response.
 /// Provides granular metrics for RAG quality, LLM quality, citation quality, and overall confidence.
 /// </summary>
-public class QualityScores
+internal class QualityScores
 {
     /// <summary>
     /// RAG confidence score based on semantic search result scores.

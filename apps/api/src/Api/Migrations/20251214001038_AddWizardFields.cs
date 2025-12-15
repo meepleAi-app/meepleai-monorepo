@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Api.Migrations
 {
     /// <inheritdoc />
-    public partial class AddWizardFields : Migration
+    internal partial class AddWizardFields : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

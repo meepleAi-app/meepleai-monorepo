@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Queries;
 /// Query to retrieve all comments for a RuleSpec version.
 /// Returns threaded comments with optional filtering by resolution status.
 /// </summary>
-public record GetRuleCommentsQuery(
+internal record GetRuleCommentsQuery(
     string GameId,
     string Version,
     bool IncludeResolved = true

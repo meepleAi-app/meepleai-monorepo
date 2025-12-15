@@ -33,7 +33,7 @@ namespace Api.Filters;
 /// Related: SessionValidationExtensions.cs provides TryGetActiveSession() used internally
 /// Issue: #1446, #1676 Phase 3
 /// </summary>
-public class RequireSessionFilter : IEndpointFilter
+internal class RequireSessionFilter : IEndpointFilter
 {
     /// <summary>
     /// Validates active session before endpoint execution.

@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.Authentication.Application.Queries;
 /// <summary>
 /// Query to get detailed usage statistics for a specific API key.
 /// </summary>
-public record GetApiKeyUsageStatsQuery(
+internal record GetApiKeyUsageStatsQuery(
     Guid KeyId,
     Guid UserId
 ) : IQuery<ApiKeyUsageStatsDto?>;

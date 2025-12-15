@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// ISSUE-1725: Handler for GetMonthlyOptimizationReportQuery.
 /// Generates comprehensive monthly LLM optimization reports.
 /// </summary>
-public class GetMonthlyOptimizationReportQueryHandler
+internal class GetMonthlyOptimizationReportQueryHandler
     : IRequestHandler<GetMonthlyOptimizationReportQuery, MonthlyOptimizationReport>
 {
     private readonly IMonthlyOptimizationReportService _reportService;
@@ -27,6 +27,7 @@ public class GetMonthlyOptimizationReportQueryHandler
         GetMonthlyOptimizationReportQuery request,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         _logger.LogInformation(
             "Generating monthly optimization report for {Year}-{Month:D2}",
             request.Year, request.Month);

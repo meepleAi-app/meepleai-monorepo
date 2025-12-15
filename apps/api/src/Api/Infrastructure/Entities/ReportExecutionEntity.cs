@@ -8,7 +8,7 @@ namespace Api.Infrastructure.Entities;
 /// ISSUE-916: Report execution history storage
 /// </summary>
 [Table("admin_report_executions")]
-public sealed class ReportExecutionEntity
+internal sealed class ReportExecutionEntity
 {
     [Key]
     [Column("id")]

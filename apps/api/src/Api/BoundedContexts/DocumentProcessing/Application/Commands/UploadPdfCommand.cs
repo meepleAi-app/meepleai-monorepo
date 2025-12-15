@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 /// <summary>
 /// Command to upload a PDF document for a game.
 /// </summary>
-public record UploadPdfCommand(
+internal record UploadPdfCommand(
     string GameId,
     Guid UserId,
     IFormFile File

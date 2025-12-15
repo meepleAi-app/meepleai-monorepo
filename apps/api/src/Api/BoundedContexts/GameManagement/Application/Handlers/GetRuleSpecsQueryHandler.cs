@@ -12,7 +12,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Handlers;
 /// Note: RuleSpec is currently in infrastructure layer.
 /// This may be moved to a dedicated bounded context (GameManagement or KnowledgeBase) in the future.
 /// </summary>
-public class GetRuleSpecsQueryHandler : IQueryHandler<GetRuleSpecsQuery, IReadOnlyList<RuleSpecDto>>
+internal class GetRuleSpecsQueryHandler : IQueryHandler<GetRuleSpecsQuery, IReadOnlyList<RuleSpecDto>>
 {
     private readonly MeepleAiDbContext _dbContext;
 

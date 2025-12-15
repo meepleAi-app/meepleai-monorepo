@@ -3,7 +3,7 @@ namespace Api.Configuration;
 /// <summary>
 /// Configuration for AI-generated follow-up questions feature (CHAT-02).
 /// </summary>
-public class FollowUpQuestionsConfiguration
+internal class FollowUpQuestionsConfiguration
 {
     public const string SectionName = "FollowUpQuestions";
 

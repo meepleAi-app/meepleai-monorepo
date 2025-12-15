@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.Authentication.Domain.ValueObjects;
 /// <summary>
 /// Represents a user role in the system.
 /// </summary>
-public sealed class Role : ValueObject
+internal sealed class Role : ValueObject
 {
     public static readonly Role User = new("user");
     public static readonly Role Editor = new("editor");

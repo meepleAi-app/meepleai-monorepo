@@ -6,7 +6,7 @@ namespace Api.Models;
 /// <summary>
 /// Represents the difference between two RuleSpec versions
 /// </summary>
-public record RuleSpecDiff(
+internal record RuleSpecDiff(
     string GameId,
     string FromVersion,
     string ToVersion,
@@ -19,7 +19,7 @@ public record RuleSpecDiff(
 /// <summary>
 /// Summary of changes between two versions
 /// </summary>
-public record DiffSummary(
+internal record DiffSummary(
     int TotalChanges,
     int Added,
     int Modified,
@@ -30,7 +30,7 @@ public record DiffSummary(
 /// <summary>
 /// Represents a change to a single rule atom
 /// </summary>
-public record RuleAtomChange(
+internal record RuleAtomChange(
     ChangeType Type,
     string? OldAtom,
     string? NewAtom,
@@ -42,7 +42,7 @@ public record RuleAtomChange(
 /// <summary>
 /// Type of change for a rule atom
 /// </summary>
-public enum ChangeType
+internal enum ChangeType
 {
     Added,
     Modified,
@@ -53,7 +53,7 @@ public enum ChangeType
 /// <summary>
 /// Represents a change to a specific field within a rule atom
 /// </summary>
-public record FieldChange(
+internal record FieldChange(
     string FieldName,
     string? OldValue,
     string? NewValue
@@ -62,7 +62,7 @@ public record FieldChange(
 /// <summary>
 /// Represents the version history of a RuleSpec
 /// </summary>
-public record RuleSpecVersion(
+internal record RuleSpecVersion(
     string Version,
     DateTime CreatedAt,
     int RuleCount,
@@ -72,7 +72,7 @@ public record RuleSpecVersion(
 /// <summary>
 /// Represents the history of changes to a RuleSpec
 /// </summary>
-public record RuleSpecHistory(
+internal record RuleSpecHistory(
     string GameId,
     IReadOnlyList<RuleSpecVersion> Versions,
     int TotalVersions

@@ -7,7 +7,7 @@ namespace Api.SharedKernel.Domain.Entities;
 /// Provides domain event management capabilities.
 /// </summary>
 /// <typeparam name="TId">The type of the aggregate root's identifier</typeparam>
-public abstract class AggregateRoot<TId> : Entity<TId>, IAggregateRoot
+internal abstract class AggregateRoot<TId> : Entity<TId>, IAggregateRoot
     where TId : notnull
 {
     private readonly List<IDomainEvent> _domainEvents = new();

@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.WorkflowIntegration.Domain.Events;
 /// <summary>
 /// Domain event raised when a new N8N configuration is created.
 /// </summary>
-public sealed class N8NConfigurationCreatedEvent : DomainEventBase
+internal sealed class N8NConfigurationCreatedEvent : DomainEventBase
 {
     public Guid ConfigurationId { get; }
     public string Name { get; }

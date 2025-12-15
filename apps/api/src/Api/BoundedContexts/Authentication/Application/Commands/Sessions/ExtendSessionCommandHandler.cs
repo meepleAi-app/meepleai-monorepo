@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands;
 /// Handler for ExtendSessionCommand with rate limiting.
 /// Rate limit: Max 10 extensions per hour per user.
 /// </summary>
-public class ExtendSessionCommandHandler : ICommandHandler<ExtendSessionCommand, ExtendSessionResponse>
+internal class ExtendSessionCommandHandler : ICommandHandler<ExtendSessionCommand, ExtendSessionResponse>
 {
     private readonly ISessionRepository _sessionRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -38,6 +38,7 @@ public class ExtendSessionCommandHandler : ICommandHandler<ExtendSessionCommand,
 
     public async Task<ExtendSessionResponse> Handle(ExtendSessionCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         // Rate limiting check - per user
         var rateLimitKey = $"session_extend:{command.RequestingUserId}";
         var rateLimitResult = await _rateLimitService.CheckRateLimitAsync(

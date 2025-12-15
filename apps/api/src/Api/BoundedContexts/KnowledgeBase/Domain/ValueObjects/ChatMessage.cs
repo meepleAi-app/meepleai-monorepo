@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 /// Entity representing a message in a chat thread.
 /// Changed from ValueObject to Entity to support update/delete operations (Issue #1184).
 /// </summary>
-public sealed class ChatMessage
+internal sealed class ChatMessage
 {
     public Guid Id { get; private set; }
     public string Content { get; private set; }

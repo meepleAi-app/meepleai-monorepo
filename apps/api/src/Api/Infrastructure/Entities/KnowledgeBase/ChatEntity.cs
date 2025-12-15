@@ -1,6 +1,6 @@
 namespace Api.Infrastructure.Entities;
 
-public class ChatEntity
+internal class ChatEntity
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     // DDD-PHASE2: Converted to Guid for domain alignment

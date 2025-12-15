@@ -13,7 +13,7 @@ namespace Api.Routing;
 /// Prompt template management and evaluation endpoints (Admin only).
 /// Handles prompt template CRUD, versioning, activation, evaluation, A/B testing, and audit logging.
 /// </summary>
-public static class PromptManagementEndpoints
+internal static class PromptManagementEndpoints
 {
     public static RouteGroupBuilder MapPromptManagementEndpoints(this RouteGroupBuilder group)
     {

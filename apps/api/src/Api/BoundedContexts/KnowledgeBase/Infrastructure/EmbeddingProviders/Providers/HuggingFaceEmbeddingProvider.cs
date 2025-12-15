@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.EmbeddingProviders.Pr
 /// HuggingFace embedding provider supporting BGE-M3 model.
 /// Uses HuggingFace Inference API for multilingual embeddings.
 /// </summary>
-public sealed class HuggingFaceEmbeddingProvider : EmbeddingProviderBase
+internal sealed class HuggingFaceEmbeddingProvider : EmbeddingProviderBase
 {
     private readonly string _modelName;
     private readonly int _dimensions;

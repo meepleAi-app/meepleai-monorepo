@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.Administration.Infrastructure.External;
 /// Infrastructure implementation for health monitoring service.
 /// Issue #891: Aggregates health checks from ASP.NET Core HealthCheckService.
 /// </summary>
-public class InfrastructureHealthService : IInfrastructureHealthService
+internal class InfrastructureHealthService : IInfrastructureHealthService
 {
     private readonly HealthCheckService _healthCheckService;
     private readonly ILogger<InfrastructureHealthService> _logger;

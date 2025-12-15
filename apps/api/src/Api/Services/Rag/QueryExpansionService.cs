@@ -7,7 +7,7 @@ namespace Api.Services.Rag;
 /// PERF-08: Generates query variations for improved recall
 /// Uses rule-based expansion with synonyms and reformulations
 /// </summary>
-public class QueryExpansionService : IQueryExpansionService
+internal class QueryExpansionService : IQueryExpansionService
 {
     private readonly ILogger<QueryExpansionService> _logger;
     private readonly IConfigurationService? _configurationService;

@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 /// Adapter interface for PDF text extraction infrastructure
 /// Abstracts the underlying PDF processing library (Docnet.Core)
 /// </summary>
-public interface IPdfTextExtractor
+internal interface IPdfTextExtractor
 {
     /// <summary>
     /// Extracts text from a PDF file with optional OCR fallback
@@ -37,7 +37,7 @@ public interface IPdfTextExtractor
 /// <summary>
 /// Result of text extraction operation
 /// </summary>
-public record TextExtractionResult(
+internal record TextExtractionResult(
     bool Success,
     string ExtractedText,
     int PageCount,
@@ -79,7 +79,7 @@ public record TextExtractionResult(
 /// <summary>
 /// Result of paged text extraction operation
 /// </summary>
-public record PagedTextExtractionResult(
+internal record PagedTextExtractionResult(
     bool Success,
     IList<PageTextChunk> PageChunks,
     int TotalPages,
@@ -117,7 +117,7 @@ public record PagedTextExtractionResult(
 /// <summary>
 /// Represents text extracted from a single page
 /// </summary>
-public record PageTextChunk(
+internal record PageTextChunk(
     int PageNumber,
     string Text,
     int CharStartIndex,

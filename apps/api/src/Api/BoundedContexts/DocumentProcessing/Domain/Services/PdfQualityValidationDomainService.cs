@@ -12,7 +12,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Domain.Services;
 /// Enforces quality threshold ≥0.80 as per ADR-003
 /// Provides detailed quality assessment for monitoring and debugging
 /// </remarks>
-public class PdfQualityValidationDomainService
+internal class PdfQualityValidationDomainService
 {
     private readonly ILogger<PdfQualityValidationDomainService> _logger;
     private readonly IConfiguration _configuration;
@@ -145,7 +145,7 @@ public class PdfQualityValidationDomainService
     /// <summary>
     /// Generates actionable recommendation based on quality score
     /// </summary>
-    private static string GenerateRecommendation(double score, ExtractionQuality quality, string source)
+    private static string GenerateRecommendation(double score, string source)
     {
         // Currently quality param is unused but kept for extensibility in rules
         if (score >= 0.80)
@@ -251,7 +251,7 @@ public class PdfQualityValidationDomainService
 /// <summary>
 /// Result of PDF quality validation
 /// </summary>
-public record PdfQualityValidationResult(
+internal record PdfQualityValidationResult(
     bool Passed,
     string SourceExtractor,
     double QualityScore,
@@ -300,7 +300,7 @@ public record PdfQualityValidationResult(
 /// <summary>
 /// Detailed PDF quality assessment report
 /// </summary>
-public record PdfQualityReport(
+internal record PdfQualityReport(
     string RequestId,
     string SourceExtractor,
     string QualityLevel,
@@ -313,7 +313,7 @@ public record PdfQualityReport(
 /// <summary>
 /// PDF extraction quality metrics breakdown
 /// </summary>
-public record PdfQualityMetrics(
+internal record PdfQualityMetrics(
     double TotalScore,
     double TextCoverageScore,
     double StructureScore,

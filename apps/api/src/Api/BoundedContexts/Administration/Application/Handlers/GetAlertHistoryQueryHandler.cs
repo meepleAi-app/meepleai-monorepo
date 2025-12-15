@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.Administration.Application.Handlers;
 /// Handler for GetAlertHistoryQuery.
 /// Delegates to AlertingService (service will be refactored in future iterations).
 /// </summary>
-public class GetAlertHistoryQueryHandler : IQueryHandler<GetAlertHistoryQuery, List<AlertDto>>
+internal class GetAlertHistoryQueryHandler : IQueryHandler<GetAlertHistoryQuery, List<AlertDto>>
 {
     private readonly IAlertingService _alertingService;
 

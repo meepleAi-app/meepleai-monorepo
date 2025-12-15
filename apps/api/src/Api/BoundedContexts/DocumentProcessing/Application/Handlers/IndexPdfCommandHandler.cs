@@ -19,7 +19,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Handlers;
 /// 5. Index to Qdrant
 /// 6. Update PDF document status
 /// </summary>
-public class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, IndexingResultDto>
+internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, IndexingResultDto>
 {
     private readonly MeepleAiDbContext _db;
     private readonly ITextChunkingService _chunkingService;
@@ -46,6 +46,7 @@ public class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, IndexingR
 
     public async Task<IndexingResultDto> Handle(IndexPdfCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         var pdfId = command.PdfId;
         _logger.LogInformation("Starting indexing for PDF {PdfId}", pdfId);
 
@@ -187,8 +188,7 @@ public class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, IndexingR
     private async Task<(bool success, List<DocumentChunk>? documentChunks, string? errorMessage, PdfIndexingErrorCode? errorCode)> ChunkAndEmbedTextAsync(
         string pdfId,
         string extractedText,
-        VectorDocumentEntity vectorDoc,
-        CancellationToken cancellationToken)
+                CancellationToken cancellationToken)
     {
         // Chunk the text
         _logger.LogInformation("Chunking text for PDF {PdfId} ({CharCount} characters)",

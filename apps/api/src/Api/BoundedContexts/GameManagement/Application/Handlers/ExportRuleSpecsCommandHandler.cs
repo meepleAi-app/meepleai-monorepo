@@ -12,7 +12,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Handlers;
 /// <summary>
 /// Handles exporting multiple rule specifications as a ZIP archive.
 /// </summary>
-public class ExportRuleSpecsCommandHandler : ICommandHandler<ExportRuleSpecsCommand, byte[]>
+internal class ExportRuleSpecsCommandHandler : ICommandHandler<ExportRuleSpecsCommand, byte[]>
 {
     private readonly MeepleAiDbContext _dbContext;
 
@@ -23,6 +23,7 @@ public class ExportRuleSpecsCommandHandler : ICommandHandler<ExportRuleSpecsComm
 
     public async Task<byte[]> Handle(ExportRuleSpecsCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         if (command.GameIds == null || command.GameIds.Count == 0)
         {
             throw new ArgumentException("At least one game ID must be provided", nameof(command));

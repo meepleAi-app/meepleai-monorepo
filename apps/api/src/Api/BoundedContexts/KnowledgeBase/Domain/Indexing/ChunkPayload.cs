@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Indexing;
 /// Contains metadata for filtering, parent/child relationships, and context retrieval.
 /// Value Object - immutable, equality by value.
 /// </summary>
-public sealed class ChunkPayload : ValueObject
+internal sealed class ChunkPayload : ValueObject
 {
     /// <summary>
     /// Game identifier for filtering (stored as string for Qdrant keyword index).

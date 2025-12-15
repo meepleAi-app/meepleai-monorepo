@@ -8,14 +8,14 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Queries;
 /// Includes ownership info for authorization.
 /// PDF-08: Get PDF processing progress
 /// </summary>
-public sealed record GetPdfProgressQuery(
+internal sealed record GetPdfProgressQuery(
     Guid PdfId
 ) : IQuery<PdfProgressResult?>;
 
 /// <summary>
 /// Result containing PDF progress data and ownership.
 /// </summary>
-public record PdfProgressResult(
+internal record PdfProgressResult(
     Guid Id,
     Guid UploadedByUserId,
     string? ProcessingProgressJson

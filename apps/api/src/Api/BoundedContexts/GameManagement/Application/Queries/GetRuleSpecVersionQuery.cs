@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Queries;
 /// <summary>
 /// Query to retrieve a specific version of a rule specification.
 /// </summary>
-public record GetRuleSpecVersionQuery(
+internal record GetRuleSpecVersionQuery(
     Guid GameId,
     string Version
 ) : IQuery<RuleSpecDto?>;

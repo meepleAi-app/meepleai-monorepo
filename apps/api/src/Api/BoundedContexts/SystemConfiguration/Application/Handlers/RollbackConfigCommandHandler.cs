@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.SystemConfiguration.Application.Handlers;
 /// Handles rollback of configuration to previous version.
 /// Currently supports single-level rollback via PreviousValue.
 /// </summary>
-public class RollbackConfigCommandHandler : ICommandHandler<RollbackConfigCommand, ConfigurationDto?>
+internal class RollbackConfigCommandHandler : ICommandHandler<RollbackConfigCommand, ConfigurationDto?>
 {
     private readonly IConfigurationRepository _configurationRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -25,6 +25,7 @@ public class RollbackConfigCommandHandler : ICommandHandler<RollbackConfigComman
 
     public async Task<ConfigurationDto?> Handle(RollbackConfigCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         var config = await _configurationRepository.GetByIdAsync(command.ConfigurationId, cancellationToken).ConfigureAwait(false);
         if (config == null)
             return null;

@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Reports.Services;
 /// <summary>
 /// ADR-016 Phase 5: Service for generating benchmark reports in markdown format.
 /// </summary>
-public interface IReportGeneratorService
+internal interface IReportGeneratorService
 {
     /// <summary>
     /// Generates a markdown report from benchmark results.
@@ -25,7 +25,7 @@ public interface IReportGeneratorService
 /// <summary>
 /// Implementation of report generator service.
 /// </summary>
-public sealed class ReportGeneratorService : IReportGeneratorService
+internal sealed class ReportGeneratorService : IReportGeneratorService
 {
     /// <inheritdoc />
     public string GenerateMarkdownReport(BenchmarkReport report)

@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 /// Repository interface for Embedding entities.
 /// Provides access to embeddings for search and retrieval operations.
 /// </summary>
-public interface IEmbeddingRepository
+internal interface IEmbeddingRepository
 {
     /// <summary>
     /// Gets an embedding by its unique identifier.

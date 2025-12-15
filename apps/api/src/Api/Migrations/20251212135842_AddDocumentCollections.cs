@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Api.Migrations
 {
     /// <inheritdoc />
-    public partial class AddDocumentCollections : Migration
+    internal partial class AddDocumentCollections : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

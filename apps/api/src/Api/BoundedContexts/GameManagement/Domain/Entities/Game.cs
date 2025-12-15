@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.GameManagement.Domain.Entities;
 /// <summary>
 /// Game aggregate root representing a board game in the system.
 /// </summary>
-public sealed class Game : AggregateRoot<Guid>
+internal sealed class Game : AggregateRoot<Guid>
 {
     public GameTitle Title { get; private set; }
     public Publisher? Publisher { get; private set; }

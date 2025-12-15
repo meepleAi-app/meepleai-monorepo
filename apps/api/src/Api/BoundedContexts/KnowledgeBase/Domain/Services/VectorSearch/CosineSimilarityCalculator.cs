@@ -21,7 +21,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
 /// For consensus validation, we use threshold ≥0.90 which indicates
 /// very high semantic similarity between model responses.
 /// </remarks>
-public class CosineSimilarityCalculator
+internal class CosineSimilarityCalculator
 {
     /// <summary>
     /// Calculate cosine similarity between two text documents using TF-IDF

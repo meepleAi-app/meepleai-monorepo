@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands;
 /// Command to mark a rule comment as unresolved.
 /// Optionally unresolves the parent comment.
 /// </summary>
-public record UnresolveRuleCommentCommand(
+internal record UnresolveRuleCommentCommand(
     Guid CommentId,
     Guid UserId,
     bool IsAdmin = false,

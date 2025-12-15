@@ -8,7 +8,7 @@ namespace Api.Logging;
 /// OPS-04: Centralized logging configuration for environment-based log levels and structured logging.
 /// Provides consistent Serilog setup across all environments with appropriate defaults.
 /// </summary>
-public static class LoggingConfiguration
+internal static class LoggingConfiguration
 {
     /// <summary>
     /// Configures Serilog with environment-specific settings.
@@ -134,7 +134,7 @@ public static class LoggingConfiguration
     /// Gets the HyperDX log level based on environment and configuration.
     /// Issue #1563: All environments should log to HyperDX, but threshold may vary.
     /// </summary>
-    private static LogEventLevel GetHyperDxLogLevel(string environmentName, IConfiguration configuration)
+    private static LogEventLevel GetHyperDxLogLevel(IConfiguration configuration)
     {
         // Check for explicit HyperDX log level configuration
         var configuredLevel = configuration["Logging:LogLevel:HyperDX"];

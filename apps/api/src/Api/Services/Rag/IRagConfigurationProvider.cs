@@ -4,7 +4,7 @@ namespace Api.Services.Rag;
 /// Provides RAG-specific configuration with 3-tier fallback strategy.
 /// Issue #1441: Extracted from RagService to reduce complexity and improve separation of concerns.
 /// </summary>
-public interface IRagConfigurationProvider
+internal interface IRagConfigurationProvider
 {
     /// <summary>
     /// Gets RAG configuration value with 3-tier fallback (DB → appsettings.json → hardcoded defaults).

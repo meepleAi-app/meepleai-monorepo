@@ -4,7 +4,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Chunking;
 /// ADR-016 Phase 1: Hierarchical chunk entity with parent/child relationships.
 /// Entity - identity by Id.
 /// </summary>
-public sealed class HierarchicalChunk
+internal sealed class HierarchicalChunk
 {
     /// <summary>
     /// Unique identifier for this chunk.

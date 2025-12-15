@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.WorkflowIntegration.Application.Queries.WorkflowEr
 /// Query to retrieve workflow errors with filtering and pagination.
 /// Supports filtering by workflow ID and date range, with HybridCache support for performance.
 /// </summary>
-public sealed record GetWorkflowErrorsQuery : IQuery<PagedResult<WorkflowErrorDto>>
+internal sealed record GetWorkflowErrorsQuery : IQuery<PagedResult<WorkflowErrorDto>>
 {
     public string? WorkflowId { get; init; }
     public DateTime? FromDate { get; init; }

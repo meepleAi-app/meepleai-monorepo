@@ -7,7 +7,7 @@ namespace Api.Services.Qdrant;
 /// <summary>
 /// Handles vector search operations in Qdrant
 /// </summary>
-public class QdrantVectorSearcher : IQdrantVectorSearcher
+internal class QdrantVectorSearcher : IQdrantVectorSearcher
 {
     private readonly IQdrantClientAdapter _clientAdapter;
     private readonly ILogger<QdrantVectorSearcher> _logger;

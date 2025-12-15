@@ -3,7 +3,7 @@ namespace Api.BoundedContexts.Authentication.Application.DTOs;
 /// <summary>
 /// DTO for API key usage statistics.
 /// </summary>
-public class ApiKeyUsageStatsDto
+internal class ApiKeyUsageStatsDto
 {
     /// <summary>
     /// API key ID.

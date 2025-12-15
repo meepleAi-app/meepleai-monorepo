@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.Authentication.Infrastructure.DependencyInjection;
 /// <summary>
 /// Dependency injection extensions for Authentication bounded context.
 /// </summary>
-public static class AuthenticationServiceExtensions
+internal static class AuthenticationServiceExtensions
 {
     /// <summary>
     /// Registers all Authentication bounded context services.

@@ -7,7 +7,7 @@ namespace Api.Infrastructure.Entities;
 /// PERF-03: Cache statistics for tracking hit rates and popular questions
 /// </summary>
 [Table("cache_stats")]
-public class CacheStatEntity
+internal class CacheStatEntity
 {
     [Key]
     [Column("id")]

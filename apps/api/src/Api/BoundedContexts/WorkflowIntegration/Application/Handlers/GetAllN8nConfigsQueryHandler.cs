@@ -6,7 +6,7 @@ using Api.SharedKernel.Application.Interfaces;
 
 namespace Api.BoundedContexts.WorkflowIntegration.Application.Handlers;
 
-public class GetAllN8NConfigsQueryHandler : IQueryHandler<GetAllN8NConfigsQuery, List<N8NConfigurationDto>>
+internal class GetAllN8NConfigsQueryHandler : IQueryHandler<GetAllN8NConfigsQuery, List<N8NConfigurationDto>>
 {
     private readonly IN8NConfigurationRepository _repository;
 

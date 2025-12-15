@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Api.Services;
 
-public class PasswordResetService : IPasswordResetService
+internal class PasswordResetService : IPasswordResetService
 {
     private const int TokenSize = 32;
     private const int TokenExpiryMinutes = 30;

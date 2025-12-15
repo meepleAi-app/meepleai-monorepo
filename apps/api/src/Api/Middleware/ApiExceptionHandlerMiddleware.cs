@@ -13,7 +13,7 @@ namespace Api.Middleware;
 /// Returns structured error responses with correlation IDs for debugging.
 /// OPS-05: Records error metrics for monitoring and alerting.
 /// </summary>
-public class ApiExceptionHandlerMiddleware
+internal class ApiExceptionHandlerMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly ILogger<ApiExceptionHandlerMiddleware> _logger;
@@ -238,7 +238,7 @@ public class ApiExceptionHandlerMiddleware
 /// <summary>
 /// Extension methods for registering API exception handler middleware.
 /// </summary>
-public static class ApiExceptionHandlerMiddlewareExtensions
+internal static class ApiExceptionHandlerMiddlewareExtensions
 {
     /// <summary>
     /// Adds API exception handler middleware to the pipeline.

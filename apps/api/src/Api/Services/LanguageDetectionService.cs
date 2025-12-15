@@ -7,7 +7,7 @@ namespace Api.Services;
 /// Local language detection service using lightweight heuristics.
 /// Supports offline detection for 5 languages without external API calls.
 /// </summary>
-public class LanguageDetectionService : ILanguageDetectionService
+internal class LanguageDetectionService : ILanguageDetectionService
 {
     private static readonly string[] SupportedLanguages = { "en", "it", "de", "fr", "es" };
     // FIX MA0009: Add timeout to prevent ReDoS attacks

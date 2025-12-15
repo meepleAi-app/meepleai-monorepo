@@ -8,7 +8,7 @@ namespace Api.Services;
 /// PagerDuty alert channel using Events API v2.
 /// OPS-07: PagerDuty incident creation for critical alerts.
 /// </summary>
-public class PagerDutyAlertChannel : IAlertChannel
+internal class PagerDutyAlertChannel : IAlertChannel
 {
     private readonly PagerDutyConfiguration _config;
     private readonly IHttpClientFactory _httpClientFactory;

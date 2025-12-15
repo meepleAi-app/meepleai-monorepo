@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.Administration.Domain.Entities;
 /// Domain entity representing a report execution instance
 /// ISSUE-916: Tracks individual report executions for audit and monitoring
 /// </summary>
-public sealed record ReportExecution
+internal sealed record ReportExecution
 {
     public required Guid Id { get; init; }
     public required Guid ReportId { get; init; }

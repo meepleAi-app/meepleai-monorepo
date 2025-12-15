@@ -6,4 +6,4 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands;
 /// Command to delete an FAQ.
 /// Issue #2028: Backend FAQ system for game-specific FAQs.
 /// </summary>
-public record DeleteGameFAQCommand(Guid Id) : ICommand;
+internal record DeleteGameFAQCommand(Guid Id) : ICommand;

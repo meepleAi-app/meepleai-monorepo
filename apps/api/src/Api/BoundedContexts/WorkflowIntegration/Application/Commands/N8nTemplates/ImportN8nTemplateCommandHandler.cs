@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.WorkflowIntegration.Application.Commands.N8NTempla
 /// Infrastructure delegation: File I/O, n8n API calls, encryption via N8NTemplateService.
 /// Flow: Load template → Validate parameters → Substitute placeholders → Query active config → Create in n8n.
 /// </summary>
-public sealed class ImportN8NTemplateCommandHandler : ICommandHandler<ImportN8NTemplateCommand, ImportTemplateResponse>
+internal sealed class ImportN8NTemplateCommandHandler : ICommandHandler<ImportN8NTemplateCommand, ImportTemplateResponse>
 {
     private readonly N8NTemplateService _templateService;
     private readonly ILogger<ImportN8NTemplateCommandHandler> _logger;
@@ -26,6 +26,7 @@ public sealed class ImportN8NTemplateCommandHandler : ICommandHandler<ImportN8NT
 
     public async Task<ImportTemplateResponse> Handle(ImportN8NTemplateCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         // Business logic validation
         if (string.IsNullOrWhiteSpace(command.TemplateId))
         {

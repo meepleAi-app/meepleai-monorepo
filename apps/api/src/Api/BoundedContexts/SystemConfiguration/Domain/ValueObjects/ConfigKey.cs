@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
 /// Value object representing a validated configuration key.
 /// Uses colon-separated hierarchy (e.g., "RateLimit:Admin:MaxTokens").
 /// </summary>
-public sealed class ConfigKey : ValueObject
+internal sealed class ConfigKey : ValueObject
 {
     public string Value { get; }
 

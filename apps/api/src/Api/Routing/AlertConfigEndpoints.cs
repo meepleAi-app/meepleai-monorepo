@@ -8,7 +8,7 @@ namespace Api.Routing;
 /// <summary>
 /// Alert configuration endpoints (Issue #921)
 /// </summary>
-public static class AlertConfigEndpoints
+internal static class AlertConfigEndpoints
 {
     public static void MapAlertConfigEndpoints(this IEndpointRouteBuilder app)
     {
@@ -129,6 +129,6 @@ public static class AlertConfigEndpoints
     }
 }
 
-public record CreateAlertRuleRequest(string Name, string AlertType, string Severity, double ThresholdValue, string ThresholdUnit, int DurationMinutes, string? Description);
-public record UpdateAlertRuleRequest(string Name, string Severity, double ThresholdValue, string ThresholdUnit, int DurationMinutes, string? Description);
-public record TestAlertRequest(string AlertType, string Channel);
+internal record CreateAlertRuleRequest(string Name, string AlertType, string Severity, double ThresholdValue, string ThresholdUnit, int DurationMinutes, string? Description);
+internal record UpdateAlertRuleRequest(string Name, string Severity, double ThresholdValue, string ThresholdUnit, int DurationMinutes, string? Description);
+internal record TestAlertRequest(string AlertType, string Channel);

@@ -1,6 +1,6 @@
 namespace Api.Services;
 
-public interface IQdrantService
+internal interface IQdrantService
 {
     Task EnsureCollectionExistsAsync(CancellationToken ct = default);
     Task<bool> CollectionExistsAsync(CancellationToken ct = default);

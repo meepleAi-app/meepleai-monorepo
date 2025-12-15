@@ -3,7 +3,7 @@ namespace Api.BoundedContexts.Administration.Domain.Aggregates.AlertRules;
 /// <summary>
 /// AlertRule Aggregate Root (Issue #921)
 /// </summary>
-public class AlertRule
+internal class AlertRule
 {
     public string Name { get; private set; }
     public string AlertType { get; private set; }

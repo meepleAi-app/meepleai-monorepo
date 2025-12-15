@@ -7,7 +7,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 
 namespace Api.BoundedContexts.WorkflowIntegration.Application.Handlers;
 
-public class LogWorkflowErrorCommandHandler : ICommandHandler<LogWorkflowErrorCommand, WorkflowErrorLogDto>
+internal class LogWorkflowErrorCommandHandler : ICommandHandler<LogWorkflowErrorCommand, WorkflowErrorLogDto>
 {
     private readonly IWorkflowErrorLogRepository _errorLogRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -22,6 +22,7 @@ public class LogWorkflowErrorCommandHandler : ICommandHandler<LogWorkflowErrorCo
 
     public async Task<WorkflowErrorLogDto> Handle(LogWorkflowErrorCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         var errorLog = new WorkflowErrorLog(
             id: Guid.NewGuid(),
             workflowId: command.WorkflowId,

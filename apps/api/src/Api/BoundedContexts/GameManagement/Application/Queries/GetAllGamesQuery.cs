@@ -6,4 +6,4 @@ namespace Api.BoundedContexts.GameManagement.Application.Queries;
 /// <summary>
 /// Query to retrieve all games in the catalog.
 /// </summary>
-public record GetAllGamesQuery() : IQuery<IReadOnlyList<GameDto>>;
+internal record GetAllGamesQuery() : IQuery<IReadOnlyList<GameDto>>;

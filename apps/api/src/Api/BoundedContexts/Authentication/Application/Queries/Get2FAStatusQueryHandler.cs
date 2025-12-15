@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Authentication.Application.Queries;
 /// Handler for Get2FAStatusQuery.
 /// DDD: Thin wrapper - delegates to ITotpService for status retrieval.
 /// </summary>
-public class Get2FAStatusQueryHandler : IQueryHandler<Get2FAStatusQuery, TwoFactorStatusDto?>
+internal class Get2FAStatusQueryHandler : IQueryHandler<Get2FAStatusQuery, TwoFactorStatusDto?>
 {
     private readonly ITotpService _totpService;
     private readonly ILogger<Get2FAStatusQueryHandler> _logger;
@@ -23,6 +23,7 @@ public class Get2FAStatusQueryHandler : IQueryHandler<Get2FAStatusQuery, TwoFact
 
     public async Task<TwoFactorStatusDto?> Handle(Get2FAStatusQuery query, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(query);
         try
         {
             var status = await _totpService.GetTwoFactorStatusAsync(query.UserId, cancellationToken).ConfigureAwait(false);

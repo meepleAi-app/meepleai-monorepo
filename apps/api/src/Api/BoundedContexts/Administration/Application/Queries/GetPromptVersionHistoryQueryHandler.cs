@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.Administration.Application.Queries;
 
-public class GetPromptVersionHistoryQueryHandler : IQueryHandler<GetPromptVersionHistoryQuery, PromptVersionHistoryResponse>
+internal class GetPromptVersionHistoryQueryHandler : IQueryHandler<GetPromptVersionHistoryQuery, PromptVersionHistoryResponse>
 {
     private readonly MeepleAiDbContext _db;
 
@@ -16,6 +16,7 @@ public class GetPromptVersionHistoryQueryHandler : IQueryHandler<GetPromptVersio
 
     public async Task<PromptVersionHistoryResponse> Handle(GetPromptVersionHistoryQuery request, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         if (!Guid.TryParse(request.TemplateId, out var templateGuid))
         {
             throw new ArgumentException($"Invalid template ID: {request.TemplateId}", nameof(request));

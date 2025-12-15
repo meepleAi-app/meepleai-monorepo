@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Api.Migrations
 {
     /// <inheritdoc />
-    public partial class AddChunkedUploadSessions : Migration
+    internal partial class AddChunkedUploadSessions : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

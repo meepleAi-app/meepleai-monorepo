@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Queries;
 /// <summary>
 /// Query to retrieve past evaluation results.
 /// </summary>
-public sealed record GetEvaluationResultsQuery : IRequest<IReadOnlyList<EvaluationResult>>
+internal sealed record GetEvaluationResultsQuery : IRequest<IReadOnlyList<EvaluationResult>>
 {
     /// <summary>
     /// Filter by dataset name.
@@ -28,7 +28,7 @@ public sealed record GetEvaluationResultsQuery : IRequest<IReadOnlyList<Evaluati
 /// <summary>
 /// Query to get the latest baseline metrics.
 /// </summary>
-public sealed record GetBaselineMetricsQuery : IRequest<EvaluationMetrics?>
+internal sealed record GetBaselineMetricsQuery : IRequest<EvaluationMetrics?>
 {
     /// <summary>
     /// Dataset name to get baseline for.

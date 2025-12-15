@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.Administration.Domain.Entities;
 /// Domain entity representing an admin report definition
 /// ISSUE-916: Report generation and scheduling
 /// </summary>
-public sealed record AdminReport
+internal sealed record AdminReport
 {
     public required Guid Id { get; init; }
     public required string Name { get; init; }

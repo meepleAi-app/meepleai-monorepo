@@ -1,8 +1,8 @@
 namespace Api.BoundedContexts.Administration.Domain.Aggregates.AlertRules;
 
-public enum AlertSeverity { Info, Warning, Error, Critical }
+internal enum AlertSeverity { Info, Warning, Error, Critical }
 
-public static class AlertSeverityExtensions
+internal static class AlertSeverityExtensions
 {
     public static string ToDisplayString(this AlertSeverity severity) => severity switch
     {

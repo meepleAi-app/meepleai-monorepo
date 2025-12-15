@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.Administration.Application.Handlers.AlertRules;
 
-public class TestAlertCommandHandler : IRequestHandler<TestAlertCommand, bool>
+internal class TestAlertCommandHandler : IRequestHandler<TestAlertCommand, bool>
 {
     private readonly IAlertingService _alertingService;
     private readonly ILogger<TestAlertCommandHandler> _logger;
@@ -20,6 +20,7 @@ public class TestAlertCommandHandler : IRequestHandler<TestAlertCommand, bool>
 
     public async Task<bool> Handle(TestAlertCommand request, CancellationToken ct)
     {
+        ArgumentNullException.ThrowIfNull(request);
         try
         {
             _logger.LogInformation(

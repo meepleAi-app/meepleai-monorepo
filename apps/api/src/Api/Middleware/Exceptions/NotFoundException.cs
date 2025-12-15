@@ -4,7 +4,7 @@ namespace Api.Middleware.Exceptions;
 /// Exception thrown when a requested resource is not found.
 /// Maps to HTTP 404 Not Found.
 /// </summary>
-public class NotFoundException : Exception
+internal class NotFoundException : Exception
 {
     /// <summary>
     /// Gets the type of the resource that was not found (e.g., "Game", "User").
@@ -35,5 +35,8 @@ public class NotFoundException : Exception
         return resourceId is not null
             ? $"{resourceType} with identifier '{resourceId}' was not found"
             : $"{resourceType} not found";
+    }
+    public NotFoundException()
+    {
     }
 }

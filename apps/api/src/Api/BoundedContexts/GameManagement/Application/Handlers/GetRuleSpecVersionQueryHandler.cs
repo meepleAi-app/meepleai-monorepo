@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Handlers;
 /// <summary>
 /// Handles retrieval of a specific version of a rule specification.
 /// </summary>
-public class GetRuleSpecVersionQueryHandler : IQueryHandler<GetRuleSpecVersionQuery, RuleSpecDto?>
+internal class GetRuleSpecVersionQueryHandler : IQueryHandler<GetRuleSpecVersionQuery, RuleSpecDto?>
 {
     private readonly MeepleAiDbContext _dbContext;
 
@@ -21,6 +21,7 @@ public class GetRuleSpecVersionQueryHandler : IQueryHandler<GetRuleSpecVersionQu
 
     public async Task<RuleSpecDto?> Handle(GetRuleSpecVersionQuery query, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(query);
         var specEntity = await _dbContext.RuleSpecs
             .AsNoTracking()
             .Include(r => r.Atoms)

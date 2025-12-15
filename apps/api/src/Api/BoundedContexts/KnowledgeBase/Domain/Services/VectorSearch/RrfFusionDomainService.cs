@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
 /// Domain service for Reciprocal Rank Fusion (RRF).
 /// Combines results from multiple search methods (vector + keyword) into a unified ranking.
 /// </summary>
-public class RrfFusionDomainService
+internal class RrfFusionDomainService
 {
     private const int DefaultRrfK = 60; // PERF-08: Standard RRF constant
 

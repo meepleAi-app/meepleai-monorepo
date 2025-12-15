@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Handlers;
 /// <summary>
 /// Handles unresolving rule comments with optional parent unresolve.
 /// </summary>
-public class UnresolveRuleCommentCommandHandler : IRequestHandler<UnresolveRuleCommentCommand, RuleCommentDto>
+internal class UnresolveRuleCommentCommandHandler : IRequestHandler<UnresolveRuleCommentCommand, RuleCommentDto>
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly TimeProvider _timeProvider;
@@ -29,6 +29,7 @@ public class UnresolveRuleCommentCommandHandler : IRequestHandler<UnresolveRuleC
 
     public async Task<RuleCommentDto> Handle(UnresolveRuleCommentCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         var comment = await _dbContext.RuleSpecComments
             .Include(c => c.ParentComment)
             .FirstOrDefaultAsync(c => c.Id == command.CommentId, cancellationToken)

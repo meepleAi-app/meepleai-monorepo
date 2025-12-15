@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Queries;
 /// Query to compute the difference between two RuleSpec versions.
 /// Returns a detailed diff with change summary and field-level changes.
 /// </summary>
-public record ComputeRuleSpecDiffQuery(
+internal record ComputeRuleSpecDiffQuery(
     Guid GameId,
     string? FromVersion,
     string? ToVersion

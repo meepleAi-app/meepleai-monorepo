@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.Administration.Infrastructure.Services;
 /// AIUsage template implementation
 /// ISSUE-916: AI/LLM usage and cost report generation
 /// </summary>
-public sealed partial class ReportGeneratorService
+internal sealed partial class ReportGeneratorService
 {
     private static (bool IsValid, string? ErrorMessage) ValidateAIUsageParameters(
         IReadOnlyDictionary<string, object> parameters)

@@ -5,7 +5,7 @@ using MediatR;
 
 namespace Api.BoundedContexts.Administration.Application.Handlers.AlertRules;
 
-public class CreateAlertRuleCommandHandler : IRequestHandler<CreateAlertRuleCommand, Guid>
+internal class CreateAlertRuleCommandHandler : IRequestHandler<CreateAlertRuleCommand, Guid>
 {
     private readonly IAlertRuleRepository _repository;
 
@@ -13,6 +13,7 @@ public class CreateAlertRuleCommandHandler : IRequestHandler<CreateAlertRuleComm
 
     public async Task<Guid> Handle(CreateAlertRuleCommand request, CancellationToken ct)
     {
+        ArgumentNullException.ThrowIfNull(request);
         var severity = AlertSeverityExtensions.FromString(request.Severity);
         var threshold = new AlertThreshold(request.ThresholdValue, request.ThresholdUnit);
         var duration = new AlertDuration(request.DurationMinutes);

@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Handlers;
 /// Handler for LoadDatasetCommand.
 /// Loads and validates an evaluation dataset from file.
 /// </summary>
-public sealed class LoadDatasetCommandHandler : IRequestHandler<LoadDatasetCommand, EvaluationDataset>
+internal sealed class LoadDatasetCommandHandler : IRequestHandler<LoadDatasetCommand, EvaluationDataset>
 {
     private readonly ILogger<LoadDatasetCommandHandler> _logger;
 

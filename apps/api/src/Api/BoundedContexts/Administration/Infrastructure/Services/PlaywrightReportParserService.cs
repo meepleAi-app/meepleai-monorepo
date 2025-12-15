@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.Administration.Infrastructure.Services;
 /// Service for parsing Playwright test reports (Issue #2139)
 /// Reads JSON reports from apps/web/playwright-report/
 /// </summary>
-public class PlaywrightReportParserService : IPlaywrightReportParserService
+internal class PlaywrightReportParserService : IPlaywrightReportParserService
 {
     private readonly ILogger<PlaywrightReportParserService> _logger;
     private readonly string _reportDirectory;
@@ -121,7 +121,7 @@ public class PlaywrightReportParserService : IPlaywrightReportParserService
     /// <summary>
     /// Gets the latest Playwright report file path
     /// </summary>
-    private async Task<string?> GetLatestReportAsync(CancellationToken ct = default)
+    private async Task<string?> GetLatestReportAsync()
     {
         await Task.CompletedTask.ConfigureAwait(false);
 

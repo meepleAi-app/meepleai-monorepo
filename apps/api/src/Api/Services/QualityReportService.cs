@@ -9,7 +9,7 @@ namespace Api.Services;
 /// Interface for quality reporting service.
 /// Provides manual report generation capability.
 /// </summary>
-public interface IQualityReportService
+internal interface IQualityReportService
 {
     /// <summary>
     /// Generate a quality report for the specified date range.
@@ -25,7 +25,7 @@ public interface IQualityReportService
 /// Also provides manual report generation via the IQualityReportService interface.
 /// AI-11: Monitors RAG confidence, LLM confidence, citation quality, and overall confidence metrics.
 /// </summary>
-public class QualityReportService : BackgroundService, IQualityReportService
+internal class QualityReportService : BackgroundService, IQualityReportService
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<QualityReportService> _logger;

@@ -12,7 +12,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
 /// Design Decision (ADR-004): Orchestration is a domain service within KnowledgeBase context.
 /// Agent selection is based on query type classification and agent type specialization.
 /// </remarks>
-public class AgentOrchestrationService
+internal class AgentOrchestrationService
 {
     /// <summary>
     /// Selects the most appropriate agent for a given query from available agents.
@@ -178,7 +178,7 @@ public class AgentOrchestrationService
 /// <summary>
 /// Enum representing different query types for agent selection.
 /// </summary>
-public enum QueryType
+internal enum QueryType
 {
     GeneralQuestion,
     RulesInterpretation,
@@ -190,7 +190,7 @@ public enum QueryType
 /// <summary>
 /// Value object representing the result of an agent invocation.
 /// </summary>
-public sealed record AgentInvocationResult
+internal sealed record AgentInvocationResult
 {
     public Guid InvocationId { get; init; }
     public Guid AgentId { get; init; }

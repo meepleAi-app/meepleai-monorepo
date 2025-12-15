@@ -22,7 +22,7 @@ using System.Diagnostics;
 #pragma warning disable MA0048 // File name must match type name - Contains Handler with related types
 namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 
-public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUploadResult>
+internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUploadResult>
 {
     private readonly MeepleAiDbContext _db;
     private readonly IServiceScopeFactory _scopeFactory;
@@ -115,8 +115,7 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
     /// </summary>
     private async Task<(bool IsValid, string? ErrorMessage, string? SanitizedFileName)> ValidateFileInputAsync(
         IFormFile? file,
-        string? gameId,
-        CancellationToken cancellationToken)
+                CancellationToken cancellationToken)
     {
         if (file == null || file.Length == 0)
         {
@@ -412,7 +411,7 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
         }
     }
 
-    private static async Task<(bool IsValid, string? ErrorMessage)> ValidatePdfStructureAsync(Stream stream, string fileName, CancellationToken ct)
+    private static async Task<(bool IsValid, string? ErrorMessage)> ValidatePdfStructureAsync(Stream stream, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(stream);
         const int headerCheckBytes = 1024; // Read first 1KB to find PDF header

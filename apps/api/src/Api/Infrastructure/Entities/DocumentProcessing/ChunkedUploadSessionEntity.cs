@@ -4,7 +4,7 @@ namespace Api.Infrastructure.Entities;
 /// EF Core entity for chunked upload sessions.
 /// Tracks in-progress large file uploads split into multiple chunks.
 /// </summary>
-public class ChunkedUploadSessionEntity
+internal class ChunkedUploadSessionEntity
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid GameId { get; set; }

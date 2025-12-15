@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.Administration.Domain.Repositories;
 /// Repository for ReportExecution aggregate
 /// ISSUE-916: Report execution history persistence
 /// </summary>
-public interface IReportExecutionRepository
+internal interface IReportExecutionRepository
 {
     Task<ReportExecution?> GetByIdAsync(Guid id, CancellationToken ct = default);
     Task<IReadOnlyList<ReportExecution>> GetByReportIdAsync(Guid reportId, int limit = 50, CancellationToken ct = default);

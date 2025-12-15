@@ -10,7 +10,7 @@ namespace Api.Services;
 /// AI-10: Cache Optimization - Implements fire-and-forget pattern to avoid blocking cache operations.
 /// Uses existing MeepleAiMetrics static infrastructure (OPS-02) for OTEL export to Prometheus.
 /// </summary>
-public class CacheMetricsRecorder : ICacheMetricsRecorder
+internal class CacheMetricsRecorder : ICacheMetricsRecorder
 {
     private readonly ILogger<CacheMetricsRecorder> _logger;
     private readonly CacheOptimizationConfiguration _config;

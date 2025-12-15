@@ -7,7 +7,7 @@ namespace Api.Infrastructure.Entities;
 /// Issue #2028: Backend FAQ system for game-specific FAQs.
 /// Uses optimistic concurrency control via RowVersion to prevent race conditions.
 /// </summary>
-public class GameFAQEntity
+internal class GameFAQEntity
 {
     public Guid Id { get; set; }
     public Guid GameId { get; set; }

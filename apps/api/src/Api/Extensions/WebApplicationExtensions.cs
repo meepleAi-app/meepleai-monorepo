@@ -6,7 +6,7 @@ using Serilog;
 
 namespace Api.Extensions;
 
-public static class WebApplicationExtensions
+internal static class WebApplicationExtensions
 {
     public static WebApplication ConfigureMiddlewarePipeline(
         this WebApplication app,

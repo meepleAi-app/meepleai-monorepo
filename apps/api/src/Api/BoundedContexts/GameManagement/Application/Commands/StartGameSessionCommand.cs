@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands;
 /// <summary>
 /// Command to start a new game session.
 /// </summary>
-public record StartGameSessionCommand(
+internal record StartGameSessionCommand(
     Guid GameId,
     IReadOnlyList<SessionPlayerRequest> Players
 ) : ICommand<GameSessionDto>;

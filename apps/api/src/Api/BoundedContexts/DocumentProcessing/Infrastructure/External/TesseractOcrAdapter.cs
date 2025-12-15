@@ -15,7 +15,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 /// OCR service implementation using Tesseract 5
 /// </summary>
 [SupportedOSPlatform("windows")]
-public class TesseractOcrAdapter : IOcrService, IDisposable
+internal class TesseractOcrAdapter : IOcrService, IDisposable
 {
     private readonly ILogger<TesseractOcrAdapter> _logger;
     private readonly string _tessdataPath;

@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 /// <summary>
 /// Command to initialize a chunked upload session for a large PDF file.
 /// </summary>
-public record InitChunkedUploadCommand(
+internal record InitChunkedUploadCommand(
     Guid GameId,
     Guid UserId,
     string FileName,
@@ -16,7 +16,7 @@ public record InitChunkedUploadCommand(
 /// <summary>
 /// Result of initializing a chunked upload session.
 /// </summary>
-public record InitChunkedUploadResult(
+internal record InitChunkedUploadResult(
     bool Success,
     Guid? SessionId,
     int TotalChunks,

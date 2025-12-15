@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands.TwoFactor;
 /// Infrastructure delegation: Temp session management and TOTP crypto via services.
 /// Security: Single-use temp sessions (5-min TTL), rate limiting handled at endpoint level.
 /// </summary>
-public sealed class Verify2FACommandHandler : ICommandHandler<Verify2FACommand, Verify2FAResult>
+internal sealed class Verify2FACommandHandler : ICommandHandler<Verify2FACommand, Verify2FAResult>
 {
     private readonly ITotpService _totpService;
     private readonly ITempSessionService _tempSessionService;
@@ -28,6 +28,7 @@ public sealed class Verify2FACommandHandler : ICommandHandler<Verify2FACommand, 
 
     public async Task<Verify2FAResult> Handle(Verify2FACommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         // Business logic validation
         if (string.IsNullOrWhiteSpace(command.SessionToken))
         {

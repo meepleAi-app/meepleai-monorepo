@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.GameManagement.Domain.Repositories;
 /// <summary>
 /// Repository interface for GameSession aggregate.
 /// </summary>
-public interface IGameSessionRepository : IRepository<GameSession, Guid>
+internal interface IGameSessionRepository : IRepository<GameSession, Guid>
 {
     /// <summary>
     /// Finds active sessions for a specific game.

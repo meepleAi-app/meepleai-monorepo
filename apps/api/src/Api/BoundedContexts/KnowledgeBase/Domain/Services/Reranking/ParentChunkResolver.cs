@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
 /// ADR-016 Phase 4: Resolves parent chunks for expanded context.
 /// Uses IChunkRepository to lookup hierarchical relationships.
 /// </summary>
-public sealed class ParentChunkResolver : IParentChunkResolver
+internal sealed class ParentChunkResolver : IParentChunkResolver
 {
     private readonly IChunkRepository _chunkRepository;
     private readonly ILogger<ParentChunkResolver> _logger;

@@ -25,8 +25,8 @@ public abstract class DomainEventHandlerBase<TEvent> : INotificationHandler<TEve
         MeepleAiDbContext dbContext,
         ILogger<DomainEventHandlerBase<TEvent>> logger)
     {
-        _dbContext = dbContext;
-        Logger = logger;
+        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
+        Logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     /// <summary>

@@ -13,7 +13,7 @@ public class GetChunkedUploadStatusQueryHandler : IQueryHandler<GetChunkedUpload
 
     public GetChunkedUploadStatusQueryHandler(IChunkedUploadSessionRepository sessionRepository)
     {
-        _sessionRepository = sessionRepository;
+        _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
     }
 
     public async Task<ChunkedUploadStatusResult?> Handle(

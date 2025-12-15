@@ -15,7 +15,7 @@ public class GetConfigHistoryQueryHandler : IQueryHandler<GetConfigHistoryQuery,
 
     public GetConfigHistoryQueryHandler(IConfigurationRepository configurationRepository)
     {
-        _configurationRepository = configurationRepository;
+        _configurationRepository = configurationRepository ?? throw new ArgumentNullException(nameof(configurationRepository));
     }
 
     public async Task<IReadOnlyList<ConfigurationHistoryDto>> Handle(GetConfigHistoryQuery query, CancellationToken cancellationToken)

@@ -47,14 +47,14 @@ public class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunk
         IPdfTableExtractor tableExtractor,
         TimeProvider? timeProvider = null)
     {
-        _sessionRepository = sessionRepository;
-        _dbContext = dbContext;
-        _blobStorageService = blobStorageService;
-        _backgroundTaskService = backgroundTaskService;
-        _logger = logger;
-        _scopeFactory = scopeFactory;
-        _pdfTextExtractor = pdfTextExtractor;
-        _tableExtractor = tableExtractor;
+        _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
+        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
+        _blobStorageService = blobStorageService ?? throw new ArgumentNullException(nameof(blobStorageService));
+        _backgroundTaskService = backgroundTaskService ?? throw new ArgumentNullException(nameof(backgroundTaskService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
+        _pdfTextExtractor = pdfTextExtractor ?? throw new ArgumentNullException(nameof(pdfTextExtractor));
+        _tableExtractor = tableExtractor ?? throw new ArgumentNullException(nameof(tableExtractor));
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 

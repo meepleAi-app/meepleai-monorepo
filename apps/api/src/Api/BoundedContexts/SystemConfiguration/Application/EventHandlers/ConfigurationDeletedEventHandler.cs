@@ -20,7 +20,7 @@ public sealed class ConfigurationDeletedEventHandler : DomainEventHandlerBase<Co
         ILogger<DomainEventHandlerBase<ConfigurationDeletedEvent>> logger)
         : base(dbContext, logger)
     {
-        _cache = cache;
+        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
     }
 
     protected override async Task HandleEventAsync(ConfigurationDeletedEvent domainEvent, CancellationToken cancellationToken)

@@ -29,11 +29,11 @@ public class UpdateRuleSpecCommandHandler : ICommandHandler<UpdateRuleSpecComman
         AuditService auditService,
         TimeProvider timeProvider)
     {
-        _dbContext = dbContext;
-        _versioningService = versioningService;
-        _cache = cache;
-        _auditService = auditService;
-        _timeProvider = timeProvider;
+        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
+        _versioningService = versioningService ?? throw new ArgumentNullException(nameof(versioningService));
+        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+        _auditService = auditService ?? throw new ArgumentNullException(nameof(auditService));
+        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
     }
 
     public async Task<RuleSpecDto> Handle(UpdateRuleSpecCommand command, CancellationToken cancellationToken)

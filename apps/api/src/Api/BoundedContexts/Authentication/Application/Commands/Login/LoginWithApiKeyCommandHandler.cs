@@ -19,8 +19,8 @@ public class LoginWithApiKeyCommandHandler : ICommandHandler<LoginWithApiKeyComm
         ApiKeyAuthenticationService apiKeyService,
         IUserRepository userRepository)
     {
-        _apiKeyService = apiKeyService;
-        _userRepository = userRepository;
+        _apiKeyService = apiKeyService ?? throw new ArgumentNullException(nameof(apiKeyService));
+        _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
     }
 
     public async Task<ApiKeyLoginResponse> Handle(LoginWithApiKeyCommand command, CancellationToken cancellationToken)

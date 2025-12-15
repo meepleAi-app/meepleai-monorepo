@@ -14,7 +14,7 @@ public class GetAllAlertConfigurationsQueryHandler : IRequestHandler<GetAllAlert
 
     public GetAllAlertConfigurationsQueryHandler(IAlertConfigurationRepository repository)
     {
-        _repository = repository;
+        _repository = repository ?? throw new ArgumentNullException(nameof(repository));
     }
 
     public async Task<List<AlertConfigurationDto>> Handle(GetAllAlertConfigurationsQuery request, CancellationToken ct)

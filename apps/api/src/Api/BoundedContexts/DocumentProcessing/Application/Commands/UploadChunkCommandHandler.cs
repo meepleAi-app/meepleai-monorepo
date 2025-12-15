@@ -26,9 +26,9 @@ public class UploadChunkCommandHandler : ICommandHandler<UploadChunkCommand, Upl
         MeepleAiDbContext dbContext,
         ILogger<UploadChunkCommandHandler> logger)
     {
-        _sessionRepository = sessionRepository;
-        _dbContext = dbContext;
-        _logger = logger;
+        _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
+        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<UploadChunkResult> Handle(

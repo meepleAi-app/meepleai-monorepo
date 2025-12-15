@@ -14,7 +14,7 @@ public class GetVersionTimelineQueryHandler : IQueryHandler<GetVersionTimelineQu
 
     public GetVersionTimelineQueryHandler(MeepleAiDbContext dbContext)
     {
-        _dbContext = dbContext;
+        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
     }
 
     public async Task<VersionTimelineDto> Handle(GetVersionTimelineQuery query, CancellationToken cancellationToken)

@@ -13,7 +13,7 @@ public class ReleaseEditorLockCommandHandler : ICommandHandler<ReleaseEditorLock
 
     public ReleaseEditorLockCommandHandler(IEditorLockService lockService)
     {
-        _lockService = lockService;
+        _lockService = lockService ?? throw new ArgumentNullException(nameof(lockService));
     }
 
     public Task<bool> Handle(ReleaseEditorLockCommand command, CancellationToken cancellationToken)

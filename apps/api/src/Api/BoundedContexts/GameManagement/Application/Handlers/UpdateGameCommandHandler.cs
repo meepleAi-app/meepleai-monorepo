@@ -19,8 +19,8 @@ public class UpdateGameCommandHandler : ICommandHandler<UpdateGameCommand, GameD
         IGameRepository gameRepository,
         IUnitOfWork unitOfWork)
     {
-        _gameRepository = gameRepository;
-        _unitOfWork = unitOfWork;
+        _gameRepository = gameRepository ?? throw new ArgumentNullException(nameof(gameRepository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
 
     public async Task<GameDto> Handle(UpdateGameCommand command, CancellationToken cancellationToken)

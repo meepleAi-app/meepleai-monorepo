@@ -18,8 +18,8 @@ public class UpdateAlertConfigurationCommandHandler : IRequestHandler<UpdateAler
         IAlertConfigurationRepository repository,
         ILogger<UpdateAlertConfigurationCommandHandler> logger)
     {
-        _repository = repository;
-        _logger = logger;
+        _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<bool> Handle(UpdateAlertConfigurationCommand request, CancellationToken ct)

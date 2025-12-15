@@ -5,7 +5,7 @@ namespace Api.Tests.BoundedContexts.Administration.TestHelpers;
 /// <summary>
 /// Builder for creating AuditLog test instances with sensible defaults.
 /// </summary>
-public class AuditLogBuilder
+internal class AuditLogBuilder
 {
     private Guid _id = Guid.NewGuid();
     private Guid? _userId = Guid.NewGuid();

@@ -10,7 +10,7 @@ namespace Api.Tests.Helpers;
 /// <summary>
 /// Helper for creating test DbContext instances with proper configuration.
 /// </summary>
-public static class DbContextHelper
+internal static class DbContextHelper
 {
     /// <summary>
     /// Creates an InMemory MeepleAiDbContext for unit testing.

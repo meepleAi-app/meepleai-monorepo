@@ -8,7 +8,7 @@ namespace Api.Infrastructure.Entities;
 /// ISSUE-916: Report definitions storage
 /// </summary>
 [Table("admin_reports")]
-internal sealed class AdminReportEntity
+public sealed class AdminReportEntity
 {
     [Key]
     [Column("id")]

@@ -6,7 +6,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.TestHelpers;
 /// <summary>
 /// Builder for creating Agent test instances with sensible defaults.
 /// </summary>
-public class AgentBuilder
+internal class AgentBuilder
 {
     private Guid _id = Guid.NewGuid();
     private AgentType _agentType = AgentType.RagAgent;  // Changed from QA

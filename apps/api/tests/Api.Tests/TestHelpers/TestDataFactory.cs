@@ -47,7 +47,7 @@ namespace Api.Tests.TestHelpers;
 ///     .Build();
 /// </code>
 /// </remarks>
-public static class TestDataFactory
+internal static class TestDataFactory
 {
     /// <summary>
     /// Creates a valid game with sensible defaults (Catan-like).

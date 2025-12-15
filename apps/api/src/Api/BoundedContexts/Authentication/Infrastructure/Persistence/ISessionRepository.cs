@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 /// Note: Session is not an aggregate root, but we provide repository for query convenience.
 /// Sessions are managed through the User aggregate root.
 /// </summary>
-internal interface ISessionRepository
+public interface ISessionRepository
 {
     /// <summary>
     /// Finds a session by its ID.

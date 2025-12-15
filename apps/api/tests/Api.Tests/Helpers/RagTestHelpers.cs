@@ -7,7 +7,7 @@ namespace Api.Tests.Helpers;
 /// Shared test helpers for RAG-related tests.
 /// Provides consistent mock configuration across integration and performance tests.
 /// </summary>
-public static class RagTestHelpers
+internal static class RagTestHelpers
 {
     /// <summary>
     /// Known RAG configuration keys used by RagService.

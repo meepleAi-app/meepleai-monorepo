@@ -4,7 +4,7 @@ namespace Api.Infrastructure.Entities;
 /// Represents a single usage event of an API key.
 /// Provides detailed audit trail and analytics for API key usage patterns.
 /// </summary>
-internal class ApiKeyUsageLogEntity
+public class ApiKeyUsageLogEntity
 {
     /// <summary>
     /// Unique identifier for this usage log entry.

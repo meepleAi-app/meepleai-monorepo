@@ -15,7 +15,7 @@ namespace Api.Tests.Infrastructure;
 /// Base class for integration tests using Testcontainers with PostgreSQL.
 /// Ensures complete test isolation by resetting database state between each test.
 /// </summary>
-internal abstract class IntegrationTestBase<TRepository> : IAsyncLifetime
+public abstract class IntegrationTestBase<TRepository> : IAsyncLifetime
     where TRepository : class
 {
     private IContainer? _postgresContainer;

@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Api.Infrastructure;
 
-internal class MeepleAiDbContext : DbContext
+public class MeepleAiDbContext : DbContext
 {
     private readonly IMediator _mediator;
     private readonly IDomainEventCollector _eventCollector;

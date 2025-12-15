@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 /// EF Core implementation of Session repository.
 /// Maps between domain Session entity and UserSessionEntity persistence model.
 /// </summary>
-internal class SessionRepository : RepositoryBase, ISessionRepository
+public class SessionRepository : RepositoryBase, ISessionRepository
 {
     private readonly TimeProvider _timeProvider;
 

@@ -7,7 +7,7 @@ namespace Api.Infrastructure.Entities;
 /// Issue #2051: Multi-document collection storage
 /// </summary>
 [Table("document_collections")]
-internal class DocumentCollectionEntity
+public class DocumentCollectionEntity
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid GameId { get; set; }

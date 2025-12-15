@@ -54,7 +54,7 @@ internal record LlmModelPricing
 /// <summary>
 /// Cost calculation result for an LLM request
 /// </summary>
-internal record LlmCostCalculation
+public record LlmCostCalculation
 {
     /// <summary>
     /// Model used for the request

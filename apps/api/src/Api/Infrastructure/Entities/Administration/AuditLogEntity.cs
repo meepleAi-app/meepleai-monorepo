@@ -1,6 +1,6 @@
 namespace Api.Infrastructure.Entities;
 
-internal class AuditLogEntity
+public class AuditLogEntity
 {
     // DDD-PHASE2: Converted to Guid for domain alignment
     public Guid Id { get; set; } = Guid.NewGuid();

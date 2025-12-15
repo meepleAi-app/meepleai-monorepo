@@ -9,7 +9,7 @@ namespace Api.SharedKernel.Domain.Interfaces;
 /// TId is covariant (out) because it only appears in output position (property getter).
 /// This allows IEntity{Guid} to be assignable to IEntity{object}, improving type safety.
 /// </remarks>
-internal interface IEntity<out TId> where TId : notnull
+public interface IEntity<out TId> where TId : notnull
 {
     /// <summary>
     /// Gets the unique identifier for this entity.

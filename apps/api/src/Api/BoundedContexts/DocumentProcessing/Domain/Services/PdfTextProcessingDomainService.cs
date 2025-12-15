@@ -119,7 +119,7 @@ internal class PdfTextProcessingDomainService
 /// <summary>
 /// Represents the quality of text extraction
 /// </summary>
-internal enum ExtractionQuality
+public enum ExtractionQuality
 {
     /// <summary>Very low quality - likely needs OCR (&lt;50 chars/page)</summary>
     VeryLow,

@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.Administration.Infrastructure.Repositories;
 
-public class AlertRuleRepository : IAlertRuleRepository
+internal class AlertRuleRepository : IAlertRuleRepository
 {
     private readonly MeepleAiDbContext _context;
     public AlertRuleRepository(MeepleAiDbContext context) => _context = context;

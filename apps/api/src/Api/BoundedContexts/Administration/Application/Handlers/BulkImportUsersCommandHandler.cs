@@ -15,7 +15,7 @@ namespace Api.BoundedContexts.Administration.Application.Handlers;
 /// Handler for bulk user import from CSV.
 /// CSV format: email,displayName,role,password
 /// </summary>
-public class BulkImportUsersCommandHandler : ICommandHandler<BulkImportUsersCommand, BulkOperationResult>
+internal class BulkImportUsersCommandHandler : ICommandHandler<BulkImportUsersCommand, BulkOperationResult>
 {
     private const int MaxBulkSize = 1000;
     private const int MaxCsvSizeBytes = 10 * 1024 * 1024; // 10MB
@@ -35,13 +35,14 @@ public class BulkImportUsersCommandHandler : ICommandHandler<BulkImportUsersComm
 
     public async Task<BulkOperationResult> Handle(BulkImportUsersCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         _logger.LogInformation("Admin {RequesterId} initiating bulk user import from CSV",
             command.RequesterId);
 
         try
         {
             // Step 1: Validate CSV and parse user records
-            var userRecords = await ValidateCsvAndParseUsersAsync(command.CsvContent, cancellationToken).ConfigureAwait(false);
+            var userRecords = await ValidateCsvAndParseUsersAsync(command.CsvContent).ConfigureAwait(false);
 
             // Step 2: Validate no duplicates (in CSV or database)
             await ValidateUserDuplicatesAsync(userRecords, cancellationToken).ConfigureAwait(false);

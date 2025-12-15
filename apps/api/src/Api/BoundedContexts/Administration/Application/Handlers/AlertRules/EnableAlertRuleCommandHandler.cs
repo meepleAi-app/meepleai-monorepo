@@ -4,7 +4,7 @@ using MediatR;
 
 namespace Api.BoundedContexts.Administration.Application.Handlers.AlertRules;
 
-public class EnableAlertRuleCommandHandler : IRequestHandler<EnableAlertRuleCommand, Unit>
+internal class EnableAlertRuleCommandHandler : IRequestHandler<EnableAlertRuleCommand, Unit>
 {
     private readonly IAlertRuleRepository _repository;
 
@@ -13,6 +13,7 @@ public class EnableAlertRuleCommandHandler : IRequestHandler<EnableAlertRuleComm
 
     public async Task<Unit> Handle(EnableAlertRuleCommand request, CancellationToken ct)
     {
+        ArgumentNullException.ThrowIfNull(request);
         var rule = await _repository.GetByIdAsync(request.Id, ct).ConfigureAwait(false);
         if (rule == null) throw new InvalidOperationException($"AlertRule {request.Id} not found");
 

@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Administration.Infrastructure.Services;
 /// <summary>
 /// Service for querying Prometheus metrics API (Issue #2139)
 /// </summary>
-public class PrometheusClientService : IPrometheusClientService
+internal class PrometheusClientService : IPrometheusClientService
 {
     private readonly HttpClient _httpClient;
     private readonly ILogger<PrometheusClientService> _logger;

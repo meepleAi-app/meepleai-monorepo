@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 /// <summary>
 /// Value object representing a game publisher name.
 /// </summary>
-public sealed class Publisher : ValueObject
+internal sealed class Publisher : ValueObject
 {
     private const int MaxLength = 100;
 

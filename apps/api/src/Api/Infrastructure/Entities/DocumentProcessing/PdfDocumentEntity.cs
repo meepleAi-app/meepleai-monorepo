@@ -4,7 +4,7 @@ using Api.Models;
 
 namespace Api.Infrastructure.Entities;
 
-public class PdfDocumentEntity
+internal class PdfDocumentEntity
 {
     // DDD-PHASE2: Converted to Guid for domain alignment
     public Guid Id { get; set; } = Guid.NewGuid();
@@ -49,10 +49,10 @@ public class PdfDocumentEntity
     // Issue #2051: Multi-document collection support
     public Guid? CollectionId { get; set; }
     public string DocumentType { get; set; } = "base"; // base, expansion, errata, homerule
-    public int SortOrder { get; set; } = 0;
+    public int SortOrder { get; set; }
 
     // Admin Wizard: Public library visibility (visible to all registered users)
-    public bool IsPublic { get; set; } = false;
+    public bool IsPublic { get; set; }
 
     [NotMapped]
     public ProcessingProgress? ProcessingProgress

@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.GridSearch.Commands;
 /// <summary>
 /// ADR-016 Phase 5: Command to run grid search evaluation across multiple configurations.
 /// </summary>
-public sealed record RunGridSearchCommand : IRequest<GridSearchResult>
+internal sealed record RunGridSearchCommand : IRequest<GridSearchResult>
 {
     /// <summary>
     /// Path to the dataset file to use for evaluation.
@@ -22,7 +22,7 @@ public sealed record RunGridSearchCommand : IRequest<GridSearchResult>
     /// <summary>
     /// Whether to run a quick evaluation (3 representative configs).
     /// </summary>
-    public bool QuickMode { get; init; } = false;
+    public bool QuickMode { get; init; }
 
     /// <summary>
     /// Maximum number of samples to evaluate per configuration.
@@ -33,5 +33,5 @@ public sealed record RunGridSearchCommand : IRequest<GridSearchResult>
     /// <summary>
     /// Whether to include detailed per-sample results in the output.
     /// </summary>
-    public bool IncludeDetailedResults { get; init; } = false;
+    public bool IncludeDetailedResults { get; init; }
 }

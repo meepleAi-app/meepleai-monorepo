@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
 /// ADR-016 Phase 4: Cross-encoder reranking service interface.
 /// Provides semantic reranking using BGE-reranker-v2-m3 model.
 /// </summary>
-public interface ICrossEncoderReranker
+internal interface ICrossEncoderReranker
 {
     /// <summary>
     /// Reranks chunks using cross-encoder semantic similarity.
@@ -34,7 +34,7 @@ public interface ICrossEncoderReranker
 /// <summary>
 /// Input chunk for reranking.
 /// </summary>
-public sealed record RerankChunk(
+internal sealed record RerankChunk(
     string Id,
     string Content,
     double OriginalScore,
@@ -44,7 +44,7 @@ public sealed record RerankChunk(
 /// <summary>
 /// Reranked chunk with cross-encoder score.
 /// </summary>
-public sealed record RerankedChunk(
+internal sealed record RerankedChunk(
     string Id,
     string Content,
     double OriginalScore,
@@ -55,7 +55,7 @@ public sealed record RerankedChunk(
 /// <summary>
 /// Result of reranking operation.
 /// </summary>
-public sealed record RerankResult(
+internal sealed record RerankResult(
     IReadOnlyList<RerankedChunk> Chunks,
     string Model,
     double ProcessingTimeMs

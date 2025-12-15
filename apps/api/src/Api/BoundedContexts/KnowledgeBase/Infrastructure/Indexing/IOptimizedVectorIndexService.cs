@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.Indexing;
 /// Interface for the optimized vector index service.
 /// ADR-016 Phase 3: Provides domain-driven interface for Qdrant collection management.
 /// </summary>
-public interface IOptimizedVectorIndexService
+internal interface IOptimizedVectorIndexService
 {
     /// <summary>
     /// Ensures an optimized collection exists with HNSW and quantization configuration.

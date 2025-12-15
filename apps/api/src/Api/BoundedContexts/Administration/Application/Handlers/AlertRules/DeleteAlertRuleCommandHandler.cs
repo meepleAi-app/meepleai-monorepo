@@ -4,7 +4,7 @@ using MediatR;
 
 namespace Api.BoundedContexts.Administration.Application.Handlers.AlertRules;
 
-public class DeleteAlertRuleCommandHandler : IRequestHandler<DeleteAlertRuleCommand, Unit>
+internal class DeleteAlertRuleCommandHandler : IRequestHandler<DeleteAlertRuleCommand, Unit>
 {
     private readonly IAlertRuleRepository _repository;
 
@@ -13,6 +13,7 @@ public class DeleteAlertRuleCommandHandler : IRequestHandler<DeleteAlertRuleComm
 
     public async Task<Unit> Handle(DeleteAlertRuleCommand request, CancellationToken ct)
     {
+        ArgumentNullException.ThrowIfNull(request);
         await _repository.DeleteAsync(request.Id, ct).ConfigureAwait(false);
         return Unit.Value;
     }

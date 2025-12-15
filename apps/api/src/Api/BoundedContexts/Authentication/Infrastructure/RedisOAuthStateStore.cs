@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.Authentication.Infrastructure;
 /// Redis-backed OAuth state storage for distributed deployments.
 /// Uses Redis TTL for automatic expiration and Lua scripts for atomic operations.
 /// </summary>
-public class RedisOAuthStateStore : IOAuthStateStore
+internal class RedisOAuthStateStore : IOAuthStateStore
 {
     private readonly IConnectionMultiplexer _redis;
     private readonly ILogger<RedisOAuthStateStore> _logger;

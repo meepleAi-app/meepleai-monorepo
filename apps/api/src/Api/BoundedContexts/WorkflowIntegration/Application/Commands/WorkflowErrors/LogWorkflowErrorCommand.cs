@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.WorkflowIntegration.Application.Commands.WorkflowE
 /// Sanitizes error messages to remove sensitive data and stores in database.
 /// Used by n8n error handling webhooks for telemetry and debugging.
 /// </summary>
-public sealed record LogWorkflowErrorCommand : ICommand
+internal sealed record LogWorkflowErrorCommand : ICommand
 {
     public string WorkflowId { get; init; } = string.Empty;
     public string? ExecutionId { get; init; }

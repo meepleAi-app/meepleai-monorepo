@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.Authentication.Application.Queries.PasswordReset;
 /// Business logic: Token format validation → Token existence check → Expiry check.
 /// Infrastructure delegation: Database access via password reset service.
 /// </summary>
-public sealed class ValidatePasswordResetTokenQueryHandler : IQueryHandler<ValidatePasswordResetTokenQuery, ValidatePasswordResetTokenResult>
+internal sealed class ValidatePasswordResetTokenQueryHandler : IQueryHandler<ValidatePasswordResetTokenQuery, ValidatePasswordResetTokenResult>
 {
     private readonly IPasswordResetService _passwordResetService;
     private readonly ILogger<ValidatePasswordResetTokenQueryHandler> _logger;
@@ -24,6 +24,7 @@ public sealed class ValidatePasswordResetTokenQueryHandler : IQueryHandler<Valid
 
     public async Task<ValidatePasswordResetTokenResult> Handle(ValidatePasswordResetTokenQuery query, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(query);
         try
         {
             // Validate token format (basic business logic)

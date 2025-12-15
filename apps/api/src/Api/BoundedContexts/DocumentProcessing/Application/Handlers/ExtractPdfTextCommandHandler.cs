@@ -14,7 +14,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Handlers;
 /// Retrieves PDF from blob storage and extracts text for existing documents.
 /// Used to reprocess PDFs that are stuck in pending status.
 /// </summary>
-public class ExtractPdfTextCommandHandler : ICommandHandler<ExtractPdfTextCommand, ExtractPdfTextResultDto>
+internal class ExtractPdfTextCommandHandler : ICommandHandler<ExtractPdfTextCommand, ExtractPdfTextResultDto>
 {
     private readonly MeepleAiDbContext _db;
     private readonly IBlobStorageService _blobStorage;
@@ -38,6 +38,7 @@ public class ExtractPdfTextCommandHandler : ICommandHandler<ExtractPdfTextComman
 
     public async Task<ExtractPdfTextResultDto> Handle(ExtractPdfTextCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         var pdfId = command.PdfId;
         _logger.LogInformation("Starting text extraction for PDF {PdfId}", pdfId);
 

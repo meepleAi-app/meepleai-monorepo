@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 /// Note: Embeddings are stored in Qdrant, not PostgreSQL.
 /// This repository coordinates between domain layer and Qdrant adapter.
 /// </summary>
-public class EmbeddingRepository : IEmbeddingRepository
+internal class EmbeddingRepository : IEmbeddingRepository
 {
     private readonly MeepleAiDbContext _context;
     private readonly IQdrantVectorStoreAdapter _qdrantAdapter;

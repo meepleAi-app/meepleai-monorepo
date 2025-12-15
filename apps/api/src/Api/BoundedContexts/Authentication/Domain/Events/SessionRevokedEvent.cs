@@ -5,7 +5,7 @@ namespace Api.BoundedContexts.Authentication.Domain.Events;
 /// <summary>
 /// Domain event raised when a user session is revoked.
 /// </summary>
-public sealed class SessionRevokedEvent : DomainEventBase
+internal sealed class SessionRevokedEvent : DomainEventBase
 {
     /// <summary>
     /// Gets the ID of the revoked session.

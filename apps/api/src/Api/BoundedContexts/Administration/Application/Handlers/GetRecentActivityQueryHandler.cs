@@ -21,7 +21,7 @@ namespace Api.BoundedContexts.Administration.Application.Handlers;
 /// 3. System alerts (AlertCreated/AlertResolved events)
 /// 4. AI Request errors (ErrorOccurred events)
 /// </summary>
-public class GetRecentActivityQueryHandler : IQueryHandler<GetRecentActivityQuery, RecentActivityDto>
+internal class GetRecentActivityQueryHandler : IQueryHandler<GetRecentActivityQuery, RecentActivityDto>
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly TimeProvider _timeProvider;
@@ -39,6 +39,7 @@ public class GetRecentActivityQueryHandler : IQueryHandler<GetRecentActivityQuer
 
     public async Task<RecentActivityDto> Handle(GetRecentActivityQuery query, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(query);
         var now = _timeProvider.GetUtcNow().UtcDateTime;
         var since = query.Since ?? now.AddDays(-7); // Default: last 7 days
         var limit = Math.Min(query.Limit, 100); // Cap at 100 events

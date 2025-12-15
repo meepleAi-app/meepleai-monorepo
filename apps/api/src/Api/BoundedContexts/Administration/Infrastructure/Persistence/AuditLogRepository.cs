@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.Administration.Infrastructure.Persistence;
 
-public class AuditLogRepository : RepositoryBase, IAuditLogRepository
+internal class AuditLogRepository : RepositoryBase, IAuditLogRepository
 {
     public AuditLogRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
         : base(dbContext, eventCollector)

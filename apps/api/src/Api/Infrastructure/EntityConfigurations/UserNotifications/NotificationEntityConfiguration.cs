@@ -8,7 +8,7 @@ namespace Api.Infrastructure.EntityConfigurations.UserNotifications;
 /// EF Core configuration for NotificationEntity.
 /// Configures table mapping, indexes, and constraints.
 /// </summary>
-public class NotificationEntityConfiguration : IEntityTypeConfiguration<NotificationEntity>
+internal class NotificationEntityConfiguration : IEntityTypeConfiguration<NotificationEntity>
 {
     public void Configure(EntityTypeBuilder<NotificationEntity> builder)
     {

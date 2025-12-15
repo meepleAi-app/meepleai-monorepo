@@ -6,6 +6,6 @@ namespace Api.BoundedContexts.Administration.Application.Queries;
 /// <summary>
 /// Query to retrieve a single prompt template by ID.
 /// </summary>
-public record GetPromptTemplateByIdQuery(
+internal record GetPromptTemplateByIdQuery(
     Guid TemplateId
 ) : IQuery<PromptTemplateDto?>;

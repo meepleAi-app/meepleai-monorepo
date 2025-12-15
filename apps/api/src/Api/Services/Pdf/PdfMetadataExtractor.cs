@@ -6,7 +6,7 @@ namespace Api.Services.Pdf;
 /// <summary>
 /// Service responsible for extracting PDF metadata
 /// </summary>
-public class PdfMetadataExtractor : IPdfMetadataExtractor
+internal class PdfMetadataExtractor : IPdfMetadataExtractor
 {
     private readonly ILogger<PdfMetadataExtractor> _logger;
 

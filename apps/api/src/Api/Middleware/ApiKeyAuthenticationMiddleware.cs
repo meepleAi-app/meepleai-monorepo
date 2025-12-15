@@ -9,7 +9,7 @@ namespace Api.Middleware;
 /// Runs before authorization middleware and sets up ClaimsPrincipal for API key-based requests.
 /// Falls through to cookie authentication if no API key is provided.
 /// </summary>
-public class ApiKeyAuthenticationMiddleware
+internal class ApiKeyAuthenticationMiddleware
 {
     private const string AuthorizationHeaderName = "Authorization";
     private const string ApiKeyCookieName = "meeple_apikey";
@@ -170,7 +170,7 @@ public class ApiKeyAuthenticationMiddleware
 /// <summary>
 /// Extension methods for registering API key authentication middleware.
 /// </summary>
-public static class ApiKeyAuthenticationMiddlewareExtensions
+internal static class ApiKeyAuthenticationMiddlewareExtensions
 {
     /// <summary>
     /// Adds API key authentication middleware to the pipeline.

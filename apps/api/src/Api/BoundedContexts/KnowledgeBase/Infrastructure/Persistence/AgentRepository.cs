@@ -13,7 +13,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 /// <summary>
 /// Repository for Agent aggregate in KnowledgeBase bounded context.
 /// </summary>
-public class AgentRepository : RepositoryBase, IAgentRepository
+internal class AgentRepository : RepositoryBase, IAgentRepository
 {
     public AgentRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
         : base(dbContext, eventCollector)

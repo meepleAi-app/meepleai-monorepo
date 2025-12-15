@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands.OAuth;
 /// Business logic: CSRF state generation → State storage → Authorization URL generation.
 /// Infrastructure delegation: Provider HTTP communication and state storage via IOAuthService.
 /// </summary>
-public sealed class InitiateOAuthLoginCommandHandler : ICommandHandler<InitiateOAuthLoginCommand, InitiateOAuthLoginResult>
+internal sealed class InitiateOAuthLoginCommandHandler : ICommandHandler<InitiateOAuthLoginCommand, InitiateOAuthLoginResult>
 {
     private readonly IOAuthService _oauthService;
     private readonly ILogger<InitiateOAuthLoginCommandHandler> _logger;
@@ -26,6 +26,7 @@ public sealed class InitiateOAuthLoginCommandHandler : ICommandHandler<InitiateO
 
     public async Task<InitiateOAuthLoginResult> Handle(InitiateOAuthLoginCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         try
         {
             // Validate provider (business logic)

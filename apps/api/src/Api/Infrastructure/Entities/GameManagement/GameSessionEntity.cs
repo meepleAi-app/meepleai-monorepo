@@ -4,7 +4,7 @@ namespace Api.Infrastructure.Entities;
 /// EF Core entity for game session persistence.
 /// Represents a play session of a board game.
 /// </summary>
-public class GameSessionEntity
+internal class GameSessionEntity
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid GameId { get; set; }

@@ -13,7 +13,7 @@ namespace Api.Routing;
 /// Game management endpoints.
 /// Handles game CRUD operations and listing.
 /// </summary>
-public static class GameEndpoints
+internal static class GameEndpoints
 {
     public static RouteGroupBuilder MapGameEndpoints(this RouteGroupBuilder group)
     {
@@ -110,7 +110,7 @@ public static class GameEndpoints
             CancellationToken ct) =>
         {
             // Auth check
-            var (authorized, session, error) = context.RequireAdminOrEditorSession();
+            var (authorized, _, error) = context.RequireAdminOrEditorSession();
             if (!authorized) return error!;
 
             var command = new CreateGameCommand(
@@ -137,7 +137,7 @@ public static class GameEndpoints
             CancellationToken ct) =>
         {
             // Auth check
-            var (authorized, session, error) = context.RequireAdminOrEditorSession();
+            var (authorized, _, error) = context.RequireAdminOrEditorSession();
             if (!authorized) return error!;
 
             var command = new UpdateGameCommand(
@@ -436,7 +436,7 @@ public static class GameEndpoints
             CancellationToken ct) =>
         {
             // Auth check
-            var (authorized, session, error) = context.RequireAdminOrEditorSession();
+            var (authorized, _, error) = context.RequireAdminOrEditorSession();
             if (!authorized) return error!;
 
             var command = new CreateGameFAQCommand(
@@ -459,7 +459,7 @@ public static class GameEndpoints
             CancellationToken ct) =>
         {
             // Auth check
-            var (authorized, session, error) = context.RequireAdminOrEditorSession();
+            var (authorized, _, error) = context.RequireAdminOrEditorSession();
             if (!authorized) return error!;
 
             var command = new UpdateGameFAQCommand(
@@ -480,7 +480,7 @@ public static class GameEndpoints
             CancellationToken ct) =>
         {
             // Auth check
-            var (authorized, session, error) = context.RequireAdminOrEditorSession();
+            var (authorized, _, error) = context.RequireAdminOrEditorSession();
             if (!authorized) return error!;
 
             var command = new DeleteGameFAQCommand(Id: id);

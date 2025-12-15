@@ -7,7 +7,7 @@ namespace Api.SharedKernel.Infrastructure.Persistence;
 /// EF Core implementation of Unit of Work pattern.
 /// Manages transactions and change tracking for the DbContext.
 /// </summary>
-public class EfCoreUnitOfWork : IUnitOfWork
+internal class EfCoreUnitOfWork : IUnitOfWork
 {
     private readonly MeepleAiDbContext _dbContext;
     private IDbContextTransaction? _currentTransaction;

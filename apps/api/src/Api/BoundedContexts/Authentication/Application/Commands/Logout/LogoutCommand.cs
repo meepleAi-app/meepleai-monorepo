@@ -5,6 +5,6 @@ namespace Api.BoundedContexts.Authentication.Application.Commands;
 /// <summary>
 /// Command to logout a user and revoke their session.
 /// </summary>
-public record LogoutCommand(
+internal record LogoutCommand(
     string SessionToken
 ) : ICommand;

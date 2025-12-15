@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.WorkflowIntegration.Infrastructure.Persistence;
 
-public class WorkflowErrorLogRepository : RepositoryBase, IWorkflowErrorLogRepository
+internal class WorkflowErrorLogRepository : RepositoryBase, IWorkflowErrorLogRepository
 {
     public WorkflowErrorLogRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
         : base(dbContext, eventCollector)

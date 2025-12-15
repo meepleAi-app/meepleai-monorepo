@@ -7,7 +7,7 @@ namespace Api.Services.Rag;
 /// PERF-08: Fuses search results using Reciprocal Rank Fusion (RRF)
 /// Combines results from multiple queries with deduplication
 /// </summary>
-public class SearchResultReranker : ISearchResultReranker
+internal class SearchResultReranker : ISearchResultReranker
 {
     private readonly ILogger<SearchResultReranker> _logger;
     private readonly IConfigurationService? _configurationService;

@@ -5,7 +5,7 @@ namespace Api.Helpers;
 /// <summary>
 /// Centralized string utility methods to eliminate code duplication.
 /// </summary>
-public static class StringHelper
+internal static class StringHelper
 {
     /// <summary>
     /// Truncates a string to a maximum length and appends an ellipsis if truncated.
@@ -39,7 +39,7 @@ public static class StringHelper
         }
 
         var truncatedLength = Math.Max(0, maxLength - ellipsis.Length);
-        return text.Substring(0, truncatedLength) + ellipsis;
+        return string.Concat(text.AsSpan(0, truncatedLength), ellipsis);
     }
 
     /// <summary>
@@ -64,6 +64,9 @@ public static class StringHelper
     /// - Limits filename length to prevent filesystem issues
     /// - Provides fallback for empty results
     /// </remarks>
+
+    private static readonly char[] AdditionalInvalidChars = { '<', '>', '?', '*', '|', '"', ':' };
+
     public static string SanitizeFilename(string filename, int maxLength = 200, string fallbackName = "file")
     {
         if (string.IsNullOrWhiteSpace(filename))
@@ -83,7 +86,7 @@ public static class StringHelper
 
         // Step 3: Remove OS-specific invalid characters plus additional problematic chars
         var invalidChars = Path.GetInvalidFileNameChars()
-            .Concat(new[] { '<', '>', '?', '*', '|', '"', ':' })
+            .Concat(AdditionalInvalidChars)
             .Distinct()
             .ToArray();
 
@@ -130,7 +133,7 @@ public static class StringHelper
         int maxLength = 200)
     {
         // Ensure extension has leading dot
-        if (!string.IsNullOrEmpty(extension) && !extension.StartsWith(".", StringComparison.Ordinal))
+        if (!string.IsNullOrEmpty(extension) && !extension.StartsWith('.'))
         {
             extension = "." + extension;
         }

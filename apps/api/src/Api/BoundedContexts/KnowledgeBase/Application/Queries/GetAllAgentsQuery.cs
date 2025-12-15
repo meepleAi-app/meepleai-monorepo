@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 /// Query to get all agents with optional filtering.
 /// Issue #866: AI Agents Entity & Configuration
 /// </summary>
-public record GetAllAgentsQuery(
+internal record GetAllAgentsQuery(
     bool? ActiveOnly = null,
     string? Type = null
 ) : IRequest<List<AgentDto>>;

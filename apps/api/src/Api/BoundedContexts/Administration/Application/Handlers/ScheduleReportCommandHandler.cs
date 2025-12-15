@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.Administration.Application.Handlers;
 /// Handler for ScheduleReportCommand
 /// ISSUE-916: Report scheduling with Quartz.NET
 /// </summary>
-public sealed class ScheduleReportCommandHandler : ICommandHandler<ScheduleReportCommand, Guid>
+internal sealed class ScheduleReportCommandHandler : ICommandHandler<ScheduleReportCommand, Guid>
 {
     private readonly IAdminReportRepository _repository;
     private readonly IReportSchedulerService _schedulerService;
@@ -29,6 +29,7 @@ public sealed class ScheduleReportCommandHandler : ICommandHandler<ScheduleRepor
 
     public async Task<Guid> Handle(ScheduleReportCommand command, CancellationToken ct)
     {
+        ArgumentNullException.ThrowIfNull(command);
         _logger.LogInformation(
             "Scheduling {Template} report: {Name}",
             command.Template, command.Name);

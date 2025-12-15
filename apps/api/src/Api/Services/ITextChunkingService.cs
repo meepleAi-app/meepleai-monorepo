@@ -2,7 +2,7 @@ using System.Collections.Generic;
 
 namespace Api.Services;
 
-public interface ITextChunkingService
+internal interface ITextChunkingService
 {
     List<TextChunk> ChunkText(string text, int chunkSize = 512, int overlap = 50);
 

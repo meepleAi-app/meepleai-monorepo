@@ -10,7 +10,7 @@ namespace Api.Services;
 /// Background service that periodically revokes inactive sessions.
 /// Runs as an ASP.NET Core hosted service.
 /// </summary>
-public class SessionAutoRevocationService : BackgroundService
+internal class SessionAutoRevocationService : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<SessionAutoRevocationService> _logger;

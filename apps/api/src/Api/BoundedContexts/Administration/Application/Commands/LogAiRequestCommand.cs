@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.Administration.Application.Commands;
 /// Command to log an AI request for telemetry and analytics.
 /// This command should never fail - it's a fire-and-forget telemetry operation.
 /// </summary>
-public record LogAiRequestCommand(
+internal record LogAiRequestCommand(
     string? UserId,
     string? GameId,
     string Endpoint,

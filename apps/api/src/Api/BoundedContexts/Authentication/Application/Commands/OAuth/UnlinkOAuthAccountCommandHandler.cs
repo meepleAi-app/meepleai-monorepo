@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands.OAuth;
 /// Handles unlinking an OAuth provider account from a user.
 /// Validates lockout prevention rules via domain logic.
 /// </summary>
-public sealed class UnlinkOAuthAccountCommandHandler : ICommandHandler<UnlinkOAuthAccountCommand, UnlinkOAuthAccountResult>
+internal sealed class UnlinkOAuthAccountCommandHandler : ICommandHandler<UnlinkOAuthAccountCommand, UnlinkOAuthAccountResult>
 {
     private readonly IUserRepository _userRepository;
     private readonly IOAuthAccountRepository _oauthAccountRepository;
@@ -31,6 +31,7 @@ public sealed class UnlinkOAuthAccountCommandHandler : ICommandHandler<UnlinkOAu
 
     public async Task<UnlinkOAuthAccountResult> Handle(UnlinkOAuthAccountCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         try
         {
             // Load user by ID

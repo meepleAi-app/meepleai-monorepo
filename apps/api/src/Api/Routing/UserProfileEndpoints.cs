@@ -18,7 +18,7 @@ namespace Api.Routing;
 /// User profile management endpoints.
 /// Handles profile viewing, updating display name/email, and password changes.
 /// </summary>
-public static class UserProfileEndpoints
+internal static class UserProfileEndpoints
 {
     public static RouteGroupBuilder MapUserProfileEndpoints(this RouteGroupBuilder group)
     {
@@ -331,17 +331,17 @@ public static class UserProfileEndpoints
 /// <summary>
 /// Payload for updating user profile.
 /// </summary>
-public record UpdateProfilePayload(string? DisplayName, string? Email);
+internal record UpdateProfilePayload(string? DisplayName, string? Email);
 
 /// <summary>
 /// Payload for changing password.
 /// </summary>
-public record ChangePasswordPayload(string CurrentPassword, string NewPassword);
+internal record ChangePasswordPayload(string CurrentPassword, string NewPassword);
 
 /// <summary>
 /// Payload for updating user preferences.
 /// </summary>
-public record UpdatePreferencesPayload(
+internal record UpdatePreferencesPayload(
     string Language,
     string Theme,
     bool EmailNotifications,

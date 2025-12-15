@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.EmbeddingProviders;
 /// <summary>
 /// Supported embedding provider types per ADR-016 Phase 2.
 /// </summary>
-public enum EmbeddingProviderType
+internal enum EmbeddingProviderType
 {
     /// <summary>
     /// OpenRouter with text-embedding-3-large (3072 dimensions, 8K context)
@@ -42,7 +42,7 @@ public enum EmbeddingProviderType
 /// <summary>
 /// Extension methods for EmbeddingProviderType
 /// </summary>
-public static class EmbeddingProviderTypeExtensions
+internal static class EmbeddingProviderTypeExtensions
 {
     /// <summary>
     /// Get the model name for a provider type

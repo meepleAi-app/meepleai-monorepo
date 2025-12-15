@@ -7,12 +7,12 @@ namespace Api.BoundedContexts.Administration.Application.Queries.Testing;
 /// Query to retrieve E2E testing metrics (Issue #2139)
 /// Returns Playwright test execution results
 /// </summary>
-public record GetE2EMetricsQuery : IQuery<E2EMetricsDto>;
+internal record GetE2EMetricsQuery : IQuery<E2EMetricsDto>;
 
 /// <summary>
 /// DTO for E2E metrics (Issue #2139)
 /// </summary>
-public record E2EMetricsDto(
+internal record E2EMetricsDto(
     decimal Coverage,
     decimal PassRate,
     decimal FlakyRate,

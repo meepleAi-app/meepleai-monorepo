@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands;
 /// Command to update an existing rule comment.
 /// Only the comment author can update their comment.
 /// </summary>
-public record UpdateRuleCommentCommand(
+internal record UpdateRuleCommentCommand(
     Guid CommentId,
     string CommentText,
     Guid UserId

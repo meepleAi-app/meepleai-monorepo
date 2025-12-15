@@ -3,7 +3,7 @@ using MediatR;
 
 namespace Api.BoundedContexts.Administration.Application.Commands.AlertRules;
 
-public record UpdateAlertRuleCommand(
+internal record UpdateAlertRuleCommand(
     Guid Id,
     string Name,
     string Severity,
@@ -13,7 +13,7 @@ public record UpdateAlertRuleCommand(
     string? Description,
     string UpdatedBy) : IRequest<Unit>;
 
-public class UpdateAlertRuleCommandValidator : AbstractValidator<UpdateAlertRuleCommand>
+internal class UpdateAlertRuleCommandValidator : AbstractValidator<UpdateAlertRuleCommand>
 {
     public UpdateAlertRuleCommandValidator()
     {

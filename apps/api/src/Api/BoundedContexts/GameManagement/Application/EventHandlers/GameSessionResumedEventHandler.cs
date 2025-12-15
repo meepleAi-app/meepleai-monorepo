@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.GameManagement.Application.EventHandlers;
 
-public sealed class GameSessionResumedEventHandler : DomainEventHandlerBase<GameSessionResumedEvent>
+internal sealed class GameSessionResumedEventHandler : DomainEventHandlerBase<GameSessionResumedEvent>
 {
     public GameSessionResumedEventHandler(
         MeepleAiDbContext dbContext,

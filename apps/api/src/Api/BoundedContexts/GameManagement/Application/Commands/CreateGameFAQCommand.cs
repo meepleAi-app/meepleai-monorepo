@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands;
 /// Command to create a new FAQ for a game.
 /// Issue #2028: Backend FAQ system for game-specific FAQs.
 /// </summary>
-public record CreateGameFAQCommand(
+internal record CreateGameFAQCommand(
     Guid GameId,
     string Question,
     string Answer

@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Commands;
 /// <summary>
 /// Command to load an evaluation dataset from file.
 /// </summary>
-public sealed record LoadDatasetCommand : IRequest<EvaluationDataset>
+internal sealed record LoadDatasetCommand : IRequest<EvaluationDataset>
 {
     /// <summary>
     /// Path to the dataset JSON file.

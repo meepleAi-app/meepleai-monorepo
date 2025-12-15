@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands;
 /// Command to authenticate a user with email and password.
 /// Returns LoginResponse with session token or temp token if 2FA required.
 /// </summary>
-public record LoginCommand(
+internal record LoginCommand(
     string Email,
     string Password,
     string? IpAddress = null,

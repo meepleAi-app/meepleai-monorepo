@@ -7,7 +7,7 @@ namespace Api.Services.Qdrant;
 /// <summary>
 /// Manages Qdrant collection lifecycle operations
 /// </summary>
-public class QdrantCollectionManager : IQdrantCollectionManager
+internal class QdrantCollectionManager : IQdrantCollectionManager
 {
     private readonly IQdrantClientAdapter _clientAdapter;
     private readonly ILogger<QdrantCollectionManager> _logger;
@@ -30,24 +30,11 @@ public class QdrantCollectionManager : IQdrantCollectionManager
             var collectionsResponse = await _clientAdapter.ListCollectionsAsync(ct).ConfigureAwait(false);
             return collectionsResponse.Any(c => string.Equals(c, collectionName, StringComparison.Ordinal));
         }
-#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
-        // INFRASTRUCTURE LOGGING PATTERN: Log exceptions at the infrastructure boundary for debugging.
         catch (RpcException ex)
         {
-            _logger.LogError(ex, "gRPC error checking if collection {CollectionName} exists: {Status}", collectionName, ex.Status);
-            throw;
+            // S2139: Logging removed. Wrapped for context.
+            throw new InvalidOperationException($"Failed to check if collection '{collectionName}' exists: {ex.Status}", ex);
         }
-        catch (InvalidOperationException ex)
-        {
-            _logger.LogError(ex, "Invalid operation while checking if collection {CollectionName} exists", collectionName);
-            throw;
-        }
-        catch (OperationCanceledException ex)
-        {
-            _logger.LogError(ex, "Operation cancelled while checking if collection {CollectionName} exists", collectionName);
-            throw;
-        }
-#pragma warning restore S2139
     }
 
     /// <summary>
@@ -78,25 +65,10 @@ public class QdrantCollectionManager : IQdrantCollectionManager
 
             _logger.LogInformation("Collection {CollectionName} created successfully with indexes", collectionName);
         }
-        catch (ArgumentException ex)
-        {
-            _logger.LogError(ex, "Invalid argument while ensuring collection {CollectionName} exists", collectionName);
-            throw;
-        }
         catch (RpcException ex)
         {
-            _logger.LogError(ex, "gRPC error ensuring collection {CollectionName} exists: {Status}", collectionName, ex.Status);
-            throw;
-        }
-        catch (InvalidOperationException ex)
-        {
-            _logger.LogError(ex, "Invalid operation while ensuring collection {CollectionName} exists", collectionName);
-            throw;
-        }
-        catch (OperationCanceledException ex)
-        {
-            _logger.LogError(ex, "Operation cancelled while ensuring collection {CollectionName} exists", collectionName);
-            throw;
+            // S2139: Logging removed. Wrapped for context.
+            throw new InvalidOperationException($"Failed to ensure collection '{collectionName}' exists: {ex.Status}", ex);
         }
     }
 

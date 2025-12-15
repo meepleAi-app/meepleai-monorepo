@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands;
 /// <summary>
 /// Command to update an existing API key.
 /// </summary>
-public record UpdateApiKeyManagementCommand(
+internal record UpdateApiKeyManagementCommand(
     string KeyId,
     string UserId,
     UpdateApiKeyRequest Request

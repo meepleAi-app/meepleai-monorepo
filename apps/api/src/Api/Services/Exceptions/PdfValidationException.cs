@@ -12,4 +12,7 @@ public class PdfValidationException : Exception
     public PdfValidationException(string message, Exception innerException) : base(message, innerException)
     {
     }
+    public PdfValidationException()
+    {
+    }
 }

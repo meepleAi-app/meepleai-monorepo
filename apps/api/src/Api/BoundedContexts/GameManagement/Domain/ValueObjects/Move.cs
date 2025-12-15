@@ -4,7 +4,7 @@ namespace Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 /// Represents a player move in a board game session.
 /// Immutable value object containing move details for validation.
 /// </summary>
-public sealed record Move
+internal sealed record Move
 {
     /// <summary>
     /// Name of the player making the move.

@@ -12,7 +12,7 @@ namespace Api.Services;
 /// PERF-05: HybridCache-based implementation of AI response caching.
 /// Replaces direct Redis usage with HybridCache for cache stampede protection and L1+L2 tiering.
 /// </summary>
-public class AiResponseCacheService : IAiResponseCacheService
+internal class AiResponseCacheService : IAiResponseCacheService
 {
     private readonly IHybridCacheService _hybridCache;
     private readonly ILogger<AiResponseCacheService> _logger;

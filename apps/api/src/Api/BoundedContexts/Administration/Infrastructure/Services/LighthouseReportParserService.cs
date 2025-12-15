@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.Administration.Infrastructure.Services;
 /// Service for parsing Lighthouse CI reports (Issue #2139)
 /// Reads JSON reports from apps/web/.lighthouseci/
 /// </summary>
-public class LighthouseReportParserService : ILighthouseReportParserService
+internal class LighthouseReportParserService : ILighthouseReportParserService
 {
     private readonly ILogger<LighthouseReportParserService> _logger;
     private readonly string _reportDirectory;
@@ -33,7 +33,7 @@ public class LighthouseReportParserService : ILighthouseReportParserService
     {
         try
         {
-            var latestReport = await GetLatestReportAsync(cancellationToken).ConfigureAwait(false);
+            var latestReport = await GetLatestReportAsync().ConfigureAwait(false);
             if (latestReport == null)
             {
                 _logger.LogWarning("No Lighthouse reports found in directory: {Directory}", _reportDirectory);
@@ -85,7 +85,7 @@ public class LighthouseReportParserService : ILighthouseReportParserService
     {
         try
         {
-            var latestReport = await GetLatestReportAsync(cancellationToken).ConfigureAwait(false);
+            var latestReport = await GetLatestReportAsync().ConfigureAwait(false);
             if (latestReport == null)
             {
                 _logger.LogWarning("No Lighthouse reports found in directory: {Directory}", _reportDirectory);

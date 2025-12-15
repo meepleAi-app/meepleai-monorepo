@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Events;
 /// Domain event raised when an agent is invoked with token usage tracking.
 /// Issue #1694: Enhanced with LLM token usage and cost tracking.
 /// </summary>
-public sealed class AgentInvokedEvent : DomainEventBase
+internal sealed class AgentInvokedEvent : DomainEventBase
 {
     public Guid AgentId { get; }
     public string Input { get; }

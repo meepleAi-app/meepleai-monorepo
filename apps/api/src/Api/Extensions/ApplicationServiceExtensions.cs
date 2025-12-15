@@ -17,8 +17,9 @@ using FluentValidation;
 
 namespace Api.Extensions;
 
-public static class ApplicationServiceExtensions
+internal static class ApplicationServiceExtensions
 {
+    [Obsolete]
     public static IServiceCollection AddApplicationServices(
         this IServiceCollection services,
         IConfiguration configuration)

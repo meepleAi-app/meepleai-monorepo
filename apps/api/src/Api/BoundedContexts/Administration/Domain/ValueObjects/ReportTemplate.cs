@@ -4,7 +4,7 @@ namespace Api.BoundedContexts.Administration.Domain.ValueObjects;
 /// Value object representing report template types
 /// ISSUE-916: 4 templates - SystemHealth, UserActivity, AIUsage, ContentMetrics
 /// </summary>
-public enum ReportTemplate
+internal enum ReportTemplate
 {
     /// <summary>System health metrics report</summary>
     SystemHealth = 1,

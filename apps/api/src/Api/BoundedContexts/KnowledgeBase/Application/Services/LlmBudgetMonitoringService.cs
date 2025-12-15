@@ -30,7 +30,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
 ///
 /// DI Pattern: Uses IServiceScopeFactory to resolve scoped services (ILlmCostLogRepository)
 /// </remarks>
-public class LlmBudgetMonitoringService : BackgroundService
+internal class LlmBudgetMonitoringService : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IConfiguration _configuration;

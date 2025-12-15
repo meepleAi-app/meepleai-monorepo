@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 /// Issue #2051: Remove document from collection
 /// SECURITY: Includes UserId for authorization
 /// </summary>
-public record RemoveDocumentFromCollectionCommand(
+internal record RemoveDocumentFromCollectionCommand(
     Guid CollectionId,
     Guid PdfDocumentId,
     Guid UserId // SECURITY: Required for ownership verification

@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands;
 /// Command to extend a session's expiration time.
 /// Rate limited to max 10 extensions per hour per user.
 /// </summary>
-public record ExtendSessionCommand(
+internal record ExtendSessionCommand(
     Guid SessionId,
     Guid RequestingUserId,
     TimeSpan? ExtensionDuration = null // Defaults to 30 days if not specified
@@ -16,7 +16,7 @@ public record ExtendSessionCommand(
 /// <summary>
 /// Response for ExtendSessionCommand.
 /// </summary>
-public record ExtendSessionResponse(
+internal record ExtendSessionResponse(
     bool Success,
     DateTime? NewExpiresAt,
     string? ErrorMessage

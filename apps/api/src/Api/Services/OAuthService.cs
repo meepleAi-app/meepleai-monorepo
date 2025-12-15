@@ -18,7 +18,7 @@ namespace Api.Services;
 /// Business logic delegated to CQRS handlers (HandleOAuthCallbackCommand, UnlinkOAuthAccountCommand, etc).
 /// This service is a pure infrastructure adapter for provider-specific HTTP operations.
 /// </summary>
-public class OAuthService : IOAuthService
+internal class OAuthService : IOAuthService
 {
     private readonly MeepleAiDbContext _db;
     private readonly IEncryptionService _encryption;
@@ -176,7 +176,7 @@ public class OAuthService : IOAuthService
                 return value;
             }
 
-            if (value.StartsWith("${", StringComparison.Ordinal) && value.EndsWith("}", StringComparison.Ordinal))
+            if (value.StartsWith("${", StringComparison.Ordinal) && value.EndsWith('}'))
             {
                 var envName = value.Substring(2, value.Length - 3);
                 var envValue = Environment.GetEnvironmentVariable(envName);
@@ -222,9 +222,11 @@ public class OAuthService : IOAuthService
         string provider,
         string code)
     {
-#pragma warning disable CA2000 // HttpClient lifetime managed by IHttpClientFactory
+        // CA2000 suppression: HttpClient from IHttpClientFactory MUST NOT be disposed manually.
+        // The factory manages HttpMessageHandler pooling and lifetime. See: https://learn.microsoft.com/en-us/dotnet/architecture/microservices/implement-resilient-applications/use-httpclientfactory-to-implement-resilient-http-requests
+#pragma warning disable CA2000 // Dispose objects before losing scope - False positive: IHttpClientFactory manages HttpClient lifetime
         var httpClient = _httpClientFactory.CreateClient();
-#pragma warning restore CA2000
+#pragma warning restore CA2000 // Dispose objects before losing scope
         var callbackUrl = GetCallbackUrl(provider);
 
         var requestData = new Dictionary<string, string>
@@ -289,9 +291,11 @@ public class OAuthService : IOAuthService
         string provider,
         string accessToken)
     {
-#pragma warning disable CA2000 // HttpClient lifetime managed by IHttpClientFactory
+        // CA2000 suppression: HttpClient from IHttpClientFactory MUST NOT be disposed manually.
+        // The factory manages HttpMessageHandler pooling and lifetime. See: https://learn.microsoft.com/en-us/dotnet/architecture/microservices/implement-resilient-applications/use-httpclientfactory-to-implement-resilient-http-requests
+#pragma warning disable CA2000 // Dispose objects before losing scope - False positive: IHttpClientFactory manages HttpClient lifetime
         var httpClient = _httpClientFactory.CreateClient();
-#pragma warning restore CA2000
+#pragma warning restore CA2000 // Dispose objects before losing scope
         using var request = new HttpRequestMessage(HttpMethod.Get, config.UserInfoUrl);
         request.Headers.Add("Authorization", $"Bearer {accessToken}");
 
@@ -366,12 +370,16 @@ public class OAuthService : IOAuthService
 
     private async Task<string> GetGitHubPrimaryEmailAsync(string accessToken)
     {
-#pragma warning disable CA2000 // HttpClient lifetime managed by IHttpClientFactory
         // S1075: GitHub API endpoint (official public endpoint)
+#pragma warning disable S1075 // URIs should not be hardcoded
         const string GitHubUserEmailsApiUrl = "https://api.github.com/user/emails";
+#pragma warning restore S1075 // URIs should not be hardcoded
 
+        // CA2000 suppression: HttpClient from IHttpClientFactory MUST NOT be disposed manually.
+        // The factory manages HttpMessageHandler pooling and lifetime. See: https://learn.microsoft.com/en-us/dotnet/architecture/microservices/implement-resilient-applications/use-httpclientfactory-to-implement-resilient-http-requests
+#pragma warning disable CA2000 // Dispose objects before losing scope - False positive: IHttpClientFactory manages HttpClient lifetime
         var httpClient = _httpClientFactory.CreateClient();
-#pragma warning restore CA2000
+#pragma warning restore CA2000 // Dispose objects before losing scope
         using var request = new HttpRequestMessage(HttpMethod.Get, GitHubUserEmailsApiUrl);
         request.Headers.Add("Authorization", $"Bearer {accessToken}");
         request.Headers.Add("User-Agent", "MeepleAI");
@@ -434,7 +442,7 @@ public class OAuthService : IOAuthService
         var oauthAccount = await _db.OAuthAccounts
             .FirstOrDefaultAsync(oa =>
                 oa.UserId == userId &&
-                oa.Provider == provider.ToLowerInvariant()).ConfigureAwait(false);
+                oa.Provider.Equals(provider, StringComparison.OrdinalIgnoreCase)).ConfigureAwait(false);
 
         if (oauthAccount == null)
         {
@@ -487,9 +495,11 @@ public class OAuthService : IOAuthService
         string provider,
         string refreshToken)
     {
-#pragma warning disable CA2000 // HttpClient lifetime managed by IHttpClientFactory
+        // CA2000 suppression: HttpClient from IHttpClientFactory MUST NOT be disposed manually.
+        // The factory manages HttpMessageHandler pooling and lifetime. See: https://learn.microsoft.com/en-us/dotnet/architecture/microservices/implement-resilient-applications/use-httpclientfactory-to-implement-resilient-http-requests
+#pragma warning disable CA2000 // Dispose objects before losing scope - False positive: IHttpClientFactory manages HttpClient lifetime
         var httpClient = _httpClientFactory.CreateClient();
-#pragma warning restore CA2000
+#pragma warning restore CA2000 // Dispose objects before losing scope
 
         var requestData = new Dictionary<string, string>
 (StringComparer.Ordinal)

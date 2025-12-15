@@ -5,7 +5,7 @@ namespace Api.BoundedContexts.Authentication.Domain.Events;
 /// <summary>
 /// Domain event raised when an API key is revoked.
 /// </summary>
-public sealed class ApiKeyRevokedEvent : DomainEventBase
+internal sealed class ApiKeyRevokedEvent : DomainEventBase
 {
     /// <summary>
     /// Gets the ID of the revoked API key.

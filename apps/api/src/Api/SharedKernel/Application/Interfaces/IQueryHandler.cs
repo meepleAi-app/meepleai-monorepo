@@ -7,7 +7,7 @@ namespace Api.SharedKernel.Application.Interfaces;
 /// </summary>
 /// <typeparam name="TQuery">The type of query to handle</typeparam>
 /// <typeparam name="TResponse">The type of the query result</typeparam>
-public interface IQueryHandler<in TQuery, TResponse> : IRequestHandler<TQuery, TResponse>
+internal interface IQueryHandler<in TQuery, TResponse> : IRequestHandler<TQuery, TResponse>
     where TQuery : IQuery<TResponse>
 {
 }

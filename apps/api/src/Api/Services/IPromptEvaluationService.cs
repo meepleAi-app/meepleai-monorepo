@@ -7,7 +7,7 @@ namespace Api.Services;
 /// Service for evaluating prompt quality through automated testing
 /// ADMIN-01 Phase 4: Prompt Testing Framework
 /// </summary>
-public interface IPromptEvaluationService
+internal interface IPromptEvaluationService
 {
     /// <summary>
     /// Loads a test dataset from JSON file with schema validation
@@ -81,7 +81,7 @@ public interface IPromptEvaluationService
 /// <summary>
 /// Report output format
 /// </summary>
-public enum ReportFormat
+internal enum ReportFormat
 {
     /// <summary>Markdown format for human readability</summary>
     Markdown,

@@ -17,7 +17,7 @@ namespace Api.Services;
 /// Classification: Tier 3 Orchestration Service (ADR-017)
 /// Critical: YES (21 references). Coordinates Embedding, Search, LLM, Validation.
 /// </summary>
-public class RagService : IRagService
+internal class RagService : IRagService
 {
     // CONFIG-04: Hardcoded defaults (lowest priority fallback)
     private const int DefaultTopK = 5;

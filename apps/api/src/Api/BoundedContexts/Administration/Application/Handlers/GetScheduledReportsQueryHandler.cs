@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.Administration.Application.Handlers;
 /// Handler for GetScheduledReportsQuery
 /// ISSUE-916: Report listing
 /// </summary>
-public sealed class GetScheduledReportsQueryHandler : IQueryHandler<GetScheduledReportsQuery, IReadOnlyList<ScheduledReportDto>>
+internal sealed class GetScheduledReportsQueryHandler : IQueryHandler<GetScheduledReportsQuery, IReadOnlyList<ScheduledReportDto>>
 {
     private readonly IAdminReportRepository _repository;
     private readonly ILogger<GetScheduledReportsQueryHandler> _logger;

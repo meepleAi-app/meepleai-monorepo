@@ -13,7 +13,7 @@ namespace Api.Routing;
 /// Password reset endpoints.
 /// Handles password reset request, token validation, and password change with auto-login.
 /// </summary>
-public static class PasswordEndpoints
+internal static class PasswordEndpoints
 {
     // AUTH-04: Password reset endpoints
     public static RouteGroupBuilder MapPasswordResetEndpoints(this RouteGroupBuilder group, Action<HttpContext, string, DateTime> writeSessionCookie)

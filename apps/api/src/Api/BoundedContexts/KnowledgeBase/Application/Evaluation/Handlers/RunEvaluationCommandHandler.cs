@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Handlers;
 /// Handler for RunEvaluationCommand.
 /// Loads dataset and runs RAG evaluation.
 /// </summary>
-public sealed class RunEvaluationCommandHandler : IRequestHandler<RunEvaluationCommand, EvaluationResult>
+internal sealed class RunEvaluationCommandHandler : IRequestHandler<RunEvaluationCommand, EvaluationResult>
 {
     private readonly IDatasetEvaluationService _evaluationService;
     private readonly ILogger<RunEvaluationCommandHandler> _logger;

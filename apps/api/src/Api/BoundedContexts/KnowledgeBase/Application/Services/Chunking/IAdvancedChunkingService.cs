@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Services.Chunking;
 /// ADR-016 Phase 1: Interface for advanced hierarchical document chunking.
 /// Creates parent/child chunk relationships with metadata enrichment.
 /// </summary>
-public interface IAdvancedChunkingService
+internal interface IAdvancedChunkingService
 {
     /// <summary>
     /// Chunks a document into hierarchical chunks with parent/child relationships.
@@ -40,7 +40,7 @@ public interface IAdvancedChunkingService
 /// Represents an extracted document with content and metadata.
 /// Used as input to the advanced chunking service.
 /// </summary>
-public sealed record ExtractedDocument
+internal sealed record ExtractedDocument
 {
     /// <summary>
     /// Document identifier.
@@ -71,7 +71,7 @@ public sealed record ExtractedDocument
 /// <summary>
 /// Represents a section within an extracted document.
 /// </summary>
-public sealed record DocumentSection
+internal sealed record DocumentSection
 {
     /// <summary>
     /// Section heading/title.

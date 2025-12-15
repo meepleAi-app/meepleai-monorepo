@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Handlers;
 /// <summary>
 /// Handles retrieval of rule comments for a specific line number.
 /// </summary>
-public class GetCommentsForLineQueryHandler : IRequestHandler<GetCommentsForLineQuery, IReadOnlyList<RuleCommentDto>>
+internal class GetCommentsForLineQueryHandler : IRequestHandler<GetCommentsForLineQuery, IReadOnlyList<RuleCommentDto>>
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly ILogger<GetCommentsForLineQueryHandler> _logger;

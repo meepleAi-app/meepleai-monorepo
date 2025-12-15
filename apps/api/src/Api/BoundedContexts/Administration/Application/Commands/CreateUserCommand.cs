@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.Administration.Application.Commands;
 /// Command to create a new user with specified role.
 /// Admin users can create users with any role, bypassing normal registration restrictions.
 /// </summary>
-public record CreateUserCommand(
+internal record CreateUserCommand(
     string Email,
     string Password,
     string DisplayName,

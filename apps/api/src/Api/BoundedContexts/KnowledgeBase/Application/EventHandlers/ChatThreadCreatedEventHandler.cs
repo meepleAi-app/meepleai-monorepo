@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.EventHandlers;
 
-public sealed class ChatThreadCreatedEventHandler : DomainEventHandlerBase<ChatThreadCreatedEvent>
+internal sealed class ChatThreadCreatedEventHandler : DomainEventHandlerBase<ChatThreadCreatedEvent>
 {
     public ChatThreadCreatedEventHandler(
         MeepleAiDbContext dbContext,

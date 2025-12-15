@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.Administration.Application.Handlers;
 
-public class ActivatePromptVersionCommandHandler : ICommandHandler<ActivatePromptVersionCommand, PromptVersionDto>
+internal class ActivatePromptVersionCommandHandler : ICommandHandler<ActivatePromptVersionCommand, PromptVersionDto>
 {
     private readonly MeepleAiDbContext _db;
     private readonly TimeProvider _timeProvider;
@@ -26,6 +26,7 @@ public class ActivatePromptVersionCommandHandler : ICommandHandler<ActivatePromp
 
     public async Task<PromptVersionDto> Handle(ActivatePromptVersionCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         var templateId = command.TemplateId;
         var versionId = command.VersionId;
         var activatedByUserId = command.ActivatedByUserId;

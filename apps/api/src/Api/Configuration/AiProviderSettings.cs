@@ -18,7 +18,7 @@ namespace Api.Configuration;
 /// 3. Fall back to LlmRouting tier-based logic if PreferredProvider empty
 /// 4. Use FallbackChain for circuit breaker failover order
 /// </remarks>
-public class AiProviderSettings
+internal class AiProviderSettings
 {
     public const string SectionName = "AI";
 
@@ -48,7 +48,7 @@ public class AiProviderSettings
 /// <summary>
 /// Configuration for a single AI provider (Ollama, OpenRouter, etc.).
 /// </summary>
-public class ProviderConfig
+internal class ProviderConfig
 {
     /// <summary>
     /// Whether this provider is enabled.
@@ -84,7 +84,7 @@ public class ProviderConfig
 /// <summary>
 /// Circuit breaker configuration for provider failure handling.
 /// </summary>
-public class CircuitBreakerConfig
+internal class CircuitBreakerConfig
 {
     /// <summary>
     /// Number of consecutive failures before opening circuit (default: 5).

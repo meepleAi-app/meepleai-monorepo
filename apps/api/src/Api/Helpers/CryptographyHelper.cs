@@ -7,7 +7,7 @@ namespace Api.Helpers;
 /// Centralized cryptographic utilities to eliminate code duplication across services.
 /// Provides standardized hashing methods for consistent security operations.
 /// </summary>
-public static class CryptographyHelper
+internal static class CryptographyHelper
 {
     /// <summary>
     /// Computes SHA256 hash of the input string and returns lowercase hexadecimal representation.

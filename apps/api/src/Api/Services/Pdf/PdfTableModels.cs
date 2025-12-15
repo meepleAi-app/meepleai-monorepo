@@ -6,7 +6,7 @@ namespace Api.Services.Pdf;
 /// <summary>
 /// Positioned character in PDF page
 /// </summary>
-public sealed class PositionedCharacter
+internal sealed class PositionedCharacter
 {
     public PositionedCharacter(string text, float x, float y, float width)
     {
@@ -28,7 +28,7 @@ public sealed class PositionedCharacter
 /// <summary>
 /// Positioned text line in PDF page
 /// </summary>
-public sealed class PositionedTextLine
+internal sealed class PositionedTextLine
 {
     private readonly List<PositionedCharacter> _characters = new();
     private int _nextSequenceIndex;
@@ -83,7 +83,7 @@ public sealed class PositionedTextLine
 /// <summary>
 /// Column boundary definition
 /// </summary>
-public sealed class ColumnBoundary
+internal sealed class ColumnBoundary
 {
     public float Start { get; set; }
     public float End { get; set; }
@@ -126,7 +126,7 @@ public sealed class ColumnBoundary
 /// <summary>
 /// Result of column split operation
 /// </summary>
-public sealed class ColumnSplitResult
+internal sealed class ColumnSplitResult
 {
     public IList<string> Columns { get; set; } = new List<string>();
     public IList<ColumnBoundary> Boundaries { get; set; } = new List<ColumnBoundary>();
@@ -135,7 +135,7 @@ public sealed class ColumnSplitResult
 /// <summary>
 /// Detected column layout
 /// </summary>
-public sealed class DetectedColumnLayout
+internal sealed class DetectedColumnLayout
 {
     public IList<ColumnBoundary> Boundaries { get; } = new List<ColumnBoundary>();
     public IList<string> Columns { get; set; } = new List<string>();
@@ -144,7 +144,7 @@ public sealed class DetectedColumnLayout
 /// <summary>
 /// Represents a table extracted from a PDF
 /// </summary>
-public class PdfTable
+internal class PdfTable
 {
     public int PageNumber { get; set; }
     public int StartLine { get; set; }
@@ -157,7 +157,7 @@ public class PdfTable
 /// <summary>
 /// Represents a diagram/image extracted from a PDF
 /// </summary>
-public class PdfDiagram
+internal class PdfDiagram
 {
     public int PageNumber { get; set; }
     public string DiagramType { get; set; } = "Unknown";
@@ -170,7 +170,7 @@ public class PdfDiagram
 /// <summary>
 /// Result of structured PDF extraction
 /// </summary>
-public record PdfStructuredExtractionResult
+internal record PdfStructuredExtractionResult
 {
     public bool Success { get; init; }
     public string? ErrorMessage { get; init; }
@@ -204,7 +204,7 @@ public record PdfStructuredExtractionResult
 /// <summary>
 /// Extracted image information
 /// </summary>
-public class ExtractedImage
+internal class ExtractedImage
 {
     public int Width { get; set; }
     public int Height { get; set; }

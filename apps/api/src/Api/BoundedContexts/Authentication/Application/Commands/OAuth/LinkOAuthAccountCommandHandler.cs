@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands.OAuth;
 /// Handles linking an OAuth provider account to a user.
 /// Validates user exists and prevents duplicate provider links.
 /// </summary>
-public sealed class LinkOAuthAccountCommandHandler : ICommandHandler<LinkOAuthAccountCommand, LinkOAuthAccountResult>
+internal sealed class LinkOAuthAccountCommandHandler : ICommandHandler<LinkOAuthAccountCommand, LinkOAuthAccountResult>
 {
     private readonly IUserRepository _userRepository;
     private readonly IOAuthAccountRepository _oauthAccountRepository;
@@ -32,6 +32,7 @@ public sealed class LinkOAuthAccountCommandHandler : ICommandHandler<LinkOAuthAc
 
     public async Task<LinkOAuthAccountResult> Handle(LinkOAuthAccountCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         try
         {
             // Load user by ID

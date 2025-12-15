@@ -12,7 +12,7 @@ namespace Api.BoundedContexts.Administration.Application.Handlers;
 /// Handler for UpdateUserCommand.
 /// Updates existing user details (email, display name, role).
 /// </summary>
-public class UpdateUserCommandHandler : ICommandHandler<UpdateUserCommand, UserDto>
+internal class UpdateUserCommandHandler : ICommandHandler<UpdateUserCommand, UserDto>
 {
     private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -27,6 +27,7 @@ public class UpdateUserCommandHandler : ICommandHandler<UpdateUserCommand, UserD
 
     public async Task<UserDto> Handle(UpdateUserCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         // Find user
         var userId = Guid.Parse(command.UserId);
         var user = await _userRepository.GetByIdAsync(userId, cancellationToken).ConfigureAwait(false);

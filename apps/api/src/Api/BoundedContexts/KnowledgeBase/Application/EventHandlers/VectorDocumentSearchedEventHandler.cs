@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.EventHandlers;
 
-public sealed class VectorDocumentSearchedEventHandler : DomainEventHandlerBase<VectorDocumentSearchedEvent>
+internal sealed class VectorDocumentSearchedEventHandler : DomainEventHandlerBase<VectorDocumentSearchedEvent>
 {
     public VectorDocumentSearchedEventHandler(
         MeepleAiDbContext dbContext,

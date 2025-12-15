@@ -2,7 +2,7 @@ using Api.SharedKernel.Domain.Events;
 
 namespace Api.BoundedContexts.KnowledgeBase.Domain.Events;
 
-public sealed class ChatThreadCreatedEvent : DomainEventBase
+internal sealed class ChatThreadCreatedEvent : DomainEventBase
 {
     public Guid ThreadId { get; }
     public Guid GameId { get; }

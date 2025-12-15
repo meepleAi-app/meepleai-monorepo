@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.Authentication.Application.Queries;
 
-public class GetUserSessionsQueryHandler : IQueryHandler<GetUserSessionsQuery, List<SessionInfo>>
+internal class GetUserSessionsQueryHandler : IQueryHandler<GetUserSessionsQuery, List<SessionInfo>>
 {
     private readonly MeepleAiDbContext _db;
     private readonly TimeProvider _timeProvider;

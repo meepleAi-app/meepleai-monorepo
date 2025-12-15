@@ -7,7 +7,7 @@ namespace Api.Services;
 /// Provides encryption and decryption services using ASP.NET Core Data Protection API.
 /// Thread-safe and supports automatic key rotation.
 /// </summary>
-public class EncryptionService : IEncryptionService
+internal class EncryptionService : IEncryptionService
 {
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly ILogger<EncryptionService> _logger;

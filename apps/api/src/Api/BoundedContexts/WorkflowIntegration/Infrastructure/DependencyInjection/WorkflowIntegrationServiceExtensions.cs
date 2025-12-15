@@ -5,7 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Api.BoundedContexts.WorkflowIntegration.Infrastructure.DependencyInjection;
 
-public static class WorkflowIntegrationServiceExtensions
+internal static class WorkflowIntegrationServiceExtensions
 {
     public static IServiceCollection AddWorkflowIntegrationContext(this IServiceCollection services)
     {

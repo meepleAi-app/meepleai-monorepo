@@ -8,7 +8,7 @@ namespace Api.Services;
 /// <summary>
 /// Exports chat conversations as Markdown with proper formatting.
 /// </summary>
-public class MdExportFormatter : IExportFormatter
+internal class MdExportFormatter : IExportFormatter
 {
     private readonly ILogger<MdExportFormatter>? _logger;
 

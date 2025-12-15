@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Services;
 /// Provides Recall@K, nDCG@K, MRR calculations as defined in ADR-016.
 /// Named DatasetEvaluationService to avoid conflict with Api.Services.RagEvaluationService.
 /// </summary>
-public sealed class DatasetEvaluationService : IDatasetEvaluationService
+internal sealed class DatasetEvaluationService : IDatasetEvaluationService
 {
     private readonly IRagService _ragService;
     private readonly ILogger<DatasetEvaluationService> _logger;

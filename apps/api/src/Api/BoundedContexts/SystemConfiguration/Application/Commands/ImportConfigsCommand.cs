@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.SystemConfiguration.Application.Commands;
 /// <summary>
 /// Command to import multiple configurations from backup/export.
 /// </summary>
-public record ImportConfigsCommand(
+internal record ImportConfigsCommand(
     IReadOnlyList<ConfigurationImportItem> Configurations,
     bool OverwriteExisting,
     Guid UserId
@@ -15,7 +15,7 @@ public record ImportConfigsCommand(
 /// <summary>
 /// Single configuration in import operation.
 /// </summary>
-public record ConfigurationImportItem(
+internal record ConfigurationImportItem(
     string Key,
     string Value,
     string ValueType,

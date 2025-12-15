@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Handlers;
 /// <summary>
 /// Handles query to get session history with filters.
 /// </summary>
-public class GetSessionHistoryQueryHandler : IQueryHandler<GetSessionHistoryQuery, List<GameSessionDto>>
+internal class GetSessionHistoryQueryHandler : IQueryHandler<GetSessionHistoryQuery, List<GameSessionDto>>
 {
     private readonly IGameSessionRepository _sessionRepository;
 

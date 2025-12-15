@@ -6,7 +6,7 @@ namespace Api.SharedKernel.Domain.Validation;
 /// <summary>
 /// Helper methods for working with validation results.
 /// </summary>
-public static class ValidationHelpers
+internal static class ValidationHelpers
 {
     /// <summary>
     /// Throws a ValidationException if the result is a failure.
@@ -18,7 +18,7 @@ public static class ValidationHelpers
     /// <exception cref="ValidationException">Thrown if validation fails.</exception>
     public static T ThrowIfFailure<T>(this Result<T> result)
     {
-        if (result is null) throw new ArgumentNullException(nameof(result));
+        ArgumentNullException.ThrowIfNull(result);
         if (result.IsFailure)
         {
             throw new ValidationException(result.Error!.Message);
@@ -38,8 +38,8 @@ public static class ValidationHelpers
     /// <exception cref="ValidationException">Thrown if validation fails.</exception>
     public static T ThrowIfFailure<T>(this Result<T> result, string fieldName)
     {
-        if (result is null) throw new ArgumentNullException(nameof(result));
-        if (fieldName is null) throw new ArgumentNullException(nameof(fieldName));
+        ArgumentNullException.ThrowIfNull(result);
+        ArgumentNullException.ThrowIfNull(fieldName);
         if (result.IsFailure)
         {
             throw new ValidationException(fieldName, result.Error!.Message);
@@ -57,7 +57,7 @@ public static class ValidationHelpers
     /// <returns>A combined result containing all errors if any validation fails.</returns>
     public static Result<T> CombineResults<T>(params Result<T>[] results)
     {
-        if (results is null) throw new ArgumentNullException(nameof(results));
+        ArgumentNullException.ThrowIfNull(results);
         if (results.Length == 0)
             throw new ArgumentException("At least one result is required", nameof(results));
 
@@ -81,7 +81,7 @@ public static class ValidationHelpers
     /// <returns>The first failure result, or the final success result.</returns>
     public static Result<T> Validate<T>(T value, params Func<T, Result<T>>[] validators)
     {
-        if (validators is null) throw new ArgumentNullException(nameof(validators));
+        ArgumentNullException.ThrowIfNull(validators);
         var result = Result<T>.Success(value);
 
         foreach (var validator in validators)
@@ -107,8 +107,8 @@ public static class ValidationHelpers
         Func<T, bool> predicate,
         string errorMessage)
     {
-        if (predicate is null) throw new ArgumentNullException(nameof(predicate));
-        if (errorMessage is null) throw new ArgumentNullException(nameof(errorMessage));
+        ArgumentNullException.ThrowIfNull(predicate);
+        ArgumentNullException.ThrowIfNull(errorMessage);
         return value => value.Must(predicate, errorMessage);
     }
 
@@ -123,8 +123,8 @@ public static class ValidationHelpers
         Func<T, Task<bool>> predicate,
         string errorMessage)
     {
-        if (predicate is null) throw new ArgumentNullException(nameof(predicate));
-        if (errorMessage is null) throw new ArgumentNullException(nameof(errorMessage));
+        ArgumentNullException.ThrowIfNull(predicate);
+        ArgumentNullException.ThrowIfNull(errorMessage);
         return async value =>
         {
             var isValid = await predicate(value).ConfigureAwait(false);

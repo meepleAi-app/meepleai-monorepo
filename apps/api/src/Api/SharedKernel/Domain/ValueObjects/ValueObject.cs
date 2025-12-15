@@ -12,7 +12,7 @@ namespace Api.SharedKernel.Domain.ValueObjects;
 /// S4035 is suppressed as this design is intentional for DDD base classes.
 /// </remarks>
 #pragma warning disable S4035 // Classes implementing "IEquatable<T>" should be sealed or implement "IEqualityComparer<T>"
-public abstract class ValueObject : IEquatable<ValueObject>
+internal abstract class ValueObject : IEquatable<ValueObject>
 {
     /// <summary>
     /// Gets the atomic values that define this value object's equality.

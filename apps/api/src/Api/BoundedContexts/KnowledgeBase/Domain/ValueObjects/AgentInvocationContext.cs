@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 /// Immutable context passed to agent invocation methods.
 /// Contains query, embeddings, and optional domain filters (game, chat thread).
 /// </remarks>
-public sealed record AgentInvocationContext
+internal sealed record AgentInvocationContext
 {
     /// <summary>
     /// Unique identifier for this invocation (for tracking and auditing).

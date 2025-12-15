@@ -7,7 +7,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 
 namespace Api.BoundedContexts.SystemConfiguration.Application.Handlers;
 
-public class ToggleConfigurationCommandHandler : ICommandHandler<ToggleConfigurationCommand, ConfigurationDto>
+internal class ToggleConfigurationCommandHandler : ICommandHandler<ToggleConfigurationCommand, ConfigurationDto>
 {
     private readonly IConfigurationRepository _configurationRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -22,6 +22,7 @@ public class ToggleConfigurationCommandHandler : ICommandHandler<ToggleConfigura
 
     public async Task<ConfigurationDto> Handle(ToggleConfigurationCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         var config = await _configurationRepository.GetByIdAsync(command.ConfigId, cancellationToken).ConfigureAwait(false);
 
         if (config == null)

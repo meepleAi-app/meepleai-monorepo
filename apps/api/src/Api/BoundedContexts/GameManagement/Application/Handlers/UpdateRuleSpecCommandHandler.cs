@@ -14,7 +14,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Handlers;
 /// Handles updating rule specifications for a game.
 /// Creates a new version of the RuleSpec.
 /// </summary>
-public class UpdateRuleSpecCommandHandler : ICommandHandler<UpdateRuleSpecCommand, RuleSpecDto>
+internal class UpdateRuleSpecCommandHandler : ICommandHandler<UpdateRuleSpecCommand, RuleSpecDto>
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly RuleSpecVersioningDomainService _versioningService;
@@ -38,6 +38,7 @@ public class UpdateRuleSpecCommandHandler : ICommandHandler<UpdateRuleSpecComman
 
     public async Task<RuleSpecDto> Handle(UpdateRuleSpecCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         // Ensure game exists
         var game = await _dbContext.Games
             .FirstOrDefaultAsync(g => g.Id == command.GameId, cancellationToken).ConfigureAwait(false);

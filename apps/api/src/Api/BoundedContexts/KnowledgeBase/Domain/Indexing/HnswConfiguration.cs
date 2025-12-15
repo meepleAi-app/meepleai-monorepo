@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Indexing;
 /// ADR-016 Phase 3: HNSW index configuration value object.
 /// Defines Hierarchical Navigable Small World graph parameters for vector search.
 /// </summary>
-public sealed class HnswConfiguration : ValueObject
+internal sealed class HnswConfiguration : ValueObject
 {
     /// <summary>
     /// Number of edges per node in the HNSW graph.

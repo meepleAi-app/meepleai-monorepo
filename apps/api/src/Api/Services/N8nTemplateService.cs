@@ -11,7 +11,7 @@ using System.Globalization;
 
 namespace Api.Services;
 
-public class N8NTemplateService
+internal class N8NTemplateService
 {
     private readonly MeepleAiDbContext _db;
     private readonly IHttpClientFactory _httpClientFactory;
@@ -439,9 +439,11 @@ public class N8NTemplateService
         string workflowJson,
         CancellationToken ct)
     {
-#pragma warning disable CA2000 // HttpClient lifetime managed by IHttpClientFactory
+        // CA2000 suppression: HttpClient from IHttpClientFactory MUST NOT be disposed manually.
+        // The factory manages HttpMessageHandler pooling and lifetime. See: https://learn.microsoft.com/en-us/dotnet/architecture/microservices/implement-resilient-applications/use-httpclientfactory-to-implement-resilient-http-requests
+#pragma warning disable CA2000 // Dispose objects before losing scope - False positive: IHttpClientFactory manages HttpClient lifetime
         var httpClient = _httpClientFactory.CreateClient();
-#pragma warning restore CA2000
+#pragma warning restore CA2000 // Dispose objects before losing scope
 
         // Decrypt API key
         var apiKey = DecryptApiKey(config.ApiKeyEncrypted);
@@ -574,10 +576,12 @@ public class N8NTemplateService
         public string Author { get; set; } = "MeepleAI";
         public List<string> Tags { get; set; } = new();
         public string Icon { get; set; } = "📋";
+#pragma warning disable S3459, S1144 // Assigned via deserialization
         public string? Screenshot { get; set; }
         public string? Documentation { get; set; }
         public List<TemplateParameter> Parameters { get; set; } = new();
         public object Workflow { get; set; } = new();
+#pragma warning restore S3459, S1144
     }
 
     private sealed class TemplateParameter
@@ -586,9 +590,11 @@ public class N8NTemplateService
         public string Type { get; set; } = "string";
         public string Label { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
+#pragma warning disable S3459, S1144 // Assigned via deserialization
         public bool Required { get; set; }
         public string? Default { get; set; }
         public List<string>? Options { get; set; }
         public bool Sensitive { get; set; }
+#pragma warning restore S3459, S1144
     }
 }

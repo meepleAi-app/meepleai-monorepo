@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.Authentication.Application.EventHandlers;
 /// Handles the PasswordChangedEvent domain event.
 /// Creates audit log entry automatically via base class.
 /// </summary>
-public sealed class PasswordChangedEventHandler : DomainEventHandlerBase<PasswordChangedEvent>
+internal sealed class PasswordChangedEventHandler : DomainEventHandlerBase<PasswordChangedEvent>
 {
     public PasswordChangedEventHandler(
         MeepleAiDbContext dbContext,

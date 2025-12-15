@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Administration.Application.Commands;
 /// </summary>
 /// <param name="CsvContent">CSV file content as string.</param>
 /// <param name="RequesterId">The ID of the admin requesting the operation.</param>
-public record BulkImportUsersCommand(
+internal record BulkImportUsersCommand(
     string CsvContent,
     Guid RequesterId
 ) : ICommand<BulkOperationResult>;

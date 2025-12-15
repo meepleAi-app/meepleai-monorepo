@@ -12,7 +12,7 @@ namespace Api.BoundedContexts.Administration.Application.Queries.QualityReports;
 /// Infrastructure delegation: Database query via DbContext.
 /// Metrics: RAG confidence, LLM confidence, citation quality, overall confidence, low-quality percentage.
 /// </summary>
-public sealed class GenerateQualityReportQueryHandler : IQueryHandler<GenerateQualityReportQuery, QualityReport>
+internal sealed class GenerateQualityReportQueryHandler : IQueryHandler<GenerateQualityReportQuery, QualityReport>
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly ILogger<GenerateQualityReportQueryHandler> _logger;
@@ -27,6 +27,7 @@ public sealed class GenerateQualityReportQueryHandler : IQueryHandler<GenerateQu
 
     public async Task<QualityReport> Handle(GenerateQualityReportQuery query, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(query);
         // Business logic validation
         if (query.EndDate < query.StartDate)
         {

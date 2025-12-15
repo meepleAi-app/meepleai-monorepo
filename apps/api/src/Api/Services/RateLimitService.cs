@@ -10,7 +10,7 @@ namespace Api.Services;
 /// Redis-based token bucket rate limiter.
 /// Supports per-IP and per-user rate limiting with configurable limits.
 /// </summary>
-public class RateLimitService : IRateLimitService
+internal class RateLimitService : IRateLimitService
 {
     private readonly IConnectionMultiplexer _redis;
     private readonly TimeProvider _timeProvider;
@@ -164,8 +164,8 @@ public class RateLimitService : IRateLimitService
         var normalizedRole = role?.ToLowerInvariant() ?? "anonymous";
 
         // Get both maxTokens and refillRate from database with fallback
-        var maxTokens = await GetRateLimitValueAsync<int>("MaxTokens", normalizedRole, ct).ConfigureAwait(false);
-        var refillRate = await GetRateLimitValueAsync<double>("RefillRate", normalizedRole, ct).ConfigureAwait(false);
+        var maxTokens = await GetRateLimitValueAsync<int>("MaxTokens", normalizedRole).ConfigureAwait(false);
+        var refillRate = await GetRateLimitValueAsync<double>("RefillRate", normalizedRole).ConfigureAwait(false);
 
         _logger.LogDebug("Rate limit config for {Role}: MaxTokens={MaxTokens}, RefillRate={RefillRate}",
             normalizedRole, maxTokens, refillRate);
@@ -375,11 +375,11 @@ public class RateLimitService : IRateLimitService
 /// <param name="Allowed">Whether the request is allowed</param>
 /// <param name="TokensRemaining">Number of tokens remaining in bucket</param>
 /// <param name="RetryAfterSeconds">Seconds to wait before retrying (0 if allowed)</param>
-public record RateLimitResult(bool Allowed, int TokensRemaining, int RetryAfterSeconds);
+internal record RateLimitResult(bool Allowed, int TokensRemaining, int RetryAfterSeconds);
 
 /// <summary>
 /// Rate limit configuration.
 /// </summary>
 /// <param name="MaxTokens">Maximum tokens (burst capacity)</param>
 /// <param name="RefillRate">Tokens added per second</param>
-public record RateLimitConfig(int MaxTokens, double RefillRate);
+internal record RateLimitConfig(int MaxTokens, double RefillRate);

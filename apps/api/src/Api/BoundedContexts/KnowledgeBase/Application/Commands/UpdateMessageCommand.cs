@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 /// Command to update a chat message.
 /// Updates content and invalidates subsequent AI responses.
 /// </summary>
-public record UpdateMessageCommand(
+internal record UpdateMessageCommand(
     Guid ThreadId,
     Guid MessageId,
     string NewContent,

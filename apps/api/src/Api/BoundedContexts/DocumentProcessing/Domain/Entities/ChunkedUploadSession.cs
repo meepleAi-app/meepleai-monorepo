@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 /// Represents an in-progress chunked upload session for large PDF files.
 /// Tracks received chunks and manages the upload lifecycle.
 /// </summary>
-public sealed class ChunkedUploadSession : AggregateRoot<Guid>
+internal sealed class ChunkedUploadSession : AggregateRoot<Guid>
 {
     /// <summary>
     /// Maximum chunk size in bytes (10 MB).

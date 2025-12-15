@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.Administration.Application.Handlers;
 
-public class GetUserByEmailQueryHandler : IQueryHandler<GetUserByEmailQuery, UserDto?>
+internal class GetUserByEmailQueryHandler : IQueryHandler<GetUserByEmailQuery, UserDto?>
 {
     private readonly MeepleAiDbContext _dbContext;
 
@@ -18,6 +18,7 @@ public class GetUserByEmailQueryHandler : IQueryHandler<GetUserByEmailQuery, Use
 
     public async Task<UserDto?> Handle(GetUserByEmailQuery query, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(query);
         var user = await _dbContext.Users
             .Include(u => u.Sessions)
             .AsNoTracking()

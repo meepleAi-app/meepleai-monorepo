@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.GameManagement.Domain.Repositories;
 /// Repository interface for Game aggregate.
 /// Extends IRepository with game-specific queries.
 /// </summary>
-public interface IGameRepository : IRepository<Game, Guid>
+internal interface IGameRepository : IRepository<Game, Guid>
 {
     /// <summary>
     /// Finds games by title (normalized search).

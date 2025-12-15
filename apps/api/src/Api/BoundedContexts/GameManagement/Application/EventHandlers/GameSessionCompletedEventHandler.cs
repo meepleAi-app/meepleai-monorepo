@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.GameManagement.Application.EventHandlers;
 
-public sealed class GameSessionCompletedEventHandler : DomainEventHandlerBase<GameSessionCompletedEvent>
+internal sealed class GameSessionCompletedEventHandler : DomainEventHandlerBase<GameSessionCompletedEvent>
 {
     public GameSessionCompletedEventHandler(
         MeepleAiDbContext dbContext,

@@ -21,7 +21,7 @@ namespace Api.Services.LlmClients;
 /// through a unified API. Used for authenticated/premium users requiring high-quality responses.
 /// Models: openai/gpt-4o-mini, anthropic/claude-3.5-sonnet, deepseek/deepseek-chat-v3.1, etc.
 /// </remarks>
-public class OpenRouterLlmClient : ILlmClient
+internal class OpenRouterLlmClient : ILlmClient
 {
     private readonly HttpClient _httpClient;
     private readonly ILogger<OpenRouterLlmClient> _logger;

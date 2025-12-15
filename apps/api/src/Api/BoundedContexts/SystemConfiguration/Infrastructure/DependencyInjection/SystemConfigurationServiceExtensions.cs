@@ -6,7 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Api.BoundedContexts.SystemConfiguration.Infrastructure.DependencyInjection;
 
-public static class SystemConfigurationServiceExtensions
+internal static class SystemConfigurationServiceExtensions
 {
     public static IServiceCollection AddSystemConfigurationContext(this IServiceCollection services)
     {

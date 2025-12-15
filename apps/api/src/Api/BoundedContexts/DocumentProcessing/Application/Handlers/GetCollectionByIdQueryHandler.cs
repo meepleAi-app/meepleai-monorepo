@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Handlers;
 /// Handler for retrieving document collection by collection ID.
 /// Issue #2051: Get collection with full document details
 /// </summary>
-public class GetCollectionByIdQueryHandler : IQueryHandler<GetCollectionByIdQuery, DocumentCollectionDto?>
+internal class GetCollectionByIdQueryHandler : IQueryHandler<GetCollectionByIdQuery, DocumentCollectionDto?>
 {
     private readonly IDocumentCollectionRepository _collectionRepository;
     private readonly IPdfDocumentRepository _pdfRepository;
@@ -28,6 +28,7 @@ public class GetCollectionByIdQueryHandler : IQueryHandler<GetCollectionByIdQuer
 
     public async Task<DocumentCollectionDto?> Handle(GetCollectionByIdQuery query, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(query);
         _logger.LogInformation("Retrieving document collection {CollectionId}", query.CollectionId);
 
         var collection = await _collectionRepository.GetByIdAsync(query.CollectionId, cancellationToken).ConfigureAwait(false);

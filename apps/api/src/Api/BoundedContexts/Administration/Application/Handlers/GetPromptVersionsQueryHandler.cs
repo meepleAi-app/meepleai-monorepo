@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.Administration.Application.Handlers;
 /// <summary>
 /// Handles retrieval of all versions for a prompt template.
 /// </summary>
-public class GetPromptVersionsQueryHandler : IQueryHandler<GetPromptVersionsQuery, IReadOnlyList<PromptVersionDto>>
+internal class GetPromptVersionsQueryHandler : IQueryHandler<GetPromptVersionsQuery, IReadOnlyList<PromptVersionDto>>
 {
     private readonly MeepleAiDbContext _dbContext;
 

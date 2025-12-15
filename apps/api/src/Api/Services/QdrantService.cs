@@ -14,7 +14,7 @@ namespace Api.Services;
 /// Critical: YES (19 references). Pure technical integration, zero business logic.
 /// Facade pattern - delegates to specialized services.
 /// </summary>
-public class QdrantService : IQdrantService
+internal class QdrantService : IQdrantService
 {
     private readonly IQdrantCollectionManager _collectionManager;
     private readonly IQdrantVectorIndexer _vectorIndexer;
@@ -500,7 +500,7 @@ public class QdrantService : IQdrantService
 /// <summary>
 /// Document chunk with embedding
 /// </summary>
-public record DocumentChunk
+internal record DocumentChunk
 {
     public string Text { get; init; } = string.Empty;
     public float[] Embedding { get; init; } = Array.Empty<float>();
@@ -511,7 +511,7 @@ public record DocumentChunk
 /// <summary>
 /// Result of indexing operation
 /// </summary>
-public record IndexResult
+internal record IndexResult
 {
     public bool Success { get; init; }
     public string? ErrorMessage { get; init; }
@@ -524,7 +524,7 @@ public record IndexResult
 /// <summary>
 /// Result of search operation
 /// </summary>
-public record SearchResult
+internal record SearchResult
 {
     public bool Success { get; init; }
     public string? ErrorMessage { get; init; }
@@ -537,7 +537,7 @@ public record SearchResult
 /// <summary>
 /// Single search result item
 /// </summary>
-public record SearchResultItem
+internal record SearchResultItem
 {
     public float Score { get; init; }
     public string Text { get; init; } = string.Empty;
@@ -549,7 +549,7 @@ public record SearchResultItem
 /// <summary>
 /// Result of chess knowledge indexing operation.
 /// </summary>
-public record ChessIndexResult
+internal record ChessIndexResult
 {
     public bool Success { get; init; }
     public string? ErrorMessage { get; init; }

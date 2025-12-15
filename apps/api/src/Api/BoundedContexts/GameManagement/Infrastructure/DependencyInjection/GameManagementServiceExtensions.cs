@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.GameManagement.Infrastructure.DependencyInjection;
 /// <summary>
 /// Dependency injection extensions for GameManagement bounded context.
 /// </summary>
-public static class GameManagementServiceExtensions
+internal static class GameManagementServiceExtensions
 {
     /// <summary>
     /// Registers all GameManagement bounded context services.

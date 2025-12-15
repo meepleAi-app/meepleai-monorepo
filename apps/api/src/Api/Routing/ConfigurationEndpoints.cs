@@ -12,7 +12,7 @@ namespace Api.Routing;
 /// System configuration management endpoints (Admin only).
 /// Handles CRUD operations, validation, versioning, import/export, and cache management.
 /// </summary>
-public static class ConfigurationEndpoints
+internal static class ConfigurationEndpoints
 {
     public static RouteGroupBuilder MapConfigurationEndpoints(this RouteGroupBuilder group)
     {
@@ -27,7 +27,7 @@ public static class ConfigurationEndpoints
             int pageSize = 50,
             CancellationToken ct = default) =>
         {
-            var (authorized, session, error) = context.RequireAdminSession();
+            var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             var query = new GetAllConfigsQuery(category, environment, activeOnly, page, pageSize);
@@ -44,7 +44,7 @@ public static class ConfigurationEndpoints
             IMediator mediator,
             CancellationToken ct = default) =>
         {
-            var (authorized, session, error) = context.RequireAdminSession();
+            var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             var query = new GetConfigByIdQuery(id);
@@ -64,7 +64,7 @@ public static class ConfigurationEndpoints
             bool activeOnly = false,
             CancellationToken ct = default) =>
         {
-            var (authorized, session, error) = context.RequireAdminSession();
+            var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             var query = new GetConfigByKeyQuery(key, environment, activeOnly);
@@ -243,7 +243,7 @@ public static class ConfigurationEndpoints
             IMediator mediator,
             CancellationToken ct = default) =>
         {
-            var (authorized, session, error) = context.RequireAdminSession();
+            var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             var command = new ValidateConfigCommand(key, value, valueType);
@@ -261,7 +261,7 @@ public static class ConfigurationEndpoints
             bool activeOnly = true,
             CancellationToken ct = default) =>
         {
-            var (authorized, session, error) = context.RequireAdminSession();
+            var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             var query = new ExportConfigsQuery(environment, activeOnly);
@@ -314,7 +314,7 @@ public static class ConfigurationEndpoints
             int limit = 20,
             CancellationToken ct = default) =>
         {
-            var (authorized, session, error) = context.RequireAdminSession();
+            var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             var query = new GetConfigHistoryQuery(id, limit);
@@ -361,7 +361,7 @@ public static class ConfigurationEndpoints
             IMediator mediator,
             CancellationToken ct = default) =>
         {
-            var (authorized, session, error) = context.RequireAdminSession();
+            var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             var query = new GetConfigCategoriesQuery();

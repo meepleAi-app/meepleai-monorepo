@@ -11,7 +11,7 @@ namespace Api.Services;
 /// PERF-05: HybridCache service implementation with L1 (in-memory) + L2 (Redis) support.
 /// Tag tracking is now Redis-based for cross-instance synchronization and test reliability.
 /// </summary>
-public class HybridCacheService : IHybridCacheService
+internal class HybridCacheService : IHybridCacheService
 {
     private readonly HybridCache _hybridCache;
     private readonly HybridCacheConfiguration _config;
@@ -25,9 +25,9 @@ public class HybridCacheService : IHybridCacheService
     private readonly TimeSpan _tagExpiration = TimeSpan.FromDays(7); // Tags expire after 7 days
 
     // Statistics tracking (in-memory per instance)
-    private long _totalHits = 0;
-    private long _totalMisses = 0;
-    private long _stampedePreventions = 0;
+    private long _totalHits;
+    private long _totalMisses;
+    private long _stampedePreventions;
 
     public HybridCacheService(
         HybridCache hybridCache,
@@ -35,9 +35,12 @@ public class HybridCacheService : IHybridCacheService
         ILogger<HybridCacheService> logger,
         IConnectionMultiplexer? redis = null)
     {
-        _hybridCache = hybridCache ?? throw new ArgumentNullException(nameof(hybridCache));
-        _config = config?.Value ?? throw new ArgumentNullException(nameof(config));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(hybridCache);
+        _hybridCache = hybridCache;
+        ArgumentNullException.ThrowIfNull(config);
+        _config = config.Value ?? throw new ArgumentNullException(nameof(config));
+        ArgumentNullException.ThrowIfNull(logger);
+        _logger = logger;
         _redis = redis;
         _redisDb = redis?.GetDatabase();
     }
@@ -51,27 +54,7 @@ public class HybridCacheService : IHybridCacheService
         TimeSpan? expiration = null,
         CancellationToken ct = default) where T : class
     {
-        ArgumentNullException.ThrowIfNull(cacheKey);
-        if (string.IsNullOrWhiteSpace(cacheKey))
-        {
-            throw new ArgumentException("Cache key cannot be null or whitespace", nameof(cacheKey));
-        }
-
-        if (factory == null)
-        {
-            throw new ArgumentNullException(nameof(factory));
-        }
-
-        // Validate tags
-        if (tags != null && _config.EnableTags)
-        {
-            if (tags.Length > _config.MaxTagsPerEntry)
-            {
-                throw new ArgumentException(
-                    $"Number of tags ({tags.Length}) exceeds maximum allowed ({_config.MaxTagsPerEntry})",
-                    nameof(tags));
-            }
-        }
+        ValidateGetOrCreateInput(cacheKey, factory, tags);
 
         var effectiveExpiration = expiration ?? _config.DefaultExpiration;
 
@@ -135,7 +118,29 @@ public class HybridCacheService : IHybridCacheService
         }
     }
 
-#pragma warning restore MA0051
+
+
+    private void ValidateGetOrCreateInput<T>(string cacheKey, Func<CancellationToken, Task<T>> factory, string[]? tags)
+    {
+        ArgumentNullException.ThrowIfNull(cacheKey);
+        if (string.IsNullOrWhiteSpace(cacheKey))
+        {
+            throw new ArgumentException("Cache key cannot be null or whitespace", nameof(cacheKey));
+        }
+
+        ArgumentNullException.ThrowIfNull(factory);
+
+        if (tags != null && _config.EnableTags)
+        {
+            if (tags.Length > _config.MaxTagsPerEntry)
+            {
+                throw new ArgumentException(
+                    $"Number of tags ({tags.Length}) exceeds maximum allowed ({_config.MaxTagsPerEntry})",
+                    nameof(tags));
+            }
+        }
+    }
+
     /// <inheritdoc />
     public async Task RemoveAsync(string cacheKey, CancellationToken ct = default)
     {
@@ -267,8 +272,7 @@ public class HybridCacheService : IHybridCacheService
         {
             _logger.LogWarning(ex, "Redis timeout while tracking tags for key {CacheKey}", cacheKey);
         }
-#pragma warning disable CA1031 // Do not catch general exception types
-        catch (Exception ex)
+        catch (Exception ex) when (ex is InvalidOperationException or NullReferenceException)
         {
             // SERVICE BOUNDARY PATTERN: Cache tag tracking failures must not block cache operations
             // Rationale: Tag tracking is a secondary feature for cache invalidation. Failures in tag tracking
@@ -277,7 +281,6 @@ public class HybridCacheService : IHybridCacheService
             // Context: Redis operations can fail in various ways (serialization, network, permissions)
             _logger.LogWarning(ex, "Unexpected error tracking tags for key {CacheKey}", cacheKey);
         }
-#pragma warning restore CA1031 // Do not catch general exception types
     }
 
     private void UntrackKey(string cacheKey)
@@ -318,8 +321,7 @@ public class HybridCacheService : IHybridCacheService
         {
             _logger.LogWarning(ex, "Redis timeout while untracking key {CacheKey}", cacheKey);
         }
-#pragma warning disable CA1031 // Do not catch general exception types
-        catch (Exception ex)
+        catch (Exception ex) when (ex is InvalidOperationException or NullReferenceException)
         {
             // SERVICE BOUNDARY PATTERN: Cache tag untracking failures must not block cache removal
             // Rationale: Tag untracking is a cleanup operation. Failures in removing tag associations
@@ -328,7 +330,6 @@ public class HybridCacheService : IHybridCacheService
             // Context: Redis KEYS scanning can fail in various ways (permissions, large key sets, network)
             _logger.LogWarning(ex, "Unexpected error untracking key {CacheKey}", cacheKey);
         }
-#pragma warning restore CA1031 // Do not catch general exception types
     }
 
     private HashSet<string> GetKeysByTag(string tag)
@@ -358,8 +359,7 @@ public class HybridCacheService : IHybridCacheService
             _logger.LogWarning(ex, "Redis timeout while getting keys for tag {Tag}", tag);
             return new HashSet<string>(StringComparer.Ordinal);
         }
-#pragma warning disable CA1031 // Do not catch general exception types
-        catch (Exception ex)
+        catch (Exception ex) when (ex is InvalidOperationException or NullReferenceException)
         {
             // SERVICE BOUNDARY PATTERN: Cache tag lookup failures must return empty results gracefully
             // Rationale: Tag-based cache lookup is a query operation. Failures (Redis errors, serialization
@@ -369,7 +369,6 @@ public class HybridCacheService : IHybridCacheService
             _logger.LogWarning(ex, "Unexpected error getting keys for tag {Tag}", tag);
             return new HashSet<string>(StringComparer.Ordinal);
         }
-#pragma warning restore CA1031 // Do not catch general exception types
     }
 
     private HashSet<string> GetKeysByTags(string[] tags)
@@ -426,8 +425,7 @@ public class HybridCacheService : IHybridCacheService
             _logger.LogWarning(ex, "Redis timeout while getting keys for multiple tags");
             return new HashSet<string>(StringComparer.Ordinal);
         }
-#pragma warning disable CA1031 // Do not catch general exception types
-        catch (Exception ex)
+        catch (Exception ex) when (ex is InvalidOperationException or NullReferenceException)
         {
             // SERVICE BOUNDARY PATTERN: Cache multi-tag lookup failures must return empty results gracefully
             // Rationale: Multi-tag cache lookup is a query operation with set intersections. Failures (Redis
@@ -437,6 +435,5 @@ public class HybridCacheService : IHybridCacheService
             _logger.LogWarning(ex, "Unexpected error getting keys for multiple tags");
             return new HashSet<string>(StringComparer.Ordinal);
         }
-#pragma warning restore CA1031 // Do not catch general exception types
     }
 }

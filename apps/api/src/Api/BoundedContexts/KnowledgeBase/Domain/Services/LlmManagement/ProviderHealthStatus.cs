@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
 /// Health status for LLM provider monitoring
 /// ISSUE-962 (BGAI-020): Tracks provider availability and health
 /// </summary>
-public enum HealthStatus
+internal enum HealthStatus
 {
     /// <summary>Provider is healthy and responding</summary>
     Healthy,
@@ -25,7 +25,7 @@ public enum HealthStatus
 /// <summary>
 /// Provider health tracking with history
 /// </summary>
-public sealed class ProviderHealthStatus
+internal sealed class ProviderHealthStatus
 {
     private const int MaxHealthCheckHistory = 10;
     private readonly Queue<(DateTime timestamp, bool success)> _healthCheckHistory = new();

@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// <summary>
 /// Handles get chat threads by game query.
 /// </summary>
-public class GetChatThreadsByGameQueryHandler : IQueryHandler<GetChatThreadsByGameQuery, IReadOnlyList<ChatThreadDto>>
+internal class GetChatThreadsByGameQueryHandler : IQueryHandler<GetChatThreadsByGameQuery, IReadOnlyList<ChatThreadDto>>
 {
     private readonly IChatThreadRepository _threadRepository;
 

@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.Administration.Application.Handlers;
 /// Handler for GetAdminStatsQuery.
 /// Delegates to AdminStatsService (service will be refactored in future iterations).
 /// </summary>
-public class GetAdminStatsQueryHandler : IQueryHandler<GetAdminStatsQuery, DashboardStatsDto>
+internal class GetAdminStatsQueryHandler : IQueryHandler<GetAdminStatsQuery, DashboardStatsDto>
 {
     private readonly IAdminStatsService _adminStatsService;
 
@@ -20,6 +20,7 @@ public class GetAdminStatsQueryHandler : IQueryHandler<GetAdminStatsQuery, Dashb
 
     public async Task<DashboardStatsDto> Handle(GetAdminStatsQuery query, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(query);
         var queryParams = new AnalyticsQueryParams(
             FromDate: query.FromDate,
             ToDate: query.ToDate,

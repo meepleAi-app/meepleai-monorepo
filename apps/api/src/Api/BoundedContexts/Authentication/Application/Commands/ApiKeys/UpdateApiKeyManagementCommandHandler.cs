@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.Authentication.Application.Commands;
 
-public class UpdateApiKeyManagementCommandHandler : ICommandHandler<UpdateApiKeyManagementCommand, ApiKeyDto?>
+internal class UpdateApiKeyManagementCommandHandler : ICommandHandler<UpdateApiKeyManagementCommand, ApiKeyDto?>
 {
     private readonly MeepleAiDbContext _db;
     private readonly ILogger<UpdateApiKeyManagementCommandHandler> _logger;
@@ -24,6 +24,7 @@ public class UpdateApiKeyManagementCommandHandler : ICommandHandler<UpdateApiKey
 
     public async Task<ApiKeyDto?> Handle(UpdateApiKeyManagementCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         if (!Guid.TryParse(command.KeyId, out var keyGuid) || !Guid.TryParse(command.UserId, out var userGuid))
         {
             return null;

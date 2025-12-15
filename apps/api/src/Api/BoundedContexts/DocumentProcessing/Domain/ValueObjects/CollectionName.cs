@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 /// Collection name value object for document collections.
 /// Issue #2051: Validates collection naming conventions
 /// </summary>
-public sealed class CollectionName : ValueObject
+internal sealed class CollectionName : ValueObject
 {
     private const int MaxLength = 200;
     private const int MinLength = 3;

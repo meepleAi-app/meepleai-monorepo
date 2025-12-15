@@ -13,7 +13,7 @@ namespace Api.Routing;
 /// Prompt template management and evaluation endpoints (Admin only).
 /// Handles prompt template CRUD, versioning, activation, evaluation, A/B testing, and audit logging.
 /// </summary>
-public static class PromptManagementEndpoints
+internal static class PromptManagementEndpoints
 {
     public static RouteGroupBuilder MapPromptManagementEndpoints(this RouteGroupBuilder group)
     {
@@ -28,7 +28,7 @@ public static class PromptManagementEndpoints
             string? category = null,
             CancellationToken ct = default) =>
         {
-            var (authorized, session, error) = context.RequireAdminSession();
+            var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             var result = await mediator.Send(
@@ -84,7 +84,7 @@ public static class PromptManagementEndpoints
             IMediator mediator,
             CancellationToken ct = default) =>
         {
-            var (authorized, session, error) = context.RequireAdminSession();
+            var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             var result = await mediator.Send(
@@ -144,7 +144,7 @@ public static class PromptManagementEndpoints
             IMediator mediator,
             CancellationToken ct = default) =>
         {
-            var (authorized, session, error) = context.RequireAdminSession();
+            var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             var result = await mediator.Send(
@@ -286,7 +286,7 @@ public static class PromptManagementEndpoints
             HttpContext context,
             CancellationToken ct) =>
         {
-            var (authorized, session, error) = context.RequireAdminSession();
+            var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             // ADMIN-01: Use CQRS pattern for evaluation history
@@ -314,7 +314,7 @@ public static class PromptManagementEndpoints
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
-            var (authorized, session, error) = context.RequireAdminSession();
+            var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             // ADMIN-01: Use CQRS pattern for report generation
@@ -350,7 +350,7 @@ public static class PromptManagementEndpoints
         // Get version history for prompt template (Admin only)
         group.MapGet("/prompts/{templateId:guid}/versions", async (Guid templateId, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
-            var (authorized, session, error) = context.RequireAdminSession();
+            var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             var query = new Api.BoundedContexts.Administration.Application.Queries.GetPromptVersionHistoryQuery(templateId.ToString());
@@ -399,7 +399,7 @@ public static class PromptManagementEndpoints
         // Get audit log for prompt template (Admin only)
         group.MapGet("/prompts/{templateId:guid}/audit-log", async (Guid templateId, int limit, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
-            var (authorized, session, error) = context.RequireAdminSession();
+            var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             var query = new Api.BoundedContexts.Administration.Application.Queries.GetPromptAuditLogQuery(templateId.ToString(), limit);
@@ -410,7 +410,7 @@ public static class PromptManagementEndpoints
         // List all prompt templates (Admin only)
         group.MapGet("/prompts", async (string? category, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
-            var (authorized, session, error) = context.RequireAdminSession();
+            var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             var query = new Api.BoundedContexts.Administration.Application.Queries.ListPromptTemplatesQuery(category);
@@ -421,7 +421,7 @@ public static class PromptManagementEndpoints
         // Get specific prompt template (Admin only)
         group.MapGet("/prompts/{templateId:guid}", async (Guid templateId, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
-            var (authorized, session, error) = context.RequireAdminSession();
+            var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             var query = new Api.BoundedContexts.Administration.Application.Queries.GetPromptTemplateQuery(templateId.ToString());

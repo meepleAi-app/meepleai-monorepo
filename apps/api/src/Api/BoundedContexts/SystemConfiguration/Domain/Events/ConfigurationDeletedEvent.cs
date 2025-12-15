@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.SystemConfiguration.Domain.Events;
 /// <summary>
 /// Domain event raised when a configuration is deleted.
 /// </summary>
-public sealed class ConfigurationDeletedEvent : DomainEventBase
+internal sealed class ConfigurationDeletedEvent : DomainEventBase
 {
     public Guid ConfigurationId { get; }
     public ConfigKey Key { get; }

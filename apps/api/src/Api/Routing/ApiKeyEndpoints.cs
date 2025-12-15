@@ -11,7 +11,7 @@ namespace Api.Routing;
 /// API key management endpoints.
 /// Handles API key CRUD, rotation, usage tracking, and admin operations.
 /// </summary>
-public static class ApiKeyEndpoints
+internal static class ApiKeyEndpoints
 {
     public static RouteGroupBuilder MapApiKeyEndpoints(this RouteGroupBuilder group)
     {

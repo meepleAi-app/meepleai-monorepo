@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// Handler for IndexChessKnowledgeCommand.
 /// Indexes all chess knowledge from ChessKnowledge.json into Qdrant.
 /// </summary>
-public sealed class IndexChessKnowledgeCommandHandler
+internal sealed class IndexChessKnowledgeCommandHandler
     : IRequestHandler<IndexChessKnowledgeCommand, Api.Services.ChessIndexResult>
 {
     private readonly IQdrantService _qdrantService;
@@ -40,6 +40,7 @@ public sealed class IndexChessKnowledgeCommandHandler
         IndexChessKnowledgeCommand request,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         try
         {
             _logger.LogInformation("Starting chess knowledge indexing");

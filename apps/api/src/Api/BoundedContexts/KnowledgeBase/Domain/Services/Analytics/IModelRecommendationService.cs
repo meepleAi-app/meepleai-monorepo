@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services.Analytics;
 /// ISSUE-1725: Provides LLM model recommendations based on cost/quality trade-offs.
 /// Analyzes historical performance to suggest optimal model selection.
 /// </summary>
-public interface IModelRecommendationService
+internal interface IModelRecommendationService
 {
     /// <summary>
     /// Get model recommendation for a use case based on cost and quality requirements
@@ -30,7 +30,7 @@ public interface IModelRecommendationService
 /// <summary>
 /// Model recommendation with rationale
 /// </summary>
-public record ModelRecommendation
+internal record ModelRecommendation
 {
     public required string RecommendedModel { get; init; }
     public required string Provider { get; init; }
@@ -43,7 +43,7 @@ public record ModelRecommendation
 /// <summary>
 /// Model comparison metrics
 /// </summary>
-public record ModelComparison
+internal record ModelComparison
 {
     public required string ModelId { get; init; }
     public required string Provider { get; init; }

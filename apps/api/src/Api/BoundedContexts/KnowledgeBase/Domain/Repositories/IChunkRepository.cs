@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 /// ADR-016 Phase 1: Repository interface for hierarchical chunk storage.
 /// Implementation deferred to later phases - in-memory implementation for now.
 /// </summary>
-public interface IChunkRepository
+internal interface IChunkRepository
 {
     /// <summary>
     /// Gets a chunk by its identifier.

@@ -15,7 +15,7 @@ namespace Api.Services;
 /// Provides cached search and game details retrieval with retry logic.
 /// AI-13: https://github.com/DegrassiAaron/meepleai-monorepo/issues/420
 /// </summary>
-public class BggApiService : IBggApiService
+internal class BggApiService : IBggApiService
 {
     private readonly HttpClient _httpClient;
     private readonly HybridCache _cache;

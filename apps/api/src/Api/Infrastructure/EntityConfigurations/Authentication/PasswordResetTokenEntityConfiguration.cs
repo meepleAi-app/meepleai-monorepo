@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 namespace Api.Infrastructure.EntityConfigurations;
 
 // AUTH-04: Password reset tokens
-public class PasswordResetTokenEntityConfiguration : IEntityTypeConfiguration<PasswordResetTokenEntity>
+internal class PasswordResetTokenEntityConfiguration : IEntityTypeConfiguration<PasswordResetTokenEntity>
 {
     public void Configure(EntityTypeBuilder<PasswordResetTokenEntity> builder)
     {

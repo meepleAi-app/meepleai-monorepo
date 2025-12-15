@@ -12,7 +12,7 @@ namespace Api.BoundedContexts.Administration.Application.Handlers;
 /// Handler for GetAllUsersQuery.
 /// Returns paginated list of users with optional filtering and sorting.
 /// </summary>
-public class GetAllUsersQueryHandler : IQueryHandler<GetAllUsersQuery, PagedResult<UserDto>>
+internal class GetAllUsersQueryHandler : IQueryHandler<GetAllUsersQuery, PagedResult<UserDto>>
 {
     private readonly MeepleAiDbContext _dbContext;
 

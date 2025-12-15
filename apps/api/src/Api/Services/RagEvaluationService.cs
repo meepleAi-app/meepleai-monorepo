@@ -18,7 +18,7 @@ namespace Api.Services;
 /// AI-06: Service for offline RAG evaluation
 /// Implements information retrieval metrics: Precision@K, Recall@K, MRR, latency percentiles
 /// </summary>
-public interface IRagEvaluationService
+internal interface IRagEvaluationService
 {
     /// <summary>
     /// Load evaluation dataset from JSON file
@@ -45,7 +45,7 @@ public interface IRagEvaluationService
     string GenerateJsonReport(RagEvaluationReport report);
 }
 
-public class RagEvaluationService : IRagEvaluationService
+internal class RagEvaluationService : IRagEvaluationService
 {
     private readonly IQdrantService _qdrantService;
     private readonly IEmbeddingService _embeddingService;
@@ -154,10 +154,7 @@ public class RagEvaluationService : IRagEvaluationService
         RagQualityThresholds? thresholds = null,
         CancellationToken ct = default)
     {
-        if (dataset == null)
-        {
-            throw new ArgumentNullException(nameof(dataset));
-        }
+        ArgumentNullException.ThrowIfNull(dataset);
 
         if (dataset.Queries.Count == 0)
         {
@@ -486,10 +483,7 @@ public class RagEvaluationService : IRagEvaluationService
     /// <inheritdoc/>
     public string GenerateMarkdownReport(RagEvaluationReport report)
     {
-        if (report == null)
-        {
-            throw new ArgumentNullException(nameof(report));
-        }
+        ArgumentNullException.ThrowIfNull(report);
 
         var sb = new System.Text.StringBuilder();
 
@@ -604,10 +598,7 @@ public class RagEvaluationService : IRagEvaluationService
     /// <inheritdoc/>
     public string GenerateJsonReport(RagEvaluationReport report)
     {
-        if (report == null)
-        {
-            throw new ArgumentNullException(nameof(report));
-        }
+        ArgumentNullException.ThrowIfNull(report);
 
         return JsonSerializer.Serialize(report, new JsonSerializerOptions
         {

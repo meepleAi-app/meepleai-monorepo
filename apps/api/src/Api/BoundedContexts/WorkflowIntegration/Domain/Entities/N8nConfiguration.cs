@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.WorkflowIntegration.Domain.Entities;
 /// <summary>
 /// N8NConfiguration aggregate root representing n8n instance configuration.
 /// </summary>
-public sealed class N8NConfiguration : AggregateRoot<Guid>
+internal sealed class N8NConfiguration : AggregateRoot<Guid>
 {
     public string Name { get; private set; }
     public WorkflowUrl BaseUrl { get; private set; }

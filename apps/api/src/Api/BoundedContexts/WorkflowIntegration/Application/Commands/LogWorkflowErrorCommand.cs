@@ -3,7 +3,7 @@ using Api.SharedKernel.Application.Interfaces;
 
 namespace Api.BoundedContexts.WorkflowIntegration.Application.Commands;
 
-public record LogWorkflowErrorCommand(
+internal record LogWorkflowErrorCommand(
     string WorkflowId,
     string ExecutionId,
     string ErrorMessage,

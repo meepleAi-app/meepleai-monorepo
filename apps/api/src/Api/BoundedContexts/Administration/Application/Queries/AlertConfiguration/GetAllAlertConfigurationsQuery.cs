@@ -5,4 +5,4 @@ namespace Api.BoundedContexts.Administration.Application.Queries.AlertConfigurat
 /// <summary>
 /// Query to get all alert configurations (Issue #915)
 /// </summary>
-public record GetAllAlertConfigurationsQuery : IRequest<List<AlertConfigurationDto>>;
+internal record GetAllAlertConfigurationsQuery : IRequest<List<AlertConfigurationDto>>;

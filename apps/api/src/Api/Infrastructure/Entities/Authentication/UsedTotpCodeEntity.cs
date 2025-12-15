@@ -5,7 +5,7 @@ namespace Api.Infrastructure.Entities.Authentication;
 /// SECURITY: Issue #1787 - TOTP Replay Attack Prevention (OWASP ASVS 2.8.3)
 /// Pattern: Nonce validation with automatic TTL cleanup.
 /// </summary>
-public class UsedTotpCodeEntity
+internal class UsedTotpCodeEntity
 {
     /// <summary>
     /// Primary key.

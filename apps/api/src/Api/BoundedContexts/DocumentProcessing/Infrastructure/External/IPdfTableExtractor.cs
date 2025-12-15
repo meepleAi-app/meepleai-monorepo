@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 /// External adapter interface for PDF table extraction
 /// Abstracts the PDF library implementation (iText7) from domain logic
 /// </summary>
-public interface IPdfTableExtractor
+internal interface IPdfTableExtractor
 {
     /// <summary>
     /// Extracts tables from a PDF file with optional atomic rule conversion
@@ -36,7 +36,7 @@ public interface IPdfTableExtractor
 /// Result of table extraction operation
 /// Uses existing DTOs from Api.Services.Pdf namespace
 /// </summary>
-public record TableExtractionResult
+internal record TableExtractionResult
 {
     public bool Success { get; init; }
     public string? ErrorMessage { get; init; }
@@ -68,7 +68,7 @@ public record TableExtractionResult
 /// Includes tables, diagrams, and atomic rules
 /// Uses existing DTOs from Api.Services.Pdf namespace
 /// </summary>
-public record StructuredContentResult
+internal record StructuredContentResult
 {
     public bool Success { get; init; }
     public string? ErrorMessage { get; init; }

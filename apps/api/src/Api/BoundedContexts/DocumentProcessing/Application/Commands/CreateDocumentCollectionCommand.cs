@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 /// Command to create a new document collection with optional initial documents.
 /// Issue #2051: Multi-document collection creation
 /// </summary>
-public record CreateDocumentCollectionCommand(
+internal record CreateDocumentCollectionCommand(
     Guid GameId,
     Guid UserId,
     string Name,

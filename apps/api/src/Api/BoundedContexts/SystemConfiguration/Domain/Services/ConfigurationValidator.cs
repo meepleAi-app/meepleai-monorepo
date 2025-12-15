@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.SystemConfiguration.Domain.Services;
 /// Domain service for validating configuration values.
 /// Encapsulates validation rules for type checking and domain-specific constraints.
 /// </summary>
-public class ConfigurationValidator
+internal class ConfigurationValidator
 {
     /// <summary>
     /// Validates a configuration value against its declared type and domain rules.
@@ -17,7 +17,7 @@ public class ConfigurationValidator
     /// <param name="value">Value to validate</param>
     /// <param name="valueType">Expected value type (string, int, bool, json, etc.)</param>
     /// <returns>Validation result with any errors</returns>
-    public static ValidationResult Validate(string key, string value, string valueType)
+    public ValidationResult Validate(string key, string value, string valueType)
     {
         if (string.IsNullOrWhiteSpace(key))
             throw new ArgumentException("Key cannot be empty", nameof(key));
@@ -42,7 +42,7 @@ public class ConfigurationValidator
         );
     }
 
-    private static void ValidateValueType(string value, string valueType, List<string> errors)
+    private void ValidateValueType(string value, string valueType, List<string> errors)
     {
         switch (valueType.ToLowerInvariant())
         {
@@ -99,7 +99,7 @@ public class ConfigurationValidator
         }
     }
 
-    private static void ValidateDomainRules(string key, string value, List<string> errors)
+    private void ValidateDomainRules(string key, string value, List<string> errors)
     {
         // Rate limit validations
         if (key.Contains("RateLimit", StringComparison.OrdinalIgnoreCase))
@@ -135,134 +135,106 @@ public class ConfigurationValidator
         }
     }
 
-    private static void ValidateRateLimitRules(string key, string value, List<string> errors)
+    private void ValidateRateLimitRules(string key, string value, List<string> errors)
     {
-        if (key.Contains("MaxTokens", StringComparison.OrdinalIgnoreCase))
+        if (key.Contains("MaxTokens", StringComparison.OrdinalIgnoreCase) &&
+            int.TryParse(value, CultureInfo.InvariantCulture, out var maxTokens) && maxTokens < 0)
         {
-            if (int.TryParse(value, CultureInfo.InvariantCulture, out var maxTokens) && maxTokens < 0)
-            {
-                errors.Add("MaxTokens must be non-negative");
-            }
+            errors.Add("MaxTokens must be non-negative");
         }
 
-        if (key.Contains("RefillRate", StringComparison.OrdinalIgnoreCase))
+        if (key.Contains("RefillRate", StringComparison.OrdinalIgnoreCase) &&
+            int.TryParse(value, CultureInfo.InvariantCulture, out var refillRate) && refillRate < 0)
         {
-            if (int.TryParse(value, CultureInfo.InvariantCulture, out var refillRate) && refillRate < 0)
-            {
-                errors.Add("RefillRate must be non-negative");
-            }
+            errors.Add("RefillRate must be non-negative");
         }
 
-        if (key.Contains("WindowSeconds", StringComparison.OrdinalIgnoreCase))
+        if (key.Contains("WindowSeconds", StringComparison.OrdinalIgnoreCase) &&
+            int.TryParse(value, CultureInfo.InvariantCulture, out var windowSeconds) && windowSeconds < 1)
         {
-            if (int.TryParse(value, CultureInfo.InvariantCulture, out var windowSeconds) && windowSeconds < 1)
-            {
-                errors.Add("WindowSeconds must be at least 1");
-            }
+            errors.Add("WindowSeconds must be at least 1");
         }
     }
 
-    private static void ValidateAiRules(string key, string value, List<string> errors)
+    private void ValidateAiRules(string key, string value, List<string> errors)
     {
-        if (key.Contains("Temperature", StringComparison.OrdinalIgnoreCase))
+        if (key.Contains("Temperature", StringComparison.OrdinalIgnoreCase) &&
+            double.TryParse(value, CultureInfo.InvariantCulture, out var temp) && (temp < 0 || temp > 2))
         {
-            if (double.TryParse(value, CultureInfo.InvariantCulture, out var temp) && (temp < 0 || temp > 2))
-            {
-                errors.Add("Temperature must be between 0 and 2");
-            }
+            errors.Add("Temperature must be between 0 and 2");
         }
 
-        if (key.Contains("MaxTokens", StringComparison.OrdinalIgnoreCase))
+        if (key.Contains("MaxTokens", StringComparison.OrdinalIgnoreCase) &&
+            int.TryParse(value, CultureInfo.InvariantCulture, out var maxTokens) && maxTokens < 1)
         {
-            if (int.TryParse(value, CultureInfo.InvariantCulture, out var maxTokens) && maxTokens < 1)
-            {
-                errors.Add("MaxTokens must be positive");
-            }
+            errors.Add("MaxTokens must be positive");
         }
 
-        if (key.Contains("TopP", StringComparison.OrdinalIgnoreCase))
+        if (key.Contains("TopP", StringComparison.OrdinalIgnoreCase) &&
+            double.TryParse(value, CultureInfo.InvariantCulture, out var topP) && (topP < 0 || topP > 1))
         {
-            if (double.TryParse(value, CultureInfo.InvariantCulture, out var topP) && (topP < 0 || topP > 1))
-            {
-                errors.Add("TopP must be between 0 and 1");
-            }
+            errors.Add("TopP must be between 0 and 1");
         }
 
-        if (key.Contains("FrequencyPenalty", StringComparison.OrdinalIgnoreCase) ||
-            key.Contains("PresencePenalty", StringComparison.OrdinalIgnoreCase))
+        if ((key.Contains("FrequencyPenalty", StringComparison.OrdinalIgnoreCase) ||
+             key.Contains("PresencePenalty", StringComparison.OrdinalIgnoreCase)) &&
+            double.TryParse(value, CultureInfo.InvariantCulture, out var penalty) && (penalty < -2 || penalty > 2))
         {
-            if (double.TryParse(value, CultureInfo.InvariantCulture, out var penalty) && (penalty < -2 || penalty > 2))
-            {
-                errors.Add("Penalty values must be between -2 and 2");
-            }
+            errors.Add("Penalty values must be between -2 and 2");
         }
     }
 
-    private static void ValidateRagRules(string key, string value, List<string> errors)
+    private void ValidateRagRules(string key, string value, List<string> errors)
     {
-        if (key.Contains("TopK", StringComparison.OrdinalIgnoreCase))
+        if (key.Contains("TopK", StringComparison.OrdinalIgnoreCase) &&
+            int.TryParse(value, CultureInfo.InvariantCulture, out var topK) && topK < 1)
         {
-            if (int.TryParse(value, CultureInfo.InvariantCulture, out var topK) && topK < 1)
-            {
-                errors.Add("TopK must be at least 1");
-            }
+            errors.Add("TopK must be at least 1");
         }
 
-        if (key.Contains("MinScore", StringComparison.OrdinalIgnoreCase) ||
-            key.Contains("Threshold", StringComparison.OrdinalIgnoreCase))
+        if ((key.Contains("MinScore", StringComparison.OrdinalIgnoreCase) ||
+             key.Contains("Threshold", StringComparison.OrdinalIgnoreCase)) &&
+            double.TryParse(value, CultureInfo.InvariantCulture, out var score) && (score < 0 || score > 1))
         {
-            if (double.TryParse(value, CultureInfo.InvariantCulture, out var score) && (score < 0 || score > 1))
-            {
-                errors.Add("Score threshold must be between 0 and 1");
-            }
+            errors.Add("Score threshold must be between 0 and 1");
         }
 
-        if (key.Contains("MaxChunkSize", StringComparison.OrdinalIgnoreCase))
+        if (key.Contains("MaxChunkSize", StringComparison.OrdinalIgnoreCase) &&
+            int.TryParse(value, CultureInfo.InvariantCulture, out var chunkSize) && (chunkSize < 100 || chunkSize > 10000))
         {
-            if (int.TryParse(value, CultureInfo.InvariantCulture, out var chunkSize) && (chunkSize < 100 || chunkSize > 10000))
-            {
-                errors.Add("MaxChunkSize must be between 100 and 10000");
-            }
+            errors.Add("MaxChunkSize must be between 100 and 10000");
         }
 
-        if (key.Contains("ChunkOverlap", StringComparison.OrdinalIgnoreCase))
+        if (key.Contains("ChunkOverlap", StringComparison.OrdinalIgnoreCase) &&
+            int.TryParse(value, CultureInfo.InvariantCulture, out var overlap) && overlap < 0)
         {
-            if (int.TryParse(value, CultureInfo.InvariantCulture, out var overlap) && overlap < 0)
-            {
-                errors.Add("ChunkOverlap must be non-negative");
-            }
+            errors.Add("ChunkOverlap must be non-negative");
         }
     }
 
-    private static void ValidatePdfRules(string key, string value, List<string> errors)
+    private void ValidatePdfRules(string key, string value, List<string> errors)
     {
-        if (key.Contains("MaxFileSizeMB", StringComparison.OrdinalIgnoreCase))
+        if (key.Contains("MaxFileSizeMB", StringComparison.OrdinalIgnoreCase) &&
+            int.TryParse(value, CultureInfo.InvariantCulture, out var maxSize) && maxSize < 1)
         {
-            if (int.TryParse(value, CultureInfo.InvariantCulture, out var maxSize) && maxSize < 1)
-            {
-                errors.Add("MaxFileSizeMB must be at least 1");
-            }
+            errors.Add("MaxFileSizeMB must be at least 1");
         }
 
-        if (key.Contains("TimeoutSeconds", StringComparison.OrdinalIgnoreCase))
+        if (key.Contains("TimeoutSeconds", StringComparison.OrdinalIgnoreCase) &&
+            int.TryParse(value, CultureInfo.InvariantCulture, out var timeout) && timeout < 1)
         {
-            if (int.TryParse(value, CultureInfo.InvariantCulture, out var timeout) && timeout < 1)
-            {
-                errors.Add("TimeoutSeconds must be at least 1");
-            }
+            errors.Add("TimeoutSeconds must be at least 1");
         }
 
         if (key.Contains("Quality", StringComparison.OrdinalIgnoreCase) &&
-            key.Contains("Threshold", StringComparison.OrdinalIgnoreCase))
+            key.Contains("Threshold", StringComparison.OrdinalIgnoreCase) &&
+            double.TryParse(value, CultureInfo.InvariantCulture, out var quality) && (quality < 0 || quality > 1))
         {
-            if (double.TryParse(value, CultureInfo.InvariantCulture, out var quality) && (quality < 0 || quality > 1))
-            {
-                errors.Add("Quality threshold must be between 0 and 1");
-            }
+            errors.Add("Quality threshold must be between 0 and 1");
         }
     }
 
-    private static void ValidateFeatureFlagRules(string key, string value, List<string> errors)
+    private void ValidateFeatureFlagRules(string key, string value, List<string> errors)
     {
         // Feature flags must be boolean
         if (!bool.TryParse(value, out _))
@@ -277,4 +249,4 @@ public class ConfigurationValidator
 /// </summary>
 /// <param name="IsValid">Whether the validation passed</param>
 /// <param name="Errors">List of validation errors (empty if valid)</param>
-public record ValidationResult(bool IsValid, IReadOnlyList<string> Errors);
+internal record ValidationResult(bool IsValid, IReadOnlyList<string> Errors);

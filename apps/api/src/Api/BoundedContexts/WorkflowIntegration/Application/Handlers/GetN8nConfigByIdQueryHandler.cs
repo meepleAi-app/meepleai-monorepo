@@ -6,7 +6,7 @@ using Api.SharedKernel.Application.Interfaces;
 
 namespace Api.BoundedContexts.WorkflowIntegration.Application.Handlers;
 
-public class GetN8NConfigByIdQueryHandler : IQueryHandler<GetN8NConfigByIdQuery, N8NConfigurationDto?>
+internal class GetN8NConfigByIdQueryHandler : IQueryHandler<GetN8NConfigByIdQuery, N8NConfigurationDto?>
 {
     private readonly IN8NConfigurationRepository _repository;
 
@@ -17,6 +17,7 @@ public class GetN8NConfigByIdQueryHandler : IQueryHandler<GetN8NConfigByIdQuery,
 
     public async Task<N8NConfigurationDto?> Handle(GetN8NConfigByIdQuery query, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(query);
         var config = await _repository.GetByIdAsync(query.ConfigId, cancellationToken).ConfigureAwait(false);
         return config != null ? MapToDto(config) : null;
     }

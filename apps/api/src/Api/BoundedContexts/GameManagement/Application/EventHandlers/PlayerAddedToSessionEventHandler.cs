@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.GameManagement.Application.EventHandlers;
 
-public sealed class PlayerAddedToSessionEventHandler : DomainEventHandlerBase<PlayerAddedToSessionEvent>
+internal sealed class PlayerAddedToSessionEventHandler : DomainEventHandlerBase<PlayerAddedToSessionEvent>
 {
     public PlayerAddedToSessionEventHandler(
         MeepleAiDbContext dbContext,

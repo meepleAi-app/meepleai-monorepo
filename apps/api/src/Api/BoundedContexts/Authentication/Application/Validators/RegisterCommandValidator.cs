@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Authentication.Application.Validators;
 /// Enforces email format, password complexity, display name requirements, and optional role validation.
 /// Issue #1449: FluentValidation for Authentication CQRS pipeline
 /// </summary>
-public sealed class RegisterCommandValidator : AbstractValidator<RegisterCommand>
+internal sealed class RegisterCommandValidator : AbstractValidator<RegisterCommand>
 {
     private static readonly string[] ValidRoles = { "user", "editor", "admin" };
 

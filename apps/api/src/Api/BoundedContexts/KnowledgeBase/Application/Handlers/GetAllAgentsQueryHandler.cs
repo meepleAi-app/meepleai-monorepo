@@ -12,7 +12,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// Handler for GetAllAgentsQuery.
 /// Retrieves all agents with optional filtering.
 /// </summary>
-public class GetAllAgentsQueryHandler : IRequestHandler<GetAllAgentsQuery, List<AgentDto>>
+internal class GetAllAgentsQueryHandler : IRequestHandler<GetAllAgentsQuery, List<AgentDto>>
 {
     private readonly IAgentRepository _agentRepository;
     private readonly ILogger<GetAllAgentsQueryHandler> _logger;

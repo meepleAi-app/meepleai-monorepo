@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands;
 /// Command to validate an API key and return the associated profile.
 /// Clients are responsible for storing the API key securely (e.g., Authorization header).
 /// </summary>
-public record LoginWithApiKeyCommand(
+internal record LoginWithApiKeyCommand(
     string ApiKey
 ) : ICommand<ApiKeyLoginResponse>;
 
@@ -16,7 +16,7 @@ public record LoginWithApiKeyCommand(
 /// Response for API key login containing user information.
 /// The API key is not returned in responses. Clients should persist it on their side.
 /// </summary>
-public record ApiKeyLoginResponse(
+internal record ApiKeyLoginResponse(
     UserDto User,
     string ApiKeyId,
     string Message

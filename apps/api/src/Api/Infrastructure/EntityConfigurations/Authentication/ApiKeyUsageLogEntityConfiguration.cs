@@ -7,7 +7,7 @@ namespace Api.Infrastructure.EntityConfigurations;
 /// <summary>
 /// Entity Framework configuration for ApiKeyUsageLogEntity.
 /// </summary>
-public class ApiKeyUsageLogEntityConfiguration : IEntityTypeConfiguration<ApiKeyUsageLogEntity>
+internal class ApiKeyUsageLogEntityConfiguration : IEntityTypeConfiguration<ApiKeyUsageLogEntity>
 {
     public void Configure(EntityTypeBuilder<ApiKeyUsageLogEntity> builder)
     {

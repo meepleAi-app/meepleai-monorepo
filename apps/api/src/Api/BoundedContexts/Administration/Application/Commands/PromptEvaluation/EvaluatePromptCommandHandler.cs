@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Administration.Application.Commands.PromptEvaluati
 /// Handler for evaluating prompt versions with automated testing
 /// Delegates to IPromptEvaluationService (infrastructure adapter for complex evaluation logic)
 /// </summary>
-public sealed class EvaluatePromptCommandHandler : ICommandHandler<EvaluatePromptCommand, PromptEvaluationResult>
+internal sealed class EvaluatePromptCommandHandler : ICommandHandler<EvaluatePromptCommand, PromptEvaluationResult>
 {
     private readonly IPromptEvaluationService _evaluationService;
     private readonly ILogger<EvaluatePromptCommandHandler> _logger;
@@ -23,6 +23,7 @@ public sealed class EvaluatePromptCommandHandler : ICommandHandler<EvaluatePromp
 
     public async Task<PromptEvaluationResult> Handle(EvaluatePromptCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         _logger.LogInformation(
             "Evaluating prompt template {TemplateId}, version {VersionId} with dataset {DatasetPath}",
             command.TemplateId, command.VersionId, command.DatasetPath);

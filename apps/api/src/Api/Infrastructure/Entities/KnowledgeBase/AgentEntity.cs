@@ -1,6 +1,6 @@
 namespace Api.Infrastructure.Entities;
 
-public class AgentEntity
+internal class AgentEntity
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public string Name { get; set; } = default!;

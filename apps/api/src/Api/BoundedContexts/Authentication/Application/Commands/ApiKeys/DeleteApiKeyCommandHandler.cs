@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.Authentication.Application.Commands;
 
-public class DeleteApiKeyCommandHandler : ICommandHandler<DeleteApiKeyCommand, bool>
+internal class DeleteApiKeyCommandHandler : ICommandHandler<DeleteApiKeyCommand, bool>
 {
     private readonly MeepleAiDbContext _db;
     private readonly ILogger<DeleteApiKeyCommandHandler> _logger;
@@ -19,6 +19,7 @@ public class DeleteApiKeyCommandHandler : ICommandHandler<DeleteApiKeyCommand, b
 
     public async Task<bool> Handle(DeleteApiKeyCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         if (command is null) throw new ArgumentNullException(nameof(command));
         if (!Guid.TryParse(command.KeyId, out var keyGuid))
         {

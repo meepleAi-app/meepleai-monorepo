@@ -4,7 +4,7 @@ namespace Api.Constants;
 /// Centralized time-related constants to eliminate magic numbers.
 /// All values are in seconds unless otherwise noted.
 /// </summary>
-public static class TimeConstants
+internal static class TimeConstants
 {
     /// <summary>
     /// One day in seconds (86400).

@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands.PasswordReset;
 /// Infrastructure delegation: Email service and rate limiting.
 /// Security: Always returns success to prevent email enumeration attacks.
 /// </summary>
-public sealed class RequestPasswordResetCommandHandler : ICommandHandler<RequestPasswordResetCommand, RequestPasswordResetResult>
+internal sealed class RequestPasswordResetCommandHandler : ICommandHandler<RequestPasswordResetCommand, RequestPasswordResetResult>
 {
     private readonly IPasswordResetService _passwordResetService;
     private readonly ILogger<RequestPasswordResetCommandHandler> _logger;
@@ -25,6 +25,7 @@ public sealed class RequestPasswordResetCommandHandler : ICommandHandler<Request
 
     public async Task<RequestPasswordResetResult> Handle(RequestPasswordResetCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         try
         {
             // Validate email format (basic business logic)

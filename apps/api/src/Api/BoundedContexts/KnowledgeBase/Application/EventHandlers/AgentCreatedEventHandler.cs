@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.EventHandlers;
 
-public sealed class AgentCreatedEventHandler : DomainEventHandlerBase<AgentCreatedEvent>
+internal sealed class AgentCreatedEventHandler : DomainEventHandlerBase<AgentCreatedEvent>
 {
     public AgentCreatedEventHandler(
         MeepleAiDbContext dbContext,

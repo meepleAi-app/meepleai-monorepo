@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 /// <summary>
 /// Command to export a chat thread in a specified format.
 /// </summary>
-public record ExportChatCommand(
+internal record ExportChatCommand(
     Guid ThreadId,
     string Format = "json" // Default to JSON
 ) : ICommand<ExportedChatDto>;

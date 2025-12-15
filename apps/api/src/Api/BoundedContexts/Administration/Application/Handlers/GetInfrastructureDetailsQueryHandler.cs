@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.Administration.Application.Handlers;
 /// Issue #894: Handler for infrastructure details query.
 /// Delegates to IInfrastructureDetailsService for orchestration.
 /// </summary>
-public class GetInfrastructureDetailsQueryHandler : IRequestHandler<GetInfrastructureDetailsQuery, InfrastructureDetails>
+internal class GetInfrastructureDetailsQueryHandler : IRequestHandler<GetInfrastructureDetailsQuery, InfrastructureDetails>
 {
     private readonly IInfrastructureDetailsService _detailsService;
     private readonly ILogger<GetInfrastructureDetailsQueryHandler> _logger;
@@ -26,6 +26,7 @@ public class GetInfrastructureDetailsQueryHandler : IRequestHandler<GetInfrastru
         GetInfrastructureDetailsQuery request,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         _logger.LogInformation("Handling GetInfrastructureDetailsQuery");
 
         try

@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
 /// Domain service for managing chat context in RAG queries.
 /// Handles game-specific context filtering and chat history integration.
 /// </summary>
-public class ChatContextDomainService
+internal class ChatContextDomainService
 {
     private const int MaxHistoryMessages = 10;
     private const int MaxHistoryChars = 2000;

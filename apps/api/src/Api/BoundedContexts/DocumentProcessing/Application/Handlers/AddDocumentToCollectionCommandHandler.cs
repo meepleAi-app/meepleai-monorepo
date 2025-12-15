@@ -13,7 +13,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Handlers;
 /// Handler for adding a PDF document to an existing collection.
 /// Issue #2051: Add document with validation (max 5 docs, no duplicates)
 /// </summary>
-public class AddDocumentToCollectionCommandHandler : ICommandHandler<AddDocumentToCollectionCommand, bool>
+internal class AddDocumentToCollectionCommandHandler : ICommandHandler<AddDocumentToCollectionCommand, bool>
 {
     private readonly IDocumentCollectionRepository _collectionRepository;
     private readonly IPdfDocumentRepository _pdfRepository;
@@ -34,6 +34,7 @@ public class AddDocumentToCollectionCommandHandler : ICommandHandler<AddDocument
 
     public async Task<bool> Handle(AddDocumentToCollectionCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         _logger.LogInformation(
             "Adding document {PdfDocumentId} to collection {CollectionId} by user {UserId}",
             command.PdfDocumentId, command.CollectionId, command.UserId);

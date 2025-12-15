@@ -6,7 +6,7 @@ namespace Api.SharedKernel.Domain.Validation;
 /// <summary>
 /// Common domain-specific validators for frequently used patterns.
 /// </summary>
-public static class CommonValidators
+internal static class CommonValidators
 {
     // Email validation regex (RFC 5322 simplified) - matches Email.cs implementation
     // FIX MA0009: Add timeout to prevent ReDoS attacks

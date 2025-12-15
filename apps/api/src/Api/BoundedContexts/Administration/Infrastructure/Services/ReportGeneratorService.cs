@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.Administration.Infrastructure.Services;
 /// Implementation of IReportGeneratorService
 /// ISSUE-916: Generates reports from 4 templates in PDF/CSV/JSON formats
 /// </summary>
-public sealed partial class ReportGeneratorService : IReportGeneratorService
+internal sealed partial class ReportGeneratorService : IReportGeneratorService
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly ILogger<ReportGeneratorService> _logger;

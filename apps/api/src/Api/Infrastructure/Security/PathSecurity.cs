@@ -9,6 +9,8 @@ namespace Api.Infrastructure.Security;
 /// </summary>
 internal static partial class PathSecurity
 {
+    private static readonly char[] AdditionalInvalidChars = ['/', '\\', ':', '*', '?', '"', '<', '>', '|'];
+
     /// <summary>
     /// Validates that resolved path is within allowed directory (prevents directory traversal)
     /// </summary>
@@ -76,7 +78,7 @@ internal static partial class PathSecurity
 
         // Remove path separators and dangerous characters
         var invalidChars = Path.GetInvalidFileNameChars()
-            .Concat(new[] { '/', '\\', ':', '*', '?', '"', '<', '>', '|' })
+            .Concat(AdditionalInvalidChars)
             .Distinct()
             .ToArray();
 

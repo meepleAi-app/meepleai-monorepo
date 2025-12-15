@@ -87,7 +87,7 @@ internal class ApiKeyEntity
     /// Total number of times this API key has been successfully used for authentication.
     /// Incremented on each successful API request.
     /// </summary>
-    public int UsageCount { get; set; } = 0;
+    public int UsageCount { get; set; }
 
     // Navigation properties
     /// <summary>

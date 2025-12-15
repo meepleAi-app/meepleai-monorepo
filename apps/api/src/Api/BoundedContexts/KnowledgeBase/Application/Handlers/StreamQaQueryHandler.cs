@@ -157,7 +157,7 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
             new StreamingStateUpdate("Generating answer..."));
 
         var (systemPrompt, userPrompt) = await BuildLlmPromptsAsync(
-            query.GameId, query.Query, snippets!, chatHistoryContext, cancellationToken).ConfigureAwait(false);
+            query.GameId, query.Query, snippets!, chatHistoryContext).ConfigureAwait(false);
 
         // Step 4: Stream tokens from LLM
         var answerBuilder = new StringBuilder();

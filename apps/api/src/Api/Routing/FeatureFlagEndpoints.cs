@@ -23,7 +23,7 @@ internal static class FeatureFlagEndpoints
             IMediator mediator,
             CancellationToken ct = default) =>
         {
-            var (authorized, session, error) = context.RequireAdminSession();
+            var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             // Query configurations with "Features" category
@@ -64,7 +64,7 @@ internal static class FeatureFlagEndpoints
             IMediator mediator,
             CancellationToken ct = default) =>
         {
-            var (authorized, session, error) = context.RequireAdminSession();
+            var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             // Use FeatureFlagService to check current status

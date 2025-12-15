@@ -143,30 +143,6 @@ internal class PdfQualityValidationDomainService
     }
 
     /// <summary>
-    /// Generates actionable recommendation based on quality score
-    /// </summary>
-    private static string GenerateRecommendation(double score, string source)
-    {
-        // Currently quality param is unused but kept for extensibility in rules
-        if (score >= 0.80)
-        {
-            return "Quality meets threshold - suitable for RAG pipeline";
-        }
-
-        if (score >= 0.70)
-        {
-            return $"Quality acceptable but below optimal threshold - consider fallback extraction if {source} == Stage1";
-        }
-
-        if (score >= 0.50)
-        {
-            return "Quality poor - fallback to next stage recommended";
-        }
-
-        return "Quality critical - document may be corrupted or incompatible";
-    }
-
-    /// <summary>
     /// Calculates text coverage score based on characters per page
     /// </summary>
     private double CalculateTextCoverage(TextExtractionResult result)
@@ -205,6 +181,25 @@ internal class PdfQualityValidationDomainService
             _ => 0.0
         };
     }
+
+    /// <summary>
+    /// Generates a recommendation based on quality metrics
+    /// </summary>
+    private static string GenerateRecommendation(double qualityScore, ExtractionQuality quality, string sourceName)
+    {
+        if (qualityScore >= DefaultMinimumQualityThreshold)
+        {
+            return "Quality is sufficient for indexing.";
+        }
+
+        if (quality == ExtractionQuality.VeryLow)
+        {
+            return $"Source '{sourceName}' provided very low quality extraction. Consider using a different extraction method or checking the source PDF.";
+        }
+
+        return $"Quality score {qualityScore:F2} is below threshold {DefaultMinimumQualityThreshold}. Manual review recommended.";
+    }
+
 
     /// <summary>
     /// Calculates completeness score

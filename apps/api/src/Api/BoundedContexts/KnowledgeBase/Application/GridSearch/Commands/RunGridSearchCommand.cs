@@ -22,7 +22,7 @@ internal sealed record RunGridSearchCommand : IRequest<GridSearchResult>
     /// <summary>
     /// Whether to run a quick evaluation (3 representative configs).
     /// </summary>
-    public bool QuickMode { get; init; } = false;
+    public bool QuickMode { get; init; }
 
     /// <summary>
     /// Maximum number of samples to evaluate per configuration.
@@ -33,5 +33,5 @@ internal sealed record RunGridSearchCommand : IRequest<GridSearchResult>
     /// <summary>
     /// Whether to include detailed per-sample results in the output.
     /// </summary>
-    public bool IncludeDetailedResults { get; init; } = false;
+    public bool IncludeDetailedResults { get; init; }
 }

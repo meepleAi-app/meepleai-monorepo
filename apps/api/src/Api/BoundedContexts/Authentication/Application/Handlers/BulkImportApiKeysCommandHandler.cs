@@ -45,7 +45,7 @@ internal class BulkImportApiKeysCommandHandler : ICommandHandler<BulkImportApiKe
         try
         {
             // Step 1: Validate CSV and parse records
-            var keyRecords = await ValidateCsvAndParseAsync(command.CsvContent, cancellationToken).ConfigureAwait(false);
+            var keyRecords = await ValidateCsvAndParseAsync(command.CsvContent).ConfigureAwait(false);
 
             // Step 2: Validate all user IDs exist
             await ValidateUserExistenceAsync(keyRecords, cancellationToken).ConfigureAwait(false);

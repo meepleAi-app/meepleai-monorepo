@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 /// <summary>
 /// Value object representing semantic version (major.minor.patch).
 /// </summary>
-internal sealed class Version : ValueObject
+internal sealed class Version : ValueObject, IComparable<Version>, IEquatable<Version>
 {
     // FIX MA0009: Add timeout to prevent ReDoS attacks
     // FIX MA0023: Add ExplicitCapture to prevent capturing unneeded groups
@@ -67,12 +67,29 @@ internal sealed class Version : ValueObject
     /// <summary>
     /// Compares two versions for ordering.
     /// </summary>
-    public int CompareTo(Version other)
+    public int CompareTo(Version? other)
     {
+        if (other is null) return 1;
+        if (ReferenceEquals(this, other)) return 0;
+
         if (Major != other.Major) return Major.CompareTo(other.Major);
         if (Minor != other.Minor) return Minor.CompareTo(other.Minor);
         return Patch.CompareTo(other.Patch);
     }
+
+    public bool Equals(Version? other) => base.Equals(other);
+
+    public override bool Equals(object? obj) => obj is Version other && Equals(other);
+
+    public override int GetHashCode() => HashCode.Combine(Major, Minor, Patch);
+
+    public static bool operator ==(Version? left, Version? right) => left is null ? right is null : left.Equals(right);
+    public static bool operator !=(Version? left, Version? right) => !(left == right);
+
+    public static bool operator <(Version? left, Version? right) => left is null ? right is not null : left.CompareTo(right) < 0;
+    public static bool operator <=(Version? left, Version? right) => left is null || left.CompareTo(right) <= 0;
+    public static bool operator >(Version? left, Version? right) => left is not null && left.CompareTo(right) > 0;
+    public static bool operator >=(Version? left, Version? right) => left is null ? right is null : left.CompareTo(right) >= 0;
 
     public bool IsNewerThan(Version other) => CompareTo(other) > 0;
     public bool IsOlderThan(Version other) => CompareTo(other) < 0;

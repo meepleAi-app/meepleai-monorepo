@@ -119,36 +119,7 @@ internal partial class SensitiveDataDestructuringPolicy : IDestructuringPolicy
         // (Dictionary is in System.Collections.Generic)
         if (value is IDictionary dictionary)
         {
-            var properties = new List<LogEventProperty>();
-            foreach (DictionaryEntry entry in dictionary)
-            {
-                var key = entry.Key?.ToString() ?? "null";
-                var propertyValue = entry.Value;
-
-                if (IsSensitiveProperty(key))
-                {
-                    properties.Add(new LogEventProperty(key, new ScalarValue(RedactedValue)));
-                }
-                else if (propertyValue is string str)
-                {
-                    var redacted = RedactSensitiveStringPatterns(str);
-                    properties.Add(new LogEventProperty(key, new ScalarValue(redacted)));
-                }
-                else if (propertyValue != null)
-                {
-                    // Try to recursively destructure nested objects with this policy
-                    if (TryDestructure(propertyValue, propertyValueFactory, out var nestedResult))
-                    {
-                        properties.Add(new LogEventProperty(key, nestedResult!));
-                    }
-                    else
-                    {
-                        properties.Add(new LogEventProperty(key, propertyValueFactory.CreatePropertyValue(propertyValue, true)));
-                    }
-                }
-            }
-            result = new StructureValue(properties);
-            return true;
+            return TryDestructureDictionary(dictionary, propertyValueFactory, out result);
         }
 
         // Skip primitive types and simple system types (after handling collections)
@@ -163,6 +134,46 @@ internal partial class SensitiveDataDestructuringPolicy : IDestructuringPolicy
         }
 
         // Handle complex objects via reflection
+        return TryDestructureComplexObject(value, type, propertyValueFactory, out result);
+
+
+    }
+
+    private bool TryDestructureDictionary(IDictionary dictionary, ILogEventPropertyValueFactory propertyValueFactory, out LogEventPropertyValue result)
+    {
+        var properties = new List<LogEventProperty>();
+        foreach (DictionaryEntry entry in dictionary)
+        {
+            var key = entry.Key?.ToString() ?? "null";
+            var propertyValue = entry.Value;
+
+            if (IsSensitiveProperty(key))
+            {
+                properties.Add(new LogEventProperty(key, new ScalarValue(RedactedValue)));
+            }
+            else if (propertyValue is string str)
+            {
+                var redacted = RedactSensitiveStringPatterns(str);
+                properties.Add(new LogEventProperty(key, new ScalarValue(redacted)));
+            }
+            else if (propertyValue != null)
+            {
+                if (TryDestructure(propertyValue, propertyValueFactory, out var nestedResult))
+                {
+                    properties.Add(new LogEventProperty(key, nestedResult!));
+                }
+                else
+                {
+                    properties.Add(new LogEventProperty(key, propertyValueFactory.CreatePropertyValue(propertyValue, true)));
+                }
+            }
+        }
+        result = new StructureValue(properties);
+        return true;
+    }
+
+    private bool TryDestructureComplexObject(object value, Type type, ILogEventPropertyValueFactory propertyValueFactory, out LogEventPropertyValue result)
+    {
         var props = type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
         if (props.Length == 0)
         {
@@ -177,8 +188,6 @@ internal partial class SensitiveDataDestructuringPolicy : IDestructuringPolicy
             {
                 var propValue = prop.GetValue(value);
 
-                // If the property name is sensitive AND the value is a simple/scalar type, redact entirely.
-                // For complex objects (e.g., Credentials), recurse instead of redacting the whole structure.
                 if (IsSensitiveProperty(prop.Name) &&
                     (propValue is string || prop.PropertyType.IsPrimitive || prop.PropertyType.IsEnum))
                 {
@@ -191,7 +200,6 @@ internal partial class SensitiveDataDestructuringPolicy : IDestructuringPolicy
                 }
                 else if (propValue != null)
                 {
-                    // Try to recursively destructure nested objects with this policy
                     if (TryDestructure(propValue, propertyValueFactory, out var nestedResult))
                     {
                         logProperties.Add(new LogEventProperty(prop.Name, nestedResult!));
@@ -202,9 +210,7 @@ internal partial class SensitiveDataDestructuringPolicy : IDestructuringPolicy
                     }
                 }
             }
-#pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: Resilience pattern - logging infrastructure must not fail operations
-            // Property access during logging may throw various exceptions; we must skip problematic properties
+#pragma warning disable CA1031
             catch (Exception ex) when (
                 ex is TargetException or
                 TargetInvocationException or
@@ -213,8 +219,6 @@ internal partial class SensitiveDataDestructuringPolicy : IDestructuringPolicy
                 NotSupportedException)
             {
                 // Intentionally skip properties that throw on access during logging
-                // This prevents logging infrastructure failures from propagating
-                // Cannot log here as it would risk infinite recursion in logging pipeline
             }
 #pragma warning restore CA1031
         }

@@ -10,13 +10,17 @@ namespace Api.BoundedContexts.SystemConfiguration.Application.Handlers;
 /// </summary>
 internal class ValidateConfigCommandHandler : ICommandHandler<ValidateConfigCommand, ConfigurationValidationResult>
 {
-    // Note: Using static Validate method from ConfigurationValidator
-    // No instance fields needed
+    private readonly ConfigurationValidator _validator;
+
+    public ValidateConfigCommandHandler(ConfigurationValidator validator)
+    {
+        _validator = validator;
+    }
 
     public Task<ConfigurationValidationResult> Handle(ValidateConfigCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
-        var domainResult = ConfigurationValidator.Validate(command.Key, command.Value, command.ValueType);
+        var domainResult = _validator.Validate(command.Key, command.Value, command.ValueType);
 
         var result = new ConfigurationValidationResult(
             IsValid: domainResult.IsValid,

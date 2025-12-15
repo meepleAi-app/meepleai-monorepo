@@ -11,5 +11,5 @@ namespace Api.BoundedContexts.GameManagement.Application.Queries.BggApi;
 internal sealed record SearchBggGamesQuery : IQuery<List<BggSearchResultDto>>
 {
     public string Query { get; init; } = string.Empty;
-    public bool Exact { get; init; } = false;
+    public bool Exact { get; init; }
 }

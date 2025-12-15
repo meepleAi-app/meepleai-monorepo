@@ -75,7 +75,7 @@ internal static class RuleSpecEndpoints
         // RULE-02: Get version history
         group.MapGet("/games/{gameId:guid}/rulespec/history", async (Guid gameId, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
-            var (authorized, session, error) = context.RequireAdminOrEditorSession();
+            var (authorized, _, error) = context.RequireAdminOrEditorSession();
             if (!authorized) return error!;
 
             logger.LogInformation("Fetching RuleSpec version history for game {GameId}", gameId);
@@ -95,7 +95,7 @@ internal static class RuleSpecEndpoints
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
-            var (authorized, session, error) = context.RequireAdminOrEditorSession();
+            var (authorized, _, error) = context.RequireAdminOrEditorSession();
             if (!authorized) return error!;
 
             if (!Guid.TryParse(gameId, out var gameGuid))
@@ -123,7 +123,7 @@ internal static class RuleSpecEndpoints
         // RULE-02: Get specific version
         group.MapGet("/games/{gameId:guid}/rulespec/versions/{version}", async (Guid gameId, string version, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
-            var (authorized, session, error) = context.RequireAdminOrEditorSession();
+            var (authorized, _, error) = context.RequireAdminOrEditorSession();
             if (!authorized) return error!;
 
             logger.LogInformation("Fetching RuleSpec version {Version} for game {GameId}", version, gameId);

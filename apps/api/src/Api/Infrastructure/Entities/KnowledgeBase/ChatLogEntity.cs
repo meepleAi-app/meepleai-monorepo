@@ -13,7 +13,7 @@ internal class ChatLogEntity
 
     public string Level { get; set; } = default!;
     public string Message { get; set; } = default!;
-    public string? MetadataJson { get; set; } = null;
+    public string? MetadataJson { get; set; }
 
     /// <summary>
     /// Message ordering within chat (0-indexed). Used for invalidation logic.
@@ -30,7 +30,7 @@ internal class ChatLogEntity
     /// <summary>
     /// Soft delete flag. Deleted messages hidden from UI but retained for audit.
     /// </summary>
-    public bool IsDeleted { get; set; } = false;
+    public bool IsDeleted { get; set; }
 
     /// <summary>
     /// Timestamp when message was soft-deleted.
@@ -46,7 +46,7 @@ internal class ChatLogEntity
     /// <summary>
     /// Flag indicating message is invalidated due to prior message edit/delete.
     /// </summary>
-    public bool IsInvalidated { get; set; } = false;
+    public bool IsInvalidated { get; set; }
 
     // Navigation properties
     public ChatEntity Chat { get; set; } = default!;

@@ -3,7 +3,7 @@ namespace Api.Services.Exceptions;
 /// <summary>
 /// Exception thrown when PDF validation operations fail
 /// </summary>
-internal class PdfValidationException : Exception
+public class PdfValidationException : Exception
 {
     public PdfValidationException(string message) : base(message)
     {

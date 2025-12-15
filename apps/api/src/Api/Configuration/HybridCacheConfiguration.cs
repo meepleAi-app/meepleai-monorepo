@@ -12,7 +12,7 @@ internal class HybridCacheConfiguration
     /// Development: false (in-memory only for simplicity)
     /// Staging/Production: true (L1 + Redis L2 for multi-server)
     /// </remarks>
-    public bool EnableL2Cache { get; set; } = false;
+    public bool EnableL2Cache { get; set; }
 
     /// <summary>
     /// Maximum size of individual cached entries in bytes.

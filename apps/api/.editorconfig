@@ -76,6 +76,10 @@ dotnet_diagnostic.CA1062.severity = none
 [src/**/Services/**/*.cs]
 dotnet_diagnostic.CA1062.severity = none
 
+# Re-enable for specific contexts being fixed (Phase 1)
+[src/Api/BoundedContexts/{Authentication,Administration}/**/Services/**/*.cs]
+dotnet_diagnostic.CA1062.severity = warning
+
 # Code quality - Test code (relaxed enforcement)
 [tests/**/*.cs]
 # CA2000: Dispose objects - SUGGESTION in tests (test fixtures often manage lifetime differently)

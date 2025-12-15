@@ -8,6 +8,10 @@ namespace Api.Migrations
     /// <inheritdoc />
     internal partial class AddDocumentCollections : Migration
     {
+        private static readonly string[] CollectionIdSortOrderColumns = new[] { "CollectionId", "SortOrder" };
+        private static readonly string[] ChatThreadIdCollectionIdColumns = new[] { "ChatThreadId", "CollectionId" };
+        private static readonly string[] CreatedByUserIdCreatedAtColumns = new[] { "CreatedByUserId", "CreatedAt" };
+
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
@@ -97,7 +101,7 @@ namespace Api.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_pdf_documents_CollectionId_SortOrder",
                 table: "pdf_documents",
-                columns: new[] { "CollectionId", "SortOrder" });
+                columns: CollectionIdSortOrderColumns);
 
             migrationBuilder.CreateIndex(
                 name: "IX_chat_thread_collections_ChatThreadId",
@@ -107,7 +111,7 @@ namespace Api.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_chat_thread_collections_ChatThreadId_CollectionId",
                 table: "chat_thread_collections",
-                columns: new[] { "ChatThreadId", "CollectionId" },
+                columns: ChatThreadIdCollectionIdColumns,
                 unique: true);
 
             migrationBuilder.CreateIndex(
@@ -118,7 +122,7 @@ namespace Api.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_document_collections_CreatedByUserId_CreatedAt",
                 table: "document_collections",
-                columns: new[] { "CreatedByUserId", "CreatedAt" });
+                columns: CreatedByUserIdCreatedAtColumns);
 
             migrationBuilder.CreateIndex(
                 name: "IX_document_collections_GameId",

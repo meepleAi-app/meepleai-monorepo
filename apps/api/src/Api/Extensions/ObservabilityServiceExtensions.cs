@@ -23,20 +23,23 @@ internal static class ObservabilityServiceExtensions
         return services;
     }
 
+    private static readonly string[] PostgresTags = new[] { "db", "sql" };
+    private static readonly string[] RedisTags = new[] { "cache", "redis" };
+    private static readonly string[] QdrantTags = new[] { "vector", "qdrant" };
+    private static readonly string[] QdrantCollectionTags = new[] { "vector", "qdrant", "collection" };
+    private static readonly string[] N8nTags = new[] { "automation", "workflow" };
+    private static readonly string[] HyperDxTags = new[] { "observability", "monitoring" };
+
     private static IServiceCollection AddOpenTelemetryServices(
-        this IServiceCollection services,
-        IConfiguration configuration,
-        IWebHostEnvironment environment)
+            this IServiceCollection services,
+            IConfiguration configuration,
+            IWebHostEnvironment environment)
     {
         // Issue #1563: HyperDX OpenTelemetry configuration
         var hyperDxEndpoint = configuration["HYPERDX_OTLP_ENDPOINT"] ?? "http://meepleai-hyperdx:14317";
         var serviceName = "meepleai-api";
         var serviceVersion = "1.0.0";
-
-        // Determine batch sizes based on environment
         var isDevelopment = environment.IsDevelopment();
-        var maxQueueSize = isDevelopment ? 512 : 2048;
-        var maxExportBatchSize = isDevelopment ? 128 : 512;
 
         // Issue #1567: Add logging for OpenTelemetry debugging
         services.AddLogging(logging =>
@@ -52,86 +55,100 @@ internal static class ObservabilityServiceExtensions
                     serviceName: serviceName,
                     serviceVersion: serviceVersion,
                     serviceInstanceId: Environment.MachineName)
-                .AddAttributes(new Dictionary<string, object>
-(StringComparer.Ordinal)
+                .AddAttributes(new Dictionary<string, object>(StringComparer.Ordinal)
                 {
                     ["deployment.environment"] = environment.EnvironmentName,
                     ["service.namespace"] = "meepleai"
                 }))
-            .WithTracing(tracing => tracing
-                .SetSampler(new AlwaysOnSampler())
-                .AddAspNetCoreInstrumentation(options =>
-                {
-                    options.RecordException = true;
-                    options.Filter = httpContext =>
-                    {
-                        // Don't trace health checks or metrics endpoints
-                        var path = httpContext.Request.Path.Value ?? string.Empty;
-                        return !path.StartsWith("/health", StringComparison.Ordinal) && !path.Equals("/metrics");
-                    };
-                })
-                .AddHttpClientInstrumentation(options =>
-                {
-                    options.RecordException = true;
-                })
-                .AddEntityFrameworkCoreInstrumentation()
-                // Add explicit Activity Sources for tracing (not Meter sources)
-                .AddSource("Microsoft.AspNetCore")  // ASP.NET Core framework traces
-                .AddSource("System.Net.Http")       // HTTP client traces
-                .AddSource("test-telemetry")        // Issue #1567: Manual test spans
-                                                    // Add custom MeepleAI Activity Sources for domain-specific tracing
-                .AddSource(MeepleAiActivitySources.ApiSourceName)
-                .AddSource(MeepleAiActivitySources.RagSourceName)
-                .AddSource(MeepleAiActivitySources.VectorSearchSourceName)
-                .AddSource(MeepleAiActivitySources.PdfProcessingSourceName)
-                .AddSource(MeepleAiActivitySources.CacheSourceName)
-                // Issue #1563: Add sensitive data processor (P1-SEC3)
-                .AddProcessor(new SensitiveDataProcessor())
-                // Issue #1567: HyperDX OTLP Exporter (HTTP instead of gRPC for compatibility)
-                // gRPC in .NET has issues with insecure connections even with AppContext switch
-                // Using HTTP/Protobuf as more reliable alternative for local development
-                .AddOtlpExporter(options =>
-                {
-                    // Use HTTP endpoint (4318) instead of gRPC (4317)
-                    // HTTP/Protobuf requires explicit /v1/traces path for traces
-                    var httpEndpoint = hyperDxEndpoint.Replace(":4317", ":4318");
-                    if (!httpEndpoint.EndsWith("/v1/traces", StringComparison.Ordinal))
-                    {
-                        httpEndpoint = httpEndpoint.TrimEnd('/') + "/v1/traces";
-                    }
-                    options.Endpoint = new Uri(httpEndpoint);
-                    options.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.HttpProtobuf;
-                    options.ExportProcessorType = OpenTelemetry.ExportProcessorType.Batch;
-                    options.BatchExportProcessorOptions = new OpenTelemetry.BatchExportProcessorOptions<Activity>
-                    {
-                        MaxQueueSize = maxQueueSize,
-                        ScheduledDelayMilliseconds = 5000,
-                        ExporterTimeoutMilliseconds = 30000,
-                        MaxExportBatchSize = maxExportBatchSize
-                    };
-                }))
-            .WithMetrics(metrics => metrics
-                .AddAspNetCoreInstrumentation()
-                .AddHttpClientInstrumentation()
-                .AddRuntimeInstrumentation()
-                .AddMeter(MeepleAiMetrics.MeterName)
-                // Keep Prometheus exporter for Grafana infrastructure metrics
-                .AddPrometheusExporter()
-                // Issue #1567: Add HyperDX OTLP Exporter for metrics (HTTP for compatibility)
-                // Note: Metrics use PeriodicExportingMetricReader, not BatchProcessor like traces
-                .AddOtlpExporter(options =>
-                {
-                    // HTTP/Protobuf requires explicit /v1/metrics path for metrics
-                    var httpEndpoint = hyperDxEndpoint.Replace(":4317", ":4318");
-                    if (!httpEndpoint.EndsWith("/v1/metrics", StringComparison.Ordinal))
-                    {
-                        httpEndpoint = httpEndpoint.TrimEnd('/') + "/v1/metrics";
-                    }
-                    options.Endpoint = new Uri(httpEndpoint);
-                    options.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.HttpProtobuf;
-                }));
+            .WithTracing(tracing => tracing.ConfigureTracing(hyperDxEndpoint, isDevelopment))
+            .WithMetrics(metrics => metrics.ConfigureMetrics(hyperDxEndpoint));
 
         return services;
+    }
+
+    private static TracerProviderBuilder ConfigureTracing(this TracerProviderBuilder tracing, string hyperDxEndpoint, bool isDevelopment)
+    {
+        var maxQueueSize = isDevelopment ? 512 : 2048;
+        var maxExportBatchSize = isDevelopment ? 128 : 512;
+
+        return tracing
+            .SetSampler(new AlwaysOnSampler())
+            .AddAspNetCoreInstrumentation(options =>
+            {
+                options.RecordException = true;
+                options.Filter = httpContext =>
+                {
+                    // Don't trace health checks or metrics endpoints
+                    var path = httpContext.Request.Path.Value ?? string.Empty;
+                    return !path.StartsWith("/health", StringComparison.Ordinal) && !path.Equals("/metrics");
+                };
+            })
+            .AddHttpClientInstrumentation(options =>
+            {
+                options.RecordException = true;
+            })
+            .AddEntityFrameworkCoreInstrumentation()
+            // Add explicit Activity Sources for tracing (not Meter sources)
+            .AddSource("Microsoft.AspNetCore")  // ASP.NET Core framework traces
+            .AddSource("System.Net.Http")       // HTTP client traces
+            .AddSource("test-telemetry")        // Issue #1567: Manual test spans
+                                                // Add custom MeepleAI Activity Sources for domain-specific tracing
+            .AddSource(MeepleAiActivitySources.ApiSourceName)
+            .AddSource(MeepleAiActivitySources.RagSourceName)
+            .AddSource(MeepleAiActivitySources.VectorSearchSourceName)
+            .AddSource(MeepleAiActivitySources.PdfProcessingSourceName)
+            .AddSource(MeepleAiActivitySources.CacheSourceName)
+            // Issue #1563: Add sensitive data processor (P1-SEC3)
+#pragma warning disable CA2000 // Dispose objects before losing scope - OpenTelemetry takes ownership
+            .AddProcessor(new SensitiveDataProcessor())
+#pragma warning restore CA2000
+            // Issue #1567: HyperDX OTLP Exporter (HTTP instead of gRPC for compatibility)
+            // gRPC in .NET has issues with insecure connections even with AppContext switch
+            // Using HTTP/Protobuf as more reliable alternative for local development
+            .AddOtlpExporter(options =>
+            {
+                // Use HTTP endpoint (4318) instead of gRPC (4317)
+                // HTTP/Protobuf requires explicit /v1/traces path for traces
+                var httpEndpoint = hyperDxEndpoint.Replace(":4317", ":4318");
+                if (!httpEndpoint.EndsWith("/v1/traces", StringComparison.Ordinal))
+                {
+                    httpEndpoint = httpEndpoint.TrimEnd('/') + "/v1/traces";
+                }
+                options.Endpoint = new Uri(httpEndpoint);
+                options.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.HttpProtobuf;
+                options.ExportProcessorType = OpenTelemetry.ExportProcessorType.Batch;
+                options.BatchExportProcessorOptions = new OpenTelemetry.BatchExportProcessorOptions<Activity>
+                {
+                    MaxQueueSize = maxQueueSize,
+                    ScheduledDelayMilliseconds = 5000,
+                    ExporterTimeoutMilliseconds = 30000,
+                    MaxExportBatchSize = maxExportBatchSize
+                };
+            });
+    }
+
+    private static MeterProviderBuilder ConfigureMetrics(this MeterProviderBuilder metrics, string hyperDxEndpoint)
+    {
+        return metrics
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddRuntimeInstrumentation()
+            .AddMeter(MeepleAiMetrics.MeterName)
+            // Keep Prometheus exporter for Grafana infrastructure metrics
+            .AddPrometheusExporter()
+            // Issue #1567: Add HyperDX OTLP Exporter for metrics (HTTP for compatibility)
+            // Note: Metrics use PeriodicExportingMetricReader, not BatchProcessor like traces
+            .AddOtlpExporter(options =>
+            {
+                // HTTP/Protobuf requires explicit /v1/metrics path for metrics
+                var httpEndpoint = hyperDxEndpoint.Replace(":4317", ":4318");
+                if (!httpEndpoint.EndsWith("/v1/metrics", StringComparison.Ordinal))
+                {
+                    httpEndpoint = httpEndpoint.TrimEnd('/') + "/v1/metrics";
+                }
+                options.Endpoint = new Uri(httpEndpoint);
+                options.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.HttpProtobuf;
+            });
     }
 
     /// <summary>
@@ -151,69 +168,73 @@ internal static class ObservabilityServiceExtensions
         IConfiguration configuration,
         IWebHostEnvironment environment)
     {
+        var healthChecksBuilder = services.AddHealthChecks();
+
+        AddPostgresHealthCheck(healthChecksBuilder, configuration, environment);
+        AddExternalHealthChecks(healthChecksBuilder, configuration);
+
+        return services;
+    }
+
+    private static void AddPostgresHealthCheck(IHealthChecksBuilder builder, IConfiguration configuration, IWebHostEnvironment environment)
+    {
+        // Skip Postgres health check in Testing environment (uses SQLite in-memory DB)
+        if (environment.IsEnvironment("Testing"))
+        {
+            return;
+        }
+
+        // SEC-708: Build connection string from Docker Secrets if available (only for non-testing)
+        var healthCheckConnectionString = configuration.GetConnectionString("Postgres")
+            ?? configuration["ConnectionStrings__Postgres"]
+            ?? SecretsHelper.BuildPostgresConnectionString(configuration);
+
+        if (string.IsNullOrEmpty(healthCheckConnectionString))
+        {
+            throw new InvalidOperationException(
+                "Health check database connection string not configured. " +
+                "Set CONNECTIONSTRINGS__POSTGRES environment variable or appsettings.json ConnectionStrings:Postgres.");
+        }
+
+        builder.AddNpgSql(
+            healthCheckConnectionString,
+            name: "postgres",
+            tags: PostgresTags);
+    }
+
+    private static void AddExternalHealthChecks(IHealthChecksBuilder builder, IConfiguration configuration)
+    {
         // S1075: Default URLs extracted to const
         const string DefaultRedisConnectionString = "localhost:6379";
         const string DefaultQdrantUrl = "http://localhost:6333";
-
-        // OPS-01: Health checks for observability
-        var healthCheckRedisConnectionString = configuration["REDIS_URL"] ?? DefaultRedisConnectionString;
-        var healthCheckQdrantUrl = configuration["QDRANT_URL"] ?? DefaultQdrantUrl;
-
-        var healthChecksBuilder = services.AddHealthChecks();
-
-        // Skip Postgres health check in Testing environment (uses SQLite in-memory DB)
-        if (!environment.IsEnvironment("Testing"))
-        {
-            // SEC-708: Build connection string from Docker Secrets if available (only for non-testing)
-            var healthCheckConnectionString = configuration.GetConnectionString("Postgres")
-                ?? configuration["ConnectionStrings__Postgres"]
-                ?? SecretsHelper.BuildPostgresConnectionString(configuration);
-
-            if (string.IsNullOrEmpty(healthCheckConnectionString))
-            {
-                throw new InvalidOperationException(
-                    "Health check database connection string not configured. " +
-                    "Set CONNECTIONSTRINGS__POSTGRES environment variable or appsettings.json ConnectionStrings:Postgres.");
-            }
-
-            healthChecksBuilder.AddNpgSql(
-                healthCheckConnectionString,
-                name: "postgres",
-                tags: new[] { "db", "sql" });
-        }
-
-        healthChecksBuilder
-            .AddRedis(
-                healthCheckRedisConnectionString,
-                name: "redis",
-                tags: new[] { "cache", "redis" })
-            .AddUrlGroup(
-                new Uri($"{healthCheckQdrantUrl}/healthz"),
-                name: "qdrant",
-                tags: new[] { "vector", "qdrant" })
-            .AddCheck<QdrantHealthCheck>(
-                "qdrant-collection",
-                tags: new[] { "vector", "qdrant", "collection" });
-
-        // S1075: Default service URLs extracted to const
         const string DefaultN8nUrl = "http://n8n:5678";
         const string DefaultHyperDxUrl = "http://meepleai-hyperdx:8000";
 
-        // Issue #892: Additional health checks for n8n and HyperDX
+        var healthCheckRedisConnectionString = configuration["REDIS_URL"] ?? DefaultRedisConnectionString;
+        var healthCheckQdrantUrl = configuration["QDRANT_URL"] ?? DefaultQdrantUrl;
         var n8nUrl = configuration["N8N_URL"] ?? DefaultN8nUrl;
         var hyperDxUrl = configuration["HYPERDX_URL"] ?? DefaultHyperDxUrl;
 
-        healthChecksBuilder
+        builder
+            .AddRedis(
+                healthCheckRedisConnectionString,
+                name: "redis",
+                tags: RedisTags)
+            .AddUrlGroup(
+                new Uri($"{healthCheckQdrantUrl}/healthz"),
+                name: "qdrant",
+                tags: QdrantTags)
+            .AddCheck<QdrantHealthCheck>(
+                "qdrant-collection",
+                tags: QdrantCollectionTags)
             .AddUrlGroup(
                 new Uri($"{n8nUrl}/healthz"),
                 name: "n8n",
-                tags: new[] { "automation", "workflow" })
+                tags: N8nTags)
             .AddUrlGroup(
                 new Uri($"{hyperDxUrl}/health"),
                 name: "hyperdx",
-                tags: new[] { "observability", "monitoring" });
-
-        return services;
+                tags: HyperDxTags);
     }
 
     /// <summary>

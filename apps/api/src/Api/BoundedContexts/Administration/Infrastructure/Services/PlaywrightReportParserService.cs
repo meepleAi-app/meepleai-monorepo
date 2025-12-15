@@ -32,7 +32,7 @@ internal class PlaywrightReportParserService : IPlaywrightReportParserService
     {
         try
         {
-            var latestReport = await GetLatestReportAsync(cancellationToken).ConfigureAwait(false);
+            var latestReport = await GetLatestReportAsync().ConfigureAwait(false);
             if (latestReport == null)
             {
                 _logger.LogWarning("No Playwright reports found in directory: {Directory}", _reportDirectory);

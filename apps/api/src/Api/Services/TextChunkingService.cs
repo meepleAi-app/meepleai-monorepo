@@ -94,7 +94,7 @@ internal class TextChunkingService : ITextChunkingService
                     Index = chunkIndex,
                     CharStart = currentPosition,
                     CharEnd = chunkEnd,
-                    Page = EstimatePageNumber(currentPosition, textLength)
+                    Page = EstimatePageNumber(currentPosition)
                 });
 
                 chunkIndex++;

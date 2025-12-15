@@ -6,10 +6,10 @@ internal class RuleAtomEntity
     public Guid RuleSpecId { get; set; } = Guid.Empty;
     public string Key { get; set; } = default!;
     public string Text { get; set; } = default!;
-    public string? Section { get; set; } = null;
-    public int? PageNumber { get; set; } = null;
-    public int? LineNumber { get; set; } = null;
-    public int SortOrder { get; set; } = 0;
+    public string? Section { get; set; }
+    public int? PageNumber { get; set; }
+    public int? LineNumber { get; set; }
+    public int SortOrder { get; set; }
 
     public RuleSpecEntity RuleSpec { get; set; } = default!;
 }

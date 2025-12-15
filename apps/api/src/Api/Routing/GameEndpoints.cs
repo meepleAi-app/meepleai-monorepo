@@ -110,7 +110,7 @@ internal static class GameEndpoints
             CancellationToken ct) =>
         {
             // Auth check
-            var (authorized, session, error) = context.RequireAdminOrEditorSession();
+            var (authorized, _, error) = context.RequireAdminOrEditorSession();
             if (!authorized) return error!;
 
             var command = new CreateGameCommand(
@@ -137,7 +137,7 @@ internal static class GameEndpoints
             CancellationToken ct) =>
         {
             // Auth check
-            var (authorized, session, error) = context.RequireAdminOrEditorSession();
+            var (authorized, _, error) = context.RequireAdminOrEditorSession();
             if (!authorized) return error!;
 
             var command = new UpdateGameCommand(
@@ -436,7 +436,7 @@ internal static class GameEndpoints
             CancellationToken ct) =>
         {
             // Auth check
-            var (authorized, session, error) = context.RequireAdminOrEditorSession();
+            var (authorized, _, error) = context.RequireAdminOrEditorSession();
             if (!authorized) return error!;
 
             var command = new CreateGameFAQCommand(
@@ -459,7 +459,7 @@ internal static class GameEndpoints
             CancellationToken ct) =>
         {
             // Auth check
-            var (authorized, session, error) = context.RequireAdminOrEditorSession();
+            var (authorized, _, error) = context.RequireAdminOrEditorSession();
             if (!authorized) return error!;
 
             var command = new UpdateGameFAQCommand(
@@ -480,7 +480,7 @@ internal static class GameEndpoints
             CancellationToken ct) =>
         {
             // Auth check
-            var (authorized, session, error) = context.RequireAdminOrEditorSession();
+            var (authorized, _, error) = context.RequireAdminOrEditorSession();
             if (!authorized) return error!;
 
             var command = new DeleteGameFAQCommand(Id: id);

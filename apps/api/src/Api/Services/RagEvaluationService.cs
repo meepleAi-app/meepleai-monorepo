@@ -154,10 +154,7 @@ internal class RagEvaluationService : IRagEvaluationService
         RagQualityThresholds? thresholds = null,
         CancellationToken ct = default)
     {
-        if (dataset == null)
-        {
-            throw new ArgumentNullException(nameof(dataset));
-        }
+        ArgumentNullException.ThrowIfNull(dataset);
 
         if (dataset.Queries.Count == 0)
         {
@@ -486,10 +483,7 @@ internal class RagEvaluationService : IRagEvaluationService
     /// <inheritdoc/>
     public string GenerateMarkdownReport(RagEvaluationReport report)
     {
-        if (report == null)
-        {
-            throw new ArgumentNullException(nameof(report));
-        }
+        ArgumentNullException.ThrowIfNull(report);
 
         var sb = new System.Text.StringBuilder();
 
@@ -604,10 +598,7 @@ internal class RagEvaluationService : IRagEvaluationService
     /// <inheritdoc/>
     public string GenerateJsonReport(RagEvaluationReport report)
     {
-        if (report == null)
-        {
-            throw new ArgumentNullException(nameof(report));
-        }
+        ArgumentNullException.ThrowIfNull(report);
 
         return JsonSerializer.Serialize(report, new JsonSerializerOptions
         {

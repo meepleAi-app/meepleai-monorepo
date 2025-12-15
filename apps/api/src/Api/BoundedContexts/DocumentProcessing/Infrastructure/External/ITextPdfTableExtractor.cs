@@ -31,15 +31,18 @@ internal class ITextPdfTableExtractor : IPdfTableExtractor
 {
     private readonly ITableDetectionService _tableDetectionService;
     private readonly ITableStructureAnalyzer _tableStructureAnalyzer;
+    private readonly TableToAtomicRuleConverter _tableToAtomicRuleConverter;
     private readonly ILogger<ITextPdfTableExtractor> _logger;
 
     public ITextPdfTableExtractor(
         ITableDetectionService tableDetectionService,
         ITableStructureAnalyzer tableStructureAnalyzer,
+        TableToAtomicRuleConverter tableToAtomicRuleConverter,
         ILogger<ITextPdfTableExtractor> logger)
     {
         _tableDetectionService = tableDetectionService ?? throw new ArgumentNullException(nameof(tableDetectionService));
         _tableStructureAnalyzer = tableStructureAnalyzer ?? throw new ArgumentNullException(nameof(tableStructureAnalyzer));
+        _tableToAtomicRuleConverter = tableToAtomicRuleConverter ?? throw new ArgumentNullException(nameof(tableToAtomicRuleConverter));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -230,7 +233,7 @@ internal class ITextPdfTableExtractor : IPdfTableExtractor
                     foreach (var table in pageTables)
                     {
                         // DOMAIN DELEGATION: Convert table to atomic rules using domain service
-                        var rules = TableToAtomicRuleConverter.ConvertTableToAtomicRules(table);
+                        var rules = _tableToAtomicRuleConverter.ConvertTableToAtomicRules(table);
                         if (rules != null && rules.Count > 0)
                         {
                             atomicRules.AddRange(rules);
@@ -306,7 +309,7 @@ internal class ITextPdfTableExtractor : IPdfTableExtractor
                 foreach (var table in pageTables)
                 {
                     // DOMAIN DELEGATION: Convert table to atomic rules
-                    var rules = TableToAtomicRuleConverter.ConvertTableToAtomicRules(table);
+                    var rules = _tableToAtomicRuleConverter.ConvertTableToAtomicRules(table);
                     if (rules != null && rules.Count > 0)
                     {
                         atomicRules.AddRange(rules);

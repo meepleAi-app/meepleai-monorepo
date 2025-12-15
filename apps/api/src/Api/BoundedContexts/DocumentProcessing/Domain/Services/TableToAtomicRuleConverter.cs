@@ -19,7 +19,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Domain.Services;
 /// - Independent of PDF parsing technology
 /// - Testable without external dependencies
 /// </remarks>
-internal static class TableToAtomicRuleConverter
+internal class TableToAtomicRuleConverter
 {
     /// <summary>
     /// Converts a PDF table to a list of atomic game rules
@@ -34,7 +34,7 @@ internal static class TableToAtomicRuleConverter
     /// 4. Empty cells are skipped (no null/empty values in rules)
     /// 5. Page number is always included for traceability
     /// </remarks>
-    public static List<string> ConvertTableToAtomicRules(PdfTable table)
+    public List<string> ConvertTableToAtomicRules(PdfTable table)
     {
         var rules = new List<string>();
 
@@ -65,7 +65,7 @@ internal static class TableToAtomicRuleConverter
     /// <param name="headers">Table column headers</param>
     /// <param name="row">Table row data</param>
     /// <returns>List of "Header: Value" pairs</returns>
-    private static List<string> ExtractRulePartsFromRow(IList<string> headers, string[] row)
+    private List<string> ExtractRulePartsFromRow(IList<string> headers, string[] row)
     {
         var parts = new List<string>();
         var columnCount = Math.Min(headers.Count, row.Length);
@@ -89,7 +89,7 @@ internal static class TableToAtomicRuleConverter
     /// <param name="pageNumber">Page number where the table was found</param>
     /// <param name="ruleParts">List of "Header: Value" pairs</param>
     /// <returns>Formatted atomic rule string</returns>
-    private static string FormatAtomicRule(int pageNumber, List<string> ruleParts)
+    private string FormatAtomicRule(int pageNumber, List<string> ruleParts)
     {
         // Business Rule: Always include page number for traceability
         // Format: [Table on page N] Part1; Part2; Part3
@@ -110,7 +110,7 @@ internal static class TableToAtomicRuleConverter
     /// This is BUSINESS LOGIC because it defines what constitutes a
     /// meaningful header in game rule tables, not how to parse PDF data.
     /// </remarks>
-    public static bool IsHeaderRow(string[] row)
+    public bool IsHeaderRow(string[] row)
     {
         if (row == null || row.Length == 0)
         {
@@ -154,7 +154,7 @@ internal static class TableToAtomicRuleConverter
     ///
     /// Categories map to game phases and rule types understood by game designers.
     /// </remarks>
-    public static string CategorizeAtomicRule(string atomicRule)
+    public string CategorizeAtomicRule(string atomicRule)
     {
         if (string.IsNullOrWhiteSpace(atomicRule))
         {

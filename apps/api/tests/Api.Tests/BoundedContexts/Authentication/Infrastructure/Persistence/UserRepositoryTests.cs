@@ -14,7 +14,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Infrastructure.Persistence;
 /// Tests actual EF Core queries and domain-persistence mapping.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
-public class UserRepositoryTests : IntegrationTestBase<UserRepository>
+internal class UserRepositoryTests : IntegrationTestBase<UserRepository>
 {
     protected override string DatabaseName => "meepleai_user_test";
 

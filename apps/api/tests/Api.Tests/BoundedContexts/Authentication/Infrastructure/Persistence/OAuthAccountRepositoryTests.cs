@@ -17,7 +17,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Infrastructure.Persistence;
 /// Tests OAuth provider linking, token management, and multi-provider scenarios.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
-public class OAuthAccountRepositoryTests : IntegrationTestBase<OAuthAccountRepository>
+internal class OAuthAccountRepositoryTests : IntegrationTestBase<OAuthAccountRepository>
 {
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 

@@ -16,7 +16,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 /// ISSUE-960: BGAI-018 - Cost tracking persistence tests
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
-public class LlmCostLogRepositoryTests : IntegrationTestBase<LlmCostLogRepository>
+internal class LlmCostLogRepositoryTests : IntegrationTestBase<LlmCostLogRepository>
 {
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 

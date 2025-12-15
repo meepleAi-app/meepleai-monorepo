@@ -127,7 +127,10 @@ internal static class GameEndpoints
                 MinPlayers: request.MinPlayers,
                 MaxPlayers: request.MaxPlayers,
                 MinPlayTimeMinutes: request.MinPlayTimeMinutes,
-                MaxPlayTimeMinutes: request.MaxPlayTimeMinutes
+                MaxPlayTimeMinutes: request.MaxPlayTimeMinutes,
+                IconUrl: request.IconUrl,
+                ImageUrl: request.ImageUrl,
+                BggId: request.BggId
             );
 
             var result = await mediator.Send(command, ct).ConfigureAwait(false);

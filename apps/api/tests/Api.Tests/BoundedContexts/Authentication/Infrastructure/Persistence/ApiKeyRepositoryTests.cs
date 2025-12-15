@@ -14,7 +14,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Infrastructure.Persistence;
 /// Tests API key management, scoping, expiration, and revocation logic.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
-public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
+internal class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
 {
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 

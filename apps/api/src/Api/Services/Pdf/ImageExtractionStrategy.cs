@@ -1,6 +1,7 @@
 using iText.Kernel.Pdf.Canvas.Parser;
 using iText.Kernel.Pdf.Canvas.Parser.Data;
 using iText.Kernel.Pdf.Canvas.Parser.Listener;
+using Serilog;
 
 namespace Api.Services.Pdf;
 
@@ -38,17 +39,12 @@ internal class ImageExtractionStrategy : IEventListener
                         });
                     }
                 }
-#pragma warning disable CA1031 // Do not catch general exception types
-                catch (Exception)
+                catch (Exception ex)
                 {
                     // DATA ROBUSTNESS PATTERN: Individual image extraction failures should not stop PDF processing
-                    // Rationale: PDFs can contain various image formats, some corrupted or unsupported. Failing to
-                    // extract one image should not prevent extracting other images or diagrams from the document.
-                    // We silently skip problematic images to maximize extraction success rate.
-                    // Context: iText7 can throw various exceptions for malformed/encrypted/proprietary image formats
-                    // Ignore errors for individual images
+                    // We log at debug to preserve exception context while skipping the problematic image.
+                    Serilog.Log.Debug(ex, "Image extraction skipped for one image: {Message}", ex.Message);
                 }
-#pragma warning restore CA1031 // Do not catch general exception types
             }
         }
     }

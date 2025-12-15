@@ -60,6 +60,12 @@ internal class CreateGameCommandHandler : ICommandHandler<CreateGameCommand, Gam
             game.SetImages(command.IconUrl, command.ImageUrl);
         }
 
+        // Link to BGG if ID provided
+        if (command.BggId.HasValue)
+        {
+            game.LinkToBgg(command.BggId.Value);
+        }
+
         // Persist
         await _gameRepository.AddAsync(game, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

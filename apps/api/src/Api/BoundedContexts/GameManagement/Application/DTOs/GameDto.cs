@@ -33,7 +33,8 @@ internal record CreateGameRequest(
     int? MinPlayTimeMinutes = null,
     int? MaxPlayTimeMinutes = null,
     string? IconUrl = null,
-    string? ImageUrl = null
+    string? ImageUrl = null,
+    int? BggId = null
 );
 
 /// <summary>

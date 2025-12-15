@@ -5,35 +5,34 @@
  * Covers: Games CRUD, filtering, sorting, pagination, documents
  */
 
-import type { HttpClient } from '../core/httpClient';
 import { z } from 'zod';
+import type { HttpClient } from '../core/httpClient';
 import {
+  AcquireLockResultSchema,
+  AgentDtoSchema,
+  EditorLockSchema,
+  GameFAQSchema,
   GameSchema,
   GameSessionDtoSchema,
-  PaginatedGamesResponseSchema,
-  PdfDocumentDtoSchema,
-  RuleSpecSchema,
-  RuleSpecHistorySchema,
-  VersionTimelineSchema,
-  RuleSpecDiffSchema,
-  GameFAQSchema,
   GetGameFAQsResultSchema,
-  EditorLockSchema,
-  AcquireLockResultSchema,
+  RuleSpecDiffSchema,
+  RuleSpecHistorySchema,
+  RuleSpecSchema,
+  VersionTimelineSchema,
+  type AcquireLockResult,
+  type AgentDto,
+  type EditorLock,
   type Game,
+  type GameFAQ,
   type GameSessionDto,
+  type GetGameFAQsResult,
   type PaginatedGamesResponse,
   type PdfDocumentDto,
   type RuleSpec,
+  type RuleSpecDiff,
   type RuleSpecHistory,
   type VersionTimeline,
-  type RuleSpecDiff,
-  type GameFAQ,
-  type GetGameFAQsResult,
-  type EditorLock,
-  type AcquireLockResult,
 } from '../schemas';
-import { AgentDtoSchema, type AgentDto } from '../schemas';
 
 export interface CreateGamesClientParams {
   httpClient: HttpClient;
@@ -77,6 +76,7 @@ export interface CreateGameRequest {
   maxPlayTimeMinutes?: number | null;
   iconUrl?: string | null;
   imageUrl?: string | null;
+  bggId?: number | null;
 }
 
 /**

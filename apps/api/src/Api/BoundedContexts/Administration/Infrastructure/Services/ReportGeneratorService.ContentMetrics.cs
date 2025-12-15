@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.Administration.Infrastructure.Services;
 /// ContentMetrics template implementation
 /// ISSUE-916: Content and document metrics report generation
 /// </summary>
-public sealed partial class ReportGeneratorService
+internal sealed partial class ReportGeneratorService
 {
     private static (bool IsValid, string? ErrorMessage) ValidateContentMetricsParameters(
         IReadOnlyDictionary<string, object> parameters)

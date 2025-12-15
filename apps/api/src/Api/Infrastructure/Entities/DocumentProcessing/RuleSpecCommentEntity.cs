@@ -22,7 +22,7 @@ internal class RuleSpecCommentEntity
     public Guid? ParentCommentId { get; set; }
 
     // EDIT-05: Resolution Tracking
-    public bool IsResolved { get; set; } = false;
+    public bool IsResolved { get; set; }
     // DDD-PHASE2: Converted to Guid for domain alignment
     public Guid? ResolvedByUserId { get; set; }
     public DateTime? ResolvedAt { get; set; }

@@ -62,7 +62,7 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
 
             // Step 2: Chunk text and generate embeddings
             var (chunkingSuccess, documentChunks, chunkingError, chunkErrorCode) = await ChunkAndEmbedTextAsync(
-                pdfId, pdf!.ExtractedText!, vectorDoc!, cancellationToken).ConfigureAwait(false);
+                pdfId, pdf!.ExtractedText!, cancellationToken).ConfigureAwait(false);
             if (!chunkingSuccess)
             {
                 return await MarkIndexingFailedAsync(vectorDoc!, chunkingError!, chunkErrorCode!.Value, cancellationToken).ConfigureAwait(false);

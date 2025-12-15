@@ -109,7 +109,6 @@ internal class PromptEvaluationService : IPromptEvaluationService
         // File loading may throw various exceptions; we wrap them with context for callers
         catch (Exception ex) when (ex is not FileNotFoundException && ex is not JsonException && ex is not ArgumentException)
         {
-            _logger.LogError(ex, "Error loading dataset from {Path}", datasetPath);
             throw new InvalidOperationException($"Failed to load dataset: {ex.Message}", ex);
         }
 #pragma warning restore CA1031
@@ -262,21 +261,11 @@ internal class PromptEvaluationService : IPromptEvaluationService
         }
         catch (FileNotFoundException ex)
         {
-            _logger.LogError(ex, "Dataset file not found for evaluation of template {TemplateId}, version {VersionId}",
-                templateId, versionId);
             throw new InvalidOperationException("Evaluation dataset file not found", ex);
         }
         catch (JsonException ex)
         {
-            _logger.LogError(ex, "Invalid JSON in dataset for template {TemplateId}, version {VersionId}",
-                templateId, versionId);
             throw new InvalidOperationException("Failed to parse evaluation dataset", ex);
-        }
-        catch (InvalidOperationException ex)
-        {
-            _logger.LogError(ex, "Invalid operation during evaluation for template {TemplateId}, version {VersionId}",
-                templateId, versionId);
-            throw;
         }
     }
 
@@ -675,90 +664,80 @@ internal class PromptEvaluationService : IPromptEvaluationService
     /// <summary>
     /// BGAI-041: Generates recommendation based on A/B comparison results (5-metric framework)
     /// </summary>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Meziantou.Analyzer", "MA0051:Method is too long", Justification = "Business scoring logic is clearer in one method")]
     private static (ComparisonRecommendation recommendation, string reasoning) GenerateRecommendation(
         PromptEvaluationResult baseline,
         PromptEvaluationResult candidate,
         MetricDeltas deltas)
     {
         _ = baseline; // baseline metrics are reflected in deltas; suppress unused parameter warning
-        var reasons = new List<string>();
 
-        // REJECT if candidate fails any threshold
+        // Check for Rejection
         if (!candidate.Passed)
         {
             return (ComparisonRecommendation.Reject,
                 $"Candidate version failed quality thresholds: {candidate.Summary}");
         }
 
-        // REJECT if significant regression in any metric
-        if (deltas.AccuracyDelta <= -10.0)
-            reasons.Add($"Accuracy regression: {deltas.AccuracyDelta:F1}%");
-
-        if (deltas.RelevanceDelta <= -10.0)
-            reasons.Add($"Relevance regression: {deltas.RelevanceDelta:F1}%");
-
-        if (deltas.CompletenessDelta <= -10.0)
-            reasons.Add($"Completeness regression: {deltas.CompletenessDelta:F1}%");
-
-        if (deltas.ClarityDelta <= -10.0)
-            reasons.Add($"Clarity regression: {deltas.ClarityDelta:F1}%");
-
-        if (deltas.CitationQualityDelta <= -10.0)
-            reasons.Add($"Citation quality regression: {deltas.CitationQualityDelta:F1}%");
-
-        if (reasons.Count > 0)
+        var regressionReasons = GetRegressionReasons(deltas);
+        if (regressionReasons.Count > 0)
         {
             return (ComparisonRecommendation.Reject,
-                $"Significant regressions detected: {string.Join(", ", reasons)}");
+                $"Significant regressions detected: {string.Join(", ", regressionReasons)}");
         }
 
-        // ACTIVATE if meaningful improvement in any metric
-        var improvements = new List<string>();
-
-        if (deltas.AccuracyDelta >= 5.0)
-            improvements.Add($"Accuracy improved: +{deltas.AccuracyDelta:F1}%");
-
-        if (deltas.RelevanceDelta >= 5.0)
-            improvements.Add($"Relevance improved: +{deltas.RelevanceDelta:F1}%");
-
-        if (deltas.CompletenessDelta >= 5.0)
-            improvements.Add($"Completeness improved: +{deltas.CompletenessDelta:F1}%");
-
-        if (deltas.ClarityDelta >= 5.0)
-            improvements.Add($"Clarity improved: +{deltas.ClarityDelta:F1}%");
-
-        if (deltas.CitationQualityDelta >= 5.0)
-            improvements.Add($"Citation quality improved: +{deltas.CitationQualityDelta:F1}%");
-
+        // Check for Activation
+        var improvements = GetImprovementReasons(deltas);
         if (improvements.Count > 0)
         {
             return (ComparisonRecommendation.Activate,
                 $"Candidate shows significant improvements: {string.Join(", ", improvements)}. No regressions detected. Recommend activation.");
         }
 
-        // MANUAL_REVIEW for marginal or mixed results
+        // Check for Manual Review
+        var manualReviewChanges = GetManualReviewChanges(deltas);
+        return (ComparisonRecommendation.ManualReview,
+            manualReviewChanges.Count > 0
+                ? $"Results show marginal changes: {string.Join(", ", manualReviewChanges)}. Manual review recommended."
+                : "No significant changes detected. Manual review recommended before activation.");
+    }
+
+    private static List<string> GetRegressionReasons(MetricDeltas deltas)
+    {
+        var reasons = new List<string>();
+
+        if (deltas.AccuracyDelta <= -10.0) reasons.Add($"Accuracy regression: {deltas.AccuracyDelta:F1}%");
+        if (deltas.RelevanceDelta <= -10.0) reasons.Add($"Relevance regression: {deltas.RelevanceDelta:F1}%");
+        if (deltas.CompletenessDelta <= -10.0) reasons.Add($"Completeness regression: {deltas.CompletenessDelta:F1}%");
+        if (deltas.ClarityDelta <= -10.0) reasons.Add($"Clarity regression: {deltas.ClarityDelta:F1}%");
+        if (deltas.CitationQualityDelta <= -10.0) reasons.Add($"Citation quality regression: {deltas.CitationQualityDelta:F1}%");
+
+        return reasons;
+    }
+
+    private static List<string> GetImprovementReasons(MetricDeltas deltas)
+    {
+        var improvements = new List<string>();
+
+        if (deltas.AccuracyDelta >= 5.0) improvements.Add($"Accuracy improved: +{deltas.AccuracyDelta:F1}%");
+        if (deltas.RelevanceDelta >= 5.0) improvements.Add($"Relevance improved: +{deltas.RelevanceDelta:F1}%");
+        if (deltas.CompletenessDelta >= 5.0) improvements.Add($"Completeness improved: +{deltas.CompletenessDelta:F1}%");
+        if (deltas.ClarityDelta >= 5.0) improvements.Add($"Clarity improved: +{deltas.ClarityDelta:F1}%");
+        if (deltas.CitationQualityDelta >= 5.0) improvements.Add($"Citation quality improved: +{deltas.CitationQualityDelta:F1}%");
+
+        return improvements;
+    }
+
+    private static List<string> GetManualReviewChanges(MetricDeltas deltas)
+    {
         var changes = new List<string>();
 
-        if (Math.Abs(deltas.AccuracyDelta) >= 1.0)
-            changes.Add($"Accuracy: {deltas.AccuracyDelta:+0.0;-0.0}%");
+        if (Math.Abs(deltas.AccuracyDelta) >= 1.0) changes.Add($"Accuracy: {deltas.AccuracyDelta:+0.0;-0.0}%");
+        if (Math.Abs(deltas.RelevanceDelta) >= 1.0) changes.Add($"Relevance: {deltas.RelevanceDelta:+0.0;-0.0}%");
+        if (Math.Abs(deltas.CompletenessDelta) >= 1.0) changes.Add($"Completeness: {deltas.CompletenessDelta:+0.0;-0.0}%");
+        if (Math.Abs(deltas.ClarityDelta) >= 1.0) changes.Add($"Clarity: {deltas.ClarityDelta:+0.0;-0.0}%");
+        if (Math.Abs(deltas.CitationQualityDelta) >= 1.0) changes.Add($"Citation Quality: {deltas.CitationQualityDelta:+0.0;-0.0}%");
 
-        if (Math.Abs(deltas.RelevanceDelta) >= 1.0)
-            changes.Add($"Relevance: {deltas.RelevanceDelta:+0.0;-0.0}%");
-
-        if (Math.Abs(deltas.CompletenessDelta) >= 1.0)
-            changes.Add($"Completeness: {deltas.CompletenessDelta:+0.0;-0.0}%");
-
-        if (Math.Abs(deltas.ClarityDelta) >= 1.0)
-            changes.Add($"Clarity: {deltas.ClarityDelta:+0.0;-0.0}%");
-
-        if (Math.Abs(deltas.CitationQualityDelta) >= 1.0)
-            changes.Add($"Citation Quality: {deltas.CitationQualityDelta:+0.0;-0.0}%");
-
-        return (ComparisonRecommendation.ManualReview,
-            changes.Count > 0
-                ? $"Results show marginal changes: {string.Join(", ", changes)}. Manual review recommended."
-                : "No significant changes detected. Manual review recommended before activation.");
+        return changes;
     }
 
     /// <summary>
@@ -778,7 +757,6 @@ internal class PromptEvaluationService : IPromptEvaluationService
     /// <summary>
     /// Generates Markdown report
     /// </summary>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Meziantou.Analyzer", "MA0051:Method is too long", Justification = "Report generation is clearer in a single method")]
     private static string GenerateMarkdownReport(PromptEvaluationResult result)
     {
         var sb = new StringBuilder();
@@ -812,12 +790,19 @@ internal class PromptEvaluationService : IPromptEvaluationService
         sb.AppendLine(result.Summary);
         sb.AppendLine();
 
+        AppendQueryBreakdown(sb, result.QueryResults);
+
+        return sb.ToString();
+    }
+
+    private static void AppendQueryBreakdown(StringBuilder sb, IList<QueryEvaluationResult> queryResults)
+    {
         sb.AppendLine("## Query Breakdown");
         sb.AppendLine();
 
-        for (var i = 0; i < result.QueryResults.Count; i++)
+        for (var i = 0; i < queryResults.Count; i++)
         {
-            var qr = result.QueryResults[i];
+            var qr = queryResults[i];
             sb.AppendLine(string.Format(System.Globalization.CultureInfo.InvariantCulture, "### Query {0}: `{1}`", i + 1, qr.TestCaseId));
             sb.AppendLine();
             sb.AppendLine($"**Query**: {qr.Query}");
@@ -841,8 +826,6 @@ internal class PromptEvaluationService : IPromptEvaluationService
             sb.AppendLine("---");
             sb.AppendLine();
         }
-
-        return sb.ToString();
     }
 
     /// <summary>

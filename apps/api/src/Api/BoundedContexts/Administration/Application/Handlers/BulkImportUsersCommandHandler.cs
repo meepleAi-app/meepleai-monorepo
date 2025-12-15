@@ -42,7 +42,7 @@ internal class BulkImportUsersCommandHandler : ICommandHandler<BulkImportUsersCo
         try
         {
             // Step 1: Validate CSV and parse user records
-            var userRecords = await ValidateCsvAndParseUsersAsync(command.CsvContent, cancellationToken).ConfigureAwait(false);
+            var userRecords = await ValidateCsvAndParseUsersAsync(command.CsvContent).ConfigureAwait(false);
 
             // Step 2: Validate no duplicates (in CSV or database)
             await ValidateUserDuplicatesAsync(userRecords, cancellationToken).ConfigureAwait(false);

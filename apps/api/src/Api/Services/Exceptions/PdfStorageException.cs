@@ -3,7 +3,7 @@ namespace Api.Services.Exceptions;
 /// <summary>
 /// Exception thrown when PDF storage operations fail
 /// </summary>
-internal class PdfStorageException : Exception
+public class PdfStorageException : Exception
 {
     public PdfStorageException(string message) : base(message)
     {

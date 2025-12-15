@@ -54,7 +54,7 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
         {
             // Step 1: Validate state and exchange code for user info
             var (tokenSuccess, userInfo, tokenResponse) = await ValidateAndExchangeTokenAsync(
-                command.Provider, command.State, command.Code, cancellationToken).ConfigureAwait(false);
+                command.Provider, command.State, command.Code).ConfigureAwait(false);
             if (!tokenSuccess)
             {
                 return new HandleOAuthCallbackResult

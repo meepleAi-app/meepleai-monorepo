@@ -371,7 +371,9 @@ internal class OAuthService : IOAuthService
     private async Task<string> GetGitHubPrimaryEmailAsync(string accessToken)
     {
         // S1075: GitHub API endpoint (official public endpoint)
+#pragma warning disable S1075 // URIs should not be hardcoded
         const string GitHubUserEmailsApiUrl = "https://api.github.com/user/emails";
+#pragma warning restore S1075 // URIs should not be hardcoded
 
         // CA2000 suppression: HttpClient from IHttpClientFactory MUST NOT be disposed manually.
         // The factory manages HttpMessageHandler pooling and lifetime. See: https://learn.microsoft.com/en-us/dotnet/architecture/microservices/implement-resilient-applications/use-httpclientfactory-to-implement-resilient-http-requests
@@ -440,7 +442,7 @@ internal class OAuthService : IOAuthService
         var oauthAccount = await _db.OAuthAccounts
             .FirstOrDefaultAsync(oa =>
                 oa.UserId == userId &&
-                oa.Provider == provider.ToLowerInvariant()).ConfigureAwait(false);
+                oa.Provider.Equals(provider, StringComparison.OrdinalIgnoreCase)).ConfigureAwait(false);
 
         if (oauthAccount == null)
         {

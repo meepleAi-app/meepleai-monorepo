@@ -23,9 +23,9 @@ internal class InfisicalSecretsClient : IInfisicalClient
         IOptions<InfisicalOptions> options,
         ILogger<InfisicalSecretsClient> logger)
     {
-        if (httpClientFactory is null) throw new ArgumentNullException(nameof(httpClientFactory));
-        if (options is null) throw new ArgumentNullException(nameof(options));
-        if (logger is null) throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(httpClientFactory);
+        ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(logger);
 
         _httpClient = httpClientFactory.CreateClient("Infisical");
         _options = options.Value ?? throw new ArgumentException("Infisical options value is missing", nameof(options));
@@ -46,9 +46,9 @@ internal class InfisicalSecretsClient : IInfisicalClient
         string secretPath = "/",
         CancellationToken cancellationToken = default)
     {
-        if (secretName is null) throw new ArgumentNullException(nameof(secretName));
-        if (environment is null) throw new ArgumentNullException(nameof(environment));
-        if (secretPath is null) throw new ArgumentNullException(nameof(secretPath));
+        ArgumentNullException.ThrowIfNull(secretName);
+        ArgumentNullException.ThrowIfNull(environment);
+        ArgumentNullException.ThrowIfNull(secretPath);
 
         await EnsureAuthenticatedAsync(cancellationToken).ConfigureAwait(false);
 
@@ -87,17 +87,14 @@ internal class InfisicalSecretsClient : IInfisicalClient
         }
         catch (HttpRequestException ex)
         {
-            _logger.LogError(ex,
-                "HTTP error fetching secret {SecretName}: {StatusCode}",
-                secretName, ex.StatusCode);
-            throw;
+            // Capture specific status code context if needed, but rely on upstream logging to avoid duplication (S2139)
+            // Rethrowing allows the caller (e.g. startup) to handle the failure appropriately
+            throw new InvalidOperationException($"HTTP error fetching secret {secretName}: {ex.StatusCode}", ex);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex,
-                "Failed to fetch secret {SecretName}",
-                secretName);
-            throw;
+            // Wrap in a more meaningful exception for the domain
+            throw new InvalidOperationException($"Failed to fetch secret {secretName}", ex);
         }
     }
 
@@ -107,9 +104,9 @@ internal class InfisicalSecretsClient : IInfisicalClient
         string secretPath = "/",
         CancellationToken cancellationToken = default)
     {
-        if (secretName is null) throw new ArgumentNullException(nameof(secretName));
-        if (environment is null) throw new ArgumentNullException(nameof(environment));
-        if (secretPath is null) throw new ArgumentNullException(nameof(secretPath));
+        ArgumentNullException.ThrowIfNull(secretName);
+        ArgumentNullException.ThrowIfNull(environment);
+        ArgumentNullException.ThrowIfNull(secretPath);
 
         await EnsureAuthenticatedAsync(cancellationToken).ConfigureAwait(false);
 
@@ -163,10 +160,8 @@ internal class InfisicalSecretsClient : IInfisicalClient
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex,
-                "Failed to fetch version history for {SecretName}",
-                secretName);
-            throw;
+            // S2139: Do not log and rethrow.
+            throw new InvalidOperationException($"Failed to fetch version history for {secretName}", ex);
         }
     }
 
@@ -252,7 +247,9 @@ internal class InfisicalSecretsClient : IInfisicalClient
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Infisical authentication failed");
+            // S2139: Ensure we don't double log.
+            // The InvalidOperationException will be caught and logged by the caller if it crashes the app startup
+            // or the specific operation requesting the secret.
             throw new InvalidOperationException(
                 "Failed to authenticate with Infisical. Check CLIENT_ID and CLIENT_SECRET.", ex);
         }

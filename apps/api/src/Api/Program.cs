@@ -63,16 +63,7 @@ builder.Services.AddResponseCompression(options =>
     options.Providers.Add<GzipCompressionProvider>(); // Gzip (fallback, widely supported)
 
     // Compress these MIME types
-    options.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(new[]
-    {
-        "application/json",
-        "application/json; charset=utf-8",
-        "text/plain",
-        "text/json",
-        "application/xml",
-        "text/xml",
-        "image/svg+xml"
-    });
+    options.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(AdditionalCompressedMimeTypes);
 });
 
 // Configure Brotli compression level (optimal balance)
@@ -672,4 +663,16 @@ static bool ShouldSkipMigrations(WebApplication app, MeepleAiDbContext db)
 }
 
 #pragma warning disable S1118 // Utility classes should not have public constructors - Required for test integration
-internal partial class Program { }
+public partial class Program
+{
+    internal static readonly string[] AdditionalCompressedMimeTypes =
+    [
+        "application/json",
+        "application/json; charset=utf-8",
+        "text/plain",
+        "text/json",
+        "application/xml",
+        "text/xml",
+        "image/svg+xml"
+    ];
+}

@@ -27,7 +27,7 @@ internal abstract class RepositoryBase
     {
         if (aggregate == null) return;
 
-        if (aggregate.DomainEvents.Any())
+        if (aggregate.DomainEvents.Count > 0)
         {
             EventCollector.CollectEventsFrom(aggregate);
             aggregate.ClearDomainEvents();

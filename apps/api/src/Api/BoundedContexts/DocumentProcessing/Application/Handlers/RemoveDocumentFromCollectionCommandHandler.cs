@@ -15,18 +15,15 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Handlers;
 internal class RemoveDocumentFromCollectionCommandHandler : ICommandHandler<RemoveDocumentFromCollectionCommand, bool>
 {
     private readonly IDocumentCollectionRepository _collectionRepository;
-    private readonly IPdfDocumentRepository _pdfRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<RemoveDocumentFromCollectionCommandHandler> _logger;
 
     public RemoveDocumentFromCollectionCommandHandler(
         IDocumentCollectionRepository collectionRepository,
-        IPdfDocumentRepository pdfRepository,
         IUnitOfWork unitOfWork,
         ILogger<RemoveDocumentFromCollectionCommandHandler> logger)
     {
         _collectionRepository = collectionRepository;
-        _pdfRepository = pdfRepository;
         _unitOfWork = unitOfWork;
         _logger = logger;
     }

@@ -66,7 +66,7 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
         try
         {
             // Validate session and permissions
-            (bool validationSuccess, string? validationError, ChunkedUploadSession? session) = await ValidateSessionAndPermissionsAsync(
+            var (validationSuccess, validationError, session) = await ValidateSessionAndPermissionsAsync(
                 request.SessionId, request.UserId, cancellationToken).ConfigureAwait(false);
             if (!validationSuccess)
             {
@@ -127,61 +127,61 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
     /// Validates upload session, permissions, and completeness.
     /// Returns (success, errorMessage, session).
     /// </summary>
-    private async Task<(bool success, string? errorMessage, ChunkedUploadSession? session)> ValidateSessionAndPermissionsAsync(
+    private async Task<(bool success, string? errorMessage, ChunkedUploadSession? uploadSession)> ValidateSessionAndPermissionsAsync(
         Guid sessionId,
         Guid userId,
         CancellationToken cancellationToken)
     {
         // Get session
-        var session = await _sessionRepository.GetByIdAsync(sessionId, cancellationToken).ConfigureAwait(false);
+        var uploadSession = await _sessionRepository.GetByIdAsync(sessionId, cancellationToken).ConfigureAwait(false);
 
-        if (session == null)
+        if (uploadSession == null)
         {
             return (false, "Upload session not found", null);
         }
 
         // Verify ownership
-        if (session.UserId != userId)
+        if (uploadSession.UserId != userId)
         {
-            return (false, "Access denied", session);
+            return (false, "Access denied", uploadSession);
         }
 
         // Validate TempDirectory to prevent path traversal attacks
-        if (!IsValidTempDirectory(session.TempDirectory))
+        if (!IsValidTempDirectory(uploadSession.TempDirectory))
         {
             _logger.LogWarning(
                 "Invalid TempDirectory detected for session {SessionId}: {TempDirectory}",
-                sessionId.ToString(), session.TempDirectory);
+                sessionId.ToString(), uploadSession.TempDirectory);
 
-            return (false, "Invalid upload session", session);
+            return (false, "Invalid upload session", uploadSession);
         }
 
         // Check session status
-        if (session.IsExpired)
+        if (uploadSession.IsExpired)
         {
-            session.MarkAsExpired();
-            await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
+            uploadSession.MarkAsExpired();
+            await _sessionRepository.UpdateAsync(uploadSession, cancellationToken).ConfigureAwait(false);
             await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
             // Cleanup temp files
-            await CleanupTempDirectoryAsync(session.TempDirectory).ConfigureAwait(false);
+            await CleanupTempDirectoryAsync(uploadSession.TempDirectory).ConfigureAwait(false);
 
-            return (false, "Upload session has expired", session);
+            return (false, "Upload session has expired", uploadSession);
         }
 
-        if (string.Equals(session.Status, "completed", StringComparison.Ordinal))
+        if (string.Equals(uploadSession.Status, "completed", StringComparison.Ordinal))
         {
-            return (false, "Upload session is already completed", session);
+            return (false, "Upload session already completed", uploadSession);
         }
 
         // Check if all chunks received
-        if (!session.IsComplete)
+        if (!uploadSession.IsComplete)
         {
-            var missingChunks = session.GetMissingChunks();
-            return (false, $"Upload incomplete. Missing {missingChunks.Count} chunk(s).", session);
+            var missingChunks = uploadSession.GetMissingChunks();
+            return (false, $"Upload incomplete. Missing {missingChunks.Count} chunk(s).", uploadSession);
         }
 
-        return (true, null, session);
+        return (true, null, uploadSession);
     }
 
     /// <summary>
@@ -386,7 +386,7 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
 
             // Step 2: Chunk text for embedding
             var allDocumentChunks = await ChunkTextContentAsync(
-                pdfId, fullText!, totalPages, scope, ct).ConfigureAwait(false);
+                pdfId, fullText!, scope).ConfigureAwait(false);
 
             // Step 3: Generate embeddings
             var (embeddingsSuccess, embeddings) = await GenerateEmbeddingsAsync(

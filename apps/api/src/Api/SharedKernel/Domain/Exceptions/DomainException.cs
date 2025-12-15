@@ -4,7 +4,7 @@ namespace Api.SharedKernel.Domain.Exceptions;
 /// Base exception for domain-related errors.
 /// Thrown when a domain rule or invariant is violated.
 /// </summary>
-internal class DomainException : Exception
+public class DomainException : Exception
 {
     public DomainException()
     {

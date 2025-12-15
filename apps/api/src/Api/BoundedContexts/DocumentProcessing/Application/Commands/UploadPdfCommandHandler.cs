@@ -72,7 +72,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         var userId = command.UserId;
 
         // Validate file input
-        var validationResult = await ValidateFileInputAsync(file, gameId, cancellationToken).ConfigureAwait(false);
+        var validationResult = await ValidateFileInputAsync(file, cancellationToken).ConfigureAwait(false);
         if (!validationResult.IsValid)
         {
             return new PdfUploadResult(false, validationResult.ErrorMessage!, null);
@@ -140,7 +140,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         // Validate PDF file structure (Issue #1688)
         using (var validationStream = file.OpenReadStream())
         {
-            var (isValid, validationError) = await ValidatePdfStructureAsync(validationStream, file.FileName, cancellationToken).ConfigureAwait(false);
+            var (isValid, validationError) = await ValidatePdfStructureAsync(validationStream, cancellationToken).ConfigureAwait(false);
             if (!isValid)
             {
                 RecordUploadMetricSafely("validation_failed_structure", file.Length);

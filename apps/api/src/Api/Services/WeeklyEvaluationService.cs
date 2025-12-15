@@ -29,7 +29,7 @@ internal class WeeklyEvaluationConfiguration
     public string? RagDatasetPath { get; set; }
 
     /// <summary>Enable RAG evaluation (default: false, requires dataset)</summary>
-    public bool EnableRagEvaluation { get; set; } = false;
+    public bool EnableRagEvaluation { get; set; }
 
     /// <summary>Quality thresholds for alerts</summary>
     public QualityThresholds Thresholds { get; set; } = new();

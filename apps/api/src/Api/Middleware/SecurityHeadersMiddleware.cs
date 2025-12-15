@@ -237,6 +237,49 @@ internal class SecurityHeadersOptionsValidator : IValidateOptions<SecurityHeader
         var errors = new List<string>();
 
         // Validate HSTS policy
+        // Validate HSTS policy
+        ValidateHsts(options, errors);
+
+        // Validate CSP policy
+        if (options.EnableCsp && string.IsNullOrWhiteSpace(options.CspPolicy))
+        {
+            errors.Add("CSP policy cannot be null or empty when CSP is enabled");
+        }
+
+        // Validate X-Frame-Options
+        // Validate X-Frame-Options
+        ValidateXFrameOptions(options, errors);
+
+        // Validate X-Content-Type-Options
+        if (options.EnableXContentTypeOptions)
+        {
+            if (string.IsNullOrWhiteSpace(options.XContentTypeOptionsPolicy))
+            {
+                errors.Add("X-Content-Type-Options policy cannot be null or empty when enabled");
+            }
+            else if (!options.XContentTypeOptionsPolicy.Equals("nosniff", StringComparison.OrdinalIgnoreCase))
+            {
+                errors.Add($"X-Content-Type-Options must be 'nosniff' (got: {options.XContentTypeOptionsPolicy})");
+            }
+        }
+
+        // Validate Referrer-Policy
+        // Validate Referrer-Policy
+        ValidateReferrerPolicy(options, errors);
+
+        // Validate Permissions-Policy
+        if (options.EnablePermissionsPolicy && string.IsNullOrWhiteSpace(options.PermissionsPolicyValue))
+        {
+            errors.Add("Permissions-Policy cannot be null or empty when enabled");
+        }
+
+        return errors.Count > 0
+            ? ValidateOptionsResult.Fail(errors)
+            : ValidateOptionsResult.Success;
+    }
+
+    private static void ValidateHsts(SecurityHeadersOptions options, List<string> errors)
+    {
         if (options.EnableHsts)
         {
             if (string.IsNullOrWhiteSpace(options.HstsPolicy))
@@ -249,12 +292,9 @@ internal class SecurityHeadersOptionsValidator : IValidateOptions<SecurityHeader
             }
             else
             {
-                // Extract max-age value and validate it's a number
-                // FIX MA0009: Add timeout to prevent ReDoS attacks
-                // Issue #2112: Use named capture group with ExplicitCapture to avoid empty Groups[1]
                 var maxAgeMatch = System.Text.RegularExpressions.Regex.Match(
                     options.HstsPolicy,
-                    @"max-age=(?<maxage>\d+)",  // Named group for ExplicitCapture compatibility
+                    @"max-age=(?<maxage>\d+)",
                     System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.ExplicitCapture,
                     TimeSpan.FromSeconds(1));
 
@@ -267,7 +307,6 @@ internal class SecurityHeadersOptionsValidator : IValidateOptions<SecurityHeader
                     }
                     if (options.HstsPolicy.Contains("preload", StringComparison.OrdinalIgnoreCase))
                     {
-                        // Preload requires max-age >= 31536000 (1 year) and includeSubDomains
                         if (maxAge < 31536000)
                         {
                             errors.Add("HSTS preload requires max-age of at least 31536000 (1 year)");
@@ -280,14 +319,10 @@ internal class SecurityHeadersOptionsValidator : IValidateOptions<SecurityHeader
                 }
             }
         }
+    }
 
-        // Validate CSP policy
-        if (options.EnableCsp && string.IsNullOrWhiteSpace(options.CspPolicy))
-        {
-            errors.Add("CSP policy cannot be null or empty when CSP is enabled");
-        }
-
-        // Validate X-Frame-Options
+    private static void ValidateXFrameOptions(SecurityHeadersOptions options, List<string> errors)
+    {
         if (options.EnableXFrameOptions)
         {
             if (string.IsNullOrWhiteSpace(options.XFrameOptionsPolicy))
@@ -304,21 +339,10 @@ internal class SecurityHeadersOptionsValidator : IValidateOptions<SecurityHeader
                 }
             }
         }
+    }
 
-        // Validate X-Content-Type-Options
-        if (options.EnableXContentTypeOptions)
-        {
-            if (string.IsNullOrWhiteSpace(options.XContentTypeOptionsPolicy))
-            {
-                errors.Add("X-Content-Type-Options policy cannot be null or empty when enabled");
-            }
-            else if (!options.XContentTypeOptionsPolicy.Equals("nosniff", StringComparison.OrdinalIgnoreCase))
-            {
-                errors.Add($"X-Content-Type-Options must be 'nosniff' (got: {options.XContentTypeOptionsPolicy})");
-            }
-        }
-
-        // Validate Referrer-Policy
+    private static void ValidateReferrerPolicy(SecurityHeadersOptions options, List<string> errors)
+    {
         if (options.EnableReferrerPolicy)
         {
             if (string.IsNullOrWhiteSpace(options.ReferrerPolicyValue))
@@ -344,16 +368,6 @@ internal class SecurityHeadersOptionsValidator : IValidateOptions<SecurityHeader
                 }
             }
         }
-
-        // Validate Permissions-Policy
-        if (options.EnablePermissionsPolicy && string.IsNullOrWhiteSpace(options.PermissionsPolicyValue))
-        {
-            errors.Add("Permissions-Policy cannot be null or empty when enabled");
-        }
-
-        return errors.Count > 0
-            ? ValidateOptionsResult.Fail(errors)
-            : ValidateOptionsResult.Success;
     }
 }
 

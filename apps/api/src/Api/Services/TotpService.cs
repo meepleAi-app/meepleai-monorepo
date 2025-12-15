@@ -206,7 +206,7 @@ internal class TotpService : ITotpService
         }
 
         // SEC-05: Account lockout check (5 failures = 15min lockout) - LAYER 2
-        var isLockedOut = await IsAccountLockedOutAsync(userId, "totp", cancellationToken).ConfigureAwait(false);
+        var isLockedOut = await IsAccountLockedOutAsync(userId, "totp").ConfigureAwait(false);
         if (isLockedOut)
         {
             _logger.LogWarning("🔒 Account locked out for user {UserId} due to excessive failed 2FA attempts", userId);
@@ -246,7 +246,7 @@ internal class TotpService : ITotpService
                 "Failed TOTP code attempt").ConfigureAwait(false);
 
             // SEC-05: Track failed attempt for lockout
-            await TrackFailedAttemptAsync(userId, "totp", cancellationToken).ConfigureAwait(false);
+            await TrackFailedAttemptAsync(userId, "totp").ConfigureAwait(false);
             await CheckAndTriggerSecurityAlertAsync(userId, "TOTP", cancellationToken).ConfigureAwait(false);
 
             // SEC-08: Track failed TOTP attempt
@@ -255,7 +255,7 @@ internal class TotpService : ITotpService
         else
         {
             // SEC-05: Clear failed attempts on success
-            await ClearFailedAttemptsAsync(userId, "totp", cancellationToken).ConfigureAwait(false);
+            await ClearFailedAttemptsAsync(userId, "totp").ConfigureAwait(false);
 
             // SEC-07: Store used code to prevent replay (Issue #1787)
             var expiresAt = _timeProvider.GetUtcNow().UtcDateTime.AddMinutes(2);
@@ -331,7 +331,7 @@ internal class TotpService : ITotpService
         }
 
         // Check for account lockout (separate from rate limiting)
-        var isLockedOut = await IsAccountLockedOutAsync(userId, "backup", cancellationToken).ConfigureAwait(false);
+        var isLockedOut = await IsAccountLockedOutAsync(userId, "backup").ConfigureAwait(false);
         if (isLockedOut)
         {
             _logger.LogWarning("🔒 Account locked out for user {UserId} due to excessive failed backup code attempts", userId);
@@ -383,7 +383,7 @@ internal class TotpService : ITotpService
                     }
 
                     // SEC-05: Clear failed attempts on successful verification
-                    await ClearFailedAttemptsAsync(userId, "backup", cancellationToken).ConfigureAwait(false);
+                    await ClearFailedAttemptsAsync(userId, "backup").ConfigureAwait(false);
 
                     // SEC-08: Track successful backup code use
                     MeepleAiMetrics.Record2FAVerification("backup_code", success: true, userId: userId.ToString());
@@ -398,7 +398,7 @@ internal class TotpService : ITotpService
                 "Failed backup code attempt").ConfigureAwait(false);
 
             // SEC-05: Track failed attempt for lockout mechanism
-            await TrackFailedAttemptAsync(userId, "backup", cancellationToken).ConfigureAwait(false);
+            await TrackFailedAttemptAsync(userId, "backup").ConfigureAwait(false);
             await CheckAndTriggerSecurityAlertAsync(userId, "BackupCode", cancellationToken).ConfigureAwait(false);
 
             // SEC-08: Track failed backup code attempt

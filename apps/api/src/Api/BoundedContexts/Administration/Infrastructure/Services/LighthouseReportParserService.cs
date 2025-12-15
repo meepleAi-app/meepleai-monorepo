@@ -33,7 +33,7 @@ internal class LighthouseReportParserService : ILighthouseReportParserService
     {
         try
         {
-            var latestReport = await GetLatestReportAsync(cancellationToken).ConfigureAwait(false);
+            var latestReport = await GetLatestReportAsync().ConfigureAwait(false);
             if (latestReport == null)
             {
                 _logger.LogWarning("No Lighthouse reports found in directory: {Directory}", _reportDirectory);
@@ -85,7 +85,7 @@ internal class LighthouseReportParserService : ILighthouseReportParserService
     {
         try
         {
-            var latestReport = await GetLatestReportAsync(cancellationToken).ConfigureAwait(false);
+            var latestReport = await GetLatestReportAsync().ConfigureAwait(false);
             if (latestReport == null)
             {
                 _logger.LogWarning("No Lighthouse reports found in directory: {Directory}", _reportDirectory);

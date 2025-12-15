@@ -67,9 +67,8 @@ internal sealed class GenerateReportCommandHandler : ICommandHandler<GenerateRep
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex,
-                "Report generation failed: ExecutionId={ExecutionId}",
-                execution.Id);
+            // S2139: Logging removed to avoid double logging (caller will log).
+            // We still need to update the execution status in the DB.
 
             // Update execution as failed
             var failedExecution = execution.Fail(ex.Message);

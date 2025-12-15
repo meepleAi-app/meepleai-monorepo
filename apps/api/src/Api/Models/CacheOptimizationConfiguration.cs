@@ -17,7 +17,7 @@ internal class CacheOptimizationConfiguration
     /// Enables proactive cache warming service for frequently accessed queries.
     /// Default: false (disabled for safety - requires explicit opt-in).
     /// </summary>
-    public bool WarmingEnabled { get; set; } = false;
+    public bool WarmingEnabled { get; set; }
 
     /// <summary>
     /// Number of top queries to pre-cache during warming cycle.

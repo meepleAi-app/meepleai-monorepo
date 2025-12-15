@@ -78,7 +78,7 @@ internal static class AlertEndpoints
             bool? activeOnly = true,
             CancellationToken ct = default) =>
         {
-            var (authorized, session, error) = context.RequireAdminSession();
+            var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             var alerts = activeOnly == true
@@ -104,7 +104,7 @@ internal static class AlertEndpoints
             string alertType,
             CancellationToken ct = default) =>
         {
-            var (authorized, session, error) = context.RequireAdminSession();
+            var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             var resolved = await alertingService.ResolveAlertAsync(alertType, ct).ConfigureAwait(false);

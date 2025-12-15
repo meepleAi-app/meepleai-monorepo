@@ -164,8 +164,8 @@ internal class RateLimitService : IRateLimitService
         var normalizedRole = role?.ToLowerInvariant() ?? "anonymous";
 
         // Get both maxTokens and refillRate from database with fallback
-        var maxTokens = await GetRateLimitValueAsync<int>("MaxTokens", normalizedRole, ct).ConfigureAwait(false);
-        var refillRate = await GetRateLimitValueAsync<double>("RefillRate", normalizedRole, ct).ConfigureAwait(false);
+        var maxTokens = await GetRateLimitValueAsync<int>("MaxTokens", normalizedRole).ConfigureAwait(false);
+        var refillRate = await GetRateLimitValueAsync<double>("RefillRate", normalizedRole).ConfigureAwait(false);
 
         _logger.LogDebug("Rate limit config for {Role}: MaxTokens={MaxTokens}, RefillRate={RefillRate}",
             normalizedRole, maxTokens, refillRate);

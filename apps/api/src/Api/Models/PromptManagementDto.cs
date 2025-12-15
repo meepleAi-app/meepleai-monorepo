@@ -252,7 +252,7 @@ internal class CreatePromptVersionRequest
     /// Whether to immediately activate this version (default: false).
     /// If false, the version is created but not activated.
     /// </summary>
-    public bool ActivateImmediately { get; init; } = false;
+    public bool ActivateImmediately { get; init; }
 }
 
 /// <summary>

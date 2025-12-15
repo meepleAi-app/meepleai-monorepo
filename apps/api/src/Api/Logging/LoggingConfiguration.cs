@@ -72,7 +72,7 @@ internal static class LoggingConfiguration
                 ["deployment.environment"] = environment.EnvironmentName,
                 ["service.namespace"] = "meepleai"
             };
-            options.RestrictedToMinimumLevel = GetHyperDxLogLevel(environment.EnvironmentName, configuration);
+            options.RestrictedToMinimumLevel = GetHyperDxLogLevel(configuration);
         });
 
         return loggerConfig;

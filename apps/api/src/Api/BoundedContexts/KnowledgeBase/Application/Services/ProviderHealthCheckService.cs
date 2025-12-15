@@ -33,7 +33,7 @@ internal sealed class ProviderHealthCheckService : BackgroundService, IProviderH
         _logger.LogInformation("ProviderHealthCheckService starting...");
 
         // Initialize health statuses
-        await InitializeHealthStatuses(stoppingToken).ConfigureAwait(false);
+        await InitializeHealthStatuses().ConfigureAwait(false);
 
         // Wait 10 seconds before first health check (let app warm up)
         await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken).ConfigureAwait(false);

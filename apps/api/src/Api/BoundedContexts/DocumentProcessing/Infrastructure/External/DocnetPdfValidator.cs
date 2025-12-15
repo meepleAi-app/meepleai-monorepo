@@ -414,7 +414,7 @@ internal class DocnetPdfValidator : IPdfValidator
 /// Exception thrown when PDF validation fails unexpectedly.
 /// Wraps underlying exceptions for consistent error handling.
 /// </summary>
-internal class PdfValidationException : Exception
+public class PdfValidationException : Exception
 {
     public PdfValidationException(string message) : base(message) { }
     public PdfValidationException(string message, Exception innerException) : base(message, innerException) { }

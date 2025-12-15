@@ -61,8 +61,8 @@ internal class PdfUploadQuotaService : IPdfUploadQuotaService
 
         try
         {
-            var (dailyLimit, weeklyLimit) = await GetLimitsForTierAsync(userTier, ct).ConfigureAwait(false);
-            var (dailyUsed, weeklyUsed) = await GetUsageAsync(userId, ct).ConfigureAwait(false);
+            var (dailyLimit, weeklyLimit) = await GetLimitsForTierAsync(userTier).ConfigureAwait(false);
+            var (dailyUsed, weeklyUsed) = await GetUsageAsync(userId).ConfigureAwait(false);
 
             var now = _timeProvider.GetUtcNow().UtcDateTime;
             var dailyReset = GetNextDailyReset(now);
@@ -236,7 +236,7 @@ internal class PdfUploadQuotaService : IPdfUploadQuotaService
                 return;
             }
 
-            await DecrementUploadCountAsync(userId, ct).ConfigureAwait(false);
+            await DecrementUploadCountAsync(userId).ConfigureAwait(false);
             await db.KeyDeleteAsync(reservationKey).ConfigureAwait(false);
 
             _logger.LogInformation(
@@ -309,8 +309,8 @@ internal class PdfUploadQuotaService : IPdfUploadQuotaService
 
         try
         {
-            var (dailyLimit, weeklyLimit) = await GetLimitsForTierAsync(userTier, ct).ConfigureAwait(false);
-            var (dailyUsed, weeklyUsed) = await GetUsageAsync(userId, ct).ConfigureAwait(false);
+            var (dailyLimit, weeklyLimit) = await GetLimitsForTierAsync(userTier).ConfigureAwait(false);
+            var (dailyUsed, weeklyUsed) = await GetUsageAsync(userId).ConfigureAwait(false);
 
             var currentTime = _timeProvider.GetUtcNow().UtcDateTime;
             var dailyReset = GetNextDailyReset(currentTime);

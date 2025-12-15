@@ -21,9 +21,9 @@ public sealed class CreateShareLinkCommandHandler : IRequestHandler<CreateShareL
         IShareLinkRepository shareLinkRepository,
         IConfiguration configuration)
     {
-        _context = context;
-        _shareLinkRepository = shareLinkRepository;
-        _configuration = configuration;
+        _context = context ?? throw new ArgumentNullException(nameof(context));
+        _shareLinkRepository = shareLinkRepository ?? throw new ArgumentNullException(nameof(shareLinkRepository));
+        _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
     }
 
     public async Task<CreateShareLinkResult> Handle(

@@ -18,8 +18,8 @@ public sealed class GetUserActivityQueryHandler : IRequestHandler<GetUserActivit
         IAuditLogRepository auditLogRepository,
         ILogger<GetUserActivityQueryHandler> logger)
     {
-        _auditLogRepository = auditLogRepository;
-        _logger = logger;
+        _auditLogRepository = auditLogRepository ?? throw new ArgumentNullException(nameof(auditLogRepository));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<GetUserActivityResult> Handle(GetUserActivityQuery request, CancellationToken cancellationToken)

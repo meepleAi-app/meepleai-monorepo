@@ -25,10 +25,10 @@ public class RemoveDocumentFromCollectionCommandHandler : ICommandHandler<Remove
         IUnitOfWork unitOfWork,
         ILogger<RemoveDocumentFromCollectionCommandHandler> logger)
     {
-        _collectionRepository = collectionRepository;
-        _pdfRepository = pdfRepository;
-        _unitOfWork = unitOfWork;
-        _logger = logger;
+        _collectionRepository = collectionRepository ?? throw new ArgumentNullException(nameof(collectionRepository));
+        _pdfRepository = pdfRepository ?? throw new ArgumentNullException(nameof(pdfRepository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<bool> Handle(RemoveDocumentFromCollectionCommand command, CancellationToken cancellationToken)

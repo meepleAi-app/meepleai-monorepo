@@ -20,7 +20,7 @@ public sealed class ConfigurationUpdatedEventHandler : DomainEventHandlerBase<Co
         ILogger<DomainEventHandlerBase<ConfigurationUpdatedEvent>> logger)
         : base(dbContext, logger)
     {
-        _cache = cache;
+        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
     }
 
     protected override async Task HandleEventAsync(ConfigurationUpdatedEvent domainEvent, CancellationToken cancellationToken)

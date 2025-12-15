@@ -18,8 +18,8 @@ public class GetInfrastructureHealthQueryHandler : IRequestHandler<GetInfrastruc
         IInfrastructureHealthService healthService,
         ILogger<GetInfrastructureHealthQueryHandler> logger)
     {
-        _healthService = healthService;
-        _logger = logger;
+        _healthService = healthService ?? throw new ArgumentNullException(nameof(healthService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<InfrastructureHealthResponse> Handle(

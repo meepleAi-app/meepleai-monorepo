@@ -17,8 +17,8 @@ public sealed class RevokeShareLinkCommandHandler : IRequestHandler<RevokeShareL
         IShareLinkRepository shareLinkRepository,
         IDistributedCache cache)
     {
-        _shareLinkRepository = shareLinkRepository;
-        _cache = cache;
+        _shareLinkRepository = shareLinkRepository ?? throw new ArgumentNullException(nameof(shareLinkRepository));
+        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
     }
 
     public async Task<bool> Handle(

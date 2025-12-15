@@ -18,8 +18,8 @@ public class GetPrometheusMetricsQueryHandler : IRequestHandler<GetPrometheusMet
         IPrometheusQueryService prometheusService,
         ILogger<GetPrometheusMetricsQueryHandler> logger)
     {
-        _prometheusService = prometheusService;
-        _logger = logger;
+        _prometheusService = prometheusService ?? throw new ArgumentNullException(nameof(prometheusService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<PrometheusMetricsResponse> Handle(

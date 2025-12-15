@@ -18,8 +18,8 @@ public class GetInfrastructureDetailsQueryHandler : IRequestHandler<GetInfrastru
         IInfrastructureDetailsService detailsService,
         ILogger<GetInfrastructureDetailsQueryHandler> logger)
     {
-        _detailsService = detailsService;
-        _logger = logger;
+        _detailsService = detailsService ?? throw new ArgumentNullException(nameof(detailsService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<InfrastructureDetails> Handle(

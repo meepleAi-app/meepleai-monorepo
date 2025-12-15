@@ -18,8 +18,8 @@ public sealed class ValidateShareLinkQueryHandler : IRequestHandler<ValidateShar
         IDistributedCache cache,
         IConfiguration configuration)
     {
-        _cache = cache;
-        _configuration = configuration;
+        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+        _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
     }
 
     public async Task<ValidateShareLinkResult?> Handle(

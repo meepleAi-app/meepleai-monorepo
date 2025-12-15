@@ -14,7 +14,7 @@ public class GetEditorLockStatusQueryHandler : IQueryHandler<GetEditorLockStatus
 
     public GetEditorLockStatusQueryHandler(IEditorLockService lockService)
     {
-        _lockService = lockService;
+        _lockService = lockService ?? throw new ArgumentNullException(nameof(lockService));
     }
 
     public Task<EditorLockDto> Handle(GetEditorLockStatusQuery query, CancellationToken cancellationToken)

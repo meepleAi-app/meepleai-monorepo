@@ -24,10 +24,10 @@ public sealed class GetSharedThreadQueryHandler : IRequestHandler<GetSharedThrea
         IMediator mediator,
         ILogger<GetSharedThreadQueryHandler> logger)
     {
-        _threadRepository = threadRepository;
-        _shareLinkRepository = shareLinkRepository;
-        _mediator = mediator;
-        _logger = logger;
+        _threadRepository = threadRepository ?? throw new ArgumentNullException(nameof(threadRepository));
+        _shareLinkRepository = shareLinkRepository ?? throw new ArgumentNullException(nameof(shareLinkRepository));
+        _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<GetSharedThreadResult?> Handle(

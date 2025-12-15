@@ -13,7 +13,7 @@ public class AcquireEditorLockCommandHandler : ICommandHandler<AcquireEditorLock
 
     public AcquireEditorLockCommandHandler(IEditorLockService lockService)
     {
-        _lockService = lockService;
+        _lockService = lockService ?? throw new ArgumentNullException(nameof(lockService));
     }
 
     public Task<EditorLockResult> Handle(AcquireEditorLockCommand command, CancellationToken cancellationToken)

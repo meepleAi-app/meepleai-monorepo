@@ -46,11 +46,21 @@ internal static class PdfEndpoints
 
             var form = await context.Request.ReadFormAsync(ct).ConfigureAwait(false);
             var file = form.Files.GetFile("file");
-            var gameId = form["gameId"].ToString();
 
-            if (string.IsNullOrWhiteSpace(gameId))
+            // Support both legacy gameId and new metadata approach
+            var gameId = form["gameId"].ToString();
+            var gameName = form["gameName"].ToString();
+            var versionType = form["versionType"].ToString();
+            var language = form["language"].ToString();
+            var versionNumber = form["versionNumber"].ToString();
+
+            // Validate that either gameId or metadata is provided
+            bool hasGameId = !string.IsNullOrWhiteSpace(gameId);
+            bool hasMetadata = !string.IsNullOrWhiteSpace(gameName);
+
+            if (!hasGameId && !hasMetadata)
             {
-                return Results.BadRequest(new { error = "gameId is required" });
+                return Results.BadRequest(new { error = "Either gameId or game metadata (gameName, versionType, language, versionNumber) is required" });
             }
 
             if (file == null || file.Length == 0)
@@ -60,7 +70,7 @@ internal static class PdfEndpoints
 
             var userId = session!.User!.Id;
 
-            logger.LogInformation("User {UserId} uploading PDF for game {GameId}", userId, gameId);
+            logger.LogInformation("User {UserId} uploading PDF {FileName}", userId, file.FileName);
 
             // PDF-09: Comprehensive validation (DDD adapter)
             // Validates: magic bytes, file size, MIME type, page count, PDF version
@@ -76,17 +86,29 @@ internal static class PdfEndpoints
             // Reset stream position for processing
             stream.Position = 0;
 
-            var result = await mediator.Send(new UploadPdfCommand(gameId, userId, file!), ct).ConfigureAwait(false);
+            // Build metadata if provided
+            PdfUploadMetadata? metadata = null;
+            if (hasMetadata)
+            {
+                metadata = new PdfUploadMetadata(
+                    gameName,
+                    versionType ?? "base",
+                    language ?? "en",
+                    versionNumber ?? "1.0"
+                );
+            }
+
+            var result = await mediator.Send(new UploadPdfCommand(gameId, metadata, userId, file!), ct).ConfigureAwait(false);
 
             if (!result.Success)
             {
-                logger.LogWarning("PDF upload failed for game {GameId}: {Error}", gameId, result.Message);
+                logger.LogWarning("PDF upload failed: {Error}", result.Message);
                 return Results.BadRequest(new { error = result.Message });
             }
 
             if (result.Document == null)
             {
-                logger.LogError("PDF upload succeeded but Document is null for game {GameId}", gameId);
+                logger.LogError("PDF upload succeeded but Document is null");
                 return Results.Problem("Upload succeeded but document is missing", statusCode: 500);
             }
 

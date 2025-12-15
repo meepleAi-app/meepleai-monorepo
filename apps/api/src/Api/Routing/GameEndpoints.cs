@@ -17,15 +17,22 @@ internal static class GameEndpoints
 {
     public static RouteGroupBuilder MapGameEndpoints(this RouteGroupBuilder group)
     {
-        // Get all games (DDD/CQRS)
+        // Get all games (DDD/CQRS) with pagination support
         group.MapGet("/games", async (
+            [FromQuery] string? search,
+            [FromQuery] int? page,
+            [FromQuery] int? pageSize,
             IMediator mediator,
             HttpContext context,
             CancellationToken ct) =>
         {
             // User authenticated via session OR API key (RequireAuthenticatedUserFilter)
 
-            var query = new GetAllGamesQuery();
+            var query = new GetAllGamesQuery(
+                Search: search,
+                Page: page ?? 1,
+                PageSize: pageSize ?? 20
+            );
             var result = await mediator.Send(query, ct).ConfigureAwait(false);
 
             return Results.Ok(result);

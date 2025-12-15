@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 /// BGAI-039: Measures how accurately the validation system identifies correct vs. incorrect responses.
 /// Target: >= 80% accuracy baseline
 /// </summary>
-public record ValidationAccuracyMetrics
+internal record ValidationAccuracyMetrics
 {
     /// <summary>
     /// True Positives: Valid responses correctly identified as valid
@@ -178,7 +178,7 @@ public record ValidationAccuracyMetrics
 /// <summary>
 /// Quality level classification for validation accuracy
 /// </summary>
-public enum ValidationAccuracyLevel
+internal enum ValidationAccuracyLevel
 {
     /// <summary>Critical: Accuracy < 60% - System unreliable</summary>
     Critical = 0,

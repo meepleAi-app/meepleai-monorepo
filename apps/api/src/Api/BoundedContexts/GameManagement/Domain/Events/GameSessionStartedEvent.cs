@@ -5,7 +5,7 @@ namespace Api.BoundedContexts.GameManagement.Domain.Events;
 /// <summary>
 /// Domain event raised when a game session is started.
 /// </summary>
-public sealed class GameSessionStartedEvent : DomainEventBase
+internal sealed class GameSessionStartedEvent : DomainEventBase
 {
     /// <summary>
     /// Gets the ID of the game session.

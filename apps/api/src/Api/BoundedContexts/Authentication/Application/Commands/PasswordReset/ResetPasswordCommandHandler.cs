@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands.PasswordReset;
 /// Infrastructure delegation: Database access and password hashing via password reset service.
 /// Security: All user sessions are revoked after successful password reset.
 /// </summary>
-public sealed class ResetPasswordCommandHandler : ICommandHandler<ResetPasswordCommand, ResetPasswordResult>
+internal sealed class ResetPasswordCommandHandler : ICommandHandler<ResetPasswordCommand, ResetPasswordResult>
 {
     private readonly IPasswordResetService _passwordResetService;
     private readonly ILogger<ResetPasswordCommandHandler> _logger;
@@ -25,6 +25,7 @@ public sealed class ResetPasswordCommandHandler : ICommandHandler<ResetPasswordC
 
     public async Task<ResetPasswordResult> Handle(ResetPasswordCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         try
         {
             // Basic validation (business logic)

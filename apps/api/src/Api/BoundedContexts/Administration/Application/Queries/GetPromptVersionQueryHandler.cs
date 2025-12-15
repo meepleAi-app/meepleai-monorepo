@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.Administration.Application.Queries;
 
-public class GetPromptVersionQueryHandler : IQueryHandler<GetPromptVersionQuery, PromptVersionDto?>
+internal class GetPromptVersionQueryHandler : IQueryHandler<GetPromptVersionQuery, PromptVersionDto?>
 {
     private readonly MeepleAiDbContext _db;
 
@@ -16,6 +16,7 @@ public class GetPromptVersionQueryHandler : IQueryHandler<GetPromptVersionQuery,
 
     public async Task<PromptVersionDto?> Handle(GetPromptVersionQuery request, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         if (!Guid.TryParse(request.TemplateId, out var templateGuid))
         {
             return null;

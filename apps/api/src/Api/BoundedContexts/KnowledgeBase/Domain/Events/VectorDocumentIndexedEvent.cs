@@ -2,7 +2,7 @@ using Api.SharedKernel.Domain.Events;
 
 namespace Api.BoundedContexts.KnowledgeBase.Domain.Events;
 
-public sealed class VectorDocumentIndexedEvent : DomainEventBase
+internal sealed class VectorDocumentIndexedEvent : DomainEventBase
 {
     public Guid DocumentId { get; }
     public Guid GameId { get; }

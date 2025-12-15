@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.EmbeddingProviders;
 /// Abstraction for embedding generation providers.
 /// Supports multiple backends: OpenRouter, Ollama, HuggingFace.
 /// </summary>
-public interface IEmbeddingProvider
+internal interface IEmbeddingProvider
 {
     /// <summary>
     /// Provider name (e.g., "OpenRouter", "Ollama", "HuggingFace")
@@ -54,7 +54,7 @@ public interface IEmbeddingProvider
 /// <summary>
 /// Result of an embedding generation operation
 /// </summary>
-public sealed record EmbeddingProviderResult
+internal sealed record EmbeddingProviderResult
 {
     public bool Success { get; init; }
     public string? ErrorMessage { get; init; }

@@ -8,7 +8,7 @@ namespace Api.Infrastructure.Configurations.Authentication;
 /// <summary>
 /// Entity Framework configuration for ShareLink entity.
 /// </summary>
-public sealed class ShareLinkEntityConfiguration : IEntityTypeConfiguration<ShareLinkEntity>
+internal sealed class ShareLinkEntityConfiguration : IEntityTypeConfiguration<ShareLinkEntity>
 {
     public void Configure(EntityTypeBuilder<ShareLinkEntity> builder)
     {

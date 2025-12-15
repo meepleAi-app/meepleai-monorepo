@@ -4,7 +4,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 /// Request DTO for creating a new document collection.
 /// Issue #2051: Multi-document collection creation
 /// </summary>
-public record CreateCollectionRequest(
+internal record CreateCollectionRequest(
     string Name,
     string? Description,
     IReadOnlyList<InitialDocumentRequest> InitialDocuments
@@ -13,7 +13,7 @@ public record CreateCollectionRequest(
 /// <summary>
 /// Initial document to add when creating collection.
 /// </summary>
-public record InitialDocumentRequest(
+internal record InitialDocumentRequest(
     Guid PdfDocumentId,
     string DocumentType,
     int SortOrder

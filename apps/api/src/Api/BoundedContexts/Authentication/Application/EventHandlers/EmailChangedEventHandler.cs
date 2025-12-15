@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.Authentication.Application.EventHandlers;
 /// Handles the EmailChangedEvent domain event.
 /// Creates audit log entry automatically via base class.
 /// </summary>
-public sealed class EmailChangedEventHandler : DomainEventHandlerBase<EmailChangedEvent>
+internal sealed class EmailChangedEventHandler : DomainEventHandlerBase<EmailChangedEvent>
 {
     public EmailChangedEventHandler(
         MeepleAiDbContext dbContext,

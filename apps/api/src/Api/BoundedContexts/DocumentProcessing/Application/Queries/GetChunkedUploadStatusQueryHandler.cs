@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Queries;
 /// Handler for GetChunkedUploadStatusQuery.
 /// Returns the current status of a chunked upload session.
 /// </summary>
-public class GetChunkedUploadStatusQueryHandler : IQueryHandler<GetChunkedUploadStatusQuery, ChunkedUploadStatusResult?>
+internal class GetChunkedUploadStatusQueryHandler : IQueryHandler<GetChunkedUploadStatusQuery, ChunkedUploadStatusResult?>
 {
     private readonly IChunkedUploadSessionRepository _sessionRepository;
 
@@ -20,6 +20,7 @@ public class GetChunkedUploadStatusQueryHandler : IQueryHandler<GetChunkedUpload
         GetChunkedUploadStatusQuery request,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         var session = await _sessionRepository.GetByIdAsync(request.SessionId, cancellationToken).ConfigureAwait(false);
 
         if (session == null)

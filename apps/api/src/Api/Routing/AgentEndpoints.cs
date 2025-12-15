@@ -15,7 +15,7 @@ namespace Api.Routing;
 /// DDD-PHASE3: Agent management endpoints for KnowledgeBase bounded context.
 /// Issue #866: AI Agents Entity & Configuration
 /// </summary>
-public static class AgentEndpoints
+internal static class AgentEndpoints
 {
     public static RouteGroupBuilder MapAgentEndpoints(this RouteGroupBuilder group)
     {
@@ -196,7 +196,7 @@ public static class AgentEndpoints
 }
 
 // Request DTOs
-public record CreateAgentRequest(
+internal record CreateAgentRequest(
     string Name,
     string Type,
     string StrategyName,
@@ -204,12 +204,12 @@ public record CreateAgentRequest(
     bool? IsActive
 );
 
-public record ConfigureAgentRequest(
+internal record ConfigureAgentRequest(
     string StrategyName,
     IDictionary<string, object>? StrategyParameters
 );
 
-public record InvokeAgentRequest(
+internal record InvokeAgentRequest(
     string Query,
     Guid? GameId = null,
     Guid? ChatThreadId = null

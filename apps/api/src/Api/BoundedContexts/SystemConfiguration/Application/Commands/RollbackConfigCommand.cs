@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.SystemConfiguration.Application.Commands;
 /// <summary>
 /// Command to rollback configuration to a previous version.
 /// </summary>
-public record RollbackConfigCommand(
+internal record RollbackConfigCommand(
     Guid ConfigurationId,
     int TargetVersion,
     Guid UserId

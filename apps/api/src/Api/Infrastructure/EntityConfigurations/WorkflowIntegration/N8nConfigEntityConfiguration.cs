@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Api.Infrastructure.EntityConfigurations;
 
-public class N8NConfigEntityConfiguration : IEntityTypeConfiguration<N8NConfigEntity>
+internal class N8NConfigEntityConfiguration : IEntityTypeConfiguration<N8NConfigEntity>
 {
     public void Configure(EntityTypeBuilder<N8NConfigEntity> builder)
     {

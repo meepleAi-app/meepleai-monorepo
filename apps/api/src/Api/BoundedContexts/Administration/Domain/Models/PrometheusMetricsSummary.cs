@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Administration.Domain.Models;
 /// <param name="AvgLatencyMs">Average API latency in milliseconds (last 1 hour)</param>
 /// <param name="ErrorRate">API error rate percentage (last 1 hour, 0-1 range)</param>
 /// <param name="LlmCostLast24h">Total LLM cost in USD for last 24 hours</param>
-public record PrometheusMetricsSummary(
+internal record PrometheusMetricsSummary(
     long ApiRequestsLast24h,
     double AvgLatencyMs,
     double ErrorRate,

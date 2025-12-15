@@ -6,7 +6,7 @@ namespace Api.Services.Pdf;
 /// <summary>
 /// Service responsible for analyzing table structure and converting to atomic rules
 /// </summary>
-public class TableStructureAnalyzer : ITableStructureAnalyzer
+internal class TableStructureAnalyzer : ITableStructureAnalyzer
 {
     private readonly ILogger<TableStructureAnalyzer> _logger;
 

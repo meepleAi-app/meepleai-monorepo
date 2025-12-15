@@ -5,7 +5,7 @@ namespace Api.Infrastructure.Entities;
 /// API keys provide an alternative authentication method to cookie-based sessions,
 /// allowing programmatic access to the MeepleAI API.
 /// </summary>
-public class ApiKeyEntity
+internal class ApiKeyEntity
 {
     /// <summary>
     /// Unique identifier for the API key.

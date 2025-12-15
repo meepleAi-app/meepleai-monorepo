@@ -8,7 +8,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 
 namespace Api.BoundedContexts.WorkflowIntegration.Application.Handlers;
 
-public class CreateN8NConfigCommandHandler : ICommandHandler<CreateN8NConfigCommand, N8NConfigurationDto>
+internal class CreateN8NConfigCommandHandler : ICommandHandler<CreateN8NConfigCommand, N8NConfigurationDto>
 {
     private readonly IN8NConfigurationRepository _configRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -23,6 +23,7 @@ public class CreateN8NConfigCommandHandler : ICommandHandler<CreateN8NConfigComm
 
     public async Task<N8NConfigurationDto> Handle(CreateN8NConfigCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         var baseUrl = new WorkflowUrl(command.BaseUrl);
         WorkflowUrl? webhookUrl = command.WebhookUrl != null ? new WorkflowUrl(command.WebhookUrl) : null;
 

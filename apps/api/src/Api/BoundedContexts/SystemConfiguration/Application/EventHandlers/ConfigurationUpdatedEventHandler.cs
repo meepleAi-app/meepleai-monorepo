@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.SystemConfiguration.Application.EventHandlers;
 /// Handler for ConfigurationUpdatedEvent domain event.
 /// Automatically creates audit log entry and invalidates cache via base class.
 /// </summary>
-public sealed class ConfigurationUpdatedEventHandler : DomainEventHandlerBase<ConfigurationUpdatedEvent>
+internal sealed class ConfigurationUpdatedEventHandler : DomainEventHandlerBase<ConfigurationUpdatedEvent>
 {
     private readonly IHybridCacheService _cache;
 

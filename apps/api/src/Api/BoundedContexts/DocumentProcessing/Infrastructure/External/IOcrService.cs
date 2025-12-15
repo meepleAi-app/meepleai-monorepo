@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 /// <summary>
 /// Service for performing Optical Character Recognition (OCR) on PDF documents
 /// </summary>
-public interface IOcrService
+internal interface IOcrService
 {
     /// <summary>
     /// Performs OCR on a specific page of a PDF document
@@ -34,7 +34,7 @@ public interface IOcrService
 /// <summary>
 /// Result of an OCR operation
 /// </summary>
-public record OcrResult
+internal record OcrResult
 {
     public bool Success { get; init; }
     public string? ErrorMessage { get; init; }

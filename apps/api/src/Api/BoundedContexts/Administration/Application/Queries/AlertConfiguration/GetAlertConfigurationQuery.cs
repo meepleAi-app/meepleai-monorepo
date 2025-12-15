@@ -5,12 +5,12 @@ namespace Api.BoundedContexts.Administration.Application.Queries.AlertConfigurat
 /// <summary>
 /// Query to get alert configuration by category (Issue #915)
 /// </summary>
-public record GetAlertConfigurationQuery(string Category) : IRequest<AlertConfigurationDto>;
+internal record GetAlertConfigurationQuery(string Category) : IRequest<AlertConfigurationDto>;
 
 /// <summary>
 /// DTO for alert configuration (Issue #915)
 /// </summary>
-public record AlertConfigurationDto(
+internal record AlertConfigurationDto(
     Guid Id,
     string ConfigKey,
     string ConfigValue,

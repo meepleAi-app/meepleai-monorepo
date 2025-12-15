@@ -3,7 +3,7 @@ namespace Api.Infrastructure.Secrets;
 /// <summary>
 /// Configuration options for Infisical secrets client (Issue #936 POC).
 /// </summary>
-public class InfisicalOptions
+internal class InfisicalOptions
 {
     public const string SectionName = "Infisical";
 

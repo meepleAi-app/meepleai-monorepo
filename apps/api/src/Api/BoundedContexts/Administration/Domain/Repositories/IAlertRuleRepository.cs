@@ -5,7 +5,7 @@ namespace Api.BoundedContexts.Administration.Domain.Repositories;
 /// <summary>
 /// Repository for AlertRule aggregate (Issue #921)
 /// </summary>
-public interface IAlertRuleRepository
+internal interface IAlertRuleRepository
 {
     Task<AlertRule?> GetByIdAsync(Guid id, CancellationToken ct = default);
     Task<AlertRule?> GetByNameAsync(string name, CancellationToken ct = default);

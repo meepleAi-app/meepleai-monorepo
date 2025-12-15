@@ -5,7 +5,7 @@ namespace Api.Models;
 /// Data transfer object for API key information (without sensitive data).
 /// Used for listing and viewing API keys.
 /// </summary>
-public class ApiKeyDto
+internal class ApiKeyDto
 {
     /// <summary>
     /// Unique identifier for the API key.
@@ -66,7 +66,7 @@ public class ApiKeyDto
 /// <summary>
 /// Data transfer object for API key quota information.
 /// </summary>
-public class ApiKeyQuotaDto
+internal class ApiKeyQuotaDto
 {
     /// <summary>
     /// Maximum number of requests allowed per day (null = unlimited).
@@ -97,7 +97,7 @@ public class ApiKeyQuotaDto
 /// <summary>
 /// Request to create a new API key.
 /// </summary>
-public class CreateApiKeyRequest
+internal class CreateApiKeyRequest
 {
     /// <summary>
     /// Human-readable name for the API key.
@@ -134,7 +134,7 @@ public class CreateApiKeyRequest
 /// Response containing a newly created API key with the plaintext key value.
 /// The plaintext key is only shown once and cannot be retrieved later.
 /// </summary>
-public class CreateApiKeyResponse
+internal class CreateApiKeyResponse
 {
     /// <summary>
     /// The newly created API key information.
@@ -155,7 +155,7 @@ public class CreateApiKeyResponse
 /// <summary>
 /// Request to update an existing API key.
 /// </summary>
-public class UpdateApiKeyRequest
+internal class UpdateApiKeyRequest
 {
     /// <summary>
     /// New name for the API key (optional).
@@ -191,7 +191,7 @@ public class UpdateApiKeyRequest
 /// <summary>
 /// Request to rotate an API key (generates new key, revokes old one).
 /// </summary>
-public class RotateApiKeyRequest
+internal class RotateApiKeyRequest
 {
     /// <summary>
     /// Optional new expiration date for the new key.
@@ -202,7 +202,7 @@ public class RotateApiKeyRequest
 /// <summary>
 /// Response for API key rotation.
 /// </summary>
-public class RotateApiKeyResponse
+internal class RotateApiKeyResponse
 {
     /// <summary>
     /// The newly created API key information.
@@ -228,7 +228,7 @@ public class RotateApiKeyResponse
 /// <summary>
 /// Response for paginated list of API keys.
 /// </summary>
-public class ApiKeyListResponse
+internal class ApiKeyListResponse
 {
     /// <summary>
     /// List of API keys.

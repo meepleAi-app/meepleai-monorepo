@@ -14,7 +14,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Handlers;
 /// <summary>
 /// Handles creation of rule comments with threading and @mention support.
 /// </summary>
-public partial class CreateRuleCommentCommandHandler : IRequestHandler<CreateRuleCommentCommand, RuleCommentDto>
+internal partial class CreateRuleCommentCommandHandler : IRequestHandler<CreateRuleCommentCommand, RuleCommentDto>
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly TimeProvider _timeProvider;
@@ -38,6 +38,7 @@ public partial class CreateRuleCommentCommandHandler : IRequestHandler<CreateRul
 
     public async Task<RuleCommentDto> Handle(CreateRuleCommentCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         ValidateCommentText(command.CommentText);
         ValidateLineNumber(command.LineNumber);
 

@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 /// <summary>
 /// Query to retrieve all chat threads for a user.
 /// </summary>
-public record GetUserChatsQuery(
+internal record GetUserChatsQuery(
     Guid UserId,
     int Skip = 0,
     int Take = 50

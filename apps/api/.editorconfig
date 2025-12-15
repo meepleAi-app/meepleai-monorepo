@@ -74,7 +74,7 @@ dotnet_diagnostic.CA1062.severity = none
 
 # Code quality - Services (suppress CA1062 temporarily - legacy code to be migrated)
 [src/**/Services/**/*.cs]
-dotnet_diagnostic.CA1062.severity = suggestion
+dotnet_diagnostic.CA1062.severity = none
 
 # Code quality - Test code (relaxed enforcement)
 [tests/**/*.cs]

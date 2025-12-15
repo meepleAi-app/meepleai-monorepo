@@ -4,7 +4,7 @@ namespace Api.Services;
 /// Service for managing temporary 2FA sessions (short-lived, single-use)
 /// AUTH-07: Secure temp sessions between password validation and 2FA verification
 /// </summary>
-public interface ITempSessionService
+internal interface ITempSessionService
 {
     /// <summary>
     /// Create temporary session after password validation

@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands;
 /// Command to change user password.
 /// Requires current password verification before allowing change.
 /// </summary>
-public record ChangePasswordCommand : ICommand
+internal record ChangePasswordCommand : ICommand
 {
     public Guid UserId { get; init; }
     public string CurrentPassword { get; init; } = string.Empty;

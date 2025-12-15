@@ -10,7 +10,7 @@ namespace Api.Logging;
 /// OPS-04: Serilog destructuring policy that redacts sensitive data from log events.
 /// Prevents passwords, API keys, tokens, and other secrets from appearing in logs.
 /// </summary>
-public partial class SensitiveDataDestructuringPolicy : IDestructuringPolicy
+internal partial class SensitiveDataDestructuringPolicy : IDestructuringPolicy
 {
     private static readonly string[] SensitivePropertyNames = new[]
     {

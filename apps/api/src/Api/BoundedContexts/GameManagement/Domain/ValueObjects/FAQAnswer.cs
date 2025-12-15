@@ -5,7 +5,7 @@ namespace Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 /// <summary>
 /// Value object representing an FAQ answer.
 /// </summary>
-public sealed class FAQAnswer : ValueObject
+internal sealed class FAQAnswer : ValueObject
 {
     public string Value { get; }
 

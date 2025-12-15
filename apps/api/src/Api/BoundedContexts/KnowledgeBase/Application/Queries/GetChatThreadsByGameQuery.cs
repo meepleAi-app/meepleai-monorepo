@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 /// <summary>
 /// Query to retrieve chat threads for a specific game and user.
 /// </summary>
-public record GetChatThreadsByGameQuery(
+internal record GetChatThreadsByGameQuery(
     Guid GameId,
     Guid UserId,
     int Skip = 0,

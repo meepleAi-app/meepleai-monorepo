@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 /// Handler for InitChunkedUploadCommand.
 /// Creates a new chunked upload session and prepares the temp directory.
 /// </summary>
-public class InitChunkedUploadCommandHandler : ICommandHandler<InitChunkedUploadCommand, InitChunkedUploadResult>
+internal class InitChunkedUploadCommandHandler : ICommandHandler<InitChunkedUploadCommand, InitChunkedUploadResult>
 {
     private readonly IChunkedUploadSessionRepository _sessionRepository;
     private readonly MeepleAiDbContext _dbContext;
@@ -34,6 +34,7 @@ public class InitChunkedUploadCommandHandler : ICommandHandler<InitChunkedUpload
         InitChunkedUploadCommand request,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         try
         {
             // Validate file extension

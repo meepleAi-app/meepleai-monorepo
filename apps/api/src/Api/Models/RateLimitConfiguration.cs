@@ -6,7 +6,7 @@ namespace Api.Models;
 /// <summary>
 /// Configuration for a specific role's rate limit.
 /// </summary>
-public record RoleLimitConfiguration
+internal record RoleLimitConfiguration
 {
     /// <summary>
     /// Maximum number of tokens in the bucket (burst capacity).
@@ -22,7 +22,7 @@ public record RoleLimitConfiguration
 /// <summary>
 /// Rate limiting configuration for all user roles.
 /// </summary>
-public record RateLimitConfiguration
+internal record RateLimitConfiguration
 {
     /// <summary>
     /// Rate limits for admin users.

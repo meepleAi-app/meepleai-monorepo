@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.SystemConfiguration.Application.EventHandlers;
 /// Handler for ConfigurationCreatedEvent domain event.
 /// Automatically creates audit log entry via base class.
 /// </summary>
-public sealed class ConfigurationCreatedEventHandler : DomainEventHandlerBase<ConfigurationCreatedEvent>
+internal sealed class ConfigurationCreatedEventHandler : DomainEventHandlerBase<ConfigurationCreatedEvent>
 {
     public ConfigurationCreatedEventHandler(
         MeepleAiDbContext dbContext,

@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.Administration.Application.Handlers.AlertConfigura
 /// <summary>
 /// Handler for UpdateAlertConfigurationCommand (Issue #915)
 /// </summary>
-public class UpdateAlertConfigurationCommandHandler : IRequestHandler<UpdateAlertConfigurationCommand, bool>
+internal class UpdateAlertConfigurationCommandHandler : IRequestHandler<UpdateAlertConfigurationCommand, bool>
 {
     private readonly IAlertConfigurationRepository _repository;
     private readonly ILogger<UpdateAlertConfigurationCommandHandler> _logger;
@@ -24,6 +24,7 @@ public class UpdateAlertConfigurationCommandHandler : IRequestHandler<UpdateAler
 
     public async Task<bool> Handle(UpdateAlertConfigurationCommand request, CancellationToken ct)
     {
+        ArgumentNullException.ThrowIfNull(request);
         var category = ConfigCategoryExtensions.FromString(request.Category);
         var existing = await _repository.GetByKeyAsync(request.ConfigKey, ct).ConfigureAwait(false);
 

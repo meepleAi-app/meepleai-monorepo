@@ -7,6 +7,6 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Queries;
 /// Query to get user's PDF upload quota information.
 /// Returns current usage, limits, and reset times for daily/weekly quotas.
 /// </summary>
-public sealed record GetUserUploadQuotaQuery(
+internal sealed record GetUserUploadQuotaQuery(
     Guid UserId
 ) : IQuery<PdfUploadQuotaInfo>;

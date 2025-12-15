@@ -10,7 +10,7 @@ namespace Api.Routing;
 /// HTTP endpoints for report generation and scheduling
 /// ISSUE-916: Admin reporting endpoints
 /// </summary>
-public static class ReportingEndpoints
+internal static class ReportingEndpoints
 {
     public static IEndpointRouteBuilder MapReportingEndpoints(this IEndpointRouteBuilder app)
     {
@@ -168,12 +168,12 @@ public static class ReportingEndpoints
 }
 
 // Request DTOs
-public sealed record GenerateReportRequest(
+internal sealed record GenerateReportRequest(
     ReportTemplate Template,
     ReportFormat Format,
     IReadOnlyDictionary<string, object>? Parameters);
 
-public sealed record ScheduleReportRequest(
+internal sealed record ScheduleReportRequest(
     string Name,
     string Description,
     ReportTemplate Template,
@@ -182,6 +182,6 @@ public sealed record ScheduleReportRequest(
     string ScheduleExpression,
     IReadOnlyList<string>? EmailRecipients); // ISSUE-918: Email delivery integration
 
-public sealed record UpdateScheduleRequest(
+internal sealed record UpdateScheduleRequest(
     string? ScheduleExpression,
     bool IsActive);

@@ -18,7 +18,7 @@ namespace Api.Routing;
 /// RuleSpec management endpoints.
 /// Handles rule specification CRUD, versioning, comments, diffs, and bulk operations.
 /// </summary>
-public static class RuleSpecEndpoints
+internal static class RuleSpecEndpoints
 {
     public static RouteGroupBuilder MapRuleSpecEndpoints(this RouteGroupBuilder group)
     {

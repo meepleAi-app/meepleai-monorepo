@@ -13,7 +13,7 @@ namespace Api.Routing;
 /// n8n workflow integration endpoints.
 /// Handles n8n configuration, template management, workflow imports, and error logging.
 /// </summary>
-public static class WorkflowEndpoints
+internal static class WorkflowEndpoints
 {
     public static RouteGroupBuilder MapWorkflowEndpoints(this RouteGroupBuilder group)
     {

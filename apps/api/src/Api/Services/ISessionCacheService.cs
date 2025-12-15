@@ -4,7 +4,7 @@ namespace Api.Services;
 /// Redis-based cache for session validation (Phase 2 optimization)
 /// Reduces database queries for session validation by ~90%
 /// </summary>
-public interface ISessionCacheService
+internal interface ISessionCacheService
 {
     /// <summary>
     /// Invalidate a specific session (e.g., on logout)

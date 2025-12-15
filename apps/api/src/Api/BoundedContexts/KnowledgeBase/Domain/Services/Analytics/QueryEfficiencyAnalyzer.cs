@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services.Analytics;
 /// ISSUE-1725: Implementation of IQueryEfficiencyAnalyzer for LLM cost optimization.
 /// Analyzes token usage patterns and provides actionable efficiency recommendations.
 /// </summary>
-public class QueryEfficiencyAnalyzer : IQueryEfficiencyAnalyzer
+internal class QueryEfficiencyAnalyzer : IQueryEfficiencyAnalyzer
 {
     private readonly ILlmCostLogRepository _costLogRepository;
     private readonly ILogger<QueryEfficiencyAnalyzer> _logger;

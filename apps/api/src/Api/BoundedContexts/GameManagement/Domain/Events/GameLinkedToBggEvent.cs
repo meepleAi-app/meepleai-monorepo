@@ -5,7 +5,7 @@ namespace Api.BoundedContexts.GameManagement.Domain.Events;
 /// <summary>
 /// Domain event raised when a game is linked to BoardGameGeek.
 /// </summary>
-public sealed class GameLinkedToBggEvent : DomainEventBase
+internal sealed class GameLinkedToBggEvent : DomainEventBase
 {
     /// <summary>
     /// Gets the ID of the game.

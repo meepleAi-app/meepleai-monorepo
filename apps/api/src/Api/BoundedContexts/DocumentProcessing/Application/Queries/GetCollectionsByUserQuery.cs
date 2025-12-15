@@ -7,6 +7,6 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Queries;
 /// Query to get all document collections created by a specific user.
 /// Issue #2051: Get collections by user ID
 /// </summary>
-public record GetCollectionsByUserQuery(
+internal record GetCollectionsByUserQuery(
     Guid UserId
 ) : IQuery<IReadOnlyList<DocumentCollectionDto>>;

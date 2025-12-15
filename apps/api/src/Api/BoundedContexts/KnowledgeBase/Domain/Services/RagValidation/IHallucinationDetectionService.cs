@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
 /// Domain service for detecting hallucinations via forbidden keyword analysis
 /// ISSUE-972: BGAI-030 - Hallucination detection (forbidden keywords)
 /// </summary>
-public interface IHallucinationDetectionService
+internal interface IHallucinationDetectionService
 {
     /// <summary>
     /// Detect hallucinations in AI-generated response text
@@ -30,7 +30,7 @@ public interface IHallucinationDetectionService
 /// <summary>
 /// Result of hallucination detection
 /// </summary>
-public record HallucinationValidationResult
+internal record HallucinationValidationResult
 {
     /// <summary>
     /// Whether response is free of hallucination indicators
@@ -66,7 +66,7 @@ public record HallucinationValidationResult
 /// <summary>
 /// Severity level for hallucination detection
 /// </summary>
-public enum HallucinationSeverity
+internal enum HallucinationSeverity
 {
     /// <summary>
     /// No hallucinations detected

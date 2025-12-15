@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands;
 /// <summary>
 /// Command to add a player to an existing game session.
 /// </summary>
-public record AddPlayerToSessionCommand(
+internal record AddPlayerToSessionCommand(
     Guid SessionId,
     string PlayerName,
     int PlayerOrder,

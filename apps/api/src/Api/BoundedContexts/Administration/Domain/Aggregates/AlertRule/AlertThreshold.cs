@@ -1,6 +1,6 @@
 namespace Api.BoundedContexts.Administration.Domain.Aggregates.AlertRules;
 
-public record AlertThreshold
+internal record AlertThreshold
 {
     public double Value { get; init; }
     public string Unit { get; init; }

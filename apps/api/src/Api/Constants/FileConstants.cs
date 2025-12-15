@@ -3,7 +3,7 @@ namespace Api.Constants;
 /// <summary>
 /// Centralized file-related constants to eliminate magic numbers.
 /// </summary>
-public static class FileConstants
+internal static class FileConstants
 {
     /// <summary>
     /// 10 MB in bytes (10 * 1024 * 1024 = 10,485,760).

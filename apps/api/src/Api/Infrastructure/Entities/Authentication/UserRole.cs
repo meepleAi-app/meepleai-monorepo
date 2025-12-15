@@ -1,6 +1,6 @@
 namespace Api.Infrastructure.Entities;
 
-public enum UserRole
+internal enum UserRole
 {
     Admin,
     Editor,

@@ -10,7 +10,7 @@ namespace Api.Infrastructure.Secrets;
 /// Demonstrates secret fetching, versioning, and rotation capabilities.
 /// Uses direct REST API for maximum control and simplicity.
 /// </summary>
-public class InfisicalSecretsClient : IInfisicalClient
+internal class InfisicalSecretsClient : IInfisicalClient
 {
     private readonly HttpClient _httpClient;
     private readonly InfisicalOptions _options;

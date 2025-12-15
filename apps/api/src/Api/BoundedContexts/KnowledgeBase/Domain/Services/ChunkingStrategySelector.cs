@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
 /// ADR-016 Phase 1: Domain service that selects appropriate chunking strategy
 /// based on content characteristics.
 /// </summary>
-public sealed class ChunkingStrategySelector
+internal sealed class ChunkingStrategySelector
 {
     // Thresholds for content classification
     private const double TableDensityThreshold = 0.08; // 8% of content is table-like (pipes/tabs)

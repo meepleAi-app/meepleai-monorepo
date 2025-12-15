@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.EmbeddingProviders.Pr
 /// OpenRouter embedding provider supporting text-embedding-3-large and text-embedding-3-small.
 /// Uses OpenAI-compatible API via OpenRouter gateway.
 /// </summary>
-public sealed class OpenRouterEmbeddingProvider : EmbeddingProviderBase
+internal sealed class OpenRouterEmbeddingProvider : EmbeddingProviderBase
 {
     private readonly EmbeddingProviderType _providerType;
     private readonly string _modelName;

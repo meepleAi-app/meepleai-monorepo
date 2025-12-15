@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Mappers;
 /// Mapper for RuleSpecCommentEntity to RuleCommentDto.
 /// Centralizes mapping logic to eliminate duplication across handlers.
 /// </summary>
-public static class RuleCommentMapper
+internal static class RuleCommentMapper
 {
     /// <summary>
     /// Maps a RuleSpecCommentEntity to RuleCommentDto with recursive reply mapping.

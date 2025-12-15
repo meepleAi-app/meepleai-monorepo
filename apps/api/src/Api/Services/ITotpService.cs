@@ -6,7 +6,7 @@ namespace Api.Services;
 /// <summary>
 /// Service for TOTP-based two-factor authentication
 /// </summary>
-public interface ITotpService
+internal interface ITotpService
 {
     /// <summary>
     /// Generate TOTP secret, QR code URL, and backup codes for 2FA enrollment
@@ -65,7 +65,7 @@ public interface ITotpService
 /// <summary>
 /// Response for TOTP setup containing secret and backup codes
 /// </summary>
-public class TotpSetupResponse
+internal class TotpSetupResponse
 {
     public string Secret { get; set; } = string.Empty;
     public string QrCodeUrl { get; set; } = string.Empty;
@@ -75,7 +75,7 @@ public class TotpSetupResponse
 /// <summary>
 /// Response for 2FA status
 /// </summary>
-public class TwoFactorStatusResponse
+internal class TwoFactorStatusResponse
 {
     public bool IsEnabled { get; set; }
     public DateTime? EnabledAt { get; set; }

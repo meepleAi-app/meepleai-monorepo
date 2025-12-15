@@ -6,6 +6,6 @@ namespace Api.BoundedContexts.GameManagement.Application.Queries;
 /// <summary>
 /// Query to retrieve a game session by ID.
 /// </summary>
-public record GetGameSessionByIdQuery(
+internal record GetGameSessionByIdQuery(
     Guid SessionId
 ) : IQuery<GameSessionDto?>;

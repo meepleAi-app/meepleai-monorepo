@@ -22,7 +22,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 /// Handler for CompleteChunkedUploadCommand.
 /// Assembles chunks into a complete file and triggers PDF processing.
 /// </summary>
-public class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunkedUploadCommand, CompleteChunkedUploadResult>
+internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunkedUploadCommand, CompleteChunkedUploadResult>
 {
     private static readonly string UploadTempBasePath = Path.Combine(Path.GetTempPath(), "meepleai_uploads");
 
@@ -498,10 +498,9 @@ public class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunk
     private async Task<List<DocumentChunkInput>> ChunkTextContentAsync(
         string pdfId,
         string fullText,
-        int totalPages,
-        IServiceScope scope,
-        CancellationToken ct = default)
-        
+                IServiceScope scope
+        )
+
     {
         var chunkingStopwatch = Stopwatch.StartNew();
         var chunkingService = scope.ServiceProvider.GetRequiredService<ITextChunkingService>();

@@ -26,7 +26,7 @@ namespace Api.Services;
 /// );
 /// </code>
 /// </remarks>
-public interface IHybridCacheService
+internal interface IHybridCacheService
 {
     /// <summary>
     /// Get cached value or create it using the factory function.
@@ -99,7 +99,7 @@ public interface IHybridCacheService
 /// <summary>
 /// PERF-05: Statistics for HybridCache monitoring.
 /// </summary>
-public class HybridCacheStats
+internal class HybridCacheStats
 {
     /// <summary>
     /// Total number of cache hits since startup.

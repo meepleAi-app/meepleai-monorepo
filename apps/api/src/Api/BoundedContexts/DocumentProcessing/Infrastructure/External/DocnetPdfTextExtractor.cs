@@ -12,7 +12,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 /// Docnet.Core adapter for PDF text extraction with OCR fallback coordination
 /// Implements thread-safe PDF processing with semaphore-based concurrency control
 /// </summary>
-public class DocnetPdfTextExtractor : IPdfTextExtractor
+internal class DocnetPdfTextExtractor : IPdfTextExtractor
 {
     private readonly ILogger<DocnetPdfTextExtractor> _logger;
     private readonly PdfTextProcessingDomainService _domainService;

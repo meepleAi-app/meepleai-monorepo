@@ -26,7 +26,7 @@ namespace Api.Filters;
 ///
 /// Issue: #2155 - Rate limiting for mark-all endpoint
 /// </summary>
-public class NotificationRateLimitFilter : IEndpointFilter
+internal class NotificationRateLimitFilter : IEndpointFilter
 {
     /// <summary>
     /// Maximum requests allowed per window (burst capacity).

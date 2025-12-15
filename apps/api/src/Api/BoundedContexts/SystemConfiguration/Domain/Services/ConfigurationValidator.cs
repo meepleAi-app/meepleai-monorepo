@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.SystemConfiguration.Domain.Services;
 /// Domain service for validating configuration values.
 /// Encapsulates validation rules for type checking and domain-specific constraints.
 /// </summary>
-public class ConfigurationValidator
+internal static class ConfigurationValidator
 {
     /// <summary>
     /// Validates a configuration value against its declared type and domain rules.
@@ -277,4 +277,4 @@ public class ConfigurationValidator
 /// </summary>
 /// <param name="IsValid">Whether the validation passed</param>
 /// <param name="Errors">List of validation errors (empty if valid)</param>
-public record ValidationResult(bool IsValid, IReadOnlyList<string> Errors);
+internal record ValidationResult(bool IsValid, IReadOnlyList<string> Errors);

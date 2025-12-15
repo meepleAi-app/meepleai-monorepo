@@ -10,7 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 
-public class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDeleteResult>
+internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDeleteResult>
 {
     private readonly MeepleAiDbContext _db;
     private readonly IServiceScopeFactory _scopeFactory;
@@ -34,6 +34,7 @@ public class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDele
 
     public async Task<PdfDeleteResult> Handle(DeletePdfCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         var pdfId = command.PdfId;
 
         try

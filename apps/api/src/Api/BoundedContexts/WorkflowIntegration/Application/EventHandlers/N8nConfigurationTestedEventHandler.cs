@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.WorkflowIntegration.Application.EventHandlers;
 /// <summary>
 /// Handler for N8NConfigurationTestedEvent domain event.
 /// </summary>
-public sealed class N8NConfigurationTestedEventHandler : DomainEventHandlerBase<N8NConfigurationTestedEvent>
+internal sealed class N8NConfigurationTestedEventHandler : DomainEventHandlerBase<N8NConfigurationTestedEvent>
 {
     public N8NConfigurationTestedEventHandler(
         MeepleAiDbContext dbContext,

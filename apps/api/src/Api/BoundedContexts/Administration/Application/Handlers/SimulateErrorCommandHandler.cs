@@ -15,7 +15,7 @@ namespace Api.BoundedContexts.Administration.Application.Handlers;
 ///
 /// Issue #2004: Enables testing of high-error-rate.md and error-spike.md runbooks.
 /// </summary>
-public class SimulateErrorCommandHandler : IRequestHandler<SimulateErrorCommand, Unit>
+internal class SimulateErrorCommandHandler : IRequestHandler<SimulateErrorCommand, Unit>
 {
     private readonly ILogger<SimulateErrorCommandHandler> _logger;
     private readonly IConfiguration _configuration;
@@ -30,6 +30,7 @@ public class SimulateErrorCommandHandler : IRequestHandler<SimulateErrorCommand,
 
     public async Task<Unit> Handle(SimulateErrorCommand request, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         // Security: Verify test endpoints are enabled
         var enabled = _configuration.GetValue<bool>("TestEndpoints:Enabled", false);
         if (!enabled)

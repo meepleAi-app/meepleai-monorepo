@@ -3,7 +3,7 @@ namespace Api.BoundedContexts.Authentication.Domain.ValueObjects;
 /// <summary>
 /// Defines the access level for shared chat thread links.
 /// </summary>
-public enum ShareLinkRole
+internal enum ShareLinkRole
 {
     /// <summary>
     /// Read-only access: can view thread messages and citations.

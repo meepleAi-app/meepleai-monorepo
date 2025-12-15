@@ -27,7 +27,7 @@ namespace Api.Routing;
 /// Core authentication endpoints.
 /// Handles user registration, login, logout, API key authentication, and session management.
 /// </summary>
-public static class AuthenticationEndpoints
+internal static class AuthenticationEndpoints
 {
     public static RouteGroupBuilder MapAuthEndpoints(this RouteGroupBuilder group)
     {

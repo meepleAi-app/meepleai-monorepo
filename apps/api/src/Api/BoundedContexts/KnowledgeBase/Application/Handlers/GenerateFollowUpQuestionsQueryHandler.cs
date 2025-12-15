@@ -15,7 +15,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// Generates AI-powered follow-up questions based on Q&A context.
 /// CHAT-02: AI-Generated Follow-Up Questions
 /// </summary>
-public sealed class GenerateFollowUpQuestionsQueryHandler
+internal sealed class GenerateFollowUpQuestionsQueryHandler
     : IRequestHandler<GenerateFollowUpQuestionsQuery, IReadOnlyList<string>>
 {
     private readonly ILlmService _llmService;

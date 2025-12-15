@@ -11,7 +11,7 @@ namespace Api.Services;
 /// PERF-05: HybridCache service implementation with L1 (in-memory) + L2 (Redis) support.
 /// Tag tracking is now Redis-based for cross-instance synchronization and test reliability.
 /// </summary>
-public class HybridCacheService : IHybridCacheService
+internal class HybridCacheService : IHybridCacheService
 {
     private readonly HybridCache _hybridCache;
     private readonly HybridCacheConfiguration _config;

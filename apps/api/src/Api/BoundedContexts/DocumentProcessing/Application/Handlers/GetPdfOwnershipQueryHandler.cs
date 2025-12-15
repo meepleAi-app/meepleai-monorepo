@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Handlers;
 /// Uses repository to retrieve ownership and status from domain entity.
 /// SEC-02: Row-Level Security for PDF operations
 /// </summary>
-public class GetPdfOwnershipQueryHandler : IQueryHandler<GetPdfOwnershipQuery, PdfOwnershipResult?>
+internal class GetPdfOwnershipQueryHandler : IQueryHandler<GetPdfOwnershipQuery, PdfOwnershipResult?>
 {
     private readonly IPdfDocumentRepository _documentRepository;
     private readonly ILogger<GetPdfOwnershipQueryHandler> _logger;
@@ -24,6 +24,7 @@ public class GetPdfOwnershipQueryHandler : IQueryHandler<GetPdfOwnershipQuery, P
 
     public async Task<PdfOwnershipResult?> Handle(GetPdfOwnershipQuery query, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(query);
         try
         {
             var document = await _documentRepository.GetByIdAsync(query.PdfId, cancellationToken).ConfigureAwait(false);

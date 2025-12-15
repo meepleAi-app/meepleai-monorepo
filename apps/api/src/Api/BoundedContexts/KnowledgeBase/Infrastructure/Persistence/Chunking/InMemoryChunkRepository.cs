@@ -15,7 +15,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence.Chunking;
 /// <para>This is acceptable for Phase 1 (development/testing) but the EF Core implementation
 /// in Phase 2 will use proper scoped lifetime with database-level concurrency control.</para>
 /// </remarks>
-public sealed class InMemoryChunkRepository : IChunkRepository
+internal sealed class InMemoryChunkRepository : IChunkRepository
 {
     private readonly ConcurrentDictionary<string, HierarchicalChunk> _chunks = new(StringComparer.Ordinal);
     private readonly ILogger<InMemoryChunkRepository> _logger;

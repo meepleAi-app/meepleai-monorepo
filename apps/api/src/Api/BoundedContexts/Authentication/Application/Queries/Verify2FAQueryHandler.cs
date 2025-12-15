@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Authentication.Application.Queries;
 /// Handler for Verify2FAQuery.
 /// DDD: Thin wrapper - delegates to ITotpService for verification logic.
 /// </summary>
-public class Verify2FAQueryHandler : IQueryHandler<Verify2FAQuery, Verify2FAResult>
+internal class Verify2FAQueryHandler : IQueryHandler<Verify2FAQuery, Verify2FAResult>
 {
     private readonly IUserRepository _userRepository;
     private readonly ITotpService _totpService;
@@ -26,6 +26,7 @@ public class Verify2FAQueryHandler : IQueryHandler<Verify2FAQuery, Verify2FAResu
 
     public async Task<Verify2FAResult> Handle(Verify2FAQuery query, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(query);
         try
         {
             // Get user by email

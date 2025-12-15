@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Authentication.Domain.ValueObjects;
 /// Represents an email address value object.
 /// Ensures email validity and normalization.
 /// </summary>
-public sealed class Email : ValueObject
+internal sealed class Email : ValueObject
 {
     // Email validation regex (RFC 5322 simplified)
     // FIX MA0009: Add timeout to prevent ReDoS attacks

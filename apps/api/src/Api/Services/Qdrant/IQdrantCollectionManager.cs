@@ -5,7 +5,7 @@ namespace Api.Services.Qdrant;
 /// <summary>
 /// Manages Qdrant collection lifecycle operations (create, check existence, delete)
 /// </summary>
-public interface IQdrantCollectionManager
+internal interface IQdrantCollectionManager
 {
     /// <summary>
     /// Check if the collection exists

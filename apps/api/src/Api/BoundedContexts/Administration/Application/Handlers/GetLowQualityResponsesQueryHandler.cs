@@ -13,7 +13,7 @@ namespace Api.BoundedContexts.Administration.Application.Handlers;
 /// NOTE: Uses DbContext directly for AiRequestLogs (legacy infrastructure entity).
 /// ISSUE-1674: Create proper repository when AiRequestLog is migrated to bounded context.
 /// </summary>
-public class GetLowQualityResponsesQueryHandler : IQueryHandler<GetLowQualityResponsesQuery, LowQualityResponsesResult>
+internal class GetLowQualityResponsesQueryHandler : IQueryHandler<GetLowQualityResponsesQuery, LowQualityResponsesResult>
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly ILogger<GetLowQualityResponsesQueryHandler> _logger;
@@ -28,6 +28,7 @@ public class GetLowQualityResponsesQueryHandler : IQueryHandler<GetLowQualityRes
 
     public async Task<LowQualityResponsesResult> Handle(GetLowQualityResponsesQuery query, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(query);
         try
         {
             // Convert DateTime parameters to UTC if they have Kind=Unspecified (from query string parsing)

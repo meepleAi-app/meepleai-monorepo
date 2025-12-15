@@ -6,7 +6,7 @@ namespace Api.Models;
 /// <summary>
 /// Data transfer object for prompt template information.
 /// </summary>
-public class PromptTemplateDto
+internal class PromptTemplateDto
 {
     /// <summary>
     /// Unique identifier for the template.
@@ -57,7 +57,7 @@ public class PromptTemplateDto
 /// <summary>
 /// Data transfer object for prompt version information.
 /// </summary>
-public class PromptVersionDto
+internal class PromptVersionDto
 {
     /// <summary>
     /// Unique identifier for the version.
@@ -133,7 +133,7 @@ public class PromptVersionDto
 /// <summary>
 /// Data transfer object for prompt audit log entries.
 /// </summary>
-public class PromptAuditLogDto
+internal class PromptAuditLogDto
 {
     /// <summary>
     /// Unique identifier for the audit log entry.
@@ -189,7 +189,7 @@ public class PromptAuditLogDto
 /// <summary>
 /// Request to create a new prompt template.
 /// </summary>
-public class CreatePromptTemplateRequest
+internal class CreatePromptTemplateRequest
 {
     /// <summary>
     /// Unique name for the template (e.g., "qa-system-prompt").
@@ -220,7 +220,7 @@ public class CreatePromptTemplateRequest
 /// <summary>
 /// Response containing a newly created prompt template.
 /// </summary>
-public class CreatePromptTemplateResponse
+internal class CreatePromptTemplateResponse
 {
     /// <summary>
     /// The newly created template.
@@ -236,7 +236,7 @@ public class CreatePromptTemplateResponse
 /// <summary>
 /// Request to create a new version of a prompt template.
 /// </summary>
-public class CreatePromptVersionRequest
+internal class CreatePromptVersionRequest
 {
     /// <summary>
     /// The prompt content for the new version.
@@ -258,7 +258,7 @@ public class CreatePromptVersionRequest
 /// <summary>
 /// Request to activate a specific version of a prompt template.
 /// </summary>
-public class ActivatePromptVersionRequest
+internal class ActivatePromptVersionRequest
 {
     /// <summary>
     /// Optional reason for activating this version (for audit log).
@@ -269,7 +269,7 @@ public class ActivatePromptVersionRequest
 /// <summary>
 /// Response for prompt version history.
 /// </summary>
-public class PromptVersionHistoryResponse
+internal class PromptVersionHistoryResponse
 {
     /// <summary>
     /// The template information.
@@ -290,7 +290,7 @@ public class PromptVersionHistoryResponse
 /// <summary>
 /// Response for prompt audit log.
 /// </summary>
-public class PromptAuditLogResponse
+internal class PromptAuditLogResponse
 {
     /// <summary>
     /// The template information.
@@ -311,7 +311,7 @@ public class PromptAuditLogResponse
 /// <summary>
 /// Response for listing prompt templates.
 /// </summary>
-public class PromptTemplateListResponse
+internal class PromptTemplateListResponse
 {
     /// <summary>
     /// List of templates.

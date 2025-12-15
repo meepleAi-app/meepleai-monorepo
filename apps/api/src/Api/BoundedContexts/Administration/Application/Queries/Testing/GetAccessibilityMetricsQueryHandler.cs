@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Administration.Application.Queries.Testing;
 /// Handler for GetAccessibilityMetricsQuery (Issue #2139)
 /// Retrieves accessibility metrics from Lighthouse reports
 /// </summary>
-public class GetAccessibilityMetricsQueryHandler : IQueryHandler<GetAccessibilityMetricsQuery, AccessibilityMetricsDto>
+internal class GetAccessibilityMetricsQueryHandler : IQueryHandler<GetAccessibilityMetricsQuery, AccessibilityMetricsDto>
 {
     private readonly ILighthouseReportParserService _lighthouseParser;
     private readonly ILogger<GetAccessibilityMetricsQueryHandler> _logger;
@@ -23,6 +23,7 @@ public class GetAccessibilityMetricsQueryHandler : IQueryHandler<GetAccessibilit
 
     public async Task<AccessibilityMetricsDto> Handle(GetAccessibilityMetricsQuery request, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         _logger.LogInformation("Retrieving accessibility metrics from Lighthouse reports");
 
         var metrics = await _lighthouseParser.ParseAccessibilityMetricsAsync(cancellationToken).ConfigureAwait(false);

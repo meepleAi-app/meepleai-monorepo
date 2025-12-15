@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.Persistence;
 /// <summary>
 /// Repository implementation for ChunkedUploadSession aggregate.
 /// </summary>
-public class ChunkedUploadSessionRepository : RepositoryBase, IChunkedUploadSessionRepository
+internal class ChunkedUploadSessionRepository : RepositoryBase, IChunkedUploadSessionRepository
 {
     public ChunkedUploadSessionRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
         : base(dbContext, eventCollector)

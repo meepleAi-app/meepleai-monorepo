@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Queries.BggApi;
 /// Returns top 5 results with basic metadata (BGG ID, name, year).
 /// External API integration with caching and rate limiting.
 /// </summary>
-public sealed record SearchBggGamesQuery : IQuery<List<BggSearchResultDto>>
+internal sealed record SearchBggGamesQuery : IQuery<List<BggSearchResultDto>>
 {
     public string Query { get; init; } = string.Empty;
     public bool Exact { get; init; } = false;

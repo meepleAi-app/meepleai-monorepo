@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.WorkflowIntegration.Application.EventHandlers;
 /// <summary>
 /// Handler for WorkflowErrorLoggedEvent domain event.
 /// </summary>
-public sealed class WorkflowErrorLoggedEventHandler : DomainEventHandlerBase<WorkflowErrorLoggedEvent>
+internal sealed class WorkflowErrorLoggedEventHandler : DomainEventHandlerBase<WorkflowErrorLoggedEvent>
 {
     public WorkflowErrorLoggedEventHandler(
         MeepleAiDbContext dbContext,

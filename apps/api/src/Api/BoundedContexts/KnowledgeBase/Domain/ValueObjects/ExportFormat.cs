@@ -3,7 +3,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 /// <summary>
 /// Export format for chat thread data.
 /// </summary>
-public enum ExportFormat
+internal enum ExportFormat
 {
     /// <summary>
     /// JSON format - machine-readable, structured data.

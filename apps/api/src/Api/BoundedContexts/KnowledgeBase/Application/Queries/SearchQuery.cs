@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 /// Query to perform vector/hybrid search.
 /// Issue #2051: Supports document filtering via DocumentIds
 /// </summary>
-public record SearchQuery(
+internal record SearchQuery(
     Guid GameId,
     string Query,
     int TopK = 5,

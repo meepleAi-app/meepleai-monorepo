@@ -6,11 +6,11 @@ namespace Api.BoundedContexts.Authentication.Application.Commands;
 /// <summary>
 /// Command to acknowledge API key logout (clients clear their stored keys).
 /// </summary>
-public record LogoutApiKeyCommand : ICommand<LogoutApiKeyResponse>;
+internal record LogoutApiKeyCommand : ICommand<LogoutApiKeyResponse>;
 
 /// <summary>
 /// Response for API key logout.
 /// </summary>
-public record LogoutApiKeyResponse(
+internal record LogoutApiKeyResponse(
     string Message
 );

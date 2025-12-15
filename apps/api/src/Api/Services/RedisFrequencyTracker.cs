@@ -10,7 +10,7 @@ namespace Api.Services;
 /// Provides data for dynamic TTL calculation and cache warming service.
 /// Redis ZSET key format: {FrequencyTrackerKeyPrefix}{gameId} (e.g., "meepleai:freq:game-guid")
 /// </summary>
-public class RedisFrequencyTracker : IRedisFrequencyTracker
+internal class RedisFrequencyTracker : IRedisFrequencyTracker
 {
     private readonly ILogger<RedisFrequencyTracker> _logger;
     private readonly IConnectionMultiplexer _redis;

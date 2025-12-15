@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Api.Infrastructure.EntityConfigurations;
 
-public class AgentFeedbackEntityConfiguration : IEntityTypeConfiguration<AgentFeedbackEntity>
+internal class AgentFeedbackEntityConfiguration : IEntityTypeConfiguration<AgentFeedbackEntity>
 {
     public void Configure(EntityTypeBuilder<AgentFeedbackEntity> builder)
     {

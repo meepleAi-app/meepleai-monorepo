@@ -14,7 +14,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 /// EF Core implementation of ChatThread repository.
 /// Maps between domain ChatThread entity and ChatThreadEntity persistence model.
 /// </summary>
-public class ChatThreadRepository : RepositoryBase, IChatThreadRepository
+internal class ChatThreadRepository : RepositoryBase, IChatThreadRepository
 {
     public ChatThreadRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
         : base(dbContext, eventCollector)

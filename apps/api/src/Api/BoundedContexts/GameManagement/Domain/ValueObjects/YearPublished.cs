@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 /// <summary>
 /// Value object representing the year a game was published.
 /// </summary>
-public sealed class YearPublished : ValueObject
+internal sealed class YearPublished : ValueObject
 {
     private const int MinYear = 1000; // Historical games support (e.g., Chess 1475, medieval games)
     private static readonly int MaxYear = DateTime.UtcNow.Year + 5; // Allow future releases
@@ -55,5 +55,10 @@ public sealed class YearPublished : ValueObject
     {
         if (year is null) throw new ArgumentNullException(nameof(year));
         return year.Value;
+    }
+
+    public int ToInt32()
+    {
+        throw new NotImplementedException();
     }
 }

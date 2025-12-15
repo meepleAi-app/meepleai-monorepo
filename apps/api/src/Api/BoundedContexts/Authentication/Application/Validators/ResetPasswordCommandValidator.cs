@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Authentication.Application.Validators;
 /// Ensures reset token is a valid GUID and new password meets complexity requirements.
 /// Issue #1449: FluentValidation for Authentication CQRS pipeline
 /// </summary>
-public sealed class ResetPasswordCommandValidator : AbstractValidator<ResetPasswordCommand>
+internal sealed class ResetPasswordCommandValidator : AbstractValidator<ResetPasswordCommand>
 {
     public ResetPasswordCommandValidator()
     {

@@ -12,7 +12,7 @@ namespace Api.BoundedContexts.Administration.Infrastructure.Persistence;
 /// EF Core repository for ReportExecution aggregate
 /// ISSUE-916: Repository implementation for execution history
 /// </summary>
-public sealed class ReportExecutionRepository : IReportExecutionRepository
+internal sealed class ReportExecutionRepository : IReportExecutionRepository
 {
     private readonly MeepleAiDbContext _dbContext;
 

@@ -5,7 +5,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 
 namespace Api.BoundedContexts.WorkflowIntegration.Application.Handlers;
 
-public class DeleteN8NConfigCommandHandler : ICommandHandler<DeleteN8NConfigCommand, bool>
+internal class DeleteN8NConfigCommandHandler : ICommandHandler<DeleteN8NConfigCommand, bool>
 {
     private readonly IN8NConfigurationRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
@@ -20,6 +20,7 @@ public class DeleteN8NConfigCommandHandler : ICommandHandler<DeleteN8NConfigComm
 
     public async Task<bool> Handle(DeleteN8NConfigCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         var config = await _repository.GetByIdAsync(command.ConfigId, cancellationToken).ConfigureAwait(false);
         if (config == null)
             return false;

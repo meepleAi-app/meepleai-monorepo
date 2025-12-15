@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services.Analytics;
 /// ISSUE-1725: Analyzes correlation between cache effectiveness and LLM cost savings.
 /// Provides insights on cache ROI and optimization opportunities.
 /// </summary>
-public interface ICacheCorrelationAnalyzer
+internal interface ICacheCorrelationAnalyzer
 {
     /// <summary>
     /// Analyze cache effectiveness and cost impact
@@ -29,7 +29,7 @@ public interface ICacheCorrelationAnalyzer
 /// <summary>
 /// Cache effectiveness correlation report
 /// </summary>
-public record CacheCorrelationReport
+internal record CacheCorrelationReport
 {
     public required DateOnly StartDate { get; init; }
     public required DateOnly EndDate { get; init; }

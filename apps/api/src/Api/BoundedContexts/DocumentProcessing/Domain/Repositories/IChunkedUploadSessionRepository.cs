@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 /// <summary>
 /// Repository interface for ChunkedUploadSession aggregate.
 /// </summary>
-public interface IChunkedUploadSessionRepository : IRepository<ChunkedUploadSession, Guid>
+internal interface IChunkedUploadSessionRepository : IRepository<ChunkedUploadSession, Guid>
 {
     /// <summary>
     /// Finds all active (non-expired, non-completed) sessions for a user.

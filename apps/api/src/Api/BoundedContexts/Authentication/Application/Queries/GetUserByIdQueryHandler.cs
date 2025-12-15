@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Authentication.Application.Queries;
 /// <summary>
 /// Handles retrieval of user by ID.
 /// </summary>
-public class GetUserByIdQueryHandler : IQueryHandler<GetUserByIdQuery, UserDto?>
+internal class GetUserByIdQueryHandler : IQueryHandler<GetUserByIdQuery, UserDto?>
 {
     private readonly IUserRepository _userRepository;
 
@@ -19,6 +19,7 @@ public class GetUserByIdQueryHandler : IQueryHandler<GetUserByIdQuery, UserDto?>
 
     public async Task<UserDto?> Handle(GetUserByIdQuery query, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(query);
         var user = await _userRepository.GetByIdAsync(query.UserId, cancellationToken).ConfigureAwait(false);
 
         return user != null ? MapToUserDto(user) : null;

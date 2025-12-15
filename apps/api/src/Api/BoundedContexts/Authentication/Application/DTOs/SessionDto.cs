@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.Authentication.Application.DTOs;
 /// <summary>
 /// Data transfer object for session information.
 /// </summary>
-public record SessionDto(
+internal record SessionDto(
     Guid Id,
     Guid UserId,
     DateTime CreatedAt,
@@ -21,7 +21,7 @@ public record SessionDto(
 /// <summary>
 /// DTO for session status check.
 /// </summary>
-public record SessionStatusDto(
+internal record SessionStatusDto(
     bool IsValid,
     UserDto? User,
     DateTime? ExpiresAt,

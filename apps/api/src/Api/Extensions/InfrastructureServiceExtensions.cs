@@ -13,7 +13,7 @@ using Microsoft.Extensions.Options;
 
 namespace Api.Extensions;
 
-public static class InfrastructureServiceExtensions
+internal static class InfrastructureServiceExtensions
 {
     public static IServiceCollection AddInfrastructureServices(
         this IServiceCollection services,

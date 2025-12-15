@@ -5,7 +5,7 @@ namespace Api.Services.Qdrant;
 /// <summary>
 /// Handles vector indexing operations in Qdrant
 /// </summary>
-public interface IQdrantVectorIndexer
+internal interface IQdrantVectorIndexer
 {
     /// <summary>
     /// Index a batch of vectors with their payloads

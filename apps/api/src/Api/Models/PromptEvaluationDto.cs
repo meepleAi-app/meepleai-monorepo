@@ -7,7 +7,7 @@ namespace Api.Models;
 /// Test dataset for prompt evaluation
 /// ADMIN-01 Phase 4: Prompt Testing Framework
 /// </summary>
-public class PromptTestDataset
+internal class PromptTestDataset
 {
     /// <summary>Unique dataset identifier</summary>
     [JsonPropertyName("dataset_id")]
@@ -37,7 +37,7 @@ public class PromptTestDataset
 /// <summary>
 /// Individual test case within a dataset
 /// </summary>
-public class PromptTestCase
+internal class PromptTestCase
 {
     /// <summary>Unique test case ID</summary>
     [JsonPropertyName("id")]
@@ -88,7 +88,7 @@ public class PromptTestCase
 /// Quality thresholds for evaluation pass/fail
 /// BGAI-041: Updated for 5-metric quality evaluation framework
 /// </summary>
-public class QualityThresholds
+internal class QualityThresholds
 {
     /// <summary>Minimum accuracy (0.0-1.0), default 0.80</summary>
     [JsonPropertyName("min_accuracy")]
@@ -114,7 +114,7 @@ public class QualityThresholds
 /// <summary>
 /// Result of evaluating a prompt version
 /// </summary>
-public class PromptEvaluationResult
+internal class PromptEvaluationResult
 {
     /// <summary>Unique evaluation run ID</summary>
     public required string EvaluationId { get; set; }
@@ -151,7 +151,7 @@ public class PromptEvaluationResult
 /// Evaluation metrics (5 core metrics)
 /// BGAI-041: Extended 5-metric quality evaluation framework
 /// </summary>
-public class EvaluationMetrics
+internal class EvaluationMetrics
 {
     /// <summary>
     /// Accuracy: Percentage of responses with correct information (required keywords/expected content)
@@ -197,7 +197,7 @@ public class EvaluationMetrics
 /// Result for a single query evaluation
 /// BGAI-041: Extended for 5-metric quality evaluation framework
 /// </summary>
-public class QueryEvaluationResult
+internal class QueryEvaluationResult
 {
     /// <summary>Test case ID</summary>
     public required string TestCaseId { get; set; }
@@ -236,7 +236,7 @@ public class QueryEvaluationResult
 /// <summary>
 /// A/B comparison result between two prompt versions
 /// </summary>
-public class PromptComparisonResult
+internal class PromptComparisonResult
 {
     /// <summary>Comparison run ID</summary>
     public required string ComparisonId { get; set; }
@@ -264,7 +264,7 @@ public class PromptComparisonResult
 /// Delta metrics for A/B comparison
 /// BGAI-041: Updated for 5-metric quality evaluation framework
 /// </summary>
-public class MetricDeltas
+internal class MetricDeltas
 {
     /// <summary>Change in accuracy percentage</summary>
     public double AccuracyDelta { get; set; }
@@ -285,7 +285,7 @@ public class MetricDeltas
 /// <summary>
 /// Comparison recommendation
 /// </summary>
-public enum ComparisonRecommendation
+internal enum ComparisonRecommendation
 {
     /// <summary>Candidate is significantly better, recommend activation</summary>
     Activate,
@@ -302,7 +302,7 @@ public enum ComparisonRecommendation
 /// <summary>
 /// Request to evaluate a prompt version
 /// </summary>
-public class EvaluatePromptRequest
+internal class EvaluatePromptRequest
 {
     /// <summary>Path to test dataset JSON file</summary>
     public required string DatasetPath { get; set; }
@@ -314,7 +314,7 @@ public class EvaluatePromptRequest
 /// <summary>
 /// Request to compare two prompt versions
 /// </summary>
-public class ComparePromptsRequest
+internal class ComparePromptsRequest
 {
     /// <summary>Baseline version ID (usually current active)</summary>
     public required string BaselineVersionId { get; set; }

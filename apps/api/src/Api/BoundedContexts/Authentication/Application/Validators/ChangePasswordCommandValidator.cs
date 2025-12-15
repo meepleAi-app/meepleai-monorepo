@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.Authentication.Application.Validators;
 /// and new password is different from current password.
 /// Issue #1449: FluentValidation for Authentication CQRS pipeline
 /// </summary>
-public sealed class ChangePasswordCommandValidator : AbstractValidator<ChangePasswordCommand>
+internal sealed class ChangePasswordCommandValidator : AbstractValidator<ChangePasswordCommand>
 {
     public ChangePasswordCommandValidator()
     {

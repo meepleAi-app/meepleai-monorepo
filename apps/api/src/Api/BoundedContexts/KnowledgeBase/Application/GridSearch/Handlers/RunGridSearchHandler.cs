@@ -13,7 +13,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.GridSearch.Handlers;
 /// ADR-016 Phase 5: Handler for running grid search evaluations.
 /// Executes evaluation across multiple configurations and aggregates results.
 /// </summary>
-public sealed class RunGridSearchHandler : IRequestHandler<RunGridSearchCommand, GridSearchResult>
+internal sealed class RunGridSearchHandler : IRequestHandler<RunGridSearchCommand, GridSearchResult>
 {
     private readonly IDatasetEvaluationService _evaluationService;
     private readonly ILogger<RunGridSearchHandler> _logger;
@@ -33,6 +33,7 @@ public sealed class RunGridSearchHandler : IRequestHandler<RunGridSearchCommand,
         RunGridSearchCommand request,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         var startedAt = DateTime.UtcNow;
         var overallStopwatch = Stopwatch.StartNew();
 

@@ -16,7 +16,7 @@ namespace Api.Middleware;
 ///
 /// Issue #1447: Implements 6 critical security headers for OWASP compliance.
 /// </summary>
-public class SecurityHeadersMiddleware
+internal class SecurityHeadersMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly ILogger<SecurityHeadersMiddleware> _logger;
@@ -135,7 +135,7 @@ public class SecurityHeadersMiddleware
 /// Configuration options for security headers middleware.
 /// Provides sensible defaults while allowing customization via appsettings.json.
 /// </summary>
-public class SecurityHeadersOptions
+internal class SecurityHeadersOptions
 {
     /// <summary>
     /// Configuration section name for appsettings.json binding.
@@ -230,7 +230,7 @@ public class SecurityHeadersOptions
 /// Validator for SecurityHeadersOptions to ensure configuration correctness at startup.
 /// Validates policy strings and detects common configuration errors.
 /// </summary>
-public class SecurityHeadersOptionsValidator : IValidateOptions<SecurityHeadersOptions>
+internal class SecurityHeadersOptionsValidator : IValidateOptions<SecurityHeadersOptions>
 {
     public ValidateOptionsResult Validate(string? name, SecurityHeadersOptions options)
     {
@@ -360,7 +360,7 @@ public class SecurityHeadersOptionsValidator : IValidateOptions<SecurityHeadersO
 /// <summary>
 /// Extension methods for registering security headers middleware.
 /// </summary>
-public static class SecurityHeadersMiddlewareExtensions
+internal static class SecurityHeadersMiddlewareExtensions
 {
     /// <summary>
     /// Adds security headers middleware to the pipeline.

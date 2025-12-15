@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 namespace Api.Infrastructure.EntityConfigurations;
 
 // AUTH-07: Temporary sessions for 2FA verification (short-lived, single-use)
-public class TempSessionEntityConfiguration : IEntityTypeConfiguration<TempSessionEntity>
+internal class TempSessionEntityConfiguration : IEntityTypeConfiguration<TempSessionEntity>
 {
     public void Configure(EntityTypeBuilder<TempSessionEntity> builder)
     {

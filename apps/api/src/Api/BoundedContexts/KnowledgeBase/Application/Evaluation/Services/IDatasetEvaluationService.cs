@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Services;
 /// Implements Recall@K, nDCG@K, MRR, and answer correctness evaluation.
 /// Named IDatasetEvaluationService to avoid conflict with Api.Services.IRagEvaluationService.
 /// </summary>
-public interface IDatasetEvaluationService
+internal interface IDatasetEvaluationService
 {
     /// <summary>
     /// Runs evaluation on a complete dataset.
@@ -50,7 +50,7 @@ public interface IDatasetEvaluationService
 /// <summary>
 /// Options for evaluation execution.
 /// </summary>
-public sealed record EvaluationOptions
+internal sealed record EvaluationOptions
 {
     /// <summary>
     /// Configuration name for tracking.

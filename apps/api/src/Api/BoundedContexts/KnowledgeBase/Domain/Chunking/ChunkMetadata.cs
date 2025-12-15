@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Chunking;
 /// ADR-016 Phase 1: Metadata for a chunk containing positional and semantic information.
 /// Value Object - immutable, equality by value.
 /// </summary>
-public sealed record ChunkMetadata
+internal sealed record ChunkMetadata
 {
     /// <summary>
     /// Page number where the chunk originates (1-based).
@@ -53,7 +53,7 @@ public sealed record ChunkMetadata
 /// <summary>
 /// Bounding box for spatial information from PDF extraction.
 /// </summary>
-public sealed record BoundingBox
+internal sealed record BoundingBox
 {
     public float X { get; init; }
     public float Y { get; init; }

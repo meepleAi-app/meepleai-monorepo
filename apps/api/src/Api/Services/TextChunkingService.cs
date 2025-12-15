@@ -6,7 +6,7 @@ namespace Api.Services;
 /// <summary>
 /// Service for chunking text documents into smaller segments for embedding
 /// </summary>
-public class TextChunkingService : ITextChunkingService
+internal class TextChunkingService : ITextChunkingService
 {
     private readonly ILogger<TextChunkingService> _logger;
     private const int DefaultChunkSize = ChunkingConstants.DefaultChunkSize;
@@ -264,7 +264,7 @@ public class TextChunkingService : ITextChunkingService
     /// Estimate page number based on character position
     /// Assumes ~2000 characters per page (rough estimate)
     /// </summary>
-    private static int EstimatePageNumber(int charPosition, int totalLength = -1)
+    private static int EstimatePageNumber(int charPosition)
     {
         const int charsPerPage = 2000;
         return (charPosition / charsPerPage) + 1;
@@ -290,7 +290,7 @@ public class TextChunkingService : ITextChunkingService
 /// <summary>
 /// Text chunk with metadata (no embedding yet)
 /// </summary>
-public record TextChunk
+internal record TextChunk
 {
     public string Text { get; init; } = string.Empty;
     public int Index { get; init; }
@@ -302,7 +302,7 @@ public record TextChunk
 /// <summary>
 /// Document chunk input ready for embedding
 /// </summary>
-public record DocumentChunkInput
+internal record DocumentChunkInput
 {
     public string Text { get; init; } = string.Empty;
     public int Page { get; init; }

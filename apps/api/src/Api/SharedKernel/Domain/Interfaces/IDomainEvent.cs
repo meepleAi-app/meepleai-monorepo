@@ -7,7 +7,7 @@ namespace Api.SharedKernel.Domain.Interfaces;
 /// Domain events represent something that happened in the domain that other parts of the system should know about.
 /// Extends INotification to enable MediatR integration for event dispatching.
 /// </summary>
-public interface IDomainEvent : INotification
+internal interface IDomainEvent : INotification
 {
     /// <summary>
     /// Gets the date and time when this event occurred.

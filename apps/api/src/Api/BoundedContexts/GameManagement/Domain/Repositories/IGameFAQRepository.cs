@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.GameManagement.Domain.Repositories;
 /// Repository interface for GameFAQ aggregate.
 /// Issue #2028: Backend FAQ system for game-specific FAQs.
 /// </summary>
-public interface IGameFAQRepository
+internal interface IGameFAQRepository
 {
     /// <summary>
     /// Gets an FAQ by ID.

@@ -14,7 +14,7 @@ namespace Api.BoundedContexts.GameManagement.Infrastructure.Persistence;
 /// Maps between domain GameFAQ entity and GameFAQEntity persistence model.
 /// Issue #2028: Backend FAQ system for game-specific FAQs.
 /// </summary>
-public class GameFAQRepository : RepositoryBase, IGameFAQRepository
+internal class GameFAQRepository : RepositoryBase, IGameFAQRepository
 {
     public GameFAQRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
         : base(dbContext, eventCollector)

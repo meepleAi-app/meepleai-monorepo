@@ -26,7 +26,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
 /// - Standard mode: Validates existing LLM response (layers 1, 3, 4)
 /// - Multi-model mode: Generates multi-model response + full validation (all 5 layers)
 /// </remarks>
-public interface IRagValidationPipelineService
+internal interface IRagValidationPipelineService
 {
     /// <summary>
     /// Validate a QA response through all applicable validation layers
@@ -66,7 +66,7 @@ public interface IRagValidationPipelineService
 /// <summary>
 /// Aggregated result from RAG validation pipeline
 /// </summary>
-public record RagValidationResult
+internal record RagValidationResult
 {
     /// <summary>
     /// Overall validation passed (all layers pass)
@@ -127,7 +127,7 @@ public record RagValidationResult
 /// <summary>
 /// Overall severity level for RAG validation
 /// </summary>
-public enum RagValidationSeverity
+internal enum RagValidationSeverity
 {
     /// <summary>
     /// All validations passed

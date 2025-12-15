@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Handlers;
 /// <summary>
 /// Handles resolving rule comments with optional recursive reply resolution.
 /// </summary>
-public class ResolveRuleCommentCommandHandler : IRequestHandler<ResolveRuleCommentCommand, RuleCommentDto>
+internal class ResolveRuleCommentCommandHandler : IRequestHandler<ResolveRuleCommentCommand, RuleCommentDto>
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly TimeProvider _timeProvider;
@@ -29,6 +29,7 @@ public class ResolveRuleCommentCommandHandler : IRequestHandler<ResolveRuleComme
 
     public async Task<RuleCommentDto> Handle(ResolveRuleCommentCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         var comment = await _dbContext.RuleSpecComments
             .Include(c => c.Replies)
             .FirstOrDefaultAsync(c => c.Id == command.CommentId, cancellationToken)

@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Administration.Application.Queries.PromptEvaluatio
 /// Supports Markdown (human-readable) and JSON (machine-readable) formats
 /// ADMIN-01 Phase 4: Prompt Testing Framework
 /// </summary>
-public sealed record GenerateEvaluationReportQuery : IQuery<(string Report, string ContentType)>
+internal sealed record GenerateEvaluationReportQuery : IQuery<(string Report, string ContentType)>
 {
     /// <summary>Evaluation ID to generate report for</summary>
     public required string EvaluationId { get; init; }

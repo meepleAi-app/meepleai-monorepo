@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 /// <summary>
 /// Value object representing valid player count range for a game.
 /// </summary>
-public sealed class PlayerCount : ValueObject
+internal sealed class PlayerCount : ValueObject
 {
     private const int AbsoluteMin = 1;
     private const int AbsoluteMax = 100;

@@ -3,7 +3,7 @@ using Api.SharedKernel.Application.Interfaces;
 
 namespace Api.BoundedContexts.SystemConfiguration.Application.Commands;
 
-public record CreateConfigurationCommand(
+internal record CreateConfigurationCommand(
     string Key,
     string Value,
     string ValueType,

@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.Authentication.Application.EventHandlers;
 /// Handles the ApiKeyRevokedEvent domain event.
 /// Creates audit log entry automatically via base class.
 /// </summary>
-public sealed class ApiKeyRevokedEventHandler : DomainEventHandlerBase<ApiKeyRevokedEvent>
+internal sealed class ApiKeyRevokedEventHandler : DomainEventHandlerBase<ApiKeyRevokedEvent>
 {
     public ApiKeyRevokedEventHandler(
         MeepleAiDbContext dbContext,

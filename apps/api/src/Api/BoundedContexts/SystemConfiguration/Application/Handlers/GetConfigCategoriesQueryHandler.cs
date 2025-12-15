@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.SystemConfiguration.Application.Handlers;
 /// <summary>
 /// Handles retrieval of all distinct configuration categories.
 /// </summary>
-public class GetConfigCategoriesQueryHandler : IQueryHandler<GetConfigCategoriesQuery, IReadOnlyList<string>>
+internal class GetConfigCategoriesQueryHandler : IQueryHandler<GetConfigCategoriesQuery, IReadOnlyList<string>>
 {
     private readonly IConfigurationRepository _configurationRepository;
 

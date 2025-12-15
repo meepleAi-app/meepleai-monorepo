@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.Administration.Application.Commands;
 /// <summary>
 /// Command to send an alert through configured channels (Email, Slack, PagerDuty).
 /// </summary>
-public record SendAlertCommand(
+internal record SendAlertCommand(
     string AlertType,
     string Severity,
     string Message,

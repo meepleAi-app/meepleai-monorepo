@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Administration.Infrastructure.Scheduling;
 /// Quartz.NET implementation of IReportSchedulerService
 /// ISSUE-916: Background job scheduling with Quartz
 /// </summary>
-public sealed class QuartzReportSchedulerService : IReportSchedulerService
+internal sealed class QuartzReportSchedulerService : IReportSchedulerService
 {
     private readonly ISchedulerFactory _schedulerFactory;
     private readonly ILogger<QuartzReportSchedulerService> _logger;

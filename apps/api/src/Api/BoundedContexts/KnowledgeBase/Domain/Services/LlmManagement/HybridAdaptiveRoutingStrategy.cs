@@ -12,7 +12,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
 /// ISSUE-963 (BGAI-021): Enhanced with AI:Providers configuration integration (Option C)
 /// ISSUE-1725: Enhanced with budget-aware model override support
 /// </summary>
-public class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
+internal class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
 {
     private readonly IConfiguration _configuration;
     private readonly ILlmModelOverrideService _modelOverrideService;

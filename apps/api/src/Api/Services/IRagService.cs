@@ -6,7 +6,7 @@ namespace Api.Services;
 /// AI-04: RAG (Retrieval-Augmented Generation) service interface for question answering and explanations.
 /// Provides semantic search with LLM generation and anti-hallucination guarantees.
 /// </summary>
-public interface IRagService
+internal interface IRagService
 {
     /// <summary>
     /// Answer a question using RAG with LLM generation and anti-hallucination.

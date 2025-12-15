@@ -4,7 +4,7 @@ namespace Api.Services;
 /// Service for detecting language from text content
 /// Supports 5 languages: English (en), Italian (it), German (de), French (fr), Spanish (es)
 /// </summary>
-public interface ILanguageDetectionService
+internal interface ILanguageDetectionService
 {
     /// <summary>
     /// Detect the language of the provided text

@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Handlers;
 /// <summary>
 /// Handles retrieval of version timeline with filtering and branching support.
 /// </summary>
-public class GetVersionTimelineQueryHandler : IQueryHandler<GetVersionTimelineQuery, VersionTimelineDto>
+internal class GetVersionTimelineQueryHandler : IQueryHandler<GetVersionTimelineQuery, VersionTimelineDto>
 {
     private readonly MeepleAiDbContext _dbContext;
 
@@ -19,6 +19,7 @@ public class GetVersionTimelineQueryHandler : IQueryHandler<GetVersionTimelineQu
 
     public async Task<VersionTimelineDto> Handle(GetVersionTimelineQuery query, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(query);
         var dbQuery = _dbContext.RuleSpecs
             .AsNoTracking()
             .Include(r => r.CreatedBy)

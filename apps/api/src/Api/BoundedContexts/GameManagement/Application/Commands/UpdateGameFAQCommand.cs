@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands;
 /// Command to update an existing FAQ.
 /// Issue #2028: Backend FAQ system for game-specific FAQs.
 /// </summary>
-public record UpdateGameFAQCommand(
+internal record UpdateGameFAQCommand(
     Guid Id,
     string Question,
     string Answer

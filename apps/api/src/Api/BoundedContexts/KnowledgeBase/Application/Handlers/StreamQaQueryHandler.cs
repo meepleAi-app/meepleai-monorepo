@@ -24,7 +24,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// CHAT-01: Integrates with ChatContextDomainService for conversation continuity
 /// AI-11: Tracks quality metrics and confidence scoring
 /// </summary>
-public class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagStreamingEvent>
+internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagStreamingEvent>
 {
     private readonly SearchQueryHandler _searchQueryHandler;
     private readonly QualityTrackingDomainService _qualityTrackingService;
@@ -305,9 +305,9 @@ public class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagStr
         string gameId,
         string queryText,
         List<Snippet> snippets,
-        string chatHistoryContext,
-        CancellationToken ct = default)
-        
+        string chatHistoryContext
+        )
+
     {
         var context = string.Join("\n\n", snippets.Select(s =>
             $"[Page {s.page}] {s.text}"));

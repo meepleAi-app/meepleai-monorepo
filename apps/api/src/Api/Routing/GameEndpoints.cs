@@ -13,7 +13,7 @@ namespace Api.Routing;
 /// Game management endpoints.
 /// Handles game CRUD operations and listing.
 /// </summary>
-public static class GameEndpoints
+internal static class GameEndpoints
 {
     public static RouteGroupBuilder MapGameEndpoints(this RouteGroupBuilder group)
     {

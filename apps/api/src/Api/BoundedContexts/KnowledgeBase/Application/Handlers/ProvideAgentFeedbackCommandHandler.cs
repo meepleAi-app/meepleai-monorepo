@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// Handler for ProvideAgentFeedbackCommand.
 /// Records user feedback for agent responses to track effectiveness.
 /// </summary>
-public sealed class ProvideAgentFeedbackCommandHandler : IRequestHandler<ProvideAgentFeedbackCommand>
+internal sealed class ProvideAgentFeedbackCommandHandler : IRequestHandler<ProvideAgentFeedbackCommand>
 {
     private static readonly HashSet<string> ValidOutcomes = new(StringComparer.Ordinal)
     {
@@ -35,6 +35,7 @@ public sealed class ProvideAgentFeedbackCommandHandler : IRequestHandler<Provide
 
     public async Task Handle(ProvideAgentFeedbackCommand request, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         if (string.IsNullOrWhiteSpace(request.MessageId))
         {
             throw new ArgumentException("messageId is required", nameof(request));

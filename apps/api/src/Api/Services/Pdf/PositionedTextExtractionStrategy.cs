@@ -8,7 +8,7 @@ namespace Api.Services.Pdf;
 /// <summary>
 /// Custom extraction strategy for positioned text
 /// </summary>
-public sealed class PositionedTextExtractionStrategy : IEventListener
+internal sealed class PositionedTextExtractionStrategy : IEventListener
 {
     private readonly List<PositionedCharacter> _characters = new();
 

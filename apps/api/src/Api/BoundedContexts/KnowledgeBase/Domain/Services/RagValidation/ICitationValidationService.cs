@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
 /// Domain service for validating citation accuracy and source references
 /// ISSUE-971: BGAI-029 - Citation validation (verify source references)
 /// </summary>
-public interface ICitationValidationService
+internal interface ICitationValidationService
 {
     /// <summary>
     /// Validate that citations reference actual source documents
@@ -32,7 +32,7 @@ public interface ICitationValidationService
 /// <summary>
 /// Result of citation validation
 /// </summary>
-public record CitationValidationResult
+internal record CitationValidationResult
 {
     /// <summary>
     /// Whether all citations are valid
@@ -75,7 +75,7 @@ public record CitationValidationResult
 /// <summary>
 /// Citation validation error details
 /// </summary>
-public record CitationValidationError
+internal record CitationValidationError
 {
     /// <summary>
     /// Citation source that failed validation
@@ -101,7 +101,7 @@ public record CitationValidationError
 /// <summary>
 /// Types of citation validation errors
 /// </summary>
-public enum CitationErrorType
+internal enum CitationErrorType
 {
     /// <summary>
     /// Citation references non-existent PDF document

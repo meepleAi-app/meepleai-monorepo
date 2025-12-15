@@ -4,7 +4,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Chunking;
 /// ADR-016 Phase 1: Configuration for chunking strategies.
 /// Value Object - immutable, equality by value.
 /// </summary>
-public sealed record ChunkingConfiguration
+internal sealed record ChunkingConfiguration
 {
     /// <summary>
     /// Configuration name identifier.

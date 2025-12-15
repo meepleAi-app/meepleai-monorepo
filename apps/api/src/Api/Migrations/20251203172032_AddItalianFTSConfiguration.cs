@@ -10,7 +10,7 @@ namespace Api.Migrations
     /// ADR-016 Phase 3: Adds Italian full-text search configuration for board game rules.
     /// Creates meepleai_italian text search configuration with game-specific synonyms.
     /// </summary>
-    public partial class AddItalianFTSConfiguration : Migration
+    internal partial class AddItalianFTSConfiguration : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

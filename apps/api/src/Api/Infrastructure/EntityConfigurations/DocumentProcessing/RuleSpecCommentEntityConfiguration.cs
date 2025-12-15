@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 namespace Api.Infrastructure.EntityConfigurations;
 
 // EDIT-05: Enhanced Comments System
-public class RuleSpecCommentEntityConfiguration : IEntityTypeConfiguration<RuleSpecCommentEntity>
+internal class RuleSpecCommentEntityConfiguration : IEntityTypeConfiguration<RuleSpecCommentEntity>
 {
     public void Configure(EntityTypeBuilder<RuleSpecCommentEntity> builder)
     {

@@ -7,7 +7,7 @@ namespace Api.Models;
 /// DTO for LLM provider health monitoring
 /// ISSUE-962 (BGAI-020): Admin endpoint response
 /// </summary>
-public record LlmHealthStatusDto(
+internal record LlmHealthStatusDto(
     Dictionary<string, ProviderHealthDto> Providers,
     string Summary
 );
@@ -15,7 +15,7 @@ public record LlmHealthStatusDto(
 /// <summary>
 /// Health status for a single LLM provider
 /// </summary>
-public record ProviderHealthDto(
+internal record ProviderHealthDto(
     string ProviderName,
     string Status,
     int SuccessfulChecks,

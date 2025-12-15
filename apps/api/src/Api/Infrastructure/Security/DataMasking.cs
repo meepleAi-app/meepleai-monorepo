@@ -7,7 +7,7 @@ namespace Api.Infrastructure.Security;
 /// Utility class for masking sensitive information in logs and error messages.
 /// Prevents exposure of PII, credentials, and other sensitive data.
 /// </summary>
-public static partial class DataMasking
+internal static partial class DataMasking
 {
     /// <summary>
     /// Masks sensitive string, keeping only first/last characters.

@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 /// EF Core implementation of ApiKey repository.
 /// Maps between domain ApiKey entity and ApiKeyEntity persistence model.
 /// </summary>
-public class ApiKeyRepository : RepositoryBase, IApiKeyRepository
+internal class ApiKeyRepository : RepositoryBase, IApiKeyRepository
 {
     public ApiKeyRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
         : base(dbContext, eventCollector)

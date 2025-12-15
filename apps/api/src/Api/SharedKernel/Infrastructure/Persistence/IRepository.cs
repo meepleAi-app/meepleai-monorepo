@@ -8,7 +8,7 @@ namespace Api.SharedKernel.Infrastructure.Persistence;
 /// </summary>
 /// <typeparam name="TEntity">The type of aggregate root</typeparam>
 /// <typeparam name="TId">The type of the aggregate root's identifier</typeparam>
-public interface IRepository<TEntity, TId>
+internal interface IRepository<TEntity, TId>
     where TEntity : class, IAggregateRoot, IEntity<TId>
     where TId : notnull
 {

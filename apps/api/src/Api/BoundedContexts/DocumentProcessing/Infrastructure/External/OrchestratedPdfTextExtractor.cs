@@ -12,7 +12,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 /// This adapter bridges the gap between IPdfTextExtractor (legacy interface)
 /// and EnhancedPdfProcessingOrchestrator (new 3-stage implementation)
 /// </remarks>
-public class OrchestratedPdfTextExtractor : IPdfTextExtractor
+internal class OrchestratedPdfTextExtractor : IPdfTextExtractor
 {
     private readonly EnhancedPdfProcessingOrchestrator _orchestrator;
 

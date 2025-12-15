@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands.CreateShareLin
 /// <param name="ExpiresAt">Expiration timestamp (UTC)</param>
 /// <param name="Label">Optional label for the share link</param>
 /// <param name="UserId">User creating the share link (from auth context)</param>
-public sealed record CreateShareLinkCommand(
+internal sealed record CreateShareLinkCommand(
     Guid ThreadId,
     ShareLinkRole Role,
     DateTime ExpiresAt,
@@ -26,7 +26,7 @@ public sealed record CreateShareLinkCommand(
 /// <param name="Token">JWT token to embed in shareable URL</param>
 /// <param name="ExpiresAt">Expiration timestamp</param>
 /// <param name="ShareableUrl">Complete URL with embedded token</param>
-public sealed record CreateShareLinkResult(
+internal sealed record CreateShareLinkResult(
     Guid ShareLinkId,
     string Token,
     DateTime ExpiresAt,

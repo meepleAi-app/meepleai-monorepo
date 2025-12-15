@@ -14,7 +14,7 @@ namespace Api.Routing;
 /// Miscellaneous admin endpoints.
 /// Handles seed data creation, chess knowledge indexing, and other administrative utilities.
 /// </summary>
-public static class AdminMiscEndpoints
+internal static class AdminMiscEndpoints
 {
     public static RouteGroupBuilder MapAdminMiscEndpoints(this RouteGroupBuilder group)
     {

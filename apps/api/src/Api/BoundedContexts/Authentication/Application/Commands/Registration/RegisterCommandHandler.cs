@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands;
 /// Handles user registration with email and password.
 /// Creates user and immediately authenticates with session token.
 /// </summary>
-public class RegisterCommandHandler : ICommandHandler<RegisterCommand, RegisterResponse>
+internal class RegisterCommandHandler : ICommandHandler<RegisterCommand, RegisterResponse>
 {
     private readonly IUserRepository _userRepository;
     private readonly ISessionRepository _sessionRepository;
@@ -29,6 +29,7 @@ public class RegisterCommandHandler : ICommandHandler<RegisterCommand, RegisterR
 
     public async Task<RegisterResponse> Handle(RegisterCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         // Validate and create email
         var email = new Email(command.Email);
 

@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands;
 /// Command to create a new rule comment with threading support.
 /// Supports inline comments on specific lines and @mention functionality.
 /// </summary>
-public record CreateRuleCommentCommand(
+internal record CreateRuleCommentCommand(
     string GameId,
     string Version,
     int? LineNumber,

@@ -17,7 +17,7 @@ namespace Api.Routing;
 /// Handles creation, retrieval, and management of document collections for games.
 /// Issue #2051: Multi-document collections
 /// </summary>
-public static class DocumentCollectionEndpoints
+internal static class DocumentCollectionEndpoints
 {
     public static RouteGroupBuilder MapDocumentCollectionEndpoints(this RouteGroupBuilder group)
     {

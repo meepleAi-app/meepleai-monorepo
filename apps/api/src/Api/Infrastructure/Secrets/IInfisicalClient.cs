@@ -6,7 +6,7 @@ namespace Api.Infrastructure.Secrets;
 /// Infisical secrets management client interface for POC (Issue #936).
 /// Provides access to secrets with versioning and rotation support.
 /// </summary>
-public interface IInfisicalClient
+internal interface IInfisicalClient
 {
     /// <summary>
     /// Retrieves the current value of a secret by name.
@@ -47,7 +47,7 @@ public interface IInfisicalClient
 /// <summary>
 /// Represents a specific version of a secret for rollback testing.
 /// </summary>
-public record SecretVersion(
+internal record SecretVersion(
     int Version,
     string Value,
     DateTime CreatedAt,

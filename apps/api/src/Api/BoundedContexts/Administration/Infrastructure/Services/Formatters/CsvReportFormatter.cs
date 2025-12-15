@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.Administration.Infrastructure.Services.Formatters;
 /// CSV report formatter
 /// ISSUE-916: Formats reports as CSV for data analysis
 /// </summary>
-public sealed class CsvReportFormatter : IReportFormatter
+internal sealed class CsvReportFormatter : IReportFormatter
 {
     public byte[] Format(ReportContent content)
     {

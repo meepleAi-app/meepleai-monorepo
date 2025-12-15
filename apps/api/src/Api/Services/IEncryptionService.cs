@@ -4,7 +4,7 @@ namespace Api.Services;
 /// Provides encryption and decryption services for sensitive data (OAuth tokens, etc.)
 /// Uses ASP.NET Core Data Protection API for secure key management and rotation.
 /// </summary>
-public interface IEncryptionService
+internal interface IEncryptionService
 {
     /// <summary>
     /// Encrypts plaintext using Data Protection API

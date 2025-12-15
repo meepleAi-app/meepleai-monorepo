@@ -12,7 +12,7 @@ namespace Api.BoundedContexts.Administration.Application.Handlers;
 /// Handler for bulk role change operations.
 /// Changes role for multiple users in a single transaction.
 /// </summary>
-public class BulkRoleChangeCommandHandler : ICommandHandler<BulkRoleChangeCommand, BulkOperationResult>
+internal class BulkRoleChangeCommandHandler : ICommandHandler<BulkRoleChangeCommand, BulkOperationResult>
 {
     private const int MaxBulkSize = 1000;
     private readonly IUserRepository _userRepository;
@@ -31,6 +31,7 @@ public class BulkRoleChangeCommandHandler : ICommandHandler<BulkRoleChangeComman
 
     public async Task<BulkOperationResult> Handle(BulkRoleChangeCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         // Validation: Check bulk size limit
         if (command.UserIds == null || command.UserIds.Count == 0)
         {

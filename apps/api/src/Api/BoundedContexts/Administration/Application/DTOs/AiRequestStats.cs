@@ -3,7 +3,7 @@ namespace Api.BoundedContexts.Administration.Application.DTOs;
 /// <summary>
 /// Statistics about AI requests for analytics and monitoring.
 /// </summary>
-public record AiRequestStats
+internal record AiRequestStats
 {
     /// <summary>
     /// Total number of AI requests.

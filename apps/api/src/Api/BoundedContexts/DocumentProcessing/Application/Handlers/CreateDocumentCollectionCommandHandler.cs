@@ -14,7 +14,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Handlers;
 /// Handler for creating a new document collection with initial documents.
 /// Issue #2051: Multi-document collection creation with validation
 /// </summary>
-public class CreateDocumentCollectionCommandHandler : ICommandHandler<CreateDocumentCollectionCommand, DocumentCollectionDto>
+internal class CreateDocumentCollectionCommandHandler : ICommandHandler<CreateDocumentCollectionCommand, DocumentCollectionDto>
 {
     private readonly IDocumentCollectionRepository _collectionRepository;
     private readonly IPdfDocumentRepository _pdfRepository;
@@ -35,6 +35,7 @@ public class CreateDocumentCollectionCommandHandler : ICommandHandler<CreateDocu
 
     public async Task<DocumentCollectionDto> Handle(CreateDocumentCollectionCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         _logger.LogInformation(
             "Creating document collection for game {GameId} by user {UserId}",
             command.GameId, command.UserId);

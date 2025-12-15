@@ -8,7 +8,7 @@ namespace Api.Logging;
 /// (API keys, bearer tokens, passwords in connection strings) even when values
 /// are logged as scalars (not destructured).
 /// </summary>
-public class SensitiveStringRedactionEnricher : ILogEventEnricher
+internal class SensitiveStringRedactionEnricher : ILogEventEnricher
 {
     public void Enrich(LogEvent logEvent, ILogEventPropertyFactory propertyFactory)
     {

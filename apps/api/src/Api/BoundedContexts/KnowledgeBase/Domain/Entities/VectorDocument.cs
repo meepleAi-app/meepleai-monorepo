@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 /// Represents a document that has been indexed in the vector database.
 /// Controls embeddings and search operations for the document.
 /// </summary>
-public sealed class VectorDocument : AggregateRoot<Guid>
+internal sealed class VectorDocument : AggregateRoot<Guid>
 {
     public Guid GameId { get; private set; }
     public Guid PdfDocumentId { get; private set; }

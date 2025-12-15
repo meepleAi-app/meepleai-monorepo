@@ -5,7 +5,7 @@ using Api.SharedKernel.Application.Interfaces;
 
 namespace Api.BoundedContexts.SystemConfiguration.Application.Handlers;
 
-public class GetConfigByIdQueryHandler : IQueryHandler<GetConfigByIdQuery, ConfigurationDto?>
+internal class GetConfigByIdQueryHandler : IQueryHandler<GetConfigByIdQuery, ConfigurationDto?>
 {
     private readonly IConfigurationRepository _configurationRepository;
 
@@ -16,6 +16,7 @@ public class GetConfigByIdQueryHandler : IQueryHandler<GetConfigByIdQuery, Confi
 
     public async Task<ConfigurationDto?> Handle(GetConfigByIdQuery query, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(query);
         var config = await _configurationRepository.GetByIdAsync(query.ConfigId, cancellationToken).ConfigureAwait(false);
 
         if (config == null)

@@ -8,7 +8,7 @@ namespace Api.Routing;
 /// Audit log and request tracking endpoints (Admin only).
 /// Handles AI request logs, audit trail retrieval, and request filtering.
 /// </summary>
-public static class AuditEndpoints
+internal static class AuditEndpoints
 {
     public static RouteGroupBuilder MapAuditEndpoints(this RouteGroupBuilder group)
     {

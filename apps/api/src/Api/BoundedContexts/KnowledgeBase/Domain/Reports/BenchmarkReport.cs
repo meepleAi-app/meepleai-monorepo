@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Reports;
 /// ADR-016 Phase 5: Benchmark report for RAG pipeline evaluation.
 /// Contains structured data for generating markdown reports.
 /// </summary>
-public sealed record BenchmarkReport
+internal sealed record BenchmarkReport
 {
     /// <summary>
     /// Report generation timestamp.
@@ -114,7 +114,7 @@ public sealed record BenchmarkReport
 /// <summary>
 /// Phase 5 target metrics for evaluation.
 /// </summary>
-public sealed record Phase5Targets
+internal sealed record Phase5Targets
 {
     /// <summary>
     /// Minimum Recall@10 target.
@@ -135,7 +135,7 @@ public sealed record Phase5Targets
 /// <summary>
 /// Summary statistics for the benchmark report.
 /// </summary>
-public sealed record ReportSummary
+internal sealed record ReportSummary
 {
     /// <summary>
     /// Total configurations evaluated.

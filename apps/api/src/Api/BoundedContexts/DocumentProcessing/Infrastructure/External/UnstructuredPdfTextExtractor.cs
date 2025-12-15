@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 /// Unstructured library adapter for PDF text extraction (Stage 1 of 3-stage pipeline)
 /// Calls Python FastAPI microservice running Unstructured library
 /// </summary>
-public class UnstructuredPdfTextExtractor : IPdfTextExtractor
+internal class UnstructuredPdfTextExtractor : IPdfTextExtractor
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<UnstructuredPdfTextExtractor> _logger;

@@ -22,7 +22,7 @@ namespace Api.Routing;
 /// - Sensitive data redaction
 /// - Performance testing (100+ events in 1 minute)
 /// </remarks>
-public static class TelemetryTestEndpoints
+internal static class TelemetryTestEndpoints
 {
     private static readonly ActivitySource ActivitySource = new("MeepleAI.TelemetryTests", "1.0.0");
 

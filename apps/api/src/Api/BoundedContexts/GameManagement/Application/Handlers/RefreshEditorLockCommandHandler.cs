@@ -13,7 +13,7 @@ internal class RefreshEditorLockCommandHandler : ICommandHandler<RefreshEditorLo
 
     public RefreshEditorLockCommandHandler(IEditorLockService lockService)
     {
-        _lockService = lockService;
+        _lockService = lockService ?? throw new ArgumentNullException(nameof(lockService));
     }
 
     public Task<bool> Handle(RefreshEditorLockCommand command, CancellationToken cancellationToken)

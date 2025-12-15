@@ -9,7 +9,8 @@ internal class GetAlertRuleByIdQueryHandler : IRequestHandler<GetAlertRuleByIdQu
 {
     private readonly IAlertRuleRepository _repository;
 
-    public GetAlertRuleByIdQueryHandler(IAlertRuleRepository repository) => _repository = repository;
+    public GetAlertRuleByIdQueryHandler(IAlertRuleRepository repository) =>
+        _repository = repository ?? throw new ArgumentNullException(nameof(repository));
 
     public async Task<AlertRuleDto?> Handle(GetAlertRuleByIdQuery request, CancellationToken ct)
     {

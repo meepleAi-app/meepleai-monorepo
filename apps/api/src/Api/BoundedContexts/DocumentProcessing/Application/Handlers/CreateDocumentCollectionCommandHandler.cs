@@ -27,10 +27,10 @@ internal class CreateDocumentCollectionCommandHandler : ICommandHandler<CreateDo
         IUnitOfWork unitOfWork,
         ILogger<CreateDocumentCollectionCommandHandler> logger)
     {
-        _collectionRepository = collectionRepository;
-        _pdfRepository = pdfRepository;
-        _unitOfWork = unitOfWork;
-        _logger = logger;
+        _collectionRepository = collectionRepository ?? throw new ArgumentNullException(nameof(collectionRepository));
+        _pdfRepository = pdfRepository ?? throw new ArgumentNullException(nameof(pdfRepository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<DocumentCollectionDto> Handle(CreateDocumentCollectionCommand command, CancellationToken cancellationToken)

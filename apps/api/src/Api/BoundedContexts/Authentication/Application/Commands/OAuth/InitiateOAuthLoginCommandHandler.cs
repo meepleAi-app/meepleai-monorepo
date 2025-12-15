@@ -20,8 +20,8 @@ internal sealed class InitiateOAuthLoginCommandHandler : ICommandHandler<Initiat
         IOAuthService oauthService,
         ILogger<InitiateOAuthLoginCommandHandler> logger)
     {
-        _oauthService = oauthService;
-        _logger = logger;
+        _oauthService = oauthService ?? throw new ArgumentNullException(nameof(oauthService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<InitiateOAuthLoginResult> Handle(InitiateOAuthLoginCommand command, CancellationToken cancellationToken)

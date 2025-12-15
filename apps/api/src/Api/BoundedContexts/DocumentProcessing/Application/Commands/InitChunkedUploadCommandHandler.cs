@@ -22,9 +22,9 @@ internal class InitChunkedUploadCommandHandler : ICommandHandler<InitChunkedUplo
         MeepleAiDbContext dbContext,
         ILogger<InitChunkedUploadCommandHandler> logger)
     {
-        _sessionRepository = sessionRepository;
-        _dbContext = dbContext;
-        _logger = logger;
+        _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
+        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         // Use a temp directory for chunked uploads
         _uploadTempBasePath = Path.Combine(Path.GetTempPath(), "meepleai_uploads");

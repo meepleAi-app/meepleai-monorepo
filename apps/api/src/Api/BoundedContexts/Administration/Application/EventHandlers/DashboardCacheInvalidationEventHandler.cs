@@ -22,8 +22,8 @@ internal sealed class DashboardCacheInvalidationEventHandler :
         HybridCache cache,
         ILogger<DashboardCacheInvalidationEventHandler> logger)
     {
-        _cache = cache;
-        _logger = logger;
+        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     /// <summary>

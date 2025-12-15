@@ -14,8 +14,8 @@ internal class TestAlertCommandHandler : IRequestHandler<TestAlertCommand, bool>
         IAlertingService alertingService,
         ILogger<TestAlertCommandHandler> logger)
     {
-        _alertingService = alertingService;
-        _logger = logger;
+        _alertingService = alertingService ?? throw new ArgumentNullException(nameof(alertingService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<bool> Handle(TestAlertCommand request, CancellationToken ct)

@@ -232,8 +232,11 @@ internal sealed record EvaluationResult
     }
 
     private static IReadOnlyDictionary<string, EvaluationMetrics> CalculateMetricsByGroup(
-                )
+        IReadOnlyList<EvaluationSampleResult> results,
+        bool byDifficulty)
     {
+        ArgumentNullException.ThrowIfNull(results);
+
         // Note: This is a simplified implementation. In practice, you'd need to
         // group samples by difficulty or category and calculate metrics per group.
         // For now, returning empty to satisfy the caller signatures.

@@ -123,18 +123,9 @@ internal class EnhancedPdfProcessingOrchestrator
         var overallStopwatch = Stopwatch.StartNew();
 
         // Defense in depth: Validate file size before processing
-        var maxSize = _configuration.GetValue<long>(
-            "PdfProcessing:MaxFileSizeBytes",
-            104857600); // 100 MB default
-
-        if (pdfStream.CanSeek && pdfStream.Length > maxSize)
+        if (!ValidateFileSize(pdfStream, requestId, out var sizeError))
         {
-            _logger.LogWarning(
-                "[{RequestId}] PDF size {Size} bytes exceeds maximum {Max} bytes - rejecting",
-                requestId, pdfStream.Length, maxSize);
-
-            return EnhancedExtractionResult.CreateFailure(
-                $"PDF size ({pdfStream.Length / 1_000_000:F1} MB) exceeds maximum allowed ({maxSize / 1_000_000} MB)");
+            return EnhancedExtractionResult.CreateFailure(sizeError!);
         }
 
         _logger.LogInformation(
@@ -146,38 +137,12 @@ internal class EnhancedPdfProcessingOrchestrator
 
         try
         {
-            // Stage 1: Unstructured (fastest, high quality target)
-            var stage1Result = await TryExtractWithStage(
-                1,
-                "Unstructured",
-                _unstructuredExtractor,
-                pdfData,
-                Stage1QualityThreshold,
-                enableOcrFallback,
-                requestId,
-                ct).ConfigureAwait(false);
-
-            if (stage1Result != null)
+            // Try Stages 1-2 with quality thresholds
+            var result = await TryStages1And2Async(pdfData, enableOcrFallback, requestId, ct).ConfigureAwait(false);
+            if (result != null)
             {
                 overallStopwatch.Stop();
-                return CreateEnhancedResult(stage1Result, 1, "Unstructured", overallStopwatch.Elapsed, requestId);
-            }
-
-            // Stage 2: SmolDocling (VLM-based, complex layouts)
-            var stage2Result = await TryExtractWithStage(
-                2,
-                "SmolDocling",
-                _smolDoclingExtractor,
-                pdfData,
-                Stage2QualityThreshold,
-                enableOcrFallback,
-                requestId,
-                ct).ConfigureAwait(false);
-
-            if (stage2Result != null)
-            {
-                overallStopwatch.Stop();
-                return CreateEnhancedResult(stage2Result, 2, "SmolDocling", overallStopwatch.Elapsed, requestId);
+                return result;
             }
 
             // Stage 3: Docnet (fallback, best effort)
@@ -185,25 +150,40 @@ internal class EnhancedPdfProcessingOrchestrator
                 "[{RequestId}] Stages 1-2 failed or low quality, using Stage 3 (Docnet) fallback",
                 requestId);
 
-            var stage3Stopwatch = Stopwatch.StartNew();
-            var fallbackStream = pdfData.GetStream();
-            await using (fallbackStream.ConfigureAwait(false))
-            {
-                var stage3Result = await _docnetExtractor.ExtractTextAsync(fallbackStream, enableOcrFallback, ct).ConfigureAwait(false);
-                stage3Stopwatch.Stop();
-
-                _logger.LogInformation(
-                    "[{RequestId}] Stage 3 (Docnet) completed in {DurationMs}ms - Success={Success}, Quality={Quality}",
-                    requestId, stage3Stopwatch.Elapsed.TotalMilliseconds, stage3Result.Success, stage3Result.Quality);
-
-                overallStopwatch.Stop();
-                return CreateEnhancedResult(stage3Result, 3, "Docnet", overallStopwatch.Elapsed, requestId);
-            }
+            overallStopwatch.Stop();
+            return await ExecuteStage3FallbackAsync(pdfData, enableOcrFallback, overallStopwatch.Elapsed, requestId, ct).ConfigureAwait(false);
         }
         finally
         {
             // BGAI-087: Ensure temp file cleanup via Dispose
         }
+    }
+
+    /// <summary>
+    /// Tries extraction with Stages 1 and 2, returns result if successful
+    /// </summary>
+    private async Task<EnhancedExtractionResult?> TryStages1And2Async(
+        PdfDataHandle pdfData,
+        bool enableOcrFallback,
+        string requestId,
+        CancellationToken ct)
+    {
+        // Stage 1: Unstructured
+        var stage1Result = await TryExtractWithStage(
+            1, "Unstructured", _unstructuredExtractor, pdfData,
+            Stage1QualityThreshold, enableOcrFallback, requestId, ct).ConfigureAwait(false);
+
+        if (stage1Result != null)
+            return CreateEnhancedResult(stage1Result, 1, "Unstructured", TimeSpan.Zero, requestId);
+
+        // Stage 2: SmolDocling
+        var stage2Result = await TryExtractWithStage(
+            2, "SmolDocling", _smolDoclingExtractor, pdfData,
+            Stage2QualityThreshold, enableOcrFallback, requestId, ct).ConfigureAwait(false);
+
+        return stage2Result != null
+            ? CreateEnhancedResult(stage2Result, 2, "SmolDocling", TimeSpan.Zero, requestId)
+            : null;
     }
 
     /// <summary>
@@ -286,6 +266,96 @@ internal class EnhancedPdfProcessingOrchestrator
     }
 
     /// <summary>
+    /// Executes Stage 3 (Docnet) fallback for text extraction
+    /// </summary>
+    private async Task<EnhancedExtractionResult> ExecuteStage3FallbackAsync(
+        PdfDataHandle pdfData,
+        bool enableOcrFallback,
+        TimeSpan totalDuration,
+        string requestId,
+        CancellationToken ct)
+    {
+        var stage3Stopwatch = Stopwatch.StartNew();
+        var fallbackStream = pdfData.GetStream();
+        await using (fallbackStream.ConfigureAwait(false))
+        {
+            var stage3Result = await _docnetExtractor.ExtractTextAsync(fallbackStream, enableOcrFallback, ct).ConfigureAwait(false);
+            stage3Stopwatch.Stop();
+
+            _logger.LogInformation(
+                "[{RequestId}] Stage 3 (Docnet) completed in {DurationMs}ms - Success={Success}, Quality={Quality}",
+                requestId, stage3Stopwatch.Elapsed.TotalMilliseconds, stage3Result.Success, stage3Result.Quality);
+
+            return CreateEnhancedResult(stage3Result, 3, "Docnet", totalDuration, requestId);
+        }
+    }
+
+    /// <summary>
+    /// Executes Stage 3 (Docnet) fallback for paged text extraction
+    /// </summary>
+    private async Task<EnhancedPagedExtractionResult> ExecutePagedStage3FallbackAsync(
+        PdfDataHandle pdfData,
+        bool enableOcrFallback,
+        TimeSpan totalDuration,
+        string requestId,
+        CancellationToken ct)
+    {
+        var stage3Stopwatch = Stopwatch.StartNew();
+        var fallbackStream = pdfData.GetStream();
+        await using (fallbackStream.ConfigureAwait(false))
+        {
+            var stage3Result = await _docnetExtractor.ExtractPagedTextAsync(fallbackStream, enableOcrFallback, ct).ConfigureAwait(false);
+            stage3Stopwatch.Stop();
+
+            _logger.LogInformation(
+                "[{RequestId}] Stage 3 (Docnet) paged extraction completed in {DurationMs}ms - Success={Success}, Chunks={Chunks}",
+                requestId, stage3Stopwatch.Elapsed.TotalMilliseconds, stage3Result.Success, stage3Result.PageChunks.Count);
+
+            return CreateEnhancedPagedResult(stage3Result, 3, "Docnet", totalDuration, requestId);
+        }
+    }
+
+    /// <summary>
+    /// Creates paged validation failure result
+    /// </summary>
+    private static EnhancedPagedExtractionResult CreatePagedValidationFailureResult(string errorMessage, TimeSpan duration)
+    {
+        return new EnhancedPagedExtractionResult(
+            Success: false,
+            PageChunks: (IList<PageTextChunk>)new List<PageTextChunk>(),
+            TotalPages: 0,
+            TotalCharacters: 0,
+            OcrTriggered: false,
+            StageUsed: 0,
+            StageName: "Validation",
+            TotalDurationMs: (int)duration.TotalMilliseconds,
+            ErrorMessage: errorMessage);
+    }
+
+    /// <summary>
+    /// Validates PDF file size against configured maximum
+    /// </summary>
+    private bool ValidateFileSize(Stream pdfStream, string requestId, out string? errorMessage)
+    {
+        var maxSize = _configuration.GetValue<long>(
+            "PdfProcessing:MaxFileSizeBytes",
+            104857600); // 100 MB default
+
+        if (pdfStream.CanSeek && pdfStream.Length > maxSize)
+        {
+            _logger.LogWarning(
+                "[{RequestId}] PDF size {Size} bytes exceeds maximum {Max} bytes - rejecting",
+                requestId, pdfStream.Length, maxSize);
+
+            errorMessage = $"PDF size ({pdfStream.Length / 1_000_000:F1} MB) exceeds maximum allowed ({maxSize / 1_000_000} MB)";
+            return false;
+        }
+
+        errorMessage = null;
+        return true;
+    }
+
+    /// <summary>
     /// Maps ExtractionQuality enum to approximate quality score (0.0-1.0)
     /// </summary>
     /// <remarks>
@@ -350,28 +420,11 @@ internal class EnhancedPdfProcessingOrchestrator
             "[{RequestId}] Starting 3-stage paged PDF extraction pipeline",
             requestId);
 
-        // ISSUE-1160: Defense in depth - Validate file size before processing (same as non-paged method)
-        var maxSize = _configuration.GetValue<long>(
-            "PdfProcessing:MaxFileSizeBytes",
-            104857600); // 100 MB default
-
-        if (pdfStream.CanSeek && pdfStream.Length > maxSize)
+        // ISSUE-1160: Defense in depth - Validate file size before processing
+        if (!ValidateFileSize(pdfStream, requestId, out var sizeError))
         {
-            _logger.LogWarning(
-                "[{RequestId}] PDF size {Size} bytes exceeds maximum {Max} bytes - rejecting paged extraction",
-                requestId, pdfStream.Length, maxSize);
-
             overallStopwatch.Stop();
-            return new EnhancedPagedExtractionResult(
-                Success: false,
-                PageChunks: (IList<PageTextChunk>)new List<PageTextChunk>(),
-                TotalPages: 0,
-                TotalCharacters: 0,
-                OcrTriggered: false,
-                StageUsed: 0,
-                StageName: "Validation",
-                TotalDurationMs: (int)overallStopwatch.Elapsed.TotalMilliseconds,
-                ErrorMessage: $"PDF size ({pdfStream.Length / 1_000_000:F1} MB) exceeds maximum allowed ({maxSize / 1_000_000} MB)");
+            return CreatePagedValidationFailureResult(sizeError!, overallStopwatch.Elapsed);
         }
 
         // BGAI-087: Load PDF with size-based strategy (memory vs temp file)
@@ -418,20 +471,8 @@ internal class EnhancedPdfProcessingOrchestrator
                 "[{RequestId}] Stages 1-2 failed for paged extraction, using Stage 3 (Docnet) fallback",
                 requestId);
 
-            var stage3Stopwatch = Stopwatch.StartNew();
-            var fallbackStream = pdfData.GetStream();
-            await using (fallbackStream.ConfigureAwait(false))
-            {
-                var stage3Result = await _docnetExtractor.ExtractPagedTextAsync(fallbackStream, enableOcrFallback, ct).ConfigureAwait(false);
-                stage3Stopwatch.Stop();
-
-                _logger.LogInformation(
-                    "[{RequestId}] Stage 3 (Docnet) paged extraction completed in {DurationMs}ms - Success={Success}, Chunks={Chunks}",
-                    requestId, stage3Stopwatch.Elapsed.TotalMilliseconds, stage3Result.Success, stage3Result.PageChunks.Count);
-
-                overallStopwatch.Stop();
-                return CreateEnhancedPagedResult(stage3Result, 3, "Docnet", overallStopwatch.Elapsed, requestId);
-            }
+            overallStopwatch.Stop();
+            return await ExecutePagedStage3FallbackAsync(pdfData, enableOcrFallback, overallStopwatch.Elapsed, requestId, ct).ConfigureAwait(false);
         }
         finally
         {

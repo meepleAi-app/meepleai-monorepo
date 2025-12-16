@@ -122,6 +122,7 @@ public sealed class User : AggregateRoot<Guid>
     /// </summary>
     public void UpdateEmail(Email newEmail)
     {
+        ArgumentNullException.ThrowIfNull(newEmail);
         if (Email == newEmail)
             return; // No change
 
@@ -149,6 +150,8 @@ public sealed class User : AggregateRoot<Guid>
     /// </summary>
     public void AssignRole(Role newRole, Role requesterRole)
     {
+        ArgumentNullException.ThrowIfNull(newRole);
+        ArgumentNullException.ThrowIfNull(requesterRole);
         // Only admins can assign roles
         if (!requesterRole.IsAdmin())
             throw new DomainException("Only administrators can assign roles");
@@ -168,6 +171,7 @@ public sealed class User : AggregateRoot<Guid>
     /// </summary>
     public void UpdateRole(Role newRole)
     {
+        ArgumentNullException.ThrowIfNull(newRole);
         if (Role == newRole)
             return; // No change
 

@@ -409,7 +409,6 @@ v1Api.MapTestEndpoints();
 
 await app.RunAsync().ConfigureAwait(false);
 
-#pragma warning disable MA0051 // Method is too long - Bootstrap method requires comprehensive validation and error handling
 // Bootstrap: Create initial admin user if database is empty
 static async Task EnsureInitialAdminUserAsync(WebApplication app, MeepleAiDbContext db, IServiceProvider services)
 {
@@ -429,109 +428,26 @@ static async Task EnsureInitialAdminUserAsync(WebApplication app, MeepleAiDbCont
         return;
     }
 
-    // Get admin credentials from environment variables
-    var adminEmail = app.Configuration["INITIAL_ADMIN_EMAIL"];
-    // SEC-708: Read initial admin password from Docker Secret file or direct config
-    var adminPassword = SecretsHelper.GetSecretOrValue(
-        app.Configuration,
-        "INITIAL_ADMIN_PASSWORD",
-        app.Logger,
-        required: false
-    );
-    var adminDisplayName = app.Configuration["INITIAL_ADMIN_DISPLAY_NAME"] ?? "System Admin";
-
-    if (string.IsNullOrWhiteSpace(adminEmail) || string.IsNullOrWhiteSpace(adminPassword))
+    // Get and validate admin credentials
+    if (!TryGetAdminCredentials(app, out var adminEmail, out var adminPassword, out var adminDisplayName))
     {
-        app.Logger.LogWarning(
-            "⚠️  No admin user found and INITIAL_ADMIN_EMAIL/INITIAL_ADMIN_PASSWORD not set. " +
-            "Please create an admin user manually or set environment variables."
-        );
-        return;
-    }
-
-    // Validate email format
-    if (!adminEmail.Contains('@'))
-    {
-        app.Logger.LogError("Invalid INITIAL_ADMIN_EMAIL format: {Email}", adminEmail);
-        return;
-    }
-
-    // Validate password strength (minimum 8 chars, at least one uppercase, one digit)
-    if (adminPassword.Length < 8 ||
-        !adminPassword.Any(char.IsUpper) ||
-        !adminPassword.Any(char.IsDigit))
-    {
-        app.Logger.LogError(
-            "INITIAL_ADMIN_PASSWORD must be at least 8 characters with uppercase and digit"
-        );
         return;
     }
 
     try
     {
-        // Hash the password using PBKDF2
-        var passwordHashingService = services.GetRequiredService<IPasswordHashingService>();
-        var passwordHash = passwordHashingService.HashSecret(adminPassword);
+        // Create and save admin user
+        var adminUser = await CreateAdminUser(app, db, services, adminEmail!, adminPassword!, adminDisplayName!).ConfigureAwait(false);
 
-        // Create admin user
-        var adminUser = new UserEntity
-        {
-            Id = Guid.NewGuid(),
-            Email = adminEmail,
-            DisplayName = adminDisplayName,
-            PasswordHash = passwordHash,
-            Role = "admin",
-            CreatedAt = DateTime.UtcNow
-        };
-
-        db.Users.Add(adminUser);
-        await db.SaveChangesAsync().ConfigureAwait(false);
-
-        app.Logger.LogInformation(
-            "✅ Initial admin user created successfully: {Email} (ID: {UserId})",
-            adminEmail,
-            adminUser.Id
-        );
-
-        // Audit log
-        var auditLog = new AuditLogEntity
-        {
-            Id = Guid.NewGuid(),
-            UserId = null, // System-generated
-            Action = "BOOTSTRAP_ADMIN_CREATED",
-            Resource = "User",
-            ResourceId = adminUser.Id.ToString(),
-            Result = "Success",
-            Details = $"Initial admin user created: {adminEmail}",
-            IpAddress = "system",
-            UserAgent = "bootstrap",
-            CreatedAt = DateTime.UtcNow
-        };
-
-        db.AuditLogs.Add(auditLog);
-        await db.SaveChangesAsync().ConfigureAwait(false);
+        // Create audit log
+        await CreateAdminAuditLog(db, adminUser, adminEmail!).ConfigureAwait(false);
     }
 #pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
     // RACE CONDITION PATTERN: Log unexpected unique constraint violations before propagating.
     catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
 #pragma warning restore S2139
     {
-        // Race condition: Another instance created the admin user simultaneously
-        // Recheck if an admin user now exists
-        var adminNowExists = await db.Users
-            .AnyAsync(u => u.Role == "admin").ConfigureAwait(false);
-
-        if (adminNowExists)
-        {
-            app.Logger.LogInformation(
-                "ℹ️  Admin user creation skipped: Another instance created the admin user concurrently"
-            );
-            return;
-        }
-
-        // If no admin exists, this is an unexpected error - rethrow
-        app.Logger.LogError(ex, "Unique constraint violation but no admin user found");
-        throw;
+        await HandleAdminCreationRaceCondition(app, db, ex).ConfigureAwait(false);
     }
 #pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
     // BOOTSTRAP PATTERN: Log critical initialization failures before propagating.
@@ -542,9 +458,131 @@ static async Task EnsureInitialAdminUserAsync(WebApplication app, MeepleAiDbCont
     }
 #pragma warning restore S2139
 }
-#pragma warning restore MA0051
 
-#pragma warning disable MA0051 // Method is too long - Bootstrap method handles multiple test users with validation
+// Helper: Get and validate admin credentials from configuration
+static bool TryGetAdminCredentials(
+    WebApplication app,
+    out string? adminEmail,
+    out string? adminPassword,
+    out string? adminDisplayName)
+{
+    adminEmail = app.Configuration["INITIAL_ADMIN_EMAIL"];
+    adminPassword = SecretsHelper.GetSecretOrValue(
+        app.Configuration,
+        "INITIAL_ADMIN_PASSWORD",
+        app.Logger,
+        required: false
+    );
+    adminDisplayName = app.Configuration["INITIAL_ADMIN_DISPLAY_NAME"] ?? "System Admin";
+
+    if (string.IsNullOrWhiteSpace(adminEmail) || string.IsNullOrWhiteSpace(adminPassword))
+    {
+        app.Logger.LogWarning(
+            "⚠️  No admin user found and INITIAL_ADMIN_EMAIL/INITIAL_ADMIN_PASSWORD not set. " +
+            "Please create an admin user manually or set environment variables."
+        );
+        return false;
+    }
+
+    // Validate email format
+    if (!adminEmail.Contains('@'))
+    {
+        app.Logger.LogError("Invalid INITIAL_ADMIN_EMAIL format: {Email}", adminEmail);
+        return false;
+    }
+
+    // Validate password strength (minimum 8 chars, at least one uppercase, one digit)
+    if (adminPassword.Length < 8 ||
+        !adminPassword.Any(char.IsUpper) ||
+        !adminPassword.Any(char.IsDigit))
+    {
+        app.Logger.LogError(
+            "INITIAL_ADMIN_PASSWORD must be at least 8 characters with uppercase and digit"
+        );
+        return false;
+    }
+
+    return true;
+}
+
+// Helper: Create admin user entity and save to database
+static async Task<UserEntity> CreateAdminUser(
+    WebApplication app,
+    MeepleAiDbContext db,
+    IServiceProvider services,
+    string adminEmail,
+    string adminPassword,
+    string adminDisplayName)
+{
+    // Hash the password using PBKDF2
+    var passwordHashingService = services.GetRequiredService<IPasswordHashingService>();
+    var passwordHash = passwordHashingService.HashSecret(adminPassword);
+
+    // Create admin user
+    var adminUser = new UserEntity
+    {
+        Id = Guid.NewGuid(),
+        Email = adminEmail,
+        DisplayName = adminDisplayName,
+        PasswordHash = passwordHash,
+        Role = "admin",
+        CreatedAt = DateTime.UtcNow
+    };
+
+    db.Users.Add(adminUser);
+    await db.SaveChangesAsync().ConfigureAwait(false);
+
+    app.Logger.LogInformation(
+        "✅ Initial admin user created successfully: {Email} (ID: {UserId})",
+        adminEmail,
+        adminUser.Id
+    );
+
+    return adminUser;
+}
+
+// Helper: Create audit log for admin user creation
+static async Task CreateAdminAuditLog(MeepleAiDbContext db, UserEntity adminUser, string adminEmail)
+{
+    var auditLog = new AuditLogEntity
+    {
+        Id = Guid.NewGuid(),
+        UserId = null, // System-generated
+        Action = "BOOTSTRAP_ADMIN_CREATED",
+        Resource = "User",
+        ResourceId = adminUser.Id.ToString(),
+        Result = "Success",
+        Details = $"Initial admin user created: {adminEmail}",
+        IpAddress = "system",
+        UserAgent = "bootstrap",
+        CreatedAt = DateTime.UtcNow
+    };
+
+    db.AuditLogs.Add(auditLog);
+    await db.SaveChangesAsync().ConfigureAwait(false);
+}
+
+// Helper: Handle race condition when another instance creates admin user concurrently
+static async Task HandleAdminCreationRaceCondition(WebApplication app, MeepleAiDbContext db, DbUpdateException ex)
+{
+    // Race condition: Another instance created the admin user simultaneously
+    // Recheck if an admin user now exists
+    var adminNowExists = await db.Users
+        .AnyAsync(u => u.Role == "admin").ConfigureAwait(false);
+
+    if (adminNowExists)
+    {
+        app.Logger.LogInformation(
+            "ℹ️  Admin user creation skipped: Another instance created the admin user concurrently"
+        );
+        return;
+    }
+
+    // If no admin exists, this is an unexpected error - rethrow
+    app.Logger.LogError(ex, "Unique constraint violation but no admin user found");
+    throw;
+}
+
 // K6 Performance Testing: Ensure demo test users exist for testing (Issue #1663)
 static async Task EnsureTestUserExistsAsync(WebApplication app, MeepleAiDbContext db, IServiceProvider services)
 {
@@ -562,68 +600,79 @@ static async Task EnsureTestUserExistsAsync(WebApplication app, MeepleAiDbContex
 
     foreach (var userData in demoUsers)
     {
-        // Check if user already exists
-        var userExists = await db.Users.AnyAsync(u => u.Email == userData.Email).ConfigureAwait(false);
-
-        if (userExists)
-        {
-            app.Logger.LogDebug("ℹ️  Demo user already exists: {Email}", userData.Email);
-            continue;
-        }
-
-        try
-        {
-            var demoUser = new UserEntity
-            {
-                Id = Guid.NewGuid(),
-                Email = userData.Email,
-                DisplayName = userData.DisplayName,
-                PasswordHash = passwordHash,
-                Role = userData.Role,
-                CreatedAt = DateTime.UtcNow,
-                IsDemoAccount = true
-            };
-
-            db.Users.Add(demoUser);
-            await db.SaveChangesAsync().ConfigureAwait(false);
-
-            app.Logger.LogInformation(
-                "✅ Demo user created: {Email} ({Role}) - for Postman/Newman and K6 testing",
-                userData.Email,
-                userData.Role
-            );
-
-            // Audit log
-            var auditLog = new AuditLogEntity
-            {
-                Id = Guid.NewGuid(),
-                UserId = null,
-                Action = "DEMO_USER_CREATED",
-                Resource = "User",
-                ResourceId = demoUser.Id.ToString(),
-                Result = "Success",
-                Details = $"Demo user created: {userData.Email} ({userData.Role})",
-                IpAddress = "system",
-                UserAgent = "bootstrap",
-                CreatedAt = DateTime.UtcNow
-            };
-
-            db.AuditLogs.Add(auditLog);
-            await db.SaveChangesAsync().ConfigureAwait(false);
-        }
-        catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
-        {
-            app.Logger.LogDebug("ℹ️  Demo user creation skipped: {Email} already exists concurrently", userData.Email);
-        }
-        catch (Exception ex)
-        {
-            app.Logger.LogWarning(ex, "Failed to create demo user {Email} - non-critical for production", userData.Email);
-        }
+        await CreateDemoUserIfNotExists(app, db, userData.Email, userData.DisplayName, userData.Role, passwordHash).ConfigureAwait(false);
     }
 
     app.Logger.LogInformation("✓ Demo user seeding complete");
 }
-#pragma warning restore MA0051
+
+// Helper: Create demo user if it doesn't already exist
+static async Task CreateDemoUserIfNotExists(
+    WebApplication app,
+    MeepleAiDbContext db,
+    string email,
+    string displayName,
+    string role,
+    string passwordHash)
+{
+    // Check if user already exists
+    var userExists = await db.Users.AnyAsync(u => u.Email == email).ConfigureAwait(false);
+
+    if (userExists)
+    {
+        app.Logger.LogDebug("ℹ️  Demo user already exists: {Email}", email);
+        return;
+    }
+
+    try
+    {
+        var demoUser = new UserEntity
+        {
+            Id = Guid.NewGuid(),
+            Email = email,
+            DisplayName = displayName,
+            PasswordHash = passwordHash,
+            Role = role,
+            CreatedAt = DateTime.UtcNow,
+            IsDemoAccount = true
+        };
+
+        db.Users.Add(demoUser);
+        await db.SaveChangesAsync().ConfigureAwait(false);
+
+        app.Logger.LogInformation(
+            "✅ Demo user created: {Email} ({Role}) - for Postman/Newman and K6 testing",
+            email,
+            role
+        );
+
+        // Audit log
+        var auditLog = new AuditLogEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = null,
+            Action = "DEMO_USER_CREATED",
+            Resource = "User",
+            ResourceId = demoUser.Id.ToString(),
+            Result = "Success",
+            Details = $"Demo user created: {email} ({role})",
+            IpAddress = "system",
+            UserAgent = "bootstrap",
+            CreatedAt = DateTime.UtcNow
+        };
+
+        db.AuditLogs.Add(auditLog);
+        await db.SaveChangesAsync().ConfigureAwait(false);
+    }
+    catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
+    {
+        app.Logger.LogDebug("ℹ️  Demo user creation skipped: {Email} already exists concurrently", email);
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogWarning(ex, "Failed to create demo user {Email} - non-critical for production", email);
+    }
+}
 
 // Helper method to detect unique constraint violations across database providers
 static bool IsUniqueConstraintViolation(DbUpdateException ex)

@@ -25,3 +25,6 @@ using System.Diagnostics.CodeAnalysis;
 
 // CA1861: Prefer 'static readonly' fields over constant array arguments
 [assembly: SuppressMessage("Performance", "CA1861:Prefer 'static readonly' fields over constant array arguments", Justification = "Migrations are executed once and do not require this optimization", Scope = "namespaceanddescendants", Target = "~N:Api.Migrations")]
+
+// CA1062: Validate arguments of public methods
+[assembly: SuppressMessage("Design", "CA1062:Validate arguments of public methods", Justification = "Auto-generated migration code - EF Core guarantees non-null parameters", Scope = "namespaceanddescendants", Target = "~N:Api.Migrations")]

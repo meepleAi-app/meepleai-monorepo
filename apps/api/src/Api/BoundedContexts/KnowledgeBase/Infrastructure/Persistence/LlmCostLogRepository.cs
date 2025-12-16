@@ -36,6 +36,7 @@ public class LlmCostLogRepository : ILlmCostLogRepository
         string? userAgent,
         CancellationToken ct = default)
     {
+        ArgumentNullException.ThrowIfNull(cost);
         var entity = new LlmCostLogEntity
         {
             UserId = userId,

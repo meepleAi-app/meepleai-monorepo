@@ -14,6 +14,12 @@ internal class PrometheusHttpClient : IPrometheusQueryService
     private readonly HttpClient _httpClient;
     private readonly ILogger<PrometheusHttpClient> _logger;
 
+    // CA1869: Cache JsonSerializerOptions for better performance
+    private static readonly JsonSerializerOptions s_jsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
     public PrometheusHttpClient(
         HttpClient httpClient,
         IOptions<PrometheusOptions> options,
@@ -63,10 +69,7 @@ internal class PrometheusHttpClient : IPrometheusQueryService
             response.EnsureSuccessStatusCode();
 
             var content = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-            var prometheusResponse = JsonSerializer.Deserialize<PrometheusApiResponse>(content, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
+            var prometheusResponse = JsonSerializer.Deserialize<PrometheusApiResponse>(content, s_jsonOptions);
 
             if (prometheusResponse is null || !string.Equals(prometheusResponse.Status, "success", StringComparison.Ordinal))
             {
@@ -111,10 +114,7 @@ internal class PrometheusHttpClient : IPrometheusQueryService
             response.EnsureSuccessStatusCode();
 
             var content = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-            var prometheusResponse = JsonSerializer.Deserialize<PrometheusApiResponse>(content, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
+            var prometheusResponse = JsonSerializer.Deserialize<PrometheusApiResponse>(content, s_jsonOptions);
 
             if (prometheusResponse is null || !string.Equals(prometheusResponse.Status, "success", StringComparison.Ordinal))
             {

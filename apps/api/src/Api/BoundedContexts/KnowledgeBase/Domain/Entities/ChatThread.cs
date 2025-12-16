@@ -20,8 +20,16 @@ internal sealed class ChatThread : AggregateRoot<Guid>
     public DateTime CreatedAt { get; private set; }
     public DateTime LastMessageAt { get; private set; }
 
+
     private readonly List<ChatMessage> _messages = new();
     public IReadOnlyList<ChatMessage> Messages => _messages.AsReadOnly();
+
+    // CA1869: Cache JsonSerializerOptions for better performance
+    private static readonly JsonSerializerOptions s_exportOptions = new()
+    {
+        WriteIndented = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
 
     /// <summary>
     /// Private constructor for EF Core.
@@ -253,13 +261,7 @@ internal sealed class ChatThread : AggregateRoot<Guid>
             }).ToList()
         };
 
-        var options = new JsonSerializerOptions
-        {
-            WriteIndented = true,
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-        };
-
-        return JsonSerializer.Serialize(export, options);
+        return JsonSerializer.Serialize(export, s_exportOptions);
     }
 
     /// <summary>

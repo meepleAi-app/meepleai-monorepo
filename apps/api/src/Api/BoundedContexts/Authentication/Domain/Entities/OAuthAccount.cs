@@ -52,6 +52,7 @@ public sealed class OAuthAccount : AggregateRoot<Guid>
         string? refreshTokenEncrypted = null,
         DateTime? tokenExpiresAt = null) : base(id)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(provider);
         if (!SupportedProviders.Contains(provider))
             throw new ValidationException(nameof(provider), $"Unsupported OAuth provider: {provider}. Supported: {string.Join(", ", SupportedProviders)}");
 

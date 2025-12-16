@@ -60,6 +60,14 @@ internal class HybridLlmService : ILlmService
     // Default LLM parameters
     private const double DefaultTemperature = 0.3;
     private const int DefaultMaxTokens = 500;
+
+    // CA1869: Cache JsonSerializerOptions for better performance
+    private static readonly System.Text.Json.JsonSerializerOptions s_jsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        AllowTrailingCommas = true,
+        ReadCommentHandling = System.Text.Json.JsonCommentHandling.Skip
+    };
     public HybridLlmService(
         IEnumerable<ILlmClient> clients,
         ILlmRoutingStrategy routingStrategy,
@@ -322,14 +330,7 @@ internal class HybridLlmService : ILlmService
             // Clean common LLM formatting artifacts
             var jsonText = CleanJsonResponse(result.Response);
 
-            var options = new System.Text.Json.JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true,
-                AllowTrailingCommas = true,
-                ReadCommentHandling = System.Text.Json.JsonCommentHandling.Skip
-            };
-
-            var parsed = System.Text.Json.JsonSerializer.Deserialize<T>(jsonText, options);
+            var parsed = System.Text.Json.JsonSerializer.Deserialize<T>(jsonText, s_jsonOptions);
 
             if (parsed == null)
             {

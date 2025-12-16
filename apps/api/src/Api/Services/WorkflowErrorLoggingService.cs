@@ -75,7 +75,7 @@ internal class WorkflowErrorLoggingService : IWorkflowErrorLoggingService
         ArgumentNullException.ThrowIfNull(queryParams);
         var cacheKey = $"workflow-errors-{queryParams.WorkflowId}-{queryParams.FromDate}-{queryParams.ToDate}-{queryParams.Page}-{queryParams.Limit}";
 
-        return await _cache.GetOrCreateAsync(
+        return await _cache.GetOrCreateAsync<PagedResult<WorkflowErrorDto>>(
             cacheKey,
             async cancel =>
             {
@@ -134,7 +134,7 @@ internal class WorkflowErrorLoggingService : IWorkflowErrorLoggingService
     {
         var cacheKey = $"workflow-error-{id}";
 
-        return await _cache.GetOrCreateAsync(
+        return await _cache.GetOrCreateAsync<WorkflowErrorDto?>(
             cacheKey,
             async cancel =>
             {

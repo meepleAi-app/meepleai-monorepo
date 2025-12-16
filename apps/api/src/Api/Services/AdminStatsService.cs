@@ -21,6 +21,13 @@ internal class AdminStatsService : IAdminStatsService
     private readonly TimeProvider _timeProvider;
     private static readonly TimeSpan CacheDuration = TimeSpan.FromMinutes(1); // Issue #879: Reduced from 5min to 1min for dashboard stats
 
+    // CA1869: Cache JsonSerializerOptions for better performance
+    private static readonly JsonSerializerOptions s_exportOptions = new()
+    {
+        WriteIndented = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
+
     public AdminStatsService(
         MeepleAiDbContext dbContext,
         HybridCache cache,
@@ -43,7 +50,7 @@ internal class AdminStatsService : IAdminStatsService
     {
         var cacheKey = $"dashboard:stats:{queryParams.Days}:{queryParams.GameId}:{queryParams.RoleFilter}";
 
-        return await _cache.GetOrCreateAsync(
+        return await _cache.GetOrCreateAsync<DashboardStatsDto>(
             cacheKey,
             async cancel =>
             {
@@ -448,11 +455,7 @@ internal class AdminStatsService : IAdminStatsService
     /// </summary>
     private static string ExportToJson(DashboardStatsDto stats)
     {
-        return JsonSerializer.Serialize(stats, new JsonSerializerOptions
-        {
-            WriteIndented = true,
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-        });
+        return JsonSerializer.Serialize(stats, s_exportOptions);
     }
 
     /// <summary>

@@ -54,6 +54,18 @@ internal class RagEvaluationService : IRagEvaluationService
     private readonly TimeProvider _timeProvider;
     private readonly IConfigurationService _configService;
 
+    // CA1869: Cache JsonSerializerOptions for better performance
+    private static readonly JsonSerializerOptions s_deserializeOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
+    private static readonly JsonSerializerOptions s_serializeOptions = new()
+    {
+        WriteIndented = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
+
     public RagEvaluationService(
         IQdrantService qdrantService,
         IEmbeddingService embeddingService,
@@ -111,10 +123,7 @@ internal class RagEvaluationService : IRagEvaluationService
             }
 
             var jsonContent = await System.IO.File.ReadAllTextAsync(fullPath, ct).ConfigureAwait(false);
-            var dataset = JsonSerializer.Deserialize<RagEvaluationDataset>(jsonContent, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
+            var dataset = JsonSerializer.Deserialize<RagEvaluationDataset>(jsonContent, s_deserializeOptions);
 
             if (dataset == null)
             {
@@ -147,7 +156,6 @@ internal class RagEvaluationService : IRagEvaluationService
     }
 
     /// <inheritdoc/>
-#pragma warning disable MA0051 // Method is too long
     public async Task<RagEvaluationReport> EvaluateAsync(
         RagEvaluationDataset dataset,
         int topK = 10,
@@ -188,8 +196,28 @@ internal class RagEvaluationService : IRagEvaluationService
         }
 
         // Calculate aggregate statistics
+        var stats = CalculateAggregateStatistics(queryResults);
+
+        // Check quality gates
+        var (qualityGateFailures, passedQualityGates) = ValidateQualityGates(stats, thresholds, queryResults.Count);
+
+        // Create evaluation report
+        var report = CreateEvaluationReport(dataset.Name, queryResults, stats, qualityGateFailures, passedQualityGates);
+
+        _logger.LogInformation(
+            "RAG evaluation completed: {SuccessfulQueries}/{TotalQueries} successful, " +
+            "MRR={MRR:F4}, P@5={P5:F4}, Latency p95={Latencyp95:F2}ms, Passed={Passed}",
+            stats.SuccessfulCount, queryResults.Count, stats.MeanReciprocalRank, stats.AvgPrecisionAt5, stats.LatencyP95, passedQualityGates);
+
+        return report;
+    }
+
+    /// <summary>
+    /// Calculates aggregate statistics from query results
+    /// </summary>
+    private AggregateStatistics CalculateAggregateStatistics(List<RagEvaluationQueryResult> queryResults)
+    {
         var successfulQueries = queryResults.Where(r => r.Success).ToList();
-        var failedQueries = queryResults.Where(r => !r.Success).ToList();
 
         var avgPrecisionAt1 = successfulQueries.Count > 0
             ? successfulQueries.Average(r => r.PrecisionAt1)
@@ -221,7 +249,7 @@ internal class RagEvaluationService : IRagEvaluationService
 
         var confidenceValues = successfulQueries
             .Where(r => r.AverageConfidence.HasValue)
-            .Select(r => r.AverageConfidence!.Value) // Safe because of Where clause - null-forgiving operator used
+            .Select(r => r.AverageConfidence!.Value)
             .ToList();
 
         var avgConfidence = confidenceValues.Count > 0
@@ -234,23 +262,48 @@ internal class RagEvaluationService : IRagEvaluationService
         var latencyP95 = CalculatePercentile(latencies, 95);
         var latencyP99 = CalculatePercentile(latencies, 99);
 
-        // Check quality gates
+        return new AggregateStatistics
+        {
+            SuccessfulCount = successfulQueries.Count,
+            FailedCount = queryResults.Count - successfulQueries.Count,
+            AvgPrecisionAt1 = avgPrecisionAt1,
+            AvgPrecisionAt3 = avgPrecisionAt3,
+            AvgPrecisionAt5 = avgPrecisionAt5,
+            AvgPrecisionAt10 = avgPrecisionAt10,
+            AvgRecallAtK = avgRecallAtK,
+            MeanReciprocalRank = meanReciprocalRank,
+            AvgLatencyMs = avgLatency,
+            AvgConfidence = avgConfidence,
+            LatencyP50 = latencyP50,
+            LatencyP95 = latencyP95,
+            LatencyP99 = latencyP99
+        };
+    }
+
+    /// <summary>
+    /// Validates quality gates against thresholds
+    /// </summary>
+    private (List<string> Failures, bool Passed) ValidateQualityGates(
+        AggregateStatistics stats,
+        RagQualityThresholds thresholds,
+        int totalQueries)
+    {
         var qualityGateFailures = new List<string>();
-        var successRate = queryResults.Count > 0 ? (double)successfulQueries.Count / queryResults.Count : 0.0;
+        var successRate = totalQueries > 0 ? (double)stats.SuccessfulCount / totalQueries : 0.0;
 
-        if (avgPrecisionAt5 < thresholds.MinPrecisionAt5)
+        if (stats.AvgPrecisionAt5 < thresholds.MinPrecisionAt5)
         {
-            qualityGateFailures.Add($"Precision@5 ({avgPrecisionAt5:F4}) below threshold ({thresholds.MinPrecisionAt5:F4})");
+            qualityGateFailures.Add($"Precision@5 ({stats.AvgPrecisionAt5:F4}) below threshold ({thresholds.MinPrecisionAt5:F4})");
         }
 
-        if (meanReciprocalRank < thresholds.MinMeanReciprocalRank)
+        if (stats.MeanReciprocalRank < thresholds.MinMeanReciprocalRank)
         {
-            qualityGateFailures.Add($"MRR ({meanReciprocalRank:F4}) below threshold ({thresholds.MinMeanReciprocalRank:F4})");
+            qualityGateFailures.Add($"MRR ({stats.MeanReciprocalRank:F4}) below threshold ({thresholds.MinMeanReciprocalRank:F4})");
         }
 
-        if (latencyP95 > thresholds.MaxLatencyP95Ms)
+        if (stats.LatencyP95 > thresholds.MaxLatencyP95Ms)
         {
-            qualityGateFailures.Add($"Latency p95 ({latencyP95:F2}ms) above threshold ({thresholds.MaxLatencyP95Ms:F2}ms)");
+            qualityGateFailures.Add($"Latency p95 ({stats.LatencyP95:F2}ms) above threshold ({thresholds.MaxLatencyP95Ms:F2}ms)");
         }
 
         if (successRate < thresholds.MinSuccessRate)
@@ -259,38 +312,43 @@ internal class RagEvaluationService : IRagEvaluationService
         }
 
         var passedQualityGates = qualityGateFailures.Count == 0;
+        return (qualityGateFailures, passedQualityGates);
+    }
 
-        var report = new RagEvaluationReport
+    /// <summary>
+    /// Creates evaluation report from statistics and results
+    /// </summary>
+    private RagEvaluationReport CreateEvaluationReport(
+        string datasetName,
+        List<RagEvaluationQueryResult> queryResults,
+        AggregateStatistics stats,
+        List<string> qualityGateFailures,
+        bool passedQualityGates)
+    {
+        return new RagEvaluationReport
         {
-            DatasetName = dataset.Name,
+            DatasetName = datasetName,
             EvaluatedAt = _timeProvider.GetUtcNow().UtcDateTime,
             TotalQueries = queryResults.Count,
-            SuccessfulQueries = successfulQueries.Count,
-            FailedQueries = failedQueries.Count,
-            MeanReciprocalRank = meanReciprocalRank,
-            AvgPrecisionAt1 = avgPrecisionAt1,
-            AvgPrecisionAt3 = avgPrecisionAt3,
-            AvgPrecisionAt5 = avgPrecisionAt5,
-            AvgPrecisionAt10 = avgPrecisionAt10,
-            AvgRecallAtK = avgRecallAtK,
-            LatencyP50 = latencyP50,
-            LatencyP95 = latencyP95,
-            LatencyP99 = latencyP99,
-            AvgLatencyMs = avgLatency,
-            AvgConfidence = avgConfidence,
+            SuccessfulQueries = stats.SuccessfulCount,
+            FailedQueries = stats.FailedCount,
+            MeanReciprocalRank = stats.MeanReciprocalRank,
+            AvgPrecisionAt1 = stats.AvgPrecisionAt1,
+            AvgPrecisionAt3 = stats.AvgPrecisionAt3,
+            AvgPrecisionAt5 = stats.AvgPrecisionAt5,
+            AvgPrecisionAt10 = stats.AvgPrecisionAt10,
+            AvgRecallAtK = stats.AvgRecallAtK,
+            LatencyP50 = stats.LatencyP50,
+            LatencyP95 = stats.LatencyP95,
+            LatencyP99 = stats.LatencyP99,
+            AvgLatencyMs = stats.AvgLatencyMs,
+            AvgConfidence = stats.AvgConfidence,
             QueryResults = queryResults,
             PassedQualityGates = passedQualityGates,
             QualityGateFailures = qualityGateFailures
         };
-
-        _logger.LogInformation(
-            "RAG evaluation completed: {SuccessfulQueries}/{TotalQueries} successful, " +
-            "MRR={MRR:F4}, P@5={P5:F4}, Latency p95={Latencyp95:F2}ms, Passed={Passed}",
-            successfulQueries.Count, queryResults.Count, meanReciprocalRank, avgPrecisionAt5, latencyP95, passedQualityGates);
-
-        return report;
     }
-#pragma warning restore MA0051 // Method is too long
+
 
     /// <summary>
     /// Evaluate a single query
@@ -600,10 +658,27 @@ internal class RagEvaluationService : IRagEvaluationService
     {
         ArgumentNullException.ThrowIfNull(report);
 
-        return JsonSerializer.Serialize(report, new JsonSerializerOptions
-        {
-            WriteIndented = true,
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-        });
+        return JsonSerializer.Serialize(report, s_serializeOptions);
     }
 }
+
+/// <summary>
+/// Helper record to hold aggregate statistics for RAG evaluation
+/// </summary>
+internal record AggregateStatistics
+{
+    public int SuccessfulCount { get; init; }
+    public int FailedCount { get; init; }
+    public double AvgPrecisionAt1 { get; init; }
+    public double AvgPrecisionAt3 { get; init; }
+    public double AvgPrecisionAt5 { get; init; }
+    public double AvgPrecisionAt10 { get; init; }
+    public double AvgRecallAtK { get; init; }
+    public double MeanReciprocalRank { get; init; }
+    public double AvgLatencyMs { get; init; }
+    public double? AvgConfidence { get; init; }
+    public double LatencyP50 { get; init; }
+    public double LatencyP95 { get; init; }
+    public double LatencyP99 { get; init; }
+}
+

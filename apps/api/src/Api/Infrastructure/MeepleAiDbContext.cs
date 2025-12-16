@@ -74,6 +74,7 @@ public class MeepleAiDbContext : DbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
+        ArgumentNullException.ThrowIfNull(optionsBuilder);
         base.OnConfiguring(optionsBuilder);
 
         // Issue #1694: Suppress PendingModelChangesWarning in Alpha phase
@@ -87,6 +88,7 @@ public class MeepleAiDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        ArgumentNullException.ThrowIfNull(modelBuilder);
         base.OnModelCreating(modelBuilder);
 
         // Apply all entity configurations from assembly

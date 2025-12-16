@@ -25,6 +25,13 @@ internal class PromptEvaluationService : IPromptEvaluationService
     private readonly string _allowedDatasetsDirectory;
     private readonly TimeProvider _timeProvider;
     private readonly IConfigurationService _configService;
+
+    // CA1869: Cache JsonSerializerOptions for better performance
+    private static readonly JsonSerializerOptions s_exportOptions = new()
+    {
+        WriteIndented = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
     public PromptEvaluationService(
         IRagService ragService,
         MeepleAiDbContext dbContext,
@@ -836,11 +843,7 @@ internal class PromptEvaluationService : IPromptEvaluationService
     /// </summary>
     private string GenerateJsonReport(PromptEvaluationResult result)
     {
-        return JsonSerializer.Serialize(result, new JsonSerializerOptions
-        {
-            WriteIndented = true,
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-        });
+        return JsonSerializer.Serialize(result, s_exportOptions);
     }
 
     /// <summary>

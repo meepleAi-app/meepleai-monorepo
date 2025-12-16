@@ -98,7 +98,7 @@ internal partial class CreateRuleCommentCommandHandler : IRequestHandler<CreateR
                 .AsNoTracking()
                 .Where(u =>
                     (u.DisplayName != null && mentionedUsernames.Contains(u.DisplayName.ToLower()))
-                    || (u.Email != null && mentionedUsernames.Any(m => u.Email.ToLower().StartsWith(m))))
+                    || (u.Email != null && mentionedUsernames.Any(m => u.Email.ToLower().StartsWith(m, StringComparison.Ordinal))))
 #pragma warning restore MA0011, MA0074
                 .Select(u => u.Id.ToString())
                 .Distinct()

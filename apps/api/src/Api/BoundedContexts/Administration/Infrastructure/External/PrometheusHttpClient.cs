@@ -141,7 +141,7 @@ internal class PrometheusHttpClient : IPrometheusQueryService
     {
         // Prometheus step format: number + unit (s=seconds, m=minutes, h=hours, d=days, w=weeks, y=years)
         // Examples: "5m", "1h", "30s", "1d"
-        if (!System.Text.RegularExpressions.Regex.IsMatch(step, @"^\d+[smhdwy]$", 
+        if (!System.Text.RegularExpressions.Regex.IsMatch(step, @"^\d+[smhdwy]$",
             System.Text.RegularExpressions.RegexOptions.None, TimeSpan.FromSeconds(1)))
         {
             throw new ArgumentException(

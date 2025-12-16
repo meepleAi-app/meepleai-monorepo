@@ -16,7 +16,7 @@ namespace Api.BoundedContexts.Administration.Infrastructure.DependencyInjection;
 
 internal static class AdministrationServiceExtensions
 {
-    [Obsolete]
+    [Obsolete("Use AddAdministrationInfrastructure instead for modular registration")]
     public static IServiceCollection AddAdministrationContext(this IServiceCollection services)
     {
         // Repositories

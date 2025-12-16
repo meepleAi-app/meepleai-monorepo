@@ -443,9 +443,9 @@ internal static class CommonValidators
             return Result<TEnum>.Failure(notEmptyResult.Error!);
         }
 
-        if (!Enum.TryParse<TEnum>(value, true, out var enumValue) || !Enum.IsDefined(typeof(TEnum), enumValue))
+        if (!Enum.TryParse<TEnum>(value, true, out var enumValue) || !Enum.IsDefined(enumValue))
         {
-            var validValues = string.Join(", ", Enum.GetNames(typeof(TEnum)));
+            var validValues = string.Join(", ", Enum.GetNames<TEnum>());
             return Result<TEnum>.Failure(Error.Validation(
                 message ?? $"{parameterName} must be one of: {validValues}"));
         }

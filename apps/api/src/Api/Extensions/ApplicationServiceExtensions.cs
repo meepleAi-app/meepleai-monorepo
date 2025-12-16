@@ -19,7 +19,7 @@ namespace Api.Extensions;
 
 internal static class ApplicationServiceExtensions
 {
-    [Obsolete]
+    [Obsolete("Use modular service registration methods instead (AddVectorSearchServices, AddDomainServices, etc.)")]
     public static IServiceCollection AddApplicationServices(
         this IServiceCollection services,
         IConfiguration configuration)

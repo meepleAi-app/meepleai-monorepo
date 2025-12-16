@@ -184,9 +184,9 @@ internal class TesseractOcrAdapter : IOcrService, IDisposable
 
             return OcrResult.CreateSuccess(extractedText, meanConfidence, pageCount);
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException ex)
         {
-            _logger.LogWarning("OCR operation cancelled for PDF: {PdfPath}", pdfPath);
+            _logger.LogWarning(ex, "OCR operation cancelled for PDF: {PdfPath}", pdfPath);
             throw;
         }
 #pragma warning disable CA1031 // Do not catch general exception types

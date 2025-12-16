@@ -186,8 +186,8 @@ public sealed class User : AggregateRoot<Guid>
     /// <exception cref="DomainException">Thrown when 2FA is already enabled or backup codes are invalid.</exception>
     public void Enable2FA(TotpSecret totpSecret, List<BackupCode>? backupCodes = null)
     {
-        if (totpSecret == null)
-            throw new ArgumentNullException(nameof(totpSecret));
+        ArgumentNullException.ThrowIfNull(totpSecret);
+
 
         if (IsTwoFactorEnabled)
             throw new DomainException("Two-factor authentication is already enabled");
@@ -274,8 +274,8 @@ public sealed class User : AggregateRoot<Guid>
     /// <exception cref="DomainException">Thrown when provider is already linked.</exception>
     public void LinkOAuthAccount(OAuthAccount account)
     {
-        if (account == null)
-            throw new ArgumentNullException(nameof(account));
+        ArgumentNullException.ThrowIfNull(account);
+
 
         // Validate provider is supported (account constructor already validates this, but check again)
         if (!OAuthAccount.SupportedProviders.Contains(account.Provider))
@@ -369,11 +369,11 @@ public sealed class User : AggregateRoot<Guid>
     /// <exception cref="DomainException">Thrown when requester is not an admin.</exception>
     public void UpdateTier(UserTier newTier, Role requesterRole)
     {
-        if (newTier == null)
-            throw new ArgumentNullException(nameof(newTier));
+        ArgumentNullException.ThrowIfNull(newTier);
 
-        if (requesterRole == null)
-            throw new ArgumentNullException(nameof(requesterRole));
+
+        ArgumentNullException.ThrowIfNull(requesterRole);
+
 
         // Only admins can change user tiers
         if (!requesterRole.IsAdmin())

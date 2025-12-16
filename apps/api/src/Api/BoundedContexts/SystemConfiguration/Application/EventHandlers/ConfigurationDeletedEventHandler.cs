@@ -17,7 +17,7 @@ internal sealed class ConfigurationDeletedEventHandler : DomainEventHandlerBase<
     public ConfigurationDeletedEventHandler(
         MeepleAiDbContext dbContext,
         IHybridCacheService cache,
-        ILogger<DomainEventHandlerBase<ConfigurationDeletedEvent>> logger)
+        ILogger<ConfigurationDeletedEventHandler> logger)
         : base(dbContext, logger)
     {
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));

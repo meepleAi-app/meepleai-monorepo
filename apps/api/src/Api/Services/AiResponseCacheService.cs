@@ -21,8 +21,10 @@ internal class AiResponseCacheService : IAiResponseCacheService
         IHybridCacheService hybridCache,
         ILogger<AiResponseCacheService> logger)
     {
-        _hybridCache = hybridCache ?? throw new ArgumentNullException(nameof(hybridCache));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(hybridCache);
+        _hybridCache = hybridCache;
+        ArgumentNullException.ThrowIfNull(logger);
+        _logger = logger;
     }
 
     /// <inheritdoc />

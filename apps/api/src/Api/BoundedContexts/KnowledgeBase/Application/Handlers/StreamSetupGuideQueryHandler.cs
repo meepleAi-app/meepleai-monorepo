@@ -29,6 +29,28 @@ internal class StreamSetupGuideQueryHandler : IStreamingQueryHandler<StreamSetup
     private readonly IConfiguration _configuration;
     private readonly ILogger<StreamSetupGuideQueryHandler> _logger;
     private readonly TimeProvider _timeProvider;
+
+    /// <summary>
+    /// ADMIN-01 Phase 3: Hardcoded fallback prompt for backward compatibility
+    /// </summary>
+    private const string SetupGuideSystemPromptFallback = @"You are a board game setup assistant. Your job is to create clear, actionable setup instructions based ONLY on the provided rulebook context.
+
+CRITICAL INSTRUCTIONS:
+- Generate 3-7 numbered setup steps in a logical order
+- Each step should be concrete and actionable (e.g., 'Place the board in the center')
+- Keep each step instruction concise (1-2 sentences maximum)
+- Mark optional steps with '[OPTIONAL]' prefix in the title
+- Use information ONLY from the provided context
+- If the context is insufficient, generate generic but helpful setup steps
+- Return ONLY the steps in this exact format:
+
+STEP 1: <title>
+<instruction>
+
+STEP 2: <title>
+<instruction>
+
+etc.";
     public StreamSetupGuideQueryHandler(
         IEmbeddingService embeddingService,
         IQdrantService qdrantService,
@@ -484,33 +506,10 @@ TASK: Generate a step-by-step setup guide for this board game. Focus on the init
         }
 
         // Fallback: Use hardcoded prompt (backward compatibility)
-        return GetSetupGuideSystemPromptFallback();
+        return SetupGuideSystemPromptFallback;
     }
 
-    /// <summary>
-    /// ADMIN-01 Phase 3: Hardcoded fallback prompt for backward compatibility
-    /// </summary>
-    private string GetSetupGuideSystemPromptFallback()
-    {
-        return @"You are a board game setup assistant. Your job is to create clear, actionable setup instructions based ONLY on the provided rulebook context.
 
-CRITICAL INSTRUCTIONS:
-- Generate 3-7 numbered setup steps in a logical order
-- Each step should be concrete and actionable (e.g., 'Place the board in the center')
-- Keep each step instruction concise (1-2 sentences maximum)
-- Mark optional steps with '[OPTIONAL]' prefix in the title
-- Use information ONLY from the provided context
-- If the context is insufficient, generate generic but helpful setup steps
-- Return ONLY the steps in this exact format:
-
-STEP 1: <title>
-<instruction>
-
-STEP 2: <title>
-<instruction>
-
-etc.";
-    }
     /// <summary>
     /// Create a streaming event with timestamp
     /// </summary>

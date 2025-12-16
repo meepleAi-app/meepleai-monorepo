@@ -9,7 +9,7 @@ internal sealed class ChatThreadCreatedEventHandler : DomainEventHandlerBase<Cha
 {
     public ChatThreadCreatedEventHandler(
         MeepleAiDbContext dbContext,
-        ILogger<DomainEventHandlerBase<ChatThreadCreatedEvent>> logger)
+        ILogger<ChatThreadCreatedEventHandler> logger)
         : base(dbContext, logger)
     {
     }

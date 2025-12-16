@@ -46,8 +46,10 @@ internal class QualityReportService : BackgroundService, IQualityReportService
         IConfiguration configuration,
         TimeProvider? timeProvider = null)
     {
-        _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(scopeFactory);
+        _scopeFactory = scopeFactory;
+        ArgumentNullException.ThrowIfNull(logger);
+        _logger = logger;
         _timeProvider = timeProvider ?? TimeProvider.System;
 
         // Read configuration with defaults

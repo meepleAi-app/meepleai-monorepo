@@ -166,7 +166,7 @@ internal class HybridSearchService : IHybridSearchService
             query,
             gameId,
             limit,
-            phraseSearch: query.Contains("\""), // Enable phrase search if query has quotes
+            phraseSearch: query.Contains('"'), // Enable phrase search if query has quotes
             boostTerms: _config.BoostTerms,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -239,7 +239,7 @@ internal class HybridSearchService : IHybridSearchService
             query,
             gameId,
             fetchLimit,
-            phraseSearch: query.Contains("\""),
+            phraseSearch: query.Contains('"'),
             boostTerms: _config.BoostTerms,
             cancellationToken: cancellationToken);
 

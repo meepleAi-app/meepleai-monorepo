@@ -281,7 +281,7 @@ internal class TotpService : ITotpService
             catch (DbUpdateException ex) when (IsDuplicateKeyViolation(ex))
             {
                 // Concurrent request already stored this code - replay attack detected at DB level
-                _logger.LogWarning("🔴 TOTP replay attack detected via DB constraint for user {UserId}", userId);
+                _logger.LogWarning(ex, "🔴 TOTP replay attack detected via DB constraint for user {UserId}", userId);
                 await _auditService.LogAsync(userId.ToString(), "TotpReplayAttempt", "TwoFactor", userId.ToString(), "Blocked",
                     "Replay attack prevented by database constraint - concurrent request").ConfigureAwait(false);
 

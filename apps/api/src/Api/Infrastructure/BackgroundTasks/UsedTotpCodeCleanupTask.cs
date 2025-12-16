@@ -23,8 +23,10 @@ internal class UsedTotpCodeCleanupTask : IHostedService, IDisposable
         ILogger<UsedTotpCodeCleanupTask> logger,
         TimeProvider? timeProvider = null)
     {
-        _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(serviceProvider);
+        _serviceProvider = serviceProvider;
+        ArgumentNullException.ThrowIfNull(logger);
+        _logger = logger;
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 

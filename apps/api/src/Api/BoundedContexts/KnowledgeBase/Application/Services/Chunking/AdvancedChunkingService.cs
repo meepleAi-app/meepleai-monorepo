@@ -32,8 +32,7 @@ internal sealed class AdvancedChunkingService : IAdvancedChunkingService
     {
         ct.ThrowIfCancellationRequested();
 
-        if (document == null)
-            throw new ArgumentNullException(nameof(document));
+        ArgumentNullException.ThrowIfNull(document);
 
         // Step 1: Auto-select strategy if not provided
         var elementTypes = document.Sections.Select(s => s.ElementType).ToList();
@@ -262,6 +261,8 @@ internal sealed class AdvancedChunkingService : IAdvancedChunkingService
         return childChunks;
     }
 
+    private static readonly string[] ParagraphSeparators = { "\r\n\r\n", "\n\n" };
+
     /// <summary>
     /// Splits text into paragraphs based on double newlines.
     /// </summary>
@@ -269,7 +270,7 @@ internal sealed class AdvancedChunkingService : IAdvancedChunkingService
     {
         // Split on double newlines (paragraph breaks)
         var paragraphs = text.Split(
-            new[] { "\r\n\r\n", "\n\n" },
+            ParagraphSeparators,
             StringSplitOptions.None);
 
         return paragraphs

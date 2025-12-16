@@ -14,7 +14,8 @@ internal sealed class UnitOfWork : IUnitOfWork
 
     public UnitOfWork(MeepleAiDbContext context)
     {
-        _context = context ?? throw new ArgumentNullException(nameof(context));
+        ArgumentNullException.ThrowIfNull(context);
+        _context = context;
     }
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

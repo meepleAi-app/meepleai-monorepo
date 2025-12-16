@@ -65,8 +65,20 @@ internal class PlaywrightReportParserService : IPlaywrightReportParserService
             var coverage = totalTests > 0 ? Math.Min(100, totalTests * 0.5m) : 0;
 
             // Determine status
-            var status = passRate >= 95 && flakyRate <= 5 ? "pass" :
-                        passRate >= 80 && flakyRate <= 10 ? "warning" : "fail";
+            // Determine status
+            string status;
+            if (passRate >= 95 && flakyRate <= 5)
+            {
+                status = "pass";
+            }
+            else if (passRate >= 80 && flakyRate <= 10)
+            {
+                status = "warning";
+            }
+            else
+            {
+                status = "fail";
+            }
 
             var lastRunAt = File.GetLastWriteTimeUtc(latestReport);
 

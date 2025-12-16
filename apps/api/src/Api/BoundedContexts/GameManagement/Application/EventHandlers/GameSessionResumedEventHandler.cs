@@ -9,7 +9,7 @@ internal sealed class GameSessionResumedEventHandler : DomainEventHandlerBase<Ga
 {
     public GameSessionResumedEventHandler(
         MeepleAiDbContext dbContext,
-        ILogger<DomainEventHandlerBase<GameSessionResumedEvent>> logger)
+        ILogger<GameSessionResumedEventHandler> logger)
         : base(dbContext, logger)
     {
     }

@@ -112,7 +112,7 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
                 _logger.LogWarning(ex, "Error deleting physical file for PDF {PdfId}", pdfId);
             }
 
-            await InvalidateCacheSafelyAsync(gameId.ToString(), cancellationToken, "PDF deletion").ConfigureAwait(false);
+            await InvalidateCacheSafelyAsync(gameId.ToString(), "PDF deletion", cancellationToken).ConfigureAwait(false);
 
             return new PdfDeleteResult(true, "PDF deleted successfully", gameId.ToString());
         }
@@ -141,7 +141,7 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
         }
     }
 
-    private async Task InvalidateCacheSafelyAsync(string gameId, CancellationToken ct, string operation)
+    private async Task InvalidateCacheSafelyAsync(string gameId, string operation, CancellationToken ct)
     {
         try
         {

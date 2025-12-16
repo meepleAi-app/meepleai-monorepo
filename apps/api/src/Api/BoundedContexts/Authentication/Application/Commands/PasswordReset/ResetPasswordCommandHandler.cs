@@ -73,7 +73,7 @@ internal sealed class ResetPasswordCommandHandler : ICommandHandler<ResetPasswor
         catch (ArgumentException ex)
         {
             // Password validation failed
-            _logger.LogWarning("Password reset failed: {Error}", ex.Message);
+            _logger.LogWarning(ex, "Password reset failed: {Error}", ex.Message);
             return new ResetPasswordResult
             {
                 Success = false,

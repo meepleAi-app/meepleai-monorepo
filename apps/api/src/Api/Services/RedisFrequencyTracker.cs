@@ -27,9 +27,12 @@ internal class RedisFrequencyTracker : IRedisFrequencyTracker
         IConnectionMultiplexer redis,
         IOptions<CacheOptimizationConfiguration> config)
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _redis = redis ?? throw new ArgumentNullException(nameof(redis));
-        _config = config?.Value ?? throw new ArgumentNullException(nameof(config));
+        ArgumentNullException.ThrowIfNull(logger);
+        _logger = logger;
+        ArgumentNullException.ThrowIfNull(redis);
+        _redis = redis;
+        ArgumentNullException.ThrowIfNull(config);
+        _config = config.Value;
     }
 
     /// <inheritdoc />

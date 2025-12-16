@@ -27,7 +27,7 @@ internal class WorkflowErrorLoggingService : IWorkflowErrorLoggingService
 
     public async Task LogErrorAsync(LogWorkflowErrorRequest request, CancellationToken ct = default)
     {
-        if (request is null) throw new ArgumentNullException(nameof(request));
+        ArgumentNullException.ThrowIfNull(request);
         try
         {
             var entity = new WorkflowErrorLogEntity
@@ -72,7 +72,7 @@ internal class WorkflowErrorLoggingService : IWorkflowErrorLoggingService
         WorkflowErrorsQueryParams queryParams,
         CancellationToken ct = default)
     {
-        if (queryParams is null) throw new ArgumentNullException(nameof(queryParams));
+        ArgumentNullException.ThrowIfNull(queryParams);
         var cacheKey = $"workflow-errors-{queryParams.WorkflowId}-{queryParams.FromDate}-{queryParams.ToDate}-{queryParams.Page}-{queryParams.Limit}";
 
         return await _cache.GetOrCreateAsync(

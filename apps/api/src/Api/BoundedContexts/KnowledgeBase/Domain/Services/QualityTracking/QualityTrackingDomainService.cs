@@ -96,7 +96,7 @@ internal class QualityTrackingDomainService
     private bool HasCitations(string response)
     {
         // Check for common citation patterns: [1], (Page 5), etc.
-        return response.Contains("[") || response.Contains("(Page");
+        return response.Contains('[') || response.Contains("(Page");
     }
 
     /// <summary>

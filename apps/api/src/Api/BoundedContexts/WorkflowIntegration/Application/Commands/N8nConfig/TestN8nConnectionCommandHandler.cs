@@ -20,8 +20,10 @@ internal sealed class TestN8NConnectionCommandHandler : ICommandHandler<TestN8NC
         N8NConfigService configService,
         ILogger<TestN8NConnectionCommandHandler> logger)
     {
-        _configService = configService ?? throw new ArgumentNullException(nameof(configService));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(configService);
+        _configService = configService;
+        ArgumentNullException.ThrowIfNull(logger);
+        _logger = logger;
     }
 
     public async Task<N8NTestResult> Handle(TestN8NConnectionCommand command, CancellationToken cancellationToken)

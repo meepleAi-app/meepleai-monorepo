@@ -22,3 +22,6 @@ using System.Diagnostics.CodeAnalysis;
 
 // CA1711: Identifiers should not have incorrect suffix
 [assembly: SuppressMessage("Naming", "CA1711:Identifiers should not have incorrect suffix", Justification = "Legacy naming conventions.")]
+
+// CA1861: Prefer 'static readonly' fields over constant array arguments
+[assembly: SuppressMessage("Performance", "CA1861:Prefer 'static readonly' fields over constant array arguments", Justification = "Migrations are executed once and do not require this optimization", Scope = "namespaceanddescendants", Target = "~N:Api.Migrations")]

@@ -20,8 +20,7 @@ internal record SearchResultDto(
     /// </summary>
     public static SearchResultDto FromDomain(SearchResult searchResult)
     {
-        if (searchResult == null)
-            throw new ArgumentNullException(nameof(searchResult));
+        ArgumentNullException.ThrowIfNull(searchResult);
 
         return new SearchResultDto(
             VectorDocumentId: searchResult.VectorDocumentId.ToString(),

@@ -99,13 +99,13 @@ internal class PdfMetadataExtractor : IPdfMetadataExtractor
             return null;
         }
 
-        var year = int.Parse(dateStr.Substring(0, 4), CultureInfo.InvariantCulture);
-        var month = int.Parse(dateStr.Substring(4, 2), CultureInfo.InvariantCulture);
-        var day = int.Parse(dateStr.Substring(6, 2), CultureInfo.InvariantCulture);
+        var year = int.Parse(dateStr.AsSpan(0, 4), CultureInfo.InvariantCulture);
+        var month = int.Parse(dateStr.AsSpan(4, 2), CultureInfo.InvariantCulture);
+        var day = int.Parse(dateStr.AsSpan(6, 2), CultureInfo.InvariantCulture);
 
-        var hour = dateStr.Length >= 10 ? int.Parse(dateStr.Substring(8, 2), CultureInfo.InvariantCulture) : 0;
-        var minute = dateStr.Length >= 12 ? int.Parse(dateStr.Substring(10, 2), CultureInfo.InvariantCulture) : 0;
-        var second = dateStr.Length >= 14 ? int.Parse(dateStr.Substring(12, 2), CultureInfo.InvariantCulture) : 0;
+        var hour = dateStr.Length >= 10 ? int.Parse(dateStr.AsSpan(8, 2), CultureInfo.InvariantCulture) : 0;
+        var minute = dateStr.Length >= 12 ? int.Parse(dateStr.AsSpan(10, 2), CultureInfo.InvariantCulture) : 0;
+        var second = dateStr.Length >= 14 ? int.Parse(dateStr.AsSpan(12, 2), CultureInfo.InvariantCulture) : 0;
 
         return new DateTime(year, month, day, hour, minute, second, DateTimeKind.Utc);
     }

@@ -9,7 +9,7 @@ internal sealed class ThreadReopenedEventHandler : DomainEventHandlerBase<Thread
 {
     public ThreadReopenedEventHandler(
         MeepleAiDbContext dbContext,
-        ILogger<DomainEventHandlerBase<ThreadReopenedEvent>> logger)
+        ILogger<ThreadReopenedEventHandler> logger)
         : base(dbContext, logger)
     {
     }

@@ -19,6 +19,7 @@ internal class BulkImportUsersCommandHandler : ICommandHandler<BulkImportUsersCo
 {
     private const int MaxBulkSize = 1000;
     private const int MaxCsvSizeBytes = 10 * 1024 * 1024; // 10MB
+    private static readonly char[] NewLineSeparators = { '\r', '\n' };
     private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<BulkImportUsersCommandHandler> _logger;
@@ -192,7 +193,7 @@ internal class BulkImportUsersCommandHandler : ICommandHandler<BulkImportUsersCo
     private static List<UserImportRecord> ParseCsv(string csvContent, List<string> errors)
     {
         var records = new List<UserImportRecord>();
-        var lines = csvContent.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+        var lines = csvContent.Split(NewLineSeparators, StringSplitOptions.RemoveEmptyEntries);
 
         if (lines.Length == 0)
         {

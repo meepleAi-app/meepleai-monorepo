@@ -26,6 +26,16 @@ internal static class TelemetryTestEndpoints
 {
     private static readonly ActivitySource ActivitySource = new("MeepleAI.TelemetryTests", "1.0.0");
 
+    private static readonly string[] TestErrorVerifyFields = { "timestamp", "level", "message", "service.name", "correlation_id" };
+    private static readonly string[] TestTraceVerifySpans = { "TelemetryTest.GenerateTrace", "TelemetryTest.ChildOperation" };
+    private static readonly string[] SensitiveDataVerify =
+    {
+        "password field should show [REDACTED]",
+        "apiKey field should show [REDACTED]",
+        "token field should show [REDACTED]",
+        "username field should be visible"
+    };
+
     /// <summary>
     /// Maps telemetry test endpoints to the application.
     /// </summary>
@@ -100,7 +110,7 @@ internal static class TelemetryTestEndpoints
             expectedInHyperDX = new
             {
                 search = $"service.name:meepleai-api AND level:error AND correlation_id:{correlationId}",
-                verifyFields = new[] { "timestamp", "level", "message", "service.name", "correlation_id" }
+                verifyFields = TestErrorVerifyFields
             }
         });
     }
@@ -169,7 +179,7 @@ internal static class TelemetryTestEndpoints
             expectedInHyperDX = new
             {
                 search = $"trace_id:{traceId}",
-                verifySpans = new[] { "TelemetryTest.GenerateTrace", "TelemetryTest.ChildOperation" },
+                verifySpans = TestTraceVerifySpans,
                 verifyCorrelation = "Click log → should auto-open trace view"
             }
         });
@@ -230,13 +240,7 @@ internal static class TelemetryTestEndpoints
             expectedInHyperDX = new
             {
                 search = $"trace_id:{activity.TraceId}",
-                verify = new[]
-                {
-                    "password field should show [REDACTED]",
-                    "apiKey field should show [REDACTED]",
-                    "token field should show [REDACTED]",
-                    "username field should be visible"
-                }
+                verify = SensitiveDataVerify
             }
         });
     }

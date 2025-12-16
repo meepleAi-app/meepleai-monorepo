@@ -13,7 +13,7 @@ internal sealed class ConfigurationCreatedEventHandler : DomainEventHandlerBase<
 {
     public ConfigurationCreatedEventHandler(
         MeepleAiDbContext dbContext,
-        ILogger<DomainEventHandlerBase<ConfigurationCreatedEvent>> logger)
+        ILogger<ConfigurationCreatedEventHandler> logger)
         : base(dbContext, logger)
     {
     }

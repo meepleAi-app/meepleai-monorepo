@@ -22,7 +22,7 @@ internal class GetAllGamesQueryHandler : IQueryHandler<GetAllGamesQuery, Paginat
     {
         // Validate and sanitize pagination parameters
         var page = query.Page < 1 ? 1 : query.Page;
-        var pageSize = query.PageSize < 1 ? 20 : (query.PageSize > 100 ? 100 : query.PageSize);
+        var pageSize = Math.Clamp(query.PageSize < 1 ? 20 : query.PageSize, 1, 100);
 
         // Get paginated games from repository
         var (games, total) = await _gameRepository.GetPaginatedAsync(

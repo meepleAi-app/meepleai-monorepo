@@ -1,4 +1,5 @@
 using Api.BoundedContexts.Administration.Infrastructure.Services.Formatters;
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.Administration.Infrastructure.Services;
@@ -74,7 +75,7 @@ internal sealed partial class ReportGeneratorService
             .ConfigureAwait(false);
 
         // ISSUE-917: Enhanced with multi-line chart
-        var dateLabels = pdfMetrics.Select(m => m.Date.ToString("MMM dd")).ToArray();
+        var dateLabels = pdfMetrics.Select(m => m.Date.ToString("MMM dd", CultureInfo.InvariantCulture)).ToArray();
         var pdfCountValues = pdfMetrics.Select(m => (double)m.Count).ToArray();
         var vectorCountValues = vectorMetrics.Select(v => (double)v.Count).ToArray();
 
@@ -86,7 +87,7 @@ internal sealed partial class ReportGeneratorService
                 Data: pdfMetrics.Select(m => new ReportDataRow(
                     new Dictionary<string, object>
 (StringComparer.Ordinal) {
-                        ["Date"] = m.Date.ToString("yyyy-MM-dd"),
+                        ["Date"] = m.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
                         ["Uploads"] = m.Count,
                         ["Total Size (MB)"] = $"{m.TotalSize / 1024.0 / 1024.0:F2}"
                     })).ToList(),
@@ -104,7 +105,7 @@ internal sealed partial class ReportGeneratorService
                 Data: vectorMetrics.Select(v => new ReportDataRow(
                     new Dictionary<string, object>
 (StringComparer.Ordinal) {
-                        ["Date"] = v.Date.ToString("yyyy-MM-dd"),
+                        ["Date"] = v.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
                         ["Documents"] = v.Count
                     })).ToList(),
                 Chart: new ChartData(

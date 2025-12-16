@@ -58,8 +58,7 @@ internal class RagValidationPipelineService : IRagValidationPipelineService
         string? language = null,
         CancellationToken cancellationToken = default)
     {
-        if (response == null)
-            throw new ArgumentNullException(nameof(response));
+        ArgumentNullException.ThrowIfNull(response);
 
         if (string.IsNullOrWhiteSpace(gameId))
             throw new ArgumentException("Game ID cannot be null or empty", nameof(gameId));
@@ -164,8 +163,7 @@ internal class RagValidationPipelineService : IRagValidationPipelineService
         string? language = null,
         CancellationToken cancellationToken = default)
     {
-        if (response == null)
-            throw new ArgumentNullException(nameof(response));
+        ArgumentNullException.ThrowIfNull(response);
 
         if (string.IsNullOrWhiteSpace(gameId))
             throw new ArgumentException("Game ID cannot be null or empty", nameof(gameId));

@@ -13,7 +13,7 @@ internal sealed class EmailChangedEventHandler : DomainEventHandlerBase<EmailCha
 {
     public EmailChangedEventHandler(
         MeepleAiDbContext dbContext,
-        ILogger<DomainEventHandlerBase<EmailChangedEvent>> logger)
+        ILogger<EmailChangedEventHandler> logger)
         : base(dbContext, logger)
     {
     }

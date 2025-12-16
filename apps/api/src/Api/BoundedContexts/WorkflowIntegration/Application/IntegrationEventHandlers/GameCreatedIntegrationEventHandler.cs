@@ -14,7 +14,8 @@ internal sealed class GameCreatedIntegrationEventHandler : INotificationHandler<
 
     public GameCreatedIntegrationEventHandler(ILogger<GameCreatedIntegrationEventHandler> logger)
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(logger);
+        _logger = logger;
     }
 
     public async Task Handle(GameCreatedIntegrationEvent notification, CancellationToken cancellationToken)

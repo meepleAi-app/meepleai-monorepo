@@ -390,7 +390,7 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
 
             // Step 3: Generate embeddings
             var (embeddingsSuccess, embeddings) = await GenerateEmbeddingsAsync(
-                pdfId, allDocumentChunks, pdfDoc, db, ct, scope).ConfigureAwait(false);
+                pdfId, allDocumentChunks, pdfDoc, db, scope, ct).ConfigureAwait(false);
             if (!embeddingsSuccess) return;
 
             // Step 4: Index in vector store and save to PostgreSQL
@@ -538,8 +538,8 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
         List<DocumentChunkInput> allDocumentChunks,
         PdfDocumentEntity pdfDoc,
         MeepleAiDbContext db,
-        CancellationToken ct,
-        IServiceScope scope)
+        IServiceScope scope,
+        CancellationToken ct)
     {
         var embeddingStopwatch = Stopwatch.StartNew();
         var embeddingService = scope.ServiceProvider.GetRequiredService<IEmbeddingService>();

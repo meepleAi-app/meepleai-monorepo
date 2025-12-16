@@ -19,8 +19,10 @@ internal sealed class GetN8NTemplatesQueryHandler : IQueryHandler<GetN8NTemplate
         N8NTemplateService templateService,
         ILogger<GetN8NTemplatesQueryHandler> logger)
     {
-        _templateService = templateService ?? throw new ArgumentNullException(nameof(templateService));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(templateService);
+        _templateService = templateService;
+        ArgumentNullException.ThrowIfNull(logger);
+        _logger = logger;
     }
 
     public async Task<List<WorkflowTemplateDto>> Handle(GetN8NTemplatesQuery query, CancellationToken cancellationToken)

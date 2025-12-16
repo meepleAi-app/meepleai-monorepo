@@ -23,6 +23,11 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
 /// </remarks>
 internal class CosineSimilarityCalculator
 {
+    private static readonly char[] TokenSeparators =
+    {
+        ' ', '\t', '\n', '\r', '.', ',', '!', '?', ';', ':', '(', ')', '[', ']', '{', '}', '"', '\'', '-', '—', '/', '\\'
+    };
+
     /// <summary>
     /// Calculate cosine similarity between two text documents using TF-IDF
     /// </summary>
@@ -68,7 +73,7 @@ internal class CosineSimilarityCalculator
 
         // Split on whitespace and punctuation
         var words = text.ToLowerInvariant()
-            .Split(new[] { ' ', '\t', '\n', '\r', '.', ',', '!', '?', ';', ':', '(', ')', '[', ']', '{', '}', '"', '\'', '-', '—', '/', '\\' },
+            .Split(TokenSeparators,
                 StringSplitOptions.RemoveEmptyEntries);
 
         foreach (var word in words)

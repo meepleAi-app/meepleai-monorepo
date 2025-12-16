@@ -458,7 +458,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
             storageResult.FileId!,
             (ct) => ProcessPdfAsync(storageResult.FileId!, storageResult.FilePath!, userId, ct));
 
-        await InvalidateCacheSafelyAsync(gameId, cancellationToken, "PDF upload").ConfigureAwait(false);
+        await InvalidateCacheSafelyAsync(gameId, "PDF upload", cancellationToken).ConfigureAwait(false);
 
         RecordUploadMetricSafely("success", file.Length);
 
@@ -1088,7 +1088,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
         await db.SaveChangesAsync(ct).ConfigureAwait(false);
 
-        await InvalidateCacheSafelyAsync(pdfDoc.GameId.ToString(), ct, "PDF processing").ConfigureAwait(false);
+        await InvalidateCacheSafelyAsync(pdfDoc.GameId.ToString(), "PDF processing", ct).ConfigureAwait(false);
 
         // Two-Phase Quota (#1743): Confirm quota (Phase 2)
         await quotaService.ConfirmQuotaAsync(userId, pdfId, CancellationToken.None).ConfigureAwait(false);
@@ -1213,7 +1213,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         }
     }
 
-    private async Task InvalidateCacheSafelyAsync(string gameId, CancellationToken ct, string operation)
+    private async Task InvalidateCacheSafelyAsync(string gameId, string operation, CancellationToken ct)
     {
         try
         {

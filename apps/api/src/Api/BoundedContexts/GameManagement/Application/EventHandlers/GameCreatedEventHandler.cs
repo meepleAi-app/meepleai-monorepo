@@ -18,7 +18,7 @@ internal sealed class GameCreatedEventHandler : DomainEventHandlerBase<GameCreat
 
     public GameCreatedEventHandler(
         MeepleAiDbContext dbContext,
-        ILogger<DomainEventHandlerBase<GameCreatedEvent>> logger,
+        ILogger<GameCreatedEventHandler> logger,
         IMediator mediator)
         : base(dbContext, logger)
     {

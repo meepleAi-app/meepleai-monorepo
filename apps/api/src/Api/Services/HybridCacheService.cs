@@ -40,7 +40,7 @@ internal class HybridCacheService : IHybridCacheService
         ArgumentNullException.ThrowIfNull(hybridCache);
         _hybridCache = hybridCache;
         ArgumentNullException.ThrowIfNull(config);
-        _config = config.Value ?? throw new ArgumentNullException(nameof(config));
+        _config = config.Value;
         ArgumentNullException.ThrowIfNull(logger);
         _logger = logger;
         _redis = redis;

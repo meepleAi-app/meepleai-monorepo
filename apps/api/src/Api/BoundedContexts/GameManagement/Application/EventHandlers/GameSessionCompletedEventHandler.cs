@@ -9,7 +9,7 @@ internal sealed class GameSessionCompletedEventHandler : DomainEventHandlerBase<
 {
     public GameSessionCompletedEventHandler(
         MeepleAiDbContext dbContext,
-        ILogger<DomainEventHandlerBase<GameSessionCompletedEvent>> logger)
+        ILogger<GameSessionCompletedEventHandler> logger)
         : base(dbContext, logger)
     {
     }

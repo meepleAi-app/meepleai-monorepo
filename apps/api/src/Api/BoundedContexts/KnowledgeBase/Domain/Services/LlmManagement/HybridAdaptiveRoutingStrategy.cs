@@ -104,7 +104,15 @@ internal class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
         var useOpenRouter = ShouldUseOpenRouter(openRouterPercent);
 
         // BGAI-022 Step 3: Check if selected provider is enabled
-        var selectedProvider = useOpenRouter ? "OpenRouter" : (ollamaModel.Contains('/') ? "OpenRouter" : "Ollama");
+        string selectedProvider;
+        if (useOpenRouter)
+        {
+            selectedProvider = "OpenRouter";
+        }
+        else
+        {
+            selectedProvider = ollamaModel.Contains('/') ? "OpenRouter" : "Ollama";
+        }
         // Note: Model selection (openRouterModel vs ollamaModel) is handled downstream in the provider routing logic
 
         // Verify provider is enabled (backward compatible: if AI section missing, allow all)
@@ -112,7 +120,7 @@ internal class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
             !settings.Providers[selectedProvider].Enabled)
         {
             _logger.LogWarning(
-                "[{UserId}] Selected provider {Provider} is disabled (AI:Providers:{Provider}:Enabled = false), trying fallback",
+                "[{UserId}] Selected provider {Provider} is disabled (AI:Providers:{ProviderName}:Enabled = false), trying fallback",
                 userId, selectedProvider, selectedProvider);
 
             // Try alternative provider

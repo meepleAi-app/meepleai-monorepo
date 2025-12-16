@@ -16,6 +16,8 @@ namespace Api.Routing;
 /// </summary>
 internal static class AdminUserEndpoints
 {
+    private static readonly string[] ValidTiers = { "free", "normal", "premium" };
+
     public static RouteGroupBuilder MapAdminUserEndpoints(this RouteGroupBuilder group)
     {
         // User search endpoint (authenticated users)
@@ -152,16 +154,15 @@ internal static class AdminUserEndpoints
             }
 
             // Validate tier value
-            var validTiers = new[] { "free", "normal", "premium" };
             if (string.IsNullOrWhiteSpace(request.Tier) ||
-                !validTiers.Contains(request.Tier.ToLowerInvariant(), StringComparer.Ordinal))
+                !ValidTiers.Contains(request.Tier.ToLowerInvariant(), StringComparer.Ordinal))
             {
                 logger.LogWarning("Admin {AdminId} attempted to set invalid tier: {Tier}",
                     requesterId, request.Tier);
                 return Results.BadRequest(new
                 {
                     error = "invalid_tier",
-                    message = $"Invalid tier value. Valid tiers are: {string.Join(", ", validTiers)}"
+                    message = $"Invalid tier value. Valid tiers are: {string.Join(", ", ValidTiers)}"
                 });
             }
 

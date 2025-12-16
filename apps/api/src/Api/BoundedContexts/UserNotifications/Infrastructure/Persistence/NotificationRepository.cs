@@ -105,10 +105,8 @@ internal class NotificationRepository : RepositoryBase, INotificationRepository
 
     public async Task DeleteAsync(Notification notification, CancellationToken cancellationToken = default)
     {
-        if (notification == null)
-        {
-            throw new ArgumentNullException(nameof(notification));
-        }
+        ArgumentNullException.ThrowIfNull(notification);
+
 
         await DbContext.Set<NotificationEntity>()
             .Where(n => n.Id == notification.Id)

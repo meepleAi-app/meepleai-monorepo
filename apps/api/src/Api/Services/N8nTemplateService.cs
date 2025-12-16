@@ -19,6 +19,12 @@ internal class N8NTemplateService
     private readonly ILogger<N8NTemplateService> _logger;
     private readonly string _templatesPath;
 
+    // CA1869: Cache JsonSerializerOptions for better performance
+    private static readonly JsonSerializerOptions s_jsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
     public N8NTemplateService(
         MeepleAiDbContext db,
         IHttpClientFactory httpClientFactory,
@@ -82,10 +88,7 @@ internal class N8NTemplateService
             try
             {
                 var json = await File.ReadAllTextAsync(file, ct).ConfigureAwait(false);
-                var template = JsonSerializer.Deserialize<WorkflowTemplateFile>(json, new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                });
+                var template = JsonSerializer.Deserialize<WorkflowTemplateFile>(json, s_jsonOptions);
 
                 if (template != null)
                 {
@@ -159,10 +162,7 @@ internal class N8NTemplateService
         try
         {
             var json = await File.ReadAllTextAsync(filePath, ct).ConfigureAwait(false);
-            var template = JsonSerializer.Deserialize<WorkflowTemplateFile>(json, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
+            var template = JsonSerializer.Deserialize<WorkflowTemplateFile>(json, s_jsonOptions);
 
             if (template == null)
             {
@@ -275,7 +275,7 @@ internal class N8NTemplateService
         {
             var template = JsonSerializer.Deserialize<WorkflowTemplateFile>(
                 templateJson,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                s_jsonOptions);
 
             if (template == null)
             {

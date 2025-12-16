@@ -50,6 +50,7 @@ public sealed class Session : AggregateRoot<Guid>
         string? userAgent = null,
         TimeProvider? timeProvider = null) : base(id)
     {
+        ArgumentNullException.ThrowIfNull(token);
         UserId = userId;
         TokenHash = token.ComputeHash();
         CreatedAt = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
@@ -66,6 +67,7 @@ public sealed class Session : AggregateRoot<Guid>
     /// </summary>
     public bool IsValid(TimeProvider timeProvider)
     {
+        ArgumentNullException.ThrowIfNull(timeProvider);
         var now = timeProvider.GetUtcNow().UtcDateTime;
 
         // Session is valid if not expired and not revoked
@@ -97,6 +99,7 @@ public sealed class Session : AggregateRoot<Guid>
     /// </summary>
     public bool IsExpired(TimeProvider timeProvider)
     {
+        ArgumentNullException.ThrowIfNull(timeProvider);
         return timeProvider.GetUtcNow().UtcDateTime >= ExpiresAt;
     }
 

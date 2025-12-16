@@ -21,6 +21,14 @@ internal sealed class ReportExecutionRepository : IReportExecutionRepository
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
     }
 
+    // CA1869: Cache JsonSerializerOptions for better performance
+    private static readonly JsonSerializerOptions s_deserializeOptions = new()
+    {
+        MaxDepth = 10,
+        PropertyNameCaseInsensitive = false,
+        AllowTrailingCommas = false
+    };
+
     public async Task<ReportExecution?> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
         var entity = await _dbContext.ReportExecutions
@@ -96,17 +104,9 @@ internal sealed class ReportExecutionRepository : IReportExecutionRepository
     // Entity to Domain mapping
     private static ReportExecution MapToDomain(ReportExecutionEntity entity)
     {
-        // ISSUE-916: Safe JSON deserialization with type restrictions (SECURITY)
-        var options = new JsonSerializerOptions
-        {
-            MaxDepth = 10,
-            PropertyNameCaseInsensitive = false,
-            AllowTrailingCommas = false
-        };
-
         var metadata = string.IsNullOrWhiteSpace(entity.ExecutionMetadataJson)
             ? new Dictionary<string, object>(StringComparer.Ordinal)
-            : JsonSerializer.Deserialize<Dictionary<string, object>>(entity.ExecutionMetadataJson, options)
+            : JsonSerializer.Deserialize<Dictionary<string, object>>(entity.ExecutionMetadataJson, s_deserializeOptions)
               ?? new Dictionary<string, object>(StringComparer.Ordinal);
 
         return new ReportExecution

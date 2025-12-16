@@ -52,7 +52,7 @@ internal class BggApiService : IBggApiService
         var cacheKey = $"bgg:search:{query.ToLowerInvariant()}:{exact}";
 
         // Try cache first (7-day TTL by default)
-        var cachedResults = await _cache.GetOrCreateAsync(
+        var cachedResults = await _cache.GetOrCreateAsync<List<BggSearchResultDto>?>(
             cacheKey,
             async cancel =>
             {
@@ -80,7 +80,7 @@ internal class BggApiService : IBggApiService
         var cacheKey = $"bgg:game:{bggId}";
 
         // Try cache first
-        var cachedDetails = await _cache.GetOrCreateAsync(
+        var cachedDetails = await _cache.GetOrCreateAsync<BggGameDetailsDto?>(
             cacheKey,
             async cancel =>
             {

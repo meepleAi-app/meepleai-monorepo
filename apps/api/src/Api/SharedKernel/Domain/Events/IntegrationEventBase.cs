@@ -31,6 +31,7 @@ internal abstract class IntegrationEventBase : IIntegrationEvent
     {
         EventId = Guid.NewGuid();
         OccurredAt = DateTime.UtcNow;
-        SourceContext = sourceContext ?? throw new ArgumentNullException(nameof(sourceContext));
+        ArgumentNullException.ThrowIfNull(sourceContext);
+        SourceContext = sourceContext;
     }
 }

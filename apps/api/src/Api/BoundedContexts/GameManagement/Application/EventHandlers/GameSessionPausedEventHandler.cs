@@ -9,7 +9,7 @@ internal sealed class GameSessionPausedEventHandler : DomainEventHandlerBase<Gam
 {
     public GameSessionPausedEventHandler(
         MeepleAiDbContext dbContext,
-        ILogger<DomainEventHandlerBase<GameSessionPausedEvent>> logger)
+        ILogger<GameSessionPausedEventHandler> logger)
         : base(dbContext, logger)
     {
     }

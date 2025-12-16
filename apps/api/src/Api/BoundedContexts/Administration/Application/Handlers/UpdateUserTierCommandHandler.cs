@@ -36,7 +36,7 @@ internal class UpdateUserTierCommandHandler : ICommandHandler<UpdateUserTierComm
     public async Task<UserDto> Handle(UpdateUserTierCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
-        if (command is null) throw new ArgumentNullException(nameof(command));
+        ArgumentNullException.ThrowIfNull(command);
         // Authorization: While endpoint checks admin role, we verify again for defense in depth
         // and to ensure handler can be safely called from any context
         var requester = await _userRepository.GetByIdAsync(command.RequesterUserId, cancellationToken).ConfigureAwait(false);

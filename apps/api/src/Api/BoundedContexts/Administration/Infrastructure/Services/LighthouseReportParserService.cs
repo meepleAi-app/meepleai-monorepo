@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Globalization;
 using Api.BoundedContexts.Administration.Application.Interfaces;
 using Api.BoundedContexts.Administration.Domain.ValueObjects;
 using Microsoft.Extensions.Configuration;
@@ -54,8 +55,20 @@ internal class LighthouseReportParserService : ILighthouseReportParserService
             if (accessibilityScore >= 90) wcagLevels.Add("AAA");
 
             // Determine status
-            var status = accessibilityScore >= 90 ? "pass" :
-                        accessibilityScore >= 75 ? "warning" : "fail";
+            // Determine status
+            string status;
+            if (accessibilityScore >= 90)
+            {
+                status = "pass";
+            }
+            else if (accessibilityScore >= 75)
+            {
+                status = "warning";
+            }
+            else
+            {
+                status = "fail";
+            }
 
             var lastRunAt = File.GetLastWriteTimeUtc(latestReport);
 
@@ -105,8 +118,20 @@ internal class LighthouseReportParserService : ILighthouseReportParserService
             var speedIndex = GetNumericValue(latestReport, "audits", "speed-index", "numericValue");
 
             // Determine budget status based on Core Web Vitals
-            var budgetStatus = lcp <= 2500 && fid <= 100 && cls <= 0.1 ? "pass" :
-                             lcp <= 4000 && fid <= 300 && cls <= 0.25 ? "warning" : "fail";
+            // Determine budget status based on Core Web Vitals
+            string budgetStatus;
+            if (lcp <= 2500 && fid <= 100 && cls <= 0.1)
+            {
+                budgetStatus = "pass";
+            }
+            else if (lcp <= 4000 && fid <= 300 && cls <= 0.25)
+            {
+                budgetStatus = "warning";
+            }
+            else
+            {
+                budgetStatus = "fail";
+            }
 
             var lastRunAt = File.GetLastWriteTimeUtc(latestReport);
 
@@ -198,7 +223,7 @@ internal class LighthouseReportParserService : ILighthouseReportParserService
             return element.ValueKind switch
             {
                 JsonValueKind.Number => element.GetDouble(),
-                JsonValueKind.String when double.TryParse(element.GetString(), out var val) => val,
+                JsonValueKind.String when double.TryParse(element.GetString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var val) => val,
                 _ => 0
             };
         }

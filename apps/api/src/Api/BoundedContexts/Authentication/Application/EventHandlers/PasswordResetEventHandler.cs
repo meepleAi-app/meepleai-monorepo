@@ -13,7 +13,7 @@ internal sealed class PasswordResetEventHandler : DomainEventHandlerBase<Passwor
 {
     public PasswordResetEventHandler(
         MeepleAiDbContext dbContext,
-        ILogger<DomainEventHandlerBase<PasswordResetEvent>> logger)
+        ILogger<PasswordResetEventHandler> logger)
         : base(dbContext, logger)
     {
     }

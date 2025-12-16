@@ -13,7 +13,7 @@ internal static class GameSessionMapper
     /// </summary>
     public static GameSessionDto ToDto(this GameSession session)
     {
-        if (session is null) throw new ArgumentNullException(nameof(session));
+        ArgumentNullException.ThrowIfNull(session);
         var playerDtos = session.Players.Select(p => new SessionPlayerDto(
             PlayerName: p.PlayerName,
             PlayerOrder: p.PlayerOrder,

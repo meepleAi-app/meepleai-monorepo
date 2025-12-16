@@ -83,7 +83,7 @@ internal class ChunkedUploadSessionRepository : RepositoryBase, IChunkedUploadSe
 
     public async Task AddAsync(ChunkedUploadSession session, CancellationToken cancellationToken = default)
     {
-        if (session is null) throw new ArgumentNullException(nameof(session));
+        ArgumentNullException.ThrowIfNull(session);
         CollectDomainEvents(session);
         var entity = MapToPersistence(session);
         await DbContext.ChunkedUploadSessions.AddAsync(entity, cancellationToken).ConfigureAwait(false);
@@ -91,7 +91,7 @@ internal class ChunkedUploadSessionRepository : RepositoryBase, IChunkedUploadSe
 
     public Task UpdateAsync(ChunkedUploadSession session, CancellationToken cancellationToken = default)
     {
-        if (session is null) throw new ArgumentNullException(nameof(session));
+        ArgumentNullException.ThrowIfNull(session);
         CollectDomainEvents(session);
         var entity = MapToPersistence(session);
 
@@ -108,7 +108,7 @@ internal class ChunkedUploadSessionRepository : RepositoryBase, IChunkedUploadSe
 
     public Task DeleteAsync(ChunkedUploadSession session, CancellationToken cancellationToken = default)
     {
-        if (session is null) throw new ArgumentNullException(nameof(session));
+        ArgumentNullException.ThrowIfNull(session);
         var entity = MapToPersistence(session);
         DbContext.ChunkedUploadSessions.Remove(entity);
         return Task.CompletedTask;
@@ -152,7 +152,7 @@ internal class ChunkedUploadSessionRepository : RepositoryBase, IChunkedUploadSe
 
     private static ChunkedUploadSessionEntity MapToPersistence(ChunkedUploadSession domain)
     {
-        if (domain is null) throw new ArgumentNullException(nameof(domain));
+        ArgumentNullException.ThrowIfNull(domain);
         return new ChunkedUploadSessionEntity
         {
             Id = domain.Id,

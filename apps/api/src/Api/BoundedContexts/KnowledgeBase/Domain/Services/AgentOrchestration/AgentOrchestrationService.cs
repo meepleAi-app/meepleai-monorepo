@@ -82,17 +82,10 @@ internal class AgentOrchestrationService
         VectorSearchDomainService vectorSearch,
         QualityTrackingDomainService qualityTracking)
     {
-        if (agent == null)
-            throw new ArgumentNullException(nameof(agent));
-
-        if (context == null)
-            throw new ArgumentNullException(nameof(context));
-
-        if (vectorSearch == null)
-            throw new ArgumentNullException(nameof(vectorSearch));
-
-        if (qualityTracking == null)
-            throw new ArgumentNullException(nameof(qualityTracking));
+        ArgumentNullException.ThrowIfNull(agent);
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(vectorSearch);
+        ArgumentNullException.ThrowIfNull(qualityTracking);
 
         // Ensure agent is active
         if (!agent.IsActive)

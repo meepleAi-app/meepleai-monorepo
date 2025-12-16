@@ -14,7 +14,8 @@ internal class GetUnreadCountQueryHandler : IQueryHandler<GetUnreadCountQuery, i
 
     public GetUnreadCountQueryHandler(INotificationRepository notificationRepository)
     {
-        _notificationRepository = notificationRepository ?? throw new ArgumentNullException(nameof(notificationRepository));
+        ArgumentNullException.ThrowIfNull(notificationRepository);
+        _notificationRepository = notificationRepository;
     }
 
     public async Task<int> Handle(GetUnreadCountQuery query, CancellationToken cancellationToken)

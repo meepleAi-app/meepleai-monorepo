@@ -10,7 +10,7 @@ using System.Diagnostics.CodeAnalysis;
 public class UnauthorizedHttpException : HttpException
 {
     [SetsRequiredMembers]
-    public UnauthorizedHttpException(string message = "Authentication required")
+    public UnauthorizedHttpException(string message)
         : base(StatusCodes.Status401Unauthorized, "unauthorized", message)
     {
     }

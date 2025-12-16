@@ -16,8 +16,10 @@ internal class LogWorkflowErrorCommandHandler : ICommandHandler<LogWorkflowError
         IWorkflowErrorLogRepository errorLogRepository,
         IUnitOfWork unitOfWork)
     {
-        _errorLogRepository = errorLogRepository ?? throw new ArgumentNullException(nameof(errorLogRepository));
-        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        ArgumentNullException.ThrowIfNull(errorLogRepository);
+        _errorLogRepository = errorLogRepository;
+        ArgumentNullException.ThrowIfNull(unitOfWork);
+        _unitOfWork = unitOfWork;
     }
 
     public async Task<WorkflowErrorLogDto> Handle(LogWorkflowErrorCommand command, CancellationToken cancellationToken)

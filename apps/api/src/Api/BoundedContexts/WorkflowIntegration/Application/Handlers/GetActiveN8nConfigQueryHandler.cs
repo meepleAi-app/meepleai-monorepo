@@ -11,7 +11,8 @@ internal class GetActiveN8NConfigQueryHandler : IQueryHandler<GetActiveN8NConfig
 
     public GetActiveN8NConfigQueryHandler(IN8NConfigurationRepository configRepository)
     {
-        _configRepository = configRepository ?? throw new ArgumentNullException(nameof(configRepository));
+        ArgumentNullException.ThrowIfNull(configRepository);
+        _configRepository = configRepository;
     }
 
     public async Task<N8NConfigurationDto?> Handle(GetActiveN8NConfigQuery query, CancellationToken cancellationToken)

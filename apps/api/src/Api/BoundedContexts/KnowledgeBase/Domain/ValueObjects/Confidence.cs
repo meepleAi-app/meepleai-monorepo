@@ -47,6 +47,6 @@ internal sealed class Confidence : ValueObject
 
     public double ToDouble()
     {
-        throw new NotImplementedException();
+        throw new NotSupportedException("Use implicit conversion to double instead");
     }
 }

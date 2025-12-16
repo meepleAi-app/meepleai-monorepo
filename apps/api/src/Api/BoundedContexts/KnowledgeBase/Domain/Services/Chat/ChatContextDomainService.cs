@@ -40,8 +40,7 @@ internal class ChatContextDomainService
     /// <returns>Formatted chat history string for LLM context</returns>
     public virtual string BuildChatHistoryContext(ChatThread thread)
     {
-        if (thread == null)
-            throw new ArgumentNullException(nameof(thread));
+        ArgumentNullException.ThrowIfNull(thread);
 
         if (thread.IsEmpty)
             return string.Empty;

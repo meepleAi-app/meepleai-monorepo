@@ -240,7 +240,7 @@ internal class KeywordSearchService : IKeywordSearchService
         var sanitizedQuery = SanitizeQuery(query);
 
         // Handle phrase search with proximity operator <->
-        if (phraseSearch && sanitizedQuery.Contains(" "))
+        if (phraseSearch && sanitizedQuery.Contains(' '))
         {
             // Replace spaces with PostgreSQL proximity operator for exact phrase matching
             var words = sanitizedQuery.Split(' ', StringSplitOptions.RemoveEmptyEntries);

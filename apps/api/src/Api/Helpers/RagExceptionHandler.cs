@@ -201,7 +201,7 @@ internal static class RagExceptionHandler
         // Log with context before re-throwing
         if (additionalContext.Length > 0)
         {
-            logger.LogError(exception, "Error during {Context} - Additional context: {@Context}", context, additionalContext);
+            logger.LogError(exception, "Error during {Context} - Additional context: {@AdditionalContext}", context, additionalContext);
         }
         else
         {

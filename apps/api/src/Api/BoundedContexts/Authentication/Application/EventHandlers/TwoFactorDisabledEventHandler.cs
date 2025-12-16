@@ -20,7 +20,7 @@ internal sealed class TwoFactorDisabledEventHandler : DomainEventHandlerBase<Two
         MeepleAiDbContext dbContext,
         IUserRepository userRepository,
         IEmailService emailService,
-        ILogger<DomainEventHandlerBase<TwoFactorDisabledEvent>> logger)
+        ILogger<TwoFactorDisabledEventHandler> logger)
         : base(dbContext, logger)
     {
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));

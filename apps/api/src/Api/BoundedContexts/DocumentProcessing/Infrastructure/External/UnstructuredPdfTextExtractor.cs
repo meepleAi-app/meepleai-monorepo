@@ -130,7 +130,7 @@ internal class UnstructuredPdfTextExtractor : IPdfTextExtractor
         }
         catch (TaskCanceledException ex) when (ex.CancellationToken == ct)
         {
-            _logger.LogWarning("Extraction cancelled by user. RequestId: {RequestId}", requestId);
+            _logger.LogWarning(ex, "Extraction cancelled by user. RequestId: {RequestId}", requestId);
             throw;
         }
         catch (TaskCanceledException ex)

@@ -24,10 +24,12 @@ internal class RedisBackgroundTaskOrchestrator : IBackgroundTaskOrchestrator
         IConnectionMultiplexer redis,
         ILogger<RedisBackgroundTaskOrchestrator> logger)
     {
+
+
         ArgumentNullException.ThrowIfNull(redis);
+        _redis = redis;
         ArgumentNullException.ThrowIfNull(logger);
-        _redis = redis ?? throw new ArgumentNullException(nameof(redis));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _logger = logger;
         _runningTasks = new ConcurrentDictionary<string, CancellationTokenSource>(StringComparer.Ordinal);
         _scheduledTasks = new ConcurrentDictionary<string, CancellationTokenSource>(StringComparer.Ordinal);
     }
@@ -40,8 +42,7 @@ internal class RedisBackgroundTaskOrchestrator : IBackgroundTaskOrchestrator
     {
         if (string.IsNullOrWhiteSpace(taskId))
             throw new ArgumentException("Task ID cannot be null or empty", nameof(taskId));
-        if (taskFactory == null)
-            throw new ArgumentNullException(nameof(taskFactory));
+        ArgumentNullException.ThrowIfNull(taskFactory);
 
         _logger.LogInformation("Scheduling task {TaskId} ({TaskName})", taskId, taskName);
 
@@ -51,7 +52,7 @@ internal class RedisBackgroundTaskOrchestrator : IBackgroundTaskOrchestrator
         var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _scheduledTasks.TryAdd(taskId, cts);
 
-        _ = Task.Run(async () => await ExecuteTaskAsync(taskId, taskName, taskFactory, cts.Token, isRecurring: false).ConfigureAwait(false), cts.Token).ConfigureAwait(false);
+        _ = Task.Run(async () => await ExecuteTaskAsync(taskId, taskName, taskFactory, isRecurring: false, cts.Token).ConfigureAwait(false), cts.Token).ConfigureAwait(false);
     }
 
     public async Task ScheduleDelayedAsync(
@@ -63,8 +64,7 @@ internal class RedisBackgroundTaskOrchestrator : IBackgroundTaskOrchestrator
     {
         if (string.IsNullOrWhiteSpace(taskId))
             throw new ArgumentException("Task ID cannot be null or empty", nameof(taskId));
-        if (taskFactory == null)
-            throw new ArgumentNullException(nameof(taskFactory));
+        ArgumentNullException.ThrowIfNull(taskFactory);
         if (delay < TimeSpan.Zero)
             throw new ArgumentException("Delay cannot be negative", nameof(delay));
 
@@ -84,7 +84,7 @@ internal class RedisBackgroundTaskOrchestrator : IBackgroundTaskOrchestrator
                 await Task.Delay(delay, cts.Token).ConfigureAwait(false);
                 if (!cts.Token.IsCancellationRequested)
                 {
-                    await ExecuteTaskAsync(taskId, taskName, taskFactory, cts.Token, isRecurring: false).ConfigureAwait(false);
+                    await ExecuteTaskAsync(taskId, taskName, taskFactory, isRecurring: false, cts.Token).ConfigureAwait(false);
                 }
             }
             catch (OperationCanceledException)
@@ -104,8 +104,7 @@ internal class RedisBackgroundTaskOrchestrator : IBackgroundTaskOrchestrator
     {
         if (string.IsNullOrWhiteSpace(taskId))
             throw new ArgumentException("Task ID cannot be null or empty", nameof(taskId));
-        if (taskFactory == null)
-            throw new ArgumentNullException(nameof(taskFactory));
+        ArgumentNullException.ThrowIfNull(taskFactory);
         if (interval <= TimeSpan.Zero)
             throw new ArgumentException("Interval must be positive", nameof(interval));
 
@@ -124,7 +123,7 @@ internal class RedisBackgroundTaskOrchestrator : IBackgroundTaskOrchestrator
             {
                 while (!cts.Token.IsCancellationRequested)
                 {
-                    await ExecuteTaskAsync(taskId, taskName, taskFactory, cts.Token, isRecurring: true).ConfigureAwait(false);
+                    await ExecuteTaskAsync(taskId, taskName, taskFactory, isRecurring: true, cts.Token).ConfigureAwait(false);
 
                     if (!cts.Token.IsCancellationRequested)
                     {
@@ -154,7 +153,7 @@ internal class RedisBackgroundTaskOrchestrator : IBackgroundTaskOrchestrator
         if (_scheduledTasks.TryRemove(taskId, out var scheduledCts))
         {
             _logger.LogInformation("Cancelling scheduled task {TaskId}", taskId);
-            scheduledCts.Cancel();
+            await scheduledCts.CancelAsync().ConfigureAwait(false);
             scheduledCts.Dispose();
             await SetTaskStatusAsync(taskId, BackgroundTaskStatus.Cancelled).ConfigureAwait(false);
             return true;
@@ -164,7 +163,7 @@ internal class RedisBackgroundTaskOrchestrator : IBackgroundTaskOrchestrator
         if (_runningTasks.TryRemove(taskId, out var runningCts))
         {
             _logger.LogInformation("Cancelling running task {TaskId}", taskId);
-            runningCts.Cancel();
+            await runningCts.CancelAsync().ConfigureAwait(false);
             runningCts.Dispose();
             await SetTaskStatusAsync(taskId, BackgroundTaskStatus.Cancelled).ConfigureAwait(false);
             return true;
@@ -208,8 +207,7 @@ internal class RedisBackgroundTaskOrchestrator : IBackgroundTaskOrchestrator
     {
         if (string.IsNullOrWhiteSpace(lockKey))
             throw new ArgumentException("Lock key cannot be null or empty", nameof(lockKey));
-        if (taskFactory == null)
-            throw new ArgumentNullException(nameof(taskFactory));
+        ArgumentNullException.ThrowIfNull(taskFactory);
         if (lockTimeout <= TimeSpan.Zero)
             throw new ArgumentException("Lock timeout must be positive", nameof(lockTimeout));
 
@@ -261,8 +259,8 @@ internal class RedisBackgroundTaskOrchestrator : IBackgroundTaskOrchestrator
         string taskId,
         string taskName,
         Func<CancellationToken, Task> taskFactory,
-        CancellationToken cancellationToken,
-        bool isRecurring)
+        bool isRecurring,
+        CancellationToken cancellationToken)
     {
         // For one-time tasks, remove from scheduled tasks as we're now executing
         // For recurring tasks, keep in scheduled tasks so they can be cancelled between iterations
@@ -284,10 +282,10 @@ internal class RedisBackgroundTaskOrchestrator : IBackgroundTaskOrchestrator
             await SetTaskStatusAsync(taskId, BackgroundTaskStatus.Completed).ConfigureAwait(false);
             _logger.LogInformation("Task {TaskId} ({TaskName}) completed successfully", taskId, taskName);
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException ex)
         {
             await SetTaskStatusAsync(taskId, BackgroundTaskStatus.Cancelled).ConfigureAwait(false);
-            _logger.LogInformation("Task {TaskId} ({TaskName}) was cancelled", taskId, taskName);
+            _logger.LogInformation(ex, "Task {TaskId} ({TaskName}) was cancelled", taskId, taskName);
         }
         catch (Exception ex)
         {

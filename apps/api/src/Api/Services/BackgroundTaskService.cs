@@ -59,9 +59,9 @@ internal class BackgroundTaskService : IBackgroundTaskService
                 await taskFactory(cts.Token).ConfigureAwait(false);
                 _logger.LogInformation("Background task {TaskId} completed successfully", taskId);
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException ex)
             {
-                _logger.LogInformation("Background task {TaskId} was cancelled", taskId);
+                _logger.LogInformation(ex, "Background task {TaskId} was cancelled", taskId);
             }
             catch (InvalidOperationException ex)
             {

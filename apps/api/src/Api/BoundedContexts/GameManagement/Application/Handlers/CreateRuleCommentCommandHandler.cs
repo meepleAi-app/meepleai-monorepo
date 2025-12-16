@@ -91,15 +91,15 @@ internal partial class CreateRuleCommentCommandHandler : IRequestHandler<CreateR
                 return new List<string>();
             }
 
-            // MA0011/MA0074: ToLower() required for EF Core SQL translation - ToLowerInvariant() not supported
-            // EF Core translates ToLower() to SQL LOWER() which is deterministic and culture-safe in database context
-#pragma warning disable MA0011, MA0074 // EF Core SQL translation limitation
+            // MA0011/MA0074/CA1304/CA1311: ToLower()/Contains()/StartsWith() required for EF Core SQL translation
+            // EF Core translates these to SQL functions which are deterministic and culture-safe in database context
+#pragma warning disable MA0011, MA0074, CA1304, CA1311 // EF Core SQL translation limitation
             var users = await _dbContext.Users
                 .AsNoTracking()
                 .Where(u =>
                     (u.DisplayName != null && mentionedUsernames.Contains(u.DisplayName.ToLower()))
                     || (u.Email != null && mentionedUsernames.Any(m => u.Email.ToLower().StartsWith(m, StringComparison.Ordinal))))
-#pragma warning restore MA0011, MA0074
+#pragma warning restore MA0011, MA0074, CA1304, CA1311
                 .Select(u => u.Id.ToString())
                 .Distinct()
                 .ToListAsync(cancellationToken).ConfigureAwait(false);

@@ -18,8 +18,10 @@ public abstract class RepositoryBase
 
     protected RepositoryBase(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
     {
-        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
-        _eventCollector = eventCollector ?? throw new ArgumentNullException(nameof(eventCollector));
+        ArgumentNullException.ThrowIfNull(dbContext);
+        _dbContext = dbContext;
+        ArgumentNullException.ThrowIfNull(eventCollector);
+        _eventCollector = eventCollector;
     }
 
     /// <summary>

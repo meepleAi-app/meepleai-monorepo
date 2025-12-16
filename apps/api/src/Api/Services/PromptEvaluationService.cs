@@ -18,6 +18,7 @@ namespace Api.Services;
 /// </summary>
 internal class PromptEvaluationService : IPromptEvaluationService
 {
+    private static readonly char[] SentenceSeparators = { '.', '!', '?' };
     private readonly IRagService _ragService;
     private readonly MeepleAiDbContext _dbContext;
     private readonly ILogger<PromptEvaluationService> _logger;
@@ -446,7 +447,7 @@ internal class PromptEvaluationService : IPromptEvaluationService
             return false;
 
         // Check for basic structure indicators
-        var sentences = response.Split(new[] { '.', '!', '?' }, StringSplitOptions.RemoveEmptyEntries);
+        var sentences = response.Split(SentenceSeparators, StringSplitOptions.RemoveEmptyEntries);
         if (sentences.Length == 0)
             return false;
 

@@ -12,7 +12,8 @@ internal class GetAllN8NConfigsQueryHandler : IQueryHandler<GetAllN8NConfigsQuer
 
     public GetAllN8NConfigsQueryHandler(IN8NConfigurationRepository repository)
     {
-        _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        ArgumentNullException.ThrowIfNull(repository);
+        _repository = repository;
     }
 
     public async Task<List<N8NConfigurationDto>> Handle(GetAllN8NConfigsQuery query, CancellationToken cancellationToken)

@@ -231,10 +231,12 @@ internal class BulkImportApiKeysCommandHandler : ICommandHandler<BulkImportApiKe
         return (successCount, errors, importedKeys);
     }
 
+    private static readonly char[] CsvSeparators = { '\r', '\n' };
+
     private static List<ApiKeyImportRecord> ParseCsv(string csvContent, List<string> errors)
     {
         var records = new List<ApiKeyImportRecord>();
-        var lines = csvContent.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+        var lines = csvContent.Split(CsvSeparators, StringSplitOptions.RemoveEmptyEntries);
 
         if (lines.Length == 0)
         {

@@ -13,7 +13,7 @@ internal sealed class PasswordChangedEventHandler : DomainEventHandlerBase<Passw
 {
     public PasswordChangedEventHandler(
         MeepleAiDbContext dbContext,
-        ILogger<DomainEventHandlerBase<PasswordChangedEvent>> logger)
+        ILogger<PasswordChangedEventHandler> logger)
         : base(dbContext, logger)
     {
     }

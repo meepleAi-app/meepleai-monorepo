@@ -31,6 +31,9 @@ internal class ResponseQualityService : IResponseQualityService
         "might", "possibly", "unclear", "I'm not sure", "maybe", "perhaps", "I think"
     };
 
+    private static readonly char[] WhitespaceSeparators = { ' ', '\t', '\n', '\r' };
+    private static readonly string[] ParagraphSeparators = { "\n\n", "\n" };
+
     /// <summary>
     /// Calculate quality scores for an AI response.
     /// </summary>
@@ -99,7 +102,7 @@ internal class ResponseQualityService : IResponseQualityService
         var confidence = BaseConfidence;
 
         // Count words in response
-        var words = responseText.Split(new[] { ' ', '\t', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+        var words = responseText.Split(WhitespaceSeparators, StringSplitOptions.RemoveEmptyEntries);
         var wordCount = words.Length;
 
         // Apply length penalties
@@ -146,7 +149,7 @@ internal class ResponseQualityService : IResponseQualityService
 
         // Count paragraphs (split by double newlines or single newlines)
         var paragraphs = responseText
-            .Split(new[] { "\n\n", "\n" }, StringSplitOptions.RemoveEmptyEntries)
+            .Split(ParagraphSeparators, StringSplitOptions.RemoveEmptyEntries)
             .Where(p => !string.IsNullOrWhiteSpace(p))
             .ToArray();
 

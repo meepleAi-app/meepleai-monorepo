@@ -178,7 +178,19 @@ internal class LogoutAllDevicesCommandHandler : ICommandHandler<LogoutAllDevices
 
     private void LogResult(Guid userId, int revokedCount, bool currentSessionExcluded, bool currentSessionRevoked)
     {
-        var status = currentSessionExcluded ? "preserved" : (currentSessionRevoked ? "revoked" : "not specified");
+        string status;
+        if (currentSessionExcluded)
+        {
+            status = "preserved";
+        }
+        else if (currentSessionRevoked)
+        {
+            status = "revoked";
+        }
+        else
+        {
+            status = "not specified";
+        }
         _logger.LogInformation(
             "User {UserId} logged out of {RevokedCount} devices. Current session: {CurrentSessionStatus}",
             userId, revokedCount, status);

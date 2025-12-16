@@ -296,7 +296,7 @@ using (var scope = app.Services.CreateScope())
     }
     else
     {
-        db.Database.Migrate();
+        await db.Database.MigrateAsync().ConfigureAwait(false);
 
         // AI-01: Initialize Qdrant collection
         var qdrant = scope.ServiceProvider.GetRequiredService<IQdrantService>();
@@ -407,7 +407,7 @@ v1Api.MapTestTelemetryEndpoints(); // Issue #1567: Manual span test endpoint
 // Issue #2004: Runbook validation test endpoints
 v1Api.MapTestEndpoints();
 
-app.Run();
+await app.RunAsync().ConfigureAwait(false);
 
 #pragma warning disable MA0051 // Method is too long - Bootstrap method requires comprehensive validation and error handling
 // Bootstrap: Create initial admin user if database is empty

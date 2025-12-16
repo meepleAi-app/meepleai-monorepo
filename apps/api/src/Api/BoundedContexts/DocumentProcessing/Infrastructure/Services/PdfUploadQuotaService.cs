@@ -41,9 +41,12 @@ internal class PdfUploadQuotaService : IPdfUploadQuotaService
         ILogger<PdfUploadQuotaService> logger,
         TimeProvider? timeProvider = null)
     {
-        _redis = redis ?? throw new ArgumentNullException(nameof(redis));
-        _configService = configService ?? throw new ArgumentNullException(nameof(configService));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(redis);
+        _redis = redis;
+        ArgumentNullException.ThrowIfNull(configService);
+        _configService = configService;
+        ArgumentNullException.ThrowIfNull(logger);
+        _logger = logger;
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 

@@ -17,8 +17,10 @@ internal class CreateN8NConfigCommandHandler : ICommandHandler<CreateN8NConfigCo
         IN8NConfigurationRepository configRepository,
         IUnitOfWork unitOfWork)
     {
-        _configRepository = configRepository ?? throw new ArgumentNullException(nameof(configRepository));
-        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        ArgumentNullException.ThrowIfNull(configRepository);
+        _configRepository = configRepository;
+        ArgumentNullException.ThrowIfNull(unitOfWork);
+        _unitOfWork = unitOfWork;
     }
 
     public async Task<N8NConfigurationDto> Handle(CreateN8NConfigCommand command, CancellationToken cancellationToken)

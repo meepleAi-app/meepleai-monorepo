@@ -13,7 +13,7 @@ internal sealed class SessionRevokedEventHandler : DomainEventHandlerBase<Sessio
 {
     public SessionRevokedEventHandler(
         MeepleAiDbContext dbContext,
-        ILogger<DomainEventHandlerBase<SessionRevokedEvent>> logger)
+        ILogger<SessionRevokedEventHandler> logger)
         : base(dbContext, logger)
     {
     }

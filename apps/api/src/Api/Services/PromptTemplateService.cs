@@ -50,6 +50,11 @@ ANSWER:",
         FewShotExamples = new List<FewShotExample>()
     };
 
+    private static readonly string[] EdgeCaseKeywords = { "en passant", "castling", "castle", "stalemate", "special", "exception", "edge case" };
+    private static readonly string[] WinningConditionKeywords = { "win", "victory", "lose", "checkmate", "three in a row", "winning", "defeat" };
+    private static readonly string[] SetupKeywords = { "setup", "set up", "start", "begin", "prepare", "place pieces", "initial", "arrange" };
+    private static readonly string[] GameplayKeywords = { "move", "turn", "action", "can i", "allowed", "play", "rules", "how does" };
+
     public PromptTemplateService(
         MeepleAiDbContext dbContext,
         IConnectionMultiplexer redis,
@@ -203,29 +208,25 @@ ANSWER:",
         // Check keywords in priority order (most specific first)
 
         // EdgeCases keywords (check first as they're most specific)
-        if (ContainsAny(queryLower, new[]
-            { "en passant", "castling", "castle", "stalemate", "special", "exception", "edge case" }))
+        if (ContainsAny(queryLower, EdgeCaseKeywords))
         {
             return QuestionType.EdgeCases;
         }
 
         // WinningConditions keywords
-        if (ContainsAny(queryLower, new[]
-            { "win", "victory", "lose", "checkmate", "three in a row", "winning", "defeat" }))
+        if (ContainsAny(queryLower, WinningConditionKeywords))
         {
             return QuestionType.WinningConditions;
         }
 
         // Setup keywords
-        if (ContainsAny(queryLower, new[]
-            { "setup", "set up", "start", "begin", "prepare", "place pieces", "initial", "arrange" }))
+        if (ContainsAny(queryLower, SetupKeywords))
         {
             return QuestionType.Setup;
         }
 
         // Gameplay keywords (most common, check last)
-        if (ContainsAny(queryLower, new[]
-            { "move", "turn", "action", "can i", "allowed", "play", "rules", "how does" }))
+        if (ContainsAny(queryLower, GameplayKeywords))
         {
             return QuestionType.Gameplay;
         }

@@ -9,7 +9,7 @@ internal sealed class AgentInvokedEventHandler : DomainEventHandlerBase<AgentInv
 {
     public AgentInvokedEventHandler(
         MeepleAiDbContext dbContext,
-        ILogger<DomainEventHandlerBase<AgentInvokedEvent>> logger)
+        ILogger<AgentInvokedEventHandler> logger)
         : base(dbContext, logger)
     {
     }

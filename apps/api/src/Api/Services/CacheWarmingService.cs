@@ -41,11 +41,16 @@ internal class CacheWarmingService : BackgroundService
         IOptions<CacheOptimizationConfiguration> config,
         TimeProvider? timeProvider = null)
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _frequencyTracker = frequencyTracker ?? throw new ArgumentNullException(nameof(frequencyTracker));
-        _cacheService = cacheService ?? throw new ArgumentNullException(nameof(cacheService));
-        _ragService = ragService ?? throw new ArgumentNullException(nameof(ragService));
-        _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
+        ArgumentNullException.ThrowIfNull(logger);
+        _logger = logger;
+        ArgumentNullException.ThrowIfNull(frequencyTracker);
+        _frequencyTracker = frequencyTracker;
+        ArgumentNullException.ThrowIfNull(cacheService);
+        _cacheService = cacheService;
+        ArgumentNullException.ThrowIfNull(ragService);
+        _ragService = ragService;
+        ArgumentNullException.ThrowIfNull(scopeFactory);
+        _scopeFactory = scopeFactory;
         _config = config?.Value ?? throw new ArgumentNullException(nameof(config));
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
@@ -107,10 +112,10 @@ internal class CacheWarmingService : BackgroundService
                 }
             }
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException ex)
         {
             // Expected during graceful shutdown
-            _logger.LogInformation("Cache warming service stopped.");
+            _logger.LogInformation(ex, "Cache warming service stopped.");
         }
     }
 

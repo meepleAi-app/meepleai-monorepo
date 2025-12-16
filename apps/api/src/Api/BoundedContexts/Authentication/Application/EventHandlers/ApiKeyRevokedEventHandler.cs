@@ -13,7 +13,7 @@ internal sealed class ApiKeyRevokedEventHandler : DomainEventHandlerBase<ApiKeyR
 {
     public ApiKeyRevokedEventHandler(
         MeepleAiDbContext dbContext,
-        ILogger<DomainEventHandlerBase<ApiKeyRevokedEvent>> logger)
+        ILogger<ApiKeyRevokedEventHandler> logger)
         : base(dbContext, logger)
     {
     }

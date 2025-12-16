@@ -61,8 +61,7 @@ internal sealed class ChatThread : AggregateRoot<Guid>
     /// </summary>
     public void AddMessage(ChatMessage message)
     {
-        if (message == null)
-            throw new ArgumentNullException(nameof(message));
+        ArgumentNullException.ThrowIfNull(message);
 
         if (Status.IsClosed)
             throw new InvalidOperationException("Cannot add message to closed thread");

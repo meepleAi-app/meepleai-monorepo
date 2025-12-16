@@ -1,4 +1,5 @@
 using Api.BoundedContexts.Administration.Infrastructure.Services.Formatters;
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.Administration.Infrastructure.Services;
@@ -64,7 +65,7 @@ internal sealed partial class ReportGeneratorService
             .ConfigureAwait(false);
 
         // ISSUE-917: Enhanced with line chart and bar chart
-        var dateLabels = aiRequests.Select(r => r.Date.ToString("MMM dd")).ToArray();
+        var dateLabels = aiRequests.Select(r => r.Date.ToString("MMM dd", CultureInfo.InvariantCulture)).ToArray();
         var tokensValues = aiRequests.Select(r => (double)r.TotalTokens).ToArray();
         var costValues = aiRequests.Select(r => (double)r.TotalCost).ToArray();
 
@@ -76,10 +77,10 @@ internal sealed partial class ReportGeneratorService
                 Data: aiRequests.Select(r => new ReportDataRow(
                     new Dictionary<string, object>
 (StringComparer.Ordinal) {
-                        ["Date"] = r.Date.ToString("yyyy-MM-dd"),
+                        ["Date"] = r.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
                         ["Requests"] = r.Count,
                         ["Tokens"] = r.TotalTokens,
-                        ["Cost (USD)"] = $"{r.TotalCost:F4}"
+                        ["Cost (USD)"] = r.TotalCost.ToString("F4", CultureInfo.InvariantCulture)
                     })).ToList(),
                 Chart: new ChartData(
                     Type: ChartType.MultiLine,
@@ -98,7 +99,7 @@ internal sealed partial class ReportGeneratorService
 (StringComparer.Ordinal) {
                         ["Model"] = m.Model ?? "Unknown",
                         ["Requests"] = m.Count,
-                        ["Total Cost (USD)"] = $"{m.TotalCost:F4}"
+                        ["Total Cost (USD)"] = m.TotalCost.ToString("F4", CultureInfo.InvariantCulture)
                     })).ToList(),
                 Chart: new ChartData(
                     Type: ChartType.Bar,

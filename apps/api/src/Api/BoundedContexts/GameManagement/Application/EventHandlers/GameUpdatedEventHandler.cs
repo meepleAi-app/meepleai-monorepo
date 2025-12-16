@@ -13,7 +13,7 @@ internal sealed class GameUpdatedEventHandler : DomainEventHandlerBase<GameUpdat
 {
     public GameUpdatedEventHandler(
         MeepleAiDbContext dbContext,
-        ILogger<DomainEventHandlerBase<GameUpdatedEvent>> logger)
+        ILogger<GameUpdatedEventHandler> logger)
         : base(dbContext, logger)
     {
     }

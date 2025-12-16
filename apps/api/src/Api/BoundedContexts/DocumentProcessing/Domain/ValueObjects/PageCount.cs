@@ -86,6 +86,6 @@ internal sealed class PageCount : ValueObject
 
     public int ToInt32()
     {
-        throw new NotImplementedException();
+        throw new NotSupportedException("Use implicit conversion to int instead");
     }
 }

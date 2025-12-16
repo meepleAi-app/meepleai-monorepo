@@ -155,7 +155,7 @@ internal class InfisicalSecretsClient : IInfisicalClient
         }
         catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
-            _logger.LogWarning("Version history not supported or secret {SecretName} not found", secretName);
+            _logger.LogWarning(ex, "Version history not supported or secret {SecretName} not found", secretName);
             return Array.Empty<SecretVersion>();
         }
         catch (Exception ex)

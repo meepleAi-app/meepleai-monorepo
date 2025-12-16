@@ -12,7 +12,7 @@ internal sealed class N8NConfigurationTestedEventHandler : DomainEventHandlerBas
 {
     public N8NConfigurationTestedEventHandler(
         MeepleAiDbContext dbContext,
-        ILogger<DomainEventHandlerBase<N8NConfigurationTestedEvent>> logger)
+        ILogger<N8NConfigurationTestedEventHandler> logger)
         : base(dbContext, logger)
     {
     }

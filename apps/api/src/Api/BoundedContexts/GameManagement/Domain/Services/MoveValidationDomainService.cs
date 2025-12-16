@@ -42,11 +42,8 @@ internal class MoveValidationDomainService
         string? ruleSpecVersion = null,
         CancellationToken cancellationToken = default)
     {
-        if (session == null)
-            throw new ArgumentNullException(nameof(session));
-
-        if (move == null)
-            throw new ArgumentNullException(nameof(move));
+        ArgumentNullException.ThrowIfNull(session);
+        ArgumentNullException.ThrowIfNull(move);
 
         _logger.LogInformation(
             "Validating move for session {SessionId}, game {GameId}: {Move}",
@@ -191,6 +188,8 @@ internal class MoveValidationDomainService
         return applicableRules;
     }
 
+    private static readonly char[] ActionSeparators = { ' ', '-', '_' };
+
     /// <summary>
     /// Builds search terms from the move for rule matching.
     /// </summary>
@@ -200,7 +199,7 @@ internal class MoveValidationDomainService
 
         // Add action terms
         var actionWords = move.Action.ToLowerInvariant()
-            .Split(new[] { ' ', '-', '_' }, StringSplitOptions.RemoveEmptyEntries);
+            .Split(ActionSeparators, StringSplitOptions.RemoveEmptyEntries);
         terms.AddRange(actionWords);
 
         // Add position if provided

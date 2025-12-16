@@ -435,7 +435,7 @@ internal class HybridLlmService : ILlmService
                 !settings.Providers[providerName].Enabled)
             {
                 _logger.LogDebug(
-                    "Provider {Provider} is disabled in configuration (AI:Providers:{Provider}:Enabled = false)",
+                    "Provider {Provider} is disabled in configuration (AI:Providers:{ProviderName}:Enabled = false)",
                     providerName, providerName);
                 return false; // Disabled in config - provider unavailable
             }

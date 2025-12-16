@@ -13,7 +13,7 @@ internal sealed class TwoFactorEnabledEventHandler : DomainEventHandlerBase<TwoF
 {
     public TwoFactorEnabledEventHandler(
         MeepleAiDbContext dbContext,
-        ILogger<DomainEventHandlerBase<TwoFactorEnabledEvent>> logger)
+        ILogger<TwoFactorEnabledEventHandler> logger)
         : base(dbContext, logger)
     {
     }

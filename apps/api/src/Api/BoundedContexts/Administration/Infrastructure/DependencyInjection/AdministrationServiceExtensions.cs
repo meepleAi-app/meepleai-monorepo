@@ -16,8 +16,10 @@ namespace Api.BoundedContexts.Administration.Infrastructure.DependencyInjection;
 
 internal static class AdministrationServiceExtensions
 {
+#pragma warning disable S1133 // Method marked obsolete but kept for backward compatibility during migration
     [Obsolete("Use AddAdministrationInfrastructure instead for modular registration")]
     public static IServiceCollection AddAdministrationContext(this IServiceCollection services)
+#pragma warning restore S1133
     {
         // Repositories
         services.AddScoped<IAlertRepository, AlertRepository>();

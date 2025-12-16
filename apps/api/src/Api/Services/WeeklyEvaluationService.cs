@@ -74,9 +74,12 @@ internal class WeeklyEvaluationService : BackgroundService
         IOptions<WeeklyEvaluationConfiguration> config,
         TimeProvider? timeProvider = null)
     {
-        _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _config = config?.Value ?? throw new ArgumentNullException(nameof(config));
+        ArgumentNullException.ThrowIfNull(scopeFactory);
+        _scopeFactory = scopeFactory;
+        ArgumentNullException.ThrowIfNull(logger);
+        _logger = logger;
+        ArgumentNullException.ThrowIfNull(config);
+        _config = config.Value;
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 

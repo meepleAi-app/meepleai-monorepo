@@ -19,10 +19,12 @@ namespace Api.Extensions;
 
 internal static class ApplicationServiceExtensions
 {
+#pragma warning disable S1133 // Method marked obsolete but kept for backward compatibility during migration
     [Obsolete("Use modular service registration methods instead (AddVectorSearchServices, AddDomainServices, etc.)")]
     public static IServiceCollection AddApplicationServices(
         this IServiceCollection services,
         IConfiguration configuration)
+#pragma warning restore S1133
     {
         services.AddVectorSearchServices(configuration);
         services.AddDomainServices();

@@ -50,7 +50,7 @@ internal sealed class RequestPasswordResetCommandHandler : ICommandHandler<Reque
         catch (InvalidOperationException ex) when (ex.Message.Contains("Too many"))
         {
             // Rate limit exceeded - return generic message for security
-            _logger.LogWarning("Password reset rate limit exceeded for email pattern");
+            _logger.LogWarning(ex, "Password reset rate limit exceeded for email pattern");
             return new RequestPasswordResetResult
             {
                 Success = false,

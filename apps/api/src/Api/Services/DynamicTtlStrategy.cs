@@ -23,7 +23,8 @@ internal class DynamicTtlStrategy : IDynamicTtlStrategy
         ILogger<DynamicTtlStrategy> logger,
         IOptions<CacheOptimizationConfiguration> config)
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(logger);
+        _logger = logger;
         _config = config?.Value ?? throw new ArgumentNullException(nameof(config));
     }
 

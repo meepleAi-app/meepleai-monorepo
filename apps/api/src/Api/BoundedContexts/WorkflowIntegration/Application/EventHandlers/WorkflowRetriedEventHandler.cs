@@ -12,7 +12,7 @@ internal sealed class WorkflowRetriedEventHandler : DomainEventHandlerBase<Workf
 {
     public WorkflowRetriedEventHandler(
         MeepleAiDbContext dbContext,
-        ILogger<DomainEventHandlerBase<WorkflowRetriedEvent>> logger)
+        ILogger<WorkflowRetriedEventHandler> logger)
         : base(dbContext, logger)
     {
     }

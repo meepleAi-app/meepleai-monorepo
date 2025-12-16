@@ -19,8 +19,10 @@ internal sealed class ValidateN8NTemplateQueryHandler : IQueryHandler<ValidateN8
         N8NTemplateService templateService,
         ILogger<ValidateN8NTemplateQueryHandler> logger)
     {
-        _templateService = templateService ?? throw new ArgumentNullException(nameof(templateService));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(templateService);
+        _templateService = templateService;
+        ArgumentNullException.ThrowIfNull(logger);
+        _logger = logger;
     }
 
     public Task<ValidateTemplateResponse> Handle(ValidateN8NTemplateQuery query, CancellationToken cancellationToken)

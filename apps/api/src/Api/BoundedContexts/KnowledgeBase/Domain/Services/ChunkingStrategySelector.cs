@@ -145,7 +145,6 @@ internal sealed class ChunkingStrategySelector
             catch (RegexMatchTimeoutException)
             {
                 // Regex timed out - skip this line to prevent ReDoS
-                continue;
             }
         }
 

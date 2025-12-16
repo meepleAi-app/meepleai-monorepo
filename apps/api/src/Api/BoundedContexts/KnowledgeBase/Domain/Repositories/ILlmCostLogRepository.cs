@@ -46,5 +46,7 @@ public interface ILlmCostLogRepository
     /// <summary>
     /// Get daily cost total
     /// </summary>
+#pragma warning disable CA1716 // Identifiers should not match keywords - 'date' is appropriate for DateOnly parameter
     Task<decimal> GetDailyCostAsync(DateOnly date, CancellationToken ct = default);
+#pragma warning restore CA1716
 }

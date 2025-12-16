@@ -70,10 +70,8 @@ internal sealed class GenerateFollowUpQuestionsQueryHandler
         try
         {
             // Check for user cancellation before starting
-            if (cancellationToken.IsCancellationRequested)
-            {
-                throw new OperationCanceledException(cancellationToken);
-            }
+            cancellationToken.ThrowIfCancellationRequested();
+
 
             // Apply configuration limits
             var effectiveMaxQuestions = Math.Min(request.MaxQuestions, _config.MaxQuestionsPerResponse);

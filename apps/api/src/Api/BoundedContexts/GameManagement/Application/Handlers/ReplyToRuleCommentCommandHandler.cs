@@ -144,7 +144,7 @@ internal partial class ReplyToRuleCommentCommandHandler : IRequestHandler<ReplyT
             var users = await _dbContext.Users
                 .AsNoTracking()
                 .Where(u => (u.DisplayName != null && mentionedUsernames.Contains(u.DisplayName.ToLower(CultureInfo.InvariantCulture)))
-                    || (u.Email != null && mentionedUsernames.Any(m => u.Email.ToLower(CultureInfo.InvariantCulture).StartsWith(m))))
+                    || (u.Email != null && mentionedUsernames.Any(m => u.Email.ToLower(CultureInfo.InvariantCulture).StartsWith(m, StringComparison.OrdinalIgnoreCase))))
                 .Select(u => u.Id.ToString())
                 .Distinct()
                 .ToListAsync(cancellationToken).ConfigureAwait(false);

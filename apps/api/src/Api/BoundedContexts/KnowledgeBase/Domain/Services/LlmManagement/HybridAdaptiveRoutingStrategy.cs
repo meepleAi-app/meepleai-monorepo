@@ -80,7 +80,9 @@ internal class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
             settings.Providers[settings.PreferredProvider].Enabled)
         {
             var preferredConfig = settings.Providers[settings.PreferredProvider];
-            var preferredModel = preferredConfig.Models.FirstOrDefault() ?? GetDefaultModelForProvider(settings.PreferredProvider, userRole);
+            var preferredModel = preferredConfig.Models.Count > 0 
+                ? preferredConfig.Models[0] 
+                : GetDefaultModelForProvider(settings.PreferredProvider, userRole);
 
             _logger.LogDebug(
                 "[{UserId}] Routing to PreferredProvider {Provider} ({Model}) - overriding user-tier routing",

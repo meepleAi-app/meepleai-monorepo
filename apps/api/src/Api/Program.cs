@@ -205,7 +205,10 @@ builder.Services.AddMediatR(cfg =>
 
 // Application services (Domain, AI, Admin)
 // BGAI-001-v2: Pass configuration for PDF extractor provider selection
+#pragma warning disable CS0612 // Type or member is obsolete
 builder.Services.AddApplicationServices(builder.Configuration);
+#pragma warning restore CS0612
+
 
 // Authentication services (Auth, OAuth, 2FA, API keys, Sessions)
 builder.Services.AddAuthenticationServices(builder.Configuration);

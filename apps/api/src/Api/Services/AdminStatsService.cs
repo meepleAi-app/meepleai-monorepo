@@ -121,7 +121,7 @@ internal class AdminStatsService : IAdminStatsService
         var avgConfidenceTask = _dbContext.AiRequestLogs
             .AsNoTracking()
             .Where(log => log.Confidence.HasValue)
-            .AverageAsync(log => (double?)log.Confidence, cancellationToken);
+            .AverageAsync(log => log.Confidence, cancellationToken);
 
         var totalRagRequestsTask = _dbContext.AiRequestLogs
             .AsNoTracking()
@@ -300,7 +300,7 @@ internal class AdminStatsService : IAdminStatsService
             {
                 Date = g.Key,
                 Count = g.LongCount(),
-                AvgConfidence = g.Average(log => (double?)log.Confidence)
+                AvgConfidence = g.Average(log => log.Confidence)
             })
             .OrderBy(d => d.Date)
             .ToListAsync(cancellationToken).ConfigureAwait(false);

@@ -80,7 +80,7 @@ internal static class ObservabilityServiceExtensions
                 {
                     // Don't trace health checks or metrics endpoints
                     var path = httpContext.Request.Path.Value ?? string.Empty;
-                    return !path.StartsWith("/health", StringComparison.Ordinal) && !path.Equals("/metrics");
+                    return !path.StartsWith("/health", StringComparison.Ordinal) && !path.Equals("/metrics", StringComparison.Ordinal);
                 };
             })
             .AddHttpClientInstrumentation(options =>

@@ -27,7 +27,9 @@ internal class HybridCacheService : IHybridCacheService
     // Statistics tracking (in-memory per instance)
     private long _totalHits;
     private long _totalMisses;
+#pragma warning disable CS0649 // Field is never assigned to - reserved for future stampede prevention tracking
     private long _stampedePreventions;
+#pragma warning restore CS0649
 
     public HybridCacheService(
         HybridCache hybridCache,

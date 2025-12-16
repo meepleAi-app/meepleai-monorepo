@@ -654,11 +654,13 @@ internal class PromptEvaluationService : IPromptEvaluationService
             _logger.LogError(ex, "Dataset not found during comparison for template {TemplateId}", templateId);
             throw new InvalidOperationException("Failed to compare prompts: dataset file not found", ex);
         }
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
         catch (InvalidOperationException ex)
         {
             _logger.LogError(ex, "Invalid operation during comparison for template {TemplateId}", templateId);
             throw;
         }
+#pragma warning restore S2139
     }
 
     /// <summary>

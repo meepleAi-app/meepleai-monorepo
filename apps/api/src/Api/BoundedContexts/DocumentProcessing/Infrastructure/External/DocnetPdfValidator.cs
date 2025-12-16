@@ -265,7 +265,7 @@ internal class DocnetPdfValidator : IPdfValidator
 
         stream.Position = 0;
         var buffer = new byte[PdfMagicBytes.Length];
-        var bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, ct).ConfigureAwait(false);
+        var bytesRead = await stream.ReadAsync(buffer.AsMemory(), ct).ConfigureAwait(false);
 
         if (bytesRead < PdfMagicBytes.Length)
         {

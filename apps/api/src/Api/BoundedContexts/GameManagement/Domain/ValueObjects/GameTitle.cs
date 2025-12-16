@@ -75,8 +75,7 @@ internal sealed class GameTitle : ValueObject
 
     private static Guid GenerateGuidFromString(string input)
     {
-        using var sha256 = SHA256.Create();
-        var hash = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(input));
+        var hash = SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(input));
         Span<byte> guidBytes = stackalloc byte[16];
         hash.AsSpan(0, 16).CopyTo(guidBytes);
         return new Guid(guidBytes);

@@ -28,7 +28,9 @@ internal class GetAlertConfigurationQueryHandler : IRequestHandler<GetAlertConfi
             throw new InvalidOperationException($"No configuration found for category: {request.Category}");
         }
 
+#pragma warning disable S6608 // Prefer indexing instead of "Enumerable" methods on "IReadOnlyList" - First() is clearer here after Count check
         var config = configs.First();
+#pragma warning restore S6608
         return MapToDto(config);
     }
 

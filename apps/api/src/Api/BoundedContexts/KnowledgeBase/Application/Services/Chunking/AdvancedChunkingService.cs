@@ -35,8 +35,6 @@ internal sealed class AdvancedChunkingService : IAdvancedChunkingService
         if (document == null)
             throw new ArgumentNullException(nameof(document));
 
-        var chunks = new List<HierarchicalChunk>();
-
         // Step 1: Auto-select strategy if not provided
         var elementTypes = document.Sections.Select(s => s.ElementType).ToList();
         config ??= _strategySelector.SelectStrategy(document.Content, elementTypes);
@@ -46,6 +44,7 @@ internal sealed class AdvancedChunkingService : IAdvancedChunkingService
             document.Id, config.Name, config.ChunkSizeTokens, config.OverlapPercentage * 100);
 
         // Step 2: Process sections if available, otherwise treat as single section
+        List<HierarchicalChunk> chunks;
         if (document.Sections.Count > 0)
         {
             chunks = ProcessSections(document, config);

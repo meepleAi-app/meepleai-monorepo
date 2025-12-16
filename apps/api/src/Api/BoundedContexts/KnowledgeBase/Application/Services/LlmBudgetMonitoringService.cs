@@ -104,10 +104,12 @@ internal class LlmBudgetMonitoringService : BackgroundService
 
         // Check monthly budget
         var monthStart = new DateTime(now.Year, now.Month, 1);
+#pragma warning disable S6562 // Always set the "DateTimeKind" when creating new "DateTime" instances - monthStart is UTC context
         var monthlySpend = await costLogRepository.GetTotalCostAsync(
             startDate: DateOnly.FromDateTime(monthStart),
             endDate: DateOnly.FromDateTime(now),
             ct: ct).ConfigureAwait(false);
+#pragma warning restore S6562
 
         var monthlyPercentage = (double)(monthlySpend / MonthlyBudgetUsd);
         await ProcessThresholdAsync(alertingService, "Monthly", monthlySpend, MonthlyBudgetUsd, monthlyPercentage, ct).ConfigureAwait(false);

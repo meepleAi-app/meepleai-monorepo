@@ -34,7 +34,7 @@ internal class QdrantClientAdapter : IQdrantClientAdapter
 
         var host = uri.Host;
         var useHttps = uri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase);
-        var grpcPort = ResolveGrpcPort(configuration, uri, useHttps, logger);
+        var grpcPort = ResolveGrpcPort(configuration, uri, logger);
 
         var factory = clientFactory ?? ((h, p, https) => new QdrantClient(h, p, https));
         _client = factory(host, grpcPort, useHttps);
@@ -44,7 +44,6 @@ internal class QdrantClientAdapter : IQdrantClientAdapter
     private static int ResolveGrpcPort(
         IConfiguration configuration,
         Uri uri,
-        bool useHttps,
         ILogger logger)
     {
         var grpcPortSetting = configuration["QDRANT_GRPC_PORT"];
@@ -69,7 +68,7 @@ internal class QdrantClientAdapter : IQdrantClientAdapter
             return uri.Port;
         }
 
-        return useHttps ? 6334 : 6334;
+        return 6334;
     }
 
     public Task<IReadOnlyList<string>> ListCollectionsAsync(CancellationToken cancellationToken = default)

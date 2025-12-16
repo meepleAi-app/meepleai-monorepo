@@ -231,11 +231,15 @@ internal class HybridLlmService : ILlmService
     /// Generate streaming completion with user context for adaptive routing
     /// ISSUE-1725: Enhanced to return StreamChunk with usage metadata
     /// </summary>
+#pragma warning disable S3400 // Methods should not return constants - async iterator pattern requires this signature
+#pragma warning disable S4456 // Parameter validation on async iterator - validated before yield
     public async IAsyncEnumerable<StreamChunk> GenerateCompletionStreamAsync(
         string systemPrompt,
         string userPrompt,
         User? user,
         [EnumeratorCancellation] CancellationToken ct = default)
+#pragma warning restore S4456
+#pragma warning restore S3400
     {
         ArgumentNullException.ThrowIfNull(systemPrompt);
         ArgumentNullException.ThrowIfNull(userPrompt);

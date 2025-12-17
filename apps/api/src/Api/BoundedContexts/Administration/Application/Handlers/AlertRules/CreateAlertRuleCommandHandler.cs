@@ -12,7 +12,7 @@ internal class CreateAlertRuleCommandHandler : IRequestHandler<CreateAlertRuleCo
     public CreateAlertRuleCommandHandler(IAlertRuleRepository repository) =>
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
 
-    public async Task<Guid> Handle(CreateAlertRuleCommand request, CancellationToken ct)
+    public async Task<Guid> Handle(CreateAlertRuleCommand request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
         var severity = AlertSeverityExtensions.FromString(request.Severity);
@@ -20,7 +20,8 @@ internal class CreateAlertRuleCommandHandler : IRequestHandler<CreateAlertRuleCo
         var duration = new AlertDuration(request.DurationMinutes);
 
         var rule = AlertRule.Create(request.Name, request.AlertType, severity, threshold, duration, request.CreatedBy, request.Description);
-        await _repository.AddAsync(rule, ct).ConfigureAwait(false);
+        await _repository.AddAsync(rule, cancellationToken).ConfigureAwait(false);
         return rule.Id;
     }
 }
+

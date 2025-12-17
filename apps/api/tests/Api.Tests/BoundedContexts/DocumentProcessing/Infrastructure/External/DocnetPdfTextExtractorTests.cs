@@ -16,7 +16,7 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Infrastructure.External;
 /// ISSUE-1818: Migrated to FluentAssertions for improved readability.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
-public class DocnetPdfTextExtractorTests : IDisposable
+public sealed class DocnetPdfTextExtractorTests : IDisposable
 {
     private readonly Mock<ILogger<DocnetPdfTextExtractor>> _mockLogger;
     private readonly PdfTextProcessingDomainService _domainService;

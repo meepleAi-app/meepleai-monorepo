@@ -23,7 +23,7 @@ internal class ModelRecommendationService : IModelRecommendationService
     public Task<ModelRecommendation> GetRecommendationAsync(
         string useCase,
         bool prioritizeCost = false,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         _logger.LogInformation(
             "Generating model recommendation for use case: {UseCase}, prioritize cost: {PrioritizeCost}",
@@ -86,7 +86,7 @@ internal class ModelRecommendationService : IModelRecommendationService
         return Task.FromResult(recommendation);
     }
 
-    public async Task<List<ModelComparison>> CompareModelsAsync(CancellationToken ct = default)
+    public async Task<List<ModelComparison>> CompareModelsAsync(CancellationToken cancellationToken = default)
     {
         await Task.CompletedTask.ConfigureAwait(false); // Satisfy async
 
@@ -165,3 +165,4 @@ internal class ModelRecommendationService : IModelRecommendationService
         return cost == 0 ? 0.0 : (double)cost / qualityScore;
     }
 }
+

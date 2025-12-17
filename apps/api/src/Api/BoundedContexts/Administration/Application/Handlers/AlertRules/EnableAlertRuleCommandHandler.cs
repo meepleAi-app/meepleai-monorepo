@@ -11,16 +11,17 @@ internal class EnableAlertRuleCommandHandler : IRequestHandler<EnableAlertRuleCo
     public EnableAlertRuleCommandHandler(IAlertRuleRepository repository) =>
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
 
-    public async Task<Unit> Handle(EnableAlertRuleCommand request, CancellationToken ct)
+    public async Task<Unit> Handle(EnableAlertRuleCommand request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
-        var rule = await _repository.GetByIdAsync(request.Id, ct).ConfigureAwait(false);
+        var rule = await _repository.GetByIdAsync(request.Id, cancellationToken).ConfigureAwait(false);
         if (rule == null) throw new InvalidOperationException($"AlertRule {request.Id} not found");
 
         if (rule.IsEnabled) rule.Disable(request.UpdatedBy);
         else rule.Enable(request.UpdatedBy);
 
-        await _repository.UpdateAsync(rule, ct).ConfigureAwait(false);
+        await _repository.UpdateAsync(rule, cancellationToken).ConfigureAwait(false);
         return Unit.Value;
     }
 }
+

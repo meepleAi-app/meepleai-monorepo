@@ -106,19 +106,19 @@ internal class TempSessionService : ITempSessionService
     /// <summary>
     /// Cleanup expired temp sessions (run periodically)
     /// </summary>
-    public async Task CleanupExpiredSessionsAsync(CancellationToken ct = default)
+    public async Task CleanupExpiredSessionsAsync(CancellationToken cancellationToken = default)
     {
         var now = _timeProvider.GetUtcNow();
         var cutoff = now.AddHours(-1); // Keep used sessions for 1 hour (audit trail)
 
         var expiredSessions = await _dbContext.TempSessions
             .Where(ts => ts.ExpiresAt < now.UtcDateTime || (ts.IsUsed && ts.UsedAt < cutoff.UtcDateTime))
-            .ToListAsync(ct).ConfigureAwait(false);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
-        if (expiredSessions.Any())
+        if (expiredSessions.Count > 0)
         {
             _dbContext.TempSessions.RemoveRange(expiredSessions);
-            await _dbContext.SaveChangesAsync(ct).ConfigureAwait(false);
+            await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation("Cleaned up {Count} expired temp sessions", expiredSessions.Count);
         }

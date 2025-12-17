@@ -277,7 +277,7 @@ public class AdvancedChunkingServiceTests
         await cts.CancelAsync();
 
         // Act
-        var act = () => _service.ChunkDocumentAsync(document, ct: cts.Token);
+        var act = () => _service.ChunkDocumentAsync(document, cancellationToken: cts.Token);
 
         // Assert
         await act.Should().ThrowAsync<OperationCanceledException>();

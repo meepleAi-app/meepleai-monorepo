@@ -70,7 +70,7 @@ internal static partial class DataMasking
         if (string.IsNullOrEmpty(cardNumber))
             return "****-****-****-****";
 
-        var digitsOnly = new string(cardNumber.Where(char.IsDigit).ToArray());
+        var digitsOnly = string.Concat(cardNumber.Where(char.IsDigit));
 
         if (digitsOnly.Length < 4)
             return "****-****-****-****";

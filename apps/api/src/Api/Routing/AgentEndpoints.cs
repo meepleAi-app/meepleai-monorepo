@@ -19,6 +19,17 @@ internal static class AgentEndpoints
 {
     public static RouteGroupBuilder MapAgentEndpoints(this RouteGroupBuilder group)
     {
+        MapCreateAgentEndpoint(group);
+        MapGetAgentByIdEndpoint(group);
+        MapGetAllAgentsEndpoint(group);
+        MapConfigureAgentEndpoint(group);
+        MapInvokeAgentEndpoint(group);
+
+        return group;
+    }
+
+    private static void MapCreateAgentEndpoint(RouteGroupBuilder group)
+    {
         // Create agent
         group.MapPost("/agents", async (
             CreateAgentRequest req,
@@ -51,7 +62,10 @@ internal static class AgentEndpoints
         .Produces(201)
         .Produces(400)
         .Produces(500);
+    }
 
+    private static void MapGetAgentByIdEndpoint(RouteGroupBuilder group)
+    {
         // Get agent by ID
         group.MapGet("/agents/{id:guid}", async (
             Guid id,
@@ -61,7 +75,7 @@ internal static class AgentEndpoints
             CancellationToken ct = default) =>
         {
             // Session validated by RequireSessionFilter
-            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+            _ = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
             var query = new GetAgentByIdQuery(id);
             var result = await mediator.Send(query, ct).ConfigureAwait(false);
@@ -78,7 +92,10 @@ internal static class AgentEndpoints
         .Produces(200)
         .Produces(404)
         .Produces(500);
+    }
 
+    private static void MapGetAllAgentsEndpoint(RouteGroupBuilder group)
+    {
         // Get all agents
         group.MapGet("/agents", async (
             [FromQuery] bool? activeOnly,
@@ -109,7 +126,10 @@ internal static class AgentEndpoints
         .WithName("GetAllAgents")
         .Produces(200)
         .Produces(500);
+    }
 
+    private static void MapConfigureAgentEndpoint(RouteGroupBuilder group)
+    {
         // Configure agent
         group.MapPut("/agents/{id:guid}/configure", async (
             Guid id,
@@ -155,7 +175,10 @@ internal static class AgentEndpoints
         .Produces(400)
         .Produces(404)
         .Produces(500);
+    }
 
+    private static void MapInvokeAgentEndpoint(RouteGroupBuilder group)
+    {
         // Invoke agent - Issue #867: Game Master Agent Integration
         group.MapPost("/agents/{id:guid}/invoke", async (
             Guid id,
@@ -190,8 +213,6 @@ internal static class AgentEndpoints
         .Produces(400)
         .Produces(404)
         .Produces(500);
-
-        return group;
     }
 }
 

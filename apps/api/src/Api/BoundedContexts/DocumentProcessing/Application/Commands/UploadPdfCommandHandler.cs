@@ -192,50 +192,17 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
                 return (false, gameError!, null, null);
             }
 
-            // Check upload quota
-            var user = await _db.Users
-                .AsNoTracking()
-                .Where(u => u.Id == userId)
-                .Select(u => new { u.Id, u.Tier, u.Role })
-                .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
-
-            if (user == null)
+            // Get user and validate quota
+            var user = await GetUserForQuotaCheckAsync(userId, file, cancellationToken).ConfigureAwait(false);
+            if (!user.HasValue)
             {
-                RecordUploadMetricSafely("user_not_found", file.Length);
-                _logger.LogError("User {UserId} not found during PDF upload", userId);
                 return (false, "User not found. Please ensure you are authenticated.", null, null);
             }
 
-            var userTier = UserTier.Parse(user.Tier);
-            var userRole = Role.Parse(user.Role);
+            var (uId, uTier, uRole) = user.Value;
+            var (allowed, error, tier, _) = await ValidateUserQuotaAsync(uId, uTier, uRole, file, cancellationToken).ConfigureAwait(false);
 
-            var quotaResult = await _quotaService.CheckQuotaAsync(
-                user.Id,
-                userTier,
-                userRole,
-                cancellationToken).ConfigureAwait(false);
-
-            if (!quotaResult.Allowed)
-            {
-                RecordUploadMetricSafely("quota_exceeded", file.Length);
-                _logger.LogWarning(
-                    "PDF upload denied for user {UserId} ({Tier}): {Reason}",
-                    userId,
-                    userTier.Value,
-                    quotaResult.ErrorMessage);
-                return (false, quotaResult.ErrorMessage!, userTier.Value, null);
-            }
-
-            _logger.LogDebug(
-                "PDF upload quota check passed for user {UserId} ({Tier}): Daily {DailyUsed}/{DailyLimit}, Weekly {WeeklyUsed}/{WeeklyLimit}",
-                userId,
-                userTier.Value,
-                quotaResult.DailyUploadsUsed,
-                quotaResult.DailyLimit,
-                quotaResult.WeeklyUploadsUsed,
-                quotaResult.WeeklyLimit);
-
-            return (true, null, userTier.Value, resolvedGameId.Value);
+            return (allowed, error, tier, resolvedGameId);
         }
         catch (OperationCanceledException)
         {
@@ -247,6 +214,66 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
             _logger.LogError(ex, "Database unavailable during PDF upload");
             return (false, "Database unavailable. Please retry the upload.", null, null);
         }
+    }
+
+    private async Task<(Guid Id, string Tier, string Role)?> GetUserForQuotaCheckAsync(
+        Guid userId,
+        IFormFile file,
+        CancellationToken cancellationToken)
+    {
+        var user = await _db.Users
+            .AsNoTracking()
+            .Where(u => u.Id == userId)
+            .Select(u => new { u.Id, u.Tier, u.Role })
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+
+        if (user == null)
+        {
+            RecordUploadMetricSafely("user_not_found", file.Length);
+            _logger.LogError("User {UserId} not found during PDF upload", userId);
+            return null;
+        }
+
+        return (user.Id, user.Tier, user.Role);
+    }
+
+    private async Task<(bool Allowed, string? ErrorMessage, string? UserTier, Guid? GameId)> ValidateUserQuotaAsync(
+        Guid userId,
+        string tier,
+        string role,
+        IFormFile file,
+        CancellationToken cancellationToken)
+    {
+        var userTier = UserTier.Parse(tier);
+        var userRole = Role.Parse(role);
+
+        var quotaResult = await _quotaService.CheckQuotaAsync(
+            userId,
+            userTier,
+            userRole,
+            cancellationToken).ConfigureAwait(false);
+
+        if (!quotaResult.Allowed)
+        {
+            RecordUploadMetricSafely("quota_exceeded", file.Length);
+            _logger.LogWarning(
+                "PDF upload denied for user {UserId} ({Tier}): {Reason}",
+                userId,
+                userTier.Value,
+                quotaResult.ErrorMessage);
+            return (false, quotaResult.ErrorMessage!, userTier.Value, null);
+        }
+
+        _logger.LogDebug(
+            "PDF upload quota check passed for user {UserId} ({Tier}): Daily {DailyUsed}/{DailyLimit}, Weekly {WeeklyUsed}/{WeeklyLimit}",
+            userId,
+            userTier.Value,
+            quotaResult.DailyUploadsUsed,
+            quotaResult.DailyLimit,
+            quotaResult.WeeklyUploadsUsed,
+            quotaResult.WeeklyLimit);
+
+        return (true, null, userTier.Value, null);
     }
 
     /// <summary>
@@ -456,7 +483,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         // Start background processing
         _backgroundTaskService.ExecuteWithCancellation(
             storageResult.FileId!,
-            (ct) => ProcessPdfAsync(storageResult.FileId!, storageResult.FilePath!, userId, ct));
+            (cancellationToken) => ProcessPdfAsync(storageResult.FileId!, storageResult.FilePath!, userId, cancellationToken));
 
         await InvalidateCacheSafelyAsync(gameId, "PDF upload", cancellationToken).ConfigureAwait(false);
 
@@ -496,7 +523,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         }
     }
 
-    private static async Task<(bool IsValid, string? ErrorMessage)> ValidatePdfStructureAsync(Stream stream, CancellationToken ct)
+    private static async Task<(bool IsValid, string? ErrorMessage)> ValidatePdfStructureAsync(Stream stream, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(stream);
         const int headerCheckBytes = 1024; // Read first 1KB to find PDF header
@@ -513,7 +540,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
             // Read beginning of file for PDF header
             stream.Seek(0, SeekOrigin.Begin);
             var headerBuffer = new byte[Math.Min(headerCheckBytes, (int)stream.Length)];
-            var headerBytesRead = await stream.ReadAsync(headerBuffer.AsMemory(0, headerBuffer.Length), ct).ConfigureAwait(false);
+            var headerBytesRead = await stream.ReadAsync(headerBuffer.AsMemory(0, headerBuffer.Length), cancellationToken).ConfigureAwait(false);
 
             // Check for PDF header signature (%PDF-1.x)
             var headerText = System.Text.Encoding.ASCII.GetString(headerBuffer, 0, Math.Min(10, headerBytesRead));
@@ -526,7 +553,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
             var trailerStart = Math.Max(0, stream.Length - trailerCheckBytes);
             stream.Seek(trailerStart, SeekOrigin.Begin);
             var trailerBuffer = new byte[Math.Min(trailerCheckBytes, (int)(stream.Length - trailerStart))];
-            var trailerBytesRead = await stream.ReadAsync(trailerBuffer.AsMemory(0, trailerBuffer.Length), ct).ConfigureAwait(false);
+            var trailerBytesRead = await stream.ReadAsync(trailerBuffer.AsMemory(0, trailerBuffer.Length), cancellationToken).ConfigureAwait(false);
 
             // Check for PDF EOF marker (%%EOF)
             var trailerText = System.Text.Encoding.ASCII.GetString(trailerBuffer, 0, trailerBytesRead);
@@ -551,7 +578,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
             return (false, $"Failed to validate PDF structure: {ex.Message}");
         }
     }
-    private async Task ProcessPdfAsync(string pdfId, string filePath, Guid userId, CancellationToken ct)
+    private async Task ProcessPdfAsync(string pdfId, string filePath, Guid userId, CancellationToken cancellationToken)
     {
         using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
@@ -560,12 +587,12 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
 
         try
         {
-            var pdfDoc = await ValidateAndPrepareProcessingAsync(pdfId, userId, db, quotaService, ct).ConfigureAwait(false);
+            var pdfDoc = await ValidateAndPrepareProcessingAsync(pdfId, userId, db, quotaService, cancellationToken).ConfigureAwait(false);
             if (pdfDoc == null) return; // Validation failed
 
             // Step 1: Extract text with page tracking (20-40%)
             var (extractionSuccess, fullText, extractResult) = await ExtractPdfContentAsync(
-                pdfId, filePath, pdfDoc, db, scope, startTime, ct).ConfigureAwait(false);
+                pdfId, filePath, pdfDoc, db, scope, startTime, cancellationToken).ConfigureAwait(false);
 
             if (!extractionSuccess)
             {
@@ -575,33 +602,33 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
 
             // Step 2: Chunk text with page tracking (40-60%)
             var allDocumentChunks = await ChunkExtractedTextAsync(
-                pdfId, fullText!, extractResult!, db, scope, startTime, ct).ConfigureAwait(false);
+                pdfId, fullText!, extractResult!, db, scope, startTime, cancellationToken).ConfigureAwait(false);
 
             // Step 3: Generate embeddings (60-80%)
             var (embeddingsSuccess, embeddings) = await GenerateAndValidateEmbeddingsAsync(
-                pdfId, userId, allDocumentChunks, pdfDoc, db, quotaService, scope, startTime, ct).ConfigureAwait(false);
+                pdfId, userId, allDocumentChunks, pdfDoc, db, quotaService, scope, startTime, cancellationToken).ConfigureAwait(false);
 
             if (!embeddingsSuccess) return;
 
             // Step 4: Index in Qdrant (80-100%)
             await IndexInVectorStoreAsync(
                 pdfId, userId, pdfDoc, allDocumentChunks, embeddings!,
-                db, scope, startTime, ct).ConfigureAwait(false);
+                db, scope, startTime, cancellationToken).ConfigureAwait(false);
 
             // Complete processing
-            await FinalizeProcessingAsync(pdfId, pdfDoc, userId, db, quotaService, startTime, ct).ConfigureAwait(false);
+            await FinalizeProcessingAsync(pdfId, pdfDoc, userId, db, quotaService, startTime, cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
-            await HandleProcessingCancellationAsync(pdfId, userId, db, quotaService, startTime, ct).ConfigureAwait(false);
+            await HandleProcessingCancellationAsync(pdfId, userId, db, quotaService, startTime, cancellationToken).ConfigureAwait(false);
         }
         catch (InvalidOperationException ex)
         {
-            await HandleProcessingErrorAsync(pdfId, userId, db, quotaService, startTime, ex, "Invalid operation", ct).ConfigureAwait(false);
+            await HandleProcessingErrorAsync(pdfId, userId, db, quotaService, startTime, ex, "Invalid operation", cancellationToken).ConfigureAwait(false);
         }
         catch (DbUpdateException ex)
         {
-            await HandleProcessingErrorAsync(pdfId, userId, db, quotaService, startTime, ex, "Database error occurred", ct).ConfigureAwait(false);
+            await HandleProcessingErrorAsync(pdfId, userId, db, quotaService, startTime, ex, "Database error occurred", cancellationToken).ConfigureAwait(false);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
         // Justification: Background service - PDF processing runs async; must catch all exceptions
@@ -609,7 +636,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         catch (Exception ex)
 #pragma warning restore CA1031
         {
-            await HandleProcessingErrorAsync(pdfId, userId, db, quotaService, startTime, ex, ex.Message, ct).ConfigureAwait(false);
+            await HandleProcessingErrorAsync(pdfId, userId, db, quotaService, startTime, ex, ex.Message, cancellationToken).ConfigureAwait(false);
         }
     }
 
@@ -621,7 +648,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         Guid userId,
         MeepleAiDbContext db,
         IPdfUploadQuotaService quotaService,
-        CancellationToken ct)
+        CancellationToken cancellationToken)
     {
         if (!Guid.TryParse(pdfId, out var pdfGuid))
         {
@@ -630,7 +657,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
             return null;
         }
 
-        var pdfDoc = await db.PdfDocuments.FindAsync(new object[] { pdfGuid }, ct).ConfigureAwait(false);
+        var pdfDoc = await db.PdfDocuments.FindAsync(new object[] { pdfGuid }, cancellationToken).ConfigureAwait(false);
         if (pdfDoc == null)
         {
             _logger.LogError("PDF document {PdfId} not found for processing", pdfId);
@@ -655,7 +682,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
 
         // Mark as processing (optimistic locking)
         pdfDoc.ProcessingStatus = "processing";
-        await db.SaveChangesAsync(ct).ConfigureAwait(false);
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         return pdfDoc;
     }
@@ -671,15 +698,15 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         MeepleAiDbContext db,
         IServiceScope scope,
         DateTime startTime,
-        CancellationToken ct)
+        CancellationToken cancellationToken)
     {
-        await UpdateProgressAsync(db, pdfId, ProcessingStep.Extracting, 0, 0, startTime, null, ct).ConfigureAwait(false);
+        await UpdateProgressAsync(db, pdfId, ProcessingStep.Extracting, 0, 0, startTime, null, cancellationToken).ConfigureAwait(false);
 
         var extractionStopwatch = Stopwatch.StartNew();
         var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
         await using (fileStream.ConfigureAwait(false))
         {
-            var extractResult = await _pdfTextExtractor.ExtractPagedTextAsync(fileStream, enableOcrFallback: true, ct).ConfigureAwait(false);
+            var extractResult = await _pdfTextExtractor.ExtractPagedTextAsync(fileStream, enableOcrFallback: true, cancellationToken).ConfigureAwait(false);
             extractionStopwatch.Stop();
 
             RecordPipelineMetricSafely("extraction", extractionStopwatch.Elapsed.TotalMilliseconds);
@@ -687,11 +714,11 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
             if (!extractResult.Success)
             {
                 RecordPipelineMetricSafely("extraction_error", 0);
-                await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, extractResult.ErrorMessage, ct).ConfigureAwait(false);
+                await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, extractResult.ErrorMessage, cancellationToken).ConfigureAwait(false);
                 pdfDoc.ProcessingStatus = "failed";
                 pdfDoc.ProcessingError = extractResult.ErrorMessage;
                 pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
-                await db.SaveChangesAsync(ct).ConfigureAwait(false);
+                await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
                 return (false, null, null);
             }
 
@@ -702,14 +729,14 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
             pdfDoc.ExtractedText = fullText;
             pdfDoc.PageCount = extractResult.TotalPages;
             pdfDoc.CharacterCount = extractResult.TotalCharacters;
-            await db.SaveChangesAsync(ct).ConfigureAwait(false);
+            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
             RecordPipelineMetricSafely("pages_processed", extractResult.TotalPages);
 
             // Extract structured content (tables, diagrams)
-            await ExtractStructuredContentAsync(filePath, pdfDoc, db, scope, ct).ConfigureAwait(false);
+            await ExtractStructuredContentAsync(filePath, pdfDoc, db, scope, cancellationToken).ConfigureAwait(false);
 
-            await UpdateProgressAsync(db, pdfId, ProcessingStep.Extracting, extractResult.TotalPages, extractResult.TotalPages, startTime, null, ct).ConfigureAwait(false);
+            await UpdateProgressAsync(db, pdfId, ProcessingStep.Extracting, extractResult.TotalPages, extractResult.TotalPages, startTime, null, cancellationToken).ConfigureAwait(false);
 
             return (true, fullText, extractResult);
         }
@@ -723,12 +750,12 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         PdfDocumentEntity pdfDoc,
         MeepleAiDbContext db,
         IServiceScope scope,
-        CancellationToken ct)
+        CancellationToken cancellationToken)
     {
         var tableExtractor = scope.ServiceProvider.GetService<IPdfTableExtractor>() ?? _tableExtractor;
         if (tableExtractor == null) return;
 
-        var structuredResult = await tableExtractor.ExtractStructuredContentAsync(filePath, ct).ConfigureAwait(false);
+        var structuredResult = await tableExtractor.ExtractStructuredContentAsync(filePath, cancellationToken).ConfigureAwait(false);
         if (!structuredResult.Success) return;
 
         pdfDoc.ExtractedTables = System.Text.Json.JsonSerializer.Serialize(structuredResult.Tables);
@@ -745,7 +772,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         pdfDoc.TableCount = structuredResult.TableCount;
         pdfDoc.DiagramCount = structuredResult.DiagramCount;
         pdfDoc.AtomicRuleCount = structuredResult.AtomicRuleCount;
-        await db.SaveChangesAsync(ct).ConfigureAwait(false);
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -758,9 +785,9 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         MeepleAiDbContext db,
         IServiceScope scope,
         DateTime startTime,
-        CancellationToken ct)
+        CancellationToken cancellationToken)
     {
-        await UpdateProgressAsync(db, pdfId, ProcessingStep.Chunking, 0, extractResult.TotalPages, startTime, null, ct).ConfigureAwait(false);
+        await UpdateProgressAsync(db, pdfId, ProcessingStep.Chunking, 0, extractResult.TotalPages, startTime, null, cancellationToken).ConfigureAwait(false);
 
         var chunkingStopwatch = Stopwatch.StartNew();
         var chunkingService = scope.ServiceProvider.GetRequiredService<ITextChunkingService>();
@@ -821,10 +848,10 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         IPdfUploadQuotaService quotaService,
         IServiceScope scope,
         DateTime startTime,
-        CancellationToken ct)
+        CancellationToken cancellationToken)
     {
         var totalPages = pdfDoc.PageCount ?? 0;
-        await UpdateProgressAsync(db, pdfId, ProcessingStep.Embedding, 0, totalPages, startTime, null, ct).ConfigureAwait(false);
+        await UpdateProgressAsync(db, pdfId, ProcessingStep.Embedding, 0, totalPages, startTime, null, cancellationToken).ConfigureAwait(false);
 
         // Generate embeddings
         var embeddingStopwatch = Stopwatch.StartNew();
@@ -838,22 +865,22 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         if (!embeddingResult.Success)
         {
             await HandleEmbeddingFailureAsync(pdfId, userId, pdfDoc, db, quotaService, startTime,
-                $"Embedding generation failed: {embeddingResult.ErrorMessage}", ct).ConfigureAwait(false);
+                $"Embedding generation failed: {embeddingResult.ErrorMessage}", cancellationToken).ConfigureAwait(false);
             return (false, null);
         }
 
-        await UpdateProgressAsync(db, pdfId, ProcessingStep.Embedding, totalPages, totalPages, startTime, null, ct).ConfigureAwait(false);
+        await UpdateProgressAsync(db, pdfId, ProcessingStep.Embedding, totalPages, totalPages, startTime, null, cancellationToken).ConfigureAwait(false);
 
         var embeddings = embeddingResult.Embeddings ?? new List<float[]>();
 
         // Validate embedding count matches chunks
         var countValidation = await ValidateEmbeddingCountAsync(
-            pdfId, userId, embeddings.Count, allDocumentChunks.Count, pdfDoc, db, quotaService, startTime, ct).ConfigureAwait(false);
+            pdfId, userId, embeddings.Count, allDocumentChunks.Count, pdfDoc, db, quotaService, startTime, cancellationToken).ConfigureAwait(false);
         if (!countValidation) return (false, null);
 
         // Validate embedding quality (no NaN/Infinity vectors)
         var qualityValidation = await ValidateEmbeddingQualityAsync(
-            pdfId, userId, embeddings, pdfDoc, db, quotaService, startTime, ct).ConfigureAwait(false);
+            pdfId, userId, embeddings, pdfDoc, db, quotaService, startTime, cancellationToken).ConfigureAwait(false);
         if (!qualityValidation) return (false, null);
 
         return (true, embeddings);
@@ -871,13 +898,13 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         MeepleAiDbContext db,
         IPdfUploadQuotaService quotaService,
         DateTime startTime,
-        CancellationToken ct)
+        CancellationToken cancellationToken)
     {
         if (embeddingCount == chunkCount) return true;
 
         var mismatchMessage = $"Embedding service returned {embeddingCount} vectors for {chunkCount} chunks";
         _logger.LogWarning("Embedding count mismatch for PDF {PdfId}: {Message}", pdfId, mismatchMessage);
-        await HandleEmbeddingFailureAsync(pdfId, userId, pdfDoc, db, quotaService, startTime, mismatchMessage, ct).ConfigureAwait(false);
+        await HandleEmbeddingFailureAsync(pdfId, userId, pdfDoc, db, quotaService, startTime, mismatchMessage, cancellationToken).ConfigureAwait(false);
         return false;
     }
 
@@ -892,7 +919,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         MeepleAiDbContext db,
         IPdfUploadQuotaService quotaService,
         DateTime startTime,
-        CancellationToken ct)
+        CancellationToken cancellationToken)
     {
         var invalidEmbeddingIndexes = new List<int>();
         for (var i = 0; i < embeddings.Count; i++)
@@ -908,7 +935,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         var detail = string.Join(", ", invalidEmbeddingIndexes);
         var error = $"Embedding service returned invalid vectors for chunk indices: {detail}";
         _logger.LogWarning("Invalid embeddings detected for PDF {PdfId}: {Detail}", pdfId, detail);
-        await HandleEmbeddingFailureAsync(pdfId, userId, pdfDoc, db, quotaService, startTime, error, ct).ConfigureAwait(false);
+        await HandleEmbeddingFailureAsync(pdfId, userId, pdfDoc, db, quotaService, startTime, error, cancellationToken).ConfigureAwait(false);
         return false;
     }
 
@@ -923,14 +950,14 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         IPdfUploadQuotaService quotaService,
         DateTime startTime,
         string errorMessage,
-        CancellationToken ct)
+        CancellationToken cancellationToken)
     {
-        await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, errorMessage, ct).ConfigureAwait(false);
+        await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, errorMessage, cancellationToken).ConfigureAwait(false);
         await quotaService.ReleaseQuotaAsync(userId, pdfId, CancellationToken.None).ConfigureAwait(false);
         pdfDoc.ProcessingStatus = "failed";
         pdfDoc.ProcessingError = errorMessage;
         pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
-        await db.SaveChangesAsync(ct).ConfigureAwait(false);
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -945,11 +972,11 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         MeepleAiDbContext db,
         IServiceScope scope,
         DateTime startTime,
-        CancellationToken ct)
+        CancellationToken cancellationToken)
     {
         var totalPages = pdfDoc.PageCount ?? 0;
 
-        await UpdateProgressAsync(db, pdfId, ProcessingStep.Indexing, 0, totalPages, startTime, null, ct).ConfigureAwait(false);
+        await UpdateProgressAsync(db, pdfId, ProcessingStep.Indexing, 0, totalPages, startTime, null, cancellationToken).ConfigureAwait(false);
 
         var indexingStopwatch = Stopwatch.StartNew();
         var qdrantService = scope.ServiceProvider.GetRequiredService<IQdrantService>();
@@ -972,20 +999,20 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
 
         if (!indexResult.Success)
         {
-            await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, $"Qdrant indexing failed: {indexResult.ErrorMessage}", ct).ConfigureAwait(false);
+            await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, $"Qdrant indexing failed: {indexResult.ErrorMessage}", cancellationToken).ConfigureAwait(false);
             await scope.ServiceProvider.GetRequiredService<IPdfUploadQuotaService>().ReleaseQuotaAsync(userId, pdfId, CancellationToken.None).ConfigureAwait(false);
             pdfDoc.ProcessingStatus = "failed";
             pdfDoc.ProcessingError = indexResult.ErrorMessage;
             pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
-            await db.SaveChangesAsync(ct).ConfigureAwait(false);
+            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             return;
         }
 
         // Update vector document
-        await UpdateVectorDocumentAsync(pdfId, pdfDoc, indexResult.IndexedCount, db, ct).ConfigureAwait(false);
+        await UpdateVectorDocumentAsync(pdfId, pdfDoc, indexResult.IndexedCount, db, cancellationToken).ConfigureAwait(false);
 
         // Save text chunks to PostgreSQL for hybrid search (FTS)
-        await SaveTextChunksForHybridSearchAsync(pdfId, pdfDoc, allDocumentChunks, db, ct).ConfigureAwait(false);
+        await SaveTextChunksForHybridSearchAsync(pdfId, pdfDoc, allDocumentChunks, db, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -996,10 +1023,10 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         PdfDocumentEntity pdfDoc,
         int indexedCount,
         MeepleAiDbContext db,
-        CancellationToken ct)
+        CancellationToken cancellationToken)
     {
         var pdfGuid = Guid.Parse(pdfId);
-        var vectorDoc = await db.VectorDocuments.FirstOrDefaultAsync(v => v.PdfDocumentId == pdfGuid, ct).ConfigureAwait(false);
+        var vectorDoc = await db.VectorDocuments.FirstOrDefaultAsync(v => v.PdfDocumentId == pdfGuid, cancellationToken).ConfigureAwait(false);
 
         if (vectorDoc == null)
         {
@@ -1023,7 +1050,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
             vectorDoc.IndexedAt = _timeProvider.GetUtcNow().UtcDateTime;
         }
 
-        await db.SaveChangesAsync(ct).ConfigureAwait(false);
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -1034,14 +1061,14 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         PdfDocumentEntity pdfDoc,
         List<DocumentChunkInput> allDocumentChunks,
         MeepleAiDbContext db,
-        CancellationToken ct)
+        CancellationToken cancellationToken)
     {
         var pdfGuid = Guid.Parse(pdfId);
 
         // Delete existing chunks for re-processing scenario
         var existingChunks = await db.TextChunks
             .Where(tc => tc.PdfDocumentId == pdfGuid)
-            .ToListAsync(ct).ConfigureAwait(false);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
         if (existingChunks.Count > 0)
         {
             db.TextChunks.RemoveRange(existingChunks);
@@ -1063,7 +1090,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
             .ToList();
 
         db.TextChunks.AddRange(textChunkEntities);
-        await db.SaveChangesAsync(ct).ConfigureAwait(false);
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation("Saved {ChunkCount} text chunks to PostgreSQL for hybrid search (PDF {PdfId})",
             textChunkEntities.Count, pdfId);
@@ -1079,16 +1106,16 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         MeepleAiDbContext db,
         IPdfUploadQuotaService quotaService,
         DateTime startTime,
-        CancellationToken ct)
+        CancellationToken cancellationToken)
     {
         var totalPages = pdfDoc.PageCount ?? 0;
-        await UpdateProgressAsync(db, pdfId, ProcessingStep.Completed, totalPages, totalPages, startTime, null, ct).ConfigureAwait(false);
+        await UpdateProgressAsync(db, pdfId, ProcessingStep.Completed, totalPages, totalPages, startTime, null, cancellationToken).ConfigureAwait(false);
 
         pdfDoc.ProcessingStatus = "completed";
         pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
-        await db.SaveChangesAsync(ct).ConfigureAwait(false);
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        await InvalidateCacheSafelyAsync(pdfDoc.GameId.ToString(), "PDF processing", ct).ConfigureAwait(false);
+        await InvalidateCacheSafelyAsync(pdfDoc.GameId.ToString(), "PDF processing", cancellationToken).ConfigureAwait(false);
 
         // Two-Phase Quota (#1743): Confirm quota (Phase 2)
         await quotaService.ConfirmQuotaAsync(userId, pdfId, CancellationToken.None).ConfigureAwait(false);
@@ -1105,10 +1132,10 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         MeepleAiDbContext db,
         IPdfUploadQuotaService quotaService,
         DateTime startTime,
-        CancellationToken ct)
+        CancellationToken cancellationToken)
     {
         _logger.LogInformation("PDF processing cancelled for {PdfId}", pdfId);
-        await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, "Processing cancelled by user", ct).ConfigureAwait(false);
+        await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, "Processing cancelled by user", cancellationToken).ConfigureAwait(false);
         await quotaService.ReleaseQuotaAsync(userId, pdfId, CancellationToken.None).ConfigureAwait(false);
 
         if (Guid.TryParse(pdfId, out var cancelledPdfGuid))
@@ -1135,22 +1162,22 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         DateTime startTime,
         Exception ex,
         string errorMessage,
-        CancellationToken ct = default
+        CancellationToken cancellationToken = default
         )
     {
         _logger.LogError(ex, "Error during PDF processing for {PdfId}: {ErrorType}", pdfId, ex.GetType().Name);
-        await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, errorMessage, ct).ConfigureAwait(false);
-        await quotaService.ReleaseQuotaAsync(userId, pdfId, ct).ConfigureAwait(false);
+        await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, errorMessage, cancellationToken).ConfigureAwait(false);
+        await quotaService.ReleaseQuotaAsync(userId, pdfId, cancellationToken).ConfigureAwait(false);
 
         if (Guid.TryParse(pdfId, out var errorPdfGuid))
         {
-            var pdfDoc = await db.PdfDocuments.FindAsync(new object[] { errorPdfGuid }, ct).ConfigureAwait(false);
+            var pdfDoc = await db.PdfDocuments.FindAsync(new object[] { errorPdfGuid }, cancellationToken).ConfigureAwait(false);
             if (pdfDoc != null)
             {
                 pdfDoc.ProcessingStatus = "failed";
                 pdfDoc.ProcessingError = errorMessage;
                 pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
-                await db.SaveChangesAsync(ct).ConfigureAwait(false);
+                await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             }
         }
     }
@@ -1162,7 +1189,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         int totalPages,
         DateTime startTime,
         string? errorMessage,
-        CancellationToken ct)
+        CancellationToken cancellationToken)
     {
         try
         {
@@ -1172,7 +1199,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
                 return;
             }
 
-            var pdfDoc = await db.PdfDocuments.FindAsync(new object[] { pdfGuid }, ct).ConfigureAwait(false);
+            var pdfDoc = await db.PdfDocuments.FindAsync(new object[] { pdfGuid }, cancellationToken).ConfigureAwait(false);
             if (pdfDoc == null) return;
 
             var elapsed = _timeProvider.GetUtcNow().UtcDateTime - startTime;
@@ -1192,7 +1219,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
                 ErrorMessage = errorMessage
             };
 
-            await db.SaveChangesAsync(ct).ConfigureAwait(false);
+            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             _logger.LogDebug("Updated progress for PDF {PdfId}: {Step} {Percent}%", pdfId, step, percentComplete);
         }
         catch (OperationCanceledException)
@@ -1213,11 +1240,11 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         }
     }
 
-    private async Task InvalidateCacheSafelyAsync(string gameId, string operation, CancellationToken ct)
+    private async Task InvalidateCacheSafelyAsync(string gameId, string operation, CancellationToken cancellationToken)
     {
         try
         {
-            await _cacheService.InvalidateGameAsync(gameId, ct).ConfigureAwait(false);
+            await _cacheService.InvalidateGameAsync(gameId, cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -1300,3 +1327,4 @@ internal class DocumentChunkInput
     public int CharStart { get; init; }
     public int CharEnd { get; init; }
 }
+

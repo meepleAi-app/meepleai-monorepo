@@ -90,7 +90,7 @@ internal sealed record BenchmarkReport
     }
 
     private static string? DetermineRecommendedConfiguration(
-        IReadOnlyList<ConfigurationResult> results)
+        List<ConfigurationResult> results)
     {
         if (results.Count == 0) return null;
 

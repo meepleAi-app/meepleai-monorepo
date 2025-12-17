@@ -84,7 +84,7 @@ internal class LlmBudgetMonitoringService : BackgroundService
         _logger.LogInformation("LLM Budget Monitoring Service stopping...");
     }
 
-    private async Task CheckBudgetThresholdsAsync(CancellationToken ct)
+    private async Task CheckBudgetThresholdsAsync(CancellationToken cancellationToken)
     {
         // Create scope to resolve scoped services
         using var scope = _scopeFactory.CreateScope();
@@ -97,20 +97,20 @@ internal class LlmBudgetMonitoringService : BackgroundService
         var dailySpend = await costLogRepository.GetTotalCostAsync(
             startDate: DateOnly.FromDateTime(now.Date),
             endDate: DateOnly.FromDateTime(now),
-            ct: ct).ConfigureAwait(false);
+            cancellationToken: cancellationToken).ConfigureAwait(false);
 
         var dailyPercentage = (double)(dailySpend / DailyBudgetUsd);
-        await ProcessThresholdAsync(alertingService, "Daily", dailySpend, DailyBudgetUsd, dailyPercentage, ct).ConfigureAwait(false);
+        await ProcessThresholdAsync(alertingService, "Daily", dailySpend, DailyBudgetUsd, dailyPercentage, cancellationToken).ConfigureAwait(false);
 
         // Check monthly budget
         var monthStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
         var monthlySpend = await costLogRepository.GetTotalCostAsync(
             startDate: DateOnly.FromDateTime(monthStart),
             endDate: DateOnly.FromDateTime(now),
-            ct: ct).ConfigureAwait(false);
+            cancellationToken: cancellationToken).ConfigureAwait(false);
 
         var monthlyPercentage = (double)(monthlySpend / MonthlyBudgetUsd);
-        await ProcessThresholdAsync(alertingService, "Monthly", monthlySpend, MonthlyBudgetUsd, monthlyPercentage, ct).ConfigureAwait(false);
+        await ProcessThresholdAsync(alertingService, "Monthly", monthlySpend, MonthlyBudgetUsd, monthlyPercentage, cancellationToken).ConfigureAwait(false);
     }
 
     private async Task ProcessThresholdAsync(
@@ -119,7 +119,7 @@ internal class LlmBudgetMonitoringService : BackgroundService
         decimal actualSpend,
         decimal budgetLimit,
         double percentage,
-        CancellationToken ct)
+        CancellationToken cancellationToken)
     {
         if (percentage >= CriticalThreshold)
         {
@@ -134,7 +134,7 @@ internal class LlmBudgetMonitoringService : BackgroundService
                 actualSpend: actualSpend,
                 budgetLimit: budgetLimit,
                 percentage: percentage,
-                ct: ct).ConfigureAwait(false);
+                cancellationToken: cancellationToken).ConfigureAwait(false);
         }
         else if (percentage >= WarningThreshold)
         {
@@ -145,7 +145,7 @@ internal class LlmBudgetMonitoringService : BackgroundService
                 actualSpend: actualSpend,
                 budgetLimit: budgetLimit,
                 percentage: percentage,
-                ct: ct).ConfigureAwait(false);
+                cancellationToken: cancellationToken).ConfigureAwait(false);
         }
         else if (_modelOverrideService.IsInBudgetMode())
         {
@@ -168,7 +168,7 @@ internal class LlmBudgetMonitoringService : BackgroundService
         decimal actualSpend,
         decimal budgetLimit,
         double percentage,
-        CancellationToken ct)
+        CancellationToken cancellationToken)
     {
         var budgetModeStatus = _modelOverrideService.GetBudgetModeStatus();
         var message = $"""
@@ -202,6 +202,7 @@ internal class LlmBudgetMonitoringService : BackgroundService
                 { "source", "LlmBudgetMonitoring" },
                 { "budgetModeActive", _modelOverrideService.IsInBudgetMode() }
             },
-            cancellationToken: ct).ConfigureAwait(false);
+            cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 }
+

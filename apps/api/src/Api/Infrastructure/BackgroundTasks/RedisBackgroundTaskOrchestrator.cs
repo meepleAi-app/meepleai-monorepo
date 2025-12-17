@@ -87,10 +87,10 @@ internal class RedisBackgroundTaskOrchestrator : IBackgroundTaskOrchestrator
                     await ExecuteTaskAsync(taskId, taskName, taskFactory, isRecurring: false, cts.Token).ConfigureAwait(false);
                 }
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException ex)
             {
                 // Task was cancelled during delay - cleanup handled by CancelAsync
-                _logger.LogInformation("Delayed task {TaskId} ({TaskName}) was cancelled before execution", taskId, taskName);
+                _logger.LogInformation(ex, "Delayed task {TaskId} ({TaskName}) was cancelled before execution", taskId, taskName);
             }
         }, cts.Token);
     }
@@ -131,10 +131,10 @@ internal class RedisBackgroundTaskOrchestrator : IBackgroundTaskOrchestrator
                     }
                 }
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException ex)
             {
                 // Task was cancelled during execution or delay - cleanup handled by CancelAsync
-                _logger.LogInformation("Recurring task {TaskId} ({TaskName}) was cancelled", taskId, taskName);
+                _logger.LogInformation(ex, "Recurring task {TaskId} ({TaskName}) was cancelled", taskId, taskName);
             }
             finally
             {

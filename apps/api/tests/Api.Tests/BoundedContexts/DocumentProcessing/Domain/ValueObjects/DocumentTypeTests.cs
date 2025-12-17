@@ -158,7 +158,7 @@ public class DocumentTypeTests
         // Act & Assert
         DocumentType.IsValid("invalid").Should().BeFalse();
         DocumentType.IsValid("").Should().BeFalse();
-        DocumentType.IsValid(null).Should().BeFalse();
+        DocumentType.IsValid(null!).Should().BeFalse();
     }
 
     [Fact]

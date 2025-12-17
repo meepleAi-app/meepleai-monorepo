@@ -59,8 +59,14 @@ internal class GoldenDatasetLoader : IGoldenDatasetLoader
     private readonly string _datasetPath;
     private readonly ILogger<GoldenDatasetLoader> _logger;
 
+    // CA1869: Cache JsonSerializerOptions for better performance
+    private static readonly JsonSerializerOptions s_jsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
     // Cache for loaded test cases
-    private IReadOnlyList<GoldenDatasetTestCase>? _cachedTestCases;
+    private List<GoldenDatasetTestCase>? _cachedTestCases;
 
     public GoldenDatasetLoader(ILogger<GoldenDatasetLoader> logger, string? datasetPath = null)
     {
@@ -188,10 +194,7 @@ internal class GoldenDatasetLoader : IGoldenDatasetLoader
         try
         {
             var json = await File.ReadAllTextAsync(_datasetPath, Encoding.UTF8, cancellationToken).ConfigureAwait(false);
-            var dataset = JsonSerializer.Deserialize<GoldenDatasetFile>(json, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
+            var dataset = JsonSerializer.Deserialize<GoldenDatasetFile>(json, s_jsonOptions);
 
             if (dataset == null || dataset.Games == null)
             {

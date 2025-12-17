@@ -94,10 +94,10 @@ internal class CacheWarmingService : BackgroundService
                         _timeProvider,
                         stoppingToken).ConfigureAwait(false);
                 }
-                catch (OperationCanceledException)
+                catch (OperationCanceledException ex)
                 {
                     // Graceful shutdown
-                    _logger.LogInformation("Cache warming service is shutting down (cancellation requested).");
+                    _logger.LogInformation(ex, "Cache warming service is shutting down (cancellation requested).");
                     break;
                 }
                 catch (InvalidOperationException ex)

@@ -15,7 +15,7 @@ internal interface IMonthlyOptimizationReportService
     Task<MonthlyOptimizationReport> GenerateReportAsync(
         int year,
         int month,
-        CancellationToken ct = default);
+        CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -32,3 +32,4 @@ internal record MonthlyOptimizationReport
     public required List<string> ExecutiveSummary { get; init; }
     public required decimal TotalSavingsOpportunity { get; init; }
 }
+

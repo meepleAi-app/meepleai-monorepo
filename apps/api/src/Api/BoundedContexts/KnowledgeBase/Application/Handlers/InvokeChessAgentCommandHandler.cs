@@ -448,23 +448,15 @@ ANSWER:";
                 answer,
                 pattern,
                 RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.NonBacktracking | RegexOptions.Compiled);
-            foreach (Match match in matches)
-            {
-                if (match.Groups.Count > 1)
+
+            suggestedMoves.AddRange(matches.Cast<Match>()
+                .Where(m => m.Groups.Count > 1)
+                .Select(match =>
                 {
                     var move = match.Groups[1].Value.Trim();
                     var explanation = match.Groups.Count > 2 ? match.Groups[2].Value.Trim() : "";
-
-                    if (!string.IsNullOrEmpty(explanation))
-                    {
-                        suggestedMoves.Add($"{move}: {explanation}");
-                    }
-                    else
-                    {
-                        suggestedMoves.Add(move);
-                    }
-                }
-            }
+                    return !string.IsNullOrEmpty(explanation) ? $"{move}: {explanation}" : move;
+                }));
         }
 
         // If FEN position was provided, extract position analysis

@@ -125,7 +125,7 @@ internal sealed class EvaluationDataset
     public IReadOnlyList<EvaluationSample> GetByGameId(string gameId)
     {
         return _samples
-            .Where(s => s.GameId?.Equals(gameId, StringComparison.OrdinalIgnoreCase) == true)
+            .Where(s => s.GameId?.Equals(gameId, StringComparison.OrdinalIgnoreCase) is true)
             .ToList()
             .AsReadOnly();
     }
@@ -195,13 +195,8 @@ internal sealed class EvaluationDataset
     {
         ArgumentNullException.ThrowIfNull(other);
 
-        foreach (var sample in other.Samples)
-        {
-            if (!_samples.Any(s => string.Equals(s.Id, sample.Id, StringComparison.Ordinal)))
-            {
-                _samples.Add(sample);
-            }
-        }
+        _samples.AddRange(other.Samples.Where(sample =>
+            !_samples.Any(s => string.Equals(s.Id, sample.Id, StringComparison.Ordinal))));
 
         SourceType = "combined";
     }

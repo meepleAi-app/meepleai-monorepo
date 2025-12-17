@@ -151,7 +151,7 @@ internal sealed class CrossEncoderRerankerClient : ICrossEncoderReranker
             }
 
             var health = await response.Content.ReadFromJsonAsync<HealthResponseDto>(JsonOptions, cts.Token).ConfigureAwait(false);
-            var isHealthy = health?.ModelLoaded == true && string.Equals(health.Status, "healthy", StringComparison.Ordinal);
+            var isHealthy = health?.ModelLoaded is true && string.Equals(health.Status, "healthy", StringComparison.Ordinal);
 
             if (!isHealthy)
             {

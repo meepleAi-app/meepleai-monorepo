@@ -30,26 +30,28 @@ internal class GetAllUsersQueryHandler : IQueryHandler<GetAllUsersQuery, PagedRe
         // Search filter (email or display name)
         if (!string.IsNullOrWhiteSpace(query.SearchTerm))
         {
-            var term = query.SearchTerm.ToLower(CultureInfo.InvariantCulture);
+            var term = query.SearchTerm;
             dbQuery = dbQuery.Where(u =>
-                (u.Email != null && u.Email.ToLower(CultureInfo.InvariantCulture).Contains(term)) ||
-                (u.DisplayName != null && u.DisplayName.ToLower(CultureInfo.InvariantCulture).Contains(term)));
+                (u.Email != null && u.Email.Contains(term, StringComparison.InvariantCultureIgnoreCase)) ||
+                (u.DisplayName != null && u.DisplayName.Contains(term, StringComparison.InvariantCultureIgnoreCase)));
         }
 
         // Role filter
         if (!string.IsNullOrWhiteSpace(query.RoleFilter) && !string.Equals(query.RoleFilter, "all", StringComparison.Ordinal))
         {
-            var normalizedRole = query.RoleFilter.ToLower(CultureInfo.InvariantCulture);
-            dbQuery = dbQuery.Where(u => u.Role == normalizedRole);
+            dbQuery = dbQuery.Where(u => string.Equals(u.Role, query.RoleFilter, StringComparison.OrdinalIgnoreCase));
         }
 
         // Sorting
-        dbQuery = query.SortBy?.ToLower(CultureInfo.InvariantCulture) switch
+        var sortOrder = query.SortOrder ?? "asc";
+        var isAsc = string.Equals(sortOrder, "asc", StringComparison.OrdinalIgnoreCase);
+
+        dbQuery = query.SortBy switch
         {
-            "email" => string.Equals(query.SortOrder, "asc", StringComparison.Ordinal) ? dbQuery.OrderBy(u => u.Email) : dbQuery.OrderByDescending(u => u.Email),
-            "displayname" => string.Equals(query.SortOrder, "asc", StringComparison.Ordinal) ? dbQuery.OrderBy(u => u.DisplayName) : dbQuery.OrderByDescending(u => u.DisplayName),
-            "role" => string.Equals(query.SortOrder, "asc", StringComparison.Ordinal) ? dbQuery.OrderBy(u => u.Role) : dbQuery.OrderByDescending(u => u.Role),
-            _ => string.Equals(query.SortOrder, "asc", StringComparison.Ordinal) ? dbQuery.OrderBy(u => u.CreatedAt) : dbQuery.OrderByDescending(u => u.CreatedAt)
+            var s when string.Equals(s, "email", StringComparison.OrdinalIgnoreCase) => isAsc ? dbQuery.OrderBy(u => u.Email) : dbQuery.OrderByDescending(u => u.Email),
+            var s when string.Equals(s, "displayname", StringComparison.OrdinalIgnoreCase) => isAsc ? dbQuery.OrderBy(u => u.DisplayName) : dbQuery.OrderByDescending(u => u.DisplayName),
+            var s when string.Equals(s, "role", StringComparison.OrdinalIgnoreCase) => isAsc ? dbQuery.OrderBy(u => u.Role) : dbQuery.OrderByDescending(u => u.Role),
+            _ => isAsc ? dbQuery.OrderBy(u => u.CreatedAt) : dbQuery.OrderByDescending(u => u.CreatedAt)
         };
 
         var total = await dbQuery.CountAsync(cancellationToken).ConfigureAwait(false);

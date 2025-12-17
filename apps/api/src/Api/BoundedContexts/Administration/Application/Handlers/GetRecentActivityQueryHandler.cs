@@ -47,9 +47,36 @@ internal class GetRecentActivityQueryHandler : IQueryHandler<GetRecentActivityQu
         _logger.LogInformation("Fetching recent activity: limit={Limit}, since={Since}", limit, since);
 
         // Aggregate events from multiple sources
+        // Aggregate events from multiple sources
         var events = new List<ActivityEvent>();
 
         // 1. User registrations
+        events.AddRange(await GetUserRegistrationEventsAsync(since, limit, cancellationToken).ConfigureAwait(false));
+
+        // 2. PDF uploads
+        events.AddRange(await GetPdfUploadEventsAsync(since, limit, cancellationToken).ConfigureAwait(false));
+
+        // 3. Alerts
+        events.AddRange(await GetAlertEventsAsync(since, limit, cancellationToken).ConfigureAwait(false));
+
+        // 4. AI Request errors (sample recent errors)
+        events.AddRange(await GetAiErrorEventsAsync(since, limit, cancellationToken).ConfigureAwait(false));
+
+        // Sort all events by timestamp descending and take top N
+        var sortedEvents = events
+            .OrderByDescending(e => e.Timestamp)
+            .Take(limit)
+            .ToList();
+
+        return new RecentActivityDto(
+            Events: sortedEvents,
+            TotalCount: sortedEvents.Count,
+            GeneratedAt: now
+        );
+    }
+
+    private async Task<List<ActivityEvent>> GetUserRegistrationEventsAsync(DateTime since, int limit, CancellationToken cancellationToken)
+    {
         var userRegistrations = await _dbContext.Users
             .AsNoTracking()
             .Where(u => u.CreatedAt >= since)
@@ -63,7 +90,7 @@ internal class GetRecentActivityQueryHandler : IQueryHandler<GetRecentActivityQu
             })
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 
-        events.AddRange(userRegistrations.Select(u => new ActivityEvent(
+        return userRegistrations.Select(u => new ActivityEvent(
             u.Id.ToString(),
             ActivityEventType.UserRegistered,
             $"New user registered: {u.Email}",
@@ -73,9 +100,11 @@ internal class GetRecentActivityQueryHandler : IQueryHandler<GetRecentActivityQu
             "User",
             u.CreatedAt,
             ActivitySeverity.Info
-        )));
+        )).ToList();
+    }
 
-        // 2. PDF uploads
+    private async Task<List<ActivityEvent>> GetPdfUploadEventsAsync(DateTime since, int limit, CancellationToken cancellationToken)
+    {
         var pdfUploads = await _dbContext.PdfDocuments
             .AsNoTracking()
             .Where(pdf => pdf.UploadedAt >= since)
@@ -91,7 +120,7 @@ internal class GetRecentActivityQueryHandler : IQueryHandler<GetRecentActivityQu
             })
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 
-        events.AddRange(pdfUploads.Select(pdf => new ActivityEvent(
+        return pdfUploads.Select(pdf => new ActivityEvent(
             pdf.Id.ToString(),
             ActivityEventType.PdfUploaded,
             $"PDF uploaded: {pdf.FileName} ({pdf.FileSizeBytes} bytes)",
@@ -101,9 +130,11 @@ internal class GetRecentActivityQueryHandler : IQueryHandler<GetRecentActivityQu
             "PdfDocument",
             pdf.UploadedAt,
             ActivitySeverity.Info
-        )));
+        )).ToList();
+    }
 
-        // 3. Alerts
+    private async Task<List<ActivityEvent>> GetAlertEventsAsync(DateTime since, int limit, CancellationToken cancellationToken)
+    {
         var alerts = await _dbContext.Alerts
             .AsNoTracking()
             .Where(a => a.TriggeredAt >= since)
@@ -120,7 +151,7 @@ internal class GetRecentActivityQueryHandler : IQueryHandler<GetRecentActivityQu
             })
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 
-        events.AddRange(alerts.Select(a => new ActivityEvent(
+        return alerts.Select(a => new ActivityEvent(
             a.Id.ToString(),
             !a.IsActive && a.ResolvedAt.HasValue ? ActivityEventType.AlertResolved : ActivityEventType.AlertCreated,
             $"Alert: {a.Message} (Severity: {a.Severity})",
@@ -130,9 +161,11 @@ internal class GetRecentActivityQueryHandler : IQueryHandler<GetRecentActivityQu
             "Alert",
             !a.IsActive && a.ResolvedAt.HasValue ? a.ResolvedAt.Value : a.TriggeredAt,
             MapAlertSeverity(a.Severity)
-        )));
+        )).ToList();
+    }
 
-        // 4. AI Request errors (sample recent errors)
+    private async Task<List<ActivityEvent>> GetAiErrorEventsAsync(DateTime since, int limit, CancellationToken cancellationToken)
+    {
         var recentErrors = await _dbContext.AiRequestLogs
             .AsNoTracking()
             .Where(log => log.CreatedAt >= since && log.Status != "Success")
@@ -148,7 +181,7 @@ internal class GetRecentActivityQueryHandler : IQueryHandler<GetRecentActivityQu
             })
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 
-        events.AddRange(recentErrors.Select(log => new ActivityEvent(
+        return recentErrors.Select(log => new ActivityEvent(
             log.Id.ToString(),
             ActivityEventType.ErrorOccurred,
             $"AI Request failed: {log.ErrorMessage ?? "Unknown error"} (Endpoint: {log.Endpoint})",
@@ -158,19 +191,7 @@ internal class GetRecentActivityQueryHandler : IQueryHandler<GetRecentActivityQu
             "AiRequestLog",
             log.CreatedAt,
             ActivitySeverity.Error
-        )));
-
-        // Sort all events by timestamp descending and take top N
-        var sortedEvents = events
-            .OrderByDescending(e => e.Timestamp)
-            .Take(limit)
-            .ToList();
-
-        return new RecentActivityDto(
-            Events: sortedEvents,
-            TotalCount: sortedEvents.Count,
-            GeneratedAt: now
-        );
+        )).ToList();
     }
 
     private static ActivitySeverity MapAlertSeverity(string alertSeverity)

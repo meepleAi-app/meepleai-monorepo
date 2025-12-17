@@ -136,7 +136,7 @@ internal sealed class GenerateReportJob : IJob
     private async Task SendReportEmailIfConfiguredAsync(
         AdminReport report,
         ReportData reportData,
-        CancellationToken ct)
+        CancellationToken cancellationToken)
     {
         if (report.EmailRecipients.Count == 0)
         {
@@ -153,7 +153,7 @@ internal sealed class GenerateReportJob : IJob
                 reportData.Content,
                 reportData.FileName,
                 reportData.FileSizeBytes,
-                ct).ConfigureAwait(false);
+                cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Report email delivered successfully: {ReportName} to {RecipientCount} recipients",
@@ -170,7 +170,7 @@ internal sealed class GenerateReportJob : IJob
     private async Task SendFailureEmailIfConfiguredAsync(
         AdminReport report,
         string errorMessage,
-        CancellationToken ct)
+        CancellationToken cancellationToken)
     {
         if (report.EmailRecipients.Count == 0)
         {
@@ -183,7 +183,7 @@ internal sealed class GenerateReportJob : IJob
                 report.EmailRecipients,
                 report.Name,
                 errorMessage,
-                ct).ConfigureAwait(false);
+                cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Report failure email sent: {ReportName} to {RecipientCount} recipients",
@@ -197,3 +197,4 @@ internal sealed class GenerateReportJob : IJob
         }
     }
 }
+

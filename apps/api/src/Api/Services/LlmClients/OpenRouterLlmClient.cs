@@ -43,7 +43,9 @@ internal class OpenRouterLlmClient : ILlmClient
         _costCalculator = costCalculator;
 
         // S1075: OpenRouter API endpoint (official public endpoint)
+#pragma warning disable S1075 // URIs should not be hardcoded - Official API endpoint
         const string OpenRouterApiBaseUrl = "https://openrouter.ai/api/v1/";
+#pragma warning restore S1075
 
         // SEC-708: Read API key from Docker Secret file or direct config (S1450: local scope)
         var apiKey = SecretsHelper.GetSecretOrValue(config, "OPENROUTER_API_KEY", logger, required: true)
@@ -81,108 +83,13 @@ internal class OpenRouterLlmClient : ILlmClient
 
         try
         {
-            var messages = new List<object>();
-
-            if (!string.IsNullOrWhiteSpace(systemPrompt))
-            {
-                messages.Add(new { role = "system", content = systemPrompt });
-            }
-
-            messages.Add(new { role = "user", content = userPrompt });
-
-            var request = new
-            {
-                model = model,
-                messages = messages,
-                temperature = temperature,
-                max_tokens = maxTokens
-            };
-
-            var json = JsonSerializer.Serialize(request);
-            var httpRequest = new HttpRequestMessage(HttpMethod.Post, "chat/completions")
-            {
-                Content = new StringContent(json, Encoding.UTF8, "application/json")
-            };
+            using var httpRequest = CreateChatRequest(model, systemPrompt, userPrompt, temperature, maxTokens, stream: false);
 
             _logger.LogInformation("Generating OpenRouter completion using {Model} (temp={Temperature}, max_tokens={MaxTokens})",
                 model, temperature, maxTokens);
 
-            HttpResponseMessage? response = null;
-            try
-            {
-                response = await _httpClient.SendAsync(httpRequest, ct).ConfigureAwait(false);
-                var responseBody = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    _logger.LogError("OpenRouter API error: {Status} - {Body}", response.StatusCode, DataMasking.MaskResponseBody(responseBody));
-                    var statusCode = (int)response.StatusCode;
-                    return LlmCompletionResult.CreateFailure($"OpenRouter API error: {statusCode} ({response.StatusCode})");
-                }
-
-                var chatResponse = JsonSerializer.Deserialize<OpenRouterChatResponse>(responseBody);
-
-                if (chatResponse?.Choices == null || chatResponse.Choices.Count == 0)
-                {
-                    return LlmCompletionResult.CreateFailure("No response returned from OpenRouter");
-                }
-
-                var assistantMessage = chatResponse.Choices[0].Message?.Content ?? string.Empty;
-
-                var usage = chatResponse.Usage != null
-                    ? new LlmUsage(
-                        chatResponse.Usage.PromptTokens,
-                        chatResponse.Usage.CompletionTokens,
-                        chatResponse.Usage.TotalTokens)
-                    : LlmUsage.Empty;
-
-                // ISSUE-960: Calculate cost for this request
-                var costCalculation = _costCalculator.CalculateCost(
-                    model,
-                    ProviderName,
-                    usage.PromptTokens,
-                    usage.CompletionTokens);
-
-                var cost = new LlmCost
-                {
-                    InputCost = costCalculation.InputCost,
-                    OutputCost = costCalculation.OutputCost,
-                    ModelId = model,
-                    Provider = ProviderName
-                };
-
-                var metadata = new Dictionary<string, string>
-(StringComparer.Ordinal)
-                {
-                    ["provider"] = "OpenRouter",
-                    ["cost_usd"] = cost.TotalCost.ToString("F6", CultureInfo.InvariantCulture)
-                };
-
-                if (!string.IsNullOrWhiteSpace(chatResponse.Id))
-                {
-                    metadata["response_id"] = chatResponse.Id;
-                }
-
-                if (!string.IsNullOrWhiteSpace(chatResponse.Model))
-                {
-                    metadata["model"] = chatResponse.Model;
-                }
-
-                var finishReason = chatResponse.Choices[0].FinishReason;
-                if (!string.IsNullOrWhiteSpace(finishReason))
-                {
-                    metadata["finish_reason"] = finishReason;
-                }
-
-                _logger.LogInformation("Successfully generated OpenRouter completion (cost: ${Cost:F6})", cost.TotalCost);
-
-                return LlmCompletionResult.CreateSuccess(assistantMessage, usage, cost, metadata);
-            }
-            finally
-            {
-                response?.Dispose();
-                httpRequest.Dispose();
-            }
+            using var response = await _httpClient.SendAsync(httpRequest, ct).ConfigureAwait(false);
+            return await HandleCompletionResponseAsync(response, model, ct).ConfigureAwait(false);
         }
         catch (TaskCanceledException ex)
         {
@@ -205,13 +112,116 @@ internal class OpenRouterLlmClient : ILlmClient
             return LlmCompletionResult.CreateFailure($"Configuration error: {ex.Message}");
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Service boundary using Result pattern - must return failure instead of throwing
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error during OpenRouter completion");
             return LlmCompletionResult.CreateFailure($"Error: {ex.Message}");
         }
 #pragma warning restore CA1031
+    }
+
+    private HttpRequestMessage CreateChatRequest(
+        string model,
+        string systemPrompt,
+        string userPrompt,
+        double temperature,
+        int maxTokens,
+        bool stream)
+    {
+        var messages = new List<object>();
+
+        if (!string.IsNullOrWhiteSpace(systemPrompt))
+        {
+            messages.Add(new { role = "system", content = systemPrompt });
+        }
+
+        messages.Add(new { role = "user", content = userPrompt });
+
+        var requestPayload = new
+        {
+            model = model,
+            messages = messages,
+            temperature = temperature,
+            max_tokens = maxTokens,
+            stream = stream,
+            usage = stream ? new { include = true } : null
+        };
+
+        var json = JsonSerializer.Serialize(requestPayload);
+        return new HttpRequestMessage(HttpMethod.Post, "chat/completions")
+        {
+            Content = new StringContent(json, Encoding.UTF8, "application/json")
+        };
+    }
+
+    private async Task<LlmCompletionResult> HandleCompletionResponseAsync(
+        HttpResponseMessage response,
+        string model,
+        CancellationToken ct)
+    {
+        var responseBody = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogError("OpenRouter API error: {Status} - {Body}", response.StatusCode, DataMasking.MaskResponseBody(responseBody));
+            return LlmCompletionResult.CreateFailure($"OpenRouter API error: {(int)response.StatusCode} ({response.StatusCode})");
+        }
+
+        var chatResponse = JsonSerializer.Deserialize<OpenRouterChatResponse>(responseBody);
+
+        if (chatResponse?.Choices == null || chatResponse.Choices.Count == 0)
+        {
+            return LlmCompletionResult.CreateFailure("No response returned from OpenRouter");
+        }
+
+        var assistantMessage = chatResponse.Choices[0].Message?.Content ?? string.Empty;
+
+        var usage = chatResponse.Usage != null
+            ? new LlmUsage(
+                chatResponse.Usage.PromptTokens,
+                chatResponse.Usage.CompletionTokens,
+                chatResponse.Usage.TotalTokens)
+            : LlmUsage.Empty;
+
+        var costCalculation = _costCalculator.CalculateCost(
+            model,
+            ProviderName,
+            usage.PromptTokens,
+            usage.CompletionTokens);
+
+        var cost = new LlmCost
+        {
+            InputCost = costCalculation.InputCost,
+            OutputCost = costCalculation.OutputCost,
+            ModelId = model,
+            Provider = ProviderName
+        };
+
+        var metadata = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["provider"] = "OpenRouter",
+            ["cost_usd"] = cost.TotalCost.ToString("F6", CultureInfo.InvariantCulture)
+        };
+
+        if (!string.IsNullOrWhiteSpace(chatResponse.Id))
+        {
+            metadata["response_id"] = chatResponse.Id;
+        }
+
+        if (!string.IsNullOrWhiteSpace(chatResponse.Model))
+        {
+            metadata["model"] = chatResponse.Model;
+        }
+
+        var finishReason = chatResponse.Choices[0].FinishReason;
+        if (!string.IsNullOrWhiteSpace(finishReason))
+        {
+            metadata["finish_reason"] = finishReason;
+        }
+
+        _logger.LogInformation("Successfully generated OpenRouter completion (cost: ${Cost:F6})", cost.TotalCost);
+
+        return LlmCompletionResult.CreateSuccess(assistantMessage, usage, cost, metadata);
     }
 
     /// <inheritdoc/>
@@ -229,36 +239,10 @@ internal class OpenRouterLlmClient : ILlmClient
             yield break;
         }
 
-        var messages = new List<object>();
-
-        if (!string.IsNullOrWhiteSpace(systemPrompt))
-        {
-            messages.Add(new { role = "system", content = systemPrompt });
-        }
-
-        messages.Add(new { role = "user", content = userPrompt });
-
-        // ISSUE-1725: Enable usage metadata in SSE stream
-        var request = new
-        {
-            model = model,
-            messages = messages,
-            temperature = temperature,
-            max_tokens = maxTokens,
-            stream = true,
-            usage = new { include = true } // Request usage metadata in final chunk
-        };
-
-        var json = JsonSerializer.Serialize(request);
-        using var content = new StringContent(json, Encoding.UTF8, "application/json");
+        using var httpRequest = CreateChatRequest(model, systemPrompt, userPrompt, temperature, maxTokens, stream: true);
 
         _logger.LogInformation("Starting OpenRouter streaming completion using {Model} (temp={Temperature}, max_tokens={MaxTokens})",
             model, temperature, maxTokens);
-
-        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "chat/completions")
-        {
-            Content = content
-        };
 
         HttpResponseMessage? response = null;
 
@@ -302,7 +286,16 @@ internal class OpenRouterLlmClient : ILlmClient
         }
 #pragma warning restore CA1031
 
-        // Process stream
+        await foreach (var chunk in ProcessStreamResponseAsync(response, model, ct).ConfigureAwait(false))
+        {
+            yield return chunk;
+        }
+    }
+
+    private async IAsyncEnumerable<StreamChunk> ProcessStreamResponseAsync(
+        HttpResponseMessage response,
+                [EnumeratorCancellation] CancellationToken ct)
+    {
         using (response)
         {
             using var stream = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);

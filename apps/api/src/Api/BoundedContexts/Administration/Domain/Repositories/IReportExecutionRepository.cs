@@ -8,9 +8,10 @@ namespace Api.BoundedContexts.Administration.Domain.Repositories;
 /// </summary>
 internal interface IReportExecutionRepository
 {
-    Task<ReportExecution?> GetByIdAsync(Guid id, CancellationToken ct = default);
-    Task<IReadOnlyList<ReportExecution>> GetByReportIdAsync(Guid reportId, int limit = 50, CancellationToken ct = default);
-    Task<IReadOnlyList<ReportExecution>> GetRecentExecutionsAsync(int limit = 100, CancellationToken ct = default);
-    Task AddAsync(ReportExecution execution, CancellationToken ct = default);
-    Task UpdateAsync(ReportExecution execution, CancellationToken ct = default);
+    Task<ReportExecution?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<ReportExecution>> GetByReportIdAsync(Guid reportId, int limit = 50, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<ReportExecution>> GetRecentExecutionsAsync(int limit = 100, CancellationToken cancellationToken = default);
+    Task AddAsync(ReportExecution execution, CancellationToken cancellationToken = default);
+    Task UpdateAsync(ReportExecution execution, CancellationToken cancellationToken = default);
 }
+

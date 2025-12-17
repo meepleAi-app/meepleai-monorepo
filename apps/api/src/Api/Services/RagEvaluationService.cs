@@ -23,7 +23,7 @@ internal interface IRagEvaluationService
     /// <summary>
     /// Load evaluation dataset from JSON file
     /// </summary>
-    Task<RagEvaluationDataset> LoadDatasetAsync(string filePath, CancellationToken ct = default);
+    Task<RagEvaluationDataset> LoadDatasetAsync(string filePath, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Evaluate RAG system performance on a dataset
@@ -32,7 +32,7 @@ internal interface IRagEvaluationService
         RagEvaluationDataset dataset,
         int topK = 10,
         RagQualityThresholds? thresholds = null,
-        CancellationToken ct = default);
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Generate markdown report from evaluation results
@@ -90,7 +90,7 @@ internal class RagEvaluationService : IRagEvaluationService
     }
 
     /// <inheritdoc/>
-    public async Task<RagEvaluationDataset> LoadDatasetAsync(string filePath, CancellationToken ct = default)
+    public async Task<RagEvaluationDataset> LoadDatasetAsync(string filePath, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(filePath))
         {
@@ -122,7 +122,7 @@ internal class RagEvaluationService : IRagEvaluationService
                 throw new ArgumentException($"Dataset file exceeds maximum size of {maxFileSizeMB} MB (actual: {fileInfo.Length / 1024 / 1024} MB)", nameof(filePath));
             }
 
-            var jsonContent = await System.IO.File.ReadAllTextAsync(fullPath, ct).ConfigureAwait(false);
+            var jsonContent = await System.IO.File.ReadAllTextAsync(fullPath, cancellationToken).ConfigureAwait(false);
             var dataset = JsonSerializer.Deserialize<RagEvaluationDataset>(jsonContent, s_deserializeOptions);
 
             if (dataset == null)
@@ -160,7 +160,7 @@ internal class RagEvaluationService : IRagEvaluationService
         RagEvaluationDataset dataset,
         int topK = 10,
         RagQualityThresholds? thresholds = null,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(dataset);
 
@@ -184,10 +184,10 @@ internal class RagEvaluationService : IRagEvaluationService
         // Evaluate each query
         foreach (var query in dataset.Queries)
         {
-            var queryResult = await EvaluateQueryAsync(query, topK, ct).ConfigureAwait(false);
+            var queryResult = await EvaluateQueryAsync(query, topK, cancellationToken).ConfigureAwait(false);
             queryResults.Add(queryResult);
 
-            if (ct.IsCancellationRequested)
+            if (cancellationToken.IsCancellationRequested)
             {
                 _logger.LogWarning("Evaluation cancelled after {CompletedQueries}/{TotalQueries} queries",
                     queryResults.Count, dataset.Queries.Count);
@@ -356,116 +356,45 @@ internal class RagEvaluationService : IRagEvaluationService
     private async Task<RagEvaluationQueryResult> EvaluateQueryAsync(
         RagEvaluationQuery query,
         int topK,
-        CancellationToken ct)
+        CancellationToken cancellationToken)
     {
         var stopwatch = Stopwatch.StartNew();
 
         try
         {
             // Step 1: Generate embedding for query
-            var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(query.Query, ct).ConfigureAwait(false);
-
-            if (!embeddingResult.Success || embeddingResult.Embeddings.Count == 0)
+            var embedding = await GenerateQueryEmbeddingAsync(query, cancellationToken).ConfigureAwait(false);
+            if (embedding.Length == 0)
             {
-                _logger.LogWarning("Failed to generate embedding for query {QueryId}: {Error}",
-                    query.Id, embeddingResult.ErrorMessage);
-
-                return new RagEvaluationQueryResult
-                {
-                    QueryId = query.Id,
-                    Query = query.Query,
-                    Success = false,
-                    ErrorMessage = $"Embedding generation failed: {embeddingResult.ErrorMessage}",
-                    LatencyMs = stopwatch.Elapsed.TotalMilliseconds
-                };
+                return CreateFailureResult(query, "Embedding generation failed", stopwatch);
             }
 
             // Step 2: Search Qdrant
             var searchResult = await _qdrantService.SearchAsync(
                 query.GameId,
-                embeddingResult.Embeddings[0],
+                embedding,
                 limit: topK,
-                ct: ct).ConfigureAwait(false);
+                cancellationToken: cancellationToken).ConfigureAwait(false);
 
             stopwatch.Stop();
 
             if (!searchResult.Success)
             {
-                _logger.LogWarning("Search failed for query {QueryId}: {Error}",
-                    query.Id, searchResult.ErrorMessage);
-
-                return new RagEvaluationQueryResult
-                {
-                    QueryId = query.Id,
-                    Query = query.Query,
-                    Success = false,
-                    ErrorMessage = $"Search failed: {searchResult.ErrorMessage}",
-                    LatencyMs = stopwatch.Elapsed.TotalMilliseconds
-                };
+                _logger.LogWarning("Search failed for query {QueryId}: {Error}", query.Id, searchResult.ErrorMessage);
+                return CreateFailureResult(query, $"Search failed: {searchResult.ErrorMessage}", stopwatch);
             }
 
             // Step 3: Calculate metrics
-            var retrievedDocIds = searchResult.Results.Select(r => r.PdfId).ToList();
-            var relevantDocIds = query.RelevantDocIds.ToHashSet(StringComparer.Ordinal);
-
-            // TEST-656: Count UNIQUE relevant documents to prevent RecallAtK > 1.0
-            var relevantRetrievedCount = retrievedDocIds.Where(docId => relevantDocIds.Contains(docId)).Distinct(StringComparer.Ordinal).Count();
-
-            // Precision@K for different K values
-            var precisionAt1 = CalculatePrecisionAtK(retrievedDocIds, relevantDocIds, 1);
-            var precisionAt3 = CalculatePrecisionAtK(retrievedDocIds, relevantDocIds, 3);
-            var precisionAt5 = CalculatePrecisionAtK(retrievedDocIds, relevantDocIds, 5);
-            var precisionAt10 = CalculatePrecisionAtK(retrievedDocIds, relevantDocIds, 10);
-
-            // Recall@K
-            var recallAtK = relevantDocIds.Count > 0
-                ? (double)relevantRetrievedCount / relevantDocIds.Count
-                : 0.0;
-
-            // Reciprocal Rank (position of first relevant result)
-            var reciprocalRank = CalculateReciprocalRank(retrievedDocIds, relevantDocIds);
-
-            // Average confidence
-            var avgConfidence = searchResult.Results.Count > 0
-                ? (double?)searchResult.Results.Average(r => r.Score)
-                : null;
-
-            return new RagEvaluationQueryResult
-            {
-                QueryId = query.Id,
-                Query = query.Query,
-                RetrievedCount = retrievedDocIds.Count,
-                RelevantCount = relevantDocIds.Count,
-                RelevantRetrievedCount = relevantRetrievedCount,
-                PrecisionAt1 = precisionAt1,
-                PrecisionAt3 = precisionAt3,
-                PrecisionAt5 = precisionAt5,
-                PrecisionAt10 = precisionAt10,
-                RecallAtK = recallAtK,
-                ReciprocalRank = reciprocalRank,
-                LatencyMs = stopwatch.Elapsed.TotalMilliseconds,
-                RetrievedDocIds = retrievedDocIds,
-                AverageConfidence = avgConfidence,
-                Success = true
-            };
+            return CalculateQueryMetrics(query, searchResult.Results, stopwatch.Elapsed.TotalMilliseconds);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Service boundary - Evaluation operations coordinate multiple services (embedding, search), gracefully handle all failures in result object
         catch (Exception ex)
-#pragma warning restore CA1031
         {
             stopwatch.Stop();
             _logger.LogError(ex, "Error evaluating query {QueryId}", query.Id);
-
-            return new RagEvaluationQueryResult
-            {
-                QueryId = query.Id,
-                Query = query.Query,
-                Success = false,
-                ErrorMessage = $"Exception: {ex.Message}",
-                LatencyMs = stopwatch.Elapsed.TotalMilliseconds
-            };
+            return CreateFailureResult(query, $"Exception: {ex.Message}", stopwatch);
         }
+#pragma warning restore CA1031
     }
 
     /// <summary>
@@ -538,6 +467,82 @@ internal class RagEvaluationService : IRagEvaluationService
         return lowerValue + fraction * (upperValue - lowerValue);
     }
 
+    private async Task<float[]> GenerateQueryEmbeddingAsync(RagEvaluationQuery query, CancellationToken cancellationToken)
+    {
+        var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(query.Query, cancellationToken).ConfigureAwait(false);
+
+        if (!embeddingResult.Success || embeddingResult.Embeddings.Count == 0)
+        {
+            _logger.LogWarning("Failed to generate embedding for query {QueryId}: {Error}",
+                query.Id, embeddingResult.ErrorMessage);
+            return Array.Empty<float>();
+        }
+
+        return embeddingResult.Embeddings[0];
+    }
+
+    private static RagEvaluationQueryResult CreateFailureResult(RagEvaluationQuery query, string errorMessage, Stopwatch stopwatch)
+    {
+        return new RagEvaluationQueryResult
+        {
+            QueryId = query.Id,
+            Query = query.Query,
+            Success = false,
+            ErrorMessage = errorMessage,
+            LatencyMs = stopwatch.Elapsed.TotalMilliseconds
+        };
+    }
+
+    private static RagEvaluationQueryResult CalculateQueryMetrics(
+        RagEvaluationQuery query,
+        List<SearchResultItem> searchResults,
+        double latencyMs)
+    {
+        var retrievedDocIds = searchResults.Select(r => r.PdfId).ToList();
+        var relevantDocIds = query.RelevantDocIds.ToHashSet(StringComparer.Ordinal);
+
+        // TEST-656: Count UNIQUE relevant documents to prevent RecallAtK > 1.0
+        var relevantRetrievedCount = retrievedDocIds.Where(docId => relevantDocIds.Contains(docId)).Distinct(StringComparer.Ordinal).Count();
+
+        // Precision@K for different K values
+        var precisionAt1 = CalculatePrecisionAtK(retrievedDocIds, relevantDocIds, 1);
+        var precisionAt3 = CalculatePrecisionAtK(retrievedDocIds, relevantDocIds, 3);
+        var precisionAt5 = CalculatePrecisionAtK(retrievedDocIds, relevantDocIds, 5);
+        var precisionAt10 = CalculatePrecisionAtK(retrievedDocIds, relevantDocIds, 10);
+
+        // Recall@K
+        var recallAtK = relevantDocIds.Count > 0
+            ? (double)relevantRetrievedCount / relevantDocIds.Count
+            : 0.0;
+
+        // Reciprocal Rank (position of first relevant result)
+        var reciprocalRank = CalculateReciprocalRank(retrievedDocIds, relevantDocIds);
+
+        // Average confidence
+        var avgConfidence = searchResults.Count > 0
+            ? (double?)searchResults.Average(r => r.Score)
+            : null;
+
+        return new RagEvaluationQueryResult
+        {
+            QueryId = query.Id,
+            Query = query.Query,
+            RetrievedCount = retrievedDocIds.Count,
+            RelevantCount = relevantDocIds.Count,
+            RelevantRetrievedCount = relevantRetrievedCount,
+            PrecisionAt1 = precisionAt1,
+            PrecisionAt3 = precisionAt3,
+            PrecisionAt5 = precisionAt5,
+            PrecisionAt10 = precisionAt10,
+            RecallAtK = recallAtK,
+            ReciprocalRank = reciprocalRank,
+            LatencyMs = latencyMs,
+            RetrievedDocIds = retrievedDocIds,
+            AverageConfidence = avgConfidence,
+            Success = true
+        };
+    }
+
     /// <inheritdoc/>
     public string GenerateMarkdownReport(RagEvaluationReport report)
     {
@@ -545,6 +550,28 @@ internal class RagEvaluationService : IRagEvaluationService
 
         var sb = new System.Text.StringBuilder();
 
+        AppendReportHeader(sb, report);
+        AppendSummarySection(sb, report);
+        AppendRetrievalMetricsSection(sb, report);
+        AppendPerformanceMetricsSection(sb, report);
+        AppendQualityGateFailuresSection(sb, report);
+        AppendSlowestQueriesSection(sb, report);
+        AppendLowestPrecisionQueriesSection(sb, report);
+        AppendFailedQueriesSection(sb, report);
+
+        return sb.ToString();
+    }
+
+    /// <inheritdoc/>
+    public string GenerateJsonReport(RagEvaluationReport report)
+    {
+        ArgumentNullException.ThrowIfNull(report);
+
+        return JsonSerializer.Serialize(report, s_serializeOptions);
+    }
+
+    private static void AppendReportHeader(System.Text.StringBuilder sb, RagEvaluationReport report)
+    {
         sb.AppendLine("# RAG Evaluation Report");
         sb.AppendLine();
         sb.AppendLine($"**Dataset:** {report.DatasetName}");
@@ -553,7 +580,10 @@ internal class RagEvaluationService : IRagEvaluationService
         sb.AppendLine(string.Format(System.Globalization.CultureInfo.InvariantCulture,
             "**Status:** {0}", report.PassedQualityGates ? "✅ PASSED" : "❌ FAILED"));
         sb.AppendLine();
+    }
 
+    private static void AppendSummarySection(System.Text.StringBuilder sb, RagEvaluationReport report)
+    {
         sb.AppendLine("## Summary");
         sb.AppendLine();
         sb.AppendLine(string.Format(System.Globalization.CultureInfo.InvariantCulture, "- **Total Queries:** {0}", report.TotalQueries));
@@ -561,7 +591,10 @@ internal class RagEvaluationService : IRagEvaluationService
             "- **Successful:** {0} ({1:P2})", report.SuccessfulQueries, (double)report.SuccessfulQueries / report.TotalQueries));
         sb.AppendLine(string.Format(System.Globalization.CultureInfo.InvariantCulture, "- **Failed:** {0}", report.FailedQueries));
         sb.AppendLine();
+    }
 
+    private static void AppendRetrievalMetricsSection(System.Text.StringBuilder sb, RagEvaluationReport report)
+    {
         sb.AppendLine("## Information Retrieval Metrics");
         sb.AppendLine();
         sb.AppendLine("| Metric | Value |");
@@ -573,7 +606,10 @@ internal class RagEvaluationService : IRagEvaluationService
         sb.AppendLine(string.Format(System.Globalization.CultureInfo.InvariantCulture, "| Precision@10 | {0:F4} |", report.AvgPrecisionAt10));
         sb.AppendLine(string.Format(System.Globalization.CultureInfo.InvariantCulture, "| Recall@K | {0:F4} |", report.AvgRecallAtK));
         sb.AppendLine();
+    }
 
+    private static void AppendPerformanceMetricsSection(System.Text.StringBuilder sb, RagEvaluationReport report)
+    {
         sb.AppendLine("## Performance Metrics");
         sb.AppendLine();
         sb.AppendLine("| Metric | Value |");
@@ -587,7 +623,10 @@ internal class RagEvaluationService : IRagEvaluationService
             sb.AppendLine(string.Format(System.Globalization.CultureInfo.InvariantCulture, "| Average Confidence | {0:F4} |", report.AvgConfidence.Value));
         }
         sb.AppendLine();
+    }
 
+    private static void AppendQualityGateFailuresSection(System.Text.StringBuilder sb, RagEvaluationReport report)
+    {
         if (!report.PassedQualityGates && report.QualityGateFailures.Count > 0)
         {
             sb.AppendLine("## Quality Gate Failures");
@@ -598,7 +637,10 @@ internal class RagEvaluationService : IRagEvaluationService
             }
             sb.AppendLine();
         }
+    }
 
+    private static void AppendSlowestQueriesSection(System.Text.StringBuilder sb, RagEvaluationReport report)
+    {
         sb.AppendLine("## Top 10 Slowest Queries");
         sb.AppendLine();
         var slowestQueries = report.QueryResults
@@ -611,12 +653,15 @@ internal class RagEvaluationService : IRagEvaluationService
         sb.AppendLine("|----------|-------|--------------|");
         foreach (var query in slowestQueries)
         {
-            var queryText = query.Query.Length > 50 ? query.Query.Substring(0, 47) + "..." : query.Query;
+            var queryText = query.Query.Length > 50 ? string.Concat(query.Query.AsSpan(0, 47), "...") : query.Query;
             sb.AppendLine(string.Format(System.Globalization.CultureInfo.InvariantCulture,
                 "| {0} | {1} | {2:F2} |", query.QueryId, queryText, query.LatencyMs));
         }
         sb.AppendLine();
+    }
 
+    private static void AppendLowestPrecisionQueriesSection(System.Text.StringBuilder sb, RagEvaluationReport report)
+    {
         sb.AppendLine("## Top 10 Lowest Precision Queries");
         sb.AppendLine();
         var lowestPrecisionQueries = report.QueryResults
@@ -629,11 +674,14 @@ internal class RagEvaluationService : IRagEvaluationService
         sb.AppendLine("|----------|-------|-----|--------|");
         foreach (var query in lowestPrecisionQueries)
         {
-            var queryText = query.Query.Length > 50 ? query.Query.Substring(0, 47) + "..." : query.Query;
+            var queryText = query.Query.Length > 50 ? string.Concat(query.Query.AsSpan(0, 47), "...") : query.Query;
             sb.AppendLine($"| {query.QueryId} | {queryText} | {query.PrecisionAt5.ToString("F4", CultureInfo.InvariantCulture)} | {query.RecallAtK.ToString("F4", CultureInfo.InvariantCulture)} |");
         }
         sb.AppendLine();
+    }
 
+    private static void AppendFailedQueriesSection(System.Text.StringBuilder sb, RagEvaluationReport report)
+    {
         if (report.FailedQueries > 0)
         {
             sb.AppendLine("## Failed Queries");
@@ -643,22 +691,12 @@ internal class RagEvaluationService : IRagEvaluationService
             sb.AppendLine("|----------|-------|-------|");
             foreach (var query in failedQueries)
             {
-                var queryText = query.Query.Length > 50 ? query.Query.Substring(0, 47) + "..." : query.Query;
-                var error = query.ErrorMessage?.Length > 50 ? query.ErrorMessage.Substring(0, 47) + "..." : query.ErrorMessage;
+                var queryText = query.Query.Length > 50 ? string.Concat(query.Query.AsSpan(0, 47), "...") : query.Query;
+                var error = query.ErrorMessage?.Length > 50 ? string.Concat(query.ErrorMessage.AsSpan(0, 47), "...") : query.ErrorMessage;
                 sb.AppendLine($"| {query.QueryId} | {queryText} | {error} |");
             }
             sb.AppendLine();
         }
-
-        return sb.ToString();
-    }
-
-    /// <inheritdoc/>
-    public string GenerateJsonReport(RagEvaluationReport report)
-    {
-        ArgumentNullException.ThrowIfNull(report);
-
-        return JsonSerializer.Serialize(report, s_serializeOptions);
     }
 }
 

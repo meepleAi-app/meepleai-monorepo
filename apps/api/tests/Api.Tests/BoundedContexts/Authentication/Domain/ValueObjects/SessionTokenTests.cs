@@ -118,7 +118,7 @@ public class SessionTokenTests
 
         // Verify it's valid Base64
         Assert.True(TryDecodeBase64(hash, out var hashBytes));
-        Assert.Equal(32, hashBytes.Length); // 256 bits = 32 bytes
+        Assert.Equal(32, hashBytes!.Length); // 256 bits = 32 bytes
     }
 
     [Fact]

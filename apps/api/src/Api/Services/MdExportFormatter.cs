@@ -58,7 +58,7 @@ internal class MdExportFormatter : IExportFormatter
 
                 // Parse and display citations if present
                 var citations = ParseCitations(log.MetadataJson);
-                if (citations.Any())
+                if (citations.Count > 0)
                 {
                     sb.AppendLine("**Citations:**");
                     sb.AppendLine();
@@ -124,12 +124,11 @@ internal class MdExportFormatter : IExportFormatter
         try
         {
             var metadata = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(metadataJson);
-            if (metadata == null || !metadata.ContainsKey("citations"))
+            if (metadata == null || !metadata.TryGetValue("citations", out var citationsElement))
             {
                 return new List<CitationMetadata>();
             }
 
-            var citationsElement = metadata["citations"];
             if (citationsElement.ValueKind != JsonValueKind.Array)
             {
                 return new List<CitationMetadata>();

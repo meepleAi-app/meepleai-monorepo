@@ -33,22 +33,22 @@ internal interface IEmbeddingProvider
     /// Generate embedding for a single text
     /// </summary>
     /// <param name="text">Text to embed</param>
-    /// <param name="ct">Cancellation token</param>
+    /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Embedding vector</returns>
-    Task<EmbeddingProviderResult> GenerateEmbeddingAsync(string text, CancellationToken ct = default);
+    Task<EmbeddingProviderResult> GenerateEmbeddingAsync(string text, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Generate embeddings for multiple texts (batch operation)
     /// </summary>
     /// <param name="texts">Texts to embed</param>
-    /// <param name="ct">Cancellation token</param>
+    /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>List of embedding vectors</returns>
-    Task<EmbeddingProviderResult> GenerateBatchEmbeddingsAsync(IReadOnlyList<string> texts, CancellationToken ct = default);
+    Task<EmbeddingProviderResult> GenerateBatchEmbeddingsAsync(IReadOnlyList<string> texts, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Check if the provider is healthy and available
     /// </summary>
-    Task<bool> IsHealthyAsync(CancellationToken ct = default);
+    Task<bool> IsHealthyAsync(CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -71,3 +71,4 @@ internal sealed record EmbeddingProviderResult
     public static EmbeddingProviderResult CreateFailure(string error) =>
         new() { Success = false, ErrorMessage = error };
 }
+

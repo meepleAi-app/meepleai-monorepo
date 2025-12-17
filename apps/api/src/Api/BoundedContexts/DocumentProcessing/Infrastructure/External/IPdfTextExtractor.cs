@@ -14,24 +14,24 @@ internal interface IPdfTextExtractor
     /// </summary>
     /// <param name="pdfStream">PDF file stream</param>
     /// <param name="enableOcrFallback">Whether to enable OCR fallback for low-quality extraction</param>
-    /// <param name="ct">Cancellation token</param>
+    /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Extraction result with text and metadata</returns>
     Task<TextExtractionResult> ExtractTextAsync(
         Stream pdfStream,
         bool enableOcrFallback = true,
-        CancellationToken ct = default);
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Extracts text from a PDF file page-by-page with optional OCR fallback
     /// </summary>
     /// <param name="pdfStream">PDF file stream</param>
     /// <param name="enableOcrFallback">Whether to enable OCR fallback for low-quality extraction</param>
-    /// <param name="ct">Cancellation token</param>
+    /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Extraction result with page-aware chunks</returns>
     Task<PagedTextExtractionResult> ExtractPagedTextAsync(
         Stream pdfStream,
         bool enableOcrFallback = true,
-        CancellationToken ct = default);
+        CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -133,3 +133,4 @@ internal record PageTextChunk(
     /// </summary>
     public int CharCount => Text?.Length ?? 0;
 }
+

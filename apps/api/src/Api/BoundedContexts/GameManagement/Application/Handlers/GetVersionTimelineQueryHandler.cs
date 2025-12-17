@@ -1,5 +1,6 @@
 using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -17,6 +18,8 @@ internal class GetVersionTimelineQueryHandler : IQueryHandler<GetVersionTimeline
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
     }
 
+    private record RawVersionData(Guid Id, string Version, DateTime CreatedAt, Guid? ParentVersionId, string MergedFromVersionIds, int AtomCount, string AuthorName);
+
     public async Task<VersionTimelineDto> Handle(GetVersionTimelineQuery query, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(query);
@@ -25,7 +28,25 @@ internal class GetVersionTimelineQueryHandler : IQueryHandler<GetVersionTimeline
             .Include(r => r.CreatedBy)
             .Where(r => r.GameId == query.GameId);
 
-        // Apply filters
+        dbQuery = ApplyFilters(dbQuery, query);
+
+        var versions = await GetRawVersionsAsync(dbQuery, cancellationToken).ConfigureAwait(false);
+        var versionNodes = BuildVersionNodes(versions);
+
+        MarkCurrentVersion(versionNodes);
+
+        var authors = GetAuthors(versionNodes);
+
+        return new VersionTimelineDto(
+            GameId: query.GameId,
+            Versions: versionNodes,
+            TotalVersions: versionNodes.Count,
+            Authors: authors
+        );
+    }
+
+    private IQueryable<RuleSpecEntity> ApplyFilters(IQueryable<RuleSpecEntity> dbQuery, GetVersionTimelineQuery query)
+    {
         if (query.StartDate.HasValue)
             dbQuery = dbQuery.Where(r => r.CreatedAt >= query.StartDate.Value);
 
@@ -46,23 +67,29 @@ internal class GetVersionTimelineQueryHandler : IQueryHandler<GetVersionTimeline
             dbQuery = dbQuery.Where(r => r.Version.Contains(searchTerm));
         }
 
-        var versions = await dbQuery
+        return dbQuery;
+    }
+
+    private async Task<List<RawVersionData>> GetRawVersionsAsync(IQueryable<RuleSpecEntity> dbQuery, CancellationToken ct)
+    {
+        return await dbQuery
             .OrderBy(r => r.CreatedAt)
-            .Select(r => new
-            {
+            .Select(r => new RawVersionData(
                 r.Id,
                 r.Version,
                 r.CreatedAt,
                 r.ParentVersionId,
                 r.MergedFromVersionIds,
-                AtomCount = r.Atoms.Count,
-                AuthorName = r.CreatedBy != null
+                r.Atoms.Count,
+                r.CreatedBy != null
                     ? r.CreatedBy.DisplayName ?? r.CreatedBy.Email ?? "Unknown"
                     : "Unknown"
-            })
-            .ToListAsync(cancellationToken).ConfigureAwait(false);
+            ))
+            .ToListAsync(ct).ConfigureAwait(false);
+    }
 
-        // Build version nodes with parent/merge relationships
+    private List<VersionNodeDto> BuildVersionNodes(List<RawVersionData> versions)
+    {
         var versionNodes = new List<VersionNodeDto>();
         var versionMap = versions.ToDictionary(v => v.Id, v => v.Version);
 
@@ -100,8 +127,12 @@ internal class GetVersionTimelineQueryHandler : IQueryHandler<GetVersionTimeline
             versionNodes.Add(node);
         }
 
-        // Mark the most recent version as current
-        if (versionNodes.Any())
+        return versionNodes;
+    }
+
+    private void MarkCurrentVersion(List<VersionNodeDto> versionNodes)
+    {
+        if (versionNodes.Count > 0)
         {
             var latestVersion = versionNodes.MaxBy(v => v.CreatedAt)!;
             for (int i = 0; i < versionNodes.Count; i++)
@@ -113,19 +144,14 @@ internal class GetVersionTimelineQueryHandler : IQueryHandler<GetVersionTimeline
                 }
             }
         }
+    }
 
-        // Extract unique authors for filter dropdown
-        var authors = versionNodes
+    private List<string> GetAuthors(List<VersionNodeDto> versionNodes)
+    {
+        return versionNodes
             .Select(v => v.Author)
             .Distinct(StringComparer.Ordinal)
             .OrderBy(a => a, StringComparer.Ordinal)
             .ToList();
-
-        return new VersionTimelineDto(
-            GameId: query.GameId,
-            Versions: versionNodes,
-            TotalVersions: versionNodes.Count,
-            Authors: authors
-        );
     }
 }

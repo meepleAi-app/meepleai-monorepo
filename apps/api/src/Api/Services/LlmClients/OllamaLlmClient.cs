@@ -40,7 +40,9 @@ internal class OllamaLlmClient : ILlmClient
         _costCalculator = costCalculator;
 
         // S1075: Default Ollama URL extracted to const
+#pragma warning disable S1075 // URIs should not be hardcoded - Default/Fallback value
         const string DefaultOllamaUrl = "http://ollama:11434";
+#pragma warning restore S1075
 
         // Configure Ollama endpoint - check multiple config keys for flexibility
         // Docker uses OLLAMA_URL env var, appsettings.json may use OllamaUrl
@@ -75,107 +77,13 @@ internal class OllamaLlmClient : ILlmClient
 
         try
         {
-            var messages = new List<object>();
-
-            if (!string.IsNullOrWhiteSpace(systemPrompt))
-            {
-                messages.Add(new { role = "system", content = systemPrompt });
-            }
-
-            messages.Add(new { role = "user", content = userPrompt });
-
-            // Ollama API format (OpenAI-compatible)
-            var request = new
-            {
-                model = model,
-                messages = messages,
-                options = new
-                {
-                    temperature = temperature,
-                    num_predict = maxTokens // Ollama's equivalent of max_tokens
-                },
-                stream = false
-            };
-
-            var json = JsonSerializer.Serialize(request);
-            var httpRequest = new HttpRequestMessage(HttpMethod.Post, "api/chat")
-            {
-                Content = new StringContent(json, Encoding.UTF8, "application/json")
-            };
+            using var httpRequest = CreateChatRequest(model, systemPrompt, userPrompt, temperature, maxTokens, stream: false);
 
             _logger.LogInformation("Generating Ollama completion using {Model} (temp={Temperature}, max_tokens={MaxTokens})",
                 model, temperature, maxTokens);
 
-            HttpResponseMessage? response = null;
-            try
-            {
-                // Ollama endpoint: /api/chat
-                response = await _httpClient.SendAsync(httpRequest, ct).ConfigureAwait(false);
-                var responseBody = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    _logger.LogError("Ollama API error: {Status} - {Body}", response.StatusCode, DataMasking.MaskResponseBody(responseBody));
-                    var statusCode = (int)response.StatusCode;
-                    return LlmCompletionResult.CreateFailure($"Ollama API error: {statusCode} ({response.StatusCode})");
-                }
-
-                var chatResponse = JsonSerializer.Deserialize<OllamaChatResponse>(responseBody);
-
-                if (chatResponse?.Message == null)
-                {
-                    return LlmCompletionResult.CreateFailure("No response returned from Ollama");
-                }
-
-                var assistantMessage = chatResponse.Message.Content ?? string.Empty;
-
-                // Ollama doesn't provide detailed token counts in chat API (only in generate API)
-                // Use estimated token counts: ~0.75 tokens per word
-                var estimatedPromptTokens = EstimateTokenCount(systemPrompt + userPrompt);
-                var estimatedCompletionTokens = EstimateTokenCount(assistantMessage);
-
-                var usage = new LlmUsage(
-                    estimatedPromptTokens,
-                    estimatedCompletionTokens,
-                    estimatedPromptTokens + estimatedCompletionTokens);
-
-                // ISSUE-960: Calculate cost for Ollama (always $0 - self-hosted)
-                var costCalculation = _costCalculator.CalculateCost(
-                    model,
-                    ProviderName,
-                    usage.PromptTokens,
-                    usage.CompletionTokens);
-
-                var cost = new LlmCost
-                {
-                    InputCost = costCalculation.InputCost,  // Will be $0 for Ollama
-                    OutputCost = costCalculation.OutputCost,
-                    ModelId = model,
-                    Provider = ProviderName
-                };
-
-                var metadata = new Dictionary<string, string>
-(StringComparer.Ordinal)
-                {
-                    ["model"] = chatResponse.Model ?? model,
-                    ["provider"] = "Ollama",
-                    ["cost_usd"] = "0.000000"  // Free - self-hosted
-                };
-
-                if (!string.IsNullOrWhiteSpace(chatResponse.DoneReason))
-                {
-                    metadata["finish_reason"] = chatResponse.DoneReason;
-                }
-
-                _logger.LogInformation("Successfully generated Ollama completion (cost: $0 - self-hosted)");
-
-                return LlmCompletionResult.CreateSuccess(assistantMessage, usage, cost, metadata);
-            }
-            finally
-            {
-                response?.Dispose();
-                httpRequest.Dispose();
-            }
+            using var response = await _httpClient.SendAsync(httpRequest, ct).ConfigureAwait(false);
+            return await HandleCompletionResponseAsync(response, model, systemPrompt, userPrompt, ct).ConfigureAwait(false);
         }
         catch (TaskCanceledException ex)
         {
@@ -193,13 +101,110 @@ internal class OllamaLlmClient : ILlmClient
             return LlmCompletionResult.CreateFailure("Invalid response format");
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Service boundary using Result pattern - must return failure instead of throwing
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error during Ollama completion");
             return LlmCompletionResult.CreateFailure($"Error: {ex.Message}");
         }
 #pragma warning restore CA1031
+    }
+
+    private HttpRequestMessage CreateChatRequest(
+        string model,
+        string systemPrompt,
+        string userPrompt,
+        double temperature,
+        int maxTokens,
+        bool stream)
+    {
+        var messages = new List<object>();
+
+        if (!string.IsNullOrWhiteSpace(systemPrompt))
+        {
+            messages.Add(new { role = "system", content = systemPrompt });
+        }
+
+        messages.Add(new { role = "user", content = userPrompt });
+
+        var requestPayload = new
+        {
+            model = model,
+            messages = messages,
+            options = new
+            {
+                temperature = temperature,
+                num_predict = maxTokens
+            },
+            stream = stream
+        };
+
+        var json = JsonSerializer.Serialize(requestPayload);
+        return new HttpRequestMessage(HttpMethod.Post, "api/chat")
+        {
+            Content = new StringContent(json, Encoding.UTF8, "application/json")
+        };
+    }
+
+    private async Task<LlmCompletionResult> HandleCompletionResponseAsync(
+        HttpResponseMessage response,
+        string model,
+        string systemPrompt,
+        string userPrompt,
+        CancellationToken ct)
+    {
+        var responseBody = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogError("Ollama API error: {Status} - {Body}", response.StatusCode, DataMasking.MaskResponseBody(responseBody));
+            return LlmCompletionResult.CreateFailure($"Ollama API error: {(int)response.StatusCode} ({response.StatusCode})");
+        }
+
+        var chatResponse = JsonSerializer.Deserialize<OllamaChatResponse>(responseBody);
+
+        if (chatResponse?.Message == null)
+        {
+            return LlmCompletionResult.CreateFailure("No response returned from Ollama");
+        }
+
+        var assistantMessage = chatResponse.Message.Content ?? string.Empty;
+        var estimatedPromptTokens = EstimateTokenCount(systemPrompt + userPrompt);
+        var estimatedCompletionTokens = EstimateTokenCount(assistantMessage);
+
+        var usage = new LlmUsage(
+            estimatedPromptTokens,
+            estimatedCompletionTokens,
+            estimatedPromptTokens + estimatedCompletionTokens);
+
+        var costCalculation = _costCalculator.CalculateCost(
+            model,
+            ProviderName,
+            usage.PromptTokens,
+            usage.CompletionTokens);
+
+        var cost = new LlmCost
+        {
+            InputCost = costCalculation.InputCost,
+            OutputCost = costCalculation.OutputCost,
+            ModelId = model,
+            Provider = ProviderName
+        };
+
+        var metadata = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["model"] = chatResponse.Model ?? model,
+            ["provider"] = "Ollama",
+            ["cost_usd"] = "0.000000"
+        };
+
+        if (!string.IsNullOrWhiteSpace(chatResponse.DoneReason))
+        {
+            metadata["finish_reason"] = chatResponse.DoneReason;
+        }
+
+        _logger.LogInformation("Successfully generated Ollama completion (cost: $0 - self-hosted)");
+
+        return LlmCompletionResult.CreateSuccess(assistantMessage, usage, cost, metadata);
     }
 
     /// <inheritdoc/>
@@ -217,37 +222,10 @@ internal class OllamaLlmClient : ILlmClient
             yield break;
         }
 
-        var messages = new List<object>();
-
-        if (!string.IsNullOrWhiteSpace(systemPrompt))
-        {
-            messages.Add(new { role = "system", content = systemPrompt });
-        }
-
-        messages.Add(new { role = "user", content = userPrompt });
-
-        var request = new
-        {
-            model = model,
-            messages = messages,
-            options = new
-            {
-                temperature = temperature,
-                num_predict = maxTokens
-            },
-            stream = true // Enable streaming
-        };
-
-        var json = JsonSerializer.Serialize(request);
-        using var content = new StringContent(json, Encoding.UTF8, "application/json");
+        using var httpRequest = CreateChatRequest(model, systemPrompt, userPrompt, temperature, maxTokens, stream: true);
 
         _logger.LogInformation("Starting Ollama streaming completion using {Model} (temp={Temperature}, max_tokens={MaxTokens})",
             model, temperature, maxTokens);
-
-        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "api/chat")
-        {
-            Content = content
-        };
 
         HttpResponseMessage? response = null;
 
@@ -285,7 +263,17 @@ internal class OllamaLlmClient : ILlmClient
         }
 #pragma warning restore CA1031
 
-        // Process stream
+        await foreach (var chunk in ProcessStreamResponseAsync(response, model, ct).ConfigureAwait(false))
+        {
+            yield return chunk;
+        }
+    }
+
+    private async IAsyncEnumerable<StreamChunk> ProcessStreamResponseAsync(
+        HttpResponseMessage response,
+        string model,
+        [EnumeratorCancellation] CancellationToken ct)
+    {
         using (response)
         {
             using var stream = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
@@ -325,7 +313,7 @@ internal class OllamaLlmClient : ILlmClient
                 }
 
                 // ISSUE-1725: Check if this is the final chunk (done=true)
-                if (chunk?.Done == true)
+                if (chunk?.Done is true)
                 {
                     // Final chunk - may contain usage metadata
                     if (chunk.PromptEvalCount.HasValue && chunk.EvalCount.HasValue)

@@ -27,7 +27,7 @@ internal sealed class GenerateReportCommandHandler : ICommandHandler<GenerateRep
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public async Task<GenerateReportResult> Handle(GenerateReportCommand command, CancellationToken ct)
+    public async Task<GenerateReportResult> Handle(GenerateReportCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
         _logger.LogInformation(
@@ -36,7 +36,7 @@ internal sealed class GenerateReportCommandHandler : ICommandHandler<GenerateRep
 
         // Create execution record
         var execution = ReportExecution.Create(Guid.Empty); // On-demand, no report ID
-        await _executionRepository.AddAsync(execution, ct).ConfigureAwait(false);
+        await _executionRepository.AddAsync(execution, cancellationToken).ConfigureAwait(false);
 
         try
         {
@@ -45,7 +45,7 @@ internal sealed class GenerateReportCommandHandler : ICommandHandler<GenerateRep
                 command.Template,
                 command.Format,
                 command.Parameters,
-                ct).ConfigureAwait(false);
+                cancellationToken).ConfigureAwait(false);
 
             // Update execution as completed
             // Note: In production, outputPath would save to storage (S3, Azure Blob, etc.)
@@ -53,7 +53,7 @@ internal sealed class GenerateReportCommandHandler : ICommandHandler<GenerateRep
                 outputPath: $"temp://{reportData.FileName}",
                 fileSizeBytes: reportData.FileSizeBytes);
 
-            await _executionRepository.UpdateAsync(completedExecution, ct).ConfigureAwait(false);
+            await _executionRepository.UpdateAsync(completedExecution, cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Report generated successfully: ExecutionId={ExecutionId}, FileName={FileName}",
@@ -72,9 +72,10 @@ internal sealed class GenerateReportCommandHandler : ICommandHandler<GenerateRep
 
             // Update execution as failed
             var failedExecution = execution.Fail(ex.Message);
-            await _executionRepository.UpdateAsync(failedExecution, ct).ConfigureAwait(false);
+            await _executionRepository.UpdateAsync(failedExecution, cancellationToken).ConfigureAwait(false);
 
             throw;
         }
     }
 }
+

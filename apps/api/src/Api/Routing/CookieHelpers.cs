@@ -122,13 +122,9 @@ internal static class CookieHelpers
         if (!isHttps && configuration.UseForwardedProto &&
             context.Request.Headers.TryGetValue("X-Forwarded-Proto", out var forwardedProto))
         {
-            foreach (var proto in forwardedProto)
+            if (forwardedProto.Any(proto => string.Equals(proto, "https", StringComparison.OrdinalIgnoreCase)))
             {
-                if (string.Equals(proto, "https", StringComparison.OrdinalIgnoreCase))
-                {
-                    isHttps = true;
-                    break;
-                }
+                isHttps = true;
             }
         }
 
@@ -138,7 +134,7 @@ internal static class CookieHelpers
         // CRITICAL FIX: For localhost development with Secure=false
         // Force SameSite=None BEFORE any other logic modifies it
         SameSiteMode sameSite;
-        if (configuration.Secure == false)
+        if (configuration.Secure is false)
         {
             // Explicitly configured for development (HTTP)
             // Force SameSite=None for cross-port cookies
@@ -212,13 +208,9 @@ internal static class CookieHelpers
         if (!isHttps && configuration.UseForwardedProto &&
             context.Request.Headers.TryGetValue("X-Forwarded-Proto", out var forwardedProto))
         {
-            foreach (var proto in forwardedProto)
+            if (forwardedProto.Any(proto => string.Equals(proto, "https", StringComparison.OrdinalIgnoreCase)))
             {
-                if (string.Equals(proto, "https", StringComparison.OrdinalIgnoreCase))
-                {
-                    isHttps = true;
-                    break;
-                }
+                isHttps = true;
             }
         }
 
@@ -258,13 +250,9 @@ internal static class CookieHelpers
         if (!isHttps && configuration.UseForwardedProto &&
             context.Request.Headers.TryGetValue("X-Forwarded-Proto", out var forwardedProto))
         {
-            foreach (var proto in forwardedProto)
+            if (forwardedProto.Any(proto => string.Equals(proto, "https", StringComparison.OrdinalIgnoreCase)))
             {
-                if (string.Equals(proto, "https", StringComparison.OrdinalIgnoreCase))
-                {
-                    isHttps = true;
-                    break;
-                }
+                isHttps = true;
             }
         }
 

@@ -140,9 +140,9 @@ internal class CosineSimilarityCalculator
         var dotProduct = 0.0;
         foreach (var term in vector1.Keys)
         {
-            if (vector2.ContainsKey(term))
+            if (vector2.TryGetValue(term, out var value2))
             {
-                dotProduct += vector1[term] * vector2[term];
+                dotProduct += vector1[term] * value2;
             }
         }
 

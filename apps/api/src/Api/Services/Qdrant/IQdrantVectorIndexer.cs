@@ -13,7 +13,7 @@ internal interface IQdrantVectorIndexer
     Task UpsertPointsAsync(
         string collectionName,
         IReadOnlyList<PointStruct> points,
-        CancellationToken ct = default);
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Build point structures from document chunks
@@ -28,5 +28,5 @@ internal interface IQdrantVectorIndexer
     Task DeleteByFilterAsync(
         string collectionName,
         Filter filter,
-        CancellationToken ct = default);
+        CancellationToken cancellationToken = default);
 }

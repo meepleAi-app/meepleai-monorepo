@@ -231,9 +231,9 @@ internal sealed record EvaluationResult
         );
     }
 
-    private static IReadOnlyDictionary<string, EvaluationMetrics> CalculateMetricsByGroup(
-        IReadOnlyList<EvaluationSampleResult> results,
-        bool byDifficulty)
+    private static Dictionary<string, EvaluationMetrics> CalculateMetricsByGroup(
+        IReadOnlyList<EvaluationSampleResult> results
+        )
     {
         ArgumentNullException.ThrowIfNull(results);
 

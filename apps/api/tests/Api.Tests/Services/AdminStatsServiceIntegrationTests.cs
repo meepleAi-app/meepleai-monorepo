@@ -143,7 +143,7 @@ internal class FakeHybridCache : HybridCache
 /// - Documentation: InMemory DB rationale (Docker hijack prevention #895)
 /// </summary>
 [Trait("Category", TestCategories.Integration)]
-public class AdminStatsServiceIntegrationTests : IDisposable
+public sealed class AdminStatsServiceIntegrationTests : IDisposable
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly FakeHybridCache _cache;

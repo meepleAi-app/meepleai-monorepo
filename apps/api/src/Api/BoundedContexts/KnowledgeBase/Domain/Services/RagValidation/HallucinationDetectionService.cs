@@ -177,8 +177,10 @@ internal class HallucinationDetectionService : IHallucinationDetectionService
         }
 
         // Detect forbidden keywords in response
+        // Detect forbidden keywords in response
         var detectedKeywords = new List<string>();
-        foreach (var keyword in keywords)
+
+        var matches = keywords.Where(keyword =>
         {
             string normalizedKeyword = keyword;
             if (string.Equals(language, "de", StringComparison.Ordinal))
@@ -186,14 +188,16 @@ internal class HallucinationDetectionService : IHallucinationDetectionService
                 // Normalize keyword for German ß/SS equivalence
                 normalizedKeyword = keyword.Replace("ß", "ss", StringComparison.Ordinal);
             }
+            return normalizedText.Contains(normalizedKeyword, StringComparison.OrdinalIgnoreCase);
+        }).ToList();
 
-            if (normalizedText.Contains(normalizedKeyword, StringComparison.OrdinalIgnoreCase))
-            {
-                detectedKeywords.Add(keyword); // Keep original keyword for reporting
-                _logger.LogDebug(
-                    "Detected forbidden keyword '{Keyword}' in response (language: {Language})",
-                    keyword, language);
-            }
+        detectedKeywords.AddRange(matches);
+
+        foreach (var keyword in matches)
+        {
+            _logger.LogDebug(
+                "Detected forbidden keyword '{Keyword}' in response (language: {Language})",
+                keyword, language);
         }
 
         var isValid = detectedKeywords.Count == 0;

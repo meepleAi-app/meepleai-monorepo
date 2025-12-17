@@ -28,9 +28,9 @@ internal sealed class AdvancedChunkingService : IAdvancedChunkingService
     public Task<List<HierarchicalChunk>> ChunkDocumentAsync(
         ExtractedDocument document,
         ChunkingConfiguration? config = null,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
-        ct.ThrowIfCancellationRequested();
+        cancellationToken.ThrowIfCancellationRequested();
 
         ArgumentNullException.ThrowIfNull(document);
 
@@ -67,9 +67,9 @@ internal sealed class AdvancedChunkingService : IAdvancedChunkingService
         string text,
         Guid documentId,
         ChunkingConfiguration? config = null,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
-        ct.ThrowIfCancellationRequested();
+        cancellationToken.ThrowIfCancellationRequested();
 
         if (string.IsNullOrWhiteSpace(text))
             return Task.FromResult(new List<HierarchicalChunk>());
@@ -279,3 +279,4 @@ internal sealed class AdvancedChunkingService : IAdvancedChunkingService
             .ToList();
     }
 }
+

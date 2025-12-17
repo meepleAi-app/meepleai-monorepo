@@ -24,7 +24,6 @@ public class DomainEventIntegrationTests : IAsyncLifetime
 {
     private MeepleAiDbContext _dbContext = null!;
     private IMediator _mediator = null!;
-    private Mock<ILogger<DomainEventHandlerBase<PasswordChangedEvent>>> _logger = null!;
 
     public async ValueTask InitializeAsync()
     {
@@ -45,7 +44,7 @@ public class DomainEventIntegrationTests : IAsyncLifetime
         _mediator = serviceProvider.GetRequiredService<IMediator>();
         _dbContext = serviceProvider.GetRequiredService<MeepleAiDbContext>();
 
-        _logger = new Mock<ILogger<DomainEventHandlerBase<PasswordChangedEvent>>>();
+
 
         await Task.CompletedTask;
     }

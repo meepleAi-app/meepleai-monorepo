@@ -247,7 +247,7 @@ public class UserRepository : RepositoryBase, IUserRepository
         }
 
         // Reconstruct OAuth accounts collection
-        if (entity.OAuthAccounts.Any())
+        if (entity.OAuthAccounts.Count > 0)
         {
             var oauthAccounts = entity.OAuthAccounts.Select(oauthEntity => new OAuthAccount(
                 oauthEntity.Id,

@@ -15,7 +15,7 @@ namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 /// Tests for GetRecentActivityQueryHandler - Issue #874, #878
 /// Validates ActivityFeedService functionality (13 comprehensive test scenarios)
 /// </summary>
-public class GetRecentActivityQueryHandlerTests : IDisposable
+public sealed class GetRecentActivityQueryHandlerTests : IDisposable
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly Mock<ILogger<GetRecentActivityQueryHandler>> _mockLogger;

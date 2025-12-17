@@ -21,13 +21,31 @@ internal static class DocumentCollectionEndpoints
 {
     public static RouteGroupBuilder MapDocumentCollectionEndpoints(this RouteGroupBuilder group)
     {
-        // Game-scoped endpoints (create and list by game)
+        // Game-scoped endpoints (create, list, get by id)
+        MapGameScopedEndpoints(group);
+        // User-scoped endpoints (list by user)
+        MapUserScopedEndpoints(group);
+        // Document content management (add/remove documents)
+        MapContentEndpoints(group);
+
+        return group;
+    }
+
+    private static void MapGameScopedEndpoints(RouteGroupBuilder group)
+    {
         var gameCollectionGroup = group.MapGroup("/games/{gameId:guid}/document-collections")
             .WithTags("DocumentCollections")
             .WithOpenApi();
 
+        MapCreateCollectionEndpoint(gameCollectionGroup);
+        MapGetCollectionByGameEndpoint(gameCollectionGroup);
+        MapGetCollectionByIdEndpoint(gameCollectionGroup);
+    }
+
+    private static void MapCreateCollectionEndpoint(RouteGroupBuilder group)
+    {
         // Create a new document collection
-        gameCollectionGroup.MapPost("", async (
+        group.MapPost("", async (
             Guid gameId,
             HttpContext context,
             [FromBody] CreateCollectionRequest request,
@@ -70,9 +88,12 @@ internal static class DocumentCollectionEndpoints
         .RequireSession()
         .WithName("CreateDocumentCollection")
         .WithDescription("Create a new document collection for a game with optional initial documents");
+    }
 
+    private static void MapGetCollectionByGameEndpoint(RouteGroupBuilder group)
+    {
         // Get collection by game ID
-        gameCollectionGroup.MapGet("", async (
+        group.MapGet("", async (
             Guid gameId,
             HttpContext context,
             IMediator mediator,
@@ -99,14 +120,12 @@ internal static class DocumentCollectionEndpoints
         .RequireSession()
         .WithName("GetCollectionByGame")
         .WithDescription("Get the document collection for a specific game");
+    }
 
-        // Collection-scoped endpoints (operations on existing collections)
-        var collectionGroup = group.MapGroup("/games/{gameId:guid}/document-collections")
-            .WithTags("DocumentCollections")
-            .WithOpenApi();
-
+    private static void MapGetCollectionByIdEndpoint(RouteGroupBuilder group)
+    {
         // Get collection by ID (within game scope)
-        collectionGroup.MapGet("/{collectionId:guid}", async (
+        group.MapGet("/{collectionId:guid}", async (
             Guid gameId,
             Guid collectionId,
             HttpContext context,
@@ -143,7 +162,10 @@ internal static class DocumentCollectionEndpoints
         .RequireSession()
         .WithName("GetCollectionById")
         .WithDescription("Get a document collection by its ID within a game scope");
+    }
 
+    private static void MapUserScopedEndpoints(RouteGroupBuilder group)
+    {
         // Get all collections by user ID (admin/separate group)
         var userCollectionGroup = group.MapGroup("/document-collections/by-user")
             .WithTags("DocumentCollections")
@@ -182,9 +204,22 @@ internal static class DocumentCollectionEndpoints
         .RequireSession()
         .WithName("GetCollectionsByUser")
         .WithDescription("Get all document collections created by a specific user");
+    }
 
+    private static void MapContentEndpoints(RouteGroupBuilder group)
+    {
+        var collectionGroup = group.MapGroup("/games/{gameId:guid}/document-collections")
+            .WithTags("DocumentCollections")
+            .WithOpenApi();
+
+        MapAddDocumentToCollectionEndpoint(collectionGroup);
+        MapRemoveDocumentFromCollectionEndpoint(collectionGroup);
+    }
+
+    private static void MapAddDocumentToCollectionEndpoint(RouteGroupBuilder group)
+    {
         // Add document to collection
-        collectionGroup.MapPost("/{collectionId:guid}/documents", async (
+        group.MapPost("/{collectionId:guid}/documents", async (
             Guid gameId,
             Guid collectionId,
             HttpContext context,
@@ -226,9 +261,12 @@ internal static class DocumentCollectionEndpoints
         .RequireSession()
         .WithName("AddDocumentToCollection")
         .WithDescription("Add a PDF document to an existing collection");
+    }
 
+    private static void MapRemoveDocumentFromCollectionEndpoint(RouteGroupBuilder group)
+    {
         // Remove document from collection
-        collectionGroup.MapDelete("/{collectionId:guid}/documents/{documentId:guid}", async (
+        group.MapDelete("/{collectionId:guid}/documents/{documentId:guid}", async (
             Guid gameId,
             Guid collectionId,
             Guid documentId,
@@ -268,7 +306,5 @@ internal static class DocumentCollectionEndpoints
         .RequireSession()
         .WithName("RemoveDocumentFromCollection")
         .WithDescription("Remove a PDF document from a collection");
-
-        return group;
     }
 }

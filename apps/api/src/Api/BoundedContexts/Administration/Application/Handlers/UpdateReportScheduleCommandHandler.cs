@@ -26,7 +26,7 @@ internal sealed class UpdateReportScheduleCommandHandler : ICommandHandler<Updat
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public async Task<bool> Handle(UpdateReportScheduleCommand command, CancellationToken ct)
+    public async Task<bool> Handle(UpdateReportScheduleCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
         _logger.LogInformation(
@@ -34,7 +34,7 @@ internal sealed class UpdateReportScheduleCommandHandler : ICommandHandler<Updat
             command.ReportId);
 
         // Get existing report
-        var report = await _repository.GetByIdAsync(command.ReportId, ct).ConfigureAwait(false);
+        var report = await _repository.GetByIdAsync(command.ReportId, cancellationToken).ConfigureAwait(false);
         if (report is null)
         {
             _logger.LogWarning("Report not found: {ReportId}", command.ReportId);
@@ -42,7 +42,7 @@ internal sealed class UpdateReportScheduleCommandHandler : ICommandHandler<Updat
         }
 
         // Unschedule old job
-        await _schedulerService.UnscheduleReportAsync(report.Id, ct).ConfigureAwait(false);
+        await _schedulerService.UnscheduleReportAsync(report.Id, cancellationToken).ConfigureAwait(false);
 
         // Update domain entity
         var updatedReport = report with
@@ -51,12 +51,12 @@ internal sealed class UpdateReportScheduleCommandHandler : ICommandHandler<Updat
             IsActive = command.IsActive
         };
 
-        await _repository.UpdateAsync(updatedReport, ct).ConfigureAwait(false);
+        await _repository.UpdateAsync(updatedReport, cancellationToken).ConfigureAwait(false);
 
         // Reschedule if active and has schedule
         if (command.IsActive && !string.IsNullOrWhiteSpace(command.ScheduleExpression))
         {
-            await _schedulerService.ScheduleReportAsync(updatedReport, ct).ConfigureAwait(false);
+            await _schedulerService.ScheduleReportAsync(updatedReport, cancellationToken).ConfigureAwait(false);
             _logger.LogInformation(
                 "Report rescheduled: ReportId={ReportId}, Schedule={Schedule}",
                 updatedReport.Id, updatedReport.ScheduleExpression);
@@ -71,3 +71,4 @@ internal sealed class UpdateReportScheduleCommandHandler : ICommandHandler<Updat
         return true;
     }
 }
+

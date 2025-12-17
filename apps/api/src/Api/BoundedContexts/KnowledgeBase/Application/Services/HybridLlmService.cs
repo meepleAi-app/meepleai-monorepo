@@ -45,7 +45,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
 /// </remarks>
 internal class HybridLlmService : ILlmService
 {
-    private readonly IEnumerable<ILlmClient> _clients;
+    private readonly List<ILlmClient> _clients;
     private readonly ILlmRoutingStrategy _routingStrategy;
     private readonly ILlmCostLogRepository _costLogRepository;
     private readonly ILogger<HybridLlmService> _logger;
@@ -68,6 +68,7 @@ internal class HybridLlmService : ILlmService
         AllowTrailingCommas = true,
         ReadCommentHandling = System.Text.Json.JsonCommentHandling.Skip
     };
+
     public HybridLlmService(
         IEnumerable<ILlmClient> clients,
         ILlmRoutingStrategy routingStrategy,
@@ -76,29 +77,30 @@ internal class HybridLlmService : ILlmService
         IOptions<AiProviderSettings> aiSettings,
         IProviderHealthCheckService? healthCheckService = null)
     {
-        _clients = clients ?? throw new ArgumentNullException(nameof(clients));
+        _clients = clients?.ToList() ?? throw new ArgumentNullException(nameof(clients));
         _routingStrategy = routingStrategy ?? throw new ArgumentNullException(nameof(routingStrategy));
         _costLogRepository = costLogRepository ?? throw new ArgumentNullException(nameof(costLogRepository));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _aiSettings = aiSettings ?? throw new ArgumentNullException(nameof(aiSettings));
         _healthCheckService = healthCheckService; // Optional - may not be registered in tests
 
-        if (!_clients.Any())
+        if (_clients.Count == 0)
         {
             throw new ArgumentException("At least one ILlmClient must be registered", nameof(clients));
         }
 
         // ISSUE-962: Initialize circuit breakers and latency stats for each provider
-        foreach (var client in _clients)
+        // ISSUE-962: Initialize circuit breakers and latency stats for each provider
+        foreach (var providerName in _clients.Select(client => client.ProviderName))
         {
-            _circuitBreakers[client.ProviderName] = new CircuitBreakerState();
-            _latencyStats[client.ProviderName] = new LatencyStats();
+            _circuitBreakers[providerName] = new CircuitBreakerState();
+            _latencyStats[providerName] = new LatencyStats();
         }
 
         var healthCheckStatus = _healthCheckService != null ? "enabled" : "disabled";
         _logger.LogInformation(
             "HybridLlmService initialized with {ClientCount} providers: {Providers} (cost tracking + circuit breaker + latency tracking + health checks {HealthCheckStatus} + AI config integration)",
-            _clients.Count(),
+            _clients.Count,
             string.Join(", ", _clients.Select(c => c.ProviderName)),
             healthCheckStatus);
     }
@@ -122,7 +124,7 @@ internal class HybridLlmService : ILlmService
         string systemPrompt,
         string userPrompt,
         User? user,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(systemPrompt);
         ArgumentNullException.ThrowIfNull(userPrompt);
@@ -139,7 +141,7 @@ internal class HybridLlmService : ILlmService
         {
             _logger.LogError(
                 "No available provider found (circuit breakers may be open), using first client as fallback");
-            client = _clients.ToList()[0]; // Safe: constructor ensures _clients.Any()
+            client = _clients[0]; // Safe: constructor ensures _clients.Count > 0
 
             var originalProvider = decision.ProviderName;
             decision = new LlmRoutingDecision(
@@ -181,7 +183,7 @@ internal class HybridLlmService : ILlmService
                     userPrompt,
                     DefaultTemperature,
                     DefaultMaxTokens,
-                    ct).ConfigureAwait(false);
+                    cancellationToken).ConfigureAwait(false);
 
                 attemptStopwatch.Stop();
 
@@ -189,12 +191,12 @@ internal class HybridLlmService : ILlmService
                 {
                     RecordSuccess(client.ProviderName, attemptStopwatch.ElapsedMilliseconds);
                     AddRoutingMetadata(result, decision, client, attemptStopwatch.ElapsedMilliseconds);
-                    await LogCostAsync(result, user, attemptStopwatch.ElapsedMilliseconds, ct).ConfigureAwait(false);
+                    await LogCostAsync(result, user, attemptStopwatch.ElapsedMilliseconds, cancellationToken).ConfigureAwait(false);
                     return result;
                 }
 
                 RecordFailure(client.ProviderName, attemptStopwatch.ElapsedMilliseconds);
-                await LogCostFailureAsync(result.ErrorMessage, user, attemptStopwatch.ElapsedMilliseconds, ct).ConfigureAwait(false);
+                await LogCostFailureAsync(result.ErrorMessage, user, attemptStopwatch.ElapsedMilliseconds, cancellationToken).ConfigureAwait(false);
                 lastFailure = NormalizeFailureResult(result, client.ProviderName);
             }
             catch (Exception ex)
@@ -206,7 +208,7 @@ internal class HybridLlmService : ILlmService
                     "Error generating completion with {Provider} ({Model}) - Circuit state: {CircuitState}",
                     client.ProviderName, decision.ModelId, GetCircuitState(client.ProviderName));
 
-                await LogCostFailureAsync(ex.Message, user, attemptStopwatch.ElapsedMilliseconds, ct).ConfigureAwait(false);
+                await LogCostFailureAsync(ex.Message, user, attemptStopwatch.ElapsedMilliseconds, cancellationToken).ConfigureAwait(false);
                 lastFailure = LlmCompletionResult.CreateFailure($"Provider error: {ex.Message}");
             }
 
@@ -245,7 +247,7 @@ internal class HybridLlmService : ILlmService
         string systemPrompt,
         string userPrompt,
         User? user,
-        [EnumeratorCancellation] CancellationToken ct = default)
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
 #pragma warning restore S4456
 #pragma warning restore S3400
     {
@@ -266,7 +268,7 @@ internal class HybridLlmService : ILlmService
             _logger.LogError(
                 "No client found for provider {Provider}, falling back to first available",
                 decision.ProviderName);
-            client = _clients.ToList()[0]; // Safe: constructor ensures _clients.Any()
+            client = _clients[0]; // Safe: constructor ensures _clients.Count > 0
         }
 
         _logger.LogInformation(
@@ -279,7 +281,7 @@ internal class HybridLlmService : ILlmService
             userPrompt,
             DefaultTemperature,
             DefaultMaxTokens,
-            ct).ConfigureAwait(false))
+            cancellationToken).ConfigureAwait(false))
         {
             yield return chunk;
         }
@@ -305,7 +307,7 @@ internal class HybridLlmService : ILlmService
         string systemPrompt,
         string userPrompt,
         User? user,
-        CancellationToken ct = default) where T : class
+        CancellationToken cancellationToken = default) where T : class
     {
         ArgumentNullException.ThrowIfNull(systemPrompt);
         ArgumentNullException.ThrowIfNull(userPrompt);
@@ -317,7 +319,7 @@ internal class HybridLlmService : ILlmService
             Just the raw JSON object that matches the required structure.
             """;
 
-        var result = await GenerateCompletionAsync(enhancedSystemPrompt, userPrompt, user, ct).ConfigureAwait(false);
+        var result = await GenerateCompletionAsync(enhancedSystemPrompt, userPrompt, user, cancellationToken).ConfigureAwait(false);
 
         if (!result.Success || string.IsNullOrWhiteSpace(result.Response))
         {
@@ -342,7 +344,7 @@ internal class HybridLlmService : ILlmService
         catch (System.Text.Json.JsonException ex)
         {
             var truncated = result.Response.Length > 500
-                ? result.Response.Substring(0, 500) + "..."
+                ? string.Concat(result.Response.AsSpan(0, 500), "...")
                 : result.Response;
             _logger.LogWarning(ex, "Failed to parse LLM JSON response. Raw: {Response}", truncated);
             return null;
@@ -397,9 +399,8 @@ internal class HybridLlmService : ILlmService
                 client.ProviderName);
 
             // BGAI-022: Use FallbackChain if configured, otherwise use all clients
-            var settings = _aiSettings.Value;
-            var fallbackOrder = settings.FallbackChain?.Any() == true
-                ? settings.FallbackChain.Where(p => !string.Equals(p, client.ProviderName, StringComparison.Ordinal))
+            var fallbackOrder = (_aiSettings.Value.FallbackChain?.Count ?? 0) > 0
+                ? _aiSettings.Value.FallbackChain!.Where(p => !string.Equals(p, client.ProviderName, StringComparison.Ordinal)).Select(p => p!)
                 : _clients.Where(c => !string.Equals(c.ProviderName, client.ProviderName, StringComparison.Ordinal)).Select(c => c.ProviderName);
 
             foreach (var fallbackProviderName in fallbackOrder)
@@ -410,7 +411,7 @@ internal class HybridLlmService : ILlmService
                     _logger.LogInformation(
                         "Using fallback provider {Fallback} ({Order}) - primary {Primary} unavailable",
                         fallbackClient.ProviderName,
-                        settings.FallbackChain?.Any() == true ? "from FallbackChain" : "auto-selected",
+                        (_aiSettings.Value.FallbackChain?.Count ?? 0) > 0 ? "from FallbackChain" : "auto-selected",
                         client.ProviderName);
                     return fallbackClient;
                 }
@@ -432,7 +433,7 @@ internal class HybridLlmService : ILlmService
         {
             // BGAI-022: Check if provider is enabled in configuration
             var settings = _aiSettings.Value;
-            if (settings.Providers?.ContainsKey(providerName) == true &&
+            if (settings.Providers?.ContainsKey(providerName) is true &&
                 !settings.Providers[providerName].Enabled)
             {
                 _logger.LogDebug(
@@ -442,12 +443,9 @@ internal class HybridLlmService : ILlmService
             }
 
             // Check circuit breaker
-            if (_circuitBreakers.TryGetValue(providerName, out var breaker))
+            if (_circuitBreakers.TryGetValue(providerName, out var breaker) && !breaker.AllowsRequests())
             {
-                if (!breaker.AllowsRequests())
-                {
-                    return false; // Circuit open - provider unavailable
-                }
+                return false; // Circuit open - provider unavailable
             }
 
             // Check health status (if health check service is enabled)
@@ -487,7 +485,7 @@ internal class HybridLlmService : ILlmService
         LlmCompletionResult result,
         User? user,
         long latencyMs,
-        CancellationToken ct)
+        CancellationToken cancellationToken)
     {
         try
         {
@@ -509,7 +507,7 @@ internal class HybridLlmService : ILlmService
                 latencyMs: (int)latencyMs,
                 ipAddress: null,
                 userAgent: null,
-                ct: ct).ConfigureAwait(false);
+                cancellationToken: cancellationToken).ConfigureAwait(false);
         }
         catch (Exception logEx)
         {
@@ -521,7 +519,7 @@ internal class HybridLlmService : ILlmService
         string? errorMessage,
         User? user,
         long latencyMs,
-        CancellationToken ct)
+        CancellationToken cancellationToken)
     {
         try
         {
@@ -535,7 +533,7 @@ internal class HybridLlmService : ILlmService
                 latencyMs: (int)latencyMs,
                 ipAddress: null,
                 userAgent: null,
-                ct: ct).ConfigureAwait(false);
+                cancellationToken: cancellationToken).ConfigureAwait(false);
         }
         catch (Exception logEx)
         {
@@ -577,18 +575,14 @@ internal class HybridLlmService : ILlmService
             .Where(p => !string.IsNullOrWhiteSpace(p))
             .ToList();
 
-        if (configuredFallback?.Any() == true)
+        if ((configuredFallback?.Count ?? 0) > 0)
         {
-            order.AddRange(configuredFallback);
+            order.AddRange(configuredFallback!);
         }
 
-        foreach (var client in _clients)
-        {
-            if (!order.Contains(client.ProviderName, StringComparer.OrdinalIgnoreCase))
-            {
-                order.Add(client.ProviderName);
-            }
-        }
+        order.AddRange(_clients
+            .Select(c => c.ProviderName)
+            .Where(name => !order.Contains(name, StringComparer.OrdinalIgnoreCase)));
 
         return order;
     }
@@ -718,3 +712,4 @@ internal class HybridLlmService : ILlmService
         };
     }
 }
+

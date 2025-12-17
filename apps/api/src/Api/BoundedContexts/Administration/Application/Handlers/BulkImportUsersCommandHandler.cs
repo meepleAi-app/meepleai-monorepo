@@ -125,7 +125,7 @@ internal class BulkImportUsersCommandHandler : ICommandHandler<BulkImportUsersCo
             .Select(g => g.Key)
             .ToList();
 
-        if (duplicateEmails.Any())
+        if (duplicateEmails.Count > 0)
         {
             throw new DomainException($"CSV contains duplicate emails: {string.Join(", ", duplicateEmails)}");
         }
@@ -142,7 +142,7 @@ internal class BulkImportUsersCommandHandler : ICommandHandler<BulkImportUsersCo
             }
         }
 
-        if (existingEmails.Any())
+        if (existingEmails.Count > 0)
         {
             throw new DomainException($"The following emails already exist: {string.Join(", ", existingEmails)}");
         }

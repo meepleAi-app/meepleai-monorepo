@@ -251,10 +251,10 @@ internal class MoveValidationDomainService
 
         // Example heuristic: Check if rules mention restrictions
         var hasRestrictions = applicableRules.Any(r =>
-            r.text.ToLowerInvariant().Contains("cannot") ||
-            r.text.ToLowerInvariant().Contains("must not") ||
-            r.text.ToLowerInvariant().Contains("forbidden") ||
-            r.text.ToLowerInvariant().Contains("illegal"));
+            r.text.Contains("cannot", StringComparison.OrdinalIgnoreCase) ||
+            r.text.Contains("must not", StringComparison.OrdinalIgnoreCase) ||
+            r.text.Contains("forbidden", StringComparison.OrdinalIgnoreCase) ||
+            r.text.Contains("illegal", StringComparison.OrdinalIgnoreCase));
 
         if (hasRestrictions)
         {
@@ -267,11 +267,11 @@ internal class MoveValidationDomainService
         {
             // During setup, certain moves might be restricted
             var setupRules = applicableRules
-                .Where(r => r.text.ToLowerInvariant().Contains("setup") ||
-                           r.text.ToLowerInvariant().Contains("start"))
+                .Where(r => r.text.Contains("setup", StringComparison.OrdinalIgnoreCase) ||
+                           r.text.Contains("start", StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
-            if (setupRules.Any())
+            if (setupRules.Count > 0)
             {
                 suggestions.Add("During setup phase, follow setup-specific rules.");
             }

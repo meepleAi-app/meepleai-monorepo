@@ -170,7 +170,7 @@ internal class ValidationAccuracyTrackingService
     /// <summary>
     /// Generates actionable recommendations based on metrics.
     /// </summary>
-    private static IReadOnlyList<string> GenerateRecommendations(ValidationAccuracyMetrics metrics)
+    private static List<string> GenerateRecommendations(ValidationAccuracyMetrics metrics)
     {
         var recommendations = new List<string>();
 

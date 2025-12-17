@@ -181,7 +181,7 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
         var oauthAccount = await _db.OAuthAccounts
             .Include(oa => oa.User)
             .FirstOrDefaultAsync(oa =>
-                oa.Provider == provider.ToLowerInvariant() &&
+                string.Equals(oa.Provider, provider, StringComparison.OrdinalIgnoreCase) &&
                 oa.ProviderUserId == userInfo!.Id, cancellationToken).ConfigureAwait(false);
 
         UserEntity? user;
@@ -202,7 +202,7 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
         else
         {
             // Check if user exists with same email (auto-link for MVP)
-            user = await _db.Users.FirstOrDefaultAsync(u => u.Email == userInfo!.Email.ToLowerInvariant(), cancellationToken).ConfigureAwait(false);
+            user = await _db.Users.FirstOrDefaultAsync(u => string.Equals(u.Email, userInfo!.Email, StringComparison.InvariantCultureIgnoreCase), cancellationToken).ConfigureAwait(false);
 
             if (user == null)
             {

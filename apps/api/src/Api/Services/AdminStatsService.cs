@@ -102,14 +102,51 @@ internal class AdminStatsService : IAdminStatsService
         var start7DaysAgo = now.AddDays(-7);
         var start30DaysAgo = now.AddDays(-30);
 
-        // Parallel independent queries (original 8 + new 8 for Issue #874)
+        // Execute parallel queries
+        var basicMetricsTask = ExecuteBasicMetricsQueriesAsync(startOfDay, cancellationToken);
+        var additionalMetricsTask = ExecuteAdditionalMetricsQueriesAsync(startOfDay, start7DaysAgo, start30DaysAgo, cancellationToken);
+
+        await Task.WhenAll(basicMetricsTask, additionalMetricsTask).ConfigureAwait(false);
+
+        var basicMetrics = await basicMetricsTask.ConfigureAwait(false);
+        var additionalMetrics = await additionalMetricsTask.ConfigureAwait(false);
+
+        // Calculate error rate
+        var errorRate = CalculateErrorRate(additionalMetrics.ErrorCount24h, additionalMetrics.TotalCount24h);
+
+        return new DashboardMetrics(
+            TotalUsers: basicMetrics.TotalUsers,
+            ActiveSessions: basicMetrics.ActiveSessions,
+            ApiRequestsToday: basicMetrics.ApiRequestsToday,
+            TotalPdfDocuments: basicMetrics.TotalPdfDocuments,
+            TotalChatMessages: basicMetrics.TotalChatMessages,
+            AverageConfidenceScore: basicMetrics.AvgConfidence ?? 0.0,
+            TotalRagRequests: basicMetrics.TotalRagRequests,
+            TotalTokensUsed: basicMetrics.TotalTokens,
+            TotalGames: additionalMetrics.TotalGames,
+            ApiRequests7d: additionalMetrics.ApiRequests7d,
+            ApiRequests30d: additionalMetrics.ApiRequests30d,
+            AverageLatency24h: additionalMetrics.AvgLatency24h ?? 0.0,
+            AverageLatency7d: additionalMetrics.AvgLatency7d ?? 0.0,
+            ErrorRate24h: errorRate,
+            ActiveAlerts: additionalMetrics.ActiveAlerts,
+            ResolvedAlerts: additionalMetrics.ResolvedAlerts);
+    }
+
+    /// <summary>
+    /// Executes basic metrics queries in parallel.
+    /// </summary>
+    private async Task<BasicMetricsResult> ExecuteBasicMetricsQueriesAsync(
+        DateTime startOfDay,
+        CancellationToken cancellationToken)
+    {
         var totalUsersTask = _dbContext.Users
             .AsNoTracking()
             .CountAsync(cancellationToken);
 
         var activeSessionsTask = _dbContext.UserSessions
             .AsNoTracking()
-            .Where(s => s.RevokedAt == null && s.ExpiresAt > now)
+            .Where(s => s.RevokedAt == null && s.ExpiresAt > _timeProvider.GetUtcNow().UtcDateTime)
             .CountAsync(cancellationToken);
 
         var apiRequestsTodayTask = _dbContext.AiRequestLogs
@@ -138,7 +175,32 @@ internal class AdminStatsService : IAdminStatsService
             .AsNoTracking()
             .SumAsync(log => (long)log.TokenCount, cancellationToken);
 
-        // Issue #874: Additional metrics for centralized dashboard
+        await Task.WhenAll(
+            totalUsersTask, activeSessionsTask, apiRequestsTodayTask,
+            totalPdfDocumentsTask, totalChatMessagesTask, avgConfidenceTask,
+            totalRagRequestsTask, totalTokensTask
+        ).ConfigureAwait(false);
+
+        return new BasicMetricsResult(
+            TotalUsers: await totalUsersTask.ConfigureAwait(false),
+            ActiveSessions: await activeSessionsTask.ConfigureAwait(false),
+            ApiRequestsToday: await apiRequestsTodayTask.ConfigureAwait(false),
+            TotalPdfDocuments: await totalPdfDocumentsTask.ConfigureAwait(false),
+            TotalChatMessages: await totalChatMessagesTask.ConfigureAwait(false),
+            AvgConfidence: await avgConfidenceTask.ConfigureAwait(false),
+            TotalRagRequests: await totalRagRequestsTask.ConfigureAwait(false),
+            TotalTokens: await totalTokensTask.ConfigureAwait(false));
+    }
+
+    /// <summary>
+    /// Executes additional metrics queries in parallel (Issue #874).
+    /// </summary>
+    private async Task<AdditionalMetricsResult> ExecuteAdditionalMetricsQueriesAsync(
+        DateTime startOfDay,
+        DateTime start7DaysAgo,
+        DateTime start30DaysAgo,
+        CancellationToken cancellationToken)
+    {
         var totalGamesTask = _dbContext.Games
             .AsNoTracking()
             .CountAsync(cancellationToken);
@@ -184,46 +246,57 @@ internal class AdminStatsService : IAdminStatsService
             .CountAsync(cancellationToken);
 
         await Task.WhenAll(
-            totalUsersTask, activeSessionsTask, apiRequestsTodayTask,
-            totalPdfDocumentsTask, totalChatMessagesTask, avgConfidenceTask,
-            totalRagRequestsTask, totalTokensTask,
-            // Issue #874 metrics
             totalGamesTask, apiRequests7dTask, apiRequests30dTask,
-            avgLatency24hTask, avgLatency7dTask, errorCount24hTask, totalCount24hTask,
-            activeAlertsTask, resolvedAlertsTask
+            avgLatency24hTask, avgLatency7dTask, errorCount24hTask,
+            totalCount24hTask, activeAlertsTask, resolvedAlertsTask
         ).ConfigureAwait(false);
 
-        // Calculate error rate (avoid division by zero)
-        var errorCount = await errorCount24hTask.ConfigureAwait(false);
-        var totalCount = await totalCount24hTask.ConfigureAwait(false);
-        var errorRate = totalCount > 0 ? (double)errorCount / totalCount : 0.0;
-
-        return new DashboardMetrics(
-            TotalUsers: await totalUsersTask.ConfigureAwait(false),
-            ActiveSessions: await activeSessionsTask.ConfigureAwait(false),
-            ApiRequestsToday: await apiRequestsTodayTask.ConfigureAwait(false),
-            TotalPdfDocuments: await totalPdfDocumentsTask.ConfigureAwait(false),
-            TotalChatMessages: await totalChatMessagesTask.ConfigureAwait(false),
-            AverageConfidenceScore: await avgConfidenceTask.ConfigureAwait(false) ?? 0.0,
-            TotalRagRequests: await totalRagRequestsTask.ConfigureAwait(false),
-            TotalTokensUsed: await totalTokensTask.ConfigureAwait(false),
-            // Issue #874: Additional metrics
+        return new AdditionalMetricsResult(
             TotalGames: await totalGamesTask.ConfigureAwait(false),
             ApiRequests7d: await apiRequests7dTask.ConfigureAwait(false),
             ApiRequests30d: await apiRequests30dTask.ConfigureAwait(false),
-            AverageLatency24h: await avgLatency24hTask.ConfigureAwait(false) ?? 0.0,
-            AverageLatency7d: await avgLatency7dTask.ConfigureAwait(false) ?? 0.0,
-            ErrorRate24h: errorRate,
+            AvgLatency24h: await avgLatency24hTask.ConfigureAwait(false),
+            AvgLatency7d: await avgLatency7dTask.ConfigureAwait(false),
+            ErrorCount24h: await errorCount24hTask.ConfigureAwait(false),
+            TotalCount24h: await totalCount24hTask.ConfigureAwait(false),
             ActiveAlerts: await activeAlertsTask.ConfigureAwait(false),
-            ResolvedAlerts: await resolvedAlertsTask
-.ConfigureAwait(false));
+            ResolvedAlerts: await resolvedAlertsTask.ConfigureAwait(false));
     }
+
+    /// <summary>
+    /// Calculates error rate avoiding division by zero.
+    /// </summary>
+    private static double CalculateErrorRate(int errorCount, int totalCount)
+    {
+        return totalCount > 0 ? (double)errorCount / totalCount : 0.0;
+    }
+
+    private record BasicMetricsResult(
+        int TotalUsers,
+        int ActiveSessions,
+        int ApiRequestsToday,
+        int TotalPdfDocuments,
+        int TotalChatMessages,
+        double? AvgConfidence,
+        int TotalRagRequests,
+        long TotalTokens);
+
+    private record AdditionalMetricsResult(
+        int TotalGames,
+        int ApiRequests7d,
+        int ApiRequests30d,
+        double? AvgLatency24h,
+        double? AvgLatency7d,
+        int ErrorCount24h,
+        int TotalCount24h,
+        int ActiveAlerts,
+        int ResolvedAlerts);
 
     /// <summary>
     /// Get user registration trend over time with optional role filter.
     /// Groups by date for efficient time-series aggregation.
     /// </summary>
-    private async Task<IReadOnlyList<TimeSeriesDataPoint>> GetUserTrendAsync(
+    private async Task<List<TimeSeriesDataPoint>> GetUserTrendAsync(
         DateTime fromDate,
         DateTime toDate,
         string? roleFilter,
@@ -260,7 +333,7 @@ internal class AdminStatsService : IAdminStatsService
     /// <summary>
     /// Get session creation trend over time.
     /// </summary>
-    private async Task<IReadOnlyList<TimeSeriesDataPoint>> GetSessionTrendAsync(
+    private async Task<List<TimeSeriesDataPoint>> GetSessionTrendAsync(
         DateTime fromDate,
         DateTime toDate,
         CancellationToken cancellationToken)
@@ -286,7 +359,7 @@ internal class AdminStatsService : IAdminStatsService
     /// <summary>
     /// Get API request trend over time with optional game filter.
     /// </summary>
-    private async Task<IReadOnlyList<TimeSeriesDataPoint>> GetApiRequestTrendAsync(
+    private async Task<List<TimeSeriesDataPoint>> GetApiRequestTrendAsync(
         DateTime fromDate,
         DateTime toDate,
         string? gameId,
@@ -321,7 +394,7 @@ internal class AdminStatsService : IAdminStatsService
     /// <summary>
     /// Get PDF upload trend over time with optional game filter.
     /// </summary>
-    private async Task<IReadOnlyList<TimeSeriesDataPoint>> GetPdfUploadTrendAsync(
+    private async Task<List<TimeSeriesDataPoint>> GetPdfUploadTrendAsync(
         DateTime fromDate,
         DateTime toDate,
         string? gameId,
@@ -357,7 +430,7 @@ internal class AdminStatsService : IAdminStatsService
     /// Get chat message trend over time.
     /// Note: ChatLogEntity doesn't have GameId, so game filtering is not available for chat messages.
     /// </summary>
-    private async Task<IReadOnlyList<TimeSeriesDataPoint>> GetChatMessageTrendAsync(
+    private async Task<List<TimeSeriesDataPoint>> GetChatMessageTrendAsync(
         DateTime fromDate,
         DateTime toDate,
                 CancellationToken cancellationToken)
@@ -462,8 +535,8 @@ internal class AdminStatsService : IAdminStatsService
     /// Fill missing dates in time series with zero counts for continuous visualization.
     /// Ensures charts don't have gaps for days with no data.
     /// </summary>
-    private static IReadOnlyList<TimeSeriesDataPoint> FillMissingDates(
-        IReadOnlyList<TimeSeriesDataPoint> data,
+    private static List<TimeSeriesDataPoint> FillMissingDates(
+        List<TimeSeriesDataPoint> data,
         DateTime fromDate,
         DateTime toDate)
     {

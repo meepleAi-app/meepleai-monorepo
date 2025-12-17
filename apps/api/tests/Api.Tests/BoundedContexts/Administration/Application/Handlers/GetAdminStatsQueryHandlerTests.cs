@@ -52,11 +52,11 @@ public class GetAdminStatsQueryHandlerTests
                 ActiveAlerts: 2,
                 ResolvedAlerts: 15
             ),
-            UserTrend: Array.Empty<TimeSeriesDataPoint>(),
-            SessionTrend: Array.Empty<TimeSeriesDataPoint>(),
-            ApiRequestTrend: Array.Empty<TimeSeriesDataPoint>(),
-            PdfUploadTrend: Array.Empty<TimeSeriesDataPoint>(),
-            ChatMessageTrend: Array.Empty<TimeSeriesDataPoint>(),
+            UserTrend: new List<TimeSeriesDataPoint>(),
+            SessionTrend: new List<TimeSeriesDataPoint>(),
+            ApiRequestTrend: new List<TimeSeriesDataPoint>(),
+            PdfUploadTrend: new List<TimeSeriesDataPoint>(),
+            ChatMessageTrend: new List<TimeSeriesDataPoint>(),
             GeneratedAt: DateTime.UtcNow
         );
 
@@ -109,11 +109,11 @@ public class GetAdminStatsQueryHandlerTests
                 ActiveAlerts: 0,
                 ResolvedAlerts: 0
             ),
-            UserTrend: Array.Empty<TimeSeriesDataPoint>(),
-            SessionTrend: Array.Empty<TimeSeriesDataPoint>(),
-            ApiRequestTrend: Array.Empty<TimeSeriesDataPoint>(),
-            PdfUploadTrend: Array.Empty<TimeSeriesDataPoint>(),
-            ChatMessageTrend: Array.Empty<TimeSeriesDataPoint>(),
+            UserTrend: new List<TimeSeriesDataPoint>(),
+            SessionTrend: new List<TimeSeriesDataPoint>(),
+            ApiRequestTrend: new List<TimeSeriesDataPoint>(),
+            PdfUploadTrend: new List<TimeSeriesDataPoint>(),
+            ChatMessageTrend: new List<TimeSeriesDataPoint>(),
             GeneratedAt: DateTime.UtcNow
         );
 
@@ -161,11 +161,11 @@ public class GetAdminStatsQueryHandlerTests
                 ActiveAlerts: 0,
                 ResolvedAlerts: 5
             ),
-            UserTrend: Array.Empty<TimeSeriesDataPoint>(),
-            SessionTrend: Array.Empty<TimeSeriesDataPoint>(),
-            ApiRequestTrend: Array.Empty<TimeSeriesDataPoint>(),
-            PdfUploadTrend: Array.Empty<TimeSeriesDataPoint>(),
-            ChatMessageTrend: Array.Empty<TimeSeriesDataPoint>(),
+            UserTrend: new List<TimeSeriesDataPoint>(),
+            SessionTrend: new List<TimeSeriesDataPoint>(),
+            ApiRequestTrend: new List<TimeSeriesDataPoint>(),
+            PdfUploadTrend: new List<TimeSeriesDataPoint>(),
+            ChatMessageTrend: new List<TimeSeriesDataPoint>(),
             GeneratedAt: DateTime.UtcNow
         );
 
@@ -214,11 +214,11 @@ public class GetAdminStatsQueryHandlerTests
                 ActiveAlerts: 0,
                 ResolvedAlerts: 0
             ),
-            UserTrend: Array.Empty<TimeSeriesDataPoint>(),
-            SessionTrend: Array.Empty<TimeSeriesDataPoint>(),
-            ApiRequestTrend: Array.Empty<TimeSeriesDataPoint>(),
-            PdfUploadTrend: Array.Empty<TimeSeriesDataPoint>(),
-            ChatMessageTrend: Array.Empty<TimeSeriesDataPoint>(),
+            UserTrend: new List<TimeSeriesDataPoint>(),
+            SessionTrend: new List<TimeSeriesDataPoint>(),
+            ApiRequestTrend: new List<TimeSeriesDataPoint>(),
+            PdfUploadTrend: new List<TimeSeriesDataPoint>(),
+            ChatMessageTrend: new List<TimeSeriesDataPoint>(),
             GeneratedAt: DateTime.UtcNow
         );
 
@@ -271,11 +271,11 @@ public class GetAdminStatsQueryHandlerTests
                 ActiveAlerts: 0,
                 ResolvedAlerts: 0
             ),
-            UserTrend: Array.Empty<TimeSeriesDataPoint>(),
-            SessionTrend: Array.Empty<TimeSeriesDataPoint>(),
-            ApiRequestTrend: Array.Empty<TimeSeriesDataPoint>(),
-            PdfUploadTrend: Array.Empty<TimeSeriesDataPoint>(),
-            ChatMessageTrend: Array.Empty<TimeSeriesDataPoint>(),
+            UserTrend: new List<TimeSeriesDataPoint>(),
+            SessionTrend: new List<TimeSeriesDataPoint>(),
+            ApiRequestTrend: new List<TimeSeriesDataPoint>(),
+            PdfUploadTrend: new List<TimeSeriesDataPoint>(),
+            ChatMessageTrend: new List<TimeSeriesDataPoint>(),
             GeneratedAt: DateTime.UtcNow
         );
 
@@ -334,11 +334,11 @@ public class GetAdminStatsQueryHandlerTests
                 ActiveAlerts: 0,
                 ResolvedAlerts: 0
             ),
-            UserTrend: Array.Empty<TimeSeriesDataPoint>(),
-            SessionTrend: Array.Empty<TimeSeriesDataPoint>(),
-            ApiRequestTrend: Array.Empty<TimeSeriesDataPoint>(),
-            PdfUploadTrend: Array.Empty<TimeSeriesDataPoint>(),
-            ChatMessageTrend: Array.Empty<TimeSeriesDataPoint>(),
+            UserTrend: new List<TimeSeriesDataPoint>(),
+            SessionTrend: new List<TimeSeriesDataPoint>(),
+            ApiRequestTrend: new List<TimeSeriesDataPoint>(),
+            PdfUploadTrend: new List<TimeSeriesDataPoint>(),
+            ChatMessageTrend: new List<TimeSeriesDataPoint>(),
             GeneratedAt: DateTime.UtcNow
         );
 

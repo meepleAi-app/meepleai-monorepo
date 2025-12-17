@@ -1,5 +1,5 @@
-using Api.SharedKernel.Domain.Results;
 using Api.SharedKernel.Domain.Exceptions;
+using Api.SharedKernel.Domain.Results;
 
 namespace Api.SharedKernel.Domain.Validation;
 
@@ -63,7 +63,7 @@ internal static class ValidationHelpers
 
         var failures = results.Where(r => r.IsFailure).ToList();
 
-        if (failures.Any())
+        if (failures.Count > 0)
         {
             var combinedMessage = string.Join("; ", failures.Select(f => f.Error!.Message));
             return Result<T>.Failure(Error.Validation(combinedMessage));

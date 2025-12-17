@@ -19,6 +19,17 @@ internal static class ReportingEndpoints
             .RequireAuthorization(policy => policy.RequireRole("Admin")) // ISSUE-916: Admin-only access
             .WithTags("Admin - Reporting");
 
+        MapGenerateReportEndpoint(group);
+        MapScheduleReportEndpoint(group);
+        MapGetScheduledReportsEndpoint(group);
+        MapGetReportExecutionsEndpoint(group);
+        MapUpdateReportScheduleEndpoint(group);
+
+        return app;
+    }
+
+    private static void MapGenerateReportEndpoint(RouteGroupBuilder group)
+    {
         // Generate report on-demand
         group.MapPost("/generate", async (
             [FromBody] GenerateReportRequest request,
@@ -50,7 +61,10 @@ internal static class ReportingEndpoints
         .Produces(StatusCodes.Status200OK, contentType: "application/octet-stream")
         .Produces(StatusCodes.Status400BadRequest)
         .Produces(StatusCodes.Status401Unauthorized);
+    }
 
+    private static void MapScheduleReportEndpoint(RouteGroupBuilder group)
+    {
         // Schedule recurring report
         group.MapPost("/schedule", async (
             [FromBody] ScheduleReportRequest request,
@@ -86,7 +100,10 @@ internal static class ReportingEndpoints
         .Produces<object>(StatusCodes.Status200OK)
         .Produces(StatusCodes.Status400BadRequest)
         .Produces(StatusCodes.Status401Unauthorized);
+    }
 
+    private static void MapGetScheduledReportsEndpoint(RouteGroupBuilder group)
+    {
         // Get all scheduled reports
         group.MapGet("/scheduled", async (
             HttpContext context,
@@ -105,7 +122,10 @@ internal static class ReportingEndpoints
         .WithSummary("Get all scheduled reports")
         .Produces<IReadOnlyList<ScheduledReportDto>>(StatusCodes.Status200OK)
         .Produces(StatusCodes.Status401Unauthorized);
+    }
 
+    private static void MapGetReportExecutionsEndpoint(RouteGroupBuilder group)
+    {
         // Get report executions
         group.MapGet("/executions", async (
             Guid? reportId,
@@ -132,7 +152,10 @@ internal static class ReportingEndpoints
         .WithSummary("Get report execution history")
         .Produces<IReadOnlyList<ReportExecutionDto>>(StatusCodes.Status200OK)
         .Produces(StatusCodes.Status401Unauthorized);
+    }
 
+    private static void MapUpdateReportScheduleEndpoint(RouteGroupBuilder group)
+    {
         // Update report schedule
         group.MapPut("/{reportId:guid}/schedule", async (
             Guid reportId,
@@ -162,8 +185,6 @@ internal static class ReportingEndpoints
         .Produces<object>(StatusCodes.Status200OK)
         .Produces(StatusCodes.Status404NotFound)
         .Produces(StatusCodes.Status401Unauthorized);
-
-        return app;
     }
 }
 

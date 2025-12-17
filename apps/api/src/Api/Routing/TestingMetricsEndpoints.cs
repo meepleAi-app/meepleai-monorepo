@@ -12,6 +12,15 @@ internal static class TestingMetricsEndpoints
 {
     public static RouteGroupBuilder MapTestingMetricsEndpoints(this RouteGroupBuilder group)
     {
+        MapGetAccessibilityMetricsEndpoint(group);
+        MapGetPerformanceMetricsEndpoint(group);
+        MapGetE2EMetricsEndpoint(group);
+
+        return group;
+    }
+
+    private static void MapGetAccessibilityMetricsEndpoint(RouteGroupBuilder group)
+    {
         // GET /api/v1/admin/testing/accessibility
         group.MapGet("/testing/accessibility", async (
             HttpContext context,
@@ -59,7 +68,10 @@ internal static class TestingMetricsEndpoints
             operation.Description = "Returns Lighthouse and axe-core accessibility scores from latest test run";
             return operation;
         });
+    }
 
+    private static void MapGetPerformanceMetricsEndpoint(RouteGroupBuilder group)
+    {
         // GET /api/v1/admin/testing/performance
         group.MapGet("/testing/performance", async (
             HttpContext context,
@@ -120,7 +132,10 @@ internal static class TestingMetricsEndpoints
             operation.Description = "Returns Core Web Vitals and performance budgets from latest Lighthouse run";
             return operation;
         });
+    }
 
+    private static void MapGetE2EMetricsEndpoint(RouteGroupBuilder group)
+    {
         // GET /api/v1/admin/testing/e2e
         group.MapGet("/testing/e2e", async (
             HttpContext context,
@@ -170,7 +185,5 @@ internal static class TestingMetricsEndpoints
             operation.Description = "Returns Playwright test execution results including coverage, pass rate, and flaky tests";
             return operation;
         });
-
-        return group;
     }
 }

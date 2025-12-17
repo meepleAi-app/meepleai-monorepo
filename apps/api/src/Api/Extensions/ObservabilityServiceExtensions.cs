@@ -36,7 +36,9 @@ internal static class ObservabilityServiceExtensions
             IWebHostEnvironment environment)
     {
         // Issue #1563: HyperDX OpenTelemetry configuration
+#pragma warning disable S1075 // URIs should not be hardcoded - Default/Fallback value
         var hyperDxEndpoint = configuration["HYPERDX_OTLP_ENDPOINT"] ?? "http://meepleai-hyperdx:14317";
+#pragma warning restore S1075
         var serviceName = "meepleai-api";
         var serviceVersion = "1.0.0";
         var isDevelopment = environment.IsDevelopment();
@@ -205,10 +207,12 @@ internal static class ObservabilityServiceExtensions
     private static void AddExternalHealthChecks(IHealthChecksBuilder builder, IConfiguration configuration)
     {
         // S1075: Default URLs extracted to const
+#pragma warning disable S1075 // URIs should not be hardcoded - Default/Fallback values
         const string DefaultRedisConnectionString = "localhost:6379";
         const string DefaultQdrantUrl = "http://localhost:6333";
         const string DefaultN8nUrl = "http://n8n:5678";
         const string DefaultHyperDxUrl = "http://meepleai-hyperdx:8000";
+#pragma warning restore S1075
 
         var healthCheckRedisConnectionString = configuration["REDIS_URL"] ?? DefaultRedisConnectionString;
         var healthCheckQdrantUrl = configuration["QDRANT_URL"] ?? DefaultQdrantUrl;

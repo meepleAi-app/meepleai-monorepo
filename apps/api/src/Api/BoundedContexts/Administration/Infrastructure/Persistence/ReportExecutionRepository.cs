@@ -29,11 +29,11 @@ internal sealed class ReportExecutionRepository : IReportExecutionRepository
         AllowTrailingCommas = false
     };
 
-    public async Task<ReportExecution?> GetByIdAsync(Guid id, CancellationToken ct = default)
+    public async Task<ReportExecution?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var entity = await _dbContext.ReportExecutions
             .AsNoTracking()
-            .FirstOrDefaultAsync(e => e.Id == id, ct)
+            .FirstOrDefaultAsync(e => e.Id == id, cancellationToken)
             .ConfigureAwait(false);
 
         return entity is not null ? MapToDomain(entity) : null;
@@ -42,14 +42,14 @@ internal sealed class ReportExecutionRepository : IReportExecutionRepository
     public async Task<IReadOnlyList<ReportExecution>> GetByReportIdAsync(
         Guid reportId,
         int limit = 50,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         var entities = await _dbContext.ReportExecutions
             .AsNoTracking()
             .Where(e => e.ReportId == reportId)
             .OrderByDescending(e => e.StartedAt)
             .Take(limit)
-            .ToListAsync(ct)
+            .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
         return entities.Select(MapToDomain).ToList();
@@ -57,30 +57,30 @@ internal sealed class ReportExecutionRepository : IReportExecutionRepository
 
     public async Task<IReadOnlyList<ReportExecution>> GetRecentExecutionsAsync(
         int limit = 100,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         var entities = await _dbContext.ReportExecutions
             .AsNoTracking()
             .OrderByDescending(e => e.StartedAt)
             .Take(limit)
-            .ToListAsync(ct)
+            .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
         return entities.Select(MapToDomain).ToList();
     }
 
-    public async Task AddAsync(ReportExecution execution, CancellationToken ct = default)
+    public async Task AddAsync(ReportExecution execution, CancellationToken cancellationToken = default)
     {
         var entity = MapToEntity(execution);
-        await _dbContext.ReportExecutions.AddAsync(entity, ct).ConfigureAwait(false);
-        await _dbContext.SaveChangesAsync(ct).ConfigureAwait(false);
+        await _dbContext.ReportExecutions.AddAsync(entity, cancellationToken).ConfigureAwait(false);
+        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task UpdateAsync(ReportExecution execution, CancellationToken ct = default)
+    public async Task UpdateAsync(ReportExecution execution, CancellationToken cancellationToken = default)
     {
         var entity = MapToEntity(execution);
         _dbContext.ReportExecutions.Update(entity);
-        await _dbContext.SaveChangesAsync(ct).ConfigureAwait(false);
+        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
     // Domain to Entity mapping
@@ -124,3 +124,4 @@ internal sealed class ReportExecutionRepository : IReportExecutionRepository
         };
     }
 }
+

@@ -37,12 +37,12 @@ internal class HybridSearchService : IHybridSearchService
         _config = config.Value;
     }
 
-    public async Task<IReadOnlyList<HybridSearchResult>> SearchAsync(
+    public async Task<List<HybridSearchResult>> SearchAsync(
         string query,
         Guid gameId,
         SearchMode mode = SearchMode.Hybrid,
         int limit = 10,
-        IReadOnlyList<Guid>? documentIds = null,
+        List<Guid>? documentIds = null,
         float vectorWeight = 0.7f,
         float keywordWeight = 0.3f,
         CancellationToken cancellationToken = default)
@@ -53,7 +53,7 @@ internal class HybridSearchService : IHybridSearchService
         {
             _logger.LogWarning("Invalid query provided to HybridSearchService: {Error}", queryError);
             // Return empty results for invalid queries (maintains existing behavior)
-            return Array.Empty<HybridSearchResult>();
+            return new List<HybridSearchResult>();
         }
 
         // Security: Cap limit parameter to prevent resource exhaustion
@@ -95,11 +95,11 @@ internal class HybridSearchService : IHybridSearchService
     /// <summary>
     /// Performs vector-only semantic search using Qdrant.
     /// </summary>
-    private async Task<IReadOnlyList<HybridSearchResult>> SearchSemanticOnlyAsync(
+    private async Task<List<HybridSearchResult>> SearchSemanticOnlyAsync(
         string query,
         Guid gameId,
         int limit,
-        IReadOnlyList<Guid>? documentIds,
+        List<Guid>? documentIds,
         CancellationToken cancellationToken)
     {
         // Generate embedding for the query
@@ -107,7 +107,7 @@ internal class HybridSearchService : IHybridSearchService
         if (embeddingResult == null || !embeddingResult.Success || embeddingResult.Embeddings?.Count == 0)
         {
             _logger.LogError("Failed to generate query embedding for semantic search: {Error}", embeddingResult?.ErrorMessage ?? "Embedding result was null");
-            return Array.Empty<HybridSearchResult>();
+            return new List<HybridSearchResult>();
         }
 
         var queryEmbedding = embeddingResult.Embeddings![0];
@@ -121,12 +121,12 @@ internal class HybridSearchService : IHybridSearchService
             queryEmbedding,
             limit: limit,
             documentIds: documentIdStrings,
-            ct: cancellationToken).ConfigureAwait(false);
+            cancellationToken: cancellationToken).ConfigureAwait(false);
 
         if (!vectorResults.Success)
         {
             _logger.LogError("Qdrant search failed: {Error}", vectorResults.ErrorMessage);
-            return Array.Empty<HybridSearchResult>();
+            return new List<HybridSearchResult>();
         }
 
         // Issue #2141: No post-query filtering needed - Qdrant does native filtering
@@ -147,19 +147,19 @@ internal class HybridSearchService : IHybridSearchService
             KeywordScore = null,
             VectorRank = index + 1,
             KeywordRank = null,
-            MatchedTerms = Array.Empty<string>(),
+            MatchedTerms = new List<string>(),
             Mode = SearchMode.Semantic
-        }).ToArray();
+        }).ToList();
     }
 
     /// <summary>
     /// Performs keyword-only search using PostgreSQL full-text search.
     /// </summary>
-    private async Task<IReadOnlyList<HybridSearchResult>> SearchKeywordOnlyAsync(
+    private async Task<List<HybridSearchResult>> SearchKeywordOnlyAsync(
         string query,
         Guid gameId,
         int limit,
-        IReadOnlyList<Guid>? documentIds,
+        List<Guid>? documentIds,
         CancellationToken cancellationToken)
     {
         var keywordResults = await _keywordSearchService.SearchAsync(
@@ -194,19 +194,19 @@ internal class HybridSearchService : IHybridSearchService
             KeywordRank = index + 1,
             MatchedTerms = r.MatchedTerms,
             Mode = SearchMode.Keyword
-        }).ToArray();
+        }).ToList();
     }
 
     /// <summary>
     /// Performs hybrid search combining vector and keyword results with RRF fusion.
     /// </summary>
-    private async Task<IReadOnlyList<HybridSearchResult>> SearchHybridAsync(
+    private async Task<List<HybridSearchResult>> SearchHybridAsync(
         string query,
         Guid gameId,
         int limit,
         float vectorWeight,
         float keywordWeight,
-        IReadOnlyList<Guid>? documentIds,
+        List<Guid>? documentIds,
         CancellationToken cancellationToken)
     {
         // Fetch more results from each system than needed (to ensure good fusion)
@@ -233,7 +233,7 @@ internal class HybridSearchService : IHybridSearchService
             queryEmbedding,
             limit: fetchLimit,
             documentIds: documentIdStrings,
-            ct: cancellationToken);
+            cancellationToken: cancellationToken);
 
         var keywordTask = _keywordSearchService.SearchAsync(
             query,
@@ -277,11 +277,11 @@ internal class HybridSearchService : IHybridSearchService
         var topResults = fusedResults
             .OrderByDescending(r => r.HybridScore)
             .Take(limit)
-            .ToArray();
+            .ToList();
 
         _logger.LogInformation(
             "Hybrid search completed: returned {ResultCount} fused results (from {TotalFused} total)",
-            topResults.Length, fusedResults.Count);
+            topResults.Count, fusedResults.Count);
 
         return topResults;
     }
@@ -430,5 +430,5 @@ internal class HybridSearchConfiguration
     /// Game-specific terms to boost in keyword search.
     /// Examples: "castling", "en passant", "check", "checkmate"
     /// </summary>
-    public IReadOnlyList<string> BoostTerms { get; set; } = Array.Empty<string>();
+    public List<string> BoostTerms { get; set; } = new List<string>();
 }

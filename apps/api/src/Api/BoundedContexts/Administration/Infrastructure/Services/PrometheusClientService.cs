@@ -23,7 +23,9 @@ internal class PrometheusClientService : IPrometheusClientService
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         // Default to localhost:9090 if not configured
+#pragma warning disable S1075 // URIs should not be hardcoded - Default/Fallback value
         _prometheusUrl = configuration["Prometheus:Url"] ?? "http://localhost:9090";
+#pragma warning restore S1075
 
         _logger.LogInformation("PrometheusClientService initialized with URL: {PrometheusUrl}", _prometheusUrl);
     }

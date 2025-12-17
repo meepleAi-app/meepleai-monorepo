@@ -79,7 +79,7 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
             : baseQuestion;
 
         // Step 4: Generate answer with LLM and record metrics
-        var (llmResponse, llmResult) = await GenerateLlmAnswerAndRecordMetricsAsync(
+        var (llmResponse, _) = await GenerateLlmAnswerAndRecordMetricsAsync(
             systemPrompt, userPrompt, cancellationToken).ConfigureAwait(false);
 
         // Step 5: Build validated response with quality metrics and citations

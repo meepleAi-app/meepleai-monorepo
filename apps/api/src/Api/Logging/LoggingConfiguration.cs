@@ -81,7 +81,7 @@ internal static class LoggingConfiguration
     /// <summary>
     /// Gets the default log level based on environment.
     /// </summary>
-    private static LogEventLevel GetDefaultLogLevel(string environmentName, IConfiguration configuration)
+    private static LogEventLevel GetDefaultLogLevel(string environmentName, ConfigurationManager configuration)
     {
         // Check configuration first
         var configuredLevel = configuration["Logging:LogLevel:Default"];
@@ -104,7 +104,7 @@ internal static class LoggingConfiguration
     /// <summary>
     /// Gets a specific log level from configuration.
     /// </summary>
-    private static LogEventLevel GetLogLevel(IConfiguration configuration, string key, LogEventLevel defaultLevel)
+    private static LogEventLevel GetLogLevel(ConfigurationManager configuration, string key, LogEventLevel defaultLevel)
     {
         var configuredLevel = configuration[key];
         if (!string.IsNullOrWhiteSpace(configuredLevel) &&
@@ -134,7 +134,7 @@ internal static class LoggingConfiguration
     /// Gets the HyperDX log level based on environment and configuration.
     /// Issue #1563: All environments should log to HyperDX, but threshold may vary.
     /// </summary>
-    private static LogEventLevel GetHyperDxLogLevel(IConfiguration configuration)
+    private static LogEventLevel GetHyperDxLogLevel(ConfigurationManager configuration)
     {
         // Check for explicit HyperDX log level configuration
         var configuredLevel = configuration["Logging:LogLevel:HyperDX"];

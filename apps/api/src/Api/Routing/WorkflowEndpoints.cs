@@ -17,10 +17,28 @@ internal static class WorkflowEndpoints
 {
     public static RouteGroupBuilder MapWorkflowEndpoints(this RouteGroupBuilder group)
     {
+        MapN8NConfigEndpoints(group);
+        MapN8NTemplateEndpoints(group);
+        MapWorkflowErrorEndpoints(group);
+
+        return group;
+    }
+
+    private static void MapN8NConfigEndpoints(RouteGroupBuilder group)
+    {
+        MapGetN8NConfigEndpoints(group);
+        MapCreateN8NConfigEndpoint(group);
+        MapUpdateN8NConfigEndpoint(group);
+        MapDeleteN8NConfigEndpoint(group);
+        MapTestN8NConfigEndpoint(group);
+    }
+
+    private static void MapGetN8NConfigEndpoints(RouteGroupBuilder group)
+    {
         // ADM-02: n8n workflow configuration endpoints (DDD/CQRS)
         group.MapGet("/admin/n8n", async (IMediator mediator, HttpContext context, IFeatureFlagService featureFlags, CancellationToken ct) =>
         {
-            var (authorized, session, error) = context.RequireAdminSession();
+            var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             // CONFIG-05: Check if n8n integration feature is enabled
@@ -37,7 +55,7 @@ internal static class WorkflowEndpoints
 
         group.MapGet("/admin/n8n/{configId}", async (Guid configId, IMediator mediator, HttpContext context, CancellationToken ct) =>
         {
-            var (authorized, session, error) = context.RequireAdminSession();
+            var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             var config = await mediator.Send(new GetN8NConfigByIdQuery(configId), ct).ConfigureAwait(false);
@@ -49,7 +67,10 @@ internal static class WorkflowEndpoints
 
             return Results.Json(config);
         });
+    }
 
+    private static void MapCreateN8NConfigEndpoint(RouteGroupBuilder group)
+    {
         group.MapPost("/admin/n8n", async (CreateN8NConfigRequest request, IMediator mediator, IEncryptionService encryptionService, HttpContext context, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authorized, session, error) = context.RequireAdminSession();
@@ -71,7 +92,10 @@ internal static class WorkflowEndpoints
             logger.LogInformation("n8n config {ConfigId} created successfully", config.Id);
             return Results.Json(config);
         });
+    }
 
+    private static void MapUpdateN8NConfigEndpoint(RouteGroupBuilder group)
+    {
         group.MapPut("/admin/n8n/{configId}", async (Guid configId, UpdateN8NConfigRequest request, IMediator mediator, IEncryptionService encryptionService, HttpContext context, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authorized, session, error) = context.RequireAdminSession();
@@ -98,7 +122,10 @@ internal static class WorkflowEndpoints
             logger.LogInformation("n8n config {ConfigId} updated successfully", config.Id);
             return Results.Json(config);
         });
+    }
 
+    private static void MapDeleteN8NConfigEndpoint(RouteGroupBuilder group)
+    {
         group.MapDelete("/admin/n8n/{configId}", async (Guid configId, IMediator mediator, HttpContext context, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authorized, session, error) = context.RequireAdminSession();
@@ -117,7 +144,10 @@ internal static class WorkflowEndpoints
             logger.LogInformation("n8n config {ConfigId} deleted successfully", configId);
             return Results.Json(new { ok = true });
         });
+    }
 
+    private static void MapTestN8NConfigEndpoint(RouteGroupBuilder group)
+    {
         group.MapPost("/admin/n8n/{configId:guid}/test", async (Guid configId, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authorized, session, error) = context.RequireAdminSession();
@@ -134,7 +164,17 @@ internal static class WorkflowEndpoints
             logger.LogInformation("n8n config {ConfigId} test result: {Success}", configId, result.Success);
             return Results.Json(result);
         });
+    }
 
+    private static void MapN8NTemplateEndpoints(RouteGroupBuilder group)
+    {
+        MapGetN8NTemplateEndpoints(group);
+        MapImportN8NTemplateEndpoint(group);
+        MapValidateN8NTemplateEndpoint(group);
+    }
+
+    private static void MapGetN8NTemplateEndpoints(RouteGroupBuilder group)
+    {
         // N8N-04: Workflow template endpoints (CQRS pattern)
         group.MapGet("/n8n/templates", async (
             string? category,
@@ -174,7 +214,10 @@ internal static class WorkflowEndpoints
         .WithName("GetN8NTemplate")
         .WithTags("N8N")
         .WithDescription("Get a specific n8n workflow template by ID with full details");
+    }
 
+    private static void MapImportN8NTemplateEndpoint(RouteGroupBuilder group)
+    {
         group.MapPost("/n8n/templates/{id}/import", async (
             string id,
             ImportTemplateRequest request,
@@ -204,7 +247,10 @@ internal static class WorkflowEndpoints
         .WithName("ImportN8NTemplate")
         .WithTags("N8N")
         .WithDescription("Import an n8n workflow template with parameter substitution");
+    }
 
+    private static void MapValidateN8NTemplateEndpoint(RouteGroupBuilder group)
+    {
         group.MapPost("/n8n/templates/validate", async (
             ValidateTemplateRequest request,
             IMediator mediator,
@@ -212,7 +258,7 @@ internal static class WorkflowEndpoints
             CancellationToken ct) =>
         {
             // Extract session for role check (RequireAuthorization ensures authentication)
-            var (authorized, session, error) = context.RequireAdminSession();
+            var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             var query = new Api.BoundedContexts.WorkflowIntegration.Application.Queries.N8NTemplates.ValidateN8NTemplateQuery
@@ -226,7 +272,16 @@ internal static class WorkflowEndpoints
         .WithName("ValidateN8NTemplate")
         .WithTags("N8N")
         .WithDescription("Validate n8n workflow template JSON structure (admin only)");
+    }
 
+    private static void MapWorkflowErrorEndpoints(RouteGroupBuilder group)
+    {
+        MapLogWorkflowErrorEndpoint(group);
+        MapGetWorkflowErrorsEndpoint(group);
+    }
+
+    private static void MapLogWorkflowErrorEndpoint(RouteGroupBuilder group)
+    {
         // N8N-05: Workflow error logging endpoints
 
         // Webhook endpoint for n8n (no authentication required for simplicity)
@@ -252,7 +307,10 @@ internal static class WorkflowEndpoints
         .WithDescription("Webhook endpoint for n8n to log workflow errors (no auth required)")
         .Produces(StatusCodes.Status200OK)
         .Produces<ValidationProblemDetails>(StatusCodes.Status400BadRequest);
+    }
 
+    private static void MapGetWorkflowErrorsEndpoint(RouteGroupBuilder group)
+    {
         // Admin endpoint to list workflow errors
         group.MapGet("/admin/workflows/errors", async (
             HttpContext context,
@@ -264,7 +322,7 @@ internal static class WorkflowEndpoints
             int limit = 20,
             CancellationToken ct = default) =>
         {
-            var (authorized, session, error) = context.RequireAdminSession();
+            var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             var query = new Api.BoundedContexts.WorkflowIntegration.Application.Queries.WorkflowErrors.GetWorkflowErrorsQuery
@@ -292,7 +350,7 @@ internal static class WorkflowEndpoints
             Guid id,
             CancellationToken ct = default) =>
         {
-            var (authorized, session, authError) = context.RequireAdminSession();
+            var (authorized, _, authError) = context.RequireAdminSession();
             if (!authorized) return authError!;
 
             var query = new Api.BoundedContexts.WorkflowIntegration.Application.Queries.WorkflowErrors.GetWorkflowErrorByIdQuery
@@ -315,7 +373,5 @@ internal static class WorkflowEndpoints
         .Produces(StatusCodes.Status404NotFound)
         .Produces(StatusCodes.Status401Unauthorized)
         .Produces(StatusCodes.Status403Forbidden);
-
-        return group;
     }
 }

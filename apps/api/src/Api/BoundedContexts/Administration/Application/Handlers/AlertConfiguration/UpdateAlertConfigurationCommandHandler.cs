@@ -22,16 +22,16 @@ internal class UpdateAlertConfigurationCommandHandler : IRequestHandler<UpdateAl
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public async Task<bool> Handle(UpdateAlertConfigurationCommand request, CancellationToken ct)
+    public async Task<bool> Handle(UpdateAlertConfigurationCommand request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
         var category = ConfigCategoryExtensions.FromString(request.Category);
-        var existing = await _repository.GetByKeyAsync(request.ConfigKey, ct).ConfigureAwait(false);
+        var existing = await _repository.GetByKeyAsync(request.ConfigKey, cancellationToken).ConfigureAwait(false);
 
         if (existing != null)
         {
             existing.UpdateValue(request.ConfigValue, request.UpdatedBy);
-            await _repository.UpdateAsync(existing, ct).ConfigureAwait(false);
+            await _repository.UpdateAsync(existing, cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Alert configuration updated: {ConfigKey} in category {Category} by {UpdatedBy}",
@@ -48,7 +48,7 @@ internal class UpdateAlertConfigurationCommandHandler : IRequestHandler<UpdateAl
             request.UpdatedBy,
             request.Description);
 
-        await _repository.AddAsync(newConfig, ct).ConfigureAwait(false);
+        await _repository.AddAsync(newConfig, cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Alert configuration created: {ConfigKey} in category {Category} by {UpdatedBy}",
@@ -57,3 +57,4 @@ internal class UpdateAlertConfigurationCommandHandler : IRequestHandler<UpdateAl
         return true;
     }
 }
+

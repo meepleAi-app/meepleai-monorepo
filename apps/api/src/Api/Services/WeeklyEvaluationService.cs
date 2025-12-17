@@ -133,9 +133,9 @@ internal class WeeklyEvaluationService : BackgroundService
             {
                 await RunWeeklyEvaluationAsync(stoppingToken).ConfigureAwait(false);
             }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            catch (OperationCanceledException ex) when (stoppingToken.IsCancellationRequested)
             {
-                _logger.LogInformation("Weekly evaluation cancelled (application shutting down)");
+                _logger.LogInformation(ex, "Weekly evaluation cancelled (application shutting down)");
                 break;
             }
 #pragma warning disable CA1031 // Do not catch general exception types
@@ -249,7 +249,7 @@ internal class WeeklyEvaluationService : BackgroundService
                 dataset,
                 topK: 10,
                 thresholds: null,
-                ct: cancellationToken).ConfigureAwait(false);
+                cancellationToken: cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "RAG evaluation completed: MRR={MRR:F4}, P@5={P5:F4}, Latency p95={Latency:F2}ms",

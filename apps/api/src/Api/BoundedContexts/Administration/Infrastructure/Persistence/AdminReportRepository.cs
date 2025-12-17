@@ -21,62 +21,62 @@ internal sealed class AdminReportRepository : IAdminReportRepository
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
     }
 
-    public async Task<AdminReport?> GetByIdAsync(Guid id, CancellationToken ct = default)
+    public async Task<AdminReport?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var entity = await _dbContext.AdminReports
             .AsNoTracking()
-            .FirstOrDefaultAsync(r => r.Id == id, ct)
+            .FirstOrDefaultAsync(r => r.Id == id, cancellationToken)
             .ConfigureAwait(false);
 
         return entity is not null ? MapToDomain(entity) : null;
     }
 
-    public async Task<IReadOnlyList<AdminReport>> GetAllAsync(CancellationToken ct = default)
+    public async Task<IReadOnlyList<AdminReport>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         var entities = await _dbContext.AdminReports
             .AsNoTracking()
             .OrderByDescending(r => r.CreatedAt)
-            .ToListAsync(ct)
+            .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
         return entities.Select(MapToDomain).ToList();
     }
 
-    public async Task<IReadOnlyList<AdminReport>> GetActiveScheduledReportsAsync(CancellationToken ct = default)
+    public async Task<IReadOnlyList<AdminReport>> GetActiveScheduledReportsAsync(CancellationToken cancellationToken = default)
     {
         var entities = await _dbContext.AdminReports
             .AsNoTracking()
             .Where(r => r.IsActive && r.ScheduleExpression != null)
-            .ToListAsync(ct)
+            .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
         return entities.Select(MapToDomain).ToList();
     }
 
-    public async Task AddAsync(AdminReport report, CancellationToken ct = default)
+    public async Task AddAsync(AdminReport report, CancellationToken cancellationToken = default)
     {
         var entity = MapToEntity(report);
-        await _dbContext.AdminReports.AddAsync(entity, ct).ConfigureAwait(false);
-        await _dbContext.SaveChangesAsync(ct).ConfigureAwait(false);
+        await _dbContext.AdminReports.AddAsync(entity, cancellationToken).ConfigureAwait(false);
+        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task UpdateAsync(AdminReport report, CancellationToken ct = default)
+    public async Task UpdateAsync(AdminReport report, CancellationToken cancellationToken = default)
     {
         var entity = MapToEntity(report);
         _dbContext.AdminReports.Update(entity);
-        await _dbContext.SaveChangesAsync(ct).ConfigureAwait(false);
+        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task DeleteAsync(Guid id, CancellationToken ct = default)
+    public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var entity = await _dbContext.AdminReports
-            .FirstOrDefaultAsync(r => r.Id == id, ct)
+            .FirstOrDefaultAsync(r => r.Id == id, cancellationToken)
             .ConfigureAwait(false);
 
         if (entity is not null)
         {
             _dbContext.AdminReports.Remove(entity);
-            await _dbContext.SaveChangesAsync(ct).ConfigureAwait(false);
+            await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
     }
 
@@ -139,3 +139,4 @@ internal sealed class AdminReportRepository : IAdminReportRepository
         };
     }
 }
+

@@ -331,7 +331,7 @@ public class CreateApiKeyCommandHandlerTests
         Assert.Equal("read,write", result.Scopes);
         Assert.True(result.CreatedAt <= DateTime.UtcNow);
         Assert.True(result.CreatedAt >= DateTime.UtcNow.AddSeconds(-5));
-        Assert.Equal(expiresAt.Date, result.ExpiresAt.Value.Date);
+        Assert.Equal(expiresAt.Date, result.ExpiresAt!.Value.Date);
     }
 
     [Fact]

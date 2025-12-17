@@ -31,16 +31,25 @@ internal static class AuthenticationEndpoints
 {
     public static RouteGroupBuilder MapAuthEndpoints(this RouteGroupBuilder group)
     {
-        // Import static methods from CookieHelpers for session cookie management
-        var writeSessionCookie = CookieHelpers.WriteSessionCookie;
-        var removeSessionCookie = CookieHelpers.RemoveSessionCookie;
-        var getSessionCookieName = CookieHelpers.GetSessionCookieName;
-        var writeApiKeyCookie = CookieHelpers.WriteApiKeyCookie;
-        var removeApiKeyCookie = CookieHelpers.RemoveApiKeyCookie;
-        var writeUserRoleCookie = CookieHelpers.WriteUserRoleCookie;
-        var removeUserRoleCookie = CookieHelpers.RemoveUserRoleCookie;
+        MapRegisterEndpoint(group);
+        MapLoginEndpoint(group);
+        MapLogoutEndpoint(group);
+        MapApiKeyEndpoints(group);
+        MapMeEndpoint(group);
 
-        // User registration (DDD/CQRS)
+        // Map session management endpoints
+        MapSessionEndpoints(group);
+
+        // Map endpoints from other files
+        group.MapTwoFactorEndpoints();
+        group.MapOAuthEndpoints(CookieHelpers.WriteSessionCookie);
+        group.MapPasswordResetEndpoints(CookieHelpers.WriteSessionCookie);
+
+        return group;
+    }
+
+    private static void MapRegisterEndpoint(RouteGroupBuilder group)
+    {
         group.MapPost("/auth/register", async (RegisterPayload payload, IMediator mediator, HttpContext context, ILogger<Program> logger, CancellationToken ct) =>
         {
             var displayName = string.IsNullOrWhiteSpace(payload.DisplayName)
@@ -57,15 +66,16 @@ internal static class AuthenticationEndpoints
 
             logger.LogInformation("User registration attempt for {Email}", payload.Email);
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
-            writeSessionCookie(context, result.SessionToken, result.ExpiresAt);
-            writeUserRoleCookie(context, result.User.Role, result.ExpiresAt);
+            CookieHelpers.WriteSessionCookie(context, result.SessionToken, result.ExpiresAt);
+            CookieHelpers.WriteUserRoleCookie(context, result.User.Role, result.ExpiresAt);
             logger.LogInformation("User {UserId} registered successfully with role {Role}", result.User.Id, result.User.Role);
 
-            // Issue #1676 Phase 2: Return UserDto directly (no legacy conversion)
             return Results.Json(new { user = result.User, expiresAt = result.ExpiresAt });
         });
+    }
 
-        // User login with 2FA support (AUTH-07) - DDD CQRS
+    private static void MapLoginEndpoint(RouteGroupBuilder group)
+    {
         group.MapPost("/auth/login", async ([FromBody] LoginPayload payload, HttpContext context, IMediator mediator, IConfigurationService configService, ILogger<Program> logger, CancellationToken ct) =>
         {
             if (payload == null)
@@ -74,7 +84,6 @@ internal static class AuthenticationEndpoints
                 return Results.BadRequest(new { error = "Invalid request payload" });
             }
 
-            // Validate email and password are not empty
             if (string.IsNullOrWhiteSpace(payload.Email) || string.IsNullOrWhiteSpace(payload.Password))
             {
                 logger.LogWarning("Login failed: email or password is empty");
@@ -90,41 +99,39 @@ internal static class AuthenticationEndpoints
             logger.LogInformation("Login attempt for {Email}", payload.Email);
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
-            // AUTH-07: 2FA flow
             if (result.RequiresTwoFactor)
             {
                 logger.LogInformation("User requires 2FA, temp session created");
                 return Results.Json(new
                 {
                     requiresTwoFactor = true,
-                    sessionToken = result.TempSessionToken, // Secure temp token (5-min TTL, single-use)
+                    sessionToken = result.TempSessionToken,
                     message = "Two-factor authentication required"
                 });
             }
 
-            // Normal login (no 2FA)
             if (result.User == null || result.SessionToken == null)
             {
                 logger.LogWarning("Login failed for {Email}: missing user or session token", payload.Email);
-                removeSessionCookie(context);
+                CookieHelpers.RemoveSessionCookie(context);
                 return Results.Unauthorized();
             }
 
-            // Calculate session expiration from configuration (default: 30 days)
             var sessionExpirationDays = (await configService.GetValueAsync<int?>("Authentication:SessionManagement:SessionExpirationDays", 30).ConfigureAwait(false)) ?? 30;
             var expiresAt = DateTime.UtcNow.AddDays(sessionExpirationDays);
-            writeSessionCookie(context, result.SessionToken, expiresAt);
-            writeUserRoleCookie(context, result.User.Role, expiresAt);
+            CookieHelpers.WriteSessionCookie(context, result.SessionToken, expiresAt);
+            CookieHelpers.WriteUserRoleCookie(context, result.User.Role, expiresAt);
             logger.LogInformation("User {UserId} logged in successfully", result.User.Id);
 
-            // Issue #1676 Phase 2: Return UserDto directly (no legacy conversion)
             return Results.Json(new { user = result.User, expiresAt });
         });
+    }
 
-        // User logout - DDD CQRS
+    private static void MapLogoutEndpoint(RouteGroupBuilder group)
+    {
         group.MapPost("/auth/logout", async (HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
-            var sessionCookieName = getSessionCookieName(context);
+            var sessionCookieName = CookieHelpers.GetSessionCookieName(context);
 
             if (context.Request.Cookies.TryGetValue(sessionCookieName, out var token) &&
                 !string.IsNullOrWhiteSpace(token))
@@ -134,12 +141,14 @@ internal static class AuthenticationEndpoints
                 logger.LogInformation("User logged out successfully");
             }
 
-            removeSessionCookie(context);
-            removeUserRoleCookie(context);
+            CookieHelpers.RemoveSessionCookie(context);
+            CookieHelpers.RemoveUserRoleCookie(context);
             return Results.Json(new { ok = true });
         });
+    }
 
-        // API Key Login - Validates API key credentials and stores them in a secure cookie
+    private static void MapApiKeyEndpoints(RouteGroupBuilder group)
+    {
         group.MapPost("/auth/apikey/login", async (
             ApiKeyLoginPayload payload,
             HttpContext context,
@@ -160,11 +169,10 @@ internal static class AuthenticationEndpoints
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
             var protectedApiKey = apiKeyCookieService.Protect(payload.ApiKey);
-            writeApiKeyCookie(context, protectedApiKey);
-            writeUserRoleCookie(context, result.User.Role, DateTime.UtcNow.AddDays(90));
+            CookieHelpers.WriteApiKeyCookie(context, protectedApiKey);
+            CookieHelpers.WriteUserRoleCookie(context, result.User.Role, DateTime.UtcNow.AddDays(90));
             logger.LogInformation("User {UserId} validated API key {ApiKeyId} and cookie issued", result.User.Id, result.ApiKeyId);
 
-            // Issue #1676 Phase 2: Return UserDto directly (no legacy conversion)
             return Results.Json(new
             {
                 user = result.User,
@@ -180,7 +188,6 @@ Clients can also store the key securely and send it via the `Authorization: ApiK
         .Produces(400)
         .Produces(401);
 
-        // API Key Logout - Removes the httpOnly cookie
         group.MapPost("/auth/apikey/logout", async (
             HttpContext context,
             IMediator mediator,
@@ -190,8 +197,8 @@ Clients can also store the key securely and send it via the `Authorization: ApiK
             var command = new LogoutApiKeyCommand();
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
-            removeApiKeyCookie(context);
-            removeUserRoleCookie(context);
+            CookieHelpers.RemoveApiKeyCookie(context);
+            CookieHelpers.RemoveUserRoleCookie(context);
             logger.LogInformation("API key cookie removed");
 
             return Results.Json(new { ok = true, message = result.Message });
@@ -201,15 +208,14 @@ Clients can also store the key securely and send it via the `Authorization: ApiK
         .WithSummary("Logout API key authentication by removing httpOnly cookie")
         .WithDescription("Removes the secure API key cookie so browsers no longer send it automatically. Use key management endpoints to revoke the key entirely.")
         .Produces(200);
+    }
 
-        // Get current user (AUTH-01: Supports both cookie and API key auth)
-        // Priority: API key > Cookie session
+    private static void MapMeEndpoint(RouteGroupBuilder group)
+    {
         group.MapGet("/auth/me", (HttpContext context) =>
         {
-            // Check for API key authentication first (higher priority)
-            // API keys are identified by the "AuthType" claim with value "ApiKey"
             var authType = context.User.FindFirst("AuthType")?.Value;
-            if (string.Equals(authType, "ApiKey", StringComparison.Ordinal) && context.User.Identity?.IsAuthenticated == true)
+            if (string.Equals(authType, "ApiKey", StringComparison.Ordinal) && context.User.Identity?.IsAuthenticated is true)
             {
                 var userId = context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
                 var email = context.User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
@@ -226,12 +232,10 @@ Clients can also store the key securely and send it via the `Authorization: ApiK
                     return Results.Unauthorized();
                 }
 
-                // Issue #1676 Phase 2: Construct UserDto inline (API key auth doesn't have full UserDto)
                 var user = new { id = userId, email, displayName = displayName ?? email, role = role ?? UserRole.User.ToString() };
-                return Results.Json(new { user, expiresAt = (DateTime?)null }); // API keys don't have session expiration
+                return Results.Json(new { user, expiresAt = (DateTime?)null });
             }
 
-            // Fall back to cookie-based session auth (DDD SessionStatusDto)
             var (authenticated, session, _) = context.TryGetActiveSession();
             if (authenticated)
             {
@@ -240,20 +244,21 @@ Clients can also store the key securely and send it via the `Authorization: ApiK
 
             return Results.Unauthorized();
         });
-
-        // Map session management endpoints
-        MapSessionEndpoints(group, getSessionCookieName);
-
-        // Map endpoints from other files
-        group.MapTwoFactorEndpoints();
-        group.MapOAuthEndpoints(writeSessionCookie);
-        group.MapPasswordResetEndpoints(writeSessionCookie);
-
-        return group;
     }
 
     // AUTH-05: Session management endpoints
-    private static void MapSessionEndpoints(RouteGroupBuilder group, Func<HttpContext, string> getSessionCookieName)
+    private static void MapSessionEndpoints(RouteGroupBuilder group)
+    {
+        MapSessionStatusEndpoint(group);
+        MapSessionExtendEndpoint(group);
+        MapUserSessionsEndpoint(group);
+        MapSessionIdStatusEndpoint(group);
+        MapSessionIdExtendEndpoint(group);
+        MapSessionRevokeEndpoint(group);
+        MapRevokeAllSessionsEndpoint(group);
+    }
+
+    private static void MapSessionStatusEndpoint(RouteGroupBuilder group)
     {
         group.MapGet("/auth/session/status", (
             HttpContext context,
@@ -279,7 +284,10 @@ Clients can also store the key securely and send it via the `Authorization: ApiK
 
             return Results.Json(response);
         });
+    }
 
+    private static void MapSessionExtendEndpoint(RouteGroupBuilder group)
+    {
         group.MapPost("/auth/session/extend", async (
             HttpContext context,
             IMediator mediator,
@@ -292,7 +300,7 @@ Clients can also store the key securely and send it via the `Authorization: ApiK
             if (!authenticated) return error!;
 
             // Get session token hash from cookie
-            var sessionCookieName = getSessionCookieName(context);
+            var sessionCookieName = CookieHelpers.GetSessionCookieName(context);
             if (!context.Request.Cookies.TryGetValue(sessionCookieName, out var token) || string.IsNullOrWhiteSpace(token))
             {
                 return Results.Unauthorized();
@@ -326,7 +334,10 @@ Clients can also store the key securely and send it via the `Authorization: ApiK
 
             return Results.Json(new { expiresAt = response.NewExpiresAt });
         });
+    }
 
+    private static void MapUserSessionsEndpoint(RouteGroupBuilder group)
+    {
         group.MapGet("/users/me/sessions", async (HttpContext context, IMediator mediator, CancellationToken ct = default) =>
         {
             var (authenticated, session, error) = context.TryGetActiveSession();
@@ -336,7 +347,10 @@ Clients can also store the key securely and send it via the `Authorization: ApiK
             var sessions = await mediator.Send(query, ct).ConfigureAwait(false);
             return Results.Json(sessions);
         });
+    }
 
+    private static void MapSessionIdStatusEndpoint(RouteGroupBuilder group)
+    {
         group.MapGet("/auth/sessions/{sessionId:guid}/status", async (
             Guid sessionId,
             HttpContext context,
@@ -371,7 +385,10 @@ Clients can also store the key securely and send it via the `Authorization: ApiK
 
             return Results.Json(result);
         }).RequireAuthorization();
+    }
 
+    private static void MapSessionIdExtendEndpoint(RouteGroupBuilder group)
+    {
         group.MapPost("/auth/sessions/{sessionId:guid}/extend", async (
             Guid sessionId,
             HttpContext context,
@@ -399,7 +416,7 @@ Clients can also store the key securely and send it via the `Authorization: ApiK
             if (!result.Success)
             {
                 // Check if it's a rate limit error
-                if (result.ErrorMessage?.Contains("Rate limit exceeded") == true)
+                if (result.ErrorMessage?.Contains("Rate limit exceeded") is true)
                 {
                     return Results.Json(new { error = result.ErrorMessage }, statusCode: 429);
                 }
@@ -418,7 +435,10 @@ Clients can also store the key securely and send it via the `Authorization: ApiK
 
             return Results.Json(new { ok = true, expiresAt = result.NewExpiresAt });
         }).RequireAuthorization();
+    }
 
+    private static void MapSessionRevokeEndpoint(RouteGroupBuilder group)
+    {
         group.MapPost("/auth/sessions/{sessionId:guid}/revoke", async (
             Guid sessionId,
             HttpContext context,
@@ -453,7 +473,10 @@ Clients can also store the key securely and send it via the `Authorization: ApiK
 
             return Results.Json(new { ok = true, message = "Session revoked successfully" });
         }).RequireAuthorization();
+    }
 
+    private static void MapRevokeAllSessionsEndpoint(RouteGroupBuilder group)
+    {
         // Issue #2056: Logout from all devices (revoke all sessions except optionally the current one)
         group.MapPost("/auth/sessions/revoke-all", async (
             [FromBody] LogoutAllDevicesPayload? payload,
@@ -470,7 +493,7 @@ Clients can also store the key securely and send it via the `Authorization: ApiK
 
             // Get current session token hash for optional exclusion
             string? currentTokenHash = null;
-            var sessionCookieName = getSessionCookieName(context);
+            var sessionCookieName = CookieHelpers.GetSessionCookieName(context);
             if (context.Request.Cookies.TryGetValue(sessionCookieName, out var token) && !string.IsNullOrWhiteSpace(token))
             {
                 var hash = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(token));

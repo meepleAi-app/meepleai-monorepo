@@ -66,7 +66,7 @@ internal sealed class HierarchicalChunk
         if (level < 0 || level > 2)
             throw new ArgumentOutOfRangeException(nameof(level), "Level must be 0, 1, or 2");
 
-        ArgumentNullException.ThrowIfNull(metadata, nameof(metadata));
+        ArgumentNullException.ThrowIfNull(metadata);
 
         return new HierarchicalChunk
         {

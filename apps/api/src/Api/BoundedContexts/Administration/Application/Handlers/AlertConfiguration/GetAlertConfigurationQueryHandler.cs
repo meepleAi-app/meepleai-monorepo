@@ -17,11 +17,11 @@ internal class GetAlertConfigurationQueryHandler : IRequestHandler<GetAlertConfi
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
     }
 
-    public async Task<AlertConfigurationDto> Handle(GetAlertConfigurationQuery request, CancellationToken ct)
+    public async Task<AlertConfigurationDto> Handle(GetAlertConfigurationQuery request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
         var category = ConfigCategoryExtensions.FromString(request.Category);
-        var configs = await _repository.GetByCategoryAsync(category, ct).ConfigureAwait(false);
+        var configs = await _repository.GetByCategoryAsync(category, cancellationToken).ConfigureAwait(false);
 
         if (configs.Count == 0)
         {
@@ -47,3 +47,4 @@ internal class GetAlertConfigurationQueryHandler : IRequestHandler<GetAlertConfi
             config.UpdatedBy);
     }
 }
+

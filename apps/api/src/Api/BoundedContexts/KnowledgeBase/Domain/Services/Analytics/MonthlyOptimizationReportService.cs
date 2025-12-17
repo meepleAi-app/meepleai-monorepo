@@ -28,7 +28,7 @@ internal class MonthlyOptimizationReportService : IMonthlyOptimizationReportServ
     public async Task<MonthlyOptimizationReport> GenerateReportAsync(
         int year,
         int month,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         if (month < 1 || month > 12)
         {
@@ -44,10 +44,10 @@ internal class MonthlyOptimizationReportService : IMonthlyOptimizationReportServ
         var endDate = startDate.AddMonths(1).AddDays(-1);
 
         // Run all analyses in parallel for efficiency
-        var efficiencyTask = _efficiencyAnalyzer.AnalyzeEfficiencyAsync(startDate, endDate, ct);
-        var cacheTask = _cacheAnalyzer.AnalyzeCacheEffectivenessAsync(startDate, endDate, ct);
-        var modelComparisonTask = _recommendationService.CompareModelsAsync(ct);
-        var recommendationTask = _recommendationService.GetRecommendationAsync("qa", prioritizeCost: false, ct);
+        var efficiencyTask = _efficiencyAnalyzer.AnalyzeEfficiencyAsync(startDate, endDate, cancellationToken);
+        var cacheTask = _cacheAnalyzer.AnalyzeCacheEffectivenessAsync(startDate, endDate, cancellationToken);
+        var modelComparisonTask = _recommendationService.CompareModelsAsync(cancellationToken);
+        var recommendationTask = _recommendationService.GetRecommendationAsync("qa", prioritizeCost: false, cancellationToken);
 
         await Task.WhenAll(efficiencyTask, cacheTask, modelComparisonTask, recommendationTask).ConfigureAwait(false);
 
@@ -120,3 +120,4 @@ internal class MonthlyOptimizationReportService : IMonthlyOptimizationReportServ
         return summary;
     }
 }
+

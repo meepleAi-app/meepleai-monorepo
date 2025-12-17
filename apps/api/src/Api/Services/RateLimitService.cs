@@ -51,7 +51,7 @@ internal class RateLimitService : IRateLimitService
         string key,
         int maxTokens,
         double refillRate,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         var db = _redis.GetDatabase();
         var now = _timeProvider.GetUtcNow().ToUnixTimeMilliseconds() / 1000.0;
@@ -153,7 +153,7 @@ internal class RateLimitService : IRateLimitService
     /// <param name="role">User role (admin, editor, user, anonymous)</param>
     /// <param name="ct">Cancellation token</param>
     /// <returns>Rate limit configuration for the role</returns>
-    public async Task<RateLimitConfig> GetConfigForRoleAsync(string? role, CancellationToken ct = default)
+    public async Task<RateLimitConfig> GetConfigForRoleAsync(string? role, CancellationToken cancellationToken = default)
     {
         // For backward compatibility and when ConfigurationService is not available
         if (_configService is null)

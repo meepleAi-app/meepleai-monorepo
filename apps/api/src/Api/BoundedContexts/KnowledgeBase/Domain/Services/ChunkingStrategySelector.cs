@@ -66,7 +66,7 @@ internal sealed class ChunkingStrategySelector
     /// <summary>
     /// Checks if element types indicate high-density content (tables, lists).
     /// </summary>
-    private static bool HasHighDenseElementRatio(IReadOnlyList<string> elementTypes)
+    private static bool HasHighDenseElementRatio(List<string> elementTypes)
     {
         if (elementTypes.Count == 0)
             return false;

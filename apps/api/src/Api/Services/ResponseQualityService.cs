@@ -116,14 +116,10 @@ internal class ResponseQualityService : IResponseQualityService
         }
 
         // Count hedging phrases (case-insensitive)
-        var lowerText = responseText.ToLowerInvariant();
-        foreach (var phrase in HedgingPhrases)
-        {
-            if (lowerText.Contains(phrase.ToLowerInvariant()))
-            {
-                confidence -= HedgingPhrasePenalty;
-            }
-        }
+        var hedgingPhraseCount = HedgingPhrases.Count(phrase =>
+            responseText.Contains(phrase, StringComparison.InvariantCultureIgnoreCase));
+
+        confidence -= hedgingPhraseCount * HedgingPhrasePenalty;
 
         // Cap at [0.0, 1.0]
         return Math.Max(0.0, Math.Min(1.0, confidence));

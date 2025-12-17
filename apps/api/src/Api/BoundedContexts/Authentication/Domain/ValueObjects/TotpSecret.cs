@@ -46,6 +46,7 @@ public sealed class TotpSecret : ValueObject
 
     public static implicit operator string(TotpSecret secret)
     {
+        ArgumentNullException.ThrowIfNull(secret);
         return secret.EncryptedValue;
     }
 }

@@ -18,7 +18,7 @@ namespace Api.Tests.Services;
 /// BGAI-042: Weekly automated quality evaluation job.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
-public class WeeklyEvaluationServiceTests : IDisposable
+public sealed class WeeklyEvaluationServiceTests : IDisposable
 {
     private readonly Mock<IServiceScopeFactory> _scopeFactoryMock;
     private readonly Mock<IServiceScope> _scopeMock;

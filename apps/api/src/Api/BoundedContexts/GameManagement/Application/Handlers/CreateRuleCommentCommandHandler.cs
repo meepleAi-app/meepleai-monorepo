@@ -86,7 +86,7 @@ internal partial class CreateRuleCommentCommandHandler : IRequestHandler<CreateR
                 .Distinct(StringComparer.Ordinal)
                 .ToList();
 
-            if (!mentionedUsernames.Any())
+            if (mentionedUsernames.Count == 0)
             {
                 return new List<string>();
             }
@@ -97,8 +97,8 @@ internal partial class CreateRuleCommentCommandHandler : IRequestHandler<CreateR
             var users = await _dbContext.Users
                 .AsNoTracking()
                 .Where(u =>
-                    (u.DisplayName != null && mentionedUsernames.Contains(u.DisplayName.ToLower()))
-                    || (u.Email != null && mentionedUsernames.Any(m => u.Email.ToLower().StartsWith(m, StringComparison.Ordinal))))
+                    (u.DisplayName != null && mentionedUsernames.Any(m => string.Equals(u.DisplayName, m, StringComparison.CurrentCultureIgnoreCase)))
+                    || (u.Email != null && mentionedUsernames.Any(m => u.Email.StartsWith(m, StringComparison.OrdinalIgnoreCase))))
 #pragma warning restore MA0011, MA0074, CA1304, CA1311
                 .Select(u => u.Id.ToString())
                 .Distinct()

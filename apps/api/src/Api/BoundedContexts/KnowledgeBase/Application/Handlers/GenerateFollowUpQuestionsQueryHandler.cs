@@ -110,10 +110,10 @@ internal sealed class GenerateFollowUpQuestionsQueryHandler
 
             return validQuestions.AsReadOnly();
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
         {
             // User-initiated cancellation - propagate
-            _logger.LogInformation(
+            _logger.LogInformation(ex,
                 "Follow-up question generation cancelled by user for game {GameName}",
                 request.GameName);
 
@@ -190,10 +190,10 @@ internal sealed class GenerateFollowUpQuestionsQueryHandler
                     }
                 }
             }
-            catch (OperationCanceledException) when (timeoutCts.Token.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+            catch (OperationCanceledException ex) when (timeoutCts.Token.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
             {
                 // Timeout occurred (but not user cancellation)
-                _logger.LogWarning(
+                _logger.LogWarning(ex,
                     "Follow-up question generation timed out after {TimeoutMs}ms for game {GameName}",
                     _config.GenerationTimeoutMs,
                     gameName);
@@ -303,7 +303,7 @@ Generate follow-up questions that help the user explore this topic further.";
             return text;
         }
 
-        return text.Substring(0, maxLength - 3) + "...";
+        return string.Concat(text.AsSpan(0, maxLength - 3), "...");
     }
 
     /// <summary>
@@ -317,9 +317,7 @@ Generate follow-up questions that help the user explore this topic further.";
         }
 
         // Keep only alphanumeric characters, spaces, and hyphens
-        var sanitized = new string(gameName
-            .Where(c => char.IsLetterOrDigit(c) || c == ' ' || c == '-')
-            .ToArray());
+        var sanitized = string.Concat(gameName.Where(c => char.IsLetterOrDigit(c) || c == ' ' || c == '-'));
 
         // Limit length to 50 chars to avoid cardinality issues
         if (sanitized.Length > 50)

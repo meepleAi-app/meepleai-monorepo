@@ -27,7 +27,7 @@ internal sealed class ScheduleReportCommandHandler : ICommandHandler<ScheduleRep
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public async Task<Guid> Handle(ScheduleReportCommand command, CancellationToken ct)
+    public async Task<Guid> Handle(ScheduleReportCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
         _logger.LogInformation(
@@ -54,10 +54,10 @@ internal sealed class ScheduleReportCommandHandler : ICommandHandler<ScheduleRep
             emailRecipients: command.EmailRecipients);
 
         // Save to database
-        await _repository.AddAsync(report, ct).ConfigureAwait(false);
+        await _repository.AddAsync(report, cancellationToken).ConfigureAwait(false);
 
         // Schedule with Quartz.NET
-        await _schedulerService.ScheduleReportAsync(report, ct).ConfigureAwait(false);
+        await _schedulerService.ScheduleReportAsync(report, cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Report scheduled successfully: ReportId={ReportId}, Schedule={Schedule}",
@@ -66,3 +66,4 @@ internal sealed class ScheduleReportCommandHandler : ICommandHandler<ScheduleRep
         return report.Id;
     }
 }
+

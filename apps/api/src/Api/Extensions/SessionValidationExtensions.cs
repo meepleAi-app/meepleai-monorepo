@@ -75,7 +75,7 @@ internal static class SessionValidationExtensions
                         value is SessionStatusDto session &&
                         session.IsValid &&
                         session.User != null;
-        var hasApiKey = context.User.Identity?.IsAuthenticated == true;
+        var hasApiKey = context.User.Identity?.IsAuthenticated is true;
 
         if (!hasSession && !hasApiKey)
         {

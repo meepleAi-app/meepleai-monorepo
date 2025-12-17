@@ -15,13 +15,13 @@ internal interface IReportGeneratorService
     /// <param name="template">Report template type</param>
     /// <param name="format">Output format</param>
     /// <param name="parameters">Template-specific parameters</param>
-    /// <param name="ct">Cancellation token</param>
+    /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Generated report data</returns>
     Task<ReportData> GenerateAsync(
         ReportTemplate template,
         ReportFormat format,
         IReadOnlyDictionary<string, object> parameters,
-        CancellationToken ct = default);
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Validates parameters for a specific template
@@ -42,3 +42,4 @@ internal sealed record ReportData(
     string FileName,
     long FileSizeBytes,
     IReadOnlyDictionary<string, object> Metadata);
+

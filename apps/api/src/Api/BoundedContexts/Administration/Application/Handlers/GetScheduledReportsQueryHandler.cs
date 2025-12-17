@@ -22,11 +22,11 @@ internal sealed class GetScheduledReportsQueryHandler : IQueryHandler<GetSchedul
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public async Task<IReadOnlyList<ScheduledReportDto>> Handle(GetScheduledReportsQuery query, CancellationToken ct)
+    public async Task<IReadOnlyList<ScheduledReportDto>> Handle(GetScheduledReportsQuery query, CancellationToken cancellationToken)
     {
         _logger.LogDebug("Getting all scheduled reports");
 
-        var reports = await _repository.GetAllAsync(ct).ConfigureAwait(false);
+        var reports = await _repository.GetAllAsync(cancellationToken).ConfigureAwait(false);
 
         var dtos = reports.Select(r => new ScheduledReportDto(
             Id: r.Id,
@@ -46,3 +46,4 @@ internal sealed class GetScheduledReportsQueryHandler : IQueryHandler<GetSchedul
         return dtos;
     }
 }
+

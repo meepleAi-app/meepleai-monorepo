@@ -154,15 +154,13 @@ internal class HybridCacheService : IHybridCacheService
 
         ArgumentNullException.ThrowIfNull(factory);
 
-        if (tags != null && _config.EnableTags)
+        if (tags != null && _config.EnableTags && tags.Length > _config.MaxTagsPerEntry)
         {
-            if (tags.Length > _config.MaxTagsPerEntry)
-            {
-                throw new ArgumentException(
-                    $"Number of tags ({tags.Length}) exceeds maximum allowed ({_config.MaxTagsPerEntry})",
-                    nameof(tags));
-            }
+            throw new ArgumentException(
+                $"Number of tags ({tags.Length}) exceeds maximum allowed ({_config.MaxTagsPerEntry})",
+                nameof(tags));
         }
+
     }
 
     /// <inheritdoc />

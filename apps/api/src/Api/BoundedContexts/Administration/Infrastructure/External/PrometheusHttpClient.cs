@@ -183,10 +183,9 @@ internal class PrometheusHttpClient : IPrometheusQueryService
                     }
                 }
             }
-            else if (result.Value is not null)
+            else if (result.Value is JsonElement element && element.ValueKind == JsonValueKind.Array)
             {
                 // Instant query response: single [timestamp, value] array
-                if (result.Value is JsonElement element && element.ValueKind == JsonValueKind.Array)
                 {
                     var array = element.EnumerateArray().ToArray();
                     if (array.Length >= 2)

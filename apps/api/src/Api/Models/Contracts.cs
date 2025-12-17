@@ -552,11 +552,11 @@ internal record UserSearchResultDto(
 // ADMIN-02: Analytics Dashboard models
 internal record DashboardStatsDto(
     DashboardMetrics Metrics,
-    IReadOnlyList<TimeSeriesDataPoint> UserTrend,
-    IReadOnlyList<TimeSeriesDataPoint> SessionTrend,
-    IReadOnlyList<TimeSeriesDataPoint> ApiRequestTrend,
-    IReadOnlyList<TimeSeriesDataPoint> PdfUploadTrend,
-    IReadOnlyList<TimeSeriesDataPoint> ChatMessageTrend,
+    List<TimeSeriesDataPoint> UserTrend,
+    List<TimeSeriesDataPoint> SessionTrend,
+    List<TimeSeriesDataPoint> ApiRequestTrend,
+    List<TimeSeriesDataPoint> PdfUploadTrend,
+    List<TimeSeriesDataPoint> ChatMessageTrend,
     DateTime GeneratedAt
 );
 

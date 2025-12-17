@@ -346,7 +346,7 @@ internal class PdfTestFixtureBuilder
 /// Test fixture containing all configured mocks for PDF upload testing.
 /// Provides helper methods for creating handler instances and accessing mocks.
 /// </summary>
-internal class PdfTestFixture : IDisposable
+internal sealed class PdfTestFixture : IDisposable
 {
     public MeepleAiDbContext DbContext { get; }
     public Mock<IServiceScopeFactory> ScopeFactoryMock { get; }

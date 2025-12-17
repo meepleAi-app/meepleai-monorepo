@@ -18,7 +18,7 @@ internal class TestAlertCommandHandler : IRequestHandler<TestAlertCommand, bool>
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public async Task<bool> Handle(TestAlertCommand request, CancellationToken ct)
+    public async Task<bool> Handle(TestAlertCommand request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
         try
@@ -38,7 +38,7 @@ internal class TestAlertCommandHandler : IRequestHandler<TestAlertCommand, bool>
                     ["test"] = true,
                     ["channel"] = request.Channel
                 },
-                ct).ConfigureAwait(false);
+                cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Test alert sent successfully: Type={AlertType}, Channel={Channel}",
@@ -59,3 +59,4 @@ internal class TestAlertCommandHandler : IRequestHandler<TestAlertCommand, bool>
         }
     }
 }
+

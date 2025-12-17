@@ -82,9 +82,7 @@ internal static partial class PathSecurity
             .Distinct()
             .ToArray();
 
-        var sanitized = new string(filename
-            .Where(c => !invalidChars.Contains(c))
-            .ToArray());
+        var sanitized = string.Concat(filename.Where(c => !invalidChars.Contains(c)));
 
         // Remove leading/trailing dots and spaces
         // Leading/trailing dots can be security risks (.hidden files, "..") or cause filesystem issues

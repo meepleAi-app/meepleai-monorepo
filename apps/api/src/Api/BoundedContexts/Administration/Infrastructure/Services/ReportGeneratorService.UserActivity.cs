@@ -37,7 +37,7 @@ internal sealed partial class ReportGeneratorService
 
     private async Task<ReportContent> GenerateUserActivityReportAsync(
         IReadOnlyDictionary<string, object> parameters,
-        CancellationToken ct)
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(parameters);
         var startDate = (DateTime)parameters["startDate"];
@@ -49,7 +49,7 @@ internal sealed partial class ReportGeneratorService
             .GroupBy(u => u.CreatedAt.Date)
             .Select(g => new { Date = g.Key, Count = g.Count() })
             .OrderBy(x => x.Date)
-            .ToListAsync(ct)
+            .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
         // Login activity (via sessions)
@@ -58,7 +58,7 @@ internal sealed partial class ReportGeneratorService
             .GroupBy(s => s.CreatedAt.Date)
             .Select(g => new { Date = g.Key, Count = g.Count() })
             .OrderBy(x => x.Date)
-            .ToListAsync(ct)
+            .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
         // Session creation
@@ -67,7 +67,7 @@ internal sealed partial class ReportGeneratorService
             .GroupBy(s => s.CreatedAt.Date)
             .Select(g => new { Date = g.Key, Count = g.Count() })
             .OrderBy(x => x.Date)
-            .ToListAsync(ct)
+            .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
         // ISSUE-917: Enhanced with multi-line chart
@@ -129,3 +129,4 @@ internal sealed partial class ReportGeneratorService
             Sections: sections);
     }
 }
+

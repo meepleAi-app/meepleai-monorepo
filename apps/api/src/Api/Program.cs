@@ -580,7 +580,7 @@ static async Task HandleAdminCreationRaceCondition(WebApplication app, MeepleAiD
 
     // If no admin exists, this is an unexpected error - rethrow
     app.Logger.LogError(ex, "Unique constraint violation but no admin user found");
-    throw;
+    System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw(ex);
 }
 
 // K6 Performance Testing: Ensure demo test users exist for testing (Issue #1663)
@@ -666,7 +666,7 @@ static async Task CreateDemoUserIfNotExists(
     }
     catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
     {
-        app.Logger.LogDebug("ℹ️  Demo user creation skipped: {Email} already exists concurrently", email);
+        app.Logger.LogDebug(ex, "ℹ️  Demo user creation skipped: {Email} already exists concurrently", email);
     }
     catch (Exception ex)
     {
@@ -714,7 +714,7 @@ static bool ShouldSkipMigrations(WebApplication app, MeepleAiDbContext db)
         return true;
     }
 
-    if (app.Configuration.GetValue<bool?>("SkipMigrations") == true)
+    if (app.Configuration.GetValue<bool?>("SkipMigrations").GetValueOrDefault(false))
     {
         return true;
     }

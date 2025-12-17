@@ -32,7 +32,7 @@ internal class UnstructuredPdfTextExtractor : IPdfTextExtractor
     public async Task<TextExtractionResult> ExtractTextAsync(
         Stream pdfStream,
         bool enableOcrFallback = true,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         string? requestId = Guid.NewGuid().ToString("N");
         var client = _httpClientFactory.CreateClient("UnstructuredService");
@@ -44,79 +44,21 @@ internal class UnstructuredPdfTextExtractor : IPdfTextExtractor
                 "Starting Unstructured extraction (Stage 1). RequestId: {RequestId}",
                 requestId);
 
-            // Step 1: Prepare HTTP client (factory provides configured, pooled instance)
+            // Step 1: Prepare multipart form data
+            using var content = PrepareMultipartContent(pdfStream);
 
-            // Step 2: Prepare multipart form data (CODE-01: Dispose all IDisposable content)
-            using var content = new MultipartFormDataContent();
-            using var streamContent = new StreamContent(pdfStream);
-            using var strategyContent = new StringContent("fast");  // CODE-01: Dispose StringContent
-            using var languageContent = new StringContent("ita");   // CODE-01: Dispose StringContent
+            // Step 2: Call Python service
+            using var response = await CallUnstructuredServiceAsync(client, content, cancellationToken).ConfigureAwait(false);
 
-            streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/pdf");
-            content.Add(streamContent, "file", "document.pdf");
-            content.Add(strategyContent, "strategy");  // Use fast strategy for <2s target
-            content.Add(languageContent, "language");
-
-            // Step 3: Call Python service (CODE-01: Dispose HttpResponseMessage)
-            using var response = await client.PostAsync("/api/v1/extract", content, ct).ConfigureAwait(false);
-
-            // Step 4: Handle errors
-            if (!response.IsSuccessStatusCode)
-            {
-                var errorContent = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
-                _logger.LogError(
-                    "Unstructured service returned error: {StatusCode}, Body: {ErrorContent}",
-                    response.StatusCode,
-                    errorContent);
-
-                return TextExtractionResult.CreateFailure(
-                    $"Unstructured extraction failed with status {response.StatusCode}: {errorContent}");
-            }
-
-            // Step 5: Parse response
-            var jsonContent = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
-            var extractionResponse = JsonSerializer.Deserialize<UnstructuredExtractionResponse>(
-                jsonContent,
-                _jsonOptions);
-
+            // Step 3: Parse and validate response
+            var extractionResponse = await ParseExtractionResponseAsync(response, cancellationToken).ConfigureAwait(false);
             if (extractionResponse == null)
             {
-                _logger.LogError("Failed to deserialize Unstructured response");
                 return TextExtractionResult.CreateFailure("Invalid response from Unstructured service");
             }
 
-            // Step 6: Normalize text using domain service
-            var normalizedText = PdfTextProcessingDomainService.NormalizeText(extractionResponse.Text);
-
-            // Step 7: Map quality score to ExtractionQuality enum
-            var quality = MapQualityScore(extractionResponse.QualityScore);
-
-            // Step 8: Log quality warning if below threshold
-            if (extractionResponse.QualityScore < 0.80)
-            {
-                _logger.LogWarning(
-                    "Unstructured extraction quality below threshold: {Score:F2} < 0.80. " +
-                    "Consider fallback to Stage 2 (SmolDocling)",
-                    extractionResponse.QualityScore);
-            }
-
-            // Step 9: Create success result
-            var result = TextExtractionResult.CreateSuccess(
-                extractedText: normalizedText,
-                pageCount: extractionResponse.PageCount,
-                characterCount: normalizedText.Length,
-                ocrTriggered: false,  // Unstructured handles OCR internally
-                quality: quality);
-
-            _logger.LogInformation(
-                "Unstructured extraction completed. RequestId: {RequestId}, Pages: {PageCount}, " +
-                "Characters: {CharCount}, Quality: {Quality} (score: {Score:F2}), Duration: {Duration}ms",
-                requestId,
-                result.PageCount,
-                result.CharacterCount,
-                result.Quality,
-                extractionResponse.QualityScore,
-                extractionResponse.Metadata?.ExtractionDurationMs ?? 0);
+            // Step 4: Create result with normalized text and quality assessment
+            var result = CreateExtractionResult(extractionResponse, requestId);
 
             return result;
         }
@@ -128,7 +70,7 @@ internal class UnstructuredPdfTextExtractor : IPdfTextExtractor
             return TextExtractionResult.CreateFailure(
                 $"Failed to connect to Unstructured service: {ex.Message}");
         }
-        catch (TaskCanceledException ex) when (ex.CancellationToken == ct)
+        catch (TaskCanceledException ex) when (ex.CancellationToken == cancellationToken)
         {
             _logger.LogWarning(ex, "Extraction cancelled by user. RequestId: {RequestId}", requestId);
             throw;
@@ -161,15 +103,124 @@ internal class UnstructuredPdfTextExtractor : IPdfTextExtractor
         }
     }
 
+    /// <summary>
+    /// Prepares multipart form data content for Unstructured API request.
+    /// </summary>
+    private static MultipartFormDataContent PrepareMultipartContent(Stream pdfStream)
+    {
+        var content = new MultipartFormDataContent();
+#pragma warning disable CA2000 // Dispose objects before losing scope
+        // Justification: MultipartFormDataContent takes ownership of added content and disposes them when it is disposed
+        var streamContent = new StreamContent(pdfStream);
+        var strategyContent = new StringContent("fast");
+        var languageContent = new StringContent("ita");
+#pragma warning restore CA2000
+
+        streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/pdf");
+        content.Add(streamContent, "file", "document.pdf");
+        content.Add(strategyContent, "strategy");  // Use fast strategy for <2s target
+        content.Add(languageContent, "language");
+
+        return content;
+    }
+
+    /// <summary>
+    /// Calls Unstructured service and validates HTTP response status.
+    /// </summary>
+    private async Task<HttpResponseMessage> CallUnstructuredServiceAsync(
+        HttpClient client,
+        MultipartFormDataContent content,
+        CancellationToken cancellationToken)
+    {
+        var response = await client.PostAsync("/api/v1/extract", content, cancellationToken).ConfigureAwait(false);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorContent = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            _logger.LogError(
+                "Unstructured service returned error: {StatusCode}, Body: {ErrorContent}",
+                response.StatusCode,
+                errorContent);
+
+            throw new HttpRequestException(
+                $"Unstructured extraction failed with status {response.StatusCode}: {errorContent}");
+        }
+
+        return response;
+    }
+
+    /// <summary>
+    /// Parses and deserializes Unstructured service JSON response.
+    /// </summary>
+    private async Task<UnstructuredExtractionResponse?> ParseExtractionResponseAsync(
+        HttpResponseMessage response,
+        CancellationToken cancellationToken)
+    {
+        var jsonContent = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+        var extractionResponse = JsonSerializer.Deserialize<UnstructuredExtractionResponse>(
+            jsonContent,
+            _jsonOptions);
+
+        if (extractionResponse == null)
+        {
+            _logger.LogError("Failed to deserialize Unstructured response");
+        }
+
+        return extractionResponse;
+    }
+
+    /// <summary>
+    /// Creates TextExtractionResult from Unstructured response with normalization and quality assessment.
+    /// </summary>
+    private TextExtractionResult CreateExtractionResult(
+        UnstructuredExtractionResponse extractionResponse,
+        string requestId)
+    {
+        // Normalize text using domain service
+        var normalizedText = PdfTextProcessingDomainService.NormalizeText(extractionResponse.Text);
+
+        // Map quality score to ExtractionQuality enum
+        var quality = MapQualityScore(extractionResponse.QualityScore);
+
+        // Log quality warning if below threshold
+        if (extractionResponse.QualityScore < 0.80)
+        {
+            _logger.LogWarning(
+                "Unstructured extraction quality below threshold: {Score:F2} < 0.80. " +
+                "Consider fallback to Stage 2 (SmolDocling)",
+                extractionResponse.QualityScore);
+        }
+
+        // Create success result
+        var result = TextExtractionResult.CreateSuccess(
+            extractedText: normalizedText,
+            pageCount: extractionResponse.PageCount,
+            characterCount: normalizedText.Length,
+            ocrTriggered: false,  // Unstructured handles OCR internally
+            quality: quality);
+
+        _logger.LogInformation(
+            "Unstructured extraction completed. RequestId: {RequestId}, Pages: {PageCount}, " +
+            "Characters: {CharCount}, Quality: {Quality} (score: {Score:F2}), Duration: {Duration}ms",
+            requestId,
+            result.PageCount,
+            result.CharacterCount,
+            result.Quality,
+            extractionResponse.QualityScore,
+            extractionResponse.Metadata?.ExtractionDurationMs ?? 0);
+
+        return result;
+    }
+
     public async Task<PagedTextExtractionResult> ExtractPagedTextAsync(
         Stream pdfStream,
         bool enableOcrFallback = true,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         // Note: Unstructured returns semantic chunks, not strict page-by-page text
         // For now, we extract full text and then attempt to map chunks to pages
 
-        var extractionResult = await ExtractTextAsync(pdfStream, enableOcrFallback, ct).ConfigureAwait(false);
+        var extractionResult = await ExtractTextAsync(pdfStream, enableOcrFallback, cancellationToken).ConfigureAwait(false);
 
         if (!extractionResult.Success)
         {
@@ -262,3 +313,4 @@ internal record UnstructuredMetadata(
     [property: JsonPropertyName("detected_tables")] int? DetectedTables,
     [property: JsonPropertyName("detected_structures")] List<string>? DetectedStructures,
     [property: JsonPropertyName("quality_breakdown")] Dictionary<string, double>? QualityBreakdown);
+

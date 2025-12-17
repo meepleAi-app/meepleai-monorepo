@@ -195,7 +195,7 @@ internal class StreamExplainQueryHandler : IStreamingQueryHandler<StreamExplainQ
             var firstSentence = text.Split('.')[0];
             if (firstSentence.Length > 60)
             {
-                firstSentence = firstSentence.Substring(0, 57) + "...";
+                firstSentence = string.Concat(firstSentence.AsSpan(0, 57), "...");
             }
             sections.Add(firstSentence);
         }

@@ -29,7 +29,7 @@ internal sealed partial class ReportGeneratorService
 
     private async Task<ReportContent> GenerateAIUsageReportAsync(
         IReadOnlyDictionary<string, object> parameters,
-        CancellationToken ct)
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(parameters);
         var startDate = (DateTime)parameters["startDate"];
@@ -47,7 +47,7 @@ internal sealed partial class ReportGeneratorService
                 TotalCost = g.Sum(r => r.TotalCost)
             })
             .OrderBy(x => x.Date)
-            .ToListAsync(ct)
+            .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
         // Model usage breakdown
@@ -61,7 +61,7 @@ internal sealed partial class ReportGeneratorService
                 TotalCost = g.Sum(r => r.TotalCost)
             })
             .OrderByDescending(x => x.Count)
-            .ToListAsync(ct)
+            .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
         // ISSUE-917: Enhanced with line chart and bar chart
@@ -126,3 +126,4 @@ internal sealed partial class ReportGeneratorService
             Sections: sections);
     }
 }
+

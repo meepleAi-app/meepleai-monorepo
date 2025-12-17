@@ -46,7 +46,6 @@ public class OAuthIntegrationTests : IAsyncLifetime
     private string _databaseName = string.Empty;
     private MeepleAiDbContext? _dbContext;
     private IServiceProvider? _serviceProvider;
-    private IMediator? _mediator;
     private readonly Action<string> _output;
 
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
@@ -120,7 +119,6 @@ public class OAuthIntegrationTests : IAsyncLifetime
 
         // Create DbContext instance
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
-        _mediator = _serviceProvider.GetRequiredService<IMediator>();
 
         // Apply migrations
         _output("Applying migrations...");

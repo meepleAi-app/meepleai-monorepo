@@ -358,7 +358,7 @@ public sealed class User : AggregateRoot<Guid>
         bool hasPassword = PasswordHash != null;
 
         // User has at least one OAuth account
-        bool hasOAuth = _oauthAccounts.Any();
+        bool hasOAuth = _oauthAccounts.Count > 0;
 
         return hasPassword || hasOAuth;
     }

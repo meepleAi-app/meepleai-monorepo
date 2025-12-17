@@ -18,7 +18,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Application.Queries;
 /// Tests for GetSessionStatusQueryHandler focusing on authorization.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
-public class GetSessionStatusQueryHandlerTests : IDisposable
+public sealed class GetSessionStatusQueryHandlerTests : IDisposable
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly Mock<ILogger<GetSessionStatusQueryHandler>> _loggerMock;

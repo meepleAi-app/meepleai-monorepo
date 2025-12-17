@@ -76,9 +76,10 @@ internal class AiProviderValidator : IValidateOptions<AiProviderSettings>
             var duplicates = options.FallbackChain
                 .GroupBy(p => p, StringComparer.Ordinal)
                 .Where(g => g.Count() > 1)
-                .Select(g => g.Key);
+                .Select(g => g.Key)
+                .ToList();
 
-            if (duplicates.Any())
+            if (duplicates.Count > 0)
             {
                 errors.Add($"FallbackChain contains duplicate providers: {string.Join(", ", duplicates)}");
             }

@@ -22,7 +22,6 @@ public class LoginCommandHandlerTests
     private readonly Mock<ISessionRepository> _sessionRepositoryMock;
     private readonly Mock<ITempSessionService> _tempSessionServiceMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
-    private readonly TimeProvider _timeProvider;
     private readonly LoginCommandHandler _handler;
 
     public LoginCommandHandlerTests()
@@ -31,7 +30,6 @@ public class LoginCommandHandlerTests
         _sessionRepositoryMock = new Mock<ISessionRepository>();
         _tempSessionServiceMock = new Mock<ITempSessionService>();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
-        _timeProvider = TimeProvider.System;
 
         _handler = new LoginCommandHandler(
             _userRepositoryMock.Object,

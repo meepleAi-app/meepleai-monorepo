@@ -20,7 +20,9 @@ internal class EmailService : IEmailService
     public EmailService(IConfiguration configuration, ILogger<EmailService> logger)
     {
         // S1075: Default values extracted to const
+#pragma warning disable S1075 // URIs should not be hardcoded - Default/Fallback value
         const string DefaultResetUrlBase = "http://localhost:3000/reset-password";
+#pragma warning restore S1075
 
         _logger = logger;
 

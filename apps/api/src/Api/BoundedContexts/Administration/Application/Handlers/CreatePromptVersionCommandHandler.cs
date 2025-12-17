@@ -47,7 +47,7 @@ internal class CreatePromptVersionCommandHandler : ICommandHandler<CreatePromptV
         }
 
         // Calculate next version number
-        var nextVersionNumber = template.Versions.Any()
+        var nextVersionNumber = template.Versions.Count > 0
             ? template.Versions.Max(v => v.VersionNumber) + 1
             : 1;
 

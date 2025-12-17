@@ -22,7 +22,9 @@ internal class QdrantClientAdapter : IQdrantClientAdapter
         Func<string, int, bool, QdrantClient>? clientFactory = null)
     {
         // S1075: Default Qdrant URL extracted to const
+#pragma warning disable S1075 // URIs should not be hardcoded - Default/Fallback value
         const string DefaultQdrantUrl = "http://localhost:6333";
+#pragma warning restore S1075
 
         _logger = logger;
         var qdrantUrl = configuration["QDRANT_URL"] ?? DefaultQdrantUrl;

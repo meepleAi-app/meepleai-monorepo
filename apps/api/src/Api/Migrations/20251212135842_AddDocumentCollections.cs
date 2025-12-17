@@ -13,6 +13,7 @@ namespace Api.Migrations
         private static readonly string[] CreatedByUserIdCreatedAtColumns = new[] { "CreatedByUserId", "CreatedAt" };
 
         /// <inheritdoc />
+#pragma warning disable MA0051 // Method is too long - EF Core migration auto-generated code
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.AddColumn<Guid>(

@@ -17,7 +17,7 @@ namespace Api.SharedKernel.Application.Behaviors;
 internal sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
     where TRequest : IRequest<TResponse>
 {
-    private readonly IReadOnlyCollection<IValidator<TRequest>> _validators;
+    private readonly IValidator<TRequest>[] _validators;
 
     public ValidationBehavior(IEnumerable<IValidator<TRequest>>? validators)
     {
@@ -33,7 +33,7 @@ internal sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavio
         var validationToken = cancellationToken.IsCancellationRequested ? cancellationToken : CancellationToken.None;
 
         // Skip validation if no validators are registered for this request type
-        if (_validators.Count == 0)
+        if (_validators.Length == 0)
         {
             return await next().ConfigureAwait(false);
         }

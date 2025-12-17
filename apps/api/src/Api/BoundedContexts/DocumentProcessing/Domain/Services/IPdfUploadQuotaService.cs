@@ -42,20 +42,20 @@ internal interface IPdfUploadQuotaService
     /// <param name="userId">User ID to check quota for</param>
     /// <param name="userTier">User's subscription tier (free/normal/premium)</param>
     /// <param name="userRole">User's role (determines if quota bypass applies)</param>
-    /// <param name="ct">Cancellation token</param>
+    /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Result with allowed status, quota usage, limits, and reset times</returns>
     /// <exception cref="ArgumentNullException">Thrown if userTier or userRole is null</exception>
     Task<PdfUploadQuotaResult> CheckQuotaAsync(
         Guid userId,
         UserTier userTier,
         Role userRole,
-        CancellationToken ct = default);
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Increments the upload count for a user.
     /// Should be called after a successful PDF upload.
     /// </summary>
-    Task IncrementUploadCountAsync(Guid userId, CancellationToken ct = default);
+    Task IncrementUploadCountAsync(Guid userId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets the remaining quota for a user.
@@ -64,7 +64,7 @@ internal interface IPdfUploadQuotaService
         Guid userId,
         UserTier userTier,
         Role userRole,
-        CancellationToken ct = default);
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Reserves quota for a PDF upload (Two-Phase Commit - Phase 1).
@@ -72,12 +72,12 @@ internal interface IPdfUploadQuotaService
     /// </summary>
     /// <param name="userId">User ID reserving quota</param>
     /// <param name="pdfId">PDF document ID for tracking</param>
-    /// <param name="ct">Cancellation token</param>
+    /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Result indicating if reservation was successful and expiration time</returns>
     Task<QuotaReservationResult> ReserveQuotaAsync(
         Guid userId,
         string pdfId,
-        CancellationToken ct = default);
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Confirms a reserved quota after successful PDF processing (Two-Phase Commit - Phase 2).
@@ -85,8 +85,8 @@ internal interface IPdfUploadQuotaService
     /// </summary>
     /// <param name="userId">User ID that reserved quota</param>
     /// <param name="pdfId">PDF document ID</param>
-    /// <param name="ct">Cancellation token</param>
-    Task ConfirmQuotaAsync(Guid userId, string pdfId, CancellationToken ct = default);
+    /// <param name="cancellationToken">Cancellation token</param>
+    Task ConfirmQuotaAsync(Guid userId, string pdfId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Releases a reserved quota if PDF processing fails (Two-Phase Commit - Rollback).
@@ -94,8 +94,8 @@ internal interface IPdfUploadQuotaService
     /// </summary>
     /// <param name="userId">User ID that reserved quota</param>
     /// <param name="pdfId">PDF document ID</param>
-    /// <param name="ct">Cancellation token</param>
-    Task ReleaseQuotaAsync(Guid userId, string pdfId, CancellationToken ct = default);
+    /// <param name="cancellationToken">Cancellation token</param>
+    Task ReleaseQuotaAsync(Guid userId, string pdfId, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -201,3 +201,4 @@ internal record QuotaReservationResult
         };
     }
 }
+

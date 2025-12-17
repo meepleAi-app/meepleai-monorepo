@@ -16,7 +16,7 @@ internal static class SessionEndpoints
         // AUTH-03: Session management endpoints
         group.MapGet("/admin/sessions", async (HttpContext context, IMediator mediator, int limit = 100, string? userId = null, CancellationToken ct = default) =>
         {
-            var (authorized, session, error) = context.RequireAdminSession();
+            var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             var query = new Api.BoundedContexts.Authentication.Application.Queries.GetAllSessionsQuery(

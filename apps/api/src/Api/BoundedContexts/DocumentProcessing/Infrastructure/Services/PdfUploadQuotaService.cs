@@ -54,7 +54,7 @@ internal class PdfUploadQuotaService : IPdfUploadQuotaService
         Guid userId,
         UserTier userTier,
         AuthRole userRole,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         // Admin and Editor bypass quota checks (unlimited)
         if (userRole.IsAdmin() || userRole.IsEditor())
@@ -115,7 +115,7 @@ internal class PdfUploadQuotaService : IPdfUploadQuotaService
         }
     }
 
-    public async Task IncrementUploadCountAsync(Guid userId, CancellationToken ct = default)
+    public async Task IncrementUploadCountAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -158,7 +158,7 @@ internal class PdfUploadQuotaService : IPdfUploadQuotaService
     public async Task<QuotaReservationResult> ReserveQuotaAsync(
         Guid userId,
         string pdfId,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(pdfId);
         try
@@ -178,7 +178,7 @@ internal class PdfUploadQuotaService : IPdfUploadQuotaService
 
             var ttl = TimeSpan.FromMinutes(30);
             await db.StringSetAsync(reservationKey, reservationData, ttl).ConfigureAwait(false);
-            await IncrementUploadCountAsync(userId, ct).ConfigureAwait(false);
+            await IncrementUploadCountAsync(userId, cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Quota reserved for user {UserId}, PDF {PdfId}, expires at {ExpiresAt}",
@@ -193,7 +193,7 @@ internal class PdfUploadQuotaService : IPdfUploadQuotaService
         }
     }
 
-    public async Task ConfirmQuotaAsync(Guid userId, string pdfId, CancellationToken ct = default)
+    public async Task ConfirmQuotaAsync(Guid userId, string pdfId, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(pdfId);
         try
@@ -222,7 +222,7 @@ internal class PdfUploadQuotaService : IPdfUploadQuotaService
         }
     }
 
-    public async Task ReleaseQuotaAsync(Guid userId, string pdfId, CancellationToken ct = default)
+    public async Task ReleaseQuotaAsync(Guid userId, string pdfId, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(pdfId);
         try
@@ -290,7 +290,7 @@ internal class PdfUploadQuotaService : IPdfUploadQuotaService
         Guid userId,
         UserTier userTier,
         AuthRole userRole,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(userTier);
         // Admin and Editor have unlimited quota
@@ -452,3 +452,4 @@ internal class PdfUploadQuotaService : IPdfUploadQuotaService
         return now.Date.AddDays(daysUntilMonday);
     }
 }
+

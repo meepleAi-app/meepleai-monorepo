@@ -61,22 +61,13 @@ internal class QueryExpansionService : IQueryExpansionService
         // Rule-based query expansion patterns for board games domain
         // Apply expansion rules (case-insensitive)
         var queryLower = query.ToLowerInvariant();
-        foreach (var rule in ExpansionRules)
+        var newVariations = ExpansionRules
+            .Where(rule => queryLower.Contains(rule.Key))
+            .SelectMany(rule => rule.Value.Take(2)
+                .Select(synonym => query.Replace(rule.Key, synonym, StringComparison.OrdinalIgnoreCase)))
+            .Where(expanded => !variations.Contains(expanded, StringComparer.OrdinalIgnoreCase));
 
-
-        {
-            if (queryLower.Contains(rule.Key))
-            {
-                foreach (var synonym in rule.Value.Take(2)) // Limit to 2 synonyms per rule
-                {
-                    var expandedQuery = query.Replace(rule.Key, synonym, StringComparison.OrdinalIgnoreCase);
-                    if (!variations.Contains(expandedQuery, StringComparer.OrdinalIgnoreCase))
-                    {
-                        variations.Add(expandedQuery);
-                    }
-                }
-            }
-        }
+        variations.AddRange(newVariations);
 
         // Add question reformulations for common patterns
         if (queryLower.StartsWith("how", StringComparison.Ordinal) || queryLower.StartsWith("what", StringComparison.Ordinal) || queryLower.StartsWith("can", StringComparison.Ordinal))

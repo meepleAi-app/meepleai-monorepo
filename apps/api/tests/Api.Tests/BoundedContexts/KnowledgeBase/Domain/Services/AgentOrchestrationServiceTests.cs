@@ -4,6 +4,8 @@ using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Moq;
 using Xunit;
 using Api.Tests.Constants;
+using Microsoft.Extensions.Logging;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services;
 
@@ -15,14 +17,10 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services;
 public class AgentOrchestrationServiceTests
 {
     private readonly AgentOrchestrationService _service;
-    private readonly Mock<VectorSearchDomainService> _mockVectorSearch;
-    private readonly Mock<QualityTrackingDomainService> _mockQualityTracking;
 
     public AgentOrchestrationServiceTests()
     {
         _service = new AgentOrchestrationService();
-        _mockVectorSearch = new Mock<VectorSearchDomainService>();
-        _mockQualityTracking = new Mock<QualityTrackingDomainService>();
     }
 
     [Fact]

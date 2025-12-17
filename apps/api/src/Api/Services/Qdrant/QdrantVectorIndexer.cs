@@ -29,14 +29,14 @@ internal class QdrantVectorIndexer : IQdrantVectorIndexer
     public async Task UpsertPointsAsync(
         string collectionName,
         IReadOnlyList<PointStruct> points,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         try
         {
             await _clientAdapter.UpsertAsync(
                 collectionName: collectionName,
                 points: points,
-                cancellationToken: ct
+                cancellationToken: cancellationToken
             ).ConfigureAwait(false);
 
             _logger.LogDebug("Successfully upserted {Count} points to collection {CollectionName}",
@@ -119,14 +119,14 @@ internal class QdrantVectorIndexer : IQdrantVectorIndexer
     public async Task DeleteByFilterAsync(
         string collectionName,
         Filter filter,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         try
         {
             await _clientAdapter.DeleteAsync(
                 collectionName: collectionName,
                 filter: filter,
-                cancellationToken: ct
+                cancellationToken: cancellationToken
             ).ConfigureAwait(false);
 
             _logger.LogDebug("Successfully deleted vectors from collection {CollectionName}", collectionName);

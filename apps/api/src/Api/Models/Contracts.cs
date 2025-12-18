@@ -160,7 +160,7 @@ internal record N8NTestResult(
 );
 
 // N8N-04: Workflow template models
-internal record WorkflowTemplateDto(
+public record WorkflowTemplateDto(
     string Id,
     string Name,
     string Version,
@@ -174,7 +174,7 @@ internal record WorkflowTemplateDto(
     IList<TemplateParameterDto> Parameters
 );
 
-internal record TemplateParameterDto(
+public record TemplateParameterDto(
     string Name,
     string Type,
     string Label,
@@ -185,7 +185,7 @@ internal record TemplateParameterDto(
     bool Sensitive
 );
 
-internal record WorkflowTemplateDetailDto(
+public record WorkflowTemplateDetailDto(
     string Id,
     string Name,
     string Version,
@@ -204,7 +204,7 @@ internal record ImportTemplateRequest(
     IDictionary<string, string> Parameters
 );
 
-internal record ImportTemplateResponse(
+public record ImportTemplateResponse(
     string WorkflowId,
     string Message
 );
@@ -213,7 +213,7 @@ internal record ValidateTemplateRequest(
     string TemplateJson
 );
 
-internal record ValidateTemplateResponse(
+public record ValidateTemplateResponse(
     [property: JsonPropertyName("valid")] bool IsValid,
     [property: JsonPropertyName("errors")] IList<string>? Errors
 );

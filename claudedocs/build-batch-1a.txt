@@ -1,9 +1,0 @@
-  Individuazione dei progetti da ripristinare...
-  Tutti i progetti sono aggiornati per il ripristino.
-  Api -> D:\Repositories\meepleai-monorepo-frontend\meepleai-monorepo\apps\api\src\Api\bin\Debug\net9.0\Api.dll
-
-Compilazione completata.
-    Avvisi: 0
-    Errori: 0
-
-Tempo trascorso 00:00:17.41

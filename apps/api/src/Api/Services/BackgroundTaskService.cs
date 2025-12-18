@@ -42,6 +42,9 @@ internal class BackgroundTaskService : IBackgroundTaskService
 
     public void ExecuteWithCancellation(string taskId, Func<CancellationToken, Task> taskFactory)
     {
+        // S2930: CancellationTokenSource stored in dictionary for lifecycle management.
+        // Disposed explicitly in finally block (line 81) or CancelTask() (line 92).
+        // Cannot use 'using var' as disposal must occur when task completes or is cancelled.
         var cts = new CancellationTokenSource();
 
         if (!_activeTasks.TryAdd(taskId, cts))

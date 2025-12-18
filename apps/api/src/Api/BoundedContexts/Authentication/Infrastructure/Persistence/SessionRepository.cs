@@ -65,6 +65,7 @@ public class SessionRepository : RepositoryBase, ISessionRepository
 
     public async Task AddAsync(Session session, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(session);
         // Collect domain events BEFORE mapping to persistence entity
         CollectDomainEvents(session);
 
@@ -74,6 +75,7 @@ public class SessionRepository : RepositoryBase, ISessionRepository
 
     public async Task UpdateAsync(Session session, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(session);
         // Collect domain events BEFORE updating persistence entity
         CollectDomainEvents(session);
 

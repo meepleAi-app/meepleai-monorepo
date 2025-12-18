@@ -5,7 +5,7 @@ namespace Api.Services;
 /// <summary>
 /// Service for exporting chat conversations in various formats.
 /// </summary>
-public interface IChatExportService
+internal interface IChatExportService
 {
     /// <summary>
     /// Exports a chat conversation to the specified format.

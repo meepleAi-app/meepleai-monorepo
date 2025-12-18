@@ -11,7 +11,7 @@ using System.Globalization;
 
 namespace Api.Services;
 
-public class QdrantClientAdapter : IQdrantClientAdapter
+internal class QdrantClientAdapter : IQdrantClientAdapter
 {
     private readonly QdrantClient _client;
     private readonly ILogger<QdrantClientAdapter> _logger;
@@ -22,7 +22,9 @@ public class QdrantClientAdapter : IQdrantClientAdapter
         Func<string, int, bool, QdrantClient>? clientFactory = null)
     {
         // S1075: Default Qdrant URL extracted to const
+#pragma warning disable S1075 // URIs should not be hardcoded - Default/Fallback value
         const string DefaultQdrantUrl = "http://localhost:6333";
+#pragma warning restore S1075
 
         _logger = logger;
         var qdrantUrl = configuration["QDRANT_URL"] ?? DefaultQdrantUrl;
@@ -34,7 +36,7 @@ public class QdrantClientAdapter : IQdrantClientAdapter
 
         var host = uri.Host;
         var useHttps = uri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase);
-        var grpcPort = ResolveGrpcPort(configuration, uri, useHttps, logger);
+        var grpcPort = ResolveGrpcPort(configuration, uri, logger);
 
         var factory = clientFactory ?? ((h, p, https) => new QdrantClient(h, p, https));
         _client = factory(host, grpcPort, useHttps);
@@ -44,7 +46,6 @@ public class QdrantClientAdapter : IQdrantClientAdapter
     private static int ResolveGrpcPort(
         IConfiguration configuration,
         Uri uri,
-        bool useHttps,
         ILogger logger)
     {
         var grpcPortSetting = configuration["QDRANT_GRPC_PORT"];
@@ -69,7 +70,7 @@ public class QdrantClientAdapter : IQdrantClientAdapter
             return uri.Port;
         }
 
-        return useHttps ? 6334 : 6334;
+        return 6334;
     }
 
     public Task<IReadOnlyList<string>> ListCollectionsAsync(CancellationToken cancellationToken = default)

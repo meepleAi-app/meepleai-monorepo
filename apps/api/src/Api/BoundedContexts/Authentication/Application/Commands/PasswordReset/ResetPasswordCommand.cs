@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands.PasswordReset;
 /// Command to reset user password using valid reset token.
 /// Validates token, updates password, and revokes all user sessions.
 /// </summary>
-public sealed record ResetPasswordCommand : ICommand<ResetPasswordResult>
+internal sealed record ResetPasswordCommand : ICommand<ResetPasswordResult>
 {
     public string Token { get; init; } = string.Empty;
     public string NewPassword { get; init; } = string.Empty;
@@ -16,7 +16,7 @@ public sealed record ResetPasswordCommand : ICommand<ResetPasswordResult>
 /// <summary>
 /// Result of password reset operation.
 /// </summary>
-public sealed record ResetPasswordResult
+internal sealed record ResetPasswordResult
 {
     public bool Success { get; init; }
     public Guid? UserId { get; init; }

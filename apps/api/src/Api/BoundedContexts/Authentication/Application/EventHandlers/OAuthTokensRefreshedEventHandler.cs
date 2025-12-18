@@ -9,11 +9,11 @@ namespace Api.BoundedContexts.Authentication.Application.EventHandlers;
 /// Handles the OAuthTokensRefreshedEvent domain event.
 /// Creates audit log entry automatically via base class.
 /// </summary>
-public sealed class OAuthTokensRefreshedEventHandler : DomainEventHandlerBase<OAuthTokensRefreshedEvent>
+internal sealed class OAuthTokensRefreshedEventHandler : DomainEventHandlerBase<OAuthTokensRefreshedEvent>
 {
     public OAuthTokensRefreshedEventHandler(
         MeepleAiDbContext dbContext,
-        ILogger<DomainEventHandlerBase<OAuthTokensRefreshedEvent>> logger)
+        ILogger<OAuthTokensRefreshedEventHandler> logger)
         : base(dbContext, logger)
     {
     }

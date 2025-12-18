@@ -3,7 +3,7 @@ namespace Api.BoundedContexts.Authentication.Application.DTOs;
 /// <summary>
 /// DTO for a single API key usage log entry.
 /// </summary>
-public class ApiKeyUsageLogDto
+internal class ApiKeyUsageLogDto
 {
     /// <summary>
     /// Unique identifier for this usage log.

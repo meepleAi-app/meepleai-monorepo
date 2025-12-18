@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 /// Number of pages in a PDF document.
 /// Represents a valid page count (minimum 1).
 /// </summary>
-public sealed class PageCount : ValueObject
+internal sealed class PageCount : ValueObject
 {
     /// <summary>
     /// Number of pages (minimum 1)
@@ -83,4 +83,9 @@ public sealed class PageCount : ValueObject
     /// </summary>
     public static readonly PageCount SinglePage = new(1);
     public static readonly PageCount TwoPages = new(2);
+
+    public int ToInt32()
+    {
+        throw new NotSupportedException("Use implicit conversion to int instead");
+    }
 }

@@ -29,7 +29,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
 /// - Comprehensive logging for quality tracking
 /// - Thread-safe and stateless for singleton lifecycle
 /// </remarks>
-public class RagValidationPipelineService : IRagValidationPipelineService
+internal class RagValidationPipelineService : IRagValidationPipelineService
 {
     private readonly IConfidenceValidationService _confidenceValidation;
     private readonly IMultiModelValidationService _multiModelValidation;
@@ -58,8 +58,7 @@ public class RagValidationPipelineService : IRagValidationPipelineService
         string? language = null,
         CancellationToken cancellationToken = default)
     {
-        if (response == null)
-            throw new ArgumentNullException(nameof(response));
+        ArgumentNullException.ThrowIfNull(response);
 
         if (string.IsNullOrWhiteSpace(gameId))
             throw new ArgumentException("Game ID cannot be null or empty", nameof(gameId));
@@ -83,40 +82,13 @@ public class RagValidationPipelineService : IRagValidationPipelineService
             confidenceResult.ValidationMessage);
 
         // Layer 3 & 4: Execute in parallel for performance optimization (BGAI-037)
-        var citationTask = EnsureCitationTask(
-            _citationValidation.ValidateCitationsAsync(snippets, gameId, CancellationToken.None),
-            snippets.Count);
+        var (citationResult, hallucinationResult) = await ExecuteStandardParallelValidationAsync(
+            snippets, gameId, answerText, language, cancellationToken).ConfigureAwait(false);
 
-        var hallucinationTask = EnsureHallucinationTask(
-            _hallucinationDetection.DetectHallucinationsAsync(answerText, language, CancellationToken.None));
-
-        // Wait for both tasks to complete
-        await Task.WhenAll(citationTask, hallucinationTask).ConfigureAwait(false);
-
-        var citationResult = EnsureCitationResult(await citationTask.ConfigureAwait(false), snippets.Count);
-        var hallucinationResult = EnsureHallucinationResult(await hallucinationTask.ConfigureAwait(false));
         var citation = citationResult!;
         var hallucination = hallucinationResult!;
 
-        var citationValidCount = citation.ValidCitations;
-        var citationTotalCount = citation.TotalCitations;
-        var citationStatus = citation.IsValid ? "PASS" : "FAIL";
-
-        _logger.LogDebug(
-            "Layer 3 (Citation): {Status} - {ValidCount}/{TotalCount} citations valid",
-            citationStatus,
-            citationValidCount,
-            citationTotalCount);
-
-        var hallucinationDetected = hallucination.DetectedKeywords?.Count ?? 0;
-        var hallucinationSeverity = hallucination.Severity;
-        var hallucinationStatus = hallucination.IsValid ? "PASS" : "FAIL";
-
-        _logger.LogDebug(
-            "Layer 4 (Hallucination): {Status} - {DetectedCount} keywords detected (severity: {Severity})",
-            hallucinationStatus,
-            hallucinationDetected,
-            hallucinationSeverity);
+        LogStandardValidationDetails(citation, hallucination);
 
         stopwatch.Stop();
 
@@ -155,6 +127,45 @@ public class RagValidationPipelineService : IRagValidationPipelineService
         };
     }
 
+    private async Task<(CitationValidationResult, HallucinationValidationResult)> ExecuteStandardParallelValidationAsync(
+        List<Snippet> snippets,
+        string gameId,
+        string answerText,
+        string language,
+        CancellationToken cancellationToken)
+    {
+        var citationTask = EnsureCitationTask(
+            _citationValidation.ValidateCitationsAsync(snippets, gameId, CancellationToken.None),
+            snippets.Count);
+
+        var hallucinationTask = EnsureHallucinationTask(
+            _hallucinationDetection.DetectHallucinationsAsync(answerText, language, CancellationToken.None));
+
+        await Task.WhenAll(citationTask, hallucinationTask).ConfigureAwait(false);
+
+        var citationResult = EnsureCitationResult(await citationTask.ConfigureAwait(false), snippets.Count);
+        var hallucinationResult = EnsureHallucinationResult(await hallucinationTask.ConfigureAwait(false));
+
+        return (citationResult, hallucinationResult);
+    }
+
+    private void LogStandardValidationDetails(CitationValidationResult citation, HallucinationValidationResult hallucination)
+    {
+        var citationStatus = citation.IsValid ? "PASS" : "FAIL";
+        _logger.LogDebug(
+            "Layer 3 (Citation): {Status} - {ValidCount}/{TotalCount} citations valid",
+            citationStatus,
+            citation.ValidCitations,
+            citation.TotalCitations);
+
+        var hallucinationStatus = hallucination.IsValid ? "PASS" : "FAIL";
+        _logger.LogDebug(
+            "Layer 4 (Hallucination): {Status} - {DetectedCount} keywords detected (severity: {Severity})",
+            hallucinationStatus,
+            hallucination.DetectedKeywords?.Count ?? 0,
+            hallucination.Severity);
+    }
+
     /// <inheritdoc/>
     public async Task<RagValidationResult> ValidateWithMultiModelAsync(
         QaResponse response,
@@ -164,8 +175,7 @@ public class RagValidationPipelineService : IRagValidationPipelineService
         string? language = null,
         CancellationToken cancellationToken = default)
     {
-        if (response == null)
-            throw new ArgumentNullException(nameof(response));
+        ArgumentNullException.ThrowIfNull(response);
 
         if (string.IsNullOrWhiteSpace(gameId))
             throw new ArgumentException("Game ID cannot be null or empty", nameof(gameId));
@@ -195,72 +205,14 @@ public class RagValidationPipelineService : IRagValidationPipelineService
             confidenceResult.ValidationMessage);
 
         // Layer 2, 3, 4: Execute in parallel for performance optimization (BGAI-037)
-        // Note: Layer 4 depends on Layer 2 result for text selection, but we handle this with continuation
-        var multiModelTask = EnsureMultiModelTask(
-            _multiModelValidation.ValidateWithConsensusAsync(
-                systemPrompt,
-                userPrompt,
-                temperature: 0.3,
-                maxTokens: 1000,
-                CancellationToken.None));
+        var (multiModelResult, citationResult, hallucinationResult) = await ExecuteMultiModelParallelValidationAsync(
+            snippets, gameId, systemPrompt, userPrompt, answerText, language, cancellationToken).ConfigureAwait(false);
 
-        var citationTask = EnsureCitationTask(
-            _citationValidation.ValidateCitationsAsync(snippets, gameId, CancellationToken.None),
-            snippets.Count);
-
-        // Start hallucination detection after multi-model completes (needs consensus response)
-        var hallucinationTask = multiModelTask.ContinueWith(async task =>
-        {
-            var multiModelResult = EnsureMultiModelResult(await task.ConfigureAwait(false));
-            var textToValidate = multiModelResult.HasConsensus && !string.IsNullOrWhiteSpace(multiModelResult.ConsensusResponse)
-                ? multiModelResult.ConsensusResponse
-                : answerText;
-
-            return await _hallucinationDetection.DetectHallucinationsAsync(
-                textToValidate,
-                language,
-                CancellationToken.None).ConfigureAwait(false);
-        }, cancellationToken).Unwrap();
-
-        // Wait for all tasks to complete
-        await Task.WhenAll(multiModelTask, citationTask, hallucinationTask).ConfigureAwait(false);
-
-        var multiModelResult = EnsureMultiModelResult(await multiModelTask.ConfigureAwait(false));
-        var citationResult = EnsureCitationResult(await citationTask.ConfigureAwait(false), snippets.Count);
-        var hallucinationResult = EnsureHallucinationResult(await hallucinationTask.ConfigureAwait(false));
         var multiModel = multiModelResult!;
         var citation = citationResult!;
         var hallucination = hallucinationResult!;
 
-        var multiModelStatus = multiModel.HasConsensus ? "PASS" : "FAIL";
-        var multiModelSimilarity = multiModel.SimilarityScore;
-        var multiModelThreshold = multiModel.RequiredThreshold;
-
-        _logger.LogDebug(
-            "Layer 2 (Multi-Model Consensus): {Status} - Similarity: {Similarity:F3} (threshold: {Threshold:F2})",
-            multiModelStatus,
-            multiModelSimilarity,
-            multiModelThreshold);
-
-        var citationValidCount2 = citation.ValidCitations;
-        var citationTotalCount2 = citation.TotalCitations;
-        var citationStatus2 = citation.IsValid ? "PASS" : "FAIL";
-
-        _logger.LogDebug(
-            "Layer 3 (Citation): {Status} - {ValidCount}/{TotalCount} citations valid",
-            citationStatus2,
-            citationValidCount2,
-            citationTotalCount2);
-
-        var hallucinationDetected2 = hallucination.DetectedKeywords?.Count ?? 0;
-        var hallucinationSeverity2 = hallucination.Severity;
-        var hallucinationStatus2 = hallucination.IsValid ? "PASS" : "FAIL";
-
-        _logger.LogDebug(
-            "Layer 4 (Hallucination): {Status} - {DetectedCount} keywords detected (severity: {Severity})",
-            hallucinationStatus2,
-            hallucinationDetected2,
-            hallucinationSeverity2);
+        LogMultiModelValidationDetails(multiModel, citation, hallucination);
 
         stopwatch.Stop();
 
@@ -302,6 +254,77 @@ public class RagValidationPipelineService : IRagValidationPipelineService
             Severity = severity,
             DurationMs = stopwatch.ElapsedMilliseconds
         };
+    }
+
+    private async Task<(MultiModelConsensusResult, CitationValidationResult, HallucinationValidationResult)> ExecuteMultiModelParallelValidationAsync(
+        List<Snippet> snippets,
+        string gameId,
+        string systemPrompt,
+        string userPrompt,
+        string answerText,
+        string language,
+        CancellationToken cancellationToken)
+    {
+        var multiModelTask = EnsureMultiModelTask(
+            _multiModelValidation.ValidateWithConsensusAsync(
+                systemPrompt,
+                userPrompt,
+                temperature: 0.3,
+                maxTokens: 1000,
+                CancellationToken.None));
+
+        var citationTask = EnsureCitationTask(
+            _citationValidation.ValidateCitationsAsync(snippets, gameId, CancellationToken.None),
+            snippets.Count);
+
+        // Start hallucination detection after multi-model completes (needs consensus response)
+        var hallucinationTask = multiModelTask.ContinueWith(async task =>
+        {
+            var multiModelResult = EnsureMultiModelResult(await task.ConfigureAwait(false));
+            var textToValidate = multiModelResult.HasConsensus && !string.IsNullOrWhiteSpace(multiModelResult.ConsensusResponse)
+                ? multiModelResult.ConsensusResponse
+                : answerText;
+
+            return await _hallucinationDetection.DetectHallucinationsAsync(
+                textToValidate,
+                language,
+                CancellationToken.None).ConfigureAwait(false);
+        }, cancellationToken).Unwrap();
+
+        await Task.WhenAll(multiModelTask, citationTask, hallucinationTask).ConfigureAwait(false);
+
+        var multiModelResult = EnsureMultiModelResult(await multiModelTask.ConfigureAwait(false));
+        var citationResult = EnsureCitationResult(await citationTask.ConfigureAwait(false), snippets.Count);
+        var hallucinationResult = EnsureHallucinationResult(await hallucinationTask.ConfigureAwait(false));
+
+        return (multiModelResult, citationResult, hallucinationResult);
+    }
+
+    private void LogMultiModelValidationDetails(
+        MultiModelConsensusResult multiModel,
+        CitationValidationResult citation,
+        HallucinationValidationResult hallucination)
+    {
+        var multiModelStatus = multiModel.HasConsensus ? "PASS" : "FAIL";
+        _logger.LogDebug(
+            "Layer 2 (Multi-Model Consensus): {Status} - Similarity: {Similarity:F3} (threshold: {Threshold:F2})",
+            multiModelStatus,
+            multiModel.SimilarityScore,
+            multiModel.RequiredThreshold);
+
+        var citationStatus = citation.IsValid ? "PASS" : "FAIL";
+        _logger.LogDebug(
+            "Layer 3 (Citation): {Status} - {ValidCount}/{TotalCount} citations valid",
+            citationStatus,
+            citation.ValidCitations,
+            citation.TotalCitations);
+
+        var hallucinationStatus = hallucination.IsValid ? "PASS" : "FAIL";
+        _logger.LogDebug(
+            "Layer 4 (Hallucination): {Status} - {DetectedCount} keywords detected (severity: {Severity})",
+            hallucinationStatus,
+            hallucination.DetectedKeywords?.Count ?? 0,
+            hallucination.Severity);
     }
 
     /// <summary>

@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Authentication.Application.Queries;
 /// Handler for Verify2FAQuery.
 /// DDD: Thin wrapper - delegates to ITotpService for verification logic.
 /// </summary>
-public class Verify2FAQueryHandler : IQueryHandler<Verify2FAQuery, Verify2FAResult>
+internal class Verify2FAQueryHandler : IQueryHandler<Verify2FAQuery, Verify2FAResult>
 {
     private readonly IUserRepository _userRepository;
     private readonly ITotpService _totpService;
@@ -26,6 +26,7 @@ public class Verify2FAQueryHandler : IQueryHandler<Verify2FAQuery, Verify2FAResu
 
     public async Task<Verify2FAResult> Handle(Verify2FAQuery query, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(query);
         try
         {
             // Get user by email
@@ -51,10 +52,15 @@ public class Verify2FAQueryHandler : IQueryHandler<Verify2FAQuery, Verify2FAResu
 
             return new Verify2FAResult(IsValid: isValid);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: QUERY HANDLER PATTERN - CQRS query boundary
+        // Generic catch handles unexpected infrastructure failures (DB, network)
+        // to prevent exception propagation to API layer. Returns Result pattern.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error verifying 2FA code for email {Email}", query.Email);
             return new Verify2FAResult(IsValid: false, ErrorMessage: "Verification error");
         }
+#pragma warning restore CA1031
     }
 }

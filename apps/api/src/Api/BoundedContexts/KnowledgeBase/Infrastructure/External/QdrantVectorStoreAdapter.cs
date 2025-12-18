@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 /// Concrete implementation of IQdrantVectorStoreAdapter.
 /// Wraps existing QdrantService and maps to domain entities.
 /// </summary>
-public class QdrantVectorStoreAdapter : IQdrantVectorStoreAdapter
+internal class QdrantVectorStoreAdapter : IQdrantVectorStoreAdapter
 {
     private readonly IQdrantService _qdrantService;
     private readonly ILogger<QdrantVectorStoreAdapter> _logger;

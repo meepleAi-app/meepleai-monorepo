@@ -13,7 +13,7 @@ using Microsoft.Extensions.Options;
 
 namespace Api.Extensions;
 
-public static class InfrastructureServiceExtensions
+internal static class InfrastructureServiceExtensions
 {
     public static IServiceCollection AddInfrastructureServices(
         this IServiceCollection services,
@@ -81,7 +81,9 @@ public static class InfrastructureServiceExtensions
         IConfiguration configuration)
     {
         // PERF-09: Configure Redis with optimized connection pooling
+#pragma warning disable S1075 // URIs should not be hardcoded - Default/Fallback value
         var redisUrl = configuration["REDIS_URL"] ?? "localhost:6379";
+#pragma warning restore S1075
         services.AddSingleton<IConnectionMultiplexer>(sp =>
         {
             var config = ConfigurationOptions.Parse(redisUrl);
@@ -133,8 +135,8 @@ public static class InfrastructureServiceExtensions
         }
         else
         {
-            // Fallback: In-memory distributed cache for development/testing environments
-            // This ensures IDistributedCache is always available for services that require it
+            // Fallback to in-memory distributed cache when Redis L2 is disabled
+            // Required for services that depend on IDistributedCache directly
             services.AddDistributedMemoryCache();
         }
 
@@ -173,7 +175,9 @@ public static class InfrastructureServiceExtensions
         // Ollama client with optimized settings
         services.AddHttpClient("Ollama", client =>
         {
+#pragma warning disable S1075 // URIs should not be hardcoded - Default/Fallback value
             var ollamaUrl = configuration["OLLAMA_URL"] ?? "http://localhost:11434";
+#pragma warning restore S1075
             client.BaseAddress = new Uri(ollamaUrl);
             var timeoutSeconds = configuration.GetValue<int>("AIAgents:DefaultTimeoutSeconds", 30);
             client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
@@ -188,7 +192,9 @@ public static class InfrastructureServiceExtensions
 
         // OpenRouter client with optimized settings (unified gateway for cloud AI models)
         // S1075: OpenRouter API endpoint (official public endpoint)
+#pragma warning disable S1075 // URIs should not be hardcoded - Official API endpoint
         const string OpenRouterApiBaseUrl = "https://openrouter.ai/api/v1/";
+#pragma warning restore S1075
 
         services.AddHttpClient("OpenRouter", client =>
         {
@@ -207,7 +213,9 @@ public static class InfrastructureServiceExtensions
         // Qdrant client with optimized settings
         services.AddHttpClient("Qdrant", client =>
         {
+#pragma warning disable S1075 // URIs should not be hardcoded - Default/Fallback value
             var qdrantUrl = configuration["QdrantUrl"] ?? "http://localhost:6333";
+#pragma warning restore S1075
             client.BaseAddress = new Uri(qdrantUrl);
             var timeoutSeconds = configuration.GetValue<int>("AIAgents:DefaultTimeoutSeconds", 30);
             client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);

@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.Administration.Infrastructure.Services;
 /// Service for parsing Playwright test reports (Issue #2139)
 /// Reads JSON reports from apps/web/playwright-report/
 /// </summary>
-public class PlaywrightReportParserService : IPlaywrightReportParserService
+internal class PlaywrightReportParserService : IPlaywrightReportParserService
 {
     private readonly ILogger<PlaywrightReportParserService> _logger;
     private readonly string _reportDirectory;
@@ -32,7 +32,7 @@ public class PlaywrightReportParserService : IPlaywrightReportParserService
     {
         try
         {
-            var latestReport = await GetLatestReportAsync(cancellationToken).ConfigureAwait(false);
+            var latestReport = await GetLatestReportAsync().ConfigureAwait(false);
             if (latestReport == null)
             {
                 _logger.LogWarning("No Playwright reports found in directory: {Directory}", _reportDirectory);
@@ -65,8 +65,20 @@ public class PlaywrightReportParserService : IPlaywrightReportParserService
             var coverage = totalTests > 0 ? Math.Min(100, totalTests * 0.5m) : 0;
 
             // Determine status
-            var status = passRate >= 95 && flakyRate <= 5 ? "pass" :
-                        passRate >= 80 && flakyRate <= 10 ? "warning" : "fail";
+            // Determine status
+            string status;
+            if (passRate >= 95 && flakyRate <= 5)
+            {
+                status = "pass";
+            }
+            else if (passRate >= 80 && flakyRate <= 10)
+            {
+                status = "warning";
+            }
+            else
+            {
+                status = "fail";
+            }
 
             var lastRunAt = File.GetLastWriteTimeUtc(latestReport);
 
@@ -93,11 +105,16 @@ public class PlaywrightReportParserService : IPlaywrightReportParserService
 
             return metrics;
         }
+#pragma warning disable CA1031
+        // Justification: INFRASTRUCTURE SERVICE PATTERN - Graceful degradation
+        // Catches all file I/O and JSON parsing failures. Returns null instead of throwing
+        // to allow dashboard to handle missing metrics gracefully. Non-critical data retrieval.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error parsing Playwright E2E metrics");
             return null;
         }
+#pragma warning restore CA1031
     }
 
     public async Task<bool> ReportsExistAsync(CancellationToken cancellationToken = default)
@@ -121,7 +138,7 @@ public class PlaywrightReportParserService : IPlaywrightReportParserService
     /// <summary>
     /// Gets the latest Playwright report file path
     /// </summary>
-    private async Task<string?> GetLatestReportAsync(CancellationToken cancellationToken = default)
+    private async Task<string?> GetLatestReportAsync()
     {
         await Task.CompletedTask.ConfigureAwait(false);
 

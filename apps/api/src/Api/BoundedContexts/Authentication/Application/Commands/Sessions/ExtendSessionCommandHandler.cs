@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands;
 /// Handler for ExtendSessionCommand with rate limiting.
 /// Rate limit: Max 10 extensions per hour per user.
 /// </summary>
-public class ExtendSessionCommandHandler : ICommandHandler<ExtendSessionCommand, ExtendSessionResponse>
+internal class ExtendSessionCommandHandler : ICommandHandler<ExtendSessionCommand, ExtendSessionResponse>
 {
     private readonly ISessionRepository _sessionRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -38,6 +38,7 @@ public class ExtendSessionCommandHandler : ICommandHandler<ExtendSessionCommand,
 
     public async Task<ExtendSessionResponse> Handle(ExtendSessionCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         // Rate limiting check - per user
         var rateLimitKey = $"session_extend:{command.RequestingUserId}";
         var rateLimitResult = await _rateLimitService.CheckRateLimitAsync(
@@ -91,10 +92,15 @@ public class ExtendSessionCommandHandler : ICommandHandler<ExtendSessionCommand,
 
             return new ExtendSessionResponse(true, session.ExpiresAt, null);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: COMMAND HANDLER PATTERN - CQRS handler boundary
+        // Generic catch handles unexpected infrastructure failures (DB, network, memory)
+        // to prevent exception propagation to API layer. Returns Response pattern with error.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to extend session {SessionId}", command.SessionId);
             return new ExtendSessionResponse(false, null, ex.Message);
         }
+#pragma warning restore CA1031
     }
 }

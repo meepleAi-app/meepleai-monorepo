@@ -18,7 +18,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
 ///
 /// Integration: Used by RagService to validate responses before returning to users.
 /// </remarks>
-public class ConfidenceValidationService : IConfidenceValidationService
+internal class ConfidenceValidationService : IConfidenceValidationService
 {
     private readonly ILogger<ConfidenceValidationService> _logger;
 

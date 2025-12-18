@@ -229,7 +229,7 @@ internal class MockServiceScopeFactory : IServiceScopeFactory
 /// <summary>
 /// Mock ServiceScope for testing
 /// </summary>
-internal class MockServiceScope : IServiceScope
+internal sealed class MockServiceScope : IServiceScope
 {
     public IServiceProvider ServiceProvider { get; }
 

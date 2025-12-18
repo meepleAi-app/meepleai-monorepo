@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands;
 /// Command to revoke a specific session.
 /// User must own the session OR have Admin role.
 /// </summary>
-public record RevokeSessionCommand(
+internal record RevokeSessionCommand(
     Guid SessionId,
     Guid RequestingUserId,
     bool IsRequestingUserAdmin,
@@ -17,7 +17,7 @@ public record RevokeSessionCommand(
 /// <summary>
 /// Response for RevokeSessionCommand.
 /// </summary>
-public record RevokeSessionResponse(
+internal record RevokeSessionResponse(
     bool Success,
     string? ErrorMessage
 );

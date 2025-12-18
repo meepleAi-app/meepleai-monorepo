@@ -14,7 +14,7 @@ namespace Api.BoundedContexts.UserNotifications.Infrastructure.Persistence;
 /// EF Core implementation of Notification repository.
 /// Maps between domain Notification aggregate and NotificationEntity persistence model.
 /// </summary>
-public class NotificationRepository : RepositoryBase, INotificationRepository
+internal class NotificationRepository : RepositoryBase, INotificationRepository
 {
     public NotificationRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
         : base(dbContext, eventCollector)
@@ -105,10 +105,8 @@ public class NotificationRepository : RepositoryBase, INotificationRepository
 
     public async Task DeleteAsync(Notification notification, CancellationToken cancellationToken = default)
     {
-        if (notification == null)
-        {
-            throw new ArgumentNullException(nameof(notification));
-        }
+        ArgumentNullException.ThrowIfNull(notification);
+
 
         await DbContext.Set<NotificationEntity>()
             .Where(n => n.Id == notification.Id)

@@ -3,4 +3,4 @@ using Api.SharedKernel.Application.Interfaces;
 
 namespace Api.BoundedContexts.SystemConfiguration.Application.Queries;
 
-public record GetConfigByIdQuery(Guid ConfigId) : IQuery<ConfigurationDto?>;
+internal record GetConfigByIdQuery(Guid ConfigId) : IQuery<ConfigurationDto?>;

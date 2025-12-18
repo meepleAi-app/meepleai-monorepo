@@ -13,7 +13,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands;
 /// Handles user login with email and password.
 /// Returns session token or temp token if 2FA is required.
 /// </summary>
-public class LoginCommandHandler : ICommandHandler<LoginCommand, LoginResponse>
+internal class LoginCommandHandler : ICommandHandler<LoginCommand, LoginResponse>
 {
     private readonly IUserRepository _userRepository;
     private readonly ISessionRepository _sessionRepository;
@@ -34,6 +34,7 @@ public class LoginCommandHandler : ICommandHandler<LoginCommand, LoginResponse>
 
     public async Task<LoginResponse> Handle(LoginCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         // Find user by email
         var email = new Email(command.Email);
         var user = await _userRepository.GetByEmailAsync(email, cancellationToken).ConfigureAwait(false);

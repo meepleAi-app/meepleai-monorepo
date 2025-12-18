@@ -38,7 +38,7 @@ function OAuthCallbackPageContent() {
   }, [success, error, isNewUser, router]);
 
   return (
-    <div className="min-h-dvh flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+    <main className="min-h-dvh flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
       <div className="max-w-md w-full bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8 text-center">
         {status === 'loading' && (
           <>
@@ -100,7 +100,7 @@ function OAuthCallbackPageContent() {
           </>
         )}
       </div>
-    </div>
+    </main>
   );
 }
 
@@ -108,9 +108,9 @@ export default function OAuthCallbackPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-dvh flex items-center justify-center bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-300">
+        <main className="min-h-dvh flex items-center justify-center bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-300">
           Caricamento callback OAuth...
-        </div>
+        </main>
       }
     >
       <OAuthCallbackPageContent />

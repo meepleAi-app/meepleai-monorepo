@@ -12,7 +12,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// Handler for UpdateMessageCommand.
 /// Updates message content in ChatThread and invalidates subsequent AI responses.
 /// </summary>
-public class UpdateMessageCommandHandler : ICommandHandler<UpdateMessageCommand, ChatThreadDto>
+internal class UpdateMessageCommandHandler : ICommandHandler<UpdateMessageCommand, ChatThreadDto>
 {
     private readonly IChatThreadRepository _threadRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -33,6 +33,7 @@ public class UpdateMessageCommandHandler : ICommandHandler<UpdateMessageCommand,
 
     public async Task<ChatThreadDto> Handle(UpdateMessageCommand request, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         // Load thread
         var thread = await _threadRepository.GetByIdAsync(request.ThreadId, cancellationToken)
 .ConfigureAwait(false) ?? throw new InvalidOperationException($"Chat thread {request.ThreadId} not found");
@@ -79,7 +80,7 @@ public class UpdateMessageCommandHandler : ICommandHandler<UpdateMessageCommand,
                 newContent = request.NewContent,
                 updatedAt = message.UpdatedAt
             }),
-            ct: cancellationToken).ConfigureAwait(false);
+            cancellationToken: cancellationToken).ConfigureAwait(false);
 
         return MapToDto(thread);
     }
@@ -113,3 +114,4 @@ public class UpdateMessageCommandHandler : ICommandHandler<UpdateMessageCommand,
         );
     }
 }
+

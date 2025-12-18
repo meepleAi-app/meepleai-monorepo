@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 /// <summary>
 /// Command to upload a single chunk of a large PDF file.
 /// </summary>
-public record UploadChunkCommand(
+internal record UploadChunkCommand(
     Guid SessionId,
     Guid UserId,
     int ChunkIndex,
@@ -16,7 +16,7 @@ public record UploadChunkCommand(
 /// <summary>
 /// Result of uploading a chunk.
 /// </summary>
-public record UploadChunkResult(
+internal record UploadChunkResult(
     bool Success,
     int ReceivedChunks,
     int TotalChunks,

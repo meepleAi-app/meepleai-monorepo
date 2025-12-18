@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.Persistence;
 /// <summary>
 /// Repository implementation for ChunkedUploadSession aggregate.
 /// </summary>
-public class ChunkedUploadSessionRepository : RepositoryBase, IChunkedUploadSessionRepository
+internal class ChunkedUploadSessionRepository : RepositoryBase, IChunkedUploadSessionRepository
 {
     public ChunkedUploadSessionRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
         : base(dbContext, eventCollector)
@@ -83,6 +83,7 @@ public class ChunkedUploadSessionRepository : RepositoryBase, IChunkedUploadSess
 
     public async Task AddAsync(ChunkedUploadSession session, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(session);
         CollectDomainEvents(session);
         var entity = MapToPersistence(session);
         await DbContext.ChunkedUploadSessions.AddAsync(entity, cancellationToken).ConfigureAwait(false);
@@ -90,6 +91,7 @@ public class ChunkedUploadSessionRepository : RepositoryBase, IChunkedUploadSess
 
     public Task UpdateAsync(ChunkedUploadSession session, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(session);
         CollectDomainEvents(session);
         var entity = MapToPersistence(session);
 
@@ -106,6 +108,7 @@ public class ChunkedUploadSessionRepository : RepositoryBase, IChunkedUploadSess
 
     public Task DeleteAsync(ChunkedUploadSession session, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(session);
         var entity = MapToPersistence(session);
         DbContext.ChunkedUploadSessions.Remove(entity);
         return Task.CompletedTask;
@@ -149,6 +152,7 @@ public class ChunkedUploadSessionRepository : RepositoryBase, IChunkedUploadSess
 
     private static ChunkedUploadSessionEntity MapToPersistence(ChunkedUploadSession domain)
     {
+        ArgumentNullException.ThrowIfNull(domain);
         return new ChunkedUploadSessionEntity
         {
             Id = domain.Id,

@@ -1,5 +1,7 @@
 namespace Api.Middleware.Exceptions;
 
+using System.Diagnostics.CodeAnalysis;
+
 /// <summary>
 /// Base exception for HTTP-specific errors with status codes.
 /// Provides a consistent way to throw exceptions that map to specific HTTP responses.
@@ -14,8 +16,9 @@ public class HttpException : Exception
     /// <summary>
     /// Gets a machine-readable error code (e.g., "validation_error", "not_found").
     /// </summary>
-    public string ErrorCode { get; }
+    public required string ErrorCode { get; init; }
 
+    [SetsRequiredMembers]
     public HttpException(
         int statusCode,
         string errorCode,
@@ -26,6 +29,7 @@ public class HttpException : Exception
         ErrorCode = errorCode;
     }
 
+    [SetsRequiredMembers]
     public HttpException(
         int statusCode,
         string errorCode,
@@ -35,5 +39,8 @@ public class HttpException : Exception
     {
         StatusCode = statusCode;
         ErrorCode = errorCode;
+    }
+    public HttpException()
+    {
     }
 }

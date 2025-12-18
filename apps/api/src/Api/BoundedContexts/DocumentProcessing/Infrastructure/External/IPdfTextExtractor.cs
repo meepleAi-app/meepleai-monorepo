@@ -7,37 +7,37 @@ namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 /// Adapter interface for PDF text extraction infrastructure
 /// Abstracts the underlying PDF processing library (Docnet.Core)
 /// </summary>
-public interface IPdfTextExtractor
+internal interface IPdfTextExtractor
 {
     /// <summary>
     /// Extracts text from a PDF file with optional OCR fallback
     /// </summary>
     /// <param name="pdfStream">PDF file stream</param>
     /// <param name="enableOcrFallback">Whether to enable OCR fallback for low-quality extraction</param>
-    /// <param name="ct">Cancellation token</param>
+    /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Extraction result with text and metadata</returns>
     Task<TextExtractionResult> ExtractTextAsync(
         Stream pdfStream,
         bool enableOcrFallback = true,
-        CancellationToken ct = default);
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Extracts text from a PDF file page-by-page with optional OCR fallback
     /// </summary>
     /// <param name="pdfStream">PDF file stream</param>
     /// <param name="enableOcrFallback">Whether to enable OCR fallback for low-quality extraction</param>
-    /// <param name="ct">Cancellation token</param>
+    /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Extraction result with page-aware chunks</returns>
     Task<PagedTextExtractionResult> ExtractPagedTextAsync(
         Stream pdfStream,
         bool enableOcrFallback = true,
-        CancellationToken ct = default);
+        CancellationToken cancellationToken = default);
 }
 
 /// <summary>
 /// Result of text extraction operation
 /// </summary>
-public record TextExtractionResult(
+internal record TextExtractionResult(
     bool Success,
     string ExtractedText,
     int PageCount,
@@ -79,7 +79,7 @@ public record TextExtractionResult(
 /// <summary>
 /// Result of paged text extraction operation
 /// </summary>
-public record PagedTextExtractionResult(
+internal record PagedTextExtractionResult(
     bool Success,
     IList<PageTextChunk> PageChunks,
     int TotalPages,
@@ -117,7 +117,7 @@ public record PagedTextExtractionResult(
 /// <summary>
 /// Represents text extracted from a single page
 /// </summary>
-public record PageTextChunk(
+internal record PageTextChunk(
     int PageNumber,
     string Text,
     int CharStartIndex,
@@ -133,3 +133,4 @@ public record PageTextChunk(
     /// </summary>
     public int CharCount => Text?.Length ?? 0;
 }
+

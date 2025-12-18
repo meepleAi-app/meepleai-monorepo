@@ -61,9 +61,9 @@ export default function ResetPasswordPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-dvh flex items-center justify-center bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-300">
+        <main className="min-h-dvh flex items-center justify-center bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-300">
           Caricamento reset password...
-        </div>
+        </main>
       }
     >
       <ResetPasswordPageContent />
@@ -310,12 +310,12 @@ function ResetPasswordPageContent() {
   // Show loading state while checking authentication
   if (isCheckingAuth) {
     return (
-      <div className="min-h-dvh bg-slate-950 text-white flex items-center justify-center">
+      <main className="min-h-dvh bg-slate-950 text-white flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin text-4xl mb-4">⏳</div>
           <p className="text-slate-400">Loading...</p>
         </div>
-      </div>
+      </main>
     );
   }
 
@@ -325,7 +325,7 @@ function ResetPasswordPageContent() {
   }
 
   return (
-    <div className="min-h-dvh bg-slate-950 text-white">
+    <div className="min-h-dvh bg-slate-950 text-white" role="presentation">
       {/* Header */}
       <header className="sticky top-0 glass z-50">
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">

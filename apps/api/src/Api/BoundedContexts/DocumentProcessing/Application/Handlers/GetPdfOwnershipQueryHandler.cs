@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Handlers;
 /// Uses repository to retrieve ownership and status from domain entity.
 /// SEC-02: Row-Level Security for PDF operations
 /// </summary>
-public class GetPdfOwnershipQueryHandler : IQueryHandler<GetPdfOwnershipQuery, PdfOwnershipResult?>
+internal class GetPdfOwnershipQueryHandler : IQueryHandler<GetPdfOwnershipQuery, PdfOwnershipResult?>
 {
     private readonly IPdfDocumentRepository _documentRepository;
     private readonly ILogger<GetPdfOwnershipQueryHandler> _logger;
@@ -24,6 +24,7 @@ public class GetPdfOwnershipQueryHandler : IQueryHandler<GetPdfOwnershipQuery, P
 
     public async Task<PdfOwnershipResult?> Handle(GetPdfOwnershipQuery query, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(query);
         try
         {
             var document = await _documentRepository.GetByIdAsync(query.PdfId, cancellationToken).ConfigureAwait(false);
@@ -41,10 +42,15 @@ public class GetPdfOwnershipQueryHandler : IQueryHandler<GetPdfOwnershipQuery, P
                 ProcessingStatus: document.ProcessingStatus
             );
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: QUERY HANDLER PATTERN - CQRS query boundary
+        // Generic catch handles unexpected infrastructure failures (DB, network)
+        // to prevent exception propagation to API layer. Returns null on failure.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving PDF ownership for {PdfId}", query.PdfId);
             return null;
         }
+#pragma warning restore CA1031
     }
 }

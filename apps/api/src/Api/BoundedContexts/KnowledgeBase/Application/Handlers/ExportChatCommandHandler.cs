@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// Handler for ExportChatCommand.
 /// Exports a chat thread in the specified format (JSON or Markdown).
 /// </summary>
-public class ExportChatCommandHandler : ICommandHandler<ExportChatCommand, ExportedChatDto>
+internal class ExportChatCommandHandler : ICommandHandler<ExportChatCommand, ExportedChatDto>
 {
     private readonly IChatThreadRepository _threadRepository;
 
@@ -21,6 +21,7 @@ public class ExportChatCommandHandler : ICommandHandler<ExportChatCommand, Expor
 
     public async Task<ExportedChatDto> Handle(ExportChatCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         // Retrieve thread
         var thread = await _threadRepository.GetByIdAsync(command.ThreadId, cancellationToken).ConfigureAwait(false);
         if (thread == null)

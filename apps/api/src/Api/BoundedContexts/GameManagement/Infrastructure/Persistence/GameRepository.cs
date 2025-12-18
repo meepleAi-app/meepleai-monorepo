@@ -12,7 +12,7 @@ namespace Api.BoundedContexts.GameManagement.Infrastructure.Persistence;
 /// EF Core implementation of Game repository.
 /// Maps between domain Game entity and GameEntity persistence model.
 /// </summary>
-public class GameRepository : RepositoryBase, IGameRepository
+internal class GameRepository : RepositoryBase, IGameRepository
 {
     public GameRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
         : base(dbContext, eventCollector)
@@ -40,6 +40,7 @@ public class GameRepository : RepositoryBase, IGameRepository
 
     public async Task<IReadOnlyList<Game>> FindByTitleAsync(string titlePattern, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(titlePattern);
         var gameEntities = await DbContext.Games
             .AsNoTracking()
             .Where(g => EF.Functions.ILike(g.Name, $"%{titlePattern}%"))
@@ -49,8 +50,43 @@ public class GameRepository : RepositoryBase, IGameRepository
         return gameEntities.Select(MapToDomain).ToList();
     }
 
+    public async Task<(IReadOnlyList<Game> Games, int Total)> GetPaginatedAsync(
+        string? search,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        // Validate pagination parameters
+        if (page < 1) page = 1;
+        if (pageSize < 1) pageSize = 20;
+        if (pageSize > 100) pageSize = 100; // Cap at 100 for performance
+
+        var query = DbContext.Games.AsNoTracking();
+
+        // Apply search filter if provided
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            query = query.Where(g => EF.Functions.ILike(g.Name, $"%{search}%"));
+        }
+
+        // Get total count before pagination
+        var total = await query.CountAsync(cancellationToken).ConfigureAwait(false);
+
+        // Apply pagination and ordering
+        var gameEntities = await query
+            .OrderBy(g => g.Name)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+        var games = gameEntities.Select(MapToDomain).ToList();
+
+        return (games, total);
+    }
+
     public async Task AddAsync(Game game, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(game);
         // Collect domain events BEFORE mapping to persistence entity
         CollectDomainEvents(game);
 
@@ -60,6 +96,7 @@ public class GameRepository : RepositoryBase, IGameRepository
 
     public Task UpdateAsync(Game game, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(game);
         // Collect domain events BEFORE updating persistence entity
         CollectDomainEvents(game);
 
@@ -70,6 +107,7 @@ public class GameRepository : RepositoryBase, IGameRepository
 
     public Task DeleteAsync(Game game, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(game);
         var gameEntity = MapToPersistence(game);
         DbContext.Games.Remove(gameEntity);
         return Task.CompletedTask;
@@ -129,6 +167,7 @@ public class GameRepository : RepositoryBase, IGameRepository
     /// </summary>
     private static Api.Infrastructure.Entities.GameEntity MapToPersistence(Game domainEntity)
     {
+        ArgumentNullException.ThrowIfNull(domainEntity);
         return new Api.Infrastructure.Entities.GameEntity
         {
             Id = domainEntity.Id,

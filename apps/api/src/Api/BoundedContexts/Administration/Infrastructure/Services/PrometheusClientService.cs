@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Administration.Infrastructure.Services;
 /// <summary>
 /// Service for querying Prometheus metrics API (Issue #2139)
 /// </summary>
-public class PrometheusClientService : IPrometheusClientService
+internal class PrometheusClientService : IPrometheusClientService
 {
     private readonly HttpClient _httpClient;
     private readonly ILogger<PrometheusClientService> _logger;
@@ -23,7 +23,9 @@ public class PrometheusClientService : IPrometheusClientService
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         // Default to localhost:9090 if not configured
+#pragma warning disable S1075 // URIs should not be hardcoded - Default/Fallback value
         _prometheusUrl = configuration["Prometheus:Url"] ?? "http://localhost:9090";
+#pragma warning restore S1075
 
         _logger.LogInformation("PrometheusClientService initialized with URL: {PrometheusUrl}", _prometheusUrl);
     }
@@ -70,11 +72,16 @@ public class PrometheusClientService : IPrometheusClientService
             _logger.LogWarning(ex, "Prometheus query timeout: {Query}", query);
             return null;
         }
+#pragma warning disable CA1031
+        // Justification: INFRASTRUCTURE SERVICE PATTERN - Graceful degradation
+        // Catches all Prometheus API failures. Returns null instead of throwing
+        // to allow caller to handle gracefully. Prevents infrastructure failures from propagating.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error querying Prometheus: {Query}", query);
             return null;
         }
+#pragma warning restore CA1031
     }
 
     public async Task<bool> IsHealthyAsync(CancellationToken cancellationToken = default)
@@ -90,10 +97,15 @@ public class PrometheusClientService : IPrometheusClientService
 
             return isHealthy;
         }
+#pragma warning disable CA1031
+        // Justification: INFRASTRUCTURE SERVICE PATTERN - Graceful degradation
+        // Catches all health check failures. Returns false instead of throwing
+        // to allow monitoring to continue. Non-critical infrastructure check.
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Prometheus health check failed");
             return false;
         }
+#pragma warning restore CA1031
     }
 }

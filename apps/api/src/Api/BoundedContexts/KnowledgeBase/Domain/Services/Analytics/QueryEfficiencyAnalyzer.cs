@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services.Analytics;
 /// ISSUE-1725: Implementation of IQueryEfficiencyAnalyzer for LLM cost optimization.
 /// Analyzes token usage patterns and provides actionable efficiency recommendations.
 /// </summary>
-public class QueryEfficiencyAnalyzer : IQueryEfficiencyAnalyzer
+internal class QueryEfficiencyAnalyzer : IQueryEfficiencyAnalyzer
 {
     private readonly ILlmCostLogRepository _costLogRepository;
     private readonly ILogger<QueryEfficiencyAnalyzer> _logger;
@@ -28,15 +28,15 @@ public class QueryEfficiencyAnalyzer : IQueryEfficiencyAnalyzer
     public async Task<QueryEfficiencyReport> AnalyzeEfficiencyAsync(
         DateOnly startDate,
         DateOnly endDate,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         _logger.LogInformation(
             "Analyzing query efficiency from {StartDate} to {EndDate}",
             startDate, endDate);
 
         // Get aggregate data
-        var totalCost = await _costLogRepository.GetTotalCostAsync(startDate, endDate, ct).ConfigureAwait(false);
-        var costsByProvider = await _costLogRepository.GetCostsByProviderAsync(startDate, endDate, ct).ConfigureAwait(false);
+        var totalCost = await _costLogRepository.GetTotalCostAsync(startDate, endDate, cancellationToken).ConfigureAwait(false);
+        var costsByProvider = await _costLogRepository.GetCostsByProviderAsync(startDate, endDate, cancellationToken).ConfigureAwait(false);
 
         // Calculate metrics (simplified - real implementation would query detailed logs)
         var totalQueries = (int)costsByProvider.Sum(c => c.Value);
@@ -46,10 +46,10 @@ public class QueryEfficiencyAnalyzer : IQueryEfficiencyAnalyzer
         var avgCostPerQuery = totalQueries > 0 ? totalCost / totalQueries : 0m;
 
         // Get top costly queries
-        var topCostly = await GetTopCostlyQueriesAsync(startDate, endDate, 10, ct).ConfigureAwait(false);
+        var topCostly = await GetTopCostlyQueriesAsync(startDate, endDate, 10, cancellationToken).ConfigureAwait(false);
 
         // Get average tokens by operation
-        var avgByOperation = await GetAverageTokensByOperationAsync(startDate, endDate, ct).ConfigureAwait(false);
+        var avgByOperation = await GetAverageTokensByOperationAsync(startDate, endDate, cancellationToken).ConfigureAwait(false);
 
         // Generate optimization recommendations
         var recommendations = GenerateRecommendations(avgTokensPerQuery, avgCostPerQuery, topCostly);
@@ -69,14 +69,14 @@ public class QueryEfficiencyAnalyzer : IQueryEfficiencyAnalyzer
         };
     }
 
-    public async Task<IReadOnlyList<QueryTypeCost>> GetTopCostlyQueriesAsync(
+    public async Task<List<QueryTypeCost>> GetTopCostlyQueriesAsync(
         DateOnly startDate,
         DateOnly endDate,
         int topN = 10,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         // Get costs by provider (proxy for query type in current implementation)
-        var costsByProvider = await _costLogRepository.GetCostsByProviderAsync(startDate, endDate, ct).ConfigureAwait(false);
+        var costsByProvider = await _costLogRepository.GetCostsByProviderAsync(startDate, endDate, cancellationToken).ConfigureAwait(false);
 
         return costsByProvider
             .Select(kvp => new QueryTypeCost
@@ -90,13 +90,13 @@ public class QueryEfficiencyAnalyzer : IQueryEfficiencyAnalyzer
             })
             .OrderByDescending(q => q.TotalCost)
             .Take(topN)
-            .ToArray();
+            .ToList();
     }
 
-    public async Task<IReadOnlyDictionary<string, double>> GetAverageTokensByOperationAsync(
+    public async Task<Dictionary<string, double>> GetAverageTokensByOperationAsync(
         DateOnly startDate,
         DateOnly endDate,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         // Placeholder: Real implementation would query detailed operation logs
         await Task.CompletedTask.ConfigureAwait(false);
@@ -110,10 +110,10 @@ public class QueryEfficiencyAnalyzer : IQueryEfficiencyAnalyzer
         };
     }
 
-    private IReadOnlyList<string> GenerateRecommendations(
+    private List<string> GenerateRecommendations(
         double avgTokens,
         decimal avgCost,
-        IReadOnlyList<QueryTypeCost> topCostly)
+        List<QueryTypeCost> topCostly)
     {
         var recommendations = new List<string>();
 
@@ -141,3 +141,4 @@ public class QueryEfficiencyAnalyzer : IQueryEfficiencyAnalyzer
         return recommendations;
     }
 }
+

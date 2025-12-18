@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 /// PDF version identifier (e.g., 1.4, 1.7, 2.0).
 /// Represents the PDF specification version used to create the document.
 /// </summary>
-public sealed class PdfVersion : ValueObject
+internal sealed class PdfVersion : ValueObject
 {
     /// <summary>
     /// Major version number (e.g., 1 for PDF 1.x, 2 for PDF 2.x)
@@ -102,8 +102,7 @@ public sealed class PdfVersion : ValueObject
     /// <returns>True if this version >= other version</returns>
     public bool IsAtLeast(PdfVersion other)
     {
-        if (other == null)
-            throw new ArgumentNullException(nameof(other));
+        ArgumentNullException.ThrowIfNull(other);
 
         if (Major > other.Major)
             return true;
@@ -122,8 +121,7 @@ public sealed class PdfVersion : ValueObject
     /// <returns>True if versions are compatible</returns>
     public bool IsCompatibleWith(PdfVersion other)
     {
-        if (other == null)
-            throw new ArgumentNullException(nameof(other));
+        ArgumentNullException.ThrowIfNull(other);
 
         // Same major version and this minor >= other minor
         return Major == other.Major && Minor >= other.Minor;

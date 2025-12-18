@@ -9,7 +9,7 @@ namespace Api.Services;
 /// Email alert channel using SMTP.
 /// OPS-07: Email notifications for alerts.
 /// </summary>
-public class EmailAlertChannel : IAlertChannel
+internal class EmailAlertChannel : IAlertChannel
 {
     private readonly EmailConfiguration _config;
     private readonly ILogger<EmailAlertChannel> _logger;

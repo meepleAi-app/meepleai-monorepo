@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands;
 /// Command to update user profile information.
 /// Allows users to update their display name and email.
 /// </summary>
-public record UpdateUserProfileCommand : ICommand
+internal record UpdateUserProfileCommand : ICommand
 {
     public Guid UserId { get; init; }
     public string? DisplayName { get; init; }

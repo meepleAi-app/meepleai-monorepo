@@ -12,7 +12,7 @@ namespace Api.BoundedContexts.Administration.Application.Handlers;
 /// Handler for bulk password reset operations.
 /// Resets passwords for multiple users in a single transaction.
 /// </summary>
-public class BulkPasswordResetCommandHandler : ICommandHandler<BulkPasswordResetCommand, BulkOperationResult>
+internal class BulkPasswordResetCommandHandler : ICommandHandler<BulkPasswordResetCommand, BulkOperationResult>
 {
     private const int MaxBulkSize = 1000;
     private readonly IUserRepository _userRepository;
@@ -31,6 +31,7 @@ public class BulkPasswordResetCommandHandler : ICommandHandler<BulkPasswordReset
 
     public async Task<BulkOperationResult> Handle(BulkPasswordResetCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         // Validation: Check bulk size limit
         if (command.UserIds == null || command.UserIds.Count == 0)
         {
@@ -83,11 +84,17 @@ public class BulkPasswordResetCommandHandler : ICommandHandler<BulkPasswordReset
                     await _userRepository.UpdateAsync(user, cancellationToken).ConfigureAwait(false);
                     successCount++;
                 }
+#pragma warning disable CA1031 // Do not catch general exception types
+                // Justification: BULK OPERATION PATTERN - Individual password reset failure handling
+                // Catches all exceptions during password reset (validation, DB constraints, etc.)
+                // to collect errors without stopping batch processing. Each failure is logged
+                // and added to error list for reporting. Allows partial success in bulk operation.
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Error resetting password for user {UserId}", userId);
                     errors.Add($"User {userId}: {ex.Message}");
                 }
+#pragma warning restore CA1031
             }
 
             // Commit transaction if any success
@@ -109,10 +116,15 @@ public class BulkPasswordResetCommandHandler : ICommandHandler<BulkPasswordReset
                 Errors: errors
             );
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: COMMAND HANDLER PATTERN - Wraps unexpected infrastructure failures
+        // Generic catch wraps unexpected exceptions (DB, network, memory) in DomainException
+        // for consistent API error handling. Logs with full context before wrapping.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Critical error during bulk password reset");
             throw new DomainException($"Bulk password reset failed: {ex.Message}", ex);
         }
+#pragma warning restore CA1031
     }
 }

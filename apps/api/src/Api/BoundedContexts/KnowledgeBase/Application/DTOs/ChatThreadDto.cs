@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 /// <summary>
 /// DTO for chat thread information.
 /// </summary>
-public record ChatThreadDto(
+internal record ChatThreadDto(
     Guid Id,
     Guid UserId,
     Guid? GameId,
@@ -23,7 +23,7 @@ public record ChatThreadDto(
 /// DTO for chat message.
 /// Enhanced to support update/delete operations (Issue #1184).
 /// </summary>
-public record ChatMessageDto(
+internal record ChatMessageDto(
     Guid Id,
     string Content,
     string Role,
@@ -39,7 +39,7 @@ public record ChatMessageDto(
 /// <summary>
 /// DTO for creating a chat thread.
 /// </summary>
-public record CreateChatThreadRequest(
+internal record CreateChatThreadRequest(
     Guid? GameId = null,
     string? Title = null,
     string? InitialMessage = null
@@ -48,7 +48,7 @@ public record CreateChatThreadRequest(
 /// <summary>
 /// DTO for adding a message to thread.
 /// </summary>
-public record AddMessageRequest(
+internal record AddMessageRequest(
     string Content,
     string Role
 );

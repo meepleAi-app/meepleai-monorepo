@@ -13,7 +13,7 @@ namespace Api.BoundedContexts.Administration.Application.Handlers;
 /// NOTE: Uses DbContext directly for AiRequestLogs (legacy infrastructure entity).
 /// ISSUE-1674: Create proper repository when AiRequestLog is migrated to bounded context.
 /// </summary>
-public class GetLowQualityResponsesQueryHandler : IQueryHandler<GetLowQualityResponsesQuery, LowQualityResponsesResult>
+internal class GetLowQualityResponsesQueryHandler : IQueryHandler<GetLowQualityResponsesQuery, LowQualityResponsesResult>
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly ILogger<GetLowQualityResponsesQueryHandler> _logger;
@@ -22,12 +22,13 @@ public class GetLowQualityResponsesQueryHandler : IQueryHandler<GetLowQualityRes
         MeepleAiDbContext dbContext,
         ILogger<GetLowQualityResponsesQueryHandler> logger)
     {
-        _dbContext = dbContext;
-        _logger = logger;
+        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<LowQualityResponsesResult> Handle(GetLowQualityResponsesQuery query, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(query);
         try
         {
             // Convert DateTime parameters to UTC if they have Kind=Unspecified (from query string parsing)
@@ -74,6 +75,10 @@ public class GetLowQualityResponsesQueryHandler : IQueryHandler<GetLowQualityRes
                 Responses: responses
             );
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: QUERY HANDLER PATTERN - CQRS query boundary
+        // Generic catch handles unexpected infrastructure failures (DB, network)
+        // to prevent exception propagation to API layer. Returns empty result on failure.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving low-quality responses");
@@ -82,5 +87,6 @@ public class GetLowQualityResponsesQueryHandler : IQueryHandler<GetLowQualityRes
                 Responses: Array.Empty<LowQualityResponseDto>()
             );
         }
+#pragma warning restore CA1031
     }
 }

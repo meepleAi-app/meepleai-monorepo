@@ -1,4 +1,5 @@
 using System.Text;
+using System.Globalization;
 
 namespace Api.BoundedContexts.Administration.Infrastructure.Services.Formatters;
 
@@ -6,7 +7,7 @@ namespace Api.BoundedContexts.Administration.Infrastructure.Services.Formatters;
 /// CSV report formatter
 /// ISSUE-916: Formats reports as CSV for data analysis
 /// </summary>
-public sealed class CsvReportFormatter : IReportFormatter
+internal sealed class CsvReportFormatter : IReportFormatter
 {
     public byte[] Format(ReportContent content)
     {
@@ -15,7 +16,7 @@ public sealed class CsvReportFormatter : IReportFormatter
         // Header
         sb.AppendLine($"# {content.Title}");
         sb.AppendLine($"# {content.Description}");
-        sb.AppendLine($"# Generated: {content.GeneratedAt:yyyy-MM-dd HH:mm:ss} UTC");
+        sb.AppendLine($"# Generated: {content.GeneratedAt.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)} UTC");
         sb.AppendLine();
 
         // Each section as separate CSV table

@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.Administration.Application.Handlers.AlertConfigura
 /// <summary>
 /// Handler for UpdateAlertConfigurationCommand (Issue #915)
 /// </summary>
-public class UpdateAlertConfigurationCommandHandler : IRequestHandler<UpdateAlertConfigurationCommand, bool>
+internal class UpdateAlertConfigurationCommandHandler : IRequestHandler<UpdateAlertConfigurationCommand, bool>
 {
     private readonly IAlertConfigurationRepository _repository;
     private readonly ILogger<UpdateAlertConfigurationCommandHandler> _logger;
@@ -18,19 +18,20 @@ public class UpdateAlertConfigurationCommandHandler : IRequestHandler<UpdateAler
         IAlertConfigurationRepository repository,
         ILogger<UpdateAlertConfigurationCommandHandler> logger)
     {
-        _repository = repository;
-        _logger = logger;
+        _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public async Task<bool> Handle(UpdateAlertConfigurationCommand request, CancellationToken ct)
+    public async Task<bool> Handle(UpdateAlertConfigurationCommand request, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         var category = ConfigCategoryExtensions.FromString(request.Category);
-        var existing = await _repository.GetByKeyAsync(request.ConfigKey, ct).ConfigureAwait(false);
+        var existing = await _repository.GetByKeyAsync(request.ConfigKey, cancellationToken).ConfigureAwait(false);
 
         if (existing != null)
         {
             existing.UpdateValue(request.ConfigValue, request.UpdatedBy);
-            await _repository.UpdateAsync(existing, ct).ConfigureAwait(false);
+            await _repository.UpdateAsync(existing, cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Alert configuration updated: {ConfigKey} in category {Category} by {UpdatedBy}",
@@ -47,7 +48,7 @@ public class UpdateAlertConfigurationCommandHandler : IRequestHandler<UpdateAler
             request.UpdatedBy,
             request.Description);
 
-        await _repository.AddAsync(newConfig, ct).ConfigureAwait(false);
+        await _repository.AddAsync(newConfig, cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Alert configuration created: {ConfigKey} in category {Category} by {UpdatedBy}",
@@ -56,3 +57,4 @@ public class UpdateAlertConfigurationCommandHandler : IRequestHandler<UpdateAler
         return true;
     }
 }
+

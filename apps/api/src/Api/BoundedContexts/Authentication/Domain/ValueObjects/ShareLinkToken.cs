@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -9,7 +10,7 @@ namespace Api.BoundedContexts.Authentication.Domain.ValueObjects;
 /// Value Object representing a JWT token for shareable chat links.
 /// Encapsulates token generation, validation, and claims management.
 /// </summary>
-public sealed class ShareLinkToken
+internal sealed class ShareLinkToken
 {
     private const string ThreadIdClaimType = "thread_id";
     private const string RoleClaimType = "role";
@@ -66,7 +67,7 @@ public sealed class ShareLinkToken
         var claims = new[]
         {
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-            new Claim(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString()),
+            new Claim(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture)),
             new Claim(ShareLinkIdClaimType, shareLinkId.ToString()),
             new Claim(ThreadIdClaimType, threadId.ToString()),
             new Claim(RoleClaimType, role.ToString()),
@@ -153,14 +154,14 @@ public sealed class ShareLinkToken
 
     private static string GetClaimFromToken(JwtSecurityToken token, string claimType)
     {
-        return token.Claims.FirstOrDefault(c => c.Type == claimType)?.Value
+        return token.Claims.FirstOrDefault(c => string.Equals(c.Type, claimType, StringComparison.Ordinal))?.Value
             ?? throw new InvalidOperationException($"Claim '{claimType}' not found in token");
     }
 
     public override string ToString() => Value;
 
     public override bool Equals(object? obj) =>
-        obj is ShareLinkToken other && Value == other.Value;
+        obj is ShareLinkToken other && string.Equals(Value, other.Value, StringComparison.Ordinal);
 
-    public override int GetHashCode() => Value.GetHashCode();
+    public override int GetHashCode() => StringComparer.Ordinal.GetHashCode(Value);
 }

@@ -1,6 +1,6 @@
 namespace Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 
-public record PdfDocumentDto(
+internal record PdfDocumentDto(
     Guid Id,
     Guid GameId,
     string FileName,
@@ -10,5 +10,6 @@ public record PdfDocumentDto(
     DateTime UploadedAt,
     DateTime? ProcessedAt,
     int? PageCount,
-    string DocumentType = "base" // Issue #2051: base, expansion, errata, homerule
+    string DocumentType = "base", // Issue #2051: base, expansion, errata, homerule
+    bool IsPublic = false // Admin Wizard: Public library visibility
 );

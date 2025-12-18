@@ -13,10 +13,22 @@ namespace Api.Routing;
 /// OAuth 2.0 authentication endpoints.
 /// Handles OAuth provider integrations (Google, Discord, GitHub), account linking, and unlinking.
 /// </summary>
-public static class OAuthEndpoints
+internal static class OAuthEndpoints
 {
     // AUTH-06: OAuth 2.0 endpoints (Google, Discord, GitHub)
     public static RouteGroupBuilder MapOAuthEndpoints(this RouteGroupBuilder group, Action<HttpContext, string, DateTime> writeSessionCookie)
+    {
+        // Login initiation
+        MapLoginEndpoints(group);
+        // OAuth callback handling
+        MapCallbackEndpoints(group, writeSessionCookie);
+        // Account linking management
+        MapAccountLinkingEndpoints(group);
+
+        return group;
+    }
+
+    private static void MapLoginEndpoints(RouteGroupBuilder group)
     {
         group.MapGet("/auth/oauth/{provider}/login", async (
             string provider,
@@ -73,7 +85,10 @@ Rate limited to 10 requests per minute per IP address.
         .Produces(302)
         .Produces(429)
         .Produces(400);
+    }
 
+    private static void MapCallbackEndpoints(RouteGroupBuilder group, Action<HttpContext, string, DateTime> writeSessionCookie)
+    {
         // OAuth Callback - Full CQRS implementation via HandleOAuthCallbackCommand
         group.MapGet("/auth/oauth/{provider}/callback", async (
             string provider,
@@ -155,7 +170,10 @@ Rate limited to 10 requests per minute per IP address.
 **Flow**: Provider redirects here → Validate state → Exchange code for token → Get user info → Create/link account → Create session → Redirect to frontend")
         .Produces(302)
         .Produces(429);
+    }
 
+    private static void MapAccountLinkingEndpoints(RouteGroupBuilder group)
+    {
         /// <summary>
         /// Unlink OAuth provider from user account (DDD CQRS pattern).
         /// Uses IMediator to send UnlinkOAuthAccountCommand instead of direct service call.
@@ -248,7 +266,5 @@ User must have at least one authentication method remaining (password or another
 **Implementation**: Uses DDD CQRS pattern with IMediator and GetLinkedOAuthAccountsQuery.")
         .Produces<List<Api.BoundedContexts.Authentication.Application.Queries.OAuth.OAuthAccountDto>>(200)
         .Produces(401);
-
-        return group;
     }
 }

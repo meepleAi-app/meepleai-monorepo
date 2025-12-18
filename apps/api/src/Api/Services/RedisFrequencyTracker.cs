@@ -10,7 +10,7 @@ namespace Api.Services;
 /// Provides data for dynamic TTL calculation and cache warming service.
 /// Redis ZSET key format: {FrequencyTrackerKeyPrefix}{gameId} (e.g., "meepleai:freq:game-guid")
 /// </summary>
-public class RedisFrequencyTracker : IRedisFrequencyTracker
+internal class RedisFrequencyTracker : IRedisFrequencyTracker
 {
     private readonly ILogger<RedisFrequencyTracker> _logger;
     private readonly IConnectionMultiplexer _redis;
@@ -27,9 +27,12 @@ public class RedisFrequencyTracker : IRedisFrequencyTracker
         IConnectionMultiplexer redis,
         IOptions<CacheOptimizationConfiguration> config)
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _redis = redis ?? throw new ArgumentNullException(nameof(redis));
-        _config = config?.Value ?? throw new ArgumentNullException(nameof(config));
+        ArgumentNullException.ThrowIfNull(logger);
+        _logger = logger;
+        ArgumentNullException.ThrowIfNull(redis);
+        _redis = redis;
+        ArgumentNullException.ThrowIfNull(config);
+        _config = config.Value;
     }
 
     /// <inheritdoc />

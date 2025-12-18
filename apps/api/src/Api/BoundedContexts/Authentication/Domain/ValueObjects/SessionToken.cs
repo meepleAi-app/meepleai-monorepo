@@ -80,5 +80,9 @@ public sealed class SessionToken : ValueObject
 
     public override string ToString() => "[REDACTED]"; // Never expose token value
 
-    public static implicit operator string(SessionToken token) => token.Value;
+    public static implicit operator string(SessionToken token)
+    {
+        ArgumentNullException.ThrowIfNull(token);
+        return token.Value;
+    }
 }

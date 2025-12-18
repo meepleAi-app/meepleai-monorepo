@@ -13,7 +13,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.GridSearch.Handlers;
 /// ADR-016 Phase 5: Handler for running grid search evaluations.
 /// Executes evaluation across multiple configurations and aggregates results.
 /// </summary>
-public sealed class RunGridSearchHandler : IRequestHandler<RunGridSearchCommand, GridSearchResult>
+internal sealed class RunGridSearchHandler : IRequestHandler<RunGridSearchCommand, GridSearchResult>
 {
     private readonly IDatasetEvaluationService _evaluationService;
     private readonly ILogger<RunGridSearchHandler> _logger;
@@ -33,6 +33,7 @@ public sealed class RunGridSearchHandler : IRequestHandler<RunGridSearchCommand,
         RunGridSearchCommand request,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         var startedAt = DateTime.UtcNow;
         var overallStopwatch = Stopwatch.StartNew();
 
@@ -43,7 +44,7 @@ public sealed class RunGridSearchHandler : IRequestHandler<RunGridSearchCommand,
 
         // Load dataset and get configurations to run
         var (dataset, configurations) = await LoadDatasetAndGetConfigurationsAsync(
-            request.DatasetPath, request, cancellationToken).ConfigureAwait(false);
+            request.DatasetPath ?? DefaultDatasetPath, request, cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Running evaluation for {ConfigCount} configurations on dataset '{DatasetName}' ({SampleCount} samples)",
@@ -227,6 +228,10 @@ public sealed class RunGridSearchHandler : IRequestHandler<RunGridSearchCommand,
                 result.SampleResults.Count,
                 configStopwatch.Elapsed.TotalMilliseconds);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: BACKGROUND TASK PATTERN - Grid search error isolation
+        // Background tasks must not throw exceptions (would terminate grid search batch).
+        // Errors logged for monitoring; failed configurations recorded with error state for analysis.
         catch (Exception ex)
         {
             configStopwatch.Stop();
@@ -241,6 +246,7 @@ public sealed class RunGridSearchHandler : IRequestHandler<RunGridSearchCommand,
                 ex.Message,
                 configStopwatch.Elapsed.TotalMilliseconds);
         }
+#pragma warning restore CA1031
     }
 
     private void LogSummary(GridSearchResult result)

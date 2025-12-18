@@ -7,6 +7,6 @@ namespace Api.SharedKernel.Application.Interfaces;
 /// Streaming queries return IAsyncEnumerable for progressive data delivery (e.g., SSE, WebSockets).
 /// </summary>
 /// <typeparam name="TResponse">The type of each item in the stream</typeparam>
-public interface IStreamingQuery<out TResponse> : IStreamRequest<TResponse>
+internal interface IStreamingQuery<out TResponse> : IStreamRequest<TResponse>
 {
 }

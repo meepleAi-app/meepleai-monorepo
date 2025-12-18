@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.WorkflowIntegration.Application.Commands.N8NConfig
 /// Infrastructure delegation: HTTP calls, API key decryption, database updates via N8NConfigService.
 /// Side effect: Updates config.LastTestedAt and config.LastTestResult in database.
 /// </summary>
-public sealed class TestN8NConnectionCommandHandler : ICommandHandler<TestN8NConnectionCommand, N8NTestResult>
+internal sealed class TestN8NConnectionCommandHandler : ICommandHandler<TestN8NConnectionCommand, N8NTestResult>
 {
     private readonly N8NConfigService _configService;
     private readonly ILogger<TestN8NConnectionCommandHandler> _logger;
@@ -20,12 +20,15 @@ public sealed class TestN8NConnectionCommandHandler : ICommandHandler<TestN8NCon
         N8NConfigService configService,
         ILogger<TestN8NConnectionCommandHandler> logger)
     {
-        _configService = configService ?? throw new ArgumentNullException(nameof(configService));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(configService);
+        _configService = configService;
+        ArgumentNullException.ThrowIfNull(logger);
+        _logger = logger;
     }
 
     public async Task<N8NTestResult> Handle(TestN8NConnectionCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         // Business logic validation
         if (command.ConfigId == Guid.Empty)
         {

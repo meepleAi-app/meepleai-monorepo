@@ -9,12 +9,13 @@ namespace Api.Routing;
 /// Helper methods for session and API key cookie management shared across endpoints.
 /// Extracted from Program.cs to support modular routing architecture.
 /// </summary>
-public static class CookieHelpers
+internal static class CookieHelpers
 {
     // Session Cookie Methods
 
     public static void WriteSessionCookie(HttpContext context, string token, DateTime expiresAt)
     {
+        ArgumentNullException.ThrowIfNull(context);
         var options = CreateSessionCookieOptions(context, expiresAt);
         var sessionCookieName = GetSessionCookieName(context);
 
@@ -46,6 +47,7 @@ public static class CookieHelpers
 
     public static void RemoveSessionCookie(HttpContext context)
     {
+        ArgumentNullException.ThrowIfNull(context);
         var options = BuildSessionCookieOptions(context);
         options.Expires = DateTimeOffset.UnixEpoch;
 
@@ -57,6 +59,7 @@ public static class CookieHelpers
 
     public static void WriteUserRoleCookie(HttpContext context, string role, DateTime expiresAt)
     {
+        ArgumentNullException.ThrowIfNull(context);
         var options = CreateUserRoleCookieOptions(context, expiresAt);
         const string roleCookieName = "meepleai_user_role";
         context.Response.Cookies.Append(roleCookieName, role, options);
@@ -64,6 +67,7 @@ public static class CookieHelpers
 
     public static void RemoveUserRoleCookie(HttpContext context)
     {
+        ArgumentNullException.ThrowIfNull(context);
         var options = BuildUserRoleCookieOptions(context);
         options.Expires = DateTimeOffset.UnixEpoch;
 
@@ -75,6 +79,7 @@ public static class CookieHelpers
 
     public static void WriteApiKeyCookie(HttpContext context, string apiKey, DateTime? expiresAt = null)
     {
+        ArgumentNullException.ThrowIfNull(context);
         var options = CreateApiKeyCookieOptions(context, expiresAt);
         const string apiKeyCookieName = "meeple_apikey";
         context.Response.Cookies.Append(apiKeyCookieName, apiKey, options);
@@ -82,6 +87,7 @@ public static class CookieHelpers
 
     public static void RemoveApiKeyCookie(HttpContext context)
     {
+        ArgumentNullException.ThrowIfNull(context);
         var options = BuildApiKeyCookieOptions(context);
         options.Expires = DateTimeOffset.UnixEpoch;
 
@@ -91,6 +97,7 @@ public static class CookieHelpers
 
     public static string GetSessionCookieName(HttpContext context)
     {
+        ArgumentNullException.ThrowIfNull(context);
         var configuration = GetSessionCookieConfiguration(context);
         return string.IsNullOrWhiteSpace(configuration.Name)
             ? "meepleai_session" // Default session cookie name (matches external documentation/spec)
@@ -99,6 +106,7 @@ public static class CookieHelpers
 
     private static CookieOptions CreateSessionCookieOptions(HttpContext context, DateTime expiresAt)
     {
+        ArgumentNullException.ThrowIfNull(context);
         var options = BuildSessionCookieOptions(context);
         options.Expires = expiresAt;
         return options;
@@ -106,6 +114,7 @@ public static class CookieHelpers
 
     private static CookieOptions BuildSessionCookieOptions(HttpContext context)
     {
+        ArgumentNullException.ThrowIfNull(context);
         var configuration = GetSessionCookieConfiguration(context);
 
         var isHttps = context.Request.IsHttps;
@@ -113,13 +122,9 @@ public static class CookieHelpers
         if (!isHttps && configuration.UseForwardedProto &&
             context.Request.Headers.TryGetValue("X-Forwarded-Proto", out var forwardedProto))
         {
-            foreach (var proto in forwardedProto)
+            if (forwardedProto.Any(proto => string.Equals(proto, "https", StringComparison.OrdinalIgnoreCase)))
             {
-                if (string.Equals(proto, "https", StringComparison.OrdinalIgnoreCase))
-                {
-                    isHttps = true;
-                    break;
-                }
+                isHttps = true;
             }
         }
 
@@ -129,7 +134,7 @@ public static class CookieHelpers
         // CRITICAL FIX: For localhost development with Secure=false
         // Force SameSite=None BEFORE any other logic modifies it
         SameSiteMode sameSite;
-        if (configuration.Secure == false)
+        if (configuration.Secure is false)
         {
             // Explicitly configured for development (HTTP)
             // Force SameSite=None for cross-port cookies
@@ -180,6 +185,7 @@ public static class CookieHelpers
 
     private static CookieOptions CreateApiKeyCookieOptions(HttpContext context, DateTime? expiresAt)
     {
+        ArgumentNullException.ThrowIfNull(context);
         var options = BuildApiKeyCookieOptions(context);
         if (expiresAt.HasValue)
         {
@@ -195,19 +201,16 @@ public static class CookieHelpers
 
     private static CookieOptions BuildApiKeyCookieOptions(HttpContext context)
     {
+        ArgumentNullException.ThrowIfNull(context);
         var configuration = GetSessionCookieConfiguration(context);
         var isHttps = context.Request.IsHttps;
 
         if (!isHttps && configuration.UseForwardedProto &&
             context.Request.Headers.TryGetValue("X-Forwarded-Proto", out var forwardedProto))
         {
-            foreach (var proto in forwardedProto)
+            if (forwardedProto.Any(proto => string.Equals(proto, "https", StringComparison.OrdinalIgnoreCase)))
             {
-                if (string.Equals(proto, "https", StringComparison.OrdinalIgnoreCase))
-                {
-                    isHttps = true;
-                    break;
-                }
+                isHttps = true;
             }
         }
 
@@ -232,6 +235,7 @@ public static class CookieHelpers
 
     private static CookieOptions CreateUserRoleCookieOptions(HttpContext context, DateTime expiresAt)
     {
+        ArgumentNullException.ThrowIfNull(context);
         var options = BuildUserRoleCookieOptions(context);
         options.Expires = expiresAt;
         return options;
@@ -239,19 +243,16 @@ public static class CookieHelpers
 
     private static CookieOptions BuildUserRoleCookieOptions(HttpContext context)
     {
+        ArgumentNullException.ThrowIfNull(context);
         var configuration = GetSessionCookieConfiguration(context);
         var isHttps = context.Request.IsHttps;
 
         if (!isHttps && configuration.UseForwardedProto &&
             context.Request.Headers.TryGetValue("X-Forwarded-Proto", out var forwardedProto))
         {
-            foreach (var proto in forwardedProto)
+            if (forwardedProto.Any(proto => string.Equals(proto, "https", StringComparison.OrdinalIgnoreCase)))
             {
-                if (string.Equals(proto, "https", StringComparison.OrdinalIgnoreCase))
-                {
-                    isHttps = true;
-                    break;
-                }
+                isHttps = true;
             }
         }
 

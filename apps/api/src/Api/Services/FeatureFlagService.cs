@@ -12,7 +12,7 @@ namespace Api.Services;
 /// Provides runtime feature toggling with role-based access control.
 /// Uses CQRS commands/queries for configuration management.
 /// </summary>
-public class FeatureFlagService : IFeatureFlagService
+internal class FeatureFlagService : IFeatureFlagService
 {
     private readonly IConfigurationService _configService;
     private readonly IMediator _mediator;

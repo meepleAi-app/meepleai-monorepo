@@ -7,4 +7,4 @@ namespace Api.BoundedContexts.Administration.Application.Queries;
 /// Query to get LLM provider health status.
 /// ISSUE-962 (BGAI-020): Admin endpoint for provider health monitoring
 /// </summary>
-public record GetLlmHealthQuery : IQuery<LlmHealthStatusDto>;
+internal record GetLlmHealthQuery : IQuery<LlmHealthStatusDto>;

@@ -5,7 +5,7 @@ namespace Api.BoundedContexts.Authentication.Domain.Events;
 /// <summary>
 /// Domain event raised when an OAuth account is linked to a user.
 /// </summary>
-public sealed class OAuthAccountLinkedEvent : DomainEventBase
+internal sealed class OAuthAccountLinkedEvent : DomainEventBase
 {
     /// <summary>
     /// Gets the ID of the user who linked the OAuth account.

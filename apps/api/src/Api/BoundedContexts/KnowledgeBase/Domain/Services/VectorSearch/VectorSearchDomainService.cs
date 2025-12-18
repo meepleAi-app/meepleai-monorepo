@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
 /// Domain service for vector search operations.
 /// Encapsulates semantic search logic using vector embeddings.
 /// </summary>
-public class VectorSearchDomainService
+internal class VectorSearchDomainService
 {
     /// <summary>
     /// Performs vector similarity search and returns ranked results.

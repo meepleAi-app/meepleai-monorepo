@@ -6,7 +6,7 @@ namespace Api.Tests.BoundedContexts.Authentication.TestHelpers;
 /// Fluent builder for creating test ApiKey entities.
 /// Provides convenient methods for constructing API keys with various configurations.
 /// </summary>
-public class ApiKeyBuilder
+internal class ApiKeyBuilder
 {
     private Guid _id = Guid.NewGuid();
     private Guid _userId = Guid.NewGuid();

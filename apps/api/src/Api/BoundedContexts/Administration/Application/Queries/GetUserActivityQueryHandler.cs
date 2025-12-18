@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Administration.Application.Queries;
 /// Handles GetUserActivityQuery to retrieve filtered audit logs for a user.
 /// Issue #911 - Backend support for UserActivityTimeline component.
 /// </summary>
-public sealed class GetUserActivityQueryHandler : IRequestHandler<GetUserActivityQuery, GetUserActivityResult>
+internal sealed class GetUserActivityQueryHandler : IRequestHandler<GetUserActivityQuery, GetUserActivityResult>
 {
     private readonly IAuditLogRepository _auditLogRepository;
     private readonly ILogger<GetUserActivityQueryHandler> _logger;
@@ -18,12 +18,13 @@ public sealed class GetUserActivityQueryHandler : IRequestHandler<GetUserActivit
         IAuditLogRepository auditLogRepository,
         ILogger<GetUserActivityQueryHandler> logger)
     {
-        _auditLogRepository = auditLogRepository;
-        _logger = logger;
+        _auditLogRepository = auditLogRepository ?? throw new ArgumentNullException(nameof(auditLogRepository));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<GetUserActivityResult> Handle(GetUserActivityQuery request, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         // Validate limit
         var limit = Math.Min(request.Limit > 0 ? request.Limit : 100, MaxLimit);
 

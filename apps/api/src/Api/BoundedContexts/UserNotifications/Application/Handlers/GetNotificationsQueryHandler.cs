@@ -12,7 +12,7 @@ namespace Api.BoundedContexts.UserNotifications.Application.Handlers;
 /// Retrieves user notifications with optional filtering.
 /// Enforces configurable maximum page size from system configuration.
 /// </summary>
-public class GetNotificationsQueryHandler : IQueryHandler<GetNotificationsQuery, List<NotificationDto>>
+internal class GetNotificationsQueryHandler : IQueryHandler<GetNotificationsQuery, List<NotificationDto>>
 {
     private readonly INotificationRepository _notificationRepository;
     private readonly IConfigurationService _configService;
@@ -26,8 +26,10 @@ public class GetNotificationsQueryHandler : IQueryHandler<GetNotificationsQuery,
         INotificationRepository notificationRepository,
         IConfigurationService configService)
     {
-        _notificationRepository = notificationRepository ?? throw new ArgumentNullException(nameof(notificationRepository));
-        _configService = configService ?? throw new ArgumentNullException(nameof(configService));
+        ArgumentNullException.ThrowIfNull(notificationRepository);
+        _notificationRepository = notificationRepository;
+        ArgumentNullException.ThrowIfNull(configService);
+        _configService = configService;
     }
 
     public async Task<List<NotificationDto>> Handle(GetNotificationsQuery query, CancellationToken cancellationToken)

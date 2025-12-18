@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Services;
 /// Provides Recall@K, nDCG@K, MRR calculations as defined in ADR-016.
 /// Named DatasetEvaluationService to avoid conflict with Api.Services.RagEvaluationService.
 /// </summary>
-public sealed class DatasetEvaluationService : IDatasetEvaluationService
+internal sealed class DatasetEvaluationService : IDatasetEvaluationService
 {
     private readonly IRagService _ragService;
     private readonly ILogger<DatasetEvaluationService> _logger;
@@ -145,6 +145,10 @@ public sealed class DatasetEvaluationService : IDatasetEvaluationService
                 Confidence = ragResponse.confidence ?? 0.0
             };
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: BACKGROUND TASK PATTERN - Dataset evaluation error isolation
+        // Background tasks must not throw exceptions (would terminate evaluation batch).
+        // Errors logged for monitoring; failed samples recorded with error state for analysis.
         catch (Exception ex)
         {
             stopwatch.Stop();
@@ -169,6 +173,7 @@ public sealed class DatasetEvaluationService : IDatasetEvaluationService
                 ErrorMessage = ex.Message
             };
         }
+#pragma warning restore CA1031
     }
 
     /// <inheritdoc/>
@@ -252,49 +257,35 @@ public sealed class DatasetEvaluationService : IDatasetEvaluationService
         return 0.0; // No relevant document found
     }
 
+
     private static bool HasHitAtK(IReadOnlyList<string> retrievedChunkIds, IReadOnlyList<string> relevantChunkIds, int k)
     {
-        if (relevantChunkIds.Count == 0)
-        {
-            return true;
-        }
-
-        var topK = retrievedChunkIds.Take(k).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var topK = retrievedChunkIds.Take(k);
         var relevantSet = relevantChunkIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-        // Use Intersect with explicit comparer for case-insensitive matching
-        return topK.Intersect(relevantSet, StringComparer.OrdinalIgnoreCase).Any();
+        return topK.Any(id => relevantSet.Contains(id));
     }
 
-    private static (double dcg, double idealDcg) CalculateDcgComponents(
-        IReadOnlyList<string> retrievedChunkIds,
-        IReadOnlyList<string> relevantChunkIds,
-        int k)
+    private static (double Dcg, double IdealDcg) CalculateDcgComponents(IReadOnlyList<string> retrievedChunkIds, IReadOnlyList<string> relevantChunkIds, int k)
     {
-        if (relevantChunkIds.Count == 0)
-        {
-            return (1.0, 1.0); // Perfect score when nothing to find
-        }
-
+        var dcg = 0.0;
         var relevantSet = relevantChunkIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        // DCG: sum of relevance / log2(position + 1)
-        var dcg = 0.0;
-        var topK = retrievedChunkIds.Take(k).ToList();
-
-        for (var i = 0; i < topK.Count; i++)
+        // Calculate DCG
+        for (var i = 0; i < Math.Min(retrievedChunkIds.Count, k); i++)
         {
-            var relevance = relevantSet.Contains(topK[i]) ? 1.0 : 0.0;
-            dcg += relevance / Math.Log2(i + 2); // +2 because log2(1) = 0
+            if (relevantSet.Contains(retrievedChunkIds[i]))
+            {
+                var relevance = 1.0; // Binary relevance
+                dcg += (Math.Pow(2, relevance) - 1) / Math.Log2(i + 2);
+            }
         }
 
-        // Ideal DCG: all relevant docs at top positions
+        // Calculate IDCG (Ideal DCG)
         var idealDcg = 0.0;
-        var numRelevant = Math.Min(relevantChunkIds.Count, k);
-
-        for (var i = 0; i < numRelevant; i++)
+        for (var i = 0; i < Math.Min(relevantChunkIds.Count, k); i++)
         {
-            idealDcg += 1.0 / Math.Log2(i + 2);
+            var relevance = 1.0;
+            idealDcg += (Math.Pow(2, relevance) - 1) / Math.Log2(i + 2);
         }
 
         return (dcg, idealDcg);
@@ -317,7 +308,7 @@ public sealed class DatasetEvaluationService : IDatasetEvaluationService
         if (expectedKeywords.Count > 0)
         {
             var matchCount = expectedKeywords.Count(kw =>
-                normalizedGenerated.Contains(kw.ToLowerInvariant()));
+                generatedAnswer.Contains(kw, StringComparison.InvariantCultureIgnoreCase));
             return (double)matchCount / expectedKeywords.Count;
         }
 

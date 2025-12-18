@@ -34,8 +34,9 @@ public class LlmCostLogRepository : ILlmCostLogRepository
         int latencyMs,
         string? ipAddress,
         string? userAgent,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(cost);
         var entity = new LlmCostLogEntity
         {
             UserId = userId,
@@ -59,7 +60,7 @@ public class LlmCostLogRepository : ILlmCostLogRepository
         };
 
         _context.LlmCostLogs.Add(entity);
-        await _context.SaveChangesAsync(ct).ConfigureAwait(false);
+        await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogDebug(
             "Logged LLM cost: {Provider}/{Model} - {Tokens} tokens = ${Cost:F6} (user: {UserId}, role: {Role})",
@@ -67,37 +68,37 @@ public class LlmCostLogRepository : ILlmCostLogRepository
     }
 
     /// <inheritdoc/>
-    public async Task<decimal> GetTotalCostAsync(DateOnly startDate, DateOnly endDate, CancellationToken ct = default)
+    public async Task<decimal> GetTotalCostAsync(DateOnly startDate, DateOnly endDate, CancellationToken cancellationToken = default)
     {
         return await _context.LlmCostLogs
             .Where(x => x.RequestDate >= startDate && x.RequestDate <= endDate)
-            .SumAsync(x => x.TotalCost, ct).ConfigureAwait(false);
+            .SumAsync(x => x.TotalCost, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
     public async Task<Dictionary<string, decimal>> GetCostsByProviderAsync(
         DateOnly startDate,
         DateOnly endDate,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         return await _context.LlmCostLogs
             .Where(x => x.RequestDate >= startDate && x.RequestDate <= endDate)
             .GroupBy(x => x.Provider)
             .Select(g => new { Provider = g.Key, TotalCost = g.Sum(x => x.TotalCost) })
-            .ToDictionaryAsync(x => x.Provider, x => x.TotalCost, ct).ConfigureAwait(false);
+            .ToDictionaryAsync(x => x.Provider, x => x.TotalCost, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
     public async Task<Dictionary<string, decimal>> GetCostsByRoleAsync(
         DateOnly startDate,
         DateOnly endDate,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         return await _context.LlmCostLogs
             .Where(x => x.RequestDate >= startDate && x.RequestDate <= endDate)
             .GroupBy(x => x.UserRole)
             .Select(g => new { Role = g.Key, TotalCost = g.Sum(x => x.TotalCost) })
-            .ToDictionaryAsync(x => x.Role, x => x.TotalCost, ct).ConfigureAwait(false);
+            .ToDictionaryAsync(x => x.Role, x => x.TotalCost, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
@@ -105,18 +106,19 @@ public class LlmCostLogRepository : ILlmCostLogRepository
         Guid userId,
         DateOnly startDate,
         DateOnly endDate,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         return await _context.LlmCostLogs
             .Where(x => x.UserId == userId && x.RequestDate >= startDate && x.RequestDate <= endDate)
-            .SumAsync(x => x.TotalCost, ct).ConfigureAwait(false);
+            .SumAsync(x => x.TotalCost, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
-    public async Task<decimal> GetDailyCostAsync(DateOnly date, CancellationToken ct = default)
+    public async Task<decimal> GetDailyCostAsync(DateOnly date, CancellationToken cancellationToken = default)
     {
         return await _context.LlmCostLogs
             .Where(x => x.RequestDate == date)
-            .SumAsync(x => x.TotalCost, ct).ConfigureAwait(false);
+            .SumAsync(x => x.TotalCost, cancellationToken).ConfigureAwait(false);
     }
 }
+

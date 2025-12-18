@@ -5,35 +5,34 @@
  * Covers: Games CRUD, filtering, sorting, pagination, documents
  */
 
-import type { HttpClient } from '../core/httpClient';
 import { z } from 'zod';
+import type { HttpClient } from '../core/httpClient';
 import {
+  AcquireLockResultSchema,
+  AgentDtoSchema,
+  EditorLockSchema,
+  GameFAQSchema,
   GameSchema,
   GameSessionDtoSchema,
-  PaginatedGamesResponseSchema,
-  PdfDocumentDtoSchema,
-  RuleSpecSchema,
-  RuleSpecHistorySchema,
-  VersionTimelineSchema,
-  RuleSpecDiffSchema,
-  GameFAQSchema,
   GetGameFAQsResultSchema,
-  EditorLockSchema,
-  AcquireLockResultSchema,
+  RuleSpecDiffSchema,
+  RuleSpecHistorySchema,
+  RuleSpecSchema,
+  VersionTimelineSchema,
+  type AcquireLockResult,
+  type AgentDto,
+  type EditorLock,
   type Game,
+  type GameFAQ,
   type GameSessionDto,
+  type GetGameFAQsResult,
   type PaginatedGamesResponse,
   type PdfDocumentDto,
   type RuleSpec,
+  type RuleSpecDiff,
   type RuleSpecHistory,
   type VersionTimeline,
-  type RuleSpecDiff,
-  type GameFAQ,
-  type GetGameFAQsResult,
-  type EditorLock,
-  type AcquireLockResult,
 } from '../schemas';
-import { AgentDtoSchema, type AgentDto } from '../schemas';
 
 export interface CreateGamesClientParams {
   httpClient: HttpClient;
@@ -62,6 +61,22 @@ export type SortDirection = 'asc' | 'desc';
 export interface GameSortOptions {
   field: GameSortField;
   direction: SortDirection;
+}
+
+/**
+ * Admin Wizard: Create game request with optional image URLs
+ */
+export interface CreateGameRequest {
+  name: string;
+  publisher?: string | null;
+  yearPublished?: number | null;
+  minPlayers?: number | null;
+  maxPlayers?: number | null;
+  minPlayTimeMinutes?: number | null;
+  maxPlayTimeMinutes?: number | null;
+  iconUrl?: string | null;
+  imageUrl?: string | null;
+  bggId?: number | null;
 }
 
 /**
@@ -257,11 +272,17 @@ export function createGamesClient({ httpClient }: CreateGamesClientParams) {
     /**
      * Create new game
      * POST /api/v1/games
+     * Admin Wizard: Extended to support iconUrl and imageUrl
      */
-    async create(name: string): Promise<{ id: string; title: string; createdAt: string }> {
-      return httpClient.post<{ id: string; title: string; createdAt: string }>('/api/v1/games', {
-        name,
-      });
+    async create(
+      request: CreateGameRequest | string
+    ): Promise<{ id: string; title: string; createdAt: string }> {
+      // Support both legacy (string) and new (object) signatures
+      const payload = typeof request === 'string' ? { name: request } : request;
+      return httpClient.post<{ id: string; title: string; createdAt: string }>(
+        '/api/v1/games',
+        payload
+      );
     },
 
     // ========== RuleSpec Management ==========

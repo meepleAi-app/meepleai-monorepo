@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands;
 /// <summary>
 /// Handles user logout by revoking the session.
 /// </summary>
-public class LogoutCommandHandler : ICommandHandler<LogoutCommand>
+internal class LogoutCommandHandler : ICommandHandler<LogoutCommand>
 {
     private readonly ISessionRepository _sessionRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -24,6 +24,7 @@ public class LogoutCommandHandler : ICommandHandler<LogoutCommand>
 
     public async Task Handle(LogoutCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         // Parse and hash the token
         var sessionToken = SessionToken.FromStored(command.SessionToken);
         var tokenHash = sessionToken.ComputeHash();

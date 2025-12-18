@@ -8,13 +8,13 @@ namespace Api.Routing;
 /// Audit log and request tracking endpoints (Admin only).
 /// Handles AI request logs, audit trail retrieval, and request filtering.
 /// </summary>
-public static class AuditEndpoints
+internal static class AuditEndpoints
 {
     public static RouteGroupBuilder MapAuditEndpoints(this RouteGroupBuilder group)
     {
         group.MapGet("/logs", async (HttpContext context, IMediator mediator, CancellationToken ct) =>
         {
-            var (authorized, session, error) = context.RequireAdminSession();
+            var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             var query = new Api.BoundedContexts.Administration.Application.Queries.GetAiRequestsQuery(Limit: 100);
@@ -27,11 +27,19 @@ public static class AuditEndpoints
                         ? "ERROR"
                         : "INFO";
 
-                    var message = !string.IsNullOrWhiteSpace(log.ResponseSnippet)
-                        ? log.ResponseSnippet!
-                        : !string.IsNullOrWhiteSpace(log.Query)
-                            ? log.Query!
-                            : $"{log.Endpoint} request ({log.Status})";
+                    string message;
+                    if (!string.IsNullOrWhiteSpace(log.ResponseSnippet))
+                    {
+                        message = log.ResponseSnippet!;
+                    }
+                    else if (!string.IsNullOrWhiteSpace(log.Query))
+                    {
+                        message = log.Query!;
+                    }
+                    else
+                    {
+                        message = $"{log.Endpoint} request ({log.Status})";
+                    }
 
                     return new LogEntryResponse(
                         log.CreatedAt,

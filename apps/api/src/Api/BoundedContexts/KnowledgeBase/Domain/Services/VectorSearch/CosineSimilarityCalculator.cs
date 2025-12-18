@@ -21,8 +21,13 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
 /// For consensus validation, we use threshold ≥0.90 which indicates
 /// very high semantic similarity between model responses.
 /// </remarks>
-public class CosineSimilarityCalculator
+internal class CosineSimilarityCalculator
 {
+    private static readonly char[] TokenSeparators =
+    {
+        ' ', '\t', '\n', '\r', '.', ',', '!', '?', ';', ':', '(', ')', '[', ']', '{', '}', '"', '\'', '-', '—', '/', '\\'
+    };
+
     /// <summary>
     /// Calculate cosine similarity between two text documents using TF-IDF
     /// </summary>
@@ -68,7 +73,7 @@ public class CosineSimilarityCalculator
 
         // Split on whitespace and punctuation
         var words = text.ToLowerInvariant()
-            .Split(new[] { ' ', '\t', '\n', '\r', '.', ',', '!', '?', ';', ':', '(', ')', '[', ']', '{', '}', '"', '\'', '-', '—', '/', '\\' },
+            .Split(TokenSeparators,
                 StringSplitOptions.RemoveEmptyEntries);
 
         foreach (var word in words)
@@ -135,9 +140,9 @@ public class CosineSimilarityCalculator
         var dotProduct = 0.0;
         foreach (var term in vector1.Keys)
         {
-            if (vector2.ContainsKey(term))
+            if (vector2.TryGetValue(term, out var value2))
             {
-                dotProduct += vector1[term] * vector2[term];
+                dotProduct += vector1[term] * value2;
             }
         }
 

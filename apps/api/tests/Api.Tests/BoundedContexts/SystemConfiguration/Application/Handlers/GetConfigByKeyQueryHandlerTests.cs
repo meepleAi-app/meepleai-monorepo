@@ -141,7 +141,7 @@ public class GetConfigByKeyQueryHandlerTests
     {
         // Arrange
         var query = new GetConfigByKeyQuery("test.key");
-        var cancellationTokenSource = new CancellationTokenSource();
+        using var cancellationTokenSource = new CancellationTokenSource();
         var cancellationToken = cancellationTokenSource.Token;
 
         _mockConfigRepository
@@ -317,4 +317,5 @@ public class GetConfigByKeyQueryHandlerTests
             Times.Once);
     }
 }
+
 

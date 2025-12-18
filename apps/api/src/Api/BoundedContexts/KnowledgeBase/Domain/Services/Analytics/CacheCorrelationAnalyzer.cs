@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services.Analytics;
 /// ISSUE-1725: Implementation of ICacheCorrelationAnalyzer for cache ROI analysis.
 /// Quantifies cost savings from caching and identifies optimization opportunities.
 /// </summary>
-public class CacheCorrelationAnalyzer : ICacheCorrelationAnalyzer
+internal class CacheCorrelationAnalyzer : ICacheCorrelationAnalyzer
 {
     private readonly ILlmCostLogRepository _costLogRepository;
     private readonly ILogger<CacheCorrelationAnalyzer> _logger;
@@ -28,14 +28,14 @@ public class CacheCorrelationAnalyzer : ICacheCorrelationAnalyzer
     public async Task<CacheCorrelationReport> AnalyzeCacheEffectivenessAsync(
         DateOnly startDate,
         DateOnly endDate,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         _logger.LogInformation(
             "Analyzing cache effectiveness from {StartDate} to {EndDate}",
             startDate, endDate);
 
         // Get actual LLM cost (only cache misses incur cost)
-        var actualCost = await _costLogRepository.GetTotalCostAsync(startDate, endDate, ct).ConfigureAwait(false);
+        var actualCost = await _costLogRepository.GetTotalCostAsync(startDate, endDate, cancellationToken).ConfigureAwait(false);
 
         // Estimate cache metrics (in production, would query from metrics backend)
         var totalRequests = (int)(actualCost / AverageCostPerQuery) * 3; // Estimate 3x requests with cache
@@ -72,9 +72,9 @@ public class CacheCorrelationAnalyzer : ICacheCorrelationAnalyzer
     public async Task<decimal> CalculateCacheSavingsAsync(
         DateOnly startDate,
         DateOnly endDate,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
-        var report = await AnalyzeCacheEffectivenessAsync(startDate, endDate, ct).ConfigureAwait(false);
+        var report = await AnalyzeCacheEffectivenessAsync(startDate, endDate, cancellationToken).ConfigureAwait(false);
         return report.EstimatedSavingsUsd;
     }
 
@@ -110,3 +110,4 @@ public class CacheCorrelationAnalyzer : ICacheCorrelationAnalyzer
         return recommendations;
     }
 }
+

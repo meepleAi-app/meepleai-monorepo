@@ -6,6 +6,6 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 /// <summary>
 /// Command to close a chat thread.
 /// </summary>
-public record CloseThreadCommand(
+internal record CloseThreadCommand(
     Guid ThreadId
 ) : ICommand<ChatThreadDto>;

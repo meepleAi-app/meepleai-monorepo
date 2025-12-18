@@ -27,7 +27,7 @@ public sealed class ReportGeneratorServiceTests : IDisposable
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
             .UseInMemoryDatabase($"ReportGeneratorTests_{Guid.NewGuid()}")
             .Options;
-        
+
         var mediatorMock = new Mock<IMediator>();
         var eventCollectorMock = new Mock<IDomainEventCollector>();
         _dbContext = new MeepleAiDbContext(options, mediatorMock.Object, eventCollectorMock.Object);
@@ -237,7 +237,7 @@ public sealed class ReportGeneratorServiceTests : IDisposable
     public async Task GenerateAsync_CancellationRequested_ThrowsOperationCanceledException()
     {
         var parameters = CreateValidParameters(ReportTemplate.SystemHealth);
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         cts.Cancel();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>

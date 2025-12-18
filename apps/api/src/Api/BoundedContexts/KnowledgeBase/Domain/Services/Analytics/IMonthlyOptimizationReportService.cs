@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services.Analytics;
 /// ISSUE-1725: Generates comprehensive monthly LLM optimization reports.
 /// Combines efficiency analysis, model recommendations, and cache correlation.
 /// </summary>
-public interface IMonthlyOptimizationReportService
+internal interface IMonthlyOptimizationReportService
 {
     /// <summary>
     /// Generate complete monthly optimization report
@@ -15,13 +15,13 @@ public interface IMonthlyOptimizationReportService
     Task<MonthlyOptimizationReport> GenerateReportAsync(
         int year,
         int month,
-        CancellationToken ct = default);
+        CancellationToken cancellationToken = default);
 }
 
 /// <summary>
 /// Comprehensive monthly optimization report
 /// </summary>
-public record MonthlyOptimizationReport
+internal record MonthlyOptimizationReport
 {
     public required int Year { get; init; }
     public required int Month { get; init; }
@@ -32,3 +32,4 @@ public record MonthlyOptimizationReport
     public required List<string> ExecutiveSummary { get; init; }
     public required decimal TotalSavingsOpportunity { get; init; }
 }
+

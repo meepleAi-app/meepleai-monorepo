@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 /// DocumentCollection aggregate root representing a collection of related PDF documents for a game.
 /// Issue #2051: Supports base rulebooks, expansions, errata, and house rules
 /// </summary>
-public sealed class DocumentCollection : AggregateRoot<Guid>
+internal sealed class DocumentCollection : AggregateRoot<Guid>
 {
     private const int MaxDocumentsPerCollection = 5;
 
@@ -102,9 +102,6 @@ public sealed class DocumentCollection : AggregateRoot<Guid>
         var collectionDoc = new CollectionDocument(pdfDocumentId, documentType, sortOrder);
         _documents.Add(collectionDoc);
         UpdatedAt = DateTime.UtcNow;
-
-        // Domain event for auditing
-        // AddDomainEvent(new DocumentAddedToCollectionEvent(Id, pdfDocumentId, documentType));
     }
 
     /// <summary>
@@ -119,9 +116,6 @@ public sealed class DocumentCollection : AggregateRoot<Guid>
 
         _documents.Remove(document);
         UpdatedAt = DateTime.UtcNow;
-
-        // Domain event for auditing
-        // AddDomainEvent(new DocumentRemovedFromCollectionEvent(Id, pdfDocumentId));
     }
 
     /// <summary>
@@ -157,7 +151,7 @@ public sealed class DocumentCollection : AggregateRoot<Guid>
     /// </summary>
     public bool ContainsDocumentType(DocumentType type)
     {
-        return _documents.Any(d => d.Type.Value == type.Value);
+        return _documents.Any(d => string.Equals(d.Type.Value, type.Value, StringComparison.Ordinal));
     }
 
     /// <summary>
@@ -180,7 +174,7 @@ public sealed class DocumentCollection : AggregateRoot<Guid>
 /// Value object representing a document within a collection.
 /// Stores reference to PDF document ID plus collection-specific metadata.
 /// </summary>
-public sealed record CollectionDocument
+internal sealed record CollectionDocument
 {
     public Guid PdfDocumentId { get; init; }
     public DocumentType Type { get; init; }

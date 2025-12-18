@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.Administration.Application.Handlers.AlertRules;
 
-public class TestAlertCommandHandler : IRequestHandler<TestAlertCommand, bool>
+internal class TestAlertCommandHandler : IRequestHandler<TestAlertCommand, bool>
 {
     private readonly IAlertingService _alertingService;
     private readonly ILogger<TestAlertCommandHandler> _logger;
@@ -14,37 +14,44 @@ public class TestAlertCommandHandler : IRequestHandler<TestAlertCommand, bool>
         IAlertingService alertingService,
         ILogger<TestAlertCommandHandler> logger)
     {
-        _alertingService = alertingService;
-        _logger = logger;
+        _alertingService = alertingService ?? throw new ArgumentNullException(nameof(alertingService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public async Task<bool> Handle(TestAlertCommand request, CancellationToken ct)
+    public async Task<bool> Handle(TestAlertCommand request, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         try
         {
             _logger.LogInformation(
-                "Testing alert: Type={AlertType}, Channel={Channel}", 
-                request.AlertType, 
+                "Testing alert: Type={AlertType}, Channel={Channel}",
+                request.AlertType,
                 request.Channel);
 
             await _alertingService.SendAlertAsync(
-                request.AlertType, 
-                "Critical", 
-                $"Test alert for {request.AlertType} via {request.Channel}", 
-                new Dictionary<string, object> 
-                { 
-                    ["test"] = true, 
-                    ["channel"] = request.Channel 
-                }, 
-                ct);
+                request.AlertType,
+                "Critical",
+                $"Test alert for {request.AlertType} via {request.Channel}",
+                new Dictionary<string, object>
+(StringComparer.Ordinal)
+                {
+                    ["test"] = true,
+                    ["channel"] = request.Channel
+                },
+                cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(
-                "Test alert sent successfully: Type={AlertType}, Channel={Channel}", 
-                request.AlertType, 
+                "Test alert sent successfully: Type={AlertType}, Channel={Channel}",
+                request.AlertType,
                 request.Channel);
 
             return true;
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: COMMAND HANDLER PATTERN - Test/diagnostic operation failure handling
+        // Catches all exceptions during test alert send (network, config, service failures)
+        // to return false instead of throwing. Logs error for diagnostics. Test operations
+        // should not throw exceptions - returning false indicates test failure.
         catch (Exception ex)
         {
             _logger.LogError(
@@ -55,5 +62,7 @@ public class TestAlertCommandHandler : IRequestHandler<TestAlertCommand, bool>
                 ex.Message);
             return false;
         }
+#pragma warning restore CA1031
     }
 }
+

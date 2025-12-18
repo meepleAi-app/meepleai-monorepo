@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.GameManagement.Domain.Services;
 /// Domain service for computing differences between RuleSpec versions.
 /// Pure domain logic with no infrastructure dependencies.
 /// </summary>
-public class RuleSpecDiffDomainService
+internal class RuleSpecDiffDomainService
 {
     /// <summary>
     /// Computes the difference between two RuleSpec versions

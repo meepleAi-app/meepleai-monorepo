@@ -12,4 +12,7 @@ public class PdfStorageException : Exception
     public PdfStorageException(string message, Exception innerException) : base(message, innerException)
     {
     }
+    public PdfStorageException()
+    {
+    }
 }

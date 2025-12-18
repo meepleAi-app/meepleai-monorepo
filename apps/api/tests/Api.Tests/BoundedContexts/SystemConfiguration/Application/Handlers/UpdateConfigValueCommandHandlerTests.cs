@@ -190,7 +190,7 @@ public class UpdateConfigValueCommandHandlerTests
             UpdatedByUserId: userId
         );
 
-        var cancellationTokenSource = new CancellationTokenSource();
+        using var cancellationTokenSource = new CancellationTokenSource();
         var cancellationToken = cancellationTokenSource.Token;
 
         _mockConfigRepository
@@ -251,4 +251,5 @@ public class UpdateConfigValueCommandHandlerTests
         Assert.Equal("Cache", result.Category);
     }
 }
+
 

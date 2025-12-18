@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Administration.Application.Queries.PromptEvaluatio
 /// Handler for retrieving historical evaluation results for a template
 /// Delegates to IPromptEvaluationService (infrastructure adapter)
 /// </summary>
-public sealed class GetEvaluationHistoryQueryHandler : IQueryHandler<GetEvaluationHistoryQuery, List<PromptEvaluationResult>>
+internal sealed class GetEvaluationHistoryQueryHandler : IQueryHandler<GetEvaluationHistoryQuery, List<PromptEvaluationResult>>
 {
     private readonly IPromptEvaluationService _evaluationService;
     private readonly ILogger<GetEvaluationHistoryQueryHandler> _logger;

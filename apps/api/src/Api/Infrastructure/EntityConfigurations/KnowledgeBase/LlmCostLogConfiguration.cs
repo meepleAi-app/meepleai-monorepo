@@ -8,7 +8,7 @@ namespace Api.Infrastructure.EntityConfigurations;
 /// EF Core configuration for LlmCostLogEntity
 /// ISSUE-960: BGAI-018 - Cost tracking database schema
 /// </summary>
-public class LlmCostLogConfiguration : IEntityTypeConfiguration<LlmCostLogEntity>
+internal class LlmCostLogConfiguration : IEntityTypeConfiguration<LlmCostLogEntity>
 {
     public void Configure(EntityTypeBuilder<LlmCostLogEntity> builder)
     {
@@ -16,6 +16,14 @@ public class LlmCostLogConfiguration : IEntityTypeConfiguration<LlmCostLogEntity
 
         builder.HasKey(x => x.Id);
 
+        ConfigureBasicProperties(builder);
+        ConfigureCostProperties(builder);
+        ConfigureContextProperties(builder);
+        ConfigureIndexes(builder);
+    }
+
+    private static void ConfigureBasicProperties(EntityTypeBuilder<LlmCostLogEntity> builder)
+    {
         builder.Property(x => x.Id)
             .HasColumnName("id")
             .IsRequired();
@@ -38,6 +46,23 @@ public class LlmCostLogConfiguration : IEntityTypeConfiguration<LlmCostLogEntity
             .HasMaxLength(50)
             .IsRequired();
 
+        builder.Property(x => x.CreatedAt)
+            .HasColumnName("created_at")
+            .IsRequired();
+
+        builder.Property(x => x.RequestDate)
+            .HasColumnName("request_date")
+            .IsRequired();
+
+        // Foreign key relationship to Users
+        builder.HasOne(x => x.User)
+            .WithMany()
+            .HasForeignKey(x => x.UserId)
+            .OnDelete(DeleteBehavior.SetNull);
+    }
+
+    private static void ConfigureCostProperties(EntityTypeBuilder<LlmCostLogEntity> builder)
+    {
         builder.Property(x => x.PromptTokens)
             .HasColumnName("prompt_tokens")
             .IsRequired();
@@ -65,7 +90,10 @@ public class LlmCostLogConfiguration : IEntityTypeConfiguration<LlmCostLogEntity
             .HasColumnName("total_cost_usd")
             .HasColumnType("decimal(18,6)")
             .IsRequired();
+    }
 
+    private static void ConfigureContextProperties(EntityTypeBuilder<LlmCostLogEntity> builder)
+    {
         builder.Property(x => x.Endpoint)
             .HasColumnName("endpoint")
             .HasMaxLength(100)
@@ -90,15 +118,10 @@ public class LlmCostLogConfiguration : IEntityTypeConfiguration<LlmCostLogEntity
         builder.Property(x => x.UserAgent)
             .HasColumnName("user_agent")
             .HasMaxLength(500);
+    }
 
-        builder.Property(x => x.CreatedAt)
-            .HasColumnName("created_at")
-            .IsRequired();
-
-        builder.Property(x => x.RequestDate)
-            .HasColumnName("request_date")
-            .IsRequired();
-
+    private static void ConfigureIndexes(EntityTypeBuilder<LlmCostLogEntity> builder)
+    {
         // Indexes for efficient querying
         builder.HasIndex(x => x.UserId)
             .HasDatabaseName("ix_llm_cost_logs_user_id");
@@ -114,11 +137,5 @@ public class LlmCostLogConfiguration : IEntityTypeConfiguration<LlmCostLogEntity
 
         builder.HasIndex(x => x.CreatedAt)
             .HasDatabaseName("ix_llm_cost_logs_created_at");
-
-        // Foreign key relationship to Users
-        builder.HasOne(x => x.User)
-            .WithMany()
-            .HasForeignKey(x => x.UserId)
-            .OnDelete(DeleteBehavior.SetNull);
     }
 }

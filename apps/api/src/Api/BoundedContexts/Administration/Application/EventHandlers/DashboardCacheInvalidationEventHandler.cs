@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.Administration.Application.EventHandlers;
 /// Issue #879: Invalidates dashboard cache when system configuration changes.
 /// Ensures dashboard stats reflect configuration updates within 1 minute (or immediately on config change).
 /// </summary>
-public sealed class DashboardCacheInvalidationEventHandler :
+internal sealed class DashboardCacheInvalidationEventHandler :
     INotificationHandler<ConfigurationUpdatedEvent>,
     INotificationHandler<ConfigurationToggledEvent>
 {
@@ -22,8 +22,8 @@ public sealed class DashboardCacheInvalidationEventHandler :
         HybridCache cache,
         ILogger<DashboardCacheInvalidationEventHandler> logger)
     {
-        _cache = cache;
-        _logger = logger;
+        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     /// <summary>
@@ -31,6 +31,7 @@ public sealed class DashboardCacheInvalidationEventHandler :
     /// </summary>
     public async Task Handle(ConfigurationUpdatedEvent notification, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(notification);
         _logger.LogInformation(
             "Configuration updated: {Key} → invalidating dashboard cache",
             notification.Key.Value);
@@ -43,6 +44,7 @@ public sealed class DashboardCacheInvalidationEventHandler :
     /// </summary>
     public async Task Handle(ConfigurationToggledEvent notification, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(notification);
         _logger.LogInformation(
             "Configuration toggled: {Key} (Active: {IsActive}) → invalidating dashboard cache",
             notification.Key.Value,
@@ -83,6 +85,10 @@ public sealed class DashboardCacheInvalidationEventHandler :
             };
             MeepleAiMetrics.DashboardCacheInvalidationsTotal.Add(1, tags);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: EVENT HANDLER PATTERN - Background event processing
+        // Event handlers must not throw exceptions (violates mediator/event pattern).
+        // Errors logged for monitoring; failed cache invalidation doesn't block config updates.
         catch (Exception ex)
         {
             // Non-critical operation - log but don't throw
@@ -90,6 +96,7 @@ public sealed class DashboardCacheInvalidationEventHandler :
                 "Failed to invalidate dashboard cache after config change: {ConfigKey}",
                 configKey);
         }
+#pragma warning restore CA1031
     }
 
     /// <summary>

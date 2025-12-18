@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.Authentication.Domain.Repositories;
 /// <summary>
 /// Repository interface for ShareLink aggregate.
 /// </summary>
-public interface IShareLinkRepository : IRepository<ShareLink, Guid>
+internal interface IShareLinkRepository : IRepository<ShareLink, Guid>
 {
     /// <summary>
     /// Finds all share links for a specific thread.

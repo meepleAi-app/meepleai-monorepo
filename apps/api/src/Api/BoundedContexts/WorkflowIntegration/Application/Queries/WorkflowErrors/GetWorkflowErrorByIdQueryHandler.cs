@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.WorkflowIntegration.Application.Queries.WorkflowEr
 /// Infrastructure delegation: Database query, caching via WorkflowErrorLoggingService.
 /// Performance: HybridCache with 10-minute expiration.
 /// </summary>
-public sealed class GetWorkflowErrorByIdQueryHandler : IQueryHandler<GetWorkflowErrorByIdQuery, WorkflowErrorDto?>
+internal sealed class GetWorkflowErrorByIdQueryHandler : IQueryHandler<GetWorkflowErrorByIdQuery, WorkflowErrorDto?>
 {
     private readonly IWorkflowErrorLoggingService _errorLoggingService;
     private readonly ILogger<GetWorkflowErrorByIdQueryHandler> _logger;
@@ -20,12 +20,15 @@ public sealed class GetWorkflowErrorByIdQueryHandler : IQueryHandler<GetWorkflow
         IWorkflowErrorLoggingService errorLoggingService,
         ILogger<GetWorkflowErrorByIdQueryHandler> logger)
     {
-        _errorLoggingService = errorLoggingService ?? throw new ArgumentNullException(nameof(errorLoggingService));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(errorLoggingService);
+        _errorLoggingService = errorLoggingService;
+        ArgumentNullException.ThrowIfNull(logger);
+        _logger = logger;
     }
 
     public async Task<WorkflowErrorDto?> Handle(GetWorkflowErrorByIdQuery query, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(query);
         // Business logic validation
         if (query.ErrorId == Guid.Empty)
         {

@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.Authentication.Application.Commands;
 
-public class RevokeApiKeyManagementCommandHandler : ICommandHandler<RevokeApiKeyManagementCommand, bool>
+internal class RevokeApiKeyManagementCommandHandler : ICommandHandler<RevokeApiKeyManagementCommand, bool>
 {
     private readonly MeepleAiDbContext _db;
     private readonly ApiKeyAuthenticationService _authService;
@@ -23,6 +23,7 @@ public class RevokeApiKeyManagementCommandHandler : ICommandHandler<RevokeApiKey
 
     public async Task<bool> Handle(RevokeApiKeyManagementCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         if (!Guid.TryParse(command.KeyId, out var keyGuid) || !Guid.TryParse(command.UserId, out var userGuid))
         {
             return false;

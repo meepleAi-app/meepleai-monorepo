@@ -8,7 +8,7 @@ namespace Api.Infrastructure.EntityConfigurations;
 /// EF Core configuration for ChatThreadCollectionEntity junction table.
 /// Issue #2051: Many-to-many relationship between chat threads and document collections
 /// </summary>
-public class ChatThreadCollectionEntityConfiguration : IEntityTypeConfiguration<ChatThreadCollectionEntity>
+internal class ChatThreadCollectionEntityConfiguration : IEntityTypeConfiguration<ChatThreadCollectionEntity>
 {
     public void Configure(EntityTypeBuilder<ChatThreadCollectionEntity> builder)
     {

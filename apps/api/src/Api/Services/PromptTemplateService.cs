@@ -16,7 +16,7 @@ namespace Api.Services;
 /// Combines AI-07.1 few-shot learning with admin-configurable prompt management
 /// Architecture: Redis cache-first → PostgreSQL fallback → Configuration fallback
 /// </summary>
-public class PromptTemplateService : IPromptTemplateService
+internal class PromptTemplateService : IPromptTemplateService
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly IConnectionMultiplexer _redis;
@@ -50,6 +50,11 @@ ANSWER:",
         FewShotExamples = new List<FewShotExample>()
     };
 
+    private static readonly string[] EdgeCaseKeywords = { "en passant", "castling", "castle", "stalemate", "special", "exception", "edge case" };
+    private static readonly string[] WinningConditionKeywords = { "win", "victory", "lose", "checkmate", "three in a row", "winning", "defeat" };
+    private static readonly string[] SetupKeywords = { "setup", "set up", "start", "begin", "prepare", "place pieces", "initial", "arrange" };
+    private static readonly string[] GameplayKeywords = { "move", "turn", "action", "can i", "allowed", "play", "rules", "how does" };
+
     public PromptTemplateService(
         MeepleAiDbContext dbContext,
         IConnectionMultiplexer redis,
@@ -57,10 +62,13 @@ ANSWER:",
         ILogger<PromptTemplateService> logger,
         TimeProvider? timeProvider = null)
     {
-        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
-        _redis = redis ?? throw new ArgumentNullException(nameof(redis));
+        ArgumentNullException.ThrowIfNull(dbContext);
+        _dbContext = dbContext;
+        ArgumentNullException.ThrowIfNull(redis);
+        _redis = redis;
         _config = config?.Value ?? new RagPromptsConfiguration();
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(logger);
+        _logger = logger;
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
@@ -139,10 +147,7 @@ ANSWER:",
     /// </summary>
     public string RenderSystemPrompt(PromptTemplate template)
     {
-        if (template == null)
-        {
-            throw new ArgumentNullException(nameof(template));
-        }
+        ArgumentNullException.ThrowIfNull(template);
 
         if (template.FewShotExamples == null || template.FewShotExamples.Count == 0)
         {
@@ -175,10 +180,7 @@ ANSWER:",
     /// </summary>
     public string RenderUserPrompt(PromptTemplate template, string context, string query)
     {
-        if (template == null)
-        {
-            throw new ArgumentNullException(nameof(template));
-        }
+        ArgumentNullException.ThrowIfNull(template);
 
         if (string.IsNullOrEmpty(template.UserPromptTemplate))
         {
@@ -206,29 +208,25 @@ ANSWER:",
         // Check keywords in priority order (most specific first)
 
         // EdgeCases keywords (check first as they're most specific)
-        if (ContainsAny(queryLower, new[]
-            { "en passant", "castling", "castle", "stalemate", "special", "exception", "edge case" }))
+        if (ContainsAny(queryLower, EdgeCaseKeywords))
         {
             return QuestionType.EdgeCases;
         }
 
         // WinningConditions keywords
-        if (ContainsAny(queryLower, new[]
-            { "win", "victory", "lose", "checkmate", "three in a row", "winning", "defeat" }))
+        if (ContainsAny(queryLower, WinningConditionKeywords))
         {
             return QuestionType.WinningConditions;
         }
 
         // Setup keywords
-        if (ContainsAny(queryLower, new[]
-            { "setup", "set up", "start", "begin", "prepare", "place pieces", "initial", "arrange" }))
+        if (ContainsAny(queryLower, SetupKeywords))
         {
             return QuestionType.Setup;
         }
 
         // Gameplay keywords (most common, check last)
-        if (ContainsAny(queryLower, new[]
-            { "move", "turn", "action", "can i", "allowed", "play", "rules", "how does" }))
+        if (ContainsAny(queryLower, GameplayKeywords))
         {
             return QuestionType.Gameplay;
         }
@@ -246,10 +244,7 @@ ANSWER:",
         Guid? gameId,
         QuestionType questionType)
     {
-        if (config == null)
-        {
-            throw new ArgumentNullException(nameof(config));
-        }
+        ArgumentNullException.ThrowIfNull(config);
 
         var fewShotExamples = config.FewShotExamples?
             .Select(e => new FewShotExample
@@ -273,7 +268,7 @@ ANSWER:",
     /// ADMIN-01: Gets active prompt from cache-first architecture
     /// Flow: Redis cache → PostgreSQL → Configuration fallback
     /// </summary>
-    public async Task<string?> GetActivePromptAsync(string templateName, CancellationToken ct = default)
+    public async Task<string?> GetActivePromptAsync(string templateName, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(templateName))
         {
@@ -302,7 +297,7 @@ ANSWER:",
                 .Include(v => v.Template)
                 .Where(v => v.Template.Name == templateName && v.IsActive)
                 .OrderByDescending(v => v.VersionNumber)
-                .FirstOrDefaultAsync(ct).ConfigureAwait(false);
+                .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
 
             if (activeVersion != null)
             {
@@ -345,7 +340,7 @@ ANSWER:",
                 .Include(v => v.Template)
                 .Where(v => v.Template.Name == templateName && v.IsActive)
                 .OrderByDescending(v => v.VersionNumber)
-                .FirstOrDefaultAsync(ct).ConfigureAwait(false);
+                .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
 
             return activeVersion?.Content;
         }
@@ -365,40 +360,22 @@ ANSWER:",
     /// ADMIN-01: Activates a prompt version with transaction safety and cache invalidation
     /// Critical: Ensures only ONE active version per template + atomic cache invalidation
     /// </summary>
-    public async Task<bool> ActivateVersionAsync(Guid templateId, Guid versionId, Guid activatedByUserId, CancellationToken ct = default)
+    public async Task<bool> ActivateVersionAsync(Guid templateId, Guid versionId, Guid activatedByUserId, CancellationToken cancellationToken = default)
     {
-        if (templateId == Guid.Empty)
-        {
-            throw new ArgumentException("Template ID cannot be empty", nameof(templateId));
-        }
-        if (versionId == Guid.Empty)
-        {
-            throw new ArgumentException("Version ID cannot be empty", nameof(versionId));
-        }
-        if (activatedByUserId == Guid.Empty)
-        {
-            throw new ArgumentException("Activated by user ID cannot be empty", nameof(activatedByUserId));
-        }
+        // Validate inputs
+        ValidateActivationInputs(templateId, versionId, activatedByUserId);
 
         // FIX: Load user BEFORE transaction to reduce transaction scope and lock duration
-        // Note: NOT using AsNoTracking because user entity is reused in audit log (needs tracking)
-        var changedByUser = await _dbContext.Set<UserEntity>()
-            .FirstOrDefaultAsync(u => u.Id == activatedByUserId, ct).ConfigureAwait(false);
+        var changedByUser = await LoadUserForActivationAsync(activatedByUserId, cancellationToken).ConfigureAwait(false);
 
-        if (changedByUser == null)
-        {
-            _logger.LogWarning("User {UserId} not found for activation", activatedByUserId);
-            throw new InvalidOperationException($"User {activatedByUserId} not found");
-        }
-
-        using var transaction = await _dbContext.Database.BeginTransactionAsync(ct).ConfigureAwait(false);
+        using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
 
         try
         {
             // Step 1: Verify version exists and belongs to template
             var versionToActivate = await _dbContext.Set<PromptVersionEntity>()
                 .Include(v => v.Template)
-                .FirstOrDefaultAsync(v => v.Id == versionId && v.TemplateId == templateId, ct)
+                .FirstOrDefaultAsync(v => v.Id == versionId && v.TemplateId == templateId, cancellationToken)
                 .ConfigureAwait(false);
 
             if (versionToActivate == null)
@@ -409,66 +386,34 @@ ANSWER:",
                 return false;
             }
 
-            // Step 2: Deactivate all other versions for this template (ensure single active)
-            var otherVersions = await _dbContext.Set<PromptVersionEntity>()
-                .Where(v => v.TemplateId == templateId && v.Id != versionId && v.IsActive)
-                .ToListAsync(ct)
-                .ConfigureAwait(false);
-
-            foreach (var version in otherVersions)
-            {
-                version.IsActive = false;
-                _logger.LogDebug(
-                    "Deactivating version {VersionId} (v{VersionNumber})",
-                    version.Id, version.VersionNumber);
-            }
+            // Step 2: Deactivate all other versions for this template
+            await DeactivateOtherVersionsAsync(templateId, versionId, cancellationToken).ConfigureAwait(false);
 
             // Step 3: Activate the target version
             versionToActivate.IsActive = true;
 
-            // Step 4: Create audit log entry (navigation properties set via FK, not entity references)
-            // Note: changedByUser was fetched with AsNoTracking(), so we use only the FK
-            var auditLog = new PromptAuditLogEntity
-            {
-                Id = Guid.NewGuid(),
-                TemplateId = templateId,
-                VersionId = versionId,
-                Action = "version_activated",
-                ChangedByUserId = activatedByUserId,
-                ChangedAt = _timeProvider.GetUtcNow().UtcDateTime,
-                Details = $"Activated version {versionToActivate.VersionNumber}",
-                Template = versionToActivate.Template,
-                ChangedBy = changedByUser // EF Core will handle FK relationship
-            };
-
-            _dbContext.Set<PromptAuditLogEntity>().Add(auditLog);
+            // Step 4: Create audit log entry
+            CreateActivationAuditLog(templateId, versionId, activatedByUserId, versionToActivate, changedByUser);
 
             // Step 5: Save changes (within transaction)
-            await _dbContext.SaveChangesAsync(ct).ConfigureAwait(false);
+            await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
             // Step 6: Commit transaction (atomic) - FIX: Commit BEFORE cache invalidation
-            await transaction.CommitAsync(ct).ConfigureAwait(false);
+            await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Transaction committed for template {TemplateName} version {VersionNumber}",
                 versionToActivate.Template.Name, versionToActivate.VersionNumber);
 
-            // Step 7: Invalidate cache AFTER transaction commit (prevents stale cache)
-            // This ensures cache doesn't contain old data while transaction uncommitted
-            var cacheKey = $"{CacheKeyPrefix}{versionToActivate.Template.Name}:active";
-            var db = _redis.GetDatabase();
-            var deleted = await db.KeyDeleteAsync(cacheKey).ConfigureAwait(false);
-
-            _logger.LogInformation(
-                "Cache invalidation for template {TemplateName} after activation: {Result}",
-                versionToActivate.Template.Name, deleted ? "SUCCESS" : "KEY_NOT_FOUND");
+            // Step 7: Invalidate cache AFTER transaction commit
+            await InvalidateCacheForTemplateAsync(versionToActivate.Template.Name).ConfigureAwait(false);
 
             return true;
         }
         catch (DbUpdateException ex)
         {
             // Rollback on any error
-            await transaction.RollbackAsync(ct).ConfigureAwait(false);
+            await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
             _logger.LogError(
                 ex,
                 "Database error activating version {VersionId} for template {TemplateId}",
@@ -488,10 +433,106 @@ ANSWER:",
     }
 
     /// <summary>
+    /// Validates activation input parameters.
+    /// </summary>
+    private static void ValidateActivationInputs(Guid templateId, Guid versionId, Guid activatedByUserId)
+    {
+        if (templateId == Guid.Empty)
+        {
+            throw new ArgumentException("Template ID cannot be empty", nameof(templateId));
+        }
+        if (versionId == Guid.Empty)
+        {
+            throw new ArgumentException("Version ID cannot be empty", nameof(versionId));
+        }
+        if (activatedByUserId == Guid.Empty)
+        {
+            throw new ArgumentException("Activated by user ID cannot be empty", nameof(activatedByUserId));
+        }
+    }
+
+    /// <summary>
+    /// Loads user entity for activation audit logging.
+    /// </summary>
+    private async Task<UserEntity> LoadUserForActivationAsync(Guid activatedByUserId, CancellationToken cancellationToken)
+    {
+        // Note: NOT using AsNoTracking because user entity is reused in audit log (needs tracking)
+        var changedByUser = await _dbContext.Set<UserEntity>()
+            .FirstOrDefaultAsync(u => u.Id == activatedByUserId, cancellationToken).ConfigureAwait(false);
+
+        if (changedByUser == null)
+        {
+            _logger.LogWarning("User {UserId} not found for activation", activatedByUserId);
+            throw new InvalidOperationException($"User {activatedByUserId} not found");
+        }
+
+        return changedByUser;
+    }
+
+    /// <summary>
+    /// Deactivates all other versions for the template to ensure single active version.
+    /// </summary>
+    private async Task DeactivateOtherVersionsAsync(Guid templateId, Guid versionId, CancellationToken cancellationToken)
+    {
+        var otherVersions = await _dbContext.Set<PromptVersionEntity>()
+            .Where(v => v.TemplateId == templateId && v.Id != versionId && v.IsActive)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        foreach (var version in otherVersions)
+        {
+            version.IsActive = false;
+            _logger.LogDebug(
+                "Deactivating version {VersionId} (v{VersionNumber})",
+                version.Id, version.VersionNumber);
+        }
+    }
+
+    /// <summary>
+    /// Creates audit log entry for version activation.
+    /// </summary>
+    private void CreateActivationAuditLog(
+        Guid templateId,
+        Guid versionId,
+        Guid activatedByUserId,
+        PromptVersionEntity versionToActivate,
+        UserEntity changedByUser)
+    {
+        var auditLog = new PromptAuditLogEntity
+        {
+            Id = Guid.NewGuid(),
+            TemplateId = templateId,
+            VersionId = versionId,
+            Action = "version_activated",
+            ChangedByUserId = activatedByUserId,
+            ChangedAt = _timeProvider.GetUtcNow().UtcDateTime,
+            Details = $"Activated version {versionToActivate.VersionNumber}",
+            Template = versionToActivate.Template,
+            ChangedBy = changedByUser // EF Core will handle FK relationship
+        };
+
+        _dbContext.Set<PromptAuditLogEntity>().Add(auditLog);
+    }
+
+    /// <summary>
+    /// Invalidates Redis cache for a template after activation.
+    /// </summary>
+    private async Task InvalidateCacheForTemplateAsync(string templateName)
+    {
+        var cacheKey = $"{CacheKeyPrefix}{templateName}:active";
+        var db = _redis.GetDatabase();
+        var deleted = await db.KeyDeleteAsync(cacheKey).ConfigureAwait(false);
+
+        _logger.LogInformation(
+            "Cache invalidation for template {TemplateName} after activation: {Result}",
+            templateName, deleted ? "SUCCESS" : "KEY_NOT_FOUND");
+    }
+
+    /// <summary>
     /// ADMIN-01: Invalidates cache for a specific template
     /// Used for manual cache refresh or debugging
     /// </summary>
-    public async Task InvalidateCacheAsync(string templateName, CancellationToken ct = default)
+    public async Task InvalidateCacheAsync(string templateName, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(templateName))
         {

@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.UserNotifications.Application.Queries;
 /// Query to get notifications for a specific user.
 /// Supports filtering by read status and limiting results.
 /// </summary>
-public record GetNotificationsQuery(
+internal record GetNotificationsQuery(
     Guid UserId,
     bool? UnreadOnly = null,
     int? Limit = 50

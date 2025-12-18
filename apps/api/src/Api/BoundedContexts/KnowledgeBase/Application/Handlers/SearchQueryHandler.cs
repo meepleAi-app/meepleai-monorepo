@@ -13,7 +13,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// Handler for SearchQuery.
 /// Orchestrates vector/hybrid search using domain services.
 /// </summary>
-public class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResultDto>>
+internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResultDto>>
 {
     private readonly IEmbeddingRepository _embeddingRepository;
     private readonly VectorSearchDomainService _vectorSearchService;
@@ -156,7 +156,7 @@ public class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResultDt
             gameId,
             SearchMode.Keyword,
             topK,
-            documentIds, // Issue #2051: Pass document filter
+            documentIds?.ToList(), // Issue #2051: Pass document filter
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         // Map keyword results to domain entities

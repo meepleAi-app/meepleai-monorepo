@@ -3,7 +3,7 @@ namespace Api.Services;
 /// <summary>
 /// Interface for rate limiting service.
 /// </summary>
-public interface IRateLimitService
+internal interface IRateLimitService
 {
     /// <summary>
     /// Check if a request is allowed under the rate limit.
@@ -18,7 +18,7 @@ public interface IRateLimitService
         string key,
         int maxTokens,
         double refillRate,
-        CancellationToken ct = default);
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Get rate limit configuration based on role or defaults.
@@ -26,5 +26,5 @@ public interface IRateLimitService
     /// <param name="role">User role (admin, editor, user, anonymous)</param>
     /// <param name="ct">Cancellation token</param>
     /// <returns>Rate limit configuration for the role</returns>
-    Task<RateLimitConfig> GetConfigForRoleAsync(string? role, CancellationToken ct = default);
+    Task<RateLimitConfig> GetConfigForRoleAsync(string? role, CancellationToken cancellationToken = default);
 }

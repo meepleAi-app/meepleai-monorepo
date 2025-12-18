@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Administration.Infrastructure.Services.Formatters;
 /// PDF report formatter using QuestPDF
 /// ISSUE-917: Professional PDF generation with charts
 /// </summary>
-public sealed class PdfReportFormatter : IReportFormatter
+internal sealed class PdfReportFormatter : IReportFormatter
 {
     private readonly ChartGenerationService _chartService;
 
@@ -181,7 +181,7 @@ public sealed class PdfReportFormatter : IReportFormatter
                     chartData.Series,
                     chartData.YAxisLabel ?? "Value"),
 
-            _ => throw new ArgumentOutOfRangeException(nameof(chartData.Type), chartData.Type, "Unknown chart type")
+            _ => throw new ArgumentOutOfRangeException(nameof(chartData), chartData.Type, "Unknown chart type")
         };
 
         container.Image(chartBytes);

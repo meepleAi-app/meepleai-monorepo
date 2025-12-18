@@ -12,7 +12,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.External.Reranking;
 /// ADR-016 Phase 4: HTTP client for cross-encoder reranking service.
 /// Implements resilient communication with Python reranker service.
 /// </summary>
-public sealed class CrossEncoderRerankerClient : ICrossEncoderReranker
+internal sealed class CrossEncoderRerankerClient : ICrossEncoderReranker
 {
     private readonly HttpClient _httpClient;
     private readonly ILogger<CrossEncoderRerankerClient> _logger;
@@ -42,10 +42,12 @@ public sealed class CrossEncoderRerankerClient : ICrossEncoderReranker
         int? topK = null,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(query);
+        ArgumentNullException.ThrowIfNull(chunks);
         if (string.IsNullOrWhiteSpace(query))
             throw new ArgumentException("Query cannot be empty", nameof(query));
 
-        if (chunks == null || chunks.Count == 0)
+        if (chunks.Count == 0)
         {
             return new RerankResult(
                 Chunks: Array.Empty<RerankedChunk>(),
@@ -54,18 +56,7 @@ public sealed class CrossEncoderRerankerClient : ICrossEncoderReranker
             );
         }
 
-        var request = new RerankRequestDto
-        {
-            Query = query,
-            Chunks = chunks.Select(c => new ChunkDto
-            {
-                Id = c.Id,
-                Content = c.Content,
-                Score = c.OriginalScore,
-                Metadata = c.Metadata ?? new Dictionary<string, object>(StringComparer.Ordinal)
-            }).ToList(),
-            TopK = topK
-        };
+        var request = CreateRerankRequest(query, chunks, topK);
 
         try
         {
@@ -93,17 +84,7 @@ public sealed class CrossEncoderRerankerClient : ICrossEncoderReranker
                 result.ProcessingTimeMs,
                 result.Model);
 
-            return new RerankResult(
-                Chunks: result.Results.Select(r => new RerankedChunk(
-                    Id: r.Id,
-                    Content: r.Content,
-                    OriginalScore: r.OriginalScore,
-                    RerankScore: r.RerankScore,
-                    Metadata: r.Metadata
-                )).ToList(),
-                Model: result.Model,
-                ProcessingTimeMs: result.ProcessingTimeMs
-            );
+            return MapToRerankResult(result);
         }
         catch (HttpRequestException ex)
         {
@@ -112,7 +93,7 @@ public sealed class CrossEncoderRerankerClient : ICrossEncoderReranker
         }
         catch (TaskCanceledException ex) when (ex.CancellationToken != cancellationToken)
         {
-            _logger.LogWarning("Reranker service request timed out after {TimeoutMs}ms", _options.TimeoutMs);
+            _logger.LogWarning(ex, "Reranker service request timed out after {TimeoutMs}ms", _options.TimeoutMs);
             throw new RerankerServiceException($"Reranker service timed out after {_options.TimeoutMs}ms", ex);
         }
         catch (JsonException ex)
@@ -120,6 +101,37 @@ public sealed class CrossEncoderRerankerClient : ICrossEncoderReranker
             _logger.LogError(ex, "Failed to deserialize reranker response");
             throw new RerankerServiceException("Invalid response from reranker service", ex);
         }
+    }
+
+    private static RerankRequestDto CreateRerankRequest(string query, IReadOnlyList<RerankChunk> chunks, int? topK)
+    {
+        return new RerankRequestDto
+        {
+            Query = query,
+            Chunks = chunks.Select(c => new ChunkDto
+            {
+                Id = c.Id,
+                Content = c.Content,
+                Score = c.OriginalScore,
+                Metadata = c.Metadata ?? new Dictionary<string, object>(StringComparer.Ordinal)
+            }).ToList(),
+            TopK = topK
+        };
+    }
+
+    private static RerankResult MapToRerankResult(RerankResponseDto result)
+    {
+        return new RerankResult(
+            Chunks: result.Results.Select(r => new RerankedChunk(
+                Id: r.Id,
+                Content: r.Content,
+                OriginalScore: r.OriginalScore,
+                RerankScore: r.RerankScore,
+                Metadata: r.Metadata
+            )).ToList(),
+            Model: result.Model,
+            ProcessingTimeMs: result.ProcessingTimeMs
+        );
     }
 
     /// <inheritdoc />
@@ -139,7 +151,7 @@ public sealed class CrossEncoderRerankerClient : ICrossEncoderReranker
             }
 
             var health = await response.Content.ReadFromJsonAsync<HealthResponseDto>(JsonOptions, cts.Token).ConfigureAwait(false);
-            var isHealthy = health?.ModelLoaded == true && string.Equals(health.Status, "healthy", StringComparison.Ordinal);
+            var isHealthy = health?.ModelLoaded is true && string.Equals(health.Status, "healthy", StringComparison.Ordinal);
 
             if (!isHealthy)
             {
@@ -174,22 +186,29 @@ public sealed class CrossEncoderRerankerClient : ICrossEncoderReranker
     {
         public List<RerankResultDto> Results { get; set; } = new();
         public string Model { get; set; } = string.Empty;
+#pragma warning disable S3459, S1144 // Assigned via deserialization
         public double ProcessingTimeMs { get; set; }
+#pragma warning restore S3459, S1144
     }
 
     private sealed class RerankResultDto
     {
         public string Id { get; set; } = string.Empty;
         public string Content { get; set; } = string.Empty;
+#pragma warning disable S3459, S1144 // Assigned via deserialization
         public double OriginalScore { get; set; }
         public double RerankScore { get; set; }
+#pragma warning restore S3459, S1144
         public Dictionary<string, object> Metadata { get; set; } = new(StringComparer.Ordinal);
     }
 
     private sealed class HealthResponseDto
     {
         public string Status { get; set; } = string.Empty;
+#pragma warning disable S3459, S1144 // Assigned via deserialization
         public bool ModelLoaded { get; set; }
+#pragma warning restore S3459, S1144
+#pragma warning restore S3459, S1144
         public string ModelName { get; set; } = string.Empty;
         public string Device { get; set; } = string.Empty;
     }
@@ -198,7 +217,7 @@ public sealed class CrossEncoderRerankerClient : ICrossEncoderReranker
 /// <summary>
 /// Configuration options for reranker client.
 /// </summary>
-public sealed class RerankerClientOptions
+internal sealed class RerankerClientOptions
 {
     /// <summary>
     /// Base URL of the reranker service.
@@ -219,4 +238,7 @@ public sealed class RerankerServiceException : Exception
     public RerankerServiceException(string message) : base(message) { }
     public RerankerServiceException(string message, Exception innerException)
         : base(message, innerException) { }
+    public RerankerServiceException()
+    {
+    }
 }

@@ -8,7 +8,7 @@ namespace Api.Services;
 /// Part of AI-14 hybrid search implementation for BM25-style keyword matching.
 /// ADR-016 Phase 3: Supports Italian (meepleai_italian) and English FTS configurations.
 /// </summary>
-public interface IKeywordSearchService
+internal interface IKeywordSearchService
 {
     /// <summary>
     /// Searches text chunks using PostgreSQL full-text search (tsvector + ts_rank_cd).
@@ -21,12 +21,12 @@ public interface IKeywordSearchService
     /// <param name="language">Language code for FTS configuration: "it" → meepleai_italian, "en" → english (default: "it")</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>List of keyword search results with BM25-style relevance scores</returns>
-    Task<IReadOnlyList<KeywordSearchResult>> SearchAsync(
+    Task<List<KeywordSearchResult>> SearchAsync(
         string query,
         Guid gameId,
         int limit = 10,
         bool phraseSearch = false,
-        IReadOnlyList<string>? boostTerms = null,
+        List<string>? boostTerms = null,
         string language = "it",
         CancellationToken cancellationToken = default);
 
@@ -40,7 +40,7 @@ public interface IKeywordSearchService
     /// <param name="language">Language code for FTS configuration: "it" → meepleai_italian, "en" → english (default: "it")</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>List of PDF document search results</returns>
-    Task<IReadOnlyList<KeywordDocumentResult>> SearchDocumentsAsync(
+    Task<List<KeywordDocumentResult>> SearchDocumentsAsync(
         string query,
         Guid gameId,
         int limit = 10,
@@ -51,7 +51,7 @@ public interface IKeywordSearchService
 /// <summary>
 /// Result from keyword search on text chunks with PostgreSQL ts_rank_cd scoring.
 /// </summary>
-public record KeywordSearchResult
+internal record KeywordSearchResult
 {
     public required string ChunkId { get; init; }
     public required string Content { get; init; }
@@ -69,13 +69,13 @@ public record KeywordSearchResult
     /// <summary>
     /// Matched search terms highlighted in the content.
     /// </summary>
-    public IReadOnlyList<string> MatchedTerms { get; init; } = Array.Empty<string>();
+    public List<string> MatchedTerms { get; init; } = new List<string>();
 }
 
 /// <summary>
 /// Result from keyword search on PDF documents.
 /// </summary>
-public record KeywordDocumentResult
+internal record KeywordDocumentResult
 {
     public required string DocumentId { get; init; }
     public required string FileName { get; init; }

@@ -7,12 +7,12 @@ namespace Api.BoundedContexts.Administration.Application.Queries;
 /// Query to get all scheduled reports
 /// ISSUE-916: Report listing
 /// </summary>
-public sealed record GetScheduledReportsQuery : IQuery<IReadOnlyList<ScheduledReportDto>>;
+internal sealed record GetScheduledReportsQuery : IQuery<IReadOnlyList<ScheduledReportDto>>;
 
 /// <summary>
 /// DTO for scheduled report
 /// </summary>
-public sealed record ScheduledReportDto(
+internal sealed record ScheduledReportDto(
     Guid Id,
     string Name,
     string Description,

@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.WorkflowIntegration.Application.Commands.WorkflowE
 /// Infrastructure delegation: Database persistence, cache invalidation via WorkflowErrorLoggingService.
 /// Resilience: Never fails n8n webhook operations (catch-all for telemetry reliability).
 /// </summary>
-public sealed class LogWorkflowErrorCommandHandler : ICommandHandler<LogWorkflowErrorCommand>
+internal sealed class LogWorkflowErrorCommandHandler : ICommandHandler<LogWorkflowErrorCommand>
 {
     private readonly IWorkflowErrorLoggingService _errorLoggingService;
     private readonly ILogger<LogWorkflowErrorCommandHandler> _logger;
@@ -20,12 +20,15 @@ public sealed class LogWorkflowErrorCommandHandler : ICommandHandler<LogWorkflow
         IWorkflowErrorLoggingService errorLoggingService,
         ILogger<LogWorkflowErrorCommandHandler> logger)
     {
-        _errorLoggingService = errorLoggingService ?? throw new ArgumentNullException(nameof(errorLoggingService));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(errorLoggingService);
+        _errorLoggingService = errorLoggingService;
+        ArgumentNullException.ThrowIfNull(logger);
+        _logger = logger;
     }
 
     public async Task Handle(LogWorkflowErrorCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         var executionId = command.ExecutionId;
         if (string.IsNullOrWhiteSpace(executionId))
         {

@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.Administration.Application.Handlers;
 /// Handler for DeleteUserCommand.
 /// Prevents self-deletion and deletion of the last admin.
 /// </summary>
-public class DeleteUserCommandHandler : ICommandHandler<DeleteUserCommand>
+internal class DeleteUserCommandHandler : ICommandHandler<DeleteUserCommand>
 {
     private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -25,6 +25,7 @@ public class DeleteUserCommandHandler : ICommandHandler<DeleteUserCommand>
 
     public async Task Handle(DeleteUserCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         // Prevent self-deletion
         if (string.Equals(command.UserId, command.RequestingUserId, StringComparison.Ordinal))
             throw new DomainException("Cannot delete your own account");

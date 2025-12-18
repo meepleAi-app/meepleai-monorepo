@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 /// <summary>
 /// Value object representing the year a game was published.
 /// </summary>
-public sealed class YearPublished : ValueObject
+internal sealed class YearPublished : ValueObject
 {
     private const int MinYear = 1000; // Historical games support (e.g., Chess 1475, medieval games)
     private static readonly int MaxYear = DateTime.UtcNow.Year + 5; // Allow future releases
@@ -51,5 +51,16 @@ public sealed class YearPublished : ValueObject
 
     public override string ToString() => Value.ToString();
 
-    public static implicit operator int(YearPublished year) => year.Value;
+#pragma warning disable S3877 // Null check is necessary for safety in implicit conversion
+    public static implicit operator int(YearPublished year)
+    {
+        ArgumentNullException.ThrowIfNull(year);
+        return year.Value;
+    }
+#pragma warning restore S3877
+
+    public int ToInt32()
+    {
+        throw new NotSupportedException("Use implicit conversion to int instead");
+    }
 }

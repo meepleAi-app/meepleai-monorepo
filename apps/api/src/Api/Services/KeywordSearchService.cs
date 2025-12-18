@@ -12,7 +12,7 @@ namespace Api.Services;
 /// Part of AI-14 hybrid search implementation.
 /// ADR-016 Phase 3: Supports Italian (meepleai_italian) and English FTS configurations.
 /// </summary>
-public class KeywordSearchService : IKeywordSearchService
+internal class KeywordSearchService : IKeywordSearchService
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly ILogger<KeywordSearchService> _logger;
@@ -26,7 +26,7 @@ public class KeywordSearchService : IKeywordSearchService
     /// <summary>
     /// Mapping of language codes to PostgreSQL text search configurations.
     /// </summary>
-    private static readonly IReadOnlyDictionary<string, string> LanguageToFtsConfig = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+    private static readonly Dictionary<string, string> LanguageToFtsConfig = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
     {
         { "it", "meepleai_italian" },
         { "italian", "meepleai_italian" },
@@ -42,12 +42,12 @@ public class KeywordSearchService : IKeywordSearchService
         _logger = logger;
     }
 
-    public async Task<IReadOnlyList<KeywordSearchResult>> SearchAsync(
+    public async Task<List<KeywordSearchResult>> SearchAsync(
         string query,
         Guid gameId,
         int limit = 10,
         bool phraseSearch = false,
-        IReadOnlyList<string>? boostTerms = null,
+        List<string>? boostTerms = null,
         string language = "it",
         CancellationToken cancellationToken = default)
     {
@@ -56,7 +56,7 @@ public class KeywordSearchService : IKeywordSearchService
         if (queryError != null)
         {
             _logger.LogWarning("Invalid query provided to KeywordSearchService: {Error}", queryError);
-            return Array.Empty<KeywordSearchResult>();
+            return new List<KeywordSearchResult>();
         }
 
         // Security: Cap limit parameter to prevent resource exhaustion
@@ -140,18 +140,14 @@ public class KeywordSearchService : IKeywordSearchService
 #pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
         {
-            // SERVICE BOUNDARY PATTERN: Search service must log all errors before re-throwing
-            // Rationale: This is a service entry point that executes PostgreSQL full-text searches. We catch
-            // all exceptions to add diagnostic logging context (query details) before re-throwing to the caller.
-            // This ensures comprehensive error logging while maintaining exception propagation for proper handling.
-            // Context: PostgreSQL full-text search can fail in various ways (syntax errors, timeout, connection)
-            _logger.LogError(ex, "Error during keyword search for query '{Query}'", query);
-            throw;
+            // S2139: Logging removed. Wrapped for context.
+            // CA1031: We catch all exceptions to ensure comprehensive error handling for the service boundary.
+            throw new InvalidOperationException($"Error during keyword search for query '{query}': {ex.Message}", ex);
         }
 #pragma warning restore CA1031 // Do not catch general exception types
     }
 
-    public async Task<IReadOnlyList<KeywordDocumentResult>> SearchDocumentsAsync(
+    public async Task<List<KeywordDocumentResult>> SearchDocumentsAsync(
         string query,
         Guid gameId,
         int limit = 10,
@@ -163,7 +159,7 @@ public class KeywordSearchService : IKeywordSearchService
         if (queryError != null)
         {
             // Return empty results for invalid queries (maintains existing behavior)
-            return Array.Empty<KeywordDocumentResult>();
+            return new List<KeywordDocumentResult>();
         }
 
         // Security: Cap limit parameter
@@ -222,13 +218,9 @@ public class KeywordSearchService : IKeywordSearchService
 #pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
         {
-            // SERVICE BOUNDARY PATTERN: Search service must log all errors before re-throwing
-            // Rationale: This is a service entry point that executes PostgreSQL document searches. We catch
-            // all exceptions to add diagnostic logging context (query details) before re-throwing to the caller.
-            // This ensures comprehensive error logging while maintaining exception propagation for proper handling.
-            // Context: PostgreSQL full-text search can fail in various ways (syntax errors, timeout, connection)
-            _logger.LogError(ex, "Error during document keyword search for query '{Query}'", query);
-            throw;
+            // S2139: Logging removed. Wrapped for context.
+            // CA1031: We catch all exceptions to ensure comprehensive error handling for the service boundary.
+            throw new InvalidOperationException($"Error during document keyword search for query '{query}': {ex.Message}", ex);
         }
 #pragma warning restore CA1031 // Do not catch general exception types
     }
@@ -242,13 +234,13 @@ public class KeywordSearchService : IKeywordSearchService
     /// - Phrase: "en passant" with phraseSearch=true → "en <-> passant"
     /// - Boost: "check" with boostTerms=["check", "checkmate"] → "check:A | checkmate:A"
     /// </remarks>
-    private string BuildTsQuery(string query, bool phraseSearch, IReadOnlyList<string>? boostTerms)
+    private string BuildTsQuery(string query, bool phraseSearch, List<string>? boostTerms)
     {
         // Sanitize query to prevent SQL injection and tsquery syntax errors
         var sanitizedQuery = SanitizeQuery(query);
 
         // Handle phrase search with proximity operator <->
-        if (phraseSearch && sanitizedQuery.Contains(" "))
+        if (phraseSearch && sanitizedQuery.Contains(' '))
         {
             // Replace spaces with PostgreSQL proximity operator for exact phrase matching
             var words = sanitizedQuery.Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -332,18 +324,18 @@ public class KeywordSearchService : IKeywordSearchService
     /// <summary>
     /// Extracts matched terms from query for frontend highlighting.
     /// </summary>
-    private IReadOnlyList<string> ExtractMatchedTerms(string query, bool phraseSearch)
+    private List<string> ExtractMatchedTerms(string query, bool phraseSearch)
     {
         if (phraseSearch)
         {
-            return new[] { query.Trim('"').Trim() };
+            return new List<string> { query.Trim('"').Trim() };
         }
 
         return query
             .Split(' ', StringSplitOptions.RemoveEmptyEntries)
             .Select(t => t.Trim())
             .Where(t => t.Length > 2)
-            .ToArray();
+            .ToList();
     }
 }
 

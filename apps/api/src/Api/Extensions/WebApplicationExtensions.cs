@@ -6,7 +6,7 @@ using Serilog;
 
 namespace Api.Extensions;
 
-public static class WebApplicationExtensions
+internal static class WebApplicationExtensions
 {
     public static WebApplication ConfigureMiddlewarePipeline(
         this WebApplication app,
@@ -15,6 +15,15 @@ public static class WebApplicationExtensions
         // PERF-11: Enable Response Compression (must be early in pipeline)
         app.UseResponseCompression();
 
+        ConfigureSecurityMiddleware(app, forwardedHeadersEnabled);
+        ConfigureObservabilityMiddleware(app);
+        ConfigureAuthMiddleware(app);
+
+        return app;
+    }
+
+    private static void ConfigureSecurityMiddleware(WebApplication app, bool forwardedHeadersEnabled)
+    {
         // BGAI-081: Cookie Policy (development only - allow SameSite=None without Secure)
         if (app.Environment.IsDevelopment())
         {
@@ -32,7 +41,10 @@ public static class WebApplicationExtensions
 
         // CORS
         app.UseCors("web");
+    }
 
+    private static void ConfigureObservabilityMiddleware(WebApplication app)
+    {
         // OPS-02: OpenTelemetry Prometheus metrics endpoint
         app.MapPrometheusScrapingEndpoint();
 
@@ -68,7 +80,7 @@ public static class WebApplicationExtensions
                 diagnosticContext.Set("UserAgent", httpContext.Request.Headers.UserAgent.ToString());
                 diagnosticContext.Set("RemoteIp", httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown");
 
-                if (httpContext.User.Identity?.IsAuthenticated == true)
+                if (httpContext.User.Identity?.IsAuthenticated is true)
                 {
                     diagnosticContext.Set("UserId", httpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "unknown");
                     diagnosticContext.Set("UserEmail", httpContext.User.FindFirst(ClaimTypes.Email)?.Value ?? "unknown");
@@ -105,7 +117,10 @@ public static class WebApplicationExtensions
 
             await next().ConfigureAwait(false);
         });
+    }
 
+    private static void ConfigureAuthMiddleware(WebApplication app)
+    {
         // AUTH-03: Session cookie authentication (must be before API key and authorization)
         // This middleware reads session cookies and populates HttpContext.Items["ActiveSession"]
         app.UseSessionAuthentication();
@@ -124,8 +139,6 @@ public static class WebApplicationExtensions
 
         // Rate limiting middleware (must be after authorization to read user role from ActiveSession)
         app.UseRoleAwareRateLimiting();
-
-        return app;
     }
 
     public static IServiceCollection AddCorsServices(

@@ -10,7 +10,7 @@ namespace Api.Routing;
 /// HTTP endpoints for report generation and scheduling
 /// ISSUE-916: Admin reporting endpoints
 /// </summary>
-public static class ReportingEndpoints
+internal static class ReportingEndpoints
 {
     public static IEndpointRouteBuilder MapReportingEndpoints(this IEndpointRouteBuilder app)
     {
@@ -19,6 +19,17 @@ public static class ReportingEndpoints
             .RequireAuthorization(policy => policy.RequireRole("Admin")) // ISSUE-916: Admin-only access
             .WithTags("Admin - Reporting");
 
+        MapGenerateReportEndpoint(group);
+        MapScheduleReportEndpoint(group);
+        MapGetScheduledReportsEndpoint(group);
+        MapGetReportExecutionsEndpoint(group);
+        MapUpdateReportScheduleEndpoint(group);
+
+        return app;
+    }
+
+    private static void MapGenerateReportEndpoint(RouteGroupBuilder group)
+    {
         // Generate report on-demand
         group.MapPost("/generate", async (
             [FromBody] GenerateReportRequest request,
@@ -34,7 +45,7 @@ public static class ReportingEndpoints
             {
                 Template = request.Template,
                 Format = request.Format,
-                Parameters = request.Parameters ?? new Dictionary<string, object>()
+                Parameters = request.Parameters ?? new Dictionary<string, object>(StringComparer.Ordinal)
             };
 
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -50,7 +61,10 @@ public static class ReportingEndpoints
         .Produces(StatusCodes.Status200OK, contentType: "application/octet-stream")
         .Produces(StatusCodes.Status400BadRequest)
         .Produces(StatusCodes.Status401Unauthorized);
+    }
 
+    private static void MapScheduleReportEndpoint(RouteGroupBuilder group)
+    {
         // Schedule recurring report
         group.MapPost("/schedule", async (
             [FromBody] ScheduleReportRequest request,
@@ -71,7 +85,7 @@ public static class ReportingEndpoints
                 Description = request.Description,
                 Template = request.Template,
                 Format = request.Format,
-                Parameters = request.Parameters ?? new Dictionary<string, object>(),
+                Parameters = request.Parameters ?? new Dictionary<string, object>(StringComparer.Ordinal),
                 ScheduleExpression = request.ScheduleExpression,
                 CreatedBy = userId,
                 EmailRecipients = request.EmailRecipients // ISSUE-918
@@ -86,7 +100,10 @@ public static class ReportingEndpoints
         .Produces<object>(StatusCodes.Status200OK)
         .Produces(StatusCodes.Status400BadRequest)
         .Produces(StatusCodes.Status401Unauthorized);
+    }
 
+    private static void MapGetScheduledReportsEndpoint(RouteGroupBuilder group)
+    {
         // Get all scheduled reports
         group.MapGet("/scheduled", async (
             HttpContext context,
@@ -105,7 +122,10 @@ public static class ReportingEndpoints
         .WithSummary("Get all scheduled reports")
         .Produces<IReadOnlyList<ScheduledReportDto>>(StatusCodes.Status200OK)
         .Produces(StatusCodes.Status401Unauthorized);
+    }
 
+    private static void MapGetReportExecutionsEndpoint(RouteGroupBuilder group)
+    {
         // Get report executions
         group.MapGet("/executions", async (
             Guid? reportId,
@@ -132,7 +152,10 @@ public static class ReportingEndpoints
         .WithSummary("Get report execution history")
         .Produces<IReadOnlyList<ReportExecutionDto>>(StatusCodes.Status200OK)
         .Produces(StatusCodes.Status401Unauthorized);
+    }
 
+    private static void MapUpdateReportScheduleEndpoint(RouteGroupBuilder group)
+    {
         // Update report schedule
         group.MapPut("/{reportId:guid}/schedule", async (
             Guid reportId,
@@ -162,18 +185,16 @@ public static class ReportingEndpoints
         .Produces<object>(StatusCodes.Status200OK)
         .Produces(StatusCodes.Status404NotFound)
         .Produces(StatusCodes.Status401Unauthorized);
-
-        return app;
     }
 }
 
 // Request DTOs
-public sealed record GenerateReportRequest(
+internal sealed record GenerateReportRequest(
     ReportTemplate Template,
     ReportFormat Format,
     IReadOnlyDictionary<string, object>? Parameters);
 
-public sealed record ScheduleReportRequest(
+internal sealed record ScheduleReportRequest(
     string Name,
     string Description,
     ReportTemplate Template,
@@ -182,6 +203,6 @@ public sealed record ScheduleReportRequest(
     string ScheduleExpression,
     IReadOnlyList<string>? EmailRecipients); // ISSUE-918: Email delivery integration
 
-public sealed record UpdateScheduleRequest(
+internal sealed record UpdateScheduleRequest(
     string? ScheduleExpression,
     bool IsActive);

@@ -8,7 +8,7 @@ namespace Api.Services.Pdf;
 /// <summary>
 /// Custom extraction strategy for positioned text
 /// </summary>
-public sealed class PositionedTextExtractionStrategy : IEventListener
+internal sealed class PositionedTextExtractionStrategy : IEventListener
 {
     private readonly List<PositionedCharacter> _characters = new();
 
@@ -33,9 +33,9 @@ public sealed class PositionedTextExtractionStrategy : IEventListener
                 var baseline = characterInfo.GetBaseline();
                 var startPoint = baseline.GetStartPoint();
                 var endPoint = baseline.GetEndPoint();
-                var x = (float)startPoint.Get(Vector.I1);
-                var y = (float)startPoint.Get(Vector.I2);
-                var width = (float)Math.Abs(endPoint.Get(Vector.I1) - startPoint.Get(Vector.I1));
+                var x = startPoint.Get(Vector.I1);
+                var y = startPoint.Get(Vector.I2);
+                var width = Math.Abs(endPoint.Get(Vector.I1) - startPoint.Get(Vector.I1));
 
                 if (width <= 0)
                 {

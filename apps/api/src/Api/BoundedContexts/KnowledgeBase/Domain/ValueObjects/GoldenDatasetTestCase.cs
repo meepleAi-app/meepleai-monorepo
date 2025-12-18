@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 /// BGAI-059: Quality test implementation for accuracy validation.
 /// Used to validate RAG system accuracy against expected answers, citations, and forbidden keywords.
 /// </summary>
-public record GoldenDatasetTestCase
+internal record GoldenDatasetTestCase
 {
     /// <summary>
     /// Unique identifier for this test case (e.g., "tm_001", "ws_002")
@@ -126,7 +126,7 @@ public record GoldenDatasetTestCase
 /// <summary>
 /// Expected citation for a golden dataset test case
 /// </summary>
-public record ExpectedCitation
+internal record ExpectedCitation
 {
     /// <summary>
     /// Expected page number in the rulebook
@@ -160,7 +160,7 @@ public record ExpectedCitation
 /// <summary>
 /// Result of evaluating a RAG response against a golden dataset test case
 /// </summary>
-public record AccuracyEvaluationResult
+internal record AccuracyEvaluationResult
 {
     /// <summary>
     /// Test case ID being evaluated

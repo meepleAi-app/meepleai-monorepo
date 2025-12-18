@@ -239,7 +239,7 @@ This is required.";
         SetupEmbeddingMock();
 
         _qdrantServiceMock
-            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<IReadOnlyList<string>?>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<List<string>?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new SearchResult
             {
                 Success = true,
@@ -323,7 +323,7 @@ This is required.";
         SetupEmbeddingMock();
 
         _qdrantServiceMock
-            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<IReadOnlyList<string>?>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<List<string>?>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new Exception("Unexpected error"));
 
         // Act
@@ -405,7 +405,7 @@ This is required.";
 
         SetupSuccessfulLlmGeneration();
 
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
 
         // Act
         var events = new List<RagStreamingEvent>();
@@ -694,7 +694,7 @@ Give each player their starting items.";
     private void SetupQdrantMock(string gameId, List<SearchResultItem> results)
     {
         _qdrantServiceMock
-            .Setup(x => x.SearchAsync(gameId, It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<IReadOnlyList<string>?>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.SearchAsync(gameId, It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<List<string>?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new SearchResult
             {
                 Success = true,

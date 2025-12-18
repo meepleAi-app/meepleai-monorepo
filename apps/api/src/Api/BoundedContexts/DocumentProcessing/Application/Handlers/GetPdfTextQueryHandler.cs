@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Handlers;
 /// Retrieves extracted text from PDF document.
 /// NOTE: Uses DbContext directly for ExtractedText field (not in domain entity).
 /// </summary>
-public class GetPdfTextQueryHandler : IQueryHandler<GetPdfTextQuery, PdfTextResult?>
+internal class GetPdfTextQueryHandler : IQueryHandler<GetPdfTextQuery, PdfTextResult?>
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly ILogger<GetPdfTextQueryHandler> _logger;
@@ -25,6 +25,7 @@ public class GetPdfTextQueryHandler : IQueryHandler<GetPdfTextQuery, PdfTextResu
 
     public async Task<PdfTextResult?> Handle(GetPdfTextQuery query, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(query);
         try
         {
             var pdf = await _dbContext.PdfDocuments
@@ -49,10 +50,15 @@ public class GetPdfTextQueryHandler : IQueryHandler<GetPdfTextQuery, PdfTextResu
 
             return pdf;
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: QUERY HANDLER PATTERN - CQRS query boundary
+        // Generic catch handles unexpected infrastructure failures (DB, network)
+        // to prevent exception propagation to API layer. Returns null on failure.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving PDF text for {PdfId}", query.PdfId);
             return null;
         }
+#pragma warning restore CA1031
     }
 }

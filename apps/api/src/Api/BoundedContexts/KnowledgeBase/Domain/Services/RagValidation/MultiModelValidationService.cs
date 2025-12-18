@@ -22,7 +22,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
 /// - Calculates cosine similarity: (A · B) / (||A|| * ||B||)
 /// - Threshold: ≥0.90 for consensus (>95% accuracy target)
 /// </remarks>
-public class MultiModelValidationService : IMultiModelValidationService
+internal class MultiModelValidationService : IMultiModelValidationService
 {
     private readonly ILlmClient _openRouterClient;
     private readonly ILogger<MultiModelValidationService> _logger;

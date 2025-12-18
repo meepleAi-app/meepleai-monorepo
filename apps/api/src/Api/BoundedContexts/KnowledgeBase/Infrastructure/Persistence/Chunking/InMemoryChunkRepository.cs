@@ -15,7 +15,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence.Chunking;
 /// <para>This is acceptable for Phase 1 (development/testing) but the EF Core implementation
 /// in Phase 2 will use proper scoped lifetime with database-level concurrency control.</para>
 /// </remarks>
-public sealed class InMemoryChunkRepository : IChunkRepository
+internal sealed class InMemoryChunkRepository : IChunkRepository
 {
     private readonly ConcurrentDictionary<string, HierarchicalChunk> _chunks = new(StringComparer.Ordinal);
     private readonly ILogger<InMemoryChunkRepository> _logger;
@@ -26,18 +26,18 @@ public sealed class InMemoryChunkRepository : IChunkRepository
     }
 
     /// <inheritdoc />
-    public Task<HierarchicalChunk?> GetByIdAsync(string id, CancellationToken ct = default)
+    public Task<HierarchicalChunk?> GetByIdAsync(string id, CancellationToken cancellationToken = default)
     {
-        ct.ThrowIfCancellationRequested();
+        cancellationToken.ThrowIfCancellationRequested();
 
         _chunks.TryGetValue(id, out var chunk);
         return Task.FromResult(chunk);
     }
 
     /// <inheritdoc />
-    public Task<List<HierarchicalChunk>> GetByIdsAsync(IEnumerable<string> ids, CancellationToken ct = default)
+    public Task<List<HierarchicalChunk>> GetByIdsAsync(IEnumerable<string> ids, CancellationToken cancellationToken = default)
     {
-        ct.ThrowIfCancellationRequested();
+        cancellationToken.ThrowIfCancellationRequested();
 
         // Thread-safe: Use TryGetValue to avoid race condition between ContainsKey and indexer
         var result = new List<HierarchicalChunk>();
@@ -53,9 +53,9 @@ public sealed class InMemoryChunkRepository : IChunkRepository
     }
 
     /// <inheritdoc />
-    public Task<List<HierarchicalChunk>> GetChildrenAsync(string parentId, CancellationToken ct = default)
+    public Task<List<HierarchicalChunk>> GetChildrenAsync(string parentId, CancellationToken cancellationToken = default)
     {
-        ct.ThrowIfCancellationRequested();
+        cancellationToken.ThrowIfCancellationRequested();
 
         var children = _chunks.Values
             .Where(c => string.Equals(c.ParentId, parentId, StringComparison.Ordinal))
@@ -65,9 +65,9 @@ public sealed class InMemoryChunkRepository : IChunkRepository
     }
 
     /// <inheritdoc />
-    public Task<HierarchicalChunk?> GetParentAsync(string childId, CancellationToken ct = default)
+    public Task<HierarchicalChunk?> GetParentAsync(string childId, CancellationToken cancellationToken = default)
     {
-        ct.ThrowIfCancellationRequested();
+        cancellationToken.ThrowIfCancellationRequested();
 
         if (!_chunks.TryGetValue(childId, out var childChunk))
             return Task.FromResult<HierarchicalChunk?>(null);
@@ -80,9 +80,9 @@ public sealed class InMemoryChunkRepository : IChunkRepository
     }
 
     /// <inheritdoc />
-    public Task SaveAsync(HierarchicalChunk chunk, CancellationToken ct = default)
+    public Task SaveAsync(HierarchicalChunk chunk, CancellationToken cancellationToken = default)
     {
-        ct.ThrowIfCancellationRequested();
+        cancellationToken.ThrowIfCancellationRequested();
 
         _chunks[chunk.Id] = chunk;
         _logger.LogDebug("Saved chunk {ChunkId}", chunk.Id);
@@ -91,9 +91,9 @@ public sealed class InMemoryChunkRepository : IChunkRepository
     }
 
     /// <inheritdoc />
-    public Task SaveBatchAsync(List<HierarchicalChunk> chunks, CancellationToken ct = default)
+    public Task SaveBatchAsync(List<HierarchicalChunk> chunks, CancellationToken cancellationToken = default)
     {
-        ct.ThrowIfCancellationRequested();
+        cancellationToken.ThrowIfCancellationRequested();
 
         foreach (var chunk in chunks)
         {
@@ -106,9 +106,9 @@ public sealed class InMemoryChunkRepository : IChunkRepository
     }
 
     /// <inheritdoc />
-    public Task DeleteByDocumentIdAsync(Guid documentId, CancellationToken ct = default)
+    public Task DeleteByDocumentIdAsync(Guid documentId, CancellationToken cancellationToken = default)
     {
-        ct.ThrowIfCancellationRequested();
+        cancellationToken.ThrowIfCancellationRequested();
 
         var chunksToRemove = _chunks.Values
             .Where(c => c.Metadata.DocumentId == documentId)
@@ -126,9 +126,9 @@ public sealed class InMemoryChunkRepository : IChunkRepository
     }
 
     /// <inheritdoc />
-    public Task<List<HierarchicalChunk>> GetByDocumentIdAsync(Guid documentId, CancellationToken ct = default)
+    public Task<List<HierarchicalChunk>> GetByDocumentIdAsync(Guid documentId, CancellationToken cancellationToken = default)
     {
-        ct.ThrowIfCancellationRequested();
+        cancellationToken.ThrowIfCancellationRequested();
 
         var chunks = _chunks.Values
             .Where(c => c.Metadata.DocumentId == documentId)
@@ -147,3 +147,4 @@ public sealed class InMemoryChunkRepository : IChunkRepository
     /// </summary>
     public void Clear() => _chunks.Clear();
 }
+

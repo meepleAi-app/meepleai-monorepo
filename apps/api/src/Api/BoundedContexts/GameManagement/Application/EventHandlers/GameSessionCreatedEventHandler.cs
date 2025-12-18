@@ -5,11 +5,11 @@ using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.GameManagement.Application.EventHandlers;
 
-public sealed class GameSessionCreatedEventHandler : DomainEventHandlerBase<GameSessionCreatedEvent>
+internal sealed class GameSessionCreatedEventHandler : DomainEventHandlerBase<GameSessionCreatedEvent>
 {
     public GameSessionCreatedEventHandler(
         MeepleAiDbContext dbContext,
-        ILogger<DomainEventHandlerBase<GameSessionCreatedEvent>> logger)
+        ILogger<GameSessionCreatedEventHandler> logger)
         : base(dbContext, logger)
     {
     }

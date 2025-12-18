@@ -4,7 +4,7 @@ namespace Api.Constants;
 /// Centralized text chunking constants to eliminate magic numbers.
 /// Used for RAG (Retrieval-Augmented Generation) text processing.
 /// </summary>
-public static class ChunkingConstants
+internal static class ChunkingConstants
 {
     /// <summary>
     /// Default chunk size in characters (512).

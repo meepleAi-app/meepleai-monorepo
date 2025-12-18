@@ -5,11 +5,11 @@ using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.EventHandlers;
 
-public sealed class VectorDocumentMetadataUpdatedEventHandler : DomainEventHandlerBase<VectorDocumentMetadataUpdatedEvent>
+internal sealed class VectorDocumentMetadataUpdatedEventHandler : DomainEventHandlerBase<VectorDocumentMetadataUpdatedEvent>
 {
     public VectorDocumentMetadataUpdatedEventHandler(
         MeepleAiDbContext dbContext,
-        ILogger<DomainEventHandlerBase<VectorDocumentMetadataUpdatedEvent>> logger)
+        ILogger<VectorDocumentMetadataUpdatedEventHandler> logger)
         : base(dbContext, logger)
     {
     }

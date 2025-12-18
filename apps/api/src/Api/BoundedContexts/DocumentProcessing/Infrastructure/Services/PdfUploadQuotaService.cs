@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
 /// Redis-based implementation of PDF upload quota service.
 /// Tracks daily and weekly upload counts with automatic TTL-based reset.
 /// </summary>
-public class PdfUploadQuotaService : IPdfUploadQuotaService
+internal class PdfUploadQuotaService : IPdfUploadQuotaService
 {
     /// <summary>
     /// Default upload quotas for each tier.
@@ -41,9 +41,12 @@ public class PdfUploadQuotaService : IPdfUploadQuotaService
         ILogger<PdfUploadQuotaService> logger,
         TimeProvider? timeProvider = null)
     {
-        _redis = redis ?? throw new ArgumentNullException(nameof(redis));
-        _configService = configService ?? throw new ArgumentNullException(nameof(configService));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(redis);
+        _redis = redis;
+        ArgumentNullException.ThrowIfNull(configService);
+        _configService = configService;
+        ArgumentNullException.ThrowIfNull(logger);
+        _logger = logger;
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
@@ -51,7 +54,7 @@ public class PdfUploadQuotaService : IPdfUploadQuotaService
         Guid userId,
         UserTier userTier,
         AuthRole userRole,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         // Admin and Editor bypass quota checks (unlimited)
         if (userRole.IsAdmin() || userRole.IsEditor())
@@ -61,8 +64,8 @@ public class PdfUploadQuotaService : IPdfUploadQuotaService
 
         try
         {
-            var (dailyLimit, weeklyLimit) = await GetLimitsForTierAsync(userTier, ct).ConfigureAwait(false);
-            var (dailyUsed, weeklyUsed) = await GetUsageAsync(userId, ct).ConfigureAwait(false);
+            var (dailyLimit, weeklyLimit) = await GetLimitsForTierAsync(userTier).ConfigureAwait(false);
+            var (dailyUsed, weeklyUsed) = await GetUsageAsync(userId).ConfigureAwait(false);
 
             var now = _timeProvider.GetUtcNow().UtcDateTime;
             var dailyReset = GetNextDailyReset(now);
@@ -104,15 +107,21 @@ public class PdfUploadQuotaService : IPdfUploadQuotaService
                 dailyReset,
                 weeklyReset);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: FAIL-OPEN PATTERN - Infrastructure resilience for quota enforcement
+        // Catches all Redis/network failures during quota check. Fails open (allows upload)
+        // to prioritize availability over quota enforcement. Without this, Redis downtime
+        // would block all uploads. Logs error for monitoring.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error checking PDF upload quota for user {UserId}", userId);
             // Fail-open: allow upload if quota check fails (prioritize availability)
             return PdfUploadQuotaResult.Success(0, int.MaxValue, 0, int.MaxValue, DateTime.MaxValue, DateTime.MaxValue);
         }
+#pragma warning restore CA1031
     }
 
-    public async Task IncrementUploadCountAsync(Guid userId, CancellationToken ct = default)
+    public async Task IncrementUploadCountAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -145,18 +154,25 @@ public class PdfUploadQuotaService : IPdfUploadQuotaService
 
             _logger.LogDebug("Incremented PDF upload count for user {UserId}", userId);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: NON-CRITICAL OPERATION PATTERN - Usage tracking failure tolerance
+        // Catches all Redis failures during upload count increment. This is pure tracking/analytics;
+        // failure doesn't impact upload functionality. Logs warning for monitoring but swallows
+        // exception to avoid disrupting main upload flow. Fail-safe for non-critical operations.
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to increment upload count for user {UserId}", userId);
             // Non-critical error, continue without throwing
         }
+#pragma warning restore CA1031
     }
 
     public async Task<QuotaReservationResult> ReserveQuotaAsync(
         Guid userId,
         string pdfId,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(pdfId);
         try
         {
             var db = _redis.GetDatabase();
@@ -174,7 +190,7 @@ public class PdfUploadQuotaService : IPdfUploadQuotaService
 
             var ttl = TimeSpan.FromMinutes(30);
             await db.StringSetAsync(reservationKey, reservationData, ttl).ConfigureAwait(false);
-            await IncrementUploadCountAsync(userId, ct).ConfigureAwait(false);
+            await IncrementUploadCountAsync(userId, cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Quota reserved for user {UserId}, PDF {PdfId}, expires at {ExpiresAt}",
@@ -182,15 +198,22 @@ public class PdfUploadQuotaService : IPdfUploadQuotaService
 
             return QuotaReservationResult.Success(expiresAt);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: INFRASTRUCTURE SERVICE PATTERN - Graceful degradation on Redis failure
+        // Catches all Redis/network failures during quota reservation. Returns failure result
+        // instead of throwing to allow caller to handle gracefully (e.g., retry, fallback).
+        // Logs error for monitoring. Prevents infrastructure failures from propagating.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to reserve quota for user {UserId}, PDF {PdfId}", userId, pdfId);
             return QuotaReservationResult.Failed($"Failed to reserve quota: {ex.Message}");
         }
+#pragma warning restore CA1031
     }
 
-    public async Task ConfirmQuotaAsync(Guid userId, string pdfId, CancellationToken ct = default)
+    public async Task ConfirmQuotaAsync(Guid userId, string pdfId, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(pdfId);
         try
         {
             var db = _redis.GetDatabase();
@@ -211,14 +234,21 @@ public class PdfUploadQuotaService : IPdfUploadQuotaService
                 "Quota confirmed for user {UserId}, PDF {PdfId}",
                 userId, pdfId);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: NON-CRITICAL OPERATION PATTERN - Reservation cleanup failure tolerance
+        // Catches all Redis failures during quota confirmation (reservation cleanup).
+        // Cleanup failure is non-critical; logs warning but doesn't throw. Reservations
+        // auto-expire via TTL anyway. Fail-safe for cleanup operations.
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to confirm quota for user {UserId}, PDF {PdfId}", userId, pdfId);
         }
+#pragma warning restore CA1031
     }
 
-    public async Task ReleaseQuotaAsync(Guid userId, string pdfId, CancellationToken ct = default)
+    public async Task ReleaseQuotaAsync(Guid userId, string pdfId, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(pdfId);
         try
         {
             var db = _redis.GetDatabase();
@@ -233,20 +263,26 @@ public class PdfUploadQuotaService : IPdfUploadQuotaService
                 return;
             }
 
-            await DecrementUploadCountAsync(userId, ct).ConfigureAwait(false);
+            await DecrementUploadCountAsync(userId).ConfigureAwait(false);
             await db.KeyDeleteAsync(reservationKey).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Quota released for user {UserId}, PDF {PdfId}",
                 userId, pdfId);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: NON-CRITICAL OPERATION PATTERN - Quota release failure tolerance
+        // Catches all Redis failures during quota release (decrement + cleanup).
+        // Release failure is non-critical; logs warning but doesn't throw. Quotas reset
+        // automatically via TTL. Fail-safe for cleanup operations.
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to release quota for user {UserId}, PDF {PdfId}", userId, pdfId);
         }
+#pragma warning restore CA1031
     }
 
-    private async Task DecrementUploadCountAsync(Guid userId, CancellationToken _ = default)
+    private async Task DecrementUploadCountAsync(Guid userId)
     {
         try
         {
@@ -274,18 +310,25 @@ public class PdfUploadQuotaService : IPdfUploadQuotaService
 
             _logger.LogDebug("Decremented PDF upload count for user {UserId}", userId);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: NON-CRITICAL OPERATION PATTERN - Usage tracking decrement failure tolerance
+        // Catches all Redis failures during upload count decrement. This is tracking/analytics only;
+        // failure doesn't impact functionality. Logs warning but swallows exception.
+        // Fail-safe for non-critical operations.
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to decrement upload count for user {UserId}", userId);
         }
+#pragma warning restore CA1031
     }
 
     public async Task<PdfUploadQuotaInfo> GetQuotaInfoAsync(
         Guid userId,
         UserTier userTier,
         AuthRole userRole,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(userTier);
         // Admin and Editor have unlimited quota
         if (userRole.IsAdmin() || userRole.IsEditor())
         {
@@ -305,8 +348,8 @@ public class PdfUploadQuotaService : IPdfUploadQuotaService
 
         try
         {
-            var (dailyLimit, weeklyLimit) = await GetLimitsForTierAsync(userTier, ct).ConfigureAwait(false);
-            var (dailyUsed, weeklyUsed) = await GetUsageAsync(userId, ct).ConfigureAwait(false);
+            var (dailyLimit, weeklyLimit) = await GetLimitsForTierAsync(userTier).ConfigureAwait(false);
+            var (dailyUsed, weeklyUsed) = await GetUsageAsync(userId).ConfigureAwait(false);
 
             var currentTime = _timeProvider.GetUtcNow().UtcDateTime;
             var dailyReset = GetNextDailyReset(currentTime);
@@ -334,7 +377,7 @@ public class PdfUploadQuotaService : IPdfUploadQuotaService
         }
 #pragma warning restore S2139
     }
-    private async Task<(int dailyLimit, int weeklyLimit)> GetLimitsForTierAsync(UserTier tier, CancellationToken _ = default)
+    private async Task<(int dailyLimit, int weeklyLimit)> GetLimitsForTierAsync(UserTier tier)
     {
         var tierValue = tier.Value;
         var dailyKey = $"UploadLimits:{tierValue}:DailyLimit";
@@ -353,7 +396,7 @@ public class PdfUploadQuotaService : IPdfUploadQuotaService
         );
     }
 
-    private async Task<(int dailyUsed, int weeklyUsed)> GetUsageAsync(Guid userId, CancellationToken _ = default)
+    private async Task<(int dailyUsed, int weeklyUsed)> GetUsageAsync(Guid userId)
     {
         var db = _redis.GetDatabase();
         var now = _timeProvider.GetUtcNow().UtcDateTime;
@@ -445,3 +488,4 @@ public class PdfUploadQuotaService : IPdfUploadQuotaService
         return now.Date.AddDays(daysUntilMonday);
     }
 }
+

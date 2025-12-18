@@ -7,13 +7,14 @@ namespace Api.Helpers;
 /// Wraps IConfiguration to enable testing with extension methods.
 /// Solves TEST-900 RC-1: Moq cannot mock extension methods.
 /// </summary>
-public class ConfigurationWrapper : IConfigurationWrapper
+internal class ConfigurationWrapper : IConfigurationWrapper
 {
     private readonly IConfiguration _configuration;
 
     public ConfigurationWrapper(IConfiguration configuration)
     {
-        _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+        ArgumentNullException.ThrowIfNull(configuration);
+        _configuration = configuration;
     }
 
     /// <inheritdoc />

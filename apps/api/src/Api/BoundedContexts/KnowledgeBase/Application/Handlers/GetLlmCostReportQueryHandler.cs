@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// Handler for GetLlmCostReportQuery
 /// ISSUE-960: BGAI-018 - Cost reporting handler
 /// </summary>
-public class GetLlmCostReportQueryHandler : IRequestHandler<GetLlmCostReportQuery, LlmCostReportDto>
+internal class GetLlmCostReportQueryHandler : IRequestHandler<GetLlmCostReportQuery, LlmCostReportDto>
 {
     private readonly ILlmCostLogRepository _costLogRepository;
     private readonly ILogger<GetLlmCostReportQueryHandler> _logger;
@@ -24,26 +24,27 @@ public class GetLlmCostReportQueryHandler : IRequestHandler<GetLlmCostReportQuer
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public async Task<LlmCostReportDto> Handle(GetLlmCostReportQuery request, CancellationToken ct)
+    public async Task<LlmCostReportDto> Handle(GetLlmCostReportQuery request, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         _logger.LogInformation(
             "Generating LLM cost report for {StartDate} to {EndDate} (UserId: {UserId})",
             request.StartDate, request.EndDate, request.UserId);
 
         // Get total cost
         var totalCost = request.UserId.HasValue
-            ? await _costLogRepository.GetUserCostAsync(request.UserId.Value, request.StartDate, request.EndDate, ct)
-.ConfigureAwait(false) : await _costLogRepository.GetTotalCostAsync(request.StartDate, request.EndDate, ct).ConfigureAwait(false);
+            ? await _costLogRepository.GetUserCostAsync(request.UserId.Value, request.StartDate, request.EndDate, cancellationToken)
+.ConfigureAwait(false) : await _costLogRepository.GetTotalCostAsync(request.StartDate, request.EndDate, cancellationToken).ConfigureAwait(false);
 
         // Get costs by provider
-        var costsByProvider = await _costLogRepository.GetCostsByProviderAsync(request.StartDate, request.EndDate, ct).ConfigureAwait(false);
+        var costsByProvider = await _costLogRepository.GetCostsByProviderAsync(request.StartDate, request.EndDate, cancellationToken).ConfigureAwait(false);
 
         // Get costs by role
-        var costsByRole = await _costLogRepository.GetCostsByRoleAsync(request.StartDate, request.EndDate, ct).ConfigureAwait(false);
+        var costsByRole = await _costLogRepository.GetCostsByRoleAsync(request.StartDate, request.EndDate, cancellationToken).ConfigureAwait(false);
 
         // Get today's cost for threshold check
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
-        var dailyCost = await _costLogRepository.GetDailyCostAsync(today, ct).ConfigureAwait(false);
+        var dailyCost = await _costLogRepository.GetDailyCostAsync(today, cancellationToken).ConfigureAwait(false);
         var exceedsThreshold = dailyCost > DailyAlertThreshold;
 
         if (exceedsThreshold)
@@ -72,3 +73,4 @@ public class GetLlmCostReportQueryHandler : IRequestHandler<GetLlmCostReportQuer
         return report;
     }
 }
+

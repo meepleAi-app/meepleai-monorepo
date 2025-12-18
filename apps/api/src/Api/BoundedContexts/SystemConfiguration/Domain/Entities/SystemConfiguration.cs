@@ -7,6 +7,7 @@ namespace Api.BoundedContexts.SystemConfiguration.Domain.Entities;
 
 /// <summary>
 /// SystemConfiguration aggregate root representing a system configuration entry.
+/// Made public to enable Moq proxy generation for IConfigurationRepository in tests (Issue #2188).
 /// </summary>
 public sealed class SystemConfiguration : AggregateRoot<Guid>
 {

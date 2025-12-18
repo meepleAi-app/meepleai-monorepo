@@ -9,11 +9,11 @@ namespace Api.BoundedContexts.Authentication.Application.EventHandlers;
 /// Handles the OAuthAccountLinkedEvent domain event.
 /// Creates audit log entry automatically via base class.
 /// </summary>
-public sealed class OAuthAccountLinkedEventHandler : DomainEventHandlerBase<OAuthAccountLinkedEvent>
+internal sealed class OAuthAccountLinkedEventHandler : DomainEventHandlerBase<OAuthAccountLinkedEvent>
 {
     public OAuthAccountLinkedEventHandler(
         MeepleAiDbContext dbContext,
-        ILogger<DomainEventHandlerBase<OAuthAccountLinkedEvent>> logger)
+        ILogger<OAuthAccountLinkedEventHandler> logger)
         : base(dbContext, logger)
     {
     }

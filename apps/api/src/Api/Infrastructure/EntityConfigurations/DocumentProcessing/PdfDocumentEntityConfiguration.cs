@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Api.Infrastructure.EntityConfigurations;
 
-public class PdfDocumentEntityConfiguration : IEntityTypeConfiguration<PdfDocumentEntity>
+internal class PdfDocumentEntityConfiguration : IEntityTypeConfiguration<PdfDocumentEntity>
 {
     public void Configure(EntityTypeBuilder<PdfDocumentEntity> builder)
     {

@@ -8,7 +8,7 @@ namespace Api.Services.Rag;
 /// <summary>
 /// Validates citation references in RAG responses
 /// </summary>
-public class CitationExtractorService : ICitationExtractorService
+internal class CitationExtractorService : ICitationExtractorService
 {
     private readonly ILogger<CitationExtractorService> _logger;
 
@@ -34,14 +34,11 @@ public class CitationExtractorService : ICitationExtractorService
 
         foreach (Match match in matches)
         {
-            if (int.TryParse(match.Groups[1].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int index))
+            if (int.TryParse(match.Groups[1].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int index) &&
+                (index < 1 || index > snippets.Count))
             {
-                // Citations are 1-indexed
-                if (index < 1 || index > snippets.Count)
-                {
-                    _logger.LogWarning("Invalid citation index: {Index} (max: {MaxIndex})", index, snippets.Count);
-                    allValid = false;
-                }
+                _logger.LogWarning("Invalid citation index: {Index} (max: {MaxIndex})", index, snippets.Count);
+                allValid = false;
             }
         }
 

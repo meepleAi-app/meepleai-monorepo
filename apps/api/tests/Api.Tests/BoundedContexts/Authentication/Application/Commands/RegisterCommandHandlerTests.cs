@@ -20,7 +20,6 @@ public class RegisterCommandHandlerTests
     private readonly Mock<IUserRepository> _userRepositoryMock;
     private readonly Mock<ISessionRepository> _sessionRepositoryMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
-    private readonly TimeProvider _timeProvider;
     private readonly RegisterCommandHandler _handler;
 
     public RegisterCommandHandlerTests()
@@ -28,7 +27,6 @@ public class RegisterCommandHandlerTests
         _userRepositoryMock = new Mock<IUserRepository>();
         _sessionRepositoryMock = new Mock<ISessionRepository>();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
-        _timeProvider = TimeProvider.System;
 
         _handler = new RegisterCommandHandler(
             _userRepositoryMock.Object,
@@ -676,7 +674,7 @@ public class RegisterCommandHandlerTests
             UserAgent: "TestAgent"
         );
 
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         var token = cts.Token;
 
         _userRepositoryMock

@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 /// DTO for DocumentCollection with list of documents.
 /// Issue #2051: Multi-document collection response
 /// </summary>
-public record DocumentCollectionDto(
+internal record DocumentCollectionDto(
     Guid Id,
     Guid GameId,
     string Name,
@@ -22,7 +22,7 @@ public record DocumentCollectionDto(
 /// <summary>
 /// DTO for a document within a collection.
 /// </summary>
-public record CollectionDocumentDto(
+internal record CollectionDocumentDto(
     Guid PdfDocumentId,
     string DocumentType,
     int SortOrder,

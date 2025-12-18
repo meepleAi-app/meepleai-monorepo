@@ -9,11 +9,11 @@ namespace Api.BoundedContexts.Authentication.Application.EventHandlers;
 /// Handles the RoleChangedEvent domain event.
 /// Creates audit log entry automatically via base class.
 /// </summary>
-public sealed class RoleChangedEventHandler : DomainEventHandlerBase<RoleChangedEvent>
+internal sealed class RoleChangedEventHandler : DomainEventHandlerBase<RoleChangedEvent>
 {
     public RoleChangedEventHandler(
         MeepleAiDbContext dbContext,
-        ILogger<DomainEventHandlerBase<RoleChangedEvent>> logger)
+        ILogger<RoleChangedEventHandler> logger)
         : base(dbContext, logger)
     {
     }

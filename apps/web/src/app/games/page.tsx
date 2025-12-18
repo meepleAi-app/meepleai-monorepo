@@ -17,11 +17,13 @@
  * @see Issue #1838 PAGE-003
  */
 
+import { Button } from '@/components/ui/button';
 import { Metadata } from 'next';
-import { ViewToggle } from './components/ViewToggle';
-import { SearchBar } from './components/SearchBar';
+import Link from 'next/link';
 import { GameGrid } from './components/GameGrid';
 import { Pagination } from './components/Pagination';
+import { SearchBar } from './components/SearchBar';
+import { ViewToggle } from './components/ViewToggle';
 
 // API base URL
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
@@ -132,11 +134,17 @@ export default async function GamesPage({ searchParams }: { searchParams: Promis
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="font-heading text-3xl md:text-4xl font-bold mb-2">Catalogo Giochi</h1>
-        <p className="text-muted-foreground">
-          Esplora {total} giochi da tavolo. Cerca, filtra e scopri le regole.
-        </p>
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+        <div>
+          <h1 className="font-heading text-3xl md:text-4xl font-bold mb-2">Catalogo Giochi</h1>
+          <p className="text-muted-foreground">
+            Esplora {total} giochi da tavolo. Cerca, filtra e scopri le regole.
+          </p>
+        </div>
+        <Link href="/games/add">
+          <Button>Aggiungi Gioco</Button>
+        </Link>
       </div>
 
       {/* Toolbar: Search + View Toggle */}

@@ -6,7 +6,7 @@ namespace Api.Tests.BoundedContexts.Authentication.TestHelpers;
 /// Fluent builder for creating test OAuthAccount entities.
 /// Provides convenient methods for constructing OAuth accounts with various configurations.
 /// </summary>
-public class OAuthAccountBuilder
+internal class OAuthAccountBuilder
 {
     private Guid _id = Guid.NewGuid();
     private Guid _userId = Guid.NewGuid();

@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Administration.Infrastructure.Scheduling;
 /// Quartz.NET implementation of IReportSchedulerService
 /// ISSUE-916: Background job scheduling with Quartz
 /// </summary>
-public sealed class QuartzReportSchedulerService : IReportSchedulerService
+internal sealed class QuartzReportSchedulerService : IReportSchedulerService
 {
     private readonly ISchedulerFactory _schedulerFactory;
     private readonly ILogger<QuartzReportSchedulerService> _logger;
@@ -21,7 +21,7 @@ public sealed class QuartzReportSchedulerService : IReportSchedulerService
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public async Task ScheduleReportAsync(AdminReport report, CancellationToken ct = default)
+    public async Task ScheduleReportAsync(AdminReport report, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(report.ScheduleExpression))
         {
@@ -32,7 +32,7 @@ public sealed class QuartzReportSchedulerService : IReportSchedulerService
             "Scheduling report: ReportId={ReportId}, Schedule={Schedule}",
             report.Id, report.ScheduleExpression);
 
-        var scheduler = await _schedulerFactory.GetScheduler(ct).ConfigureAwait(false);
+        var scheduler = await _schedulerFactory.GetScheduler(cancellationToken).ConfigureAwait(false);
 
         // Create job
         var jobKey = new JobKey($"report-{report.Id}", "reports");
@@ -53,21 +53,21 @@ public sealed class QuartzReportSchedulerService : IReportSchedulerService
             .Build();
 
         // Schedule the job
-        await scheduler.ScheduleJob(job, trigger, ct).ConfigureAwait(false);
+        await scheduler.ScheduleJob(job, trigger, cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Report scheduled successfully: JobKey={JobKey}",
             jobKey);
     }
 
-    public async Task UnscheduleReportAsync(Guid reportId, CancellationToken ct = default)
+    public async Task UnscheduleReportAsync(Guid reportId, CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Unscheduling report: ReportId={ReportId}", reportId);
 
-        var scheduler = await _schedulerFactory.GetScheduler(ct).ConfigureAwait(false);
+        var scheduler = await _schedulerFactory.GetScheduler(cancellationToken).ConfigureAwait(false);
         var jobKey = new JobKey($"report-{reportId}", "reports");
 
-        var deleted = await scheduler.DeleteJob(jobKey, ct).ConfigureAwait(false);
+        var deleted = await scheduler.DeleteJob(jobKey, cancellationToken).ConfigureAwait(false);
 
         if (deleted)
         {
@@ -79,22 +79,22 @@ public sealed class QuartzReportSchedulerService : IReportSchedulerService
         }
     }
 
-    public async Task TriggerReportAsync(Guid reportId, CancellationToken ct = default)
+    public async Task TriggerReportAsync(Guid reportId, CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Triggering immediate report execution: ReportId={ReportId}", reportId);
 
-        var scheduler = await _schedulerFactory.GetScheduler(ct).ConfigureAwait(false);
+        var scheduler = await _schedulerFactory.GetScheduler(cancellationToken).ConfigureAwait(false);
         var jobKey = new JobKey($"report-{reportId}", "reports");
 
-        await scheduler.TriggerJob(jobKey, ct).ConfigureAwait(false);
+        await scheduler.TriggerJob(jobKey, cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation("Report triggered: JobKey={JobKey}", jobKey);
     }
 
-    public async Task<SchedulerStatus> GetStatusAsync(CancellationToken ct = default)
+    public async Task<SchedulerStatus> GetStatusAsync(CancellationToken cancellationToken = default)
     {
-        var scheduler = await _schedulerFactory.GetScheduler(ct).ConfigureAwait(false);
-        var metadata = await scheduler.GetMetaData(ct).ConfigureAwait(false);
+        var scheduler = await _schedulerFactory.GetScheduler(cancellationToken).ConfigureAwait(false);
+        var metadata = await scheduler.GetMetaData(cancellationToken).ConfigureAwait(false);
 
         return new SchedulerStatus(
             IsRunning: metadata.Started,
@@ -103,3 +103,4 @@ public sealed class QuartzReportSchedulerService : IReportSchedulerService
             TotalExecutions: metadata.NumberOfJobsExecuted);
     }
 }
+

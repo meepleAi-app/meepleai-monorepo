@@ -9,11 +9,11 @@ namespace Api.BoundedContexts.Authentication.Application.EventHandlers;
 /// Handles the TwoFactorEnabledEvent domain event.
 /// Creates audit log entry automatically via base class.
 /// </summary>
-public sealed class TwoFactorEnabledEventHandler : DomainEventHandlerBase<TwoFactorEnabledEvent>
+internal sealed class TwoFactorEnabledEventHandler : DomainEventHandlerBase<TwoFactorEnabledEvent>
 {
     public TwoFactorEnabledEventHandler(
         MeepleAiDbContext dbContext,
-        ILogger<DomainEventHandlerBase<TwoFactorEnabledEvent>> logger)
+        ILogger<TwoFactorEnabledEventHandler> logger)
         : base(dbContext, logger)
     {
     }

@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 /// Immutable context passed to agent invocation methods.
 /// Contains query, embeddings, and optional domain filters (game, chat thread).
 /// </remarks>
-public sealed record AgentInvocationContext
+internal sealed record AgentInvocationContext
 {
     /// <summary>
     /// Unique identifier for this invocation (for tracking and auditing).
@@ -66,11 +66,8 @@ public sealed record AgentInvocationContext
         if (string.IsNullOrWhiteSpace(query))
             throw new ArgumentException("Query cannot be empty", nameof(query));
 
-        if (queryVector == null)
-            throw new ArgumentNullException(nameof(queryVector));
-
-        if (candidateEmbeddings == null)
-            throw new ArgumentNullException(nameof(candidateEmbeddings));
+        ArgumentNullException.ThrowIfNull(queryVector);
+        ArgumentNullException.ThrowIfNull(candidateEmbeddings);
 
         InvocationId = Guid.NewGuid();
         Query = query.Trim();

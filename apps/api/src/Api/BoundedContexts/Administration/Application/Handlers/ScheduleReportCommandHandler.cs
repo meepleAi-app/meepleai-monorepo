@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.Administration.Application.Handlers;
 /// Handler for ScheduleReportCommand
 /// ISSUE-916: Report scheduling with Quartz.NET
 /// </summary>
-public sealed class ScheduleReportCommandHandler : ICommandHandler<ScheduleReportCommand, Guid>
+internal sealed class ScheduleReportCommandHandler : ICommandHandler<ScheduleReportCommand, Guid>
 {
     private readonly IAdminReportRepository _repository;
     private readonly IReportSchedulerService _schedulerService;
@@ -27,8 +27,9 @@ public sealed class ScheduleReportCommandHandler : ICommandHandler<ScheduleRepor
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public async Task<Guid> Handle(ScheduleReportCommand command, CancellationToken ct)
+    public async Task<Guid> Handle(ScheduleReportCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         _logger.LogInformation(
             "Scheduling {Template} report: {Name}",
             command.Template, command.Name);
@@ -53,10 +54,10 @@ public sealed class ScheduleReportCommandHandler : ICommandHandler<ScheduleRepor
             emailRecipients: command.EmailRecipients);
 
         // Save to database
-        await _repository.AddAsync(report, ct).ConfigureAwait(false);
+        await _repository.AddAsync(report, cancellationToken).ConfigureAwait(false);
 
         // Schedule with Quartz.NET
-        await _schedulerService.ScheduleReportAsync(report, ct).ConfigureAwait(false);
+        await _schedulerService.ScheduleReportAsync(report, cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Report scheduled successfully: ReportId={ReportId}, Schedule={Schedule}",
@@ -65,3 +66,4 @@ public sealed class ScheduleReportCommandHandler : ICommandHandler<ScheduleRepor
         return report.Id;
     }
 }
+

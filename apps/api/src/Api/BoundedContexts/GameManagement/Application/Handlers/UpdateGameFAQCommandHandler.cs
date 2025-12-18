@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Handlers;
 /// Handles UpdateGameFAQCommand.
 /// Issue #2028: Backend FAQ system for game-specific FAQs.
 /// </summary>
-public class UpdateGameFAQCommandHandler : ICommandHandler<UpdateGameFAQCommand, GameFAQDto>
+internal class UpdateGameFAQCommandHandler : ICommandHandler<UpdateGameFAQCommand, GameFAQDto>
 {
     private readonly IGameFAQRepository _faqRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -26,6 +26,7 @@ public class UpdateGameFAQCommandHandler : ICommandHandler<UpdateGameFAQCommand,
 
     public async Task<GameFAQDto> Handle(UpdateGameFAQCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         // Retrieve existing FAQ
         var faq = await _faqRepository.GetByIdAsync(command.Id, cancellationToken).ConfigureAwait(false);
         if (faq == null)

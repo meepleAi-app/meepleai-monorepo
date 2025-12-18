@@ -6,6 +6,7 @@ import reactHooks from "eslint-plugin-react-hooks";
 import jsxA11y from "eslint-plugin-jsx-a11y";
 import security from "eslint-plugin-security";
 import noUnsanitized from "eslint-plugin-no-unsanitized";
+import nextPlugin from "@next/eslint-plugin-next/dist/index.js";
 
 // Custom security rules
 import noIncompleteSanitization from "./eslint-rules/no-incomplete-sanitization.js";
@@ -80,6 +81,7 @@ export default [
       "jsx-a11y": jsxA11y,
       security: security,
       "no-unsanitized": noUnsanitized,
+      "@next/next": nextPlugin,
       // Custom security rules
       "local": {
         rules: {
@@ -126,6 +128,10 @@ export default [
       // Temporarily relaxed - many false positives in library integrations
       "jsx-a11y/click-events-have-key-events": "off",
       "jsx-a11y/no-static-element-interactions": "off",
+
+      // Next.js specific rules
+      "@next/next/no-img-element": "warn",
+      "@next/next/no-html-link-for-pages": "warn",
 
       // ============================================================================
       // Security Rules (SEC-001 to SEC-015) - Issue #XXXX

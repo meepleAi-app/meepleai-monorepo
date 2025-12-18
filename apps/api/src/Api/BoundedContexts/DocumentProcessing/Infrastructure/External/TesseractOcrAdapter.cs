@@ -15,7 +15,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 /// OCR service implementation using Tesseract 5
 /// </summary>
 [SupportedOSPlatform("windows")]
-public class TesseractOcrAdapter : IOcrService, IDisposable
+internal class TesseractOcrAdapter : IOcrService, IDisposable
 {
     private readonly ILogger<TesseractOcrAdapter> _logger;
     private readonly string _tessdataPath;
@@ -82,7 +82,7 @@ public class TesseractOcrAdapter : IOcrService, IDisposable
     public async Task<OcrResult> ExtractTextFromPageAsync(
         string pdfPath,
         int pageIndex,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(pdfPath))
         {
@@ -94,11 +94,11 @@ public class TesseractOcrAdapter : IOcrService, IDisposable
             return OcrResult.CreateFailure($"PDF file not found: {pdfPath}");
         }
 
-        await _semaphore.WaitAsync(ct).ConfigureAwait(false);
+        await _semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
 
         try
         {
-            var (text, confidence) = await Task.Run(() => ExtractTextFromPageInternal(pdfPath, pageIndex), ct).ConfigureAwait(false);
+            var (text, confidence) = await Task.Run(() => ExtractTextFromPageInternal(pdfPath, pageIndex), cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "OCR completed for page {PageIndex} of {PdfPath}. Confidence: {Confidence:F2}, Characters: {CharCount}",
@@ -123,7 +123,7 @@ public class TesseractOcrAdapter : IOcrService, IDisposable
 
     public async Task<OcrResult> ExtractTextFromPdfAsync(
         string pdfPath,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(pdfPath))
         {
@@ -137,46 +137,11 @@ public class TesseractOcrAdapter : IOcrService, IDisposable
 
         try
         {
-            // First, get page count
-            int pageCount;
-            // NOTE: DocLib.Instance is a singleton - DO NOT dispose it
-            var library = DocLib.Instance;
-            using (var docReader = library.GetDocReader(pdfPath, new PageDimensions(1080, 1920)))
-            {
-                pageCount = docReader.GetPageCount();
-            }
+            int pageCount = GetPdfPageCount(pdfPath);
 
             _logger.LogInformation("Starting OCR for PDF: {PdfPath}, Pages: {PageCount}", pdfPath, pageCount);
 
-            var textBuilder = new StringBuilder();
-            var confidences = new List<float>();
-
-            // Process each page
-            for (int i = 0; i < pageCount; i++)
-            {
-                ct.ThrowIfCancellationRequested();
-
-                var pageResult = await ExtractTextFromPageAsync(pdfPath, i, ct).ConfigureAwait(false);
-
-                if (!pageResult.Success)
-                {
-                    _logger.LogWarning(
-                        "OCR failed for page {PageIndex} of {PdfPath}: {Error}",
-                        i, pdfPath, pageResult.ErrorMessage);
-                    continue;
-                }
-
-                if (!string.IsNullOrWhiteSpace(pageResult.ExtractedText))
-                {
-                    textBuilder.AppendLine(pageResult.ExtractedText);
-                    textBuilder.AppendLine(); // Page separator
-                }
-
-                confidences.Add(pageResult.MeanConfidence);
-            }
-
-            var extractedText = textBuilder.ToString().Trim();
-            var meanConfidence = confidences.Count > 0 ? confidences.Average() : 0f;
+            var (extractedText, meanConfidence) = await ProcessPagesAsync(pdfPath, pageCount, cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "OCR completed for PDF: {PdfPath}. Pages: {PageCount}, Mean confidence: {Confidence:F2}, Total characters: {CharCount}",
@@ -184,9 +149,9 @@ public class TesseractOcrAdapter : IOcrService, IDisposable
 
             return OcrResult.CreateSuccess(extractedText, meanConfidence, pageCount);
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException ex)
         {
-            _logger.LogWarning("OCR operation cancelled for PDF: {PdfPath}", pdfPath);
+            _logger.LogWarning(ex, "OCR operation cancelled for PDF: {PdfPath}", pdfPath);
             throw;
         }
 #pragma warning disable CA1031 // Do not catch general exception types
@@ -198,6 +163,49 @@ public class TesseractOcrAdapter : IOcrService, IDisposable
             _logger.LogError(ex, "OCR failed for PDF: {PdfPath}", pdfPath);
             return OcrResult.CreateFailure($"OCR failed: {ex.Message}");
         }
+    }
+
+    private static int GetPdfPageCount(string pdfPath)
+    {
+        // NOTE: DocLib.Instance is a singleton - DO NOT dispose it
+        var library = DocLib.Instance;
+        using var docReader = library.GetDocReader(pdfPath, new PageDimensions(1080, 1920));
+        return docReader.GetPageCount();
+    }
+
+    private async Task<(string Text, float MeanConfidence)> ProcessPagesAsync(string pdfPath, int pageCount, CancellationToken cancellationToken)
+    {
+        var textBuilder = new StringBuilder();
+        var confidences = new List<float>();
+
+        // Process each page
+        for (int i = 0; i < pageCount; i++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var pageResult = await ExtractTextFromPageAsync(pdfPath, i, cancellationToken).ConfigureAwait(false);
+
+            if (!pageResult.Success)
+            {
+                _logger.LogWarning(
+                    "OCR failed for page {PageIndex} of {PdfPath}: {Error}",
+                    i, pdfPath, pageResult.ErrorMessage);
+                continue;
+            }
+
+            if (!string.IsNullOrWhiteSpace(pageResult.ExtractedText))
+            {
+                textBuilder.AppendLine(pageResult.ExtractedText);
+                textBuilder.AppendLine(); // Page separator
+            }
+
+            confidences.Add(pageResult.MeanConfidence);
+        }
+
+        var extractedText = textBuilder.ToString().Trim();
+        var meanConfidence = confidences.Count > 0 ? confidences.Average() : 0f;
+
+        return (extractedText, meanConfidence);
     }
 
     /// <summary>
@@ -316,3 +324,4 @@ public class TesseractOcrAdapter : IOcrService, IDisposable
         _disposed = true;
     }
 }
+

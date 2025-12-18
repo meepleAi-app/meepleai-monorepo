@@ -218,7 +218,7 @@ public sealed class ValidationBehaviorTests
             Password: "Password123!"
         );
 
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
 
         var mockValidator = new Mock<IValidator<LoginCommand>>();

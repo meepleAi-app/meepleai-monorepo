@@ -13,7 +13,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 /// Design Decision (ADR-004): Agents reside in KnowledgeBase context following "Bounded Context as Workspace" pattern.
 /// They are domain entities that orchestrate VectorSearchDomainService and QualityTrackingDomainService.
 /// </remarks>
-public sealed class Agent : AggregateRoot<Guid>
+internal sealed class Agent : AggregateRoot<Guid>
 {
     public string Name { get; private set; }
     public AgentType Type { get; private set; }
@@ -45,9 +45,12 @@ public sealed class Agent : AggregateRoot<Guid>
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Agent name cannot be empty", nameof(name));
 
+        ArgumentNullException.ThrowIfNull(type);
+        ArgumentNullException.ThrowIfNull(strategy);
+
         Name = name.Trim();
-        Type = type ?? throw new ArgumentNullException(nameof(type));
-        Strategy = strategy ?? throw new ArgumentNullException(nameof(strategy));
+        Type = type;
+        Strategy = strategy;
         IsActive = isActive;
         CreatedAt = DateTime.UtcNow;
         InvocationCount = 0;
@@ -60,8 +63,7 @@ public sealed class Agent : AggregateRoot<Guid>
     /// </summary>
     public void Configure(AgentStrategy strategy)
     {
-        if (strategy == null)
-            throw new ArgumentNullException(nameof(strategy));
+        ArgumentNullException.ThrowIfNull(strategy);
 
         Strategy = strategy;
 
@@ -107,8 +109,7 @@ public sealed class Agent : AggregateRoot<Guid>
         if (!IsActive)
             throw new InvalidOperationException($"Cannot invoke inactive agent: {Name}");
 
-        if (tokenUsage == null)
-            throw new ArgumentNullException(nameof(tokenUsage));
+        ArgumentNullException.ThrowIfNull(tokenUsage);
 
         LastInvokedAt = DateTime.UtcNow;
         InvocationCount++;

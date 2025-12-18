@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Api.Models;
 using Api.Services;
 
 #pragma warning disable MA0048 // File name must match type name - Contains middleware and extension methods
@@ -9,7 +10,7 @@ namespace Api.Middleware;
 /// Runs before authorization middleware and sets up ClaimsPrincipal for API key-based requests.
 /// Falls through to cookie authentication if no API key is provided.
 /// </summary>
-public class ApiKeyAuthenticationMiddleware
+internal class ApiKeyAuthenticationMiddleware
 {
     private const string AuthorizationHeaderName = "Authorization";
     private const string ApiKeyCookieName = "meeple_apikey";
@@ -38,8 +39,31 @@ public class ApiKeyAuthenticationMiddleware
             return;
         }
 
-        string? apiKey = null;
-        string source = "none";
+        if (!TryGetApiKey(context, apiKeyCookieService, out var apiKey, out var source))
+        {
+            // No API key provided - fall through to session cookie authentication
+            await _next(context).ConfigureAwait(false);
+            return;
+        }
+
+        // If we have an API key, validate it
+        var result = await apiKeyService.ValidateApiKeyAsync(apiKey!).ConfigureAwait(false);
+
+        if (result.IsValid)
+        {
+            await HandleValidApiKeyAsync(context, result, source, apiKeyRepository, unitOfWork).ConfigureAwait(false);
+            await _next(context).ConfigureAwait(false);
+        }
+        else
+        {
+            await HandleInvalidApiKeyAsync(context, result, source).ConfigureAwait(false);
+        }
+    }
+
+    private bool TryGetApiKey(HttpContext context, ApiKeyCookieService apiKeyCookieService, out string? apiKey, out string source)
+    {
+        apiKey = null;
+        source = "none";
 
         // Priority 1: httpOnly cookie (highest protection for browsers)
         if (context.Request.Cookies.TryGetValue(ApiKeyCookieName, out var cookieApiKey))
@@ -48,129 +72,136 @@ public class ApiKeyAuthenticationMiddleware
             {
                 apiKey = unprotected;
                 source = "cookie";
+                return true;
             }
-            else
-            {
-                _logger.LogWarning("Discarding invalid API key cookie");
-            }
+
+            _logger.LogWarning("Discarding invalid API key cookie");
         }
 
         // Priority 2: Authorization header (ApiKey scheme)
-        if (apiKey == null && context.Request.Headers.TryGetValue(AuthorizationHeaderName, out var authValues))
+        if (context.Request.Headers.TryGetValue(AuthorizationHeaderName, out var authValues))
         {
             var authValue = authValues.FirstOrDefault();
             if (!string.IsNullOrWhiteSpace(authValue) && authValue.StartsWith("ApiKey ", StringComparison.OrdinalIgnoreCase))
             {
                 apiKey = authValue["ApiKey ".Length..].Trim();
                 source = "authorization-header";
+                return true;
             }
         }
 
-        // If we have an API key, validate it
-        if (!string.IsNullOrWhiteSpace(apiKey))
+        return false;
+    }
+
+    private Task HandleValidApiKeyAsync(
+        HttpContext context,
+        ApiKeyValidationResult result,
+        string source,
+        Api.BoundedContexts.Authentication.Infrastructure.Persistence.IApiKeyRepository apiKeyRepository,
+        Api.SharedKernel.Infrastructure.Persistence.IUnitOfWork unitOfWork)
+    {
+        // Set ClaimsPrincipal for API key authentication
+        var claims = new List<Claim>
         {
-            var result = await apiKeyService.ValidateApiKeyAsync(apiKey).ConfigureAwait(false);
+            new(ClaimTypes.NameIdentifier, result.UserId!),
+            new(ClaimTypes.Email, result.UserEmail!),
+            new(ClaimTypes.Role, result.UserRole!),
+            new("ApiKeyId", result.ApiKeyId!),
+            new("AuthType", "ApiKey"),
+            new("AuthSource", source) // Track where the API key came from
+        };
 
-            if (result.IsValid)
-            {
-                // Set ClaimsPrincipal for API key authentication
-                var claims = new List<Claim>
-                {
-                    new(ClaimTypes.NameIdentifier, result.UserId!),
-                    new(ClaimTypes.Email, result.UserEmail!),
-                    new(ClaimTypes.Role, result.UserRole!),
-                    new("ApiKeyId", result.ApiKeyId!),
-                    new("AuthType", "ApiKey"),
-                    new("AuthSource", source) // Track where the API key came from
-                };
-
-                // Add display name if available
-                if (!string.IsNullOrWhiteSpace(result.UserDisplayName))
-                {
-                    claims.Add(new Claim(ClaimTypes.Name, result.UserDisplayName));
-                }
-
-                // Add scope claims for fine-grained authorization
-                foreach (var scope in result.Scopes)
-                {
-                    claims.Add(new Claim("scope", scope));
-                }
-
-                var identity = new ClaimsIdentity(claims, "ApiKey");
-                context.User = new ClaimsPrincipal(identity);
-
-                _logger.LogInformation(
-                    "API key authentication successful from {Source}. UserId: {UserId}, ApiKeyId: {ApiKeyId}, Path: {Path}",
-                    source,
-                    result.UserId,
-                    result.ApiKeyId,
-                    LogValueSanitizer.SanitizePath(context.Request.Path));
-
-                // Record API key usage (async, fire-and-forget)
-                // ISSUE-904: Track API key usage for analytics and auditing
-                _ = Task.Run(async () =>
-                {
-                    try
-                    {
-                        if (Guid.TryParse(result.ApiKeyId, out var apiKeyGuid) && Guid.TryParse(result.UserId, out var userGuid))
-                        {
-                            // Get all user's keys and find the one used
-                            var apiKeys = await apiKeyRepository.GetByUserIdAsync(userGuid).ConfigureAwait(false);
-                            var apiKey = apiKeys.FirstOrDefault(k => k.Id == apiKeyGuid);
-
-                            if (apiKey != null)
-                            {
-                                var endpoint = context.Request.Path.ToString();
-                                var ipAddress = context.Connection.RemoteIpAddress?.ToString();
-                                var userAgent = context.Request.Headers.UserAgent.ToString();
-
-                                apiKey.RecordUsage(endpoint, ipAddress, userAgent);
-                                await unitOfWork.SaveChangesAsync().ConfigureAwait(false);
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        // Log but don't throw - usage tracking should not break requests
-                        _logger.LogError(ex, "Failed to record API key usage for ApiKeyId: {ApiKeyId}", result.ApiKeyId);
-                    }
-                });
-
-                await _next(context).ConfigureAwait(false);
-                return;
-            }
-            else
-            {
-                // Invalid API key
-                _logger.LogWarning(
-                    "API key authentication failed from {Source}: {Reason}. Path: {Path}, IP: {IP}",
-                    source,
-                    result.InvalidReason,
-                    LogValueSanitizer.SanitizePath(context.Request.Path),
-                    context.Connection.RemoteIpAddress);
-
-                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-                context.Response.ContentType = "application/json";
-                await context.Response.WriteAsJsonAsync(new
-                {
-                    error = "invalid_api_key",
-                    message = result.InvalidReason ?? "Invalid or expired API key",
-                    source = source,
-                    correlationId = context.TraceIdentifier
-                }).ConfigureAwait(false);
-                return;
-            }
+        // Add display name if available
+        if (!string.IsNullOrWhiteSpace(result.UserDisplayName))
+        {
+            claims.Add(new Claim(ClaimTypes.Name, result.UserDisplayName));
         }
 
-        // No API key provided - fall through to session cookie authentication
-        await _next(context).ConfigureAwait(false);
+        // Add scope claims for fine-grained authorization
+        foreach (var scope in result.Scopes)
+        {
+            claims.Add(new Claim("scope", scope));
+        }
+
+        var identity = new ClaimsIdentity(claims, "ApiKey");
+        context.User = new ClaimsPrincipal(identity);
+
+        _logger.LogInformation(
+            "API key authentication successful from {Source}. UserId: {UserId}, ApiKeyId: {ApiKeyId}, Path: {Path}",
+            source,
+            result.UserId,
+            result.ApiKeyId,
+            LogValueSanitizer.SanitizePath(context.Request.Path));
+
+        // Record API key usage (async, fire-and-forget)
+        // ISSUE-904: Track API key usage for analytics and auditing
+        RecordApiKeyUsage(context, apiKeyRepository, unitOfWork, result.ApiKeyId!, result.UserId!);
+        return Task.CompletedTask;
+    }
+
+    private void RecordApiKeyUsage(
+        HttpContext context,
+        Api.BoundedContexts.Authentication.Infrastructure.Persistence.IApiKeyRepository apiKeyRepository,
+        Api.SharedKernel.Infrastructure.Persistence.IUnitOfWork unitOfWork,
+        string apiKeyId,
+        string userId)
+    {
+        var endpoint = context.Request.Path.ToString();
+        var ipAddress = context.Connection.RemoteIpAddress?.ToString();
+        // Capture user agent here as context might be disposed in the background task
+        var userAgent = context.Request.Headers.UserAgent.ToString();
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                if (Guid.TryParse(apiKeyId, out var apiKeyGuid) && Guid.TryParse(userId, out var userGuid))
+                {
+                    // Get all user's keys and find the one used
+                    var apiKeys = await apiKeyRepository.GetByUserIdAsync(userGuid).ConfigureAwait(false);
+                    var apiKey = apiKeys.FirstOrDefault(k => k.Id == apiKeyGuid);
+
+                    if (apiKey != null)
+                    {
+                        apiKey.RecordUsage(endpoint, ipAddress, userAgent);
+                        await unitOfWork.SaveChangesAsync().ConfigureAwait(false);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log but don't throw - usage tracking should not break requests
+                _logger.LogError(ex, "Failed to record API key usage for ApiKeyId: {ApiKeyId}", apiKeyId);
+            }
+        });
+    }
+
+    private async Task HandleInvalidApiKeyAsync(HttpContext context, ApiKeyValidationResult result, string source)
+    {
+        // Invalid API key
+        _logger.LogWarning(
+            "API key authentication failed from {Source}: {Reason}. Path: {Path}, IP: {IP}",
+            source,
+            result.InvalidReason,
+            LogValueSanitizer.SanitizePath(context.Request.Path),
+            context.Connection.RemoteIpAddress);
+
+        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+        context.Response.ContentType = "application/json";
+        await context.Response.WriteAsJsonAsync(new
+        {
+            error = "invalid_api_key",
+            message = result.InvalidReason ?? "Invalid or expired API key",
+            source = source,
+            correlationId = context.TraceIdentifier
+        }).ConfigureAwait(false);
     }
 }
 
 /// <summary>
 /// Extension methods for registering API key authentication middleware.
 /// </summary>
-public static class ApiKeyAuthenticationMiddlewareExtensions
+internal static class ApiKeyAuthenticationMiddlewareExtensions
 {
     /// <summary>
     /// Adds API key authentication middleware to the pipeline.

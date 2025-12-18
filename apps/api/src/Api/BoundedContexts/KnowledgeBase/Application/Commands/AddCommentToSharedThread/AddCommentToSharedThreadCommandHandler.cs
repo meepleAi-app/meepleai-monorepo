@@ -3,6 +3,7 @@ using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using MediatR;
 using Microsoft.Extensions.Caching.Distributed;
+using System.Globalization;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Commands.AddCommentToSharedThread;
 
@@ -10,7 +11,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Commands.AddCommentToSha
 /// Handler for adding comments to shared chat threads.
 /// Validates share link token, enforces comment role requirement, and applies rate limiting.
 /// </summary>
-public sealed class AddCommentToSharedThreadCommandHandler
+internal sealed class AddCommentToSharedThreadCommandHandler
     : IRequestHandler<AddCommentToSharedThreadCommand, AddCommentToSharedThreadResult?>
 {
     private readonly IChatThreadRepository _threadRepository;
@@ -26,6 +27,9 @@ public sealed class AddCommentToSharedThreadCommandHandler
         IMediator mediator,
         IDistributedCache cache)
     {
+        ArgumentNullException.ThrowIfNull(threadRepository);
+        ArgumentNullException.ThrowIfNull(mediator);
+        ArgumentNullException.ThrowIfNull(cache);
         _threadRepository = threadRepository;
         _mediator = mediator;
         _cache = cache;
@@ -35,10 +39,11 @@ public sealed class AddCommentToSharedThreadCommandHandler
         AddCommentToSharedThreadCommand request,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         // Validate share link token
         var validation = await _mediator.Send(
             new ValidateShareLinkQuery(request.Token),
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
 
         if (validation == null || !validation.IsValid)
         {
@@ -55,8 +60,8 @@ public sealed class AddCommentToSharedThreadCommandHandler
 
         // Check rate limiting
         var rateLimitKey = $"share_link_comments:{validation.ShareLinkId}";
-        var commentCountStr = await _cache.GetStringAsync(rateLimitKey, cancellationToken);
-        var commentCount = commentCountStr != null ? int.Parse(commentCountStr) : 0;
+        var commentCountStr = await _cache.GetStringAsync(rateLimitKey, cancellationToken).ConfigureAwait(false);
+        var commentCount = commentCountStr != null ? int.Parse(commentCountStr, CultureInfo.InvariantCulture) : 0;
 
         if (commentCount >= MaxCommentsPerHour)
         {
@@ -65,7 +70,7 @@ public sealed class AddCommentToSharedThreadCommandHandler
         }
 
         // Load chat thread via repository
-        var thread = await _threadRepository.GetByIdAsync(validation.ThreadId, cancellationToken);
+        var thread = await _threadRepository.GetByIdAsync(validation.ThreadId, cancellationToken).ConfigureAwait(false);
 
         if (thread == null)
         {
@@ -75,29 +80,29 @@ public sealed class AddCommentToSharedThreadCommandHandler
         // Validate content
         if (string.IsNullOrWhiteSpace(request.Content))
         {
-            throw new ArgumentException("Message content cannot be empty", nameof(request.Content));
+            throw new ArgumentException("Message content cannot be empty", nameof(request));
         }
 
         if (request.Content.Length > 4000)
         {
-            throw new ArgumentException("Message content exceeds maximum length (4000 characters)", nameof(request.Content));
+            throw new ArgumentException("Message content exceeds maximum length (4000 characters)", nameof(request));
         }
 
         // Add user message to thread (domain method)
         thread.AddUserMessage(request.Content);
 
         // Save changes via repository
-        await _threadRepository.UpdateAsync(thread, cancellationToken);
+        await _threadRepository.UpdateAsync(thread, cancellationToken).ConfigureAwait(false);
 
         // Update rate limit counter
         await _cache.SetStringAsync(
             rateLimitKey,
-            (commentCount + 1).ToString(),
+            (commentCount + 1).ToString(CultureInfo.InvariantCulture),
             new DistributedCacheEntryOptions
             {
                 AbsoluteExpirationRelativeToNow = RateLimitWindow
             },
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
 
         var lastMessage = thread.Messages.OrderByDescending(m => m.SequenceNumber).First();
 

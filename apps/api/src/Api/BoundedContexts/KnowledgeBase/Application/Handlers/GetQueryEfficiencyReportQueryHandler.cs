@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// ISSUE-1725: Handler for GetQueryEfficiencyReportQuery.
 /// Analyzes LLM query efficiency and provides optimization recommendations.
 /// </summary>
-public class GetQueryEfficiencyReportQueryHandler
+internal class GetQueryEfficiencyReportQueryHandler
     : IRequestHandler<GetQueryEfficiencyReportQuery, QueryEfficiencyReportDto>
 {
     private readonly IQueryEfficiencyAnalyzer _efficiencyAnalyzer;
@@ -27,6 +27,7 @@ public class GetQueryEfficiencyReportQueryHandler
         GetQueryEfficiencyReportQuery request,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         _logger.LogInformation(
             "Generating query efficiency report from {StartDate} to {EndDate}",
             request.StartDate, request.EndDate);

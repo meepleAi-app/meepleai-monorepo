@@ -13,7 +13,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Handlers;
 /// Handler for adding a PDF document to an existing collection.
 /// Issue #2051: Add document with validation (max 5 docs, no duplicates)
 /// </summary>
-public class AddDocumentToCollectionCommandHandler : ICommandHandler<AddDocumentToCollectionCommand, bool>
+internal class AddDocumentToCollectionCommandHandler : ICommandHandler<AddDocumentToCollectionCommand, bool>
 {
     private readonly IDocumentCollectionRepository _collectionRepository;
     private readonly IPdfDocumentRepository _pdfRepository;
@@ -26,14 +26,15 @@ public class AddDocumentToCollectionCommandHandler : ICommandHandler<AddDocument
         IUnitOfWork unitOfWork,
         ILogger<AddDocumentToCollectionCommandHandler> logger)
     {
-        _collectionRepository = collectionRepository;
-        _pdfRepository = pdfRepository;
-        _unitOfWork = unitOfWork;
-        _logger = logger;
+        _collectionRepository = collectionRepository ?? throw new ArgumentNullException(nameof(collectionRepository));
+        _pdfRepository = pdfRepository ?? throw new ArgumentNullException(nameof(pdfRepository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<bool> Handle(AddDocumentToCollectionCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         _logger.LogInformation(
             "Adding document {PdfDocumentId} to collection {CollectionId} by user {UserId}",
             command.PdfDocumentId, command.CollectionId, command.UserId);
@@ -80,53 +81,5 @@ public class AddDocumentToCollectionCommandHandler : ICommandHandler<AddDocument
             command.PdfDocumentId, command.CollectionId, collection.DocumentCount);
 
         return true;
-    }
-
-    private async Task<DocumentCollectionDto> MapToDto(
-        Domain.Entities.DocumentCollection collection,
-        CancellationToken cancellationToken)
-    {
-        // PERF-05: Batch query to avoid N+1 problem
-        var pdfIds = collection.Documents.Select(d => d.PdfDocumentId).ToList();
-        var pdfDocs = await _pdfRepository.GetByIdsAsync(pdfIds, cancellationToken).ConfigureAwait(false);
-        var pdfDict = pdfDocs.ToDictionary(p => p.Id);
-
-        var documentDtos = new List<CollectionDocumentDto>();
-
-        foreach (var doc in collection.GetDocumentsOrdered())
-        {
-            var pdfDoc = pdfDict.GetValueOrDefault(doc.PdfDocumentId);
-
-            documentDtos.Add(new CollectionDocumentDto(
-                PdfDocumentId: doc.PdfDocumentId,
-                DocumentType: doc.Type.Value,
-                SortOrder: doc.SortOrder,
-                AddedAt: doc.AddedAt,
-                PdfDocument: pdfDoc != null ? new PdfDocumentDto(
-                    Id: pdfDoc.Id,
-                    GameId: pdfDoc.GameId,
-                    FileName: pdfDoc.FileName.Value,
-                    FilePath: pdfDoc.FilePath,
-                    FileSizeBytes: pdfDoc.FileSize.Bytes,
-                    ProcessingStatus: pdfDoc.ProcessingStatus,
-                    UploadedAt: pdfDoc.UploadedAt,
-                    ProcessedAt: pdfDoc.ProcessedAt,
-                    PageCount: pdfDoc.PageCount
-                ) : null
-            ));
-        }
-
-        return new DocumentCollectionDto(
-            Id: collection.Id,
-            GameId: collection.GameId,
-            Name: collection.Name.Value,
-            Description: collection.Description,
-            CreatedByUserId: collection.CreatedByUserId,
-            CreatedAt: collection.CreatedAt,
-            UpdatedAt: collection.UpdatedAt,
-            Documents: documentDtos,
-            DocumentCount: collection.DocumentCount,
-            IsFull: collection.IsFull
-        );
     }
 }

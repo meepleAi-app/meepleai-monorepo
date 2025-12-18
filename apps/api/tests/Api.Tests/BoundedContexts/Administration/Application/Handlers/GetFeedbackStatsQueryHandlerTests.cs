@@ -371,7 +371,7 @@ public class GetFeedbackStatsQueryHandlerTests
         using var context = CreateFreshDbContext();
         var handler = new GetFeedbackStatsQueryHandler(context, _mockLogger.Object);
         var query = new GetFeedbackStatsQuery();
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
 
         // Act & Assert - Should not throw with valid cancellation token
         var result = await handler.Handle(query, cts.Token);

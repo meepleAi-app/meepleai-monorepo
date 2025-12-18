@@ -7,7 +7,7 @@ namespace Api.Services;
 /// Service for evaluating prompt quality through automated testing
 /// ADMIN-01 Phase 4: Prompt Testing Framework
 /// </summary>
-public interface IPromptEvaluationService
+internal interface IPromptEvaluationService
 {
     /// <summary>
     /// Loads a test dataset from JSON file with schema validation
@@ -15,7 +15,7 @@ public interface IPromptEvaluationService
     /// <param name="datasetPath">Absolute or relative path to JSON dataset file</param>
     /// <param name="ct">Cancellation token</param>
     /// <returns>Loaded and validated test dataset</returns>
-    Task<PromptTestDataset> LoadDatasetAsync(string datasetPath, CancellationToken ct = default);
+    Task<PromptTestDataset> LoadDatasetAsync(string datasetPath, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Evaluates a prompt version using a test dataset
@@ -32,7 +32,7 @@ public interface IPromptEvaluationService
         string versionId,
         string datasetPath,
         Action<int, int>? progressCallback = null,
-        CancellationToken ct = default);
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Compares two prompt versions side-by-side using the same dataset
@@ -48,7 +48,7 @@ public interface IPromptEvaluationService
         string baselineVersionId,
         string candidateVersionId,
         string datasetPath,
-        CancellationToken ct = default);
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Generates human-readable and machine-readable reports
@@ -63,7 +63,7 @@ public interface IPromptEvaluationService
     /// </summary>
     /// <param name="result">Evaluation result to store</param>
     /// <param name="ct">Cancellation token</param>
-    Task StoreResultsAsync(PromptEvaluationResult result, CancellationToken ct = default);
+    Task StoreResultsAsync(PromptEvaluationResult result, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Retrieves historical evaluation results for a template
@@ -75,13 +75,13 @@ public interface IPromptEvaluationService
     Task<List<PromptEvaluationResult>> GetHistoricalResultsAsync(
         string templateId,
         int limit = 10,
-        CancellationToken ct = default);
+        CancellationToken cancellationToken = default);
 }
 
 /// <summary>
 /// Report output format
 /// </summary>
-public enum ReportFormat
+internal enum ReportFormat
 {
     /// <summary>Markdown format for human readability</summary>
     Markdown,

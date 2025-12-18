@@ -2,7 +2,7 @@ namespace Api.Models;
 
 using Microsoft.AspNetCore.Http;
 
-public record SessionCookieConfiguration
+internal record SessionCookieConfiguration
 {
     public string? Name { get; init; } = "meepleai_session";
 

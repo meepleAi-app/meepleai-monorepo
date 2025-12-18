@@ -10,7 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 
-public class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDeleteResult>
+internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDeleteResult>
 {
     private readonly MeepleAiDbContext _db;
     private readonly IServiceScopeFactory _scopeFactory;
@@ -34,6 +34,7 @@ public class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDele
 
     public async Task<PdfDeleteResult> Handle(DeletePdfCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         var pdfId = command.PdfId;
 
         try
@@ -49,47 +50,8 @@ public class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDele
 
             var gameId = pdfDoc.GameId;
 
-            // Delete associated vector document if exists
-            var vectorDoc = await _db.VectorDocuments
-                .FirstOrDefaultAsync(v => v.PdfDocumentId == pdfGuid, cancellationToken).ConfigureAwait(false);
-
-            if (vectorDoc != null)
-            {
-                _db.VectorDocuments.Remove(vectorDoc);
-                _logger.LogInformation("Removed vector document for PDF {PdfId}", pdfId);
-
-                // Delete vectors from Qdrant
-                try
-                {
-                    using var scope = _scopeFactory.CreateScope();
-                    var qdrantService = scope.ServiceProvider.GetService<IQdrantService>();
-
-                    if (qdrantService != null)
-                    {
-                        var deleteResult = await qdrantService.DeleteDocumentAsync(pdfId, cancellationToken).ConfigureAwait(false);
-                        if (!deleteResult)
-                        {
-                            _logger.LogWarning("Failed to delete vectors from Qdrant for PDF {PdfId}", pdfId);
-                        }
-                    }
-                }
-                catch (OperationCanceledException)
-                {
-                    throw;
-                }
-                catch (InvalidOperationException ex)
-                {
-                    _logger.LogWarning(ex, "Invalid operation deleting vectors from Qdrant for PDF {PdfId}", pdfId);
-                }
-#pragma warning disable CA1031 // Do not catch general exception types
-                // Justification: Infrastructure adapter - Qdrant vector deletion is best-effort cleanup;
-                // failures must not block PDF metadata deletion
-                catch (Exception ex)
-#pragma warning restore CA1031
-                {
-                    _logger.LogWarning(ex, "Unexpected error deleting vectors from Qdrant for PDF {PdfId}", pdfId);
-                }
-            }
+            // Delete associated vector document and vectors from Qdrant
+            await DeleteVectorDocumentAsync(pdfGuid, pdfId, cancellationToken).ConfigureAwait(false);
 
             // Delete PDF document record
             _db.PdfDocuments.Remove(pdfDoc);
@@ -98,20 +60,10 @@ public class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDele
             _logger.LogInformation("Deleted PDF document record {PdfId}", pdfId);
 
             // Delegate physical file deletion to BlobStorageService
-            try
-            {
-                await _blobStorageService.DeleteAsync(pdfId, gameId.ToString(), cancellationToken).ConfigureAwait(false);
-            }
-#pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: Infrastructure adapter - Physical file deletion is best-effort cleanup;
-            // failures must not block PDF metadata deletion (file may already be gone)
-            catch (Exception ex)
-#pragma warning restore CA1031
-            {
-                _logger.LogWarning(ex, "Error deleting physical file for PDF {PdfId}", pdfId);
-            }
+            await DeletePhysicalFileAsync(pdfId, gameId.ToString(), cancellationToken).ConfigureAwait(false);
 
-            await InvalidateCacheSafelyAsync(gameId.ToString(), cancellationToken, "PDF deletion").ConfigureAwait(false);
+            // Invalidate cache
+            await InvalidateCacheSafelyAsync(gameId.ToString(), "PDF deletion", cancellationToken).ConfigureAwait(false);
 
             return new PdfDeleteResult(true, "PDF deleted successfully", gameId.ToString());
         }
@@ -140,11 +92,79 @@ public class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDele
         }
     }
 
-    private async Task InvalidateCacheSafelyAsync(string gameId, CancellationToken ct, string operation)
+    /// <summary>
+    /// Deletes vector document from database and Qdrant.
+    /// </summary>
+    private async Task DeleteVectorDocumentAsync(Guid pdfGuid, string pdfId, CancellationToken cancellationToken)
+    {
+        var vectorDoc = await _db.VectorDocuments
+            .FirstOrDefaultAsync(v => v.PdfDocumentId == pdfGuid, cancellationToken).ConfigureAwait(false);
+
+        if (vectorDoc == null)
+        {
+            return;
+        }
+
+        _db.VectorDocuments.Remove(vectorDoc);
+        _logger.LogInformation("Removed vector document for PDF {PdfId}", pdfId);
+
+        // Delete vectors from Qdrant
+        try
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var qdrantService = scope.ServiceProvider.GetService<IQdrantService>();
+
+            if (qdrantService != null)
+            {
+                var deleteResult = await qdrantService.DeleteDocumentAsync(pdfId, cancellationToken).ConfigureAwait(false);
+                if (!deleteResult)
+                {
+                    _logger.LogWarning("Failed to delete vectors from Qdrant for PDF {PdfId}", pdfId);
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Invalid operation deleting vectors from Qdrant for PDF {PdfId}", pdfId);
+        }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Infrastructure adapter - Qdrant vector deletion is best-effort cleanup;
+        // failures must not block PDF metadata deletion
+        catch (Exception ex)
+#pragma warning restore CA1031
+        {
+            _logger.LogWarning(ex, "Unexpected error deleting vectors from Qdrant for PDF {PdfId}", pdfId);
+        }
+    }
+
+    /// <summary>
+    /// Deletes physical PDF file from blob storage.
+    /// </summary>
+    private async Task DeletePhysicalFileAsync(string pdfId, string gameId, CancellationToken cancellationToken)
     {
         try
         {
-            await _cacheService.InvalidateGameAsync(gameId, ct).ConfigureAwait(false);
+            await _blobStorageService.DeleteAsync(pdfId, gameId, cancellationToken).ConfigureAwait(false);
+        }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Infrastructure adapter - Physical file deletion is best-effort cleanup;
+        // failures must not block PDF metadata deletion (file may already be gone)
+        catch (Exception ex)
+#pragma warning restore CA1031
+        {
+            _logger.LogWarning(ex, "Error deleting physical file for PDF {PdfId}", pdfId);
+        }
+    }
+
+    private async Task InvalidateCacheSafelyAsync(string gameId, string operation, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _cacheService.InvalidateGameAsync(gameId, cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -164,3 +184,4 @@ public class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDele
         }
     }
 }
+

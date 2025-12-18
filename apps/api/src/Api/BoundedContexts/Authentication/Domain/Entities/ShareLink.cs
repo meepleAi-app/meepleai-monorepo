@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.Authentication.Domain.Entities;
 /// Aggregate root representing a shareable chat thread link.
 /// Tracks audit trail (creator, creation time, revocation) and generates JWT tokens.
 /// </summary>
-public sealed class ShareLink : AggregateRoot<Guid>
+internal sealed class ShareLink : AggregateRoot<Guid>
 {
     /// <summary>
     /// Chat thread identifier that this link provides access to.

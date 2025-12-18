@@ -20,14 +20,12 @@ public class CreateUserCommandHandlerTests
 {
     private readonly Mock<IUserRepository> _mockUserRepository;
     private readonly Mock<IUnitOfWork> _mockUnitOfWork;
-    private readonly Mock<TimeProvider> _mockTimeProvider;
     private readonly CreateUserCommandHandler _handler;
 
     public CreateUserCommandHandlerTests()
     {
         _mockUserRepository = new Mock<IUserRepository>();
         _mockUnitOfWork = new Mock<IUnitOfWork>();
-        _mockTimeProvider = new Mock<TimeProvider>();
         _handler = new CreateUserCommandHandler(
             _mockUserRepository.Object,
             _mockUnitOfWork.Object);

@@ -6,7 +6,7 @@ namespace Api.Services;
 /// ADMIN-02: Service for retrieving analytics dashboard statistics and metrics.
 /// Provides aggregated data from database and OpenTelemetry metrics.
 /// </summary>
-public interface IAdminStatsService
+internal interface IAdminStatsService
 {
     /// <summary>
     /// Get comprehensive dashboard statistics including metrics and time-series trends.

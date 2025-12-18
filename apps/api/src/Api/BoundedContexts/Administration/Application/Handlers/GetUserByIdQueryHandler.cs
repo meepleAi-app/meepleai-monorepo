@@ -7,17 +7,18 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.Administration.Application.Handlers;
 
-public class GetUserByIdQueryHandler : IQueryHandler<GetUserByIdQuery, UserDto?>
+internal class GetUserByIdQueryHandler : IQueryHandler<GetUserByIdQuery, UserDto?>
 {
     private readonly MeepleAiDbContext _dbContext;
 
     public GetUserByIdQueryHandler(MeepleAiDbContext dbContext)
     {
-        _dbContext = dbContext;
+        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
     }
 
     public async Task<UserDto?> Handle(GetUserByIdQuery query, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(query);
         var userId = Guid.Parse(query.UserId);
         var user = await _dbContext.Users
             .Include(u => u.Sessions)

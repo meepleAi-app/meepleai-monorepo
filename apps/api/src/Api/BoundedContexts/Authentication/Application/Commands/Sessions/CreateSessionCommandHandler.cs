@@ -12,7 +12,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands;
 /// Handles session creation for an authenticated user.
 /// Used after OAuth callback or 2FA verification.
 /// </summary>
-public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand, CreateSessionResponse>
+internal class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand, CreateSessionResponse>
 {
     private readonly IUserRepository _userRepository;
     private readonly ISessionRepository _sessionRepository;
@@ -30,6 +30,7 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
 
     public async Task<CreateSessionResponse> Handle(CreateSessionCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         // Get user by ID
         var user = await _userRepository.GetByIdAsync(command.UserId, cancellationToken).ConfigureAwait(false);
 

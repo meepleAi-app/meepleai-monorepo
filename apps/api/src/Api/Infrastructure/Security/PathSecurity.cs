@@ -7,8 +7,10 @@ namespace Api.Infrastructure.Security;
 /// Path security utility for preventing path traversal and injection attacks
 /// Implements defense-in-depth validation for file system operations
 /// </summary>
-public static partial class PathSecurity
+internal static partial class PathSecurity
 {
+    private static readonly char[] AdditionalInvalidChars = ['/', '\\', ':', '*', '?', '"', '<', '>', '|'];
+
     /// <summary>
     /// Validates that resolved path is within allowed directory (prevents directory traversal)
     /// </summary>
@@ -76,13 +78,11 @@ public static partial class PathSecurity
 
         // Remove path separators and dangerous characters
         var invalidChars = Path.GetInvalidFileNameChars()
-            .Concat(new[] { '/', '\\', ':', '*', '?', '"', '<', '>', '|' })
+            .Concat(AdditionalInvalidChars)
             .Distinct()
             .ToArray();
 
-        var sanitized = new string(filename
-            .Where(c => !invalidChars.Contains(c))
-            .ToArray());
+        var sanitized = string.Concat(filename.Where(c => !invalidChars.Contains(c)));
 
         // Remove leading/trailing dots and spaces
         // Leading/trailing dots can be security risks (.hidden files, "..") or cause filesystem issues

@@ -12,7 +12,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Models;
 /// Free tier models (meta-llama/*:free) have $0 cost.
 /// Local Ollama models have $0 cost (self-hosted).
 /// </remarks>
-public record LlmModelPricing
+internal record LlmModelPricing
 {
     /// <summary>
     /// Model identifier (e.g., "openai/gpt-4o-mini", "anthropic/claude-3.5-haiku")

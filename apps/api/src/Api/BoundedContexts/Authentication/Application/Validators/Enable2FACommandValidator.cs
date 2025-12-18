@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Authentication.Application.Validators;
 /// Ensures user ID is valid and TOTP code is a 6-digit numeric code.
 /// Issue #1449: FluentValidation for Authentication CQRS pipeline
 /// </summary>
-public sealed class Enable2FACommandValidator : AbstractValidator<Enable2FACommand>
+internal sealed class Enable2FACommandValidator : AbstractValidator<Enable2FACommand>
 {
     public Enable2FACommandValidator()
     {

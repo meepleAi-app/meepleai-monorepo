@@ -2,7 +2,7 @@ using Api.SharedKernel.Domain.Events;
 
 namespace Api.BoundedContexts.KnowledgeBase.Domain.Events;
 
-public sealed class AgentCreatedEvent : DomainEventBase
+internal sealed class AgentCreatedEvent : DomainEventBase
 {
     public Guid AgentId { get; }
     public string Type { get; }

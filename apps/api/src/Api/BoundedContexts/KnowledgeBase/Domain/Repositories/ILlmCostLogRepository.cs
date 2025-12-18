@@ -21,30 +21,33 @@ public interface ILlmCostLogRepository
         int latencyMs,
         string? ipAddress,
         string? userAgent,
-        CancellationToken ct = default);
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Get total costs for a date range
     /// </summary>
-    Task<decimal> GetTotalCostAsync(DateOnly startDate, DateOnly endDate, CancellationToken ct = default);
+    Task<decimal> GetTotalCostAsync(DateOnly startDate, DateOnly endDate, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Get costs grouped by provider for a date range
     /// </summary>
-    Task<Dictionary<string, decimal>> GetCostsByProviderAsync(DateOnly startDate, DateOnly endDate, CancellationToken ct = default);
+    Task<Dictionary<string, decimal>> GetCostsByProviderAsync(DateOnly startDate, DateOnly endDate, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Get costs grouped by user role for a date range
     /// </summary>
-    Task<Dictionary<string, decimal>> GetCostsByRoleAsync(DateOnly startDate, DateOnly endDate, CancellationToken ct = default);
+    Task<Dictionary<string, decimal>> GetCostsByRoleAsync(DateOnly startDate, DateOnly endDate, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Get costs for a specific user
     /// </summary>
-    Task<decimal> GetUserCostAsync(Guid userId, DateOnly startDate, DateOnly endDate, CancellationToken ct = default);
+    Task<decimal> GetUserCostAsync(Guid userId, DateOnly startDate, DateOnly endDate, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Get daily cost total
     /// </summary>
-    Task<decimal> GetDailyCostAsync(DateOnly date, CancellationToken ct = default);
+#pragma warning disable CA1716 // Identifiers should not match keywords - 'date' is appropriate for DateOnly parameter
+    Task<decimal> GetDailyCostAsync(DateOnly date, CancellationToken cancellationToken = default);
+#pragma warning restore CA1716
 }
+

@@ -9,7 +9,7 @@ namespace Api.Services;
 /// Hot queries (frequently accessed) get longer TTLs to maximize cache hit rate.
 /// Cold queries (rarely accessed) get shorter TTLs to avoid memory waste.
 /// </summary>
-public class DynamicTtlStrategy : IDynamicTtlStrategy
+internal class DynamicTtlStrategy : IDynamicTtlStrategy
 {
     private readonly ILogger<DynamicTtlStrategy> _logger;
     private readonly CacheOptimizationConfiguration _config;
@@ -23,7 +23,8 @@ public class DynamicTtlStrategy : IDynamicTtlStrategy
         ILogger<DynamicTtlStrategy> logger,
         IOptions<CacheOptimizationConfiguration> config)
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(logger);
+        _logger = logger;
         _config = config?.Value ?? throw new ArgumentNullException(nameof(config));
     }
 

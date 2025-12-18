@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 /// Represents an embedding vector value object.
 /// Ensures vector dimension validity and provides similarity operations.
 /// </summary>
-public sealed class Vector : ValueObject
+internal sealed class Vector : ValueObject
 {
     public float[] Values { get; }
     public int Dimensions => Values.Length;

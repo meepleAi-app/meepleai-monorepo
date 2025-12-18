@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.Administration.Application.Handlers;
 /// Handler for GetReportExecutionsQuery
 /// ISSUE-916: Execution history retrieval
 /// </summary>
-public sealed class GetReportExecutionsQueryHandler : IQueryHandler<GetReportExecutionsQuery, IReadOnlyList<ReportExecutionDto>>
+internal sealed class GetReportExecutionsQueryHandler : IQueryHandler<GetReportExecutionsQuery, IReadOnlyList<ReportExecutionDto>>
 {
     private readonly IReportExecutionRepository _repository;
     private readonly ILogger<GetReportExecutionsQueryHandler> _logger;
@@ -22,14 +22,14 @@ public sealed class GetReportExecutionsQueryHandler : IQueryHandler<GetReportExe
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public async Task<IReadOnlyList<ReportExecutionDto>> Handle(GetReportExecutionsQuery query, CancellationToken ct)
+    public async Task<IReadOnlyList<ReportExecutionDto>> Handle(GetReportExecutionsQuery query, CancellationToken cancellationToken)
     {
         _logger.LogDebug("Getting report executions: ReportId={ReportId}, Limit={Limit}",
             query.ReportId, query.Limit);
 
         var executions = query.ReportId.HasValue
-            ? await _repository.GetByReportIdAsync(query.ReportId.Value, query.Limit, ct).ConfigureAwait(false)
-            : await _repository.GetRecentExecutionsAsync(query.Limit, ct).ConfigureAwait(false);
+            ? await _repository.GetByReportIdAsync(query.ReportId.Value, query.Limit, cancellationToken).ConfigureAwait(false)
+            : await _repository.GetRecentExecutionsAsync(query.Limit, cancellationToken).ConfigureAwait(false);
 
         var dtos = executions.Select(e => new ReportExecutionDto(
             Id: e.Id,
@@ -48,3 +48,4 @@ public sealed class GetReportExecutionsQueryHandler : IQueryHandler<GetReportExe
         return dtos;
     }
 }
+

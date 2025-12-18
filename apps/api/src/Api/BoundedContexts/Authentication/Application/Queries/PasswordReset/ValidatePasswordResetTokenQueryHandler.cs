@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.Authentication.Application.Queries.PasswordReset;
 /// Business logic: Token format validation → Token existence check → Expiry check.
 /// Infrastructure delegation: Database access via password reset service.
 /// </summary>
-public sealed class ValidatePasswordResetTokenQueryHandler : IQueryHandler<ValidatePasswordResetTokenQuery, ValidatePasswordResetTokenResult>
+internal sealed class ValidatePasswordResetTokenQueryHandler : IQueryHandler<ValidatePasswordResetTokenQuery, ValidatePasswordResetTokenResult>
 {
     private readonly IPasswordResetService _passwordResetService;
     private readonly ILogger<ValidatePasswordResetTokenQueryHandler> _logger;
@@ -24,6 +24,7 @@ public sealed class ValidatePasswordResetTokenQueryHandler : IQueryHandler<Valid
 
     public async Task<ValidatePasswordResetTokenResult> Handle(ValidatePasswordResetTokenQuery query, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(query);
         try
         {
             // Validate token format (basic business logic)
@@ -37,10 +38,15 @@ public sealed class ValidatePasswordResetTokenQueryHandler : IQueryHandler<Valid
 
             return new ValidatePasswordResetTokenResult { IsValid = isValid };
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: QUERY HANDLER PATTERN - CQRS query boundary
+        // Generic catch handles unexpected infrastructure failures (DB, network)
+        // to prevent exception propagation to API layer. Returns Result pattern.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error validating password reset token");
             return new ValidatePasswordResetTokenResult { IsValid = false };
         }
+#pragma warning restore CA1031
     }
 }

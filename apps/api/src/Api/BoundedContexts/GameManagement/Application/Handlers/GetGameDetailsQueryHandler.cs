@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Handlers;
 /// <summary>
 /// Handles get game details query with extended metadata and statistics.
 /// </summary>
-public class GetGameDetailsQueryHandler : IQueryHandler<GetGameDetailsQuery, GameDetailsDto?>
+internal class GetGameDetailsQueryHandler : IQueryHandler<GetGameDetailsQuery, GameDetailsDto?>
 {
     private readonly IGameRepository _gameRepository;
     private readonly IGameSessionRepository _sessionRepository;
@@ -25,6 +25,7 @@ public class GetGameDetailsQueryHandler : IQueryHandler<GetGameDetailsQuery, Gam
 
     public async Task<GameDetailsDto?> Handle(GetGameDetailsQuery query, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(query);
         var game = await _gameRepository.GetByIdAsync(query.GameId, cancellationToken).ConfigureAwait(false);
 
         if (game == null)

@@ -14,12 +14,12 @@ using Polly.Extensions.Http;
 
 namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.DependencyInjection;
 
-public static class DocumentProcessingServiceExtensions
+internal static class DocumentProcessingServiceExtensions
 {
     /// <summary>
     /// Keyed service keys for PDF text extractors (ISSUE-1174: Post-merge enhancement)
     /// </summary>
-    public static class PdfExtractorKeys
+    internal static class PdfExtractorKeys
     {
         public const string Unstructured = "unstructured";
         public const string SmolDocling = "smoldocling";
@@ -144,7 +144,7 @@ public static class DocumentProcessingServiceExtensions
     /// <summary>
     /// Get Polly retry policy with configurable max retries
     /// </summary>
-    private static IAsyncPolicy<HttpResponseMessage> GetRetryPolicy(int maxRetries)
+    private static Polly.Retry.AsyncRetryPolicy<HttpResponseMessage> GetRetryPolicy(int maxRetries)
     {
         return HttpPolicyExtensions
             .HandleTransientHttpError()

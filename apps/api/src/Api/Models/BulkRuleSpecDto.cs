@@ -6,7 +6,7 @@ namespace Api.Models;
 /// <summary>
 /// Request to export multiple rule specs as a ZIP archive
 /// </summary>
-public record BulkExportRequest
+internal record BulkExportRequest
 {
     /// <summary>
     /// List of rule spec IDs to export (gameId format)
@@ -17,7 +17,7 @@ public record BulkExportRequest
 /// <summary>
 /// Request to delete multiple rule specs
 /// </summary>
-public record BulkDeleteRequest
+internal record BulkDeleteRequest
 {
     /// <summary>
     /// List of rule spec IDs to delete (gameId format)
@@ -28,7 +28,7 @@ public record BulkDeleteRequest
 /// <summary>
 /// Request to duplicate multiple rule specs
 /// </summary>
-public record BulkDuplicateRequest
+internal record BulkDuplicateRequest
 {
     /// <summary>
     /// List of rule spec IDs to duplicate (gameId format)
@@ -39,7 +39,7 @@ public record BulkDuplicateRequest
 /// <summary>
 /// Result of a bulk import operation
 /// </summary>
-public record BulkImportResult
+internal record BulkImportResult
 {
     /// <summary>
     /// Number of rule specs successfully imported
@@ -60,7 +60,7 @@ public record BulkImportResult
 /// <summary>
 /// Details about an import error
 /// </summary>
-public record ImportError
+internal record ImportError
 {
     /// <summary>
     /// Name of the file that failed to import
@@ -81,7 +81,7 @@ public record ImportError
 /// <summary>
 /// Result of a bulk delete operation
 /// </summary>
-public record BulkDeleteResult
+internal record BulkDeleteResult
 {
     /// <summary>
     /// Number of rule specs successfully deleted
@@ -92,7 +92,7 @@ public record BulkDeleteResult
 /// <summary>
 /// Result of a bulk duplicate operation
 /// </summary>
-public record BulkDuplicateResult
+internal record BulkDuplicateResult
 {
     /// <summary>
     /// Number of rule specs successfully duplicated

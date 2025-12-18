@@ -70,6 +70,7 @@ public class UserRepository : RepositoryBase, IUserRepository
 
     public async Task AddAsync(User entity, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(entity);
         // Collect domain events BEFORE mapping to persistence entity
         CollectDomainEvents(entity);
 
@@ -110,6 +111,7 @@ public class UserRepository : RepositoryBase, IUserRepository
 
     public async Task UpdateAsync(User entity, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(entity);
         // Collect domain events BEFORE updating persistence entity
         CollectDomainEvents(entity);
 
@@ -162,6 +164,7 @@ public class UserRepository : RepositoryBase, IUserRepository
 
     public async Task DeleteAsync(User entity, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(entity);
         var userEntity = await DbContext.Users.FindAsync(new object[] { entity.Id }, cancellationToken).ConfigureAwait(false);
         if (userEntity != null)
         {
@@ -244,7 +247,7 @@ public class UserRepository : RepositoryBase, IUserRepository
         }
 
         // Reconstruct OAuth accounts collection
-        if (entity.OAuthAccounts.Any())
+        if (entity.OAuthAccounts.Count > 0)
         {
             var oauthAccounts = entity.OAuthAccounts.Select(oauthEntity => new OAuthAccount(
                 oauthEntity.Id,

@@ -42,6 +42,7 @@ public sealed class Role : ValueObject
 
     public bool HasPermission(Role requiredRole)
     {
+        ArgumentNullException.ThrowIfNull(requiredRole);
         // Admin has all permissions
         if (IsAdmin()) return true;
 
@@ -59,5 +60,9 @@ public sealed class Role : ValueObject
 
     public override string ToString() => Value;
 
-    public static implicit operator string(Role role) => role.Value;
+    public static implicit operator string(Role role)
+    {
+        ArgumentNullException.ThrowIfNull(role);
+        return role.Value;
+    }
 }

@@ -5,7 +5,7 @@ namespace Api.Services.Pdf;
 /// <summary>
 /// Service responsible for analyzing table structure and converting to atomic rules
 /// </summary>
-public interface ITableStructureAnalyzer
+internal interface ITableStructureAnalyzer
 {
     /// <summary>
     /// Converts table rows to atomic rules (PDF-03 requirement)

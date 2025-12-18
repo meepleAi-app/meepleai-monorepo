@@ -339,6 +339,7 @@ public class UploadPdfCommandHandlerTests
         // Act
         var command = new UploadPdfCommand(
             GameId: gameId,
+            Metadata: null,
             UserId: userId,
             File: formFileMock.Object);
 
@@ -354,6 +355,7 @@ public class UploadPdfCommandHandlerTests
         var formFileMock = new Mock<IFormFile>();
         var command = new UploadPdfCommand(
             GameId: string.Empty, // Will be validated by handler
+            Metadata: null,
             UserId: Guid.NewGuid(),
             File: formFileMock.Object);
 
@@ -369,6 +371,7 @@ public class UploadPdfCommandHandlerTests
         var formFileMock = new Mock<IFormFile>();
         var command = new UploadPdfCommand(
             GameId: Guid.NewGuid().ToString(),
+            Metadata: null,
             UserId: Guid.Empty, // Will be validated by handler
             File: formFileMock.Object);
 

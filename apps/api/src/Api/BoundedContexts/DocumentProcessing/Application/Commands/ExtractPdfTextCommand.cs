@@ -7,4 +7,4 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 /// Command to trigger text extraction for an existing PDF document.
 /// Used to reprocess PDFs that are stuck in pending status or need re-extraction.
 /// </summary>
-public record ExtractPdfTextCommand(Guid PdfId) : ICommand<ExtractPdfTextResultDto>;
+internal record ExtractPdfTextCommand(Guid PdfId) : ICommand<ExtractPdfTextResultDto>;

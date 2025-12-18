@@ -10,7 +10,7 @@ namespace Api.Services;
 /// Cost: Cost metadata (only in final chunk)
 /// IsFinal: True if this is the last chunk containing usage metadata
 /// </summary>
-public record StreamChunk(
+internal record StreamChunk(
     string? Content,
     LlmUsage? Usage = null,
     LlmCost? Cost = null,
@@ -19,7 +19,7 @@ public record StreamChunk(
 /// <summary>
 /// Interface for LLM chat completion services
 /// </summary>
-public interface ILlmService
+internal interface ILlmService
 {
     /// <summary>
     /// Generate a chat completion response
@@ -59,7 +59,7 @@ public interface ILlmService
 /// <summary>
 /// Token usage information from LLM completion
 /// </summary>
-public record LlmUsage(int PromptTokens, int CompletionTokens, int TotalTokens)
+internal record LlmUsage(int PromptTokens, int CompletionTokens, int TotalTokens)
 {
     public static readonly LlmUsage Empty = new(0, 0, 0);
 }
@@ -68,7 +68,7 @@ public record LlmUsage(int PromptTokens, int CompletionTokens, int TotalTokens)
 /// Cost information for LLM completion
 /// ISSUE-960: BGAI-018 - Financial cost tracking
 /// </summary>
-public record LlmCost
+internal record LlmCost
 {
     /// <summary>
     /// Cost for input/prompt tokens in USD
@@ -110,7 +110,7 @@ public record LlmCost
 /// <summary>
 /// Result of LLM completion with token usage and cost information
 /// </summary>
-public record LlmCompletionResult
+internal record LlmCompletionResult
 {
     public bool Success { get; init; }
     public string? ErrorMessage { get; init; }

@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands.PasswordReset;
 /// Infrastructure delegation: Database access and password hashing via password reset service.
 /// Security: All user sessions are revoked after successful password reset.
 /// </summary>
-public sealed class ResetPasswordCommandHandler : ICommandHandler<ResetPasswordCommand, ResetPasswordResult>
+internal sealed class ResetPasswordCommandHandler : ICommandHandler<ResetPasswordCommand, ResetPasswordResult>
 {
     private readonly IPasswordResetService _passwordResetService;
     private readonly ILogger<ResetPasswordCommandHandler> _logger;
@@ -25,6 +25,7 @@ public sealed class ResetPasswordCommandHandler : ICommandHandler<ResetPasswordC
 
     public async Task<ResetPasswordResult> Handle(ResetPasswordCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         try
         {
             // Basic validation (business logic)
@@ -72,13 +73,18 @@ public sealed class ResetPasswordCommandHandler : ICommandHandler<ResetPasswordC
         catch (ArgumentException ex)
         {
             // Password validation failed
-            _logger.LogWarning("Password reset failed: {Error}", ex.Message);
+            _logger.LogWarning(ex, "Password reset failed: {Error}", ex.Message);
             return new ResetPasswordResult
             {
                 Success = false,
                 ErrorMessage = ex.Message
             };
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: COMMAND HANDLER PATTERN - CQRS handler boundary
+        // Specific exceptions (ArgumentException) caught separately above.
+        // Generic catch handles unexpected infrastructure failures (DB, network, memory)
+        // to prevent exception propagation to API layer. Returns Result pattern.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error during password reset");
@@ -88,5 +94,6 @@ public sealed class ResetPasswordCommandHandler : ICommandHandler<ResetPasswordC
                 ErrorMessage = "An unexpected error occurred while resetting password"
             };
         }
+#pragma warning restore CA1031
     }
 }

@@ -8,7 +8,7 @@ namespace Api.Observability;
 /// Provides custom metrics for the MeepleAI application.
 /// These metrics are exported via OpenTelemetry to Prometheus.
 /// </summary>
-public static class MeepleAiMetrics
+internal static class MeepleAiMetrics
 {
     /// <summary>
     /// Meter name for MeepleAI metrics (matches the meter name in OpenTelemetry configuration)
@@ -520,6 +520,7 @@ public static class MeepleAiMetrics
         string? endpoint = null,
         bool isUnhandled = false)
     {
+        ArgumentNullException.ThrowIfNull(exception);
         // Determine severity based on HTTP status code
         var severity = httpStatusCode switch
         {
@@ -751,6 +752,8 @@ public static class MeepleAiMetrics
         string? userSegment = null,
         string? userIdHash = null)
     {
+        ArgumentNullException.ThrowIfNull(modelId);
+        ArgumentNullException.ThrowIfNull(provider);
         // OpenTelemetry GenAI Semantic Convention: gen_ai.client.token.usage
         var baseTags = new TagList
         {

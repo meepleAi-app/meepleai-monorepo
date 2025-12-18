@@ -61,6 +61,7 @@ public sealed class UserTier : ValueObject
     /// </summary>
     public bool HasLevel(UserTier requiredTier)
     {
+        ArgumentNullException.ThrowIfNull(requiredTier);
         return GetLevel() >= requiredTier.GetLevel();
     }
 
@@ -71,5 +72,9 @@ public sealed class UserTier : ValueObject
 
     public override string ToString() => Value;
 
-    public static implicit operator string(UserTier tier) => tier.Value;
+    public static implicit operator string(UserTier tier)
+    {
+        ArgumentNullException.ThrowIfNull(tier);
+        return tier.Value;
+    }
 }

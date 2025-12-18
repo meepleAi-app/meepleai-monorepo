@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 namespace Api.Infrastructure.EntityConfigurations;
 
 // AI-14: Hybrid search - text chunks table configuration
-public class TextChunkEntityConfiguration : IEntityTypeConfiguration<TextChunkEntity>
+internal class TextChunkEntityConfiguration : IEntityTypeConfiguration<TextChunkEntity>
 {
     public void Configure(EntityTypeBuilder<TextChunkEntity> builder)
     {

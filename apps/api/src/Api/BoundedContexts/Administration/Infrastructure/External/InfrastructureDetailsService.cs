@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.Administration.Infrastructure.External;
 /// Issue #894: Infrastructure service orchestrating health checks and Prometheus metrics.
 /// Executes parallel queries for optimal performance.
 /// </summary>
-public class InfrastructureDetailsService : IInfrastructureDetailsService
+internal class InfrastructureDetailsService : IInfrastructureDetailsService
 {
     private readonly IInfrastructureHealthService _healthService;
     private readonly IPrometheusQueryService _prometheusService;
@@ -77,12 +77,12 @@ public class InfrastructureDetailsService : IInfrastructureDetailsService
 #pragma warning restore S2139
     }
 
-    private async Task<long> QueryApiRequests24h(DateTime start, DateTime end, CancellationToken ct)
+    private async Task<long> QueryApiRequests24h(DateTime start, DateTime end, CancellationToken cancellationToken)
     {
         try
         {
             var query = "sum(increase(http_requests_total[24h]))";
-            var result = await _prometheusService.QueryRangeAsync(query, start, end, "1h", ct).ConfigureAwait(false);
+            var result = await _prometheusService.QueryRangeAsync(query, start, end, "1h", cancellationToken).ConfigureAwait(false);
 
             // Extract single value from time series (last data point)
             var lastValue = result.TimeSeries
@@ -99,12 +99,12 @@ public class InfrastructureDetailsService : IInfrastructureDetailsService
         }
     }
 
-    private async Task<double> QueryAvgLatency(DateTime start, DateTime end, CancellationToken ct)
+    private async Task<double> QueryAvgLatency(DateTime start, DateTime end, CancellationToken cancellationToken)
     {
         try
         {
             var query = "avg(rate(http_request_duration_seconds_sum[1h]) / rate(http_request_duration_seconds_count[1h]))";
-            var result = await _prometheusService.QueryRangeAsync(query, start, end, "5m", ct).ConfigureAwait(false);
+            var result = await _prometheusService.QueryRangeAsync(query, start, end, "5m", cancellationToken).ConfigureAwait(false);
 
             var lastValue = result.TimeSeries
                 .SelectMany(ts => ts.Values)
@@ -121,12 +121,12 @@ public class InfrastructureDetailsService : IInfrastructureDetailsService
         }
     }
 
-    private async Task<double> QueryErrorRate(DateTime start, DateTime end, CancellationToken ct)
+    private async Task<double> QueryErrorRate(DateTime start, DateTime end, CancellationToken cancellationToken)
     {
         try
         {
             var query = "sum(rate(http_requests_total{status=~\"5..\"}[1h])) / sum(rate(http_requests_total[1h]))";
-            var result = await _prometheusService.QueryRangeAsync(query, start, end, "5m", ct).ConfigureAwait(false);
+            var result = await _prometheusService.QueryRangeAsync(query, start, end, "5m", cancellationToken).ConfigureAwait(false);
 
             var lastValue = result.TimeSeries
                 .SelectMany(ts => ts.Values)
@@ -142,12 +142,12 @@ public class InfrastructureDetailsService : IInfrastructureDetailsService
         }
     }
 
-    private async Task<double> QueryLlmCost24h(DateTime start, DateTime end, CancellationToken ct)
+    private async Task<double> QueryLlmCost24h(DateTime start, DateTime end, CancellationToken cancellationToken)
     {
         try
         {
             var query = "sum(increase(meepleai_llm_cost_usd[24h]))";
-            var result = await _prometheusService.QueryRangeAsync(query, start, end, "1h", ct).ConfigureAwait(false);
+            var result = await _prometheusService.QueryRangeAsync(query, start, end, "1h", cancellationToken).ConfigureAwait(false);
 
             var lastValue = result.TimeSeries
                 .SelectMany(ts => ts.Values)
@@ -163,3 +163,4 @@ public class InfrastructureDetailsService : IInfrastructureDetailsService
         }
     }
 }
+

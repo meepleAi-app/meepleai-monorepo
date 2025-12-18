@@ -10,14 +10,14 @@ namespace Api.Routing;
 /// Cache management endpoints (Admin only).
 /// Handles cache statistics retrieval and cache invalidation operations.
 /// </summary>
-public static class CacheEndpoints
+internal static class CacheEndpoints
 {
     public static RouteGroupBuilder MapCacheEndpoints(this RouteGroupBuilder group)
     {
         // PERF-03: Cache management endpoints
         group.MapGet("/admin/cache/stats", async (HttpContext context, IAiResponseCacheService cacheService, string? gameId = null, CancellationToken ct = default) =>
         {
-            var (authorized, session, error) = context.RequireAdminSession();
+            var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             var stats = await cacheService.GetCacheStatsAsync(gameId, ct).ConfigureAwait(false);

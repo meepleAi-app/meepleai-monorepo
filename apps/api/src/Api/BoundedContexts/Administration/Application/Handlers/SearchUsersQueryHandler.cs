@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.Administration.Application.Handlers;
 /// Uses IUserRepository to search users for autocomplete scenarios.
 /// API-01: Authentication endpoints (versioned)
 /// </summary>
-public class SearchUsersQueryHandler : IQueryHandler<SearchUsersQuery, IReadOnlyList<UserSearchResultDto>>
+internal class SearchUsersQueryHandler : IQueryHandler<SearchUsersQuery, IReadOnlyList<UserSearchResultDto>>
 {
     private readonly IUserRepository _userRepository;
     private readonly ILogger<SearchUsersQueryHandler> _logger;
@@ -44,10 +44,15 @@ public class SearchUsersQueryHandler : IQueryHandler<SearchUsersQuery, IReadOnly
             _logger.LogInformation("Found {Count} users matching query: {Query}", results.Count, query.SearchQuery);
             return results;
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: QUERY HANDLER PATTERN - CQRS query boundary
+        // Generic catch handles unexpected infrastructure failures (DB, network)
+        // to prevent exception propagation to API layer. Returns empty result on failure.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error searching users with query: {Query}", query.SearchQuery);
             return Array.Empty<UserSearchResultDto>();
         }
+#pragma warning restore CA1031
     }
 }

@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.Administration.Application.Handlers;
 /// Handler for GetLlmHealthQuery.
 /// ISSUE-962 (BGAI-020): Provides real-time LLM provider health monitoring
 /// </summary>
-public class GetLlmHealthQueryHandler : IQueryHandler<GetLlmHealthQuery, LlmHealthStatusDto>
+internal class GetLlmHealthQueryHandler : IQueryHandler<GetLlmHealthQuery, LlmHealthStatusDto>
 {
     private readonly IProviderHealthCheckService _healthCheckService;
     private readonly HybridLlmService _hybridLlmService;
@@ -24,6 +24,7 @@ public class GetLlmHealthQueryHandler : IQueryHandler<GetLlmHealthQuery, LlmHeal
 
     public Task<LlmHealthStatusDto> Handle(GetLlmHealthQuery query, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(query);
         // Get all provider health statuses
         var allHealth = _healthCheckService.GetAllProviderHealth();
 

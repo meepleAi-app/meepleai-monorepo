@@ -1151,6 +1151,15 @@ namespace Api.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("IconUrl")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ImageUrl")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Language")
+                        .HasColumnType("text");
+
                     b.Property<int?>("MaxPlayTimeMinutes")
                         .HasColumnType("integer");
 
@@ -1169,6 +1178,12 @@ namespace Api.Migrations
                         .HasColumnType("character varying(128)");
 
                     b.Property<string>("Publisher")
+                        .HasColumnType("text");
+
+                    b.Property<string>("VersionNumber")
+                        .HasColumnType("text");
+
+                    b.Property<string>("VersionType")
                         .HasColumnType("text");
 
                     b.Property<int?>("YearPublished")
@@ -1591,6 +1606,9 @@ namespace Api.Migrations
                     b.Property<Guid>("GameId")
                         .HasMaxLength(64)
                         .HasColumnType("uuid");
+
+                    b.Property<bool>("IsPublic")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Language")
                         .IsRequired()

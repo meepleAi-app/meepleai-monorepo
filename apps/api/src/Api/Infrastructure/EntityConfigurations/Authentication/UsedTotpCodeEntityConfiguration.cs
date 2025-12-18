@@ -8,7 +8,7 @@ namespace Api.Infrastructure.EntityConfigurations.Authentication;
 /// EF Core configuration for UsedTotpCodeEntity.
 /// SECURITY: Issue #1787 - TOTP Replay Attack Prevention (OWASP ASVS 2.8.3)
 /// </summary>
-public class UsedTotpCodeEntityConfiguration : IEntityTypeConfiguration<UsedTotpCodeEntity>
+internal class UsedTotpCodeEntityConfiguration : IEntityTypeConfiguration<UsedTotpCodeEntity>
 {
     public void Configure(EntityTypeBuilder<UsedTotpCodeEntity> builder)
     {

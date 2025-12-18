@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands;
 /// Command to mark a rule comment as resolved.
 /// Optionally resolves all nested replies.
 /// </summary>
-public record ResolveRuleCommentCommand(
+internal record ResolveRuleCommentCommand(
     Guid CommentId,
     Guid ResolvedByUserId,
     bool IsAdmin = false,

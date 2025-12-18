@@ -17,11 +17,14 @@ using FluentValidation;
 
 namespace Api.Extensions;
 
-public static class ApplicationServiceExtensions
+internal static class ApplicationServiceExtensions
 {
+#pragma warning disable S1133 // Method marked obsolete but kept for backward compatibility during migration
+    [Obsolete("Use modular service registration methods instead (AddVectorSearchServices, AddDomainServices, etc.)")]
     public static IServiceCollection AddApplicationServices(
         this IServiceCollection services,
         IConfiguration configuration)
+#pragma warning restore S1133
     {
         services.AddVectorSearchServices(configuration);
         services.AddDomainServices();
@@ -109,7 +112,7 @@ public static class ApplicationServiceExtensions
 
         // N8N services
         services.AddScoped<N8NConfigService>();
-        services.AddScoped<N8NTemplateService>(); // N8N-04: Workflow template service
+        services.AddScoped<IN8NTemplateService, N8NTemplateService>(); // N8N-04: Workflow template service
 
         // N8N-05: Workflow error logging service
         services.AddScoped<IWorkflowErrorLoggingService, WorkflowErrorLoggingService>();

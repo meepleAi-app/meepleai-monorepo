@@ -6,13 +6,14 @@ using Api.SharedKernel.Application.Interfaces;
 
 namespace Api.BoundedContexts.WorkflowIntegration.Application.Handlers;
 
-public class GetAllN8NConfigsQueryHandler : IQueryHandler<GetAllN8NConfigsQuery, List<N8NConfigurationDto>>
+internal class GetAllN8NConfigsQueryHandler : IQueryHandler<GetAllN8NConfigsQuery, List<N8NConfigurationDto>>
 {
     private readonly IN8NConfigurationRepository _repository;
 
     public GetAllN8NConfigsQueryHandler(IN8NConfigurationRepository repository)
     {
-        _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        ArgumentNullException.ThrowIfNull(repository);
+        _repository = repository;
     }
 
     public async Task<List<N8NConfigurationDto>> Handle(GetAllN8NConfigsQuery query, CancellationToken cancellationToken)

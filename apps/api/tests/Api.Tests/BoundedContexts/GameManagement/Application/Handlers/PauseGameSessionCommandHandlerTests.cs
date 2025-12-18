@@ -284,7 +284,7 @@ public class PauseGameSessionCommandHandlerTests
 
         var command = new PauseGameSessionCommand(SessionId: sessionId);
 
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         var cancellationToken = cts.Token;
 
         // Act

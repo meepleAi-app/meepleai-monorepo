@@ -20,7 +20,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// Implements streaming setup guide generation with progressive step delivery.
 /// AI-03: RAG-based setup guide generation with streaming delivery
 /// </summary>
-public class StreamSetupGuideQueryHandler : IStreamingQueryHandler<StreamSetupGuideQuery, RagStreamingEvent>
+internal class StreamSetupGuideQueryHandler : IStreamingQueryHandler<StreamSetupGuideQuery, RagStreamingEvent>
 {
     private readonly IEmbeddingService _embeddingService;
     private readonly IQdrantService _qdrantService;
@@ -29,6 +29,28 @@ public class StreamSetupGuideQueryHandler : IStreamingQueryHandler<StreamSetupGu
     private readonly IConfiguration _configuration;
     private readonly ILogger<StreamSetupGuideQueryHandler> _logger;
     private readonly TimeProvider _timeProvider;
+
+    /// <summary>
+    /// ADMIN-01 Phase 3: Hardcoded fallback prompt for backward compatibility
+    /// </summary>
+    private const string SetupGuideSystemPromptFallback = @"You are a board game setup assistant. Your job is to create clear, actionable setup instructions based ONLY on the provided rulebook context.
+
+CRITICAL INSTRUCTIONS:
+- Generate 3-7 numbered setup steps in a logical order
+- Each step should be concrete and actionable (e.g., 'Place the board in the center')
+- Keep each step instruction concise (1-2 sentences maximum)
+- Mark optional steps with '[OPTIONAL]' prefix in the title
+- Use information ONLY from the provided context
+- If the context is insufficient, generate generic but helpful setup steps
+- Return ONLY the steps in this exact format:
+
+STEP 1: <title>
+<instruction>
+
+STEP 2: <title>
+<instruction>
+
+etc.";
     public StreamSetupGuideQueryHandler(
         IEmbeddingService embeddingService,
         IQdrantService qdrantService,
@@ -312,64 +334,7 @@ TASK: Generate a step-by-step setup guide for this board game. Focus on the init
         {
             // Split response by STEP markers
             var lines = llmResponse.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-            int currentStepNumber = 0;
-            string? currentTitle = null;
-            var currentInstructionLines = new List<string>();
-
-            foreach (var line in lines)
-            {
-                var trimmedLine = line.Trim();
-
-                // Check if this is a new step
-                if (trimmedLine.StartsWith("STEP ", StringComparison.OrdinalIgnoreCase))
-                {
-                    // Save previous step if exists
-                    if (currentStepNumber > 0 && currentTitle != null)
-                    {
-                        var instruction = string.Join(" ", currentInstructionLines).Trim();
-                        if (!string.IsNullOrWhiteSpace(instruction))
-                        {
-                            steps.Add(CreateParsedStep(currentStepNumber, currentTitle, instruction, references));
-                        }
-                    }
-
-                    // Parse new step
-                    var colonIndex = trimmedLine.IndexOf(':');
-                    if (colonIndex > 0)
-                    {
-                        var stepPart = trimmedLine.Substring(0, colonIndex).Trim();
-                        var titlePart = trimmedLine.Substring(colonIndex + 1).Trim();
-
-                        // Extract step number
-                        // FIX MA0009: Add timeout to prevent ReDoS attacks
-                        var numberMatch = Regex.Match(stepPart, @"\d+", RegexOptions.None, TimeSpan.FromSeconds(1));
-                        if (numberMatch.Success && int.TryParse(numberMatch.Value, CultureInfo.InvariantCulture, out var stepNumber))
-                        {
-                            currentStepNumber = stepNumber;
-                            currentTitle = titlePart;
-                            currentInstructionLines.Clear();
-                        }
-                    }
-                }
-                else if (currentStepNumber > 0)
-                {
-                    // This is part of the current step's instruction
-                    if (!string.IsNullOrWhiteSpace(trimmedLine))
-                    {
-                        currentInstructionLines.Add(trimmedLine);
-                    }
-                }
-            }
-
-            // Don't forget the last step
-            if (currentStepNumber > 0 && currentTitle != null)
-            {
-                var instruction = string.Join(" ", currentInstructionLines).Trim();
-                if (!string.IsNullOrWhiteSpace(instruction))
-                {
-                    steps.Add(CreateParsedStep(currentStepNumber, currentTitle, instruction, references));
-                }
-            }
+            steps = ProcessLlmResponseLines(lines, references);
 
             // If parsing failed, return empty list (will trigger fallback to default steps)
             if (steps.Count == 0)
@@ -389,6 +354,68 @@ TASK: Generate a step-by-step setup guide for this board game. Focus on the init
             _logger.LogError(ex, "Error parsing LLM steps response");
         }
 #pragma warning restore CA1031
+
+        return steps;
+    }
+
+    private List<SetupGuideStep> ProcessLlmResponseLines(string[] lines, List<Snippet> references)
+    {
+        var steps = new List<SetupGuideStep>();
+        int currentStepNumber = 0;
+        string? currentTitle = null;
+        var currentInstructionLines = new List<string>();
+
+        foreach (var line in lines)
+        {
+            var trimmedLine = line.Trim();
+
+            // Check if this is a new step
+            if (trimmedLine.StartsWith("STEP ", StringComparison.OrdinalIgnoreCase))
+            {
+                // Save previous step if exists
+                if (currentStepNumber > 0 && currentTitle != null)
+                {
+                    var instruction = string.Join(" ", currentInstructionLines).Trim();
+                    if (!string.IsNullOrWhiteSpace(instruction))
+                    {
+                        steps.Add(CreateParsedStep(currentStepNumber, currentTitle, instruction, references));
+                    }
+                }
+
+                // Parse new step
+                var colonIndex = trimmedLine.IndexOf(':');
+                if (colonIndex > 0)
+                {
+                    var stepPart = trimmedLine.Substring(0, colonIndex).Trim();
+                    var titlePart = trimmedLine.Substring(colonIndex + 1).Trim();
+
+                    // Extract step number
+                    // FIX MA0009: Add timeout to prevent ReDoS attacks
+                    var numberMatch = Regex.Match(stepPart, @"\d+", RegexOptions.None, TimeSpan.FromSeconds(1));
+                    if (numberMatch.Success && int.TryParse(numberMatch.Value, CultureInfo.InvariantCulture, out var stepNumber))
+                    {
+                        currentStepNumber = stepNumber;
+                        currentTitle = titlePart;
+                        currentInstructionLines.Clear();
+                    }
+                }
+            }
+            else if (currentStepNumber > 0 && !string.IsNullOrWhiteSpace(trimmedLine))
+            {
+                // This is part of the current step's instruction
+                currentInstructionLines.Add(trimmedLine);
+            }
+        }
+
+        // Don't forget the last step
+        if (currentStepNumber > 0 && currentTitle != null)
+        {
+            var instruction = string.Join(" ", currentInstructionLines).Trim();
+            if (!string.IsNullOrWhiteSpace(instruction))
+            {
+                steps.Add(CreateParsedStep(currentStepNumber, currentTitle, instruction, references));
+            }
+        }
 
         return steps;
     }
@@ -440,7 +467,7 @@ TASK: Generate a step-by-step setup guide for this board game. Focus on the init
         // Truncate if too long (max 500 chars for readability)
         if (text.Length > 500)
         {
-            text = text.Substring(0, 497) + "...";
+            text = string.Concat(text.AsSpan(0, 497), "...");
         }
 
         return text.Trim();
@@ -449,7 +476,7 @@ TASK: Generate a step-by-step setup guide for this board game. Focus on the init
     /// <summary>
     /// ADMIN-01 Phase 3: Get setup guide system prompt using database-driven prompt management with fallback
     /// </summary>
-    private async Task<string> GetSetupGuideSystemPromptAsync(CancellationToken ct = default)
+    private async Task<string> GetSetupGuideSystemPromptAsync(CancellationToken cancellationToken = default)
     {
         // ADMIN-01: Check feature flag for database-driven prompts
         var usePromptDatabase = _configuration.GetValue<bool>("Features:PromptDatabase", false);
@@ -458,7 +485,7 @@ TASK: Generate a step-by-step setup guide for this board game. Focus on the init
         {
             try
             {
-                var promptTemplate = await _promptTemplateService.GetActivePromptAsync("setup-guide-system-prompt", ct).ConfigureAwait(false);
+                var promptTemplate = await _promptTemplateService.GetActivePromptAsync("setup-guide-system-prompt", cancellationToken).ConfigureAwait(false);
                 if (!string.IsNullOrWhiteSpace(promptTemplate))
                 {
                     _logger.LogDebug("Using database-driven setup guide system prompt");
@@ -484,33 +511,10 @@ TASK: Generate a step-by-step setup guide for this board game. Focus on the init
         }
 
         // Fallback: Use hardcoded prompt (backward compatibility)
-        return GetSetupGuideSystemPromptFallback();
+        return SetupGuideSystemPromptFallback;
     }
 
-    /// <summary>
-    /// ADMIN-01 Phase 3: Hardcoded fallback prompt for backward compatibility
-    /// </summary>
-    private string GetSetupGuideSystemPromptFallback()
-    {
-        return @"You are a board game setup assistant. Your job is to create clear, actionable setup instructions based ONLY on the provided rulebook context.
 
-CRITICAL INSTRUCTIONS:
-- Generate 3-7 numbered setup steps in a logical order
-- Each step should be concrete and actionable (e.g., 'Place the board in the center')
-- Keep each step instruction concise (1-2 sentences maximum)
-- Mark optional steps with '[OPTIONAL]' prefix in the title
-- Use information ONLY from the provided context
-- If the context is insufficient, generate generic but helpful setup steps
-- Return ONLY the steps in this exact format:
-
-STEP 1: <title>
-<instruction>
-
-STEP 2: <title>
-<instruction>
-
-etc.";
-    }
     /// <summary>
     /// Create a streaming event with timestamp
     /// </summary>
@@ -611,3 +615,4 @@ etc.";
         }
     }
 }
+

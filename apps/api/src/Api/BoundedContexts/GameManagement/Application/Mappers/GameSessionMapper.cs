@@ -6,13 +6,14 @@ namespace Api.BoundedContexts.GameManagement.Application.Mappers;
 /// <summary>
 /// Mapper for GameSession domain entity to DTOs.
 /// </summary>
-public static class GameSessionMapper
+internal static class GameSessionMapper
 {
     /// <summary>
     /// Maps a GameSession domain entity to GameSessionDto.
     /// </summary>
     public static GameSessionDto ToDto(this GameSession session)
     {
+        ArgumentNullException.ThrowIfNull(session);
         var playerDtos = session.Players.Select(p => new SessionPlayerDto(
             PlayerName: p.PlayerName,
             PlayerOrder: p.PlayerOrder,

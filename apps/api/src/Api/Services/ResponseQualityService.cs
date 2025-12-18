@@ -7,7 +7,7 @@ namespace Api.Services;
 /// Service for calculating multi-dimensional quality scores for AI responses.
 /// AI-11: Provides RAG confidence, LLM confidence, citation quality, and overall confidence metrics.
 /// </summary>
-public class ResponseQualityService : IResponseQualityService
+internal class ResponseQualityService : IResponseQualityService
 {
     // Heuristic constants for LLM confidence calculation
     private const double BaseConfidence = 0.85;
@@ -30,6 +30,9 @@ public class ResponseQualityService : IResponseQualityService
     {
         "might", "possibly", "unclear", "I'm not sure", "maybe", "perhaps", "I think"
     };
+
+    private static readonly char[] WhitespaceSeparators = { ' ', '\t', '\n', '\r' };
+    private static readonly string[] ParagraphSeparators = { "\n\n", "\n" };
 
     /// <summary>
     /// Calculate quality scores for an AI response.
@@ -99,7 +102,7 @@ public class ResponseQualityService : IResponseQualityService
         var confidence = BaseConfidence;
 
         // Count words in response
-        var words = responseText.Split(new[] { ' ', '\t', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+        var words = responseText.Split(WhitespaceSeparators, StringSplitOptions.RemoveEmptyEntries);
         var wordCount = words.Length;
 
         // Apply length penalties
@@ -113,14 +116,10 @@ public class ResponseQualityService : IResponseQualityService
         }
 
         // Count hedging phrases (case-insensitive)
-        var lowerText = responseText.ToLowerInvariant();
-        foreach (var phrase in HedgingPhrases)
-        {
-            if (lowerText.Contains(phrase.ToLowerInvariant()))
-            {
-                confidence -= HedgingPhrasePenalty;
-            }
-        }
+        var hedgingPhraseCount = HedgingPhrases.Count(phrase =>
+            responseText.Contains(phrase, StringComparison.InvariantCultureIgnoreCase));
+
+        confidence -= hedgingPhraseCount * HedgingPhrasePenalty;
 
         // Cap at [0.0, 1.0]
         return Math.Max(0.0, Math.Min(1.0, confidence));
@@ -146,7 +145,7 @@ public class ResponseQualityService : IResponseQualityService
 
         // Count paragraphs (split by double newlines or single newlines)
         var paragraphs = responseText
-            .Split(new[] { "\n\n", "\n" }, StringSplitOptions.RemoveEmptyEntries)
+            .Split(ParagraphSeparators, StringSplitOptions.RemoveEmptyEntries)
             .Where(p => !string.IsNullOrWhiteSpace(p))
             .ToArray();
 
@@ -170,7 +169,7 @@ public class ResponseQualityService : IResponseQualityService
 /// <summary>
 /// Interface for response quality service.
 /// </summary>
-public interface IResponseQualityService
+internal interface IResponseQualityService
 {
     /// <summary>
     /// Calculate quality scores for an AI response.
@@ -186,7 +185,7 @@ public interface IResponseQualityService
 /// RAG search result with confidence score.
 /// Used for quality scoring calculations.
 /// </summary>
-public class RagSearchResult
+internal class RagSearchResult
 {
     public double Score { get; set; }
     // Additional properties can be added as needed
@@ -196,7 +195,7 @@ public class RagSearchResult
 /// Citation reference in an AI response.
 /// Links response content back to source documents.
 /// </summary>
-public class Citation
+internal class Citation
 {
     public Guid DocumentId { get; set; }
     public int PageNumber { get; set; }

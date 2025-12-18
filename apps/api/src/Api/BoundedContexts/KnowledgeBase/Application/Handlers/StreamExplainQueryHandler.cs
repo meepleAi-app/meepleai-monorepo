@@ -16,7 +16,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// Implements streaming RAG explain flow with progressive SSE events.
 /// API-02: Emits StateUpdate → Citations → Outline → ScriptChunk(s) → Complete
 /// </summary>
-public class StreamExplainQueryHandler : IStreamingQueryHandler<StreamExplainQuery, RagStreamingEvent>
+internal class StreamExplainQueryHandler : IStreamingQueryHandler<StreamExplainQuery, RagStreamingEvent>
 {
     private readonly IEmbeddingService _embeddingService;
     private readonly IQdrantService _qdrantService;
@@ -195,7 +195,7 @@ public class StreamExplainQueryHandler : IStreamingQueryHandler<StreamExplainQue
             var firstSentence = text.Split('.')[0];
             if (firstSentence.Length > 60)
             {
-                firstSentence = firstSentence.Substring(0, 57) + "...";
+                firstSentence = string.Concat(firstSentence.AsSpan(0, 57), "...");
             }
             sections.Add(firstSentence);
         }

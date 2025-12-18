@@ -12,7 +12,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// Handler for DeleteMessageCommand.
 /// Soft-deletes message in ChatThread and invalidates subsequent AI responses.
 /// </summary>
-public class DeleteMessageCommandHandler : ICommandHandler<DeleteMessageCommand, ChatThreadDto>
+internal class DeleteMessageCommandHandler : ICommandHandler<DeleteMessageCommand, ChatThreadDto>
 {
     private readonly IChatThreadRepository _threadRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -33,6 +33,7 @@ public class DeleteMessageCommandHandler : ICommandHandler<DeleteMessageCommand,
 
     public async Task<ChatThreadDto> Handle(DeleteMessageCommand request, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         // Load thread
         var thread = await _threadRepository.GetByIdAsync(request.ThreadId, cancellationToken)
 .ConfigureAwait(false) ?? throw new InvalidOperationException($"Chat thread {request.ThreadId} not found");
@@ -86,7 +87,7 @@ public class DeleteMessageCommandHandler : ICommandHandler<DeleteMessageCommand,
                 isAdminDelete = request.IsAdmin,
                 deletedAt = message.DeletedAt
             }),
-            ct: cancellationToken).ConfigureAwait(false);
+            cancellationToken: cancellationToken).ConfigureAwait(false);
 
         return MapToDto(thread);
     }
@@ -120,3 +121,4 @@ public class DeleteMessageCommandHandler : ICommandHandler<DeleteMessageCommand,
         );
     }
 }
+

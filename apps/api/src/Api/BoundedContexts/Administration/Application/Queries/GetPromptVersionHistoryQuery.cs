@@ -6,6 +6,6 @@ namespace Api.BoundedContexts.Administration.Application.Queries;
 /// <summary>
 /// Query to get the version history for a prompt template.
 /// </summary>
-public record GetPromptVersionHistoryQuery(
+internal record GetPromptVersionHistoryQuery(
     string TemplateId
 ) : IQuery<PromptVersionHistoryResponse>;

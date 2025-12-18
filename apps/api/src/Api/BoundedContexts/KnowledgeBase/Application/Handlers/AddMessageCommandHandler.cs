@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// <summary>
 /// Handles add message to chat thread command.
 /// </summary>
-public class AddMessageCommandHandler : ICommandHandler<AddMessageCommand, ChatThreadDto>
+internal class AddMessageCommandHandler : ICommandHandler<AddMessageCommand, ChatThreadDto>
 {
     private readonly IChatThreadRepository _threadRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -19,12 +19,13 @@ public class AddMessageCommandHandler : ICommandHandler<AddMessageCommand, ChatT
         IChatThreadRepository threadRepository,
         IUnitOfWork unitOfWork)
     {
-        _threadRepository = threadRepository;
-        _unitOfWork = unitOfWork;
+        _threadRepository = threadRepository ?? throw new ArgumentNullException(nameof(threadRepository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
 
     public async Task<ChatThreadDto> Handle(AddMessageCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         // Load thread
         var thread = await _threadRepository.GetByIdAsync(command.ThreadId, cancellationToken)
 .ConfigureAwait(false) ?? throw new InvalidOperationException($"Chat thread with ID {command.ThreadId} not found");

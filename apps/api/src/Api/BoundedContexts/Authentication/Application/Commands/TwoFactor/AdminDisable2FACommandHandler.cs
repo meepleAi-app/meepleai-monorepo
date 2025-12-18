@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands.TwoFactor;
 /// DDD: Admin override to disable 2FA for users who lost authenticator + backup codes.
 /// Requires admin authorization and sends email notification to affected user.
 /// </summary>
-public class AdminDisable2FACommandHandler : ICommandHandler<AdminDisable2FACommand, AdminDisable2FAResult>
+internal class AdminDisable2FACommandHandler : ICommandHandler<AdminDisable2FACommand, AdminDisable2FAResult>
 {
     private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -28,6 +28,7 @@ public class AdminDisable2FACommandHandler : ICommandHandler<AdminDisable2FAComm
 
     public async Task<AdminDisable2FAResult> Handle(AdminDisable2FACommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         try
         {
             // Verify admin user exists and has admin role
@@ -80,10 +81,16 @@ public class AdminDisable2FACommandHandler : ICommandHandler<AdminDisable2FAComm
             _logger.LogWarning(ex, "Domain exception during admin 2FA disable for user {TargetUserId}", command.TargetUserId);
             return new AdminDisable2FAResult(Success: false, ErrorMessage: ex.Message);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: COMMAND HANDLER PATTERN - CQRS handler boundary
+        // Specific exceptions (DomainException) caught separately above.
+        // Generic catch handles unexpected infrastructure failures (DB, network, memory)
+        // to prevent exception propagation to API layer. Returns Result pattern.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error during admin 2FA disable for user {TargetUserId}", command.TargetUserId);
             return new AdminDisable2FAResult(Success: false, ErrorMessage: "An error occurred while disabling two-factor authentication");
         }
+#pragma warning restore CA1031
     }
 }

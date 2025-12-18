@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.Administration.Application.Handlers;
 /// Handler for GetActiveAlertsQuery.
 /// Delegates to AlertingService (service will be refactored in future iterations).
 /// </summary>
-public class GetActiveAlertsQueryHandler : IQueryHandler<GetActiveAlertsQuery, List<AlertDto>>
+internal class GetActiveAlertsQueryHandler : IQueryHandler<GetActiveAlertsQuery, List<AlertDto>>
 {
     private readonly IAlertingService _alertingService;
 

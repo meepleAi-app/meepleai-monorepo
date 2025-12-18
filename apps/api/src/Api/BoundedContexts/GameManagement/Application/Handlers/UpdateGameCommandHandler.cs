@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Handlers;
 /// <summary>
 /// Handles game update command.
 /// </summary>
-public class UpdateGameCommandHandler : ICommandHandler<UpdateGameCommand, GameDto>
+internal class UpdateGameCommandHandler : ICommandHandler<UpdateGameCommand, GameDto>
 {
     private readonly IGameRepository _gameRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -19,12 +19,13 @@ public class UpdateGameCommandHandler : ICommandHandler<UpdateGameCommand, GameD
         IGameRepository gameRepository,
         IUnitOfWork unitOfWork)
     {
-        _gameRepository = gameRepository;
-        _unitOfWork = unitOfWork;
+        _gameRepository = gameRepository ?? throw new ArgumentNullException(nameof(gameRepository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
 
     public async Task<GameDto> Handle(UpdateGameCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         // Load game
         var game = await _gameRepository.GetByIdAsync(command.GameId, cancellationToken)
 .ConfigureAwait(false) ?? throw new InvalidOperationException($"Game with ID {command.GameId} not found");

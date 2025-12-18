@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
 /// BGAI-086: Validates PDF processing configuration on application startup
 /// Implements IValidateOptions to fail fast on misconfiguration
 /// </summary>
-public class PdfProcessingConfigurationValidator : IValidateOptions<PdfProcessingOptions>
+internal class PdfProcessingConfigurationValidator : IValidateOptions<PdfProcessingOptions>
 {
     private const long MinFileSizeBytes = 1024; // 1 KB
     private const long MaxFileSizeBytes = 524288000; // 500 MB

@@ -7,7 +7,7 @@ namespace Api.Infrastructure.EntityConfigurations.Administration;
 /// <summary>
 /// Entity configuration for AlertRuleEntity (Issue #921)
 /// </summary>
-public class AlertRuleEntityConfiguration : IEntityTypeConfiguration<AlertRuleEntity>
+internal class AlertRuleEntityConfiguration : IEntityTypeConfiguration<AlertRuleEntity>
 {
     public void Configure(EntityTypeBuilder<AlertRuleEntity> builder)
     {

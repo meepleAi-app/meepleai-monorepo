@@ -3,7 +3,7 @@ namespace Api.Configuration;
 /// <summary>
 /// PERF-05: Configuration for HybridCache L1 (in-memory) and L2 (distributed) caching.
 /// </summary>
-public class HybridCacheConfiguration
+internal class HybridCacheConfiguration
 {
     /// <summary>
     /// Enable L2 distributed cache layer (Redis). If false, only L1 in-memory cache is used.
@@ -12,7 +12,7 @@ public class HybridCacheConfiguration
     /// Development: false (in-memory only for simplicity)
     /// Staging/Production: true (L1 + Redis L2 for multi-server)
     /// </remarks>
-    public bool EnableL2Cache { get; set; } = false;
+    public bool EnableL2Cache { get; set; }
 
     /// <summary>
     /// Maximum size of individual cached entries in bytes.

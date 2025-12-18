@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.Authentication.Application.Queries;
 
-public class GetApiKeyQueryHandler : IQueryHandler<GetApiKeyQuery, ApiKeyDto?>
+internal class GetApiKeyQueryHandler : IQueryHandler<GetApiKeyQuery, ApiKeyDto?>
 {
     private readonly MeepleAiDbContext _db;
     private readonly TimeProvider _timeProvider;
@@ -19,6 +19,7 @@ public class GetApiKeyQueryHandler : IQueryHandler<GetApiKeyQuery, ApiKeyDto?>
 
     public async Task<ApiKeyDto?> Handle(GetApiKeyQuery request, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         if (!Guid.TryParse(request.KeyId, out var keyGuid) || !Guid.TryParse(request.UserId, out var userGuid))
         {
             return null;

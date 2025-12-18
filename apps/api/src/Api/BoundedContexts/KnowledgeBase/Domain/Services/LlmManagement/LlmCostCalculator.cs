@@ -16,7 +16,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
 /// - Paid fallback: openai/gpt-4o-mini ($0.15/$0.60 per 1M tokens)
 /// - Admin premium: anthropic/claude-3.5-haiku ($0.80/$4.00 per 1M tokens)
 /// </remarks>
-public class LlmCostCalculator : ILlmCostCalculator
+internal class LlmCostCalculator : ILlmCostCalculator
 {
     // Pricing database (per 1M tokens in USD)
     // Source: OpenRouter pricing + Anthropic direct pricing (Q1 2025)

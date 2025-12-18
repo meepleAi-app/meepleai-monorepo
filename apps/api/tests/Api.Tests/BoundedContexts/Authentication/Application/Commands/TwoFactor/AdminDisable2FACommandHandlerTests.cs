@@ -338,7 +338,7 @@ public class AdminDisable2FACommandHandlerTests
             AdminUserId: adminUserId,
             TargetUserId: targetUserId);
 
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         var cancellationToken = cts.Token;
 
         // Act

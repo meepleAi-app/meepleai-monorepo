@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 /// ISSUE-1725: Query for LLM query efficiency analysis report.
 /// Returns token usage patterns and optimization recommendations.
 /// </summary>
-public record GetQueryEfficiencyReportQuery : IRequest<QueryEfficiencyReportDto>
+internal record GetQueryEfficiencyReportQuery : IRequest<QueryEfficiencyReportDto>
 {
     public required DateOnly StartDate { get; init; }
     public required DateOnly EndDate { get; init; }
@@ -17,7 +17,7 @@ public record GetQueryEfficiencyReportQuery : IRequest<QueryEfficiencyReportDto>
 /// <summary>
 /// DTO for query efficiency report
 /// </summary>
-public record QueryEfficiencyReportDto
+internal record QueryEfficiencyReportDto
 {
     public required DateOnly StartDate { get; init; }
     public required DateOnly EndDate { get; init; }
@@ -31,7 +31,7 @@ public record QueryEfficiencyReportDto
     public required IReadOnlyList<string> OptimizationRecommendations { get; init; }
 }
 
-public record QueryTypeCostDto
+internal record QueryTypeCostDto
 {
     public required string QueryType { get; init; }
     public required int QueryCount { get; init; }

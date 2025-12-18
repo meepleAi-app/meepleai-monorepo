@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.External.Models;
 /// Response from Unstructured PDF extraction service
 /// Matches Python schema: PdfExtractionResponse
 /// </summary>
-public class UnstructuredResponse
+internal class UnstructuredResponse
 {
     [JsonPropertyName("text")]
     public string Text { get; set; } = string.Empty;
@@ -29,7 +29,7 @@ public class UnstructuredResponse
 /// Text chunk from Unstructured extraction
 /// Matches Python schema: TextChunkSchema
 /// </summary>
-public class UnstructuredChunk
+internal class UnstructuredChunk
 {
     [JsonPropertyName("text")]
     public string Text { get; set; } = string.Empty;
@@ -48,7 +48,7 @@ public class UnstructuredChunk
 /// Quality breakdown from Unstructured extraction
 /// Matches Python schema: QualityBreakdownSchema
 /// </summary>
-public class UnstructuredQualityBreakdown
+internal class UnstructuredQualityBreakdown
 {
     [JsonPropertyName("text_coverage_score")]
     public double TextCoverageScore { get; set; }
@@ -67,7 +67,7 @@ public class UnstructuredQualityBreakdown
 /// Error response from Unstructured service
 /// Matches Python schema: ErrorResponse
 /// </summary>
-public class UnstructuredErrorResponse
+internal class UnstructuredErrorResponse
 {
     [JsonPropertyName("error")]
     public UnstructuredErrorDetail Error { get; set; } = new();
@@ -77,7 +77,7 @@ public class UnstructuredErrorResponse
 /// Error detail from Unstructured service
 /// Matches Python schema: ErrorDetail
 /// </summary>
-public class UnstructuredErrorDetail
+internal class UnstructuredErrorDetail
 {
     [JsonPropertyName("code")]
     public string Code { get; set; } = string.Empty;

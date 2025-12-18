@@ -5,7 +5,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.EmbeddingProviders.Pr
 /// <summary>
 /// Base class for embedding providers with common functionality.
 /// </summary>
-public abstract class EmbeddingProviderBase : IEmbeddingProvider
+internal abstract class EmbeddingProviderBase : IEmbeddingProvider
 {
     protected readonly HttpClient HttpClient;
     protected readonly ILogger Logger;
@@ -26,24 +26,24 @@ public abstract class EmbeddingProviderBase : IEmbeddingProvider
     public abstract int Dimensions { get; }
     public abstract int MaxContextTokens { get; }
 
-    public async Task<EmbeddingProviderResult> GenerateEmbeddingAsync(string text, CancellationToken ct = default)
+    public async Task<EmbeddingProviderResult> GenerateEmbeddingAsync(string text, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(text))
         {
             return EmbeddingProviderResult.CreateFailure("Text cannot be empty");
         }
 
-        return await GenerateBatchEmbeddingsAsync(new[] { text }, ct).ConfigureAwait(false);
+        return await GenerateBatchEmbeddingsAsync(new[] { text }, cancellationToken).ConfigureAwait(false);
     }
 
-    public abstract Task<EmbeddingProviderResult> GenerateBatchEmbeddingsAsync(IReadOnlyList<string> texts, CancellationToken ct = default);
+    public abstract Task<EmbeddingProviderResult> GenerateBatchEmbeddingsAsync(IReadOnlyList<string> texts, CancellationToken cancellationToken = default);
 
-    public virtual async Task<bool> IsHealthyAsync(CancellationToken ct = default)
+    public virtual async Task<bool> IsHealthyAsync(CancellationToken cancellationToken = default)
     {
         try
         {
             // Default health check: try to generate a small embedding
-            var result = await GenerateEmbeddingAsync("health check", ct).ConfigureAwait(false);
+            var result = await GenerateEmbeddingAsync("health check", cancellationToken).ConfigureAwait(false);
             return result.Success;
         }
 #pragma warning disable CA1031 // Do not catch general exception types
@@ -100,3 +100,4 @@ public abstract class EmbeddingProviderBase : IEmbeddingProvider
         }
     }
 }
+

@@ -8,11 +8,13 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Api.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    internal partial class InitialCreate : Migration
     {
         /// <inheritdoc />
+#pragma warning disable MA0051 // Method is too long - EF Core migration auto-generated code
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            ArgumentNullException.ThrowIfNull(migrationBuilder);
             migrationBuilder.CreateTable(
                 name: "agent_feedback",
                 columns: table => new

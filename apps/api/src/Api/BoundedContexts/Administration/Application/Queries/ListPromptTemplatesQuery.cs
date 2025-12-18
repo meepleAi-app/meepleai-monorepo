@@ -6,6 +6,6 @@ namespace Api.BoundedContexts.Administration.Application.Queries;
 /// <summary>
 /// Query to list all prompt templates with optional category filter.
 /// </summary>
-public record ListPromptTemplatesQuery(
+internal record ListPromptTemplatesQuery(
     string? Category = null
 ) : IQuery<PromptTemplateListResponse>;

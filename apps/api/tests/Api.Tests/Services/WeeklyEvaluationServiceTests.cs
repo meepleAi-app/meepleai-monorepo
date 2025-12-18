@@ -18,7 +18,7 @@ namespace Api.Tests.Services;
 /// BGAI-042: Weekly automated quality evaluation job.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
-public class WeeklyEvaluationServiceTests : IDisposable
+public sealed class WeeklyEvaluationServiceTests : IDisposable
 {
     private readonly Mock<IServiceScopeFactory> _scopeFactoryMock;
     private readonly Mock<IServiceScope> _scopeMock;
@@ -137,8 +137,8 @@ public class WeeklyEvaluationServiceTests : IDisposable
         var options = Options.Create(_config);
         var expectedReport = new QualityReport
         {
-            StartDate = new DateTime(2025, 1, 8, 12, 0, 0),
-            EndDate = new DateTime(2025, 1, 15, 12, 0, 0),
+            StartDate = new DateTime(2025, 1, 8, 12, 0, 0, DateTimeKind.Utc),
+            EndDate = new DateTime(2025, 1, 15, 12, 0, 0, DateTimeKind.Utc),
             TotalResponses = 100,
             LowQualityCount = 5,
             LowQualityPercentage = 5.0,
@@ -174,8 +174,8 @@ public class WeeklyEvaluationServiceTests : IDisposable
         _mediatorMock.Verify(
             x => x.Send(
                 It.Is<GenerateQualityReportQuery>(q =>
-                    q.StartDate.Date == new DateTime(2025, 1, 8).Date &&
-                    q.EndDate.Date == new DateTime(2025, 1, 15).Date &&
+                    q.StartDate.Date == new DateTime(2025, 1, 8, 0, 0, 0, DateTimeKind.Utc).Date &&
+                    q.EndDate.Date == new DateTime(2025, 1, 15, 0, 0, 0, DateTimeKind.Utc).Date &&
                     q.Days == 7),
                 It.IsAny<CancellationToken>()),
             Times.AtLeastOnce);
@@ -224,8 +224,8 @@ public class WeeklyEvaluationServiceTests : IDisposable
         // Assert
         Assert.NotNull(capturedQuery);
         // Compare dates only to tolerate time shift from FakeTimeProvider.Advance
-        Assert.Equal(new DateTime(2025, 2, 13).Date, capturedQuery.StartDate.Date);
-        Assert.Equal(new DateTime(2025, 2, 20).Date, capturedQuery.EndDate.Date);
+        Assert.Equal(new DateTime(2025, 2, 13, 0, 0, 0, DateTimeKind.Utc).Date, capturedQuery.StartDate.Date);
+        Assert.Equal(new DateTime(2025, 2, 20, 0, 0, 0, DateTimeKind.Utc).Date, capturedQuery.EndDate.Date);
         Assert.Equal(7, capturedQuery.Days);
     }
 
@@ -237,10 +237,10 @@ public class WeeklyEvaluationServiceTests : IDisposable
         _config.RagDatasetPath = "datasets/rag/evaluation.json";
         var options = Options.Create(_config);
 
-        var ragServiceMock = new Mock<IRagEvaluationService>();
+        // When RAG evaluation is disabled, service won't be requested from DI
         _serviceProviderMock
             .Setup(x => x.GetService(typeof(IRagEvaluationService)))
-            .Returns(ragServiceMock.Object);
+            .Returns(null!);
 
         _mediatorMock
             .Setup(x => x.Send(It.IsAny<GenerateQualityReportQuery>(), It.IsAny<CancellationToken>()))
@@ -271,8 +271,9 @@ public class WeeklyEvaluationServiceTests : IDisposable
         await service.StopAsync(_cts.Token);
 
         // Assert
-        ragServiceMock.Verify(
-            x => x.LoadDatasetAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+        // RAG evaluation should not be invoked when disabled
+        _serviceProviderMock.Verify(
+            x => x.GetService(typeof(IRagEvaluationService)),
             Times.Never);
     }
 

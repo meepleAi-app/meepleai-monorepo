@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.GameManagement.Domain.Entities;
 /// <summary>
 /// Game aggregate root representing a board game in the system.
 /// </summary>
-public sealed class Game : AggregateRoot<Guid>
+internal sealed class Game : AggregateRoot<Guid>
 {
     public GameTitle Title { get; private set; }
     public Publisher? Publisher { get; private set; }
@@ -19,6 +19,10 @@ public sealed class Game : AggregateRoot<Guid>
     // BGG Integration (AI-13)
     public int? BggId { get; private set; }
     public string? BggMetadata { get; private set; }
+
+    // Admin Wizard: Game images
+    public string? IconUrl { get; private set; }
+    public string? ImageUrl { get; private set; }
 
     /// <summary>
     /// Private constructor for EF Core.
@@ -40,7 +44,8 @@ public sealed class Game : AggregateRoot<Guid>
         PlayerCount? playerCount = null,
         PlayTime? playTime = null) : base(id)
     {
-        Title = title ?? throw new ArgumentNullException(nameof(title));
+        ArgumentNullException.ThrowIfNull(title);
+        Title = title;
         Publisher = publisher;
         YearPublished = yearPublished;
         PlayerCount = playerCount;
@@ -67,6 +72,15 @@ public sealed class Game : AggregateRoot<Guid>
         if (playTime != null) PlayTime = playTime;
 
         AddDomainEvent(new GameUpdatedEvent(Id, Title.Value));
+    }
+
+    /// <summary>
+    /// Sets game images (icon and cover image).
+    /// </summary>
+    public void SetImages(string? iconUrl, string? imageUrl)
+    {
+        IconUrl = iconUrl;
+        ImageUrl = imageUrl;
     }
 
     /// <summary>

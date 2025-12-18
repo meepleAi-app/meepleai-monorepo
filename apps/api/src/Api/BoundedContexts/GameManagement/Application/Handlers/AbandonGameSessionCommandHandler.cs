@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Handlers;
 /// <summary>
 /// Handles game session abandon command.
 /// </summary>
-public class AbandonGameSessionCommandHandler : ICommandHandler<AbandonGameSessionCommand, GameSessionDto>
+internal class AbandonGameSessionCommandHandler : ICommandHandler<AbandonGameSessionCommand, GameSessionDto>
 {
     private readonly IGameSessionRepository _sessionRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -20,12 +20,13 @@ public class AbandonGameSessionCommandHandler : ICommandHandler<AbandonGameSessi
         IGameSessionRepository sessionRepository,
         IUnitOfWork unitOfWork)
     {
-        _sessionRepository = sessionRepository;
-        _unitOfWork = unitOfWork;
+        _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
 
     public async Task<GameSessionDto> Handle(AbandonGameSessionCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         // Load session
         var session = await _sessionRepository.GetByIdAsync(command.SessionId, cancellationToken)
 .ConfigureAwait(false) ?? throw new InvalidOperationException($"Session with ID {command.SessionId} not found");

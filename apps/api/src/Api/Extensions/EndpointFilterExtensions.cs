@@ -8,7 +8,7 @@ namespace Api.Extensions;
 ///
 /// Issue: #1446 - Session Validation Middleware
 /// </summary>
-public static class EndpointFilterExtensions
+internal static class EndpointFilterExtensions
 {
     /// <summary>
     /// Requires an active session for the endpoint.
@@ -82,7 +82,7 @@ public static class EndpointFilterExtensions
     ///     {
     ///         // Session authentication
     ///     }
-    ///     else if (context.User.Identity?.IsAuthenticated == true)
+    ///     else if (context.User.Identity?.IsAuthenticated is true)
     ///     {
     ///         // API key authentication
     ///     }

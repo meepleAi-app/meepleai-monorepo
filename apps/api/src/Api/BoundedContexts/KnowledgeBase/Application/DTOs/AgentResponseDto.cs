@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 /// <summary>
 /// DTO representing the response from an agent invocation.
 /// </summary>
-public sealed record AgentResponseDto
+internal sealed record AgentResponseDto
 {
     /// <summary>
     /// Unique identifier for this invocation.
@@ -63,8 +63,7 @@ public sealed record AgentResponseDto
     /// </summary>
     public static AgentResponseDto FromDomain(AgentInvocationResult result)
     {
-        if (result == null)
-            throw new ArgumentNullException(nameof(result));
+        ArgumentNullException.ThrowIfNull(result);
 
         var qualityLevel = result.Confidence.Value switch
         {

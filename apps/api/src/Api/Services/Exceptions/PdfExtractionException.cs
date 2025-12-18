@@ -12,4 +12,7 @@ public class PdfExtractionException : Exception
     public PdfExtractionException(string message, Exception innerException) : base(message, innerException)
     {
     }
+    public PdfExtractionException()
+    {
+    }
 }

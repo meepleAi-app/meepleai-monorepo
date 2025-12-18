@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Queries.BggApi;
 /// Infrastructure delegation: HTTP calls, XML parsing, caching, rate limiting via BggApiService.
 /// External API: BoardGameGeek XML API v2.
 /// </summary>
-public sealed class SearchBggGamesQueryHandler : IQueryHandler<SearchBggGamesQuery, List<BggSearchResultDto>>
+internal sealed class SearchBggGamesQueryHandler : IQueryHandler<SearchBggGamesQuery, List<BggSearchResultDto>>
 {
     private readonly IBggApiService _bggApiService;
     private readonly ILogger<SearchBggGamesQueryHandler> _logger;

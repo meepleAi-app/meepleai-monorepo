@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// Handler for ProvideAgentFeedbackCommand.
 /// Records user feedback for agent responses to track effectiveness.
 /// </summary>
-public sealed class ProvideAgentFeedbackCommandHandler : IRequestHandler<ProvideAgentFeedbackCommand>
+internal sealed class ProvideAgentFeedbackCommandHandler : IRequestHandler<ProvideAgentFeedbackCommand>
 {
     private static readonly HashSet<string> ValidOutcomes = new(StringComparer.Ordinal)
     {
@@ -35,6 +35,43 @@ public sealed class ProvideAgentFeedbackCommandHandler : IRequestHandler<Provide
 
     public async Task Handle(ProvideAgentFeedbackCommand request, CancellationToken cancellationToken)
     {
+        ValidateRequest(request);
+
+        try
+        {
+            var userGuid = Guid.Parse(request.UserId);
+            var messageGuid = Guid.Parse(request.MessageId);
+            var existing = await _db.AgentFeedbacks
+                .FirstOrDefaultAsync(f => f.MessageId == messageGuid && f.UserId == userGuid, cancellationToken)
+                .ConfigureAwait(false);
+
+            // If outcome is null/empty, remove existing feedback
+            if (string.IsNullOrWhiteSpace(request.Outcome))
+            {
+                await HandleFeedbackRemovalAsync(existing, request, cancellationToken).ConfigureAwait(false);
+                return;
+            }
+
+            await CreateOrUpdateFeedbackAsync(existing, request, userGuid, messageGuid, cancellationToken).ConfigureAwait(false);
+        }
+#pragma warning disable CA1031 // Do not catch general exception types
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
+        // HANDLER PATTERN: Log feedback failures before propagating.
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Failed to record feedback for message {MessageId}",
+                request.MessageId);
+            throw;
+        }
+#pragma warning restore CA1031
+#pragma warning restore S2139
+    }
+
+    private static void ValidateRequest(ProvideAgentFeedbackCommand request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
         if (string.IsNullOrWhiteSpace(request.MessageId))
         {
             throw new ArgumentException("messageId is required", nameof(request));
@@ -58,84 +95,67 @@ public sealed class ProvideAgentFeedbackCommandHandler : IRequestHandler<Provide
                 $"Invalid outcome '{request.Outcome}'. Must be one of: {string.Join(", ", ValidOutcomes)}",
                 nameof(request));
         }
+    }
 
-        try
+    private async Task HandleFeedbackRemovalAsync(AgentFeedbackEntity? existing, ProvideAgentFeedbackCommand request, CancellationToken ct)
+    {
+        if (existing != null)
         {
-            var userGuid = Guid.Parse(request.UserId);
-            var messageGuid = Guid.Parse(request.MessageId);
-            var existing = await _db.AgentFeedbacks
-                .FirstOrDefaultAsync(f => f.MessageId == messageGuid && f.UserId == userGuid, cancellationToken)
-                .ConfigureAwait(false);
+            _db.AgentFeedbacks.Remove(existing);
+            await _db.SaveChangesAsync(ct).ConfigureAwait(false);
 
-            // If outcome is null/empty, remove existing feedback
-            if (string.IsNullOrWhiteSpace(request.Outcome))
+            _logger.LogInformation(
+                "Removed agent feedback for message {MessageId} by user {UserId}",
+                request.MessageId,
+                request.UserId);
+        }
+    }
+
+    private async Task CreateOrUpdateFeedbackAsync(
+        AgentFeedbackEntity? existing,
+        ProvideAgentFeedbackCommand request,
+        Guid userGuid,
+        Guid messageGuid,
+        CancellationToken ct)
+    {
+        // Create or update feedback
+        if (existing == null)
+        {
+            var entity = new AgentFeedbackEntity
             {
-                if (existing != null)
-                {
-                    _db.AgentFeedbacks.Remove(existing);
-                    await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-
-                    _logger.LogInformation(
-                        "Removed agent feedback for message {MessageId} by user {UserId}",
-                        request.MessageId,
-                        request.UserId);
-                }
-
-                return;
-            }
-
-            // Create or update feedback
-            if (existing == null)
-            {
-                var entity = new AgentFeedbackEntity
-                {
-                    MessageId = messageGuid,
-                    Endpoint = request.Endpoint,
-                    GameId = !string.IsNullOrWhiteSpace(request.GameId) && Guid.TryParse(request.GameId, out var gameGuid)
-                        ? gameGuid
-                        : null,
-                    UserId = userGuid,
-                    Outcome = request.Outcome,
-                    CreatedAt = _timeProvider.GetUtcNow().UtcDateTime,
-                    UpdatedAt = _timeProvider.GetUtcNow().UtcDateTime
-                };
-
-                _db.AgentFeedbacks.Add(entity);
-
-                _logger.LogInformation(
-                    "Created agent feedback for message {MessageId}: {Outcome}",
-                    request.MessageId,
-                    request.Outcome);
-            }
-            else
-            {
-                existing.Endpoint = request.Endpoint;
-                existing.GameId = !string.IsNullOrWhiteSpace(request.GameId) && Guid.TryParse(request.GameId, out var gameGuid)
+                MessageId = messageGuid,
+                Endpoint = request.Endpoint,
+                GameId = !string.IsNullOrWhiteSpace(request.GameId) && Guid.TryParse(request.GameId, out var gameGuid)
                     ? gameGuid
-                    : null;
-                existing.Outcome = request.Outcome;
-                existing.UpdatedAt = _timeProvider.GetUtcNow().UtcDateTime;
+                    : null,
+                UserId = userGuid,
+                Outcome = request.Outcome,
+                CreatedAt = _timeProvider.GetUtcNow().UtcDateTime,
+                UpdatedAt = _timeProvider.GetUtcNow().UtcDateTime
+            };
 
-                _logger.LogInformation(
-                    "Updated agent feedback for message {MessageId}: {Outcome}",
-                    request.MessageId,
-                    request.Outcome);
-            }
+            _db.AgentFeedbacks.Add(entity);
 
-            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            _logger.LogInformation(
+                "Created agent feedback for message {MessageId}: {Outcome}",
+                request.MessageId,
+                request.Outcome);
         }
-#pragma warning disable CA1031 // Do not catch general exception types
-#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
-        // HANDLER PATTERN: Log feedback failures before propagating.
-        catch (Exception ex)
+        else
         {
-            _logger.LogError(
-                ex,
-                "Failed to record feedback for message {MessageId}",
-                request.MessageId);
-            throw;
+            existing.Endpoint = request.Endpoint;
+            existing.GameId = !string.IsNullOrWhiteSpace(request.GameId) && Guid.TryParse(request.GameId, out var gameGuid)
+                ? gameGuid
+                : null;
+            existing.Outcome = request.Outcome;
+            existing.UpdatedAt = _timeProvider.GetUtcNow().UtcDateTime;
+
+            _logger.LogInformation(
+                "Updated agent feedback for message {MessageId}: {Outcome}",
+                request.MessageId,
+                request.Outcome);
         }
-#pragma warning restore CA1031
-#pragma warning restore S2139
+
+        await _db.SaveChangesAsync(ct).ConfigureAwait(false);
     }
 }

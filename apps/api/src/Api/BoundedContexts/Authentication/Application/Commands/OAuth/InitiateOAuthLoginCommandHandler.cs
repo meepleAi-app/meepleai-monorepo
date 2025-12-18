@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands.OAuth;
 /// Business logic: CSRF state generation → State storage → Authorization URL generation.
 /// Infrastructure delegation: Provider HTTP communication and state storage via IOAuthService.
 /// </summary>
-public sealed class InitiateOAuthLoginCommandHandler : ICommandHandler<InitiateOAuthLoginCommand, InitiateOAuthLoginResult>
+internal sealed class InitiateOAuthLoginCommandHandler : ICommandHandler<InitiateOAuthLoginCommand, InitiateOAuthLoginResult>
 {
     private readonly IOAuthService _oauthService;
     private readonly ILogger<InitiateOAuthLoginCommandHandler> _logger;
@@ -20,12 +20,13 @@ public sealed class InitiateOAuthLoginCommandHandler : ICommandHandler<InitiateO
         IOAuthService oauthService,
         ILogger<InitiateOAuthLoginCommandHandler> logger)
     {
-        _oauthService = oauthService;
-        _logger = logger;
+        _oauthService = oauthService ?? throw new ArgumentNullException(nameof(oauthService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<InitiateOAuthLoginResult> Handle(InitiateOAuthLoginCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         try
         {
             // Validate provider (business logic)
@@ -87,6 +88,11 @@ public sealed class InitiateOAuthLoginCommandHandler : ICommandHandler<InitiateO
                 ErrorMessage = $"OAuth provider {command.Provider} is not available. Please contact support."
             };
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: COMMAND HANDLER PATTERN - CQRS handler boundary
+        // Specific exceptions (ArgumentException, InvalidOperationException) caught separately above.
+        // Generic catch handles unexpected infrastructure failures (DB, network, memory)
+        // to prevent exception propagation to API layer. Returns Result<T> pattern.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error during OAuth login initiation for provider {Provider}", command.Provider);
@@ -96,5 +102,6 @@ public sealed class InitiateOAuthLoginCommandHandler : ICommandHandler<InitiateO
                 ErrorMessage = "An unexpected error occurred while initiating OAuth login"
             };
         }
+#pragma warning restore CA1031
     }
 }

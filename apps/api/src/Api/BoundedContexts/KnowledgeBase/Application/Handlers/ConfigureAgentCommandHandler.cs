@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// Handler for ConfigureAgentCommand.
 /// Applies DDD pattern: Domain logic in aggregate, handler orchestrates.
 /// </summary>
-public class ConfigureAgentCommandHandler : IRequestHandler<ConfigureAgentCommand, ConfigureAgentResult>
+internal class ConfigureAgentCommandHandler : IRequestHandler<ConfigureAgentCommand, ConfigureAgentResult>
 {
     private readonly IAgentRepository _agentRepository;
     private readonly ILogger<ConfigureAgentCommandHandler> _logger;
@@ -27,6 +27,7 @@ public class ConfigureAgentCommandHandler : IRequestHandler<ConfigureAgentComman
         ConfigureAgentCommand request,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         try
         {
             // Retrieve agent
@@ -73,7 +74,13 @@ public class ConfigureAgentCommandHandler : IRequestHandler<ConfigureAgentComman
                 ErrorCode: "INVALID_CONFIGURATION"
             );
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: COMMAND HANDLER PATTERN - CQRS handler boundary
+        // Specific ArgumentException is handled above
+        // Generic catch handles unexpected infrastructure failures (DB, network, memory)
+        // to prevent exception propagation to API layer. Returns Result/Response pattern.
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             _logger.LogError(ex, "Error configuring agent {AgentId}", request.AgentId);
             return new ConfigureAgentResult(

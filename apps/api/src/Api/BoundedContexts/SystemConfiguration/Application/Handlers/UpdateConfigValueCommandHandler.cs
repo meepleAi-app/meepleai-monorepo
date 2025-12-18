@@ -7,7 +7,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 
 namespace Api.BoundedContexts.SystemConfiguration.Application.Handlers;
 
-public class UpdateConfigValueCommandHandler : ICommandHandler<UpdateConfigValueCommand, ConfigurationDto>
+internal class UpdateConfigValueCommandHandler : ICommandHandler<UpdateConfigValueCommand, ConfigurationDto>
 {
     private readonly IConfigurationRepository _configurationRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -22,6 +22,7 @@ public class UpdateConfigValueCommandHandler : ICommandHandler<UpdateConfigValue
 
     public async Task<ConfigurationDto> Handle(UpdateConfigValueCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         var config = await _configurationRepository.GetByIdAsync(command.ConfigId, cancellationToken).ConfigureAwait(false);
 
         if (config == null)

@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 /// <summary>
 /// Value object representing game play time range in minutes.
 /// </summary>
-public sealed class PlayTime : ValueObject
+internal sealed class PlayTime : ValueObject
 {
     private const int MinPlayTimeMinutes = 1;
     private const int MaxPlayTimeMinutes = 1440; // 24 hours

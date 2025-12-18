@@ -14,7 +14,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Domain.Services;
 /// - PDF version requirements (minimum supported version)
 /// - MIME type whitelist (allowed content types)
 /// </summary>
-public class PdfValidationDomainService
+internal class PdfValidationDomainService
 {
     private readonly IConfiguration _config;
 
@@ -118,7 +118,7 @@ public class PdfValidationDomainService
 /// Result of a validation operation.
 /// Contains success/failure status and error details if validation failed.
 /// </summary>
-public record ValidationResult(bool IsSuccess, string? FieldName = null, string? Error = null)
+internal record ValidationResult(bool IsSuccess, string? FieldName = null, string? Error = null)
 {
     /// <summary>
     /// Creates a successful validation result.

@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Indexing;
 /// Reduces vector storage by compressing float32 to int8, with ~75% memory reduction
 /// and less than 1% accuracy loss for typical use cases.
 /// </summary>
-public sealed class QuantizationConfiguration : ValueObject
+internal sealed class QuantizationConfiguration : ValueObject
 {
     /// <summary>
     /// Quantization type (Scalar = int8 compression).
@@ -113,7 +113,7 @@ public sealed class QuantizationConfiguration : ValueObject
 /// <summary>
 /// Quantization type for vector compression.
 /// </summary>
-public enum QuantizationType
+internal enum QuantizationType
 {
     /// <summary>
     /// No quantization (full float32 precision).

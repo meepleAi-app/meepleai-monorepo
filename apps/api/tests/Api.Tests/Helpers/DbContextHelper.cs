@@ -10,7 +10,7 @@ namespace Api.Tests.Helpers;
 /// <summary>
 /// Helper for creating test DbContext instances with proper configuration.
 /// </summary>
-public static class DbContextHelper
+internal static class DbContextHelper
 {
     /// <summary>
     /// Creates an InMemory MeepleAiDbContext for unit testing.
@@ -34,17 +34,6 @@ public static class DbContextHelper
         return new MeepleAiDbContext(options, mediatorMock.Object, eventCollectorMock.Object);
     }
 
-    /// <summary>
-    /// Creates a mock of MeepleAiDbContext with configurable behavior.
-    /// Note: For most tests, prefer CreateInMemoryDbContext() for real EF Core behavior.
-    /// WARNING: DbContext cannot be mocked with Moq due to constructor requirements.
-    /// This method is deprecated and returns a real in-memory context instead.
-    /// </summary>
-    [Obsolete("Use CreateInMemoryDbContext() instead. DbContext cannot be mocked with Moq.")]
-    public static MeepleAiDbContext CreateMockDbContext()
-    {
-        // Return a real in-memory context instead of trying to mock
-        return CreateInMemoryDbContext();
-    }
+
 }
 

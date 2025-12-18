@@ -12,7 +12,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// Handler for GetAllAgentsQuery.
 /// Retrieves all agents with optional filtering.
 /// </summary>
-public class GetAllAgentsQueryHandler : IRequestHandler<GetAllAgentsQuery, List<AgentDto>>
+internal class GetAllAgentsQueryHandler : IRequestHandler<GetAllAgentsQuery, List<AgentDto>>
 {
     private readonly IAgentRepository _agentRepository;
     private readonly ILogger<GetAllAgentsQueryHandler> _logger;
@@ -37,7 +37,7 @@ public class GetAllAgentsQueryHandler : IRequestHandler<GetAllAgentsQuery, List<
             var agentType = AgentType.Parse(request.Type);
             agents = await _agentRepository.GetByTypeAsync(agentType, cancellationToken).ConfigureAwait(false);
         }
-        else if (request.ActiveOnly == true)
+        else if (request.ActiveOnly.GetValueOrDefault(false))
         {
             // Only active agents
             agents = await _agentRepository.GetAllActiveAsync(cancellationToken).ConfigureAwait(false);

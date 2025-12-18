@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services.QualityTracking;
 /// BGAI-059: Quality test implementation for accuracy validation.
 /// Validates answer keywords, citations, and hallucination detection.
 /// </summary>
-public interface IRagAccuracyEvaluator
+internal interface IRagAccuracyEvaluator
 {
     /// <summary>
     /// Evaluates a RAG response against a golden dataset test case
@@ -43,7 +43,7 @@ public interface IRagAccuracyEvaluator
 /// <summary>
 /// Implementation of IRagAccuracyEvaluator
 /// </summary>
-public class RagAccuracyEvaluator : IRagAccuracyEvaluator
+internal class RagAccuracyEvaluator : IRagAccuracyEvaluator
 {
     private readonly ILogger<RagAccuracyEvaluator> _logger;
 
@@ -98,16 +98,9 @@ public class RagAccuracyEvaluator : IRagAccuracyEvaluator
         if (testCase.ExpectedAnswerKeywords.Count == 0)
             return (true, 1.0); // No keywords expected
 
-        var answer = actualResponse.answer?.ToLowerInvariant() ?? string.Empty;
-        var matchCount = 0;
-
-        foreach (var keyword in testCase.ExpectedAnswerKeywords)
-        {
-            if (answer.Contains(keyword.ToLowerInvariant()))
-            {
-                matchCount++;
-            }
-        }
+        var answer = actualResponse.answer ?? string.Empty;
+        var matchCount = testCase.ExpectedAnswerKeywords
+            .Count(keyword => answer.Contains(keyword, StringComparison.InvariantCultureIgnoreCase));
 
         var matchRate = (double)matchCount / testCase.ExpectedAnswerKeywords.Count;
         var allMatch = matchCount == testCase.ExpectedAnswerKeywords.Count;
@@ -120,24 +113,17 @@ public class RagAccuracyEvaluator : IRagAccuracyEvaluator
         if (testCase.ExpectedCitations.Count == 0)
             return (true, 1.0); // No citations expected
 
-        if (actualResponse.snippets == null || !actualResponse.snippets.Any())
+        if (actualResponse.snippets == null || actualResponse.snippets.Count == 0)
             return (false, 0.0); // Expected citations but got none
 
-        var validCount = 0;
-
-        foreach (var expectedCitation in testCase.ExpectedCitations)
+        var validCount = testCase.ExpectedCitations.Count(expectedCitation =>
         {
             // Check if any actual snippet matches this expected citation
             // Snippet has: text, source, page, line, score
-            var matchFound = actualResponse.snippets.Any(snippet =>
+            return actualResponse.snippets.Any(snippet =>
                 snippet.page == expectedCitation.Page &&
                 (snippet.text?.Contains(expectedCitation.SnippetContains, StringComparison.OrdinalIgnoreCase) ?? false));
-
-            if (matchFound)
-            {
-                validCount++;
-            }
-        }
+        });
 
         var validityRate = (double)validCount / testCase.ExpectedCitations.Count;
         var allValid = validCount == testCase.ExpectedCitations.Count;
@@ -150,11 +136,11 @@ public class RagAccuracyEvaluator : IRagAccuracyEvaluator
         if (testCase.ForbiddenKeywords.Count == 0)
             return true; // No forbidden keywords to check
 
-        var answer = actualResponse.answer?.ToLowerInvariant() ?? string.Empty;
+        var answer = actualResponse.answer ?? string.Empty;
 
         foreach (var forbiddenKeyword in testCase.ForbiddenKeywords)
         {
-            if (answer.Contains(forbiddenKeyword.ToLowerInvariant()))
+            if (answer.Contains(forbiddenKeyword, StringComparison.InvariantCultureIgnoreCase))
             {
                 _logger.LogWarning(
                     "Test case {TestCaseId}: Forbidden keyword '{Keyword}' found in answer (hallucination detected)",

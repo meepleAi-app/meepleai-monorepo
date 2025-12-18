@@ -10,13 +10,13 @@ namespace Api.Models;
 /// AI-14: Updated to support hybrid search modes
 /// Issue #2051: Supports document source filtering
 /// </summary>
-public record QaRequest(
+internal record QaRequest(
     string gameId,
     string query,
     Guid? chatId = null,
     SearchMode searchMode = SearchMode.Hybrid, // AI-14: Default to hybrid search
     IReadOnlyList<Guid>? documentIds = null); // Issue #2051: Filter by document IDs (null = all)
-public record QaResponse(
+internal record QaResponse(
     string answer,
     IReadOnlyList<Snippet> snippets,
     int promptTokens = 0,
@@ -25,15 +25,15 @@ public record QaResponse(
     double? confidence = null,
     IReadOnlyDictionary<string, string>? metadata = null,
     IReadOnlyList<string>? followUpQuestions = null);  // CHAT-02: AI-generated follow-up questions
-public record Snippet(string text, string source, int page, int line, float score);
+internal record Snippet(string text, string source, int page, int line, float score);
 
-public record IngestPdfResponse(string jobId);
-public record SeedRequest(string gameId);
-public record AgentFeedbackRequest(string messageId, string endpoint, string? outcome, string userId, string? gameId);
+internal record IngestPdfResponse(string jobId);
+internal record SeedRequest(string gameId);
+internal record AgentFeedbackRequest(string messageId, string endpoint, string? outcome, string userId, string? gameId);
 
 // AI-02: RAG Explain models
-public record ExplainRequest(string gameId, string topic, Guid? chatId = null);
-public record ExplainResponse(
+internal record ExplainRequest(string gameId, string topic, Guid? chatId = null);
+internal record ExplainResponse(
     ExplainOutline outline,
     string script,
     IReadOnlyList<Snippet> citations,
@@ -42,13 +42,13 @@ public record ExplainResponse(
     int completionTokens = 0,
     int totalTokens = 0,
     double? confidence = null);
-public record ExplainOutline(
+internal record ExplainOutline(
     string mainTopic,
     IReadOnlyList<string> sections
 );
 
 // API-02: RAG Explain Streaming models (SSE)
-public enum StreamingEventType
+internal enum StreamingEventType
 {
     StateUpdate,        // Progress updates (e.g., "Generating embeddings")
     Citations,          // Retrieved citations from vector search
@@ -62,31 +62,31 @@ public enum StreamingEventType
     SetupStep           // AI-03: Individual setup step for streaming setup guide
 }
 
-public record RagStreamingEvent(
+internal record RagStreamingEvent(
     StreamingEventType Type,
     object? Data,
     DateTime Timestamp
 );
 
 // Specific data models for streaming events
-public record StreamingStateUpdate(string message);
-public record StreamingCitations(IReadOnlyList<Snippet> citations);
-public record StreamingOutline(ExplainOutline outline);
-public record StreamingScriptChunk(string chunk, int chunkIndex, int totalChunks);
-public record StreamingComplete(
+internal record StreamingStateUpdate(string message);
+internal record StreamingCitations(IReadOnlyList<Snippet> citations);
+internal record StreamingOutline(ExplainOutline outline);
+internal record StreamingScriptChunk(string chunk, int chunkIndex, int totalChunks);
+internal record StreamingComplete(
     int estimatedReadingTimeMinutes,
     int promptTokens,
     int completionTokens,
     int totalTokens,
     double? confidence
 );
-public record StreamingError(string errorMessage, string? errorCode = null);
-public record StreamingHeartbeat(string message = "keep-alive");
-public record StreamingToken(string token); // CHAT-01: Individual LLM token
-public record StreamingSetupStep(SetupGuideStep step); // AI-03: Individual setup step
+internal record StreamingError(string errorMessage, string? errorCode = null);
+internal record StreamingHeartbeat(string message = "keep-alive");
+internal record StreamingToken(string token); // CHAT-01: Individual LLM token
+internal record StreamingSetupStep(SetupGuideStep step); // AI-03: Individual setup step
 
 // CHAT-02: Follow-Up Questions models
-public record StreamingFollowUpQuestions(
+internal record StreamingFollowUpQuestions(
     [property: JsonPropertyName("questions")] IReadOnlyList<string> questions
 );
 
@@ -100,7 +100,7 @@ internal record FollowUpQuestionsDto(
 /// <summary>
 /// Analytics event for tracking follow-up question clicks.
 /// </summary>
-public record FollowUpQuestionClickEvent(
+internal record FollowUpQuestionClickEvent(
     [property: JsonPropertyName("chatId")] Guid chatId,
     [property: JsonPropertyName("originalQuestion")] string originalQuestion,
     [property: JsonPropertyName("followUpQuestion")] string followUpQuestion,
@@ -108,8 +108,8 @@ public record FollowUpQuestionClickEvent(
 );
 
 // AI-03: RAG Setup Guide models
-public record SetupGuideRequest(string gameId, Guid? chatId = null);
-public record SetupGuideResponse(
+internal record SetupGuideRequest(string gameId, Guid? chatId = null);
+internal record SetupGuideResponse(
     string gameTitle,
     IReadOnlyList<SetupGuideStep> steps,
     int estimatedSetupTimeMinutes,
@@ -117,7 +117,7 @@ public record SetupGuideResponse(
     int completionTokens = 0,
     int totalTokens = 0,
     double? confidence = null);
-public record SetupGuideStep(
+internal record SetupGuideStep(
     int stepNumber,
     string title,
     string instruction,
@@ -126,7 +126,7 @@ public record SetupGuideStep(
 );
 
 // ADM-02: n8n Configuration models
-public record N8NConfigDto(
+internal record N8NConfigDto(
     string Id,
     string Name,
     string BaseUrl,
@@ -138,14 +138,14 @@ public record N8NConfigDto(
     DateTime UpdatedAt
 );
 
-public record CreateN8NConfigRequest(
+internal record CreateN8NConfigRequest(
     string Name,
     string BaseUrl,
     string ApiKey,
     string? WebhookUrl
 );
 
-public record UpdateN8NConfigRequest(
+internal record UpdateN8NConfigRequest(
     string? Name,
     string? BaseUrl,
     string? ApiKey,
@@ -153,7 +153,7 @@ public record UpdateN8NConfigRequest(
     bool? IsActive
 );
 
-public record N8NTestResult(
+internal record N8NTestResult(
     bool Success,
     string Message,
     int? LatencyMs
@@ -200,7 +200,7 @@ public record WorkflowTemplateDetailDto(
     object Workflow
 );
 
-public record ImportTemplateRequest(
+internal record ImportTemplateRequest(
     IDictionary<string, string> Parameters
 );
 
@@ -209,7 +209,7 @@ public record ImportTemplateResponse(
     string Message
 );
 
-public record ValidateTemplateRequest(
+internal record ValidateTemplateRequest(
     string TemplateJson
 );
 
@@ -219,7 +219,7 @@ public record ValidateTemplateResponse(
 );
 
 // UI-01: Chat management models
-public record ChatDto(
+internal record ChatDto(
     Guid Id,
     string GameId,
     string GameName,
@@ -229,7 +229,7 @@ public record ChatDto(
     DateTime? LastMessageAt
 );
 
-public record ChatWithHistoryDto(
+internal record ChatWithHistoryDto(
     Guid Id,
     string GameId,
     string GameName,
@@ -240,7 +240,7 @@ public record ChatWithHistoryDto(
     IReadOnlyList<ChatMessageDto> Messages
 );
 
-public record ChatMessageDto(
+internal record ChatMessageDto(
     Guid Id,
     string Level,
     string Message,
@@ -248,19 +248,19 @@ public record ChatMessageDto(
     DateTime CreatedAt
 );
 
-public record CreateChatRequest(
+internal record CreateChatRequest(
     string GameId,
     string AgentId
 );
 
 // CHAT-06: Message editing and deletion models
-public record UpdateMessageRequest(
+internal record UpdateMessageRequest(
     [Required]
     [StringLength(10000, MinimumLength = 1, ErrorMessage = "Content must be between 1 and 10000 characters")]
     string Content
 );
 
-public record ChatMessageResponse(
+internal record ChatMessageResponse(
     Guid Id,
     Guid ChatId,
     string? UserId,
@@ -276,7 +276,7 @@ public record ChatMessageResponse(
     string? MetadataJson
 );
 
-public record AgentDto(
+internal record AgentDto(
     string Id,
     string GameId,
     string Name,
@@ -285,13 +285,13 @@ public record AgentDto(
 );
 
 // CHESS-04: Chess Agent models
-public record ChessAgentRequest(
+internal record ChessAgentRequest(
     string question,
     string? fenPosition = null,
     Guid? chatId = null
 );
 
-public record ChessAgentResponse(
+internal record ChessAgentResponse(
     string answer,
     ChessAnalysis? analysis,
     IReadOnlyList<string> suggestedMoves,
@@ -303,20 +303,20 @@ public record ChessAgentResponse(
     IReadOnlyDictionary<string, string>? metadata = null
 );
 
-public record ChessAnalysis(
+internal record ChessAnalysis(
     string? fenPosition,
     string? evaluationSummary,
     IReadOnlyList<string> keyConsiderations
 );
 
 // CHAT-05: Chat Export models
-public record ExportChatRequest(
+internal record ExportChatRequest(
     string Format,
     DateTime? DateFrom = null,
     DateTime? DateTo = null
 );
 
-public class ExportResult
+internal class ExportResult
 {
     public bool Success { get; init; }
     public Stream? Stream { get; init; }
@@ -365,7 +365,7 @@ public class ExportResult
 /// Result model for low-quality responses endpoint.
 /// Contains paginated list of low-quality AI responses with their quality metrics.
 /// </summary>
-public record LowQualityResponsesResult(
+internal record LowQualityResponsesResult(
     int TotalCount,
     IReadOnlyList<LowQualityResponseDto> Responses
 );
@@ -374,7 +374,7 @@ public record LowQualityResponsesResult(
 /// DTO for a low-quality AI response.
 /// Includes all quality dimensions and metadata.
 /// </summary>
-public record LowQualityResponseDto(
+internal record LowQualityResponseDto(
     Guid Id,
     DateTime CreatedAt,
     string Query,
@@ -390,7 +390,7 @@ public record LowQualityResponseDto(
 /// DTO for user information.
 /// Used in admin user management interfaces.
 /// </summary>
-public record UserDto(
+internal record UserDto(
     string Id,
     string Email,
     string DisplayName,
@@ -403,7 +403,7 @@ public record UserDto(
 /// Request model for creating a new user.
 /// Includes email, password, display name, and role.
 /// </summary>
-public record CreateUserRequest(
+internal record CreateUserRequest(
     [Required, EmailAddress] string Email,
     [Required, MinLength(8)] string Password,
     [Required] string DisplayName,
@@ -414,7 +414,7 @@ public record CreateUserRequest(
 /// Request model for updating an existing user.
 /// All fields are optional - only provided fields will be updated.
 /// </summary>
-public record UpdateUserRequest(
+internal record UpdateUserRequest(
     [EmailAddress] string? Email = null,
     string? DisplayName = null,
     string? Role = null
@@ -424,7 +424,7 @@ public record UpdateUserRequest(
 /// Paginated result container for any list of items.
 /// Generic type T represents the item type (e.g., UserDto).
 /// </summary>
-public record PagedResult<T>(
+internal record PagedResult<T>(
     IReadOnlyList<T> Items,
     int Total,
     int Page,
@@ -432,7 +432,7 @@ public record PagedResult<T>(
 );
 
 // CONFIG-01: Dynamic Configuration System models
-public record SystemConfigurationDto(
+internal record SystemConfigurationDto(
     string Id,
     string Key,
     string Value,
@@ -450,7 +450,7 @@ public record SystemConfigurationDto(
     string? UpdatedByUserId,
     DateTime? LastToggledAt);
 
-public record CreateConfigurationRequest(
+internal record CreateConfigurationRequest(
     [Required][StringLength(500, MinimumLength = 1)] string Key,
     [Required] string Value,
     [Required] string ValueType = "string",
@@ -460,7 +460,7 @@ public record CreateConfigurationRequest(
     bool RequiresRestart = false,
     string Environment = "All");
 
-public record UpdateConfigurationRequest(
+internal record UpdateConfigurationRequest(
     string? Value = null,
     string? ValueType = null,
     string? Description = null,
@@ -469,7 +469,7 @@ public record UpdateConfigurationRequest(
     bool? RequiresRestart = null,
     string? Environment = null);
 
-public record ConfigurationHistoryDto(
+internal record ConfigurationHistoryDto(
     string Id,
     string ConfigurationId,
     string Key,
@@ -480,39 +480,39 @@ public record ConfigurationHistoryDto(
     string ChangedByUserId,
     string ChangeReason);
 
-public record BulkConfigurationUpdateRequest(
+internal record BulkConfigurationUpdateRequest(
     [Required] IReadOnlyList<ConfigurationUpdate> Updates);
 
-public record ConfigurationUpdate(
+internal record ConfigurationUpdate(
     [Required] string Id,
     [Required] string Value);
 
-public record ConfigurationValidationResult(
+internal record ConfigurationValidationResult(
     bool IsValid,
     IReadOnlyList<string> Errors);
 
-public record ConfigurationExportDto(
+internal record ConfigurationExportDto(
     IReadOnlyList<SystemConfigurationDto> Configurations,
     DateTime ExportedAt,
     string Environment);
 
-public record ConfigurationImportRequest(
+internal record ConfigurationImportRequest(
     [Required] IReadOnlyList<CreateConfigurationRequest> Configurations,
     bool OverwriteExisting = false);
 
 // CONFIG-05: Feature Flags models
-public record FeatureFlagDto(
+internal record FeatureFlagDto(
     string FeatureName,
     bool IsEnabled,
     string? RoleRestriction,
     string? Description);
 
-public record FeatureFlagUpdateRequest(
+internal record FeatureFlagUpdateRequest(
     [Required] bool Enabled,
     string? Role = null);
 
 // EDIT-05: Rule Specification Comments models
-public record RuleCommentDto(
+internal record RuleCommentDto(
     Guid Id,
     string GameId,
     string Version,
@@ -532,35 +532,35 @@ public record RuleCommentDto(
     DateTime? UpdatedAt
 );
 
-public record CreateCommentRequest(
+internal record CreateCommentRequest(
     [Required] string GameId,
     [Required] string Version,
     int? LineNumber,
     [Required] string CommentText
 );
 
-public record CreateReplyRequest(
+internal record CreateReplyRequest(
     [Required] string CommentText
 );
 
-public record UserSearchResultDto(
+internal record UserSearchResultDto(
     string Id,
     string DisplayName,
     string Email
 );
 
 // ADMIN-02: Analytics Dashboard models
-public record DashboardStatsDto(
+internal record DashboardStatsDto(
     DashboardMetrics Metrics,
-    IReadOnlyList<TimeSeriesDataPoint> UserTrend,
-    IReadOnlyList<TimeSeriesDataPoint> SessionTrend,
-    IReadOnlyList<TimeSeriesDataPoint> ApiRequestTrend,
-    IReadOnlyList<TimeSeriesDataPoint> PdfUploadTrend,
-    IReadOnlyList<TimeSeriesDataPoint> ChatMessageTrend,
+    List<TimeSeriesDataPoint> UserTrend,
+    List<TimeSeriesDataPoint> SessionTrend,
+    List<TimeSeriesDataPoint> ApiRequestTrend,
+    List<TimeSeriesDataPoint> PdfUploadTrend,
+    List<TimeSeriesDataPoint> ChatMessageTrend,
     DateTime GeneratedAt
 );
 
-public record DashboardMetrics(
+internal record DashboardMetrics(
     int TotalUsers,
     int ActiveSessions,
     int ApiRequestsToday,
@@ -580,13 +580,13 @@ public record DashboardMetrics(
     int ResolvedAlerts
 );
 
-public record TimeSeriesDataPoint(
+internal record TimeSeriesDataPoint(
     DateTime Date,
     long Count,
     double? AverageValue = null
 );
 
-public record AnalyticsQueryParams(
+internal record AnalyticsQueryParams(
     DateTime? FromDate = null,
     DateTime? ToDate = null,
     int Days = 30,
@@ -595,13 +595,13 @@ public record AnalyticsQueryParams(
 );
 
 // Issue #874: Activity Feed models for admin dashboard
-public record RecentActivityDto(
+internal record RecentActivityDto(
     IReadOnlyList<ActivityEvent> Events,
     int TotalCount,
     DateTime GeneratedAt
 );
 
-public record ActivityEvent(
+internal record ActivityEvent(
     string Id,
     ActivityEventType EventType,
     string Description,
@@ -613,7 +613,7 @@ public record ActivityEvent(
     ActivitySeverity Severity = ActivitySeverity.Info
 );
 
-public enum ActivityEventType
+internal enum ActivityEventType
 {
     UserRegistered,
     UserLogin,
@@ -627,7 +627,7 @@ public enum ActivityEventType
     SystemEvent
 }
 
-public enum ActivitySeverity
+internal enum ActivitySeverity
 {
     Info,
     Warning,
@@ -635,7 +635,7 @@ public enum ActivitySeverity
     Critical
 }
 
-public record ExportDataRequest(
+internal record ExportDataRequest(
     [Required] string Format, // "csv" or "json"
     DateTime? FromDate = null,
     DateTime? ToDate = null,
@@ -643,7 +643,7 @@ public record ExportDataRequest(
 );
 
 // AI-13: BoardGameGeek API integration models
-public record BggSearchResultDto(
+internal record BggSearchResultDto(
     int BggId,
     string Name,
     int? YearPublished,
@@ -651,7 +651,7 @@ public record BggSearchResultDto(
     string Type // "boardgame", "boardgameexpansion", etc.
 );
 
-public record BggGameDetailsDto(
+internal record BggGameDetailsDto(
     int BggId,
     string Name,
     string? Description,
@@ -674,13 +674,13 @@ public record BggGameDetailsDto(
     IList<string> Publishers
 );
 
-public record BggSearchRequest(
+internal record BggSearchRequest(
     [Required][MinLength(1)] string Query,
     bool Exact = false
 );
 
 // N8N-05: Workflow Error Logging models
-public record LogWorkflowErrorRequest(
+internal record LogWorkflowErrorRequest(
     [Required][MaxLength(255)] string WorkflowId,
     [Required][MaxLength(255)] string ExecutionId,
     [Required][MaxLength(5000)] string ErrorMessage,
@@ -689,7 +689,7 @@ public record LogWorkflowErrorRequest(
     [MaxLength(10000)] string? StackTrace = null
 );
 
-public record WorkflowErrorDto(
+internal record WorkflowErrorDto(
     Guid Id,
     string WorkflowId,
     string ExecutionId,
@@ -700,7 +700,7 @@ public record WorkflowErrorDto(
     DateTime CreatedAt
 );
 
-public record WorkflowErrorsQueryParams(
+internal record WorkflowErrorsQueryParams(
     string? WorkflowId = null,
     DateTime? FromDate = null,
     DateTime? ToDate = null,
@@ -709,7 +709,7 @@ public record WorkflowErrorsQueryParams(
 );
 
 // OPS-07: Alerting system models
-public record AlertDto(
+internal record AlertDto(
     Guid Id,
     string AlertType,
     string Severity,
@@ -721,7 +721,7 @@ public record AlertDto(
     IDictionary<string, bool>? ChannelSent
 );
 
-public record PrometheusAlertWebhook(
+internal record PrometheusAlertWebhook(
     string Version,
     string GroupKey,
     string TruncatedAlerts,
@@ -729,7 +729,7 @@ public record PrometheusAlertWebhook(
     PrometheusAlert[] Alerts
 );
 
-public record PrometheusAlert(
+internal record PrometheusAlert(
     string Status, // "firing" or "resolved"
     IReadOnlyDictionary<string, string> Labels,
     IReadOnlyDictionary<string, string> Annotations,

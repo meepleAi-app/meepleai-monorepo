@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands.OAuth;
 /// Handles linking an OAuth provider account to a user.
 /// Validates user exists and prevents duplicate provider links.
 /// </summary>
-public sealed class LinkOAuthAccountCommandHandler : ICommandHandler<LinkOAuthAccountCommand, LinkOAuthAccountResult>
+internal sealed class LinkOAuthAccountCommandHandler : ICommandHandler<LinkOAuthAccountCommand, LinkOAuthAccountResult>
 {
     private readonly IUserRepository _userRepository;
     private readonly IOAuthAccountRepository _oauthAccountRepository;
@@ -32,6 +32,7 @@ public sealed class LinkOAuthAccountCommandHandler : ICommandHandler<LinkOAuthAc
 
     public async Task<LinkOAuthAccountResult> Handle(LinkOAuthAccountCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         try
         {
             // Load user by ID
@@ -106,6 +107,11 @@ public sealed class LinkOAuthAccountCommandHandler : ICommandHandler<LinkOAuthAc
                 ErrorMessage = ex.Message
             };
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: COMMAND HANDLER PATTERN - CQRS handler boundary
+        // Specific exceptions (ValidationException, DomainException) caught separately above.
+        // Generic catch handles unexpected infrastructure failures (DB, network, memory)
+        // to prevent exception propagation to API layer. Returns Result<T> pattern.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error while linking OAuth account for user {UserId}", command.UserId);
@@ -115,5 +121,6 @@ public sealed class LinkOAuthAccountCommandHandler : ICommandHandler<LinkOAuthAc
                 ErrorMessage = "An unexpected error occurred while linking the OAuth account"
             };
         }
+#pragma warning restore CA1031
     }
 }

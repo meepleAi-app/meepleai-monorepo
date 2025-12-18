@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Services.Chunking;
 /// ADR-016 Phase 1: Advanced hierarchical chunking service implementation.
 /// Creates parent/child chunk relationships using sentence-based baseline strategy.
 /// </summary>
-public sealed class AdvancedChunkingService : IAdvancedChunkingService
+internal sealed class AdvancedChunkingService : IAdvancedChunkingService
 {
     private readonly ITextChunkingService _textChunkingService;
     private readonly ChunkingStrategySelector _strategySelector;
@@ -28,14 +28,11 @@ public sealed class AdvancedChunkingService : IAdvancedChunkingService
     public Task<List<HierarchicalChunk>> ChunkDocumentAsync(
         ExtractedDocument document,
         ChunkingConfiguration? config = null,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
-        ct.ThrowIfCancellationRequested();
+        cancellationToken.ThrowIfCancellationRequested();
 
-        if (document == null)
-            throw new ArgumentNullException(nameof(document));
-
-        var chunks = new List<HierarchicalChunk>();
+        ArgumentNullException.ThrowIfNull(document);
 
         // Step 1: Auto-select strategy if not provided
         var elementTypes = document.Sections.Select(s => s.ElementType).ToList();
@@ -46,6 +43,7 @@ public sealed class AdvancedChunkingService : IAdvancedChunkingService
             document.Id, config.Name, config.ChunkSizeTokens, config.OverlapPercentage * 100);
 
         // Step 2: Process sections if available, otherwise treat as single section
+        List<HierarchicalChunk> chunks;
         if (document.Sections.Count > 0)
         {
             chunks = ProcessSections(document, config);
@@ -69,9 +67,9 @@ public sealed class AdvancedChunkingService : IAdvancedChunkingService
         string text,
         Guid documentId,
         ChunkingConfiguration? config = null,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
-        ct.ThrowIfCancellationRequested();
+        cancellationToken.ThrowIfCancellationRequested();
 
         if (string.IsNullOrWhiteSpace(text))
             return Task.FromResult(new List<HierarchicalChunk>());
@@ -178,7 +176,7 @@ public sealed class AdvancedChunkingService : IAdvancedChunkingService
             // Create parent chunk for the paragraph
             var parentMetadata = new ChunkMetadata
             {
-                Page = EstimatePageNumber(charPosition, text.Length),
+                Page = (charPosition / 2000) + 1,
                 Heading = null,
                 ElementType = "text",
                 GameId = gameId,
@@ -263,6 +261,8 @@ public sealed class AdvancedChunkingService : IAdvancedChunkingService
         return childChunks;
     }
 
+    private static readonly string[] ParagraphSeparators = { "\r\n\r\n", "\n\n" };
+
     /// <summary>
     /// Splits text into paragraphs based on double newlines.
     /// </summary>
@@ -270,7 +270,7 @@ public sealed class AdvancedChunkingService : IAdvancedChunkingService
     {
         // Split on double newlines (paragraph breaks)
         var paragraphs = text.Split(
-            new[] { "\r\n\r\n", "\n\n" },
+            ParagraphSeparators,
             StringSplitOptions.None);
 
         return paragraphs
@@ -278,16 +278,5 @@ public sealed class AdvancedChunkingService : IAdvancedChunkingService
             .Where(p => !string.IsNullOrWhiteSpace(p))
             .ToList();
     }
-
-    /// <summary>
-    /// Estimates page number based on character position.
-    /// Uses long arithmetic to prevent integer overflow with large documents.
-    /// </summary>
-    private static int EstimatePageNumber(int charPosition, int _)
-    {
-        const long charsPerPage = 2000L;
-        // Use long division to prevent overflow, then safely cast result
-        var pageNumber = ((long)charPosition / charsPerPage) + 1;
-        return (int)Math.Min(pageNumber, int.MaxValue);
-    }
 }
+

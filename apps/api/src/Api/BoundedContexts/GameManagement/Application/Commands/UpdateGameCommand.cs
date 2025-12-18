@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands;
 /// <summary>
 /// Command to update an existing game's details.
 /// </summary>
-public record UpdateGameCommand(
+internal record UpdateGameCommand(
     Guid GameId,
     string? Title = null,
     string? Publisher = null,

@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries.GetSharedThread;
 /// Handler for retrieving shared chat threads via share link token.
 /// Validates token and returns thread with read-only message view.
 /// </summary>
-public sealed class GetSharedThreadQueryHandler : IRequestHandler<GetSharedThreadQuery, GetSharedThreadResult?>
+internal sealed class GetSharedThreadQueryHandler : IRequestHandler<GetSharedThreadQuery, GetSharedThreadResult?>
 {
     private readonly IChatThreadRepository _threadRepository;
     private readonly IShareLinkRepository _shareLinkRepository;
@@ -24,20 +24,21 @@ public sealed class GetSharedThreadQueryHandler : IRequestHandler<GetSharedThrea
         IMediator mediator,
         ILogger<GetSharedThreadQueryHandler> logger)
     {
-        _threadRepository = threadRepository;
-        _shareLinkRepository = shareLinkRepository;
-        _mediator = mediator;
-        _logger = logger;
+        _threadRepository = threadRepository ?? throw new ArgumentNullException(nameof(threadRepository));
+        _shareLinkRepository = shareLinkRepository ?? throw new ArgumentNullException(nameof(shareLinkRepository));
+        _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<GetSharedThreadResult?> Handle(
         GetSharedThreadQuery request,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         // Validate share link token
         var validation = await _mediator.Send(
             new ValidateShareLinkQuery(request.Token),
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
 
         if (validation == null || !validation.IsValid)
         {
@@ -46,7 +47,7 @@ public sealed class GetSharedThreadQueryHandler : IRequestHandler<GetSharedThrea
         }
 
         // Load chat thread via repository
-        var thread = await _threadRepository.GetByIdAsync(validation.ThreadId, cancellationToken);
+        var thread = await _threadRepository.GetByIdAsync(validation.ThreadId, cancellationToken).ConfigureAwait(false);
 
         if (thread == null)
         {
@@ -62,20 +63,25 @@ public sealed class GetSharedThreadQueryHandler : IRequestHandler<GetSharedThrea
         // IServiceScopeFactory for zero response penalty. See Issue #2150 for details.
         try
         {
-            var shareLink = await _shareLinkRepository.GetByIdAsync(validation.ShareLinkId, cancellationToken);
+            var shareLink = await _shareLinkRepository.GetByIdAsync(validation.ShareLinkId, cancellationToken).ConfigureAwait(false);
 
             if (shareLink != null)
             {
                 shareLink.RecordAccess();
-                await _shareLinkRepository.UpdateAsync(shareLink, cancellationToken);
+                await _shareLinkRepository.UpdateAsync(shareLink, cancellationToken).ConfigureAwait(false);
                 _logger.LogDebug("Recorded share link access for ShareLinkId {ShareLinkId}", validation.ShareLinkId);
             }
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: QUERY HANDLER PATTERN - CQRS query boundary
+        // Analytics tracking is non-critical. Generic catch prevents analytics failures
+        // from blocking the main thread retrieval response. Logs warning and continues.
         catch (Exception ex)
         {
             // Analytics errors should not fail the main request
             _logger.LogWarning(ex, "Failed to record share link access for ShareLinkId {ShareLinkId}", validation.ShareLinkId);
         }
+#pragma warning restore CA1031
 
         // Convert messages to DTO (filter deleted messages for shared view)
         var messageDtos = thread.Messages

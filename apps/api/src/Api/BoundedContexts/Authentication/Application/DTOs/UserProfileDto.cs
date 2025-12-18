@@ -4,7 +4,7 @@ namespace Api.BoundedContexts.Authentication.Application.DTOs;
 /// User profile data transfer object.
 /// Extended version of UserDto with profile-specific information including preferences.
 /// </summary>
-public record UserProfileDto(
+internal record UserProfileDto(
     Guid Id,
     string Email,
     string DisplayName,

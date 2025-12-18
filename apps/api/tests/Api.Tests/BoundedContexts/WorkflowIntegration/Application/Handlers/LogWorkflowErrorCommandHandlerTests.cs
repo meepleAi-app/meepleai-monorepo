@@ -176,7 +176,7 @@ public class LogWorkflowErrorCommandHandlerTests
             ErrorMessage: "Cancellation test",
             NodeName: "CancelNode"
         );
-        var cancellationTokenSource = new CancellationTokenSource();
+        using var cancellationTokenSource = new CancellationTokenSource();
         var cancellationToken = cancellationTokenSource.Token;
 
         // Act

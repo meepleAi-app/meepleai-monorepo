@@ -24,7 +24,7 @@ namespace Api.Filters;
 ///     {
 ///         // Session authentication
 ///     }
-///     else if (context.User.Identity?.IsAuthenticated == true)
+///     else if (context.User.Identity?.IsAuthenticated is true)
 ///     {
 ///         // API key authentication
 ///     }
@@ -35,7 +35,7 @@ namespace Api.Filters;
 /// Related: RequireSessionFilter, SessionValidationExtensions
 /// Issue: #1446, #1676 Phase 3
 /// </summary>
-public class RequireAuthenticatedUserFilter : IEndpointFilter
+internal class RequireAuthenticatedUserFilter : IEndpointFilter
 {
     /// <summary>
     /// Validates authentication via session or API key before endpoint execution.

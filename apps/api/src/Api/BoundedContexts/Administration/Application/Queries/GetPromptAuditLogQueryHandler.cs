@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.Administration.Application.Queries;
 
-public class GetPromptAuditLogQueryHandler : IQueryHandler<GetPromptAuditLogQuery, PromptAuditLogResponse>
+internal class GetPromptAuditLogQueryHandler : IQueryHandler<GetPromptAuditLogQuery, PromptAuditLogResponse>
 {
     private readonly MeepleAiDbContext _db;
 
@@ -16,6 +16,7 @@ public class GetPromptAuditLogQueryHandler : IQueryHandler<GetPromptAuditLogQuer
 
     public async Task<PromptAuditLogResponse> Handle(GetPromptAuditLogQuery request, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         if (!Guid.TryParse(request.TemplateId, out var templateGuid))
         {
             throw new ArgumentException($"Invalid template ID: {request.TemplateId}", nameof(request));

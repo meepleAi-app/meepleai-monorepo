@@ -4,7 +4,7 @@ namespace Api.Services;
 /// Records cache operation metrics (hits, misses, evictions) to OpenTelemetry.
 /// AI-10: Cache Optimization - Fire-and-forget metrics recording to avoid blocking cache operations.
 /// </summary>
-public interface ICacheMetricsRecorder
+internal interface ICacheMetricsRecorder
 {
     /// <summary>
     /// Records a cache hit metric with operation and cache type labels.

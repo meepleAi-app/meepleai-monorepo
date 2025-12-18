@@ -13,7 +13,7 @@ public class UserEntity
     public string Role { get; set; } = "user"; // DDD-PHASE2: Changed from enum to string
     public string Tier { get; set; } = "free"; // User subscription tier (free, normal, premium)
     public DateTime CreatedAt { get; set; }
-    public bool IsDemoAccount { get; set; } = false; // Issue #1663: Demo users for testing (user/editor@meepleai.dev)
+    public bool IsDemoAccount { get; set; } // Issue #1663: Demo users for testing (user/editor@meepleai.dev)
 
     // User Preferences
     public string Language { get; set; } = "en";
@@ -23,7 +23,7 @@ public class UserEntity
 
     // Two-Factor Authentication
     public string? TotpSecretEncrypted { get; set; }
-    public bool IsTwoFactorEnabled { get; set; } = false;
+    public bool IsTwoFactorEnabled { get; set; }
     public DateTime? TwoFactorEnabledAt { get; set; }
 
     // Navigation properties

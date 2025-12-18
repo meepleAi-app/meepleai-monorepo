@@ -5,7 +5,7 @@ namespace Api.Services.Qdrant;
 /// <summary>
 /// Handles vector indexing operations in Qdrant
 /// </summary>
-public interface IQdrantVectorIndexer
+internal interface IQdrantVectorIndexer
 {
     /// <summary>
     /// Index a batch of vectors with their payloads
@@ -13,7 +13,7 @@ public interface IQdrantVectorIndexer
     Task UpsertPointsAsync(
         string collectionName,
         IReadOnlyList<PointStruct> points,
-        CancellationToken ct = default);
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Build point structures from document chunks
@@ -28,5 +28,5 @@ public interface IQdrantVectorIndexer
     Task DeleteByFilterAsync(
         string collectionName,
         Filter filter,
-        CancellationToken ct = default);
+        CancellationToken cancellationToken = default);
 }

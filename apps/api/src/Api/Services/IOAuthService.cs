@@ -6,7 +6,7 @@ namespace Api.Services;
 /// Infrastructure adapter for OAuth 2.0 provider HTTP communication (Google, Discord, GitHub).
 /// Business logic delegated to CQRS handlers.
 /// </summary>
-public interface IOAuthService
+internal interface IOAuthService
 {
     /// <summary>
     /// Generates the OAuth authorization URL with CSRF state protection

@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Queries;
 /// Query to retrieve all comments for a specific line in a RuleSpec version.
 /// Returns top-level comments and their threaded replies.
 /// </summary>
-public record GetCommentsForLineQuery(
+internal record GetCommentsForLineQuery(
     string GameId,
     string Version,
     int LineNumber

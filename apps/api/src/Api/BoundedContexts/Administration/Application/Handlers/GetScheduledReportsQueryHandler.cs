@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.Administration.Application.Handlers;
 /// Handler for GetScheduledReportsQuery
 /// ISSUE-916: Report listing
 /// </summary>
-public sealed class GetScheduledReportsQueryHandler : IQueryHandler<GetScheduledReportsQuery, IReadOnlyList<ScheduledReportDto>>
+internal sealed class GetScheduledReportsQueryHandler : IQueryHandler<GetScheduledReportsQuery, IReadOnlyList<ScheduledReportDto>>
 {
     private readonly IAdminReportRepository _repository;
     private readonly ILogger<GetScheduledReportsQueryHandler> _logger;
@@ -22,11 +22,11 @@ public sealed class GetScheduledReportsQueryHandler : IQueryHandler<GetScheduled
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public async Task<IReadOnlyList<ScheduledReportDto>> Handle(GetScheduledReportsQuery query, CancellationToken ct)
+    public async Task<IReadOnlyList<ScheduledReportDto>> Handle(GetScheduledReportsQuery query, CancellationToken cancellationToken)
     {
         _logger.LogDebug("Getting all scheduled reports");
 
-        var reports = await _repository.GetAllAsync(ct).ConfigureAwait(false);
+        var reports = await _repository.GetAllAsync(cancellationToken).ConfigureAwait(false);
 
         var dtos = reports.Select(r => new ScheduledReportDto(
             Id: r.Id,
@@ -46,3 +46,4 @@ public sealed class GetScheduledReportsQueryHandler : IQueryHandler<GetScheduled
         return dtos;
     }
 }
+

@@ -199,7 +199,7 @@ public class EndGameSessionCommandHandlerTests
             SessionId: sessionId,
             WinnerName: "Player 1");
 
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         var cancellationToken = cts.Token;
 
         // Act

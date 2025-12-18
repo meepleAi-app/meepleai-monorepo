@@ -20,7 +20,6 @@ public class CreateSessionCommandHandlerTests
     private readonly Mock<IUserRepository> _userRepositoryMock;
     private readonly Mock<ISessionRepository> _sessionRepositoryMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
-    private readonly TimeProvider _timeProvider;
     private readonly CreateSessionCommandHandler _handler;
 
     public CreateSessionCommandHandlerTests()
@@ -28,7 +27,6 @@ public class CreateSessionCommandHandlerTests
         _userRepositoryMock = new Mock<IUserRepository>();
         _sessionRepositoryMock = new Mock<ISessionRepository>();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
-        _timeProvider = TimeProvider.System;
 
         _handler = new CreateSessionCommandHandler(
             _userRepositoryMock.Object,
@@ -223,7 +221,7 @@ public class CreateSessionCommandHandlerTests
             UserAgent: "TestAgent"
         );
 
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         var token = cts.Token;
 
         _userRepositoryMock

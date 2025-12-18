@@ -5,7 +5,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
 /// <summary>
 /// Interface for provider health check service
 /// </summary>
-public interface IProviderHealthCheckService
+internal interface IProviderHealthCheckService
 {
     /// <summary>
     /// Gets the health status for a specific provider

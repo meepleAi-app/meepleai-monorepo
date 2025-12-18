@@ -6,7 +6,7 @@ using Microsoft.Extensions.Caching.Hybrid;
 
 namespace Api.Services;
 
-public class WorkflowErrorLoggingService : IWorkflowErrorLoggingService
+internal class WorkflowErrorLoggingService : IWorkflowErrorLoggingService
 {
     private readonly MeepleAiDbContext _db;
     private readonly HybridCache _cache;
@@ -25,8 +25,9 @@ public class WorkflowErrorLoggingService : IWorkflowErrorLoggingService
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
-    public async Task LogErrorAsync(LogWorkflowErrorRequest request, CancellationToken ct = default)
+    public async Task LogErrorAsync(LogWorkflowErrorRequest request, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(request);
         try
         {
             var entity = new WorkflowErrorLogEntity
@@ -42,14 +43,14 @@ public class WorkflowErrorLoggingService : IWorkflowErrorLoggingService
             };
 
             _db.WorkflowErrorLogs.Add(entity);
-            await _db.SaveChangesAsync(ct).ConfigureAwait(false);
+            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
             _logger.LogWarning(
                 "Workflow error logged: WorkflowId={WorkflowId}, ExecutionId={ExecutionId}, NodeName={NodeName}, RetryCount={RetryCount}",
                 request.WorkflowId, request.ExecutionId, request.NodeName, request.RetryCount);
 
             // Invalidate cache for workflow errors list
-            await _cache.RemoveAsync($"workflow-errors-list", ct).ConfigureAwait(false);
+            await _cache.RemoveAsync($"workflow-errors-list", cancellationToken).ConfigureAwait(false);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
@@ -69,11 +70,12 @@ public class WorkflowErrorLoggingService : IWorkflowErrorLoggingService
 
     public async Task<PagedResult<WorkflowErrorDto>> GetErrorsAsync(
         WorkflowErrorsQueryParams queryParams,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(queryParams);
         var cacheKey = $"workflow-errors-{queryParams.WorkflowId}-{queryParams.FromDate}-{queryParams.ToDate}-{queryParams.Page}-{queryParams.Limit}";
 
-        return await _cache.GetOrCreateAsync(
+        return await _cache.GetOrCreateAsync<PagedResult<WorkflowErrorDto>>(
             cacheKey,
             async cancel =>
             {
@@ -125,14 +127,14 @@ public class WorkflowErrorLoggingService : IWorkflowErrorLoggingService
                 Expiration = TimeSpan.FromMinutes(5),
                 LocalCacheExpiration = TimeSpan.FromMinutes(2)
             },
-            cancellationToken: ct).ConfigureAwait(false);
+            cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task<WorkflowErrorDto?> GetErrorByIdAsync(Guid id, CancellationToken ct = default)
+    public async Task<WorkflowErrorDto?> GetErrorByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var cacheKey = $"workflow-error-{id}";
 
-        return await _cache.GetOrCreateAsync(
+        return await _cache.GetOrCreateAsync<WorkflowErrorDto?>(
             cacheKey,
             async cancel =>
             {
@@ -158,7 +160,7 @@ public class WorkflowErrorLoggingService : IWorkflowErrorLoggingService
                 Expiration = TimeSpan.FromMinutes(10),
                 LocalCacheExpiration = TimeSpan.FromMinutes(5)
             },
-            cancellationToken: ct).ConfigureAwait(false);
+            cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -182,7 +184,7 @@ public class WorkflowErrorLoggingService : IWorkflowErrorLoggingService
         // Truncate if too long (defense against log injection)
         if (sanitized.Length > 5000)
         {
-            sanitized = sanitized.Substring(0, 5000) + "... [truncated]";
+            sanitized = string.Concat(sanitized.AsSpan(0, 5000), "... [truncated]");
         }
 
         return sanitized;

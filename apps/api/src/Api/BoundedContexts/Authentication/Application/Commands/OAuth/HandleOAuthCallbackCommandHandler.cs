@@ -20,7 +20,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands.OAuth;
 /// Business logic: CSRF validation → Token exchange → User creation/linking → Token encryption → Session creation.
 /// Infrastructure delegation: Provider HTTP communication via IOAuthService.
 /// </summary>
-public sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<HandleOAuthCallbackCommand, HandleOAuthCallbackResult>
+internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<HandleOAuthCallbackCommand, HandleOAuthCallbackResult>
 {
     private const string EncryptionPurpose = "OAuthTokens";
 
@@ -39,21 +39,22 @@ public sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<HandleOA
         TimeProvider timeProvider,
         MeepleAiDbContext db)
     {
-        _oauthService = oauthService;
-        _mediator = mediator;
-        _logger = logger;
-        _encryptionService = encryptionService;
-        _timeProvider = timeProvider;
-        _db = db;
+        _oauthService = oauthService ?? throw new ArgumentNullException(nameof(oauthService));
+        _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _encryptionService = encryptionService ?? throw new ArgumentNullException(nameof(encryptionService));
+        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+        _db = db ?? throw new ArgumentNullException(nameof(db));
     }
 
     public async Task<HandleOAuthCallbackResult> Handle(HandleOAuthCallbackCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         try
         {
             // Step 1: Validate state and exchange code for user info
             var (tokenSuccess, userInfo, tokenResponse) = await ValidateAndExchangeTokenAsync(
-                command.Provider, command.State, command.Code, cancellationToken).ConfigureAwait(false);
+                command.Provider, command.State, command.Code).ConfigureAwait(false);
             if (!tokenSuccess)
             {
                 return new HandleOAuthCallbackResult
@@ -103,6 +104,11 @@ public sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<HandleOA
                 ErrorMessage = ex.Message
             };
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: COMMAND HANDLER PATTERN - CQRS handler boundary
+        // Specific exceptions (ValidationException, DomainException) caught separately above.
+        // Generic catch handles unexpected infrastructure failures (DB, network, memory)
+        // to prevent exception propagation to API layer. Returns Result<T> pattern.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error during OAuth callback for provider {Provider}", command.Provider);
@@ -112,6 +118,7 @@ public sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<HandleOA
                 ErrorMessage = "An unexpected error occurred during OAuth authentication"
             };
         }
+#pragma warning restore CA1031
     }
 
     /// <summary>
@@ -121,8 +128,8 @@ public sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<HandleOA
     private async Task<(bool success, object userInfoOrError, OAuthTokenResponse? tokenResponse)> ValidateAndExchangeTokenAsync(
         string provider,
         string state,
-        string code,
-        CancellationToken cancellationToken)
+        string code
+                )
     {
         // Validate CSRF state token
         var isStateValid = await _oauthService.ValidateStateAsync(state).ConfigureAwait(false);
@@ -180,7 +187,7 @@ public sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<HandleOA
         var oauthAccount = await _db.OAuthAccounts
             .Include(oa => oa.User)
             .FirstOrDefaultAsync(oa =>
-                oa.Provider == provider.ToLowerInvariant() &&
+                string.Equals(oa.Provider, provider, StringComparison.OrdinalIgnoreCase) &&
                 oa.ProviderUserId == userInfo!.Id, cancellationToken).ConfigureAwait(false);
 
         UserEntity? user;
@@ -201,7 +208,7 @@ public sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<HandleOA
         else
         {
             // Check if user exists with same email (auto-link for MVP)
-            user = await _db.Users.FirstOrDefaultAsync(u => u.Email == userInfo!.Email.ToLowerInvariant(), cancellationToken).ConfigureAwait(false);
+            user = await _db.Users.FirstOrDefaultAsync(u => string.Equals(u.Email, userInfo!.Email, StringComparison.InvariantCultureIgnoreCase), cancellationToken).ConfigureAwait(false);
 
             if (user == null)
             {
@@ -244,14 +251,14 @@ public sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<HandleOA
     /// </summary>
     private async Task<string> CreateSessionForUserAsync(
         Guid userId,
-        string ipAddress,
-        string userAgent,
+        string? ipAddress,
+        string? userAgent,
         CancellationToken cancellationToken)
     {
         var createSessionCommand = new CreateSessionCommand(
             UserId: userId,
-            IpAddress: ipAddress,
-            UserAgent: userAgent);
+            IpAddress: ipAddress ?? "unknown",
+            UserAgent: userAgent ?? "unknown");
 
         var sessionResponse = await _mediator.Send(createSessionCommand, cancellationToken).ConfigureAwait(false);
 

@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.Administration.Application.Queries;
 /// Handler for GetFeedbackStatsQuery.
 /// Aggregates agent feedback data for analytics dashboard.
 /// </summary>
-public class GetFeedbackStatsQueryHandler : IQueryHandler<GetFeedbackStatsQuery, FeedbackStatsDto>
+internal class GetFeedbackStatsQueryHandler : IQueryHandler<GetFeedbackStatsQuery, FeedbackStatsDto>
 {
     private readonly MeepleAiDbContext _db;
     private readonly ILogger<GetFeedbackStatsQueryHandler> _logger;
@@ -24,6 +24,8 @@ public class GetFeedbackStatsQueryHandler : IQueryHandler<GetFeedbackStatsQuery,
 
     public async Task<FeedbackStatsDto> Handle(GetFeedbackStatsQuery request, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(request);
         _logger.LogInformation(
             "Getting feedback stats: StartDate={StartDate}, EndDate={EndDate}, Endpoint={Endpoint}",
             request.StartDate,

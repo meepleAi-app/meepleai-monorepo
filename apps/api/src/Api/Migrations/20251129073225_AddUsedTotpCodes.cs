@@ -7,8 +7,10 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Api.Migrations
 {
     /// <inheritdoc />
-    public partial class AddUsedTotpCodes : Migration
+    internal partial class AddUsedTotpCodes : Migration
     {
+        private static readonly string[] UserCodeExpiryIndexColumns = { "UserId", "CodeHash", "ExpiresAt" };
+
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
@@ -42,7 +44,7 @@ namespace Api.Migrations
             migrationBuilder.CreateIndex(
                 name: "ix_used_totp_codes_user_code_expiry",
                 table: "used_totp_codes",
-                columns: new[] { "UserId", "CodeHash", "ExpiresAt" });
+                columns: UserCodeExpiryIndexColumns);
         }
 
         /// <inheritdoc />

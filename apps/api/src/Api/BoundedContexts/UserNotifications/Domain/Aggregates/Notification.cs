@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.UserNotifications.Domain.Aggregates;
 /// Aggregate root representing a user notification.
 /// Tracks notification lifecycle: creation, read status, and metadata.
 /// </summary>
-public sealed class Notification : AggregateRoot<Guid>
+internal sealed class Notification : AggregateRoot<Guid>
 {
     public Guid UserId { get; private set; }
     public NotificationType Type { get; private set; }
@@ -47,8 +47,10 @@ public sealed class Notification : AggregateRoot<Guid>
         : base(id)
     {
         UserId = userId;
-        Type = type ?? throw new ArgumentNullException(nameof(type));
-        Severity = severity ?? throw new ArgumentNullException(nameof(severity));
+        ArgumentNullException.ThrowIfNull(type);
+        Type = type;
+        ArgumentNullException.ThrowIfNull(severity);
+        Severity = severity;
         Title = !string.IsNullOrWhiteSpace(title) ? title : throw new ArgumentException("Title cannot be empty", nameof(title));
         Message = !string.IsNullOrWhiteSpace(message) ? message : throw new ArgumentException("Message cannot be empty", nameof(message));
         Link = link;

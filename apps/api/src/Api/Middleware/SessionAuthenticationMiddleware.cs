@@ -14,7 +14,7 @@ namespace Api.Middleware;
 ///
 /// Issue #1676 Phase 3: Migrated from ActiveSession (legacy) to SessionStatusDto (DDD)
 /// </summary>
-public class SessionAuthenticationMiddleware
+internal class SessionAuthenticationMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly ILogger<SessionAuthenticationMiddleware> _logger;
@@ -65,8 +65,7 @@ public class SessionAuthenticationMiddleware
                     }
                 }
             }
-#pragma warning disable CA1031 // Do not catch general exception types
-            catch (Exception ex)
+            catch (Exception ex) when (ex is InvalidOperationException or System.Security.SecurityException or FormatException)
             {
                 // MIDDLEWARE BOUNDARY PATTERN: Authentication middleware must not block requests on validation errors
                 // Rationale: This middleware validates session cookies but must not crash the request pipeline if
@@ -75,14 +74,13 @@ public class SessionAuthenticationMiddleware
                 // Context: Session validation involves DB queries and crypto operations that can fail
                 _logger.LogWarning(ex, "Session cookie validation failed");
             }
-#pragma warning restore CA1031 // Do not catch general exception types
         }
 
         await _next(context).ConfigureAwait(false);
     }
 }
 
-public static class SessionAuthenticationMiddlewareExtensions
+internal static class SessionAuthenticationMiddlewareExtensions
 {
     public static IApplicationBuilder UseSessionAuthentication(this IApplicationBuilder app)
     {

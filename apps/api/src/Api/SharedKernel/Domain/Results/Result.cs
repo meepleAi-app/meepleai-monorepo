@@ -8,7 +8,7 @@ namespace Api.SharedKernel.Domain.Results;
 /// Encapsulates success/failure state with optional value and error information.
 /// </summary>
 /// <typeparam name="T">The type of the value in case of success.</typeparam>
-public sealed record Result<T>
+internal sealed record Result<T>
 {
     /// <summary>
     /// Gets a value indicating whether the operation succeeded.
@@ -116,7 +116,7 @@ public sealed record Result<T>
 /// <param name="Code">A machine-readable error code (e.g., "validation_error", "not_found").</param>
 /// <param name="Message">A human-readable error message.</param>
 /// <param name="Details">Optional additional error details (e.g., stack trace, validation errors).</param>
-public sealed record Error(
+internal sealed record Error(
     string Code,
     string Message,
     string? Details = null

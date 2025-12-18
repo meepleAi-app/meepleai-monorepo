@@ -260,7 +260,7 @@ public class ChangeUserRoleCommandHandlerTests
             UserId: userId.ToString(),
             NewRole: Role.Admin.Value);
 
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         var cancellationToken = cts.Token;
 
         // Act

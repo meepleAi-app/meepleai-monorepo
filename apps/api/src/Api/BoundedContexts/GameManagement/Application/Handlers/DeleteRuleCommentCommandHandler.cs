@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Handlers;
 /// <summary>
 /// Handles deletion of rule comments with ownership/admin authorization.
 /// </summary>
-public class DeleteRuleCommentCommandHandler : IRequestHandler<DeleteRuleCommentCommand, bool>
+internal class DeleteRuleCommentCommandHandler : IRequestHandler<DeleteRuleCommentCommand, bool>
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly ILogger<DeleteRuleCommentCommandHandler> _logger;
@@ -23,6 +23,7 @@ public class DeleteRuleCommentCommandHandler : IRequestHandler<DeleteRuleComment
 
     public async Task<bool> Handle(DeleteRuleCommentCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         var comment = await _dbContext.RuleSpecComments
             .Include(c => c.Replies)
             .FirstOrDefaultAsync(c => c.Id == command.CommentId, cancellationToken)

@@ -44,5 +44,9 @@ public sealed class TotpSecret : ValueObject
 
     public override string ToString() => "[TOTP_SECRET_REDACTED]";
 
-    public static implicit operator string(TotpSecret secret) => secret.EncryptedValue;
+    public static implicit operator string(TotpSecret secret)
+    {
+        ArgumentNullException.ThrowIfNull(secret);
+        return secret.EncryptedValue;
+    }
 }

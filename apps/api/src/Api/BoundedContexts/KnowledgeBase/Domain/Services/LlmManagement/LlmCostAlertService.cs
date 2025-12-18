@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
 /// Domain service for monitoring LLM costs and triggering alerts
 /// ISSUE-960: BGAI-018 - Cost monitoring and alerting
 /// </summary>
-public class LlmCostAlertService
+internal class LlmCostAlertService
 {
     private readonly ILlmCostLogRepository _costLogRepository;
     private readonly IAlertingService _alertingService;
@@ -32,10 +32,10 @@ public class LlmCostAlertService
     /// <summary>
     /// Check daily cost and send alert if threshold exceeded
     /// </summary>
-    public async Task CheckDailyCostThresholdAsync(CancellationToken ct = default)
+    public async Task CheckDailyCostThresholdAsync(CancellationToken cancellationToken = default)
     {
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
-        var dailyCost = await _costLogRepository.GetDailyCostAsync(today, ct).ConfigureAwait(false);
+        var dailyCost = await _costLogRepository.GetDailyCostAsync(today, cancellationToken).ConfigureAwait(false);
 
         if (dailyCost > DailyThreshold)
         {
@@ -43,7 +43,7 @@ public class LlmCostAlertService
                 "ALERT: Daily LLM cost ${DailyCost:F2} exceeds threshold ${Threshold:F2}",
                 dailyCost, DailyThreshold);
 
-            var costsByProvider = await _costLogRepository.GetCostsByProviderAsync(today, today, ct).ConfigureAwait(false);
+            var costsByProvider = await _costLogRepository.GetCostsByProviderAsync(today, today, cancellationToken).ConfigureAwait(false);
             var providerBreakdown = string.Join(", ",
                 costsByProvider.Select(kv => $"{kv.Key}: ${kv.Value:F2}"));
 
@@ -60,7 +60,7 @@ public class LlmCostAlertService
                     ["exceeded_by"] = dailyCost - DailyThreshold,
                     ["provider_breakdown"] = providerBreakdown
                 },
-                cancellationToken: ct).ConfigureAwait(false);
+                cancellationToken: cancellationToken).ConfigureAwait(false);
         }
         else
         {
@@ -72,11 +72,11 @@ public class LlmCostAlertService
     /// <summary>
     /// Check weekly cost threshold
     /// </summary>
-    public async Task CheckWeeklyCostThresholdAsync(CancellationToken ct = default)
+    public async Task CheckWeeklyCostThresholdAsync(CancellationToken cancellationToken = default)
     {
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var weekStart = today.AddDays(-7);
-        var weeklyCost = await _costLogRepository.GetTotalCostAsync(weekStart, today, ct).ConfigureAwait(false);
+        var weeklyCost = await _costLogRepository.GetTotalCostAsync(weekStart, today, cancellationToken).ConfigureAwait(false);
 
         if (weeklyCost > WeeklyThreshold)
         {
@@ -96,18 +96,18 @@ public class LlmCostAlertService
                     ["weekly_cost"] = weeklyCost,
                     ["threshold"] = WeeklyThreshold
                 },
-                cancellationToken: ct).ConfigureAwait(false);
+                cancellationToken: cancellationToken).ConfigureAwait(false);
         }
     }
 
     /// <summary>
     /// Check monthly cost projection
     /// </summary>
-    public async Task CheckMonthlyCostProjectionAsync(CancellationToken ct = default)
+    public async Task CheckMonthlyCostProjectionAsync(CancellationToken cancellationToken = default)
     {
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var monthStart = new DateOnly(today.Year, today.Month, 1);
-        var monthCost = await _costLogRepository.GetTotalCostAsync(monthStart, today, ct).ConfigureAwait(false);
+        var monthCost = await _costLogRepository.GetTotalCostAsync(monthStart, today, cancellationToken).ConfigureAwait(false);
 
         // Project monthly cost based on current daily average
         var daysElapsed = (today.DayNumber - monthStart.DayNumber) + 1;
@@ -135,7 +135,8 @@ public class LlmCostAlertService
                     ["days_in_month"] = daysInMonth,
                     ["daily_average"] = monthCost / daysElapsed
                 },
-                cancellationToken: ct).ConfigureAwait(false);
+                cancellationToken: cancellationToken).ConfigureAwait(false);
         }
     }
 }
+

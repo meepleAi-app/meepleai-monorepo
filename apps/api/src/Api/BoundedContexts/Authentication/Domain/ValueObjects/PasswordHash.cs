@@ -72,7 +72,11 @@ public sealed class PasswordHash : ValueObject
 
     public override string ToString() => "[REDACTED]"; // Never expose hash value
 
-    public static implicit operator string(PasswordHash hash) => hash.Value;
+    public static implicit operator string(PasswordHash hash)
+    {
+        ArgumentNullException.ThrowIfNull(hash);
+        return hash.Value;
+    }
 
     private static string CreateVersionedHash(string plaintextPassword)
     {

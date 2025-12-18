@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.Authentication.Application.DTOs;
 /// <summary>
 /// Data transfer object for API key information.
 /// </summary>
-public record ApiKeyDto(
+internal record ApiKeyDto(
     Guid Id,
     string KeyName,
     string KeyPrefix,
@@ -20,7 +20,7 @@ public record ApiKeyDto(
 /// <summary>
 /// DTO for creating an API key.
 /// </summary>
-public record CreateApiKeyRequest(
+internal record CreateApiKeyRequest(
     string KeyName,
     string Scopes,
     DateTime? ExpiresAt = null,
@@ -31,7 +31,7 @@ public record CreateApiKeyRequest(
 /// DTO for API key creation response.
 /// Includes the plaintext key (only shown once).
 /// </summary>
-public record CreateApiKeyResponse(
+internal record CreateApiKeyResponse(
     Guid Id,
     string KeyName,
     string KeyPrefix,

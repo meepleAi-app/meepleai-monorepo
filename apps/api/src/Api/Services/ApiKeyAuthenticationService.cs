@@ -11,7 +11,7 @@ namespace Api.Services;
 /// Provides methods to validate API keys, generate new keys, and manage key lifecycle.
 /// Uses PBKDF2 with SHA256 for key hashing, consistent with the existing password hashing strategy.
 /// </summary>
-public class ApiKeyAuthenticationService
+internal class ApiKeyAuthenticationService
 {
     private const string KeyPrefix = "mpl";
     private const int KeyLengthBytes = 32; // 256 bits = 32 bytes
@@ -108,6 +108,8 @@ public class ApiKeyAuthenticationService
     /// <param name="environment">Environment prefix (live/test)</param>
     /// <param name="ct">Cancellation token</param>
     /// <returns>Tuple of (plaintext key, key entity)</returns>
+    private static readonly string[] ValidEnvironments = { "live", "test" };
+
     public async Task<(string PlaintextKey, ApiKeyEntity Entity)> GenerateApiKeyAsync(
         string userId,
         string keyName,
@@ -120,7 +122,7 @@ public class ApiKeyAuthenticationService
             throw new ArgumentException("User ID is required", nameof(userId));
         if (string.IsNullOrWhiteSpace(keyName))
             throw new ArgumentException("Key name is required", nameof(keyName));
-        if (!new[] { "live", "test" }.Contains(environment, StringComparer.Ordinal))
+        if (!ValidEnvironments.Contains(environment, StringComparer.Ordinal))
             throw new ArgumentException("Environment must be 'live' or 'test'", nameof(environment));
 
         // Verify user exists

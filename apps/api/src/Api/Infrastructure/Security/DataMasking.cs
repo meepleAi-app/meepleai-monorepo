@@ -7,7 +7,7 @@ namespace Api.Infrastructure.Security;
 /// Utility class for masking sensitive information in logs and error messages.
 /// Prevents exposure of PII, credentials, and other sensitive data.
 /// </summary>
-public static partial class DataMasking
+internal static partial class DataMasking
 {
     /// <summary>
     /// Masks sensitive string, keeping only first/last characters.
@@ -70,7 +70,7 @@ public static partial class DataMasking
         if (string.IsNullOrEmpty(cardNumber))
             return "****-****-****-****";
 
-        var digitsOnly = new string(cardNumber.Where(char.IsDigit).ToArray());
+        var digitsOnly = string.Concat(cardNumber.Where(char.IsDigit));
 
         if (digitsOnly.Length < 4)
             return "****-****-****-****";

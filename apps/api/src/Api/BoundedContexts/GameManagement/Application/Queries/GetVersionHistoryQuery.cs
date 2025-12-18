@@ -7,14 +7,14 @@ namespace Api.BoundedContexts.GameManagement.Application.Queries;
 /// <summary>
 /// Query to retrieve version history for a rule specification.
 /// </summary>
-public record GetVersionHistoryQuery(
+internal record GetVersionHistoryQuery(
     Guid GameId
 ) : IQuery<RuleSpecHistoryDto>;
 
 /// <summary>
 /// DTO for rule specification version history.
 /// </summary>
-public record RuleSpecHistoryDto(
+internal record RuleSpecHistoryDto(
     Guid GameId,
     IReadOnlyList<RuleSpecVersionDto> Versions,
     int TotalVersions
@@ -23,7 +23,7 @@ public record RuleSpecHistoryDto(
 /// <summary>
 /// DTO for a single version in the history.
 /// </summary>
-public record RuleSpecVersionDto(
+internal record RuleSpecVersionDto(
     string Version,
     DateTime CreatedAt,
     int AtomCount,

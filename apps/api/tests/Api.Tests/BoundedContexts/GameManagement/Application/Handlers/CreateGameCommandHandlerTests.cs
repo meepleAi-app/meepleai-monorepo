@@ -289,7 +289,7 @@ public class CreateGameCommandHandlerTests
     {
         // Arrange
         var command = new CreateGameCommand(Title: "Catan");
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         var cancellationToken = cts.Token;
 
         // Act
@@ -345,6 +345,31 @@ public class CreateGameCommandHandlerTests
         Assert.Null(result.BggId); // Not set during creation
         Assert.True(result.CreatedAt <= DateTime.UtcNow);
         Assert.True(result.CreatedAt >= DateTime.UtcNow.AddSeconds(-5)); // Created within last 5 seconds
+    }
+    [Fact]
+    public async Task Handle_WithBggId_LinksToBgg()
+    {
+        // Arrange
+        var command = new CreateGameCommand(
+            Title: "Scythe",
+            BggId: 169786);
+
+        Game? capturedGame = null;
+        _gameRepositoryMock
+            .Setup(r => r.AddAsync(It.IsAny<Game>(), It.IsAny<CancellationToken>()))
+            .Callback<Game, CancellationToken>((g, _) => capturedGame = g)
+            .Returns(Task.CompletedTask);
+
+        // Act
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal("Scythe", result.Title);
+        Assert.Equal(169786, result.BggId);
+
+        Assert.NotNull(capturedGame);
+        Assert.Equal(169786, capturedGame.BggId);
     }
 }
 

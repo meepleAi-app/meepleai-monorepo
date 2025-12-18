@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Globalization;
 using Api.BoundedContexts.Administration.Application.Interfaces;
 using Api.BoundedContexts.Administration.Domain.ValueObjects;
 using Microsoft.Extensions.Configuration;
@@ -10,7 +11,7 @@ namespace Api.BoundedContexts.Administration.Infrastructure.Services;
 /// Service for parsing Lighthouse CI reports (Issue #2139)
 /// Reads JSON reports from apps/web/.lighthouseci/
 /// </summary>
-public class LighthouseReportParserService : ILighthouseReportParserService
+internal class LighthouseReportParserService : ILighthouseReportParserService
 {
     private readonly ILogger<LighthouseReportParserService> _logger;
     private readonly string _reportDirectory;
@@ -19,6 +20,7 @@ public class LighthouseReportParserService : ILighthouseReportParserService
         IConfiguration configuration,
         ILogger<LighthouseReportParserService> logger)
     {
+        ArgumentNullException.ThrowIfNull(configuration);
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         // Default to relative path from API project
@@ -32,7 +34,7 @@ public class LighthouseReportParserService : ILighthouseReportParserService
     {
         try
         {
-            var latestReport = await GetLatestReportAsync(cancellationToken).ConfigureAwait(false);
+            var latestReport = await GetLatestReportAsync().ConfigureAwait(false);
             if (latestReport == null)
             {
                 _logger.LogWarning("No Lighthouse reports found in directory: {Directory}", _reportDirectory);
@@ -53,8 +55,20 @@ public class LighthouseReportParserService : ILighthouseReportParserService
             if (accessibilityScore >= 90) wcagLevels.Add("AAA");
 
             // Determine status
-            var status = accessibilityScore >= 90 ? "pass" :
-                        accessibilityScore >= 75 ? "warning" : "fail";
+            // Determine status
+            string status;
+            if (accessibilityScore >= 90)
+            {
+                status = "pass";
+            }
+            else if (accessibilityScore >= 75)
+            {
+                status = "warning";
+            }
+            else
+            {
+                status = "fail";
+            }
 
             var lastRunAt = File.GetLastWriteTimeUtc(latestReport);
 
@@ -73,18 +87,23 @@ public class LighthouseReportParserService : ILighthouseReportParserService
 
             return metrics;
         }
+#pragma warning disable CA1031
+        // Justification: INFRASTRUCTURE SERVICE PATTERN - Graceful degradation
+        // Catches all file I/O and JSON parsing failures. Returns null instead of throwing
+        // to allow dashboard to handle missing metrics gracefully. Non-critical data retrieval.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error parsing Lighthouse accessibility metrics");
             return null;
         }
+#pragma warning restore CA1031
     }
 
     public async Task<PerformanceMetrics?> ParsePerformanceMetricsAsync(CancellationToken cancellationToken = default)
     {
         try
         {
-            var latestReport = await GetLatestReportAsync(cancellationToken).ConfigureAwait(false);
+            var latestReport = await GetLatestReportAsync().ConfigureAwait(false);
             if (latestReport == null)
             {
                 _logger.LogWarning("No Lighthouse reports found in directory: {Directory}", _reportDirectory);
@@ -104,8 +123,20 @@ public class LighthouseReportParserService : ILighthouseReportParserService
             var speedIndex = GetNumericValue(latestReport, "audits", "speed-index", "numericValue");
 
             // Determine budget status based on Core Web Vitals
-            var budgetStatus = lcp <= 2500 && fid <= 100 && cls <= 0.1 ? "pass" :
-                             lcp <= 4000 && fid <= 300 && cls <= 0.25 ? "warning" : "fail";
+            // Determine budget status based on Core Web Vitals
+            string budgetStatus;
+            if (lcp <= 2500 && fid <= 100 && cls <= 0.1)
+            {
+                budgetStatus = "pass";
+            }
+            else if (lcp <= 4000 && fid <= 300 && cls <= 0.25)
+            {
+                budgetStatus = "warning";
+            }
+            else
+            {
+                budgetStatus = "fail";
+            }
 
             var lastRunAt = File.GetLastWriteTimeUtc(latestReport);
 
@@ -130,11 +161,16 @@ public class LighthouseReportParserService : ILighthouseReportParserService
 
             return metrics;
         }
+#pragma warning disable CA1031
+        // Justification: INFRASTRUCTURE SERVICE PATTERN - Graceful degradation
+        // Catches all file I/O and JSON parsing failures. Returns null instead of throwing
+        // to allow dashboard to handle missing metrics gracefully. Non-critical data retrieval.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error parsing Lighthouse performance metrics");
             return null;
         }
+#pragma warning restore CA1031
     }
 
     public async Task<bool> ReportsExistAsync(CancellationToken cancellationToken = default)
@@ -158,7 +194,7 @@ public class LighthouseReportParserService : ILighthouseReportParserService
     /// <summary>
     /// Gets the latest Lighthouse report file path
     /// </summary>
-    private async Task<string?> GetLatestReportAsync(CancellationToken cancellationToken = default)
+    private async Task<string?> GetLatestReportAsync()
     {
         await Task.CompletedTask.ConfigureAwait(false);
 
@@ -197,7 +233,7 @@ public class LighthouseReportParserService : ILighthouseReportParserService
             return element.ValueKind switch
             {
                 JsonValueKind.Number => element.GetDouble(),
-                JsonValueKind.String when double.TryParse(element.GetString(), out var val) => val,
+                JsonValueKind.String when double.TryParse(element.GetString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var val) => val,
                 _ => 0
             };
         }

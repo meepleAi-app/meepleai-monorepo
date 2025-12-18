@@ -18,7 +18,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// Architecture (ADR-004): Single-context transaction using KnowledgeBase domain services.
 /// Pattern: Agent orchestrates VectorSearchDomainService + QualityTrackingDomainService.
 /// </remarks>
-public sealed class InvokeAgentCommandHandler
+internal sealed class InvokeAgentCommandHandler
     : IRequestHandler<InvokeAgentCommand, AgentResponseDto>
 {
     private readonly IAgentRepository _agentRepository;
@@ -45,6 +45,7 @@ public sealed class InvokeAgentCommandHandler
         InvokeAgentCommand request,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         _logger.LogInformation(
             "Invoking agent {AgentId} with query: {Query}",
             request.AgentId,

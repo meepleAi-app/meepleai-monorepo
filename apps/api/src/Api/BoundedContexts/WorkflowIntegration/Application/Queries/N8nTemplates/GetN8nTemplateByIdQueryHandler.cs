@@ -11,21 +11,24 @@ namespace Api.BoundedContexts.WorkflowIntegration.Application.Queries.N8NTemplat
 /// Infrastructure delegation: File I/O and JSON deserialization via N8NTemplateService.
 /// Security: Path traversal prevention handled by infrastructure service.
 /// </summary>
-public sealed class GetN8NTemplateByIdQueryHandler : IQueryHandler<GetN8NTemplateByIdQuery, WorkflowTemplateDetailDto?>
+internal sealed class GetN8NTemplateByIdQueryHandler : IQueryHandler<GetN8NTemplateByIdQuery, WorkflowTemplateDetailDto?>
 {
-    private readonly N8NTemplateService _templateService;
+    private readonly IN8NTemplateService _templateService;
     private readonly ILogger<GetN8NTemplateByIdQueryHandler> _logger;
 
     public GetN8NTemplateByIdQueryHandler(
-        N8NTemplateService templateService,
+        IN8NTemplateService templateService,
         ILogger<GetN8NTemplateByIdQueryHandler> logger)
     {
-        _templateService = templateService ?? throw new ArgumentNullException(nameof(templateService));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(templateService);
+        _templateService = templateService;
+        ArgumentNullException.ThrowIfNull(logger);
+        _logger = logger;
     }
 
     public async Task<WorkflowTemplateDetailDto?> Handle(GetN8NTemplateByIdQuery query, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(query);
         // Business logic validation
         if (string.IsNullOrWhiteSpace(query.TemplateId))
         {

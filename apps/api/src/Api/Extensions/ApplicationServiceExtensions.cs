@@ -112,7 +112,7 @@ internal static class ApplicationServiceExtensions
 
         // N8N services
         services.AddScoped<N8NConfigService>();
-        services.AddScoped<N8NTemplateService>(); // N8N-04: Workflow template service
+        services.AddScoped<IN8NTemplateService, N8NTemplateService>(); // N8N-04: Workflow template service
 
         // N8N-05: Workflow error logging service
         services.AddScoped<IWorkflowErrorLoggingService, WorkflowErrorLoggingService>();

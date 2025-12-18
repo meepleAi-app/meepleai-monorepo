@@ -1605,8 +1605,11 @@ describe('CommentItem', () => {
       await user.click(saveButton);
 
       // During submission, textarea should be disabled
-      const textarea = screen.getByDisplayValue('This is a test comment');
-      expect(textarea).toBeDisabled();
+      // Use waitFor to handle async state transition
+      await waitFor(() => {
+        const textarea = screen.getByTestId('mention-input');
+        expect(textarea).toBeDisabled();
+      });
     });
   });
 

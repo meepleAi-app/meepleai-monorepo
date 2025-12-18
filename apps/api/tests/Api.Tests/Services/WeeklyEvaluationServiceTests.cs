@@ -559,7 +559,7 @@ public sealed class WeeklyEvaluationServiceTests : IDisposable
             Times.AtLeastOnce);
     }
 
-    [Fact(Skip = "Issue #2185: Moq cannot proxy internal IRagEvaluationService - needs refactoring to use public interface or test fake")]
+    [Fact]
     public async Task ExecuteAsync_WhenRagQualityGatesFail_SendsAlert()
     {
         // Arrange

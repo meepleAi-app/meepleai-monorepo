@@ -178,8 +178,8 @@ internal sealed record EvaluationResult
         IReadOnlyList<EvaluationSampleResult> sampleResults)
     {
         var metrics = CalculateMetrics(sampleResults);
-        var metricsByDifficulty = CalculateMetricsByGroup(sampleResults, true);
-        var metricsByCategory = CalculateMetricsByGroup(sampleResults, false);
+        var metricsByDifficulty = CalculateMetricsByGroup(sampleResults);
+        var metricsByCategory = CalculateMetricsByGroup(sampleResults);
 
         return new EvaluationResult
         {

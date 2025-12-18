@@ -53,7 +53,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<SystemConfigurationEntity> SystemConfigurations => Set<SystemConfigurationEntity>();
     public DbSet<WorkflowErrorLogEntity> WorkflowErrorLogs => Set<WorkflowErrorLogEntity>(); // N8N-05
     // ADMIN-01 Phase 4: Prompt Evaluation Results
-    public DbSet<PromptEvaluationResultEntity> PromptEvaluationResults { get; set; }
+    public DbSet<PromptEvaluationResultEntity> PromptEvaluationResults => Set<PromptEvaluationResultEntity>();
     // BGAI-039: Validation Accuracy Baseline Tracking
     public DbSet<ValidationAccuracyBaselineEntity> ValidationAccuracyBaselines => Set<ValidationAccuracyBaselineEntity>();
     public DbSet<AlertEntity> Alerts => Set<AlertEntity>(); // OPS-07

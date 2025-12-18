@@ -131,8 +131,8 @@ internal class RagValidationPipelineService : IRagValidationPipelineService
         List<Snippet> snippets,
         string gameId,
         string answerText,
-        string language
-        )
+        string language,
+        CancellationToken cancellationToken)
     {
         var citationTask = EnsureCitationTask(
             _citationValidation.ValidateCitationsAsync(snippets, gameId, CancellationToken.None),

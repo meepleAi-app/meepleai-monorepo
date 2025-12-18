@@ -410,7 +410,8 @@ internal class RagService : IRagService
     private async Task<ExplainResponse> GenerateExplanationResponseAsync(
         string topic,
         string gameId,
-                List<SearchResultItem> results,
+        string language,
+        List<SearchResultItem> results,
         string cacheKey,
         Activity? activity,
         Stopwatch stopwatch,
@@ -679,7 +680,8 @@ internal class RagService : IRagService
         string gameId,
         string query,
         SearchMode searchMode,
-                string cacheKey,
+        string language,
+        string cacheKey,
         Activity? activity,
         Stopwatch stopwatch,
         CancellationToken cancellationToken)

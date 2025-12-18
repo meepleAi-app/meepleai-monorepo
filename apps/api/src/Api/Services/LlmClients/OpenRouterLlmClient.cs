@@ -294,7 +294,8 @@ internal class OpenRouterLlmClient : ILlmClient
 
     private async IAsyncEnumerable<StreamChunk> ProcessStreamResponseAsync(
         HttpResponseMessage response,
-                [EnumeratorCancellation] CancellationToken ct)
+        string model,
+        [EnumeratorCancellation] CancellationToken ct)
     {
         using (response)
         {

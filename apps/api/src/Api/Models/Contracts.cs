@@ -643,7 +643,7 @@ internal record ExportDataRequest(
 );
 
 // AI-13: BoardGameGeek API integration models
-internal record BggSearchResultDto(
+public record BggSearchResultDto(
     int BggId,
     string Name,
     int? YearPublished,
@@ -651,7 +651,7 @@ internal record BggSearchResultDto(
     string Type // "boardgame", "boardgameexpansion", etc.
 );
 
-internal record BggGameDetailsDto(
+public record BggGameDetailsDto(
     int BggId,
     string Name,
     string? Description,
@@ -674,7 +674,7 @@ internal record BggGameDetailsDto(
     IList<string> Publishers
 );
 
-internal record BggSearchRequest(
+public record BggSearchRequest(
     [Required][MinLength(1)] string Query,
     bool Exact = false
 );

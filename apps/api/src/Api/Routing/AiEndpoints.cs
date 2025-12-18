@@ -1034,8 +1034,8 @@ internal static class AiEndpoints
         HttpContext context,
         IMediator mediator,
         SetupGuideStreamContext streamContext,
-        int latencyMs
-        )
+        int latencyMs,
+        CancellationToken cancellationToken)
     {
         var responseSnippet = streamContext.Steps.Count > 0
             ? string.Join("; ", streamContext.Steps.Take(3).Select(s => s.instruction))

@@ -11,7 +11,7 @@ using System.Globalization;
 
 namespace Api.Services;
 
-internal class N8NTemplateService
+internal class N8NTemplateService : IN8NTemplateService
 {
     private readonly MeepleAiDbContext _db;
     private readonly IHttpClientFactory _httpClientFactory;

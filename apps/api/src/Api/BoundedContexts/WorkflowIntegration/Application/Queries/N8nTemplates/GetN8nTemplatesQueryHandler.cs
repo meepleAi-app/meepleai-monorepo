@@ -12,11 +12,11 @@ namespace Api.BoundedContexts.WorkflowIntegration.Application.Queries.N8NTemplat
 /// </summary>
 internal sealed class GetN8NTemplatesQueryHandler : IQueryHandler<GetN8NTemplatesQuery, List<WorkflowTemplateDto>>
 {
-    private readonly N8NTemplateService _templateService;
+    private readonly IN8NTemplateService _templateService;
     private readonly ILogger<GetN8NTemplatesQueryHandler> _logger;
 
     public GetN8NTemplatesQueryHandler(
-        N8NTemplateService templateService,
+        IN8NTemplateService templateService,
         ILogger<GetN8NTemplatesQueryHandler> logger)
     {
         ArgumentNullException.ThrowIfNull(templateService);

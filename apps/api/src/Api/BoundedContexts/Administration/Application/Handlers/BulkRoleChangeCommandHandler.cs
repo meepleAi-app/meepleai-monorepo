@@ -12,7 +12,7 @@ namespace Api.BoundedContexts.Administration.Application.Handlers;
 /// Handler for bulk role change operations.
 /// Changes role for multiple users in a single transaction.
 /// </summary>
-public class BulkRoleChangeCommandHandler : ICommandHandler<BulkRoleChangeCommand, BulkOperationResult>
+internal class BulkRoleChangeCommandHandler : ICommandHandler<BulkRoleChangeCommand, BulkOperationResult>
 {
     private const int MaxBulkSize = 1000;
     private readonly IUserRepository _userRepository;
@@ -31,6 +31,7 @@ public class BulkRoleChangeCommandHandler : ICommandHandler<BulkRoleChangeComman
 
     public async Task<BulkOperationResult> Handle(BulkRoleChangeCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         // Validation: Check bulk size limit
         if (command.UserIds == null || command.UserIds.Count == 0)
         {
@@ -56,10 +57,15 @@ public class BulkRoleChangeCommandHandler : ICommandHandler<BulkRoleChangeComman
         {
             newRole = Role.Parse(command.NewRole);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: VALIDATION PATTERN - Role parsing failure handling
+        // Wraps Role.Parse exceptions (ArgumentException, FormatException) in DomainException
+        // for consistent API validation error response. Preserves inner exception for diagnostics.
         catch (Exception ex)
         {
             throw new DomainException($"Invalid role: {command.NewRole}", ex);
         }
+#pragma warning restore CA1031
 
         _logger.LogInformation("Admin {RequesterId} initiating bulk role change for {Count} users to role {Role}",
             command.RequesterId, distinctUserIds.Count, command.NewRole);
@@ -85,11 +91,17 @@ public class BulkRoleChangeCommandHandler : ICommandHandler<BulkRoleChangeComman
                     await _userRepository.UpdateAsync(user, cancellationToken).ConfigureAwait(false);
                     successCount++;
                 }
+#pragma warning disable CA1031 // Do not catch general exception types
+                // Justification: BULK OPERATION PATTERN - Individual role change failure handling
+                // Catches all exceptions during role update (validation, DB constraints, etc.)
+                // to collect errors without stopping batch processing. Each failure is logged
+                // and added to error list for reporting. Allows partial success in bulk operation.
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Error changing role for user {UserId}", userId);
                     errors.Add($"User {userId}: {ex.Message}");
                 }
+#pragma warning restore CA1031
             }
 
             // Commit transaction if any success
@@ -111,10 +123,15 @@ public class BulkRoleChangeCommandHandler : ICommandHandler<BulkRoleChangeComman
                 Errors: errors
             );
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: COMMAND HANDLER PATTERN - Wraps unexpected infrastructure failures
+        // Generic catch wraps unexpected exceptions (DB, network, memory) in DomainException
+        // for consistent API error handling. Logs with full context before wrapping.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Critical error during bulk role change");
             throw new DomainException($"Bulk role change failed: {ex.Message}", ex);
         }
+#pragma warning restore CA1031
     }
 }

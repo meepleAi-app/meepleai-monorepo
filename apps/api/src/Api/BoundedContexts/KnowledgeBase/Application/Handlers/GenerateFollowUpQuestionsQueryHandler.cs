@@ -15,7 +15,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// Generates AI-powered follow-up questions based on Q&A context.
 /// CHAT-02: AI-Generated Follow-Up Questions
 /// </summary>
-public sealed class GenerateFollowUpQuestionsQueryHandler
+internal sealed class GenerateFollowUpQuestionsQueryHandler
     : IRequestHandler<GenerateFollowUpQuestionsQuery, IReadOnlyList<string>>
 {
     private readonly ILlmService _llmService;
@@ -38,10 +38,12 @@ public sealed class GenerateFollowUpQuestionsQueryHandler
         _config = config?.Value ?? throw new ArgumentNullException(nameof(config));
 
         // Initialize OpenTelemetry metrics
-        // CA2000: Meter lifetime managed by IMeterFactory (long-lived, singleton)
-#pragma warning disable CA2000
+        // CA2000 suppression: Meter lifetime is managed by IMeterFactory (DI singleton).
+        // IMeterFactory.Create() returns Meters that are cached and disposed when the factory itself is disposed.
+        // Manually disposing here would break metric collection. See: https://learn.microsoft.com/en-us/dotnet/core/diagnostics/metrics-instrumentation#create-a-custom-metric
+#pragma warning disable CA2000 // Dispose objects before losing scope - False positive: IMeterFactory manages Meter lifetime
         var meter = meterFactory.Create("MeepleAI.FollowUpQuestions");
-#pragma warning restore CA2000
+#pragma warning restore CA2000 // Dispose objects before losing scope
 
         _questionsGeneratedCounter = meter.CreateCounter<long>(
             "meepleai.followups.generated.total",
@@ -68,10 +70,8 @@ public sealed class GenerateFollowUpQuestionsQueryHandler
         try
         {
             // Check for user cancellation before starting
-            if (cancellationToken.IsCancellationRequested)
-            {
-                throw new OperationCanceledException(cancellationToken);
-            }
+            cancellationToken.ThrowIfCancellationRequested();
+
 
             // Apply configuration limits
             var effectiveMaxQuestions = Math.Min(request.MaxQuestions, _config.MaxQuestionsPerResponse);
@@ -110,10 +110,10 @@ public sealed class GenerateFollowUpQuestionsQueryHandler
 
             return validQuestions.AsReadOnly();
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
         {
             // User-initiated cancellation - propagate
-            _logger.LogInformation(
+            _logger.LogInformation(ex,
                 "Follow-up question generation cancelled by user for game {GameName}",
                 request.GameName);
 
@@ -190,10 +190,10 @@ public sealed class GenerateFollowUpQuestionsQueryHandler
                     }
                 }
             }
-            catch (OperationCanceledException) when (timeoutCts.Token.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+            catch (OperationCanceledException ex) when (timeoutCts.Token.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
             {
                 // Timeout occurred (but not user cancellation)
-                _logger.LogWarning(
+                _logger.LogWarning(ex,
                     "Follow-up question generation timed out after {TimeoutMs}ms for game {GameName}",
                     _config.GenerationTimeoutMs,
                     gameName);
@@ -303,7 +303,7 @@ Generate follow-up questions that help the user explore this topic further.";
             return text;
         }
 
-        return text.Substring(0, maxLength - 3) + "...";
+        return string.Concat(text.AsSpan(0, maxLength - 3), "...");
     }
 
     /// <summary>
@@ -317,9 +317,7 @@ Generate follow-up questions that help the user explore this topic further.";
         }
 
         // Keep only alphanumeric characters, spaces, and hyphens
-        var sanitized = new string(gameName
-            .Where(c => char.IsLetterOrDigit(c) || c == ' ' || c == '-')
-            .ToArray());
+        var sanitized = string.Concat(gameName.Where(c => char.IsLetterOrDigit(c) || c == ' ' || c == '-'));
 
         // Limit length to 50 chars to avoid cardinality issues
         if (sanitized.Length > 50)

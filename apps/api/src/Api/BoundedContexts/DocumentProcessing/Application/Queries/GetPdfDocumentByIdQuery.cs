@@ -3,6 +3,6 @@ using Api.SharedKernel.Application.Interfaces;
 
 namespace Api.BoundedContexts.DocumentProcessing.Application.Queries;
 
-public record GetPdfDocumentByIdQuery(
+internal record GetPdfDocumentByIdQuery(
     Guid DocumentId
 ) : IQuery<PdfDocumentDto?>;

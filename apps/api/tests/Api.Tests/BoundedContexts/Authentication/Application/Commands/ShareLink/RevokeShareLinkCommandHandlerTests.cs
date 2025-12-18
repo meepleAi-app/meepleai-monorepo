@@ -7,6 +7,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Caching.Distributed;
 using Moq;
 using Xunit;
+using System.Globalization;
 
 namespace Api.Tests.BoundedContexts.Authentication.Application.Commands.ShareLink;
 
@@ -108,7 +109,7 @@ public class RevokeShareLinkCommandHandlerTests
         Assert.NotNull(capturedValue);
         Assert.NotEmpty(capturedValue);
         // Verify blacklist entry contains ISO 8601 timestamp (RevokedAt value)
-        Assert.True(DateTimeOffset.TryParse(capturedValue, out var parsedDateOffset),
+        Assert.True(DateTimeOffset.TryParse(capturedValue, CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var parsedDateOffset),
             $"Blacklist value should be a valid ISO 8601 timestamp, got: {capturedValue}");
         // Convert to UTC for consistent comparison
         var parsedUtc = parsedDateOffset.UtcDateTime;

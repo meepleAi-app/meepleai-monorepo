@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Handlers;
 /// <summary>
 /// Handles computing differences between RuleSpec versions using domain service.
 /// </summary>
-public class ComputeRuleSpecDiffQueryHandler : IRequestHandler<ComputeRuleSpecDiffQuery, RuleSpecDiff>
+internal class ComputeRuleSpecDiffQueryHandler : IRequestHandler<ComputeRuleSpecDiffQuery, RuleSpecDiff>
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly RuleSpecDiffDomainService _diffService;
@@ -22,13 +22,14 @@ public class ComputeRuleSpecDiffQueryHandler : IRequestHandler<ComputeRuleSpecDi
         RuleSpecDiffDomainService diffService,
         ILogger<ComputeRuleSpecDiffQueryHandler> logger)
     {
-        _dbContext = dbContext;
-        _diffService = diffService;
-        _logger = logger;
+        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
+        _diffService = diffService ?? throw new ArgumentNullException(nameof(diffService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<RuleSpecDiff> Handle(ComputeRuleSpecDiffQuery query, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(query);
         // Load FROM version
         var fromEntity = await _dbContext.RuleSpecs
             .Include(r => r.Atoms)

@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.Authentication.Application.Queries;
 /// Handles retrieval of user profile information.
 /// Returns UserProfileDto with complete profile data.
 /// </summary>
-public class GetUserProfileQueryHandler : IQueryHandler<GetUserProfileQuery, UserProfileDto?>
+internal class GetUserProfileQueryHandler : IQueryHandler<GetUserProfileQuery, UserProfileDto?>
 {
     private readonly IUserRepository _userRepository;
 
@@ -20,6 +20,7 @@ public class GetUserProfileQueryHandler : IQueryHandler<GetUserProfileQuery, Use
 
     public async Task<UserProfileDto?> Handle(GetUserProfileQuery query, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(query);
         var user = await _userRepository.GetByIdAsync(query.UserId, cancellationToken).ConfigureAwait(false);
 
         return user != null ? MapToUserProfileDto(user) : null;

@@ -7,7 +7,7 @@ using Microsoft.Extensions.Options;
 
 namespace Api.BoundedContexts.Authentication.Application.Commands;
 
-public class RevokeInactiveSessionsCommandHandler : ICommandHandler<RevokeInactiveSessionsCommand, int>
+internal class RevokeInactiveSessionsCommandHandler : ICommandHandler<RevokeInactiveSessionsCommand, int>
 {
     private readonly MeepleAiDbContext _db;
     private readonly TimeProvider _timeProvider;
@@ -31,6 +31,7 @@ public class RevokeInactiveSessionsCommandHandler : ICommandHandler<RevokeInacti
 
     public async Task<int> Handle(RevokeInactiveSessionsCommand request, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         var now = _timeProvider.GetUtcNow().UtcDateTime;
         var inactivityThreshold = now.AddDays(-_config.InactivityTimeoutDays);
 

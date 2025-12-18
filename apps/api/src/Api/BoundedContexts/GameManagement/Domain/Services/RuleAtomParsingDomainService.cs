@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.GameManagement.Domain.Services;
 /// Domain service for parsing atomic rules from various formats.
 /// Handles JSON parsing and plain text extraction.
 /// </summary>
-public partial class RuleAtomParsingDomainService
+internal partial class RuleAtomParsingDomainService
 {
     /// <summary>
     /// Parses atomic rules from JSON format.
@@ -40,6 +40,8 @@ public partial class RuleAtomParsingDomainService
         }
     }
 
+    private static readonly char[] NewLineSeparators = { '\r', '\n' };
+
     /// <summary>
     /// Parses rules from extracted text by splitting on newlines.
     /// Filters out empty lines.
@@ -52,7 +54,7 @@ public partial class RuleAtomParsingDomainService
         }
 
         return extractedText
-            .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+            .Split(NewLineSeparators, StringSplitOptions.RemoveEmptyEntries)
             .Select(line => line.Trim())
             .Where(line => !string.IsNullOrWhiteSpace(line))
             .ToList();

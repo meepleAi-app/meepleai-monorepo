@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
 /// Circuit breaker state for LLM provider failure management
 /// ISSUE-962 (BGAI-020): Implements circuit breaker pattern for provider resilience
 /// </summary>
-public enum CircuitState
+internal enum CircuitState
 {
     /// <summary>Normal operation - requests allowed</summary>
     Closed,
@@ -22,7 +22,7 @@ public enum CircuitState
 /// <summary>
 /// Circuit breaker state tracking for a single LLM provider
 /// </summary>
-public sealed class CircuitBreakerState
+internal sealed class CircuitBreakerState
 {
     private const int FailureThreshold = 5; // Failures before opening circuit
     private const int SuccessThreshold = 3; // Successes to close circuit from half-open

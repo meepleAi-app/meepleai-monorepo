@@ -8,8 +8,8 @@ namespace Api.BoundedContexts.Administration.Application.Commands;
 /// <param name="UserIds">List of user IDs to reset passwords for (max 1000).</param>
 /// <param name="NewPassword">The new password to set for all users.</param>
 /// <param name="RequesterId">The ID of the admin requesting the operation.</param>
-public record BulkPasswordResetCommand(
-    List<Guid> UserIds,
+internal record BulkPasswordResetCommand(
+    IReadOnlyList<Guid> UserIds,
     string NewPassword,
     Guid RequesterId
 ) : ICommand<BulkOperationResult>;
@@ -21,11 +21,11 @@ public record BulkPasswordResetCommand(
 /// <param name="SuccessCount">Number of items successfully processed.</param>
 /// <param name="FailedCount">Number of items that failed processing.</param>
 /// <param name="Errors">List of error messages for failed items.</param>
-public record BulkOperationResult(
+internal record BulkOperationResult(
     int TotalRequested,
     int SuccessCount,
     int FailedCount,
-    List<string> Errors
+    IReadOnlyList<string> Errors
 );
 
 /// <summary>
@@ -37,10 +37,10 @@ public record BulkOperationResult(
 /// <param name="FailedCount">Number of items that failed processing.</param>
 /// <param name="Errors">List of error messages for failed items.</param>
 /// <param name="Data">Additional data for successful items (e.g., generated keys).</param>
-public record BulkOperationResult<TData>(
+internal record BulkOperationResult<TData>(
     int TotalRequested,
     int SuccessCount,
     int FailedCount,
-    List<string> Errors,
-    List<TData> Data
+    IReadOnlyList<string> Errors,
+    IReadOnlyList<TData> Data
 );

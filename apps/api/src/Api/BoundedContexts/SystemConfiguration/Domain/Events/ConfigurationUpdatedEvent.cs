@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.SystemConfiguration.Domain.Events;
 /// <summary>
 /// Domain event raised when a configuration value is updated.
 /// </summary>
-public sealed class ConfigurationUpdatedEvent : DomainEventBase
+internal sealed class ConfigurationUpdatedEvent : DomainEventBase
 {
     public Guid ConfigurationId { get; }
     public ConfigKey Key { get; }

@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.Administration.Application.Commands;
 /// <summary>
 /// Command to create a new prompt template with an initial version.
 /// </summary>
-public record CreatePromptTemplateCommand(
+internal record CreatePromptTemplateCommand(
     string Name,
     string? Description,
     string? Category,

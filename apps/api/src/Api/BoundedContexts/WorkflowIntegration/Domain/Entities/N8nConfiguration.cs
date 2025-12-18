@@ -47,7 +47,8 @@ public sealed class N8NConfiguration : AggregateRoot<Guid>
             throw new ArgumentException("API key cannot be empty", nameof(apiKeyEncrypted));
 
         Name = name.Trim();
-        BaseUrl = baseUrl ?? throw new ArgumentNullException(nameof(baseUrl));
+        ArgumentNullException.ThrowIfNull(baseUrl);
+        BaseUrl = baseUrl;
         ApiKeyEncrypted = apiKeyEncrypted;
         WebhookUrl = webhookUrl;
         IsActive = true;

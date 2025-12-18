@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// Handles LLM cost alert checking.
 /// ISSUE-960: BGAI-018 - Cost monitoring and alerting
 /// </summary>
-public class CheckLlmCostAlertsCommandHandler : ICommandHandler<CheckLlmCostAlertsCommand, CheckLlmCostAlertsResult>
+internal class CheckLlmCostAlertsCommandHandler : ICommandHandler<CheckLlmCostAlertsCommand, CheckLlmCostAlertsResult>
 {
     private readonly LlmCostAlertService _alertService;
 
@@ -19,6 +19,7 @@ public class CheckLlmCostAlertsCommandHandler : ICommandHandler<CheckLlmCostAler
 
     public async Task<CheckLlmCostAlertsResult> Handle(CheckLlmCostAlertsCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         // Check all thresholds (daily, weekly, monthly projection)
         await _alertService.CheckDailyCostThresholdAsync(cancellationToken).ConfigureAwait(false);
         await _alertService.CheckWeeklyCostThresholdAsync(cancellationToken).ConfigureAwait(false);

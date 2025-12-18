@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands.CreateShareLin
 /// <summary>
 /// Handler for creating shareable chat thread links.
 /// </summary>
-public sealed class CreateShareLinkCommandHandler : IRequestHandler<CreateShareLinkCommand, CreateShareLinkResult>
+internal sealed class CreateShareLinkCommandHandler : IRequestHandler<CreateShareLinkCommand, CreateShareLinkResult>
 {
     private readonly MeepleAiDbContext _context;
     private readonly IShareLinkRepository _shareLinkRepository;
@@ -21,20 +21,21 @@ public sealed class CreateShareLinkCommandHandler : IRequestHandler<CreateShareL
         IShareLinkRepository shareLinkRepository,
         IConfiguration configuration)
     {
-        _context = context;
-        _shareLinkRepository = shareLinkRepository;
-        _configuration = configuration;
+        _context = context ?? throw new ArgumentNullException(nameof(context));
+        _shareLinkRepository = shareLinkRepository ?? throw new ArgumentNullException(nameof(shareLinkRepository));
+        _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
     }
 
     public async Task<CreateShareLinkResult> Handle(
         CreateShareLinkCommand request,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         // Verify that the chat thread exists and belongs to the requesting user
         var threadExists = await _context.ChatThreads
             .AnyAsync(
                 t => t.Id == request.ThreadId && t.UserId == request.UserId,
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
 
         if (!threadExists)
         {
@@ -52,7 +53,7 @@ public sealed class CreateShareLinkCommandHandler : IRequestHandler<CreateShareL
         );
 
         // Save to database for audit trail via repository
-        await _shareLinkRepository.AddAsync(shareLink, cancellationToken);
+        await _shareLinkRepository.AddAsync(shareLink, cancellationToken).ConfigureAwait(false);
 
         // Generate JWT token
         var secretKey = _configuration["Jwt:ShareLinks:SecretKey"]

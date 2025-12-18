@@ -5,7 +5,7 @@ namespace Api.Services;
 /// <summary>
 /// Production implementation of background task execution using Task.Run
 /// </summary>
-public class BackgroundTaskService : IBackgroundTaskService
+internal class BackgroundTaskService : IBackgroundTaskService
 {
     private readonly ILogger<BackgroundTaskService> _logger;
     private readonly ConcurrentDictionary<string, CancellationTokenSource> _activeTasks = new(StringComparer.Ordinal);
@@ -42,6 +42,9 @@ public class BackgroundTaskService : IBackgroundTaskService
 
     public void ExecuteWithCancellation(string taskId, Func<CancellationToken, Task> taskFactory)
     {
+        // S2930: CancellationTokenSource stored in dictionary for lifecycle management.
+        // Disposed explicitly in finally block (line 81) or CancelTask() (line 92).
+        // Cannot use 'using var' as disposal must occur when task completes or is cancelled.
         var cts = new CancellationTokenSource();
 
         if (!_activeTasks.TryAdd(taskId, cts))
@@ -59,9 +62,9 @@ public class BackgroundTaskService : IBackgroundTaskService
                 await taskFactory(cts.Token).ConfigureAwait(false);
                 _logger.LogInformation("Background task {TaskId} completed successfully", taskId);
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException ex)
             {
-                _logger.LogInformation("Background task {TaskId} was cancelled", taskId);
+                _logger.LogInformation(ex, "Background task {TaskId} was cancelled", taskId);
             }
             catch (InvalidOperationException ex)
             {

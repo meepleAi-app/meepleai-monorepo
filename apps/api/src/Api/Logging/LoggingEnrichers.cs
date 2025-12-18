@@ -9,7 +9,7 @@ namespace Api.Logging;
 /// OPS-04: Enriches log events with correlation ID from HttpContext.
 /// Ensures every log entry includes the request's TraceIdentifier for distributed tracing.
 /// </summary>
-public class CorrelationIdEnricher : ILogEventEnricher
+internal class CorrelationIdEnricher : ILogEventEnricher
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
 
@@ -34,7 +34,7 @@ public class CorrelationIdEnricher : ILogEventEnricher
 /// OPS-04: Enriches log events with user information from authenticated context.
 /// Adds UserId, UserEmail, and UserRole to all logs for audit trail.
 /// </summary>
-public class UserContextEnricher : ILogEventEnricher
+internal class UserContextEnricher : ILogEventEnricher
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
 
@@ -46,7 +46,7 @@ public class UserContextEnricher : ILogEventEnricher
     public void Enrich(LogEvent logEvent, ILogEventPropertyFactory propertyFactory)
     {
         var httpContext = _httpContextAccessor.HttpContext;
-        if (httpContext?.User?.Identity?.IsAuthenticated == true)
+        if (httpContext?.User?.Identity?.IsAuthenticated is true)
         {
             var userId = httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             var userEmail = httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
@@ -75,7 +75,7 @@ public class UserContextEnricher : ILogEventEnricher
 /// OPS-04: Enriches log events with environment information.
 /// Adds deployment environment (Development, Staging, Production) to every log.
 /// </summary>
-public class EnvironmentEnricher : ILogEventEnricher
+internal class EnvironmentEnricher : ILogEventEnricher
 {
     private readonly string _environmentName;
 
@@ -95,7 +95,7 @@ public class EnvironmentEnricher : ILogEventEnricher
 /// OPS-04: Enriches log events with request context information.
 /// Adds RequestPath, RequestMethod, RemoteIp, UserAgent for full request context.
 /// </summary>
-public class RequestContextEnricher : ILogEventEnricher
+internal class RequestContextEnricher : ILogEventEnricher
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
 

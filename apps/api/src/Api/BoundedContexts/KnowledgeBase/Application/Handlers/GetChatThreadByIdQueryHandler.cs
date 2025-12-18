@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// <summary>
 /// Handles get chat thread by ID query.
 /// </summary>
-public class GetChatThreadByIdQueryHandler : IQueryHandler<GetChatThreadByIdQuery, ChatThreadDto?>
+internal class GetChatThreadByIdQueryHandler : IQueryHandler<GetChatThreadByIdQuery, ChatThreadDto?>
 {
     private readonly IChatThreadRepository _threadRepository;
 
@@ -20,6 +20,7 @@ public class GetChatThreadByIdQueryHandler : IQueryHandler<GetChatThreadByIdQuer
 
     public async Task<ChatThreadDto?> Handle(GetChatThreadByIdQuery query, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(query);
         var thread = await _threadRepository.GetByIdAsync(query.ThreadId, cancellationToken).ConfigureAwait(false);
 
         return thread != null ? MapToDto(thread) : null;

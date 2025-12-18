@@ -1,30 +1,35 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace Api.Migrations
 {
     /// <inheritdoc />
-    public partial class AddNotificationIndexes : Migration
+    internal partial class AddNotificationIndexes : Migration
     {
+        private static readonly string[] UserIdCreatedAtColumns = new[] { "user_id", "created_at" };
+        private static readonly bool[] UserIdCreatedAtDescending = new[] { false, true };
+        private static readonly string[] UserIdIsReadColumns = new[] { "user_id", "is_read" };
+        private static readonly string[] UserIdIsReadCreatedAtColumns = new[] { "user_id", "is_read", "created_at" };
+
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateIndex(
                 name: "IX_notifications_user_id_created_at",
                 table: "notifications",
-                columns: new[] { "user_id", "created_at" },
-                descending: new[] { false, true });
+                columns: UserIdCreatedAtColumns,
+                descending: UserIdCreatedAtDescending);
 
             migrationBuilder.CreateIndex(
                 name: "IX_notifications_user_id_is_read",
                 table: "notifications",
-                columns: new[] { "user_id", "is_read" });
+                columns: UserIdIsReadColumns);
 
             migrationBuilder.CreateIndex(
                 name: "IX_notifications_user_id_is_read_created_at",
                 table: "notifications",
-                columns: new[] { "user_id", "is_read", "created_at" },
+                columns: UserIdIsReadCreatedAtColumns,
                 filter: "is_read = false");
         }
 

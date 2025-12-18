@@ -5,7 +5,7 @@ namespace Api.BoundedContexts.WorkflowIntegration.Domain.Events;
 /// <summary>
 /// Domain event raised when a workflow error is retried.
 /// </summary>
-public sealed class WorkflowRetriedEvent : DomainEventBase
+internal sealed class WorkflowRetriedEvent : DomainEventBase
 {
     public Guid ErrorLogId { get; }
     public string WorkflowId { get; }

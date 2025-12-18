@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.Administration.Infrastructure.Services.Formatters;
 /// JSON report formatter
 /// ISSUE-916: Formats reports as JSON for programmatic consumption
 /// </summary>
-public sealed class JsonReportFormatter : IReportFormatter
+internal sealed class JsonReportFormatter : IReportFormatter
 {
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {

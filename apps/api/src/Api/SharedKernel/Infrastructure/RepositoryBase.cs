@@ -10,13 +10,18 @@ namespace Api.SharedKernel.Infrastructure;
 /// </summary>
 public abstract class RepositoryBase
 {
-    protected readonly MeepleAiDbContext DbContext;
-    protected readonly IDomainEventCollector EventCollector;
+    private readonly MeepleAiDbContext _dbContext;
+    private readonly IDomainEventCollector _eventCollector;
+
+    protected MeepleAiDbContext DbContext => _dbContext;
+    protected IDomainEventCollector EventCollector => _eventCollector;
 
     protected RepositoryBase(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
     {
-        DbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
-        EventCollector = eventCollector ?? throw new ArgumentNullException(nameof(eventCollector));
+        ArgumentNullException.ThrowIfNull(dbContext);
+        _dbContext = dbContext;
+        ArgumentNullException.ThrowIfNull(eventCollector);
+        _eventCollector = eventCollector;
     }
 
     /// <summary>
@@ -27,7 +32,7 @@ public abstract class RepositoryBase
     {
         if (aggregate == null) return;
 
-        if (aggregate.DomainEvents.Any())
+        if (aggregate.DomainEvents.Count > 0)
         {
             EventCollector.CollectEventsFrom(aggregate);
             aggregate.ClearDomainEvents();

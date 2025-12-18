@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.Administration.Infrastructure.External;
 /// Infrastructure implementation for health monitoring service.
 /// Issue #891: Aggregates health checks from ASP.NET Core HealthCheckService.
 /// </summary>
-public class InfrastructureHealthService : IInfrastructureHealthService
+internal class InfrastructureHealthService : IInfrastructureHealthService
 {
     private readonly HealthCheckService _healthCheckService;
     private readonly ILogger<InfrastructureHealthService> _logger;
@@ -122,11 +122,19 @@ public class InfrastructureHealthService : IInfrastructureHealthService
         var unhealthyCount = services.Count(s => s.State == HealthState.Unhealthy);
 
         // Overall state: Unhealthy if any service is unhealthy, Degraded if any degraded, else Healthy
-        var overallState = unhealthyCount > 0
-            ? HealthState.Unhealthy
-            : degradedCount > 0
-                ? HealthState.Degraded
-                : HealthState.Healthy;
+        HealthState overallState;
+        if (unhealthyCount > 0)
+        {
+            overallState = HealthState.Unhealthy;
+        }
+        else if (degradedCount > 0)
+        {
+            overallState = HealthState.Degraded;
+        }
+        else
+        {
+            overallState = HealthState.Healthy;
+        }
 
         return new OverallHealthStatus(
             overallState,

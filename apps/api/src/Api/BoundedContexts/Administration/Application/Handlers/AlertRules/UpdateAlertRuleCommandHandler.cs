@@ -5,15 +5,17 @@ using MediatR;
 
 namespace Api.BoundedContexts.Administration.Application.Handlers.AlertRules;
 
-public class UpdateAlertRuleCommandHandler : IRequestHandler<UpdateAlertRuleCommand, Unit>
+internal class UpdateAlertRuleCommandHandler : IRequestHandler<UpdateAlertRuleCommand, Unit>
 {
     private readonly IAlertRuleRepository _repository;
 
-    public UpdateAlertRuleCommandHandler(IAlertRuleRepository repository) => _repository = repository;
+    public UpdateAlertRuleCommandHandler(IAlertRuleRepository repository) =>
+        _repository = repository ?? throw new ArgumentNullException(nameof(repository));
 
-    public async Task<Unit> Handle(UpdateAlertRuleCommand request, CancellationToken ct)
+    public async Task<Unit> Handle(UpdateAlertRuleCommand request, CancellationToken cancellationToken)
     {
-        var rule = await _repository.GetByIdAsync(request.Id, ct);
+        ArgumentNullException.ThrowIfNull(request);
+        var rule = await _repository.GetByIdAsync(request.Id, cancellationToken).ConfigureAwait(false);
         if (rule == null) throw new InvalidOperationException($"AlertRule {request.Id} not found");
 
         var severity = AlertSeverityExtensions.FromString(request.Severity);
@@ -21,7 +23,8 @@ public class UpdateAlertRuleCommandHandler : IRequestHandler<UpdateAlertRuleComm
         var duration = new AlertDuration(request.DurationMinutes);
 
         rule.Update(request.Name, severity, threshold, duration, request.UpdatedBy, request.Description);
-        await _repository.UpdateAsync(rule, ct);
+        await _repository.UpdateAsync(rule, cancellationToken).ConfigureAwait(false);
         return Unit.Value;
     }
 }
+

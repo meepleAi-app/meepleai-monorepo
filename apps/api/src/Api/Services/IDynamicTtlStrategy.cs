@@ -4,7 +4,7 @@ namespace Api.Services;
 /// Calculates dynamic Time-To-Live (TTL) for cache entries based on access frequency.
 /// AI-10: Cache Optimization - Hot/warm/cold query classification for optimal cache retention.
 /// </summary>
-public interface IDynamicTtlStrategy
+internal interface IDynamicTtlStrategy
 {
     /// <summary>
     /// Calculates TTL based on query hit count classification.

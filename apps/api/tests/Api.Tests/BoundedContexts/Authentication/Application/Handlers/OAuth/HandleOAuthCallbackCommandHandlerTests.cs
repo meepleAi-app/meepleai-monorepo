@@ -28,14 +28,12 @@ namespace Api.Tests.BoundedContexts.Authentication.Application.Handlers.OAuth;
 /// Uses real InMemoryDatabase for DbContext operations.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
-public class HandleOAuthCallbackCommandHandlerTests : IDisposable
+public sealed class HandleOAuthCallbackCommandHandlerTests : IDisposable
 {
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
     private readonly Mock<IOAuthService> _oauthServiceMock;
-    private readonly Mock<IUserRepository> _userRepositoryMock;
-    private readonly Mock<IOAuthAccountRepository> _oauthAccountRepositoryMock;
-    private readonly Mock<IUnitOfWork> _unitOfWorkMock;
+
     private readonly Mock<IMediator> _mediatorMock;
     private readonly Mock<ILogger<HandleOAuthCallbackCommandHandler>> _loggerMock;
     private readonly Mock<IEncryptionService> _encryptionServiceMock;
@@ -46,9 +44,6 @@ public class HandleOAuthCallbackCommandHandlerTests : IDisposable
     public HandleOAuthCallbackCommandHandlerTests()
     {
         _oauthServiceMock = new Mock<IOAuthService>();
-        _userRepositoryMock = new Mock<IUserRepository>();
-        _oauthAccountRepositoryMock = new Mock<IOAuthAccountRepository>();
-        _unitOfWorkMock = new Mock<IUnitOfWork>();
         _mediatorMock = new Mock<IMediator>();
         _loggerMock = new Mock<ILogger<HandleOAuthCallbackCommandHandler>>();
         _encryptionServiceMock = new Mock<IEncryptionService>();

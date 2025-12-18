@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 /// <summary>
 /// DTO for search result information.
 /// </summary>
-public record SearchResultDto(
+internal record SearchResultDto(
     string VectorDocumentId,
     string TextContent,
     int PageNumber,
@@ -20,8 +20,7 @@ public record SearchResultDto(
     /// </summary>
     public static SearchResultDto FromDomain(SearchResult searchResult)
     {
-        if (searchResult == null)
-            throw new ArgumentNullException(nameof(searchResult));
+        ArgumentNullException.ThrowIfNull(searchResult);
 
         return new SearchResultDto(
             VectorDocumentId: searchResult.VectorDocumentId.ToString(),
@@ -37,7 +36,7 @@ public record SearchResultDto(
 /// <summary>
 /// DTO for Q&A response.
 /// </summary>
-public record QaResponseDto(
+internal record QaResponseDto(
     string Answer,
     IReadOnlyList<SearchResultDto> Sources,
     double SearchConfidence,
@@ -51,7 +50,7 @@ public record QaResponseDto(
 /// <summary>
 /// DTO for RAG validation pipeline results (ISSUE-977: BGAI-035)
 /// </summary>
-public record RagValidationResultDto(
+internal record RagValidationResultDto(
     bool IsValid,
     int LayersPassed,
     int TotalLayers,
@@ -63,7 +62,7 @@ public record RagValidationResultDto(
 /// <summary>
 /// DTO for citation information.
 /// </summary>
-public record CitationDto(
+internal record CitationDto(
     string DocumentId,
     int PageNumber,
     string Snippet,
@@ -73,7 +72,7 @@ public record CitationDto(
 /// <summary>
 /// DTO for explanation response.
 /// </summary>
-public record ExplainResponseDto(
+internal record ExplainResponseDto(
     string Outline,
     string Script,
     IReadOnlyList<CitationDto> Citations,

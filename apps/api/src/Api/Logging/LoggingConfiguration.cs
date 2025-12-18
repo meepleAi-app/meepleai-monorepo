@@ -8,7 +8,7 @@ namespace Api.Logging;
 /// OPS-04: Centralized logging configuration for environment-based log levels and structured logging.
 /// Provides consistent Serilog setup across all environments with appropriate defaults.
 /// </summary>
-public static class LoggingConfiguration
+internal static class LoggingConfiguration
 {
     /// <summary>
     /// Configures Serilog with environment-specific settings.
@@ -72,7 +72,7 @@ public static class LoggingConfiguration
                 ["deployment.environment"] = environment.EnvironmentName,
                 ["service.namespace"] = "meepleai"
             };
-            options.RestrictedToMinimumLevel = GetHyperDxLogLevel(environment.EnvironmentName, configuration);
+            options.RestrictedToMinimumLevel = GetHyperDxLogLevel(configuration);
         });
 
         return loggerConfig;
@@ -81,7 +81,7 @@ public static class LoggingConfiguration
     /// <summary>
     /// Gets the default log level based on environment.
     /// </summary>
-    private static LogEventLevel GetDefaultLogLevel(string environmentName, IConfiguration configuration)
+    private static LogEventLevel GetDefaultLogLevel(string environmentName, ConfigurationManager configuration)
     {
         // Check configuration first
         var configuredLevel = configuration["Logging:LogLevel:Default"];
@@ -104,7 +104,7 @@ public static class LoggingConfiguration
     /// <summary>
     /// Gets a specific log level from configuration.
     /// </summary>
-    private static LogEventLevel GetLogLevel(IConfiguration configuration, string key, LogEventLevel defaultLevel)
+    private static LogEventLevel GetLogLevel(ConfigurationManager configuration, string key, LogEventLevel defaultLevel)
     {
         var configuredLevel = configuration[key];
         if (!string.IsNullOrWhiteSpace(configuredLevel) &&
@@ -134,7 +134,7 @@ public static class LoggingConfiguration
     /// Gets the HyperDX log level based on environment and configuration.
     /// Issue #1563: All environments should log to HyperDX, but threshold may vary.
     /// </summary>
-    private static LogEventLevel GetHyperDxLogLevel(string _, IConfiguration configuration)
+    private static LogEventLevel GetHyperDxLogLevel(ConfigurationManager configuration)
     {
         // Check for explicit HyperDX log level configuration
         var configuredLevel = configuration["Logging:LogLevel:HyperDX"];

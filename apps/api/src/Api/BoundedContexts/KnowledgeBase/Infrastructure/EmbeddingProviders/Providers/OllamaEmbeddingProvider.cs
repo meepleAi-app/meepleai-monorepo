@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.EmbeddingProviders.Pr
 /// Ollama embedding provider supporting nomic-embed-text and mxbai-embed-large.
 /// Uses local Ollama server for free, privacy-preserving embeddings.
 /// </summary>
-public sealed class OllamaEmbeddingProvider : EmbeddingProviderBase
+internal sealed class OllamaEmbeddingProvider : EmbeddingProviderBase
 {
     private readonly EmbeddingProviderType _providerType;
     private readonly string _modelName;
@@ -37,7 +37,9 @@ public sealed class OllamaEmbeddingProvider : EmbeddingProviderBase
         _dimensions = config.Dimensions ?? providerType.GetDimensions();
 
         // S1075: Default Ollama URL extracted to const
+#pragma warning disable S1075 // URIs should not be hardcoded - Default/Fallback value
         const string DefaultOllamaUrl = "http://localhost:11434";
+#pragma warning restore S1075
 
         // Configure HttpClient for Ollama
         var ollamaUrl = config.OllamaUrl ?? DefaultOllamaUrl;
@@ -52,7 +54,7 @@ public sealed class OllamaEmbeddingProvider : EmbeddingProviderBase
 
     public override async Task<EmbeddingProviderResult> GenerateBatchEmbeddingsAsync(
         IReadOnlyList<string> texts,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         if (texts == null || texts.Count == 0)
         {
@@ -70,7 +72,7 @@ public sealed class OllamaEmbeddingProvider : EmbeddingProviderBase
             // Ollama /api/embeddings processes one text at a time
             foreach (var text in texts)
             {
-                var result = await GenerateSingleEmbeddingAsync(text, ct).ConfigureAwait(false);
+                var result = await GenerateSingleEmbeddingAsync(text, cancellationToken).ConfigureAwait(false);
                 if (!result.Success)
                 {
                     return result;
@@ -92,7 +94,7 @@ public sealed class OllamaEmbeddingProvider : EmbeddingProviderBase
             Logger.LogError(ex, "HTTP error calling Ollama API");
             return EmbeddingProviderResult.CreateFailure($"HTTP error: {ex.Message}");
         }
-        catch (TaskCanceledException ex) when (ex.CancellationToken != ct)
+        catch (TaskCanceledException ex) when (ex.CancellationToken != cancellationToken)
         {
             Logger.LogError(ex, "Timeout calling Ollama API");
             return EmbeddingProviderResult.CreateFailure("Request timeout");
@@ -112,7 +114,7 @@ public sealed class OllamaEmbeddingProvider : EmbeddingProviderBase
 
     private async Task<EmbeddingProviderResult> GenerateSingleEmbeddingAsync(
         string text,
-        CancellationToken ct)
+        CancellationToken cancellationToken)
     {
         var request = new OllamaEmbeddingRequest
         {
@@ -124,8 +126,8 @@ public sealed class OllamaEmbeddingProvider : EmbeddingProviderBase
         using var content = new StringContent(json, Encoding.UTF8, "application/json");
 
         // CODE-01: Dispose HttpResponseMessage to prevent resource leak (CWE-404)
-        using var response = await HttpClient.PostAsync("/api/embeddings", content, ct).ConfigureAwait(false);
-        var responseBody = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+        using var response = await HttpClient.PostAsync("/api/embeddings", content, cancellationToken).ConfigureAwait(false);
+        var responseBody = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
 
         if (!response.IsSuccessStatusCode)
         {
@@ -159,12 +161,12 @@ public sealed class OllamaEmbeddingProvider : EmbeddingProviderBase
         return EmbeddingProviderResult.CreateSuccess(ollamaResponse.Embedding, _modelName);
     }
 
-    public override async Task<bool> IsHealthyAsync(CancellationToken ct = default)
+    public override async Task<bool> IsHealthyAsync(CancellationToken cancellationToken = default)
     {
         try
         {
             // Check Ollama API availability
-            using var response = await HttpClient.GetAsync("/api/tags", ct).ConfigureAwait(false);
+            using var response = await HttpClient.GetAsync("/api/tags", cancellationToken).ConfigureAwait(false);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -173,11 +175,11 @@ public sealed class OllamaEmbeddingProvider : EmbeddingProviderBase
             }
 
             // Verify the model is available
-            var responseBody = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+            var responseBody = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
             var tagsResponse = JsonSerializer.Deserialize<OllamaTagsResponse>(responseBody);
 
             var modelAvailable = tagsResponse?.Models?.Any(m =>
-                m.Name?.Contains(_modelName, StringComparison.OrdinalIgnoreCase) == true) ?? false;
+                m.Name?.Contains(_modelName, StringComparison.OrdinalIgnoreCase) is true) ?? false;
 
             if (!modelAvailable)
             {
@@ -231,3 +233,4 @@ internal sealed record OllamaModelInfo
     [JsonPropertyName("modified_at")]
     public string? ModifiedAt { get; init; }
 }
+

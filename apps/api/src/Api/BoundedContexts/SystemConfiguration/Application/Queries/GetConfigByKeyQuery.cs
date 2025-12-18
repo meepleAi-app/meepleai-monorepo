@@ -3,7 +3,7 @@ using Api.SharedKernel.Application.Interfaces;
 
 namespace Api.BoundedContexts.SystemConfiguration.Application.Queries;
 
-public record GetConfigByKeyQuery(
+internal record GetConfigByKeyQuery(
     string Key,
     string? Environment = null,
     bool ActiveOnly = true

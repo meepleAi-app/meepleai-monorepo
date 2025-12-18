@@ -40,7 +40,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Security;
 [Trait("Category", "Unit")]
 [Trait("BoundedContext", "Authentication")]
 [Trait("Issue", "914")]
-public class ApiKeySecurityAuditTests : IDisposable
+public sealed class ApiKeySecurityAuditTests : IDisposable
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly Mock<ILogger<CreateApiKeyCommandHandler>> _mockLogger;

@@ -8,7 +8,7 @@ namespace Api.Services;
 /// Uses Reciprocal Rank Fusion (RRF) algorithm to merge and rank results.
 /// Part of AI-14 implementation.
 /// </summary>
-public interface IHybridSearchService
+internal interface IHybridSearchService
 {
     /// <summary>
     /// Performs hybrid search using specified search mode.
@@ -22,12 +22,12 @@ public interface IHybridSearchService
     /// <param name="keywordWeight">Weight for keyword search scores (default: 0.3)</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Hybrid search results with RRF-fused scores</returns>
-    Task<IReadOnlyList<HybridSearchResult>> SearchAsync(
+    Task<List<HybridSearchResult>> SearchAsync(
         string query,
         Guid gameId,
         SearchMode mode = SearchMode.Hybrid,
         int limit = 10,
-        IReadOnlyList<Guid>? documentIds = null,
+        List<Guid>? documentIds = null,
         float vectorWeight = 0.7f,
         float keywordWeight = 0.3f,
         CancellationToken cancellationToken = default);
@@ -36,7 +36,7 @@ public interface IHybridSearchService
 /// <summary>
 /// Search modes for hybrid search.
 /// </summary>
-public enum SearchMode
+internal enum SearchMode
 {
     /// <summary>
     /// Vector similarity search only (semantic search via Qdrant embeddings).
@@ -61,7 +61,7 @@ public enum SearchMode
 /// <summary>
 /// Result from hybrid search with RRF-fused scores.
 /// </summary>
-public record HybridSearchResult
+internal record HybridSearchResult
 {
     public required string ChunkId { get; init; }
     public required string Content { get; init; }
@@ -104,7 +104,7 @@ public record HybridSearchResult
     /// <summary>
     /// Terms matched by keyword search for frontend highlighting.
     /// </summary>
-    public IReadOnlyList<string> MatchedTerms { get; init; } = Array.Empty<string>();
+    public List<string> MatchedTerms { get; init; } = new List<string>();
 
     /// <summary>
     /// Search mode used to produce this result.

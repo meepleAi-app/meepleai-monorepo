@@ -7,12 +7,12 @@ namespace Api.BoundedContexts.Administration.Application.Queries.Testing;
 /// Query to retrieve performance testing metrics (Issue #2139)
 /// Returns Core Web Vitals and performance budgets
 /// </summary>
-public record GetPerformanceMetricsQuery : IQuery<PerformanceMetricsDto>;
+internal record GetPerformanceMetricsQuery : IQuery<PerformanceMetricsDto>;
 
 /// <summary>
 /// DTO for performance metrics (Issue #2139)
 /// </summary>
-public record PerformanceMetricsDto(
+internal record PerformanceMetricsDto(
     decimal Lcp,
     decimal Fid,
     decimal Cls,

@@ -3,10 +3,12 @@ using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.Infrastructure;
 using Api.SharedKernel.Application.Services;
+using Api.Tests.Infrastructure;
+using DotNet.Testcontainers.Builders;
+using DotNet.Testcontainers.Containers;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Moq;
-using Testcontainers.PostgreSql;
 using Xunit;
 using Api.Tests.Constants;
 
@@ -19,23 +21,34 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 [Trait("Category", TestCategories.Unit)]
 public class AgentRepositoryTests : IAsyncLifetime
 {
-    private PostgreSqlContainer? _postgresContainer;
+    private IContainer? _postgresContainer;
     private MeepleAiDbContext? _dbContext;
     private AgentRepository? _repository;
+    private string? _connectionString;
 
     public async ValueTask InitializeAsync()
     {
-        _postgresContainer = new PostgreSqlBuilder()
+        // Issue #2031 fix: Use ContainerBuilder instead of PostgreSqlBuilder
+        // to avoid exec-based wait strategy that causes "cannot hijack" errors
+        _postgresContainer = new ContainerBuilder()
             .WithImage("postgres:16-alpine")
-            .WithDatabase("meepleai_test")
-            .WithUsername("test")
-            .WithPassword("test")
+            .WithEnvironment("POSTGRES_USER", "test")
+            .WithEnvironment("POSTGRES_PASSWORD", "test")
+            .WithEnvironment("POSTGRES_DB", "meepleai_test")
+            .WithPortBinding(5432, assignRandomHostPort: true)
+            .WithCleanUp(true)
             .Build();
 
         await _postgresContainer.StartAsync();
 
+        var postgresPort = _postgresContainer.GetMappedPublicPort(5432);
+        _connectionString = $"Host=localhost;Port={postgresPort};Database=meepleai_test;Username=test;Password=test;Ssl Mode=Disable;Trust Server Certificate=true;KeepAlive=30;Pooling=false;";
+
+        // Issue #2031: Wait for PostgreSQL to accept connections with retry
+        await TestcontainersWaitHelpers.WaitForPostgresReadyAsync(_connectionString);
+
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseNpgsql(_postgresContainer.GetConnectionString())
+            .UseNpgsql(_connectionString)
             .Options;
 
         var mockMediator = new Mock<IMediator>();
@@ -230,4 +243,3 @@ public class AgentRepositoryTests : IAsyncLifetime
         );
     }
 }
-

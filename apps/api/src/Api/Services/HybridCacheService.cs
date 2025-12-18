@@ -11,7 +11,7 @@ namespace Api.Services;
 /// PERF-05: HybridCache service implementation with L1 (in-memory) + L2 (Redis) support.
 /// Tag tracking is now Redis-based for cross-instance synchronization and test reliability.
 /// </summary>
-public class HybridCacheService : IHybridCacheService
+internal class HybridCacheService : IHybridCacheService
 {
     private readonly HybridCache _hybridCache;
     private readonly HybridCacheConfiguration _config;
@@ -25,9 +25,11 @@ public class HybridCacheService : IHybridCacheService
     private readonly TimeSpan _tagExpiration = TimeSpan.FromDays(7); // Tags expire after 7 days
 
     // Statistics tracking (in-memory per instance)
-    private long _totalHits = 0;
-    private long _totalMisses = 0;
-    private long _stampedePreventions = 0;
+    private long _totalHits;
+    private long _totalMisses;
+#pragma warning disable CS0649 // Field is never assigned to - reserved for future stampede prevention tracking
+    private long _stampedePreventions;
+#pragma warning restore CS0649
 
     public HybridCacheService(
         HybridCache hybridCache,
@@ -35,9 +37,12 @@ public class HybridCacheService : IHybridCacheService
         ILogger<HybridCacheService> logger,
         IConnectionMultiplexer? redis = null)
     {
-        _hybridCache = hybridCache ?? throw new ArgumentNullException(nameof(hybridCache));
-        _config = config?.Value ?? throw new ArgumentNullException(nameof(config));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(hybridCache);
+        _hybridCache = hybridCache;
+        ArgumentNullException.ThrowIfNull(config);
+        _config = config.Value;
+        ArgumentNullException.ThrowIfNull(logger);
+        _logger = logger;
         _redis = redis;
         _redisDb = redis?.GetDatabase();
     }
@@ -50,48 +55,17 @@ public class HybridCacheService : IHybridCacheService
         TimeSpan? expiration = null,
         CancellationToken ct = default) where T : class
     {
-        if (string.IsNullOrWhiteSpace(cacheKey))
-        {
-            throw new ArgumentException("Cache key cannot be null or whitespace", nameof(cacheKey));
-        }
-
-        if (factory == null)
-        {
-            throw new ArgumentNullException(nameof(factory));
-        }
-
-        // Validate tags
-        if (tags != null && _config.EnableTags)
-        {
-            if (tags.Length > _config.MaxTagsPerEntry)
-            {
-                throw new ArgumentException(
-                    $"Number of tags ({tags.Length}) exceeds maximum allowed ({_config.MaxTagsPerEntry})",
-                    nameof(tags));
-            }
-        }
+        ValidateGetOrCreateInput(cacheKey, factory, tags);
 
         var effectiveExpiration = expiration ?? _config.DefaultExpiration;
 
         try
         {
             // HybridCache GetOrCreateAsync provides built-in cache stampede protection
-            var result = await _hybridCache.GetOrCreateAsync(
+            var result = await _hybridCache.GetOrCreateAsync<T>(
                 key: cacheKey,
-                factory: async cancellationToken =>
-                {
-                    _logger.LogDebug("Cache MISS for key: {CacheKey}. Executing factory.", cacheKey);
-                    Interlocked.Increment(ref _totalMisses);
-
-                    var value = await factory(cancellationToken).ConfigureAwait(false);
-                    return value;
-                },
-                options: new HybridCacheEntryOptions
-                {
-                    Expiration = effectiveExpiration,
-                    LocalCacheExpiration = effectiveExpiration, // L1 cache expiration
-                    Flags = HybridCacheEntryFlags.DisableCompression // AI responses already compressed by LLM
-                },
+                factory: CreateFactoryWrapper(factory, cacheKey),
+                options: CreateCacheEntryOptions(effectiveExpiration),
                 tags: tags,
                 cancellationToken: ct
             ).ConfigureAwait(false);
@@ -110,27 +84,83 @@ public class HybridCacheService : IHybridCacheService
 
             return result;
         }
-        catch (RedisConnectionException ex)
+        catch (Exception ex) when (ex is RedisConnectionException or RedisTimeoutException or InvalidOperationException or JsonException)
         {
-            _logger.LogError(ex, "Redis connection failed for key {CacheKey}. Falling back to factory.", cacheKey);
-            // Redis unavailable, execute factory directly
-            return await factory(ct).ConfigureAwait(false);
+            return await HandleCacheException(ex, cacheKey, factory, ct).ConfigureAwait(false);
         }
-        catch (RedisTimeoutException ex)
+    }
+    /// <summary>
+    /// Creates a factory wrapper that logs cache misses and increments miss counter
+    /// </summary>
+    private Func<CancellationToken, ValueTask<T>> CreateFactoryWrapper<T>(Func<CancellationToken, Task<T>> factory, string cacheKey) where T : class
+    {
+        return cancellationToken => new ValueTask<T>(ExecuteFactoryAsync(factory, cacheKey, cancellationToken));
+    }
+
+    private async Task<T> ExecuteFactoryAsync<T>(Func<CancellationToken, Task<T>> factory, string cacheKey, CancellationToken cancellationToken) where T : class
+    {
+        _logger.LogDebug("Cache MISS for key: {CacheKey}. Executing factory.", cacheKey);
+        Interlocked.Increment(ref _totalMisses);
+
+        var value = await factory(cancellationToken).ConfigureAwait(false);
+        return value;
+    }
+
+    /// <summary>
+    /// Creates cache entry options with the specified expiration
+    /// </summary>
+    private static HybridCacheEntryOptions CreateCacheEntryOptions(TimeSpan expiration)
+    {
+        return new HybridCacheEntryOptions
         {
-            _logger.LogWarning(ex, "Redis timeout for key {CacheKey}. Falling back to factory.", cacheKey);
-            return await factory(ct).ConfigureAwait(false);
-        }
-        catch (InvalidOperationException ex)
+            Expiration = expiration,
+            LocalCacheExpiration = expiration, // L1 cache expiration
+            Flags = HybridCacheEntryFlags.DisableCompression // AI responses already compressed by LLM
+        };
+    }
+
+    /// <summary>
+    /// Handles cache exceptions by logging and falling back to factory
+    /// </summary>
+    private async Task<T> HandleCacheException<T>(
+        Exception ex,
+        string cacheKey,
+        Func<CancellationToken, Task<T>> factory,
+        CancellationToken ct) where T : class
+    {
+        var logLevel = ex is RedisTimeoutException ? LogLevel.Warning : LogLevel.Error;
+        var message = ex switch
         {
-            _logger.LogError(ex, "Invalid cache operation for key {CacheKey}. Falling back to factory.", cacheKey);
-            return await factory(ct).ConfigureAwait(false);
-        }
-        catch (JsonException ex)
+            RedisConnectionException => "Redis connection failed for key {CacheKey}. Falling back to factory.",
+            RedisTimeoutException => "Redis timeout for key {CacheKey}. Falling back to factory.",
+            InvalidOperationException => "Invalid cache operation for key {CacheKey}. Falling back to factory.",
+            JsonException => "JSON serialization error for key {CacheKey}. Falling back to factory.",
+            _ => "Cache error for key {CacheKey}. Falling back to factory."
+        };
+
+        _logger.Log(logLevel, ex, message, cacheKey);
+        return await factory(ct).ConfigureAwait(false);
+    }
+
+
+
+    private void ValidateGetOrCreateInput<T>(string cacheKey, Func<CancellationToken, Task<T>> factory, string[]? tags)
+    {
+        ArgumentNullException.ThrowIfNull(cacheKey);
+        if (string.IsNullOrWhiteSpace(cacheKey))
         {
-            _logger.LogError(ex, "JSON serialization error for key {CacheKey}. Falling back to factory.", cacheKey);
-            return await factory(ct).ConfigureAwait(false);
+            throw new ArgumentException("Cache key cannot be null or whitespace", nameof(cacheKey));
         }
+
+        ArgumentNullException.ThrowIfNull(factory);
+
+        if (tags != null && _config.EnableTags && tags.Length > _config.MaxTagsPerEntry)
+        {
+            throw new ArgumentException(
+                $"Number of tags ({tags.Length}) exceeds maximum allowed ({_config.MaxTagsPerEntry})",
+                nameof(tags));
+        }
+
     }
 
     /// <inheritdoc />
@@ -140,34 +170,12 @@ public class HybridCacheService : IHybridCacheService
         {
             throw new ArgumentException("Cache key cannot be null or whitespace", nameof(cacheKey));
         }
+        await _hybridCache.RemoveAsync(cacheKey, ct).ConfigureAwait(false);
 
-        try
-        {
-            await _hybridCache.RemoveAsync(cacheKey, ct).ConfigureAwait(false);
+        // Remove tag tracking for this key
+        UntrackKey(cacheKey);
 
-            // Remove tag tracking for this key
-            UntrackKey(cacheKey);
-
-            _logger.LogInformation("Removed cache entry: {CacheKey}", cacheKey);
-        }
-#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
-        // INFRASTRUCTURE LOGGING PATTERN: Log cache operation failures before propagating.
-        catch (RedisConnectionException ex)
-        {
-            _logger.LogError(ex, "Redis connection failed removing key {CacheKey}", cacheKey);
-            throw;
-        }
-        catch (RedisTimeoutException ex)
-        {
-            _logger.LogWarning(ex, "Redis timeout removing key {CacheKey}", cacheKey);
-            throw;
-        }
-        catch (InvalidOperationException ex)
-        {
-            _logger.LogError(ex, "Invalid operation removing key {CacheKey}", cacheKey);
-            throw;
-        }
-#pragma warning restore S2139
+        _logger.LogInformation("Removed cache entry: {CacheKey}", cacheKey);
     }
 
     /// <inheritdoc />
@@ -183,42 +191,23 @@ public class HybridCacheService : IHybridCacheService
             _logger.LogWarning("Tag-based invalidation is disabled in configuration");
             return 0;
         }
+        // Get all keys associated with this tag
+        var keysToRemove = GetKeysByTag(tag);
 
-        try
+        if (keysToRemove.Count == 0)
         {
-            // Get all keys associated with this tag
-            var keysToRemove = GetKeysByTag(tag);
+            _logger.LogDebug("No cache entries found for tag: {Tag}", tag);
+            return 0;
+        }
 
-            if (keysToRemove.Count == 0)
-            {
-                _logger.LogDebug("No cache entries found for tag: {Tag}", tag);
-                return 0;
-            }
+        // Remove each key
+        foreach (var key in keysToRemove)
+        {
+            await RemoveAsync(key, ct).ConfigureAwait(false);
+        }
 
-            // Remove each key
-            foreach (var key in keysToRemove)
-            {
-                await RemoveAsync(key, ct).ConfigureAwait(false);
-            }
-
-            _logger.LogInformation("Removed {Count} cache entries for tag: {Tag}", keysToRemove.Count, tag);
-            return keysToRemove.Count;
-        }
-        catch (RedisConnectionException ex)
-        {
-            _logger.LogError(ex, "Redis connection failed removing entries for tag {Tag}", tag);
-            throw;
-        }
-        catch (RedisTimeoutException ex)
-        {
-            _logger.LogWarning(ex, "Redis timeout removing entries for tag {Tag}", tag);
-            throw;
-        }
-        catch (InvalidOperationException ex)
-        {
-            _logger.LogError(ex, "Invalid operation removing entries for tag {Tag}", tag);
-            throw;
-        }
+        _logger.LogInformation("Removed {Count} cache entries for tag: {Tag}", keysToRemove.Count, tag);
+        return keysToRemove.Count;
     }
 
     /// <inheritdoc />
@@ -234,46 +223,27 @@ public class HybridCacheService : IHybridCacheService
             _logger.LogWarning("Tag-based invalidation is disabled in configuration");
             return 0;
         }
+        // Find keys that have ALL specified tags (AND logic)
+        var keysToRemove = GetKeysByTags(tags);
 
-        try
+        if (keysToRemove.Count == 0)
         {
-            // Find keys that have ALL specified tags (AND logic)
-            var keysToRemove = GetKeysByTags(tags);
-
-            if (keysToRemove.Count == 0)
-            {
-                _logger.LogDebug("No cache entries found with all tags: {Tags}", string.Join(", ", tags));
-                return 0;
-            }
-
-            // Remove each key
-            foreach (var key in keysToRemove)
-            {
-                await RemoveAsync(key, ct).ConfigureAwait(false);
-            }
-
-            _logger.LogInformation(
-                "Removed {Count} cache entries for tags: {Tags}",
-                keysToRemove.Count,
-                string.Join(", ", tags));
-
-            return keysToRemove.Count;
+            _logger.LogDebug("No cache entries found with all tags: {Tags}", string.Join(", ", tags));
+            return 0;
         }
-        catch (RedisConnectionException ex)
+
+        // Remove each key
+        foreach (var key in keysToRemove)
         {
-            _logger.LogError(ex, "Redis connection failed removing entries for tags {Tags}", string.Join(", ", tags));
-            throw;
+            await RemoveAsync(key, ct).ConfigureAwait(false);
         }
-        catch (RedisTimeoutException ex)
-        {
-            _logger.LogWarning(ex, "Redis timeout removing entries for tags {Tags}", string.Join(", ", tags));
-            throw;
-        }
-        catch (InvalidOperationException ex)
-        {
-            _logger.LogError(ex, "Invalid operation removing entries for tags {Tags}", string.Join(", ", tags));
-            throw;
-        }
+
+        _logger.LogInformation(
+            "Removed {Count} cache entries for tags: {Tags}",
+            keysToRemove.Count,
+            string.Join(", ", tags));
+
+        return keysToRemove.Count;
     }
 
     /// <inheritdoc />
@@ -324,8 +294,7 @@ public class HybridCacheService : IHybridCacheService
         {
             _logger.LogWarning(ex, "Redis timeout while tracking tags for key {CacheKey}", cacheKey);
         }
-#pragma warning disable CA1031 // Do not catch general exception types
-        catch (Exception ex)
+        catch (Exception ex) when (ex is InvalidOperationException or NullReferenceException)
         {
             // SERVICE BOUNDARY PATTERN: Cache tag tracking failures must not block cache operations
             // Rationale: Tag tracking is a secondary feature for cache invalidation. Failures in tag tracking
@@ -334,7 +303,6 @@ public class HybridCacheService : IHybridCacheService
             // Context: Redis operations can fail in various ways (serialization, network, permissions)
             _logger.LogWarning(ex, "Unexpected error tracking tags for key {CacheKey}", cacheKey);
         }
-#pragma warning restore CA1031 // Do not catch general exception types
     }
 
     private void UntrackKey(string cacheKey)
@@ -375,8 +343,7 @@ public class HybridCacheService : IHybridCacheService
         {
             _logger.LogWarning(ex, "Redis timeout while untracking key {CacheKey}", cacheKey);
         }
-#pragma warning disable CA1031 // Do not catch general exception types
-        catch (Exception ex)
+        catch (Exception ex) when (ex is InvalidOperationException or NullReferenceException)
         {
             // SERVICE BOUNDARY PATTERN: Cache tag untracking failures must not block cache removal
             // Rationale: Tag untracking is a cleanup operation. Failures in removing tag associations
@@ -385,7 +352,6 @@ public class HybridCacheService : IHybridCacheService
             // Context: Redis KEYS scanning can fail in various ways (permissions, large key sets, network)
             _logger.LogWarning(ex, "Unexpected error untracking key {CacheKey}", cacheKey);
         }
-#pragma warning restore CA1031 // Do not catch general exception types
     }
 
     private HashSet<string> GetKeysByTag(string tag)
@@ -415,8 +381,7 @@ public class HybridCacheService : IHybridCacheService
             _logger.LogWarning(ex, "Redis timeout while getting keys for tag {Tag}", tag);
             return new HashSet<string>(StringComparer.Ordinal);
         }
-#pragma warning disable CA1031 // Do not catch general exception types
-        catch (Exception ex)
+        catch (Exception ex) when (ex is InvalidOperationException or NullReferenceException)
         {
             // SERVICE BOUNDARY PATTERN: Cache tag lookup failures must return empty results gracefully
             // Rationale: Tag-based cache lookup is a query operation. Failures (Redis errors, serialization
@@ -426,7 +391,6 @@ public class HybridCacheService : IHybridCacheService
             _logger.LogWarning(ex, "Unexpected error getting keys for tag {Tag}", tag);
             return new HashSet<string>(StringComparer.Ordinal);
         }
-#pragma warning restore CA1031 // Do not catch general exception types
     }
 
     private HashSet<string> GetKeysByTags(string[] tags)
@@ -483,8 +447,7 @@ public class HybridCacheService : IHybridCacheService
             _logger.LogWarning(ex, "Redis timeout while getting keys for multiple tags");
             return new HashSet<string>(StringComparer.Ordinal);
         }
-#pragma warning disable CA1031 // Do not catch general exception types
-        catch (Exception ex)
+        catch (Exception ex) when (ex is InvalidOperationException or NullReferenceException)
         {
             // SERVICE BOUNDARY PATTERN: Cache multi-tag lookup failures must return empty results gracefully
             // Rationale: Multi-tag cache lookup is a query operation with set intersections. Failures (Redis
@@ -494,6 +457,5 @@ public class HybridCacheService : IHybridCacheService
             _logger.LogWarning(ex, "Unexpected error getting keys for multiple tags");
             return new HashSet<string>(StringComparer.Ordinal);
         }
-#pragma warning restore CA1031 // Do not catch general exception types
     }
 }

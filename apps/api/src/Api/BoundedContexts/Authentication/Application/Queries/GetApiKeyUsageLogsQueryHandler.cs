@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.Authentication.Application.Queries;
 /// Handler for GetApiKeyUsageLogsQuery.
 /// Retrieves paginated usage logs for a specific API key.
 /// </summary>
-public class GetApiKeyUsageLogsQueryHandler : IQueryHandler<GetApiKeyUsageLogsQuery, List<ApiKeyUsageLogDto>>
+internal class GetApiKeyUsageLogsQueryHandler : IQueryHandler<GetApiKeyUsageLogsQuery, List<ApiKeyUsageLogDto>>
 {
     private readonly MeepleAiDbContext _db;
     private readonly IApiKeyUsageLogRepository _usageLogRepository;

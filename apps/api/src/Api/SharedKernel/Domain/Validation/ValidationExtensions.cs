@@ -6,7 +6,7 @@ namespace Api.SharedKernel.Domain.Validation;
 /// Extension methods for common validation patterns.
 /// Provides a fluent API for building validation chains that return Result{T} values.
 /// </summary>
-public static class ValidationExtensions
+internal static class ValidationExtensions
 {
     /// <summary>
     /// Validates that a string is not null, empty, or whitespace.

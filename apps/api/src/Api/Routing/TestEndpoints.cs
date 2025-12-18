@@ -18,7 +18,7 @@ namespace Api.Routing;
 /// - high-error-rate.md: Burst 200 POST /api/v1/test/error in 120 seconds
 /// - error-spike.md: Burst 200 POST /api/v1/test/error, validate 3x baseline increase
 /// </summary>
-public static class TestEndpoints
+internal static class TestEndpoints
 {
     public static RouteGroupBuilder MapTestEndpoints(this RouteGroupBuilder group)
     {
@@ -49,7 +49,7 @@ public static class TestEndpoints
             catch (InvalidOperationException ex) when (ex.Message.Contains("disabled"))
             {
                 // TestEndpoints not enabled
-                logger.LogWarning("Test endpoints disabled: {Message}", ex.Message);
+                logger.LogWarning(ex, "Test endpoints disabled: {Message}", ex.Message);
                 return Results.Problem(
                     title: "Test endpoints disabled",
                     detail: ex.Message,
@@ -59,7 +59,7 @@ public static class TestEndpoints
             catch (ArgumentException ex)
             {
                 // Invalid error type
-                logger.LogWarning("Invalid error type: {ErrorType}", request.ErrorType);
+                logger.LogWarning(ex, "Invalid error type: {ErrorType}", request.ErrorType);
                 return Results.BadRequest(new { error = ex.Message });
             }
             catch (Exception ex)
@@ -68,30 +68,42 @@ public static class TestEndpoints
                 logger.LogError(ex, "Simulated error: {ErrorType}", request.ErrorType);
 
                 // Return appropriate status code
-                return request.ErrorType.ToLowerInvariant() switch
+                if (string.Equals(request.ErrorType, "500", StringComparison.OrdinalIgnoreCase))
                 {
-                    "500" => Results.Problem(
+                    return Results.Problem(
                         title: "Simulated Internal Server Error",
                         detail: ex.Message,
                         statusCode: StatusCodes.Status500InternalServerError
-                    ),
-                    "400" => Results.BadRequest(new { error = ex.Message }),
-                    "timeout" => Results.Problem(
+                    );
+                }
+                else if (string.Equals(request.ErrorType, "400", StringComparison.OrdinalIgnoreCase))
+                {
+                    return Results.BadRequest(new { error = ex.Message });
+                }
+                else if (string.Equals(request.ErrorType, "timeout", StringComparison.OrdinalIgnoreCase))
+                {
+                    return Results.Problem(
                         title: "Simulated Timeout",
                         detail: ex.Message,
                         statusCode: StatusCodes.Status504GatewayTimeout
-                    ),
-                    "exception" => Results.Problem(
+                    );
+                }
+                else if (string.Equals(request.ErrorType, "exception", StringComparison.OrdinalIgnoreCase))
+                {
+                    return Results.Problem(
                         title: "Simulated Exception",
                         detail: ex.Message,
                         statusCode: StatusCodes.Status500InternalServerError
-                    ),
-                    _ => Results.Problem(
+                    );
+                }
+                else
+                {
+                    return Results.Problem(
                         title: "Simulated Error",
                         detail: ex.Message,
                         statusCode: StatusCodes.Status500InternalServerError
-                    )
-                };
+                    );
+                }
             }
         })
         .WithName("SimulateError")
@@ -112,4 +124,4 @@ public static class TestEndpoints
 /// Request model for SimulateError endpoint.
 /// </summary>
 /// <param name="ErrorType">Type of error to simulate: "500", "400", "timeout", "exception"</param>
-public record SimulateErrorRequest(string ErrorType);
+internal record SimulateErrorRequest(string ErrorType);

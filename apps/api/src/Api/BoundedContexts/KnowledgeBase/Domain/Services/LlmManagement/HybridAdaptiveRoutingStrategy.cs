@@ -12,7 +12,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
 /// ISSUE-963 (BGAI-021): Enhanced with AI:Providers configuration integration (Option C)
 /// ISSUE-1725: Enhanced with budget-aware model override support
 /// </summary>
-public class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
+internal class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
 {
     private readonly IConfiguration _configuration;
     private readonly ILlmModelOverrideService _modelOverrideService;
@@ -75,24 +75,9 @@ public class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
         var settings = _aiSettings.Value;
 
         // BGAI-022 Step 1: Check PreferredProvider override (Approach B)
-        if (!string.IsNullOrEmpty(settings.PreferredProvider) &&
-            settings.Providers?.ContainsKey(settings.PreferredProvider) == true &&
-            settings.Providers[settings.PreferredProvider].Enabled)
+        if (TryGetPreferredDecision(settings, userRole, userId, out var preferredDecision))
         {
-            var preferredConfig = settings.Providers[settings.PreferredProvider];
-            var preferredModel = preferredConfig.Models.FirstOrDefault() ?? GetDefaultModelForProvider(settings.PreferredProvider, userRole);
-
-            _logger.LogDebug(
-                "[{UserId}] Routing to PreferredProvider {Provider} ({Model}) - overriding user-tier routing",
-                userId, settings.PreferredProvider, preferredModel);
-
-            var preferredDecision = new LlmRoutingDecision(
-                settings.PreferredProvider,
-                preferredModel,
-                $"PreferredProvider override (AI:PreferredProvider = {settings.PreferredProvider})");
-
-            // ISSUE-1725: Apply budget mode overrides
-            return ApplyBudgetModeOverride(preferredDecision, userId);
+            return preferredDecision!;
         }
 
         // BGAI-022 Step 2: Use existing user-tier routing
@@ -101,80 +86,109 @@ public class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
         // Traffic split: Random selection based on configured percentage
         var useOpenRouter = ShouldUseOpenRouter(openRouterPercent);
 
+        // Determine primary choice
+        var primaryProvider = useOpenRouter ? "OpenRouter" : (ollamaModel.Contains('/') ? "OpenRouter" : "Ollama");
+        var primaryModel = useOpenRouter ? openRouterModel : ollamaModel;
+
         // BGAI-022 Step 3: Check if selected provider is enabled
-        var selectedProvider = useOpenRouter ? "OpenRouter" : (ollamaModel.Contains('/') ? "OpenRouter" : "Ollama");
-        // Note: Model selection (openRouterModel vs ollamaModel) is handled downstream in the provider routing logic
+        return GetValidatedDecision(primaryProvider, primaryModel, userRole, userId, settings, openRouterPercent);
+    }
 
-        // Verify provider is enabled (backward compatible: if AI section missing, allow all)
-        if (settings.Providers?.ContainsKey(selectedProvider) == true &&
-            !settings.Providers[selectedProvider].Enabled)
+    private bool TryGetPreferredDecision(AiProviderSettings settings, Role userRole, string userId, out LlmRoutingDecision? decision)
+    {
+        decision = null;
+        if (!string.IsNullOrEmpty(settings.PreferredProvider) &&
+            settings.Providers?.ContainsKey(settings.PreferredProvider) is true &&
+            settings.Providers[settings.PreferredProvider].Enabled)
         {
-            _logger.LogWarning(
-                "[{UserId}] Selected provider {Provider} is disabled (AI:Providers:{Provider}:Enabled = false), trying fallback",
-                userId, selectedProvider, selectedProvider);
+            var preferredConfig = settings.Providers[settings.PreferredProvider];
+            var preferredModel = preferredConfig.Models.Count > 0
+                ? preferredConfig.Models[0]
+                : GetDefaultModelForProvider(settings.PreferredProvider, userRole);
 
-            // Try alternative provider
-            var alternativeProvider = string.Equals(selectedProvider, "Ollama", StringComparison.Ordinal) ? "OpenRouter" : "Ollama";
+            _logger.LogDebug(
+                "[{UserId}] Routing to PreferredProvider {Provider} ({Model}) - overriding user-tier routing",
+                userId, settings.PreferredProvider, preferredModel);
 
-            // ISSUE-1159: Treat missing providers as implicitly enabled (using default configuration)
-            var alternativeEnabled = !settings.Providers.ContainsKey(alternativeProvider) ||
-                                     settings.Providers[alternativeProvider].Enabled;
+            var rawDecision = new LlmRoutingDecision(
+                settings.PreferredProvider,
+                preferredModel,
+                $"PreferredProvider override (AI:PreferredProvider = {settings.PreferredProvider})");
 
-            if (alternativeEnabled)
-            {
-                // Get model from config or use default
-                var alternativeModel = settings.Providers.ContainsKey(alternativeProvider) &&
-                                       settings.Providers[alternativeProvider].Models.Any()
-                    ? settings.Providers[alternativeProvider].Models[0]
-                    : GetDefaultModelForProvider(alternativeProvider, userRole);
+            // ISSUE-1725: Apply budget mode overrides
+            decision = ApplyBudgetModeOverride(rawDecision, userId);
+            return true;
+        }
+        return false;
+    }
 
-                _logger.LogInformation(
-                    "[{UserId}] Fallback to {Provider} ({Model}) - primary provider disabled",
-                    userId, alternativeProvider, alternativeModel);
-
-                var fallbackDecision = new LlmRoutingDecision(
-                    alternativeProvider,
-                    alternativeModel,
-                    $"Fallback from {selectedProvider} (disabled in AI:Providers)");
-
-                // ISSUE-1725: Apply budget mode overrides
-                return ApplyBudgetModeOverride(fallbackDecision, userId);
-            }
-
-            // Both providers explicitly disabled - throw exception
-            throw new InvalidOperationException(
-                "Both AI providers are disabled. At least one provider must be enabled.");
+    private LlmRoutingDecision GetValidatedDecision(
+        string provider,
+        string model,
+        Role userRole,
+        string userId,
+        AiProviderSettings settings,
+        int openRouterPercent)
+    {
+        // Verify provider is enabled (backward compatible: if AI section missing, allow all)
+        if (settings.Providers?.ContainsKey(provider) is true &&
+            !settings.Providers[provider].Enabled)
+        {
+            return CreateFallbackDecision(provider, userRole, userId, settings);
         }
 
         // Provider is enabled or AI section not configured (backward compatible)
-        if (useOpenRouter)
-        {
-            _logger.LogDebug(
-                "[{UserId}] Routing to OpenRouter ({Model}) - Role: {Role}, Traffic split: {Percent}%",
-                userId, openRouterModel, userRole.Value, openRouterPercent);
-
-            var openRouterDecision = LlmRoutingDecision.OpenRouter(
-                openRouterModel,
-                $"User tier: {userRole.Value}, Traffic split: {openRouterPercent}%");
-
-            // ISSUE-1725: Apply budget mode overrides
-            return ApplyBudgetModeOverride(openRouterDecision, userId);
-        }
-
-        // Determine if Ollama model is local or OpenRouter free tier
-        var providerName = ollamaModel.Contains('/') ? "OpenRouter" : "Ollama";
-
         _logger.LogDebug(
-            "[{UserId}] Routing to {Provider} ({Model}) - Role: {Role}, Cost optimization",
-            userId, providerName, ollamaModel, userRole.Value);
+            "[{UserId}] Routing to {Provider} ({Model}) - Role: {Role}, Traffic split: {Percent}%",
+            userId, provider, model, userRole.Value, openRouterPercent);
 
-        var decision = new LlmRoutingDecision(
-            providerName,
-            ollamaModel,
-            $"User tier: {userRole.Value}, Cost-optimized primary");
+        var reason = string.Equals(provider, "OpenRouter"
+, StringComparison.Ordinal) ? $"User tier: {userRole.Value}, Traffic split: {openRouterPercent}%"
+            : $"User tier: {userRole.Value}, Cost-optimized primary";
+
+        var decision = new LlmRoutingDecision(provider, model, reason);
 
         // ISSUE-1725: Apply budget mode overrides if active
         return ApplyBudgetModeOverride(decision, userId);
+    }
+
+    private LlmRoutingDecision CreateFallbackDecision(string failedProvider, Role userRole, string userId, AiProviderSettings settings)
+    {
+        _logger.LogWarning(
+            "[{UserId}] Selected provider {Provider} is disabled (AI:Providers:{ProviderName}:Enabled = false), trying fallback",
+            userId, failedProvider, failedProvider);
+
+        // Try alternative provider
+        var alternativeProvider = string.Equals(failedProvider, "Ollama", StringComparison.Ordinal) ? "OpenRouter" : "Ollama";
+
+        // ISSUE-1159: Treat missing providers as implicitly enabled (using default configuration)
+        var alternativeEnabled = !settings.Providers.ContainsKey(alternativeProvider) ||
+                                 settings.Providers[alternativeProvider].Enabled;
+
+        if (alternativeEnabled)
+        {
+            // Get model from config or use default
+            var alternativeModel = settings.Providers.TryGetValue(alternativeProvider, out var altProviderConfig) &&
+                                   altProviderConfig.Models.Count > 0
+                ? altProviderConfig.Models[0]
+                : GetDefaultModelForProvider(alternativeProvider, userRole);
+
+            _logger.LogInformation(
+                "[{UserId}] Fallback to {Provider} ({Model}) - primary provider disabled",
+                userId, alternativeProvider, alternativeModel);
+
+            var fallbackDecision = new LlmRoutingDecision(
+                alternativeProvider,
+                alternativeModel,
+                $"Fallback from {failedProvider} (disabled in AI:Providers)");
+
+            // ISSUE-1725: Apply budget mode overrides
+            return ApplyBudgetModeOverride(fallbackDecision, userId);
+        }
+
+        // Both providers explicitly disabled - throw exception
+        throw new InvalidOperationException(
+            "Both AI providers are disabled. At least one provider must be enabled.");
     }
 
     /// <summary>

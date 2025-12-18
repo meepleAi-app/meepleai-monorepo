@@ -5,7 +5,7 @@ namespace Api.BoundedContexts.GameManagement.Application.DTOs;
 /// DTO for GameFAQ entity.
 /// Issue #2028: Backend FAQ system for game-specific FAQs.
 /// </summary>
-public record GameFAQDto(
+internal record GameFAQDto(
     Guid Id,
     Guid GameId,
     string Question,
@@ -19,7 +19,7 @@ public record GameFAQDto(
 /// DTO for creating a GameFAQ.
 /// Issue #2028: Backend FAQ system for game-specific FAQs.
 /// </summary>
-public record CreateGameFAQRequest(
+internal record CreateGameFAQRequest(
     string Question,
     string Answer
 );
@@ -28,7 +28,7 @@ public record CreateGameFAQRequest(
 /// DTO for updating a GameFAQ.
 /// Issue #2028: Backend FAQ system for game-specific FAQs.
 /// </summary>
-public record UpdateGameFAQRequest(
+internal record UpdateGameFAQRequest(
     string Question,
     string Answer
 );

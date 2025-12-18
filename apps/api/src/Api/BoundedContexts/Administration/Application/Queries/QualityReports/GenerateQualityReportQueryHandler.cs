@@ -12,7 +12,7 @@ namespace Api.BoundedContexts.Administration.Application.Queries.QualityReports;
 /// Infrastructure delegation: Database query via DbContext.
 /// Metrics: RAG confidence, LLM confidence, citation quality, overall confidence, low-quality percentage.
 /// </summary>
-public sealed class GenerateQualityReportQueryHandler : IQueryHandler<GenerateQualityReportQuery, QualityReport>
+internal sealed class GenerateQualityReportQueryHandler : IQueryHandler<GenerateQualityReportQuery, QualityReport>
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly ILogger<GenerateQualityReportQueryHandler> _logger;
@@ -27,6 +27,7 @@ public sealed class GenerateQualityReportQueryHandler : IQueryHandler<GenerateQu
 
     public async Task<QualityReport> Handle(GenerateQualityReportQuery query, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(query);
         // Business logic validation
         if (query.EndDate < query.StartDate)
         {
@@ -54,10 +55,10 @@ public sealed class GenerateQualityReportQueryHandler : IQueryHandler<GenerateQu
             TotalResponses = totalResponses,
             LowQualityCount = lowQualityCount,
             LowQualityPercentage = totalResponses > 0 ? (lowQualityCount / (double)totalResponses) * 100 : 0.0,
-            AverageRagConfidence = logs.Any() ? logs.Average(l => l.RagConfidence) : null,
-            AverageLlmConfidence = logs.Any() ? logs.Average(l => l.LlmConfidence) : null,
-            AverageCitationQuality = logs.Any() ? logs.Average(l => l.CitationQuality) : null,
-            AverageOverallConfidence = logs.Any() ? logs.Average(l => l.OverallConfidence) : null
+            AverageRagConfidence = logs.Count > 0 ? logs.Average(l => l.RagConfidence) : null,
+            AverageLlmConfidence = logs.Count > 0 ? logs.Average(l => l.LlmConfidence) : null,
+            AverageCitationQuality = logs.Count > 0 ? logs.Average(l => l.CitationQuality) : null,
+            AverageOverallConfidence = logs.Count > 0 ? logs.Average(l => l.OverallConfidence) : null
         };
 
         _logger.LogInformation(

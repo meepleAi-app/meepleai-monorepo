@@ -16,14 +16,22 @@ namespace Api.Services;
 /// Service for evaluating prompt quality through automated testing
 /// ADMIN-01 Phase 4: Prompt Testing Framework
 /// </summary>
-public class PromptEvaluationService : IPromptEvaluationService
+internal class PromptEvaluationService : IPromptEvaluationService
 {
+    private static readonly char[] SentenceSeparators = { '.', '!', '?' };
     private readonly IRagService _ragService;
     private readonly MeepleAiDbContext _dbContext;
     private readonly ILogger<PromptEvaluationService> _logger;
     private readonly string _allowedDatasetsDirectory;
     private readonly TimeProvider _timeProvider;
     private readonly IConfigurationService _configService;
+
+    // CA1869: Cache JsonSerializerOptions for better performance
+    private static readonly JsonSerializerOptions s_exportOptions = new()
+    {
+        WriteIndented = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
     public PromptEvaluationService(
         IRagService ragService,
         MeepleAiDbContext dbContext,
@@ -45,7 +53,7 @@ public class PromptEvaluationService : IPromptEvaluationService
     /// Loads a test dataset from JSON file with validation
     /// SECURITY: Path traversal protection and file size limits
     /// </summary>
-    public async Task<PromptTestDataset> LoadDatasetAsync(string datasetPath, CancellationToken ct = default)
+    public async Task<PromptTestDataset> LoadDatasetAsync(string datasetPath, CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Loading test dataset from {Path}", datasetPath);
 
@@ -83,7 +91,7 @@ public class PromptEvaluationService : IPromptEvaluationService
             }
 
             // Read and deserialize JSON
-            var jsonContent = await File.ReadAllTextAsync(fullPath, ct).ConfigureAwait(false);
+            var jsonContent = await File.ReadAllTextAsync(fullPath, cancellationToken).ConfigureAwait(false);
             var dataset = JsonSerializer.Deserialize<PromptTestDataset>(jsonContent);
 
             if (dataset == null)
@@ -109,7 +117,6 @@ public class PromptEvaluationService : IPromptEvaluationService
         // File loading may throw various exceptions; we wrap them with context for callers
         catch (Exception ex) when (ex is not FileNotFoundException && ex is not JsonException && ex is not ArgumentException)
         {
-            _logger.LogError(ex, "Error loading dataset from {Path}", datasetPath);
             throw new InvalidOperationException($"Failed to load dataset: {ex.Message}", ex);
         }
 #pragma warning restore CA1031
@@ -176,7 +183,7 @@ public class PromptEvaluationService : IPromptEvaluationService
         string versionId,
         string datasetPath,
         Action<int, int>? progressCallback = null,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         _logger.LogInformation(
             "Starting evaluation for template {TemplateId}, version {VersionId}, dataset {DatasetPath}",
@@ -187,12 +194,12 @@ public class PromptEvaluationService : IPromptEvaluationService
         try
         {
             // Step 1: Load dataset
-            var dataset = await LoadDatasetAsync(datasetPath, ct).ConfigureAwait(false);
+            var dataset = await LoadDatasetAsync(datasetPath, cancellationToken).ConfigureAwait(false);
 
             // Step 2: Get prompt content from database
             var version = await _dbContext.PromptVersions
                 .AsNoTracking()
-                .FirstOrDefaultAsync(v => v.Id.ToString() == versionId, ct).ConfigureAwait(false);
+                .FirstOrDefaultAsync(v => v.Id.ToString() == versionId, cancellationToken).ConfigureAwait(false);
 
             if (version == null)
             {
@@ -217,7 +224,7 @@ public class PromptEvaluationService : IPromptEvaluationService
                 progressCallback?.Invoke(i + 1, totalQueries);
 
                 // Execute single test case
-                var queryResult = await EvaluateSingleQueryAsync(testCase, customPrompt, ct).ConfigureAwait(false);
+                var queryResult = await EvaluateSingleQueryAsync(testCase, customPrompt, cancellationToken).ConfigureAwait(false);
                 queryResults.Add(queryResult);
 
                 _logger.LogDebug(
@@ -262,21 +269,11 @@ public class PromptEvaluationService : IPromptEvaluationService
         }
         catch (FileNotFoundException ex)
         {
-            _logger.LogError(ex, "Dataset file not found for evaluation of template {TemplateId}, version {VersionId}",
-                templateId, versionId);
             throw new InvalidOperationException("Evaluation dataset file not found", ex);
         }
         catch (JsonException ex)
         {
-            _logger.LogError(ex, "Invalid JSON in dataset for template {TemplateId}, version {VersionId}",
-                templateId, versionId);
             throw new InvalidOperationException("Failed to parse evaluation dataset", ex);
-        }
-        catch (InvalidOperationException ex)
-        {
-            _logger.LogError(ex, "Invalid operation during evaluation for template {TemplateId}, version {VersionId}",
-                templateId, versionId);
-            throw;
         }
     }
 
@@ -286,7 +283,7 @@ public class PromptEvaluationService : IPromptEvaluationService
     private async Task<QueryEvaluationResult> EvaluateSingleQueryAsync(
         PromptTestCase testCase,
         string customPrompt,
-        CancellationToken ct)
+        CancellationToken cancellationToken)
     {
         var gameId = testCase.GameId ?? Guid.Empty.ToString();
 
@@ -302,7 +299,7 @@ public class PromptEvaluationService : IPromptEvaluationService
                 customPrompt,
                 searchMode: SearchMode.Hybrid,
                 language: "en",
-                cancellationToken: ct).ConfigureAwait(false);
+                cancellationToken: cancellationToken).ConfigureAwait(false);
 
             queryStopwatch.Stop();
 
@@ -386,11 +383,9 @@ public class PromptEvaluationService : IPromptEvaluationService
             return true; // No keywords required, pass by default
         }
 
-        var responseLower = response.ToLowerInvariant();
-
         // Check if ALL required keywords are present
         return testCase.RequiredKeywords.All(keyword =>
-            responseLower.Contains(keyword.ToLowerInvariant()));
+            response.Contains(keyword, StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>
@@ -405,9 +400,8 @@ public class PromptEvaluationService : IPromptEvaluationService
         // Check for forbidden keywords (hallucination detection)
         if (testCase.ForbiddenKeywords != null && testCase.ForbiddenKeywords.Count > 0)
         {
-            var responseLower = response.ToLowerInvariant();
             var hasForbiddenKeywords = testCase.ForbiddenKeywords.Any(keyword =>
-                responseLower.Contains(keyword.ToLowerInvariant()));
+                response.Contains(keyword, StringComparison.InvariantCultureIgnoreCase));
 
             if (hasForbiddenKeywords)
                 return false; // Hallucination detected, not relevant
@@ -432,11 +426,11 @@ public class PromptEvaluationService : IPromptEvaluationService
             return false;
 
         // If there are required keywords, check coverage
+        // If there are required keywords, check coverage
         if (testCase.RequiredKeywords != null && testCase.RequiredKeywords.Count > 0)
         {
-            var responseLower = response.ToLowerInvariant();
             var coveredKeywords = testCase.RequiredKeywords.Count(keyword =>
-                responseLower.Contains(keyword.ToLowerInvariant()));
+                response.Contains(keyword, StringComparison.OrdinalIgnoreCase));
 
             // At least 75% of required keywords should be covered for completeness
             var coverageRatio = (double)coveredKeywords / testCase.RequiredKeywords.Count;
@@ -457,7 +451,7 @@ public class PromptEvaluationService : IPromptEvaluationService
             return false;
 
         // Check for basic structure indicators
-        var sentences = response.Split(new[] { '.', '!', '?' }, StringSplitOptions.RemoveEmptyEntries);
+        var sentences = response.Split(SentenceSeparators, StringSplitOptions.RemoveEmptyEntries);
         if (sentences.Length == 0)
             return false;
 
@@ -619,7 +613,7 @@ public class PromptEvaluationService : IPromptEvaluationService
         string baselineVersionId,
         string candidateVersionId,
         string datasetPath,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         _logger.LogInformation(
             "Comparing prompt versions: Baseline {BaselineId} vs Candidate {CandidateId}",
@@ -628,8 +622,8 @@ public class PromptEvaluationService : IPromptEvaluationService
         try
         {
             // Run evaluations on both versions
-            var baselineResult = await EvaluateAsync(templateId, baselineVersionId, datasetPath, null, ct).ConfigureAwait(false);
-            var candidateResult = await EvaluateAsync(templateId, candidateVersionId, datasetPath, null, ct).ConfigureAwait(false);
+            var baselineResult = await EvaluateAsync(templateId, baselineVersionId, datasetPath, null, cancellationToken).ConfigureAwait(false);
+            var candidateResult = await EvaluateAsync(templateId, candidateVersionId, datasetPath, null, cancellationToken).ConfigureAwait(false);
 
             // BGAI-041: Calculate deltas for new 5-metric framework
             var deltas = new MetricDeltas
@@ -665,100 +659,92 @@ public class PromptEvaluationService : IPromptEvaluationService
             _logger.LogError(ex, "Dataset not found during comparison for template {TemplateId}", templateId);
             throw new InvalidOperationException("Failed to compare prompts: dataset file not found", ex);
         }
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
         catch (InvalidOperationException ex)
         {
             _logger.LogError(ex, "Invalid operation during comparison for template {TemplateId}", templateId);
             throw;
         }
+#pragma warning restore S2139
     }
 
     /// <summary>
     /// BGAI-041: Generates recommendation based on A/B comparison results (5-metric framework)
     /// </summary>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Meziantou.Analyzer", "MA0051:Method is too long", Justification = "Business scoring logic is clearer in one method")]
     private static (ComparisonRecommendation recommendation, string reasoning) GenerateRecommendation(
         PromptEvaluationResult baseline,
         PromptEvaluationResult candidate,
         MetricDeltas deltas)
     {
         _ = baseline; // baseline metrics are reflected in deltas; suppress unused parameter warning
-        var reasons = new List<string>();
 
-        // REJECT if candidate fails any threshold
+        // Check for Rejection
         if (!candidate.Passed)
         {
             return (ComparisonRecommendation.Reject,
                 $"Candidate version failed quality thresholds: {candidate.Summary}");
         }
 
-        // REJECT if significant regression in any metric
-        if (deltas.AccuracyDelta <= -10.0)
-            reasons.Add($"Accuracy regression: {deltas.AccuracyDelta:F1}%");
-
-        if (deltas.RelevanceDelta <= -10.0)
-            reasons.Add($"Relevance regression: {deltas.RelevanceDelta:F1}%");
-
-        if (deltas.CompletenessDelta <= -10.0)
-            reasons.Add($"Completeness regression: {deltas.CompletenessDelta:F1}%");
-
-        if (deltas.ClarityDelta <= -10.0)
-            reasons.Add($"Clarity regression: {deltas.ClarityDelta:F1}%");
-
-        if (deltas.CitationQualityDelta <= -10.0)
-            reasons.Add($"Citation quality regression: {deltas.CitationQualityDelta:F1}%");
-
-        if (reasons.Count > 0)
+        var regressionReasons = GetRegressionReasons(deltas);
+        if (regressionReasons.Count > 0)
         {
             return (ComparisonRecommendation.Reject,
-                $"Significant regressions detected: {string.Join(", ", reasons)}");
+                $"Significant regressions detected: {string.Join(", ", regressionReasons)}");
         }
 
-        // ACTIVATE if meaningful improvement in any metric
-        var improvements = new List<string>();
-
-        if (deltas.AccuracyDelta >= 5.0)
-            improvements.Add($"Accuracy improved: +{deltas.AccuracyDelta:F1}%");
-
-        if (deltas.RelevanceDelta >= 5.0)
-            improvements.Add($"Relevance improved: +{deltas.RelevanceDelta:F1}%");
-
-        if (deltas.CompletenessDelta >= 5.0)
-            improvements.Add($"Completeness improved: +{deltas.CompletenessDelta:F1}%");
-
-        if (deltas.ClarityDelta >= 5.0)
-            improvements.Add($"Clarity improved: +{deltas.ClarityDelta:F1}%");
-
-        if (deltas.CitationQualityDelta >= 5.0)
-            improvements.Add($"Citation quality improved: +{deltas.CitationQualityDelta:F1}%");
-
+        // Check for Activation
+        var improvements = GetImprovementReasons(deltas);
         if (improvements.Count > 0)
         {
             return (ComparisonRecommendation.Activate,
                 $"Candidate shows significant improvements: {string.Join(", ", improvements)}. No regressions detected. Recommend activation.");
         }
 
-        // MANUAL_REVIEW for marginal or mixed results
+        // Check for Manual Review
+        var manualReviewChanges = GetManualReviewChanges(deltas);
+        return (ComparisonRecommendation.ManualReview,
+            manualReviewChanges.Count > 0
+                ? $"Results show marginal changes: {string.Join(", ", manualReviewChanges)}. Manual review recommended."
+                : "No significant changes detected. Manual review recommended before activation.");
+    }
+
+    private static List<string> GetRegressionReasons(MetricDeltas deltas)
+    {
+        var reasons = new List<string>();
+
+        if (deltas.AccuracyDelta <= -10.0) reasons.Add($"Accuracy regression: {deltas.AccuracyDelta:F1}%");
+        if (deltas.RelevanceDelta <= -10.0) reasons.Add($"Relevance regression: {deltas.RelevanceDelta:F1}%");
+        if (deltas.CompletenessDelta <= -10.0) reasons.Add($"Completeness regression: {deltas.CompletenessDelta:F1}%");
+        if (deltas.ClarityDelta <= -10.0) reasons.Add($"Clarity regression: {deltas.ClarityDelta:F1}%");
+        if (deltas.CitationQualityDelta <= -10.0) reasons.Add($"Citation quality regression: {deltas.CitationQualityDelta:F1}%");
+
+        return reasons;
+    }
+
+    private static List<string> GetImprovementReasons(MetricDeltas deltas)
+    {
+        var improvements = new List<string>();
+
+        if (deltas.AccuracyDelta >= 5.0) improvements.Add($"Accuracy improved: +{deltas.AccuracyDelta:F1}%");
+        if (deltas.RelevanceDelta >= 5.0) improvements.Add($"Relevance improved: +{deltas.RelevanceDelta:F1}%");
+        if (deltas.CompletenessDelta >= 5.0) improvements.Add($"Completeness improved: +{deltas.CompletenessDelta:F1}%");
+        if (deltas.ClarityDelta >= 5.0) improvements.Add($"Clarity improved: +{deltas.ClarityDelta:F1}%");
+        if (deltas.CitationQualityDelta >= 5.0) improvements.Add($"Citation quality improved: +{deltas.CitationQualityDelta:F1}%");
+
+        return improvements;
+    }
+
+    private static List<string> GetManualReviewChanges(MetricDeltas deltas)
+    {
         var changes = new List<string>();
 
-        if (Math.Abs(deltas.AccuracyDelta) >= 1.0)
-            changes.Add($"Accuracy: {deltas.AccuracyDelta:+0.0;-0.0}%");
+        if (Math.Abs(deltas.AccuracyDelta) >= 1.0) changes.Add($"Accuracy: {deltas.AccuracyDelta:+0.0;-0.0}%");
+        if (Math.Abs(deltas.RelevanceDelta) >= 1.0) changes.Add($"Relevance: {deltas.RelevanceDelta:+0.0;-0.0}%");
+        if (Math.Abs(deltas.CompletenessDelta) >= 1.0) changes.Add($"Completeness: {deltas.CompletenessDelta:+0.0;-0.0}%");
+        if (Math.Abs(deltas.ClarityDelta) >= 1.0) changes.Add($"Clarity: {deltas.ClarityDelta:+0.0;-0.0}%");
+        if (Math.Abs(deltas.CitationQualityDelta) >= 1.0) changes.Add($"Citation Quality: {deltas.CitationQualityDelta:+0.0;-0.0}%");
 
-        if (Math.Abs(deltas.RelevanceDelta) >= 1.0)
-            changes.Add($"Relevance: {deltas.RelevanceDelta:+0.0;-0.0}%");
-
-        if (Math.Abs(deltas.CompletenessDelta) >= 1.0)
-            changes.Add($"Completeness: {deltas.CompletenessDelta:+0.0;-0.0}%");
-
-        if (Math.Abs(deltas.ClarityDelta) >= 1.0)
-            changes.Add($"Clarity: {deltas.ClarityDelta:+0.0;-0.0}%");
-
-        if (Math.Abs(deltas.CitationQualityDelta) >= 1.0)
-            changes.Add($"Citation Quality: {deltas.CitationQualityDelta:+0.0;-0.0}%");
-
-        return (ComparisonRecommendation.ManualReview,
-            changes.Count > 0
-                ? $"Results show marginal changes: {string.Join(", ", changes)}. Manual review recommended."
-                : "No significant changes detected. Manual review recommended before activation.");
+        return changes;
     }
 
     /// <summary>
@@ -766,6 +752,7 @@ public class PromptEvaluationService : IPromptEvaluationService
     /// </summary>
     public string GenerateReport(PromptEvaluationResult result, ReportFormat format = ReportFormat.Markdown)
     {
+        ArgumentNullException.ThrowIfNull(result);
         return format switch
         {
             ReportFormat.Markdown => GenerateMarkdownReport(result),
@@ -777,7 +764,6 @@ public class PromptEvaluationService : IPromptEvaluationService
     /// <summary>
     /// Generates Markdown report
     /// </summary>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Meziantou.Analyzer", "MA0051:Method is too long", Justification = "Report generation is clearer in a single method")]
     private static string GenerateMarkdownReport(PromptEvaluationResult result)
     {
         var sb = new StringBuilder();
@@ -811,12 +797,19 @@ public class PromptEvaluationService : IPromptEvaluationService
         sb.AppendLine(result.Summary);
         sb.AppendLine();
 
+        AppendQueryBreakdown(sb, result.QueryResults);
+
+        return sb.ToString();
+    }
+
+    private static void AppendQueryBreakdown(StringBuilder sb, IList<QueryEvaluationResult> queryResults)
+    {
         sb.AppendLine("## Query Breakdown");
         sb.AppendLine();
 
-        for (var i = 0; i < result.QueryResults.Count; i++)
+        for (var i = 0; i < queryResults.Count; i++)
         {
-            var qr = result.QueryResults[i];
+            var qr = queryResults[i];
             sb.AppendLine(string.Format(System.Globalization.CultureInfo.InvariantCulture, "### Query {0}: `{1}`", i + 1, qr.TestCaseId));
             sb.AppendLine();
             sb.AppendLine($"**Query**: {qr.Query}");
@@ -840,8 +833,6 @@ public class PromptEvaluationService : IPromptEvaluationService
             sb.AppendLine("---");
             sb.AppendLine();
         }
-
-        return sb.ToString();
     }
 
     /// <summary>
@@ -849,18 +840,15 @@ public class PromptEvaluationService : IPromptEvaluationService
     /// </summary>
     private string GenerateJsonReport(PromptEvaluationResult result)
     {
-        return JsonSerializer.Serialize(result, new JsonSerializerOptions
-        {
-            WriteIndented = true,
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-        });
+        return JsonSerializer.Serialize(result, s_exportOptions);
     }
 
     /// <summary>
     /// Stores evaluation results in database for historical tracking
     /// </summary>
-    public async Task StoreResultsAsync(PromptEvaluationResult result, CancellationToken ct = default)
+    public async Task StoreResultsAsync(PromptEvaluationResult result, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(result);
         _logger.LogInformation("Storing evaluation result {EvaluationId} to database", result.EvaluationId);
 
         try
@@ -886,7 +874,7 @@ public class PromptEvaluationService : IPromptEvaluationService
             };
 
             _dbContext.PromptEvaluationResults.Add(entity);
-            await _dbContext.SaveChangesAsync(ct).ConfigureAwait(false);
+            await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation("Successfully stored evaluation result {EvaluationId}", result.EvaluationId);
         }
@@ -908,7 +896,7 @@ public class PromptEvaluationService : IPromptEvaluationService
     public async Task<List<PromptEvaluationResult>> GetHistoricalResultsAsync(
         string templateId,
         int limit = 10,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Retrieving historical evaluation results for template {TemplateId}, limit {Limit}",
             templateId, limit);
@@ -920,7 +908,7 @@ public class PromptEvaluationService : IPromptEvaluationService
                 .Where(e => e.TemplateId.ToString() == templateId)
                 .OrderByDescending(e => e.ExecutedAt)
                 .Take(limit)
-                .ToListAsync(ct).ConfigureAwait(false);
+                .ToListAsync(cancellationToken).ConfigureAwait(false);
 
             // BGAI-041: Retrieve new 5-metric framework results
             var results = entities.Select(e => new PromptEvaluationResult

@@ -12,7 +12,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Handlers;
 /// <summary>
 /// Handles game session start command.
 /// </summary>
-public class StartGameSessionCommandHandler : ICommandHandler<StartGameSessionCommand, GameSessionDto>
+internal class StartGameSessionCommandHandler : ICommandHandler<StartGameSessionCommand, GameSessionDto>
 {
     private readonly IGameSessionRepository _sessionRepository;
     private readonly IGameRepository _gameRepository;
@@ -30,6 +30,7 @@ public class StartGameSessionCommandHandler : ICommandHandler<StartGameSessionCo
 
     public async Task<GameSessionDto> Handle(StartGameSessionCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         // Verify game exists
         var gameExists = await _gameRepository.ExistsAsync(command.GameId, cancellationToken).ConfigureAwait(false);
         if (!gameExists)

@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 /// Repository interface for VectorDocument aggregate root.
 /// Manages persistence of indexed documents in the vector database.
 /// </summary>
-public interface IVectorDocumentRepository
+internal interface IVectorDocumentRepository
 {
     /// <summary>
     /// Gets a vector document by its unique identifier.

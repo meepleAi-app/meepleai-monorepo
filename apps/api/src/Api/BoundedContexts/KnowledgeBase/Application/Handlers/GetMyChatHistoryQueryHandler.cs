@@ -14,7 +14,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// - Only extracts last message content (not full message objects)
 /// - Returns summary DTO (~1KB per thread vs ~100KB with full messages)
 /// </summary>
-public class GetMyChatHistoryQueryHandler : IQueryHandler<GetMyChatHistoryQuery, GetMyChatHistoryResult>
+internal class GetMyChatHistoryQueryHandler : IQueryHandler<GetMyChatHistoryQuery, GetMyChatHistoryResult>
 {
     private readonly IChatThreadRepository _threadRepository;
 
@@ -25,6 +25,7 @@ public class GetMyChatHistoryQueryHandler : IQueryHandler<GetMyChatHistoryQuery,
 
     public async Task<GetMyChatHistoryResult> Handle(GetMyChatHistoryQuery request, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         // Get total count for pagination (separate query)
         var totalCount = await _threadRepository
             .CountByUserIdAsync(request.UserId, cancellationToken)

@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Evaluation;
 /// <summary>
 /// Result of evaluating a single sample in the RAG pipeline.
 /// </summary>
-public sealed record EvaluationSampleResult
+internal sealed record EvaluationSampleResult
 {
     /// <summary>
     /// Sample ID that was evaluated.
@@ -97,7 +97,7 @@ public sealed record EvaluationSampleResult
 /// <summary>
 /// Complete evaluation result for a dataset run.
 /// </summary>
-public sealed record EvaluationResult
+internal sealed record EvaluationResult
 {
     /// <summary>
     /// Unique identifier for this evaluation run.
@@ -178,8 +178,8 @@ public sealed record EvaluationResult
         IReadOnlyList<EvaluationSampleResult> sampleResults)
     {
         var metrics = CalculateMetrics(sampleResults);
-        var metricsByDifficulty = CalculateMetricsByGroup(sampleResults, true);
-        var metricsByCategory = CalculateMetricsByGroup(sampleResults, false);
+        var metricsByDifficulty = CalculateMetricsByGroup(sampleResults);
+        var metricsByCategory = CalculateMetricsByGroup(sampleResults);
 
         return new EvaluationResult
         {
@@ -231,13 +231,15 @@ public sealed record EvaluationResult
         );
     }
 
-    private static IReadOnlyDictionary<string, EvaluationMetrics> CalculateMetricsByGroup(
-        IReadOnlyList<EvaluationSampleResult> _,
-        bool __)
+    private static Dictionary<string, EvaluationMetrics> CalculateMetricsByGroup(
+        IReadOnlyList<EvaluationSampleResult> results
+        )
     {
+        ArgumentNullException.ThrowIfNull(results);
+
         // Note: This is a simplified implementation. In practice, you'd need to
-        // join with the original samples to get difficulty/category metadata.
-        // For now, returning empty as the sample results don't carry this metadata.
+        // group samples by difficulty or category and calculate metrics per group.
+        // For now, returning empty to satisfy the caller signatures.
         return new Dictionary<string, EvaluationMetrics>(StringComparer.Ordinal);
     }
 }

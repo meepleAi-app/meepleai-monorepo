@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.Administration.Domain.Entities;
 /// Domain entity representing an admin report definition
 /// ISSUE-916: Report generation and scheduling
 /// </summary>
-public sealed record AdminReport
+internal sealed record AdminReport
 {
     public required Guid Id { get; init; }
     public required string Name { get; init; }
@@ -34,9 +34,9 @@ public sealed record AdminReport
         string createdBy,
         IReadOnlyList<string>? emailRecipients = null)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(name, nameof(name));
-        ArgumentException.ThrowIfNullOrWhiteSpace(description, nameof(description));
-        ArgumentException.ThrowIfNullOrWhiteSpace(createdBy, nameof(createdBy));
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        ArgumentException.ThrowIfNullOrWhiteSpace(description);
+        ArgumentException.ThrowIfNullOrWhiteSpace(createdBy);
 
         var validatedRecipients = ValidateEmailRecipients(emailRecipients);
 
@@ -47,7 +47,7 @@ public sealed record AdminReport
             Description = description,
             Template = template,
             Format = format,
-            Parameters = parameters ?? new Dictionary<string, object>(),
+            Parameters = parameters ?? new Dictionary<string, object>(StringComparer.Ordinal),
             ScheduleExpression = scheduleExpression,
             IsActive = true,
             CreatedAt = DateTime.UtcNow,
@@ -110,7 +110,8 @@ public sealed record AdminReport
 
         var emailRegex = new System.Text.RegularExpressions.Regex(
             @"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$",
-            System.Text.RegularExpressions.RegexOptions.Compiled);
+            System.Text.RegularExpressions.RegexOptions.Compiled,
+            TimeSpan.FromSeconds(1)); // MA0009: Add timeout to prevent ReDoS attacks
 
         var validatedList = new List<string>();
         foreach (var email in recipients)
@@ -126,7 +127,7 @@ public sealed record AdminReport
                 throw new ArgumentException($"Invalid email address: {email}", nameof(recipients));
             }
 
-            if (!validatedList.Contains(trimmedEmail))
+            if (!validatedList.Contains(trimmedEmail, StringComparer.Ordinal))
             {
                 validatedList.Add(trimmedEmail);
             }

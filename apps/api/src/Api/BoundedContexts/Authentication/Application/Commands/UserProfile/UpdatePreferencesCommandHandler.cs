@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands;
 /// Updates language, theme, email notifications, and data retention settings.
 /// Returns updated UserProfileDto with all profile information.
 /// </summary>
-public class UpdatePreferencesCommandHandler : ICommandHandler<UpdatePreferencesCommand, UserProfileDto>
+internal class UpdatePreferencesCommandHandler : ICommandHandler<UpdatePreferencesCommand, UserProfileDto>
 {
     private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -26,6 +26,7 @@ public class UpdatePreferencesCommandHandler : ICommandHandler<UpdatePreferences
 
     public async Task<UserProfileDto> Handle(UpdatePreferencesCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         // Retrieve user
         var user = await _userRepository.GetByIdAsync(command.UserId, cancellationToken).ConfigureAwait(false);
         if (user == null)

@@ -15,6 +15,8 @@
 
 'use client';
 
+import { PdfUploadForm } from '@/components/pdf/PdfUploadForm';
+import { PdfViewerModal } from '@/components/pdf/PdfViewerModal';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -23,8 +25,9 @@ import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { BggGameDetails, Game, GameSessionDto, api, RuleSpec } from '@/lib/api';
+import { api, BggGameDetails, Game, GameSessionDto, PdfDocumentDto, RuleSpec } from '@/lib/api';
 import { createErrorContext } from '@/lib/errors';
+import { categorizeError } from '@/lib/errorUtils';
 import { logger } from '@/lib/logger';
 import {
   AlertCircle,
@@ -70,6 +73,11 @@ export default function GameDetailPage() {
   const [bggError, setBggError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
   const [rulesPagination, setRulesPagination] = useState<Record<string, number>>({});
+  const [pdfs, setPdfs] = useState<PdfDocumentDto[]>([]);
+  const [pdfsLoading, setPdfsLoading] = useState(false);
+  const [showUploadForm, setShowUploadForm] = useState(false);
+  const [selectedPdf, setSelectedPdf] = useState<{ url: string; name: string } | null>(null);
+  const [pdfViewerOpen, setPdfViewerOpen] = useState(false);
 
   // Load game data
   useEffect(() => {
@@ -186,6 +194,33 @@ export default function GameDetailPage() {
     loadRules();
   }, [gameId, activeTab]);
 
+  // Load PDFs when Rules tab is activated
+  useEffect(() => {
+    if (!gameId || activeTab !== 'rules') return;
+
+    const loadPdfs = async () => {
+      setPdfsLoading(true);
+      try {
+        const pdfsData = await api.games.getDocuments(gameId);
+        setPdfs(pdfsData);
+      } catch (err) {
+        logger.error(
+          'Failed to load game PDFs',
+          err instanceof Error ? err : new Error(String(err)),
+          createErrorContext('GameDetailPage', 'loadPdfs', {
+            gameId,
+            operation: 'fetch_pdfs',
+          })
+        );
+        setPdfs([]);
+      } finally {
+        setPdfsLoading(false);
+      }
+    };
+
+    loadPdfs();
+  }, [gameId, activeTab]);
+
   // Load notes from localStorage
   useEffect(() => {
     if (!gameId) return;
@@ -225,6 +260,44 @@ export default function GameDetailPage() {
       );
       alert('Failed to save notes');
     }
+  };
+
+  // Handle PDF upload success
+  const handleUploadSuccess = async (documentId: string) => {
+    setShowUploadForm(false);
+    // Reload PDFs to show the newly uploaded one
+    if (gameId) {
+      try {
+        const pdfsData = await api.games.getDocuments(gameId);
+        setPdfs(pdfsData);
+      } catch (err) {
+        logger.error(
+          'Failed to reload PDFs after upload',
+          err instanceof Error ? err : new Error(String(err)),
+          createErrorContext('GameDetailPage', 'handleUploadSuccess', { gameId, documentId })
+        );
+      }
+    }
+  };
+
+  // Handle PDF upload error
+  const handleUploadError = (error: ReturnType<typeof categorizeError>) => {
+    logger.error(
+      'PDF upload failed',
+      new Error(error.message),
+      createErrorContext('GameDetailPage', 'handleUploadError', { gameId, error })
+    );
+    alert(`Upload failed: ${error.message}`);
+  };
+
+  // Handle PDF view
+  const handleViewPdf = (pdf: PdfDocumentDto) => {
+    const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
+    setSelectedPdf({
+      url: `${API_BASE}/api/v1/pdfs/${pdf.id}/download`,
+      name: pdf.fileName,
+    });
+    setPdfViewerOpen(true);
   };
 
   if (loading) {
@@ -493,10 +566,80 @@ export default function GameDetailPage() {
 
         {/* Rules Tab */}
         <TabsContent value="rules" className="space-y-4">
+          {/* PDF Rulebooks Section */}
           <Card>
             <CardHeader>
-              <CardTitle>Game Rules</CardTitle>
-              <CardDescription>Rule specifications and versions (Issue #2027)</CardDescription>
+              <div className="flex justify-between items-center">
+                <div>
+                  <CardTitle>Rulebook PDFs</CardTitle>
+                  <CardDescription>Upload and view game rulebooks</CardDescription>
+                </div>
+                <Button
+                  onClick={() => setShowUploadForm(!showUploadForm)}
+                  variant={showUploadForm ? 'outline' : 'default'}
+                >
+                  {showUploadForm ? 'Cancel' : 'Upload Rulebook'}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {showUploadForm && gameId && game && (
+                <div className="mb-4">
+                  <PdfUploadForm
+                    gameId={gameId}
+                    gameName={game.title}
+                    onUploadSuccess={handleUploadSuccess}
+                    onUploadError={handleUploadError}
+                  />
+                </div>
+              )}
+
+              {pdfsLoading && (
+                <div className="space-y-3">
+                  <Skeleton className="h-16 w-full" />
+                  <Skeleton className="h-16 w-full" />
+                </div>
+              )}
+
+              {!pdfsLoading && pdfs.length === 0 && !showUploadForm && (
+                <Alert>
+                  <BookOpen className="h-4 w-4" />
+                  <AlertDescription>
+                    No rulebook PDFs uploaded yet. Click "Upload Rulebook" to add one.
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {!pdfsLoading && pdfs.length > 0 && (
+                <div className="space-y-3">
+                  {pdfs.map(pdf => (
+                    <Card key={pdf.id} className="border-2">
+                      <CardHeader className="pb-3">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <CardTitle className="text-lg">{pdf.fileName}</CardTitle>
+                            <CardDescription>
+                              Uploaded: {new Date(pdf.uploadedAt).toLocaleDateString()} •{' '}
+                              {pdf.pageCount} pages
+                            </CardDescription>
+                          </div>
+                          <Button onClick={() => handleViewPdf(pdf)} variant="outline">
+                            View PDF
+                          </Button>
+                        </div>
+                      </CardHeader>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Rule Specifications Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Rule Specifications</CardTitle>
+              <CardDescription>Extracted rules and versions (Issue #2027)</CardDescription>
             </CardHeader>
             <CardContent>
               {rulesLoading && (
@@ -723,6 +866,16 @@ export default function GameDetailPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* PDF Viewer Modal */}
+      {selectedPdf && (
+        <PdfViewerModal
+          open={pdfViewerOpen}
+          onOpenChange={setPdfViewerOpen}
+          pdfUrl={selectedPdf.url}
+          documentName={selectedPdf.name}
+        />
+      )}
     </div>
   );
 }

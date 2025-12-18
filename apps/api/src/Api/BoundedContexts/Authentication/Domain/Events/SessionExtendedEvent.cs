@@ -5,7 +5,7 @@ namespace Api.BoundedContexts.Authentication.Domain.Events;
 /// <summary>
 /// Domain event raised when a user session is extended.
 /// </summary>
-public sealed class SessionExtendedEvent : DomainEventBase
+internal sealed class SessionExtendedEvent : DomainEventBase
 {
     /// <summary>
     /// Gets the ID of the extended session.

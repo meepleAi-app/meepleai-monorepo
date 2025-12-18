@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands;
 /// Creates a new version of the RuleSpec.
 /// Issue #2055: Supports optimistic concurrency via ExpectedETag.
 /// </summary>
-public record UpdateRuleSpecCommand(
+internal record UpdateRuleSpecCommand(
     Guid GameId,
     string? Version,
     IReadOnlyList<RuleAtomDto> Atoms,

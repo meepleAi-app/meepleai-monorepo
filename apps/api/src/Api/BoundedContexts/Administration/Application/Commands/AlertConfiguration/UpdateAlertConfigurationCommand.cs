@@ -6,15 +6,17 @@ namespace Api.BoundedContexts.Administration.Application.Commands.AlertConfigura
 /// <summary>
 /// Command to update alert configuration (Issue #915)
 /// </summary>
-public record UpdateAlertConfigurationCommand(
+internal record UpdateAlertConfigurationCommand(
     string ConfigKey,
     string ConfigValue,
     string Category,
     string UpdatedBy,
     string? Description = null) : IRequest<bool>;
 
-public class UpdateAlertConfigurationCommandValidator : AbstractValidator<UpdateAlertConfigurationCommand>
+internal class UpdateAlertConfigurationCommandValidator : AbstractValidator<UpdateAlertConfigurationCommand>
 {
+    private static readonly string[] AllowedCategories = { "Email", "Slack", "PagerDuty", "Global" };
+
     public UpdateAlertConfigurationCommandValidator()
     {
         RuleFor(x => x.ConfigKey)
@@ -27,7 +29,7 @@ public class UpdateAlertConfigurationCommandValidator : AbstractValidator<Update
 
         RuleFor(x => x.Category)
             .NotEmpty().WithMessage("Category is required")
-            .Must(c => new[] { "Email", "Slack", "PagerDuty", "Global" }.Contains(c))
+            .Must(c => AllowedCategories.Contains(c, StringComparer.Ordinal))
             .WithMessage("Category must be one of: Email, Slack, PagerDuty, Global");
 
         RuleFor(x => x.UpdatedBy)

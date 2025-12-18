@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Administration.Application.Queries.Testing;
 /// Handler for GetPerformanceMetricsQuery (Issue #2139)
 /// Retrieves performance metrics from Lighthouse reports
 /// </summary>
-public class GetPerformanceMetricsQueryHandler : IQueryHandler<GetPerformanceMetricsQuery, PerformanceMetricsDto>
+internal class GetPerformanceMetricsQueryHandler : IQueryHandler<GetPerformanceMetricsQuery, PerformanceMetricsDto>
 {
     private readonly ILighthouseReportParserService _lighthouseParser;
     private readonly ILogger<GetPerformanceMetricsQueryHandler> _logger;
@@ -23,6 +23,7 @@ public class GetPerformanceMetricsQueryHandler : IQueryHandler<GetPerformanceMet
 
     public async Task<PerformanceMetricsDto> Handle(GetPerformanceMetricsQuery request, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         _logger.LogInformation("Retrieving performance metrics from Lighthouse reports");
 
         var metrics = await _lighthouseParser.ParsePerformanceMetricsAsync(cancellationToken).ConfigureAwait(false);

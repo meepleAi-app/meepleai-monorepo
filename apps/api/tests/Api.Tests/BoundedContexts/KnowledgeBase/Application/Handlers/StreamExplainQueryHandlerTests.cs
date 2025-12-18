@@ -75,7 +75,7 @@ public class StreamExplainQueryHandlerTests
         };
 
         _qdrantServiceMock
-            .Setup(x => x.SearchAsync(gameId, embedding, 5, It.IsAny<IReadOnlyList<string>?>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.SearchAsync(gameId, embedding, 5, It.IsAny<List<string>?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new SearchResult
             {
                 Success = true,
@@ -402,7 +402,7 @@ public class StreamExplainQueryHandlerTests
         SetupEmbeddingMock("test topic");
 
         _qdrantServiceMock
-            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<IReadOnlyList<string>?>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<List<string>?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new SearchResult
             {
                 Success = true,
@@ -429,8 +429,7 @@ public class StreamExplainQueryHandlerTests
         var query = new StreamExplainQuery("game123", "test topic");
         SetupHappyPathMocks();
 
-        var cts = new CancellationTokenSource();
-
+        using var cts = new CancellationTokenSource();
         // Act
         var events = new List<RagStreamingEvent>();
         var eventCount = 0;
@@ -483,8 +482,7 @@ public class StreamExplainQueryHandlerTests
         SetupEmbeddingMock("test topic");
         SetupQdrantMock("game123", searchResults);
 
-        var cts = new CancellationTokenSource();
-
+        using var cts = new CancellationTokenSource();
         // Act & Assert
         await Assert.ThrowsAsync<OperationCanceledException>(async () =>
         {
@@ -660,7 +658,7 @@ public class StreamExplainQueryHandlerTests
     private void SetupQdrantMock(string gameId, List<SearchResultItem> results)
     {
         _qdrantServiceMock
-            .Setup(x => x.SearchAsync(gameId, It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<IReadOnlyList<string>?>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.SearchAsync(gameId, It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<List<string>?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new SearchResult
             {
                 Success = true,
@@ -668,3 +666,4 @@ public class StreamExplainQueryHandlerTests
             });
     }
 }
+

@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.Authentication.Application.Queries;
 /// Handler for GetApiKeyUsageStatsQuery.
 /// Calculates comprehensive usage statistics for an API key.
 /// </summary>
-public class GetApiKeyUsageStatsQueryHandler : IQueryHandler<GetApiKeyUsageStatsQuery, ApiKeyUsageStatsDto?>
+internal class GetApiKeyUsageStatsQueryHandler : IQueryHandler<GetApiKeyUsageStatsQuery, ApiKeyUsageStatsDto?>
 {
     private readonly MeepleAiDbContext _db;
     private readonly IApiKeyUsageLogRepository _usageLogRepository;
@@ -30,6 +30,7 @@ public class GetApiKeyUsageStatsQueryHandler : IQueryHandler<GetApiKeyUsageStats
         GetApiKeyUsageStatsQuery request,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         // Get API key and verify ownership
         var apiKey = await _db.ApiKeys
             .AsNoTracking()

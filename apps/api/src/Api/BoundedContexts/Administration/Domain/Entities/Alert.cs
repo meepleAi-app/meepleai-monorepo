@@ -3,7 +3,7 @@ using Api.SharedKernel.Domain.Entities;
 
 namespace Api.BoundedContexts.Administration.Domain.Entities;
 
-public sealed class Alert : AggregateRoot<Guid>
+internal sealed class Alert : AggregateRoot<Guid>
 {
     public string AlertType { get; private set; }
     public AlertSeverity Severity { get; private set; }

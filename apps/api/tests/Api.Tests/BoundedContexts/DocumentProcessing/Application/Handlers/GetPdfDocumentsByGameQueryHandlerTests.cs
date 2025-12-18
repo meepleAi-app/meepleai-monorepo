@@ -268,7 +268,7 @@ public class GetPdfDocumentsByGameQueryHandlerTests
                 .Build()
         };
 
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         var cancellationToken = cts.Token;
 
         _documentRepositoryMock

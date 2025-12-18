@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.Administration.Application.Handlers;
 /// Handler for infrastructure health queries.
 /// Issue #891: Aggregates health checks from all infrastructure services.
 /// </summary>
-public class GetInfrastructureHealthQueryHandler : IRequestHandler<GetInfrastructureHealthQuery, InfrastructureHealthResponse>
+internal class GetInfrastructureHealthQueryHandler : IRequestHandler<GetInfrastructureHealthQuery, InfrastructureHealthResponse>
 {
     private readonly IInfrastructureHealthService _healthService;
     private readonly ILogger<GetInfrastructureHealthQueryHandler> _logger;
@@ -18,14 +18,15 @@ public class GetInfrastructureHealthQueryHandler : IRequestHandler<GetInfrastruc
         IInfrastructureHealthService healthService,
         ILogger<GetInfrastructureHealthQueryHandler> logger)
     {
-        _healthService = healthService;
-        _logger = logger;
+        _healthService = healthService ?? throw new ArgumentNullException(nameof(healthService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<InfrastructureHealthResponse> Handle(
         GetInfrastructureHealthQuery request,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         _logger.LogInformation("Getting infrastructure health status. ServiceName filter: {ServiceName}",
             request.ServiceName ?? "all");
 

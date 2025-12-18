@@ -10,7 +10,7 @@ namespace Api.Services;
 /// Supports OpenRouter, Ollama, and HuggingFace with fallback chain.
 /// Refactored per ADR-016 Phase 2 to use IEmbeddingProvider abstraction.
 /// </summary>
-public class EmbeddingService : IEmbeddingService
+internal class EmbeddingService : IEmbeddingService
 {
     private readonly IEmbeddingProvider _primaryProvider;
     private readonly IEmbeddingProvider? _fallbackProvider;
@@ -24,8 +24,10 @@ public class EmbeddingService : IEmbeddingService
     {
         // S1450: providerFactory used only locally for initialization
         ArgumentNullException.ThrowIfNull(providerFactory);
-        _config = config?.Value ?? throw new ArgumentNullException(nameof(config));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(config);
+        _config = config.Value;
+        ArgumentNullException.ThrowIfNull(logger);
+        _logger = logger;
 
         // Initialize providers
         _primaryProvider = providerFactory.GetPrimaryProvider();
@@ -197,7 +199,7 @@ public class EmbeddingService : IEmbeddingService
 /// <summary>
 /// Result of embedding generation
 /// </summary>
-public record EmbeddingResult
+internal record EmbeddingResult
 {
     public bool Success { get; init; }
     public string? ErrorMessage { get; init; }

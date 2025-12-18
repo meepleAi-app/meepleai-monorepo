@@ -11,7 +11,7 @@ namespace Api.Services;
 /// Exports chat conversations as professionally formatted PDF documents.
 /// Uses QuestPDF library for document generation.
 /// </summary>
-public class PdfExportFormatter : IExportFormatter
+internal class PdfExportFormatter : IExportFormatter
 {
     private readonly ILogger<PdfExportFormatter>? _logger;
 
@@ -176,7 +176,7 @@ public class PdfExportFormatter : IExportFormatter
 
                 // Citations
                 var citations = ParseCitations(log.MetadataJson);
-                if (citations.Any())
+                if (citations.Count > 0)
                 {
                     column.Item().PaddingTop(10).Column(citationColumn =>
                     {
@@ -218,12 +218,11 @@ public class PdfExportFormatter : IExportFormatter
         try
         {
             var metadata = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(metadataJson);
-            if (metadata == null || !metadata.ContainsKey("citations"))
+            if (metadata == null || !metadata.TryGetValue("citations", out var citationsElement))
             {
                 return new List<CitationMetadata>();
             }
 
-            var citationsElement = metadata["citations"];
             if (citationsElement.ValueKind != JsonValueKind.Array)
             {
                 return new List<CitationMetadata>();

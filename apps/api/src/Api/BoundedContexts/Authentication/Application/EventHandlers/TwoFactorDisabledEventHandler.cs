@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.Authentication.Application.EventHandlers;
 /// Handles the TwoFactorDisabledEvent domain event.
 /// Creates audit log entry automatically via base class and sends email notification.
 /// </summary>
-public sealed class TwoFactorDisabledEventHandler : DomainEventHandlerBase<TwoFactorDisabledEvent>
+internal sealed class TwoFactorDisabledEventHandler : DomainEventHandlerBase<TwoFactorDisabledEvent>
 {
     private readonly IUserRepository _userRepository;
     private readonly IEmailService _emailService;
@@ -20,11 +20,11 @@ public sealed class TwoFactorDisabledEventHandler : DomainEventHandlerBase<TwoFa
         MeepleAiDbContext dbContext,
         IUserRepository userRepository,
         IEmailService emailService,
-        ILogger<DomainEventHandlerBase<TwoFactorDisabledEvent>> logger)
+        ILogger<TwoFactorDisabledEventHandler> logger)
         : base(dbContext, logger)
     {
-        _userRepository = userRepository;
-        _emailService = emailService;
+        _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
+        _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
     }
 
     protected override async Task HandleEventAsync(TwoFactorDisabledEvent domainEvent, CancellationToken cancellationToken)
@@ -47,6 +47,10 @@ public sealed class TwoFactorDisabledEventHandler : DomainEventHandlerBase<TwoFa
                     domainEvent.WasAdminOverride);
             }
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: EVENT HANDLER PATTERN - Background event processing
+        // Event handlers must not throw exceptions (violates mediator/event pattern).
+        // Errors logged for monitoring; failed email delivery doesn't block 2FA operations.
         catch (Exception ex)
         {
             // Log error but don't fail the event handler - email is non-critical
@@ -55,6 +59,7 @@ public sealed class TwoFactorDisabledEventHandler : DomainEventHandlerBase<TwoFa
                 "Failed to send 2FA disabled email to user {UserId}",
                 domainEvent.UserId);
         }
+#pragma warning restore CA1031
     }
 
     protected override Guid? GetUserId(TwoFactorDisabledEvent domainEvent) => domainEvent.UserId;

@@ -15,7 +15,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// 2. LLM generation with context
 /// 3. Quality tracking and confidence scoring
 /// </summary>
-public class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaResponseDto>
+internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaResponseDto>
 {
     private const string DefaultSystemPrompt =
         "You are MeepleAI, a helpful board game assistant. Answer using only the provided context. "
@@ -54,6 +54,7 @@ public class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespons
         AskQuestionQuery query,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(query);
         _logger.LogInformation(
             "Processing AskQuestionQuery: GameId={GameId}, Question={Question}",
             query.GameId, query.Question);
@@ -78,12 +79,12 @@ public class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespons
             : baseQuestion;
 
         // Step 4: Generate answer with LLM and record metrics
-        var (llmResponse, llmResult) = await GenerateLlmAnswerAndRecordMetricsAsync(
+        var (llmResponse, _) = await GenerateLlmAnswerAndRecordMetricsAsync(
             systemPrompt, userPrompt, cancellationToken).ConfigureAwait(false);
 
         // Step 5: Build validated response with quality metrics and citations
         var response = await BuildValidatedResponseAsync(
-            query, llmResponse, llmResult, searchResults, domainSearchResults, 
+            query, llmResponse, searchResults, domainSearchResults,
             searchConfidence, systemPrompt, userPrompt, cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
@@ -208,8 +209,7 @@ public class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespons
     private async Task<QaResponseDto> BuildValidatedResponseAsync(
         AskQuestionQuery query,
         string llmResponse,
-        LlmCompletionResult llmResult,
-        List<SearchResultDto> searchResults,
+                List<SearchResultDto> searchResults,
         List<Domain.Entities.SearchResult> domainSearchResults,
         Confidence searchConfidence,
         string systemPrompt,
@@ -266,10 +266,15 @@ public class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespons
                 "RAG validation completed: IsValid={IsValid}, Layers={LayersPassed}/{TotalLayers}, Severity={Severity}",
                 validation.IsValid, validation.LayersPassed, validation.TotalLayers, validation.Severity);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: QUERY HANDLER PATTERN - CQRS query boundary
+        // RAG validation is non-critical optional enhancement. Generic catch prevents
+        // validation failures from blocking the main response. Returns null validation result.
         catch (Exception ex)
         {
             _logger.LogError(ex, "RAG validation pipeline failed, continuing without validation");
         }
+#pragma warning restore CA1031
 
         return new QaResponseDto(
             Answer: llmResponse,

@@ -4,7 +4,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Chunking;
 /// ADR-016 Phase 1: Hierarchical chunk entity with parent/child relationships.
 /// Entity - identity by Id.
 /// </summary>
-public sealed class HierarchicalChunk
+internal sealed class HierarchicalChunk
 {
     /// <summary>
     /// Unique identifier for this chunk.
@@ -66,7 +66,7 @@ public sealed class HierarchicalChunk
         if (level < 0 || level > 2)
             throw new ArgumentOutOfRangeException(nameof(level), "Level must be 0, 1, or 2");
 
-        ArgumentNullException.ThrowIfNull(metadata, nameof(metadata));
+        ArgumentNullException.ThrowIfNull(metadata);
 
         return new HierarchicalChunk
         {

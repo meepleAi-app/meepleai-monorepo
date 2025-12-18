@@ -12,7 +12,7 @@ namespace Api.Services;
 /// AI-10: Cache Optimization - Reduces latency by pre-caching hot queries during off-peak periods.
 /// Runs periodically (configurable interval) with startup delay to avoid interfering with application startup.
 /// </summary>
-public class CacheWarmingService : BackgroundService
+internal class CacheWarmingService : BackgroundService
 {
     private readonly ILogger<CacheWarmingService> _logger;
     private readonly IRedisFrequencyTracker _frequencyTracker;
@@ -41,11 +41,16 @@ public class CacheWarmingService : BackgroundService
         IOptions<CacheOptimizationConfiguration> config,
         TimeProvider? timeProvider = null)
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _frequencyTracker = frequencyTracker ?? throw new ArgumentNullException(nameof(frequencyTracker));
-        _cacheService = cacheService ?? throw new ArgumentNullException(nameof(cacheService));
-        _ragService = ragService ?? throw new ArgumentNullException(nameof(ragService));
-        _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
+        ArgumentNullException.ThrowIfNull(logger);
+        _logger = logger;
+        ArgumentNullException.ThrowIfNull(frequencyTracker);
+        _frequencyTracker = frequencyTracker;
+        ArgumentNullException.ThrowIfNull(cacheService);
+        _cacheService = cacheService;
+        ArgumentNullException.ThrowIfNull(ragService);
+        _ragService = ragService;
+        ArgumentNullException.ThrowIfNull(scopeFactory);
+        _scopeFactory = scopeFactory;
         _config = config?.Value ?? throw new ArgumentNullException(nameof(config));
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
@@ -89,10 +94,10 @@ public class CacheWarmingService : BackgroundService
                         _timeProvider,
                         stoppingToken).ConfigureAwait(false);
                 }
-                catch (OperationCanceledException)
+                catch (OperationCanceledException ex)
                 {
                     // Graceful shutdown
-                    _logger.LogInformation("Cache warming service is shutting down (cancellation requested).");
+                    _logger.LogInformation(ex, "Cache warming service is shutting down (cancellation requested).");
                     break;
                 }
                 catch (InvalidOperationException ex)
@@ -107,10 +112,10 @@ public class CacheWarmingService : BackgroundService
                 }
             }
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException ex)
         {
             // Expected during graceful shutdown
-            _logger.LogInformation("Cache warming service stopped.");
+            _logger.LogInformation(ex, "Cache warming service stopped.");
         }
     }
 

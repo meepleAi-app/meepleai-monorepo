@@ -10,7 +10,7 @@ namespace Api.Infrastructure.Secrets;
 /// Demonstrates secret fetching, versioning, and rotation capabilities.
 /// Uses direct REST API for maximum control and simplicity.
 /// </summary>
-public class InfisicalSecretsClient : IInfisicalClient
+internal class InfisicalSecretsClient : IInfisicalClient
 {
     private readonly HttpClient _httpClient;
     private readonly InfisicalOptions _options;
@@ -23,9 +23,18 @@ public class InfisicalSecretsClient : IInfisicalClient
         IOptions<InfisicalOptions> options,
         ILogger<InfisicalSecretsClient> logger)
     {
+        ArgumentNullException.ThrowIfNull(httpClientFactory);
+        ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(logger);
+
         _httpClient = httpClientFactory.CreateClient("Infisical");
-        _options = options.Value;
+        _options = options.Value ?? throw new ArgumentException("Infisical options value is missing", nameof(options));
         _logger = logger;
+
+        if (string.IsNullOrWhiteSpace(_options.HostUrl))
+        {
+            throw new ArgumentException("Infisical HostUrl is not configured", nameof(options));
+        }
 
         // Configure base URL
         _httpClient.BaseAddress = new Uri(_options.HostUrl);
@@ -37,7 +46,11 @@ public class InfisicalSecretsClient : IInfisicalClient
         string secretPath = "/",
         CancellationToken cancellationToken = default)
     {
-        await EnsureAuthenticatedAsync(cancellationToken);
+        ArgumentNullException.ThrowIfNull(secretName);
+        ArgumentNullException.ThrowIfNull(environment);
+        ArgumentNullException.ThrowIfNull(secretPath);
+
+        await EnsureAuthenticatedAsync(cancellationToken).ConfigureAwait(false);
 
         try
         {
@@ -50,14 +63,15 @@ public class InfisicalSecretsClient : IInfisicalClient
                       $"&environment={environment}" +
                       $"&secretPath={Uri.EscapeDataString(secretPath)}";
 
+            var token = _accessToken ?? throw new InvalidOperationException("Infisical client not authenticated");
             _httpClient.DefaultRequestHeaders.Authorization =
-                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _accessToken);
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-            var response = await _httpClient.GetAsync(url, cancellationToken);
+            var response = await _httpClient.GetAsync(url, cancellationToken).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
 
             var secretResponse = await response.Content
-                .ReadFromJsonAsync<InfisicalSecretResponse>(cancellationToken);
+                .ReadFromJsonAsync<InfisicalSecretResponse>(cancellationToken).ConfigureAwait(false);
 
             if (secretResponse?.Secret == null)
             {
@@ -73,18 +87,20 @@ public class InfisicalSecretsClient : IInfisicalClient
         }
         catch (HttpRequestException ex)
         {
-            _logger.LogError(ex,
-                "HTTP error fetching secret {SecretName}: {StatusCode}",
-                secretName, ex.StatusCode);
-            throw;
+            // Capture specific status code context if needed, but rely on upstream logging to avoid duplication (S2139)
+            // Rethrowing allows the caller (e.g. startup) to handle the failure appropriately
+            throw new InvalidOperationException($"HTTP error fetching secret {secretName}: {ex.StatusCode}", ex);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: EXCEPTION WRAPPING PATTERN - Domain boundary
+        // Wraps infrastructure exceptions (JSON, network, unexpected) into domain exception.
+        // Preserves inner exception for debugging. HttpRequestException caught separately.
         catch (Exception ex)
         {
-            _logger.LogError(ex,
-                "Failed to fetch secret {SecretName}",
-                secretName);
-            throw;
+            // Wrap in a more meaningful exception for the domain
+            throw new InvalidOperationException($"Failed to fetch secret {secretName}", ex);
         }
+#pragma warning restore CA1031
     }
 
     public async Task<SecretVersion[]> GetSecretVersionsAsync(
@@ -93,7 +109,11 @@ public class InfisicalSecretsClient : IInfisicalClient
         string secretPath = "/",
         CancellationToken cancellationToken = default)
     {
-        await EnsureAuthenticatedAsync(cancellationToken);
+        ArgumentNullException.ThrowIfNull(secretName);
+        ArgumentNullException.ThrowIfNull(environment);
+        ArgumentNullException.ThrowIfNull(secretPath);
+
+        await EnsureAuthenticatedAsync(cancellationToken).ConfigureAwait(false);
 
         try
         {
@@ -106,14 +126,15 @@ public class InfisicalSecretsClient : IInfisicalClient
                       $"&environment={environment}" +
                       $"&secretPath={Uri.EscapeDataString(secretPath)}";
 
+            var token = _accessToken ?? throw new InvalidOperationException("Infisical client not authenticated");
             _httpClient.DefaultRequestHeaders.Authorization =
-                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _accessToken);
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-            var response = await _httpClient.GetAsync(url, cancellationToken);
+            var response = await _httpClient.GetAsync(url, cancellationToken).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
 
             var versionResponse = await response.Content
-                .ReadFromJsonAsync<InfisicalVersionsResponse>(cancellationToken);
+                .ReadFromJsonAsync<InfisicalVersionsResponse>(cancellationToken).ConfigureAwait(false);
 
             if (versionResponse?.SecretVersions == null || versionResponse.SecretVersions.Length == 0)
             {
@@ -139,16 +160,19 @@ public class InfisicalSecretsClient : IInfisicalClient
         }
         catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
-            _logger.LogWarning("Version history not supported or secret {SecretName} not found", secretName);
+            _logger.LogWarning(ex, "Version history not supported or secret {SecretName} not found", secretName);
             return Array.Empty<SecretVersion>();
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: EXCEPTION WRAPPING PATTERN - Domain boundary
+        // Wraps infrastructure exceptions into domain exception. Preserves inner exception.
+        // HttpRequestException with NotFound caught separately above.
         catch (Exception ex)
         {
-            _logger.LogError(ex,
-                "Failed to fetch version history for {SecretName}",
-                secretName);
-            throw;
+            // S2139: Do not log and rethrow.
+            throw new InvalidOperationException($"Failed to fetch version history for {secretName}", ex);
         }
+#pragma warning restore CA1031
     }
 
     public async Task<bool> HealthCheckAsync(CancellationToken cancellationToken = default)
@@ -157,15 +181,16 @@ public class InfisicalSecretsClient : IInfisicalClient
         {
             _logger.LogDebug("Performing Infisical health check");
 
-            await EnsureAuthenticatedAsync(cancellationToken);
+            await EnsureAuthenticatedAsync(cancellationToken).ConfigureAwait(false);
 
             // Test connection by fetching project info
             var url = $"/api/v1/workspace/{_options.ProjectId}";
 
+            var token = _accessToken ?? throw new InvalidOperationException("Infisical client not authenticated");
             _httpClient.DefaultRequestHeaders.Authorization =
-                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _accessToken);
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-            var response = await _httpClient.GetAsync(url, cancellationToken);
+            var response = await _httpClient.GetAsync(url, cancellationToken).ConfigureAwait(false);
 
             if (response.IsSuccessStatusCode)
             {
@@ -178,11 +203,25 @@ public class InfisicalSecretsClient : IInfisicalClient
                 response.StatusCode);
             return false;
         }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogWarning(ex, "Infisical health check failed - HTTP error");
+            return false; // Health check failure, return false
+        }
+        catch (TaskCanceledException ex)
+        {
+            _logger.LogWarning(ex, "Infisical health check timed out");
+            return false; // Timeout is unhealthy
+        }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: HEALTH CHECK PATTERN - Non-critical monitoring
+        // Health check failures return false; don't throw. Specific HTTP/timeout caught separately.
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Infisical health check exception");
-            return false;
+            _logger.LogError(ex, "Unexpected error during Infisical health check");
+            return false; // Unexpected errors indicate unhealthy state
         }
+#pragma warning restore CA1031
     }
 
     private async Task EnsureAuthenticatedAsync(CancellationToken cancellationToken)
@@ -197,6 +236,11 @@ public class InfisicalSecretsClient : IInfisicalClient
         {
             _logger.LogInformation("Authenticating with Infisical Universal Auth");
 
+            if (string.IsNullOrWhiteSpace(_options.ClientId) || string.IsNullOrWhiteSpace(_options.ClientSecret))
+            {
+                throw new InvalidOperationException("Infisical client credentials are not configured");
+            }
+
             var loginRequest = new
             {
                 clientId = _options.ClientId,
@@ -206,12 +250,12 @@ public class InfisicalSecretsClient : IInfisicalClient
             var response = await _httpClient.PostAsJsonAsync(
                 "/api/v1/auth/universal-auth/login",
                 loginRequest,
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
 
             response.EnsureSuccessStatusCode();
 
             var authResponse = await response.Content
-                .ReadFromJsonAsync<InfisicalAuthResponse>(cancellationToken);
+                .ReadFromJsonAsync<InfisicalAuthResponse>(cancellationToken).ConfigureAwait(false);
 
             if (authResponse?.AccessToken == null)
             {
@@ -225,12 +269,26 @@ public class InfisicalSecretsClient : IInfisicalClient
                 "Successfully authenticated with Infisical (token expires at {ExpiresAt})",
                 _tokenExpiresAt);
         }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "HTTP error authenticating with Infisical");
+            throw; // Rethrow - authentication failure prevents secret access
+        }
+        catch (TaskCanceledException ex)
+        {
+            _logger.LogError(ex, "Timeout authenticating with Infisical");
+            throw; // Rethrow - authentication timeout prevents secret access
+        }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: EXCEPTION WRAPPING PATTERN - Authentication boundary
+        // Wraps infrastructure exceptions into domain exception. Specific HTTP/timeout caught separately.
+        // Authentication failures must propagate to prevent secret access with invalid credentials.
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Infisical authentication failed");
-            throw new InvalidOperationException(
-                "Failed to authenticate with Infisical. Check CLIENT_ID and CLIENT_SECRET.", ex);
+            _logger.LogError(ex, "Unexpected error authenticating with Infisical");
+            throw new InvalidOperationException("Failed to authenticate with Infisical", ex);
         }
+#pragma warning restore CA1031
     }
 }
 

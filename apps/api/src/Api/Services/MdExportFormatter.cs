@@ -8,7 +8,7 @@ namespace Api.Services;
 /// <summary>
 /// Exports chat conversations as Markdown with proper formatting.
 /// </summary>
-public class MdExportFormatter : IExportFormatter
+internal class MdExportFormatter : IExportFormatter
 {
     private readonly ILogger<MdExportFormatter>? _logger;
 
@@ -58,7 +58,7 @@ public class MdExportFormatter : IExportFormatter
 
                 // Parse and display citations if present
                 var citations = ParseCitations(log.MetadataJson);
-                if (citations.Any())
+                if (citations.Count > 0)
                 {
                     sb.AppendLine("**Citations:**");
                     sb.AppendLine();
@@ -124,12 +124,11 @@ public class MdExportFormatter : IExportFormatter
         try
         {
             var metadata = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(metadataJson);
-            if (metadata == null || !metadata.ContainsKey("citations"))
+            if (metadata == null || !metadata.TryGetValue("citations", out var citationsElement))
             {
                 return new List<CitationMetadata>();
             }
 
-            var citationsElement = metadata["citations"];
             if (citationsElement.ValueKind != JsonValueKind.Array)
             {
                 return new List<CitationMetadata>();

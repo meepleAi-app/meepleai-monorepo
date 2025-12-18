@@ -8,7 +8,7 @@ namespace Api.Services;
 /// Redis-based cache for session validation (Phase 2 optimization)
 /// Reduces database queries for session validation by ~90%
 /// </summary>
-public class SessionCacheService : ISessionCacheService
+internal class SessionCacheService : ISessionCacheService
 {
     private readonly IConnectionMultiplexer _redis;
     private readonly ILogger<SessionCacheService> _logger;
@@ -21,7 +21,7 @@ public class SessionCacheService : ISessionCacheService
         _logger = logger;
     }
 
-    public async Task InvalidateAsync(string tokenHash, CancellationToken ct = default)
+    public async Task InvalidateAsync(string tokenHash, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -48,7 +48,7 @@ public class SessionCacheService : ISessionCacheService
         }
     }
 
-    public async Task InvalidateUserSessionsAsync(Guid userId, CancellationToken ct = default)
+    public async Task InvalidateUserSessionsAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         try
         {

@@ -7,7 +7,7 @@ namespace Api.Services;
 /// Local language detection service using lightweight heuristics.
 /// Supports offline detection for 5 languages without external API calls.
 /// </summary>
-public class LanguageDetectionService : ILanguageDetectionService
+internal class LanguageDetectionService : ILanguageDetectionService
 {
     private static readonly string[] SupportedLanguages = { "en", "it", "de", "fr", "es" };
     // FIX MA0009: Add timeout to prevent ReDoS attacks
@@ -184,13 +184,13 @@ public class LanguageDetectionService : ILanguageDetectionService
         }
 
         // Avoid oscillation when scores are similar by preferring English unless another language is clearly dominant.
-        if (!string.Equals(best.Key, "en", StringComparison.Ordinal) && scores.TryGetValue("en", out var englishScore))
+        if (!string.Equals(best.Key, "en", StringComparison.Ordinal) &&
+            scores.TryGetValue("en", out var englishScore) &&
+            best.Value - englishScore < 1.0)
         {
-            if (best.Value - englishScore < 1.0)
-            {
-                return englishScore >= best.Value ? "en" : best.Key;
-            }
+            return englishScore >= best.Value ? "en" : best.Key;
         }
+
 
         return best.Key;
     }

@@ -6,7 +6,7 @@ namespace Api.SharedKernel.Domain.Events;
 /// Base class for integration events providing common properties.
 /// All integration events should inherit from this class.
 /// </summary>
-public abstract class IntegrationEventBase : IIntegrationEvent
+internal abstract class IntegrationEventBase : IIntegrationEvent
 {
     /// <summary>
     /// Gets the date and time when this event occurred.
@@ -31,6 +31,7 @@ public abstract class IntegrationEventBase : IIntegrationEvent
     {
         EventId = Guid.NewGuid();
         OccurredAt = DateTime.UtcNow;
-        SourceContext = sourceContext ?? throw new ArgumentNullException(nameof(sourceContext));
+        ArgumentNullException.ThrowIfNull(sourceContext);
+        SourceContext = sourceContext;
     }
 }

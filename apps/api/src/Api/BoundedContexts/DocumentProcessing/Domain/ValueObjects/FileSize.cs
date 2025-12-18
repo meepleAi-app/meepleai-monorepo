@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 /// Represents a valid file size (minimum 1 byte).
 /// Note: Maximum size validation is a business rule enforced by PdfValidationDomainService.
 /// </summary>
-public sealed class FileSize : ValueObject
+internal sealed class FileSize : ValueObject
 {
     /// <summary>
     /// Size in bytes (minimum 1)
@@ -137,7 +137,13 @@ public sealed class FileSize : ValueObject
     /// <summary>
     /// Implicit conversion to long for convenience.
     /// </summary>
-    public static implicit operator long(FileSize fileSize) => fileSize.Bytes;
+#pragma warning disable S3877 // Null check is necessary for safety in implicit conversion
+    public static implicit operator long(FileSize fileSize)
+    {
+        ArgumentNullException.ThrowIfNull(fileSize);
+        return fileSize.Bytes;
+    }
+#pragma warning restore S3877
 
     /// <summary>
     /// Common file sizes as static constants.
@@ -145,4 +151,9 @@ public sealed class FileSize : ValueObject
     public static readonly FileSize OneByte = new(1);
     public static readonly FileSize OneKilobyte = new(1024);
     public static readonly FileSize OneMegabyte = new(1024 * 1024);
+
+    public long ToInt64()
+    {
+        throw new NotSupportedException("Use implicit conversion to long instead");
+    }
 }

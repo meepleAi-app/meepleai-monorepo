@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.WorkflowIntegration.Infrastructure.Persistence;
 
-public class N8NConfigurationRepository : RepositoryBase, IN8NConfigurationRepository
+internal class N8NConfigurationRepository : RepositoryBase, IN8NConfigurationRepository
 {
     public N8NConfigurationRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
         : base(dbContext, eventCollector)

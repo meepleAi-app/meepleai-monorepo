@@ -9,13 +9,13 @@ namespace Api.BoundedContexts.SystemConfiguration.Application.Handlers;
 /// Note: This is a simplified implementation using PreviousValue field.
 /// For full audit trail, a separate configuration_history table would be needed.
 /// </summary>
-public class GetConfigHistoryQueryHandler : IQueryHandler<GetConfigHistoryQuery, IReadOnlyList<ConfigurationHistoryDto>>
+internal class GetConfigHistoryQueryHandler : IQueryHandler<GetConfigHistoryQuery, IReadOnlyList<ConfigurationHistoryDto>>
 {
     private readonly IConfigurationRepository _configurationRepository;
 
     public GetConfigHistoryQueryHandler(IConfigurationRepository configurationRepository)
     {
-        _configurationRepository = configurationRepository;
+        _configurationRepository = configurationRepository ?? throw new ArgumentNullException(nameof(configurationRepository));
     }
 
     public async Task<IReadOnlyList<ConfigurationHistoryDto>> Handle(GetConfigHistoryQuery query, CancellationToken cancellationToken)

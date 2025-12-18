@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Administration.Application.Handlers;
 /// Handler for ResolveAlertCommand.
 /// Delegates to AlertingService (service will be refactored in future iterations).
 /// </summary>
-public class ResolveAlertCommandHandler : ICommandHandler<ResolveAlertCommand, bool>
+internal class ResolveAlertCommandHandler : ICommandHandler<ResolveAlertCommand, bool>
 {
     private readonly IAlertingService _alertingService;
 
@@ -19,6 +19,7 @@ public class ResolveAlertCommandHandler : ICommandHandler<ResolveAlertCommand, b
 
     public async Task<bool> Handle(ResolveAlertCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         return await _alertingService.ResolveAlertAsync(command.AlertType, cancellationToken).ConfigureAwait(false);
     }
 }

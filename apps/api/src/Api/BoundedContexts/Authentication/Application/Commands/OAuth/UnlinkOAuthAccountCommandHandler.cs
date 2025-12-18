@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands.OAuth;
 /// Handles unlinking an OAuth provider account from a user.
 /// Validates lockout prevention rules via domain logic.
 /// </summary>
-public sealed class UnlinkOAuthAccountCommandHandler : ICommandHandler<UnlinkOAuthAccountCommand, UnlinkOAuthAccountResult>
+internal sealed class UnlinkOAuthAccountCommandHandler : ICommandHandler<UnlinkOAuthAccountCommand, UnlinkOAuthAccountResult>
 {
     private readonly IUserRepository _userRepository;
     private readonly IOAuthAccountRepository _oauthAccountRepository;
@@ -31,6 +31,7 @@ public sealed class UnlinkOAuthAccountCommandHandler : ICommandHandler<UnlinkOAu
 
     public async Task<UnlinkOAuthAccountResult> Handle(UnlinkOAuthAccountCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         try
         {
             // Load user by ID
@@ -94,6 +95,11 @@ public sealed class UnlinkOAuthAccountCommandHandler : ICommandHandler<UnlinkOAu
                 ErrorMessage = ex.Message
             };
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: COMMAND HANDLER PATTERN - CQRS handler boundary
+        // Specific exceptions (ValidationException, DomainException) caught separately above.
+        // Generic catch handles unexpected infrastructure failures (DB, network, memory)
+        // to prevent exception propagation to API layer. Returns Result<T> pattern.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error while unlinking OAuth account for user {UserId}", command.UserId);
@@ -103,5 +109,6 @@ public sealed class UnlinkOAuthAccountCommandHandler : ICommandHandler<UnlinkOAu
                 ErrorMessage = "An unexpected error occurred while unlinking the OAuth account"
             };
         }
+#pragma warning restore CA1031
     }
 }

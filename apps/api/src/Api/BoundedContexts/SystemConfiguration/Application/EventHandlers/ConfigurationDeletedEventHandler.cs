@@ -10,17 +10,17 @@ namespace Api.BoundedContexts.SystemConfiguration.Application.EventHandlers;
 /// Handler for ConfigurationDeletedEvent domain event.
 /// Automatically creates audit log entry and invalidates cache via base class.
 /// </summary>
-public sealed class ConfigurationDeletedEventHandler : DomainEventHandlerBase<ConfigurationDeletedEvent>
+internal sealed class ConfigurationDeletedEventHandler : DomainEventHandlerBase<ConfigurationDeletedEvent>
 {
     private readonly IHybridCacheService _cache;
 
     public ConfigurationDeletedEventHandler(
         MeepleAiDbContext dbContext,
         IHybridCacheService cache,
-        ILogger<DomainEventHandlerBase<ConfigurationDeletedEvent>> logger)
+        ILogger<ConfigurationDeletedEventHandler> logger)
         : base(dbContext, logger)
     {
-        _cache = cache;
+        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
     }
 
     protected override async Task HandleEventAsync(ConfigurationDeletedEvent domainEvent, CancellationToken cancellationToken)

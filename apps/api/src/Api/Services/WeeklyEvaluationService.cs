@@ -11,7 +11,7 @@ namespace Api.Services;
 /// Configuration for weekly automated quality evaluation.
 /// BGAI-042: Weekly automated quality evaluation job.
 /// </summary>
-public class WeeklyEvaluationConfiguration
+internal class WeeklyEvaluationConfiguration
 {
     /// <summary>Evaluation interval in days (default: 7 days = weekly)</summary>
     public int IntervalDays { get; set; } = 7;
@@ -29,7 +29,7 @@ public class WeeklyEvaluationConfiguration
     public string? RagDatasetPath { get; set; }
 
     /// <summary>Enable RAG evaluation (default: false, requires dataset)</summary>
-    public bool EnableRagEvaluation { get; set; } = false;
+    public bool EnableRagEvaluation { get; set; }
 
     /// <summary>Quality thresholds for alerts</summary>
     public QualityThresholds Thresholds { get; set; } = new();
@@ -38,7 +38,7 @@ public class WeeklyEvaluationConfiguration
 /// <summary>
 /// Quality thresholds for triggering alerts.
 /// </summary>
-public class QualityThresholds
+internal class QualityThresholds
 {
     /// <summary>Maximum acceptable low-quality percentage (default: 10%)</summary>
     public double MaxLowQualityPercentage { get; set; } = 10.0;
@@ -61,7 +61,7 @@ public class QualityThresholds
 /// - Alert generation on quality degradation
 /// - Comprehensive logging and monitoring
 /// </summary>
-public class WeeklyEvaluationService : BackgroundService
+internal class WeeklyEvaluationService : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<WeeklyEvaluationService> _logger;
@@ -74,9 +74,12 @@ public class WeeklyEvaluationService : BackgroundService
         IOptions<WeeklyEvaluationConfiguration> config,
         TimeProvider? timeProvider = null)
     {
-        _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _config = config?.Value ?? throw new ArgumentNullException(nameof(config));
+        ArgumentNullException.ThrowIfNull(scopeFactory);
+        _scopeFactory = scopeFactory;
+        ArgumentNullException.ThrowIfNull(logger);
+        _logger = logger;
+        ArgumentNullException.ThrowIfNull(config);
+        _config = config.Value;
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
@@ -130,9 +133,9 @@ public class WeeklyEvaluationService : BackgroundService
             {
                 await RunWeeklyEvaluationAsync(stoppingToken).ConfigureAwait(false);
             }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            catch (OperationCanceledException ex) when (stoppingToken.IsCancellationRequested)
             {
-                _logger.LogInformation("Weekly evaluation cancelled (application shutting down)");
+                _logger.LogInformation(ex, "Weekly evaluation cancelled (application shutting down)");
                 break;
             }
 #pragma warning disable CA1031 // Do not catch general exception types
@@ -246,7 +249,7 @@ public class WeeklyEvaluationService : BackgroundService
                 dataset,
                 topK: 10,
                 thresholds: null,
-                ct: cancellationToken).ConfigureAwait(false);
+                cancellationToken: cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "RAG evaluation completed: MRR={MRR:F4}, P@5={P5:F4}, Latency p95={Latency:F2}ms",

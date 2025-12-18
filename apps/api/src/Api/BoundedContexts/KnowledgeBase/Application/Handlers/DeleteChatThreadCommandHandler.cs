@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// Handler for DeleteChatThreadCommand.
 /// Deletes a chat thread after verifying user ownership.
 /// </summary>
-public class DeleteChatThreadCommandHandler : ICommandHandler<DeleteChatThreadCommand, bool>
+internal class DeleteChatThreadCommandHandler : ICommandHandler<DeleteChatThreadCommand, bool>
 {
     private readonly IChatThreadRepository _threadRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -27,6 +27,7 @@ public class DeleteChatThreadCommandHandler : ICommandHandler<DeleteChatThreadCo
 
     public async Task<bool> Handle(DeleteChatThreadCommand request, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         // Load thread
         var thread = await _threadRepository.GetByIdAsync(request.ThreadId, cancellationToken).ConfigureAwait(false);
         if (thread == null)

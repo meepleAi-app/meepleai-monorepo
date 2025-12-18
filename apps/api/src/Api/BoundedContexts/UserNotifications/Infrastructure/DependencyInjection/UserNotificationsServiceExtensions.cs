@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.UserNotifications.Infrastructure.DependencyInjecti
 /// Dependency injection extensions for UserNotifications bounded context.
 /// Issue #2053: User notifications system.
 /// </summary>
-public static class UserNotificationsServiceExtensions
+internal static class UserNotificationsServiceExtensions
 {
     /// <summary>
     /// Registers all UserNotifications bounded context services.

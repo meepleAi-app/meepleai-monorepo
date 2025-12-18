@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 /// <summary>
 /// Command to add a message to an existing chat thread.
 /// </summary>
-public record AddMessageCommand(
+internal record AddMessageCommand(
     Guid ThreadId,
     string Content,
     string Role

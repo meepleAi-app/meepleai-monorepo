@@ -13,64 +13,64 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 /// <summary>
 /// Repository for Agent aggregate in KnowledgeBase bounded context.
 /// </summary>
-public class AgentRepository : RepositoryBase, IAgentRepository
+internal class AgentRepository : RepositoryBase, IAgentRepository
 {
     public AgentRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
         : base(dbContext, eventCollector)
     {
     }
 
-    public async Task<Agent?> GetByIdAsync(Guid id, CancellationToken ct = default)
+    public async Task<Agent?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var entity = await DbContext.Set<AgentEntity>()
             .AsNoTracking()
-            .FirstOrDefaultAsync(a => a.Id == id, ct).ConfigureAwait(false);
+            .FirstOrDefaultAsync(a => a.Id == id, cancellationToken).ConfigureAwait(false);
 
         return entity != null ? KnowledgeBaseMappers.ToDomain(entity) : null;
     }
 
-    public async Task<Agent?> GetByNameAsync(string name, CancellationToken ct = default)
+    public async Task<Agent?> GetByNameAsync(string name, CancellationToken cancellationToken = default)
     {
         var entity = await DbContext.Set<AgentEntity>()
             .AsNoTracking()
-            .FirstOrDefaultAsync(a => a.Name == name, ct).ConfigureAwait(false);
+            .FirstOrDefaultAsync(a => a.Name == name, cancellationToken).ConfigureAwait(false);
 
         return entity != null ? KnowledgeBaseMappers.ToDomain(entity) : null;
     }
 
-    public async Task<List<Agent>> GetAllAsync(CancellationToken ct = default)
+    public async Task<List<Agent>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         var entities = await DbContext.Set<AgentEntity>()
             .AsNoTracking()
             .OrderBy(a => a.Name)
-            .ToListAsync(ct).ConfigureAwait(false);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return entities.Select(KnowledgeBaseMappers.ToDomain).ToList();
     }
 
-    public async Task<List<Agent>> GetAllActiveAsync(CancellationToken ct = default)
+    public async Task<List<Agent>> GetAllActiveAsync(CancellationToken cancellationToken = default)
     {
         var entities = await DbContext.Set<AgentEntity>()
             .AsNoTracking()
             .Where(a => a.IsActive)
             .OrderBy(a => a.Name)
-            .ToListAsync(ct).ConfigureAwait(false);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return entities.Select(KnowledgeBaseMappers.ToDomain).ToList();
     }
 
-    public async Task<List<Agent>> GetByTypeAsync(AgentType type, CancellationToken ct = default)
+    public async Task<List<Agent>> GetByTypeAsync(AgentType type, CancellationToken cancellationToken = default)
     {
         var entities = await DbContext.Set<AgentEntity>()
             .AsNoTracking()
             .Where(a => a.Type == type.Value)
             .OrderBy(a => a.Name)
-            .ToListAsync(ct).ConfigureAwait(false);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return entities.Select(KnowledgeBaseMappers.ToDomain).ToList();
     }
 
-    public async Task<List<Agent>> GetIdleAgentsAsync(CancellationToken ct = default)
+    public async Task<List<Agent>> GetIdleAgentsAsync(CancellationToken cancellationToken = default)
     {
         var sevenDaysAgo = DateTime.UtcNow.AddDays(-7);
 
@@ -78,20 +78,20 @@ public class AgentRepository : RepositoryBase, IAgentRepository
             .AsNoTracking()
             .Where(a => a.LastInvokedAt == null || a.LastInvokedAt < sevenDaysAgo)
             .OrderBy(a => a.LastInvokedAt)
-            .ToListAsync(ct).ConfigureAwait(false);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return entities.Select(KnowledgeBaseMappers.ToDomain).ToList();
     }
 
-    public async Task AddAsync(Agent agent, CancellationToken ct = default)
+    public async Task AddAsync(Agent agent, CancellationToken cancellationToken = default)
     {
         CollectDomainEvents(agent);
         var entity = KnowledgeBaseMappers.ToEntity(agent);
-        await DbContext.Set<AgentEntity>().AddAsync(entity, ct).ConfigureAwait(false);
-        await DbContext.SaveChangesAsync(ct).ConfigureAwait(false);
+        await DbContext.Set<AgentEntity>().AddAsync(entity, cancellationToken).ConfigureAwait(false);
+        await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task UpdateAsync(Agent agent, CancellationToken ct = default)
+    public async Task UpdateAsync(Agent agent, CancellationToken cancellationToken = default)
     {
         CollectDomainEvents(agent);
         var entity = KnowledgeBaseMappers.ToEntity(agent);
@@ -105,24 +105,25 @@ public class AgentRepository : RepositoryBase, IAgentRepository
         }
 
         DbContext.Set<AgentEntity>().Update(entity);
-        await DbContext.SaveChangesAsync(ct).ConfigureAwait(false);
+        await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task DeleteAsync(Guid id, CancellationToken ct = default)
+    public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var entity = await DbContext.Set<AgentEntity>()
-            .FirstOrDefaultAsync(a => a.Id == id, ct).ConfigureAwait(false);
+            .FirstOrDefaultAsync(a => a.Id == id, cancellationToken).ConfigureAwait(false);
 
         if (entity != null)
         {
             DbContext.Set<AgentEntity>().Remove(entity);
-            await DbContext.SaveChangesAsync(ct).ConfigureAwait(false);
+            await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
     }
 
-    public async Task<bool> ExistsAsync(string name, CancellationToken ct = default)
+    public async Task<bool> ExistsAsync(string name, CancellationToken cancellationToken = default)
     {
         return await DbContext.Set<AgentEntity>()
-            .AnyAsync(a => a.Name == name, ct).ConfigureAwait(false);
+            .AnyAsync(a => a.Name == name, cancellationToken).ConfigureAwait(false);
     }
 }
+

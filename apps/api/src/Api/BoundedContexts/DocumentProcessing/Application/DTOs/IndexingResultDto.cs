@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 /// <summary>
 /// Result of PDF indexing operation
 /// </summary>
-public record IndexingResultDto
+internal record IndexingResultDto
 {
     public bool Success { get; init; }
     public string? ErrorMessage { get; init; }

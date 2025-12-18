@@ -6,7 +6,7 @@ namespace Api.Services.Pdf;
 /// <summary>
 /// Service responsible for identifying table regions in PDF pages
 /// </summary>
-public class TableDetectionService : ITableDetectionService
+internal class TableDetectionService : ITableDetectionService
 {
     private readonly ITableCellParser _cellParser;
 
@@ -25,166 +25,221 @@ public class TableDetectionService : ITableDetectionService
 
     public List<PdfTable> DetectTablesInPage(List<PositionedTextLine> lines, int pageNum)
     {
-        var tables = new List<PdfTable>();
-
         if (lines.Count == 0)
         {
-            return tables;
+            return new List<PdfTable>();
         }
 
-        var currentRows = new List<string[]>();
-        IList<ColumnBoundary>? currentBoundaries = null;
-        var tableStartLine = -1;
-        var lastLineWasBlank = false;
-
-        // S127: Use while loop to avoid modifying counter in body
+        var context = new DetectionContext(pageNum);
         int i = 0;
+
         while (i < lines.Count)
         {
             var line = lines[i];
-            var trimmedText = line.GetTrimmedText();
+            var shouldAdvance = ProcessLine(line, context);
 
-            if (string.IsNullOrWhiteSpace(trimmedText))
+            if (shouldAdvance)
             {
-                if (currentBoundaries != null && currentBoundaries.Count > 0 && currentRows.Count > 0)
-                {
-                    currentRows.Add(Enumerable.Repeat(string.Empty, currentBoundaries.Count).ToArray());
-                }
-                else
-                {
-                    FinalizeCurrentTable();
-                }
-
-                lastLineWasBlank = true;
-                i++; // Advance to next line
-                continue;
+                i++;
             }
-
-            if (currentBoundaries != null && lastLineWasBlank)
-            {
-                var previewSplit = _cellParser.SplitIntoColumns(line, null);
-                var previewColumnCount = Math.Max(previewSplit.Columns.Count, previewSplit.Boundaries.Count);
-                var hasBlankRowSentinel = currentRows.Count > 0 && currentRows[^1].All(string.IsNullOrWhiteSpace);
-                var previewNonEmptyColumns = previewSplit.Columns.Count(value => !string.IsNullOrWhiteSpace(value));
-                var requiredPreviewColumns = currentBoundaries.Count > 0
-                    ? Math.Max(2, (currentBoundaries.Count + 1) / 2)
-                    : 0;
-
-                if (previewColumnCount > 0 && previewColumnCount < currentBoundaries.Count)
-                {
-                    FinalizeCurrentTable();
-                    // Don't increment i - reprocess this line
-                    lastLineWasBlank = false;
-                    continue;
-                }
-
-                if (hasBlankRowSentinel && currentRows.Count > 1 && previewNonEmptyColumns >= requiredPreviewColumns)
-                {
-                    FinalizeCurrentTable();
-                    // Don't increment i - reprocess this line
-                    lastLineWasBlank = false;
-                    continue;
-                }
-            }
-
-            lastLineWasBlank = false;
-
-            if (currentBoundaries == null)
-            {
-                var split = _cellParser.SplitIntoColumns(line, null);
-
-                if (split.Columns.Count >= 2)
-                {
-                    currentBoundaries = split.Boundaries;
-                    tableStartLine = i;
-                    currentRows.Add(NormalizeRow(split.Columns, currentBoundaries.Count));
-                }
-                else
-                {
-                    FinalizeCurrentTable();
-                }
-            }
-            else
-            {
-                if (currentBoundaries.Count > 0 && line.Characters.Count > 0)
-                {
-                    var rowStart = line.Characters.Min(c => c.X);
-                    var rowEnd = line.Characters.Max(c => c.EndX);
-                    var firstBoundary = currentBoundaries[0];
-                    var lastBoundary = currentBoundaries[^1];
-                    var driftTolerance = Math.Max(8f, line.GetAverageCharacterWidth() * 3f);
-
-                    var extendsLeft = rowStart < firstBoundary.Start - driftTolerance;
-                    var extendsRight = rowEnd > lastBoundary.End + driftTolerance;
-
-                    if (extendsLeft || extendsRight)
-                    {
-                        FinalizeCurrentTable();
-                        // Don't increment i - reprocess this line
-                        continue;
-                    }
-                }
-
-                var split = _cellParser.SplitIntoColumns(line, currentBoundaries);
-                var boundariesForRow = split.Boundaries;
-                var columnCount = boundariesForRow.Count;
-
-                if (columnCount > currentBoundaries.Count)
-                {
-                    for (int r = 0; r < currentRows.Count; r++)
-                    {
-                        currentRows[r] = NormalizeRow(currentRows[r], columnCount);
-                    }
-                }
-
-                currentBoundaries = boundariesForRow;
-
-                var normalizedRow = NormalizeRow(split.Columns, columnCount);
-                var hasContent = normalizedRow.Any(value => !string.IsNullOrWhiteSpace(value));
-
-                if (hasContent)
-                {
-                    currentRows.Add(normalizedRow);
-                }
-                else
-                {
-                    FinalizeCurrentTable();
-                }
-            }
-
-            i++; // Advance to next line
         }
 
-        FinalizeCurrentTable();
+        FinalizeCurrentTable(context);
 
-        return tables;
+        return context.Tables;
+    }
 
-        void FinalizeCurrentTable()
+    private bool ProcessLine(PositionedTextLine line, DetectionContext context)
+    {
+        var trimmedText = line.GetTrimmedText();
+
+        if (string.IsNullOrWhiteSpace(trimmedText))
         {
-            TrimTrailingEmptyRows();
-
-            if (currentRows.Count > 1 && currentBoundaries != null)
-            {
-                tables.Add(CreateTableFromRows(
-                    currentRows,
-                    pageNum,
-                    tableStartLine >= 0 ? tableStartLine : 0,
-                    currentBoundaries.Count));
-            }
-
-            currentRows.Clear();
-            currentBoundaries = null;
-            tableStartLine = -1;
-            lastLineWasBlank = false;
+            HandleBlankLine(context);
+            return true; // Advance to next line
         }
 
-        void TrimTrailingEmptyRows()
+        if (context.CurrentBoundaries != null && context.LastLineWasBlank)
         {
-            while (currentRows.Count > 0 && currentRows[^1].All(value => string.IsNullOrWhiteSpace(value)))
+            if (IsTableInterrupted(line, context))
             {
-                currentRows.RemoveAt(currentRows.Count - 1);
+                FinalizeCurrentTable(context);
+                context.LastLineWasBlank = false;
+                return false; // Don't increment i - reprocess this line
             }
         }
+
+        context.LastLineWasBlank = false;
+
+        if (context.CurrentBoundaries == null)
+        {
+            TryStartTable(line, context, context.CurrentLineIndex);
+        }
+        else
+        {
+            if (ShouldTerminateTable(line, context))
+            {
+                FinalizeCurrentTable(context);
+                return false; // Don't increment i - reprocess this line
+            }
+
+            ProcessTableContent(line, context);
+        }
+
+        context.CurrentLineIndex++;
+        return true;
+    }
+
+    private void HandleBlankLine(DetectionContext context)
+    {
+        if (context.CurrentBoundaries != null && context.CurrentBoundaries.Count > 0 && context.CurrentRows.Count > 0)
+        {
+            context.CurrentRows.Add(Enumerable.Repeat(string.Empty, context.CurrentBoundaries.Count).ToArray());
+        }
+        else
+        {
+            FinalizeCurrentTable(context);
+        }
+
+        context.LastLineWasBlank = true;
+        context.CurrentLineIndex++;
+    }
+
+    private bool IsTableInterrupted(PositionedTextLine line, DetectionContext context)
+    {
+        var previewSplit = _cellParser.SplitIntoColumns(line, null);
+        var previewColumnCount = Math.Max(previewSplit.Columns.Count, previewSplit.Boundaries.Count);
+        var hasBlankRowSentinel = context.CurrentRows.Count > 0 && context.CurrentRows[^1].All(string.IsNullOrWhiteSpace);
+
+        // Count non-empty columns to avoid false positives (e.g. page numbers)
+        var previewNonEmptyColumns = previewSplit.Columns.Count(value => !string.IsNullOrWhiteSpace(value));
+
+        // If we have a running table, strict requirements for continuing after a break
+        var requiredPreviewColumns = context.CurrentBoundaries!.Count > 0
+            ? Math.Max(2, (context.CurrentBoundaries.Count + 1) / 2)
+            : 0;
+
+        if (previewColumnCount > 0 && previewColumnCount < context.CurrentBoundaries.Count)
+        {
+            return true;
+        }
+
+        if (hasBlankRowSentinel && context.CurrentRows.Count > 1 && previewNonEmptyColumns >= requiredPreviewColumns)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private void TryStartTable(PositionedTextLine line, DetectionContext context, int lineIndex)
+    {
+        var split = _cellParser.SplitIntoColumns(line, null);
+
+        if (split.Columns.Count >= 2)
+        {
+            context.CurrentBoundaries = split.Boundaries;
+            context.TableStartLine = lineIndex;
+            context.CurrentRows.Add(NormalizeRow(split.Columns, context.CurrentBoundaries.Count));
+        }
+        else
+        {
+            FinalizeCurrentTable(context);
+        }
+    }
+
+    private bool ShouldTerminateTable(PositionedTextLine line, DetectionContext context)
+    {
+        if (context.CurrentBoundaries!.Count > 0 && line.Characters.Count > 0)
+        {
+            var rowStart = line.Characters.Min(c => c.X);
+            var rowEnd = line.Characters.Max(c => c.EndX);
+            var firstBoundary = context.CurrentBoundaries[0];
+            var lastBoundary = context.CurrentBoundaries[^1];
+            var driftTolerance = Math.Max(8f, line.GetAverageCharacterWidth() * 3f);
+
+            var extendsLeft = rowStart < firstBoundary.Start - driftTolerance;
+            var extendsRight = rowEnd > lastBoundary.End + driftTolerance;
+
+            if (extendsLeft || extendsRight)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void ProcessTableContent(PositionedTextLine line, DetectionContext context)
+    {
+        var split = _cellParser.SplitIntoColumns(line, context.CurrentBoundaries);
+        var boundariesForRow = split.Boundaries;
+        var columnCount = boundariesForRow.Count;
+
+        if (columnCount > context.CurrentBoundaries!.Count)
+        {
+            // Expand existing rows if column count increased
+            for (int r = 0; r < context.CurrentRows.Count; r++)
+            {
+                context.CurrentRows[r] = NormalizeRow(context.CurrentRows[r], columnCount);
+            }
+        }
+
+        context.CurrentBoundaries = boundariesForRow;
+
+        var normalizedRow = NormalizeRow(split.Columns, columnCount);
+        var hasContent = normalizedRow.Any(value => !string.IsNullOrWhiteSpace(value));
+
+        if (hasContent)
+        {
+            context.CurrentRows.Add(normalizedRow);
+        }
+        else
+        {
+            FinalizeCurrentTable(context);
+        }
+    }
+
+    private void FinalizeCurrentTable(DetectionContext context)
+    {
+        TrimTrailingEmptyRows(context);
+
+        if (context.CurrentRows.Count > 1 && context.CurrentBoundaries != null)
+        {
+            context.Tables.Add(CreateTableFromRows(
+                context.CurrentRows,
+                context.PageNum,
+                context.TableStartLine >= 0 ? context.TableStartLine : 0,
+                context.CurrentBoundaries.Count));
+        }
+
+        context.CurrentRows.Clear();
+        context.CurrentBoundaries = null;
+        context.TableStartLine = -1;
+        context.LastLineWasBlank = false;
+    }
+
+    private static void TrimTrailingEmptyRows(DetectionContext context)
+    {
+        while (context.CurrentRows.Count > 0 && context.CurrentRows[^1].All(value => string.IsNullOrWhiteSpace(value)))
+        {
+            context.CurrentRows.RemoveAt(context.CurrentRows.Count - 1);
+        }
+    }
+
+    private class DetectionContext
+    {
+        public DetectionContext(int pageNum)
+        {
+            PageNum = pageNum;
+        }
+
+        public int PageNum { get; }
+        public List<string[]> CurrentRows { get; } = new();
+        public IList<ColumnBoundary>? CurrentBoundaries { get; set; }
+        public int TableStartLine { get; set; } = -1;
+        public bool LastLineWasBlank { get; set; }
+        public List<PdfTable> Tables { get; } = new();
+        public int CurrentLineIndex { get; set; }
     }
 
     private PdfTable CreateTableFromRows(List<string[]> rows, int pageNum, int startLine, int columnCount)

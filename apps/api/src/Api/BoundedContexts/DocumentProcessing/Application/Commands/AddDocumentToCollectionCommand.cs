@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 /// Command to add a PDF document to an existing collection.
 /// Issue #2051: Add document to collection with validation
 /// </summary>
-public record AddDocumentToCollectionCommand(
+internal record AddDocumentToCollectionCommand(
     Guid CollectionId,
     Guid PdfDocumentId,
     string DocumentType,

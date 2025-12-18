@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.SystemConfiguration.Application.Queries;
 /// <summary>
 /// Query to retrieve configuration change history.
 /// </summary>
-public record GetConfigHistoryQuery(
+internal record GetConfigHistoryQuery(
     Guid ConfigurationId,
     int Limit = 20
 ) : IQuery<IReadOnlyList<ConfigurationHistoryDto>>;
@@ -14,7 +14,7 @@ public record GetConfigHistoryQuery(
 /// <summary>
 /// Configuration history entry with change tracking.
 /// </summary>
-public record ConfigurationHistoryDto(
+internal record ConfigurationHistoryDto(
     string Id,
     string ConfigurationId,
     string Key,

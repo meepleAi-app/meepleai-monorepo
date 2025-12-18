@@ -5,7 +5,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Indexing;
 /// Maps hierarchical chunks (from Phase 1) to Qdrant points with enhanced metadata payload.
 /// Entity - identity by Id.
 /// </summary>
-public sealed class ChunkIndexEntry
+internal sealed class ChunkIndexEntry
 {
     /// <summary>
     /// Unique identifier for this index entry (maps to Qdrant point ID).
@@ -93,7 +93,7 @@ public sealed class ChunkIndexEntry
         if (vector == null || vector.Length == 0)
             throw new ArgumentException("Vector cannot be empty", nameof(vector));
 
-        ArgumentNullException.ThrowIfNull(payload, nameof(payload));
+        ArgumentNullException.ThrowIfNull(payload);
 
         return new ChunkIndexEntry
         {

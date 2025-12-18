@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Handlers;
 /// <summary>
 /// Handles resolving rule comments with optional recursive reply resolution.
 /// </summary>
-public class ResolveRuleCommentCommandHandler : IRequestHandler<ResolveRuleCommentCommand, RuleCommentDto>
+internal class ResolveRuleCommentCommandHandler : IRequestHandler<ResolveRuleCommentCommand, RuleCommentDto>
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly TimeProvider _timeProvider;
@@ -29,6 +29,7 @@ public class ResolveRuleCommentCommandHandler : IRequestHandler<ResolveRuleComme
 
     public async Task<RuleCommentDto> Handle(ResolveRuleCommentCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         var comment = await _dbContext.RuleSpecComments
             .Include(c => c.Replies)
             .FirstOrDefaultAsync(c => c.Id == command.CommentId, cancellationToken)
@@ -47,7 +48,7 @@ public class ResolveRuleCommentCommandHandler : IRequestHandler<ResolveRuleComme
         comment.UpdatedAt = _timeProvider.GetUtcNow().UtcDateTime;
 
         // Recursively resolve replies if requested
-        if (command.ResolveReplies && comment.Replies.Any())
+        if (command.ResolveReplies && comment.Replies.Count > 0)
         {
             await ResolveRepliesRecursiveAsync(comment.Id, command.ResolvedByUserId, cancellationToken).ConfigureAwait(false);
         }
@@ -96,20 +97,20 @@ public class ResolveRuleCommentCommandHandler : IRequestHandler<ResolveRuleComme
         var maxDepth = 10; // Safety limit
         var depth = 0;
 
-        while (currentLevel.Any() && depth < maxDepth)
+        while (currentLevel.Count > 0 && depth < maxDepth)
         {
             var children = await _dbContext.RuleSpecComments
                 .Where(c => currentLevel.Contains(c.ParentCommentId!.Value))
                 .ToListAsync(cancellationToken).ConfigureAwait(false);
 
-            if (!children.Any())
+            if (children.Count == 0)
             {
                 break;
             }
 
             // Check for circular references
             var newIds = children.Select(c => c.Id).Where(id => !visited.Contains(id)).ToList();
-            if (!newIds.Any() && children.Any())
+            if (newIds.Count == 0 && children.Count > 0)
             {
                 _logger.LogWarning(
                     "Circular reference detected while loading descendants of {ParentId} at depth {Depth}",

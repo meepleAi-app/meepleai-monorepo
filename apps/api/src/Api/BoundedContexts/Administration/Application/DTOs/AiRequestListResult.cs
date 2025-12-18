@@ -5,7 +5,7 @@ namespace Api.BoundedContexts.Administration.Application.DTOs;
 /// <summary>
 /// Result containing a paginated list of AI request logs.
 /// </summary>
-public record AiRequestListResult
+internal record AiRequestListResult
 {
     /// <summary>
     /// List of AI request log entities.

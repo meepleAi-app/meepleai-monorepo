@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.SystemConfiguration.Application.Handlers;
 /// <summary>
 /// Handles bulk update of multiple configurations atomically.
 /// </summary>
-public class BulkUpdateConfigsCommandHandler : ICommandHandler<BulkUpdateConfigsCommand, IReadOnlyList<ConfigurationDto>>
+internal class BulkUpdateConfigsCommandHandler : ICommandHandler<BulkUpdateConfigsCommand, IReadOnlyList<ConfigurationDto>>
 {
     private readonly IConfigurationRepository _configurationRepository;
     private readonly IUnitOfWork _unitOfWork;

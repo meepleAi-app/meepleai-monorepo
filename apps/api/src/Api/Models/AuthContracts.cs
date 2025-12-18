@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 #pragma warning disable MA0048 // File name must match type name - Multi-type DTO file
 namespace Api.Models;
 
-public record RegisterPayload(
+internal record RegisterPayload(
     string Email,
     string Password,
     string? DisplayName,
@@ -13,7 +13,7 @@ public record RegisterPayload(
 /// Login payload supporting both camelCase (frontend) and PascalCase (backend) JSON formats.
 /// Case-insensitive matching is configured globally in Program.cs via ConfigureHttpJsonOptions.
 /// </summary>
-public class LoginPayload
+internal class LoginPayload
 {
     /// <summary>
     /// User email address. Accepts both "email" (camelCase) and "Email" (PascalCase) in JSON.
@@ -26,7 +26,7 @@ public class LoginPayload
     public string Password { get; set; } = default!;
 }
 
-public record RegisterCommand(
+internal record RegisterCommand(
     string Email,
     string Password,
     string? DisplayName,
@@ -34,25 +34,25 @@ public record RegisterCommand(
     string? IpAddress,
     string? UserAgent);
 
-public record LoginCommand(
+internal record LoginCommand(
     string Email,
     string Password,
     string? IpAddress,
     string? UserAgent);
 
-public record AuthUser(
+internal record AuthUser(
     [property: JsonPropertyName("id")] string Id,
     [property: JsonPropertyName("email")] string Email,
     [property: JsonPropertyName("displayName")] string? DisplayName,
     [property: JsonPropertyName("role")] string Role);
 
-public record AuthResult(AuthUser User, string SessionToken, DateTime ExpiresAt);
+internal record AuthResult(AuthUser User, string SessionToken, DateTime ExpiresAt);
 
-public record AuthResponse(
+internal record AuthResponse(
     [property: JsonPropertyName("user")] AuthUser User,
     [property: JsonPropertyName("expiresAt")] DateTime? ExpiresAt);
 
-public record SessionInfo(
+internal record SessionInfo(
     string Id,
     string UserId,
     string UserEmail,
@@ -66,12 +66,12 @@ public record SessionInfo(
 /// <summary>
 /// Response for session status check (AUTH-05)
 /// </summary>
-public record SessionStatusResponse(
+internal record SessionStatusResponse(
     DateTime ExpiresAt,
     DateTime? LastSeenAt,
     int RemainingMinutes);
 
-public class SessionManagementConfiguration
+internal class SessionManagementConfiguration
 {
     /// <summary>
     /// Number of days of inactivity before a session is auto-revoked.
@@ -90,31 +90,31 @@ public class SessionManagementConfiguration
 /// <summary>
 /// API key login payload for browser-based API key authentication.
 /// </summary>
-public record ApiKeyLoginPayload(string ApiKey);
+internal record ApiKeyLoginPayload(string ApiKey);
 
 // AUTH-04: Password reset models
-public record PasswordResetRequestPayload(string Email);
-public record PasswordResetConfirmPayload(string Token, string NewPassword);
+internal record PasswordResetRequestPayload(string Email);
+internal record PasswordResetConfirmPayload(string Token, string NewPassword);
 
 // AUTH-06: OAuth models
 /// <summary>
 /// OAuth account information returned to frontend
 /// </summary>
-public record OAuthAccountDto(
+internal record OAuthAccountDto(
     string Provider,
     DateTime CreatedAt);
 
 /// <summary>
 /// Internal result from OAuth callback processing
 /// </summary>
-public record OAuthCallbackResult(
+internal record OAuthCallbackResult(
     AuthUser User,
     bool IsNewUser);
 
 /// <summary>
 /// OAuth provider configuration
 /// </summary>
-public class OAuthProviderConfig
+internal class OAuthProviderConfig
 {
     public required string ClientId { get; init; }
     public required string ClientSecret { get; init; }
@@ -127,7 +127,7 @@ public class OAuthProviderConfig
 /// <summary>
 /// OAuth token response from provider
 /// </summary>
-public record OAuthTokenResponse(
+internal record OAuthTokenResponse(
     string AccessToken,
     string? RefreshToken,
     int? ExpiresIn,
@@ -136,7 +136,7 @@ public record OAuthTokenResponse(
 /// <summary>
 /// User information from OAuth provider
 /// </summary>
-public record OAuthUserInfo(
+internal record OAuthUserInfo(
     string Id,
     string Email,
     string? Name);
@@ -144,7 +144,7 @@ public record OAuthUserInfo(
 /// <summary>
 /// OAuth configuration section
 /// </summary>
-public class OAuthConfiguration
+internal class OAuthConfiguration
 {
     public required string CallbackBaseUrl { get; init; }
     public required IDictionary<string, OAuthProviderConfig> Providers { get; init; }
@@ -154,7 +154,7 @@ public class OAuthConfiguration
 /// Payload for logout-all-devices endpoint (Issue #2056).
 /// Allows user to revoke all active sessions with optional password verification.
 /// </summary>
-public record LogoutAllDevicesPayload(
+internal record LogoutAllDevicesPayload(
     /// <summary>
     /// Whether to also revoke the current session (requires user confirmation).
     /// If false, the current session is preserved and the user remains logged in.

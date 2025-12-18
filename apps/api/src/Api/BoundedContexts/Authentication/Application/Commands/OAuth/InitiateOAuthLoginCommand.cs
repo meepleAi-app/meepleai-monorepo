@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands.OAuth;
 /// Command to initiate OAuth 2.0 login flow.
 /// Generates CSRF state token and returns authorization URL for redirection.
 /// </summary>
-public sealed record InitiateOAuthLoginCommand : ICommand<InitiateOAuthLoginResult>
+internal sealed record InitiateOAuthLoginCommand : ICommand<InitiateOAuthLoginResult>
 {
     public string Provider { get; init; } = string.Empty;
     public string? IpAddress { get; init; }
@@ -17,7 +17,7 @@ public sealed record InitiateOAuthLoginCommand : ICommand<InitiateOAuthLoginResu
 /// Result of OAuth login initiation.
 /// Contains authorization URL for redirecting user to OAuth provider.
 /// </summary>
-public sealed record InitiateOAuthLoginResult
+internal sealed record InitiateOAuthLoginResult
 {
     public bool Success { get; init; }
     public string? AuthorizationUrl { get; init; }

@@ -8,11 +8,11 @@ namespace Api.BoundedContexts.WorkflowIntegration.Application.EventHandlers;
 /// <summary>
 /// Handler for N8NConfigurationUpdatedEvent domain event.
 /// </summary>
-public sealed class N8NConfigurationUpdatedEventHandler : DomainEventHandlerBase<N8NConfigurationUpdatedEvent>
+internal sealed class N8NConfigurationUpdatedEventHandler : DomainEventHandlerBase<N8NConfigurationUpdatedEvent>
 {
     public N8NConfigurationUpdatedEventHandler(
         MeepleAiDbContext dbContext,
-        ILogger<DomainEventHandlerBase<N8NConfigurationUpdatedEvent>> logger)
+        ILogger<N8NConfigurationUpdatedEventHandler> logger)
         : base(dbContext, logger)
     {
     }

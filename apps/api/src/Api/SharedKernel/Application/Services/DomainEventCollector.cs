@@ -7,7 +7,7 @@ namespace Api.SharedKernel.Application.Services;
 /// Collects domain events from aggregates during repository operations
 /// so they can be dispatched after successful persistence.
 /// </summary>
-public sealed class DomainEventCollector : IDomainEventCollector
+internal sealed class DomainEventCollector : IDomainEventCollector
 {
 #pragma warning disable MA0158 // Use System.Threading.Lock
     private readonly List<IDomainEvent> _collectedEvents = new();
@@ -20,8 +20,8 @@ public sealed class DomainEventCollector : IDomainEventCollector
     /// </summary>
     public void CollectEventsFrom(IAggregateRoot aggregate)
     {
-        if (aggregate == null)
-            throw new ArgumentNullException(nameof(aggregate));
+        ArgumentNullException.ThrowIfNull(aggregate);
+
 
         lock (_lock)
         {

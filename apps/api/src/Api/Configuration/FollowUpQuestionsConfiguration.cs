@@ -3,7 +3,7 @@ namespace Api.Configuration;
 /// <summary>
 /// Configuration for AI-generated follow-up questions feature (CHAT-02).
 /// </summary>
-public class FollowUpQuestionsConfiguration
+internal class FollowUpQuestionsConfiguration
 {
     public const string SectionName = "FollowUpQuestions";
 
@@ -32,7 +32,7 @@ public class FollowUpQuestionsConfiguration
     /// Whether to fail the entire QA request if follow-up generation fails.
     /// If false, returns QA response with null followUpQuestions.
     /// </summary>
-    public bool FailOnGenerationError { get; set; } = false;
+    public bool FailOnGenerationError { get; set; }
 
     /// <summary>
     /// Cache key version for follow-up questions (increment on schema changes).

@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Authentication.Application.Validators;
 /// Ensures email and password are provided with proper format.
 /// Issue #1449: FluentValidation for Authentication CQRS pipeline
 /// </summary>
-public sealed class LoginCommandValidator : AbstractValidator<LoginCommand>
+internal sealed class LoginCommandValidator : AbstractValidator<LoginCommand>
 {
     public LoginCommandValidator()
     {

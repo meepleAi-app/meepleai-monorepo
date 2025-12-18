@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 namespace Api.Infrastructure.EntityConfigurations;
 
 // AUTH-06: OAuth Accounts Configuration
-public class OAuthAccountEntityConfiguration : IEntityTypeConfiguration<OAuthAccountEntity>
+internal class OAuthAccountEntityConfiguration : IEntityTypeConfiguration<OAuthAccountEntity>
 {
     public void Configure(EntityTypeBuilder<OAuthAccountEntity> builder)
     {

@@ -13,7 +13,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// CHESS-04: Specialized chess conversational agent.
 /// Answers questions about rules, explains openings, suggests tactics, and analyzes positions using RAG.
 /// </summary>
-public sealed class InvokeChessAgentCommandHandler
+internal sealed class InvokeChessAgentCommandHandler
     : IRequestHandler<InvokeChessAgentCommand, ChessAgentResponse>
 {
     private readonly IMediator _mediator;
@@ -45,6 +45,7 @@ public sealed class InvokeChessAgentCommandHandler
         InvokeChessAgentCommand request,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         // Issue #1445: Use centralized query validation
         var queryError = QueryValidator.ValidateQuery(request.Question);
         if (queryError != null)
@@ -447,23 +448,15 @@ ANSWER:";
                 answer,
                 pattern,
                 RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.NonBacktracking | RegexOptions.Compiled);
-            foreach (Match match in matches)
-            {
-                if (match.Groups.Count > 1)
+
+            suggestedMoves.AddRange(matches.Cast<Match>()
+                .Where(m => m.Groups.Count > 1)
+                .Select(match =>
                 {
                     var move = match.Groups[1].Value.Trim();
                     var explanation = match.Groups.Count > 2 ? match.Groups[2].Value.Trim() : "";
-
-                    if (!string.IsNullOrEmpty(explanation))
-                    {
-                        suggestedMoves.Add($"{move}: {explanation}");
-                    }
-                    else
-                    {
-                        suggestedMoves.Add(move);
-                    }
-                }
-            }
+                    return !string.IsNullOrEmpty(explanation) ? $"{move}: {explanation}" : move;
+                }));
         }
 
         // If FEN position was provided, extract position analysis

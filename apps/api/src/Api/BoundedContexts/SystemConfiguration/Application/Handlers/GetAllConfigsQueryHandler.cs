@@ -5,7 +5,7 @@ using Api.SharedKernel.Application.Interfaces;
 
 namespace Api.BoundedContexts.SystemConfiguration.Application.Handlers;
 
-public class GetAllConfigsQueryHandler : IQueryHandler<GetAllConfigsQuery, PagedConfigurationResult>
+internal class GetAllConfigsQueryHandler : IQueryHandler<GetAllConfigsQuery, PagedConfigurationResult>
 {
     private readonly IConfigurationRepository _configurationRepository;
 
@@ -16,6 +16,7 @@ public class GetAllConfigsQueryHandler : IQueryHandler<GetAllConfigsQuery, Paged
 
     public async Task<PagedConfigurationResult> Handle(GetAllConfigsQuery query, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(query);
         IReadOnlyList<Domain.Entities.SystemConfiguration> configs;
 
         if (query.ActiveOnly)

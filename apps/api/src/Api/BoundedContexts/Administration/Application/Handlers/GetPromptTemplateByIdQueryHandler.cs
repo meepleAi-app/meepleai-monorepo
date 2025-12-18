@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.Administration.Application.Handlers;
 /// <summary>
 /// Handles retrieval of a single prompt template by ID.
 /// </summary>
-public class GetPromptTemplateByIdQueryHandler : IQueryHandler<GetPromptTemplateByIdQuery, PromptTemplateDto?>
+internal class GetPromptTemplateByIdQueryHandler : IQueryHandler<GetPromptTemplateByIdQuery, PromptTemplateDto?>
 {
     private readonly MeepleAiDbContext _dbContext;
 
@@ -23,6 +23,7 @@ public class GetPromptTemplateByIdQueryHandler : IQueryHandler<GetPromptTemplate
         GetPromptTemplateByIdQuery query,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(query);
         var template = await _dbContext.Set<PromptTemplateEntity>()
             .AsNoTracking()
             .Include(t => t.Versions)

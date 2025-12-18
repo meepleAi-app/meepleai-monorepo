@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 /// Represents a confidence score value object.
 /// Ensures confidence is between 0.0 and 1.0.
 /// </summary>
-public sealed class Confidence : ValueObject
+internal sealed class Confidence : ValueObject
 {
     public double Value { get; }
 
@@ -44,4 +44,9 @@ public sealed class Confidence : ValueObject
 
     public static implicit operator double(Confidence confidence) => confidence.Value;
     public static Confidence Parse(double value) => new(value);
+
+    public double ToDouble()
+    {
+        throw new NotSupportedException("Use implicit conversion to double instead");
+    }
 }

@@ -7,4 +7,4 @@ namespace Api.BoundedContexts.Administration.Application.Queries;
 /// Issue #894: Query to retrieve comprehensive infrastructure details.
 /// Combines health checks and Prometheus metrics in a single response.
 /// </summary>
-public record GetInfrastructureDetailsQuery : IRequest<InfrastructureDetails>;
+internal record GetInfrastructureDetailsQuery : IRequest<InfrastructureDetails>;

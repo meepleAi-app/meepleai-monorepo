@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 /// Repository interface for ApiKeyUsageLog aggregate.
 /// Provides data access operations for API key usage logs.
 /// </summary>
-public interface IApiKeyUsageLogRepository
+internal interface IApiKeyUsageLogRepository
 {
     /// <summary>
     /// Adds a new usage log entry.

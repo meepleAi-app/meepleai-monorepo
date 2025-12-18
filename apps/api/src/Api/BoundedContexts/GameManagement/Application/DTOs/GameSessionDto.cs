@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.GameManagement.Application.DTOs;
 /// <summary>
 /// Data transfer object for game session information.
 /// </summary>
-public record GameSessionDto(
+internal record GameSessionDto(
     Guid Id,
     Guid GameId,
     string Status,
@@ -22,7 +22,7 @@ public record GameSessionDto(
 /// <summary>
 /// DTO for session player information.
 /// </summary>
-public record SessionPlayerDto(
+internal record SessionPlayerDto(
     string PlayerName,
     int PlayerOrder,
     string? Color
@@ -31,7 +31,7 @@ public record SessionPlayerDto(
 /// <summary>
 /// DTO for starting a game session.
 /// </summary>
-public record StartGameSessionRequest(
+internal record StartGameSessionRequest(
     Guid GameId,
     IReadOnlyList<SessionPlayerRequest> Players
 );
@@ -39,7 +39,7 @@ public record StartGameSessionRequest(
 /// <summary>
 /// DTO for player in session.
 /// </summary>
-public record SessionPlayerRequest(
+internal record SessionPlayerRequest(
     string PlayerName,
     int PlayerOrder,
     string? Color = null
@@ -48,14 +48,14 @@ public record SessionPlayerRequest(
 /// <summary>
 /// DTO for completing a session.
 /// </summary>
-public record CompleteSessionRequest(
+internal record CompleteSessionRequest(
     string? WinnerName = null
 );
 
 /// <summary>
 /// DTO for aggregated session statistics.
 /// </summary>
-public record SessionStatsDto(
+internal record SessionStatsDto(
     int TotalSessions,
     int CompletedSessions,
     int AbandonedSessions,
@@ -66,7 +66,7 @@ public record SessionStatsDto(
 /// <summary>
 /// DTO for player win statistics.
 /// </summary>
-public record PlayerWinStatsDto(
+internal record PlayerWinStatsDto(
     string PlayerName,
     int WinCount,
     decimal WinRate

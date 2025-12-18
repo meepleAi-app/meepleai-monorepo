@@ -1,12 +1,12 @@
-using Api.SharedKernel.Domain.Results;
 using Api.SharedKernel.Domain.Exceptions;
+using Api.SharedKernel.Domain.Results;
 
 namespace Api.SharedKernel.Domain.Validation;
 
 /// <summary>
 /// Helper methods for working with validation results.
 /// </summary>
-public static class ValidationHelpers
+internal static class ValidationHelpers
 {
     /// <summary>
     /// Throws a ValidationException if the result is a failure.
@@ -18,6 +18,7 @@ public static class ValidationHelpers
     /// <exception cref="ValidationException">Thrown if validation fails.</exception>
     public static T ThrowIfFailure<T>(this Result<T> result)
     {
+        ArgumentNullException.ThrowIfNull(result);
         if (result.IsFailure)
         {
             throw new ValidationException(result.Error!.Message);
@@ -37,6 +38,8 @@ public static class ValidationHelpers
     /// <exception cref="ValidationException">Thrown if validation fails.</exception>
     public static T ThrowIfFailure<T>(this Result<T> result, string fieldName)
     {
+        ArgumentNullException.ThrowIfNull(result);
+        ArgumentNullException.ThrowIfNull(fieldName);
         if (result.IsFailure)
         {
             throw new ValidationException(fieldName, result.Error!.Message);
@@ -54,12 +57,13 @@ public static class ValidationHelpers
     /// <returns>A combined result containing all errors if any validation fails.</returns>
     public static Result<T> CombineResults<T>(params Result<T>[] results)
     {
+        ArgumentNullException.ThrowIfNull(results);
         if (results.Length == 0)
             throw new ArgumentException("At least one result is required", nameof(results));
 
         var failures = results.Where(r => r.IsFailure).ToList();
 
-        if (failures.Any())
+        if (failures.Count > 0)
         {
             var combinedMessage = string.Join("; ", failures.Select(f => f.Error!.Message));
             return Result<T>.Failure(Error.Validation(combinedMessage));
@@ -77,6 +81,7 @@ public static class ValidationHelpers
     /// <returns>The first failure result, or the final success result.</returns>
     public static Result<T> Validate<T>(T value, params Func<T, Result<T>>[] validators)
     {
+        ArgumentNullException.ThrowIfNull(validators);
         var result = Result<T>.Success(value);
 
         foreach (var validator in validators)
@@ -102,6 +107,8 @@ public static class ValidationHelpers
         Func<T, bool> predicate,
         string errorMessage)
     {
+        ArgumentNullException.ThrowIfNull(predicate);
+        ArgumentNullException.ThrowIfNull(errorMessage);
         return value => value.Must(predicate, errorMessage);
     }
 
@@ -116,6 +123,8 @@ public static class ValidationHelpers
         Func<T, Task<bool>> predicate,
         string errorMessage)
     {
+        ArgumentNullException.ThrowIfNull(predicate);
+        ArgumentNullException.ThrowIfNull(errorMessage);
         return async value =>
         {
             var isValid = await predicate(value).ConfigureAwait(false);

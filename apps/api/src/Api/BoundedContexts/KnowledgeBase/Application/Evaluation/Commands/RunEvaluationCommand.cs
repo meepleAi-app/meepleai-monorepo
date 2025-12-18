@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Commands;
 /// <summary>
 /// Command to run RAG evaluation on a dataset.
 /// </summary>
-public sealed record RunEvaluationCommand : IRequest<EvaluationResult>
+internal sealed record RunEvaluationCommand : IRequest<EvaluationResult>
 {
     /// <summary>
     /// Path or name of the dataset to evaluate.

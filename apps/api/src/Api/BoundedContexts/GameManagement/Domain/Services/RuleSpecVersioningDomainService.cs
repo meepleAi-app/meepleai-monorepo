@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.GameManagement.Domain.Services;
 /// Domain service for RuleSpec versioning logic.
 /// Handles version number generation and validation.
 /// </summary>
-public class RuleSpecVersioningDomainService
+internal class RuleSpecVersioningDomainService
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly TimeProvider _timeProvider;

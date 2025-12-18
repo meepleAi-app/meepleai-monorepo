@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
 /// ADR-016 Phase 4: Resolves parent chunks for expanded context.
 /// Used for ColBERT late-interaction pattern - retrieve granular, expand to parent.
 /// </summary>
-public interface IParentChunkResolver
+internal interface IParentChunkResolver
 {
     /// <summary>
     /// Resolves parent chunks for given child chunk IDs.
@@ -34,7 +34,7 @@ public interface IParentChunkResolver
 /// <summary>
 /// Resolved parent chunk with context information.
 /// </summary>
-public sealed record ResolvedParentChunk(
+internal sealed record ResolvedParentChunk(
     string ParentId,
     string ChildId,
     string ParentContent,

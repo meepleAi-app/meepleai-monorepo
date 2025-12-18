@@ -11,7 +11,7 @@ namespace Api.Services;
 /// Handles caching, deserialization, and environment-specific fallback.
 /// All CRUD operations now handled by CQRS commands/queries in SystemConfiguration bounded context.
 /// </summary>
-public class ConfigurationService : IConfigurationService
+internal class ConfigurationService : IConfigurationService
 {
     private readonly IMediator _mediator;
     private readonly IHybridCacheService _cache;
@@ -77,7 +77,7 @@ public class ConfigurationService : IConfigurationService
 
 #pragma warning disable CS8634
 #pragma warning disable CS8621
-        var cachedValue = await _cache.GetOrCreateAsync(
+        var cachedValue = await _cache.GetOrCreateAsync<SystemConfigurationDto?>(
             cacheKey,
             async cancel =>
             {

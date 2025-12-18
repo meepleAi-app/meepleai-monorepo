@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.Authentication.Application.EventHandlers;
 /// Handles ApiKeyUsedEvent by logging usage to the database.
 /// Provides audit trail and analytics for API key usage.
 /// </summary>
-public class ApiKeyUsedEventHandler : INotificationHandler<ApiKeyUsedEvent>
+internal class ApiKeyUsedEventHandler : INotificationHandler<ApiKeyUsedEvent>
 {
     private readonly IApiKeyUsageLogRepository _usageLogRepository;
     private readonly ILogger<ApiKeyUsedEventHandler> _logger;
@@ -25,6 +25,7 @@ public class ApiKeyUsedEventHandler : INotificationHandler<ApiKeyUsedEvent>
 
     public async Task Handle(ApiKeyUsedEvent notification, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(notification);
         try
         {
             var usageLog = ApiKeyUsageLog.Create(
@@ -44,6 +45,10 @@ public class ApiKeyUsedEventHandler : INotificationHandler<ApiKeyUsedEvent>
                 notification.Endpoint,
                 notification.UsedAt);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: EVENT HANDLER PATTERN - Background event processing
+        // Event handlers must not throw exceptions (violates mediator/event pattern).
+        // Errors logged for monitoring; failed usage logging doesn't break API requests.
         catch (Exception ex)
         {
             // Log error but don't throw - usage logging should not break the request
@@ -53,5 +58,6 @@ public class ApiKeyUsedEventHandler : INotificationHandler<ApiKeyUsedEvent>
                 notification.KeyId,
                 notification.Endpoint);
         }
+#pragma warning restore CA1031
     }
 }

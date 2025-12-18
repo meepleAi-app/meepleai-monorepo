@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 namespace Api.Infrastructure.EntityConfigurations;
 
 // N8N-05: Workflow Error Logs
-public class WorkflowErrorLogEntityConfiguration : IEntityTypeConfiguration<WorkflowErrorLogEntity>
+internal class WorkflowErrorLogEntityConfiguration : IEntityTypeConfiguration<WorkflowErrorLogEntity>
 {
     public void Configure(EntityTypeBuilder<WorkflowErrorLogEntity> builder)
     {

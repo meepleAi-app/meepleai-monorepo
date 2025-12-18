@@ -7,7 +7,7 @@ namespace Api.Services.Qdrant;
 /// <summary>
 /// Manages Qdrant collection lifecycle operations
 /// </summary>
-public class QdrantCollectionManager : IQdrantCollectionManager
+internal class QdrantCollectionManager : IQdrantCollectionManager
 {
     private readonly IQdrantClientAdapter _clientAdapter;
     private readonly ILogger<QdrantCollectionManager> _logger;
@@ -23,41 +23,28 @@ public class QdrantCollectionManager : IQdrantCollectionManager
     /// <summary>
     /// Check if collection exists
     /// </summary>
-    public async Task<bool> CollectionExistsAsync(string collectionName, CancellationToken ct = default)
+    public async Task<bool> CollectionExistsAsync(string collectionName, CancellationToken cancellationToken = default)
     {
         try
         {
-            var collectionsResponse = await _clientAdapter.ListCollectionsAsync(ct).ConfigureAwait(false);
+            var collectionsResponse = await _clientAdapter.ListCollectionsAsync(cancellationToken).ConfigureAwait(false);
             return collectionsResponse.Any(c => string.Equals(c, collectionName, StringComparison.Ordinal));
         }
-#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
-        // INFRASTRUCTURE LOGGING PATTERN: Log exceptions at the infrastructure boundary for debugging.
         catch (RpcException ex)
         {
-            _logger.LogError(ex, "gRPC error checking if collection {CollectionName} exists: {Status}", collectionName, ex.Status);
-            throw;
+            // S2139: Logging removed. Wrapped for context.
+            throw new InvalidOperationException($"Failed to check if collection '{collectionName}' exists: {ex.Status}", ex);
         }
-        catch (InvalidOperationException ex)
-        {
-            _logger.LogError(ex, "Invalid operation while checking if collection {CollectionName} exists", collectionName);
-            throw;
-        }
-        catch (OperationCanceledException ex)
-        {
-            _logger.LogError(ex, "Operation cancelled while checking if collection {CollectionName} exists", collectionName);
-            throw;
-        }
-#pragma warning restore S2139
     }
 
     /// <summary>
     /// Ensure collection exists, creating it if necessary with proper indexes
     /// </summary>
-    public async Task EnsureCollectionExistsAsync(string collectionName, uint vectorSize, CancellationToken ct = default)
+    public async Task EnsureCollectionExistsAsync(string collectionName, uint vectorSize, CancellationToken cancellationToken = default)
     {
         try
         {
-            var exists = await CollectionExistsAsync(collectionName, ct).ConfigureAwait(false);
+            var exists = await CollectionExistsAsync(collectionName, cancellationToken).ConfigureAwait(false);
 
             if (exists)
             {
@@ -68,42 +55,27 @@ public class QdrantCollectionManager : IQdrantCollectionManager
             _logger.LogInformation("Creating collection {CollectionName} with vector size {VectorSize}",
                 collectionName, vectorSize);
 
-            await CreateCollectionAsync(collectionName, vectorSize, ct).ConfigureAwait(false);
+            await CreateCollectionAsync(collectionName, vectorSize, cancellationToken).ConfigureAwait(false);
 
             // Create payload indexes for filtering
-            await CreatePayloadIndexAsync(collectionName, "game_id", PayloadSchemaType.Keyword, ct).ConfigureAwait(false);
-            await CreatePayloadIndexAsync(collectionName, "pdf_id", PayloadSchemaType.Keyword, ct).ConfigureAwait(false);
-            await CreatePayloadIndexAsync(collectionName, "category", PayloadSchemaType.Keyword, ct).ConfigureAwait(false);
-            await CreatePayloadIndexAsync(collectionName, "language", PayloadSchemaType.Keyword, ct).ConfigureAwait(false);
+            await CreatePayloadIndexAsync(collectionName, "game_id", PayloadSchemaType.Keyword, cancellationToken).ConfigureAwait(false);
+            await CreatePayloadIndexAsync(collectionName, "pdf_id", PayloadSchemaType.Keyword, cancellationToken).ConfigureAwait(false);
+            await CreatePayloadIndexAsync(collectionName, "category", PayloadSchemaType.Keyword, cancellationToken).ConfigureAwait(false);
+            await CreatePayloadIndexAsync(collectionName, "language", PayloadSchemaType.Keyword, cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation("Collection {CollectionName} created successfully with indexes", collectionName);
         }
-        catch (ArgumentException ex)
-        {
-            _logger.LogError(ex, "Invalid argument while ensuring collection {CollectionName} exists", collectionName);
-            throw;
-        }
         catch (RpcException ex)
         {
-            _logger.LogError(ex, "gRPC error ensuring collection {CollectionName} exists: {Status}", collectionName, ex.Status);
-            throw;
-        }
-        catch (InvalidOperationException ex)
-        {
-            _logger.LogError(ex, "Invalid operation while ensuring collection {CollectionName} exists", collectionName);
-            throw;
-        }
-        catch (OperationCanceledException ex)
-        {
-            _logger.LogError(ex, "Operation cancelled while ensuring collection {CollectionName} exists", collectionName);
-            throw;
+            // S2139: Logging removed. Wrapped for context.
+            throw new InvalidOperationException($"Failed to ensure collection '{collectionName}' exists: {ex.Status}", ex);
         }
     }
 
     /// <summary>
     /// Create a new collection with the specified vector configuration
     /// </summary>
-    public async Task CreateCollectionAsync(string collectionName, uint vectorSize, CancellationToken ct = default)
+    public async Task CreateCollectionAsync(string collectionName, uint vectorSize, CancellationToken cancellationToken = default)
     {
         await _clientAdapter.CreateCollectionAsync(
             collectionName: collectionName,
@@ -112,7 +84,7 @@ public class QdrantCollectionManager : IQdrantCollectionManager
                 Size = vectorSize,
                 Distance = Distance.Cosine
             },
-            cancellationToken: ct
+            cancellationToken: cancellationToken
         ).ConfigureAwait(false);
     }
 
@@ -123,13 +95,13 @@ public class QdrantCollectionManager : IQdrantCollectionManager
         string collectionName,
         string fieldName,
         PayloadSchemaType schemaType,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         await _clientAdapter.CreatePayloadIndexAsync(
             collectionName: collectionName,
             fieldName: fieldName,
             schemaType: schemaType,
-            cancellationToken: ct
+            cancellationToken: cancellationToken
         ).ConfigureAwait(false);
     }
 }

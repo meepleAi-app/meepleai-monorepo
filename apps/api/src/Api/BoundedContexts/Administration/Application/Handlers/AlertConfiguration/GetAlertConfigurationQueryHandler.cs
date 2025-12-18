@@ -8,26 +8,29 @@ namespace Api.BoundedContexts.Administration.Application.Handlers.AlertConfigura
 /// <summary>
 /// Handler for GetAlertConfigurationQuery (Issue #915)
 /// </summary>
-public class GetAlertConfigurationQueryHandler : IRequestHandler<GetAlertConfigurationQuery, AlertConfigurationDto>
+internal class GetAlertConfigurationQueryHandler : IRequestHandler<GetAlertConfigurationQuery, AlertConfigurationDto>
 {
     private readonly IAlertConfigurationRepository _repository;
 
     public GetAlertConfigurationQueryHandler(IAlertConfigurationRepository repository)
     {
-        _repository = repository;
+        _repository = repository ?? throw new ArgumentNullException(nameof(repository));
     }
 
-    public async Task<AlertConfigurationDto> Handle(GetAlertConfigurationQuery request, CancellationToken ct)
+    public async Task<AlertConfigurationDto> Handle(GetAlertConfigurationQuery request, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         var category = ConfigCategoryExtensions.FromString(request.Category);
-        var configs = await _repository.GetByCategoryAsync(category, ct).ConfigureAwait(false);
+        var configs = await _repository.GetByCategoryAsync(category, cancellationToken).ConfigureAwait(false);
 
         if (configs.Count == 0)
         {
             throw new InvalidOperationException($"No configuration found for category: {request.Category}");
         }
 
+#pragma warning disable S6608 // Prefer indexing instead of "Enumerable" methods on "IReadOnlyList" - First() is clearer here after Count check
         var config = configs.First();
+#pragma warning restore S6608
         return MapToDto(config);
     }
 
@@ -44,3 +47,4 @@ public class GetAlertConfigurationQueryHandler : IRequestHandler<GetAlertConfigu
             config.UpdatedBy);
     }
 }
+

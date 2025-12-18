@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.SystemConfiguration.Application.Handlers;
 /// Handles import of configurations from backup/export.
 /// Supports both creation and overwrite modes.
 /// </summary>
-public class ImportConfigsCommandHandler : ICommandHandler<ImportConfigsCommand, int>
+internal class ImportConfigsCommandHandler : ICommandHandler<ImportConfigsCommand, int>
 {
     private readonly IConfigurationRepository _configurationRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -25,6 +25,7 @@ public class ImportConfigsCommandHandler : ICommandHandler<ImportConfigsCommand,
 
     public async Task<int> Handle(ImportConfigsCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         var importedCount = 0;
 
         foreach (var item in command.Configurations)

@@ -15,7 +15,7 @@ namespace Api.Services;
 /// Provides cached search and game details retrieval with retry logic.
 /// AI-13: https://github.com/DegrassiAaron/meepleai-monorepo/issues/420
 /// </summary>
-public class BggApiService : IBggApiService
+internal class BggApiService : IBggApiService
 {
     private readonly HttpClient _httpClient;
     private readonly HybridCache _cache;
@@ -52,7 +52,7 @@ public class BggApiService : IBggApiService
         var cacheKey = $"bgg:search:{query.ToLowerInvariant()}:{exact}";
 
         // Try cache first (7-day TTL by default)
-        var cachedResults = await _cache.GetOrCreateAsync(
+        var cachedResults = await _cache.GetOrCreateAsync<List<BggSearchResultDto>?>(
             cacheKey,
             async cancel =>
             {
@@ -80,7 +80,7 @@ public class BggApiService : IBggApiService
         var cacheKey = $"bgg:game:{bggId}";
 
         // Try cache first
-        var cachedDetails = await _cache.GetOrCreateAsync(
+        var cachedDetails = await _cache.GetOrCreateAsync<BggGameDetailsDto?>(
             cacheKey,
             async cancel =>
             {

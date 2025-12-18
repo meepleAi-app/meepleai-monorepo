@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 /// Document type value object representing the category of a PDF document within a game collection.
 /// Issue #2051: Support for base rulebooks, expansions, errata, and house rules
 /// </summary>
-public sealed class DocumentType : ValueObject
+internal sealed class DocumentType : ValueObject
 {
     private static readonly HashSet<string> ValidTypes = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -41,7 +41,7 @@ public sealed class DocumentType : ValueObject
 
         if (!ValidTypes.Contains(normalized))
             throw new ValidationException(nameof(DocumentType),
-                $"Document type must be one of: {string.Join(", ", ValidTypes.OrderBy(x => x))}. Got: {type}");
+                $"Document type must be one of: {string.Join(", ", ValidTypes.OrderBy(x => x, StringComparer.Ordinal))}. Got: {type}");
 
         Value = normalized;
     }

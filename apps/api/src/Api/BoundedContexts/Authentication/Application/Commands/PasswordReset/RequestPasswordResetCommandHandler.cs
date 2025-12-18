@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands.PasswordReset;
 /// Infrastructure delegation: Email service and rate limiting.
 /// Security: Always returns success to prevent email enumeration attacks.
 /// </summary>
-public sealed class RequestPasswordResetCommandHandler : ICommandHandler<RequestPasswordResetCommand, RequestPasswordResetResult>
+internal sealed class RequestPasswordResetCommandHandler : ICommandHandler<RequestPasswordResetCommand, RequestPasswordResetResult>
 {
     private readonly IPasswordResetService _passwordResetService;
     private readonly ILogger<RequestPasswordResetCommandHandler> _logger;
@@ -25,6 +25,7 @@ public sealed class RequestPasswordResetCommandHandler : ICommandHandler<Request
 
     public async Task<RequestPasswordResetResult> Handle(RequestPasswordResetCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         try
         {
             // Validate email format (basic business logic)
@@ -49,13 +50,18 @@ public sealed class RequestPasswordResetCommandHandler : ICommandHandler<Request
         catch (InvalidOperationException ex) when (ex.Message.Contains("Too many"))
         {
             // Rate limit exceeded - return generic message for security
-            _logger.LogWarning("Password reset rate limit exceeded for email pattern");
+            _logger.LogWarning(ex, "Password reset rate limit exceeded for email pattern");
             return new RequestPasswordResetResult
             {
                 Success = false,
                 Message = "Too many password reset requests. Please try again later."
             };
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: COMMAND HANDLER PATTERN - CQRS handler boundary
+        // Specific exceptions (InvalidOperationException for rate limiting) caught separately above.
+        // Generic catch handles unexpected infrastructure failures (DB, network, memory)
+        // to prevent exception propagation to API layer. Returns Result<T> pattern.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error during password reset request");
@@ -66,5 +72,6 @@ public sealed class RequestPasswordResetCommandHandler : ICommandHandler<Request
                 Message = "If the email exists, a password reset link has been sent"
             };
         }
+#pragma warning restore CA1031
     }
 }

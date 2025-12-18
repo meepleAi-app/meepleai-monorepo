@@ -12,27 +12,25 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Handlers;
 /// Handler for removing a PDF document from a collection.
 /// Issue #2051: Remove document from collection
 /// </summary>
-public class RemoveDocumentFromCollectionCommandHandler : ICommandHandler<RemoveDocumentFromCollectionCommand, bool>
+internal class RemoveDocumentFromCollectionCommandHandler : ICommandHandler<RemoveDocumentFromCollectionCommand, bool>
 {
     private readonly IDocumentCollectionRepository _collectionRepository;
-    private readonly IPdfDocumentRepository _pdfRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<RemoveDocumentFromCollectionCommandHandler> _logger;
 
     public RemoveDocumentFromCollectionCommandHandler(
         IDocumentCollectionRepository collectionRepository,
-        IPdfDocumentRepository pdfRepository,
         IUnitOfWork unitOfWork,
         ILogger<RemoveDocumentFromCollectionCommandHandler> logger)
     {
         _collectionRepository = collectionRepository;
-        _pdfRepository = pdfRepository;
         _unitOfWork = unitOfWork;
         _logger = logger;
     }
 
     public async Task<bool> Handle(RemoveDocumentFromCollectionCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         _logger.LogInformation(
             "User {UserId} removing document {PdfDocumentId} from collection {CollectionId}",
             command.UserId, command.PdfDocumentId, command.CollectionId);
@@ -62,48 +60,5 @@ public class RemoveDocumentFromCollectionCommandHandler : ICommandHandler<Remove
             command.PdfDocumentId, command.CollectionId, collection.DocumentCount);
 
         return true;
-    }
-
-    private async Task<DocumentCollectionDto> MapToDto(
-        Domain.Entities.DocumentCollection collection,
-        CancellationToken cancellationToken)
-    {
-        var documentDtos = new List<CollectionDocumentDto>();
-
-        foreach (var doc in collection.GetDocumentsOrdered())
-        {
-            var pdfDoc = await _pdfRepository.GetByIdAsync(doc.PdfDocumentId, cancellationToken).ConfigureAwait(false);
-
-            documentDtos.Add(new CollectionDocumentDto(
-                PdfDocumentId: doc.PdfDocumentId,
-                DocumentType: doc.Type.Value,
-                SortOrder: doc.SortOrder,
-                AddedAt: doc.AddedAt,
-                PdfDocument: pdfDoc != null ? new PdfDocumentDto(
-                    Id: pdfDoc.Id,
-                    GameId: pdfDoc.GameId,
-                    FileName: pdfDoc.FileName.Value,
-                    FilePath: pdfDoc.FilePath,
-                    FileSizeBytes: pdfDoc.FileSize.Bytes,
-                    ProcessingStatus: pdfDoc.ProcessingStatus,
-                    UploadedAt: pdfDoc.UploadedAt,
-                    ProcessedAt: pdfDoc.ProcessedAt,
-                    PageCount: pdfDoc.PageCount
-                ) : null
-            ));
-        }
-
-        return new DocumentCollectionDto(
-            Id: collection.Id,
-            GameId: collection.GameId,
-            Name: collection.Name.Value,
-            Description: collection.Description,
-            CreatedByUserId: collection.CreatedByUserId,
-            CreatedAt: collection.CreatedAt,
-            UpdatedAt: collection.UpdatedAt,
-            Documents: documentDtos,
-            DocumentCount: collection.DocumentCount,
-            IsFull: collection.IsFull
-        );
     }
 }

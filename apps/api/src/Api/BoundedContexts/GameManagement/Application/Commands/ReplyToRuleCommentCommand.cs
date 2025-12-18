@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands;
 /// <summary>
 /// Command to reply to an existing rule comment, creating a threaded conversation.
 /// </summary>
-public record ReplyToRuleCommentCommand(
+internal record ReplyToRuleCommentCommand(
     Guid ParentCommentId,
     string CommentText,
     Guid UserId

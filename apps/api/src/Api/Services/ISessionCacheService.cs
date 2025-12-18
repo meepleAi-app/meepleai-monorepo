@@ -4,15 +4,15 @@ namespace Api.Services;
 /// Redis-based cache for session validation (Phase 2 optimization)
 /// Reduces database queries for session validation by ~90%
 /// </summary>
-public interface ISessionCacheService
+internal interface ISessionCacheService
 {
     /// <summary>
     /// Invalidate a specific session (e.g., on logout)
     /// </summary>
-    Task InvalidateAsync(string tokenHash, CancellationToken ct = default);
+    Task InvalidateAsync(string tokenHash, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Invalidate all sessions for a user (e.g., password change)
     /// </summary>
-    Task InvalidateUserSessionsAsync(Guid userId, CancellationToken ct = default);
+    Task InvalidateUserSessionsAsync(Guid userId, CancellationToken cancellationToken = default);
 }

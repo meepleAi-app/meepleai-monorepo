@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.Administration.Application.Handlers;
 /// <summary>
 /// Handles creation of a new prompt template.
 /// </summary>
-public class CreatePromptTemplateCommandHandler : ICommandHandler<CreatePromptTemplateCommand, PromptTemplateDto>
+internal class CreatePromptTemplateCommandHandler : ICommandHandler<CreatePromptTemplateCommand, PromptTemplateDto>
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly TimeProvider _timeProvider;
@@ -27,6 +27,7 @@ public class CreatePromptTemplateCommandHandler : ICommandHandler<CreatePromptTe
         CreatePromptTemplateCommand command,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         // Verify template name is unique
         var exists = await _dbContext.Set<PromptTemplateEntity>()
             .AnyAsync(t => t.Name == command.Name, cancellationToken).ConfigureAwait(false);

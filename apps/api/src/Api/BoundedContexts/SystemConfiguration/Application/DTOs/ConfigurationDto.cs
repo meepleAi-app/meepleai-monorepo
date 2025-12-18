@@ -3,7 +3,7 @@
 #pragma warning disable MA0048 // File name must match type name - Contains related Request/Response DTOs
 namespace Api.BoundedContexts.SystemConfiguration.Application.DTOs;
 
-public record ConfigurationDto(
+internal record ConfigurationDto(
     Guid Id,
     string Key,
     string Value,
@@ -18,7 +18,7 @@ public record ConfigurationDto(
     DateTime UpdatedAt
 );
 
-public record FeatureFlagDto(
+internal record FeatureFlagDto(
     Guid Id,
     string Name,
     bool IsEnabled,

@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Api.Infrastructure.EntityConfigurations;
 
-public class RuleAtomEntityConfiguration : IEntityTypeConfiguration<RuleAtomEntity>
+internal class RuleAtomEntityConfiguration : IEntityTypeConfiguration<RuleAtomEntity>
 {
     public void Configure(EntityTypeBuilder<RuleAtomEntity> builder)
     {

@@ -12,7 +12,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 /// Saves a chunk to disk and updates session progress.
 /// Uses optimistic concurrency with retry logic for concurrent chunk uploads.
 /// </summary>
-public class UploadChunkCommandHandler : ICommandHandler<UploadChunkCommand, UploadChunkResult>
+internal class UploadChunkCommandHandler : ICommandHandler<UploadChunkCommand, UploadChunkResult>
 {
     private const int MaxConcurrencyRetries = 3;
     private static readonly string UploadTempBasePath = Path.Combine(Path.GetTempPath(), "meepleai_uploads");
@@ -26,15 +26,16 @@ public class UploadChunkCommandHandler : ICommandHandler<UploadChunkCommand, Upl
         MeepleAiDbContext dbContext,
         ILogger<UploadChunkCommandHandler> logger)
     {
-        _sessionRepository = sessionRepository;
-        _dbContext = dbContext;
-        _logger = logger;
+        _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
+        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<UploadChunkResult> Handle(
         UploadChunkCommand request,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         // Retry loop for handling concurrent chunk uploads
         for (int attempt = 0; attempt < MaxConcurrencyRetries; attempt++)
         {
@@ -108,16 +109,16 @@ public class UploadChunkCommandHandler : ICommandHandler<UploadChunkCommand, Upl
             {
                 return new UploadChunkResult(
                     Success: false,
-                    ReceivedChunks: session.ReceivedChunks,
-                    TotalChunks: session.TotalChunks,
-                    ProgressPercentage: session.ProgressPercentage,
+                    ReceivedChunks: session!.ReceivedChunks,
+                    TotalChunks: session!.TotalChunks,
+                    ProgressPercentage: session!.ProgressPercentage,
                     IsComplete: false,
                     ErrorMessage: chunkError
                 );
             }
 
             // Check if chunk already received (idempotent)
-            if (session.HasChunk(request.ChunkIndex))
+            if (session!.HasChunk(request.ChunkIndex))
             {
                 _logger.LogDebug("Chunk {ChunkIndex} already received for session {SessionId}",
                     request.ChunkIndex, request.SessionId);
@@ -148,7 +149,12 @@ public class UploadChunkCommandHandler : ICommandHandler<UploadChunkCommand, Upl
                 ErrorMessage: null
             );
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: COMMAND HANDLER PATTERN - CQRS handler boundary
+        // Generic catch handles unexpected infrastructure failures (DB, network, memory)
+        // to prevent exception propagation to API layer. Returns Result/Response pattern.
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             _logger.LogError(ex, "Failed to process chunk {ChunkIndex} for session {SessionId}",
                 request.ChunkIndex, request.SessionId);
@@ -207,7 +213,7 @@ public class UploadChunkCommandHandler : ICommandHandler<UploadChunkCommand, Upl
             return (false, session, "Upload session has expired");
         }
 
-        if (string.Equals(session.Status, "completed", StringComparison.Ordinal) || 
+        if (string.Equals(session.Status, "completed", StringComparison.Ordinal) ||
             string.Equals(session.Status, "failed", StringComparison.Ordinal))
         {
             return (false, session, $"Session is already {session.Status}");

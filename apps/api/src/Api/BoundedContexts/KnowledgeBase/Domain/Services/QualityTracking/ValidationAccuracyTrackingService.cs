@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
 /// BGAI-039: Measures how accurately the validation system identifies correct vs. incorrect responses.
 /// Target: >= 80% accuracy baseline
 /// </summary>
-public class ValidationAccuracyTrackingService
+internal class ValidationAccuracyTrackingService
 {
     /// <summary>
     /// Minimum accuracy threshold for validation system (80%)
@@ -27,8 +27,7 @@ public class ValidationAccuracyTrackingService
         PromptEvaluationResult evaluationResult,
         int expectedValidCount)
     {
-        if (evaluationResult == null)
-            throw new ArgumentNullException(nameof(evaluationResult));
+        ArgumentNullException.ThrowIfNull(evaluationResult);
 
         if (expectedValidCount < 0 || expectedValidCount > evaluationResult.TotalQueries)
             throw new ArgumentException(
@@ -77,11 +76,8 @@ public class ValidationAccuracyTrackingService
         int expectedValidCount,
         Func<QueryEvaluationResult, bool> metricSelector)
     {
-        if (evaluationResult == null)
-            throw new ArgumentNullException(nameof(evaluationResult));
-
-        if (metricSelector == null)
-            throw new ArgumentNullException(nameof(metricSelector));
+        ArgumentNullException.ThrowIfNull(evaluationResult);
+        ArgumentNullException.ThrowIfNull(metricSelector);
 
         if (expectedValidCount < 0 || expectedValidCount > evaluationResult.TotalQueries)
             throw new ArgumentException(
@@ -153,8 +149,7 @@ public class ValidationAccuracyTrackingService
         ValidationAccuracyMetrics metrics,
         string context)
     {
-        if (metrics == null)
-            throw new ArgumentNullException(nameof(metrics));
+        ArgumentNullException.ThrowIfNull(metrics);
 
         if (string.IsNullOrWhiteSpace(context))
             throw new ArgumentException("Context cannot be null or whitespace", nameof(context));
@@ -175,7 +170,7 @@ public class ValidationAccuracyTrackingService
     /// <summary>
     /// Generates actionable recommendations based on metrics.
     /// </summary>
-    private static IReadOnlyList<string> GenerateRecommendations(ValidationAccuracyMetrics metrics)
+    private static List<string> GenerateRecommendations(ValidationAccuracyMetrics metrics)
     {
         var recommendations = new List<string>();
 
@@ -255,7 +250,7 @@ public class ValidationAccuracyTrackingService
 /// <param name="Summary">Human-readable summary</param>
 /// <param name="Recommendations">Actionable recommendations</param>
 /// <param name="Timestamp">Report generation time</param>
-public record ValidationAccuracyReport(
+internal record ValidationAccuracyReport(
     string Context,
     ValidationAccuracyMetrics Metrics,
     bool MeetsBaseline,

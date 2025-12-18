@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.Authentication.Domain.Entities;
 /// Provides detailed audit trail and analytics for API key usage.
 /// Entity for logging API key access patterns.
 /// </summary>
-public sealed class ApiKeyUsageLog : Entity<Guid>
+internal sealed class ApiKeyUsageLog : Entity<Guid>
 {
     /// <summary>
     /// The API key that was used.

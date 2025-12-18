@@ -1,4 +1,5 @@
 using Api.BoundedContexts.Administration.Infrastructure.Services.Formatters;
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.Administration.Infrastructure.Services;
@@ -7,7 +8,7 @@ namespace Api.BoundedContexts.Administration.Infrastructure.Services;
 /// UserActivity template implementation
 /// ISSUE-916: User activity and engagement report generation
 /// </summary>
-public sealed partial class ReportGeneratorService
+internal sealed partial class ReportGeneratorService
 {
     private static (bool IsValid, string? ErrorMessage) ValidateUserActivityParameters(
         IReadOnlyDictionary<string, object> parameters)
@@ -36,8 +37,9 @@ public sealed partial class ReportGeneratorService
 
     private async Task<ReportContent> GenerateUserActivityReportAsync(
         IReadOnlyDictionary<string, object> parameters,
-        CancellationToken ct)
+        CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(parameters);
         var startDate = (DateTime)parameters["startDate"];
         var endDate = (DateTime)parameters["endDate"];
 
@@ -47,7 +49,7 @@ public sealed partial class ReportGeneratorService
             .GroupBy(u => u.CreatedAt.Date)
             .Select(g => new { Date = g.Key, Count = g.Count() })
             .OrderBy(x => x.Date)
-            .ToListAsync(ct)
+            .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
         // Login activity (via sessions)
@@ -56,7 +58,7 @@ public sealed partial class ReportGeneratorService
             .GroupBy(s => s.CreatedAt.Date)
             .Select(g => new { Date = g.Key, Count = g.Count() })
             .OrderBy(x => x.Date)
-            .ToListAsync(ct)
+            .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
         // Session creation
@@ -65,11 +67,11 @@ public sealed partial class ReportGeneratorService
             .GroupBy(s => s.CreatedAt.Date)
             .Select(g => new { Date = g.Key, Count = g.Count() })
             .OrderBy(x => x.Date)
-            .ToListAsync(ct)
+            .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
         // ISSUE-917: Enhanced with multi-line chart
-        var dateLabels = registrations.Select(r => r.Date.ToString("MMM dd")).ToArray();
+        var dateLabels = registrations.Select(r => r.Date.ToString("MMM dd", CultureInfo.InvariantCulture)).ToArray();
         var registrationValues = registrations.Select(r => (double)r.Count).ToArray();
         var loginValues = logins.Select(l => (double)l.Count).ToArray();
 
@@ -80,15 +82,15 @@ public sealed partial class ReportGeneratorService
                 Description: "Daily new user registrations",
                 Data: registrations.Select(r => new ReportDataRow(
                     new Dictionary<string, object>
-                    {
-                        ["Date"] = r.Date.ToString("yyyy-MM-dd"),
+(StringComparer.Ordinal) {
+                        ["Date"] = r.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
                         ["Registrations"] = r.Count
                     })).ToList(),
                 Chart: new ChartData(
                     Type: ChartType.Line,
                     Labels: dateLabels,
                     Series: new Dictionary<string, double[]>
-                    {
+(StringComparer.Ordinal) {
                         ["Registrations"] = registrationValues
                     },
                     YAxisLabel: "Count")),
@@ -97,15 +99,15 @@ public sealed partial class ReportGeneratorService
                 Description: "Daily login and session activity comparison",
                 Data: logins.Select(l => new ReportDataRow(
                     new Dictionary<string, object>
-                    {
-                        ["Date"] = l.Date.ToString("yyyy-MM-dd"),
+(StringComparer.Ordinal) {
+                        ["Date"] = l.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
                         ["Logins"] = l.Count
                     })).ToList(),
                 Chart: new ChartData(
                     Type: ChartType.MultiLine,
                     Labels: dateLabels,
                     Series: new Dictionary<string, double[]>
-                    {
+(StringComparer.Ordinal) {
                         ["Logins"] = loginValues,
                         ["Sessions"] = sessions.Select(s => (double)s.Count).ToArray()
                     },
@@ -117,6 +119,7 @@ public sealed partial class ReportGeneratorService
             Description: $"User engagement from {startDate:yyyy-MM-dd} to {endDate:yyyy-MM-dd}",
             GeneratedAt: DateTime.UtcNow,
             Metadata: new Dictionary<string, object>
+(StringComparer.Ordinal)
             {
                 ["startDate"] = startDate,
                 ["endDate"] = endDate,
@@ -126,3 +129,4 @@ public sealed partial class ReportGeneratorService
             Sections: sections);
     }
 }
+

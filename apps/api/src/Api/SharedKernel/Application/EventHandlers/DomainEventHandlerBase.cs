@@ -12,20 +12,22 @@ namespace Api.SharedKernel.Application.EventHandlers;
 /// All domain event handlers should inherit from this class to ensure consistent audit trail.
 /// </summary>
 /// <typeparam name="TEvent">The type of domain event to handle</typeparam>
-public abstract class DomainEventHandlerBase<TEvent> : INotificationHandler<TEvent>
+internal abstract class DomainEventHandlerBase<TEvent> : INotificationHandler<TEvent>
     where TEvent : IDomainEvent
 {
     private readonly MeepleAiDbContext _dbContext;
-    protected readonly ILogger<DomainEventHandlerBase<TEvent>> Logger;
+    protected readonly ILogger Logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DomainEventHandlerBase{TEvent}"/> class.
     /// </summary>
     protected DomainEventHandlerBase(
         MeepleAiDbContext dbContext,
-        ILogger<DomainEventHandlerBase<TEvent>> logger)
+        ILogger logger)
     {
+        ArgumentNullException.ThrowIfNull(dbContext);
         _dbContext = dbContext;
+        ArgumentNullException.ThrowIfNull(logger);
         Logger = logger;
     }
 

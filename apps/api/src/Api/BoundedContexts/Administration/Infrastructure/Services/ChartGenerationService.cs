@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.Administration.Infrastructure.Services;
 /// Service for generating charts using ScottPlot
 /// ISSUE-917: Chart generation for report templates
 /// </summary>
-public sealed class ChartGenerationService
+internal sealed class ChartGenerationService
 {
     /// <summary>
     /// Generates a line chart and returns the image as byte array
@@ -20,6 +20,8 @@ public sealed class ChartGenerationService
         int width = 800,
         int height = 400)
     {
+        ArgumentNullException.ThrowIfNull(xLabels);
+        ArgumentNullException.ThrowIfNull(yValues);
         using var plot = new Plot();
 
         // Add data
@@ -39,8 +41,8 @@ public sealed class ChartGenerationService
         plot.Axes.Bottom.TickGenerator = new NumericManual(ticks);
         plot.Axes.Bottom.MajorTickStyle.Length = 5;
 
-        // Save to temporary file and read bytes
-        var tempFile = Path.GetTempFileName();
+        // Fix S5445: Use Path.GetRandomFileName() instead of Path.GetTempFileName()
+        var tempFile = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + ".png");
         try
         {
             plot.SavePng(tempFile, width, height);
@@ -64,6 +66,8 @@ public sealed class ChartGenerationService
         int width = 800,
         int height = 400)
     {
+        ArgumentNullException.ThrowIfNull(categories);
+        ArgumentNullException.ThrowIfNull(values);
         using var plot = new Plot();
 
         // Add bars
@@ -85,8 +89,8 @@ public sealed class ChartGenerationService
         plot.Axes.Bottom.MajorTickStyle.Length = 0;
         plot.Axes.Margins(bottom: 0);
 
-        // Save to temporary file and read bytes
-        var tempFile = Path.GetTempFileName();
+        // Fix S5445: Use Path.GetRandomFileName() instead of Path.GetTempFileName()
+        var tempFile = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + ".png");
         try
         {
             plot.SavePng(tempFile, width, height);
@@ -105,11 +109,13 @@ public sealed class ChartGenerationService
     public byte[] GenerateMultiLineChart(
         string title,
         string[] xLabels,
-        Dictionary<string, double[]> series,
+        IReadOnlyDictionary<string, double[]> series,
         string yAxisLabel,
         int width = 800,
         int height = 400)
     {
+        ArgumentNullException.ThrowIfNull(xLabels);
+        ArgumentNullException.ThrowIfNull(series);
         using var plot = new Plot();
         var xPositions = Enumerable.Range(0, xLabels.Length).Select(i => (double)i).ToArray();
 
@@ -134,8 +140,8 @@ public sealed class ChartGenerationService
         plot.Axes.Bottom.TickGenerator = new NumericManual(ticks);
         plot.Axes.Bottom.MajorTickStyle.Length = 5;
 
-        // Save to temporary file and read bytes
-        var tempFile = Path.GetTempFileName();
+        // Fix S5445: Use Path.GetRandomFileName() instead of Path.GetTempFileName()
+        var tempFile = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + ".png");
         try
         {
             plot.SavePng(tempFile, width, height);
@@ -155,7 +161,7 @@ public sealed class ChartGenerationService
     public byte[] GenerateStackedBarChart(
         string title,
         string[] categories,
-        Dictionary<string, double[]> series,
+        IReadOnlyDictionary<string, double[]> series,
         string yAxisLabel,
         int width = 800,
         int height = 400)
@@ -191,8 +197,8 @@ public sealed class ChartGenerationService
         plot.Axes.Bottom.MajorTickStyle.Length = 0;
         plot.Axes.Margins(bottom: 0);
 
-        // Save to temporary file and read bytes
-        var tempFile = Path.GetTempFileName();
+        // Fix S5445: Use Path.GetRandomFileName() instead of Path.GetTempFileName()
+        var tempFile = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + ".png");
         try
         {
             plot.SavePng(tempFile, width, height);

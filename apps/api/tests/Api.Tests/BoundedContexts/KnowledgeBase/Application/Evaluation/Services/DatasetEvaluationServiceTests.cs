@@ -559,7 +559,7 @@ public class DatasetEvaluationServiceTests
         }
 
         var callCount = 0;
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
 
         // Note: AskAsync signature is (gameId, query, language, bypassCache, cancellationToken)
         _mockRagService

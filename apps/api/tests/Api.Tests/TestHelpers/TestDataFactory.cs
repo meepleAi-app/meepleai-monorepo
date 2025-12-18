@@ -47,7 +47,7 @@ namespace Api.Tests.TestHelpers;
 ///     .Build();
 /// </code>
 /// </remarks>
-public static class TestDataFactory
+internal static class TestDataFactory
 {
     /// <summary>
     /// Creates a valid game with sensible defaults (Catan-like).
@@ -323,45 +323,6 @@ public static class TestDataFactory
             .Build();
         return (game, gameSession);
     }
-    /// <summary>
-    /// Default values for test data.
-    /// Provides commonly used constants and deterministic GUIDs for stable test data.
-    /// </summary>
-    public static class Defaults
-    {
-        // Authentication & User defaults
-        /// <summary>Default test email address.</summary>
-        public const string TestEmail = "test@example.com";
 
-        /// <summary>Default test password (for use with UserBuilder).</summary>
-        public const string TestPassword = "Test123!";
-
-        /// <summary>Default test user display name.</summary>
-        public const string TestDisplayName = "Test User";
-
-        // Game defaults
-        /// <summary>Default test game title.</summary>
-        public const string TestGameTitle = "Test Game";
-
-        // PDF & Quality defaults
-        /// <summary>Default page count for test PDF documents.</summary>
-        public const int DefaultPageCount = 10;
-
-        /// <summary>Default quality score for PDF processing (0.0-1.0).</summary>
-        public const double DefaultQualityScore = 0.85;
-
-        /// <summary>Default snippet relevance score for RAG (0.0-1.0).</summary>
-        public const float DefaultSnippetScore = 0.9f;
-
-        // Deterministic GUIDs for stable test data
-        /// <summary>Deterministic GUID for test user (useful for assertions that need stable IDs).</summary>
-        public static readonly Guid TestUserId = Guid.Parse("00000000-0000-0000-0000-000000000001");
-
-        /// <summary>Deterministic GUID for test game (useful for assertions that need stable IDs).</summary>
-        public static readonly Guid TestGameId = Guid.Parse("00000000-0000-0000-0000-000000000002");
-
-        /// <summary>Deterministic GUID for test PDF document (useful for assertions that need stable IDs).</summary>
-        public static readonly Guid TestPdfId = Guid.Parse("00000000-0000-0000-0000-000000000003");
-    }
 }
 

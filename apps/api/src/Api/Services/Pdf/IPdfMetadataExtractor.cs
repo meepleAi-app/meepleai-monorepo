@@ -6,7 +6,7 @@ namespace Api.Services.Pdf;
 /// <summary>
 /// Service responsible for extracting PDF metadata
 /// </summary>
-public interface IPdfMetadataExtractor
+internal interface IPdfMetadataExtractor
 {
     /// <summary>
     /// Extracts metadata from a PDF file
@@ -19,7 +19,7 @@ public interface IPdfMetadataExtractor
 /// <summary>
 /// PDF metadata information
 /// </summary>
-public class PdfMetadata
+internal class PdfMetadata
 {
     public string? Title { get; set; }
     public string? Author { get; set; }

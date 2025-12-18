@@ -6,7 +6,7 @@ using Api.SharedKernel.Application.Interfaces;
 
 namespace Api.BoundedContexts.DocumentProcessing.Application.Handlers;
 
-public class GetPdfDocumentByIdQueryHandler : IQueryHandler<GetPdfDocumentByIdQuery, PdfDocumentDto?>
+internal class GetPdfDocumentByIdQueryHandler : IQueryHandler<GetPdfDocumentByIdQuery, PdfDocumentDto?>
 {
     private readonly IPdfDocumentRepository _documentRepository;
 
@@ -17,6 +17,7 @@ public class GetPdfDocumentByIdQueryHandler : IQueryHandler<GetPdfDocumentByIdQu
 
     public async Task<PdfDocumentDto?> Handle(GetPdfDocumentByIdQuery query, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(query);
         var document = await _documentRepository.GetByIdAsync(query.DocumentId, cancellationToken).ConfigureAwait(false);
 
         return document != null ? MapToDto(document) : null;

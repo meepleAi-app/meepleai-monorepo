@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Handlers;
 /// NOTE: Uses DbContext directly for ProcessingProgressJson field (not in domain entity).
 /// PDF-08: Get PDF processing progress
 /// </summary>
-public class GetPdfProgressQueryHandler : IQueryHandler<GetPdfProgressQuery, PdfProgressResult?>
+internal class GetPdfProgressQueryHandler : IQueryHandler<GetPdfProgressQuery, PdfProgressResult?>
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly ILogger<GetPdfProgressQueryHandler> _logger;
@@ -26,6 +26,7 @@ public class GetPdfProgressQueryHandler : IQueryHandler<GetPdfProgressQuery, Pdf
 
     public async Task<PdfProgressResult?> Handle(GetPdfProgressQuery query, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(query);
         try
         {
             var pdf = await _dbContext.PdfDocuments
@@ -45,10 +46,15 @@ public class GetPdfProgressQueryHandler : IQueryHandler<GetPdfProgressQuery, Pdf
 
             return pdf;
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: QUERY HANDLER PATTERN - CQRS query boundary
+        // Generic catch handles unexpected infrastructure failures (DB, network)
+        // to prevent exception propagation to API layer. Returns null on failure.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving PDF progress for {PdfId}", query.PdfId);
             return null;
         }
+#pragma warning restore CA1031
     }
 }

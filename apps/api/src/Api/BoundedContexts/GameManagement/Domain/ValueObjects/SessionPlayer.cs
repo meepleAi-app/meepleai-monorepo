@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 /// <summary>
 /// Value object representing a player in a game session.
 /// </summary>
-public sealed class SessionPlayer : ValueObject
+internal sealed class SessionPlayer : ValueObject
 {
     public string PlayerName { get; }
     public int PlayerOrder { get; }

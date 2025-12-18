@@ -9,9 +9,25 @@ namespace Api.Routing;
 /// Infrastructure monitoring endpoints (Admin only).
 /// Issues #891 + #893: Health checks and Prometheus metrics queries.
 /// </summary>
-public static class MonitoringEndpoints
+internal static class MonitoringEndpoints
 {
     public static RouteGroupBuilder MapMonitoringEndpoints(this RouteGroupBuilder group)
+    {
+        // Issue #891, #894: Infrastructure health checks & details
+        MapInfrastructureHealthEndpoints(group);
+        // Issue #892: Individual service health endpoints
+        MapServiceHealthEndpoints(group);
+
+        return group;
+    }
+
+    private static void MapInfrastructureHealthEndpoints(RouteGroupBuilder group)
+    {
+        MapGetInfrastructureHealthEndpoint(group);
+        MapGetInfrastructureDetailsEndpoint(group);
+    }
+
+    private static void MapGetInfrastructureHealthEndpoint(RouteGroupBuilder group)
     {
         // Issue #891: Infrastructure health checks
         group.MapGet("/admin/infrastructure/health", async (
@@ -51,206 +67,10 @@ public static class MonitoringEndpoints
         .WithTags("Monitoring")
         .Produces<object>(200)
         .Produces(401);
+    }
 
-        // Issue #893: Prometheus range queries
-        group.MapGet("/admin/prometheus/metrics", async (
-            HttpContext context,
-            IMediator mediator,
-            [FromQuery] string query,
-            [FromQuery] DateTime start,
-            [FromQuery] DateTime end,
-            [FromQuery] string step = "5m",
-            CancellationToken ct = default) =>
-        {
-            var (authorized, _, error) = context.RequireAdminSession();
-            if (!authorized) return error!;
-
-            if (string.IsNullOrWhiteSpace(query))
-            {
-                return Results.BadRequest(new { error = "Query parameter is required" });
-            }
-
-            var metricsQuery = new GetPrometheusMetricsQuery
-            {
-                Query = query,
-                Start = start,
-                End = end,
-                Step = step
-            };
-
-            var result = await mediator.Send(metricsQuery, ct).ConfigureAwait(false);
-
-            return Results.Json(new
-            {
-                resultType = result.ResultType,
-                timeSeries = result.TimeSeries.Select(ts => new
-                {
-                    metric = ts.Metric,
-                    values = ts.Values.Select(v => new
-                    {
-                        timestamp = v.Timestamp,
-                        value = v.Value
-                    })
-                })
-            });
-        })
-        .WithName("GetPrometheusMetrics")
-        .WithTags("Monitoring")
-        .Produces<object>(200)
-        .Produces(400)
-        .Produces(401);
-
-        // Issue #892: Individual service health endpoints
-        group.MapGet("/health/postgresql", async (
-            HttpContext context,
-            IMediator mediator,
-            CancellationToken ct = default) =>
-        {
-            var (authorized, _, error) = context.RequireAdminSession();
-            if (!authorized) return error!;
-
-            var query = new GetInfrastructureHealthQuery { ServiceName = "postgres" };
-            var result = await mediator.Send(query, ct).ConfigureAwait(false);
-
-            var service = result.Services.FirstOrDefault();
-            if (service == null)
-                return Results.NotFound(new { error = "PostgreSQL health check not found" });
-
-            return Results.Json(new
-            {
-                serviceName = service.ServiceName,
-                state = service.State.ToString(),
-                errorMessage = service.ErrorMessage,
-                checkedAt = service.CheckedAt,
-                responseTimeMs = service.ResponseTimeMs
-            });
-        })
-        .WithName("GetPostgreSqlHealth")
-        .WithTags("Monitoring", "Health")
-        .Produces<object>(200)
-        .Produces(401)
-        .Produces(404);
-
-        group.MapGet("/health/redis", async (
-            HttpContext context,
-            IMediator mediator,
-            CancellationToken ct = default) =>
-        {
-            var (authorized, _, error) = context.RequireAdminSession();
-            if (!authorized) return error!;
-
-            var query = new GetInfrastructureHealthQuery { ServiceName = "redis" };
-            var result = await mediator.Send(query, ct).ConfigureAwait(false);
-
-            var service = result.Services.FirstOrDefault();
-            if (service == null)
-                return Results.NotFound(new { error = "Redis health check not found" });
-
-            return Results.Json(new
-            {
-                serviceName = service.ServiceName,
-                state = service.State.ToString(),
-                errorMessage = service.ErrorMessage,
-                checkedAt = service.CheckedAt,
-                responseTimeMs = service.ResponseTimeMs
-            });
-        })
-        .WithName("GetRedisHealth")
-        .WithTags("Monitoring", "Health")
-        .Produces<object>(200)
-        .Produces(401)
-        .Produces(404);
-
-        group.MapGet("/health/qdrant", async (
-            HttpContext context,
-            IMediator mediator,
-            CancellationToken ct = default) =>
-        {
-            var (authorized, _, error) = context.RequireAdminSession();
-            if (!authorized) return error!;
-
-            var query = new GetInfrastructureHealthQuery { ServiceName = "qdrant" };
-            var result = await mediator.Send(query, ct).ConfigureAwait(false);
-
-            var service = result.Services.FirstOrDefault();
-            if (service == null)
-                return Results.NotFound(new { error = "Qdrant health check not found" });
-
-            return Results.Json(new
-            {
-                serviceName = service.ServiceName,
-                state = service.State.ToString(),
-                errorMessage = service.ErrorMessage,
-                checkedAt = service.CheckedAt,
-                responseTimeMs = service.ResponseTimeMs
-            });
-        })
-        .WithName("GetQdrantHealth")
-        .WithTags("Monitoring", "Health")
-        .Produces<object>(200)
-        .Produces(401)
-        .Produces(404);
-
-        group.MapGet("/health/n8n", async (
-            HttpContext context,
-            IMediator mediator,
-            CancellationToken ct = default) =>
-        {
-            var (authorized, _, error) = context.RequireAdminSession();
-            if (!authorized) return error!;
-
-            var query = new GetInfrastructureHealthQuery { ServiceName = "n8n" };
-            var result = await mediator.Send(query, ct).ConfigureAwait(false);
-
-            var service = result.Services.FirstOrDefault();
-            if (service == null)
-                return Results.NotFound(new { error = "n8n health check not found" });
-
-            return Results.Json(new
-            {
-                serviceName = service.ServiceName,
-                state = service.State.ToString(),
-                errorMessage = service.ErrorMessage,
-                checkedAt = service.CheckedAt,
-                responseTimeMs = service.ResponseTimeMs
-            });
-        })
-        .WithName("GetN8NHealth")
-        .WithTags("Monitoring", "Health")
-        .Produces<object>(200)
-        .Produces(401)
-        .Produces(404);
-
-        group.MapGet("/health/hyperdx", async (
-            HttpContext context,
-            IMediator mediator,
-            CancellationToken ct = default) =>
-        {
-            var (authorized, _, error) = context.RequireAdminSession();
-            if (!authorized) return error!;
-
-            var query = new GetInfrastructureHealthQuery { ServiceName = "hyperdx" };
-            var result = await mediator.Send(query, ct).ConfigureAwait(false);
-
-            var service = result.Services.FirstOrDefault();
-            if (service == null)
-                return Results.NotFound(new { error = "HyperDX health check not found" });
-
-            return Results.Json(new
-            {
-                serviceName = service.ServiceName,
-                state = service.State.ToString(),
-                errorMessage = service.ErrorMessage,
-                checkedAt = service.CheckedAt,
-                responseTimeMs = service.ResponseTimeMs
-            });
-        })
-        .WithName("GetHyperDxHealth")
-        .WithTags("Monitoring", "Health")
-        .Produces<object>(200)
-        .Produces(401)
-        .Produces(404);
-
+    private static void MapGetInfrastructureDetailsEndpoint(RouteGroupBuilder group)
+    {
         // Issue #894: Comprehensive infrastructure details (health + metrics)
         group.MapGet("/admin/infrastructure/details", async (
             HttpContext context,
@@ -297,7 +117,53 @@ public static class MonitoringEndpoints
         .WithDescription("Issue #894: Returns aggregated infrastructure status combining service health and operational metrics from Prometheus")
         .Produces<object>(200)
         .Produces(401);
+    }
 
-        return group;
+    private static void MapServiceHealthEndpoints(RouteGroupBuilder group)
+    {
+        // Issue #892: Individual service health endpoints
+        MapGenericServiceHealthEndpoint(group, "/health/postgresql", "postgres", "GetPostgreSqlHealth", "PostgreSQL");
+        MapGenericServiceHealthEndpoint(group, "/health/redis", "redis", "GetRedisHealth", "Redis");
+        MapGenericServiceHealthEndpoint(group, "/health/qdrant", "qdrant", "GetQdrantHealth", "Qdrant");
+        MapGenericServiceHealthEndpoint(group, "/health/n8n", "n8n", "GetN8NHealth", "n8n");
+        MapGenericServiceHealthEndpoint(group, "/health/hyperdx", "hyperdx", "GetHyperDxHealth", "HyperDX");
+    }
+
+    private static void MapGenericServiceHealthEndpoint(
+        RouteGroupBuilder group,
+        string route,
+        string serviceName,
+        string endpointName,
+        string errorDisplayName)
+    {
+        group.MapGet(route, async (
+            HttpContext context,
+            IMediator mediator,
+            CancellationToken ct = default) =>
+        {
+            var (authorized, _, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
+
+            var query = new GetInfrastructureHealthQuery { ServiceName = serviceName };
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+            var service = result.Services.FirstOrDefault();
+            if (service == null)
+                return Results.NotFound(new { error = $"{errorDisplayName} health check not found" });
+
+            return Results.Json(new
+            {
+                serviceName = service.ServiceName,
+                state = service.State.ToString(),
+                errorMessage = service.ErrorMessage,
+                checkedAt = service.CheckedAt,
+                responseTimeMs = service.ResponseTimeMs
+            });
+        })
+        .WithName(endpointName)
+        .WithTags("Monitoring", "Health")
+        .Produces<object>(200)
+        .Produces(401)
+        .Produces(404);
     }
 }

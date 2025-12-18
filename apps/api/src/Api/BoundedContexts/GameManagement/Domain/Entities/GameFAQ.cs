@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.GameManagement.Domain.Entities;
 /// GameFAQ aggregate root representing a frequently asked question for a game.
 /// Issue #2028: Backend FAQ system for game-specific FAQs.
 /// </summary>
-public sealed class GameFAQ : AggregateRoot<Guid>
+internal sealed class GameFAQ : AggregateRoot<Guid>
 {
     public Guid GameId { get; private set; }
     public FAQQuestion Question { get; private set; }
@@ -38,8 +38,10 @@ public sealed class GameFAQ : AggregateRoot<Guid>
             throw new ArgumentException("Game ID cannot be empty", nameof(gameId));
 
         GameId = gameId;
-        Question = question ?? throw new ArgumentNullException(nameof(question));
-        Answer = answer ?? throw new ArgumentNullException(nameof(answer));
+        ArgumentNullException.ThrowIfNull(question);
+        Question = question;
+        ArgumentNullException.ThrowIfNull(answer);
+        Answer = answer;
         Upvotes = 0;
         CreatedAt = DateTime.UtcNow;
     }
@@ -49,8 +51,10 @@ public sealed class GameFAQ : AggregateRoot<Guid>
     /// </summary>
     public void Update(FAQQuestion question, FAQAnswer answer)
     {
-        Question = question ?? throw new ArgumentNullException(nameof(question));
-        Answer = answer ?? throw new ArgumentNullException(nameof(answer));
+        ArgumentNullException.ThrowIfNull(question);
+        Question = question;
+        ArgumentNullException.ThrowIfNull(answer);
+        Answer = answer;
         UpdatedAt = DateTime.UtcNow;
     }
 

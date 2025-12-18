@@ -22,7 +22,7 @@ namespace Api.Logging;
 /// Without sanitization: Creates fake log entry
 /// With sanitization: "testINFO: Admin deleted user" (newline removed)
 /// </summary>
-public class LogForgingSanitizationPolicy : IDestructuringPolicy
+internal class LogForgingSanitizationPolicy : IDestructuringPolicy
 {
     /// <summary>
     /// Sanitizes a string by removing carriage return and line feed characters.
@@ -51,8 +51,6 @@ public class LogForgingSanitizationPolicy : IDestructuringPolicy
             return false;
         }
 
-        var type = value.GetType();
-
         // Handle strings - sanitize control characters
         if (value is string stringValue)
         {
@@ -69,34 +67,10 @@ public class LogForgingSanitizationPolicy : IDestructuringPolicy
         // Handle dictionaries BEFORE checking System namespace
         if (value is IDictionary dictionary)
         {
-            var properties = new List<LogEventProperty>();
-            foreach (DictionaryEntry entry in dictionary)
-            {
-                // SEC-731: Sanitize dictionary keys to prevent newline injection via keys
-                var key = SanitizeString(entry.Key?.ToString());
-                var propertyValue = entry.Value;
-
-                if (propertyValue is string str)
-                {
-                    var sanitized = SanitizeString(str);
-                    properties.Add(new LogEventProperty(key, new ScalarValue(sanitized)));
-                }
-                else if (propertyValue != null)
-                {
-                    // Try to recursively destructure nested objects with this policy
-                    if (TryDestructure(propertyValue, propertyValueFactory, out var nestedResult))
-                    {
-                        properties.Add(new LogEventProperty(key, nestedResult!));
-                    }
-                    else
-                    {
-                        properties.Add(new LogEventProperty(key, propertyValueFactory.CreatePropertyValue(propertyValue, true)));
-                    }
-                }
-            }
-            result = new StructureValue(properties);
-            return true;
+            return TryDestructureDictionary(dictionary, propertyValueFactory, out result);
         }
+
+        var type = value.GetType();
 
         // Skip primitive types and simple system types
         if (type.IsPrimitive || type.IsEnum ||
@@ -109,6 +83,42 @@ public class LogForgingSanitizationPolicy : IDestructuringPolicy
         }
 
         // Handle complex objects via reflection
+        return TryDestructureComplexObject(value, type, propertyValueFactory, out result);
+    }
+
+    private bool TryDestructureDictionary(IDictionary dictionary, ILogEventPropertyValueFactory propertyValueFactory, out LogEventPropertyValue result)
+    {
+        var properties = new List<LogEventProperty>();
+        foreach (DictionaryEntry entry in dictionary)
+        {
+            // SEC-731: Sanitize dictionary keys to prevent newline injection via keys
+            var key = SanitizeString(entry.Key?.ToString());
+            var propertyValue = entry.Value;
+
+            if (propertyValue is string str)
+            {
+                var sanitized = SanitizeString(str);
+                properties.Add(new LogEventProperty(key, new ScalarValue(sanitized)));
+            }
+            else if (propertyValue != null)
+            {
+                // Try to recursively destructure nested objects with this policy
+                if (TryDestructure(propertyValue, propertyValueFactory, out var nestedResult))
+                {
+                    properties.Add(new LogEventProperty(key, nestedResult!));
+                }
+                else
+                {
+                    properties.Add(new LogEventProperty(key, propertyValueFactory.CreatePropertyValue(propertyValue, true)));
+                }
+            }
+        }
+        result = new StructureValue(properties);
+        return true;
+    }
+
+    private bool TryDestructureComplexObject(object value, Type type, ILogEventPropertyValueFactory propertyValueFactory, out LogEventPropertyValue result)
+    {
         var props = type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
         if (props.Length == 0)
         {
@@ -181,7 +191,7 @@ public class LogForgingSanitizationPolicy : IDestructuringPolicy
 /// _logger.LogInformation("Query: {Query}", userInput);
 /// Enricher sanitizes the {Query} property value before writing to logs.
 /// </summary>
-public class LogForgingSanitizationEnricher : ILogEventEnricher
+internal class LogForgingSanitizationEnricher : ILogEventEnricher
 {
     public void Enrich(LogEvent logEvent, ILogEventPropertyFactory propertyFactory)
     {

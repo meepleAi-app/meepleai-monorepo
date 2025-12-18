@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 /// Query to retrieve chat history summary for dashboard (Issue #2026).
 /// Optimized version that doesn't load full message arrays.
 /// </summary>
-public record GetMyChatHistoryQuery(
+internal record GetMyChatHistoryQuery(
     Guid UserId,
     int Skip = 0,
     int Take = 50
@@ -16,7 +16,7 @@ public record GetMyChatHistoryQuery(
 /// <summary>
 /// Result containing chat summaries and total count for pagination.
 /// </summary>
-public record GetMyChatHistoryResult(
+internal record GetMyChatHistoryResult(
     IReadOnlyList<ChatHistorySummaryDto> Chats,
     int TotalCount
 );

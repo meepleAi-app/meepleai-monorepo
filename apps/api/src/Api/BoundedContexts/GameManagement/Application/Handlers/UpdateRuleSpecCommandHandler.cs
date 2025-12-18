@@ -14,7 +14,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Handlers;
 /// Handles updating rule specifications for a game.
 /// Creates a new version of the RuleSpec.
 /// </summary>
-public class UpdateRuleSpecCommandHandler : ICommandHandler<UpdateRuleSpecCommand, RuleSpecDto>
+internal class UpdateRuleSpecCommandHandler : ICommandHandler<UpdateRuleSpecCommand, RuleSpecDto>
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly RuleSpecVersioningDomainService _versioningService;
@@ -29,84 +29,114 @@ public class UpdateRuleSpecCommandHandler : ICommandHandler<UpdateRuleSpecComman
         AuditService auditService,
         TimeProvider timeProvider)
     {
-        _dbContext = dbContext;
-        _versioningService = versioningService;
-        _cache = cache;
-        _auditService = auditService;
-        _timeProvider = timeProvider;
+        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
+        _versioningService = versioningService ?? throw new ArgumentNullException(nameof(versioningService));
+        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+        _auditService = auditService ?? throw new ArgumentNullException(nameof(auditService));
+        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
     }
 
     public async Task<RuleSpecDto> Handle(UpdateRuleSpecCommand command, CancellationToken cancellationToken)
     {
-        // Ensure game exists
+        ArgumentNullException.ThrowIfNull(command);
+
+        // Validate game and user exist
+        await ValidateGameAndUserAsync(command.GameId, command.UserId, cancellationToken).ConfigureAwait(false);
+
+        // Optimistic concurrency check and get latest spec
+        var latestSpec = await ValidateOptimisticConcurrencyAsync(command.GameId, command.ExpectedETag, cancellationToken).ConfigureAwait(false);
+
+        // Determine version
+        var version = await DetermineVersionAsync(command, cancellationToken).ConfigureAwait(false);
+
+        // Create new RuleSpec version
+        var specEntity = CreateRuleSpecEntity(command, version, latestSpec?.Id);
+
+        _dbContext.RuleSpecs.Add(specEntity);
+        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // Post-processing: cache invalidation and audit
+        await PostProcessRuleSpecUpdateAsync(command, version, cancellationToken).ConfigureAwait(false);
+
+        // Return DTO with ETag
+        return CreateRuleSpecDto(specEntity);
+    }
+
+    private async Task ValidateGameAndUserAsync(Guid gameId, Guid userId, CancellationToken cancellationToken)
+    {
         var game = await _dbContext.Games
-            .FirstOrDefaultAsync(g => g.Id == command.GameId, cancellationToken).ConfigureAwait(false);
+            .FirstOrDefaultAsync(g => g.Id == gameId, cancellationToken).ConfigureAwait(false);
 
         if (game is null)
         {
-            throw new InvalidOperationException($"Game {command.GameId} not found");
+            throw new InvalidOperationException($"Game {gameId} not found");
         }
 
-        // Ensure user exists
         var userExists = await _dbContext.Users
-            .AnyAsync(u => u.Id == command.UserId, cancellationToken).ConfigureAwait(false);
+            .AnyAsync(u => u.Id == userId, cancellationToken).ConfigureAwait(false);
 
         if (!userExists)
         {
-            throw new InvalidOperationException($"User {command.UserId} not found");
+            throw new InvalidOperationException($"User {userId} not found");
+        }
+    }
+
+    private async Task<RuleSpecEntity?> ValidateOptimisticConcurrencyAsync(Guid gameId, string? expectedETag, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(expectedETag))
+        {
+            return null;
         }
 
-        // Issue #2055: Optimistic concurrency check
-        RuleSpecEntity? latestSpec = null;
-        if (!string.IsNullOrEmpty(command.ExpectedETag))
-        {
-            latestSpec = await _dbContext.RuleSpecs
-                .AsNoTracking()
-                .Where(r => r.GameId == command.GameId)
-                .OrderByDescending(r => r.CreatedAt)
-                .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+        var latestSpec = await _dbContext.RuleSpecs
+            .AsNoTracking()
+            .Where(r => r.GameId == gameId)
+            .OrderByDescending(r => r.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
 
-            if (latestSpec != null && latestSpec.RowVersion != null)
+        if (latestSpec != null && latestSpec.RowVersion != null)
+        {
+            var currentETag = Convert.ToBase64String(latestSpec.RowVersion);
+            if (!string.Equals(currentETag, expectedETag, StringComparison.Ordinal))
             {
-                var currentETag = Convert.ToBase64String(latestSpec.RowVersion);
-                if (!string.Equals(currentETag, command.ExpectedETag, StringComparison.Ordinal))
-                {
-                    throw new InvalidOperationException(
-                        $"Conflict detected: RuleSpec has been modified by another user. " +
-                        $"Expected version ETag {command.ExpectedETag} but found {currentETag}. " +
-                        $"Please refresh and try again.");
-                }
+                throw new InvalidOperationException(
+                    $"Conflict detected: RuleSpec has been modified by another user. " +
+                    $"Expected version ETag {expectedETag} but found {currentETag}. " +
+                    $"Please refresh and try again.");
             }
         }
 
-        // Determine version
+        return latestSpec;
+    }
+
+    private async Task<string> DetermineVersionAsync(UpdateRuleSpecCommand command, CancellationToken cancellationToken)
+    {
         var versionProvided = !string.IsNullOrWhiteSpace(command.Version);
         var version = command.Version?.Trim() ?? string.Empty;
 
         if (!versionProvided)
         {
-            version = await _versioningService.GenerateNextVersionAsync(command.GameId, cancellationToken).ConfigureAwait(false);
+            return await _versioningService.GenerateNextVersionAsync(command.GameId, cancellationToken).ConfigureAwait(false);
         }
-        else
+
+        var duplicate = await _versioningService.VersionExistsAsync(command.GameId, version, cancellationToken).ConfigureAwait(false);
+        if (duplicate)
         {
-            var duplicate = await _versioningService.VersionExistsAsync(command.GameId, version, cancellationToken).ConfigureAwait(false);
-            if (duplicate)
-            {
-                throw new InvalidOperationException($"Version {version} already exists for game {command.GameId}");
-            }
+            throw new InvalidOperationException($"Version {version} already exists for game {command.GameId}");
         }
 
-        // Issue #2055: Set parent version ID if provided or use latest
-        var parentVersionId = command.ParentVersionId ?? latestSpec?.Id;
+        return version;
+    }
 
-        // Create new RuleSpec version
+    private RuleSpecEntity CreateRuleSpecEntity(UpdateRuleSpecCommand command, string version, Guid? parentVersionId)
+    {
         var specEntity = new RuleSpecEntity
         {
             GameId = command.GameId,
             Version = version,
             CreatedAt = _timeProvider.GetUtcNow().UtcDateTime,
             CreatedByUserId = command.UserId,
-            ParentVersionId = parentVersionId, // Issue #2055: Link to parent version
+            ParentVersionId = command.ParentVersionId ?? parentVersionId,
         };
 
         int sortOrder = 1;
@@ -124,13 +154,13 @@ public class UpdateRuleSpecCommandHandler : ICommandHandler<UpdateRuleSpecComman
             });
         }
 
-        _dbContext.RuleSpecs.Add(specEntity);
-        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return specEntity;
+    }
 
-        // Invalidate cache
+    private async Task PostProcessRuleSpecUpdateAsync(UpdateRuleSpecCommand command, string version, CancellationToken cancellationToken)
+    {
         await _cache.InvalidateGameAsync(command.GameId.ToString(), cancellationToken).ConfigureAwait(false);
 
-        // Audit trail
         await _auditService.LogAsync(
             command.UserId.ToString(),
             "UPDATE_RULESPEC",
@@ -141,8 +171,10 @@ public class UpdateRuleSpecCommandHandler : ICommandHandler<UpdateRuleSpecComman
             command.IpAddress,
             command.UserAgent,
             cancellationToken).ConfigureAwait(false);
+    }
 
-        // Issue #2055: Include ETag for optimistic concurrency
+    private static RuleSpecDto CreateRuleSpecDto(RuleSpecEntity specEntity)
+    {
         var etag = specEntity.RowVersion != null
             ? Convert.ToBase64String(specEntity.RowVersion)
             : null;

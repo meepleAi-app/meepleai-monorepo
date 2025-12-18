@@ -77,5 +77,8 @@ public sealed class BackupCode : ValueObject
         ? $"[BACKUP_CODE_USED:{UsedAt:yyyy-MM-dd HH:mm:ss}]"
         : "[BACKUP_CODE_UNUSED]";
 
-    public static implicit operator string(BackupCode code) => code.HashedValue;
+    public static implicit operator string(BackupCode code)
+    {
+        return code.HashedValue;
+    }
 }

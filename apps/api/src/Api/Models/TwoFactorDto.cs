@@ -6,7 +6,7 @@ namespace Api.Models;
 /// <summary>
 /// Request to enable two-factor authentication
 /// </summary>
-public class TwoFactorEnableRequest
+internal class TwoFactorEnableRequest
 {
     public string Code { get; set; } = string.Empty;
 }
@@ -14,7 +14,7 @@ public class TwoFactorEnableRequest
 /// <summary>
 /// Request to verify 2FA code during login
 /// </summary>
-public class TwoFactorVerifyRequest
+internal class TwoFactorVerifyRequest
 {
     public string SessionToken { get; set; } = string.Empty;
     public string Code { get; set; } = string.Empty;
@@ -23,7 +23,7 @@ public class TwoFactorVerifyRequest
 /// <summary>
 /// Request to disable two-factor authentication
 /// </summary>
-public class TwoFactorDisableRequest
+internal class TwoFactorDisableRequest
 {
     public string Password { get; set; } = string.Empty;
     public string Code { get; set; } = string.Empty;
@@ -32,7 +32,7 @@ public class TwoFactorDisableRequest
 /// <summary>
 /// Admin request to disable two-factor authentication for a locked-out user
 /// </summary>
-public class AdminDisable2FARequest
+internal class AdminDisable2FARequest
 {
     public string TargetUserId { get; set; } = string.Empty;
 }
@@ -40,7 +40,7 @@ public class AdminDisable2FARequest
 /// <summary>
 /// Response for login when 2FA is required
 /// </summary>
-public class LoginWith2FaResponse
+internal class LoginWith2FaResponse
 {
     public bool RequiresTwoFactor { get; set; }
     public string? SessionToken { get; set; }

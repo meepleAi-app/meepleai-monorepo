@@ -123,7 +123,7 @@ public abstract class TestBase : IDisposable
     /// <summary>
     /// Xunit logger provider for redirecting logs to test output.
     /// </summary>
-    private class XunitLoggerProvider(ITestOutputHelper output) : ILoggerProvider
+    private sealed class XunitLoggerProvider(ITestOutputHelper output) : ILoggerProvider
     {
         public ILogger CreateLogger(string categoryName) => new XunitLogger(output, categoryName);
         public void Dispose() { }

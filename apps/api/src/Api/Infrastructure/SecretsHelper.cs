@@ -20,7 +20,7 @@ namespace Api.Infrastructure;
 ///   2. OPENROUTER_API_KEY environment variable (direct value)
 ///   3. Throws InvalidOperationException if neither is found
 /// </summary>
-public static class SecretsHelper
+internal static class SecretsHelper
 {
     /// <summary>
     /// Gets a secret value from either a _FILE path or direct configuration value.
@@ -48,7 +48,7 @@ public static class SecretsHelper
             if (!File.Exists(filePath))
             {
                 var error = $"Secret file not found: {filePath} (from {fileKey})";
-                logger?.LogError(error);
+                logger?.LogError("Secret file not found: {FilePath} (from {FileKey})", filePath, fileKey);
                 throw new FileNotFoundException(error, filePath);
             }
 
@@ -59,7 +59,7 @@ public static class SecretsHelper
                 if (string.IsNullOrWhiteSpace(secretValue))
                 {
                     var error = $"Secret file is empty: {filePath} (from {fileKey})";
-                    logger?.LogError(error);
+                    logger?.LogError("Secret file is empty: {FilePath} (from {FileKey})", filePath, fileKey);
                     throw new InvalidOperationException(error);
                 }
 
@@ -75,7 +75,7 @@ public static class SecretsHelper
             catch (Exception ex) when (ex is not FileNotFoundException)
             {
                 var error = $"Failed to read secret file: {filePath} (from {fileKey})";
-                logger?.LogError(ex, error);
+                logger?.LogError(ex, "Failed to read secret file: {FilePath} (from {FileKey})", filePath, fileKey);
                 throw new IOException(error, ex);
             }
         }
@@ -96,7 +96,7 @@ public static class SecretsHelper
         if (required)
         {
             var error = $"{key} not configured. Set either {key} or {fileKey} environment variable.";
-            logger?.LogError(error);
+            logger?.LogError("{ConfigKey} not configured. Set either {ConfigKey} or {FileKey} environment variable.", key, key, fileKey);
             throw new InvalidOperationException(error);
         }
 

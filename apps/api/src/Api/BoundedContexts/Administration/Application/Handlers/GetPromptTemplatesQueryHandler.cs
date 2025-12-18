@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.Administration.Application.Handlers;
 /// <summary>
 /// Handles retrieval of paginated prompt templates with optional filtering.
 /// </summary>
-public class GetPromptTemplatesQueryHandler
+internal class GetPromptTemplatesQueryHandler
     : IQueryHandler<GetPromptTemplatesQuery, (IReadOnlyList<PromptTemplateDto> Templates, int TotalCount)>
 {
     private readonly MeepleAiDbContext _dbContext;

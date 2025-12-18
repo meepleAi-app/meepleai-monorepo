@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 /// ISO 639-1 language code value object for PDF language identification.
 /// Issue #2029: Validates language codes for PDF filtering
 /// </summary>
-public sealed class LanguageCode : ValueObject
+internal sealed class LanguageCode : ValueObject
 {
     // Supported ISO 639-1 codes for MeepleAI
     private static readonly HashSet<string> SupportedLanguages = new(StringComparer.OrdinalIgnoreCase)
@@ -38,7 +38,7 @@ public sealed class LanguageCode : ValueObject
 
         if (!SupportedLanguages.Contains(normalized))
             throw new ValidationException(nameof(LanguageCode),
-                $"Language code must be one of: {string.Join(", ", SupportedLanguages.OrderBy(x => x))}. Got: {code}");
+                $"Language code must be one of: {string.Join(", ", SupportedLanguages.OrderBy(x => x, StringComparer.Ordinal))}. Got: {code}");
 
         Value = normalized;
     }

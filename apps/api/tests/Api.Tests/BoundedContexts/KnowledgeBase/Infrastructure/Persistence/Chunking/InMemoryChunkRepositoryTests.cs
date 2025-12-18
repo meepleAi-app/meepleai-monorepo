@@ -212,7 +212,7 @@ public class InMemoryChunkRepositoryTests
     {
         // Arrange
         var chunk = CreateTestChunk();
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
 
         // Act

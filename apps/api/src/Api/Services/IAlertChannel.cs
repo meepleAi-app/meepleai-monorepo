@@ -4,7 +4,7 @@ namespace Api.Services;
 /// Interface for alert notification channels (Email, Slack, PagerDuty).
 /// Strategy pattern for multi-channel alerting.
 /// </summary>
-public interface IAlertChannel
+internal interface IAlertChannel
 {
     /// <summary>
     /// Name of the channel (e.g., "Email", "Slack", "PagerDuty").

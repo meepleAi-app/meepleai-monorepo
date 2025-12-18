@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.Authentication.Application.Queries.OAuth;
 /// Handles retrieval of all OAuth accounts linked to a user.
 /// Maps domain entities to DTOs with status information.
 /// </summary>
-public sealed class GetLinkedOAuthAccountsQueryHandler : IQueryHandler<GetLinkedOAuthAccountsQuery, GetLinkedOAuthAccountsResult>
+internal sealed class GetLinkedOAuthAccountsQueryHandler : IQueryHandler<GetLinkedOAuthAccountsQuery, GetLinkedOAuthAccountsResult>
 {
     private readonly IOAuthAccountRepository _oauthAccountRepository;
     private readonly ILogger<GetLinkedOAuthAccountsQueryHandler> _logger;
@@ -24,6 +24,7 @@ public sealed class GetLinkedOAuthAccountsQueryHandler : IQueryHandler<GetLinked
 
     public async Task<GetLinkedOAuthAccountsResult> Handle(GetLinkedOAuthAccountsQuery query, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(query);
         try
         {
             // Get all OAuth accounts for user
@@ -39,6 +40,10 @@ public sealed class GetLinkedOAuthAccountsQueryHandler : IQueryHandler<GetLinked
                 Accounts = accountDtos
             };
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: QUERY HANDLER PATTERN - CQRS query boundary
+        // Generic catch handles unexpected infrastructure failures (DB, network)
+        // to prevent exception propagation to API layer. Returns empty result on failure.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving OAuth accounts for user {UserId}", query.UserId);
@@ -47,6 +52,7 @@ public sealed class GetLinkedOAuthAccountsQueryHandler : IQueryHandler<GetLinked
                 Accounts = new List<OAuthAccountDto>()
             };
         }
+#pragma warning restore CA1031
     }
 
     private static OAuthAccountDto MapToDto(OAuthAccount account)

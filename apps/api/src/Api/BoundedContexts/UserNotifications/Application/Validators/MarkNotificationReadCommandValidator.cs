@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.UserNotifications.Application.Validators;
 /// Ensures NotificationId and UserId are provided.
 /// Issue #2153: Add input validation to notification commands
 /// </summary>
-public sealed class MarkNotificationReadCommandValidator : AbstractValidator<MarkNotificationReadCommand>
+internal sealed class MarkNotificationReadCommandValidator : AbstractValidator<MarkNotificationReadCommand>
 {
     public MarkNotificationReadCommandValidator()
     {

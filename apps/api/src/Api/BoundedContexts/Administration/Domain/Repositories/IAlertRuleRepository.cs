@@ -5,14 +5,15 @@ namespace Api.BoundedContexts.Administration.Domain.Repositories;
 /// <summary>
 /// Repository for AlertRule aggregate (Issue #921)
 /// </summary>
-public interface IAlertRuleRepository
+internal interface IAlertRuleRepository
 {
-    Task<AlertRule?> GetByIdAsync(Guid id, CancellationToken ct = default);
-    Task<AlertRule?> GetByNameAsync(string name, CancellationToken ct = default);
-    Task<List<AlertRule>> GetAllAsync(CancellationToken ct = default);
-    Task<List<AlertRule>> GetEnabledAsync(CancellationToken ct = default);
-    Task<List<AlertRule>> GetByAlertTypeAsync(string alertType, CancellationToken ct = default);
-    Task AddAsync(AlertRule alertRule, CancellationToken ct = default);
-    Task UpdateAsync(AlertRule alertRule, CancellationToken ct = default);
-    Task DeleteAsync(Guid id, CancellationToken ct = default);
+    Task<AlertRule?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<AlertRule?> GetByNameAsync(string name, CancellationToken cancellationToken = default);
+    Task<List<AlertRule>> GetAllAsync(CancellationToken cancellationToken = default);
+    Task<List<AlertRule>> GetEnabledAsync(CancellationToken cancellationToken = default);
+    Task<List<AlertRule>> GetByAlertTypeAsync(string alertType, CancellationToken cancellationToken = default);
+    Task AddAsync(AlertRule alertRule, CancellationToken cancellationToken = default);
+    Task UpdateAsync(AlertRule alertRule, CancellationToken cancellationToken = default);
+    Task DeleteAsync(Guid id, CancellationToken cancellationToken = default);
 }
+

@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Handlers;
 /// Handler for retrieving document collection by game ID.
 /// Issue #2051: Get collection with full document details
 /// </summary>
-public class GetCollectionByGameQueryHandler : IQueryHandler<GetCollectionByGameQuery, DocumentCollectionDto?>
+internal class GetCollectionByGameQueryHandler : IQueryHandler<GetCollectionByGameQuery, DocumentCollectionDto?>
 {
     private readonly IDocumentCollectionRepository _collectionRepository;
     private readonly IPdfDocumentRepository _pdfRepository;
@@ -28,6 +28,7 @@ public class GetCollectionByGameQueryHandler : IQueryHandler<GetCollectionByGame
 
     public async Task<DocumentCollectionDto?> Handle(GetCollectionByGameQuery query, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(query);
         _logger.LogInformation("Retrieving document collection for game {GameId}", query.GameId);
 
         var collection = await _collectionRepository.FindByGameIdAsync(query.GameId, cancellationToken).ConfigureAwait(false);

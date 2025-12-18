@@ -6,7 +6,7 @@ namespace Api.Services;
 /// Strategy interface for exporting chat conversations in different formats.
 /// Implementations provide format-specific generation logic.
 /// </summary>
-public interface IExportFormatter
+internal interface IExportFormatter
 {
     /// <summary>
     /// Format identifier (e.g., "txt", "md", "pdf"). Case-insensitive matching.

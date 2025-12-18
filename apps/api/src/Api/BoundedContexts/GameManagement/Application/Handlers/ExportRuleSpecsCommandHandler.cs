@@ -12,9 +12,16 @@ namespace Api.BoundedContexts.GameManagement.Application.Handlers;
 /// <summary>
 /// Handles exporting multiple rule specifications as a ZIP archive.
 /// </summary>
-public class ExportRuleSpecsCommandHandler : ICommandHandler<ExportRuleSpecsCommand, byte[]>
+internal class ExportRuleSpecsCommandHandler : ICommandHandler<ExportRuleSpecsCommand, byte[]>
 {
     private readonly MeepleAiDbContext _dbContext;
+
+    // CA1869: Cache JsonSerializerOptions for better performance
+    private static readonly JsonSerializerOptions s_jsonOptions = new()
+    {
+        WriteIndented = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
 
     public ExportRuleSpecsCommandHandler(MeepleAiDbContext dbContext)
     {
@@ -23,6 +30,7 @@ public class ExportRuleSpecsCommandHandler : ICommandHandler<ExportRuleSpecsComm
 
     public async Task<byte[]> Handle(ExportRuleSpecsCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         if (command.GameIds == null || command.GameIds.Count == 0)
         {
             throw new ArgumentException("At least one game ID must be provided", nameof(command));
@@ -71,12 +79,6 @@ public class ExportRuleSpecsCommandHandler : ICommandHandler<ExportRuleSpecsComm
                 using (var entryStream = entry.Open())
                 using (var writer = new StreamWriter(entryStream))
                 {
-                    var jsonOptions = new JsonSerializerOptions
-                    {
-                        WriteIndented = true,
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                    };
-
                     var exportObject = new
                     {
                         gameId = spec.GameId.ToString(),
@@ -95,7 +97,7 @@ public class ExportRuleSpecsCommandHandler : ICommandHandler<ExportRuleSpecsComm
                             .ToList()
                     };
 
-                    var json = JsonSerializer.Serialize(exportObject, jsonOptions);
+                    var json = JsonSerializer.Serialize(exportObject, s_jsonOptions);
                     await writer.WriteAsync(json).ConfigureAwait(false);
                 }
             }

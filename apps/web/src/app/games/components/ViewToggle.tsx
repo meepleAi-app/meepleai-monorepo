@@ -8,15 +8,15 @@
  * - Syncs view mode to URL (?view=grid|list)
  * - Preserves other search params (page, search, etc.)
  * - Keyboard accessible (Tab + Enter/Space)
- * - Responsive icons (LayoutGrid, List from lucide-react)
+ * - Responsive icons (Grid3x3, AlignJustify from lucide-react)
  */
 
 'use client';
 
-import { useCallback } from 'react';
-import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { LayoutGrid, List } from 'lucide-react';
+import { Rows, Square } from 'lucide-react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useCallback } from 'react';
 
 export interface ViewToggleProps {
   /** Current view mode from URL searchParams */
@@ -50,11 +50,11 @@ export function ViewToggle({ currentView }: ViewToggleProps) {
       className="border rounded-md"
     >
       <ToggleGroupItem value="grid" aria-label="Grid view" className="gap-2">
-        <LayoutGrid className="h-4 w-4" />
+        <Square className="h-4 w-4" />
         <span className="hidden sm:inline">Grid</span>
       </ToggleGroupItem>
       <ToggleGroupItem value="list" aria-label="List view" className="gap-2">
-        <List className="h-4 w-4" />
+        <Rows className="h-4 w-4" />
         <span className="hidden sm:inline">List</span>
       </ToggleGroupItem>
     </ToggleGroup>

@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 /// Handler for InitChunkedUploadCommand.
 /// Creates a new chunked upload session and prepares the temp directory.
 /// </summary>
-public class InitChunkedUploadCommandHandler : ICommandHandler<InitChunkedUploadCommand, InitChunkedUploadResult>
+internal class InitChunkedUploadCommandHandler : ICommandHandler<InitChunkedUploadCommand, InitChunkedUploadResult>
 {
     private readonly IChunkedUploadSessionRepository _sessionRepository;
     private readonly MeepleAiDbContext _dbContext;
@@ -22,9 +22,9 @@ public class InitChunkedUploadCommandHandler : ICommandHandler<InitChunkedUpload
         MeepleAiDbContext dbContext,
         ILogger<InitChunkedUploadCommandHandler> logger)
     {
-        _sessionRepository = sessionRepository;
-        _dbContext = dbContext;
-        _logger = logger;
+        _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
+        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         // Use a temp directory for chunked uploads
         _uploadTempBasePath = Path.Combine(Path.GetTempPath(), "meepleai_uploads");
@@ -34,6 +34,7 @@ public class InitChunkedUploadCommandHandler : ICommandHandler<InitChunkedUpload
         InitChunkedUploadCommand request,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         try
         {
             // Validate file extension
@@ -110,7 +111,12 @@ public class InitChunkedUploadCommandHandler : ICommandHandler<InitChunkedUpload
                 ErrorMessage: null
             );
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: COMMAND HANDLER PATTERN - CQRS handler boundary
+        // Generic catch handles unexpected infrastructure failures (DB, network, memory)
+        // to prevent exception propagation to API layer. Returns Result/Response pattern.
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             _logger.LogError(ex, "Failed to initialize chunked upload session for user {UserId}", request.UserId);
             return new InitChunkedUploadResult(

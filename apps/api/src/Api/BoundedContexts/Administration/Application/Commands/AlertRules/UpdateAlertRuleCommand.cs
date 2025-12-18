@@ -3,18 +3,20 @@ using MediatR;
 
 namespace Api.BoundedContexts.Administration.Application.Commands.AlertRules;
 
-public record UpdateAlertRuleCommand(
-    Guid Id, 
-    string Name, 
-    string Severity, 
-    double ThresholdValue, 
-    string ThresholdUnit, 
-    int DurationMinutes, 
-    string? Description, 
+internal record UpdateAlertRuleCommand(
+    Guid Id,
+    string Name,
+    string Severity,
+    double ThresholdValue,
+    string ThresholdUnit,
+    int DurationMinutes,
+    string? Description,
     string UpdatedBy) : IRequest<Unit>;
 
-public class UpdateAlertRuleCommandValidator : AbstractValidator<UpdateAlertRuleCommand>
+internal class UpdateAlertRuleCommandValidator : AbstractValidator<UpdateAlertRuleCommand>
 {
+    private static readonly string[] AllowedSeverities = { "Info", "Warning", "Error", "Critical" };
+
     public UpdateAlertRuleCommandValidator()
     {
         RuleFor(x => x.Id)
@@ -26,7 +28,7 @@ public class UpdateAlertRuleCommandValidator : AbstractValidator<UpdateAlertRule
 
         RuleFor(x => x.Severity)
             .NotEmpty().WithMessage("Severity is required")
-            .Must(s => new[] { "Info", "Warning", "Error", "Critical" }.Contains(s))
+            .Must(s => AllowedSeverities.Contains(s, StringComparer.Ordinal))
             .WithMessage("Severity must be one of: Info, Warning, Error, Critical");
 
         RuleFor(x => x.ThresholdValue)

@@ -5,11 +5,11 @@ using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.EventHandlers;
 
-public sealed class MessageAddedEventHandler : DomainEventHandlerBase<MessageAddedEvent>
+internal sealed class MessageAddedEventHandler : DomainEventHandlerBase<MessageAddedEvent>
 {
     public MessageAddedEventHandler(
         MeepleAiDbContext dbContext,
-        ILogger<DomainEventHandlerBase<MessageAddedEvent>> logger)
+        ILogger<MessageAddedEventHandler> logger)
         : base(dbContext, logger)
     {
     }

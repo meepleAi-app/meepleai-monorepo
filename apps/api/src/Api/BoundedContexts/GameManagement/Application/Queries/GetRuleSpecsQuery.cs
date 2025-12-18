@@ -6,6 +6,6 @@ namespace Api.BoundedContexts.GameManagement.Application.Queries;
 /// <summary>
 /// Query to retrieve rule specifications for a game.
 /// </summary>
-public record GetRuleSpecsQuery(
+internal record GetRuleSpecsQuery(
     Guid GameId
 ) : IQuery<IReadOnlyList<RuleSpecDto>>;

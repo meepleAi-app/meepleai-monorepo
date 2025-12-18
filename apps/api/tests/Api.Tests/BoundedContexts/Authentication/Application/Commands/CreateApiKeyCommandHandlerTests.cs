@@ -331,7 +331,7 @@ public class CreateApiKeyCommandHandlerTests
         Assert.Equal("read,write", result.Scopes);
         Assert.True(result.CreatedAt <= DateTime.UtcNow);
         Assert.True(result.CreatedAt >= DateTime.UtcNow.AddSeconds(-5));
-        Assert.Equal(expiresAt.Date, result.ExpiresAt.Value.Date);
+        Assert.Equal(expiresAt.Date, result.ExpiresAt!.Value.Date);
     }
 
     [Fact]
@@ -397,7 +397,7 @@ public class CreateApiKeyCommandHandlerTests
         var userId = Guid.NewGuid();
         var command = new CreateApiKeyCommand(userId, "Test Key", "read", null, null);
 
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         var token = cts.Token;
 
         // Act

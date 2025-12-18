@@ -38,8 +38,6 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger<HybridLlmService> _serviceLogger;
     private readonly ILogger<HybridAdaptiveRoutingStrategy> _strategyLogger;
-    private readonly ILogger<OllamaLlmClient> _ollamaLogger;
-    private readonly ILogger<OpenRouterLlmClient> _openRouterLogger;
     private readonly IConfiguration _configuration;
     private readonly Mock<ILlmCostLogRepository> _mockCostLogRepository;
 
@@ -54,8 +52,6 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
         _loggerFactory = LoggerFactory.Create(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Debug));
         _serviceLogger = _loggerFactory.CreateLogger<HybridLlmService>();
         _strategyLogger = _loggerFactory.CreateLogger<HybridAdaptiveRoutingStrategy>();
-        _ollamaLogger = _loggerFactory.CreateLogger<OllamaLlmClient>();
-        _openRouterLogger = _loggerFactory.CreateLogger<OpenRouterLlmClient>();
 
         // Default configuration
         var configData = new Dictionary<string, string>

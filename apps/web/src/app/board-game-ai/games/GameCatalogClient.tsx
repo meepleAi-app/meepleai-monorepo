@@ -16,18 +16,17 @@
  * @see docs/04-frontend/wireframes-playful-boardroom.md
  */
 
-import { useCallback, useEffect, useState, useTransition, useRef } from 'react';
-import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
-import { Search, X, LayoutGrid, List, MessageSquare } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { Skeleton } from '@/components/ui/skeleton';
 import { GameCard } from '@/components/games/GameCard';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { api, type Game } from '@/lib/api';
-import { logger } from '@/lib/logger';
 import { createErrorContext } from '@/lib/errors';
+import { logger } from '@/lib/logger';
+import { AlignJustify, Grid3x3, MessageSquare, Search, X } from 'lucide-react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
 
 // ============================================================================
 // Types
@@ -243,11 +242,11 @@ export function GameCatalogClient({
           className="border rounded-md"
         >
           <ToggleGroupItem value="grid" aria-label="Vista griglia" className="gap-2">
-            <LayoutGrid className="h-4 w-4" />
+            <Grid3x3 className="h-4 w-4" />
             <span className="hidden sm:inline">Griglia</span>
           </ToggleGroupItem>
           <ToggleGroupItem value="list" aria-label="Vista lista" className="gap-2">
-            <List className="h-4 w-4" />
+            <AlignJustify className="h-4 w-4" />
             <span className="hidden sm:inline">Lista</span>
           </ToggleGroupItem>
         </ToggleGroup>

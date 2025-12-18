@@ -21,9 +21,27 @@ indent_size = 4
 dotnet_diagnostic.MA0004.severity = warning
 MA0004.report = Always
 
-# MA0048: File name must match type name - Enforce code organization (Issue #2068)
-# One type per file improves maintainability and follows C# conventions
-dotnet_diagnostic.MA0048.severity = warning
+# MA0048: File name must match type name
+# Disabled: CQRS pattern allows DTOs/Validators co-located with Commands/Queries
+# This is an intentional architectural decision for DDD bounded contexts (Issue #2068)
+dotnet_diagnostic.MA0048.severity = none
+
+# S125: Remove commented-out code
+# Disabled: Too many false positives on pragma justification comments and developer notes
+dotnet_diagnostic.S125.severity = none
+
+# S101: Pascal case naming rules
+# Disabled: FAQ is a domain-specific acronym that should be capitalized as FAQ not Faq
+# GameFAQ, FAQAnswer, etc. are intentional naming for the domain model
+dotnet_diagnostic.S101.severity = none
+
+# S4136: Method overloads should be adjacent
+# Disabled: Interface and class organization may have logical grouping that takes priority
+dotnet_diagnostic.S4136.severity = none
+
+# MA0016: Prefer collection abstraction over implementation
+# Disabled: DTOs and public APIs use concrete collections for serialization compatibility
+dotnet_diagnostic.MA0016.severity = none
 
 # Code quality - Production code (strict enforcement)
 [src/**/*.cs]
@@ -56,7 +74,11 @@ dotnet_diagnostic.CA1062.severity = none
 
 # Code quality - Services (suppress CA1062 temporarily - legacy code to be migrated)
 [src/**/Services/**/*.cs]
-dotnet_diagnostic.CA1062.severity = suggestion
+dotnet_diagnostic.CA1062.severity = none
+
+# Re-enable for specific contexts being fixed (Phase 1)
+[src/Api/BoundedContexts/{Authentication,Administration}/**/Services/**/*.cs]
+dotnet_diagnostic.CA1062.severity = warning
 
 # Code quality - Test code (relaxed enforcement)
 [tests/**/*.cs]

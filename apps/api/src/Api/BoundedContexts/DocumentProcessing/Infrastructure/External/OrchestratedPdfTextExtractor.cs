@@ -12,7 +12,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 /// This adapter bridges the gap between IPdfTextExtractor (legacy interface)
 /// and EnhancedPdfProcessingOrchestrator (new 3-stage implementation)
 /// </remarks>
-public class OrchestratedPdfTextExtractor : IPdfTextExtractor
+internal class OrchestratedPdfTextExtractor : IPdfTextExtractor
 {
     private readonly EnhancedPdfProcessingOrchestrator _orchestrator;
 
@@ -28,9 +28,9 @@ public class OrchestratedPdfTextExtractor : IPdfTextExtractor
     public async Task<TextExtractionResult> ExtractTextAsync(
         Stream pdfStream,
         bool enableOcrFallback = true,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
-        var enhancedResult = await _orchestrator.ExtractTextWithFallbackAsync(pdfStream, enableOcrFallback, ct).ConfigureAwait(false);
+        var enhancedResult = await _orchestrator.ExtractTextWithFallbackAsync(pdfStream, enableOcrFallback, cancellationToken).ConfigureAwait(false);
 
         // Map EnhancedExtractionResult → TextExtractionResult
         return new TextExtractionResult(
@@ -49,9 +49,9 @@ public class OrchestratedPdfTextExtractor : IPdfTextExtractor
     public async Task<PagedTextExtractionResult> ExtractPagedTextAsync(
         Stream pdfStream,
         bool enableOcrFallback = true,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
-        var enhancedResult = await _orchestrator.ExtractPagedTextWithFallbackAsync(pdfStream, enableOcrFallback, ct).ConfigureAwait(false);
+        var enhancedResult = await _orchestrator.ExtractPagedTextWithFallbackAsync(pdfStream, enableOcrFallback, cancellationToken).ConfigureAwait(false);
 
         // Map EnhancedPagedExtractionResult → PagedTextExtractionResult
         return new PagedTextExtractionResult(
@@ -63,3 +63,4 @@ public class OrchestratedPdfTextExtractor : IPdfTextExtractor
             ErrorMessage: enhancedResult.ErrorMessage);
     }
 }
+

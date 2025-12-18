@@ -13,7 +13,7 @@ namespace Api.Middleware;
 /// Returns structured error responses with correlation IDs for debugging.
 /// OPS-05: Records error metrics for monitoring and alerting.
 /// </summary>
-public class ApiExceptionHandlerMiddleware
+internal class ApiExceptionHandlerMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly ILogger<ApiExceptionHandlerMiddleware> _logger;
@@ -31,18 +31,18 @@ public class ApiExceptionHandlerMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
-#pragma warning disable CA1031 // Do not catch general exception types
         try
         {
             await _next(context).ConfigureAwait(false);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: MIDDLEWARE BOUNDARY PATTERN - Global exception handler
+        // Rationale: This is the global exception handler middleware for API endpoints. Its purpose
+        // is to catch ALL unhandled exceptions from the request pipeline and convert them to
+        // structured JSON error responses. This prevents raw exceptions from reaching clients.
+        // Context: This is the top-level exception boundary for /api/* routes
         catch (Exception ex)
         {
-            // MIDDLEWARE BOUNDARY PATTERN: Exception handler middleware must catch all exceptions
-            // Rationale: This is the global exception handler middleware for API endpoints. Its purpose
-            // is to catch ALL unhandled exceptions from the request pipeline and convert them to
-            // structured JSON error responses. This prevents raw exceptions from reaching clients.
-            // Context: This is the top-level exception boundary for /api/* routes
             // Only handle /api/* paths
             if (!context.Request.Path.StartsWithSegments("/api", StringComparison.Ordinal))
             {
@@ -51,7 +51,7 @@ public class ApiExceptionHandlerMiddleware
 
             await HandleExceptionAsync(context, ex).ConfigureAwait(false);
         }
-#pragma warning restore CA1031 // Do not catch general exception types
+#pragma warning restore CA1031
     }
 
     private async Task HandleExceptionAsync(HttpContext context, Exception ex)
@@ -238,7 +238,7 @@ public class ApiExceptionHandlerMiddleware
 /// <summary>
 /// Extension methods for registering API exception handler middleware.
 /// </summary>
-public static class ApiExceptionHandlerMiddlewareExtensions
+internal static class ApiExceptionHandlerMiddlewareExtensions
 {
     /// <summary>
     /// Adds API exception handler middleware to the pipeline.

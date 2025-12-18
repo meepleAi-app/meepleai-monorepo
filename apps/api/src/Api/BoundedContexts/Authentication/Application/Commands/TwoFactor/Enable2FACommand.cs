@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands;
 /// Requires verification of TOTP code before enabling.
 /// DDD CQRS: Uses TotpCode parameter (matching handler).
 /// </summary>
-public record Enable2FACommand(
+internal record Enable2FACommand(
     Guid UserId,
     string TotpCode
 ) : ICommand<Enable2FAResult>;
@@ -16,7 +16,7 @@ public record Enable2FACommand(
 /// <summary>
 /// Result of enabling 2FA.
 /// </summary>
-public sealed record Enable2FAResult(
+internal sealed record Enable2FAResult(
     bool Success,
     IList<string>? BackupCodes = null,
     string? ErrorMessage = null

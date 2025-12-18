@@ -3,7 +3,7 @@ using Api.SharedKernel.Application.Interfaces;
 
 namespace Api.BoundedContexts.SystemConfiguration.Application.Commands;
 
-public record ToggleConfigurationCommand(
+internal record ToggleConfigurationCommand(
     Guid ConfigId,
     bool IsActive
 ) : ICommand<ConfigurationDto>;

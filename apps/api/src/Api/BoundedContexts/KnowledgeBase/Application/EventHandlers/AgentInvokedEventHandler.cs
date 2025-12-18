@@ -5,11 +5,11 @@ using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.EventHandlers;
 
-public sealed class AgentInvokedEventHandler : DomainEventHandlerBase<AgentInvokedEvent>
+internal sealed class AgentInvokedEventHandler : DomainEventHandlerBase<AgentInvokedEvent>
 {
     public AgentInvokedEventHandler(
         MeepleAiDbContext dbContext,
-        ILogger<DomainEventHandlerBase<AgentInvokedEvent>> logger)
+        ILogger<AgentInvokedEventHandler> logger)
         : base(dbContext, logger)
     {
     }

@@ -14,7 +14,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Handlers;
 /// <summary>
 /// Handles creation of rule comments with threading and @mention support.
 /// </summary>
-public partial class CreateRuleCommentCommandHandler : IRequestHandler<CreateRuleCommentCommand, RuleCommentDto>
+internal partial class CreateRuleCommentCommandHandler : IRequestHandler<CreateRuleCommentCommand, RuleCommentDto>
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly TimeProvider _timeProvider;
@@ -38,6 +38,7 @@ public partial class CreateRuleCommentCommandHandler : IRequestHandler<CreateRul
 
     public async Task<RuleCommentDto> Handle(CreateRuleCommentCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         ValidateCommentText(command.CommentText);
         ValidateLineNumber(command.LineNumber);
 
@@ -85,20 +86,20 @@ public partial class CreateRuleCommentCommandHandler : IRequestHandler<CreateRul
                 .Distinct(StringComparer.Ordinal)
                 .ToList();
 
-            if (!mentionedUsernames.Any())
+            if (mentionedUsernames.Count == 0)
             {
                 return new List<string>();
             }
 
-            // MA0011/MA0074: ToLower() required for EF Core SQL translation - ToLowerInvariant() not supported
-            // EF Core translates ToLower() to SQL LOWER() which is deterministic and culture-safe in database context
-#pragma warning disable MA0011, MA0074 // EF Core SQL translation limitation
+            // MA0011/MA0074/CA1304/CA1311: ToLower()/Contains()/StartsWith() required for EF Core SQL translation
+            // EF Core translates these to SQL functions which are deterministic and culture-safe in database context
+#pragma warning disable MA0011, MA0074, CA1304, CA1311 // EF Core SQL translation limitation
             var users = await _dbContext.Users
                 .AsNoTracking()
                 .Where(u =>
-                    (u.DisplayName != null && mentionedUsernames.Contains(u.DisplayName.ToLower()))
-                    || (u.Email != null && mentionedUsernames.Any(m => u.Email.ToLower().StartsWith(m))))
-#pragma warning restore MA0011, MA0074
+                    (u.DisplayName != null && mentionedUsernames.Any(m => string.Equals(u.DisplayName, m, StringComparison.CurrentCultureIgnoreCase)))
+                    || (u.Email != null && mentionedUsernames.Any(m => u.Email.StartsWith(m, StringComparison.OrdinalIgnoreCase))))
+#pragma warning restore MA0011, MA0074, CA1304, CA1311
                 .Select(u => u.Id.ToString())
                 .Distinct()
                 .ToListAsync(cancellationToken).ConfigureAwait(false);

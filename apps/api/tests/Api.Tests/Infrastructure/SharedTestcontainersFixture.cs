@@ -90,18 +90,17 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
                     .WithEnvironment("POSTGRES_DB", "test_shared")
                     .WithPortBinding(5432, true)
                     // Issue #2031: Removed .UntilCommandIsCompleted("pg_isready") to prevent Docker hijack errors
-                    // Default TCP port check + 2s delay is more reliable than hijacked command execution
+                    // Default TCP port check + retry mechanism is more reliable than hijacked command execution
                     .WithCleanUp(true)
                     .Build();
 
                 await _postgresContainer.StartAsync();
 
-                // Issue #2031: Wait 2s for full readiness after TCP port check
-                // Prevents race conditions without hijack-prone command execution
-                await Task.Delay(TimeSpan.FromSeconds(2));
-
                 var postgresPort = _postgresContainer.GetMappedPublicPort(5432);
                 PostgresConnectionString = $"Host=localhost;Port={postgresPort};Database=test_shared;Username=postgres;Password=postgres;Ssl Mode=Disable;Trust Server Certificate=true;KeepAlive=30;Pooling=false;";
+
+                // Issue #2031: Wait for PostgreSQL to accept connections with retry
+                await TestcontainersWaitHelpers.WaitForPostgresReadyAsync(PostgresConnectionString);
             }
 
             if (!string.IsNullOrWhiteSpace(externalRedis))
@@ -115,18 +114,17 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
                     .WithImage("redis:7-alpine")
                     .WithPortBinding(6379, true)
                     // Issue #2031: Removed .UntilCommandIsCompleted("redis-cli", "ping") to prevent Docker hijack errors
-                    // Default TCP port check + 2s delay is more reliable than hijacked command execution
+                    // Default TCP port check + retry mechanism is more reliable than hijacked command execution
                     .WithCleanUp(true)
                     .Build();
 
                 await _redisContainer.StartAsync();
 
-                // Issue #2031: Wait 2s for full readiness after TCP port check
-                // Prevents race conditions without hijack-prone command execution
-                await Task.Delay(TimeSpan.FromSeconds(2));
-
                 var redisPort = _redisContainer.GetMappedPublicPort(6379);
                 RedisConnectionString = $"localhost:{redisPort},abortConnect=false,connectTimeout=5000,syncTimeout=5000,connectRetry=3";
+
+                // Issue #2031: Wait for Redis to accept connections with retry
+                await TestcontainersWaitHelpers.WaitForRedisReadyAsync(RedisConnectionString);
             }
 
             _initialized = true;
@@ -173,7 +171,7 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
     public async Task<string> CreateIsolatedDatabaseAsync(string databaseName)
     {
         // Validate database name to prevent SQL injection (CA2100 suppression)
-        if (!System.Text.RegularExpressions.Regex.IsMatch(databaseName, @"^[a-zA-Z0-9_]+$"))
+        if (!System.Text.RegularExpressions.Regex.IsMatch(databaseName, @"^[a-zA-Z0-9_]+$", System.Text.RegularExpressions.RegexOptions.None, TimeSpan.FromSeconds(1)))
         {
             throw new ArgumentException("Database name must contain only alphanumeric characters and underscores", nameof(databaseName));
         }
@@ -206,7 +204,7 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
     public async Task DropIsolatedDatabaseAsync(string databaseName)
     {
         // Validate database name to prevent SQL injection (CA2100 suppression)
-        if (!System.Text.RegularExpressions.Regex.IsMatch(databaseName, @"^[a-zA-Z0-9_]+$"))
+        if (!System.Text.RegularExpressions.Regex.IsMatch(databaseName, @"^[a-zA-Z0-9_]+$", System.Text.RegularExpressions.RegexOptions.None, TimeSpan.FromSeconds(1)))
         {
             throw new ArgumentException("Database name must contain only alphanumeric characters and underscores", nameof(databaseName));
         }

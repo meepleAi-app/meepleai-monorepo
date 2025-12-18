@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Api.Infrastructure.EntityConfigurations;
 
-public class ApiKeyEntityConfiguration : IEntityTypeConfiguration<ApiKeyEntity>
+internal class ApiKeyEntityConfiguration : IEntityTypeConfiguration<ApiKeyEntity>
 {
     public void Configure(EntityTypeBuilder<ApiKeyEntity> builder)
     {

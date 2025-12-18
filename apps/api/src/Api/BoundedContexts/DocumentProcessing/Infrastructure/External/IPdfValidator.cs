@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 /// Abstracts technical validation (magic bytes, Docnet.Core parsing) from domain logic.
 /// Implements PDF-09 validation specification.
 /// </summary>
-public interface IPdfValidator
+internal interface IPdfValidator
 {
     /// <summary>
     /// Validates PDF stream against all business and technical constraints.
@@ -23,30 +23,30 @@ public interface IPdfValidator
     /// </summary>
     /// <param name="pdfStream">PDF file stream to validate</param>
     /// <param name="fileName">Original file name (for logging and MIME detection)</param>
-    /// <param name="ct">Cancellation token</param>
+    /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Validation result with errors and metadata</returns>
     Task<PdfValidationResult> ValidateAsync(
         Stream pdfStream,
         string fileName,
-        CancellationToken ct = default);
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Extracts PDF metadata without full validation.
     /// Used for metadata-only operations (e.g., quick info retrieval).
     /// </summary>
     /// <param name="pdfStream">PDF file stream</param>
-    /// <param name="ct">Cancellation token</param>
+    /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>PDF metadata or null if extraction fails</returns>
     Task<PdfMetadata?> ExtractMetadataAsync(
         Stream pdfStream,
-        CancellationToken ct = default);
+        CancellationToken cancellationToken = default);
 }
 
 /// <summary>
 /// Result of PDF validation operation.
 /// Contains validation status, error details, and extracted metadata.
 /// </summary>
-public record PdfValidationResult(
+internal record PdfValidationResult(
     bool IsValid,
     IDictionary<string, string> Errors,
     PdfMetadata? Metadata = null)
@@ -68,9 +68,10 @@ public record PdfValidationResult(
 /// PDF document metadata extracted during validation.
 /// Contains structural information about the PDF.
 /// </summary>
-public record PdfMetadata(
+internal record PdfMetadata(
     int PageCount,
     string PdfVersion,
     long FileSizeBytes,
     bool HasText = false,
     bool HasImages = false);
+

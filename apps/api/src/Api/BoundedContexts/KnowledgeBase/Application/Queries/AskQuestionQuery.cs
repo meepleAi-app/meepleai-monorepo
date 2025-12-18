@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 /// Supports hybrid search mode (Vector, Keyword, Hybrid).
 /// Supports chat thread context for conversational RAG.
 /// </summary>
-public record AskQuestionQuery(
+internal record AskQuestionQuery(
     Guid GameId,
     string Question,
     Guid? ThreadId = null, // Optional: Chat thread ID for conversational context

@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Handlers;
 /// <summary>
 /// Handles generating a RuleSpec from a PDF document's extracted rules.
 /// </summary>
-public class GenerateRuleSpecFromPdfCommandHandler : ICommandHandler<GenerateRuleSpecFromPdfCommand, RuleSpecDto>
+internal class GenerateRuleSpecFromPdfCommandHandler : ICommandHandler<GenerateRuleSpecFromPdfCommand, RuleSpecDto>
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly RuleAtomParsingDomainService _parsingService;
@@ -29,6 +29,7 @@ public class GenerateRuleSpecFromPdfCommandHandler : ICommandHandler<GenerateRul
 
     public async Task<RuleSpecDto> Handle(GenerateRuleSpecFromPdfCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         var pdf = await _dbContext.PdfDocuments
             .AsNoTracking()
             .FirstOrDefaultAsync(p => p.Id == command.PdfDocumentId, cancellationToken).ConfigureAwait(false);

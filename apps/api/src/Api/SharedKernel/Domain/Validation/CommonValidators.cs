@@ -6,7 +6,7 @@ namespace Api.SharedKernel.Domain.Validation;
 /// <summary>
 /// Common domain-specific validators for frequently used patterns.
 /// </summary>
-public static class CommonValidators
+internal static class CommonValidators
 {
     // Email validation regex (RFC 5322 simplified) - matches Email.cs implementation
     // FIX MA0009: Add timeout to prevent ReDoS attacks
@@ -443,9 +443,9 @@ public static class CommonValidators
             return Result<TEnum>.Failure(notEmptyResult.Error!);
         }
 
-        if (!Enum.TryParse<TEnum>(value, true, out var enumValue) || !Enum.IsDefined(typeof(TEnum), enumValue))
+        if (!Enum.TryParse<TEnum>(value, true, out var enumValue) || !Enum.IsDefined(enumValue))
         {
-            var validValues = string.Join(", ", Enum.GetNames(typeof(TEnum)));
+            var validValues = string.Join(", ", Enum.GetNames<TEnum>());
             return Result<TEnum>.Failure(Error.Validation(
                 message ?? $"{parameterName} must be one of: {validValues}"));
         }

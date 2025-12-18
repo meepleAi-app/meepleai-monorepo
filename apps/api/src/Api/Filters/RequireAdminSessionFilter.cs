@@ -28,7 +28,7 @@ namespace Api.Filters;
 /// Related: RequireSessionFilter, SessionValidationExtensions
 /// Issue: #1446, #1676 Phase 3
 /// </summary>
-public class RequireAdminSessionFilter : IEndpointFilter
+internal class RequireAdminSessionFilter : IEndpointFilter
 {
     /// <summary>
     /// Validates active session and Admin role before endpoint execution.

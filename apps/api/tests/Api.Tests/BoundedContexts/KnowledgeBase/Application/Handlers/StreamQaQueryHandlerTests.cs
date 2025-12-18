@@ -237,7 +237,7 @@ public class StreamQaQueryHandlerTests
 
         // Should NOT call search or LLM
         _hybridSearchServiceMock.Verify(
-            x => x.SearchAsync(It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<SearchMode>(), It.IsAny<int>(), It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<float>(), It.IsAny<float>(), It.IsAny<CancellationToken>()),
+            x => x.SearchAsync(It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<SearchMode>(), It.IsAny<int>(), It.IsAny<List<Guid>?>(), It.IsAny<float>(), It.IsAny<float>(), It.IsAny<CancellationToken>()),
             Times.Never
         );
         _llmServiceMock.Verify(
@@ -435,7 +435,7 @@ public class StreamQaQueryHandlerTests
             });
 
         _hybridSearchServiceMock
-            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<SearchMode>(), It.IsAny<int>(), It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<float>(), It.IsAny<float>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<SearchMode>(), It.IsAny<int>(), It.IsAny<List<Guid>?>(), It.IsAny<float>(), It.IsAny<float>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<HybridSearchResult>()); // Empty results
 
         // Act
@@ -476,7 +476,7 @@ public class StreamQaQueryHandlerTests
 
         SetupQualityTrackingMocks();
 
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
 
         // Act
         var events = new List<RagStreamingEvent>();
@@ -543,7 +543,7 @@ public class StreamQaQueryHandlerTests
         var completeEvent = events.LastOrDefault(e => e.Type == StreamingEventType.Complete);
         Assert.NotNull(completeEvent);
         var complete = Assert.IsType<StreamingComplete>(completeEvent.Data);
-        Assert.Equal(0.78, complete.confidence.Value, 0.001);
+        Assert.Equal(0.78, complete.confidence!.Value, 0.001);
 
         _qualityTrackingServiceMock.Verify(x => x.CalculateSearchConfidence(It.IsAny<List<DomainSearchResult>>()), Times.Once);
         _qualityTrackingServiceMock.Verify(x => x.CalculateLlmConfidence(It.IsAny<string>(), It.IsAny<List<DomainSearchResult>>()), Times.Once);
@@ -631,7 +631,7 @@ public class StreamQaQueryHandlerTests
                 It.IsAny<Guid>(),
                 SearchMode.Keyword,
                 It.IsAny<int>(),
-                It.IsAny<IReadOnlyList<Guid>?>(),
+                It.IsAny<List<Guid>?>(),
                 It.IsAny<float>(),
                 It.IsAny<float>(),
                 It.IsAny<CancellationToken>()))

@@ -22,7 +22,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
 /// - High-stakes questions requiring extra validation
 /// - Quality assurance for production responses
 /// </remarks>
-public interface IMultiModelValidationService
+internal interface IMultiModelValidationService
 {
     /// <summary>
     /// Validate a query against multiple models and check for consensus
@@ -57,7 +57,7 @@ public interface IMultiModelValidationService
 /// <summary>
 /// Result of multi-model consensus validation
 /// </summary>
-public record MultiModelConsensusResult
+internal record MultiModelConsensusResult
 {
     /// <summary>
     /// Whether consensus was achieved (similarity ≥ threshold)
@@ -108,7 +108,7 @@ public record MultiModelConsensusResult
 /// <summary>
 /// Individual model response details
 /// </summary>
-public record ModelResponse
+internal record ModelResponse
 {
     /// <summary>
     /// Model identifier used (e.g., "openai/gpt-4o", "anthropic/claude-3.5-sonnet")
@@ -144,7 +144,7 @@ public record ModelResponse
 /// <summary>
 /// Severity level for consensus validation
 /// </summary>
-public enum ConsensusSeverity
+internal enum ConsensusSeverity
 {
     /// <summary>
     /// High consensus achieved (similarity ≥0.90)

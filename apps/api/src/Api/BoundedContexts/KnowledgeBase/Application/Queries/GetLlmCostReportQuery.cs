@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 /// Query to get LLM cost report for a date range
 /// ISSUE-960: BGAI-018 - Cost analytics and reporting
 /// </summary>
-public record GetLlmCostReportQuery : IRequest<LlmCostReportDto>
+internal record GetLlmCostReportQuery : IRequest<LlmCostReportDto>
 {
     /// <summary>
     /// Start date for report (inclusive)
@@ -28,7 +28,7 @@ public record GetLlmCostReportQuery : IRequest<LlmCostReportDto>
 /// <summary>
 /// LLM cost report DTO
 /// </summary>
-public record LlmCostReportDto
+internal record LlmCostReportDto
 {
     public required DateOnly StartDate { get; init; }
     public required DateOnly EndDate { get; init; }

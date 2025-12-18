@@ -11,7 +11,7 @@ namespace Api.Infrastructure;
 /// Design-time factory for creating MeepleAiDbContext instances.
 /// Used by EF Core migrations and tooling.
 /// </summary>
-public class MeepleAiDbContextFactory : IDesignTimeDbContextFactory<MeepleAiDbContext>
+internal class MeepleAiDbContextFactory : IDesignTimeDbContextFactory<MeepleAiDbContext>
 {
     /// <summary>
     /// Creates a new instance of MeepleAiDbContext for design-time operations.

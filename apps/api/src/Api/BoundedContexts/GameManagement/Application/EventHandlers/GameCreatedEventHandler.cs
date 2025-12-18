@@ -12,13 +12,13 @@ namespace Api.BoundedContexts.GameManagement.Application.EventHandlers;
 /// Creates audit log entry automatically via base class.
 /// Publishes integration event for cross-context communication.
 /// </summary>
-public sealed class GameCreatedEventHandler : DomainEventHandlerBase<GameCreatedEvent>
+internal sealed class GameCreatedEventHandler : DomainEventHandlerBase<GameCreatedEvent>
 {
     private readonly IMediator _mediator;
 
     public GameCreatedEventHandler(
         MeepleAiDbContext dbContext,
-        ILogger<DomainEventHandlerBase<GameCreatedEvent>> logger,
+        ILogger<GameCreatedEventHandler> logger,
         IMediator mediator)
         : base(dbContext, logger)
     {

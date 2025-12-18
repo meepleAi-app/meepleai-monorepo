@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 /// <summary>
 /// Repository interface for ChatThread aggregate.
 /// </summary>
-public interface IChatThreadRepository : IRepository<ChatThread, Guid>
+internal interface IChatThreadRepository : IRepository<ChatThread, Guid>
 {
     /// <summary>
     /// Finds threads by user ID.

@@ -6,7 +6,7 @@ namespace Api.Models;
 /// <summary>
 /// EDIT-06: Version timeline node with branching and merging support
 /// </summary>
-public record VersionNodeDto
+internal record VersionNodeDto
 {
     public Guid Id { get; init; }
     public string Version { get; init; } = string.Empty;
@@ -32,7 +32,7 @@ public record VersionNodeDto
 /// <summary>
 /// Timeline filter parameters
 /// </summary>
-public record VersionTimelineFilters
+internal record VersionTimelineFilters
 {
     public DateTime? StartDate { get; init; }
     public DateTime? EndDate { get; init; }
@@ -43,7 +43,7 @@ public record VersionTimelineFilters
 /// <summary>
 /// Timeline response with versions
 /// </summary>
-public record VersionTimelineResponse
+internal record VersionTimelineResponse
 {
     public string GameId { get; init; } = string.Empty;
     public IList<VersionNodeDto> Versions { get; init; } = new List<VersionNodeDto>();

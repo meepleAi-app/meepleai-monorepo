@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
 /// Background service for periodic LLM provider health checks
 /// ISSUE-962 (BGAI-020): Monitors provider availability and updates health status
 /// </summary>
-public sealed class ProviderHealthCheckService : BackgroundService, IProviderHealthCheckService
+internal sealed class ProviderHealthCheckService : BackgroundService, IProviderHealthCheckService
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<ProviderHealthCheckService> _logger;
@@ -33,7 +33,7 @@ public sealed class ProviderHealthCheckService : BackgroundService, IProviderHea
         _logger.LogInformation("ProviderHealthCheckService starting...");
 
         // Initialize health statuses
-        await InitializeHealthStatuses(stoppingToken).ConfigureAwait(false);
+        await InitializeHealthStatuses().ConfigureAwait(false);
 
         // Wait 10 seconds before first health check (let app warm up)
         await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken).ConfigureAwait(false);
@@ -59,7 +59,7 @@ public sealed class ProviderHealthCheckService : BackgroundService, IProviderHea
     /// <summary>
     /// Initialize health status tracking for all providers
     /// </summary>
-    private Task InitializeHealthStatuses(CancellationToken _)
+    private Task InitializeHealthStatuses()
     {
         using var scope = _scopeFactory.CreateScope();
         var clients = scope.ServiceProvider.GetRequiredService<IEnumerable<ILlmClient>>();
@@ -85,12 +85,12 @@ public sealed class ProviderHealthCheckService : BackgroundService, IProviderHea
     /// <summary>
     /// Perform health checks on all providers
     /// </summary>
-    private async Task PerformHealthChecksAsync(CancellationToken ct)
+    private async Task PerformHealthChecksAsync(CancellationToken cancellationToken)
     {
         using var scope = _scopeFactory.CreateScope();
         var clients = scope.ServiceProvider.GetRequiredService<IEnumerable<ILlmClient>>();
 
-        var tasks = clients.Select(client => CheckProviderHealthAsync(client, ct));
+        var tasks = clients.Select(client => CheckProviderHealthAsync(client, cancellationToken));
         await Task.WhenAll(tasks).ConfigureAwait(false);
 
         // Log summary
@@ -101,13 +101,13 @@ public sealed class ProviderHealthCheckService : BackgroundService, IProviderHea
     /// <summary>
     /// Check health of a single provider
     /// </summary>
-    private async Task CheckProviderHealthAsync(ILlmClient client, CancellationToken ct)
+    private async Task CheckProviderHealthAsync(ILlmClient client, CancellationToken cancellationToken)
     {
         var providerName = client.ProviderName;
 
         try
         {
-            using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             cts.CancelAfter(TimeSpan.FromSeconds(HealthCheckTimeoutSeconds));
 
             // Determine appropriate model for health check
@@ -146,9 +146,9 @@ public sealed class ProviderHealthCheckService : BackgroundService, IProviderHea
                 }
             }
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException ex)
         {
-            _logger.LogWarning(
+            _logger.LogWarning(ex,
                 "Health check TIMEOUT: {Provider} (>{Timeout}s)",
                 providerName, HealthCheckTimeoutSeconds);
 
@@ -228,3 +228,4 @@ public sealed class ProviderHealthCheckService : BackgroundService, IProviderHea
         }
     }
 }
+

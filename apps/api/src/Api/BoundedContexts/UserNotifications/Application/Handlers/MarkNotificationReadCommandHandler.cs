@@ -12,7 +12,7 @@ namespace Api.BoundedContexts.UserNotifications.Application.Handlers;
 /// Handler for MarkNotificationReadCommand.
 /// Marks a single notification as read.
 /// </summary>
-public class MarkNotificationReadCommandHandler : ICommandHandler<MarkNotificationReadCommand, bool>
+internal class MarkNotificationReadCommandHandler : ICommandHandler<MarkNotificationReadCommand, bool>
 {
     private readonly INotificationRepository _notificationRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -23,13 +23,17 @@ public class MarkNotificationReadCommandHandler : ICommandHandler<MarkNotificati
         IUnitOfWork unitOfWork,
         ILogger<MarkNotificationReadCommandHandler> logger)
     {
-        _notificationRepository = notificationRepository ?? throw new ArgumentNullException(nameof(notificationRepository));
-        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(notificationRepository);
+        _notificationRepository = notificationRepository;
+        ArgumentNullException.ThrowIfNull(unitOfWork);
+        _unitOfWork = unitOfWork;
+        ArgumentNullException.ThrowIfNull(logger);
+        _logger = logger;
     }
 
     public async Task<bool> Handle(MarkNotificationReadCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         var stopwatch = Stopwatch.StartNew();
 
         var notification = await _notificationRepository.GetByIdAsync(command.NotificationId, cancellationToken).ConfigureAwait(false);

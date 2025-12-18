@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services.Analytics;
 /// ISSUE-1725: Implementation of IMonthlyOptimizationReportService.
 /// Generates comprehensive monthly reports for LLM cost optimization.
 /// </summary>
-public class MonthlyOptimizationReportService : IMonthlyOptimizationReportService
+internal class MonthlyOptimizationReportService : IMonthlyOptimizationReportService
 {
     private readonly IQueryEfficiencyAnalyzer _efficiencyAnalyzer;
     private readonly IModelRecommendationService _recommendationService;
@@ -28,7 +28,7 @@ public class MonthlyOptimizationReportService : IMonthlyOptimizationReportServic
     public async Task<MonthlyOptimizationReport> GenerateReportAsync(
         int year,
         int month,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         if (month < 1 || month > 12)
         {
@@ -44,10 +44,10 @@ public class MonthlyOptimizationReportService : IMonthlyOptimizationReportServic
         var endDate = startDate.AddMonths(1).AddDays(-1);
 
         // Run all analyses in parallel for efficiency
-        var efficiencyTask = _efficiencyAnalyzer.AnalyzeEfficiencyAsync(startDate, endDate, ct);
-        var cacheTask = _cacheAnalyzer.AnalyzeCacheEffectivenessAsync(startDate, endDate, ct);
-        var modelComparisonTask = _recommendationService.CompareModelsAsync(ct);
-        var recommendationTask = _recommendationService.GetRecommendationAsync("qa", prioritizeCost: false, ct);
+        var efficiencyTask = _efficiencyAnalyzer.AnalyzeEfficiencyAsync(startDate, endDate, cancellationToken);
+        var cacheTask = _cacheAnalyzer.AnalyzeCacheEffectivenessAsync(startDate, endDate, cancellationToken);
+        var modelComparisonTask = _recommendationService.CompareModelsAsync(cancellationToken);
+        var recommendationTask = _recommendationService.GetRecommendationAsync("qa", prioritizeCost: false, cancellationToken);
 
         await Task.WhenAll(efficiencyTask, cacheTask, modelComparisonTask, recommendationTask).ConfigureAwait(false);
 
@@ -58,7 +58,7 @@ public class MonthlyOptimizationReportService : IMonthlyOptimizationReportServic
 
         // Calculate total savings opportunity
         var cacheSavings = cacheAnalysis.EstimatedSavingsUsd;
-        var modelSavings = CalculateModelSwitchSavings(efficiencyAnalysis, recommendation);
+        var modelSavings = CalculateModelSwitchSavings(efficiencyAnalysis);
         var totalSavings = cacheSavings + modelSavings;
 
         // Generate executive summary
@@ -82,12 +82,14 @@ public class MonthlyOptimizationReportService : IMonthlyOptimizationReportServic
     }
 
     private static decimal CalculateModelSwitchSavings(
-        QueryEfficiencyReport efficiency,
-        ModelRecommendation _)
+        QueryEfficiencyReport efficiency
+        )
     {
         // Estimate savings if switching to recommended model
-        // Simplified: Assume 20% cost reduction from optimization
-        return efficiency.TotalCost * 0.20m;
+        // Simplified: Assume 20% cost reduction from optimization, adjusted by recommendation confidence
+        var baseSavings = efficiency.TotalCost * 0.20m;
+        // Recommendation may influence savings estimation in future; for now, return base savings.
+        return baseSavings;
     }
 
     private static List<string> GenerateExecutiveSummary(
@@ -105,12 +107,12 @@ public class MonthlyOptimizationReportService : IMonthlyOptimizationReportServic
         };
 
         // Add top recommendations from each analyzer
-        if (efficiency.OptimizationRecommendations.Any())
+        if (efficiency.OptimizationRecommendations.Count > 0)
         {
             summary.Add($"⚡ **Efficiency**: {efficiency.OptimizationRecommendations[0]}");
         }
 
-        if (cache.Recommendations.Any())
+        if (cache.Recommendations.Count > 0)
         {
             summary.Add($"🔍 **Caching**: {cache.Recommendations[0]}");
         }
@@ -118,3 +120,4 @@ public class MonthlyOptimizationReportService : IMonthlyOptimizationReportServic
         return summary;
     }
 }
+

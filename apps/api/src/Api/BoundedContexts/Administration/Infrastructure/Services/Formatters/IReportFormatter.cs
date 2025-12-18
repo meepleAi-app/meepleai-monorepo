@@ -4,7 +4,7 @@ namespace Api.BoundedContexts.Administration.Infrastructure.Services.Formatters;
 /// Interface for report formatters
 /// ISSUE-916: Strategy pattern for different output formats
 /// </summary>
-public interface IReportFormatter
+internal interface IReportFormatter
 {
     /// <summary>
     /// Formats report data into specific output format
@@ -25,7 +25,7 @@ public interface IReportFormatter
 /// <summary>
 /// Report content with structured data
 /// </summary>
-public sealed record ReportContent(
+internal sealed record ReportContent(
     string Title,
     string Description,
     DateTime GeneratedAt,
@@ -36,7 +36,7 @@ public sealed record ReportContent(
 /// Report section with data
 /// ISSUE-917: Extended with chart data support
 /// </summary>
-public sealed record ReportSection(
+internal sealed record ReportSection(
     string Title,
     string? Description,
     IReadOnlyList<ReportDataRow> Data,
@@ -45,22 +45,22 @@ public sealed record ReportSection(
 /// <summary>
 /// Report data row
 /// </summary>
-public sealed record ReportDataRow(IReadOnlyDictionary<string, object> Values);
+internal sealed record ReportDataRow(IReadOnlyDictionary<string, object> Values);
 
 /// <summary>
 /// Chart data for visualization
 /// ISSUE-917: Chart generation support
 /// </summary>
-public sealed record ChartData(
+internal sealed record ChartData(
     ChartType Type,
     string[] Labels,
-    Dictionary<string, double[]> Series,
+    IReadOnlyDictionary<string, double[]> Series,
     string? YAxisLabel = null);
 
 /// <summary>
 /// Chart type enumeration
 /// </summary>
-public enum ChartType
+internal enum ChartType
 {
     Line,
     Bar,

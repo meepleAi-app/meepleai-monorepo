@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
 /// ADR-016 Phase 1: Domain service that selects appropriate chunking strategy
 /// based on content characteristics.
 /// </summary>
-public sealed class ChunkingStrategySelector
+internal sealed class ChunkingStrategySelector
 {
     // Thresholds for content classification
     private const double TableDensityThreshold = 0.08; // 8% of content is table-like (pipes/tabs)
@@ -66,7 +66,7 @@ public sealed class ChunkingStrategySelector
     /// <summary>
     /// Checks if element types indicate high-density content (tables, lists).
     /// </summary>
-    private static bool HasHighDenseElementRatio(IReadOnlyList<string> elementTypes)
+    private static bool HasHighDenseElementRatio(List<string> elementTypes)
     {
         if (elementTypes.Count == 0)
             return false;
@@ -145,7 +145,6 @@ public sealed class ChunkingStrategySelector
             catch (RegexMatchTimeoutException)
             {
                 // Regex timed out - skip this line to prevent ReDoS
-                continue;
             }
         }
 

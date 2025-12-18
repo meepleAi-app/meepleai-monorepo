@@ -14,7 +14,7 @@ namespace Api.Services;
 /// Critical: YES (19 references). Pure technical integration, zero business logic.
 /// Facade pattern - delegates to specialized services.
 /// </summary>
-public class QdrantService : IQdrantService
+internal class QdrantService : IQdrantService
 {
     private readonly IQdrantCollectionManager _collectionManager;
     private readonly IQdrantVectorIndexer _vectorIndexer;
@@ -48,16 +48,16 @@ public class QdrantService : IQdrantService
     /// <summary>
     /// Check if collection exists
     /// </summary>
-    public async Task<bool> CollectionExistsAsync(CancellationToken ct = default)
+    public async Task<bool> CollectionExistsAsync(CancellationToken cancellationToken = default)
     {
-        return await _collectionManager.CollectionExistsAsync(CollectionName, ct).ConfigureAwait(false);
+        return await _collectionManager.CollectionExistsAsync(CollectionName, cancellationToken).ConfigureAwait(false);
     }
     /// <summary>
     /// Initialize Qdrant collection if it doesn't exist
     /// </summary>
-    public async Task EnsureCollectionExistsAsync(CancellationToken ct = default)
+    public async Task EnsureCollectionExistsAsync(CancellationToken cancellationToken = default)
     {
-        await _collectionManager.EnsureCollectionExistsAsync(CollectionName, _vectorSize, ct).ConfigureAwait(false);
+        await _collectionManager.EnsureCollectionExistsAsync(CollectionName, _vectorSize, cancellationToken).ConfigureAwait(false);
     }
     /// <summary>
     /// Index document chunks with embeddings
@@ -67,8 +67,9 @@ public class QdrantService : IQdrantService
         string gameId,
         string pdfId,
         List<DocumentChunk> chunks,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(chunks);
         using var activity = MeepleAiActivitySources.VectorSearch.StartActivity("QdrantService.IndexDocumentChunks");
         activity?.SetTag("game.id", gameId);
         activity?.SetTag("pdf.id", pdfId);
@@ -102,20 +103,13 @@ public class QdrantService : IQdrantService
                 invalidReasons.Add($"{i}: missing embedding");
                 continue;
             }
-            var hasInvalidValue = false;
-            foreach (var value in embedding)
-            {
-                if (float.IsNaN(value) || float.IsInfinity(value))
-                {
-                    hasInvalidValue = true;
-                    break;
-                }
-            }
+            var hasInvalidValue = embedding.ToArray().Any(value => float.IsNaN(value) || float.IsInfinity(value));
             if (hasInvalidValue)
-            {
-                invalidReasons.Add($"{i}: non-finite embedding value");
-                continue;
-            }
+                if (hasInvalidValue)
+                {
+                    invalidReasons.Add($"{i}: non-finite embedding value");
+                    continue;
+                }
             if (embedding.Length != _vectorSize)
             {
                 invalidReasons.Add($"{i}: dimension {embedding.Length} expected {_vectorSize}");
@@ -145,7 +139,7 @@ public class QdrantService : IQdrantService
                 ["pdf_id"] = pdfId
             };
             var points = _vectorIndexer.BuildPoints(validChunks, basePayload);
-            await _vectorIndexer.UpsertPointsAsync(CollectionName, points.AsReadOnly(), ct).ConfigureAwait(false);
+            await _vectorIndexer.UpsertPointsAsync(CollectionName, points.AsReadOnly(), cancellationToken).ConfigureAwait(false);
             _logger.LogInformation("Successfully indexed {Count} chunks for PDF {PdfId}", validChunks.Count, pdfId);
             activity?.SetTag("success", true);
             activity?.SetTag("indexed.count", validChunks.Count);
@@ -174,7 +168,7 @@ public class QdrantService : IQdrantService
         float[] queryEmbedding,
         int limit = 5,
         IReadOnlyList<string>? documentIds = null,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         // Validate parameters
         ArgumentNullException.ThrowIfNull(queryEmbedding);
@@ -203,7 +197,7 @@ public class QdrantService : IQdrantService
                 queryEmbedding: queryEmbedding,
                 filter: filter,
                 limit: limit,
-                ct: ct
+                cancellationToken: cancellationToken
             ).ConfigureAwait(false);
             var results = _vectorSearcher.ConvertToSearchResults(searchResults);
             _logger.LogInformation("Found {Count} results", results.Count);
@@ -234,13 +228,13 @@ public class QdrantService : IQdrantService
     /// <summary>
     /// Delete all vectors for a specific PDF
     /// </summary>
-    public async Task<bool> DeleteDocumentAsync(string pdfId, CancellationToken ct = default)
+    public async Task<bool> DeleteDocumentAsync(string pdfId, CancellationToken cancellationToken = default)
     {
         try
         {
             _logger.LogInformation("Deleting vectors for PDF {PdfId}", pdfId);
             var filter = _vectorSearcher.BuildPdfFilter(pdfId);
-            await _vectorIndexer.DeleteByFilterAsync(CollectionName, filter, ct).ConfigureAwait(false);
+            await _vectorIndexer.DeleteByFilterAsync(CollectionName, filter, cancellationToken).ConfigureAwait(false);
             _logger.LogInformation("Successfully deleted vectors for PDF {PdfId}", pdfId);
             return true;
         }
@@ -261,8 +255,9 @@ public class QdrantService : IQdrantService
     public async Task<IndexResult> IndexChunksWithMetadataAsync(
         Dictionary<string, string> metadata,
         List<DocumentChunk> chunks,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(metadata);
         if (chunks == null || chunks.Count == 0)
         {
             return IndexResult.CreateFailure("No chunks to index");
@@ -280,7 +275,7 @@ public class QdrantService : IQdrantService
             // Build points from chunks
             var points = _vectorIndexer.BuildPoints(chunks, basePayload);
             // Upsert to Qdrant
-            await _vectorIndexer.UpsertPointsAsync(CollectionName, points.AsReadOnly(), ct).ConfigureAwait(false);
+            await _vectorIndexer.UpsertPointsAsync(CollectionName, points.AsReadOnly(), cancellationToken).ConfigureAwait(false);
             _logger.LogInformation("Successfully indexed {Count} chunks with metadata", chunks.Count);
             return IndexResult.CreateSuccess(chunks.Count);
         }
@@ -302,7 +297,7 @@ public class QdrantService : IQdrantService
         string category,
         float[] queryEmbedding,
         int limit = 5,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         try
         {
@@ -313,7 +308,7 @@ public class QdrantService : IQdrantService
                 queryEmbedding: queryEmbedding,
                 filter: filter,
                 limit: limit,
-                ct: ct
+                cancellationToken: cancellationToken
             ).ConfigureAwait(false);
             var results = _vectorSearcher.ConvertToSearchResults(searchResults);
             _logger.LogInformation("Found {Count} results in category {Category}", results.Count, category);
@@ -339,8 +334,9 @@ public class QdrantService : IQdrantService
         string pdfId,
         List<DocumentChunk> chunks,
         string language,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(chunks);
         using var activity = MeepleAiActivitySources.VectorSearch.StartActivity("QdrantService.IndexDocumentChunks");
         activity?.SetTag("game.id", gameId);
         activity?.SetTag("pdf.id", pdfId);
@@ -369,7 +365,7 @@ public class QdrantService : IQdrantService
             // Build points from chunks
             var points = _vectorIndexer.BuildPoints(chunks, basePayload);
             // Upsert to Qdrant
-            await _vectorIndexer.UpsertPointsAsync(CollectionName, points.AsReadOnly(), ct).ConfigureAwait(false);
+            await _vectorIndexer.UpsertPointsAsync(CollectionName, points.AsReadOnly(), cancellationToken).ConfigureAwait(false);
             _logger.LogInformation("Successfully indexed {Count} chunks for PDF {PdfId} with language {Language}",
                 chunks.Count, pdfId, language);
             activity?.SetTag("success", true);
@@ -401,7 +397,7 @@ public class QdrantService : IQdrantService
         string language,
         int limit = 5,
         IReadOnlyList<string>? documentIds = null,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         // Validate parameters
         ArgumentNullException.ThrowIfNull(queryEmbedding);
@@ -443,7 +439,7 @@ public class QdrantService : IQdrantService
                 queryEmbedding: queryEmbedding,
                 filter: filter,
                 limit: limit,
-                ct: ct
+                cancellationToken: cancellationToken
             ).ConfigureAwait(false);
             var results = _vectorSearcher.ConvertToSearchResults(searchResults);
             _logger.LogInformation("Found {Count} results for language {Language}", results.Count, language);
@@ -472,13 +468,13 @@ public class QdrantService : IQdrantService
     /// <summary>
     /// Delete all vectors for a specific category
     /// </summary>
-    public async Task<bool> DeleteByCategoryAsync(string category, CancellationToken ct = default)
+    public async Task<bool> DeleteByCategoryAsync(string category, CancellationToken cancellationToken = default)
     {
         try
         {
             _logger.LogInformation("Deleting vectors for category {Category}", category);
             var filter = _vectorSearcher.BuildCategoryFilter(category);
-            await _vectorIndexer.DeleteByFilterAsync(CollectionName, filter, ct).ConfigureAwait(false);
+            await _vectorIndexer.DeleteByFilterAsync(CollectionName, filter, cancellationToken).ConfigureAwait(false);
             _logger.LogInformation("Successfully deleted vectors for category {Category}", category);
             return true;
         }
@@ -497,7 +493,7 @@ public class QdrantService : IQdrantService
 /// <summary>
 /// Document chunk with embedding
 /// </summary>
-public record DocumentChunk
+internal record DocumentChunk
 {
     public string Text { get; init; } = string.Empty;
     public float[] Embedding { get; init; } = Array.Empty<float>();
@@ -508,7 +504,7 @@ public record DocumentChunk
 /// <summary>
 /// Result of indexing operation
 /// </summary>
-public record IndexResult
+internal record IndexResult
 {
     public bool Success { get; init; }
     public string? ErrorMessage { get; init; }
@@ -521,7 +517,7 @@ public record IndexResult
 /// <summary>
 /// Result of search operation
 /// </summary>
-public record SearchResult
+internal record SearchResult
 {
     public bool Success { get; init; }
     public string? ErrorMessage { get; init; }
@@ -534,7 +530,7 @@ public record SearchResult
 /// <summary>
 /// Single search result item
 /// </summary>
-public record SearchResultItem
+internal record SearchResultItem
 {
     public float Score { get; init; }
     public string Text { get; init; } = string.Empty;
@@ -546,7 +542,7 @@ public record SearchResultItem
 /// <summary>
 /// Result of chess knowledge indexing operation.
 /// </summary>
-public record ChessIndexResult
+internal record ChessIndexResult
 {
     public bool Success { get; init; }
     public string? ErrorMessage { get; init; }

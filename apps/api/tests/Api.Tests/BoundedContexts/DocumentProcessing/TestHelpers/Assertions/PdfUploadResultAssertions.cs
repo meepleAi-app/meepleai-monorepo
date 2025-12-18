@@ -19,7 +19,7 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.TestHelpers.Assertions;
 /// result.Should().HaveDocument();
 /// </code>
 /// </remarks>
-public class PdfUploadResultAssertions : ReferenceTypeAssertions<PdfUploadResult, PdfUploadResultAssertions>
+internal class PdfUploadResultAssertions : ReferenceTypeAssertions<PdfUploadResult, PdfUploadResultAssertions>
 {
     private readonly AssertionChain _chain;
 
@@ -126,7 +126,7 @@ public class PdfUploadResultAssertions : ReferenceTypeAssertions<PdfUploadResult
 /// <summary>
 /// Extension methods to enable fluent assertion syntax for PdfUploadResult.
 /// </summary>
-public static class PdfUploadResultAssertionsExtensions
+internal static class PdfUploadResultAssertionsExtensions
 {
     public static PdfUploadResultAssertions Should(this PdfUploadResult instance)
     {

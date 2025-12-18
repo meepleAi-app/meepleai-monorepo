@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 /// <summary>
 /// Command to complete a chunked upload session and process the assembled PDF.
 /// </summary>
-public record CompleteChunkedUploadCommand(
+internal record CompleteChunkedUploadCommand(
     Guid SessionId,
     Guid UserId
 ) : ICommand<CompleteChunkedUploadResult>;
@@ -15,7 +15,7 @@ public record CompleteChunkedUploadCommand(
 /// <summary>
 /// Result of completing a chunked upload.
 /// </summary>
-public record CompleteChunkedUploadResult(
+internal record CompleteChunkedUploadResult(
     bool Success,
     Guid? DocumentId,
     string? FileName,

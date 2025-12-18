@@ -7,14 +7,15 @@ namespace Api.SharedKernel.Infrastructure.Persistence;
 /// Unit of Work implementation wrapping MeepleAiDbContext.
 /// Manages transactions across repositories.
 /// </summary>
-public sealed class UnitOfWork : IUnitOfWork
+internal sealed class UnitOfWork : IUnitOfWork
 {
     private readonly MeepleAiDbContext _context;
     private IDbContextTransaction? _currentTransaction;
 
     public UnitOfWork(MeepleAiDbContext context)
     {
-        _context = context ?? throw new ArgumentNullException(nameof(context));
+        ArgumentNullException.ThrowIfNull(context);
+        _context = context;
     }
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

@@ -199,7 +199,7 @@ public class BulkExportApiKeysQueryHandlerTests
         Assert.NotNull(result);
         var lines = result.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
         Assert.Equal(2, lines.Length);
-        
+
         // Check that null values are represented as empty strings
         var dataLine = lines[1];
         var fields = dataLine.Split(',');

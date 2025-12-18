@@ -6,7 +6,7 @@ namespace Api.Observability;
 /// OpenTelemetry metrics for Prompt Management system
 /// ADMIN-01 Phase 5: Deployment & Monitoring
 /// </summary>
-public static class PromptManagementMetrics
+internal static class PromptManagementMetrics
 {
     private static readonly Meter Meter = new("MeepleAI.PromptManagement", "1.0.0");
 

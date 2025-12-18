@@ -9,10 +9,20 @@ using System.Globalization;
 /// AgentStrategy defines HOW the agent performs its task, including algorithm parameters.
 /// Uses the Strategy pattern for flexible agent behavior configuration.
 /// </remarks>
-public sealed record AgentStrategy
+internal sealed record AgentStrategy
 {
     public string Name { get; init; }
     public IReadOnlyDictionary<string, object> Parameters { get; init; }
+
+    private static readonly string[] DefaultModels = { "gpt-4", "claude-3-opus" };
+    private static readonly string[] ValidationLayers =
+    {
+        "RetrievalScore",
+        "LLMConfidence",
+        "CitationVerification",
+        "ForbiddenKeywords",
+        "ConsensusCheck"
+    };
 
     private AgentStrategy(string name, Dictionary<string, object> parameters)
     {
@@ -69,7 +79,7 @@ public sealed record AgentStrategy
             parameters: new Dictionary<string, object>
 (StringComparer.Ordinal)
             {
-                ["Models"] = models ?? new[] { "gpt-4", "claude-3-opus" },
+                ["Models"] = models ?? DefaultModels,
                 ["ConsensusThreshold"] = consensusThreshold
             }
         );
@@ -103,14 +113,7 @@ public sealed record AgentStrategy
             {
                 ["MinConfidence"] = minConfidence,
                 ["EnableMultiLayer"] = enableMultiLayer,
-                ["Layers"] = new[]
-                {
-                    "RetrievalScore",
-                    "LLMConfidence",
-                    "CitationVerification",
-                    "ForbiddenKeywords",
-                    "ConsensusCheck"
-                }
+                ["Layers"] = ValidationLayers
             }
         );
 

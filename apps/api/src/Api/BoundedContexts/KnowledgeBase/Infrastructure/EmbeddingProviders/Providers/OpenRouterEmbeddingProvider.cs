@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.EmbeddingProviders.Pr
 /// OpenRouter embedding provider supporting text-embedding-3-large and text-embedding-3-small.
 /// Uses OpenAI-compatible API via OpenRouter gateway.
 /// </summary>
-public sealed class OpenRouterEmbeddingProvider : EmbeddingProviderBase
+internal sealed class OpenRouterEmbeddingProvider : EmbeddingProviderBase
 {
     private readonly EmbeddingProviderType _providerType;
     private readonly string _modelName;
@@ -51,7 +51,7 @@ public sealed class OpenRouterEmbeddingProvider : EmbeddingProviderBase
 
     public override async Task<EmbeddingProviderResult> GenerateBatchEmbeddingsAsync(
         IReadOnlyList<string> texts,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         if (texts == null || texts.Count == 0)
         {
@@ -70,7 +70,7 @@ public sealed class OpenRouterEmbeddingProvider : EmbeddingProviderBase
             // Process in batches if needed
             foreach (var batch in BatchTexts(texts))
             {
-                var result = await GenerateBatchInternalAsync(batch, ct).ConfigureAwait(false);
+                var result = await GenerateBatchInternalAsync(batch, cancellationToken).ConfigureAwait(false);
                 if (!result.Success)
                 {
                     return result;
@@ -93,7 +93,7 @@ public sealed class OpenRouterEmbeddingProvider : EmbeddingProviderBase
             Logger.LogError(ex, "HTTP error calling OpenRouter API");
             return EmbeddingProviderResult.CreateFailure($"HTTP error: {ex.Message}");
         }
-        catch (TaskCanceledException ex) when (ex.CancellationToken != ct)
+        catch (TaskCanceledException ex) when (ex.CancellationToken != cancellationToken)
         {
             Logger.LogError(ex, "Timeout calling OpenRouter API");
             return EmbeddingProviderResult.CreateFailure("Request timeout");
@@ -113,7 +113,7 @@ public sealed class OpenRouterEmbeddingProvider : EmbeddingProviderBase
 
     private async Task<EmbeddingProviderResult> GenerateBatchInternalAsync(
         IReadOnlyList<string> texts,
-        CancellationToken ct)
+        CancellationToken cancellationToken)
     {
         var request = new OpenRouterEmbeddingRequest
         {
@@ -137,8 +137,8 @@ public sealed class OpenRouterEmbeddingProvider : EmbeddingProviderBase
         }
 
         // CODE-01: Dispose HttpResponseMessage to prevent resource leak (CWE-404)
-        using var response = await HttpClient.SendAsync(httpRequest, ct).ConfigureAwait(false);
-        var responseBody = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+        using var response = await HttpClient.SendAsync(httpRequest, cancellationToken).ConfigureAwait(false);
+        var responseBody = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
 
         if (!response.IsSuccessStatusCode)
         {
@@ -169,12 +169,9 @@ public sealed class OpenRouterEmbeddingProvider : EmbeddingProviderBase
             .ToList();
 
         // Validate embeddings
-        foreach (var embedding in embeddings)
+        if (embeddings.Any(embedding => !ValidateEmbeddingDimensions(embedding)))
         {
-            if (!ValidateEmbeddingDimensions(embedding))
-            {
-                return EmbeddingProviderResult.CreateFailure("Invalid embedding dimensions received");
-            }
+            return EmbeddingProviderResult.CreateFailure("Invalid embedding dimensions received");
         }
 
         return EmbeddingProviderResult.CreateSuccess(
@@ -183,12 +180,12 @@ public sealed class OpenRouterEmbeddingProvider : EmbeddingProviderBase
             embeddingResponse.Usage?.TotalTokens);
     }
 
-    public override async Task<bool> IsHealthyAsync(CancellationToken ct = default)
+    public override async Task<bool> IsHealthyAsync(CancellationToken cancellationToken = default)
     {
         try
         {
             // Quick health check with minimal text
-            var result = await GenerateEmbeddingAsync("test", ct).ConfigureAwait(false);
+            var result = await GenerateEmbeddingAsync("test", cancellationToken).ConfigureAwait(false);
             return result.Success;
         }
 #pragma warning disable CA1031 // Do not catch general exception types
@@ -256,3 +253,4 @@ internal sealed record OpenRouterUsage
     [JsonPropertyName("total_tokens")]
     public int TotalTokens { get; init; }
 }
+

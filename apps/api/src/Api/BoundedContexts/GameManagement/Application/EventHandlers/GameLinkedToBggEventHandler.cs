@@ -9,11 +9,11 @@ namespace Api.BoundedContexts.GameManagement.Application.EventHandlers;
 /// Handles the GameLinkedToBggEvent domain event.
 /// Creates audit log entry automatically via base class.
 /// </summary>
-public sealed class GameLinkedToBggEventHandler : DomainEventHandlerBase<GameLinkedToBggEvent>
+internal sealed class GameLinkedToBggEventHandler : DomainEventHandlerBase<GameLinkedToBggEvent>
 {
     public GameLinkedToBggEventHandler(
         MeepleAiDbContext dbContext,
-        ILogger<DomainEventHandlerBase<GameLinkedToBggEvent>> logger)
+        ILogger<GameLinkedToBggEventHandler> logger)
         : base(dbContext, logger)
     {
     }

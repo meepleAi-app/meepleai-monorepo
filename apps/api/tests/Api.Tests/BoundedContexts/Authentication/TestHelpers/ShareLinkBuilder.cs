@@ -8,7 +8,7 @@ namespace Api.Tests.BoundedContexts.Authentication.TestHelpers;
 /// Fluent builder for creating test ShareLink entities.
 /// Provides convenient methods for constructing share links with various configurations.
 /// </summary>
-public class ShareLinkBuilder
+internal class ShareLinkBuilder
 {
     private Guid _threadId = Guid.NewGuid();
     private Guid _creatorId = Guid.NewGuid();

@@ -16,7 +16,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 /// References: ADR-003 (3-Stage PDF Pipeline), Issue #947 (BGAI-007)
 /// Stage 2: Fallback when Unstructured quality &lt;0.70
 /// </remarks>
-public class SmolDoclingPdfTextExtractor : IPdfTextExtractor
+internal class SmolDoclingPdfTextExtractor : IPdfTextExtractor
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<SmolDoclingPdfTextExtractor> _logger;
@@ -38,8 +38,9 @@ public class SmolDoclingPdfTextExtractor : IPdfTextExtractor
     public async Task<TextExtractionResult> ExtractTextAsync(
         Stream pdfStream,
         bool enableOcrFallback = true,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(pdfStream);
         var startTime = DateTime.UtcNow;
         var requestId = Guid.NewGuid().ToString();
 
@@ -47,56 +48,19 @@ public class SmolDoclingPdfTextExtractor : IPdfTextExtractor
             "[{RequestId}] Starting SmolDocling VLM extraction (Stage 2 fallback)",
             requestId);
 
-        var timeoutSeconds = GetTimeoutSeconds();
-
         try
         {
-            // Create HTTP client with circuit breaker and retry policies
-            var client = _httpClientFactory.CreateClient("SmolDoclingService");
+            // Prepare HTTP client and content
+            var client = PrepareHttpClient();
+            using var content = await PreparePdfContentAsync(pdfStream, cancellationToken).ConfigureAwait(false);
 
-            // Configure timeout
-            client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
+            // Execute request
+            using var response = await ExecuteExtractionRequestAsync(client, content, requestId, cancellationToken).ConfigureAwait(false);
 
-            // Prepare multipart form data
-            using var content = new MultipartFormDataContent();
-
-            // Copy stream to byte array (needed for retry logic - stream must be reusable)
-            byte[] pdfBytes;
-            using (var memoryStream = new MemoryStream())
-            {
-                await pdfStream.CopyToAsync(memoryStream, ct).ConfigureAwait(false);
-                pdfBytes = memoryStream.ToArray();
-            }
-
-            // Create StreamContent from byte array (allows Polly retry to resend full content)
-            using var streamContent = new StreamContent(new MemoryStream(pdfBytes));
-            streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/pdf");
-
-            content.Add(streamContent, "file", "document.pdf");
-
-            // Execute HTTP request (retry + circuit breaker handled by Polly in DI)
-            _logger.LogDebug("[{RequestId}] Sending request to SmolDocling service", requestId);
-
-            using var response = await client.PostAsync("/api/v1/extract", content, ct).ConfigureAwait(false);
-
-            // Handle response
-            if (!response.IsSuccessStatusCode)
-            {
-                var errorContent = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
-                _logger.LogError(
-                    "[{RequestId}] SmolDocling service returned {StatusCode}: {Error}",
-                    requestId, response.StatusCode, errorContent);
-
-                return HandleErrorResponse(response.StatusCode, errorContent, requestId);
-            }
-
-            // Parse successful response
-            var result = await response.Content.ReadFromJsonAsync<SmolDoclingResponse>(
-                cancellationToken: ct).ConfigureAwait(false);
-
+            // Process response
+            var result = await ProcessExtractionResponseAsync(response, requestId, cancellationToken).ConfigureAwait(false);
             if (result == null)
             {
-                _logger.LogError("[{RequestId}] Failed to parse SmolDocling response", requestId);
                 return TextExtractionResult.CreateFailure("Failed to parse service response");
             }
 
@@ -106,15 +70,13 @@ public class SmolDoclingPdfTextExtractor : IPdfTextExtractor
                 "[{RequestId}] SmolDocling extraction completed in {DurationMs}ms - Quality: {Quality}, Pages: {Pages}",
                 requestId, duration.TotalMilliseconds, result.QualityScore, result.PageCount);
 
-            // Determine extraction quality enum from score
             var quality = DetermineExtractionQuality(result.QualityScore);
 
-            // Use plain text (not markdown) for consistency with other extractors
             return TextExtractionResult.CreateSuccess(
                 extractedText: PdfTextProcessingDomainService.NormalizeText(result.Text),
                 pageCount: result.PageCount,
                 characterCount: result.Text.Length,
-                ocrTriggered: false, // SmolDocling is VLM (vision-based, not OCR)
+                ocrTriggered: false,
                 quality: quality);
         }
         catch (HttpRequestException ex)
@@ -122,105 +84,63 @@ public class SmolDoclingPdfTextExtractor : IPdfTextExtractor
             _logger.LogError(ex,
                 "[{RequestId}] HTTP request failed (SmolDocling service unavailable)",
                 requestId);
-
-            return TextExtractionResult.CreateFailure(
-                $"SmolDocling service unavailable: {ex.Message}");
+            return TextExtractionResult.CreateFailure($"SmolDocling service unavailable: {ex.Message}");
         }
         catch (TaskCanceledException ex) when (ex.InnerException is TimeoutException)
         {
-            _logger.LogError(ex,
-                "[{RequestId}] Request timed out after {Timeout}s",
-                requestId, timeoutSeconds);
-
-            return TextExtractionResult.CreateFailure(
-                $"SmolDocling extraction timeout after {timeoutSeconds}s");
+            var timeoutSeconds = GetTimeoutSeconds();
+            _logger.LogError(ex, "[{RequestId}] Request timed out after {Timeout}s", requestId, timeoutSeconds);
+            return TextExtractionResult.CreateFailure($"SmolDocling extraction timeout after {timeoutSeconds}s");
         }
-        catch (TaskCanceledException ex) when (ex.CancellationToken == ct)
+        catch (TaskCanceledException ex) when (cancellationToken.IsCancellationRequested)
         {
-            _logger.LogWarning(
-                "[{RequestId}] Extraction cancelled by user",
-                requestId);
-            throw; // Propagate user cancellation
+            _logger.LogWarning(ex, "[{RequestId}] Extraction cancelled by user", requestId);
+            throw;
         }
         catch (TaskCanceledException ex)
         {
-            _logger.LogError(ex,
-                "[{RequestId}] SmolDocling service timeout",
-                requestId);
-
+            _logger.LogError(ex, "[{RequestId}] SmolDocling service timeout", requestId);
             return TextExtractionResult.CreateFailure("SmolDocling service timeout");
         }
         catch (JsonException ex)
         {
-            _logger.LogError(ex,
-                "[{RequestId}] Failed to parse SmolDocling response",
-                requestId);
-
-            return TextExtractionResult.CreateFailure(
-                "Invalid response format from SmolDocling service");
+            _logger.LogError(ex, "[{RequestId}] Failed to parse SmolDocling response", requestId);
+            return TextExtractionResult.CreateFailure("Invalid response format from SmolDocling service");
         }
+#pragma warning disable CA1031
+        // Justification: INFRASTRUCTURE SERVICE PATTERN - Graceful degradation
+        // Catches all SmolDocling API failures. Returns error result instead of throwing
+        // to allow PDF pipeline orchestrator to fall back to next stage. External service adapter boundary.
         catch (Exception ex)
         {
-            _logger.LogError(ex,
-                "[{RequestId}] Unexpected error during SmolDocling extraction",
-                requestId);
-
-            return TextExtractionResult.CreateFailure(
-                $"Unexpected error: {ex.Message}");
+            _logger.LogError(ex, "[{RequestId}] Unexpected error during SmolDocling extraction", requestId);
+            return TextExtractionResult.CreateFailure($"Unexpected error: {ex.Message}");
         }
+#pragma warning restore CA1031
     }
 
     public async Task<PagedTextExtractionResult> ExtractPagedTextAsync(
         Stream pdfStream,
         bool enableOcrFallback = true,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(pdfStream);
         var startTime = DateTime.UtcNow;
         var requestId = Guid.NewGuid().ToString();
 
-        _logger.LogInformation(
-            "[{RequestId}] Starting paged SmolDocling extraction",
-            requestId);
+        _logger.LogInformation("[{RequestId}] Starting paged SmolDocling extraction", requestId);
 
         try
         {
-            var client = _httpClientFactory.CreateClient("SmolDoclingService");
+            // Prepare HTTP client and content
+            var client = PrepareHttpClient();
+            using var content = await PreparePdfContentAsync(pdfStream, cancellationToken).ConfigureAwait(false);
 
-            var timeoutSeconds = GetTimeoutSeconds();
-            client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
+            // Execute request
+            using var response = await ExecuteExtractionRequestAsync(client, content, requestId, cancellationToken).ConfigureAwait(false);
 
-            using var content = new MultipartFormDataContent();
-
-            // Copy stream to byte array (needed for retry logic - stream must be reusable)
-            byte[] pdfBytes;
-            using (var memoryStream = new MemoryStream())
-            {
-                await pdfStream.CopyToAsync(memoryStream, ct).ConfigureAwait(false);
-                pdfBytes = memoryStream.ToArray();
-            }
-
-            // Create StreamContent from byte array (allows Polly retry to resend full content)
-            using var streamContent = new StreamContent(new MemoryStream(pdfBytes));
-            streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/pdf");
-
-            content.Add(streamContent, "file", "document.pdf");
-
-            using var response = await client.PostAsync("/api/v1/extract", content, ct).ConfigureAwait(false);
-
-            if (!response.IsSuccessStatusCode)
-            {
-                var errorContent = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
-                _logger.LogError(
-                    "[{RequestId}] SmolDocling service error: {StatusCode} - {ErrorContent}",
-                    requestId, response.StatusCode, errorContent);
-
-                return PagedTextExtractionResult.CreateFailure(
-                    $"Service error: {response.StatusCode}");
-            }
-
-            var result = await response.Content.ReadFromJsonAsync<SmolDoclingResponse>(
-                cancellationToken: ct).ConfigureAwait(false);
-
+            // Process response
+            var result = await ProcessExtractionResponseAsync(response, requestId, cancellationToken).ConfigureAwait(false);
             if (result == null)
             {
                 return PagedTextExtractionResult.CreateFailure("Failed to parse service response");
@@ -250,11 +170,101 @@ public class SmolDoclingPdfTextExtractor : IPdfTextExtractor
             _logger.LogError(ex, "[{RequestId}] Request timeout", requestId);
             return PagedTextExtractionResult.CreateFailure("Extraction timeout");
         }
+#pragma warning disable CA1031
+        // Justification: INFRASTRUCTURE SERVICE PATTERN - Graceful degradation
+        // Catches all SmolDocling API failures. Returns error result instead of throwing
+        // to allow PDF pipeline orchestrator to fall back to next stage. External service adapter boundary.
         catch (Exception ex)
         {
             _logger.LogError(ex, "[{RequestId}] Unexpected error", requestId);
             return PagedTextExtractionResult.CreateFailure($"Unexpected error: {ex.Message}");
         }
+#pragma warning restore CA1031
+    }
+
+    /// <summary>
+    /// Prepares HTTP client with configured timeout.
+    /// </summary>
+    private HttpClient PrepareHttpClient()
+    {
+        var client = _httpClientFactory.CreateClient("SmolDoclingService");
+        var timeoutSeconds = GetTimeoutSeconds();
+        client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
+        return client;
+    }
+
+    /// <summary>
+    /// Prepares PDF content as multipart form data.
+    /// Converts stream to byte array for retry support.
+    /// </summary>
+    private static async Task<MultipartFormDataContent> PreparePdfContentAsync(
+        Stream pdfStream,
+        CancellationToken cancellationToken)
+    {
+        var content = new MultipartFormDataContent();
+
+        // Copy stream to byte array (needed for retry logic - stream must be reusable)
+        byte[] pdfBytes;
+        using (var memoryStream = new MemoryStream())
+        {
+            await pdfStream.CopyToAsync(memoryStream, cancellationToken).ConfigureAwait(false);
+            pdfBytes = memoryStream.ToArray();
+        }
+
+#pragma warning disable CA2000 // Dispose objects before losing scope
+        // Justification: MultipartFormDataContent takes ownership of StreamContent and disposes it
+        var streamContent = new StreamContent(new MemoryStream(pdfBytes));
+        streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/pdf");
+        content.Add(streamContent, "file", "document.pdf");
+#pragma warning restore CA2000
+
+        return content;
+    }
+
+    /// <summary>
+    /// Executes extraction request and handles HTTP errors.
+    /// </summary>
+    private async Task<HttpResponseMessage> ExecuteExtractionRequestAsync(
+        HttpClient client,
+        MultipartFormDataContent content,
+        string requestId,
+        CancellationToken cancellationToken)
+    {
+        _logger.LogDebug("[{RequestId}] Sending request to SmolDocling service", requestId);
+
+        var response = await client.PostAsync("/api/v1/extract", content, cancellationToken).ConfigureAwait(false);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorContent = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            _logger.LogError(
+                "[{RequestId}] SmolDocling service returned {StatusCode}: {Error}",
+                requestId, response.StatusCode, errorContent);
+
+            throw new HttpRequestException(
+                HandleErrorResponse(response.StatusCode, errorContent, requestId).ErrorMessage);
+        }
+
+        return response;
+    }
+
+    /// <summary>
+    /// Processes successful extraction response.
+    /// </summary>
+    private async Task<SmolDoclingResponse?> ProcessExtractionResponseAsync(
+        HttpResponseMessage response,
+        string requestId,
+        CancellationToken cancellationToken)
+    {
+        var result = await response.Content.ReadFromJsonAsync<SmolDoclingResponse>(
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        if (result == null)
+        {
+            _logger.LogError("[{RequestId}] Failed to parse SmolDocling response", requestId);
+        }
+
+        return result;
     }
 
     private int GetTimeoutSeconds()
@@ -271,6 +281,7 @@ public class SmolDoclingPdfTextExtractor : IPdfTextExtractor
     /// </summary>
     private List<PageTextChunk> ConvertToPageChunks(IList<SmolDoclingChunk> chunks)
     {
+        ArgumentNullException.ThrowIfNull(chunks);
         var pageChunks = new List<PageTextChunk>();
         int charIndex = 0;
 
@@ -353,3 +364,4 @@ public class SmolDoclingPdfTextExtractor : IPdfTextExtractor
         };
     }
 }
+

@@ -8,7 +8,7 @@ namespace Api.Services;
 /// <summary>
 /// Exports chat conversations as plain text with timestamps and citations.
 /// </summary>
-public class TxtExportFormatter : IExportFormatter
+internal class TxtExportFormatter : IExportFormatter
 {
     private readonly ILogger<TxtExportFormatter>? _logger;
 
@@ -51,7 +51,7 @@ public class TxtExportFormatter : IExportFormatter
 
                 // Parse and display citations if present
                 var citations = ParseCitations(log.MetadataJson);
-                if (citations.Any())
+                if (citations.Count > 0)
                 {
                     sb.AppendLine();
                     sb.AppendLine("Citations:");
@@ -115,12 +115,11 @@ public class TxtExportFormatter : IExportFormatter
         try
         {
             var metadata = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(metadataJson);
-            if (metadata == null || !metadata.ContainsKey("citations"))
+            if (metadata == null || !metadata.TryGetValue("citations", out var citationsElement))
             {
                 return new List<CitationMetadata>();
             }
 
-            var citationsElement = metadata["citations"];
             if (citationsElement.ValueKind != JsonValueKind.Array)
             {
                 return new List<CitationMetadata>();

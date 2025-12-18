@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 namespace Api.Infrastructure.EntityConfigurations;
 
 // OPS-07: Alerting system
-public class AlertEntityConfiguration : IEntityTypeConfiguration<AlertEntity>
+internal class AlertEntityConfiguration : IEntityTypeConfiguration<AlertEntity>
 {
     public void Configure(EntityTypeBuilder<AlertEntity> builder)
     {

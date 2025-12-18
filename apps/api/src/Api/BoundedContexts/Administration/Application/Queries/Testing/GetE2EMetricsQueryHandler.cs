@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Administration.Application.Queries.Testing;
 /// Handler for GetE2EMetricsQuery (Issue #2139)
 /// Retrieves E2E test metrics from Playwright reports
 /// </summary>
-public class GetE2EMetricsQueryHandler : IQueryHandler<GetE2EMetricsQuery, E2EMetricsDto>
+internal class GetE2EMetricsQueryHandler : IQueryHandler<GetE2EMetricsQuery, E2EMetricsDto>
 {
     private readonly IPlaywrightReportParserService _playwrightParser;
     private readonly ILogger<GetE2EMetricsQueryHandler> _logger;
@@ -23,6 +23,7 @@ public class GetE2EMetricsQueryHandler : IQueryHandler<GetE2EMetricsQuery, E2EMe
 
     public async Task<E2EMetricsDto> Handle(GetE2EMetricsQuery request, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         _logger.LogInformation("Retrieving E2E test metrics from Playwright reports");
 
         var metrics = await _playwrightParser.ParseE2EMetricsAsync(cancellationToken).ConfigureAwait(false);

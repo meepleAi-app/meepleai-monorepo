@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Handlers;
 /// <summary>
 /// Handles game creation command.
 /// </summary>
-public class CreateGameCommandHandler : ICommandHandler<CreateGameCommand, GameDto>
+internal class CreateGameCommandHandler : ICommandHandler<CreateGameCommand, GameDto>
 {
     private readonly IGameRepository _gameRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -26,6 +26,7 @@ public class CreateGameCommandHandler : ICommandHandler<CreateGameCommand, GameD
 
     public async Task<GameDto> Handle(CreateGameCommand command, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         // Create value objects
         var title = new GameTitle(command.Title);
         var publisher = command.Publisher != null ? new Publisher(command.Publisher) : null;
@@ -53,6 +54,18 @@ public class CreateGameCommandHandler : ICommandHandler<CreateGameCommand, GameD
             playTime: playTime
         );
 
+        // Set images if provided
+        if (!string.IsNullOrWhiteSpace(command.IconUrl) || !string.IsNullOrWhiteSpace(command.ImageUrl))
+        {
+            game.SetImages(command.IconUrl, command.ImageUrl);
+        }
+
+        // Link to BGG if ID provided
+        if (command.BggId.HasValue)
+        {
+            game.LinkToBgg(command.BggId.Value);
+        }
+
         // Persist
         await _gameRepository.AddAsync(game, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -73,7 +86,9 @@ public class CreateGameCommandHandler : ICommandHandler<CreateGameCommand, GameD
             MinPlayTimeMinutes: game.PlayTime?.MinMinutes,
             MaxPlayTimeMinutes: game.PlayTime?.MaxMinutes,
             BggId: game.BggId,
-            CreatedAt: game.CreatedAt
+            CreatedAt: game.CreatedAt,
+            IconUrl: game.IconUrl,
+            ImageUrl: game.ImageUrl
         );
     }
 }

@@ -6,7 +6,7 @@ namespace Api.Services;
 /// Service for managing system-wide dynamic configuration.
 /// Enables runtime configuration changes without redeployment.
 /// </summary>
-public interface IConfigurationService
+internal interface IConfigurationService
 {
     /// <summary>
     /// Get a configuration by its key (internal infrastructure method).

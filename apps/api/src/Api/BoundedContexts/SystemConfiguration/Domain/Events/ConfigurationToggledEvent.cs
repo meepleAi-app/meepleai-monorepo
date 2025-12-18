@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.SystemConfiguration.Domain.Events;
 /// <summary>
 /// Domain event raised when a configuration's active status is toggled.
 /// </summary>
-public sealed class ConfigurationToggledEvent : DomainEventBase
+internal sealed class ConfigurationToggledEvent : DomainEventBase
 {
     public Guid ConfigurationId { get; }
     public ConfigKey Key { get; }

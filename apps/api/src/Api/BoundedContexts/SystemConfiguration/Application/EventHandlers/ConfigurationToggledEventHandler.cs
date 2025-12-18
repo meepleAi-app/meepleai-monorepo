@@ -10,17 +10,17 @@ namespace Api.BoundedContexts.SystemConfiguration.Application.EventHandlers;
 /// Handler for ConfigurationToggledEvent domain event.
 /// Automatically creates audit log entry and invalidates cache via base class.
 /// </summary>
-public sealed class ConfigurationToggledEventHandler : DomainEventHandlerBase<ConfigurationToggledEvent>
+internal sealed class ConfigurationToggledEventHandler : DomainEventHandlerBase<ConfigurationToggledEvent>
 {
     private readonly IHybridCacheService _cache;
 
     public ConfigurationToggledEventHandler(
         MeepleAiDbContext dbContext,
         IHybridCacheService cache,
-        ILogger<DomainEventHandlerBase<ConfigurationToggledEvent>> logger)
+        ILogger<ConfigurationToggledEventHandler> logger)
         : base(dbContext, logger)
     {
-        _cache = cache;
+        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
     }
 
     protected override async Task HandleEventAsync(ConfigurationToggledEvent domainEvent, CancellationToken cancellationToken)

@@ -229,7 +229,7 @@ public class GetAllConfigsQueryHandlerTests
     {
         // Arrange
         var query = new GetAllConfigsQuery(Page: 1, PageSize: 10, ActiveOnly: false);
-        var cancellationTokenSource = new CancellationTokenSource();
+        using var cancellationTokenSource = new CancellationTokenSource();
         var cancellationToken = cancellationTokenSource.Token;
 
         _mockConfigRepository
@@ -245,4 +245,5 @@ public class GetAllConfigsQueryHandlerTests
             Times.Once);
     }
 }
+
 

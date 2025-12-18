@@ -22,7 +22,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 /// Handler for CompleteChunkedUploadCommand.
 /// Assembles chunks into a complete file and triggers PDF processing.
 /// </summary>
-public class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunkedUploadCommand, CompleteChunkedUploadResult>
+internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunkedUploadCommand, CompleteChunkedUploadResult>
 {
     private static readonly string UploadTempBasePath = Path.Combine(Path.GetTempPath(), "meepleai_uploads");
 
@@ -47,14 +47,14 @@ public class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunk
         IPdfTableExtractor tableExtractor,
         TimeProvider? timeProvider = null)
     {
-        _sessionRepository = sessionRepository;
-        _dbContext = dbContext;
-        _blobStorageService = blobStorageService;
-        _backgroundTaskService = backgroundTaskService;
-        _logger = logger;
-        _scopeFactory = scopeFactory;
-        _pdfTextExtractor = pdfTextExtractor;
-        _tableExtractor = tableExtractor;
+        _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
+        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
+        _blobStorageService = blobStorageService ?? throw new ArgumentNullException(nameof(blobStorageService));
+        _backgroundTaskService = backgroundTaskService ?? throw new ArgumentNullException(nameof(backgroundTaskService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
+        _pdfTextExtractor = pdfTextExtractor ?? throw new ArgumentNullException(nameof(pdfTextExtractor));
+        _tableExtractor = tableExtractor ?? throw new ArgumentNullException(nameof(tableExtractor));
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
@@ -62,10 +62,11 @@ public class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunk
         CompleteChunkedUploadCommand request,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
         try
         {
             // Validate session and permissions
-            (bool validationSuccess, string? validationError, ChunkedUploadSession? session) = await ValidateSessionAndPermissionsAsync(
+            var (validationSuccess, validationError, session) = await ValidateSessionAndPermissionsAsync(
                 request.SessionId, request.UserId, cancellationToken).ConfigureAwait(false);
             if (!validationSuccess)
             {
@@ -108,6 +109,11 @@ public class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunk
                 MissingChunks: null
             );
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: COMMAND HANDLER PATTERN - CQRS handler boundary
+        // Generic catch handles unexpected failures during chunked upload completion
+        // (validation, assembly, storage, DB operations). Returns Result pattern with error.
+        // Prevents exception propagation to API layer.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to complete chunked upload {SessionId}", request.SessionId);
@@ -120,67 +126,68 @@ public class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunk
                 MissingChunks: null
             );
         }
+#pragma warning restore CA1031
     }
 
     /// <summary>
     /// Validates upload session, permissions, and completeness.
     /// Returns (success, errorMessage, session).
     /// </summary>
-    private async Task<(bool success, string? errorMessage, ChunkedUploadSession? session)> ValidateSessionAndPermissionsAsync(
+    private async Task<(bool success, string? errorMessage, ChunkedUploadSession? uploadSession)> ValidateSessionAndPermissionsAsync(
         Guid sessionId,
         Guid userId,
         CancellationToken cancellationToken)
     {
         // Get session
-        var session = await _sessionRepository.GetByIdAsync(sessionId, cancellationToken).ConfigureAwait(false);
+        var uploadSession = await _sessionRepository.GetByIdAsync(sessionId, cancellationToken).ConfigureAwait(false);
 
-        if (session == null)
+        if (uploadSession == null)
         {
             return (false, "Upload session not found", null);
         }
 
         // Verify ownership
-        if (session.UserId != userId)
+        if (uploadSession.UserId != userId)
         {
-            return (false, "Access denied", session);
+            return (false, "Access denied", uploadSession);
         }
 
         // Validate TempDirectory to prevent path traversal attacks
-        if (!IsValidTempDirectory(session.TempDirectory))
+        if (!IsValidTempDirectory(uploadSession.TempDirectory))
         {
             _logger.LogWarning(
                 "Invalid TempDirectory detected for session {SessionId}: {TempDirectory}",
-                sessionId.ToString(), session.TempDirectory);
+                sessionId.ToString(), uploadSession.TempDirectory);
 
-            return (false, "Invalid upload session", session);
+            return (false, "Invalid upload session", uploadSession);
         }
 
         // Check session status
-        if (session.IsExpired)
+        if (uploadSession.IsExpired)
         {
-            session.MarkAsExpired();
-            await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
+            uploadSession.MarkAsExpired();
+            await _sessionRepository.UpdateAsync(uploadSession, cancellationToken).ConfigureAwait(false);
             await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
             // Cleanup temp files
-            await CleanupTempDirectoryAsync(session.TempDirectory).ConfigureAwait(false);
+            await CleanupTempDirectoryAsync(uploadSession.TempDirectory).ConfigureAwait(false);
 
-            return (false, "Upload session has expired", session);
+            return (false, "Upload session has expired", uploadSession);
         }
 
-        if (string.Equals(session.Status, "completed", StringComparison.Ordinal))
+        if (string.Equals(uploadSession.Status, "completed", StringComparison.Ordinal))
         {
-            return (false, "Upload session is already completed", session);
+            return (false, "Upload session already completed", uploadSession);
         }
 
         // Check if all chunks received
-        if (!session.IsComplete)
+        if (!uploadSession.IsComplete)
         {
-            var missingChunks = session.GetMissingChunks();
-            return (false, $"Upload incomplete. Missing {missingChunks.Count} chunk(s).", session);
+            var missingChunks = uploadSession.GetMissingChunks();
+            return (false, $"Upload incomplete. Missing {missingChunks.Count} chunk(s).", uploadSession);
         }
 
-        return (true, null, session);
+        return (true, null, uploadSession);
     }
 
     /// <summary>
@@ -191,6 +198,7 @@ public class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunk
         ChunkedUploadSession session,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(session);
         // Mark as assembling
         session.MarkAsAssembling();
         await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
@@ -266,16 +274,16 @@ public class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunk
         var tempDirToClean = session.TempDirectory;
         _backgroundTaskService.ExecuteWithCancellation(
             $"cleanup_{sessionId}",
-            async (ct) =>
+            async (cancellationToken) =>
             {
-                await Task.Delay(100, ct).ConfigureAwait(false); // Small delay to ensure file handles are released
+                await Task.Delay(100, cancellationToken).ConfigureAwait(false); // Small delay to ensure file handles are released
                 await CleanupTempDirectoryAsync(tempDirToClean).ConfigureAwait(false);
             });
 
         // Trigger background processing (same as regular upload)
         _backgroundTaskService.ExecuteWithCancellation(
             storageResult.FileId!,
-            (ct) => TriggerPdfProcessingAsync(storageResult.FileId!, storageResult.FilePath!, ct));
+            (cancellationToken) => TriggerPdfProcessingAsync(storageResult.FileId!, storageResult.FilePath!, cancellationToken));
 
         return pdfDoc.Id;
     }
@@ -342,10 +350,16 @@ public class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunk
                 _logger.LogDebug("Cleaned up temp directory: {TempDirectory}", tempDirectory);
             }
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: CLEANUP PATTERN - Best-effort resource cleanup
+        // Catches all exceptions during temp directory deletion (permissions, file locks, etc.).
+        // Cleanup failure is non-critical; logs warning but doesn't throw to avoid disrupting
+        // main operation flow. Fail-safe pattern for resource management.
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to cleanup temp directory: {TempDirectory}", tempDirectory);
         }
+#pragma warning restore CA1031
         return Task.CompletedTask;
     }
 
@@ -353,7 +367,7 @@ public class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunk
     /// Triggers asynchronous PDF processing after chunked upload completion.
     /// Orchestrates extraction, chunking, embedding generation, and indexing.
     /// </summary>
-    private async Task TriggerPdfProcessingAsync(string pdfId, string filePath, CancellationToken ct)
+    private async Task TriggerPdfProcessingAsync(string pdfId, string filePath, CancellationToken cancellationToken)
     {
         using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
@@ -368,7 +382,7 @@ public class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunk
                 return;
             }
 
-            var pdfDoc = await db.PdfDocuments.FindAsync(new object[] { pdfGuid }, ct).ConfigureAwait(false);
+            var pdfDoc = await db.PdfDocuments.FindAsync(new object[] { pdfGuid }, cancellationToken).ConfigureAwait(false);
             if (pdfDoc == null)
             {
                 _logger.LogError("PDF document {PdfId} not found for processing", pdfId);
@@ -379,36 +393,42 @@ public class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunk
 
             // Step 1: Extract PDF text and structured content
             var (extractSuccess, fullText, totalPages) = await ExtractPdfTextAsync(
-                pdfId, filePath, pdfDoc, db, scope, ct).ConfigureAwait(false);
+                pdfId, filePath, pdfDoc, db, scope, cancellationToken).ConfigureAwait(false);
             if (!extractSuccess) return;
 
             // Step 2: Chunk text for embedding
             var allDocumentChunks = await ChunkTextContentAsync(
-                pdfId, fullText!, totalPages, scope, ct).ConfigureAwait(false);
+                pdfId, fullText!, scope).ConfigureAwait(false);
 
             // Step 3: Generate embeddings
             var (embeddingsSuccess, embeddings) = await GenerateEmbeddingsAsync(
-                pdfId, allDocumentChunks, pdfDoc, db, ct, scope).ConfigureAwait(false);
+                pdfId, allDocumentChunks, pdfDoc, db, scope, cancellationToken).ConfigureAwait(false);
             if (!embeddingsSuccess) return;
 
             // Step 4: Index in vector store and save to PostgreSQL
             await IndexAndStoreChunksAsync(
-                pdfId, pdfGuid, allDocumentChunks, embeddings!, pdfDoc, fullText!, db, scope, ct).ConfigureAwait(false);
+                pdfId, pdfGuid, allDocumentChunks, embeddings!, pdfDoc, fullText!, db, scope, cancellationToken).ConfigureAwait(false);
 
             // Mark as completed
             pdfDoc.ProcessingStatus = "completed";
             pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
-            await db.SaveChangesAsync(ct).ConfigureAwait(false);
+            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
             var totalTime = (_timeProvider.GetUtcNow().UtcDateTime - startTime).TotalSeconds;
             _logger.LogInformation(
                 "PDF processing completed for chunked upload {PdfId}: {TotalPages} pages, {ChunkCount} chunks, {TotalSeconds}s",
                 pdfId, totalPages, allDocumentChunks.Count, totalTime);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: BACKGROUND PROCESSING PATTERN - PDF processing failure recovery
+        // Catches all exceptions during PDF text extraction, chunking, and embedding generation.
+        // Delegates to HandleProcessingFailureAsync to update PDF status as "failed" in DB.
+        // Background processing must handle errors gracefully without propagating to command handler.
         catch (Exception ex)
         {
-            await HandleProcessingFailureAsync(pdfId, db, ex, ct).ConfigureAwait(false);
+            await HandleProcessingFailureAsync(pdfId, db, ex, cancellationToken).ConfigureAwait(false);
         }
+#pragma warning restore CA1031
     }
 
     /// <summary>
@@ -420,13 +440,13 @@ public class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunk
         PdfDocumentEntity pdfDoc,
         MeepleAiDbContext db,
         IServiceScope scope,
-        CancellationToken ct)
+        CancellationToken cancellationToken)
     {
         var extractionStopwatch = Stopwatch.StartNew();
         var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
         await using (fileStream.ConfigureAwait(false))
         {
-            var extractResult = await _pdfTextExtractor.ExtractPagedTextAsync(fileStream, enableOcrFallback: true, ct).ConfigureAwait(false);
+            var extractResult = await _pdfTextExtractor.ExtractPagedTextAsync(fileStream, enableOcrFallback: true, cancellationToken).ConfigureAwait(false);
             extractionStopwatch.Stop();
 
             _logger.LogDebug("Extraction completed in {ElapsedMs}ms for {PdfId}", extractionStopwatch.ElapsedMilliseconds, pdfId);
@@ -436,7 +456,7 @@ public class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunk
                 pdfDoc.ProcessingStatus = "failed";
                 pdfDoc.ProcessingError = extractResult.ErrorMessage;
                 pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
-                await db.SaveChangesAsync(ct).ConfigureAwait(false);
+                await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
                 _logger.LogError("Text extraction failed for {PdfId}: {Error}", pdfId, extractResult.ErrorMessage);
                 return (false, null, 0);
             }
@@ -448,10 +468,10 @@ public class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunk
             pdfDoc.ExtractedText = fullText;
             pdfDoc.PageCount = extractResult.TotalPages;
             pdfDoc.CharacterCount = extractResult.TotalCharacters;
-            await db.SaveChangesAsync(ct).ConfigureAwait(false);
+            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
             // Extract structured content (tables, diagrams)
-            await ExtractStructuredContentAsync(filePath, pdfDoc, db, scope, ct).ConfigureAwait(false);
+            await ExtractStructuredContentAsync(filePath, pdfDoc, db, scope, cancellationToken).ConfigureAwait(false);
 
             return (true, fullText, extractResult.TotalPages);
         }
@@ -465,12 +485,12 @@ public class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunk
         PdfDocumentEntity pdfDoc,
         MeepleAiDbContext db,
         IServiceScope scope,
-        CancellationToken ct)
+        CancellationToken cancellationToken)
     {
         var tableExtractor = scope.ServiceProvider.GetService<IPdfTableExtractor>() ?? _tableExtractor;
         if (tableExtractor == null) return;
 
-        var structuredResult = await tableExtractor.ExtractStructuredContentAsync(filePath, ct).ConfigureAwait(false);
+        var structuredResult = await tableExtractor.ExtractStructuredContentAsync(filePath, cancellationToken).ConfigureAwait(false);
         if (!structuredResult.Success) return;
 
         pdfDoc.ExtractedTables = System.Text.Json.JsonSerializer.Serialize(structuredResult.Tables);
@@ -487,7 +507,7 @@ public class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunk
         pdfDoc.TableCount = structuredResult.TableCount;
         pdfDoc.DiagramCount = structuredResult.DiagramCount;
         pdfDoc.AtomicRuleCount = structuredResult.AtomicRuleCount;
-        await db.SaveChangesAsync(ct).ConfigureAwait(false);
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -496,9 +516,9 @@ public class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunk
     private async Task<List<DocumentChunkInput>> ChunkTextContentAsync(
         string pdfId,
         string fullText,
-        int totalPages,
-        IServiceScope scope,
-        CancellationToken ct)
+                IServiceScope scope
+        )
+
     {
         var chunkingStopwatch = Stopwatch.StartNew();
         var chunkingService = scope.ServiceProvider.GetRequiredService<ITextChunkingService>();
@@ -525,7 +545,7 @@ public class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunk
         _logger.LogDebug("Chunking completed in {ElapsedMs}ms, {ChunkCount} chunks for {PdfId}",
             chunkingStopwatch.ElapsedMilliseconds, allDocumentChunks.Count, pdfId);
 
-        return await Task.FromResult(allDocumentChunks);
+        return await Task.FromResult(allDocumentChunks).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -536,8 +556,8 @@ public class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunk
         List<DocumentChunkInput> allDocumentChunks,
         PdfDocumentEntity pdfDoc,
         MeepleAiDbContext db,
-        CancellationToken ct,
-        IServiceScope scope)
+        IServiceScope scope,
+        CancellationToken cancellationToken)
     {
         var embeddingStopwatch = Stopwatch.StartNew();
         var embeddingService = scope.ServiceProvider.GetRequiredService<IEmbeddingService>();
@@ -550,7 +570,7 @@ public class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunk
             pdfDoc.ProcessingStatus = "failed";
             pdfDoc.ProcessingError = embeddingResult.ErrorMessage;
             pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
-            await db.SaveChangesAsync(ct).ConfigureAwait(false);
+            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             _logger.LogError("Embedding generation failed for {PdfId}: {Error}", pdfId, embeddingResult.ErrorMessage);
             return (false, null);
         }
@@ -564,7 +584,7 @@ public class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunk
             pdfDoc.ProcessingStatus = "failed";
             pdfDoc.ProcessingError = mismatchMessage;
             pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
-            await db.SaveChangesAsync(ct).ConfigureAwait(false);
+            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             return (false, null);
         }
 
@@ -583,7 +603,7 @@ public class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunk
         string fullText,
         MeepleAiDbContext db,
         IServiceScope scope,
-        CancellationToken ct)
+        CancellationToken cancellationToken)
     {
         // Index in Qdrant
         var indexingStopwatch = Stopwatch.StartNew();
@@ -608,16 +628,16 @@ public class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunk
             pdfDoc.ProcessingStatus = "failed";
             pdfDoc.ProcessingError = indexResult.ErrorMessage;
             pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
-            await db.SaveChangesAsync(ct).ConfigureAwait(false);
+            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             _logger.LogError("Qdrant indexing failed for {PdfId}: {Error}", pdfId, indexResult.ErrorMessage);
             return;
         }
 
         // Update vector document
-        await UpdateOrCreateVectorDocumentAsync(pdfGuid, pdfDoc, fullText, indexResult.IndexedCount, db, ct).ConfigureAwait(false);
+        await UpdateOrCreateVectorDocumentAsync(pdfGuid, pdfDoc, fullText, indexResult.IndexedCount, db, cancellationToken).ConfigureAwait(false);
 
         // Save text chunks to PostgreSQL for hybrid search (FTS)
-        await SaveTextChunksForHybridSearchAsync(pdfGuid, pdfDoc, allDocumentChunks, db, ct).ConfigureAwait(false);
+        await SaveTextChunksForHybridSearchAsync(pdfGuid, pdfDoc, allDocumentChunks, db, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -629,9 +649,9 @@ public class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunk
         string fullText,
         int indexedCount,
         MeepleAiDbContext db,
-        CancellationToken ct)
+        CancellationToken cancellationToken)
     {
-        var vectorDoc = await db.VectorDocuments.FirstOrDefaultAsync(v => v.PdfDocumentId == pdfGuid, ct).ConfigureAwait(false);
+        var vectorDoc = await db.VectorDocuments.FirstOrDefaultAsync(v => v.PdfDocumentId == pdfGuid, cancellationToken).ConfigureAwait(false);
         if (vectorDoc == null)
         {
             vectorDoc = new VectorDocumentEntity
@@ -654,7 +674,7 @@ public class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunk
             vectorDoc.IndexedAt = _timeProvider.GetUtcNow().UtcDateTime;
         }
 
-        await db.SaveChangesAsync(ct).ConfigureAwait(false);
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -665,12 +685,12 @@ public class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunk
         PdfDocumentEntity pdfDoc,
         List<DocumentChunkInput> allDocumentChunks,
         MeepleAiDbContext db,
-        CancellationToken ct)
+        CancellationToken cancellationToken)
     {
         // Delete existing chunks
         var existingChunks = await db.TextChunks
             .Where(tc => tc.PdfDocumentId == pdfGuid)
-            .ToListAsync(ct).ConfigureAwait(false);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
         if (existingChunks.Count > 0)
         {
             db.TextChunks.RemoveRange(existingChunks);
@@ -692,7 +712,7 @@ public class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunk
             .ToList();
 
         db.TextChunks.AddRange(textChunkEntities);
-        await db.SaveChangesAsync(ct).ConfigureAwait(false);
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -702,7 +722,7 @@ public class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunk
         string pdfId,
         MeepleAiDbContext db,
         Exception ex,
-        CancellationToken ct)
+        CancellationToken cancellationToken)
     {
         _logger.LogError(ex, "Failed to process PDF {PdfId}", pdfId);
 
@@ -710,20 +730,26 @@ public class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunk
         {
             if (Guid.TryParse(pdfId, out var pdfGuid))
             {
-                var pdfDoc = await db.PdfDocuments.FindAsync(new object[] { pdfGuid }, ct).ConfigureAwait(false);
+                var pdfDoc = await db.PdfDocuments.FindAsync(new object[] { pdfGuid }, cancellationToken).ConfigureAwait(false);
                 if (pdfDoc != null)
                 {
                     pdfDoc.ProcessingStatus = "failed";
                     pdfDoc.ProcessingError = ex.Message;
                     pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
-                    await db.SaveChangesAsync(ct).ConfigureAwait(false);
+                    await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
                 }
             }
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: ERROR RECOVERY PATTERN - Nested error handling during failure recovery
+        // Catches exceptions when attempting to update PDF status to "failed" after processing error.
+        // If status update fails (DB unavailable, etc.), only logs error - nothing more can be done.
+        // Prevents cascading failures in error handling path.
         catch (Exception saveEx)
         {
             _logger.LogError(saveEx, "Failed to update PDF status after processing error for {PdfId}", pdfId);
         }
+#pragma warning restore CA1031
     }
 
     /// <summary>
@@ -755,3 +781,4 @@ public class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunk
         }
     }
 }
+

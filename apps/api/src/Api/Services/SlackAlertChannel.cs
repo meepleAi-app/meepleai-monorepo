@@ -9,7 +9,7 @@ namespace Api.Services;
 /// Slack alert channel using Incoming Webhooks.
 /// OPS-07: Slack notifications for alerts.
 /// </summary>
-public class SlackAlertChannel : IAlertChannel
+internal class SlackAlertChannel : IAlertChannel
 {
     private readonly SlackConfiguration _config;
     private readonly IHttpClientFactory _httpClientFactory;
@@ -49,9 +49,11 @@ public class SlackAlertChannel : IAlertChannel
         try
         {
             var payload = BuildSlackPayload(alertType, severity, message, metadata);
-#pragma warning disable CA2000 // HttpClient lifetime managed by IHttpClientFactory
+            // CA2000 suppression: HttpClient from IHttpClientFactory MUST NOT be disposed manually.
+            // The factory manages HttpMessageHandler pooling and lifetime. See: https://learn.microsoft.com/en-us/dotnet/architecture/microservices/implement-resilient-applications/use-httpclientfactory-to-implement-resilient-http-requests
+#pragma warning disable CA2000 // Dispose objects before losing scope - False positive: IHttpClientFactory manages HttpClient lifetime
             var httpClient = _httpClientFactory.CreateClient();
-#pragma warning restore CA2000
+#pragma warning restore CA2000 // Dispose objects before losing scope
 
             var response = await httpClient.PostAsJsonAsync(
                 _config.WebhookUrl,

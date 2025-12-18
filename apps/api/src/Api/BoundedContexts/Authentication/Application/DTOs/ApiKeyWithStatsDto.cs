@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.Authentication.Application.DTOs;
 /// DTO combining API key details with usage statistics.
 /// Used in admin dashboards for comprehensive key management.
 /// </summary>
-public class ApiKeyWithStatsDto
+internal class ApiKeyWithStatsDto
 {
     /// <summary>
     /// API key details.

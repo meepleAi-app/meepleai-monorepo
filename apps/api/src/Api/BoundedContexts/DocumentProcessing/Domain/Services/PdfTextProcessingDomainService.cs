@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Domain.Services;
 /// Domain service for PDF text processing business rules
 /// Encapsulates business logic for OCR decisions, text normalization, and quality assessment
 /// </summary>
-public class PdfTextProcessingDomainService
+internal class PdfTextProcessingDomainService
 {
     private readonly IConfiguration _configuration;
 

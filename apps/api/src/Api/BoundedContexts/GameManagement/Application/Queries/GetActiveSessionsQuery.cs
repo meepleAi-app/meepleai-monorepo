@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Queries;
 /// <summary>
 /// Query to get all active game sessions (Setup, InProgress, Paused).
 /// </summary>
-public record GetActiveSessionsQuery(
+internal record GetActiveSessionsQuery(
     int? Limit = null,
     int? Offset = null
 ) : IQuery<List<GameSessionDto>>;

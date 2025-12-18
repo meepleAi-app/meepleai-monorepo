@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands.RevokeShareLin
 /// Handler for revoking shareable chat thread links.
 /// Updates database and adds token to Redis blacklist.
 /// </summary>
-public sealed class RevokeShareLinkCommandHandler : IRequestHandler<RevokeShareLinkCommand, bool>
+internal sealed class RevokeShareLinkCommandHandler : IRequestHandler<RevokeShareLinkCommand, bool>
 {
     private readonly IShareLinkRepository _shareLinkRepository;
     private readonly IDistributedCache _cache;
@@ -17,16 +17,18 @@ public sealed class RevokeShareLinkCommandHandler : IRequestHandler<RevokeShareL
         IShareLinkRepository shareLinkRepository,
         IDistributedCache cache)
     {
-        _shareLinkRepository = shareLinkRepository;
-        _cache = cache;
+        _shareLinkRepository = shareLinkRepository ?? throw new ArgumentNullException(nameof(shareLinkRepository));
+        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
     }
 
     public async Task<bool> Handle(
         RevokeShareLinkCommand request,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(request);
         // Load share link via repository
-        var shareLink = await _shareLinkRepository.GetByIdAsync(request.ShareLinkId, cancellationToken);
+        var shareLink = await _shareLinkRepository.GetByIdAsync(request.ShareLinkId, cancellationToken).ConfigureAwait(false);
 
         if (shareLink == null || shareLink.CreatorId != request.UserId)
         {
@@ -38,7 +40,7 @@ public sealed class RevokeShareLinkCommandHandler : IRequestHandler<RevokeShareL
         shareLink.Revoke();
 
         // Save changes via repository
-        await _shareLinkRepository.UpdateAsync(shareLink, cancellationToken);
+        await _shareLinkRepository.UpdateAsync(shareLink, cancellationToken).ConfigureAwait(false);
 
         // Add token to Redis blacklist
         // Key format: "revoked_share_link:{share_link_id}"
@@ -58,7 +60,7 @@ public sealed class RevokeShareLinkCommandHandler : IRequestHandler<RevokeShareL
                 blacklistKey,
                 shareLink.RevokedAt!.Value.ToString("O"),
                 options,
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
         }
 
         return true;

@@ -24,9 +24,21 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.DependencyInjection;
 /// DDD-PHASE3: Dependency injection extensions for KnowledgeBase bounded context.
 /// Registers domain services, repositories, adapters, and handlers.
 /// </summary>
-public static class KnowledgeBaseServiceExtensions
+internal static class KnowledgeBaseServiceExtensions
 {
     public static IServiceCollection AddKnowledgeBaseServices(this IServiceCollection services, IConfiguration? configuration = null)
+    {
+        AddDomainServices(services);
+        AddValidationServices(services);
+        AddLlmServices(services);
+        AddInfrastructureServices(services);
+        AddApplicationServices(services);
+        AddChunkingAndRerankingServices(services, configuration);
+
+        return services;
+    }
+
+    private static void AddDomainServices(IServiceCollection services)
     {
         // Domain Services (stateless, can be Singleton for performance)
         services.AddSingleton<VectorSearchDomainService>();
@@ -35,7 +47,10 @@ public static class KnowledgeBaseServiceExtensions
         services.AddSingleton<ChatContextDomainService>(); // Issue #857: Chat history context
         services.AddSingleton<AgentOrchestrationService>(); // Issue #867: Agent invocation orchestration
         services.AddSingleton<ChunkingStrategySelector>(); // ISSUE-1903: ADR-016 Phase 1 - Chunking strategy selection
+    }
 
+    private static void AddValidationServices(IServiceCollection services)
+    {
         // ISSUE-970: BGAI-028 - Confidence Validation (threshold >= 0.70)
         services.AddSingleton<IConfidenceValidationService, ConfidenceValidationService>();
 
@@ -57,7 +72,10 @@ public static class KnowledgeBaseServiceExtensions
 
         // ISSUE-977: BGAI-035 - RAG Validation Pipeline (all 5 layers integrated)
         services.AddScoped<IRagValidationPipelineService, RagValidationPipelineService>();
+    }
 
+    private static void AddLlmServices(IServiceCollection services)
+    {
         // ISSUE-958: LLM Hybrid Architecture
         // Domain Services - Routing Strategy
         services.AddSingleton<ILlmRoutingStrategy, HybridAdaptiveRoutingStrategy>();
@@ -92,6 +110,12 @@ public static class KnowledgeBaseServiceExtensions
         services.AddSingleton<ProviderHealthCheckService>(sp =>
             (ProviderHealthCheckService)sp.GetRequiredService<IProviderHealthCheckService>());
 
+        // ISSUE-1725: LLM budget monitoring background service
+        services.AddHostedService<LlmBudgetMonitoringService>();
+    }
+
+    private static void AddInfrastructureServices(IServiceCollection services)
+    {
         // Infrastructure - Repositories (Scoped - tied to DbContext lifetime)
         services.AddScoped<IVectorDocumentRepository, VectorDocumentRepository>();
         services.AddScoped<IEmbeddingRepository, EmbeddingRepository>();
@@ -101,7 +125,12 @@ public static class KnowledgeBaseServiceExtensions
 
         // Infrastructure - Adapters (Scoped - uses IQdrantService which is Scoped)
         services.AddScoped<IQdrantVectorStoreAdapter, QdrantVectorStoreAdapter>();
+        // Infrastructure - In-Memory Repository (Singleton - shared in-memory store)
+        services.AddSingleton<IChunkRepository, InMemoryChunkRepository>();
+    }
 
+    private static void AddApplicationServices(IServiceCollection services)
+    {
         // Application - Handlers (Scoped - uses Scoped dependencies)
         services.AddScoped<SearchQueryHandler>();
         services.AddScoped<AskQuestionQueryHandler>();
@@ -110,19 +139,25 @@ public static class KnowledgeBaseServiceExtensions
         services.AddScoped<GetMonthlyOptimizationReportQueryHandler>(); // ISSUE-1725: Monthly optimization
         services.AddScoped<InvokeAgentCommandHandler>(); // Issue #867: Agent invocation
 
-        // ISSUE-1903: ADR-016 Phase 1 - Advanced Chunking
-        // Application Service (Scoped - uses ITextChunkingService)
-        services.AddScoped<IAdvancedChunkingService, AdvancedChunkingService>();
-        // Infrastructure - In-Memory Repository (Singleton - shared in-memory store)
-        services.AddSingleton<IChunkRepository, InMemoryChunkRepository>();
-
-        // ISSUE-1902: ADR-016 Phase 0 - Dataset Evaluation Service
-        // Named IDatasetEvaluationService to avoid conflict with Api.Services.IRagEvaluationService
-        services.AddScoped<IDatasetEvaluationService, DatasetEvaluationService>();
         services.AddScoped<RunEvaluationCommandHandler>();
         services.AddScoped<LoadDatasetCommandHandler>();
         services.AddScoped<GetEvaluationResultsQueryHandler>();
         services.AddScoped<GetBaselineMetricsQueryHandler>();
+
+        // ISSUE-1907: ADR-016 Phase 5 - Grid Search and Benchmark Reports
+        services.AddScoped<RunGridSearchHandler>();
+        services.AddSingleton<IReportGeneratorService, ReportGeneratorService>();
+    }
+
+    private static void AddChunkingAndRerankingServices(IServiceCollection services, IConfiguration? configuration)
+    {
+        // ISSUE-1903: ADR-016 Phase 1 - Advanced Chunking
+        // Application Service (Scoped - uses ITextChunkingService)
+        services.AddScoped<IAdvancedChunkingService, AdvancedChunkingService>();
+
+        // ISSUE-1902: ADR-016 Phase 0 - Dataset Evaluation Service
+        // Named IDatasetEvaluationService to avoid conflict with Api.Services.IRagEvaluationService
+        services.AddScoped<IDatasetEvaluationService, DatasetEvaluationService>();
 
         // ISSUE-1906: ADR-016 Phase 4 - Cross-Encoder Reranking Pipeline
         // Domain Services
@@ -154,14 +189,5 @@ public static class KnowledgeBaseServiceExtensions
 
         // Application Services - Resilient Retrieval with Reranking
         services.AddScoped<IRerankedRetrievalService, ResilientRetrievalService>();
-
-        // ISSUE-1907: ADR-016 Phase 5 - Grid Search and Benchmark Reports
-        services.AddScoped<RunGridSearchHandler>();
-        services.AddSingleton<IReportGeneratorService, ReportGeneratorService>();
-
-        // ISSUE-1725: LLM budget monitoring background service
-        services.AddHostedService<LlmBudgetMonitoringService>();
-
-        return services;
     }
 }

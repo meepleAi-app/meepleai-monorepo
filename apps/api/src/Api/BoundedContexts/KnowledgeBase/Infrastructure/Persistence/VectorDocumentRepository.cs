@@ -12,7 +12,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 /// EF Core implementation of IVectorDocumentRepository.
 /// Maps domain VectorDocument entities to persistence layer using KnowledgeBaseMappers.
 /// </summary>
-public class VectorDocumentRepository : RepositoryBase, IVectorDocumentRepository
+internal class VectorDocumentRepository : RepositoryBase, IVectorDocumentRepository
 {
     public VectorDocumentRepository(MeepleAiDbContext context, IDomainEventCollector eventCollector)
         : base(context, eventCollector)

@@ -15,7 +15,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 /// <param name="GameId">Optional game context for filtering results</param>
 /// <param name="ChatThreadId">Optional chat thread for conversation continuity</param>
 /// <param name="UserId">Optional user ID for personalization</param>
-public sealed record InvokeAgentCommand(
+internal sealed record InvokeAgentCommand(
     Guid AgentId,
     string Query,
     Guid? GameId = null,

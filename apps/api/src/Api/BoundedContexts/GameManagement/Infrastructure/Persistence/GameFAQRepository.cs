@@ -14,7 +14,7 @@ namespace Api.BoundedContexts.GameManagement.Infrastructure.Persistence;
 /// Maps between domain GameFAQ entity and GameFAQEntity persistence model.
 /// Issue #2028: Backend FAQ system for game-specific FAQs.
 /// </summary>
-public class GameFAQRepository : RepositoryBase, IGameFAQRepository
+internal class GameFAQRepository : RepositoryBase, IGameFAQRepository
 {
     public GameFAQRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
         : base(dbContext, eventCollector)
@@ -42,19 +42,16 @@ public class GameFAQRepository : RepositoryBase, IGameFAQRepository
             .AsNoTracking()
             .Where(f => f.GameId == gameId);
 
-        // Execute count and fetch in parallel
-        var countTask = baseQuery.CountAsync(cancellationToken);
-        var entitiesTask = baseQuery
+        // Execute count first, then fetch (sequential to avoid DbContext concurrency issues)
+        // Issue #2186: Fixed concurrent query execution - DbContext is not thread-safe
+        var totalCount = await baseQuery.CountAsync(cancellationToken).ConfigureAwait(false);
+
+        var entities = await baseQuery
             .OrderByDescending(f => f.Upvotes)
             .ThenByDescending(f => f.CreatedAt)
             .Skip(offset)
             .Take(limit)
-            .ToListAsync(cancellationToken);
-
-        await Task.WhenAll(countTask, entitiesTask).ConfigureAwait(false);
-
-        var totalCount = await countTask;
-        var entities = await entitiesTask;
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return (entities.Select(MapToDomain).ToList(), totalCount);
     }
@@ -72,7 +69,19 @@ public class GameFAQRepository : RepositoryBase, IGameFAQRepository
         CollectDomainEvents(faq);
 
         var entity = MapToPersistence(faq);
-        DbContext.GameFAQs.Update(entity);
+
+        // Issue #2186: Handle EF Core tracking to prevent conflicts in same-scope multiple updates
+        var tracked = DbContext.GameFAQs.Local.FirstOrDefault(e => e.Id == entity.Id);
+        if (tracked != null)
+        {
+            // Update the already-tracked entity
+            DbContext.Entry(tracked).CurrentValues.SetValues(entity);
+        }
+        else
+        {
+            DbContext.GameFAQs.Update(entity);
+        }
+
         return Task.CompletedTask;
     }
 
@@ -89,6 +98,38 @@ public class GameFAQRepository : RepositoryBase, IGameFAQRepository
             .AsNoTracking()
             .AnyAsync(f => f.Id == id, cancellationToken)
             .ConfigureAwait(false);
+    }
+
+    public async Task<GameFAQ> IncrementUpvoteAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        // Atomic SQL update to prevent race conditions
+        // Issue #2186: Fixed concurrent upvote handling with atomic increment
+        try
+        {
+            var rowsAffected = await DbContext.Database
+                .ExecuteSqlInterpolatedAsync(
+                    $@"UPDATE ""GameFAQs""
+                       SET ""Upvotes"" = ""Upvotes"" + 1,
+                           ""UpdatedAt"" = {DateTime.UtcNow}
+                       WHERE ""Id"" = {id}",
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+            if (rowsAffected == 0)
+                throw new InvalidOperationException($"FAQ with ID {id} not found");
+
+            // Retrieve updated entity
+            var entity = await DbContext.GameFAQs
+                .AsNoTracking()
+                .FirstOrDefaultAsync(f => f.Id == id, cancellationToken)
+                .ConfigureAwait(false);
+
+            return entity != null ? MapToDomain(entity) : throw new InvalidOperationException($"FAQ with ID {id} not found after update");
+        }
+        catch (Npgsql.PostgresException ex) when (string.Equals(ex.SqlState, "22003", StringComparison.Ordinal)) // integer out of range
+        {
+            throw new InvalidOperationException("Maximum upvotes reached for this FAQ", ex);
+        }
     }
 
     /// <summary>

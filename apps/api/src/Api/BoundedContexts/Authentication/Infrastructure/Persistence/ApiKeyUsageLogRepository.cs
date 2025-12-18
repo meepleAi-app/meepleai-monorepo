@@ -9,19 +9,19 @@ namespace Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 /// Repository implementation for ApiKeyUsageLog aggregate.
 /// Handles persistence of API key usage logs.
 /// </summary>
-public class ApiKeyUsageLogRepository : IApiKeyUsageLogRepository
+internal class ApiKeyUsageLogRepository : IApiKeyUsageLogRepository
 {
     private readonly MeepleAiDbContext _context;
 
     public ApiKeyUsageLogRepository(MeepleAiDbContext context)
     {
-        _context = context ?? throw new ArgumentNullException(nameof(context));
+        ArgumentNullException.ThrowIfNull(context);
+        _context = context;
     }
 
     public async Task AddAsync(ApiKeyUsageLog usageLog, CancellationToken cancellationToken = default)
     {
-        if (usageLog == null)
-            throw new ArgumentNullException(nameof(usageLog));
+        ArgumentNullException.ThrowIfNull(usageLog);
 
         var entity = new ApiKeyUsageLogEntity
         {

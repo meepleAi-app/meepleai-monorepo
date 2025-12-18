@@ -5,15 +5,18 @@ using MediatR;
 
 namespace Api.BoundedContexts.Administration.Application.Handlers.AlertRules;
 
-public class GetAlertRuleByIdQueryHandler : IRequestHandler<GetAlertRuleByIdQuery, AlertRuleDto?>
+internal class GetAlertRuleByIdQueryHandler : IRequestHandler<GetAlertRuleByIdQuery, AlertRuleDto?>
 {
     private readonly IAlertRuleRepository _repository;
 
-    public GetAlertRuleByIdQueryHandler(IAlertRuleRepository repository) => _repository = repository;
+    public GetAlertRuleByIdQueryHandler(IAlertRuleRepository repository) =>
+        _repository = repository ?? throw new ArgumentNullException(nameof(repository));
 
-    public async Task<AlertRuleDto?> Handle(GetAlertRuleByIdQuery request, CancellationToken ct)
+    public async Task<AlertRuleDto?> Handle(GetAlertRuleByIdQuery request, CancellationToken cancellationToken)
     {
-        var rule = await _repository.GetByIdAsync(request.Id, ct);
+        ArgumentNullException.ThrowIfNull(request);
+        var rule = await _repository.GetByIdAsync(request.Id, cancellationToken).ConfigureAwait(false);
         return rule == null ? null : new AlertRuleDto(rule.Id, rule.Name, rule.AlertType, rule.Severity.ToDisplayString(), rule.Threshold.Value, rule.Threshold.Unit, rule.Duration.Minutes, rule.IsEnabled, rule.Description, rule.CreatedAt, rule.UpdatedAt);
     }
 }
+

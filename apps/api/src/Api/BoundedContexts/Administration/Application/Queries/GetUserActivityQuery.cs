@@ -12,7 +12,7 @@ namespace Api.BoundedContexts.Administration.Application.Queries;
 /// <param name="StartDate">Optional: Filter logs from this date</param>
 /// <param name="EndDate">Optional: Filter logs until this date</param>
 /// <param name="Limit">Maximum number of logs to return (default: 100, max: 500)</param>
-public sealed record GetUserActivityQuery(
+internal sealed record GetUserActivityQuery(
     Guid UserId,
     string? ActionFilter = null,
     string? ResourceFilter = null,
@@ -21,7 +21,7 @@ public sealed record GetUserActivityQuery(
     int Limit = 100
 ) : IRequest<GetUserActivityResult>;
 
-public sealed record UserActivityDto(
+internal sealed record UserActivityDto(
     Guid Id,
     string Action,
     string Resource,
@@ -32,7 +32,7 @@ public sealed record UserActivityDto(
     string? IpAddress
 );
 
-public sealed record GetUserActivityResult(
+internal sealed record GetUserActivityResult(
     IReadOnlyList<UserActivityDto> Activities,
     int TotalCount
 );

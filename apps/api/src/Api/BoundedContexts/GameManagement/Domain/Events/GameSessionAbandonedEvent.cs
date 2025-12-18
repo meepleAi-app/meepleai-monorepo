@@ -5,7 +5,7 @@ namespace Api.BoundedContexts.GameManagement.Domain.Events;
 /// <summary>
 /// Domain event raised when a game session is abandoned without completion.
 /// </summary>
-public sealed class GameSessionAbandonedEvent : DomainEventBase
+internal sealed class GameSessionAbandonedEvent : DomainEventBase
 {
     /// <summary>
     /// Gets the ID of the game session.

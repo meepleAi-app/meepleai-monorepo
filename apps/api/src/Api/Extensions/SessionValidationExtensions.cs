@@ -21,7 +21,7 @@ namespace Api.Extensions;
 /// // Use session...
 /// </code>
 /// </summary>
-public static class SessionValidationExtensions
+internal static class SessionValidationExtensions
 {
     /// <summary>
     /// Validates that an active session exists in the HttpContext.Items collection.
@@ -75,7 +75,7 @@ public static class SessionValidationExtensions
                         value is SessionStatusDto session &&
                         session.IsValid &&
                         session.User != null;
-        var hasApiKey = context.User.Identity?.IsAuthenticated == true;
+        var hasApiKey = context.User.Identity?.IsAuthenticated is true;
 
         if (!hasSession && !hasApiKey)
         {

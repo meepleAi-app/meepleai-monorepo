@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.Administration.Domain.ValueObjects;
 /// Value object for performance testing metrics (Issue #2139)
 /// Represents Core Web Vitals and performance budgets
 /// </summary>
-public sealed class PerformanceMetrics : ValueObject
+internal sealed class PerformanceMetrics : ValueObject
 {
     /// <summary>
     /// Largest Contentful Paint (ms) - Core Web Vital

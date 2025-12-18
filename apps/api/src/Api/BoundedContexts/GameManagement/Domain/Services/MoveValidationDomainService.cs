@@ -12,7 +12,7 @@ namespace Api.BoundedContexts.GameManagement.Domain.Services;
 /// Domain service for validating player moves against game rules (RuleSpec).
 /// Part of the GameManagement bounded context, integrates with RuleSpec v2.
 /// </summary>
-public class MoveValidationDomainService
+internal class MoveValidationDomainService
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly ILogger<MoveValidationDomainService> _logger;
@@ -42,11 +42,8 @@ public class MoveValidationDomainService
         string? ruleSpecVersion = null,
         CancellationToken cancellationToken = default)
     {
-        if (session == null)
-            throw new ArgumentNullException(nameof(session));
-
-        if (move == null)
-            throw new ArgumentNullException(nameof(move));
+        ArgumentNullException.ThrowIfNull(session);
+        ArgumentNullException.ThrowIfNull(move);
 
         _logger.LogInformation(
             "Validating move for session {SessionId}, game {GameId}: {Move}",
@@ -191,6 +188,8 @@ public class MoveValidationDomainService
         return applicableRules;
     }
 
+    private static readonly char[] ActionSeparators = { ' ', '-', '_' };
+
     /// <summary>
     /// Builds search terms from the move for rule matching.
     /// </summary>
@@ -200,7 +199,7 @@ public class MoveValidationDomainService
 
         // Add action terms
         var actionWords = move.Action.ToLowerInvariant()
-            .Split(new[] { ' ', '-', '_' }, StringSplitOptions.RemoveEmptyEntries);
+            .Split(ActionSeparators, StringSplitOptions.RemoveEmptyEntries);
         terms.AddRange(actionWords);
 
         // Add position if provided
@@ -252,10 +251,10 @@ public class MoveValidationDomainService
 
         // Example heuristic: Check if rules mention restrictions
         var hasRestrictions = applicableRules.Any(r =>
-            r.text.ToLowerInvariant().Contains("cannot") ||
-            r.text.ToLowerInvariant().Contains("must not") ||
-            r.text.ToLowerInvariant().Contains("forbidden") ||
-            r.text.ToLowerInvariant().Contains("illegal"));
+            r.text.Contains("cannot", StringComparison.OrdinalIgnoreCase) ||
+            r.text.Contains("must not", StringComparison.OrdinalIgnoreCase) ||
+            r.text.Contains("forbidden", StringComparison.OrdinalIgnoreCase) ||
+            r.text.Contains("illegal", StringComparison.OrdinalIgnoreCase));
 
         if (hasRestrictions)
         {
@@ -268,11 +267,11 @@ public class MoveValidationDomainService
         {
             // During setup, certain moves might be restricted
             var setupRules = applicableRules
-                .Where(r => r.text.ToLowerInvariant().Contains("setup") ||
-                           r.text.ToLowerInvariant().Contains("start"))
+                .Where(r => r.text.Contains("setup", StringComparison.OrdinalIgnoreCase) ||
+                           r.text.Contains("start", StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
-            if (setupRules.Any())
+            if (setupRules.Count > 0)
             {
                 suggestions.Add("During setup phase, follow setup-specific rules.");
             }

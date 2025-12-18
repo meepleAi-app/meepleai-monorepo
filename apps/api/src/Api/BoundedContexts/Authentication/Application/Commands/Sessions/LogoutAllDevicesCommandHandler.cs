@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands;
 /// Handler for LogoutAllDevicesCommand.
 /// Revokes all sessions for a user with optional current session exclusion and password verification.
 /// </summary>
-public class LogoutAllDevicesCommandHandler : ICommandHandler<LogoutAllDevicesCommand, LogoutAllDevicesResult>
+internal class LogoutAllDevicesCommandHandler : ICommandHandler<LogoutAllDevicesCommand, LogoutAllDevicesResult>
 {
     private readonly ISessionRepository _sessionRepository;
     private readonly IUserRepository _userRepository;
@@ -178,7 +178,19 @@ public class LogoutAllDevicesCommandHandler : ICommandHandler<LogoutAllDevicesCo
 
     private void LogResult(Guid userId, int revokedCount, bool currentSessionExcluded, bool currentSessionRevoked)
     {
-        var status = currentSessionExcluded ? "preserved" : (currentSessionRevoked ? "revoked" : "not specified");
+        string status;
+        if (currentSessionExcluded)
+        {
+            status = "preserved";
+        }
+        else if (currentSessionRevoked)
+        {
+            status = "revoked";
+        }
+        else
+        {
+            status = "not specified";
+        }
         _logger.LogInformation(
             "User {UserId} logged out of {RevokedCount} devices. Current session: {CurrentSessionStatus}",
             userId, revokedCount, status);

@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Api.Infrastructure.EntityConfigurations;
 
-public class PromptTemplateEntityConfiguration : IEntityTypeConfiguration<PromptTemplateEntity>
+internal class PromptTemplateEntityConfiguration : IEntityTypeConfiguration<PromptTemplateEntity>
 {
     public void Configure(EntityTypeBuilder<PromptTemplateEntity> builder)
     {

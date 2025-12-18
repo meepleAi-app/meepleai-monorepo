@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.Administration.Domain.ValueObjects;
 /// Value object for accessibility testing metrics (Issue #2139)
 /// Represents Lighthouse and axe-core accessibility scores
 /// </summary>
-public sealed class AccessibilityMetrics : ValueObject
+internal sealed class AccessibilityMetrics : ValueObject
 {
     /// <summary>
     /// Lighthouse accessibility score (0-100)

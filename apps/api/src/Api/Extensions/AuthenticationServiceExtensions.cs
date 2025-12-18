@@ -8,7 +8,7 @@ using Api.BoundedContexts.Authentication.Infrastructure;
 
 namespace Api.Extensions;
 
-public static class AuthenticationServiceExtensions
+internal static class AuthenticationServiceExtensions
 {
     public static IServiceCollection AddAuthenticationServices(
         this IServiceCollection services,

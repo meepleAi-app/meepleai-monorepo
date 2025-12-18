@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.EmbeddingProviders.Pr
 /// HuggingFace embedding provider supporting BGE-M3 model.
 /// Uses HuggingFace Inference API for multilingual embeddings.
 /// </summary>
-public sealed class HuggingFaceEmbeddingProvider : EmbeddingProviderBase
+internal sealed class HuggingFaceEmbeddingProvider : EmbeddingProviderBase
 {
     private readonly string _modelName;
     private readonly int _dimensions;
@@ -40,7 +40,7 @@ public sealed class HuggingFaceEmbeddingProvider : EmbeddingProviderBase
 
     public override async Task<EmbeddingProviderResult> GenerateBatchEmbeddingsAsync(
         IReadOnlyList<string> texts,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         if (texts == null || texts.Count == 0)
         {
@@ -58,7 +58,7 @@ public sealed class HuggingFaceEmbeddingProvider : EmbeddingProviderBase
             // Process in batches
             foreach (var batch in BatchTexts(texts))
             {
-                var result = await GenerateBatchInternalAsync(batch, ct).ConfigureAwait(false);
+                var result = await GenerateBatchInternalAsync(batch, cancellationToken).ConfigureAwait(false);
                 if (!result.Success)
                 {
                     return result;
@@ -80,7 +80,7 @@ public sealed class HuggingFaceEmbeddingProvider : EmbeddingProviderBase
             Logger.LogError(ex, "HTTP error calling HuggingFace API");
             return EmbeddingProviderResult.CreateFailure($"HTTP error: {ex.Message}");
         }
-        catch (TaskCanceledException ex) when (ex.CancellationToken != ct)
+        catch (TaskCanceledException ex) when (ex.CancellationToken != cancellationToken)
         {
             Logger.LogError(ex, "Timeout calling HuggingFace API");
             return EmbeddingProviderResult.CreateFailure("Request timeout");
@@ -100,7 +100,7 @@ public sealed class HuggingFaceEmbeddingProvider : EmbeddingProviderBase
 
     private async Task<EmbeddingProviderResult> GenerateBatchInternalAsync(
         IReadOnlyList<string> texts,
-        CancellationToken ct)
+        CancellationToken cancellationToken)
     {
         var request = new HuggingFaceEmbeddingRequest
         {
@@ -126,8 +126,8 @@ public sealed class HuggingFaceEmbeddingProvider : EmbeddingProviderBase
         }
 
         // CODE-01: Dispose HttpResponseMessage to prevent resource leak (CWE-404)
-        using var response = await HttpClient.SendAsync(httpRequest, ct).ConfigureAwait(false);
-        var responseBody = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+        using var response = await HttpClient.SendAsync(httpRequest, cancellationToken).ConfigureAwait(false);
+        var responseBody = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
 
         if (!response.IsSuccessStatusCode)
         {
@@ -159,12 +159,9 @@ public sealed class HuggingFaceEmbeddingProvider : EmbeddingProviderBase
         }
 
         // Validate embeddings
-        foreach (var embedding in embeddings)
+        if (embeddings.Any(embedding => !ValidateEmbeddingDimensions(embedding)))
         {
-            if (!ValidateEmbeddingDimensions(embedding))
-            {
-                return EmbeddingProviderResult.CreateFailure("Invalid embedding dimensions received");
-            }
+            return EmbeddingProviderResult.CreateFailure("Invalid embedding dimensions received");
         }
 
         return EmbeddingProviderResult.CreateSuccess(embeddings, _modelName);
@@ -226,12 +223,12 @@ public sealed class HuggingFaceEmbeddingProvider : EmbeddingProviderBase
         }
     }
 
-    public override async Task<bool> IsHealthyAsync(CancellationToken ct = default)
+    public override async Task<bool> IsHealthyAsync(CancellationToken cancellationToken = default)
     {
         try
         {
             // Simple health check with minimal text
-            var result = await GenerateEmbeddingAsync("test", ct).ConfigureAwait(false);
+            var result = await GenerateEmbeddingAsync("test", cancellationToken).ConfigureAwait(false);
             return result.Success;
         }
 #pragma warning disable CA1031 // Do not catch general exception types
@@ -269,3 +266,4 @@ internal sealed record HuggingFaceOptions
     [JsonPropertyName("use_cache")]
     public bool UseCache { get; init; } = true;
 }
+

@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Administration.Application.Queries;
 /// Used for @mention autocomplete in comments.
 /// API-01: Authentication endpoints (versioned)
 /// </summary>
-public sealed record SearchUsersQuery(
+internal sealed record SearchUsersQuery(
     string SearchQuery,
     int MaxResults = 10
 ) : IQuery<IReadOnlyList<UserSearchResultDto>>;

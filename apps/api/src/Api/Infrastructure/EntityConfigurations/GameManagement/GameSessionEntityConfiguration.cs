@@ -8,7 +8,7 @@ namespace Api.Infrastructure.EntityConfigurations;
 /// EF Core configuration for GameSessionEntity.
 /// Maps to "GameSessions" table with optimized indexes for queries.
 /// </summary>
-public class GameSessionEntityConfiguration : IEntityTypeConfiguration<GameSessionEntity>
+internal class GameSessionEntityConfiguration : IEntityTypeConfiguration<GameSessionEntity>
 {
     public void Configure(EntityTypeBuilder<GameSessionEntity> builder)
     {

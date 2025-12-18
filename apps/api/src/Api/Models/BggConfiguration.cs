@@ -3,7 +3,7 @@ namespace Api.Models;
 /// <summary>
 /// Configuration for BoardGameGeek API integration (AI-13).
 /// </summary>
-public class BggConfiguration
+internal class BggConfiguration
 {
     public string BaseUrl { get; set; } = "https://boardgamegeek.com/xmlapi2";
     public int CacheTtlDays { get; set; } = 7;

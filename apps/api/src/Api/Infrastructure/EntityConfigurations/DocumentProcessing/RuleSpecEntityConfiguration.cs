@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Api.Infrastructure.EntityConfigurations;
 
-public class RuleSpecEntityConfiguration : IEntityTypeConfiguration<RuleSpecEntity>
+internal class RuleSpecEntityConfiguration : IEntityTypeConfiguration<RuleSpecEntity>
 {
     public void Configure(EntityTypeBuilder<RuleSpecEntity> builder)
     {

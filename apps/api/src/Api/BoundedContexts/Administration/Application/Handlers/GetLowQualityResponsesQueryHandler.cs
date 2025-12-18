@@ -75,6 +75,10 @@ internal class GetLowQualityResponsesQueryHandler : IQueryHandler<GetLowQualityR
                 Responses: responses
             );
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: QUERY HANDLER PATTERN - CQRS query boundary
+        // Generic catch handles unexpected infrastructure failures (DB, network)
+        // to prevent exception propagation to API layer. Returns empty result on failure.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving low-quality responses");
@@ -83,5 +87,6 @@ internal class GetLowQualityResponsesQueryHandler : IQueryHandler<GetLowQualityR
                 Responses: Array.Empty<LowQualityResponseDto>()
             );
         }
+#pragma warning restore CA1031
     }
 }

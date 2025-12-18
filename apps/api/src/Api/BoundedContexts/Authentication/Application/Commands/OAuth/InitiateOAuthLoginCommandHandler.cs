@@ -88,6 +88,11 @@ internal sealed class InitiateOAuthLoginCommandHandler : ICommandHandler<Initiat
                 ErrorMessage = $"OAuth provider {command.Provider} is not available. Please contact support."
             };
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: COMMAND HANDLER PATTERN - CQRS handler boundary
+        // Specific exceptions (ArgumentException, InvalidOperationException) caught separately above.
+        // Generic catch handles unexpected infrastructure failures (DB, network, memory)
+        // to prevent exception propagation to API layer. Returns Result<T> pattern.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error during OAuth login initiation for provider {Provider}", command.Provider);
@@ -97,5 +102,6 @@ internal sealed class InitiateOAuthLoginCommandHandler : ICommandHandler<Initiat
                 ErrorMessage = "An unexpected error occurred while initiating OAuth login"
             };
         }
+#pragma warning restore CA1031
     }
 }

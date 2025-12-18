@@ -107,11 +107,16 @@ internal class SmolDoclingPdfTextExtractor : IPdfTextExtractor
             _logger.LogError(ex, "[{RequestId}] Failed to parse SmolDocling response", requestId);
             return TextExtractionResult.CreateFailure("Invalid response format from SmolDocling service");
         }
+#pragma warning disable CA1031
+        // Justification: INFRASTRUCTURE SERVICE PATTERN - Graceful degradation
+        // Catches all SmolDocling API failures. Returns error result instead of throwing
+        // to allow PDF pipeline orchestrator to fall back to next stage. External service adapter boundary.
         catch (Exception ex)
         {
             _logger.LogError(ex, "[{RequestId}] Unexpected error during SmolDocling extraction", requestId);
             return TextExtractionResult.CreateFailure($"Unexpected error: {ex.Message}");
         }
+#pragma warning restore CA1031
     }
 
     public async Task<PagedTextExtractionResult> ExtractPagedTextAsync(
@@ -165,11 +170,16 @@ internal class SmolDoclingPdfTextExtractor : IPdfTextExtractor
             _logger.LogError(ex, "[{RequestId}] Request timeout", requestId);
             return PagedTextExtractionResult.CreateFailure("Extraction timeout");
         }
+#pragma warning disable CA1031
+        // Justification: INFRASTRUCTURE SERVICE PATTERN - Graceful degradation
+        // Catches all SmolDocling API failures. Returns error result instead of throwing
+        // to allow PDF pipeline orchestrator to fall back to next stage. External service adapter boundary.
         catch (Exception ex)
         {
             _logger.LogError(ex, "[{RequestId}] Unexpected error", requestId);
             return PagedTextExtractionResult.CreateFailure($"Unexpected error: {ex.Message}");
         }
+#pragma warning restore CA1031
     }
 
     /// <summary>

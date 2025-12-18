@@ -266,10 +266,15 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
                 "RAG validation completed: IsValid={IsValid}, Layers={LayersPassed}/{TotalLayers}, Severity={Severity}",
                 validation.IsValid, validation.LayersPassed, validation.TotalLayers, validation.Severity);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: QUERY HANDLER PATTERN - CQRS query boundary
+        // RAG validation is non-critical optional enhancement. Generic catch prevents
+        // validation failures from blocking the main response. Returns null validation result.
         catch (Exception ex)
         {
             _logger.LogError(ex, "RAG validation pipeline failed, continuing without validation");
         }
+#pragma warning restore CA1031
 
         return new QaResponseDto(
             Answer: llmResponse,

@@ -87,11 +87,16 @@ internal class LighthouseReportParserService : ILighthouseReportParserService
 
             return metrics;
         }
+#pragma warning disable CA1031
+        // Justification: INFRASTRUCTURE SERVICE PATTERN - Graceful degradation
+        // Catches all file I/O and JSON parsing failures. Returns null instead of throwing
+        // to allow dashboard to handle missing metrics gracefully. Non-critical data retrieval.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error parsing Lighthouse accessibility metrics");
             return null;
         }
+#pragma warning restore CA1031
     }
 
     public async Task<PerformanceMetrics?> ParsePerformanceMetricsAsync(CancellationToken cancellationToken = default)
@@ -156,11 +161,16 @@ internal class LighthouseReportParserService : ILighthouseReportParserService
 
             return metrics;
         }
+#pragma warning disable CA1031
+        // Justification: INFRASTRUCTURE SERVICE PATTERN - Graceful degradation
+        // Catches all file I/O and JSON parsing failures. Returns null instead of throwing
+        // to allow dashboard to handle missing metrics gracefully. Non-critical data retrieval.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error parsing Lighthouse performance metrics");
             return null;
         }
+#pragma warning restore CA1031
     }
 
     public async Task<bool> ReportsExistAsync(CancellationToken cancellationToken = default)

@@ -31,18 +31,18 @@ internal class ApiExceptionHandlerMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
-#pragma warning disable CA1031 // Do not catch general exception types
         try
         {
             await _next(context).ConfigureAwait(false);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: MIDDLEWARE BOUNDARY PATTERN - Global exception handler
+        // Rationale: This is the global exception handler middleware for API endpoints. Its purpose
+        // is to catch ALL unhandled exceptions from the request pipeline and convert them to
+        // structured JSON error responses. This prevents raw exceptions from reaching clients.
+        // Context: This is the top-level exception boundary for /api/* routes
         catch (Exception ex)
         {
-            // MIDDLEWARE BOUNDARY PATTERN: Exception handler middleware must catch all exceptions
-            // Rationale: This is the global exception handler middleware for API endpoints. Its purpose
-            // is to catch ALL unhandled exceptions from the request pipeline and convert them to
-            // structured JSON error responses. This prevents raw exceptions from reaching clients.
-            // Context: This is the top-level exception boundary for /api/* routes
             // Only handle /api/* paths
             if (!context.Request.Path.StartsWithSegments("/api", StringComparison.Ordinal))
             {
@@ -51,7 +51,7 @@ internal class ApiExceptionHandlerMiddleware
 
             await HandleExceptionAsync(context, ex).ConfigureAwait(false);
         }
-#pragma warning restore CA1031 // Do not catch general exception types
+#pragma warning restore CA1031
     }
 
     private async Task HandleExceptionAsync(HttpContext context, Exception ex)

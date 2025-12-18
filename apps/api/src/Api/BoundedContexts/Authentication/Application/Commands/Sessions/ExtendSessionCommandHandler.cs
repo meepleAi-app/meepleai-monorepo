@@ -92,10 +92,15 @@ internal class ExtendSessionCommandHandler : ICommandHandler<ExtendSessionComman
 
             return new ExtendSessionResponse(true, session.ExpiresAt, null);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: COMMAND HANDLER PATTERN - CQRS handler boundary
+        // Generic catch handles unexpected infrastructure failures (DB, network, memory)
+        // to prevent exception propagation to API layer. Returns Response pattern with error.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to extend session {SessionId}", command.SessionId);
             return new ExtendSessionResponse(false, null, ex.Message);
         }
+#pragma warning restore CA1031
     }
 }

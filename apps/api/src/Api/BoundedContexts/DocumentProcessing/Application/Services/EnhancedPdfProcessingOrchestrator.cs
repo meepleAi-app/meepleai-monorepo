@@ -243,6 +243,10 @@ internal class EnhancedPdfProcessingOrchestrator
                 return EvaluateStageResult(result, stageNumber, stageName, qualityThreshold, requestId, stageStopwatch.Elapsed);
             }
         }
+#pragma warning disable CA1031
+        // Justification: INFRASTRUCTURE SERVICE PATTERN - Graceful degradation
+        // Catches all PDF extractor failures. Returns null to allow fallback to next stage.
+        // Multi-stage pipeline continues with Stage 2 or Stage 3. Logs full exception context.
         catch (Exception ex)
         {
             stageStopwatch.Stop();
@@ -255,6 +259,7 @@ internal class EnhancedPdfProcessingOrchestrator
 
             return null;
         }
+#pragma warning restore CA1031
     }
 
     private TextExtractionResult? EvaluateStageResult(
@@ -522,6 +527,10 @@ internal class EnhancedPdfProcessingOrchestrator
                 return EvaluatePagedStageResult(result, stageNumber, stageName, qualityThreshold, requestId, stageStopwatch.Elapsed);
             }
         }
+#pragma warning disable CA1031
+        // Justification: INFRASTRUCTURE SERVICE PATTERN - Graceful degradation
+        // Catches all PDF extractor failures. Returns null to allow fallback to next stage.
+        // Multi-stage pipeline continues with Stage 2 or Stage 3. Logs full exception context.
         catch (Exception ex)
         {
             stageStopwatch.Stop();
@@ -534,6 +543,7 @@ internal class EnhancedPdfProcessingOrchestrator
 
             return null;
         }
+#pragma warning restore CA1031
     }
 
     private PagedTextExtractionResult? EvaluatePagedStageResult(
@@ -670,6 +680,10 @@ internal class EnhancedPdfProcessingOrchestrator
     {
         _ = Task.Run(() =>
         {
+#pragma warning disable CA1031
+            // Justification: FAIL-OPEN PATTERN - Infrastructure resilience
+            // Catches all metrics recording failures. Fails open to prioritize availability.
+            // Metric recording is non-critical; extraction pipeline continues regardless.
             try
             {
                 MeepleAiMetrics.RecordPdfExtractionStage(stageName, success, durationMs, qualityScore);
@@ -678,6 +692,7 @@ internal class EnhancedPdfProcessingOrchestrator
             {
                 _logger.LogWarning(ex, "Failed to record PDF extraction stage metric for stage {Stage}", stageName);
             }
+#pragma warning restore CA1031
         });
     }
     /// <summary>

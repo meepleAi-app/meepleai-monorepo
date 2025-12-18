@@ -109,6 +109,11 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
                 MissingChunks: null
             );
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: COMMAND HANDLER PATTERN - CQRS handler boundary
+        // Generic catch handles unexpected failures during chunked upload completion
+        // (validation, assembly, storage, DB operations). Returns Result pattern with error.
+        // Prevents exception propagation to API layer.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to complete chunked upload {SessionId}", request.SessionId);
@@ -121,6 +126,7 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
                 MissingChunks: null
             );
         }
+#pragma warning restore CA1031
     }
 
     /// <summary>
@@ -344,10 +350,16 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
                 _logger.LogDebug("Cleaned up temp directory: {TempDirectory}", tempDirectory);
             }
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: CLEANUP PATTERN - Best-effort resource cleanup
+        // Catches all exceptions during temp directory deletion (permissions, file locks, etc.).
+        // Cleanup failure is non-critical; logs warning but doesn't throw to avoid disrupting
+        // main operation flow. Fail-safe pattern for resource management.
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to cleanup temp directory: {TempDirectory}", tempDirectory);
         }
+#pragma warning restore CA1031
         return Task.CompletedTask;
     }
 
@@ -407,10 +419,16 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
                 "PDF processing completed for chunked upload {PdfId}: {TotalPages} pages, {ChunkCount} chunks, {TotalSeconds}s",
                 pdfId, totalPages, allDocumentChunks.Count, totalTime);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: BACKGROUND PROCESSING PATTERN - PDF processing failure recovery
+        // Catches all exceptions during PDF text extraction, chunking, and embedding generation.
+        // Delegates to HandleProcessingFailureAsync to update PDF status as "failed" in DB.
+        // Background processing must handle errors gracefully without propagating to command handler.
         catch (Exception ex)
         {
             await HandleProcessingFailureAsync(pdfId, db, ex, cancellationToken).ConfigureAwait(false);
         }
+#pragma warning restore CA1031
     }
 
     /// <summary>
@@ -722,10 +740,16 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
                 }
             }
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: ERROR RECOVERY PATTERN - Nested error handling during failure recovery
+        // Catches exceptions when attempting to update PDF status to "failed" after processing error.
+        // If status update fails (DB unavailable, etc.), only logs error - nothing more can be done.
+        // Prevents cascading failures in error handling path.
         catch (Exception saveEx)
         {
             _logger.LogError(saveEx, "Failed to update PDF status after processing error for {PdfId}", pdfId);
         }
+#pragma warning restore CA1031
     }
 
     /// <summary>

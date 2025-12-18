@@ -92,15 +92,19 @@ internal class UnstructuredPdfTextExtractor : IPdfTextExtractor
             return TextExtractionResult.CreateFailure(
                 "Invalid JSON response from Unstructured service");
         }
+#pragma warning disable CA1031
+        // Justification: INFRASTRUCTURE SERVICE PATTERN - Graceful degradation
+        // Catches all Unstructured API failures. Returns error result instead of throwing
+        // to allow PDF pipeline orchestrator to fall back to next stage. External service adapter boundary.
         catch (Exception ex)
         {
-            // ADAPTER BOUNDARY PATTERN: External service adapter - must handle all errors gracefully
             _logger.LogError(ex,
                 "Unexpected error during Unstructured extraction. RequestId: {RequestId}",
                 requestId);
             return TextExtractionResult.CreateFailure(
                 $"Unexpected error during PDF extraction: {ex.Message}");
         }
+#pragma warning restore CA1031
     }
 
     /// <summary>

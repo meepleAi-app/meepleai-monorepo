@@ -107,6 +107,11 @@ internal sealed class LinkOAuthAccountCommandHandler : ICommandHandler<LinkOAuth
                 ErrorMessage = ex.Message
             };
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: COMMAND HANDLER PATTERN - CQRS handler boundary
+        // Specific exceptions (ValidationException, DomainException) caught separately above.
+        // Generic catch handles unexpected infrastructure failures (DB, network, memory)
+        // to prevent exception propagation to API layer. Returns Result<T> pattern.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error while linking OAuth account for user {UserId}", command.UserId);
@@ -116,5 +121,6 @@ internal sealed class LinkOAuthAccountCommandHandler : ICommandHandler<LinkOAuth
                 ErrorMessage = "An unexpected error occurred while linking the OAuth account"
             };
         }
+#pragma warning restore CA1031
     }
 }

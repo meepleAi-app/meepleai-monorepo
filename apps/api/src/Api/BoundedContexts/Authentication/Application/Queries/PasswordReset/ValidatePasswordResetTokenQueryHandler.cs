@@ -38,10 +38,15 @@ internal sealed class ValidatePasswordResetTokenQueryHandler : IQueryHandler<Val
 
             return new ValidatePasswordResetTokenResult { IsValid = isValid };
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: QUERY HANDLER PATTERN - CQRS query boundary
+        // Generic catch handles unexpected infrastructure failures (DB, network)
+        // to prevent exception propagation to API layer. Returns Result pattern.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error validating password reset token");
             return new ValidatePasswordResetTokenResult { IsValid = false };
         }
+#pragma warning restore CA1031
     }
 }

@@ -40,6 +40,10 @@ internal sealed class GetLinkedOAuthAccountsQueryHandler : IQueryHandler<GetLink
                 Accounts = accountDtos
             };
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: QUERY HANDLER PATTERN - CQRS query boundary
+        // Generic catch handles unexpected infrastructure failures (DB, network)
+        // to prevent exception propagation to API layer. Returns empty result on failure.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving OAuth accounts for user {UserId}", query.UserId);
@@ -48,6 +52,7 @@ internal sealed class GetLinkedOAuthAccountsQueryHandler : IQueryHandler<GetLink
                 Accounts = new List<OAuthAccountDto>()
             };
         }
+#pragma warning restore CA1031
     }
 
     private static OAuthAccountDto MapToDto(OAuthAccount account)

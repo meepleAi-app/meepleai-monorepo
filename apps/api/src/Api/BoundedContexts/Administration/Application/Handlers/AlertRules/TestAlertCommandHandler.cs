@@ -47,6 +47,11 @@ internal class TestAlertCommandHandler : IRequestHandler<TestAlertCommand, bool>
 
             return true;
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: COMMAND HANDLER PATTERN - Test/diagnostic operation failure handling
+        // Catches all exceptions during test alert send (network, config, service failures)
+        // to return false instead of throwing. Logs error for diagnostics. Test operations
+        // should not throw exceptions - returning false indicates test failure.
         catch (Exception ex)
         {
             _logger.LogError(
@@ -57,6 +62,7 @@ internal class TestAlertCommandHandler : IRequestHandler<TestAlertCommand, bool>
                 ex.Message);
             return false;
         }
+#pragma warning restore CA1031
     }
 }
 

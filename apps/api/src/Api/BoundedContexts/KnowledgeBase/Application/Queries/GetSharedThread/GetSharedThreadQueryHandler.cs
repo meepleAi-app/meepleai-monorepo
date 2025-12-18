@@ -72,11 +72,16 @@ internal sealed class GetSharedThreadQueryHandler : IRequestHandler<GetSharedThr
                 _logger.LogDebug("Recorded share link access for ShareLinkId {ShareLinkId}", validation.ShareLinkId);
             }
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: QUERY HANDLER PATTERN - CQRS query boundary
+        // Analytics tracking is non-critical. Generic catch prevents analytics failures
+        // from blocking the main thread retrieval response. Logs warning and continues.
         catch (Exception ex)
         {
             // Analytics errors should not fail the main request
             _logger.LogWarning(ex, "Failed to record share link access for ShareLinkId {ShareLinkId}", validation.ShareLinkId);
         }
+#pragma warning restore CA1031
 
         // Convert messages to DTO (filter deleted messages for shared view)
         var messageDtos = thread.Messages

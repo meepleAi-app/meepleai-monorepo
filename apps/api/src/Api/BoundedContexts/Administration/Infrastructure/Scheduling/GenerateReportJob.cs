@@ -106,6 +106,10 @@ internal sealed class GenerateReportJob : IJob
                 EmailSent = report.EmailRecipients.Count > 0
             };
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: BACKGROUND TASK PATTERN - Scheduled task error isolation
+        // Background tasks must not throw exceptions (would terminate task scheduler).
+        // Errors logged for monitoring; task failures don't impact main application.
         catch (Exception ex)
         {
             _logger.LogError(ex,
@@ -130,6 +134,7 @@ internal sealed class GenerateReportJob : IJob
 
             // Don't rethrow - Quartz will mark job as failed
         }
+#pragma warning restore CA1031
     }
 
     // ISSUE-918: Email delivery helper methods
@@ -159,12 +164,17 @@ internal sealed class GenerateReportJob : IJob
                 "Report email delivered successfully: {ReportName} to {RecipientCount} recipients",
                 report.Name, report.EmailRecipients.Count);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: BACKGROUND TASK PATTERN - Scheduled task error isolation
+        // Background tasks must not throw exceptions (would terminate task scheduler).
+        // Errors logged for monitoring; failed email delivery doesn't prevent report generation.
         catch (Exception ex)
         {
             _logger.LogError(ex,
                 "Failed to send report email: {ReportName}. Report was generated successfully but email delivery failed.",
                 report.Name);
         }
+#pragma warning restore CA1031
     }
 
     private async Task SendFailureEmailIfConfiguredAsync(
@@ -189,12 +199,17 @@ internal sealed class GenerateReportJob : IJob
                 "Report failure email sent: {ReportName} to {RecipientCount} recipients",
                 report.Name, report.EmailRecipients.Count);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: BACKGROUND TASK PATTERN - Scheduled task error isolation
+        // Background tasks must not throw exceptions (would terminate task scheduler).
+        // Errors logged for monitoring; failed failure notification doesn't impact report status.
         catch (Exception ex)
         {
             _logger.LogError(ex,
                 "Failed to send report failure email: {ReportName}",
                 report.Name);
         }
+#pragma warning restore CA1031
     }
 }
 

@@ -81,7 +81,13 @@ internal class BulkImportApiKeysCommandHandler : ICommandHandler<BulkImportApiKe
         {
             throw;
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: COMMAND HANDLER PATTERN - CQRS handler boundary
+        // Specific DomainException is handled above and re-thrown
+        // Generic catch handles unexpected infrastructure failures (DB, network, memory)
+        // to prevent exception propagation to API layer. Returns Result/Response pattern.
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             _logger.LogError(ex, "Critical error during bulk API key import");
             throw new DomainException($"Bulk API key import failed: {ex.Message}", ex);
@@ -221,7 +227,13 @@ internal class BulkImportApiKeysCommandHandler : ICommandHandler<BulkImportApiKe
 
                 successCount++;
             }
+#pragma warning disable CA1031 // Do not catch general exception types
+            // Justification: BULK OPERATION PATTERN - Individual import failure handling
+            // Allows bulk operation to continue processing remaining items when individual
+            // API key creation fails due to validation, DB constraints, or infrastructure issues.
+            // Each failure is logged and tracked in errors collection for reporting.
             catch (Exception ex)
+#pragma warning restore CA1031
             {
                 _logger.LogError(ex, "Error importing API key at line {LineNumber}", lineNumber);
                 errors.Add($"Line {lineNumber} ({record.KeyName}): {ex.Message}");

@@ -1,0 +1,10 @@
+apps\api\src\Api\BoundedContexts\Authentication\Application\Commands\PasswordReset\ResetPasswordCommandHandler.cs
+apps\api\src\Api\BoundedContexts\Authentication\Application\Commands\Sessions\ExtendSessionCommandHandler.cs
+apps\api\src\Api\BoundedContexts\Authentication\Application\Commands\TwoFactor\AdminDisable2FACommandHandler.cs
+apps\api\src\Api\BoundedContexts\Authentication\Application\Commands\TwoFactor\Disable2FACommandHandler.cs
+apps\api\src\Api\BoundedContexts\Authentication\Application\Commands\TwoFactor\Enable2FACommandHandler.cs
+apps\api\src\Api\BoundedContexts\Authentication\Application\Handlers\BulkImportApiKeysCommandHandler.cs
+apps\api\src\Api\BoundedContexts\DocumentProcessing\Application\Commands\CompleteChunkedUploadCommandHandler.cs
+apps\api\src\Api\BoundedContexts\DocumentProcessing\Application\Commands\InitChunkedUploadCommandHandler.cs
+apps\api\src\Api\BoundedContexts\DocumentProcessing\Application\Commands\UploadChunkCommandHandler.cs
+apps\api\src\Api\BoundedContexts\KnowledgeBase\Application\Evaluation\Handlers\RunEvaluationCommandHandler.cs

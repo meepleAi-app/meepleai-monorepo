@@ -57,6 +57,11 @@ internal sealed class RequestPasswordResetCommandHandler : ICommandHandler<Reque
                 Message = "Too many password reset requests. Please try again later."
             };
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: COMMAND HANDLER PATTERN - CQRS handler boundary
+        // Specific exceptions (InvalidOperationException for rate limiting) caught separately above.
+        // Generic catch handles unexpected infrastructure failures (DB, network, memory)
+        // to prevent exception propagation to API layer. Returns Result<T> pattern.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error during password reset request");
@@ -67,5 +72,6 @@ internal sealed class RequestPasswordResetCommandHandler : ICommandHandler<Reque
                 Message = "If the email exists, a password reset link has been sent"
             };
         }
+#pragma warning restore CA1031
     }
 }

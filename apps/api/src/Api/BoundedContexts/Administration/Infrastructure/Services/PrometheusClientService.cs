@@ -72,11 +72,16 @@ internal class PrometheusClientService : IPrometheusClientService
             _logger.LogWarning(ex, "Prometheus query timeout: {Query}", query);
             return null;
         }
+#pragma warning disable CA1031
+        // Justification: INFRASTRUCTURE SERVICE PATTERN - Graceful degradation
+        // Catches all Prometheus API failures. Returns null instead of throwing
+        // to allow caller to handle gracefully. Prevents infrastructure failures from propagating.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error querying Prometheus: {Query}", query);
             return null;
         }
+#pragma warning restore CA1031
     }
 
     public async Task<bool> IsHealthyAsync(CancellationToken cancellationToken = default)
@@ -92,10 +97,15 @@ internal class PrometheusClientService : IPrometheusClientService
 
             return isHealthy;
         }
+#pragma warning disable CA1031
+        // Justification: INFRASTRUCTURE SERVICE PATTERN - Graceful degradation
+        // Catches all health check failures. Returns false instead of throwing
+        // to allow monitoring to continue. Non-critical infrastructure check.
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Prometheus health check failed");
             return false;
         }
+#pragma warning restore CA1031
     }
 }

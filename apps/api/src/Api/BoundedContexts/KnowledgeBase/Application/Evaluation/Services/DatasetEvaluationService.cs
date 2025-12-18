@@ -145,6 +145,10 @@ internal sealed class DatasetEvaluationService : IDatasetEvaluationService
                 Confidence = ragResponse.confidence ?? 0.0
             };
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: BACKGROUND TASK PATTERN - Dataset evaluation error isolation
+        // Background tasks must not throw exceptions (would terminate evaluation batch).
+        // Errors logged for monitoring; failed samples recorded with error state for analysis.
         catch (Exception ex)
         {
             stopwatch.Stop();
@@ -169,6 +173,7 @@ internal sealed class DatasetEvaluationService : IDatasetEvaluationService
                 ErrorMessage = ex.Message
             };
         }
+#pragma warning restore CA1031
     }
 
     /// <inheritdoc/>

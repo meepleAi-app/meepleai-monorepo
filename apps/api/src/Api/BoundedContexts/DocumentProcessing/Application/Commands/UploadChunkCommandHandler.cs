@@ -149,7 +149,12 @@ internal class UploadChunkCommandHandler : ICommandHandler<UploadChunkCommand, U
                 ErrorMessage: null
             );
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: COMMAND HANDLER PATTERN - CQRS handler boundary
+        // Generic catch handles unexpected infrastructure failures (DB, network, memory)
+        // to prevent exception propagation to API layer. Returns Result/Response pattern.
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             _logger.LogError(ex, "Failed to process chunk {ChunkIndex} for session {SessionId}",
                 request.ChunkIndex, request.SessionId);

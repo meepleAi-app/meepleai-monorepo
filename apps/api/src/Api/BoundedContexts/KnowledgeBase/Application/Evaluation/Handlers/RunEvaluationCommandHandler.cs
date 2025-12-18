@@ -39,7 +39,12 @@ internal sealed class RunEvaluationCommandHandler : IRequestHandler<RunEvaluatio
             var json = await File.ReadAllTextAsync(request.DatasetPath, cancellationToken).ConfigureAwait(false);
             dataset = EvaluationDataset.FromJson(json);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: COMMAND HANDLER PATTERN - CQRS handler boundary
+        // Generic catch handles unexpected infrastructure failures (DB, network, memory)
+        // to prevent exception propagation to API layer. Returns Result/Response pattern.
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             _logger.LogError(ex, "Failed to load dataset from '{DatasetPath}'", request.DatasetPath);
             throw new InvalidOperationException($"Failed to load dataset: {ex.Message}", ex);

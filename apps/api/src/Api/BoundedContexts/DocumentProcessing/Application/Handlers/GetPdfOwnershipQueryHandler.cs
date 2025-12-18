@@ -42,10 +42,15 @@ internal class GetPdfOwnershipQueryHandler : IQueryHandler<GetPdfOwnershipQuery,
                 ProcessingStatus: document.ProcessingStatus
             );
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: QUERY HANDLER PATTERN - CQRS query boundary
+        // Generic catch handles unexpected infrastructure failures (DB, network)
+        // to prevent exception propagation to API layer. Returns null on failure.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving PDF ownership for {PdfId}", query.PdfId);
             return null;
         }
+#pragma warning restore CA1031
     }
 }

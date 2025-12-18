@@ -85,6 +85,10 @@ internal sealed class DashboardCacheInvalidationEventHandler :
             };
             MeepleAiMetrics.DashboardCacheInvalidationsTotal.Add(1, tags);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: EVENT HANDLER PATTERN - Background event processing
+        // Event handlers must not throw exceptions (violates mediator/event pattern).
+        // Errors logged for monitoring; failed cache invalidation doesn't block config updates.
         catch (Exception ex)
         {
             // Non-critical operation - log but don't throw
@@ -92,6 +96,7 @@ internal sealed class DashboardCacheInvalidationEventHandler :
                 "Failed to invalidate dashboard cache after config change: {ConfigKey}",
                 configKey);
         }
+#pragma warning restore CA1031
     }
 
     /// <summary>

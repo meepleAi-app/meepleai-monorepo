@@ -75,11 +75,17 @@ internal class BulkImportUsersCommandHandler : ICommandHandler<BulkImportUsersCo
         {
             throw;
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: COMMAND HANDLER PATTERN - Wraps unexpected infrastructure failures
+        // DomainException caught separately above and rethrown.
+        // Generic catch wraps unexpected exceptions (DB, network, memory) in DomainException
+        // for consistent API error handling. Logs with full context before wrapping.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Critical error during bulk user import");
             throw new DomainException($"Bulk user import failed: {ex.Message}", ex);
         }
+#pragma warning restore CA1031
     }
 
     /// <summary>
@@ -180,11 +186,17 @@ internal class BulkImportUsersCommandHandler : ICommandHandler<BulkImportUsersCo
                 await _userRepository.AddAsync(user, cancellationToken).ConfigureAwait(false);
                 successCount++;
             }
+#pragma warning disable CA1031 // Do not catch general exception types
+            // Justification: BULK OPERATION PATTERN - Individual import failure handling
+            // Catches all exceptions during user creation (validation, DB constraints, etc.)
+            // to collect errors without stopping batch processing. Each failure is logged
+            // and added to error list for reporting. Allows partial success in bulk import.
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error importing user at line {LineNumber}", lineNumber);
                 errors.Add($"Line {lineNumber} ({record.Email}): {ex.Message}");
             }
+#pragma warning restore CA1031
         }
 
         return (successCount, errors);

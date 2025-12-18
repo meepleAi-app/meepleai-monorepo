@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.WorkflowIntegration.Domain.Repositories;
 /// <summary>
 /// Repository interface for WorkflowErrorLog aggregate.
 /// </summary>
-internal interface IWorkflowErrorLogRepository : IRepository<WorkflowErrorLog, Guid>
+public interface IWorkflowErrorLogRepository : IRepository<WorkflowErrorLog, Guid>
 {
     /// <summary>
     /// Finds errors by workflow ID.

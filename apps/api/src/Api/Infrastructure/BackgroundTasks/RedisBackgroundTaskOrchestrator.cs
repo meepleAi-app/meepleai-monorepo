@@ -49,6 +49,9 @@ internal class RedisBackgroundTaskOrchestrator : IBackgroundTaskOrchestrator
         await SetTaskStatusAsync(taskId, BackgroundTaskStatus.Scheduled).ConfigureAwait(false);
 
         // Create a linked cancellation token source for this scheduled task
+        // S2930: CancellationTokenSource stored in dictionary for lifecycle management.
+        // Disposed explicitly in CancelAsync() or ExecuteTaskAsync() finally block.
+        // Cannot use 'using var' as disposal must occur when task completes or is cancelled.
         var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _scheduledTasks.TryAdd(taskId, cts);
 
@@ -74,6 +77,9 @@ internal class RedisBackgroundTaskOrchestrator : IBackgroundTaskOrchestrator
         await SetTaskStatusAsync(taskId, BackgroundTaskStatus.Scheduled).ConfigureAwait(false);
 
         // Create a linked cancellation token source for this scheduled task
+        // S2930: CancellationTokenSource stored in dictionary for lifecycle management.
+        // Disposed explicitly in CancelAsync() or ExecuteTaskAsync() finally block.
+        // Cannot use 'using var' as disposal must occur when task completes or is cancelled.
         var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _scheduledTasks.TryAdd(taskId, cts);
 
@@ -114,6 +120,9 @@ internal class RedisBackgroundTaskOrchestrator : IBackgroundTaskOrchestrator
         await SetTaskStatusAsync(taskId, BackgroundTaskStatus.Scheduled).ConfigureAwait(false);
 
         // Create a linked cancellation token source for this scheduled task
+        // S2930: CancellationTokenSource stored in dictionary for lifecycle management.
+        // Disposed explicitly in CancelAsync() or ExecuteTaskAsync() finally block.
+        // Cannot use 'using var' as disposal must occur when task completes or is cancelled.
         var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _scheduledTasks.TryAdd(taskId, cts);
 
@@ -269,6 +278,9 @@ internal class RedisBackgroundTaskOrchestrator : IBackgroundTaskOrchestrator
             _scheduledTasks.TryRemove(taskId, out _);
         }
 
+        // S2930: CancellationTokenSource stored in dictionary for lifecycle management.
+        // Disposed explicitly in finally block below (line 298).
+        // Cannot use 'using var' as disposal must occur in finally after task execution.
         var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _runningTasks.TryAdd(taskId, cts);
 

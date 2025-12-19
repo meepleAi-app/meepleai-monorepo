@@ -64,7 +64,7 @@ const LoginFormExample = () => (
     </div>
     <Button className="w-full">Sign In</Button>
     <div className="text-center">
-      <a href="#" className="text-sm text-primary hover:underline">
+      <a href="/reset-password" className="text-sm text-primary hover:underline">
         Forgot password?
       </a>
     </div>
@@ -103,7 +103,7 @@ const ResetPasswordFormExample = () => (
     </div>
     <Button className="w-full">Send Reset Instructions</Button>
     <div className="text-center">
-      <a href="#" className="text-sm text-primary hover:underline">
+      <a href="/login" className="text-sm text-primary hover:underline">
         Back to Login
       </a>
     </div>

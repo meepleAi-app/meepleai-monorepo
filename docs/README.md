@@ -118,6 +118,7 @@ docs/
 |---------|-------------|
 | [Bounded Contexts](./01-architecture/diagrams/bounded-contexts-interactions.md) | DDD Bounded Contexts interactions |
 | [CQRS/MediatR Flow](./01-architecture/diagrams/cqrs-mediatr-flow.md) | CQRS command/query flow |
+| [GitHub Actions Flow](./01-architecture/diagrams/github-actions-flow.md) | CI/CD workflow visualization |
 | [Infrastructure](./01-architecture/diagrams/infrastructure-overview.md) | Complete infrastructure diagram |
 | [PDF Pipeline](./01-architecture/diagrams/pdf-pipeline-detailed.md) | 3-stage PDF processing pipeline |
 | [RAG System](./01-architecture/diagrams/rag-system-detailed.md) | Hybrid RAG system architecture |
@@ -186,6 +187,8 @@ docs/
 | [Shadcn/UI Installation](./04-frontend/shadcn-ui-installation.md) | Shadcn/UI setup guide |
 | [Testing Strategy](./04-frontend/testing-strategy.md) | Frontend testing (Jest, Playwright) |
 | [Use Cases](./04-frontend/use-cases.md) | User journeys and use cases |
+| [**User Flows**](./04-frontend/user-flows.md) | Complete user journeys (v2.0) ⭐ |
+| [User Flows - Edge Cases](./04-frontend/user-flows-edge-cases.md) | Error states and recovery |
 
 ### 05 - Operations
 
@@ -214,11 +217,12 @@ docs/
 
 | Document | Description |
 |----------|-------------|
-| [Security Audit 2025-11-04](./06-security/SECURITY_AUDIT_2025-11-04.md) | Latest security audit report |
+| [Security Audit 2025-11-04](./06-security/security-audit-2025-11-04.md) | Latest security audit report |
+| [**Code Warnings Remediation**](./06-security/code-warnings-remediation-plan.md) | Security analyzer remediation (CA3xxx, S2xxx) ⭐ |
 | [Code Scanning Remediation](./06-security/code-scanning-remediation-summary.md) | CodeQL findings remediation |
 | [OAuth Security](./06-security/oauth-security.md) | OAuth 2.0 security best practices |
 | [Log Forging Prevention](./06-security/log-forging-prevention.md) | Preventing log injection attacks |
-| _...and 4 more security docs_ | See [06-security/](./06-security/) |
+| _...and more security docs_ | See [06-security/](./06-security/) |
 
 ### 07 - Project Management
 

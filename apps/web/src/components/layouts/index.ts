@@ -12,3 +12,6 @@ export type { PublicFooterProps } from './PublicFooter';
 
 export { PublicLayout } from './PublicLayout';
 export type { PublicLayoutProps } from './PublicLayout';
+
+export { PublicLayoutWrapper } from './PublicLayoutWrapper';
+export type { PublicLayoutWrapperProps } from './PublicLayoutWrapper';

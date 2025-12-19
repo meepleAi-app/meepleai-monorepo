@@ -24,6 +24,7 @@ import { GameGrid } from './components/GameGrid';
 import { Pagination } from './components/Pagination';
 import { SearchBar } from './components/SearchBar';
 import { ViewToggle } from './components/ViewToggle';
+import { PublicLayoutWrapper } from '@/components/layouts';
 
 // API base URL
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
@@ -132,36 +133,37 @@ export default async function GamesPage({ searchParams }: { searchParams: Promis
   const { games, total, totalPages } = await fetchGames(search, currentPage, 20);
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Header */}
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-        <div>
-          <h1 className="font-heading text-3xl md:text-4xl font-bold mb-2">Catalogo Giochi</h1>
-          <p className="text-muted-foreground">
-            Esplora {total} giochi da tavolo. Cerca, filtra e scopri le regole.
-          </p>
+    <PublicLayoutWrapper containerWidth="xl">
+      <div>
+        {/* Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+          <div>
+            <h1 className="font-heading text-3xl md:text-4xl font-bold mb-2">Catalogo Giochi</h1>
+            <p className="text-muted-foreground">
+              Esplora {total} giochi da tavolo. Cerca, filtra e scopri le regole.
+            </p>
+          </div>
+          <Link href="/games/add">
+            <Button>Aggiungi Gioco</Button>
+          </Link>
         </div>
-        <Link href="/games/add">
-          <Button>Aggiungi Gioco</Button>
-        </Link>
-      </div>
 
-      {/* Toolbar: Search + View Toggle */}
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-6">
-        <div className="w-full sm:w-96">
-          <SearchBar currentSearch={search} />
+        {/* Toolbar: Search + View Toggle */}
+        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-6">
+          <div className="w-full sm:w-96">
+            <SearchBar currentSearch={search} />
+          </div>
+          <ViewToggle currentView={view} />
         </div>
-        <ViewToggle currentView={view} />
+
+        {/* Games Grid/List */}
+        <GameGrid games={games} variant={view} />
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <Pagination currentPage={currentPage} totalPages={totalPages} totalItems={total} />
+        )}
       </div>
-
-      {/* Games Grid/List */}
-      <GameGrid games={games} variant={view} />
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <Pagination currentPage={currentPage} totalPages={totalPages} totalItems={total} />
-      )}
-    </div>
+    </PublicLayoutWrapper>
   );
 }

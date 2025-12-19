@@ -29,6 +29,7 @@ import { FeaturesSection } from '@/components/landing/FeaturesSection';
 import { HowItWorksSection } from '@/components/landing/HowItWorksSection';
 import { LandingFooter } from '@/components/landing/LandingFooter';
 import { AuthRedirect } from '@/components/landing/AuthRedirect';
+import { PublicLayoutWrapper, PublicHeader } from '@/components/layouts';
 
 // Metadata for SEO
 export const metadata: Metadata = {
@@ -132,10 +133,12 @@ const structuredData = {
  *
  * Renders marketing landing page with hero, features, how-it-works, and footer.
  * All sections are server-rendered for optimal performance and SEO.
+ *
+ * Updated: Issue #2230 - Integrated PublicHeader for navigation
  */
 export default function LandingPage() {
   return (
-    <main id="main-content" className="min-h-screen flex flex-col">
+    <>
       {/* Auto-redirect authenticated users to dashboard */}
       <AuthRedirect />
 
@@ -147,17 +150,23 @@ export default function LandingPage() {
         }}
       />
 
-      {/* Hero Section */}
-      <HeroSection />
+      {/* Public Header for navigation */}
+      <PublicHeader />
 
-      {/* Features Section */}
-      <FeaturesSection />
+      {/* Main Landing Content */}
+      <main id="main-content" className="flex-1">
+        {/* Hero Section */}
+        <HeroSection />
 
-      {/* How It Works Section */}
-      <HowItWorksSection />
+        {/* Features Section */}
+        <FeaturesSection />
 
-      {/* Footer with CTA */}
+        {/* How It Works Section */}
+        <HowItWorksSection />
+      </main>
+
+      {/* Footer with CTA - Keep LandingFooter for custom CTAs */}
       <LandingFooter />
-    </main>
+    </>
   );
 }

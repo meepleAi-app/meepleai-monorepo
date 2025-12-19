@@ -4,12 +4,13 @@
  * Register Page - App Router
  *
  * Standalone registration page with AuthModal.
- * Mirrors /login structure but with defaultMode="register"
+ * Uses AuthLayout wrapper for consistent auth page UX (Issue #2231).
  */
 
 import { Suspense, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { AuthModal } from '@/components/auth';
+import { AuthLayout } from '@/components/layouts';
 import { useTranslation } from '@/hooks/useTranslation';
 
 function RegisterPageContent() {
@@ -29,17 +30,24 @@ function RegisterPageContent() {
 
   // Prevent SSR issues with TanStack Query
   if (!mounted) {
-    return null;
+    return (
+      <AuthLayout title="Loading...">
+        <div className="text-center py-8">
+          <div className="animate-pulse text-slate-500">Loading...</div>
+        </div>
+      </AuthLayout>
+    );
   }
 
   return (
-    <main
-      className="min-h-dvh flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 px-4"
+    <AuthLayout
+      title="Create Account"
+      subtitle="Join MeepleAI to get started"
       data-testid="register-page"
     >
       {/* Unified Auth Modal - Registration Mode */}
       <AuthModal isOpen={showAuthModal} onClose={handleClose} defaultMode="register" />
-    </main>
+    </AuthLayout>
   );
 }
 

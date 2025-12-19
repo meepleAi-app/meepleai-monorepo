@@ -4,7 +4,7 @@
 /**
  * Password Reset Page (AUTH-04) - App Router
  *
- * Two-mode password reset flow:
+ * Two-mode password reset flow with AuthLayout (Issue #2231):
  * 1. Request Mode (no token): User enters email to request reset
  * 2. Reset Mode (with token): User sets new password
  *
@@ -29,8 +29,8 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { api } from '@/lib/api';
 import { AccessibleFormInput, AccessibleButton } from '@/components/accessible';
+import { AuthLayout } from '@/components/layouts';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { getErrorMessage } from '@/lib/utils/errorHandler';
 
 // Type definitions
@@ -61,9 +61,11 @@ export default function ResetPasswordPage() {
   return (
     <Suspense
       fallback={
-        <main className="min-h-dvh flex items-center justify-center bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-300">
-          Caricamento reset password...
-        </main>
+        <AuthLayout title="Loading...">
+          <div className="text-center py-8">
+            <div className="animate-pulse text-slate-500">Loading...</div>
+          </div>
+        </AuthLayout>
       }
     >
       <ResetPasswordPageContent />
@@ -310,12 +312,12 @@ function ResetPasswordPageContent() {
   // Show loading state while checking authentication
   if (isCheckingAuth) {
     return (
-      <main className="min-h-dvh bg-slate-950 text-white flex items-center justify-center">
-        <div className="text-center">
+      <AuthLayout title="Loading...">
+        <div className="text-center py-8">
           <div className="animate-spin text-4xl mb-4">⏳</div>
           <p className="text-slate-400">Loading...</p>
         </div>
-      </main>
+      </AuthLayout>
     );
   }
 
@@ -324,277 +326,259 @@ function ResetPasswordPageContent() {
     return null;
   }
 
-  return (
-    <div className="min-h-dvh bg-slate-950 text-white" role="presentation">
-      {/* Header */}
-      <header className="sticky top-0 glass z-50">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-          <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-            <span className="text-4xl">🎲</span>
-            <span className="text-2xl font-bold gradient-text">MeepleAI</span>
-          </Link>
-          <Button variant="secondary" asChild className="text-sm">
-            <Link href="/">Back to Home</Link>
-          </Button>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main id="main-content" className="flex items-center justify-center px-6 py-20">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="w-full max-w-md"
-        >
-          <Card className="p-8 space-y-6">
-            {/* Request Reset Mode */}
-            {mode === 'request' && !requestSuccess && (
-              <>
-                <div className="text-center space-y-2">
-                  <h1 className="text-3xl font-bold">Reset Password</h1>
-                  <p className="text-slate-400">
-                    Enter your email address and we&apos;ll send you instructions to reset your
-                    password.
-                  </p>
-                </div>
-
-                {errorMessage && (
-                  <div
-                    role="alert"
-                    aria-live="polite"
-                    className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg"
-                  >
-                    {errorMessage}
-                  </div>
-                )}
-
-                <form onSubmit={handleRequestReset} className="space-y-4">
-                  <AccessibleFormInput
-                    label="Email Address"
-                    type="email"
-                    value={email}
-                    onChange={e => setEmail(e.target.value)}
-                    required
-                    autoComplete="email"
-                    placeholder="you@example.com"
-                    inputClassName="w-full bg-white border border-slate-300 rounded-lg px-4 py-3 text-slate-900 focus:border-primary focus:ring-2 focus:ring-ring"
-                  />
-
-                  <AccessibleButton
-                    type="submit"
-                    variant="primary"
-                    className="w-full mt-6"
-                    isLoading={isLoading}
-                    loadingText="Sending..."
-                    disabled={!email.trim()}
-                  >
-                    Send Reset Instructions
-                  </AccessibleButton>
-                </form>
-
-                <div className="text-center">
-                  <Link
-                    href="/"
-                    className="text-sm text-primary hover:text-primary/80 transition-colors"
-                  >
-                    ← Back to Login
-                  </Link>
-                </div>
-              </>
-            )}
-
-            {/* Request Success State */}
-            {mode === 'request' && requestSuccess && (
-              <div className="text-center space-y-4">
-                <div className="text-6xl mb-4">✉️</div>
-                <h2 className="text-2xl font-bold text-green-400">Check Your Email</h2>
-                <p className="text-slate-300">
-                  We&apos;ve sent password reset instructions to <strong>{email}</strong>.
-                </p>
-                <p className="text-sm text-slate-400">
-                  Didn&apos;t receive the email? Check your spam folder or{' '}
-                  <button
-                    onClick={() => {
-                      setRequestSuccess(false);
-                      setEmail('');
-                    }}
-                    className="text-primary hover:text-primary/80 underline"
-                  >
-                    try again
-                  </button>
-                  .
-                </p>
-                <div className="pt-4">
-                  <Button variant="secondary" asChild>
-                    <Link href="/">Back to Login</Link>
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* Reset Password Mode - Token Verification */}
-            {mode === 'reset' && tokenValid === null && (
-              <div className="text-center space-y-4">
-                <div className="animate-spin text-4xl mb-4">⏳</div>
-                <p className="text-slate-400">Verifying reset token...</p>
-              </div>
-            )}
-
-            {/* Reset Password Mode - Invalid Token */}
-            {mode === 'reset' && tokenValid === false && (
-              <div className="text-center space-y-4">
-                <div className="text-6xl mb-4">⚠️</div>
-                <h2 className="text-2xl font-bold text-red-400">Invalid or Expired Link</h2>
-                <p className="text-slate-300">
-                  This password reset link is invalid or has expired.
-                </p>
-                {errorMessage && <p className="text-sm text-red-400">{errorMessage}</p>}
-                <div className="pt-4 space-y-2">
-                  <Button asChild className="w-full">
-                    <Link href="/reset-password">Request New Reset Link</Link>
-                  </Button>
-                  <Button variant="secondary" asChild className="w-full">
-                    <Link href="/">Back to Login</Link>
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* Reset Password Mode - Valid Token */}
-            {mode === 'reset' && tokenValid === true && !resetSuccess && (
-              <>
-                <div className="text-center space-y-2">
-                  <h1 className="text-3xl font-bold">Set New Password</h1>
-                  <p className="text-slate-400">Choose a strong password for your account.</p>
-                </div>
-
-                {errorMessage && (
-                  <div
-                    role="alert"
-                    aria-live="polite"
-                    className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg"
-                  >
-                    {errorMessage}
-                  </div>
-                )}
-
-                <form onSubmit={handleConfirmReset} className="space-y-4">
-                  <AccessibleFormInput
-                    label="New Password"
-                    type="password"
-                    value={newPassword}
-                    onChange={e => setNewPassword(e.target.value)}
-                    required
-                    autoComplete="new-password"
-                    inputClassName="w-full bg-white border border-slate-300 rounded-lg px-4 py-3 text-slate-900 focus:border-primary focus:ring-2 focus:ring-ring"
-                  />
-
-                  {/* Password Requirements */}
-                  {newPassword && (
-                    <div className="space-y-2">
-                      <PasswordStrengthIndicator strength={passwordValidation.strength} />
-                      <div className="text-sm space-y-1">
-                        <div
-                          className={`flex items-center gap-2 ${
-                            passwordValidation.minLength ? 'text-green-400' : 'text-slate-500'
-                          }`}
-                        >
-                          <span aria-hidden="true">{passwordValidation.minLength ? '✓' : '○'}</span>
-                          <span>At least 8 characters</span>
-                        </div>
-                        <div
-                          className={`flex items-center gap-2 ${
-                            passwordValidation.hasUppercase ? 'text-green-400' : 'text-slate-500'
-                          }`}
-                        >
-                          <span aria-hidden="true">
-                            {passwordValidation.hasUppercase ? '✓' : '○'}
-                          </span>
-                          <span>At least 1 uppercase letter</span>
-                        </div>
-                        <div
-                          className={`flex items-center gap-2 ${
-                            passwordValidation.hasLowercase ? 'text-green-400' : 'text-slate-500'
-                          }`}
-                        >
-                          <span aria-hidden="true">
-                            {passwordValidation.hasLowercase ? '✓' : '○'}
-                          </span>
-                          <span>At least 1 lowercase letter</span>
-                        </div>
-                        <div
-                          className={`flex items-center gap-2 ${
-                            passwordValidation.hasNumber ? 'text-green-400' : 'text-slate-500'
-                          }`}
-                        >
-                          <span aria-hidden="true">{passwordValidation.hasNumber ? '✓' : '○'}</span>
-                          <span>At least 1 number</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  <AccessibleFormInput
-                    label="Confirm Password"
-                    type="password"
-                    value={confirmPassword}
-                    onChange={e => setConfirmPassword(e.target.value)}
-                    required
-                    autoComplete="new-password"
-                    error={
-                      confirmPassword && newPassword !== confirmPassword
-                        ? 'Passwords do not match'
-                        : undefined
-                    }
-                    inputClassName="w-full bg-white border border-slate-300 rounded-lg px-4 py-3 text-slate-900 focus:border-primary focus:ring-2 focus:ring-ring"
-                  />
-
-                  <AccessibleButton
-                    type="submit"
-                    variant="primary"
-                    className="w-full mt-6"
-                    isLoading={isLoading}
-                    loadingText="Resetting..."
-                    disabled={
-                      !passwordValidation.isValid ||
-                      newPassword !== confirmPassword ||
-                      !confirmPassword.trim()
-                    }
-                  >
-                    Reset Password
-                  </AccessibleButton>
-                </form>
-
-                <div className="text-center">
-                  <Link
-                    href="/"
-                    className="text-sm text-primary hover:text-primary/80 transition-colors"
-                  >
-                    ← Back to Login
-                  </Link>
-                </div>
-              </>
-            )}
-
-            {/* Reset Success State */}
-            {mode === 'reset' && resetSuccess && (
-              <div className="text-center space-y-4">
-                <div className="text-6xl mb-4">✅</div>
-                <h2 className="text-2xl font-bold text-green-400">Password Reset Successful</h2>
-                <p className="text-slate-300">Your password has been successfully reset.</p>
-                <p className="text-sm text-slate-400">Redirecting to chat...</p>
-                <div className="animate-spin text-2xl mx-auto w-fit">⏳</div>
-              </div>
-            )}
-          </Card>
-
-          {/* Security Notice */}
-          <div className="mt-6 text-center text-sm text-slate-500">
-            <p>🔒 This page is secured with industry-standard encryption</p>
+  // Request Reset Mode
+  if (mode === 'request' && !requestSuccess) {
+    return (
+      <AuthLayout
+        title="Reset Password"
+        subtitle="Enter your email address and we'll send you instructions to reset your password"
+      >
+        {errorMessage && (
+          <div
+            role="alert"
+            aria-live="polite"
+            className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg mb-4"
+          >
+            {errorMessage}
           </div>
-        </motion.div>
-      </main>
-    </div>
-  );
+        )}
+
+        <form onSubmit={handleRequestReset} className="space-y-4">
+          <AccessibleFormInput
+            label="Email Address"
+            type="email"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            required
+            autoComplete="email"
+            placeholder="you@example.com"
+            inputClassName="w-full bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-3 text-slate-900 dark:text-slate-100 focus:border-primary focus:ring-2 focus:ring-ring"
+          />
+
+          <AccessibleButton
+            type="submit"
+            variant="primary"
+            className="w-full mt-6"
+            isLoading={isLoading}
+            loadingText="Sending..."
+            disabled={!email.trim()}
+          >
+            Send Reset Instructions
+          </AccessibleButton>
+        </form>
+
+        <div className="text-center mt-4">
+          <Link
+            href="/"
+            className="text-sm text-primary hover:text-primary/80 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded px-2 py-1"
+          >
+            ← Back to Login
+          </Link>
+        </div>
+      </AuthLayout>
+    );
+  }
+
+  // Request Success State
+  if (mode === 'request' && requestSuccess) {
+    return (
+      <AuthLayout>
+        <div className="text-center space-y-4 py-4">
+          <div className="text-6xl mb-4">✉️</div>
+          <h2 className="text-2xl font-bold text-green-400">Check Your Email</h2>
+          <p className="text-slate-600 dark:text-slate-300">
+            We've sent password reset instructions to <strong>{email}</strong>.
+          </p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Didn't receive the email? Check your spam folder or{' '}
+            <button
+              onClick={() => {
+                setRequestSuccess(false);
+                setEmail('');
+              }}
+              className="text-primary hover:text-primary/80 underline focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded"
+            >
+              try again
+            </button>
+            .
+          </p>
+          <div className="pt-4">
+            <Button variant="secondary" asChild>
+              <Link href="/">Back to Login</Link>
+            </Button>
+          </div>
+        </div>
+      </AuthLayout>
+    );
+  }
+
+  // Reset Password Mode - Token Verification
+  if (mode === 'reset' && tokenValid === null) {
+    return (
+      <AuthLayout title="Verifying...">
+        <div className="text-center space-y-4 py-8">
+          <div className="animate-spin text-4xl mb-4">⏳</div>
+          <p className="text-slate-400">Verifying reset token...</p>
+        </div>
+      </AuthLayout>
+    );
+  }
+
+  // Reset Password Mode - Invalid Token
+  if (mode === 'reset' && tokenValid === false) {
+    return (
+      <AuthLayout
+        title="Invalid or Expired Link"
+        subtitle="This password reset link is no longer valid"
+      >
+        <div className="text-center space-y-4 py-4">
+          <div className="text-6xl mb-4">⚠️</div>
+          {errorMessage && <p className="text-sm text-red-400">{errorMessage}</p>}
+          <div className="pt-4 space-y-2">
+            <Button asChild className="w-full">
+              <Link href="/reset-password">Request New Reset Link</Link>
+            </Button>
+            <Button variant="secondary" asChild className="w-full">
+              <Link href="/">Back to Login</Link>
+            </Button>
+          </div>
+        </div>
+      </AuthLayout>
+    );
+  }
+
+  // Reset Password Mode - Valid Token
+  if (mode === 'reset' && tokenValid === true && !resetSuccess) {
+    return (
+      <AuthLayout title="Set New Password" subtitle="Choose a strong password for your account">
+        {errorMessage && (
+          <div
+            role="alert"
+            aria-live="polite"
+            className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg mb-4"
+          >
+            {errorMessage}
+          </div>
+        )}
+
+        <form onSubmit={handleConfirmReset} className="space-y-4">
+          <AccessibleFormInput
+            label="New Password"
+            type="password"
+            value={newPassword}
+            onChange={e => setNewPassword(e.target.value)}
+            required
+            autoComplete="new-password"
+            inputClassName="w-full bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-3 text-slate-900 dark:text-slate-100 focus:border-primary focus:ring-2 focus:ring-ring"
+          />
+
+          {/* Password Requirements */}
+          {newPassword && (
+            <div className="space-y-2">
+              <PasswordStrengthIndicator strength={passwordValidation.strength} />
+              <div className="text-sm space-y-1">
+                <div
+                  className={`flex items-center gap-2 ${
+                    passwordValidation.minLength
+                      ? 'text-green-400'
+                      : 'text-slate-500 dark:text-slate-400'
+                  }`}
+                >
+                  <span aria-hidden="true">{passwordValidation.minLength ? '✓' : '○'}</span>
+                  <span>At least 8 characters</span>
+                </div>
+                <div
+                  className={`flex items-center gap-2 ${
+                    passwordValidation.hasUppercase
+                      ? 'text-green-400'
+                      : 'text-slate-500 dark:text-slate-400'
+                  }`}
+                >
+                  <span aria-hidden="true">{passwordValidation.hasUppercase ? '✓' : '○'}</span>
+                  <span>At least 1 uppercase letter</span>
+                </div>
+                <div
+                  className={`flex items-center gap-2 ${
+                    passwordValidation.hasLowercase
+                      ? 'text-green-400'
+                      : 'text-slate-500 dark:text-slate-400'
+                  }`}
+                >
+                  <span aria-hidden="true">{passwordValidation.hasLowercase ? '✓' : '○'}</span>
+                  <span>At least 1 lowercase letter</span>
+                </div>
+                <div
+                  className={`flex items-center gap-2 ${
+                    passwordValidation.hasNumber
+                      ? 'text-green-400'
+                      : 'text-slate-500 dark:text-slate-400'
+                  }`}
+                >
+                  <span aria-hidden="true">{passwordValidation.hasNumber ? '✓' : '○'}</span>
+                  <span>At least 1 number</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <AccessibleFormInput
+            label="Confirm Password"
+            type="password"
+            value={confirmPassword}
+            onChange={e => setConfirmPassword(e.target.value)}
+            required
+            autoComplete="new-password"
+            error={
+              confirmPassword && newPassword !== confirmPassword
+                ? 'Passwords do not match'
+                : undefined
+            }
+            inputClassName="w-full bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-3 text-slate-900 dark:text-slate-100 focus:border-primary focus:ring-2 focus:ring-ring"
+          />
+
+          <AccessibleButton
+            type="submit"
+            variant="primary"
+            className="w-full mt-6"
+            isLoading={isLoading}
+            loadingText="Resetting..."
+            disabled={
+              !passwordValidation.isValid ||
+              newPassword !== confirmPassword ||
+              !confirmPassword.trim()
+            }
+          >
+            Reset Password
+          </AccessibleButton>
+        </form>
+
+        <div className="text-center mt-4">
+          <Link
+            href="/"
+            className="text-sm text-primary hover:text-primary/80 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded px-2 py-1"
+          >
+            ← Back to Login
+          </Link>
+        </div>
+      </AuthLayout>
+    );
+  }
+
+  // Reset Success State
+  if (mode === 'reset' && resetSuccess) {
+    return (
+      <AuthLayout
+        title="Password Reset Successful"
+        subtitle="Your password has been successfully reset"
+      >
+        <div className="text-center space-y-4 py-4">
+          <div className="text-6xl mb-4">✅</div>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Redirecting to chat...</p>
+          <div className="animate-spin text-2xl mx-auto w-fit">⏳</div>
+        </div>
+      </AuthLayout>
+    );
+  }
+
+  return null;
 }

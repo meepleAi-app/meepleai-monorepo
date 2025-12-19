@@ -15,3 +15,12 @@ export type { PublicLayoutProps } from './PublicLayout';
 
 export { PublicLayoutWrapper } from './PublicLayoutWrapper';
 export type { PublicLayoutWrapperProps } from './PublicLayoutWrapper';
+
+/**
+ * Auth Layout Components - Issue #2231
+ *
+ * Specialized layout for authentication pages.
+ */
+
+export { AuthLayout } from './AuthLayout';
+export type { AuthLayoutProps } from './AuthLayout';

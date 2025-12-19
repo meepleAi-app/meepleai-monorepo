@@ -4,7 +4,7 @@
  * Login Page (AUTH-05) - App Router
  *
  * Standalone login page with session expiration handling.
- * Uses the unified AuthModal component for consistent UX.
+ * Uses AuthLayout wrapper for consistent auth page UX (Issue #2231).
  *
  * Note (FE-IMP-005): Client-side only - AuthModal uses TanStack Query
  */
@@ -12,6 +12,7 @@
 import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AuthModal } from '@/components/auth';
+import { AuthLayout } from '@/components/layouts';
 import { useTranslation } from '@/hooks/useTranslation';
 
 function LoginPageContent() {
@@ -36,14 +37,16 @@ function LoginPageContent() {
   // Prevent SSR issues with TanStack Query (FE-IMP-005)
   if (!mounted) {
     return (
-      <main className="min-h-dvh flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 px-4">
-        <div className="animate-pulse text-slate-500">Loading...</div>
-      </main>
+      <AuthLayout title="Loading...">
+        <div className="text-center py-8">
+          <div className="animate-pulse text-slate-500">Loading...</div>
+        </div>
+      </AuthLayout>
     );
   }
 
   return (
-    <main className="min-h-dvh flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 px-4">
+    <AuthLayout title="Welcome Back" subtitle="Sign in to continue to MeepleAI">
       {/* Unified Auth Modal */}
       <AuthModal
         isOpen={showAuthModal}
@@ -51,7 +54,7 @@ function LoginPageContent() {
         defaultMode="login"
         sessionExpiredMessage={isSessionExpired}
       />
-    </main>
+    </AuthLayout>
   );
 }
 

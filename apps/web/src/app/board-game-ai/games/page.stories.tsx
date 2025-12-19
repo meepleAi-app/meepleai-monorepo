@@ -19,6 +19,7 @@
  */
 
 import type { Meta, StoryObj } from '@storybook/react';
+import Image from 'next/image';
 import type { Game } from '@/lib/api';
 
 // ============================================================================
@@ -232,14 +233,18 @@ function BoardGameAIGamesPageStory({
                   {/* Image */}
                   <div
                     className={
-                      view === 'grid' ? 'aspect-[3/4] bg-muted' : 'w-32 h-32 bg-muted flex-shrink-0'
+                      view === 'grid'
+                        ? 'relative aspect-[3/4] bg-muted overflow-hidden'
+                        : 'relative w-32 h-32 bg-muted flex-shrink-0 overflow-hidden'
                     }
                   >
                     {game.imageUrl && (
-                      <img
+                      <Image
                         src={game.imageUrl}
                         alt={game.title}
-                        className="w-full h-full object-cover"
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
                       />
                     )}
                   </div>

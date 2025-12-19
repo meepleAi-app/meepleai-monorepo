@@ -1,15 +1,15 @@
 /* eslint-disable security/detect-object-injection -- Safe Zustand store key access */
 /**
- * ChatSidebar - Collapsible sidebar with game/agent selection and thread history (Issue #858)
+ * ChatSidebar - Sidebar content for chat (Issue #2232)
  *
- * Composes GameSelector, AgentSelector, ChatHistory (thread list), and new thread button.
- * Manages sidebar collapse state and game context badge.
+ * Refactored from Issue #858 to work with ChatLayout pattern.
+ * Contains only sidebar content (selectors, new thread button, thread history).
+ * Header logic moved to ChatLayout + ChatHeader.
  *
- * Updated for SPRINT-3 #858:
- * - Thread-based UI (replacing chat sessions)
- * - Shows active and archived threads
- * - Thread limit indicator (max 5 per game)
- * - Hybrid creation: manual button + auto-create on first message
+ * Features:
+ * - Game/Agent selection
+ * - New thread button with limit indicator
+ * - Thread history (active + archived)
  */
 
 import React from 'react';
@@ -19,29 +19,21 @@ import { GameSelector } from './GameSelector';
 import { AgentSelector } from './AgentSelector';
 import { ChatHistory } from './ChatHistory';
 import { LoadingButton } from '../loading/LoadingButton';
-import { ChatThread, Game } from '@/types';
+import { ChatThread } from '@/types';
 
 const MAX_THREADS_PER_GAME = 5; // Issue #858: Thread limit constant
 
 export function ChatSidebar() {
   // Issue #1676: Migrated from useChatContext to direct Zustand store
-  const {
-    games,
-    chatsByGame,
-    selectedGameId,
-    selectedAgentId,
-    sidebarCollapsed,
-    loading,
-    createChat,
-  } = useChatStore(state => ({
-    games: state.games,
-    chatsByGame: state.chatsByGame,
-    selectedGameId: state.selectedGameId,
-    selectedAgentId: state.selectedAgentId,
-    sidebarCollapsed: state.sidebarCollapsed,
-    loading: state.loading,
-    createChat: state.createChat,
-  }));
+  const { chatsByGame, selectedGameId, selectedAgentId, loading, createChat } = useChatStore(
+    state => ({
+      chatsByGame: state.chatsByGame,
+      selectedGameId: state.selectedGameId,
+      selectedAgentId: state.selectedAgentId,
+      loading: state.loading,
+      createChat: state.createChat,
+    })
+  );
 
   // Derived value
   const chats = selectedGameId ? (chatsByGame[selectedGameId] ?? []) : [];
@@ -57,29 +49,9 @@ export function ChatSidebar() {
   const isAtThreadLimit = activeThreadCount >= MAX_THREADS_PER_GAME;
 
   return (
-    <aside
-      aria-label="Chat sidebar with game selection and thread history"
-      className={cn(
-        'hidden md:flex bg-[#f8f9fa] border-r border-[#dadce0] flex-col overflow-hidden transition-[width,min-width] duration-300 ease-in-out',
-        sidebarCollapsed ? 'w-0 min-w-0' : 'w-80 min-w-[320px]'
-      )}
-    >
-      {/* Sidebar Header */}
-      <div className="p-4 border-b border-[#dadce0]">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="m-0 text-lg">MeepleAI Chat</h2>
-          {/* Game context badge */}
-          {selectedGameId && (
-            <div
-              className="px-3 py-1 bg-[#e8f0fe] text-[#1a73e8] rounded-xl text-[11px] font-semibold border border-[#1a73e8]"
-              title={`Currently chatting about: ${games.find((g: Game) => g.id === selectedGameId)?.title ?? 'Unknown game'}`}
-              aria-label={`Active game context: ${games.find((g: Game) => g.id === selectedGameId)?.title ?? 'Unknown game'}`}
-            >
-              {games.find((g: Game) => g.id === selectedGameId)?.title ?? '...'}
-            </div>
-          )}
-        </div>
-
+    <div className="flex flex-col h-full">
+      {/* Sidebar Header - Selectors and New Thread Button */}
+      <div className="p-4 border-b border-[#dadce0] shrink-0">
         {/* Game Selector */}
         <GameSelector />
 
@@ -123,7 +95,9 @@ export function ChatSidebar() {
       </div>
 
       {/* Thread History (Issue #858: Now shows active + archived threads) */}
-      <ChatHistory />
-    </aside>
+      <div className="flex-1 overflow-hidden">
+        <ChatHistory />
+      </div>
+    </div>
   );
 }

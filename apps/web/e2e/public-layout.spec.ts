@@ -502,8 +502,8 @@ test.describe('PublicLayout - Responsive Behavior', () => {
 });
 
 test.describe('PublicLayout - Accessibility', () => {
-  // Known issues to exclude (following project pattern)
-  const KNOWN_A11Y_ISSUES = ['color-contrast', 'aria-allowed-attr'];
+  // Issue #1868 CLOSED - re-enabling rules for Phase 5 (Issue #2234) full audit
+  const KNOWN_A11Y_ISSUES: string[] = [];
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/');

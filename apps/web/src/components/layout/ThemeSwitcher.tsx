@@ -47,9 +47,7 @@ export function ThemeSwitcher() {
   }, []);
 
   if (!mounted) {
-    return (
-      <div className="w-10 h-10 rounded-lg bg-muted animate-pulse" aria-hidden="true" />
-    );
+    return <div className="w-10 h-10 rounded-lg bg-muted animate-pulse" aria-hidden="true" />;
   }
 
   const currentTheme = theme === 'system' ? systemTheme : theme;
@@ -75,7 +73,7 @@ export function ThemeSwitcher() {
           className="
             relative inline-flex items-center justify-center gap-2
             w-auto h-10 px-3 rounded-lg
-            bg-secondary hover:bg-secondary/80
+            bg-secondary text-secondary-foreground hover:bg-secondary/80
             border border-border
             transition-all duration-200
             hover:scale-105 active:scale-95
@@ -83,12 +81,8 @@ export function ThemeSwitcher() {
           "
           aria-label="Theme switcher"
         >
-          <span className="transition-transform duration-300">
-            {getIcon()}
-          </span>
-          <span className="text-sm font-medium hidden sm:inline-block">
-            {getLabel()}
-          </span>
+          <span className="transition-transform duration-300">{getIcon()}</span>
+          <span className="text-sm font-medium hidden sm:inline-block">{getLabel()}</span>
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-36">

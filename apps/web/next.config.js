@@ -117,6 +117,27 @@ const nextConfig = {
   reactStrictMode: true,
   output: 'standalone', // Enable Docker-optimized output
 
+  // Issue #2209: Next.js Image optimization - configure remote image domains
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'picsum.photos',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'cf.geekdo-images.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.boardgamegeek.com',
+        pathname: '/**',
+      },
+    ],
+  },
+
   // Issue #1817: instrumentation.ts provides DOM polyfills for pdfjs-dist SSR
   // Note: Instrumentation is enabled by default in Next.js 16, no experimental flag needed
   experimental: {

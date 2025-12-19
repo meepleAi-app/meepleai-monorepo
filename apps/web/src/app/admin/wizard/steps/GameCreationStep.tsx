@@ -7,6 +7,7 @@
  */
 
 import { useState, useCallback } from 'react';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -210,14 +211,18 @@ export function GameCreationStep({
             />
             {iconUrl && (
               <div className="flex justify-center">
-                <img
-                  src={iconUrl}
-                  alt="Icon preview"
-                  className="w-16 h-16 object-cover rounded-lg border"
-                  onError={e => {
-                    (e.target as HTMLImageElement).style.display = 'none';
-                  }}
-                />
+                <div className="relative w-16 h-16 rounded-lg border overflow-hidden">
+                  <Image
+                    src={iconUrl}
+                    alt="Icon preview"
+                    fill
+                    className="object-cover"
+                    sizes="64px"
+                    onError={e => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                </div>
               </div>
             )}
           </TabsContent>
@@ -225,11 +230,16 @@ export function GameCreationStep({
             <Input type="file" accept="image/*" onChange={handleIconFileChange} />
             {iconPreview && (
               <div className="flex justify-center">
-                <img
-                  src={iconPreview}
-                  alt="Icon preview"
-                  className="w-16 h-16 object-cover rounded-lg border"
-                />
+                <div className="relative w-16 h-16 rounded-lg border overflow-hidden">
+                  <Image
+                    src={iconPreview}
+                    alt="Icon preview"
+                    fill
+                    className="object-cover"
+                    sizes="64px"
+                    unoptimized
+                  />
+                </div>
               </div>
             )}
           </TabsContent>
@@ -253,14 +263,18 @@ export function GameCreationStep({
             />
             {imageUrl && (
               <div className="flex justify-center">
-                <img
-                  src={imageUrl}
-                  alt="Cover preview"
-                  className="max-w-xs max-h-48 object-cover rounded-lg border"
-                  onError={e => {
-                    (e.target as HTMLImageElement).style.display = 'none';
-                  }}
-                />
+                <div className="relative max-w-xs h-48 rounded-lg border overflow-hidden">
+                  <Image
+                    src={imageUrl}
+                    alt="Cover preview"
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, 384px"
+                    onError={e => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                </div>
               </div>
             )}
           </TabsContent>
@@ -268,11 +282,16 @@ export function GameCreationStep({
             <Input type="file" accept="image/*" onChange={handleImageFileChange} />
             {imagePreview && (
               <div className="flex justify-center">
-                <img
-                  src={imagePreview}
-                  alt="Cover preview"
-                  className="max-w-xs max-h-48 object-cover rounded-lg border"
-                />
+                <div className="relative max-w-xs h-48 rounded-lg border overflow-hidden">
+                  <Image
+                    src={imagePreview}
+                    alt="Cover preview"
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, 384px"
+                    unoptimized
+                  />
+                </div>
               </div>
             )}
           </TabsContent>

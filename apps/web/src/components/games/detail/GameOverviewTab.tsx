@@ -6,6 +6,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { Game, BggGameDetails, api } from '@/lib/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -158,11 +159,16 @@ export function GameOverviewTab({ game }: GameOverviewTabProps) {
                 {/* BGG Image */}
                 {bggDetails.imageUrl && (
                   <div className="flex justify-center">
-                    <img
-                      src={bggDetails.imageUrl}
-                      alt={bggDetails.name}
-                      className="max-h-80 rounded-md object-contain border"
-                    />
+                    <div className="relative max-h-80 w-full rounded-md border overflow-hidden">
+                      <Image
+                        src={bggDetails.imageUrl}
+                        alt={bggDetails.name}
+                        width={640}
+                        height={320}
+                        className="object-contain mx-auto"
+                        sizes="(max-width: 768px) 100vw, 640px"
+                      />
+                    </div>
                   </div>
                 )}
 

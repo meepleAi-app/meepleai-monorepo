@@ -15,6 +15,7 @@
 
 'use client';
 
+import Image from 'next/image';
 import { PdfUploadForm } from '@/components/pdf/PdfUploadForm';
 import { PdfViewerModal } from '@/components/pdf/PdfViewerModal';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -421,11 +422,16 @@ export default function GameDetailPage() {
                   {/* BGG Image */}
                   {bggDetails.imageUrl && (
                     <div className="flex justify-center">
-                      <img
-                        src={bggDetails.imageUrl}
-                        alt={bggDetails.name}
-                        className="max-h-96 rounded-md object-contain"
-                      />
+                      <div className="relative max-h-96 w-full rounded-md overflow-hidden">
+                        <Image
+                          src={bggDetails.imageUrl}
+                          alt={bggDetails.name}
+                          width={800}
+                          height={384}
+                          className="object-contain mx-auto"
+                          sizes="(max-width: 768px) 100vw, 800px"
+                        />
+                      </div>
                     </div>
                   )}
 

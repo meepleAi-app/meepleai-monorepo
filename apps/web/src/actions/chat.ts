@@ -101,8 +101,7 @@ export async function exportChatAction(
     }
 
     // Call API (this will trigger download)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- API client type narrowing
-    await (api.chat as any).exportChat(chatId, {
+    await api.chat.exportChat(chatId, {
       format,
       dateFrom: dateFrom || undefined,
       dateTo: dateTo || undefined,

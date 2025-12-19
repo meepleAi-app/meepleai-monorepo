@@ -26,6 +26,16 @@ const THUMBNAIL_WIDTH = 120;
 const THUMBNAIL_HEIGHT = 160;
 const MOBILE_BREAKPOINT = 768;
 
+// Type for react-window v2 List ref
+interface ListRef {
+  readonly element: HTMLDivElement | null;
+  scrollToRow(config: {
+    align?: 'auto' | 'smart' | 'center' | 'end' | 'start';
+    behavior?: 'auto' | 'smooth' | 'instant';
+    index: number;
+  }): void;
+}
+
 export function PdfPreview({ file, onClose }: PdfPreviewProps) {
   const [numPages, setNumPages] = useState<number | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -38,8 +48,7 @@ export function PdfPreview({ file, onClose }: PdfPreviewProps) {
   const [showThumbnails, setShowThumbnails] = useState(true);
 
   const mainCanvasRef = useRef<HTMLDivElement>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- FixedSizeList ref type is complex
-  const thumbnailListRef = useRef<any>(null);
+  const thumbnailListRef = useRef<ListRef | null>(null);
   const fileUrl = useMemo(() => URL.createObjectURL(file), [file]);
 
   // Detect mobile viewport
@@ -100,12 +109,8 @@ export function PdfPreview({ file, onClose }: PdfPreviewProps) {
       if (numPages && page >= 1 && page <= numPages) {
         setCurrentPage(page);
         // Scroll thumbnail list to show current page
-        if (
-          thumbnailListRef.current &&
-          showThumbnails &&
-          typeof thumbnailListRef.current.scrollToItem === 'function'
-        ) {
-          thumbnailListRef.current.scrollToItem(page - 1, 'center');
+        if (thumbnailListRef.current && showThumbnails) {
+          thumbnailListRef.current.scrollToRow({ index: page - 1, align: 'center' });
         }
       }
     },
@@ -199,7 +204,15 @@ export function PdfPreview({ file, onClose }: PdfPreviewProps) {
   );
 
   const renderThumbnail = useCallback(
-    (props: { index: number; style: React.CSSProperties }) => {
+    (props: {
+      index: number;
+      style: React.CSSProperties;
+      ariaAttributes?: {
+        'aria-posinset': number;
+        'aria-setsize': number;
+        role: string;
+      };
+    }) => {
       const { index, style } = props;
       const pageNumber = index + 1;
       const isActive = pageNumber === currentPage;
@@ -370,12 +383,13 @@ export function PdfPreview({ file, onClose }: PdfPreviewProps) {
             role="navigation"
             aria-label="Page thumbnails"
           >
-            <List<Record<string, never>>
+            <List
               listRef={thumbnailListRef}
               defaultHeight={isMobile ? window.innerHeight - 120 : 600 - 60}
               rowCount={numPages}
               rowHeight={THUMBNAIL_HEIGHT + 16}
               rowComponent={renderThumbnail}
+              // @ts-expect-error - react-window v2 rowProps type incompatibility
               rowProps={{}}
             />
           </div>

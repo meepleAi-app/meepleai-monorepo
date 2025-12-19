@@ -1,11 +1,4 @@
 /**
- * E2E Accessibility Tests (UI-05)
- *
- * Comprehensive accessibility testing with Playwright + axe-core
- * Tests all major pages for WCAG 2.1 AA compliance
- */
-
-/**
  * E2E Accessibility Tests (UI-05) - MIGRATED TO POM
  *
  * Comprehensive accessibility testing with Playwright + axe-core

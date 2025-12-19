@@ -176,7 +176,7 @@
   --secondary: 142 76% 28%;         /* WCAG AA: Darkened to 28% for 4.5:1 contrast on light bg (Issue #2234) */
   --secondary-foreground: 0 0% 100%;
   --muted: 30 20% 90%;              /* Beige medio - muted backgrounds */
-  --muted-foreground: 30 12% 36%;   /* WCAG AA: Darkened to 36% for 4.5:1 contrast (Issue #2234) */
+  --muted-foreground: 30 12% 35%;   /* WCAG AA: Darkened to 35% for guaranteed 4.5:1 contrast (Issue #2234) */
   --accent: 271 91% 55%;            /* WCAG AA: Darkened to 55% for 4.5:1 contrast with white (Issue #2234) */
   --accent-foreground: 0 0% 100%;
   --destructive: 0 84.2% 60.2%;

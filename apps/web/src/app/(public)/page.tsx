@@ -27,9 +27,8 @@ import type { Metadata } from 'next';
 import { HeroSection } from '@/components/landing/HeroSection';
 import { FeaturesSection } from '@/components/landing/FeaturesSection';
 import { HowItWorksSection } from '@/components/landing/HowItWorksSection';
-import { LandingFooter } from '@/components/landing/LandingFooter';
+import { CallToActionSection } from '@/components/landing/CallToActionSection';
 import { AuthRedirect } from '@/components/landing/AuthRedirect';
-import { PublicLayoutWrapper, PublicHeader } from '@/components/layouts';
 
 // Metadata for SEO
 export const metadata: Metadata = {
@@ -150,8 +149,7 @@ export default function LandingPage() {
         }}
       />
 
-      {/* Public Header for navigation */}
-      <PublicHeader />
+      {/* Header provided by (public)/layout.tsx → PublicLayout → PublicHeader */}
 
       {/* Main Landing Content */}
       <main id="main-content" className="flex-1">
@@ -163,10 +161,12 @@ export default function LandingPage() {
 
         {/* How It Works Section */}
         <HowItWorksSection />
+
+        {/* CTA Section (extracted from LandingFooter) */}
+        <CallToActionSection />
       </main>
 
-      {/* Footer with CTA - Keep LandingFooter for custom CTAs */}
-      <LandingFooter />
+      {/* Footer provided by (public)/layout.tsx → PublicLayout → PublicFooter */}
     </>
   );
 }

@@ -9,6 +9,7 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./vitest.setup.tsx'],
     testTimeout: 30000, // Global timeout 30s for slow worker/async tests
+    hookTimeout: 10000, // Issue #20375956158: Hook timeout 10s for CI stability
     coverage: {
       provider: 'v8',
       include: ['src/**/*.{js,jsx,ts,tsx}'],

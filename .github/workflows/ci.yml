@@ -426,6 +426,10 @@ jobs:
           QDRANT_URL: "http://localhost:6333"
           REDIS_URL: "localhost:6379"
           OPENROUTER_API_KEY: "test-key-for-ci"
+          # Issue #20375956158: Disable external service health checks in CI to speed up API startup
+          HealthChecks__Qdrant__Enabled: "false"
+          HealthChecks__Redis__Enabled: "false"
+          HealthChecks__N8n__Enabled: "false"
         run: |
           dotnet restore
           dotnet build --no-restore

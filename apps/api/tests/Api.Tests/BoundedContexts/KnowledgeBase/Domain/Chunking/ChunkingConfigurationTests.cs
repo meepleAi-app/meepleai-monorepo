@@ -112,7 +112,8 @@ public class ChunkingConfigurationTests
         var act = () => config.Validate();
 
         // Assert
-        act.Should().Throw<ArgumentException>()
+        // MA0015: Validate methods throw InvalidOperationException for invalid state
+        act.Should().Throw<InvalidOperationException>()
             .WithMessage("*ChunkSizeTokens must be positive*");
     }
 
@@ -126,7 +127,8 @@ public class ChunkingConfigurationTests
         var act = () => config.Validate();
 
         // Assert
-        act.Should().Throw<ArgumentException>()
+        // MA0015: Validate methods throw InvalidOperationException for invalid state
+        act.Should().Throw<InvalidOperationException>()
             .WithMessage("*ChunkSizeTokens must be positive*");
     }
 
@@ -147,7 +149,8 @@ public class ChunkingConfigurationTests
         var act = () => config.Validate();
 
         // Assert
-        act.Should().Throw<ArgumentException>()
+        // MA0015: Validate methods throw InvalidOperationException for invalid state
+        act.Should().Throw<InvalidOperationException>()
             .WithMessage("*OverlapPercentage must be between 0 and 0.5*");
     }
 
@@ -165,7 +168,8 @@ public class ChunkingConfigurationTests
         var act = () => config.Validate();
 
         // Assert
-        act.Should().Throw<ArgumentException>()
+        // MA0015: Validate methods throw InvalidOperationException for invalid state
+        act.Should().Throw<InvalidOperationException>()
             .WithMessage("*CharsPerToken must be positive*");
     }
 

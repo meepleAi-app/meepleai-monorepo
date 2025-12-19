@@ -1,9 +1,9 @@
 # MeepleAI Documentation Index
 
 **Project**: Italian Board Game Rules AI Assistant
-**Version**: 3.0 (Post-Consolidation)
-**Last Updated**: 2025-12-13T10:59:23.970Z
-**Total Documents**: ~90 (consolidated from 140+)
+**Version**: 3.1 (Post-Cleanup)
+**Last Updated**: 2025-12-18
+**Total Documents**: ~85 (consolidated from 140+)
 
 ---
 
@@ -72,6 +72,7 @@
 - **[diagrams/](./01-architecture/diagrams/)** - Architecture diagrams (Mermaid)
   - [Bounded Contexts Interactions](./01-architecture/diagrams/bounded-contexts-interactions.md)
   - [CQRS/MediatR Flow](./01-architecture/diagrams/cqrs-mediatr-flow.md)
+  - [GitHub Actions Flow](./01-architecture/diagrams/github-actions-flow.md) - CI/CD workflow visualization
   - [Infrastructure Overview](./01-architecture/diagrams/infrastructure-overview.md)
   - [PDF Pipeline Detailed](./01-architecture/diagrams/pdf-pipeline-detailed.md)
   - [RAG System Detailed](./01-architecture/diagrams/rag-system-detailed.md)
@@ -113,9 +114,15 @@
   - [RAG Service Migration](./02-development/implementation/bgai-023-ragservice-migration.md)
   - [Cost Tracking Verification](./02-development/implementation/bgai-026-cost-tracking.md)
 
-- **[code-review/](./02-development/code-review/)** - Code review checklists and reports (5 files)
-  - [Backend Comprehensive Review 2025-11-22](./02-development/code-review/BACKEND-COMPREHENSIVE-REVIEW-2025-11-22.md)
-  - [Infrastructure Comprehensive Review 2025-11-22](./02-development/code-review/INFRASTRUCTURE-COMPREHENSIVE-REVIEW-2025-11-22.md)
+- **[features/](./02-development/features/)** - Feature specifications (2 files)
+  - [PDF Background Processing Reliability](./02-development/features/pdf-background-processing-reliability.md)
+  - [User Tier Upload Limits](./02-development/features/user-tier-upload-limits.md)
+
+- **[code-review/](./02-development/code-review/)** - Code review checklists and reports (6 files)
+  - [Authentication System Review](./02-development/code-review/AUTHENTICATION-SYSTEM-REVIEW-2025-11-22.md)
+  - [Backend Comprehensive Review](./02-development/code-review/backend-comprehensive-review-2025-11-22.md)
+  - [Infrastructure Comprehensive Review](./02-development/code-review/infrastructure-comprehensive-review-2025-11-22.md)
+  - [Logging Events System Review](./02-development/code-review/LOGGING-EVENTS-SYSTEM-REVIEW-2025-11-22.md)
   - [PDF Processing Checklist](./02-development/code-review/pdf-processing-checklist.md)
 
 - **[testing/](./02-development/testing/)** - Testing documentation (~15 files, consolidated)
@@ -148,6 +155,8 @@
 - [Shadcn/UI Installation](./04-frontend/shadcn-ui-installation.md)
 - [Testing Strategy](./04-frontend/testing-strategy.md)
 - [Use Cases](./04-frontend/use-cases.md)
+- [**User Flows**](./04-frontend/user-flows.md) ⭐ **CONSOLIDATED** - Complete user journeys (v2.0)
+  - [Edge Cases & Error States](./04-frontend/user-flows-edge-cases.md) - Error handling supplement
 
 ### [05 - Operations](./05-operations/)
 **Audience**: DevOps, SRE, on-call engineers
@@ -195,6 +204,7 @@
 **Purpose**: Security audits, vulnerability remediation, best practices
 
 - [**Security Patterns**](./06-security/security-patterns.md) ⭐ **CONSOLIDATED** - All security patterns (resource management, credentials, validation, encoding)
+- [**Code Warnings Remediation Plan**](./06-security/code-warnings-remediation-plan.md) ⭐ **NEW** - Security analyzer remediation (CA3xxx, CA2xxx, S2xxx)
 - [Security Audit 2025-11-04](./06-security/security-audit-2025-11-04.md)
 - [Environment Variables Production Guide](./06-security/environment-variables-production.md) ⭐ **NEW**
 - [Code Scanning Remediation](./06-security/code-scanning-remediation-summary.md)
@@ -411,11 +421,15 @@ See [README.md - Contributing Documentation](./README.md#-contributing-documenta
 **Legend**: ⭐ = Essential reading, highly recommended
 
 **Index Metadata**:
-- **Version**: 2.2
+- **Version**: 2.3
 - **Maintainer**: Documentation Team
-- **Last Updated**: 2025-12-13T10:59:23.970Z
-- **Next Review**: 2025-12-24
-- **Recent Changes**: Added User Guide (Italian) for end users (BGAI-084)
+- **Last Updated**: 2025-12-18
+- **Next Review**: 2025-12-28
+- **Recent Changes**:
+  - Cleanup: Removed obsolete/temp files from docs root
+  - Consolidated: issues/ → code-warnings-remediation-plan.md
+  - Merged: code-reviews/, diagrams/, features/ → proper numbered folders
+  - Consolidated: user-flows files (v2.0)
 
 
 

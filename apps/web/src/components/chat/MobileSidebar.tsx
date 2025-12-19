@@ -1,98 +1,24 @@
 /**
- * MobileSidebar - Mobile-optimized drawer sidebar for chat
+ * MobileSidebar - Mobile-optimized drawer sidebar for chat (Issue #2232)
  *
- * Renders a Sheet (drawer) component on mobile viewports (< 768px).
- * Contains the same content as ChatSidebar but optimized for touch interaction.
+ * DEPRECATED: This component is no longer used.
+ * Mobile sidebar functionality is now handled by ChatLayout using Sheet.
  *
- * Features:
- * - Slides in from left on mobile
- * - Touch-friendly 44x44px minimum targets (WCAG 2.1 AA)
- * - Closes automatically on chat creation
- * - Full-height with proper viewport handling (h-dvh)
+ * @deprecated Use ChatLayout with sidebarContent prop instead
  */
 
 import React from 'react';
-import { cn } from '@/lib/utils';
-import { useChatStore } from '@/store/chat/store';
-import { GameSelector } from './GameSelector';
-import { AgentSelector } from './AgentSelector';
-import { ChatHistory } from './ChatHistory';
-import { LoadingButton } from '../loading/LoadingButton';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Game } from '@/types';
 
 interface MobileSidebarProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
+/**
+ * @deprecated Use ChatLayout component instead. This component is kept for backward compatibility only.
+ */
 export function MobileSidebar({ open, onOpenChange }: MobileSidebarProps) {
-  // Issue #1676: Migrated from useChatContext to direct Zustand store
-  const { games, selectedGameId, selectedAgentId, loading, createChat } = useChatStore(state => ({
-    games: state.games,
-    selectedGameId: state.selectedGameId,
-    selectedAgentId: state.selectedAgentId,
-    loading: state.loading,
-    createChat: state.createChat,
-  }));
+  console.warn('MobileSidebar is deprecated. Use ChatLayout with sidebarContent prop instead.');
 
-  const handleCreateChat = async () => {
-    await createChat();
-    // Close drawer after chat creation on mobile
-    onOpenChange(false);
-  };
-
-  const isDisabled = !selectedGameId || !selectedAgentId || loading.creating;
-
-  return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="left"
-        className="w-[320px] p-0 flex flex-col h-dvh"
-        aria-label="Mobile chat sidebar"
-      >
-        <SheetHeader className="p-4 border-b border-[#dadce0] shrink-0">
-          <div className="flex justify-between items-center mb-4">
-            <SheetTitle className="text-lg">MeepleAI Chat</SheetTitle>
-            {/* Game context badge */}
-            {selectedGameId && (
-              <div
-                className="px-3 py-1 bg-[#e8f0fe] text-[#1a73e8] rounded-xl text-[11px] font-semibold border border-[#1a73e8]"
-                title={`Currently chatting about: ${games.find((g: Game) => g.id === selectedGameId)?.title ?? 'Unknown game'}`}
-                aria-label={`Active game context: ${games.find((g: Game) => g.id === selectedGameId)?.title ?? 'Unknown game'}`}
-              >
-                {games.find((g: Game) => g.id === selectedGameId)?.title ?? '...'}
-              </div>
-            )}
-          </div>
-
-          {/* Game Selector */}
-          <GameSelector />
-
-          {/* Agent Selector */}
-          <AgentSelector />
-
-          {/* New Chat Button - Touch-friendly 44px min height */}
-          <LoadingButton
-            isLoading={loading.creating}
-            loadingText="Creazione..."
-            onClick={handleCreateChat}
-            disabled={isDisabled}
-            aria-label="Create new chat"
-            className={cn(
-              'w-full py-2.5 text-white border-none rounded text-sm font-medium touch-target',
-              isDisabled ? 'bg-[#dadce0] cursor-not-allowed' : 'bg-[#1a73e8] cursor-pointer'
-            )}
-          >
-            + Nuova Chat
-          </LoadingButton>
-        </SheetHeader>
-
-        {/* Chat History - Scrollable area */}
-        <div className="flex-1 overflow-hidden">
-          <ChatHistory />
-        </div>
-      </SheetContent>
-    </Sheet>
-  );
+  return null;
 }

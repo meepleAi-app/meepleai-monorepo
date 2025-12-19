@@ -44,7 +44,7 @@ const prometheusReporter: any[] = process.env.PROMETHEUS_REMOTE_WRITE_URL
 
 export default defineConfig<ChromaticConfig>({
   testDir: './e2e',
-  timeout: 60000, // 60s global timeout for dev mode
+  timeout: process.env.CI === 'true' ? 90000 : 60000, // Issue #20375956158: 90s in CI for accessibility tests, 60s local
   fullyParallel: process.env.CI !== 'true', // Issue #1868: Disable parallel in CI to prevent axe-core race conditions
   forbidOnly: process.env.CI === 'true',
   retries: process.env.CI === 'true' ? 2 : 0, // Issue #2008: Retry strategy - CI transient failures, local fast feedback

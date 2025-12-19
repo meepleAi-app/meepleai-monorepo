@@ -37,10 +37,10 @@ function formatViolations(violations: Result[]) {
  * These rules are disabled while the underlying UI issues are being fixed
  * TODO: Remove these exclusions as issues are resolved
  *
- * - color-contrast: Multiple components have insufficient color contrast (Issue #1868)
- * - aria-allowed-attr: Chat textarea has invalid aria-describedby (Issue #1868)
+ * Issue #1868 is CLOSED - re-enabling rules to verify fixes
+ * Phase 5 (Issue #2234): Full WCAG 2.1 AA audit without exclusions
  */
-const KNOWN_A11Y_ISSUES = ['color-contrast', 'aria-allowed-attr'];
+const KNOWN_A11Y_ISSUES: string[] = [];
 
 /**
  * CI Environment Detection

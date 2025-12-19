@@ -171,13 +171,13 @@
   --card-foreground: 30 15% 15%;
   --popover: 0 0% 100%;
   --popover-foreground: 30 15% 15%;
-  --primary: 25 95% 53%;            /* #F97316 - Arancio Catan-inspired */
+  --primary: 25 95% 38%;            /* WCAG AA: Darkened to 38% for 4.5:1 contrast with white (Issue #2234) */
   --primary-foreground: 0 0% 100%;
-  --secondary: 142 76% 36%;         /* #16A34A - Verde Carcassonne */
+  --secondary: 142 76% 28%;         /* WCAG AA: Darkened to 28% for 4.5:1 contrast on light bg (Issue #2234) */
   --secondary-foreground: 0 0% 100%;
   --muted: 30 20% 90%;              /* Beige medio - muted backgrounds */
-  --muted-foreground: 30 12% 40%;   /* Darkened from 45% for WCAG AA contrast (4.5:1) */
-  --accent: 271 91% 65%;            /* #A855F7 - Viola giochi */
+  --muted-foreground: 30 12% 36%;   /* WCAG AA: Darkened to 36% for 4.5:1 contrast (Issue #2234) */
+  --accent: 271 91% 55%;            /* WCAG AA: Darkened to 55% for 4.5:1 contrast with white (Issue #2234) */
   --accent-foreground: 0 0% 100%;
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 0 0% 98%;
@@ -204,11 +204,11 @@
   --color-primary-200: hsl(25 92% 88%);
   --color-primary-300: hsl(25 92% 75%);
   --color-primary-500: hsl(var(--primary));
-  --color-primary-600: hsl(25 95% 45%);
-  --color-primary-700: hsl(25 95% 38%);
+  --color-primary-600: hsl(25 95% 38%);   /* Adjusted for consistency */
+  --color-primary-700: hsl(25 95% 32%);   /* Darker for high contrast needs */
   --color-secondary-200: hsl(142 45% 82%);
   --color-secondary-500: hsl(var(--secondary));
-  --color-secondary-600: hsl(142 76% 30%);
+  --color-secondary-600: hsl(142 76% 24%); /* WCAG AA: Extra dark for high contrast needs */
   --color-blue: hsl(221 83% 53%);
   --color-green: hsl(142 76% 36%);
   --color-yellow: hsl(45 93% 47%);

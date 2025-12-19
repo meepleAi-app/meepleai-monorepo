@@ -58,7 +58,7 @@ export function PublicLayout({
       <PublicHeader user={user} onLogout={onLogout} />
 
       {/* Main Content */}
-      <main className={cn('flex-1 w-full', className)}>
+      <main id="main-content" className={cn('flex-1 w-full', className)}>
         <div className={cn('mx-auto px-4 sm:px-6 lg:px-8 py-8', containerClass)}>{children}</div>
       </main>
 

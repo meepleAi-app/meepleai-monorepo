@@ -152,7 +152,8 @@ export default function LandingPage() {
       {/* Header provided by (public)/layout.tsx → PublicLayout → PublicHeader */}
 
       {/* Main Landing Content */}
-      <main id="main-content" className="flex-1">
+      {/* Note: <main> wrapper provided by PublicLayout - avoid nested landmarks (Issue #2234) */}
+      <>
         {/* Hero Section */}
         <HeroSection />
 
@@ -164,7 +165,7 @@ export default function LandingPage() {
 
         {/* CTA Section (extracted from LandingFooter) */}
         <CallToActionSection />
-      </main>
+      </>
 
       {/* Footer provided by (public)/layout.tsx → PublicLayout → PublicFooter */}
     </>

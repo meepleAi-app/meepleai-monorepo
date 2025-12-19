@@ -18,7 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LoginForm, LoginFormData } from './LoginForm';
 import { RegisterForm, RegisterFormData } from './RegisterForm';
 import OAuthButtons from './OAuthButtons';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth, type AuthUser } from '@/hooks/useAuth';
 
 // ============================================================================
 // Component Props
@@ -28,8 +28,7 @@ export interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
   defaultMode?: 'login' | 'register';
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Auth provider user type varies
-  onSuccess?: (user: any) => void;
+  onSuccess?: (user: AuthUser) => void;
   sessionExpiredMessage?: boolean;
 }
 

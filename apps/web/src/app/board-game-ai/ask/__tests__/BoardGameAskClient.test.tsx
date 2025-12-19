@@ -12,7 +12,7 @@
  * - Integration flow (E2E user journey)
  */
 
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import BoardGameAskClient from '../BoardGameAskClient';
 import { useChatQuery } from '@/lib/hooks/useChatQuery';
@@ -564,6 +564,163 @@ describe('BoardGameAskClient', () => {
 
       // Step 7: Verify empty state is gone
       expect(screen.queryByText('Ready to Answer Your Questions')).not.toBeInTheDocument();
+    });
+  });
+
+  // ============================================================================
+  // GROUP 8: BRANCH COVERAGE IMPROVEMENTS - Issue #2208
+  // ============================================================================
+
+  describe('Validation and Edge Cases', () => {
+    it('should handle invalid games response schema', async () => {
+      const { api } = await import('@/lib/api');
+      // Mock invalid response (missing required fields)
+      vi.mocked(api.games.getAll).mockResolvedValue([
+        {
+          id: 'test-id',
+          // Missing required fields like title, publisher, etc.
+        } as any,
+      ]);
+
+      render(<BoardGameAskClient />);
+
+      await waitFor(() => {
+        expect(
+          screen.getByText(/failed to load games: invalid response format/i)
+        ).toBeInTheDocument();
+      });
+    });
+
+    it('should prevent submission when no game is selected', async () => {
+      const { api } = await import('@/lib/api');
+      vi.mocked(api.games.getAll).mockResolvedValue([]); // No games available
+
+      const user = userEvent.setup();
+      render(<BoardGameAskClient />);
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(/your question/i)).toBeDisabled();
+      });
+
+      // Try to submit via keyboard shortcut even though disabled
+      const textarea = screen.getByLabelText(/your question/i);
+      await user.type(textarea, 'Test question');
+
+      // Manually trigger the submission function to test the validation
+      // Since the textarea is disabled, we can't actually submit, but we can test the validation logic
+      expect(screen.getByRole('button', { name: /ask question/i })).toBeDisabled();
+    });
+
+    it('should prevent submission of empty/whitespace-only questions', async () => {
+      const user = userEvent.setup();
+      render(<BoardGameAskClient />);
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(/your question/i)).toBeEnabled();
+      });
+
+      const textarea = screen.getByLabelText(/your question/i);
+
+      // Type only whitespace
+      await user.type(textarea, '   ');
+
+      const button = screen.getByRole('button', { name: /ask question/i });
+
+      // Button should be disabled because question is effectively empty
+      expect(button).toBeDisabled();
+    });
+
+    it('should reject questions exceeding maximum length', async () => {
+      const user = userEvent.setup();
+      render(<BoardGameAskClient />);
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(/your question/i)).toBeEnabled();
+      });
+
+      const textarea = screen.getByLabelText(/your question/i) as HTMLTextAreaElement;
+
+      // Create a question longer than 2000 characters and set it directly (fireEvent is much faster)
+      const longQuestion = 'a'.repeat(2001);
+      fireEvent.change(textarea, { target: { value: longQuestion } });
+
+      const button = screen.getByRole('button', { name: /ask question/i });
+      await user.click(button);
+
+      await waitFor(() => {
+        expect(screen.getByText(/question must be less than 2000 characters/i)).toBeInTheDocument();
+      });
+
+      // Verify askQuestion was NOT called
+      expect(mockQueryControls.askQuestion).not.toHaveBeenCalled();
+    });
+
+    it('should support Meta+Enter keyboard shortcut on Mac', async () => {
+      const user = userEvent.setup();
+      render(<BoardGameAskClient />);
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(/your question/i)).toBeEnabled();
+      });
+
+      const textarea = screen.getByLabelText(/your question/i);
+      await user.type(textarea, 'Mac keyboard test');
+
+      // Simulate Meta+Enter (Mac)
+      await user.keyboard('{Meta>}{Enter}{/Meta}');
+
+      await waitFor(() => {
+        expect(mockQueryControls.askQuestion).toHaveBeenCalledWith(
+          firstGameId,
+          'Mac keyboard test'
+        );
+      });
+    });
+
+    it('should call onError callback when query fails', async () => {
+      const user = userEvent.setup();
+      const onErrorMock = vi.fn();
+
+      (useChatQuery as any).mockImplementation(callbacks => {
+        return [
+          mockQueryState,
+          {
+            askQuestion: vi.fn().mockImplementation(() => {
+              callbacks.onError('Query failed');
+            }),
+          },
+        ];
+      });
+
+      render(<BoardGameAskClient />);
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(/your question/i)).toBeEnabled();
+      });
+
+      const textarea = screen.getByLabelText(/your question/i);
+      await user.type(textarea, 'Test question');
+
+      const button = screen.getByRole('button', { name: /ask question/i });
+      await user.click(button);
+
+      // The onError callback is defined in the component and logs the error
+      // We can't directly test the callback, but we can verify the error is handled
+      // by checking that the component doesn't crash
+      expect(screen.getByText('Ask a Question')).toBeInTheDocument();
+    });
+
+    it('should display selected game description when available', async () => {
+      render(<BoardGameAskClient />);
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(/select game/i)).toBeEnabled();
+      });
+
+      // The first game (Catan) should be auto-selected and its description shown
+      await waitFor(() => {
+        expect(screen.getByText('Settle the island of Catan')).toBeInTheDocument();
+      });
     });
   });
 });

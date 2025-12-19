@@ -69,39 +69,54 @@ bash tools/cleanup/cleanup-caches.sh --yes
 ---
 
 ### 🧪 **cleanup-test-processes.ps1**
-**Purpose:** Kill hanging test processes (Playwright, Jest, dotnet test) on Windows
+**Purpose:** Kill stale test processes that lock DLL files during `dotnet test` (Windows)
 
 **What it does:**
-1. Finds processes: `node.exe` (Playwright/Jest), `dotnet.exe`, `testhost.exe`
+1. Finds processes: `testhost.exe` (DLL locking culprit), `node.exe`, `dotnet.exe`, `jest`, `VBCSCompiler`
 2. Filters for test-related processes (checks command line arguments)
-3. Terminates processes gracefully, then forcefully if needed
-4. Prevents port conflicts from zombie test processes
+3. Kills orphaned testhost processes (>10 minutes runtime)
+4. Protects IDEs and development tools (VS Code, Rider, etc.)
+5. Prevents MSB3027 errors (DLL file locking during build)
 
-**Usage:**
+**Usage via package.json (Recommended):**
+```bash
+# From apps/web directory:
+pnpm cleanup:testhost     # Kill only testhost (DLL locking fix)
+pnpm cleanup:all          # Kill all stale test processes
+pnpm cleanup:dry-run      # Preview what would be killed
+```
+
+**Direct PowerShell usage:**
 ```powershell
-# Kill all hanging test processes
+# Quick fix for DLL locking (testhost only)
+.\tools\cleanup\cleanup-test-processes.ps1 -TestHostOnly
+
+# Full cleanup (all test processes)
 .\tools\cleanup\cleanup-test-processes.ps1
 
 # Dry run - show processes without killing
-.\tools\cleanup\cleanup-test-processes.ps1 -WhatIf
+.\tools\cleanup\cleanup-test-processes.ps1 -DryRun -Verbose
 
-# Verbose output
-.\tools\cleanup\cleanup-test-processes.ps1 -Verbose
+# Custom memory threshold
+.\tools\cleanup\cleanup-test-processes.ps1 -MemoryThresholdMB 200
 ```
 
 **Common scenarios:**
+- Error: "Could not copy Api.dll - file is being used by another process"
+- Testhost processes locking DLL files after `dotnet test`
 - Playwright browser processes stuck after test failure
 - `npm run test:watch` left running in background
-- `dotnet test` hung waiting for debugger
 
-**Who uses it:** Windows developers experiencing test hangs
+**Who uses it:** Windows developers experiencing DLL locking or test hangs
 **When:**
+- Before running `dotnet build` or `dotnet test`
 - After Ctrl+C interrupted test run
 - Port 3000/8080 already in use errors
 - "Process is using the file" errors
 
-**Requirements:** PowerShell 5.1+, Administrator privileges (for force-kill)
-**Alternative (Linux/macOS):** `pkill -f "node.*test"`, `pkill dotnet`
+**Requirements:** PowerShell 5.1+, Windows 10/11
+**Alternative (Linux/macOS):** Not needed - DLL locking is Windows-specific
+**Related:** Issue #2210
 
 ---
 

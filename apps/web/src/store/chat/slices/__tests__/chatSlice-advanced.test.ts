@@ -51,13 +51,19 @@ describe('chatSlice - Advanced Features', () => {
         })),
       ];
 
-      const newThread = createMockChatThread({ id: 'new', createdAt: '2024-01-07T00:00:00Z', status: 'Active' });
+      const newThread = createMockChatThread({
+        id: 'new',
+        createdAt: '2024-01-07T00:00:00Z',
+        status: 'Active',
+      });
 
       useChatStore.setState({
         selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
         selectedAgentId: 'agent-1',
         chatsByGame: { '770e8400-e29b-41d4-a716-000000000001': activeThreads },
-        activeChatIds: { '770e8400-e29b-41d4-a716-000000000001': 'aa0e8400-e29b-41d4-a716-000000000006' },
+        activeChatIds: {
+          '770e8400-e29b-41d4-a716-000000000001': 'aa0e8400-e29b-41d4-a716-000000000006',
+        },
       });
 
       mockChat.createThread.mockResolvedValue(newThread);
@@ -89,7 +95,11 @@ describe('chatSlice - Advanced Features', () => {
         })),
       ];
 
-      const newThread = createMockChatThread({ id: 'new', createdAt: '2024-01-07T00:00:00Z', status: 'Active' });
+      const newThread = createMockChatThread({
+        id: 'new',
+        createdAt: '2024-01-07T00:00:00Z',
+        status: 'Active',
+      });
 
       useChatStore.setState({
         selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
@@ -213,7 +223,9 @@ describe('chatSlice - Advanced Features', () => {
       await useChatStore.getState().selectChat('aa0e8400-e29b-41d4-a716-000000000001');
 
       const state = useChatStore.getState();
-      expect(state.activeChatIds['770e8400-e29b-41d4-a716-000000000001']).toBe('aa0e8400-e29b-41d4-a716-000000000001');
+      expect(state.activeChatIds['770e8400-e29b-41d4-a716-000000000001']).toBe(
+        'aa0e8400-e29b-41d4-a716-000000000001'
+      );
 
       expect(loadMessagesSpy).toHaveBeenCalledWith('aa0e8400-e29b-41d4-a716-000000000001');
     });
@@ -239,10 +251,14 @@ describe('chatSlice - Advanced Features', () => {
       const loadMessagesSpy = vi.fn().mockRejectedValue(new Error('Load failed'));
       useChatStore.setState({ loadMessages: loadMessagesSpy } as any);
 
-      await expect(useChatStore.getState().selectChat('aa0e8400-e29b-41d4-a716-000000000001')).rejects.toThrow('Load failed');
+      await expect(
+        useChatStore.getState().selectChat('aa0e8400-e29b-41d4-a716-000000000001')
+      ).rejects.toThrow('Load failed');
 
       const state = useChatStore.getState();
-      expect(state.activeChatIds['770e8400-e29b-41d4-a716-000000000001']).toBe('aa0e8400-e29b-41d4-a716-000000000001');
+      expect(state.activeChatIds['770e8400-e29b-41d4-a716-000000000001']).toBe(
+        'aa0e8400-e29b-41d4-a716-000000000001'
+      );
     });
   });
 
@@ -273,7 +289,9 @@ describe('chatSlice - Advanced Features', () => {
       // Update title
       useChatStore.getState().updateChatTitle('new', 'Updated Title');
       state = useChatStore.getState();
-      expect(state.chatsByGame['770e8400-e29b-41d4-a716-000000000001'][0].title).toBe('Updated Title');
+      expect(state.chatsByGame['770e8400-e29b-41d4-a716-000000000001'][0].title).toBe(
+        'Updated Title'
+      );
 
       // Delete chat
       mockApi.delete.mockResolvedValue({} as any);
@@ -285,8 +303,12 @@ describe('chatSlice - Advanced Features', () => {
     });
 
     it('should maintain separate state for different games', async () => {
-      const game1Chats = [createMockChatThread({ id: 'g1-thread', gameId: '770e8400-e29b-41d4-a716-000000000001' })];
-      const game2Chats = [createMockChatThread({ id: 'g2-thread', gameId: '770e8400-e29b-41d4-a716-000000000002' })];
+      const game1Chats = [
+        createMockChatThread({ id: 'g1-thread', gameId: '770e8400-e29b-41d4-a716-000000000001' }),
+      ];
+      const game2Chats = [
+        createMockChatThread({ id: 'g2-thread', gameId: '770e8400-e29b-41d4-a716-000000000002' }),
+      ];
 
       mockChat.getThreadsByGame.mockResolvedValueOnce(game1Chats);
       await useChatStore.getState().loadChats('770e8400-e29b-41d4-a716-000000000001');
@@ -317,7 +339,10 @@ describe('chatSlice - Advanced Features', () => {
 
     it('should handle very large title strings', () => {
       const longTitle = 'A'.repeat(10000);
-      const thread = createMockChatThread({ id: 'aa0e8400-e29b-41d4-a716-000000000001', title: 'Short' });
+      const thread = createMockChatThread({
+        id: 'aa0e8400-e29b-41d4-a716-000000000001',
+        title: 'Short',
+      });
 
       useChatStore.setState({
         selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
@@ -334,14 +359,16 @@ describe('chatSlice - Advanced Features', () => {
       const specialId = 'thread-with-special-chars-!@#$%^&*()';
       useChatStore.setState({
         selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
-        chatsByGame: { '770e8400-e29b-41d4-a716-000000000001': [createMockChatThread({ id: specialId })] },
+        chatsByGame: {
+          '770e8400-e29b-41d4-a716-000000000001': [createMockChatThread({ id: specialId })],
+        },
       });
 
-      mockApi.delete.mockResolvedValue({} as any);
+      mockApi.chat.deleteThread.mockResolvedValue(undefined);
 
       await useChatStore.getState().deleteChat(specialId);
 
-      expect(mockApi.delete).toHaveBeenCalledWith(`/api/v1/chats/${specialId}`);
+      expect(mockApi.chat.deleteThread).toHaveBeenCalledWith(specialId);
     });
   });
 });

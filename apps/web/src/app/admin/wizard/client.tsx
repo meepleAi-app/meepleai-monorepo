@@ -10,14 +10,11 @@
  * 4. Q&A → Ask a question about the game rules
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuthUser } from '@/components/auth/AuthProvider';
 import { AdminAuthGuard } from '@/components/admin/AdminAuthGuard';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/loading';
 import { toast } from '@/components/layout';
 import { api } from '@/lib/api';
@@ -60,10 +57,10 @@ export function AdminWizardClient() {
     processingComplete: false,
   });
 
-  const [loading, setLoading] = useState(false);
+  const [_loading, _setLoading] = useState(false);
 
   // Step navigation
-  const goToStep = useCallback((step: WizardStep) => {
+  const _goToStep = useCallback((step: WizardStep) => {
     setState(prev => ({ ...prev, currentStep: step }));
   }, []);
 
@@ -96,7 +93,7 @@ export function AdminWizardClient() {
         try {
           await api.pdf.setVisibility(pdfId, true);
           toast.success('PDF aggiunto alla libreria pubblica');
-        } catch (err) {
+        } catch (_err) {
           toast.error('Errore nel rendere pubblico il PDF');
         }
       }
@@ -191,7 +188,7 @@ export function AdminWizardClient() {
               {STEPS.map((step, index) => {
                 const isActive = step.id === state.currentStep;
                 const isCompleted = index < currentStepIndex;
-                const isUpcoming = index > currentStepIndex;
+                const _isUpcoming = index > currentStepIndex;
 
                 return (
                   <div

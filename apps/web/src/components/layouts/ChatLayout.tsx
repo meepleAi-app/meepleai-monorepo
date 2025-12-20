@@ -27,7 +27,7 @@ import {
 } from '@/components/ui/sheet';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { MenuIcon } from 'lucide-react';
-import { Game, ChatThread } from '@/types';
+import { Game } from '@/types';
 
 const CHAT_SIDEBAR_COLLAPSED_KEY = 'chat-sidebar-collapsed';
 

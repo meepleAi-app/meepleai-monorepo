@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { SystemStatus, defaultServices, type ServiceStatus } from './SystemStatus';
+import { SystemStatus, defaultServices } from './SystemStatus';
 
 /**
  * SystemStatus Component - Issue #885

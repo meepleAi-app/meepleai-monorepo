@@ -10,7 +10,7 @@ import { fn } from 'storybook/test';
 import { AuthModal } from './AuthModal';
 
 // Mock useAuth hook
-const mockUseAuth = {
+const _mockUseAuth = {
   login: fn(async () => ({ id: '123', email: 'test@example.com' })),
   register: fn(async () => ({ id: '123', email: 'test@example.com' })),
   error: null,

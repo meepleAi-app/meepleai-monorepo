@@ -7,8 +7,6 @@
  * @deprecated Use ChatLayout with sidebarContent prop instead
  */
 
-import React from 'react';
-
 interface MobileSidebarProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -17,7 +15,7 @@ interface MobileSidebarProps {
 /**
  * @deprecated Use ChatLayout component instead. This component is kept for backward compatibility only.
  */
-export function MobileSidebar({ open, onOpenChange }: MobileSidebarProps) {
+export function MobileSidebar({ open: _open, onOpenChange: _onOpenChange }: MobileSidebarProps) {
   console.warn('MobileSidebar is deprecated. Use ChatLayout with sidebarContent prop instead.');
 
   return null;

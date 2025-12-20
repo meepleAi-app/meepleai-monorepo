@@ -53,7 +53,7 @@ const QUICK_QUESTIONS: QuickQuestion[] = [
 // Internal Component (needs ChatStore context)
 // ============================================================================
 
-function GameChatTabInternal({ gameId, gameTitle }: GameChatTabProps) {
+function GameChatTabInternal({ gameId, gameTitle: _gameTitle }: GameChatTabProps) {
   // Issue #1676: Migrated from useChatContext to direct Zustand store
   const { selectGame, sendMessage } = useChatStore(state => ({
     selectGame: state.selectGame,

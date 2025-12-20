@@ -134,7 +134,7 @@ export const createChatSlice: StateCreator<
   },
 
   deleteChat: async chatId => {
-    const { selectedGameId, setLoading, setError, activeChatIds } = get();
+    const { selectedGameId, setLoading, setError, activeChatIds: _activeChatIds } = get();
 
     if (!selectedGameId) return;
 

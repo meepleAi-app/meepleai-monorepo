@@ -5,7 +5,7 @@
  */
 
 import { test, expect } from './fixtures/chromatic';
-import { AuthHelper, USER_FIXTURES } from './pages';
+import { AuthHelper } from './pages';
 import { expectForbiddenOrRedirect, expectPageLoaded } from './helpers/assertions';
 import { WaitHelper } from './helpers/WaitHelper';
 

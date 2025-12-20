@@ -55,7 +55,7 @@ interface GameNotes {
 }
 
 export default function GameDetailPage() {
-  const router = useRouter();
+  const _router = useRouter();
   const params = useParams();
   const id = params?.id as string | undefined;
   const gameId = typeof id === 'string' ? id : null;

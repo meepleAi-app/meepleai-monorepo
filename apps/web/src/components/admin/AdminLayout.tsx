@@ -98,7 +98,7 @@ export function AdminLayout({
   );
 
   // Prevent hydration mismatch by showing default state initially
-  const sidebarWidth = !mounted ? 'lg:w-60' : collapsed ? 'lg:w-16' : 'lg:w-60';
+  const _sidebarWidth = !mounted ? 'lg:w-60' : collapsed ? 'lg:w-16' : 'lg:w-60';
 
   const badgeSummary =
     badges && Object.keys(badges).length > 0 ? (

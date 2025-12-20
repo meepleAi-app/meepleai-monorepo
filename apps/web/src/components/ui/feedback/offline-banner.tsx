@@ -77,8 +77,13 @@ export interface OfflineBannerProps
 const OfflineBanner = React.forwardRef<HTMLDivElement, OfflineBannerProps>(
   ({ className, queuedActionsCount = 0, onRetry, dismissible = false, message, ...props }, ref) => {
     const [isDismissed, setIsDismissed] = React.useState(false);
-    const { isOnline, isOffline, connectionQuality, isReconnecting, reconnectAttempts } =
-      useNetworkStatus();
+    const {
+      isOnline: _isOnline,
+      isOffline,
+      connectionQuality,
+      isReconnecting,
+      reconnectAttempts,
+    } = useNetworkStatus();
 
     // Reset dismissed state when going offline again
     React.useEffect(() => {

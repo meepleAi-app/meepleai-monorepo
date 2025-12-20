@@ -139,7 +139,7 @@ export function ManagementPageClient() {
           addToast('success', `${selectedKeys.size} API key(s) deleted successfully`);
           setSelectedKeys(new Set());
           fetchApiKeys();
-        } catch (err) {
+        } catch (_err) {
           addToast('error', 'Failed to delete some API keys');
         }
       },
@@ -162,7 +162,7 @@ export function ManagementPageClient() {
       window.URL.revokeObjectURL(url);
 
       addToast('success', 'API keys exported successfully');
-    } catch (err) {
+    } catch (_err) {
       addToast('error', 'Failed to export API keys');
     }
   }, [apiKeyFilters, addToast]);
@@ -206,7 +206,7 @@ export function ManagementPageClient() {
       window.URL.revokeObjectURL(url);
 
       addToast('success', 'Users exported successfully');
-    } catch (err) {
+    } catch (_err) {
       addToast('error', 'Failed to export users');
     }
   }, [addToast]);
@@ -221,7 +221,7 @@ export function ManagementPageClient() {
           `Import complete: ${result.successCount} created, ${result.failureCount} failed`
         );
         fetchUsers();
-      } catch (err) {
+      } catch (_err) {
         addToast('error', 'Failed to import users');
       }
     },
@@ -242,7 +242,7 @@ export function ManagementPageClient() {
           addToast('success', `${selectedUsers.size} user(s) deleted successfully`);
           setSelectedUsers(new Set());
           fetchUsers();
-        } catch (err) {
+        } catch (_err) {
           addToast('error', 'Failed to delete some users');
         }
       },

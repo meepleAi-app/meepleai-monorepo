@@ -46,7 +46,7 @@ export interface ChatHistorySectionProps {
  *
  * Future Enhancement: Implement data fetching hook and uncomment UI below.
  */
-export function ChatHistorySection({ userId }: ChatHistorySectionProps) {
+export function ChatHistorySection({ userId: _userId }: ChatHistorySectionProps) {
   return (
     <section className="space-y-4" aria-label="Chat history">
       <div className="flex items-center justify-between">

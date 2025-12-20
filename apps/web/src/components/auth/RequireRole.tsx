@@ -75,7 +75,7 @@ export function RequireRole({
   unauthenticatedRedirect = '/login',
 }: RequireRoleProps) {
   const router = useRouter();
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const [_user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const hasChecked = useRef(false);
 

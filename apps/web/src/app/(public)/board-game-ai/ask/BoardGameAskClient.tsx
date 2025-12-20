@@ -45,7 +45,7 @@ export default function BoardGameAskClient() {
 
   // Query hook (Issue #1006: Non-streaming backend API)
   const [queryState, queryControls] = useChatQuery({
-    onComplete: (answer, citations, metadata) => {
+    onComplete: (answer, citations, _metadata) => {
       // Add assistant response to conversation history
       setConversationHistory(prev => [
         ...prev,

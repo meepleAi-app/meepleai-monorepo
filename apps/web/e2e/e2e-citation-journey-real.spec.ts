@@ -54,7 +54,6 @@ import {
   uploadPdfAndWaitForProcessing,
   navigateToChatAndSelectGame,
   sendQuestionAndWaitForResponse,
-  verifyCitationDisplay,
 } from './helpers/citation-test-utils';
 import { WaitHelper } from './helpers/WaitHelper';
 

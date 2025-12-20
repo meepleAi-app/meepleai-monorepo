@@ -41,11 +41,6 @@ type AuthUser = {
   role: string;
 };
 
-type AuthResponse = {
-  user: AuthUser;
-  expiresAt: string;
-};
-
 type PasswordStrength = 'weak' | 'medium' | 'strong';
 
 interface PasswordValidation {

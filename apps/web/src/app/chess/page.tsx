@@ -18,17 +18,6 @@ type AuthUser = {
   role: string;
 };
 
-type AuthResponse = {
-  user: AuthUser;
-  expiresAt: string;
-};
-
-type ChessResponse = {
-  answer: string;
-  fen?: string;
-  suggestedMoves?: string[];
-};
-
 export default function ChessPage() {
   // Authentication
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
@@ -201,7 +190,7 @@ export default function ChessPage() {
     }
   };
 
-  const onDrop = ({ piece, sourceSquare, targetSquare }: PieceDropHandlerArgs) => {
+  const onDrop = ({ piece: _piece, sourceSquare, targetSquare }: PieceDropHandlerArgs) => {
     // targetSquare can be null when piece is dropped off board
     if (!targetSquare) return false;
 

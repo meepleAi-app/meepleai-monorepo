@@ -21,7 +21,7 @@ function OAuthCallbackPageContent() {
   useEffect(() => {
     if (success === 'true') {
       setStatus('success');
-      const message =
+      const _message =
         isNewUser === 'true'
           ? 'Welcome! Your account has been created.'
           : 'Successfully logged in!';

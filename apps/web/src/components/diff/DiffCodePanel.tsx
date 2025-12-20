@@ -25,9 +25,9 @@ export function DiffCodePanel({
   collapsibleSections,
   onToggleSection,
   searchQuery,
-  highlightedChangeId,
+  highlightedChangeId: _highlightedChangeId,
   onScroll,
-  syncScrollTop
+  syncScrollTop,
 }: DiffCodePanelProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -47,10 +47,7 @@ export function DiffCodePanel({
   const isLineInCollapsedSection = (lineNum: number | null): boolean => {
     if (lineNum === null) return false;
     return collapsibleSections.some(
-      section =>
-        section.isCollapsed &&
-        lineNum >= section.startLine &&
-        lineNum <= section.endLine
+      section => section.isCollapsed && lineNum >= section.startLine && lineNum <= section.endLine
     );
   };
 
@@ -107,24 +104,16 @@ export function DiffCodePanel({
   return (
     <div className={`diff-code-panel diff-code-panel--${side}`}>
       <div className="diff-panel-header">
-        <h3 className="diff-panel-title">
-          {side === 'old' ? 'Old Version' : 'New Version'}
-        </h3>
+        <h3 className="diff-panel-title">{side === 'old' ? 'Old Version' : 'New Version'}</h3>
       </div>
-      <div
-        ref={scrollContainerRef}
-        className="diff-panel-content"
-        onScroll={handleScroll}
-      >
+      <div ref={scrollContainerRef} className="diff-panel-content" onScroll={handleScroll}>
         <div className="diff-panel-inner">
           <DiffLineNumberGutter
             lines={lines}
             side={side}
             collapsibleSections={collapsibleSections.filter(s => s.isCollapsed)}
           />
-          <div className="diff-code-blocks">
-            {renderLines()}
-          </div>
+          <div className="diff-code-blocks">{renderLines()}</div>
         </div>
       </div>
     </div>

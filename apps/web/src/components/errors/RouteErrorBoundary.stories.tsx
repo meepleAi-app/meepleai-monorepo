@@ -1,6 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { RouteErrorBoundary } from './RouteErrorBoundary';
-import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 
 /**

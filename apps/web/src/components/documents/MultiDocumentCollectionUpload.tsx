@@ -110,7 +110,7 @@ export function MultiDocumentCollectionUpload({
       });
 
       // Upload all PDFs concurrently
-      const uploadPromises = files.map(async (fileItem, index) => {
+      const uploadPromises = files.map(async (fileItem, _index) => {
         try {
           const pdfId = await uploadSinglePdf(fileItem.file);
 

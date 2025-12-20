@@ -27,7 +27,7 @@ interface GameCreationStepProps {
 type ImageInputMode = 'url' | 'upload';
 
 export function GameCreationStep({
-  pdfId,
+  pdfId: _pdfId,
   pdfFileName,
   onComplete,
   onBack,

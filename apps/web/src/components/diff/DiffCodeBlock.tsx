@@ -13,7 +13,7 @@ export interface DiffCodeBlockProps {
  * Memoized to prevent unnecessary re-renders on large diffs
  */
 export const DiffCodeBlock = React.memo<DiffCodeBlockProps>(
-  ({ line, isHighlighted, searchQuery }) => {
+  ({ line, isHighlighted, searchQuery: _searchQuery }) => {
     const isEmpty = !line.content && line.lineNumber === null;
 
     if (isEmpty) {
@@ -31,11 +31,7 @@ export const DiffCodeBlock = React.memo<DiffCodeBlockProps>(
         data-line-number={line.lineNumber}
       >
         <pre className="diff-line-content">
-          <PrismHighlighter
-            code={line.content}
-            language="json"
-            lineType={line.type}
-          />
+          <PrismHighlighter code={line.content} language="json" lineType={line.type} />
         </pre>
       </div>
     );

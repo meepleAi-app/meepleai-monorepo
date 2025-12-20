@@ -24,7 +24,7 @@ import { useAuthUser } from '@/components/auth/AuthProvider';
 import { AlertRuleList } from '@/components/admin/alert-rules/AlertRuleList';
 import { AlertRuleForm } from '@/components/admin/alert-rules/AlertRuleForm';
 import { alertRulesApi } from '@/lib/api/alert-rules.api';
-import type { AlertRule, AlertTemplate } from '@/lib/api/schemas/alert-rules.schemas';
+import type { AlertRule } from '@/lib/api/schemas/alert-rules.schemas';
 
 function AlertRulesClient() {
   const { user, loading: authLoading } = useAuthUser();

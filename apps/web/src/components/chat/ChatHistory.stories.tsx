@@ -1,7 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { ChatHistory } from './ChatHistory';
-import { ChatContext, type ChatContextValue } from '@/store/chat/StorybookContext';
-import { fn } from 'storybook/test';
+import { ChatContext } from '@/store/chat/StorybookContext';
 
 /**
  * Chat History - List of chat threads

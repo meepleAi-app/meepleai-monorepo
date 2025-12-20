@@ -21,20 +21,11 @@ import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AccessibleModal } from '../accessible/AccessibleModal';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormError,
-  FormDescription,
-} from '@/components/forms';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormError } from '@/components/forms';
 import { Input } from '@/components/ui/input';
 import { LoadingButton } from '@/components/loading/LoadingButton';
 import { exportChatFormSchema, type ExportChatFormData } from '@/lib/schemas/forms';
 import { exportChatAction, type ExportChatActionState } from '@/actions/chat';
-import { ExportFormat } from '@/lib/api';
 
 export interface ExportChatModalProps {
   /**
@@ -61,12 +52,7 @@ export interface ExportChatModalProps {
 /**
  * ExportChatModal component for exporting chat conversations
  */
-export function ExportChatModal({
-  isOpen,
-  onClose,
-  chatId,
-  gameName,
-}: ExportChatModalProps) {
+export function ExportChatModal({ isOpen, onClose, chatId, gameName }: ExportChatModalProps) {
   // React Hook Form with Zod validation (NO useState)
   const form = useForm<ExportChatFormData>({
     resolver: zodResolver(exportChatFormSchema),
@@ -103,10 +89,7 @@ export function ExportChatModal({
       }
     } catch (error) {
       form.setError('root', {
-        message:
-          error instanceof Error
-            ? error.message
-            : 'Errore durante l\'esportazione',
+        message: error instanceof Error ? error.message : "Errore durante l'esportazione",
       });
     }
   };
@@ -220,15 +203,9 @@ export function ExportChatModal({
               name="dateFrom"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-xs text-slate-600 dark:text-slate-400">
-                    Da
-                  </FormLabel>
+                  <FormLabel className="text-xs text-slate-600 dark:text-slate-400">Da</FormLabel>
                   <FormControl>
-                    <Input
-                      {...field}
-                      type="date"
-                      disabled={isSubmitting}
-                    />
+                    <Input {...field} type="date" disabled={isSubmitting} />
                   </FormControl>
                   <FormError />
                 </FormItem>
@@ -241,15 +218,9 @@ export function ExportChatModal({
               name="dateTo"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-xs text-slate-600 dark:text-slate-400">
-                    A
-                  </FormLabel>
+                  <FormLabel className="text-xs text-slate-600 dark:text-slate-400">A</FormLabel>
                   <FormControl>
-                    <Input
-                      {...field}
-                      type="date"
-                      disabled={isSubmitting}
-                    />
+                    <Input {...field} type="date" disabled={isSubmitting} />
                   </FormControl>
                   <FormError />
                 </FormItem>

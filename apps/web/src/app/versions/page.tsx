@@ -11,28 +11,13 @@ import { cn } from '@/lib/utils';
 import { getErrorMessage } from '@/lib/utils/errorHandler';
 import { logger } from '@/lib/logger';
 import { createErrorContext } from '@/lib/errors';
-import type {
-  RuleSpecVersion,
-  RuleSpecHistory,
-  RuleAtom,
-  RuleSpec,
-  RuleSpecDiff,
-  RuleAtomChange,
-  DiffSummary,
-  FieldChange,
-  ChangeType,
-} from '@/lib/api/schemas';
+import type { RuleSpecHistory, RuleSpecDiff } from '@/lib/api/schemas';
 
 type AuthUser = {
   id: string;
   email: string;
   displayName?: string | null;
   role: string;
-};
-
-type AuthResponse = {
-  user: AuthUser;
-  expiresAt: string;
 };
 
 function VersionHistoryContent() {

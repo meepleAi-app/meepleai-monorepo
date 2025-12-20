@@ -1,4 +1,4 @@
-import { Page, Locator, expect } from '@playwright/test';
+import { Locator, expect } from '@playwright/test';
 import { BasePage } from '../base/BasePage';
 import { IChatPage, ChatSource } from '../../types/pom-interfaces';
 import { getTextMatcher } from '../../fixtures/i18n';

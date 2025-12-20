@@ -5,8 +5,6 @@
 
 import type { UploadQueueStats } from '@/hooks/useUploadQueue';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
 
 interface UploadSummaryProps {
   stats: UploadQueueStats;
@@ -32,21 +30,16 @@ export function UploadSummary({ stats, onClose, onClearAll }: UploadSummaryProps
       className="p-5 border-2 rounded-lg mb-5"
       style={{
         borderColor: summaryColor,
-        backgroundColor: summaryBgColor
+        backgroundColor: summaryBgColor,
       }}
     >
       {/* Header */}
       <div className="flex items-center mb-4">
-        <div
-          aria-hidden="true"
-          className="text-[32px] mr-3 leading-none"
-        >
+        <div aria-hidden="true" className="text-[32px] mr-3 leading-none">
           {summaryIcon}
         </div>
         <div>
-          <div className="text-lg font-semibold text-gray-800">
-            Upload Complete
-          </div>
+          <div className="text-lg font-semibold text-gray-800">Upload Complete</div>
           <div className="text-sm text-gray-600 mt-0.5">
             {allSucceeded
               ? `All ${stats.total} files uploaded successfully!`
@@ -56,57 +49,39 @@ export function UploadSummary({ stats, onClose, onClearAll }: UploadSummaryProps
       </div>
 
       {/* Detailed Stats */}
-      <div className="grid gap-3 mb-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))' }}>
+      <div
+        className="grid gap-3 mb-4"
+        style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))' }}
+      >
         <div className="text-center p-3 bg-white rounded-md">
-          <div className="text-2xl font-bold text-gray-800">
-            {stats.total}
-          </div>
-          <div className="text-sm text-gray-600 mt-1">
-            Total
-          </div>
+          <div className="text-2xl font-bold text-gray-800">{stats.total}</div>
+          <div className="text-sm text-gray-600 mt-1">Total</div>
         </div>
 
         <div className="text-center p-3 bg-white rounded-md">
-          <div className="text-2xl font-bold text-green-600">
-            {stats.succeeded}
-          </div>
-          <div className="text-sm text-gray-600 mt-1">
-            Succeeded
-          </div>
+          <div className="text-2xl font-bold text-green-600">{stats.succeeded}</div>
+          <div className="text-sm text-gray-600 mt-1">Succeeded</div>
         </div>
 
         {stats.failed > 0 && (
           <div className="text-center p-3 bg-white rounded-md">
-            <div className="text-2xl font-bold text-red-600">
-              {stats.failed}
-            </div>
-            <div className="text-sm text-gray-600 mt-1">
-              Failed
-            </div>
+            <div className="text-2xl font-bold text-red-600">{stats.failed}</div>
+            <div className="text-sm text-gray-600 mt-1">Failed</div>
           </div>
         )}
 
         {stats.cancelled > 0 && (
           <div className="text-center p-3 bg-white rounded-md">
-            <div className="text-2xl font-bold text-gray-600">
-              {stats.cancelled}
-            </div>
-            <div className="text-sm text-gray-600 mt-1">
-              Cancelled
-            </div>
+            <div className="text-2xl font-bold text-gray-600">{stats.cancelled}</div>
+            <div className="text-sm text-gray-600 mt-1">Cancelled</div>
           </div>
         )}
       </div>
 
       {/* Messages */}
       {hasFailures && (
-        <div
-          role="alert"
-          className="p-3 bg-white border border-red-600 rounded-md mb-4"
-        >
-          <div className="text-sm font-semibold text-red-600 mb-1">
-            Some uploads failed
-          </div>
+        <div role="alert" className="p-3 bg-white border border-red-600 rounded-md mb-4">
+          <div className="text-sm font-semibold text-red-600 mb-1">Some uploads failed</div>
           <div className="text-sm text-gray-600">
             Review the failed items in the queue and use the Retry button to try again.
           </div>
@@ -116,25 +91,19 @@ export function UploadSummary({ stats, onClose, onClearAll }: UploadSummaryProps
       {allSucceeded && (
         <div className="p-3 bg-white border border-green-600 rounded-md mb-4">
           <div className="text-sm text-gray-600">
-            All files have been uploaded and are being processed. You can view them in the Uploaded PDFs section below.
+            All files have been uploaded and are being processed. You can view them in the Uploaded
+            PDFs section below.
           </div>
         </div>
       )}
 
       {/* Action Buttons */}
       <div className="flex gap-3 flex-wrap">
-        <Button
-          onClick={onClose}
-          aria-label="Close upload summary"
-        >
+        <Button onClick={onClose} aria-label="Close upload summary">
           Close
         </Button>
 
-        <Button
-          onClick={onClearAll}
-          variant="outline"
-          aria-label="Clear all items from queue"
-        >
+        <Button onClick={onClearAll} variant="outline" aria-label="Clear all items from queue">
           Clear Queue
         </Button>
       </div>

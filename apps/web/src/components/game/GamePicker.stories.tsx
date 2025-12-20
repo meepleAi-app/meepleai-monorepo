@@ -165,7 +165,7 @@ export const ValidationError: Story = {
       }
     }),
   },
-  play: async ({ canvasElement }) => {
+  play: async ({ canvasElement: _canvasElement }) => {
     // Note: This is for documentation purposes
     // In actual usage, user would type short name and click Create
   },

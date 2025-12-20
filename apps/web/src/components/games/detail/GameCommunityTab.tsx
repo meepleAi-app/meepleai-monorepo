@@ -18,7 +18,7 @@ interface GameCommunityTabProps {
   game: Game;
 }
 
-export function GameCommunityTab({ game }: GameCommunityTabProps) {
+export function GameCommunityTab({ game: _game }: GameCommunityTabProps) {
   return (
     <div className="space-y-6" role="region" aria-label="Community features">
       {/* Overview Alert */}

@@ -27,7 +27,7 @@ import { NotificationItem } from './NotificationItem';
 
 export function NotificationPanel() {
   const notifications = useNotificationStore(selectNotifications);
-  const isLoading = useNotificationStore(selectIsLoading);
+  const _isLoading = useNotificationStore(selectIsLoading);
   const isFetching = useNotificationStore(state => state.isFetching);
   const error = useNotificationStore(state => state.error);
   const fetchNotifications = useNotificationStore(state => state.fetchNotifications);

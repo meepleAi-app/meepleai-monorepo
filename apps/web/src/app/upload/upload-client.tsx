@@ -24,9 +24,8 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useState, useMemo } from 'react';
-import type { AuthUser } from '@/types/auth';
 import { api, ApiError } from '@/lib/api';
-import { categorizeError, type CategorizedError } from '@/lib/errorUtils';
+import { type CategorizedError } from '@/lib/errorUtils';
 import { ErrorDisplay } from '@/components/errors';
 import { ProcessingProgress } from '@/components/progress';
 import { MultiFileUpload } from '@/components/upload';
@@ -35,7 +34,7 @@ import { WizardSteps } from '@/components/wizard/WizardSteps';
 import { GamePicker } from '@/components/game/GamePicker';
 import { PdfUploadForm } from '@/components/pdf/PdfUploadForm';
 import { PdfTable } from '@/components/pdf/PdfTable';
-import { useWizard, type WizardStep } from '@/hooks/wizard/useWizard';
+import { useWizard } from '@/hooks/wizard/useWizard';
 import { useGames } from '@/hooks/wizard/useGames';
 import { usePdfs, type PdfDocument } from '@/hooks/wizard/usePdfs';
 import { Button } from '@/components/ui/button';
@@ -426,7 +425,7 @@ export function UploadClient({
                   <MultiDocumentCollectionUpload
                     gameId={confirmedGameId}
                     gameName={confirmedGame.title}
-                    onSuccess={collectionId => {
+                    onSuccess={_collectionId => {
                       // Optionally navigate to collection view or show success
                       void refetchPdfs();
                       setUploadMode('single'); // Return to single mode after success

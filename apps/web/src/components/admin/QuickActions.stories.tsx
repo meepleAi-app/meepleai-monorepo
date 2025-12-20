@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { QuickActions, defaultQuickActions, type QuickAction } from './QuickActions';
+import { QuickActions, defaultQuickActions } from './QuickActions';
 import {
   FileUpIcon,
   UsersIcon,

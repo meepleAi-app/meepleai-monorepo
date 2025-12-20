@@ -27,10 +27,10 @@ import { useChatStore } from '@/store/chat/store';
 import { MessageList } from './MessageList';
 import { MessageInput } from './MessageInput';
 import { MobileSidebar } from './MobileSidebar';
-import { ContextChip, type DocumentSource } from './ContextChip';
+import { ContextChip } from './ContextChip';
 import { PdfViewerModal } from '@/components/pdf/PdfViewerModal';
 import { api } from '@/lib/api';
-import { Game, ChatThread, Citation } from '@/types';
+import { Game, ChatThread } from '@/types';
 
 /**
  * PDF modal state for citation click → jump to page (BGAI-074)
@@ -74,7 +74,7 @@ export function ChatContent() {
   // Derived values
   const activeChatId = selectedGameId ? activeChatIds[selectedGameId] : null;
   const chats = selectedGameId ? (chatsByGame[selectedGameId] ?? []) : [];
-  const messages = activeChatId ? (messagesByChat[activeChatId] ?? []) : [];
+  const _messages = activeChatId ? (messagesByChat[activeChatId] ?? []) : [];
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);

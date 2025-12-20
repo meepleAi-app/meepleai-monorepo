@@ -17,7 +17,6 @@
 
 import { test as base, expect, Page } from './fixtures/chromatic';
 import { AuthHelper, GamesHelper, USER_FIXTURES } from './pages';
-import { WaitHelper } from './helpers/WaitHelper';
 
 // Extend test with editor authentication (required for PDF upload)
 const test = base.extend<{ editorPage: Page }>({

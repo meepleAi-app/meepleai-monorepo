@@ -62,7 +62,7 @@ function getStatusBadge(status: string) {
   }
 }
 
-export function GameRulesTab({ game, documents = [] }: GameRulesTabProps) {
+export function GameRulesTab({ game: _game, documents = [] }: GameRulesTabProps) {
   const completedDocuments = documents.filter(
     doc => doc.processingStatus.toLowerCase() === 'completed'
   );

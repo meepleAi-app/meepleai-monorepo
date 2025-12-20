@@ -223,7 +223,7 @@ export const Default: Story = {};
  * Shows populated SMTP settings with multiple recipients
  */
 export const EmailTab: Story = {
-  play: async ({ canvasElement }) => {
+  play: async ({ canvasElement: _canvasElement }) => {
     // Tab is active by default
   },
 };

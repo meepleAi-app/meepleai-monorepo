@@ -60,7 +60,7 @@ export function TestingTrendChart({
   targetLabel = 'Target',
   color = '#1a73e8',
   showTarget = true,
-  unit = '',
+  unit: _unit = '',
 }: TestingTrendChartProps) {
   const [timeRange, setTimeRange] = useState<TimeRange>('7d');
 

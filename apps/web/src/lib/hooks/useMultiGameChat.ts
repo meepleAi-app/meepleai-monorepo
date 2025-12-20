@@ -244,7 +244,7 @@ export function useMultiGameChat(activeGameId: string | null): UseMultiGameChatR
    * Create a new chat for current game
    */
   const createNewChat = useCallback(
-    async (gameId: string, agentId: string): Promise<Chat | null> => {
+    async (gameId: string, _agentId: string): Promise<Chat | null> => {
       try {
         const newChat = await api.chat.createThread({
           gameId,

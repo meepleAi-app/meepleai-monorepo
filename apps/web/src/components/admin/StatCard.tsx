@@ -1,11 +1,17 @@
 /* eslint-disable security/detect-object-injection -- Safe variant styles Record access */
 /**
- * StatCard Component - Issue #874, #882
+ * StatCard Component - Issue #874, #882, #2245
  *
  * Reusable metric display card for admin dashboard.
  * Shows icon, value, label, trend indicator with loading state.
+ *
+ * Performance: React.memo optimized (Issue #2245)
+ * - Used 6+ times in admin dashboard
+ * - Pure presentational component
+ * - Props rarely change after initial render
  */
 
+import React from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -43,7 +49,7 @@ const iconVariantStyles = {
   danger: 'text-red-600 bg-red-100',
 };
 
-export function StatCard({
+export const StatCard = React.memo(function StatCard({
   label,
   value,
   icon: Icon,
@@ -108,4 +114,4 @@ export function StatCard({
       </CardContent>
     </Card>
   );
-}
+});

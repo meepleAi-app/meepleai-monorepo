@@ -188,7 +188,7 @@ export default defineConfig<ChromaticConfig>({
             command:
               process.env.CI === 'true'
                 ? 'node ./node_modules/next/dist/bin/next start -p 3000'
-                : 'node --max-old-space-size=4096 ./node_modules/next/dist/bin/next dev -p 3000',
+                : 'node --max-old-space-size=8192 ./node_modules/next/dist/bin/next dev -p 3000',
             url: 'http://localhost:3000',
             reuseExistingServer: !process.env.CI,
             timeout: 180 * 1000, // 3min for server startup

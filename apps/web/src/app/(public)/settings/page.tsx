@@ -633,7 +633,12 @@ export default function SettingsPage() {
       <div className="max-w-5xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Settings</h1>
+          <h1
+            className="text-3xl font-bold text-slate-900 dark:text-white"
+            data-testid="settings-heading"
+          >
+            Settings
+          </h1>
           <p className="text-slate-600 dark:text-slate-400 mt-2">
             Manage your account settings and preferences
           </p>
@@ -710,7 +715,11 @@ export default function SettingsPage() {
                   />
                 </div>
 
-                <Button onClick={handleUpdateProfile} disabled={loading}>
+                <Button
+                  onClick={handleUpdateProfile}
+                  disabled={loading}
+                  data-testid="save-profile-button"
+                >
                   Update Profile
                 </Button>
               </CardContent>
@@ -755,7 +764,11 @@ export default function SettingsPage() {
                   />
                 </div>
 
-                <Button onClick={handleChangePassword} disabled={loading}>
+                <Button
+                  onClick={handleChangePassword}
+                  disabled={loading}
+                  data-testid="change-password-button"
+                >
                   Change Password
                 </Button>
               </CardContent>
@@ -852,7 +865,9 @@ export default function SettingsPage() {
                   </p>
                 </div>
 
-                <Button onClick={handleUpdatePreferences}>Save Preferences</Button>
+                <Button onClick={handleUpdatePreferences} data-testid="save-preferences-button">
+                  Save Preferences
+                </Button>
               </CardContent>
             </Card>
           </TabsContent>
@@ -932,6 +947,7 @@ export default function SettingsPage() {
                           onClick={handleSetup2FA}
                           isLoading={loading}
                           loadingText="Setting up..."
+                          data-testid="enable-2fa-button"
                         >
                           Enable Two-Factor Authentication
                         </LoadingButton>
@@ -970,14 +986,14 @@ export default function SettingsPage() {
                                 once.
                               </p>
                               <div className="grid grid-cols-2 gap-2 mb-4">
-                                {setup.BackupCodes.map((code: string, i: number) => (
+                                {setup.BackupCodes?.map((code: string, i: number) => (
                                   <div
                                     key={i}
                                     className="bg-white px-3 py-2 rounded font-mono text-sm text-center text-black"
                                   >
                                     {code}
                                   </div>
-                                ))}
+                                )) || null}
                               </div>
                               <div className="flex gap-2">
                                 <Button onClick={downloadBackupCodes} variant="secondary" size="sm">
@@ -1016,6 +1032,7 @@ export default function SettingsPage() {
                                 <Button
                                   onClick={handleEnable2FA}
                                   disabled={loading || verificationCode.length !== 6}
+                                  data-testid="verify-enable-2fa-button"
                                 >
                                   {loading ? 'Verifying...' : 'Verify & Enable'}
                                 </Button>

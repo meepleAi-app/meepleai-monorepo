@@ -21,6 +21,11 @@ vi.mock('next/navigation', () => ({
   usePathname: () => '/admin/infrastructure',
 }));
 
+// Mock useUserLocale hook (Issue #2254)
+vi.mock('@/hooks/useUserLocale', () => ({
+  useUserLocale: () => 'it' as const,
+}));
+
 // Mock AdminLayout
 vi.mock('@/components/admin/AdminLayout', () => ({
   AdminLayout: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,

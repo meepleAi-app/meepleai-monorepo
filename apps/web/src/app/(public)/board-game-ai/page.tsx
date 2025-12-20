@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import { api } from '@/lib/api';
-import { AccessibleButton } from '@/components/accessible';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { LoadingButton } from '@/components/loading/LoadingButton';
@@ -18,11 +17,6 @@ type AuthUser = {
   email: string;
   displayName?: string | null;
   role: string;
-};
-
-type AuthResponse = {
-  user: AuthUser;
-  expiresAt: string;
 };
 
 export default function BoardGameAI() {

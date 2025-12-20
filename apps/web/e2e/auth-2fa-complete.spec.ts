@@ -11,17 +11,8 @@ import { WaitHelper } from './helpers/WaitHelper';
 import {
   setupTwoFactorMocks,
   mockTwoFactorStatus,
-  mockTwoFactorSetup,
   mockTwoFactorEnable,
-  mockTwoFactorVerify,
   mockTwoFactorDisable,
-  mockExpiredTempSession,
-  mockBackupCodeUsage,
-  generateMockBackupCodes,
-  generateMockTotpSecret,
-  generateMockQRCodeUri,
-  type Mock2FAStatus,
-  type MockTotpSetup,
 } from './fixtures/twoFactor';
 
 // ============================================================================

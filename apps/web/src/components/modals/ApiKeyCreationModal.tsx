@@ -40,13 +40,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { api, CreateApiKeyResponse } from '@/lib/api';
@@ -157,7 +151,7 @@ export function ApiKeyCreationModal({
     if (formData.metadata.trim()) {
       try {
         JSON.parse(formData.metadata);
-      } catch (e) {
+      } catch (_e) {
         errors.metadata = 'Metadata must be valid JSON';
       }
     }

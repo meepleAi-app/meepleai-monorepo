@@ -6,7 +6,7 @@
  */
 
 import type { Meta, StoryObj } from '@storybook/react';
-import { Trash2, Download, Power, Shield, Users, Archive, Mail, Tag } from 'lucide-react';
+import { Trash2, Download, Power, Users, Archive, Mail, Tag } from 'lucide-react';
 import { BulkActionBar, EmptyBulkActionBar } from './BulkActionBar';
 
 const meta: Meta<typeof BulkActionBar> = {

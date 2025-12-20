@@ -8,7 +8,6 @@
 import type { HttpClient } from '../core/httpClient';
 import {
   CreateShareLinkResponseSchema,
-  RevokeShareLinkResponseSchema,
   GetSharedThreadResponseSchema,
   AddCommentToSharedThreadResponseSchema,
   type CreateShareLinkResponse,

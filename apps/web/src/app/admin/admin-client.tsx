@@ -19,7 +19,6 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import type { AuthUser } from '@/types/auth';
 import { api, type AiRequest, type AdminStats } from '@/lib/api';
 import {
   EndpointDistributionChart,
@@ -32,7 +31,7 @@ import { useAuthUser } from '@/hooks/useAuthUser';
 import { FEEDBACK_OUTCOMES } from '@/lib/constants/feedback';
 
 export function AdminClient() {
-  const { user, loading: userLoading } = useAuthUser();
+  const { user: _user, loading: _userLoading } = useAuthUser();
   const [requests, setRequests] = useState<AiRequest[]>([]);
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [filter, setFilter] = useState<string>('');

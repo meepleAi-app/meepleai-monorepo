@@ -6,7 +6,7 @@
  */
 
 import { test, expect } from './fixtures/roles';
-import { getTextMatcher, t } from './fixtures/i18n';
+import { t } from './fixtures/i18n';
 
 /**
  * E2E Tests for EDIT-05: Enhanced Comments System (Threaded Replies, Mentions, Resolution)

@@ -55,7 +55,10 @@ const SOCIAL_LINKS = [
   { label: 'Discord', href: 'https://discord.gg/meepleai' },
 ];
 
-export function PublicFooter({ showNewsletter = false, className }: PublicFooterProps) {
+export function PublicFooter({
+  showNewsletter: _showNewsletter = false,
+  className,
+}: PublicFooterProps) {
   const currentYear = new Date().getFullYear();
 
   return (

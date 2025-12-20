@@ -23,7 +23,7 @@ import HyperDX from '@hyperdx/browser';
 // Configuration
 // ============================================================================
 
-const isProduction = process.env.NODE_ENV === 'production';
+const _isProduction = process.env.NODE_ENV === 'production';
 const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
 // ============================================================================

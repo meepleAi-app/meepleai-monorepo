@@ -22,7 +22,7 @@ interface AdminPageClientProps {
   user: AuthUser;
 }
 
-export function AdminPageClient({ user }: AdminPageClientProps) {
+export function AdminPageClient({ user: _user }: AdminPageClientProps) {
   const router = useRouter();
   const params = useParams();
   const id = params?.id as string | undefined;

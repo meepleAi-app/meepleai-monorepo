@@ -8,7 +8,7 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { QuickActions } from './QuickActions';
 import { QuickActionCard } from './QuickActionCard';
-import { PlusCircle, MessageSquarePlus, Settings, Upload, Download, Trash2 } from 'lucide-react';
+import { PlusCircle, MessageSquarePlus, Settings, Upload, Download } from 'lucide-react';
 
 const meta = {
   title: 'Components/Dashboard/QuickActions',

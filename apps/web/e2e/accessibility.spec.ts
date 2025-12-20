@@ -10,8 +10,7 @@
 import { test, expect } from './fixtures/chromatic';
 import AxeBuilder from '@axe-core/playwright';
 import type { Result } from 'axe-core';
-import { getTextMatcher, t } from './fixtures/i18n';
-import { AuthHelper } from './pages';
+import { t } from './fixtures/i18n';
 import { setupMockAuth } from './fixtures/auth';
 
 // Helper to get readable violations

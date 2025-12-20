@@ -5,7 +5,7 @@
  */
 
 import { test, expect } from './fixtures/chromatic';
-import { setupQATestEnvironment, QAResponse } from './helpers/qa-test-utils';
+import { setupQATestEnvironment } from './helpers/qa-test-utils';
 
 test.describe('Q&A Interface - Accessibility (Issue #1009)', () => {
   test('should support keyboard navigation with Tab key', async ({ page }) => {

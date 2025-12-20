@@ -23,7 +23,7 @@
 
 'use client';
 
-import { PropsWithChildren, useEffect, useRef } from 'react';
+import { PropsWithChildren, useEffect } from 'react';
 import { useChatStore } from './store';
 import { useStreamingChat } from '@/lib/hooks/useStreamingChat';
 

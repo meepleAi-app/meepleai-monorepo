@@ -1,11 +1,9 @@
 'use client';
 
-import type { AuthUser } from '@/types/auth';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
-import { Button } from '@/components/ui/button';
 import { getErrorMessage } from '@/lib/utils/errorHandler';
 import { useAuthUser } from '@/components/auth/AuthProvider';
 import { AdminAuthGuard, BulkActionBar } from '@/components/admin';
@@ -19,7 +17,7 @@ type Game = {
 };
 
 export function AdminPageClient() {
-  const router = useRouter();
+  const _router = useRouter();
   const { user, loading: authLoading } = useAuthUser();
   const [games, setGames] = useState<Game[]>([]);
   const [selectedGameIds, setSelectedGameIds] = useState<Set<string>>(new Set());

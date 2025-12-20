@@ -38,14 +38,6 @@ interface GameCatalogClientProps {
   initialPage: number;
 }
 
-interface PaginatedResponse {
-  games: Game[];
-  total: number;
-  page: number;
-  pageSize: number;
-  totalPages: number;
-}
-
 // ============================================================================
 // Constants
 // ============================================================================
@@ -65,7 +57,7 @@ export function GameCatalogClient({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [isPending, startTransition] = useTransition();
+  const [_isPending, startTransition] = useTransition();
 
   // State
   const [view, setView] = useState<'grid' | 'list'>(initialView);

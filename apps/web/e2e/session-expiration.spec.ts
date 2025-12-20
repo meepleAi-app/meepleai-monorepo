@@ -5,7 +5,6 @@
  */
 
 import { test, expect, Page } from './fixtures/chromatic';
-import { getTextMatcher, t } from './fixtures/i18n';
 import { WaitHelper } from './helpers/WaitHelper';
 
 const apiBase = 'http://localhost:8080';

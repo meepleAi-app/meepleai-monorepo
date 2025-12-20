@@ -550,7 +550,7 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
         // Use activeUploadsRef instead of queue state for accurate count
         // queue state updates asynchronously, but ref is synchronous!
         const activeCount = activeUploadsRef.current.size;
-        const stats = getStats();
+        const _stats = getStats();
 
         // Check if we can start more uploads
         if (activeCount >= concurrencyLimit) {

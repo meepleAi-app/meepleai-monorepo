@@ -6,7 +6,6 @@ import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { api } from '@/lib/api';
-import { cn } from '@/lib/utils';
 import { ErrorDisplay } from '@/components/errors';
 import { categorizeError } from '@/lib/errorUtils';
 import { getErrorMessage } from '@/lib/utils/errorHandler';
@@ -28,8 +27,8 @@ interface AdminPageClientProps {
   user: AuthUser;
 }
 
-export function AdminPageClient({ user }: AdminPageClientProps) {
-  const router = useRouter();
+export function AdminPageClient({ user: _user }: AdminPageClientProps) {
+  const _router = useRouter();
   const params = useParams();
   const id = params?.id as string | undefined;
 

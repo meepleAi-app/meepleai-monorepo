@@ -55,7 +55,7 @@ async function validatePdfFile(file: File): Promise<string | null> {
       if (header !== PDF_MAGIC_BYTES) {
         return `Invalid PDF format: ${file.name}`;
       }
-    } catch (error) {
+    } catch (_error) {
       return `Unable to read file: ${file.name}`;
     }
   }

@@ -19,8 +19,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
-import { Badge } from '@/components/ui/badge';
-import { Keyboard, MessageSquare, Upload, Search, HelpCircle, X as CloseIcon } from 'lucide-react';
+import { Keyboard, MessageSquare, Upload, Search, HelpCircle } from 'lucide-react';
 import { formatShortcut, isMac, type KeyboardShortcut } from '@/hooks/useKeyboardShortcuts';
 
 interface KeyboardShortcutsHelpProps {

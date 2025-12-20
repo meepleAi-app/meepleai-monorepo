@@ -9,7 +9,7 @@
  * @dependency react-window ^2.2.3
  */
 
-import React, { useRef, useEffect, useMemo } from 'react';
+import React, { useRef, useEffect } from 'react';
 // @ts-ignore - react-window types not available in v2.x
 import { List as FixedSizeList } from 'react-window';
 // @ts-ignore - auto-sizer types
@@ -18,7 +18,7 @@ import { ChatMessage, type Citation } from '@/components/ui/chat-message';
 import { Message as MessageType } from '@/types';
 
 // Type for list children (from react-window)
-interface ListChildComponentProps {
+interface _ListChildComponentProps {
   index: number;
   style: React.CSSProperties;
 }
@@ -173,7 +173,7 @@ export function VirtualizedMessageList({
   return (
     <div className={className} style={{ height: '100%', width: '100%' }}>
       <AutoSizer>
-        {({ height, width }: { height: number; width: number }) => (
+        {({ height, width: _width }: { height: number; width: number }) => (
           <FixedSizeList
             listRef={listRef}
             defaultHeight={height}

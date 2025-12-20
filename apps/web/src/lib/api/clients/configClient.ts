@@ -9,7 +9,6 @@ import type { HttpClient } from '../core/httpClient';
 import {
   SystemConfigurationDtoSchema,
   PagedResultSchema,
-  ConfigurationHistoryDtoSchema,
   ConfigurationValidationResultSchema,
   ConfigurationExportDtoSchema,
   type SystemConfigurationDto,
@@ -18,7 +17,6 @@ import {
   type ConfigurationValidationResult,
   type ConfigurationExportDto,
 } from '../schemas';
-import { z } from 'zod';
 
 export interface CreateConfigClientParams {
   httpClient: HttpClient;
@@ -130,7 +128,10 @@ export function createConfigClient({ httpClient }: CreateConfigClientParams) {
      * @param key Configuration key
      * @param environment Optional environment filter
      */
-    async getConfigurationByKey(key: string, environment?: string): Promise<SystemConfigurationDto> {
+    async getConfigurationByKey(
+      key: string,
+      environment?: string
+    ): Promise<SystemConfigurationDto> {
       const params = new URLSearchParams();
       if (environment) params.append('environment', environment);
 
@@ -150,7 +151,9 @@ export function createConfigClient({ httpClient }: CreateConfigClientParams) {
      * Create a new configuration
      * @param request Configuration creation request
      */
-    async createConfiguration(request: CreateConfigurationRequest): Promise<SystemConfigurationDto> {
+    async createConfiguration(
+      request: CreateConfigurationRequest
+    ): Promise<SystemConfigurationDto> {
       return httpClient.post('/api/v1/admin/configurations', request, SystemConfigurationDtoSchema);
     },
 
@@ -258,7 +261,10 @@ export function createConfigClient({ httpClient }: CreateConfigClientParams) {
      * @param configurationId Configuration ID (GUID format)
      * @param limit Maximum number of history entries (default: 20)
      */
-    async getHistory(configurationId: string, limit: number = 20): Promise<ConfigurationHistoryDto[]> {
+    async getHistory(
+      configurationId: string,
+      limit: number = 20
+    ): Promise<ConfigurationHistoryDto[]> {
       const response = await httpClient.get<ConfigurationHistoryDto[]>(
         `/api/v1/admin/configurations/${encodeURIComponent(configurationId)}/history?limit=${limit}`
       );

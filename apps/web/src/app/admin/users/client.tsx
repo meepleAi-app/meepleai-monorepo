@@ -1,7 +1,6 @@
 'use client';
 
-import type { AuthUser } from '@/types/auth';
-import { useCallback, useEffect, useState, startTransition } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -17,13 +16,6 @@ type User = {
   role: string;
   createdAt: string;
   lastSeenAt: string | null;
-};
-
-type PagedResult<T> = {
-  items: T[];
-  total: number;
-  page: number;
-  pageSize: number;
 };
 
 type CreateUserRequest = {
@@ -210,7 +202,7 @@ export function AdminPageClient() {
           setSelectedUsers(new Set());
           setConfirmation({ isOpen: false, title: '', message: '', onConfirm: () => {} });
           fetchUsers();
-        } catch (err) {
+        } catch (_err) {
           addToast('error', 'Failed to delete some users');
           setConfirmation({ isOpen: false, title: '', message: '', onConfirm: () => {} });
         }

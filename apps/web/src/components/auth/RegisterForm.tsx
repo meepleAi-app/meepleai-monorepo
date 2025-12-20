@@ -110,7 +110,7 @@ export function RegisterForm({
     }
 
     // Remove confirmPassword before sending to API
-    const { confirmPassword, ...registerData } = data;
+    const { confirmPassword: _confirmPassword, ...registerData } = data;
     await onSubmit(registerData);
   };
 

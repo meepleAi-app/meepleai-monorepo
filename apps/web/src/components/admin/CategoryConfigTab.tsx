@@ -104,7 +104,7 @@ export default function CategoryConfigTab({
         `Configuration '${config.key}' ${config.isActive ? 'deactivated' : 'activated'}`
       );
       onConfigurationChange();
-    } catch (err) {
+    } catch (_err) {
       toast.error('Failed to toggle configuration');
     } finally {
       setSaving(null);

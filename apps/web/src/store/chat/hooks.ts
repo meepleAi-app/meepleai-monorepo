@@ -12,7 +12,6 @@
 
 import { StoreApi, UseBoundStore } from 'zustand';
 import { useChatStore } from './store';
-import { ChatStore } from './types';
 
 // ============================================================================
 // Auto-Generated Selectors Utility

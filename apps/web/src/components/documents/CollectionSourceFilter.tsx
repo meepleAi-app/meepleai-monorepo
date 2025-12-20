@@ -45,7 +45,7 @@ export function CollectionSourceFilter({
   className,
 }: CollectionSourceFilterProps) {
   const allSelected = selectedDocIds.length === 0 || selectedDocIds.length === collections.length;
-  const someSelected = selectedDocIds.length > 0 && selectedDocIds.length < collections.length;
+  const _someSelected = selectedDocIds.length > 0 && selectedDocIds.length < collections.length;
 
   const handleToggleAll = React.useCallback(() => {
     if (allSelected) {

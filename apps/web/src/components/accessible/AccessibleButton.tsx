@@ -102,7 +102,7 @@ export interface AccessibleButtonProps extends ButtonHTMLAttributes<HTMLButtonEl
 /**
  * Map custom variants to shadcn variants
  */
-const variantMap = {
+const _variantMap = {
   primary: 'default' as const,
   secondary: 'secondary' as const,
   danger: 'destructive' as const,
@@ -112,7 +112,7 @@ const variantMap = {
 /**
  * Map custom sizes to shadcn sizes
  */
-const sizeMap = {
+const _sizeMap = {
   sm: 'sm' as const,
   md: 'default' as const,
   lg: 'lg' as const,

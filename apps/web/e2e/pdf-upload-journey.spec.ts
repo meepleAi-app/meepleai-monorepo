@@ -13,7 +13,6 @@
 
 import { test as base, expect, Page } from './fixtures/chromatic';
 import { AuthHelper, GamesHelper, USER_FIXTURES } from './pages';
-import { getTextMatcher, t } from './fixtures/i18n';
 import { WaitHelper } from './helpers/WaitHelper';
 
 // Extend test with editor authentication

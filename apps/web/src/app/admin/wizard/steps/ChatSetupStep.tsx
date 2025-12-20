@@ -78,7 +78,7 @@ export function ChatSetupStep({ gameId, gameName, pdfId, onComplete, onBack }: C
             }
             break;
         }
-      } catch (err) {
+      } catch (_err) {
         // On error, assume completed for demo purposes
         setProcessingStatus('completed');
         setProcessingProgress(100);

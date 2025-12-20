@@ -33,7 +33,7 @@ const TEST_USER_ADMIN = {
 const MAILPIT_API_BASE = 'http://localhost:8025/api/v1';
 const MAILPIT_WEB_UI = 'http://localhost:8025';
 
-const REPORT_TEMPLATES = [
+const _REPORT_TEMPLATES = [
   { value: 'SystemHealth', label: 'System Health' },
   { value: 'UserActivity', label: 'User Activity' },
   { value: 'AIUsage', label: 'AI/LLM Usage' },
@@ -149,7 +149,7 @@ async function waitForEmail(
 /**
  * Generate date string for report filters
  */
-function getDateString(daysOffset: number): string {
+function _getDateString(daysOffset: number): string {
   const date = new Date();
   date.setDate(date.getDate() + daysOffset);
   return date.toISOString().split('T')[0];
@@ -383,7 +383,7 @@ test.describe('Admin Reports - Email Delivery Flow (Issue #922)', () => {
   // SCENARIO 5: Email Failure Notification
   // --------------------------------------------------------------------------
 
-  test('should handle email delivery failures gracefully', async ({ page, request }) => {
+  test('should handle email delivery failures gracefully', async ({ page, request: _request }) => {
     // This test verifies the system handles SMTP errors without breaking report generation
     // In a real scenario, SMTP might be down or misconfigured
 

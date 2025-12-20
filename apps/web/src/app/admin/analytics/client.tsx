@@ -64,7 +64,7 @@ export function AdminPageClient() {
   const [error, setError] = useState<string | null>(null);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [days, setDays] = useState(30);
-  const [gameId, setGameId] = useState<string>('');
+  const [gameId, _setGameId] = useState<string>('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(true);

@@ -55,7 +55,7 @@ import {
   TrendingUpIcon,
   ClockIcon,
 } from 'lucide-react';
-import type { InfrastructureDetails, ServiceHealthStatus, HealthState } from '@/lib/api';
+import type { InfrastructureDetails, HealthState } from '@/lib/api';
 
 type FilterMode = 'all' | 'healthy' | 'unhealthy';
 type SortField = 'name' | 'status' | 'responseTime';

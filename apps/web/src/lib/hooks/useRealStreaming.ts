@@ -61,7 +61,7 @@ type FollowUpQuestionsData = {
   questions: string[];
 };
 
-type StreamingEvent = {
+type _StreamingEvent = {
   type: StreamingEventType;
   data:
     | StateUpdateData

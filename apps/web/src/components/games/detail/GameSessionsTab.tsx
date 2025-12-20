@@ -10,7 +10,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Separator } from '@/components/ui/separator';
 import { Users, Clock, Calendar, Trophy, PlayCircle, AlertCircle } from 'lucide-react';
 
 interface GameSessionsTabProps {
@@ -52,7 +51,7 @@ function formatDuration(minutes: number): string {
   return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
 }
 
-export function GameSessionsTab({ game, sessions = [] }: GameSessionsTabProps) {
+export function GameSessionsTab({ game: _game, sessions = [] }: GameSessionsTabProps) {
   const activeSessions = sessions.filter(s =>
     ['inprogress', 'in progress', 'paused', 'setup'].includes(s.status.toLowerCase())
   );

@@ -16,12 +16,7 @@ import {
   Brain,
   RefreshCw,
 } from 'lucide-react';
-import {
-  GRAFANA_DASHBOARDS,
-  buildGrafanaEmbedUrl,
-  getGrafanaBaseUrl,
-  type GrafanaDashboard,
-} from '@/config/grafana-dashboards';
+import { GRAFANA_DASHBOARDS, buildGrafanaEmbedUrl } from '@/config/grafana-dashboards';
 
 interface GrafanaEmbedProps {
   locale?: 'it' | 'en';

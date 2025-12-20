@@ -16,11 +16,6 @@ type AuthUser = {
   role: string;
 };
 
-type AuthResponse = {
-  user: AuthUser;
-  expiresAt: string;
-};
-
 type Game = {
   id: string;
   title: string;

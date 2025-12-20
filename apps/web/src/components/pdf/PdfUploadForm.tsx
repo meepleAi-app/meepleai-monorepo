@@ -17,7 +17,7 @@ import { LoadingButton } from '@/components/loading';
 import { retryWithBackoff, isRetryableError } from '@/lib/retryUtils';
 import { categorizeError, type CategorizedError, extractCorrelationId } from '@/lib/errorUtils';
 import { ApiError } from '@/lib/api';
-import { useChunkedUpload, CHUNKED_UPLOAD_THRESHOLD } from '@/hooks/useChunkedUpload';
+import { useChunkedUpload } from '@/hooks/useChunkedUpload';
 
 // Dynamic import to prevent SSR issues with react-pdf
 const PdfPreview = dynamic(
@@ -107,7 +107,7 @@ function formatFileSize(bytes: number): string {
  */
 export function PdfUploadForm({
   gameId,
-  gameName,
+  gameName: _gameName,
   onUploadSuccess,
   onUploadError,
   onUploadStart,

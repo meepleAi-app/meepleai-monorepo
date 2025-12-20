@@ -20,13 +20,6 @@ type PromptTemplate = {
   activeVersionId?: string | null;
 };
 
-type PagedResult = {
-  templates: PromptTemplate[];
-  totalPages: number;
-  page: number;
-  total: number;
-};
-
 type ModalState = {
   isOpen: boolean;
   mode: 'create' | 'edit';

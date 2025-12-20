@@ -66,7 +66,7 @@ const stateConfig = {
   },
 } as const;
 
-function formatResponseTime(ms: number | undefined, locale: Locale): string {
+function formatResponseTime(ms: number | undefined, _locale: Locale): string {
   if (ms === undefined) return '-';
   if (ms < 1000) return `${Math.round(ms)}ms`;
   return `${(ms / 1000).toFixed(2)}s`;

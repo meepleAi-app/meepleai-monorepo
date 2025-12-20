@@ -479,7 +479,7 @@ test.describe('Accessibility - Error States', () => {
     expect(results.violations).toEqual([]);
   });
 
-  // TODO Issue #2XXX: Dev server crashes with 500 error mock
+  // TODO Issue #2261: Dev server crashes with 500 error mock
   // Skip until server instability with error mocks is resolved
   test.skip('500 Internal Server Error should be accessible', async ({ page }) => {
     // Mock 500 error for a commonly accessed endpoint
@@ -509,7 +509,7 @@ test.describe('Accessibility - Error States', () => {
     expect(results.violations).toEqual([]);
   });
 
-  // TODO Issue #2XXX: Dev server crashes with 403 error mock
+  // TODO Issue #2261: Dev server crashes with 403 error mock
   // Skip until server instability with error mocks is resolved
   test.skip('403 Forbidden error should be accessible', async ({ page }) => {
     // Setup user role (not admin)
@@ -555,7 +555,7 @@ test.describe('Accessibility - Error States', () => {
     expect(results.violations).toEqual([]);
   });
 
-  // TODO Issue #2XXX: Dev server crashes with loading state mock
+  // TODO Issue #2261: Dev server crashes with loading state mock
   // Skip until server instability with delayed response mocks is resolved
   test.skip('Loading state should be accessible', async ({ page }) => {
     // Setup mock auth
@@ -592,7 +592,7 @@ test.describe('Accessibility - Error States', () => {
     expect(results.violations).toEqual([]);
   });
 
-  // TODO Issue #2XXX: Dev server crashes with network timeout mock
+  // TODO Issue #2261: Dev server crashes with network timeout mock
   // Skip until server instability with abort() mocks is resolved
   test.skip('Network timeout error should be accessible', async ({ page }) => {
     // Mock timeout by aborting request

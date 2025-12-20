@@ -26,7 +26,33 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { alertRulesApi } from '@/lib/api/alert-rules.api';
-import type { AlertRule } from '@/lib/api/schemas/alert-rules.schemas';
+import type {
+  AlertRule,
+  AlertTemplate,
+  CreateAlertRule,
+} from '@/lib/api/schemas/alert-rules.schemas';
+
+/**
+ * Maps an alert template to form data with type-safe severity handling
+ */
+function mapTemplateToFormData(template: AlertTemplate): Partial<CreateAlertRule> {
+  const severityMap: Record<string, CreateAlertRule['severity']> = {
+    Info: 'Info',
+    Warning: 'Warning',
+    Error: 'Error',
+    Critical: 'Critical',
+  };
+
+  return {
+    name: template.name,
+    alertType: template.alertType,
+    severity: severityMap[template.severity] ?? 'Warning',
+    thresholdValue: template.thresholdValue,
+    thresholdUnit: template.thresholdUnit,
+    durationMinutes: template.durationMinutes,
+    description: template.description,
+  };
+}
 
 function AlertRulesClient() {
   const { user, loading: authLoading } = useAuthUser();
@@ -34,6 +60,7 @@ function AlertRulesClient() {
   const [editingRule, setEditingRule] = useState<AlertRule | null>(null);
   const [deletingRuleId, setDeletingRuleId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'rules' | 'templates'>('rules');
+  const [templateData, setTemplateData] = useState<Partial<CreateAlertRule> | null>(null);
 
   const queryClient = useQueryClient();
 
@@ -96,6 +123,13 @@ function AlertRulesClient() {
     queryClient.invalidateQueries({ queryKey: ['alert-rules'] });
     setIsCreateDialogOpen(false);
     setEditingRule(null);
+    setTemplateData(null);
+  };
+
+  const handleApplyTemplate = (template: AlertTemplate) => {
+    const formData = mapTemplateToFormData(template);
+    setTemplateData(formData);
+    setIsCreateDialogOpen(true);
   };
 
   const confirmDelete = () => {
@@ -224,10 +258,7 @@ function AlertRulesClient() {
                       <Button
                         className="w-full mt-4"
                         variant="outline"
-                        onClick={() => {
-                          // TODO (#2253): Apply alert template logic
-                          toast.info('Template apply coming soon');
-                        }}
+                        onClick={() => handleApplyTemplate(template)}
                       >
                         Apply Template
                       </Button>
@@ -239,15 +270,25 @@ function AlertRulesClient() {
           </Tabs>
 
           {/* Create Dialog */}
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+          <Dialog
+            open={isCreateDialogOpen}
+            onOpenChange={open => {
+              setIsCreateDialogOpen(open);
+              if (!open) setTemplateData(null);
+            }}
+          >
             <DialogContent className="max-w-2xl">
               <DialogHeader>
                 <DialogTitle>Create Alert Rule</DialogTitle>
               </DialogHeader>
               <AlertRuleForm
                 rule={null}
+                initialData={templateData ?? undefined}
                 onSubmit={handleFormSuccess}
-                onCancel={() => setIsCreateDialogOpen(false)}
+                onCancel={() => {
+                  setIsCreateDialogOpen(false);
+                  setTemplateData(null);
+                }}
               />
             </DialogContent>
           </Dialog>

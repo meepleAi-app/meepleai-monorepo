@@ -15,17 +15,20 @@
 'use client';
 
 import * as React from 'react';
+
 import { AlertCircle, CheckCircle2, Upload } from 'lucide-react';
-import { Button } from '@/components/ui/primitives/button';
-import { Card } from '@/components/ui/data-display/card';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+
+import { LoadingButton } from '@/components/loading';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { FileUploadList, type FileUploadItem } from './FileUploadList';
+import { Card } from '@/components/ui/data-display/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/primitives/button';
+import { Textarea } from '@/components/ui/textarea';
 import { api, ApiError } from '@/lib/api';
 import type { DocumentMetadata } from '@/lib/api/schemas/documents.schemas';
-import { LoadingButton } from '@/components/loading';
+
+import { FileUploadList, type FileUploadItem } from './FileUploadList';
 
 export interface MultiDocumentCollectionUploadProps {
   gameId: string;

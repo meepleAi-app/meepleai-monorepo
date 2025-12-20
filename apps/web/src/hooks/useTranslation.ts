@@ -39,6 +39,7 @@
  */
 
 import { useIntl } from 'react-intl';
+
 import type { MessageDescriptor, IntlShape } from 'react-intl';
 
 /**

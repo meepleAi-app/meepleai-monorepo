@@ -5,12 +5,14 @@
  */
 
 import React from 'react';
-import { Game, GameSessionDto } from '@/lib/api';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+
+import { Users, Clock, Calendar, Trophy, PlayCircle, AlertCircle } from 'lucide-react';
+
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Users, Clock, Calendar, Trophy, PlayCircle, AlertCircle } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Game, GameSessionDto } from '@/lib/api';
 
 interface GameSessionsTabProps {
   game: Game;

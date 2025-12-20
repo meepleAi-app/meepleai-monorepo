@@ -29,8 +29,8 @@
 
 import { screen, within as rtlWithin } from '@testing-library/react';
 
-import itMessages from '../locales/it.json';
 import enMessages from '../locales/en.json';
+import itMessages from '../locales/it.json';
 
 // ============================================================================
 // Types and Constants

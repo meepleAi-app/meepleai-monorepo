@@ -8,12 +8,14 @@
  */
 
 import { useState, useCallback, useRef } from 'react';
+
+import Link from 'next/link';
+
+import { toast } from '@/components/layout';
+import { Spinner } from '@/components/loading';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Spinner } from '@/components/loading';
-import { toast } from '@/components/layout';
-import Link from 'next/link';
 
 interface QAStepProps {
   gameId: string;

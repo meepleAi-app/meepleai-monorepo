@@ -17,15 +17,18 @@
 'use client';
 
 import React, { useState } from 'react';
+
+import { ArrowLeft, Info, HelpCircle, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
+
+import { GameOverviewTab } from '@/components/games/detail/GameOverviewTab';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Info, HelpCircle, MessageSquare } from 'lucide-react';
+
+import { GameChatTab } from './components/GameChatTab';
+import { GameFAQTab } from './components/GameFAQTab';
 import { HeroSection } from './components/HeroSection';
 import { InfoGrid } from './components/InfoGrid';
-import { GameOverviewTab } from '@/components/games/detail/GameOverviewTab';
-import { GameFAQTab } from './components/GameFAQTab';
-import { GameChatTab } from './components/GameChatTab';
 
 // ============================================================================
 // Types

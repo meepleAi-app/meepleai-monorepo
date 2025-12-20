@@ -3,8 +3,10 @@
  * Issue #1611 Phase 3: SSR Auth Protection Migration
  */
 
-import { getServerUser } from '@/lib/auth/server';
 import { redirect } from 'next/navigation';
+
+import { getServerUser } from '@/lib/auth/server';
+
 import { AdminPageClient } from './client';
 
 export default async function AdminSubpage() {

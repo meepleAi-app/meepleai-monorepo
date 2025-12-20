@@ -7,11 +7,12 @@
  * @issue #1840 (PAGE-004)
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
 // NOTE: @storybook/test incompatible with Storybook v10 (requires v8.6.14)
 // Removed interactive tests temporarily until Storybook upgrade
 import ChatPage from '@/components/pages/ChatPage';
 import { Message } from '@/types';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 // Fixed base timestamp for consistent Chromatic snapshots
 const BASE_TIMESTAMP = new Date('2024-01-15T10:00:00Z').getTime();

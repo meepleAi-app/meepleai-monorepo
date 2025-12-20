@@ -24,6 +24,11 @@
  */
 
 import { useState, useEffect } from 'react';
+
+import { Plus, Trash2, AlertCircle } from 'lucide-react';
+
+import { LoadingButton } from '@/components/loading/LoadingButton';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -32,7 +37,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -43,10 +47,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Game, SessionPlayerDto, GameSessionDto, api } from '@/lib/api';
-import { Plus, Trash2, AlertCircle } from 'lucide-react';
-import { LoadingButton } from '@/components/loading/LoadingButton';
-import { logger } from '@/lib/logger';
 import { createErrorContext } from '@/lib/errors';
+import { logger } from '@/lib/logger';
 
 export interface SessionSetupModalProps {
   /** Whether the modal is open */

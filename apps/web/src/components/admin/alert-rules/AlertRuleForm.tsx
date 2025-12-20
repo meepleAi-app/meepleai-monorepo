@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { useForm, Controller } from 'react-hook-form';
+
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm, Controller } from 'react-hook-form';
 import { toast } from 'sonner';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,12 +15,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { alertRulesApi } from '@/lib/api/alert-rules.api';
 import {
   createAlertRuleSchema,
   type CreateAlertRule,
   type AlertRule,
 } from '@/lib/api/schemas/alert-rules.schemas';
-import { alertRulesApi } from '@/lib/api/alert-rules.api';
 
 // Severity options with visual indicators
 const SEVERITY_OPTIONS = [

@@ -17,13 +17,14 @@
  */
 
 import { useState } from 'react';
-import { ChatStoreProvider } from '@/store/chat/ChatStoreProvider';
-import { ChatLayout } from '@/components/layouts/ChatLayout';
-import { ChatSidebar } from '@/components/chat/ChatSidebar';
+
 import { ChatContent } from '@/components/chat/ChatContent';
-import { BottomNav } from '@/components/layout/BottomNav';
-import { ExportChatModal } from '@/components/modals';
+import { ChatSidebar } from '@/components/chat/ChatSidebar';
 import { ShareChatModal } from '@/components/chat/ShareChatModal';
+import { BottomNav } from '@/components/layout/BottomNav';
+import { ChatLayout } from '@/components/layouts/ChatLayout';
+import { ExportChatModal } from '@/components/modals';
+import { ChatStoreProvider } from '@/store/chat/ChatStoreProvider';
 import { useChatStore } from '@/store/chat/store';
 import { Game, ChatThread } from '@/types';
 
@@ -56,7 +57,7 @@ function ChatPageContent() {
   };
 
   const handleTitleChange = (title: string) => {
-    // TODO: Implement thread title update via Zustand action
+    // TODO (#2257): Implement thread title update via Zustand action
     // For now, title change is client-side only (will be persisted in future)
     void title; // Acknowledge parameter usage
   };
@@ -70,7 +71,7 @@ function ChatPageContent() {
   };
 
   const handleDelete = () => {
-    // TODO: Implement thread deletion with confirmation dialog
+    // TODO (#2258): Implement thread deletion with confirmation dialog
     // Will integrate with Zustand deleteThread action in future
     void activeChatId; // Acknowledge variable usage
   };

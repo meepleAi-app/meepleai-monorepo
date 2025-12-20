@@ -8,7 +8,6 @@
  * - Mark all notifications as read
  */
 
-import type { HttpClient } from '../core/httpClient';
 import {
   GetNotificationsResponseSchema,
   GetUnreadCountResponseSchema,
@@ -19,6 +18,8 @@ import {
   type MarkNotificationReadResponse,
   type NotificationDto,
 } from '../schemas/notifications.schemas';
+
+import type { HttpClient } from '../core/httpClient';
 
 export interface CreateNotificationsClientParams {
   httpClient: HttpClient;

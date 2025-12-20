@@ -9,9 +9,9 @@
  * - UI state (loading, errors)
  */
 
-import { ChatThread, Message, Game, Agent } from '@/types';
 import { AgentDto } from '@/lib/api/schemas/agents.schemas';
 import type { FeedbackOutcome } from '@/lib/constants/feedback';
+import { ChatThread, Message, Game, Agent } from '@/types';
 
 // ============================================================================
 // Loading State

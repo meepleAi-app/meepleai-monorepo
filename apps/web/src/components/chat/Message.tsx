@@ -10,12 +10,14 @@
  */
 
 import React from 'react';
+
 import { cn } from '@/lib/utils';
-import { Message as MessageType } from '@/types';
 import { useChatStore } from '@/store/chat/store';
+import { Message as MessageType } from '@/types';
+
+import { FollowUpQuestions } from './FollowUpQuestions';
 import { MessageActions } from './MessageActions';
 import { MessageEditForm } from './MessageEditForm';
-import { FollowUpQuestions } from './FollowUpQuestions';
 
 interface MessageProps {
   message: MessageType;

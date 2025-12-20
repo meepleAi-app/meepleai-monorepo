@@ -6,16 +6,18 @@
  */
 
 import React, { useEffect, useState } from 'react';
+
+import { Users, Clock, Calendar, Star, TrendingUp, ExternalLink } from 'lucide-react';
 import Image from 'next/image';
-import { Game, BggGameDetails, api } from '@/lib/api';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Button } from '@/components/ui/button';
-import { Users, Clock, Calendar, Star, TrendingUp, ExternalLink } from 'lucide-react';
-import { logger } from '@/lib/logger';
+import { Game, BggGameDetails, api } from '@/lib/api';
 import { createErrorContext } from '@/lib/errors';
+import { logger } from '@/lib/logger';
 
 interface GameOverviewTabProps {
   game: Game;

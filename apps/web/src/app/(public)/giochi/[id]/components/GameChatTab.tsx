@@ -14,11 +14,12 @@
 'use client';
 
 import React, { useEffect } from 'react';
-import { useChatStore } from '@/store/chat/store';
+
 import { ChatContent } from '@/components/chat/ChatContent';
-import { ChatStoreProvider } from '@/store/chat/ChatStoreProvider';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { ChatStoreProvider } from '@/store/chat/ChatStoreProvider';
+import { useChatStore } from '@/store/chat/store';
 
 // ============================================================================
 // Types

@@ -1,5 +1,6 @@
-import type { Meta, StoryObj } from '@storybook/react';
 import { AdminClient } from './admin-client';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 /**
  * Admin Dashboard - Main admin panel with AI requests monitoring

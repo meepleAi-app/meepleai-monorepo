@@ -11,6 +11,7 @@
  */
 
 import { StoreApi, UseBoundStore } from 'zustand';
+
 import { useChatStore } from './store';
 
 // ============================================================================

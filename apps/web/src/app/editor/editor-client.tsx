@@ -22,22 +22,24 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+
 import Link from 'next/link';
-import { api } from '@/lib/api';
+import { useRouter, useSearchParams } from 'next/navigation';
+
 import {
   RichTextEditor,
   ViewModeToggle,
   ConflictResolutionModal,
   PresenceIndicator,
 } from '@/components/editor';
+import { useAuthUser } from '@/hooks/useAuthUser';
 import { useDebounce } from '@/hooks/useDebounce';
+import { api } from '@/lib/api';
+import type { RuleSpec } from '@/lib/api/schemas';
+import { createErrorContext } from '@/lib/errors';
+import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';
 import { getErrorMessage } from '@/lib/utils/errorHandler';
-import { logger } from '@/lib/logger';
-import { createErrorContext } from '@/lib/errors';
-import { useAuthUser } from '@/hooks/useAuthUser';
-import type { RuleSpec } from '@/lib/api/schemas';
 import {
   useRuleSpecLockStore,
   selectHasLock,

@@ -23,13 +23,15 @@
 'use client';
 
 import React from 'react';
+
+import { AlertCircle, ArrowRight, Gamepad2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+
 import { GameCard } from '@/components/games/GameCard';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, ArrowRight, Gamepad2 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import type { Game } from '@/lib/api';
 
 export interface RecentGamesSectionProps {

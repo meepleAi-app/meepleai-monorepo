@@ -1,11 +1,12 @@
 import { Locator } from '@playwright/test';
-import { BasePage } from '../base/BasePage';
+
 import {
   IAuthPage,
   LoginCredentials,
   RegistrationData,
   TwoFactorData,
 } from '../../types/pom-interfaces';
+import { BasePage } from '../base/BasePage';
 
 /**
  * AuthPage - Authentication page interactions

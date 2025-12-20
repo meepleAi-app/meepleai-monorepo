@@ -11,16 +11,19 @@
  */
 
 import { useState, useCallback } from 'react';
+
 import Link from 'next/link';
-import { useAuthUser } from '@/components/auth/AuthProvider';
+
 import { AdminAuthGuard } from '@/components/admin/AdminAuthGuard';
-import { Card } from '@/components/ui/card';
-import { Spinner } from '@/components/loading';
+import { useAuthUser } from '@/components/auth/AuthProvider';
 import { toast } from '@/components/layout';
+import { Spinner } from '@/components/loading';
+import { Card } from '@/components/ui/card';
 import { api } from '@/lib/api';
-import { PdfUploadStep } from './steps/PdfUploadStep';
-import { GameCreationStep } from './steps/GameCreationStep';
+
 import { ChatSetupStep } from './steps/ChatSetupStep';
+import { GameCreationStep } from './steps/GameCreationStep';
+import { PdfUploadStep } from './steps/PdfUploadStep';
 import { QAStep } from './steps/QAStep';
 
 type WizardStep = 'upload' | 'game' | 'chat' | 'qa';

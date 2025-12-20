@@ -9,13 +9,15 @@
  */
 
 import React, { FormEvent } from 'react';
-import { useChatWithStreaming } from '@/hooks/useChatWithStreaming';
-import { useChatStore } from '@/store/chat/store';
-import { useDocumentsByGame } from '@/hooks/queries/useDocumentsByGame';
-import { LoadingButton } from '../loading/LoadingButton';
+
 import { SearchModeToggle, SearchMode, DocumentSourceSelector } from '@/components';
 import type { DocumentSource } from '@/components';
 import { Input } from '@/components/ui/input';
+import { useDocumentsByGame } from '@/hooks/queries/useDocumentsByGame';
+import { useChatWithStreaming } from '@/hooks/useChatWithStreaming';
+import { useChatStore } from '@/store/chat/store';
+
+import { LoadingButton } from '../loading/LoadingButton';
 
 export function MessageInput() {
   // Issue #1676: Uses streaming-enabled hook (combines Zustand + SSE)

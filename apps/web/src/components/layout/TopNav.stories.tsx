@@ -12,8 +12,9 @@
  * - User Menu Open
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
 import { TopNav } from './TopNav';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta: Meta<typeof TopNav> = {
   title: 'Layout/TopNav',

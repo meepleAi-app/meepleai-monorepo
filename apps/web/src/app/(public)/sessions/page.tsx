@@ -17,11 +17,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+
 import { useRouter } from 'next/navigation';
-import { api, GameSessionDto, Game, PaginatedSessionsResponse } from '@/lib/api';
+
+import { ErrorDisplay } from '@/components/errors';
+import { LoadingButton } from '@/components/loading/LoadingButton';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
@@ -31,11 +34,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { ErrorDisplay } from '@/components/errors';
-import { categorizeError } from '@/lib/errorUtils';
-import { LoadingButton } from '@/components/loading/LoadingButton';
-import { logger } from '@/lib/logger';
+import { api, GameSessionDto, Game, PaginatedSessionsResponse } from '@/lib/api';
 import { createErrorContext } from '@/lib/errors';
+import { categorizeError } from '@/lib/errorUtils';
+import { logger } from '@/lib/logger';
 
 /**
  * Session status badge component

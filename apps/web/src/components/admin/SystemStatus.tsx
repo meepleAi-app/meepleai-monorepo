@@ -12,10 +12,6 @@
  * - Refresh button
  */
 
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import { cn } from '@/lib/utils';
 import {
   CheckCircleIcon,
   XCircleIcon,
@@ -23,6 +19,11 @@ import {
   RefreshCwIcon,
   ActivityIcon,
 } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
 export type ServiceHealthStatus = 'healthy' | 'degraded' | 'unhealthy' | 'unknown';
 

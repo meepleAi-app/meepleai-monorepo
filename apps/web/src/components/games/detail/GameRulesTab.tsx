@@ -5,12 +5,14 @@
  */
 
 import React from 'react';
-import { Game, PdfDocumentDto } from '@/lib/api';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+
+import { FileText, Download, Eye, CheckCircle, Clock, XCircle, AlertCircle } from 'lucide-react';
+
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { FileText, Download, Eye, CheckCircle, Clock, XCircle, AlertCircle } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Game, PdfDocumentDto } from '@/lib/api';
 
 interface GameRulesTabProps {
   game: Game;

@@ -171,7 +171,7 @@ describe('Form Component', () => {
       expect(mockSubmit).not.toHaveBeenCalled();
     });
 
-    // TODO: Fix HTML5 validation interference with Zod validation
+    // TODO (#2259): Fix HTML5 validation interference with Zod validation
     it('should show validation error for invalid email format', async () => {
       const user = userEvent.setup();
       const mockSubmit = vi.fn();

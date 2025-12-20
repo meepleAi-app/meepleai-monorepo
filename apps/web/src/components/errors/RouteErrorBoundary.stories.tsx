@@ -1,6 +1,8 @@
-import type { Meta, StoryObj } from '@storybook/react';
-import { RouteErrorBoundary } from './RouteErrorBoundary';
 import { Button } from '@/components/ui/button';
+
+import { RouteErrorBoundary } from './RouteErrorBoundary';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 /**
  * Route Error Boundary - Error wrapper for route-level error handling

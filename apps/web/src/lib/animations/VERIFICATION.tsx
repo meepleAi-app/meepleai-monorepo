@@ -18,6 +18,7 @@
  */
 
 import React from 'react';
+
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Import all animation utilities

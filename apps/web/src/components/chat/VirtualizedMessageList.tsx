@@ -10,10 +10,12 @@
  */
 
 import React, { useRef, useEffect } from 'react';
+
 // @ts-ignore - react-window types not available in v2.x
-import { List as FixedSizeList } from 'react-window';
-// @ts-ignore - auto-sizer types
 import AutoSizer from 'react-virtualized-auto-sizer';
+import { List as FixedSizeList } from 'react-window';
+
+// @ts-ignore - auto-sizer types
 import { ChatMessage, type Citation } from '@/components/ui/chat-message';
 import { Message as MessageType } from '@/types';
 

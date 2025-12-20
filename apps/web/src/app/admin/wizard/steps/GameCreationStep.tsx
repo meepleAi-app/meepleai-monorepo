@@ -7,15 +7,17 @@
  */
 
 import { useState, useCallback } from 'react';
+
 import Image from 'next/image';
+
+import { toast } from '@/components/layout';
+import { Spinner } from '@/components/loading';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Spinner } from '@/components/loading';
-import { toast } from '@/components/layout';
-import { api } from '@/lib/api';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { api } from '@/lib/api';
 
 interface GameCreationStepProps {
   pdfId: string;
@@ -94,7 +96,7 @@ export function GameCreationStep({
       let finalImageUrl: string | null = null;
 
       // For now, we use URL inputs directly
-      // TODO: Implement file upload to storage if iconFile/imageFile are set
+      // TODO (#2255): Implement file upload to storage if iconFile/imageFile are set
       if (iconMode === 'url' && iconUrl.trim()) {
         finalIconUrl = iconUrl.trim();
       } else if (iconMode === 'upload' && iconFile) {

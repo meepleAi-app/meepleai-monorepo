@@ -6,7 +6,7 @@
  */
 
 import { z } from 'zod';
-import type { HttpClient } from '../core/httpClient';
+
 import {
   AdminUserSchema,
   AdminUserResponseSchema,
@@ -67,6 +67,8 @@ import {
   type PerformanceMetrics,
   type E2EMetrics,
 } from '../schemas';
+
+import type { HttpClient } from '../core/httpClient';
 
 export interface CreateAdminClientParams {
   httpClient: HttpClient;

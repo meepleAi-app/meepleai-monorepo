@@ -6,7 +6,7 @@
  */
 
 import type { FeedbackOutcome } from '@/lib/constants/feedback';
-import type { HttpClient } from '../core/httpClient';
+
 import { downloadFile, getApiBase } from '../core/httpClient';
 import {
   ChatThreadDtoSchema,
@@ -20,6 +20,8 @@ import {
   type RuleSpecComment,
   type CacheStats,
 } from '../schemas';
+
+import type { HttpClient } from '../core/httpClient';
 
 export interface CreateChatClientParams {
   httpClient: HttpClient;

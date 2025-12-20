@@ -11,8 +11,11 @@
  */
 
 import { useState } from 'react';
-import { cn } from '@/lib/utils';
+
 import { ChevronDownIcon, ChevronUpIcon, ActivityIcon } from 'lucide-react';
+
+import { cn } from '@/lib/utils';
+
 import { severityStyles, eventIcons, formatRelativeTimestamp } from './utils/activityUtils';
 
 export interface UserActivityEvent {

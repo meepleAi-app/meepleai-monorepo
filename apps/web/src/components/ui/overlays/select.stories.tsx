@@ -1,4 +1,5 @@
-import type { Meta, StoryObj } from '@storybook/react';
+import { Label } from '@/components/ui/label';
+
 import {
   Select,
   SelectContent,
@@ -9,7 +10,8 @@ import {
   SelectValue,
   SelectSeparator,
 } from './select';
-import { Label } from '@/components/ui/label';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 /**
  * Select component for dropdown selection.

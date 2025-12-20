@@ -1,5 +1,6 @@
-import type { Meta, StoryObj } from '@storybook/react';
 import { DocumentBadge } from './DocumentBadge';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 /**
  * DocumentBadge displays color-coded badges for document types.

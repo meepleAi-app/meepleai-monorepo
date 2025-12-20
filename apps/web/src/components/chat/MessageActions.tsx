@@ -17,10 +17,11 @@
  */
 
 import React from 'react';
-import { Message } from '@/types';
+
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
 import { FEEDBACK_OUTCOMES, type FeedbackOutcome } from '@/lib/constants/feedback';
+import { cn } from '@/lib/utils';
+import { Message } from '@/types';
 
 interface MessageActionsProps {
   message: Message;

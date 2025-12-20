@@ -19,10 +19,11 @@ import React, {
   useEffect,
   PropsWithChildren,
 } from 'react';
-import { AuthUser } from '@/types';
+
 import { api } from '@/lib/api';
 import { identifyUser } from '@/lib/hyperdx';
 import { logger } from '@/lib/logger';
+import { AuthUser } from '@/types';
 
 // ============================================================================
 // Types

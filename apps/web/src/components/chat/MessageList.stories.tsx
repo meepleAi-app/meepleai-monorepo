@@ -1,7 +1,10 @@
-import type { Meta, StoryObj } from '@storybook/react';
-import { MessageList } from './MessageList';
-import { ChatContext, type ChatContextValue } from '@/store/chat/StorybookContext';
 import { fn } from 'storybook/test';
+
+import { ChatContext, type ChatContextValue } from '@/store/chat/StorybookContext';
+
+import { MessageList } from './MessageList';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 /**
  * Message List - Scrollable list of chat messages

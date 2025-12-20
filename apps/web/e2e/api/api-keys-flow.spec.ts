@@ -13,6 +13,7 @@
  */
 
 import { test, expect } from '@playwright/test';
+
 import type { APIRequestContext } from '@playwright/test';
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';

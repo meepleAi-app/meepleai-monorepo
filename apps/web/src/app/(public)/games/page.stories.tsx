@@ -16,12 +16,14 @@
  * - DarkTheme: Dark mode
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
 import { Game } from '@/lib/api';
-import { ViewToggle } from './components/ViewToggle';
-import { SearchBar } from './components/SearchBar';
+
 import { GameGrid } from './components/GameGrid';
 import { Pagination } from './components/Pagination';
+import { SearchBar } from './components/SearchBar';
+import { ViewToggle } from './components/ViewToggle';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 // ============================================================================
 // Mock Component (Simulates Server Component for Storybook)

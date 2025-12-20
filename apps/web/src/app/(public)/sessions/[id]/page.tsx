@@ -16,16 +16,18 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+
 import Link from 'next/link';
-import { api, GameSessionDto, Game } from '@/lib/api';
+import { useRouter, useParams } from 'next/navigation';
+
+import { ErrorDisplay } from '@/components/errors';
+import { Avatar } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
-import { Avatar } from '@/components/ui/avatar';
-import { ErrorDisplay } from '@/components/errors';
+import { Skeleton } from '@/components/ui/skeleton';
+import { api, GameSessionDto, Game } from '@/lib/api';
 import { categorizeError } from '@/lib/errorUtils';
 
 /**

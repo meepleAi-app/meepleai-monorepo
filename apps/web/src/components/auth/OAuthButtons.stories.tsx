@@ -5,9 +5,11 @@
  * Covers: default, hover, loading, disabled, dark mode, mobile.
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
 import { fn } from 'storybook/test';
+
 import OAuthButtons from './OAuthButtons';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta = {
   title: 'Components/Auth/OAuthButtons',

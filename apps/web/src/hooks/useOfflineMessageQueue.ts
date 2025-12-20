@@ -24,6 +24,8 @@
  */
 
 import { useCallback, useEffect, useRef } from 'react';
+
+import { useNetworkStatus, useOnlineCallback } from '@/hooks/useNetworkStatus';
 import {
   useOfflineMessageQueueStore,
   selectPendingMessages,
@@ -32,7 +34,6 @@ import {
   selectIsReplaying,
   type QueuedMessage,
 } from '@/stores/OfflineMessageQueueStore';
-import { useNetworkStatus, useOnlineCallback } from '@/hooks/useNetworkStatus';
 
 // ============================================================================
 // Hook Interface

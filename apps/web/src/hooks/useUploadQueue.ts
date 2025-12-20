@@ -4,9 +4,10 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { retryWithBackoff, isRetryableError } from '../lib/retryUtils';
-import { extractCorrelationId } from '../lib/errorUtils';
+
 import { ApiError } from '../lib/api';
+import { extractCorrelationId } from '../lib/errorUtils';
+import { retryWithBackoff, isRetryableError } from '../lib/retryUtils';
 
 export type UploadStatus =
   | 'pending'

@@ -16,11 +16,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+
 import { useRouter } from 'next/navigation';
-import { api, GameSessionDto, Game, SessionHistoryFilters } from '@/lib/api';
+
+import { ErrorDisplay } from '@/components/errors';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -32,10 +34,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { ErrorDisplay } from '@/components/errors';
+import { api, GameSessionDto, Game, SessionHistoryFilters } from '@/lib/api';
+import { createErrorContext } from '@/lib/errors';
 import { categorizeError } from '@/lib/errorUtils';
 import { logger } from '@/lib/logger';
-import { createErrorContext } from '@/lib/errors';
 
 /**
  * Session status badge component

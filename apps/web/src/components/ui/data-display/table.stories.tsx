@@ -1,4 +1,3 @@
-import type { Meta, StoryObj } from '@storybook/react';
 import {
   Table,
   TableBody,
@@ -9,6 +8,8 @@ import {
   TableRow,
   TableFooter,
 } from './table';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 /**
  * Table component for displaying tabular data with semantic HTML.

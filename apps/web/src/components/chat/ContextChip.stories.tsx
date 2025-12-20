@@ -4,8 +4,9 @@
  * @issue #1840 (PAGE-004)
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
 import { ContextChip } from './ContextChip';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta: Meta<typeof ContextChip> = {
   title: 'Components/Chat/ContextChip',

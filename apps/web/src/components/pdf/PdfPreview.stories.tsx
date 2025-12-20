@@ -5,9 +5,11 @@
  * Covers: loading, rendering, zoom, navigation, thumbnails, error, keyboard controls, mobile.
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
 import { fn } from 'storybook/test';
+
 import { PdfPreview } from './PdfPreview';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 // Mock PDF file - minimal valid PDF structure for react-pdf/pdfjs
 // This creates a simple 1-page PDF that can be rendered without errors

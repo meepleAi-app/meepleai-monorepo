@@ -25,12 +25,14 @@
 
 'use client';
 
-import { getCurrentUser } from '@/actions/auth';
-import { useRouter } from 'next/navigation';
 import { useEffect, useState, useRef } from 'react';
 import type { ReactNode } from 'react';
-import type { AuthUser } from '@/types/auth';
+
+import { useRouter } from 'next/navigation';
+
+import { getCurrentUser } from '@/actions/auth';
 import { logger } from '@/lib/logger';
+import type { AuthUser } from '@/types/auth';
 
 interface RequireRoleProps {
   /**

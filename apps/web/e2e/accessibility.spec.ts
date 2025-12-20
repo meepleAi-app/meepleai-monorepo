@@ -7,11 +7,13 @@
  * @see apps/web/e2e/pages/ - Page Object Model architecture
  */
 
-import { test, expect } from './fixtures/chromatic';
 import AxeBuilder from '@axe-core/playwright';
-import type { Result } from 'axe-core';
-import { t } from './fixtures/i18n';
+
 import { setupMockAuth } from './fixtures/auth';
+import { test, expect } from './fixtures/chromatic';
+import { t } from './fixtures/i18n';
+
+import type { Result } from 'axe-core';
 
 // Helper to get readable violations
 function formatViolations(violations: Result[]) {

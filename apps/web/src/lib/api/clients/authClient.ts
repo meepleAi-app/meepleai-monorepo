@@ -5,7 +5,6 @@
  * Covers: Sessions, 2FA, User Profile, Preferences
  */
 
-import type { HttpClient } from '../core/httpClient';
 import { setStoredApiKey, clearStoredApiKey } from '../core/apiKeyStore';
 import {
   LoginResponseSchema,
@@ -57,6 +56,8 @@ import {
   type RevokeAllSessionsResponse,
   type RevokeAllSessionsRequest,
 } from '../schemas';
+
+import type { HttpClient } from '../core/httpClient';
 
 export interface CreateAuthClientParams {
   httpClient: HttpClient;

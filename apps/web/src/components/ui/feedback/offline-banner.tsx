@@ -20,11 +20,13 @@
 'use client';
 
 import * as React from 'react';
-import { WifiOff, RefreshCw, AlertTriangle, X, Loader2 } from 'lucide-react';
+
 import { cva, type VariantProps } from 'class-variance-authority';
-import { cn } from '@/lib/utils';
-import { useNetworkStatus } from '@/hooks/useNetworkStatus';
+import { WifiOff, RefreshCw, AlertTriangle, X, Loader2 } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
+import { useNetworkStatus } from '@/hooks/useNetworkStatus';
+import { cn } from '@/lib/utils';
 
 // ============================================================================
 // Variants

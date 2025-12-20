@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
+
 import { api, type RuleSpecComment } from '@/lib/api';
-import { CommentItem } from './CommentItem';
-import { CommentForm } from './CommentForm';
-import { getErrorMessage } from '@/lib/utils/errorHandler';
-import { logger } from '@/lib/logger';
 import { createErrorContext } from '@/lib/errors';
+import { logger } from '@/lib/logger';
+import { getErrorMessage } from '@/lib/utils/errorHandler';
+
+import { CommentForm } from './CommentForm';
+import { CommentItem } from './CommentItem';
 
 interface CommentThreadProps {
   gameId: string;

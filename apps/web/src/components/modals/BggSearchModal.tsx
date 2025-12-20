@@ -1,10 +1,12 @@
-import { useState, useEffect } from "react";
-import Image from "next/image";
-import { api, BggSearchResult, BggGameDetails } from "@/lib/api";
-import { useDebounce } from "@/hooks/useDebounce";
-import { LoadingButton } from "@/components/loading/LoadingButton";
-import { logger } from '@/lib/logger';
+import { useState, useEffect } from 'react';
+
+import Image from 'next/image';
+
+import { LoadingButton } from '@/components/loading/LoadingButton';
+import { useDebounce } from '@/hooks/useDebounce';
+import { api, BggSearchResult, BggGameDetails } from '@/lib/api';
 import { createErrorContext } from '@/lib/errors';
+import { logger } from '@/lib/logger';
 
 interface BggSearchModalProps {
   isOpen: boolean;
@@ -18,7 +20,7 @@ interface BggSearchModalProps {
  * AI-13: https://github.com/DegrassiAaron/meepleai-monorepo/issues/420
  */
 export function BggSearchModal({ isOpen, onClose, onSelect }: BggSearchModalProps) {
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState('');
   const [results, setResults] = useState<BggSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingDetails, setLoadingDetails] = useState(false);
@@ -39,7 +41,7 @@ export function BggSearchModal({ isOpen, onClose, onSelect }: BggSearchModalProp
   // Reset state when modal closes
   useEffect(() => {
     if (!isOpen) {
-      setQuery("");
+      setQuery('');
       setResults([]);
       setError(null);
     }
@@ -54,7 +56,7 @@ export function BggSearchModal({ isOpen, onClose, onSelect }: BggSearchModalProp
       setResults(response.results);
 
       if (response.results.length === 0) {
-        setError("No games found. Try a different search term.");
+        setError('No games found. Try a different search term.');
       }
     } catch (err) {
       logger.error(
@@ -62,7 +64,9 @@ export function BggSearchModal({ isOpen, onClose, onSelect }: BggSearchModalProp
         err instanceof Error ? err : new Error(String(err)),
         createErrorContext('BggSearchModal', 'handleSearch', { query: searchQuery })
       );
-      setError("Failed to search BoardGameGeek. The service may be unavailable. Please try again later.");
+      setError(
+        'Failed to search BoardGameGeek. The service may be unavailable. Please try again later.'
+      );
       setResults([]);
     } finally {
       setLoading(false);
@@ -83,7 +87,7 @@ export function BggSearchModal({ isOpen, onClose, onSelect }: BggSearchModalProp
         err instanceof Error ? err : new Error(String(err)),
         createErrorContext('BggSearchModal', 'handleSelectGame', { bggId })
       );
-      setError("Failed to fetch game details. Please try again.");
+      setError('Failed to fetch game details. Please try again.');
     } finally {
       setLoadingDetails(false);
     }
@@ -103,7 +107,7 @@ export function BggSearchModal({ isOpen, onClose, onSelect }: BggSearchModalProp
     >
       <div
         className="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
+        onClick={e => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex justify-between items-center mb-4">
@@ -124,15 +128,13 @@ export function BggSearchModal({ isOpen, onClose, onSelect }: BggSearchModalProp
           <input
             type="text"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={e => setQuery(e.target.value)}
             placeholder="Search for a board game..."
             className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             aria-label="Search BoardGameGeek"
             autoFocus
           />
-          <p className="text-sm text-gray-500 mt-1">
-            Type at least 3 characters to search
-          </p>
+          <p className="text-sm text-gray-500 mt-1">Type at least 3 characters to search</p>
         </div>
 
         {/* Loading Indicator */}
@@ -145,7 +147,10 @@ export function BggSearchModal({ isOpen, onClose, onSelect }: BggSearchModalProp
 
         {/* Error Message */}
         {error && !loading && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4" role="alert">
+          <div
+            className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4"
+            role="alert"
+          >
             <p>{error}</p>
           </div>
         )}
@@ -154,9 +159,9 @@ export function BggSearchModal({ isOpen, onClose, onSelect }: BggSearchModalProp
         {!loading && results.length > 0 && (
           <div className="space-y-3">
             <p className="text-sm text-gray-600">
-              Found {results.length} result{results.length !== 1 ? "s" : ""}
+              Found {results.length} result{results.length !== 1 ? 's' : ''}
             </p>
-            {results.map((result) => (
+            {results.map(result => (
               <div
                 key={result.bggId}
                 className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"

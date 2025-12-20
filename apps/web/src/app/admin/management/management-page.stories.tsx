@@ -5,9 +5,11 @@
  * Visual testing with Chromatic
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
-import { ManagementPageClient } from './client';
 import { AuthProvider } from '@/components/auth/AuthProvider';
+
+import { ManagementPageClient } from './client';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const _mockUser = {
   id: 'test-admin-id',

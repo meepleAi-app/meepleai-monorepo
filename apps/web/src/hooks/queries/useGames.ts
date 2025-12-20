@@ -7,6 +7,7 @@
  */
 
 import { useQuery, UseQueryResult } from '@tanstack/react-query';
+
 import { api, PaginatedGamesResponse, GameFilters, GameSortOptions } from '@/lib/api';
 
 /**

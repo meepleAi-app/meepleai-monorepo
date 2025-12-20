@@ -16,6 +16,7 @@
  */
 
 import React from 'react';
+
 import type { AuthUser } from '@/types';
 
 export interface GreetingSectionProps {

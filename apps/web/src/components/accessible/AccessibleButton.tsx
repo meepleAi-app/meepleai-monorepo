@@ -46,10 +46,12 @@
  * ```
  */
 
+import { ButtonHTMLAttributes, forwardRef } from 'react';
+
+import { Loader2 } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Loader2 } from 'lucide-react';
-import { ButtonHTMLAttributes, forwardRef } from 'react';
 
 export interface AccessibleButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   /**

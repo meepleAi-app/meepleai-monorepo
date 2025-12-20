@@ -5,7 +5,6 @@
  * Covers: Create links, revoke links, access shared threads, add comments
  */
 
-import type { HttpClient } from '../core/httpClient';
 import {
   CreateShareLinkResponseSchema,
   GetSharedThreadResponseSchema,
@@ -15,6 +14,8 @@ import {
   type GetSharedThreadResponse,
   type AddCommentToSharedThreadResponse,
 } from '../schemas/share-links.schemas';
+
+import type { HttpClient } from '../core/httpClient';
 
 export interface CreateShareLinksClientParams {
   httpClient: HttpClient;

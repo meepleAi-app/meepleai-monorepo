@@ -8,8 +8,9 @@
  * Covers: QR code display, manual code entry, verification, success, errors.
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
 import { fn } from 'storybook/test';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 // Placeholder component (will be replaced with real component)
 const TwoFactorSetup = ({ onComplete, onCancel, loading, error }: any) => (

@@ -3,9 +3,11 @@
  * Issue #1676: Chromatic visual regression testing
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
-import { AgentSelector } from './AgentSelector';
 import { ChatContext, type ChatContextValue } from '@/store/chat/StorybookContext';
+
+import { AgentSelector } from './AgentSelector';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const createMockContext = (overrides: Partial<ChatContextValue> = {}): ChatContextValue => ({
   agents: [

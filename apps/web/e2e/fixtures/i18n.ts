@@ -23,8 +23,8 @@
  * ```
  */
 
-import itMessages from '../../src/locales/it.json';
 import enMessages from '../../src/locales/en.json';
+import itMessages from '../../src/locales/it.json';
 
 type NestedMessages = Record<string, string | Record<string, unknown>>;
 
@@ -32,21 +32,21 @@ const SUPPORTED_LANGUAGES = ['it', 'en'] as const;
 type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
 const DEFAULT_LANGUAGE: SupportedLanguage = 'it';
 
-function flattenMessages(
-  nestedMessages: NestedMessages,
-  prefix = ''
-): Record<string, string> {
-  return Object.entries(nestedMessages).reduce((messages, [key, value]) => {
-    const prefixedKey = prefix ? `${prefix}.${key}` : key;
+function flattenMessages(nestedMessages: NestedMessages, prefix = ''): Record<string, string> {
+  return Object.entries(nestedMessages).reduce(
+    (messages, [key, value]) => {
+      const prefixedKey = prefix ? `${prefix}.${key}` : key;
 
-    if (typeof value === 'string') {
-      messages[prefixedKey] = value;
-    } else if (typeof value === 'object' && value !== null) {
-      Object.assign(messages, flattenMessages(value as NestedMessages, prefixedKey));
-    }
+      if (typeof value === 'string') {
+        messages[prefixedKey] = value;
+      } else if (typeof value === 'object' && value !== null) {
+        Object.assign(messages, flattenMessages(value as NestedMessages, prefixedKey));
+      }
 
-    return messages;
-  }, {} as Record<string, string>);
+      return messages;
+    },
+    {} as Record<string, string>
+  );
 }
 
 const catalog: Record<SupportedLanguage, Record<string, string>> = {
@@ -108,8 +108,7 @@ export function getCurrentLanguage(): SupportedLanguage {
 export function t(key: string, lang?: SupportedLanguage): string {
   const targetLang = lang || getCurrentLanguage();
   const translation =
-    resolveTranslation(key, targetLang) ??
-    resolveTranslation(key, DEFAULT_LANGUAGE);
+    resolveTranslation(key, targetLang) ?? resolveTranslation(key, DEFAULT_LANGUAGE);
 
   if (!translation) {
     console.warn(`⚠️  Missing translation for key: ${key}`);
@@ -214,4 +213,3 @@ export function addTranslation(key: string, en: string, it: string): void {
   catalog.en[key] = en;
   catalog.it[key] = it;
 }
-

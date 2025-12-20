@@ -17,14 +17,16 @@
  * @see Issue #1838 PAGE-003
  */
 
-import { Button } from '@/components/ui/button';
 import { Metadata } from 'next';
 import Link from 'next/link';
+
+import { PublicLayoutWrapper } from '@/components/layouts';
+import { Button } from '@/components/ui/button';
+
 import { GameGrid } from './components/GameGrid';
 import { Pagination } from './components/Pagination';
 import { SearchBar } from './components/SearchBar';
 import { ViewToggle } from './components/ViewToggle';
-import { PublicLayoutWrapper } from '@/components/layouts';
 
 // API base URL
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';

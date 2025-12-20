@@ -9,8 +9,8 @@
  * @see https://formatjs.io/docs/react-intl
  */
 
-import itMessages from './it.json';
 import enMessages from './en.json';
+import itMessages from './it.json';
 
 /**
  * Available locales in the application

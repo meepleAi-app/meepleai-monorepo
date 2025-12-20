@@ -18,17 +18,19 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+
 import Link from 'next/link';
-import { api, type AiRequest, type AdminStats } from '@/lib/api';
+
 import {
   EndpointDistributionChart,
   LatencyDistributionChart,
   RequestsTimeSeriesChart,
   FeedbackChart,
 } from '@/components/admin';
-import { cn } from '@/lib/utils';
 import { useAuthUser } from '@/hooks/useAuthUser';
+import { api, type AiRequest, type AdminStats } from '@/lib/api';
 import { FEEDBACK_OUTCOMES } from '@/lib/constants/feedback';
+import { cn } from '@/lib/utils';
 
 export function AdminClient() {
   const { user: _user, loading: _userLoading } = useAuthUser();

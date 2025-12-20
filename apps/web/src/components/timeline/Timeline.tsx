@@ -1,11 +1,13 @@
 // UI-04: Main Timeline component (multi-pane layout)
-import { useState } from "react";
-import { TimelineEvent, TimelineFilters, DEFAULT_FILTERS } from "@/lib/timeline-types";
-import { TimelineFilters as TimelineFiltersComponent } from "./TimelineFilters";
-import { TimelineEventList } from "./TimelineEventList";
-import { TimelineDetails } from "./TimelineDetails";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { useState } from 'react';
+
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { TimelineEvent, TimelineFilters, DEFAULT_FILTERS } from '@/lib/timeline-types';
+
+import { TimelineDetails } from './TimelineDetails';
+import { TimelineEventList } from './TimelineEventList';
+import { TimelineFilters as TimelineFiltersComponent } from './TimelineFilters';
 
 interface TimelineProps {
   events: TimelineEvent[];
@@ -19,7 +21,7 @@ export function Timeline({ events, isVisible, onToggleVisibility }: TimelineProp
   const [isFiltersCollapsed, setIsFiltersCollapsed] = useState(false);
   const [isDetailsCollapsed, setIsDetailsCollapsed] = useState(false);
 
-  const selectedEvent = events.find((e) => e.id === selectedEventId) || null;
+  const selectedEvent = events.find(e => e.id === selectedEventId) || null;
 
   if (!isVisible) {
     return (
@@ -49,7 +51,9 @@ export function Timeline({ events, isVisible, onToggleVisibility }: TimelineProp
       {/* Timeline Header */}
       <header className="p-4 border-b border-gray-300 flex justify-between items-center bg-white z-10">
         <div className="flex items-center gap-3">
-          <span aria-hidden="true" className="text-3xl">📊</span>
+          <span aria-hidden="true" className="text-3xl">
+            📊
+          </span>
           <div>
             <h1 className="m-0 text-xl font-semibold">Timeline RAG</h1>
             <p className="my-1 text-[13px] text-slate-500">
@@ -64,7 +68,9 @@ export function Timeline({ events, isVisible, onToggleVisibility }: TimelineProp
           className="flex items-center gap-2"
         >
           <span>Chiudi Timeline</span>
-          <span aria-hidden="true" className="text-base">✕</span>
+          <span aria-hidden="true" className="text-base">
+            ✕
+          </span>
         </Button>
       </header>
 
@@ -108,23 +114,23 @@ export function Timeline({ events, isVisible, onToggleVisibility }: TimelineProp
           </div>
           <div>
             <strong className="text-gray-900">
-              {events.filter((e) => e.status === "success").length}
-            </strong>{" "}
+              {events.filter(e => e.status === 'success').length}
+            </strong>{' '}
             completati
           </div>
           <div>
             <strong className="text-red-600">
-              {events.filter((e) => e.status === "error").length}
-            </strong>{" "}
-            {events.filter((e) => e.status === "error").length === 1 ? "errore" : "errori"}
+              {events.filter(e => e.status === 'error').length}
+            </strong>{' '}
+            {events.filter(e => e.status === 'error').length === 1 ? 'errore' : 'errori'}
           </div>
-          {events.some((e) => e.data.metrics?.totalTokens) && (
+          {events.some(e => e.data.metrics?.totalTokens) && (
             <div>
               <strong className="text-gray-900">
                 {events
                   .reduce((sum, e) => sum + (e.data.metrics?.totalTokens || 0), 0)
                   .toLocaleString()}
-              </strong>{" "}
+              </strong>{' '}
               token totali
             </div>
           )}

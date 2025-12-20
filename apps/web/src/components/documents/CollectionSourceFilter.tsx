@@ -11,9 +11,9 @@
 'use client';
 
 import * as React from 'react';
+
 import { Check } from 'lucide-react';
-import { Button } from '@/components/ui/primitives/button';
-import { Checkbox } from '@/components/ui/primitives/checkbox';
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,8 +21,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/navigation/dropdown-menu';
-import { DocumentBadge, type DocumentType } from './DocumentBadge';
+import { Button } from '@/components/ui/primitives/button';
+import { Checkbox } from '@/components/ui/primitives/checkbox';
 import { cn } from '@/lib/utils';
+
+import { DocumentBadge, type DocumentType } from './DocumentBadge';
 
 export interface DocumentCollection {
   id: string;

@@ -14,7 +14,6 @@
 
 'use client';
 
-import { useRouter } from 'next/navigation';
 import {
   CheckCircle2,
   Info,
@@ -24,9 +23,11 @@ import {
   MessageSquare,
   Link as LinkIcon,
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+
 import type { NotificationDto, NotificationSeverity, NotificationType } from '@/lib/api';
-import { useNotificationStore } from '@/store/notification/store';
 import { cn } from '@/lib/utils';
+import { useNotificationStore } from '@/store/notification/store';
 
 export interface NotificationItemProps {
   notification: NotificationDto;

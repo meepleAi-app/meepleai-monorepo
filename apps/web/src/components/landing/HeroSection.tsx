@@ -15,10 +15,11 @@
  * @see docs/04-frontend/wireframes-playful-boardroom.md (lines 33-111)
  */
 
-import Link from 'next/link';
-import { MeepleAvatar } from '@/components/ui/meeple-avatar';
-import { Button } from '@/components/ui/button';
 import { ArrowRight, ChevronDown } from 'lucide-react';
+import Link from 'next/link';
+
+import { Button } from '@/components/ui/button';
+import { MeepleAvatar } from '@/components/ui/meeple-avatar';
 import { useTranslation } from '@/hooks/useTranslation';
 
 export function HeroSection() {

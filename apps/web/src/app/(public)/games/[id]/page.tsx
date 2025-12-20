@@ -15,7 +15,25 @@
 
 'use client';
 
+import { useEffect, useState } from 'react';
+
+import {
+  AlertCircle,
+  ArrowLeft,
+  BookOpen,
+  Calendar,
+  Clock,
+  ExternalLink,
+  PlayCircle,
+  Star,
+  StickyNote,
+  TrendingUp,
+  Users,
+} from 'lucide-react';
 import Image from 'next/image';
+import Link from 'next/link';
+import { useParams, useRouter } from 'next/navigation';
+
 import { PdfUploadForm } from '@/components/pdf/PdfUploadForm';
 import { PdfViewerModal } from '@/components/pdf/PdfViewerModal';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -30,22 +48,6 @@ import { api, BggGameDetails, Game, GameSessionDto, PdfDocumentDto, RuleSpec } f
 import { createErrorContext } from '@/lib/errors';
 import { categorizeError } from '@/lib/errorUtils';
 import { logger } from '@/lib/logger';
-import {
-  AlertCircle,
-  ArrowLeft,
-  BookOpen,
-  Calendar,
-  Clock,
-  ExternalLink,
-  PlayCircle,
-  Star,
-  StickyNote,
-  TrendingUp,
-  Users,
-} from 'lucide-react';
-import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
 
 // LocalStorage key for notes
 const NOTES_STORAGE_KEY = 'meepleai_game_notes';

@@ -5,7 +5,6 @@
  * Covers: Dynamic configuration CRUD, history, validation, export/import
  */
 
-import type { HttpClient } from '../core/httpClient';
 import {
   SystemConfigurationDtoSchema,
   PagedResultSchema,
@@ -17,6 +16,8 @@ import {
   type ConfigurationValidationResult,
   type ConfigurationExportDto,
 } from '../schemas';
+
+import type { HttpClient } from '../core/httpClient';
 
 export interface CreateConfigClientParams {
   httpClient: HttpClient;

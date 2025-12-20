@@ -19,7 +19,6 @@
  * ```
  */
 
-import { HttpClient, type HttpClientConfig } from './core/httpClient';
 import {
   createAuthClient,
   createGamesClient,
@@ -48,6 +47,7 @@ import {
   type ShareLinksClient,
   type NotificationsClient,
 } from './clients';
+import { HttpClient, type HttpClientConfig } from './core/httpClient';
 
 // Re-export alert schemas (Issue #921)
 export * from './schemas/alerts.schemas';

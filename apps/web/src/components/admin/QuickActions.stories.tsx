@@ -1,5 +1,3 @@
-import type { Meta, StoryObj } from '@storybook/react';
-import { QuickActions, defaultQuickActions } from './QuickActions';
 import {
   FileUpIcon,
   UsersIcon,
@@ -8,6 +6,10 @@ import {
   MessageSquareIcon,
   DatabaseIcon,
 } from 'lucide-react';
+
+import { QuickActions, defaultQuickActions } from './QuickActions';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 /**
  * QuickActions Component - Issue #885

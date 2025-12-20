@@ -4,8 +4,9 @@
  * @see apps/web/e2e/pages/
  */
 
-import { test, expect } from './fixtures/chromatic';
 import { playAudit } from 'playwright-lighthouse';
+
+import { test, expect } from './fixtures/chromatic';
 
 /**
  * Get a unique remote debugging port for each worker to avoid EADDRINUSE collisions.

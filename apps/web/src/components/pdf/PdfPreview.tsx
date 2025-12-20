@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+
 import { Document, Page, pdfjs } from 'react-pdf';
 import { List } from 'react-window';
-import { cn } from '@/lib/utils';
-import { logger } from '@/lib/logger';
+
 import { createErrorContext } from '@/lib/errors';
+import { logger } from '@/lib/logger';
+import { cn } from '@/lib/utils';
 
 // Note: CSS imports commented out due to module resolution issues in Next.js 15.5.4
 // import 'react-pdf/dist/esm/Page/AnnotationLayer.css';

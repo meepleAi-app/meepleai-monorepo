@@ -29,8 +29,9 @@
  */
 
 import { useEffect, useState } from 'react';
-import { AccessibleModal } from '../accessible/AccessibleModal';
+
 import { AccessibleButton } from '../accessible/AccessibleButton';
+import { AccessibleModal } from '../accessible/AccessibleModal';
 
 export interface SessionWarningModalProps {
   /** Minutes remaining until session expires */
@@ -58,7 +59,7 @@ export function SessionWarningModal({
     setRemainingMinutes(initialRemainingMinutes);
 
     const intervalId = setInterval(() => {
-      setRemainingMinutes((prev) => Math.max(0, prev - 1));
+      setRemainingMinutes(prev => Math.max(0, prev - 1));
     }, 60 * 1000); // 1 minute
 
     return () => clearInterval(intervalId);
@@ -115,7 +116,11 @@ export function SessionWarningModal({
 
         {/* Countdown Timer */}
         <div className="text-center">
-          <div className="text-4xl font-bold text-amber-600 dark:text-amber-400" aria-live="polite" aria-atomic="true">
+          <div
+            className="text-4xl font-bold text-amber-600 dark:text-amber-400"
+            aria-live="polite"
+            aria-atomic="true"
+          >
             {remainingMinutes}
           </div>
           <div className="mt-1 text-sm text-slate-600 dark:text-slate-400">
@@ -125,7 +130,8 @@ export function SessionWarningModal({
 
         {/* Message */}
         <p className="text-center text-slate-700 dark:text-slate-300">
-          You haven&apos;t been active for a while. For your security, your session will expire soon.
+          You haven&apos;t been active for a while. For your security, your session will expire
+          soon.
           <br />
           <span className="text-sm text-slate-600 dark:text-slate-400">
             Click &quot;Stay Logged In&quot; to continue your session.

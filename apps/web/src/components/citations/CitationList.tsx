@@ -12,9 +12,11 @@
  */
 
 import React, { useState } from 'react';
-import { Citation } from '@/types';
-import { CitationCard } from './CitationCard';
+
 import { cn } from '@/lib/utils';
+import { Citation } from '@/types';
+
+import { CitationCard } from './CitationCard';
 
 interface CitationListProps {
   citations: Citation[];
@@ -29,7 +31,7 @@ export const CitationList = React.memo(function CitationList({
   showRelevanceScores = false,
   collapsible = false,
   className,
-  onCitationClick
+  onCitationClick,
 }: CitationListProps) {
   // Always start expanded (collapsible only affects toggle ability)
   const [isExpanded, setIsExpanded] = useState(true);
@@ -46,14 +48,14 @@ export const CitationList = React.memo(function CitationList({
   };
 
   return (
-    <div className={cn("mt-3", className)} data-testid="citation-list">
+    <div className={cn('mt-3', className)} data-testid="citation-list">
       {/* Header */}
       <button
         onClick={toggleExpanded}
         disabled={!collapsible}
         className={cn(
-          "flex items-center gap-2 mb-2 text-sm font-medium text-gray-700",
-          collapsible && "cursor-pointer hover:text-gray-900"
+          'flex items-center gap-2 mb-2 text-sm font-medium text-gray-700',
+          collapsible && 'cursor-pointer hover:text-gray-900'
         )}
         aria-expanded={isExpanded}
         aria-controls="citations-content"
@@ -64,9 +66,7 @@ export const CitationList = React.memo(function CitationList({
             {isExpanded ? '▼' : '▶'}
           </span>
         )}
-        <span>
-          📚 Fonti ({citations.length})
-        </span>
+        <span>📚 Fonti ({citations.length})</span>
       </button>
 
       {/* Citations Grid */}

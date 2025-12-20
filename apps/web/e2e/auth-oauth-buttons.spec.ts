@@ -16,8 +16,8 @@
 
 import { test, expect } from './fixtures/chromatic';
 import { getTextMatcher } from './fixtures/i18n';
-import { LoginPage, AuthHelper } from './pages';
 import { WaitHelper } from './helpers/WaitHelper';
+import { LoginPage, AuthHelper } from './pages';
 
 test.describe('OAuth Authentication Flow', () => {
   let loginPage: LoginPage;

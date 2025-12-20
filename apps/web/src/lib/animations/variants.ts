@@ -5,8 +5,9 @@
  * @module animations/variants
  */
 
-import type { Variants } from 'framer-motion';
 import { TRANSITIONS, STAGGER } from './transitions';
+
+import type { Variants } from 'framer-motion';
 
 /**
  * Fade in/out animation variant

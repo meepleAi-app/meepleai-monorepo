@@ -24,13 +24,15 @@
  */
 
 import { Suspense, useEffect, useState, FormEvent } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
+
 import { motion } from 'framer-motion';
-import { api } from '@/lib/api';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
+
 import { AccessibleFormInput, AccessibleButton } from '@/components/accessible';
 import { AuthLayout } from '@/components/layouts';
 import { Button } from '@/components/ui/button';
+import { api } from '@/lib/api';
 import { getErrorMessage } from '@/lib/utils/errorHandler';
 
 // Type definitions

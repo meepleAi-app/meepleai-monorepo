@@ -2,6 +2,10 @@
 'use client';
 
 import * as React from 'react';
+
+import { AlertCircle, CheckCircle, Info, AlertTriangle, Loader2 } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -10,8 +14,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { AlertCircle, CheckCircle, Info, AlertTriangle, Loader2 } from 'lucide-react';
 
 export type AlertVariant = 'info' | 'success' | 'warning' | 'error' | 'loading';
 

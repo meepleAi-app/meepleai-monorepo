@@ -13,12 +13,6 @@
  * - Optional badge for notifications
  */
 
-import Link from 'next/link';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
-import type { LucideIcon } from 'lucide-react';
 import {
   FileUpIcon,
   UsersIcon,
@@ -28,6 +22,14 @@ import {
   DatabaseIcon,
   ZapIcon,
 } from 'lucide-react';
+import Link from 'next/link';
+
+import { Badge } from '@/components/ui/badge';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
+
+import type { LucideIcon } from 'lucide-react';
 
 export interface QuickAction {
   id: string;

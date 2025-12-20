@@ -19,11 +19,16 @@
 'use client';
 
 import { useTransition } from 'react';
+
+import { Home, Gamepad2, MessageSquare, Settings, LogOut } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, Gamepad2, MessageSquare, Settings, LogOut } from 'lucide-react';
+
+import { logoutAction } from '@/actions/auth';
+import { NotificationBell } from '@/components/notifications';
+import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 import { cn } from '@/lib/utils';
-import { MeepleLogo } from '../ui/meeple-logo';
+
 import { Button } from '../ui/button';
 import {
   DropdownMenu,
@@ -32,9 +37,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
-import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
-import { logoutAction } from '@/actions/auth';
-import { NotificationBell } from '@/components/notifications';
+import { MeepleLogo } from '../ui/meeple-logo';
 
 interface NavItem {
   href: string;

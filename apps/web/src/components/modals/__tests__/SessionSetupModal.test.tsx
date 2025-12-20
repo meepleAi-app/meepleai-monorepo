@@ -5,7 +5,7 @@
  * Tests cover rendering and accessibility fundamentals.
  *
  * Issue #1887 - Batch 15: Test rewrite with required game prop
- * TODO: Expand with player management, validation, and submission tests
+ * TODO (#2256): Expand with player management, validation, and submission tests
  */
 
 import { render, screen } from '@testing-library/react';

@@ -227,8 +227,9 @@ export function FeedbackChart({ feedbackCounts }: FeedbackChartProps) {
  * Admin charts (Recharts) - dynamically loaded to avoid SSR/bundle bloat.
  */
 
-import dynamic from 'next/dynamic';
 import { Suspense } from 'react';
+
+import dynamic from 'next/dynamic';
 
 const isTest = process.env.NODE_ENV === 'test';
 const recharts = isTest ? require('recharts') : null;

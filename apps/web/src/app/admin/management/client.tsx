@@ -22,14 +22,7 @@
  */
 
 import { useState, useCallback, useEffect } from 'react';
-import Link from 'next/link';
-import { api } from '@/lib/api';
-import { useAuthUser } from '@/components/auth/AuthProvider';
-import { AdminAuthGuard } from '@/components/admin';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+
 import {
   Key,
   Users,
@@ -41,17 +34,25 @@ import {
   Plus,
   RefreshCw,
 } from 'lucide-react';
+import Link from 'next/link';
 
+import { AdminAuthGuard } from '@/components/admin';
 // Import FASE 3 components
 import { ApiKeyFilterPanel } from '@/components/admin/ApiKeyFilterPanel';
-import { ApiKeyCreationModal } from '@/components/modals/ApiKeyCreationModal';
 import { BulkActionBar } from '@/components/admin/BulkActionBar';
-import { UserActivityTimeline } from '@/components/admin/UserActivityTimeline';
-import { ConfirmationDialog } from '@/components/ui/overlays/confirmation-dialog';
-
+// eslint-disable-next-line import/order -- Type import grouping (edge case)
 import type { ApiKeyFilters } from '@/types';
-import type { ApiKeyWithStatsDto, AdminUser } from '@/lib/api/schemas/admin.schemas';
 import type { UserActivityEvent } from '@/components/admin/UserActivityItem';
+import { UserActivityTimeline } from '@/components/admin/UserActivityTimeline';
+import { useAuthUser } from '@/components/auth/AuthProvider';
+import { ApiKeyCreationModal } from '@/components/modals/ApiKeyCreationModal';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ConfirmationDialog } from '@/components/ui/overlays/confirmation-dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { api } from '@/lib/api';
+import type { ApiKeyWithStatsDto, AdminUser } from '@/lib/api/schemas/admin.schemas';
 
 type TabValue = 'api-keys' | 'users' | 'activity';
 

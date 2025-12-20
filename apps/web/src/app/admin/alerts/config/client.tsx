@@ -12,17 +12,8 @@
  */
 
 import { useState } from 'react';
+
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { AdminAuthGuard } from '@/components/admin';
-import { useAuthUser } from '@/components/auth/AuthProvider';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Separator } from '@/components/ui/separator';
 import {
   Loader2,
   Mail,
@@ -32,6 +23,17 @@ import {
   CheckCircle2,
   AlertTriangle,
 } from 'lucide-react';
+
+import { AdminAuthGuard } from '@/components/admin';
+import { useAuthUser } from '@/components/auth/AuthProvider';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
+import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { alertConfigApi } from '@/lib/api/alert-config.api';
 import { alertRulesApi } from '@/lib/api/alert-rules.api';
 import type { UpdateAlertConfiguration } from '@/lib/api/schemas/alert-config.schemas';

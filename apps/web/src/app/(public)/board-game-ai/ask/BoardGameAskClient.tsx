@@ -10,13 +10,14 @@
  */
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
+
 import { motion } from 'framer-motion';
-import { api } from '@/lib/api';
-import { useChatQuery } from '@/lib/hooks/useChatQuery';
+import Link from 'next/link';
+
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -24,13 +25,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import type { Citation } from '@/types';
-import { logger } from '@/lib/logger';
-import { createErrorContext } from '@/lib/errors';
+import { Textarea } from '@/components/ui/textarea';
+import { api } from '@/lib/api';
 import { GamesArrayResponseSchema } from '@/lib/api/schemas/games.schemas';
 import type { Game } from '@/lib/api/schemas/games.schemas';
+import { createErrorContext } from '@/lib/errors';
+import { useChatQuery } from '@/lib/hooks/useChatQuery';
+import { logger } from '@/lib/logger';
+import type { Citation } from '@/types';
 
 export default function BoardGameAskClient() {
   // State

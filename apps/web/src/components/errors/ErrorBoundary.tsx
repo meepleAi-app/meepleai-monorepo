@@ -3,8 +3,9 @@
  */
 
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { logger } from '@/lib/logger';
+
 import { createErrorContext } from '@/lib/errors';
+import { logger } from '@/lib/logger';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -29,7 +30,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     this.state = {
       hasError: false,
       error: null,
-      errorInfo: null
+      errorInfo: null,
     };
   }
 
@@ -44,14 +45,10 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     logger.error(
       'React Error Boundary caught error',
       error,
-      createErrorContext(
-        this.props.componentName || 'ErrorBoundary',
-        'componentDidCatch',
-        {
-          componentStack: errorInfo.componentStack,
-          errorBoundary: this.props.componentName
-        }
-      )
+      createErrorContext(this.props.componentName || 'ErrorBoundary', 'componentDidCatch', {
+        componentStack: errorInfo.componentStack,
+        errorBoundary: this.props.componentName,
+      })
     );
 
     // Call custom error handler if provided
@@ -62,7 +59,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     this.setState({
       hasError: false,
       error: null,
-      errorInfo: null
+      errorInfo: null,
     });
   };
 
@@ -101,7 +98,12 @@ interface DefaultErrorFallbackProps {
 /**
  * Default error fallback UI
  */
-function DefaultErrorFallback({ error, errorInfo, onReset, showDetails = false }: DefaultErrorFallbackProps) {
+function DefaultErrorFallback({
+  error,
+  errorInfo,
+  onReset,
+  showDetails = false,
+}: DefaultErrorFallbackProps) {
   const [detailsExpanded, setDetailsExpanded] = React.useState(false);
 
   return (
@@ -130,7 +132,8 @@ function DefaultErrorFallback({ error, errorInfo, onReset, showDetails = false }
           </h2>
 
           <p className="mt-2 text-center text-sm text-gray-600">
-            We apologize for the inconvenience. The error has been logged and our team has been notified.
+            We apologize for the inconvenience. The error has been logged and our team has been
+            notified.
           </p>
 
           {showDetails && (
@@ -148,7 +151,12 @@ function DefaultErrorFallback({ error, errorInfo, onReset, showDetails = false }
                   viewBox="0 0 24 24"
                   aria-hidden="true"
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
                 </svg>
               </button>
 
@@ -159,9 +167,7 @@ function DefaultErrorFallback({ error, errorInfo, onReset, showDetails = false }
                       {error.name}: {error.message}
                     </div>
                     {error.stack && (
-                      <pre className="whitespace-pre-wrap break-words">
-                        {error.stack}
-                      </pre>
+                      <pre className="whitespace-pre-wrap break-words">{error.stack}</pre>
                     )}
                     {errorInfo?.componentStack && (
                       <div className="mt-4">
@@ -186,7 +192,7 @@ function DefaultErrorFallback({ error, errorInfo, onReset, showDetails = false }
             </button>
 
             <button
-              onClick={() => window.location.href = '/'}
+              onClick={() => (window.location.href = '/')}
               className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
               Go to Home
@@ -213,7 +219,6 @@ export function useErrorHandler() {
   return {
     handleError: setError,
     clearError: () => setError(null),
-    error
+    error,
   };
 }
-

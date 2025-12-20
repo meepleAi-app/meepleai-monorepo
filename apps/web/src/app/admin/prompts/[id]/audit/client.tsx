@@ -1,14 +1,16 @@
 'use client';
 
-import type { AuthUser } from '@/types/auth';
 import React, { useState, useEffect, useCallback } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+
 import Link from 'next/link';
-import { api } from '@/lib/api';
-import { cn } from '@/lib/utils';
+import { useRouter, useParams } from 'next/navigation';
+
 import { ErrorDisplay } from '@/components/errors';
+import { api } from '@/lib/api';
 import { categorizeError } from '@/lib/errorUtils';
+import { cn } from '@/lib/utils';
 import { getErrorMessage } from '@/lib/utils/errorHandler';
+import type { AuthUser } from '@/types/auth';
 
 type PromptAuditLog = {
   id: string;

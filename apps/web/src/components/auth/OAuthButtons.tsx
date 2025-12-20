@@ -1,4 +1,5 @@
 import React from 'react';
+
 import { useTranslation } from '@/hooks/useTranslation';
 
 interface OAuthButtonsProps {

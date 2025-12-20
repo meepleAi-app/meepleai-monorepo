@@ -1,13 +1,15 @@
 'use client';
 
 import { FormEvent, useEffect, useState } from 'react';
+
+import { Chess } from 'chess.js';
 import Link from 'next/link';
 import { Chessboard, type PieceDropHandlerArgs } from 'react-chessboard';
-import { Chess } from 'chess.js';
+
 import { api } from '@/lib/api';
-import { cn } from '@/lib/utils';
-import { logger } from '@/lib/logger';
 import { createErrorContext } from '@/lib/errors';
+import { logger } from '@/lib/logger';
+import { cn } from '@/lib/utils';
 import type { Message } from '@/types';
 
 // Type definitions

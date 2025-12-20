@@ -1,6 +1,8 @@
-import type { Meta, StoryObj } from '@storybook/react';
-import { UploadQueue } from './UploadQueue';
 import type { UploadQueueItem, UploadQueueStats } from '@/hooks/useUploadQueue';
+
+import { UploadQueue } from './UploadQueue';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 /**
  * UploadQueue - Display list of files being uploaded

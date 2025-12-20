@@ -5,8 +5,9 @@
  * Note: Full E2E testing handled by Playwright.
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
 import { SharedChatView } from './SharedChatView';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta: Meta<typeof SharedChatView> = {
   title: 'Pages/SharedChatView',

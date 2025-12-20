@@ -15,8 +15,10 @@
 'use client';
 
 import { ReactNode, useCallback, useEffect, useState } from 'react';
+
+import { MenuIcon } from 'lucide-react';
+
 import { ChatHeader } from '@/components/chat/ChatHeader';
-import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -26,7 +28,7 @@ import {
   SheetDescription,
 } from '@/components/ui/sheet';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { MenuIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Game } from '@/types';
 
 const CHAT_SIDEBAR_COLLAPSED_KEY = 'chat-sidebar-collapsed';

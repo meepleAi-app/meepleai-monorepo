@@ -5,9 +5,11 @@
  * Demonstrates various configurations and states.
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
 import { Trash2, Download, Power, Users, Archive, Mail, Tag } from 'lucide-react';
+
 import { BulkActionBar, EmptyBulkActionBar } from './BulkActionBar';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta: Meta<typeof BulkActionBar> = {
   title: 'Admin/BulkActionBar',

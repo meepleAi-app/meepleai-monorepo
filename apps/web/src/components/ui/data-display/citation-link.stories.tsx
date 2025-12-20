@@ -7,8 +7,9 @@
  * @see Issue #1833 (UI-006)
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
 import { CitationLink } from './citation-link';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 // Mock function for onClick handlers in Storybook 10
 const fn = () => () => {};

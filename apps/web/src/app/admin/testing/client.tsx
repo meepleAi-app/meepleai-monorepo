@@ -1,11 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+
 import { useQuery } from '@tanstack/react-query';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
+import { ExportButton } from '@/components/admin/ExportButton';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Badge } from '@/components/ui/badge';
 import {
   Table,
   TableBody,
@@ -14,18 +16,18 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { ExportButton } from '@/components/admin/ExportButton';
-import {
-  exportTestingMetricsToCSV,
-  exportTestingMetricsToPDF,
-  type TestingMetrics,
-} from '@/lib/utils/export';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { api } from '@/lib/api';
 import type {
   AccessibilityMetrics,
   PerformanceMetrics,
   E2EMetrics,
 } from '@/lib/api/schemas/testing.schemas';
+import {
+  exportTestingMetricsToCSV,
+  exportTestingMetricsToPDF,
+  type TestingMetrics,
+} from '@/lib/utils/export';
 
 // Mock data based on completed Issues #841, #842, #843
 const MOCK_DATA = {

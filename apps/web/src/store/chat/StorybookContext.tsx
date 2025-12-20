@@ -8,10 +8,11 @@
  */
 
 import { createContext } from 'react';
-import type { ChatThread, Message, Game } from '@/types';
+
 import type { AgentDto } from '@/lib/api/schemas/agents.schemas';
-import type { FeedbackOutcome } from '@/lib/constants/feedback';
 import type { Citation } from '@/lib/api/schemas/streaming.schemas';
+import type { FeedbackOutcome } from '@/lib/constants/feedback';
+import type { ChatThread, Message, Game } from '@/types';
 
 export interface ChatContextValue {
   authUser: unknown;

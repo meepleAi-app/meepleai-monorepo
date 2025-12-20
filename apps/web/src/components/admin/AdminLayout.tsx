@@ -14,10 +14,9 @@
 'use client';
 
 import { ReactNode, useCallback, useEffect, useState } from 'react';
-import { AdminSidebar, type NavItemBadge } from './AdminSidebar';
-import { AdminHeader, type AdminUser } from './AdminHeader';
-import { AdminBreadcrumbs, type BreadcrumbItem } from './AdminBreadcrumbs';
-import { cn } from '@/lib/utils';
+
+import { MenuIcon } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -27,7 +26,11 @@ import {
   SheetDescription,
 } from '@/components/ui/sheet';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { MenuIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+import { AdminBreadcrumbs, type BreadcrumbItem } from './AdminBreadcrumbs';
+import { AdminHeader, type AdminUser } from './AdminHeader';
+import { AdminSidebar, type NavItemBadge } from './AdminSidebar';
 
 const SIDEBAR_COLLAPSED_KEY = 'admin-sidebar-collapsed';
 

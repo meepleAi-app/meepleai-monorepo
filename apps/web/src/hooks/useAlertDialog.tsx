@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+
 import { AlertDialog, type AlertVariant } from '@/components/ui/alert-dialog';
 
 export interface AlertOptions {

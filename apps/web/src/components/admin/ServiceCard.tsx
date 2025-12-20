@@ -13,12 +13,13 @@
  * - i18n support (IT/EN)
  */
 
+import { CheckCircleIcon, AlertTriangleIcon, XCircleIcon, ActivityIcon } from 'lucide-react';
+
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { cn } from '@/lib/utils';
-import { CheckCircleIcon, AlertTriangleIcon, XCircleIcon, ActivityIcon } from 'lucide-react';
 import type { HealthState } from '@/lib/api';
 import { getInfrastructureI18n, type Locale } from '@/lib/i18n/infrastructure';
+import { cn } from '@/lib/utils';
 
 export interface ServiceCardProps {
   /** Service name (e.g., 'postgres', 'redis') */

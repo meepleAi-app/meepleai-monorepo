@@ -1,7 +1,14 @@
 import React, { useState } from 'react';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface TimelineFilters {
   startDate?: string;
@@ -53,7 +60,7 @@ export const VersionTimelineFilters: React.FC<VersionTimelineFiltersProps> = ({
               id="startDate"
               type="date"
               value={localFilters.startDate || ''}
-              onChange={(e) => handleFilterChange('startDate', e.target.value)}
+              onChange={e => handleFilterChange('startDate', e.target.value)}
             />
           </div>
           <div className="flex flex-col">
@@ -64,7 +71,7 @@ export const VersionTimelineFilters: React.FC<VersionTimelineFiltersProps> = ({
               id="endDate"
               type="date"
               value={localFilters.endDate || ''}
-              onChange={(e) => handleFilterChange('endDate', e.target.value)}
+              onChange={e => handleFilterChange('endDate', e.target.value)}
             />
           </div>
         </div>
@@ -76,7 +83,7 @@ export const VersionTimelineFilters: React.FC<VersionTimelineFiltersProps> = ({
           </label>
           <Select
             value={localFilters.author || '__all__'}
-            onValueChange={(value) => handleFilterChange('author', value === '__all__' ? '' : value)}
+            onValueChange={value => handleFilterChange('author', value === '__all__' ? '' : value)}
           >
             <SelectTrigger id="author" className="w-[180px]">
               <SelectValue placeholder="All authors" />
@@ -84,7 +91,9 @@ export const VersionTimelineFilters: React.FC<VersionTimelineFiltersProps> = ({
             <SelectContent>
               <SelectItem value="__all__">All authors</SelectItem>
               {authors.map(author => (
-                <SelectItem key={author} value={author}>{author}</SelectItem>
+                <SelectItem key={author} value={author}>
+                  {author}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -99,17 +108,13 @@ export const VersionTimelineFilters: React.FC<VersionTimelineFiltersProps> = ({
             id="search"
             type="text"
             value={localFilters.searchQuery || ''}
-            onChange={(e) => handleFilterChange('searchQuery', e.target.value)}
+            onChange={e => handleFilterChange('searchQuery', e.target.value)}
             placeholder="Search by version..."
           />
         </div>
 
         {/* Reset Button */}
-        <Button
-          onClick={handleReset}
-          variant="secondary"
-          aria-label="Reset filters"
-        >
+        <Button onClick={handleReset} variant="secondary" aria-label="Reset filters">
           Reset Filters
         </Button>
       </div>

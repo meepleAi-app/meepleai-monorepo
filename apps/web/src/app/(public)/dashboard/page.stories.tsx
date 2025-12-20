@@ -11,10 +11,13 @@
  * @see docs/04-frontend/wireframes-playful-boardroom.md
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import DashboardPage from './page';
+
 import type { AuthUser, Game } from '@/lib/api';
+
+import DashboardPage from './page';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 // Mock data for stories
 const mockUser: AuthUser = {

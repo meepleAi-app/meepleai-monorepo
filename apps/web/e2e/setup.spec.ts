@@ -6,8 +6,8 @@
  * @see apps/web/e2e/test.ts - Coverage-enabled test (Issue #1498)
  */
 
-import { test, expect } from './test';
 import { getTextMatcher, t } from './fixtures/i18n';
+import { test, expect } from './test';
 
 test.describe('Setup Guide Page', () => {
   test('should require authentication', async ({ page }) => {

@@ -1,12 +1,33 @@
 'use client';
 
-
 import React, { useState } from 'react';
+
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from '@/components/ui/card';
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/components/ui/select';
 
 /**
  * Shadcn/UI Demo Page (App Router)
@@ -73,14 +94,12 @@ export default function ShadcnDemo() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-400">
-                Enter text:
-              </label>
+              <label className="text-sm font-medium text-slate-400">Enter text:</label>
               <Input
                 type="text"
                 placeholder="Type something..."
                 value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
+                onChange={e => setInputValue(e.target.value)}
               />
               {inputValue && (
                 <p className="text-sm text-slate-400">
@@ -99,9 +118,7 @@ export default function ShadcnDemo() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-400">
-                Choose a board game:
-              </label>
+              <label className="text-sm font-medium text-slate-400">Choose a board game:</label>
               <Select value={selectValue} onValueChange={setSelectValue}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select a game..." />
@@ -138,13 +155,14 @@ export default function ShadcnDemo() {
                 <DialogHeader>
                   <DialogTitle>Welcome to MeepleAI</DialogTitle>
                   <DialogDescription>
-                    This is a demonstration of the shadcn/ui Dialog component.
-                    It can be used for confirmations, forms, or displaying information.
+                    This is a demonstration of the shadcn/ui Dialog component. It can be used for
+                    confirmations, forms, or displaying information.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="py-4">
                   <p className="text-sm text-slate-400">
-                    Shadcn/ui provides beautiful, accessible components built with Radix UI and Tailwind CSS.
+                    Shadcn/ui provides beautiful, accessible components built with Radix UI and
+                    Tailwind CSS.
                   </p>
                 </div>
                 <DialogFooter>
@@ -169,7 +187,9 @@ export default function ShadcnDemo() {
               </p>
             </CardContent>
             <CardFooter className="flex justify-between">
-              <Button variant="outline" size="sm">Cancel</Button>
+              <Button variant="outline" size="sm">
+                Cancel
+              </Button>
               <Button size="sm">Save</Button>
             </CardFooter>
           </Card>
@@ -181,11 +201,14 @@ export default function ShadcnDemo() {
             </CardHeader>
             <CardContent>
               <p className="text-sm text-slate-400">
-                ✅ Shadcn/ui successfully installed<br />
-                ✅ 16 components configured<br />
-                ✅ Tailwind CSS 4 compatible<br />
-                ✅ TypeScript types working<br />
-                ✅ Theme integration complete
+                ✅ Shadcn/ui successfully installed
+                <br />
+                ✅ 16 components configured
+                <br />
+                ✅ Tailwind CSS 4 compatible
+                <br />
+                ✅ TypeScript types working
+                <br />✅ Theme integration complete
               </p>
             </CardContent>
           </Card>

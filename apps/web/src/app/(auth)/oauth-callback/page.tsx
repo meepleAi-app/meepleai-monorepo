@@ -2,15 +2,18 @@ import { redirect } from 'next/navigation';
 
 type SearchParamValue = string | string[];
 
-export default function OAuthCallbackPage({
+export default async function OAuthCallbackPage({
   searchParams,
 }: {
-  searchParams?: Record<string, SearchParamValue>;
+  searchParams?: Promise<Record<string, SearchParamValue>>;
 }) {
   const qs = new URLSearchParams();
 
-  if (searchParams) {
-    Object.entries(searchParams).forEach(([key, value]) => {
+  // Next.js 16: searchParams is now async
+  const resolvedParams = await searchParams;
+
+  if (resolvedParams) {
+    Object.entries(resolvedParams).forEach(([key, value]) => {
       if (Array.isArray(value)) {
         value.forEach(v => qs.append(key, v));
       } else if (value !== undefined) {

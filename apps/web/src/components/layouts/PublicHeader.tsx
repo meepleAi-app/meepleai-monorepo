@@ -15,10 +15,20 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
+
+import {
+  MenuIcon,
+  UserIcon,
+  LogOutIcon,
+  HomeIcon,
+  GamepadIcon,
+  MessageSquareIcon,
+  LayoutDashboardIcon,
+} from 'lucide-react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { MeepleLogo } from '@/components/ui/meeple/meeple-logo';
+
 import { ThemeSwitcher } from '@/components/layout/ThemeSwitcher';
 import { Button } from '@/components/ui/button';
 import {
@@ -29,6 +39,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { MeepleLogo } from '@/components/ui/meeple/meeple-logo';
 import {
   Sheet,
   SheetContent,
@@ -37,15 +48,6 @@ import {
   SheetDescription,
 } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
-import {
-  MenuIcon,
-  UserIcon,
-  LogOutIcon,
-  HomeIcon,
-  GamepadIcon,
-  MessageSquareIcon,
-  LayoutDashboardIcon,
-} from 'lucide-react';
 
 export interface PublicUser {
   name: string;

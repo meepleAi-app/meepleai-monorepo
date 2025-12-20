@@ -1,6 +1,7 @@
 import { Page, Locator } from '@playwright/test';
-import { BasePage } from '../base/BasePage';
+
 import { IUploadPage } from '../../types/pom-interfaces';
+import { BasePage } from '../base/BasePage';
 
 /**
  * UploadPage - Page Object Model for PDF upload functionality

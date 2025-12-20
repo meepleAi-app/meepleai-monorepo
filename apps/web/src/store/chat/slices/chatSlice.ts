@@ -11,11 +11,13 @@
  */
 
 import { StateCreator } from 'zustand';
-import { ChatStore, ChatSlice } from '../types';
-import { api } from '@/lib/api';
-import { logger } from '@/lib/logger';
-import { createErrorContext } from '@/lib/errors';
+
 import { CHAT_CONFIG } from '@/config';
+import { api } from '@/lib/api';
+import { createErrorContext } from '@/lib/errors';
+import { logger } from '@/lib/logger';
+
+import { ChatStore, ChatSlice } from '../types';
 
 export const createChatSlice: StateCreator<
   ChatStore,

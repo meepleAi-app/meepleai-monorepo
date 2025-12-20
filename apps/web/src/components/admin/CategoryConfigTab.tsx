@@ -6,10 +6,12 @@
  */
 
 import { useState, useEffect } from 'react';
+
 import { toast } from '@/components/layout/Toast';
+
 import { api, SystemConfigurationDto, UpdateConfigurationRequest } from '../../lib/api';
-import { Input } from '../ui/input';
 import { Button } from '../ui/button';
+import { Input } from '../ui/input';
 
 interface CategoryConfigTabProps {
   title: string;

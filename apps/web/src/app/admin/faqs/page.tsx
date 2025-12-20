@@ -9,7 +9,9 @@
  */
 
 import { Metadata } from 'next';
+
 import { RequireRole } from '@/components/auth/RequireRole';
+
 import { FAQManagementClient } from './client';
 
 export const metadata: Metadata = {

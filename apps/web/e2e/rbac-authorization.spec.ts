@@ -5,9 +5,9 @@
  */
 
 import { test, expect } from './fixtures/chromatic';
-import { AuthHelper } from './pages';
 import { expectForbiddenOrRedirect, expectPageLoaded } from './helpers/assertions';
 import { WaitHelper } from './helpers/WaitHelper';
+import { AuthHelper } from './pages';
 
 const API_BASE =
   process.env.PLAYWRIGHT_API_BASE || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';

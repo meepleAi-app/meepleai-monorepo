@@ -4,12 +4,14 @@
  */
 
 import { type DragEvent, type ChangeEvent, useCallback, useRef, useState } from 'react';
-import { useUploadQueue, type UploadQueueItem } from '@/hooks/useUploadQueue';
-import { UploadQueue } from './UploadQueue';
-import { UploadSummary } from './UploadSummary';
+
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
+import { useUploadQueue, type UploadQueueItem } from '@/hooks/useUploadQueue';
+
+import { UploadQueue } from './UploadQueue';
+import { UploadSummary } from './UploadSummary';
 
 interface MultiFileUploadProps {
   gameId: string;

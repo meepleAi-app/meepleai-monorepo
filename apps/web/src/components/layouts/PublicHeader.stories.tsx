@@ -4,9 +4,11 @@
  * Showcases different states of the PublicHeader component.
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
-import { PublicHeader } from './PublicHeader';
 import { fn } from 'storybook/test';
+
+import { PublicHeader } from './PublicHeader';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta = {
   title: 'Components/Layouts/PublicHeader',

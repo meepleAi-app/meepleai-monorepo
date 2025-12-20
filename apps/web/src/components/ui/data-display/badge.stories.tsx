@@ -1,5 +1,6 @@
-import type { Meta, StoryObj } from '@storybook/react';
 import { Badge } from './badge';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 /**
  * Badge component for labels, tags, status indicators, and counts.

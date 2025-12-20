@@ -5,7 +5,6 @@
  * Covers: Agent listing, invocation, configuration.
  */
 
-import type { HttpClient } from '../core/httpClient';
 import {
   AgentDtoSchema,
   AgentResponseDtoSchema,
@@ -22,6 +21,8 @@ import {
   type ChessAgentResponse,
   type SetupGuideResponse,
 } from '../schemas';
+
+import type { HttpClient } from '../core/httpClient';
 
 export interface CreateAgentsClientParams {
   httpClient: HttpClient;

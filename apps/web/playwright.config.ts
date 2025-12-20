@@ -1,7 +1,8 @@
-import { defineConfig, devices } from '@playwright/test';
-import { ChromaticConfig } from '@chromatic-com/playwright';
-import { defineCoverageReporterConfig } from '@bgotink/playwright-coverage';
 import path from 'path';
+
+import { defineCoverageReporterConfig } from '@bgotink/playwright-coverage';
+import { ChromaticConfig } from '@chromatic-com/playwright';
+import { defineConfig, devices } from '@playwright/test';
 
 // Issue #2009: Prometheus reporter configuration (typed for TypeScript)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Playwright reporter config allows flexible structure

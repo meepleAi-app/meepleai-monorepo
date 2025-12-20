@@ -29,15 +29,10 @@ import React, {
   useCallback,
   type ReactNode,
 } from 'react';
-import {
-  THEMES,
-  getCurrentTheme,
-  saveTheme,
-  applyTheme,
-  type Theme,
-} from '@/lib/themes';
-import { logger } from '@/lib/logger';
+
 import { createErrorContext } from '@/lib/errors';
+import { logger } from '@/lib/logger';
+import { THEMES, getCurrentTheme, saveTheme, applyTheme, type Theme } from '@/lib/themes';
 
 interface ColorSchemeContextValue {
   /** Current active theme */
@@ -65,9 +60,7 @@ interface ColorSchemeContextValue {
   isPreviewing: boolean;
 }
 
-const ColorSchemeContext = createContext<ColorSchemeContextValue | undefined>(
-  undefined
-);
+const ColorSchemeContext = createContext<ColorSchemeContextValue | undefined>(undefined);
 
 interface ColorSchemeProviderProps {
   children: ReactNode;
@@ -108,29 +101,35 @@ export function ColorSchemeProvider({ children }: ColorSchemeProviderProps) {
   }, [mounted]);
 
   // Set theme and persist
-  const setTheme = useCallback((themeId: string) => {
-    const theme = themes.find((t) => t.id === themeId);
-    if (!theme) {
-      console.warn(`Theme not found: ${themeId}`);
-      return;
-    }
+  const setTheme = useCallback(
+    (themeId: string) => {
+      const theme = themes.find(t => t.id === themeId);
+      if (!theme) {
+        console.warn(`Theme not found: ${themeId}`);
+        return;
+      }
 
-    setCurrentTheme(theme);
-    saveTheme(themeId);
-    applyTheme(theme);
-    setIsPreviewing(false);
-    setPreviewThemeId(null);
-  }, [themes]);
+      setCurrentTheme(theme);
+      saveTheme(themeId);
+      applyTheme(theme);
+      setIsPreviewing(false);
+      setPreviewThemeId(null);
+    },
+    [themes]
+  );
 
   // Preview theme without persisting
-  const previewTheme = useCallback((themeId: string) => {
-    const theme = themes.find((t) => t.id === themeId);
-    if (!theme) return;
+  const previewTheme = useCallback(
+    (themeId: string) => {
+      const theme = themes.find(t => t.id === themeId);
+      if (!theme) return;
 
-    setIsPreviewing(true);
-    setPreviewThemeId(themeId);
-    applyTheme(theme);
-  }, [themes]);
+      setIsPreviewing(true);
+      setPreviewThemeId(themeId);
+      applyTheme(theme);
+    },
+    [themes]
+  );
 
   // Cancel preview and restore current theme
   const cancelPreview = useCallback(() => {
@@ -140,56 +139,63 @@ export function ColorSchemeProvider({ children }: ColorSchemeProviderProps) {
   }, [currentTheme]);
 
   // Add custom theme
-  const addCustomTheme = useCallback((theme: Theme) => {
-    const newThemes = [...themes, theme];
-    setThemes(newThemes);
+  const addCustomTheme = useCallback(
+    (theme: Theme) => {
+      const newThemes = [...themes, theme];
+      setThemes(newThemes);
 
-    // Persist custom themes to localStorage
-    const customThemes = newThemes.filter((t) => t.isCustom);
-    try {
-      localStorage.setItem('meepleai-custom-themes', JSON.stringify(customThemes));
-    } catch (err) {
-      logger.error(
-        'Failed to save custom theme',
-        err instanceof Error ? err : new Error(String(err)),
-        createErrorContext('ColorSchemeProvider', 'addCustomTheme', { themeId: theme.id })
-      );
-    }
-  }, [themes]);
+      // Persist custom themes to localStorage
+      const customThemes = newThemes.filter(t => t.isCustom);
+      try {
+        localStorage.setItem('meepleai-custom-themes', JSON.stringify(customThemes));
+      } catch (err) {
+        logger.error(
+          'Failed to save custom theme',
+          err instanceof Error ? err : new Error(String(err)),
+          createErrorContext('ColorSchemeProvider', 'addCustomTheme', { themeId: theme.id })
+        );
+      }
+    },
+    [themes]
+  );
 
   // Remove custom theme
-  const removeCustomTheme = useCallback((themeId: string) => {
-    const theme = themes.find((t) => t.id === themeId);
-    if (!theme || !theme.isCustom) {
-      console.warn('Cannot remove non-custom theme');
-      return;
-    }
+  const removeCustomTheme = useCallback(
+    (themeId: string) => {
+      const theme = themes.find(t => t.id === themeId);
+      if (!theme || !theme.isCustom) {
+        console.warn('Cannot remove non-custom theme');
+        return;
+      }
 
-    const newThemes = themes.filter((t) => t.id !== themeId);
-    setThemes(newThemes);
+      const newThemes = themes.filter(t => t.id !== themeId);
+      setThemes(newThemes);
 
-    // Update localStorage
-    const customThemes = newThemes.filter((t) => t.isCustom);
-    try {
-      localStorage.setItem('meepleai-custom-themes', JSON.stringify(customThemes));
-    } catch (err) {
-      logger.error(
-        'Failed to update custom themes',
-        err instanceof Error ? err : new Error(String(err)),
-        createErrorContext('ColorSchemeProvider', 'removeCustomTheme', { themeId })
-      );
-    }
+      // Update localStorage
+      const customThemes = newThemes.filter(t => t.isCustom);
+      try {
+        localStorage.setItem('meepleai-custom-themes', JSON.stringify(customThemes));
+      } catch (err) {
+        logger.error(
+          'Failed to update custom themes',
+          err instanceof Error ? err : new Error(String(err)),
+          createErrorContext('ColorSchemeProvider', 'removeCustomTheme', { themeId })
+        );
+      }
 
-    // If removing current theme, switch to default
-    if (currentTheme.id === themeId) {
-      setTheme(THEMES[0].id);
-    }
-  }, [themes, currentTheme, setTheme]);
+      // If removing current theme, switch to default
+      if (currentTheme.id === themeId) {
+        setTheme(THEMES[0].id);
+      }
+    },
+    [themes, currentTheme, setTheme]
+  );
 
   const value: ColorSchemeContextValue = {
-    currentTheme: isPreviewing && previewThemeId
-      ? themes.find((t) => t.id === previewThemeId) || currentTheme
-      : currentTheme,
+    currentTheme:
+      isPreviewing && previewThemeId
+        ? themes.find(t => t.id === previewThemeId) || currentTheme
+        : currentTheme,
     themes,
     setTheme,
     addCustomTheme,
@@ -204,11 +210,7 @@ export function ColorSchemeProvider({ children }: ColorSchemeProviderProps) {
     return <div style={{ visibility: 'hidden' }}>{children}</div>;
   }
 
-  return (
-    <ColorSchemeContext.Provider value={value}>
-      {children}
-    </ColorSchemeContext.Provider>
-  );
+  return <ColorSchemeContext.Provider value={value}>{children}</ColorSchemeContext.Provider>;
 }
 
 /**

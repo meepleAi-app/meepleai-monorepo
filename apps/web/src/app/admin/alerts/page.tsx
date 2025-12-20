@@ -6,6 +6,7 @@
  */
 
 import { AdminLayout } from '@/components/admin/AdminLayout';
+
 import { AlertsPageClient } from './client';
 
 export const metadata = {

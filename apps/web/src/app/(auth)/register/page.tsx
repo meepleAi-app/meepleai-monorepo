@@ -8,7 +8,9 @@
  */
 
 import { Suspense, useState, useEffect } from 'react';
+
 import { useRouter } from 'next/navigation';
+
 import { AuthModal } from '@/components/auth';
 import { AuthLayout } from '@/components/layouts';
 import { useTranslation } from '@/hooks/useTranslation';

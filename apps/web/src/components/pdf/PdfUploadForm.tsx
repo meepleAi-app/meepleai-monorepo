@@ -1,9 +1,14 @@
 import { type ChangeEvent, type FormEvent, useState } from 'react';
-import dynamic from 'next/dynamic';
+
 import { AlertCircle, Upload } from 'lucide-react';
+import dynamic from 'next/dynamic';
+
+import { LoadingButton } from '@/components/loading';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Card } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Progress } from '@/components/ui/progress';
 import {
   Select,
   SelectContent,
@@ -11,13 +16,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Progress } from '@/components/ui/progress';
-import { LoadingButton } from '@/components/loading';
-import { retryWithBackoff, isRetryableError } from '@/lib/retryUtils';
-import { categorizeError, type CategorizedError, extractCorrelationId } from '@/lib/errorUtils';
-import { ApiError } from '@/lib/api';
 import { useChunkedUpload } from '@/hooks/useChunkedUpload';
+import { ApiError } from '@/lib/api';
+import { categorizeError, type CategorizedError, extractCorrelationId } from '@/lib/errorUtils';
+import { retryWithBackoff, isRetryableError } from '@/lib/retryUtils';
 
 // Dynamic import to prevent SSR issues with react-pdf
 const PdfPreview = dynamic(

@@ -15,7 +15,9 @@
 'use client';
 
 import { useEffect } from 'react';
-import { CheckCheck } from 'lucide-react';
+
+import { Bell, CheckCheck } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -23,6 +25,7 @@ import {
   selectNotifications,
   selectIsLoading,
 } from '@/store/notification/store';
+
 import { NotificationItem } from './NotificationItem';
 
 export function NotificationPanel() {
@@ -100,6 +103,3 @@ export function NotificationPanel() {
     </div>
   );
 }
-
-// Bell icon import for empty state
-import { Bell } from 'lucide-react';

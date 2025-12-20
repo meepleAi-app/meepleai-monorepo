@@ -18,9 +18,11 @@
  * - DarkTheme: Dark mode
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
 import Image from 'next/image';
+
 import type { Game } from '@/lib/api';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 // ============================================================================
 // Mock Component (Simulates Page Structure for Storybook)

@@ -1,6 +1,8 @@
-import type { Meta, StoryObj } from '@storybook/react';
 import { useState } from 'react';
+
 import { QuestionInputForm, ResponseMode } from './QuestionInputForm';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 /**
  * QuestionInputForm - Standalone question input component for board game queries.

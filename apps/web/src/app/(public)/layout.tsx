@@ -21,9 +21,11 @@
 'use client';
 
 import { ReactNode } from 'react';
+
+import { useRouter } from 'next/navigation';
+
 import { PublicLayout } from '@/components/layouts/PublicLayout';
 import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
-import { useRouter } from 'next/navigation';
 
 export default function PublicRootLayout({ children }: { children: ReactNode }) {
   const { data: user, isLoading } = useCurrentUser();

@@ -1,12 +1,14 @@
 'use client';
 
 import { FormEvent, useEffect, useState } from 'react';
+
 import Link from 'next/link';
+
 import { api } from '@/lib/api';
-import { cn } from '@/lib/utils';
-import { logger } from '@/lib/logger';
-import { createErrorContext } from '@/lib/errors';
 import type { SetupGuideResponse, SetupGuideResponseStep, Snippet } from '@/lib/api/schemas';
+import { createErrorContext } from '@/lib/errors';
+import { logger } from '@/lib/logger';
+import { cn } from '@/lib/utils';
 
 // Type definitions
 type AuthUser = {

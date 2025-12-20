@@ -5,8 +5,9 @@
  * Tests complete landing page with all sections integrated.
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
 import LandingPage from './page';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta: Meta<typeof LandingPage> = {
   title: 'Pages/LandingPage',

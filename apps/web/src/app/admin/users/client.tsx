@@ -1,12 +1,14 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+
+import { Trash2 } from 'lucide-react';
 import Link from 'next/link';
+
+import { AdminAuthGuard, BulkActionBar } from '@/components/admin';
+import { useAuthUser } from '@/components/auth/AuthProvider';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
-import { useAuthUser } from '@/components/auth/AuthProvider';
-import { AdminAuthGuard, BulkActionBar } from '@/components/admin';
-import { Trash2 } from 'lucide-react';
 
 // Types
 type User = {

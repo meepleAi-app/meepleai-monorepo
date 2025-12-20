@@ -22,7 +22,9 @@
  */
 
 import { ReactNode, useEffect, useState } from 'react';
+
 import { motion } from 'framer-motion';
+
 import { useReducedMotion } from '@/lib/animations';
 
 export interface MessageAnimatorProps {
@@ -53,12 +55,7 @@ export interface MessageAnimatorProps {
 /**
  * MessageAnimator component for chat message animations
  */
-export function MessageAnimator({
-  children,
-  direction,
-  delay = 0,
-  id,
-}: MessageAnimatorProps) {
+export function MessageAnimator({ children, direction, delay = 0, id }: MessageAnimatorProps) {
   const shouldReduceMotion = useReducedMotion();
   const [animationComplete, setAnimationComplete] = useState(false);
 
@@ -95,7 +92,7 @@ export function MessageAnimator({
   useEffect(() => {
     if (!shouldReduceMotion) {
       const animationDuration = 300; // Spring animation approx duration
-      const totalDelay = (delay * 1000) + animationDuration;
+      const totalDelay = delay * 1000 + animationDuration;
       const timer = setTimeout(() => {
         setAnimationComplete(true);
       }, totalDelay);

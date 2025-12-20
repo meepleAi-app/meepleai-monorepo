@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+
 import { ApiKeysPageClient } from './client';
 
 export const metadata: Metadata = {

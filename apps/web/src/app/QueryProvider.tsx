@@ -10,9 +10,11 @@
 
 'use client';
 
-import { QueryClientProvider } from '@tanstack/react-query';
-import { getQueryClient } from '@/lib/queryClient';
 import { ReactNode, lazy, Suspense } from 'react';
+
+import { QueryClientProvider } from '@tanstack/react-query';
+
+import { getQueryClient } from '@/lib/queryClient';
 
 // Lazy load DevTools to exclude from production bundle (~820KB savings)
 // Issue #994: Dynamic import ensures tree-shaking in production builds

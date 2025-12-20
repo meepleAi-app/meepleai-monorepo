@@ -5,9 +5,11 @@
  * Covers: default, loading, error, validation, role selector, dark mode, mobile.
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
 import { fn } from 'storybook/test';
+
 import { RegisterForm } from './RegisterForm';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta = {
   title: 'Components/Auth/RegisterForm',

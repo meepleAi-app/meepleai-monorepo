@@ -18,6 +18,7 @@
 export const dynamic = 'force-dynamic';
 
 import { Metadata } from 'next';
+
 import BoardGameAskClient from './BoardGameAskClient';
 
 export const metadata: Metadata = {

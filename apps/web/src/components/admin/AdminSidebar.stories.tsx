@@ -5,8 +5,9 @@
  * Covers: expanded, collapsed, badges, mobile.
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
 import { AdminSidebar } from './AdminSidebar';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta: Meta<typeof AdminSidebar> = {
   title: 'Admin/AdminSidebar',

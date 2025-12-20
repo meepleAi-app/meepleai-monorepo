@@ -12,11 +12,14 @@
  */
 
 import React from 'react';
-import type { LucideIcon } from 'lucide-react';
+
+import { ArrowUpIcon, ArrowDownIcon, MinusIcon } from 'lucide-react';
+
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { ArrowUpIcon, ArrowDownIcon, MinusIcon } from 'lucide-react';
+
+import type { LucideIcon } from 'lucide-react';
 
 export interface StatCardProps {
   label: string;

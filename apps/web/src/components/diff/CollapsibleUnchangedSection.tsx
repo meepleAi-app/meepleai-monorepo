@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+
 import { CollapsibleSection } from '../../lib/diffProcessor';
 
 export interface CollapsibleUnchangedSectionProps {

@@ -18,13 +18,24 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { api, type GameFAQ, type Game } from '@/lib/api';
+
+import { Plus, Trash2, Edit, ThumbsUp, AlertCircle } from 'lucide-react';
+
 import { AdminAuthGuard } from '@/components/admin';
 import { useAuthUser } from '@/components/auth/AuthProvider';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Spinner } from '@/components/loading';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -41,17 +52,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Plus, Trash2, Edit, ThumbsUp, AlertCircle } from 'lucide-react';
-import { Spinner } from '@/components/loading';
+import { Textarea } from '@/components/ui/textarea';
+import { api, type GameFAQ, type Game } from '@/lib/api';
 
 type ToastMessage = {
   id: string;

@@ -1,5 +1,3 @@
-import type { Meta, StoryObj } from '@storybook/react';
-import { StatCard } from './StatCard';
 import {
   Users,
   Activity,
@@ -10,6 +8,10 @@ import {
   Zap,
   FileText,
 } from 'lucide-react';
+
+import { StatCard } from './StatCard';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 /**
  * StatCard - Issue #874, #882

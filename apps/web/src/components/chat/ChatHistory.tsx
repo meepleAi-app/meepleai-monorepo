@@ -8,10 +8,12 @@
  */
 
 import React from 'react';
+
 import { useChatStore } from '@/store/chat/store';
+import { ChatThread } from '@/types';
+
 import { ThreadListItem } from './ThreadListItem';
 import { SkeletonLoader } from '../loading/SkeletonLoader';
-import { ChatThread } from '@/types';
 
 export function ChatHistory() {
   // Issue #1676: Migrated from useChatContext to direct Zustand store

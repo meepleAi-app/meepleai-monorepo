@@ -4,8 +4,9 @@
  * Showcases different states of the PublicFooter component.
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
 import { PublicFooter } from './PublicFooter';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta = {
   title: 'Components/Layouts/PublicFooter',

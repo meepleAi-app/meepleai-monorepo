@@ -3,6 +3,7 @@
  */
 
 import React, { useEffect } from 'react';
+
 import { ApiError, NetworkError, ValidationError } from '@/lib/errors';
 
 export interface ErrorModalProps {
@@ -23,7 +24,7 @@ export function ErrorModal({
   error,
   title = 'Error',
   showDetails = false,
-  onRetry
+  onRetry,
 }: ErrorModalProps) {
   useEffect(() => {
     if (isOpen) {
@@ -127,16 +128,11 @@ export function ErrorModal({
                 </svg>
               </div>
               <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left flex-1">
-                <h3
-                  className="text-lg leading-6 font-medium text-gray-900"
-                  id="error-modal-title"
-                >
+                <h3 className="text-lg leading-6 font-medium text-gray-900" id="error-modal-title">
                   {title}
                 </h3>
                 <div className="mt-2">
-                  <p className="text-sm text-gray-500">
-                    {getUserMessage()}
-                  </p>
+                  <p className="text-sm text-gray-500">{getUserMessage()}</p>
                 </div>
 
                 {showDetails && (
@@ -164,7 +160,9 @@ export function ErrorModal({
                               {error.correlationId && (
                                 <div>
                                   <span className="font-semibold">Correlation ID:</span>{' '}
-                                  <span className="font-mono text-gray-700">{error.correlationId}</span>
+                                  <span className="font-mono text-gray-700">
+                                    {error.correlationId}
+                                  </span>
                                 </div>
                               )}
                             </>
@@ -218,4 +216,3 @@ export function ErrorModal({
     </div>
   );
 }
-

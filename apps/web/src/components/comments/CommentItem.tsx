@@ -1,11 +1,13 @@
 import { useState, useCallback } from 'react';
-import type { RuleSpecComment } from '@/lib/api';
-import { MentionInput } from '../chat/MentionInput';
-import { cn } from '@/lib/utils';
-import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+
 import { useAlertDialog } from '@/hooks/useAlertDialog';
-import { logger } from '@/lib/logger';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import type { RuleSpecComment } from '@/lib/api';
 import { createErrorContext } from '@/lib/errors';
+import { logger } from '@/lib/logger';
+import { cn } from '@/lib/utils';
+
+import { MentionInput } from '../chat/MentionInput';
 
 interface CommentItemProps {
   comment: RuleSpecComment;

@@ -1,5 +1,7 @@
 import React from 'react';
+
 import { List, Columns2 } from 'lucide-react';
+
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 export interface DiffViewModeToggleProps {
@@ -16,25 +18,17 @@ export function DiffViewModeToggle({ currentMode, onModeChange }: DiffViewModeTo
     <ToggleGroup
       type="single"
       value={currentMode}
-      onValueChange={(value) => {
+      onValueChange={value => {
         if (value) onModeChange(value as 'list' | 'side-by-side');
       }}
       className="diff-view-mode-toggle"
       aria-label="Diff view mode"
     >
-      <ToggleGroupItem
-        value="list"
-        aria-label="List view"
-        className="gap-1.5"
-      >
+      <ToggleGroupItem value="list" aria-label="List view" className="gap-1.5">
         <List className="h-4 w-4" />
         List
       </ToggleGroupItem>
-      <ToggleGroupItem
-        value="side-by-side"
-        aria-label="Side-by-side view"
-        className="gap-1.5"
-      >
+      <ToggleGroupItem value="side-by-side" aria-label="Side-by-side view" className="gap-1.5">
         <Columns2 className="h-4 w-4" />
         Side-by-Side
       </ToggleGroupItem>

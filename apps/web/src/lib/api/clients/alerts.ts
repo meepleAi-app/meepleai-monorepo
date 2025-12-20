@@ -6,13 +6,14 @@
  * - Resolve alert by type
  */
 
-import type { HttpClient } from '../core/httpClient';
 import {
   GetAlertsResponseSchema,
   ResolveAlertResponseSchema,
   type AlertDto,
   type ResolveAlertResponse,
 } from '../schemas/alerts.schemas';
+
+import type { HttpClient } from '../core/httpClient';
 
 export interface CreateAlertsClientParams {
   httpClient: HttpClient;

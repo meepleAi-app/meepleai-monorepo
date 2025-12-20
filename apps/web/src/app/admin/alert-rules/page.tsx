@@ -11,18 +11,20 @@
 'use client';
 
 import { useState } from 'react';
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, AlertTriangle, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
+
+import { AdminAuthGuard } from '@/components/admin/AdminAuthGuard';
+import { AlertRuleForm } from '@/components/admin/alert-rules/AlertRuleForm';
+import { AlertRuleList } from '@/components/admin/alert-rules/AlertRuleList';
+import { useAuthUser } from '@/components/auth/AuthProvider';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AdminAuthGuard } from '@/components/admin/AdminAuthGuard';
-import { useAuthUser } from '@/components/auth/AuthProvider';
-import { AlertRuleList } from '@/components/admin/alert-rules/AlertRuleList';
-import { AlertRuleForm } from '@/components/admin/alert-rules/AlertRuleForm';
 import { alertRulesApi } from '@/lib/api/alert-rules.api';
 import type { AlertRule } from '@/lib/api/schemas/alert-rules.schemas';
 
@@ -223,7 +225,7 @@ function AlertRulesClient() {
                         className="w-full mt-4"
                         variant="outline"
                         onClick={() => {
-                          // TODO: Apply template logic
+                          // TODO (#2253): Apply alert template logic
                           toast.info('Template apply coming soon');
                         }}
                       >

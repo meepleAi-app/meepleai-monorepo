@@ -12,10 +12,11 @@
 
 'use client';
 
+import { ExternalLinkIcon } from 'lucide-react';
 import Link from 'next/link';
+
 import { MeepleLogo } from '@/components/ui/meeple/meeple-logo';
 import { cn } from '@/lib/utils';
-import { ExternalLinkIcon } from 'lucide-react';
 
 export interface PublicFooterProps {
   /** Show newsletter subscription */

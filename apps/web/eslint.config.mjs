@@ -8,6 +8,7 @@ import security from "eslint-plugin-security";
 import noUnsanitized from "eslint-plugin-no-unsanitized";
 import nextPlugin from "@next/eslint-plugin-next/dist/index.js";
 import unusedImports from "eslint-plugin-unused-imports";
+import importPlugin from "eslint-plugin-import";
 
 // Custom security rules
 import noIncompleteSanitization from "./eslint-rules/no-incomplete-sanitization.js";
@@ -84,6 +85,7 @@ export default [
       "no-unsanitized": noUnsanitized,
       "@next/next": nextPlugin,
       "unused-imports": unusedImports,
+      import: importPlugin,
       // Custom security rules
       "local": {
         rules: {
@@ -113,6 +115,40 @@ export default [
 
       // Unused imports plugin (auto-fixable)
       "unused-imports/no-unused-imports": "error",
+
+      // Import ordering (Issue #2246)
+      // Enforce consistent import organization: React → External → Internal → Relative
+      "import/order": [
+        "warn",
+        {
+          groups: [
+            "builtin", // Node.js built-in modules
+            "external", // External libraries (npm packages)
+            "internal", // Internal modules (aliased with @/)
+            ["parent", "sibling"], // Relative imports (../, ./)
+            "index", // Index imports (./index)
+            "type", // TypeScript type imports
+          ],
+          pathGroups: [
+            {
+              pattern: "react",
+              group: "external",
+              position: "before",
+            },
+            {
+              pattern: "@/**",
+              group: "internal",
+              position: "after",
+            },
+          ],
+          pathGroupsExcludedImportTypes: ["react"],
+          "newlines-between": "always",
+          alphabetize: {
+            order: "asc",
+            caseInsensitive: true,
+          },
+        },
+      ],
 
       // TypeScript rules
       // TS-002: Enforce no unused variables with TypeScript convention (Issue #2244)

@@ -1,7 +1,9 @@
-import type { Meta, StoryObj } from '@storybook/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { http, HttpResponse } from 'msw';
+
 import AlertRulesPage from './page';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 /**
  * Alert Rules Management Page - Issue #921

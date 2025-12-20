@@ -20,12 +20,15 @@
  * @see Issue #1017 BGAI-078
  */
 
+import { Suspense } from 'react';
+
+import { ArrowLeft } from 'lucide-react';
 import { Metadata } from 'next';
 import Link from 'next/link';
-import { Suspense } from 'react';
-import { ArrowLeft } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+
 import { GameCatalogClient } from './GameCatalogClient';
 
 // ============================================================================

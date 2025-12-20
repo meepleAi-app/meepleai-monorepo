@@ -19,9 +19,10 @@
  */
 
 import { test as base, expect } from './fixtures/chromatic';
-import type { Page } from '@playwright/test';
-import { AdminHelper } from './pages';
 import { WaitHelper } from './helpers/WaitHelper';
+import { AdminHelper } from './pages';
+
+import type { Page } from '@playwright/test';
 
 // Mock data generators
 function createMockInfrastructureData(

@@ -4,9 +4,11 @@
  * Showcases different states of the PublicLayout component.
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
-import { PublicLayout } from './PublicLayout';
 import { fn } from 'storybook/test';
+
+import { PublicLayout } from './PublicLayout';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta = {
   title: 'Components/Layouts/PublicLayout',

@@ -16,6 +16,11 @@
  * @see docs/04-frontend/wireframes-playful-boardroom.md
  */
 
+import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
+
+import { AlignJustify, Grid3x3, MessageSquare, Search, X } from 'lucide-react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+
 import { GameCard } from '@/components/games/GameCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,9 +29,6 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { api, type Game } from '@/lib/api';
 import { createErrorContext } from '@/lib/errors';
 import { logger } from '@/lib/logger';
-import { AlignJustify, Grid3x3, MessageSquare, Search, X } from 'lucide-react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
 
 // ============================================================================
 // Types

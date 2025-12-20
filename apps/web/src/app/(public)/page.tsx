@@ -23,12 +23,13 @@
  * @see docs/04-frontend/wireframes-playful-boardroom.md
  */
 
-import type { Metadata } from 'next';
-import { HeroSection } from '@/components/landing/HeroSection';
-import { FeaturesSection } from '@/components/landing/FeaturesSection';
-import { HowItWorksSection } from '@/components/landing/HowItWorksSection';
-import { CallToActionSection } from '@/components/landing/CallToActionSection';
 import { AuthRedirect } from '@/components/landing/AuthRedirect';
+import { CallToActionSection } from '@/components/landing/CallToActionSection';
+import { FeaturesSection } from '@/components/landing/FeaturesSection';
+import { HeroSection } from '@/components/landing/HeroSection';
+import { HowItWorksSection } from '@/components/landing/HowItWorksSection';
+
+import type { Metadata } from 'next';
 
 // Metadata for SEO
 export const metadata: Metadata = {

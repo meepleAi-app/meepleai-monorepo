@@ -31,17 +31,20 @@
 'use client';
 
 import React from 'react';
-import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
-import { useGames } from '@/hooks/queries/useGames';
+
+import { AlertCircle } from 'lucide-react';
+
+import { QuickActions } from '@/components/dashboard/QuickActions';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { TopNav } from '@/components/layout/TopNav';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
+import { useGames } from '@/hooks/queries/useGames';
+
+import { ChatHistorySection } from './components/ChatHistorySection';
 import { GreetingSection } from './components/GreetingSection';
 import { RecentGamesSection } from './components/RecentGamesSection';
-import { ChatHistorySection } from './components/ChatHistorySection';
-import { QuickActions } from '@/components/dashboard/QuickActions';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
 
 export default function DashboardPage() {
   // TanStack Query hooks (automatic caching, refetching, error handling)

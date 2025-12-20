@@ -13,15 +13,17 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+
 import Link from 'next/link';
+
+import { AdminAuthGuard } from '@/components/admin/AdminAuthGuard';
+import CategoryConfigTab from '@/components/admin/CategoryConfigTab';
+import FeatureFlagsTab from '@/components/admin/FeatureFlagsTab';
+import { useAuthUser } from '@/components/auth/AuthProvider';
+import { ErrorDisplay } from '@/components/errors';
 import { toast } from '@/components/layout';
 import { api, SystemConfigurationDto } from '@/lib/api';
-import FeatureFlagsTab from '@/components/admin/FeatureFlagsTab';
-import CategoryConfigTab from '@/components/admin/CategoryConfigTab';
-import { ErrorDisplay } from '@/components/errors';
 import { categorizeError } from '@/lib/errorUtils';
-import { useAuthUser } from '@/components/auth/AuthProvider';
-import { AdminAuthGuard } from '@/components/admin/AdminAuthGuard';
 
 // Tab types
 type TabId = 'feature-flags' | 'rate-limiting' | 'ai-llm' | 'rag';

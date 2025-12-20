@@ -14,8 +14,9 @@
  * HALF_OPEN → OPEN: After failed request
  */
 
-import { escapePrometheusLabelValue } from './prometheusUtils';
 import { logger } from '@/lib/logger';
+
+import { escapePrometheusLabelValue } from './prometheusUtils';
 
 export enum CircuitState {
   CLOSED = 'CLOSED', // Normal operation

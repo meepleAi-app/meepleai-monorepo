@@ -8,9 +8,12 @@
 'use client';
 
 import { ReactNode } from 'react';
-import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
-import { PublicLayout } from './PublicLayout';
+
 import { useRouter } from 'next/navigation';
+
+import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
+
+import { PublicLayout } from './PublicLayout';
 
 export interface PublicLayoutWrapperProps {
   children: ReactNode;

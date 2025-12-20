@@ -1,15 +1,17 @@
 'use client';
 
-import type { AuthUser } from '@/types/auth';
 import React, { useState, useEffect, useCallback } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+
 import Link from 'next/link';
-import { api } from '@/lib/api';
-import { PromptVersionCard } from '@/components/prompt';
-import { cn } from '@/lib/utils';
+import { useRouter, useParams } from 'next/navigation';
+
 import { ErrorDisplay } from '@/components/errors';
+import { PromptVersionCard } from '@/components/prompt';
+import { api } from '@/lib/api';
 import { categorizeError } from '@/lib/errorUtils';
+import { cn } from '@/lib/utils';
 import { getErrorMessage } from '@/lib/utils/errorHandler';
+import type { AuthUser } from '@/types/auth';
 
 type PromptTemplate = {
   id: string;

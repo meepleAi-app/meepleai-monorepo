@@ -14,9 +14,11 @@
 'use client';
 
 import { ReactNode } from 'react';
-import { PublicHeader, type PublicUser } from './PublicHeader';
-import { PublicFooter } from './PublicFooter';
+
 import { cn } from '@/lib/utils';
+
+import { PublicFooter } from './PublicFooter';
+import { PublicHeader, type PublicUser } from './PublicHeader';
 
 export interface PublicLayoutProps {
   /** Page content */

@@ -13,9 +13,10 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+
 import { Document, Page, pdfjs } from 'react-pdf';
 import { List } from 'react-window';
-import { cn } from '@/lib/utils';
+
 import {
   Dialog,
   DialogContent,
@@ -23,8 +24,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { logger } from '@/lib/logger';
 import { createErrorContext } from '@/lib/errors';
+import { logger } from '@/lib/logger';
+import { cn } from '@/lib/utils';
 
 // Configure PDF.js worker
 if (typeof window !== 'undefined') {

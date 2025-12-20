@@ -13,6 +13,7 @@
  */
 
 import { useState, useCallback, useRef } from 'react';
+
 import type { Citation } from '@/types';
 
 // Event types that match the backend

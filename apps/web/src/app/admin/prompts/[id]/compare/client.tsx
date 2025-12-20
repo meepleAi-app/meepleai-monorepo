@@ -1,14 +1,16 @@
 'use client';
 
-import type { AuthUser } from '@/types/auth';
 import React, { useState, useEffect, useCallback } from 'react';
-import { useRouter, useParams } from 'next/navigation';
-import Link from 'next/link';
+
 import dynamic from 'next/dynamic';
-import { api } from '@/lib/api';
+import Link from 'next/link';
+import { useRouter, useParams } from 'next/navigation';
+
 import { ErrorDisplay } from '@/components/errors';
+import { api } from '@/lib/api';
 import { categorizeError } from '@/lib/errorUtils';
 import { getErrorMessage } from '@/lib/utils/errorHandler';
+import type { AuthUser } from '@/types/auth';
 
 // Dynamically import Monaco DiffEditor to avoid SSR issues
 const DiffEditor = dynamic(() => import('@monaco-editor/react').then(mod => mod.DiffEditor), {

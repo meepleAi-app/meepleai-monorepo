@@ -1,9 +1,11 @@
-import type { Meta, StoryObj } from '@storybook/react';
+import { Bell, Check } from 'lucide-react';
+
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from './card';
 import { Button } from '../primitives/button';
 import { Input } from '../primitives/input';
 import { Label } from '../primitives/label';
-import { Bell, Check } from 'lucide-react';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 /**
  * Card component for content grouping and visual hierarchy.

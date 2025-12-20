@@ -1,8 +1,9 @@
 import React, { useRef, useEffect } from 'react';
-import { DiffLine, CollapsibleSection } from '../../lib/diffProcessor';
+
+import { CollapsibleUnchangedSection } from './CollapsibleUnchangedSection';
 import { DiffCodeBlock } from './DiffCodeBlock';
 import { DiffLineNumberGutter } from './DiffLineNumberGutter';
-import { CollapsibleUnchangedSection } from './CollapsibleUnchangedSection';
+import { DiffLine, CollapsibleSection } from '../../lib/diffProcessor';
 
 export interface DiffCodePanelProps {
   side: 'old' | 'new';

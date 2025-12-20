@@ -10,10 +10,13 @@
  * @see https://nextjs.org/docs/app/building-your-application/routing/layouts-and-pages
  */
 
-import type { Metadata, Viewport } from 'next';
 import { Quicksand } from 'next/font/google';
-import { AppProviders } from './providers';
+
 import { HyperDXProvider } from '@/components/HyperDXProvider';
+
+import { AppProviders } from './providers';
+
+import type { Metadata, Viewport } from 'next';
 import '../styles/globals.css';
 import '../styles/diff-viewer.css';
 import 'prismjs/themes/prism-tomorrow.css';

@@ -9,22 +9,24 @@
  * Issue #1077: FE-IMP-001 - Bootstrap App Router + Shared Providers
  */
 
+import { useState, useEffect, ReactNode } from 'react';
+
 import { ThemeProvider } from 'next-themes';
-import { ErrorBoundary, RouteErrorBoundary } from '@/components/errors';
-import { Toaster } from '@/components/ui/sonner';
-import { useSessionCheck } from '@/hooks/useSessionCheck';
-import { logger } from '@/lib/logger';
-import { createErrorContext } from '@/lib/errors';
-import { SessionWarningModal } from '@/components/modals';
+
+import { QueryProvider } from '@/app/QueryProvider';
 import { AccessibleSkipLink } from '@/components/accessible';
 import { AuthProvider } from '@/components/auth/AuthProvider';
-import { QueryProvider } from '@/app/QueryProvider';
-import { IntlProvider } from '@/components/providers/IntlProvider';
-import { api } from '@/lib/api';
+import { ErrorBoundary, RouteErrorBoundary } from '@/components/errors';
 import { KeyboardShortcutsHelp } from '@/components/layout';
+import { SessionWarningModal } from '@/components/modals';
+import { IntlProvider } from '@/components/providers/IntlProvider';
+import { Toaster } from '@/components/ui/sonner';
 import { useGlobalKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { useSessionCheck } from '@/hooks/useSessionCheck';
+import { api } from '@/lib/api';
 import { hydrateApiKey } from '@/lib/api/core/apiKeyStore';
-import { useState, useEffect, ReactNode } from 'react';
+import { createErrorContext } from '@/lib/errors';
+import { logger } from '@/lib/logger';
 
 interface AppProvidersProps {
   children: ReactNode;

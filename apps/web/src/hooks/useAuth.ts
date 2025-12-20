@@ -12,10 +12,12 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+
 import { useRouter } from 'next/navigation';
+
+import { userKeys } from '@/hooks/queries/useCurrentUser';
 import { api } from '@/lib/api';
 import { getQueryClient } from '@/lib/queryClient';
-import { userKeys } from '@/hooks/queries/useCurrentUser';
 
 // ============================================================================
 // Types

@@ -17,8 +17,8 @@
  * - Visual regression with screenshots
  */
 
-import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { test, expect } from '@playwright/test';
 
 test.describe('PublicLayout - Desktop Navigation', () => {
   test.beforeEach(async ({ page }) => {

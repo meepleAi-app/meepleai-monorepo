@@ -12,13 +12,16 @@
  */
 
 import { useState, useEffect } from 'react';
+
 import { useRouter } from 'next/navigation';
+
 import { AccessibleModal } from '@/components/accessible';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { LoginForm, LoginFormData } from './LoginForm';
-import { RegisterForm, RegisterFormData } from './RegisterForm';
-import OAuthButtons from './OAuthButtons';
 import { useAuth, type AuthUser } from '@/hooks/useAuth';
+
+import { LoginForm, LoginFormData } from './LoginForm';
+import OAuthButtons from './OAuthButtons';
+import { RegisterForm, RegisterFormData } from './RegisterForm';
 
 // ============================================================================
 // Component Props

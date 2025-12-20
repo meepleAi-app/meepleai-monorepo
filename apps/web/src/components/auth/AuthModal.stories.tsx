@@ -5,9 +5,11 @@
  * Covers: login/register tabs, loading, errors, session expired, OAuth, dark mode, mobile.
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
 import { fn } from 'storybook/test';
+
 import { AuthModal } from './AuthModal';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 // Mock useAuth hook
 const _mockUseAuth = {

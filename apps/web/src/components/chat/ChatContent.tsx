@@ -22,15 +22,18 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
+
 import Link from 'next/link';
-import { useChatStore } from '@/store/chat/store';
-import { MessageList } from './MessageList';
-import { MessageInput } from './MessageInput';
-import { MobileSidebar } from './MobileSidebar';
-import { ContextChip } from './ContextChip';
+
 import { PdfViewerModal } from '@/components/pdf/PdfViewerModal';
 import { api } from '@/lib/api';
+import { useChatStore } from '@/store/chat/store';
 import { Game, ChatThread } from '@/types';
+
+import { ContextChip } from './ContextChip';
+import { MessageInput } from './MessageInput';
+import { MessageList } from './MessageList';
+import { MobileSidebar } from './MobileSidebar';
 
 /**
  * PDF modal state for citation click → jump to page (BGAI-074)

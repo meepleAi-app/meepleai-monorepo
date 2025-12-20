@@ -1,7 +1,7 @@
-import type { Meta, StoryObj } from '@storybook/react';
-import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
 import * as z from 'zod';
+
 import {
   Form,
   FormControl,
@@ -11,10 +11,12 @@ import {
   FormLabel,
   FormMessage,
 } from './form';
-import { Input } from '../primitives/input';
-import { Button } from '../primitives/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../overlays/select';
+import { Button } from '../primitives/button';
 import { Checkbox } from '../primitives/checkbox';
+import { Input } from '../primitives/input';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 /**
  * Form component for building accessible forms with react-hook-form.

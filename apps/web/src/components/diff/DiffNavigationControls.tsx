@@ -1,5 +1,7 @@
 import React from 'react';
+
 import { ChevronUp, ChevronDown } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
 
 export interface DiffNavigationControlsProps {
@@ -20,7 +22,7 @@ export function DiffNavigationControls({
   totalChanges,
   onPrev,
   onNext,
-  disabled = false
+  disabled = false,
 }: DiffNavigationControlsProps) {
   if (totalChanges === 0) return null;
 
@@ -28,7 +30,11 @@ export function DiffNavigationControls({
   const isNextDisabled = disabled || currentIndex >= totalChanges - 1;
 
   return (
-    <div className="diff-navigation-controls flex items-center gap-2" role="navigation" aria-label="Diff navigation">
+    <div
+      className="diff-navigation-controls flex items-center gap-2"
+      role="navigation"
+      aria-label="Diff navigation"
+    >
       <span className="diff-navigation-position text-sm text-muted-foreground whitespace-nowrap">
         {currentIndex + 1} / {totalChanges} changes
       </span>

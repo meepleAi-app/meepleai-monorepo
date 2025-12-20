@@ -1,7 +1,9 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
+
 import { Search, X } from 'lucide-react';
-import { Input } from '@/components/ui/input';
+
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 export interface DiffSearchInputProps {
   value: string;
@@ -19,25 +21,28 @@ export function DiffSearchInput({
   value,
   onChange,
   placeholder = 'Search in diff...',
-  matchCount
+  matchCount,
 }: DiffSearchInputProps) {
   const [localValue, setLocalValue] = useState(value);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value;
-    setLocalValue(newValue);
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const newValue = e.target.value;
+      setLocalValue(newValue);
 
-    // Clear previous timeout if it exists
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-    }
+      // Clear previous timeout if it exists
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
 
-    // Debounce onChange callback (300ms)
-    debounceTimerRef.current = setTimeout(() => {
-      onChange(newValue);
-    }, 300);
-  }, [onChange]);
+      // Debounce onChange callback (300ms)
+      debounceTimerRef.current = setTimeout(() => {
+        onChange(newValue);
+      }, 300);
+    },
+    [onChange]
+  );
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -79,7 +84,10 @@ export function DiffSearchInput({
         )}
       </div>
       {matchCount !== undefined && matchCount > 0 && (
-        <span className="diff-search-count text-sm text-muted-foreground whitespace-nowrap" aria-live="polite">
+        <span
+          className="diff-search-count text-sm text-muted-foreground whitespace-nowrap"
+          aria-live="polite"
+        >
           {matchCount} {matchCount === 1 ? 'match' : 'matches'}
         </span>
       )}

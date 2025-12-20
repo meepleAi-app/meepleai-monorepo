@@ -4,8 +4,9 @@
  * Issue #1841 (PAGE-005)
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
 import { GameDetailClient } from './game-detail-client';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta: Meta<typeof GameDetailClient> = {
   title: 'Pages/Game Detail (Giochi)',

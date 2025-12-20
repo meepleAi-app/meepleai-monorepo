@@ -5,9 +5,11 @@
  * Covers: default, validating, uploading, chunked upload, errors, validation, dark mode, mobile.
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
 import { fn } from 'storybook/test';
+
 import { PdfUploadForm } from './PdfUploadForm';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta = {
   title: 'Components/PDF/PdfUploadForm',

@@ -12,8 +12,10 @@
 'use client';
 
 import { Suspense } from 'react';
-import { SharedChatView } from '@/components/pages/SharedChatView';
+
 import { Loader2 } from 'lucide-react';
+
+import { SharedChatView } from '@/components/pages/SharedChatView';
 
 function LoadingFallback() {
   return (

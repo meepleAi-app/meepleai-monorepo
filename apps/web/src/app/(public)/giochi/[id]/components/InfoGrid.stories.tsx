@@ -5,8 +5,9 @@
  * Issue #1841 (PAGE-005)
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
 import { InfoGrid } from './InfoGrid';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta: Meta<typeof InfoGrid> = {
   title: 'Game Detail/InfoGrid',

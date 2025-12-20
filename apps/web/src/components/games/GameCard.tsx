@@ -16,13 +16,15 @@
  */
 
 import React from 'react';
-import Image from 'next/image';
+
 import { cva, type VariantProps } from 'class-variance-authority';
-import { Game } from '@/lib/api';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { RatingStars } from '@/components/ui/rating-stars';
 import { Users, Clock, Calendar, HelpCircle } from 'lucide-react';
+import Image from 'next/image';
+
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { RatingStars } from '@/components/ui/rating-stars';
+import { Game } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 // ============================================================================

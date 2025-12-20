@@ -12,8 +12,9 @@
  * - Tablet View (768px - should be hidden)
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
 import { BottomNav } from './BottomNav';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta: Meta<typeof BottomNav> = {
   title: 'Layout/BottomNav',

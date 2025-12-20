@@ -13,13 +13,15 @@
  */
 
 import React from 'react';
+
 import { cn } from '@/lib/utils';
 import { useChatStore } from '@/store/chat/store';
-import { GameSelector } from './GameSelector';
+import { ChatThread } from '@/types';
+
 import { AgentSelector } from './AgentSelector';
 import { ChatHistory } from './ChatHistory';
+import { GameSelector } from './GameSelector';
 import { LoadingButton } from '../loading/LoadingButton';
-import { ChatThread } from '@/types';
 
 const MAX_THREADS_PER_GAME = 5; // Issue #858: Thread limit constant
 

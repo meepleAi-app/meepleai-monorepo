@@ -1,16 +1,18 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+
+import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
-import { api } from '@/lib/api';
+
+import { LoadingButton } from '@/components/loading/LoadingButton';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { LoadingButton } from '@/components/loading/LoadingButton';
-import { logger } from '@/lib/logger';
+import { api } from '@/lib/api';
 import { createErrorContext } from '@/lib/errors';
+import { logger } from '@/lib/logger';
 
 type AuthUser = {
   id: string;

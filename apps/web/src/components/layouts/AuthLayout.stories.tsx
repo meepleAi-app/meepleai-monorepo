@@ -5,11 +5,13 @@
  * for authentication pages (login, register, reset-password).
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
-import { AuthLayout } from './AuthLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
+
+import { AuthLayout } from './AuthLayout';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta = {
   title: 'Components/Layouts/AuthLayout',

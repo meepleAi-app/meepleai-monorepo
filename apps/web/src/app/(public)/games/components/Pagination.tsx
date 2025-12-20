@@ -15,9 +15,11 @@
 'use client';
 
 import { useCallback } from 'react';
-import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-import { Button } from '@/components/ui/button';
+
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+
+import { Button } from '@/components/ui/button';
 
 export interface PaginationProps {
   /** Current page (1-indexed) */

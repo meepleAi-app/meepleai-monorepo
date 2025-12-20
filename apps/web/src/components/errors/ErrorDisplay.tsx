@@ -5,9 +5,10 @@
  */
 
 import { type CSSProperties, useState, useEffect, useCallback } from 'react';
+
+import { UI_CONFIG } from '@/config';
 import { type CategorizedError, getErrorIcon, getErrorTitle } from '@/lib/errorUtils';
 import { showErrorToast, shouldShowToast } from '@/lib/toastUtils';
-import { UI_CONFIG } from '@/config';
 
 interface ErrorDisplayProps {
   error: CategorizedError;

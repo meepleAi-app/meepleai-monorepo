@@ -15,9 +15,10 @@
  */
 
 import { useCallback, useMemo } from 'react';
-import { useChatStore } from '@/store/chat/store';
-import { useStreamingChat } from '@/lib/hooks/useStreamingChat';
+
 import type { Citation } from '@/lib/api/schemas/streaming.schemas';
+import { useStreamingChat } from '@/lib/hooks/useStreamingChat';
+import { useChatStore } from '@/store/chat/store';
 
 export function useChatWithStreaming() {
   const store = useChatStore();

@@ -1,7 +1,9 @@
 // UI-04: Timeline event list component
-import { TimelineEvent, TimelineFilters, Snippet } from "@/lib/timeline-types";
-import { TimelineEventItem } from "./TimelineEventItem";
-import { useState } from "react";
+import { useState } from 'react';
+
+import { TimelineEvent, TimelineFilters, Snippet } from '@/lib/timeline-types';
+
+import { TimelineEventItem } from './TimelineEventItem';
 
 interface TimelineEventListProps {
   events: TimelineEvent[];
@@ -14,12 +16,12 @@ export function TimelineEventList({
   events,
   filters,
   selectedEventId,
-  onSelectEvent
+  onSelectEvent,
 }: TimelineEventListProps) {
   const [expandedEventIds, setExpandedEventIds] = useState<Set<string>>(new Set());
 
   const toggleExpand = (eventId: string) => {
-    setExpandedEventIds((prev) => {
+    setExpandedEventIds(prev => {
       const next = new Set(prev);
       if (next.has(eventId)) {
         next.delete(eventId);
@@ -31,7 +33,7 @@ export function TimelineEventList({
   };
 
   // Apply filters
-  const filteredEvents = events.filter((event) => {
+  const filteredEvents = events.filter(event => {
     // Filter by event type
     if (!filters.eventTypes.has(event.type)) {
       return false;
@@ -55,8 +57,9 @@ export function TimelineEventList({
       const searchLower = filters.searchText.toLowerCase();
       const messageMatch = event.data.message?.toLowerCase().includes(searchLower);
       const errorMatch = event.data.error?.toLowerCase().includes(searchLower);
-      const citationMatch = event.data.citations?.some((c: Snippet) =>
-        c.text.toLowerCase().includes(searchLower) || c.source.toLowerCase().includes(searchLower)
+      const citationMatch = event.data.citations?.some(
+        (c: Snippet) =>
+          c.text.toLowerCase().includes(searchLower) || c.source.toLowerCase().includes(searchLower)
       );
 
       if (!messageMatch && !errorMatch && !citationMatch) {
@@ -68,7 +71,9 @@ export function TimelineEventList({
   });
 
   // Sort by timestamp (most recent first)
-  const sortedEvents = [...filteredEvents].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+  const sortedEvents = [...filteredEvents].sort(
+    (a, b) => b.timestamp.getTime() - a.timestamp.getTime()
+  );
 
   if (sortedEvents.length === 0) {
     return (
@@ -86,12 +91,12 @@ export function TimelineEventList({
     <div className="p-4">
       {/* Event Count */}
       <div className="mb-4 p-3 bg-blue-50 rounded-lg text-[13px] text-blue-700 font-medium">
-        {sortedEvents.length} {sortedEvents.length === 1 ? "evento trovato" : "eventi trovati"}
+        {sortedEvents.length} {sortedEvents.length === 1 ? 'evento trovato' : 'eventi trovati'}
         {filteredEvents.length !== events.length && ` (${events.length} totali)`}
       </div>
 
       {/* Events */}
-      {sortedEvents.map((event) => (
+      {sortedEvents.map(event => (
         <TimelineEventItem
           key={event.id}
           event={event}

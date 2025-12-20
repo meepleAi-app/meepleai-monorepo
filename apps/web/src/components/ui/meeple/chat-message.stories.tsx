@@ -1,5 +1,6 @@
-import type { Meta, StoryObj } from '@storybook/react';
 import { ChatMessage } from './chat-message';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 // Fixed timestamps for consistent Chromatic snapshots
 const FIXED_TIMESTAMP = new Date('2024-01-15T10:00:00Z');

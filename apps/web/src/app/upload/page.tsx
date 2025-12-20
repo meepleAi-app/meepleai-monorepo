@@ -25,6 +25,7 @@
  */
 
 import dynamic from 'next/dynamic';
+
 import { RequireRole } from '@/components/auth/RequireRole';
 
 // Code splitting: lazy load UploadClient (Issue #2245)

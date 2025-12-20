@@ -10,7 +10,7 @@
  *
  * ⚠️ CURRENTLY SKIPPED - Needs proper async/await setup
  *
- * FIXME: Tests fail due to async timing issues
+ * TODO (#2252): Fix async timing issues in settings page tests
  * - Component uses fetch() for /api/v1/auth/me (profile)
  * - Component uses fetch() for /api/v1/users/me/oauth-accounts
  * - Component uses api.auth.* methods for 2FA, sessions

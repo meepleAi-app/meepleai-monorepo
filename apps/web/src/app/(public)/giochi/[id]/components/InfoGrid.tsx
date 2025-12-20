@@ -12,8 +12,10 @@
  */
 
 import React from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+
 import { Users, Clock, TrendingUp } from 'lucide-react';
+
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 
 // ============================================================================
 // Types

@@ -4,6 +4,7 @@
  */
 
 import { RequireRole } from '@/components/auth/RequireRole';
+
 import { ReportsPageClient } from './client';
 
 export const metadata = {

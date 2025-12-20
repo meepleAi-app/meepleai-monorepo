@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+
 import Link from 'next/link';
 import {
   LineChart,
@@ -12,13 +13,14 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
-import { api } from '@/lib/api';
-import { ErrorDisplay } from '@/components/errors';
-import { categorizeError } from '@/lib/errorUtils';
-import { LoadingButton } from '@/components/loading/LoadingButton';
-import { getErrorMessage } from '@/lib/utils/errorHandler';
-import { useAuthUser } from '@/components/auth/AuthProvider';
+
 import { AdminAuthGuard } from '@/components/admin/AdminAuthGuard';
+import { useAuthUser } from '@/components/auth/AuthProvider';
+import { ErrorDisplay } from '@/components/errors';
+import { LoadingButton } from '@/components/loading/LoadingButton';
+import { api } from '@/lib/api';
+import { categorizeError } from '@/lib/errorUtils';
+import { getErrorMessage } from '@/lib/utils/errorHandler';
 
 // Types
 type DashboardMetrics = {

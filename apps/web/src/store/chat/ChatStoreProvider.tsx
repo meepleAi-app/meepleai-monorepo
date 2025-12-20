@@ -24,9 +24,10 @@
 'use client';
 
 import { PropsWithChildren, useEffect } from 'react';
-import { useChatStore } from './store';
+
 import { useStreamingChat } from '@/lib/hooks/useStreamingChat';
 
+import { useChatStore } from './store';
 // Import store instance for test hooks
 import { useChatStore as chatStore } from './store';
 

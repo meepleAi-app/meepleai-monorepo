@@ -1,6 +1,7 @@
-import type { Meta, StoryObj } from '@storybook/react';
 import { Switch } from './switch';
 import { Label } from '../primitives/label';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 /**
  * Switch component for toggle controls and boolean settings.

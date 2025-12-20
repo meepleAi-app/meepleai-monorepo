@@ -6,7 +6,7 @@
  */
 
 import { z } from 'zod';
-import type { HttpClient } from '../core/httpClient';
+
 import {
   AcquireLockResultSchema,
   AgentDtoSchema,
@@ -33,6 +33,8 @@ import {
   type RuleSpecHistory,
   type VersionTimeline,
 } from '../schemas';
+
+import type { HttpClient } from '../core/httpClient';
 
 export interface CreateGamesClientParams {
   httpClient: HttpClient;

@@ -12,9 +12,10 @@
  */
 
 import React from 'react';
-import { Game } from '@/lib/api';
+
 import { GameCard } from '@/components/games/GameCard';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Game } from '@/lib/api';
 
 export interface GameGridProps {
   /** Games to display */

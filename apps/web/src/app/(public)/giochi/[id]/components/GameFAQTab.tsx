@@ -10,6 +10,10 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+
+import { HelpCircle, ThumbsUp, Info } from 'lucide-react';
+
+import { Spinner } from '@/components/loading';
 import {
   Accordion,
   AccordionContent,
@@ -17,10 +21,8 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { HelpCircle, ThumbsUp, Info } from 'lucide-react';
-import { api, type GameFAQ } from '@/lib/api';
-import { Spinner } from '@/components/loading';
 import { Button } from '@/components/ui/button';
+import { api, type GameFAQ } from '@/lib/api';
 
 // ============================================================================
 // Types

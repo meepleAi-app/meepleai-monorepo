@@ -270,7 +270,7 @@ export default function SetupPage() {
   if (!authUser) {
     return (
       <main className="p-6 max-w-[900px] mx-auto font-sans">
-        <Link href="/" className="text-primary no-underline hover:underline">
+        <Link href="/" className="text-foreground no-underline hover:underline">
           ← Back to Home
         </Link>
         <div className="mt-6 p-8 text-center border border-border rounded-lg">

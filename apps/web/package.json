@@ -32,6 +32,7 @@
     "test:e2e:parallel": "node scripts/run-parallel-e2e.js",
     "test:a11y": "vitest run -t \"(a11y|accessibility)\"",
     "test:a11y:jest": "jest --testPathPatterns=\"(a11y|accessibility)\"",
+    "test:a11y:e2e": "dotenv -e .env.test -- playwright test e2e/accessibility.spec.ts --project=desktop-chrome --workers=1",
     "audit:a11y": "tsx scripts/run-accessibility-audit.ts",
     "lint": "eslint . --max-warnings=0",
     "lint:fix": "eslint . --fix",

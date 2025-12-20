@@ -55,6 +55,7 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useUserLocale } from '@/hooks/useUserLocale';
 import { api } from '@/lib/api';
 import type { InfrastructureDetails, HealthState } from '@/lib/api';
 import { getInfrastructureI18n, type Locale } from '@/lib/i18n/infrastructure';
@@ -64,7 +65,7 @@ type SortField = 'name' | 'status' | 'responseTime';
 type TimeRange = '1h' | '6h' | '24h' | '7d';
 
 export function InfrastructureClient() {
-  const locale: Locale = 'it'; // TODO (#2254): Get from user preferences
+  const locale = useUserLocale() as Locale; // User preferences → browser → default
   const i18n = getInfrastructureI18n(locale);
 
   // State

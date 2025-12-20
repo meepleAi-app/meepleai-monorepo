@@ -576,13 +576,11 @@ jobs:
           done
 
       - name: Run Playwright Accessibility Tests
-        continue-on-error: true  # Issue #2247: Warning-level violations (don't fail CI)
         env:
           NEXT_PUBLIC_API_BASE: http://localhost:8081
         run: pnpm test:a11y:e2e
 
       - name: Run Keyboard Shortcuts Tests
-        continue-on-error: true  # Issue #2247: Warning-level violations (don't fail CI)
         env:
           NEXT_PUBLIC_API_BASE: http://localhost:8081
         run: pnpm exec playwright test e2e/keyboard-shortcuts.spec.ts --project=desktop-chrome --workers=1

@@ -45,6 +45,54 @@ pnpm exec playwright show-report
 
 ---
 
+## Error State Testing (Issue #2261)
+
+### Why Separate Error State Tests?
+
+Error state tests (500 errors, 403 forbidden, network timeouts, loading states) use **production server** instead of dev server due to a memory leak in Next.js dev server when mocking API errors.
+
+**Problem**: Dev server crashes with heap overflow after ~17 error state tests
+**Solution**: Use production build for error state tests (both local and CI)
+**Impact**: Slower local testing for error states, but stable and reliable
+
+### Running Error State Tests
+
+```bash
+# IMPORTANT: Build production bundle FIRST
+cd apps/web
+pnpm build
+
+# Run error state accessibility tests (uses production server)
+pnpm test:a11y:e2e:errors
+
+# Run regular accessibility tests (uses dev server - faster)
+pnpm test:a11y:e2e
+```
+
+### Test Coverage
+
+Error state tests validate WCAG compliance for:
+1. **500 Internal Server Error** - Generic server error handling
+2. **403 Forbidden** - Permission denied scenarios
+3. **Network Timeout** - Connection timeout handling
+4. **Loading States** - Async data fetching indicators
+
+All tests are tagged with `@error-state` and automatically run with production server via `FORCE_PRODUCTION_SERVER=true` environment variable.
+
+### Chromatic Visual Tests
+
+Error states also have Chromatic visual regression tests in `e2e/error-states.chromatic.spec.ts`:
+
+```bash
+# Run visual regression for error states
+pnpm test:a11y:e2e:errors
+
+# View visual diffs in Chromatic dashboard
+pnpm chromatic
+```
+
+---
+
 ## WCAG Compliance Standards
 
 ### WCAG 2.1 Levels

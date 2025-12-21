@@ -479,39 +479,41 @@ test.describe('Accessibility - Error States', () => {
     expect(results.violations).toEqual([]);
   });
 
-  // TODO Issue #2261: Dev server crashes with 500 error mock
-  // Skip until server instability with error mocks is resolved
-  test.skip('500 Internal Server Error should be accessible', async ({ page }) => {
-    // Mock 500 error for a commonly accessed endpoint
-    await page.route('**/api/v1/games', async route => {
-      await route.fulfill({
-        status: 500,
-        contentType: 'application/json',
-        body: JSON.stringify({ error: 'Internal Server Error' }),
+  // Issue #2261: Resolved - Now runs with production server (FORCE_PRODUCTION_SERVER=true)
+  test(
+    '500 Internal Server Error should be accessible',
+    { tag: '@error-state' },
+    async ({ page }) => {
+      // Mock 500 error for a commonly accessed endpoint
+      await page.route('**/api/v1/games', async route => {
+        await route.fulfill({
+          status: 500,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: 'Internal Server Error' }),
+        });
       });
-    });
 
-    await page.goto('/games');
+      await page.goto('/games');
 
-    // Wait for error state to render (don't wait for networkidle with error mock)
-    await page.waitForTimeout(2000);
+      // Wait for error state to render (don't wait for networkidle with error mock)
+      await page.waitForTimeout(2000);
 
-    // Error state should still be accessible
-    const results = await new AxeBuilder({ page })
-      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
-      .disableRules(KNOWN_A11Y_ISSUES)
-      .analyze();
+      // Error state should still be accessible
+      const results = await new AxeBuilder({ page })
+        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+        .disableRules(KNOWN_A11Y_ISSUES)
+        .analyze();
 
-    if (results.violations.length > 0) {
-      console.error('❌ 500 error state violations:', formatViolations(results.violations));
+      if (results.violations.length > 0) {
+        console.error('❌ 500 error state violations:', formatViolations(results.violations));
+      }
+
+      expect(results.violations).toEqual([]);
     }
+  );
 
-    expect(results.violations).toEqual([]);
-  });
-
-  // TODO Issue #2261: Dev server crashes with 403 error mock
-  // Skip until server instability with error mocks is resolved
-  test.skip('403 Forbidden error should be accessible', async ({ page }) => {
+  // Issue #2261: Resolved - Now runs with production server (FORCE_PRODUCTION_SERVER=true)
+  test('403 Forbidden error should be accessible', { tag: '@error-state' }, async ({ page }) => {
     // Setup user role (not admin)
     await page.route('**/api/v1/auth/me', async route => {
       await route.fulfill({
@@ -555,9 +557,8 @@ test.describe('Accessibility - Error States', () => {
     expect(results.violations).toEqual([]);
   });
 
-  // TODO Issue #2261: Dev server crashes with loading state mock
-  // Skip until server instability with delayed response mocks is resolved
-  test.skip('Loading state should be accessible', async ({ page }) => {
+  // Issue #2261: Resolved - Now runs with production server (FORCE_PRODUCTION_SERVER=true)
+  test('Loading state should be accessible', { tag: '@error-state' }, async ({ page }) => {
     // Setup mock auth
     await setupMockAuth(page, 'User', 'user@meepleai.dev');
 
@@ -592,9 +593,8 @@ test.describe('Accessibility - Error States', () => {
     expect(results.violations).toEqual([]);
   });
 
-  // TODO Issue #2261: Dev server crashes with network timeout mock
-  // Skip until server instability with abort() mocks is resolved
-  test.skip('Network timeout error should be accessible', async ({ page }) => {
+  // Issue #2261: Resolved - Now runs with production server (FORCE_PRODUCTION_SERVER=true)
+  test('Network timeout error should be accessible', { tag: '@error-state' }, async ({ page }) => {
     // Mock timeout by aborting request
     await page.route('**/api/v1/games', async route => {
       await route.abort('timedout');

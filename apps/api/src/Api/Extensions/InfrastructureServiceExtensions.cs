@@ -37,19 +37,11 @@ internal static class InfrastructureServiceExtensions
         // Only configure Postgres in non-test environments (tests will override with SQLite)
         if (!environment.IsEnvironment("Testing"))
         {
+            // Issue #2152: Prioritize ConnectionStrings__Postgres env var FIRST to bypass appsettings cache
             // SEC-708: Build connection string from Docker Secrets if available
-            var connStr1 = configuration.GetConnectionString("Postgres");
-            var connStr2 = configuration["ConnectionStrings__Postgres"];
-
-            // Issue #2152: Debug logging to trace connection string source
-            Console.WriteLine($"[DEBUG #2152] GetConnectionString('Postgres'): {(connStr1 != null ? connStr1.Substring(0, Math.Min(50, connStr1.Length)) : "NULL")}...");
-            Console.WriteLine($"[DEBUG #2152] configuration['ConnectionStrings__Postgres']: {(connStr2 != null ? connStr2.Substring(0, Math.Min(50, connStr2.Length)) : "NULL")}...");
-
-            var connectionString = connStr1
-                ?? connStr2
+            var connectionString = configuration["ConnectionStrings__Postgres"]
+                ?? configuration.GetConnectionString("Postgres")
                 ?? SecretsHelper.BuildPostgresConnectionString(configuration);
-
-            Console.WriteLine($"[DEBUG #2152] FINAL connectionString: {connectionString?.Substring(0, Math.Min(80, connectionString.Length))}...");
 
             // PERF-09: Optimize Postgres connection pooling for better throughput
             services.AddDbContext<MeepleAiDbContext>(options =>

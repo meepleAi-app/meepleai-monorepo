@@ -93,11 +93,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
+      # Issue #2152: Disable caching to ensure fresh appsettings.Development.json
       - name: Setup backend environment
         uses: ./.github/actions/setup-backend
         with:
           dotnet-version: '9.0.x'
           working-directory: apps/api
+          cache-nuget: 'false'  # Disable all caching for clean build
 
       - name: Install k6
         run: |

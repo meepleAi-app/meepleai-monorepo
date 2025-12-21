@@ -38,9 +38,18 @@ internal static class InfrastructureServiceExtensions
         if (!environment.IsEnvironment("Testing"))
         {
             // SEC-708: Build connection string from Docker Secrets if available
-            var connectionString = configuration.GetConnectionString("Postgres")
-                ?? configuration["ConnectionStrings__Postgres"]
+            var connStr1 = configuration.GetConnectionString("Postgres");
+            var connStr2 = configuration["ConnectionStrings__Postgres"];
+
+            // Issue #2152: Debug logging to trace connection string source
+            Console.WriteLine($"[DEBUG #2152] GetConnectionString('Postgres'): {connStr1?.Substring(0, Math.Min(50, connStr1.Length ?? 0))}...");
+            Console.WriteLine($"[DEBUG #2152] configuration['ConnectionStrings__Postgres']: {connStr2?.Substring(0, Math.Min(50, connStr2?.Length ?? 0))}...");
+
+            var connectionString = connStr1
+                ?? connStr2
                 ?? SecretsHelper.BuildPostgresConnectionString(configuration);
+
+            Console.WriteLine($"[DEBUG #2152] FINAL connectionString: {connectionString?.Substring(0, Math.Min(80, connectionString.Length))}...");
 
             // PERF-09: Optimize Postgres connection pooling for better throughput
             services.AddDbContext<MeepleAiDbContext>(options =>

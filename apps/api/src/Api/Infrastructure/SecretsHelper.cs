@@ -19,6 +19,8 @@ namespace Api.Infrastructure;
 ///   1. OPENROUTER_API_KEY_FILE environment variable (path to secret file)
 ///   2. OPENROUTER_API_KEY environment variable (direct value)
 ///   3. Throws InvalidOperationException if neither is found
+///
+/// Issue #2152: Cache invalidation trigger for appsettings.Development.json changes.
 /// </summary>
 internal static class SecretsHelper
 {

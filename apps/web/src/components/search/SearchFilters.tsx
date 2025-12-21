@@ -3,7 +3,7 @@
  * Filter UI for advanced search (Issue #1101)
  */
 
-import React from 'react';
+import React, { useCallback, useMemo } from 'react';
 
 import { X, Calendar } from 'lucide-react';
 
@@ -26,6 +26,18 @@ interface SearchFiltersProps {
   agents?: Agent[];
 }
 
+// ============================================================================
+// Constants (moved outside component for performance)
+// ============================================================================
+
+const RESULT_TYPES: { value: SearchResultType; label: string }[] = [
+  { value: 'message', label: 'Messages' },
+  { value: 'chat', label: 'Chats' },
+  { value: 'game', label: 'Games' },
+  { value: 'agent', label: 'Agents' },
+  { value: 'pdf', label: 'PDFs' },
+];
+
 /**
  * Format date for input[type="date"]
  */
@@ -42,70 +54,103 @@ function parseDateFromInput(value: string): Date | undefined {
   return new Date(value);
 }
 
-export const SearchFilters: React.FC<SearchFiltersProps> = ({
+export const SearchFilters = React.memo<SearchFiltersProps>(function SearchFilters({
   filters,
   onFiltersChange,
   games = [],
   agents = [],
-}) => {
-  const handleGameChange = (value: string) => {
-    onFiltersChange({
-      ...filters,
-      gameId: value === 'all' ? undefined : value,
-    });
-  };
+}) {
+  // Memoize handlers for performance
+  const handleGameChange = useCallback(
+    (value: string) => {
+      onFiltersChange({
+        ...filters,
+        gameId: value === 'all' ? undefined : value,
+      });
+    },
+    [filters, onFiltersChange]
+  );
 
-  const handleAgentChange = (value: string) => {
-    onFiltersChange({
-      ...filters,
-      agentId: value === 'all' ? undefined : value,
-    });
-  };
+  const handleAgentChange = useCallback(
+    (value: string) => {
+      onFiltersChange({
+        ...filters,
+        agentId: value === 'all' ? undefined : value,
+      });
+    },
+    [filters, onFiltersChange]
+  );
 
-  const handleTypeToggle = (type: SearchResultType) => {
-    const currentTypes = filters.types || [];
-    const newTypes = currentTypes.includes(type)
-      ? currentTypes.filter(t => t !== type)
-      : [...currentTypes, type];
+  const handleTypeToggle = useCallback(
+    (type: SearchResultType) => {
+      const currentTypes = filters.types || [];
+      const newTypes = currentTypes.includes(type)
+        ? currentTypes.filter(t => t !== type)
+        : [...currentTypes, type];
 
-    onFiltersChange({
-      ...filters,
-      types: newTypes.length === 0 ? undefined : newTypes,
-    });
-  };
+      onFiltersChange({
+        ...filters,
+        types: newTypes.length === 0 ? undefined : newTypes,
+      });
+    },
+    [filters, onFiltersChange]
+  );
 
-  const handleDateFromChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onFiltersChange({
-      ...filters,
-      dateFrom: parseDateFromInput(e.target.value),
-    });
-  };
+  const handleDateFromChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      onFiltersChange({
+        ...filters,
+        dateFrom: parseDateFromInput(e.target.value),
+      });
+    },
+    [filters, onFiltersChange]
+  );
 
-  const handleDateToChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onFiltersChange({
-      ...filters,
-      dateTo: parseDateFromInput(e.target.value),
-    });
-  };
+  const handleDateToChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      onFiltersChange({
+        ...filters,
+        dateTo: parseDateFromInput(e.target.value),
+      });
+    },
+    [filters, onFiltersChange]
+  );
 
-  const handleClearFilters = () => {
+  const handleClearFilters = useCallback(() => {
     onFiltersChange({});
-  };
+  }, [onFiltersChange]);
 
-  const hasActiveFilters =
-    filters.gameId ||
-    filters.agentId ||
-    filters.dateFrom ||
-    filters.dateTo ||
-    (filters.types && filters.types.length > 0);
+  // Memoize computed values
+  const hasActiveFilters = useMemo(
+    () =>
+      filters.gameId ||
+      filters.agentId ||
+      filters.dateFrom ||
+      filters.dateTo ||
+      (filters.types && filters.types.length > 0),
+    [filters]
+  );
 
-  const resultTypes: { value: SearchResultType; label: string }[] = [
-    { value: 'message', label: 'Messages' },
-    { value: 'chat', label: 'Chats' },
-    { value: 'game', label: 'Games' },
-    { value: 'agent', label: 'Agents' },
-    { value: 'pdf', label: 'PDFs' },
-  ];
+  // Memoize game and agent select items
+  const gameSelectItems = useMemo(
+    () =>
+      games.map(game => (
+        <SelectItem key={game.id} value={game.id}>
+          {game.title}
+        </SelectItem>
+      )),
+    [games]
+  );
+
+  const agentSelectItems = useMemo(
+    () =>
+      agents.map(agent => (
+        <SelectItem key={agent.id} value={agent.id}>
+          {agent.name}
+        </SelectItem>
+      )),
+    [agents]
+  );
 
   return (
     <div className="p-4 space-y-4 bg-muted/50">
@@ -131,11 +176,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All games</SelectItem>
-              {games.map(game => (
-                <SelectItem key={game.id} value={game.id}>
-                  {game.title}
-                </SelectItem>
-              ))}
+              {gameSelectItems}
             </SelectContent>
           </Select>
         </div>
@@ -151,11 +192,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All agents</SelectItem>
-              {agents.map(agent => (
-                <SelectItem key={agent.id} value={agent.id}>
-                  {agent.name}
-                </SelectItem>
-              ))}
+              {agentSelectItems}
             </SelectContent>
           </Select>
         </div>
@@ -191,7 +228,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
       <div className="space-y-2">
         <Label className="text-xs">Result Types</Label>
         <div className="flex flex-wrap gap-1">
-          {resultTypes.map(({ value, label }) => (
+          {RESULT_TYPES.map(({ value, label }) => (
             <Button
               key={value}
               variant={filters.types?.includes(value) ? 'default' : 'outline'}
@@ -218,4 +255,4 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
       </div> */}
     </div>
   );
-};
+});

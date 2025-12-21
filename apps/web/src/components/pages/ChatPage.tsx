@@ -33,16 +33,23 @@ function ChatPageContent() {
   const [showShareModal, setShowShareModal] = useState(false);
 
   // Connect to Zustand store for header props
-  const { games, selectedGameId, selectGame, chatsByGame, activeChatIds, loading } = useChatStore(
-    state => ({
-      games: state.games,
-      selectedGameId: state.selectedGameId,
-      selectGame: state.selectGame,
-      chatsByGame: state.chatsByGame,
-      activeChatIds: state.activeChatIds,
-      loading: state.loading,
-    })
-  );
+  const {
+    games,
+    selectedGameId,
+    selectGame,
+    chatsByGame,
+    activeChatIds,
+    loading,
+    updateChatTitle,
+  } = useChatStore(state => ({
+    games: state.games,
+    selectedGameId: state.selectedGameId,
+    selectGame: state.selectGame,
+    chatsByGame: state.chatsByGame,
+    activeChatIds: state.activeChatIds,
+    loading: state.loading,
+    updateChatTitle: state.updateChatTitle,
+  }));
 
   // Derived values
   // eslint-disable-next-line security/detect-object-injection -- Safe: selectedGameId is user-selected, not external input
@@ -57,9 +64,9 @@ function ChatPageContent() {
   };
 
   const handleTitleChange = (title: string) => {
-    // TODO (#2257): Implement thread title update via Zustand action
-    // For now, title change is client-side only (will be persisted in future)
-    void title; // Acknowledge parameter usage
+    if (activeChatId) {
+      void updateChatTitle(activeChatId, title);
+    }
   };
 
   const handleShare = () => {

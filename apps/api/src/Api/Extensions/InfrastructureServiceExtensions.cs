@@ -42,8 +42,8 @@ internal static class InfrastructureServiceExtensions
             var connStr2 = configuration["ConnectionStrings__Postgres"];
 
             // Issue #2152: Debug logging to trace connection string source
-            Console.WriteLine($"[DEBUG #2152] GetConnectionString('Postgres'): {connStr1?.Substring(0, Math.Min(50, connStr1.Length ?? 0))}...");
-            Console.WriteLine($"[DEBUG #2152] configuration['ConnectionStrings__Postgres']: {connStr2?.Substring(0, Math.Min(50, connStr2?.Length ?? 0))}...");
+            Console.WriteLine($"[DEBUG #2152] GetConnectionString('Postgres'): {(connStr1 != null ? connStr1.Substring(0, Math.Min(50, connStr1.Length)) : "NULL")}...");
+            Console.WriteLine($"[DEBUG #2152] configuration['ConnectionStrings__Postgres']: {(connStr2 != null ? connStr2.Substring(0, Math.Min(50, connStr2.Length)) : "NULL")}...");
 
             var connectionString = connStr1
                 ?? connStr2

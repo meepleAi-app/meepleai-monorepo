@@ -78,7 +78,7 @@ export default function AddGamePage() {
           </p>
         </div>
 
-        <form onSubmit={handleSearch} className="flex gap-4 mb-8">
+        <form noValidate onSubmit={handleSearch} className="flex gap-4 mb-8">
           <Input
             placeholder="Cerca su BoardGameGeek..."
             value={query}

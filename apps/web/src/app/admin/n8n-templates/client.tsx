@@ -397,7 +397,7 @@ const TemplateImportModal = ({
         </div>
 
         {/* Modal Body */}
-        <form onSubmit={handleSubmit} className="p-6">
+        <form noValidate onSubmit={handleSubmit} className="p-6">
           <div className="space-y-6">
             {template.parameters.length === 0 ? (
               <p className="text-gray-600 text-center py-4">

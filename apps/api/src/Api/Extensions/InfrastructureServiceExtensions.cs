@@ -55,11 +55,12 @@ internal static class InfrastructureServiceExtensions
             var envVarConnectionString = Environment.GetEnvironmentVariable("ConnectionStrings__Postgres");
             Console.WriteLine($"[DEBUG #2152] Environment.GetEnvironmentVariable('ConnectionStrings__Postgres'): {(envVarConnectionString != null ? envVarConnectionString.Substring(0, Math.Min(80, envVarConnectionString.Length)) : "NULL")}");
 
+            // Issue #2152: Prioritize SecretsHelper FIRST (reads uncorrupted POSTGRES_* vars)
             // SEC-708: Build connection string from Docker Secrets if available
-            var connectionString = envVarConnectionString
+            var connectionString = SecretsHelper.BuildPostgresConnectionString(configuration)
+                ?? envVarConnectionString
                 ?? configuration["ConnectionStrings__Postgres"]
-                ?? configuration.GetConnectionString("Postgres")
-                ?? SecretsHelper.BuildPostgresConnectionString(configuration);
+                ?? configuration.GetConnectionString("Postgres");
 
             Console.WriteLine($"[DEBUG #2152] FINAL connectionString source: {(envVarConnectionString != null ? "Environment.GetEnvironmentVariable" : configuration["ConnectionStrings__Postgres"] != null ? "configuration[]" : configuration.GetConnectionString("Postgres") != null ? "GetConnectionString" : "SecretsHelper")}");
 

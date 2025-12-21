@@ -419,7 +419,7 @@ export function AdminPageClient() {
                 {modalState.mode === 'create' ? 'Create Template' : 'Edit Template'}
               </h2>
 
-              <form onSubmit={handleSubmit}>
+              <form noValidate onSubmit={handleSubmit}>
                 <div className="mb-4">
                   <label className="block mb-2 font-medium">Name</label>
                   <input

@@ -314,8 +314,10 @@ using (var scope = app.Services.CreateScope())
         // Bootstrap: Create initial admin user if database is empty
         await EnsureInitialAdminUserAsync(app, db, scope.ServiceProvider).ConfigureAwait(false);
 
-        // K6 Performance Testing: Ensure test user exists in Development/Test environments (Issue #1663)
-        if (app.Environment.IsDevelopment() || string.Equals(app.Environment.EnvironmentName, "Test", StringComparison.Ordinal))
+        // K6 Performance Testing: Ensure test user exists in Development/Test/CI environments (Issue #1663, #2152)
+        if (app.Environment.IsDevelopment()
+            || string.Equals(app.Environment.EnvironmentName, "Test", StringComparison.Ordinal)
+            || string.Equals(app.Environment.EnvironmentName, "CI", StringComparison.Ordinal))
         {
             await EnsureTestUserExistsAsync(app, db, scope.ServiceProvider).ConfigureAwait(false);
         }

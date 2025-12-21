@@ -93,32 +93,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      # Issue #2152: Disable caching to ensure fresh build without cached appsettings
       - name: Setup backend environment
         uses: ./.github/actions/setup-backend
         with:
           dotnet-version: '9.0.x'
           working-directory: apps/api
-          cache-nuget: 'false'  # Disable all caching for clean build
-
-      # Issue #2152: Create appsettings.Development.json AFTER cache restore to prevent overwrite
-      - name: Create appsettings.Development.json with postgres username
-        working-directory: apps/api/src/Api
-        run: |
-          echo "Creating appsettings.Development.json with Username=postgres (after cache restore)..."
-          cat > appsettings.Development.json <<'EOF'
-          {
-            "ConnectionStrings": {
-              "Postgres": "Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=testpass123"
-            },
-            "Logging": {
-              "LogLevel": {
-                "Default": "Information"
-              }
-            }
-          }
-          EOF
-          echo "✅ appsettings.Development.json created with correct config"
 
       - name: Install k6
         run: |
@@ -200,7 +179,8 @@ jobs:
           HYPERDX_URL: 'http://localhost:8000'  # Issue #2112: Override for CI service containers
           # Issue #2152: Disable PostgreSQL health check to bypass early connection during startup
           HealthChecks__Postgres__Enabled: 'false'
-          ASPNETCORE_ENVIRONMENT: Development  # Issue #1663: Dev mode enables test user seeding + relaxed rate limits
+          # Issue #2152: Use CI environment to load appsettings.CI.json (bypasses Development cache issues)
+          ASPNETCORE_ENVIRONMENT: CI
           ASPNETCORE_URLS: 'http://0.0.0.0:8080'
 
       # Issue #2020: Add ConnectionStrings__Postgres to prevent EF Core from defaulting to 'root' user

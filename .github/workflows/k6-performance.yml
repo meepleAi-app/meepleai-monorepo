@@ -166,6 +166,12 @@ jobs:
           nohup dotnet run --configuration Release > ../../../../api.log 2>&1 &
           echo $! > ../../../../api.pid
         env:
+          # Issue #2152: Explicit POSTGRES_* vars for SecretsHelper.BuildPostgresConnectionString()
+          POSTGRES_USER: 'postgres'
+          POSTGRES_PASSWORD: 'testpass123'
+          POSTGRES_DB: 'meepleai_test'
+          POSTGRES_HOST: 'localhost'
+          POSTGRES_PORT: '5432'
           ConnectionStrings__Redis: 'localhost:6379'
           ConnectionStrings__Qdrant: 'http://localhost:6333'
           N8N_URL: 'http://localhost:5678'

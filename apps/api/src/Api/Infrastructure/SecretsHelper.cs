@@ -117,7 +117,8 @@ internal static class SecretsHelper
         var host = config["POSTGRES_HOST"] ?? "postgres";
         var port = config["POSTGRES_PORT"] ?? "5432";
         var database = config["POSTGRES_DB"] ?? config["ConnectionStrings:DefaultDatabase"] ?? "meepleai";
-        var username = config["POSTGRES_USER"] ?? "meeple";
+        // Issue #2152: Change default username from 'meeple' to 'postgres' for CI/standard PostgreSQL compatibility
+        var username = config["POSTGRES_USER"] ?? "postgres";
 
         // Get password from secret file or direct config
         var password = GetSecretOrValue(config, "POSTGRES_PASSWORD", logger, required: true);

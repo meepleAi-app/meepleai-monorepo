@@ -117,8 +117,6 @@ jobs:
       - name: Build API
         working-directory: apps/api/src/Api
         run: dotnet build --configuration Release --no-restore
-        env:
-          # Issue #2152: Removed ConnectionStrings__Postgres (framework corrupts it). Use POSTGRES_* instead
 
       - name: Install EF Core tools
         run: dotnet tool install --global dotnet-ef --version 9.0.11
@@ -158,8 +156,6 @@ jobs:
       - name: Apply migrations
         working-directory: apps/api/src/Api
         run: dotnet ef database update --configuration Release
-        env:
-          # Issue #2152: Removed ConnectionStrings__Postgres (framework corrupts it). Use POSTGRES_* instead
 
       # Issue #1663: Test user is now seeded automatically on API startup via EnsureTestUserExistsAsync
       # No need for separate seeding step - reduces workflow complexity and eliminates race conditions
@@ -169,8 +165,6 @@ jobs:
         run: |
           nohup dotnet run --configuration Release > ../../../../api.log 2>&1 &
           echo $! > ../../../../api.pid
-        env:
-          # Issue #2152: Removed ConnectionStrings__Postgres (framework corrupts it). Use POSTGRES_* instead
           # Issue #2152: Explicit POSTGRES_USER to ensure SecretsHelper fallback uses correct default
           POSTGRES_USER: 'postgres'
           POSTGRES_PASSWORD: 'testpass123'
@@ -202,8 +196,6 @@ jobs:
           echo "Last 100 lines of API logs:"
           tail -n 100 api.log || echo "⚠️ Could not read api.log"
           exit 1
-        env:
-          # Issue #2152: Removed ConnectionStrings__Postgres (framework corrupts it). Use POSTGRES_* instead
 
       - name: Run k6 performance tests
         working-directory: tests/k6

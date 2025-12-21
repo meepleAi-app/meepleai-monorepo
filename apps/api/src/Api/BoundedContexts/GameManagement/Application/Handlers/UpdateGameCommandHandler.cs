@@ -56,6 +56,12 @@ internal class UpdateGameCommandHandler : ICommandHandler<UpdateGameCommand, Gam
             playTime: playTime
         );
 
+        // Update images if provided (Issue #2255)
+        if (command.IconUrl != null || command.ImageUrl != null)
+        {
+            game.SetImages(command.IconUrl, command.ImageUrl);
+        }
+
         // Persist
         await _gameRepository.UpdateAsync(game, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -71,7 +77,9 @@ internal class UpdateGameCommandHandler : ICommandHandler<UpdateGameCommand, Gam
             MinPlayTimeMinutes: game.PlayTime?.MinMinutes,
             MaxPlayTimeMinutes: game.PlayTime?.MaxMinutes,
             BggId: game.BggId,
-            CreatedAt: game.CreatedAt
+            CreatedAt: game.CreatedAt,
+            IconUrl: game.IconUrl,
+            ImageUrl: game.ImageUrl
         );
     }
 }

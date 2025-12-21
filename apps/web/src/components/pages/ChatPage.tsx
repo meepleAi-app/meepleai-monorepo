@@ -24,6 +24,7 @@ import { ShareChatModal } from '@/components/chat/ShareChatModal';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { ChatLayout } from '@/components/layouts/ChatLayout';
 import { ExportChatModal } from '@/components/modals';
+import { useThreadDeletion } from '@/hooks/useThreadDeletion';
 import { ChatStoreProvider } from '@/store/chat/ChatStoreProvider';
 import { useChatStore } from '@/store/chat/store';
 import { Game, ChatThread } from '@/types';
@@ -31,6 +32,9 @@ import { Game, ChatThread } from '@/types';
 function ChatPageContent() {
   const [showExportModal, setShowExportModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+
+  // Thread deletion hook (Issue #2258)
+  const { handleThreadDelete, ConfirmDialogComponent } = useThreadDeletion();
 
   // Connect to Zustand store for header props
   const {
@@ -78,9 +82,9 @@ function ChatPageContent() {
   };
 
   const handleDelete = () => {
-    // TODO (#2258): Implement thread deletion with confirmation dialog
-    // Will integrate with Zustand deleteThread action in future
-    void activeChatId; // Acknowledge variable usage
+    if (activeChatId) {
+      void handleThreadDelete(activeChatId);
+    }
   };
 
   return (
@@ -119,6 +123,9 @@ function ChatPageContent() {
           threadId={activeChatId}
         />
       )}
+
+      {/* Confirmation dialog for thread deletion (Issue #2258) */}
+      <ConfirmDialogComponent />
     </>
   );
 }

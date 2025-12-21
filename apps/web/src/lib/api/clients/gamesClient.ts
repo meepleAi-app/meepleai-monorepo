@@ -288,6 +288,15 @@ export function createGamesClient({ httpClient }: CreateGamesClientParams) {
     },
 
     /**
+     * Update existing game
+     * PUT /api/v1/games/{id}
+     * Issue #2255: Extended to support iconUrl and imageUrl updates
+     */
+    async update(id: string, updates: Partial<CreateGameRequest>): Promise<Game> {
+      return httpClient.put<Game>(`/api/v1/games/${encodeURIComponent(id)}`, updates, GameSchema);
+    },
+
+    /**
      * Upload game image (icon or cover)
      * POST /api/v1/games/upload-image
      * Issue #2255: File upload implementation for game creation wizard

@@ -1,5 +1,7 @@
 using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.GameManagement.Application.DTOs;
+using Api.BoundedContexts.GameManagement.Application.Validators;
+using Api.Infrastructure.Security;
 using Api.Services.Pdf;
 using Api.SharedKernel.Application.Interfaces;
 
@@ -8,6 +10,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Handlers;
 /// <summary>
 /// Handles game image upload command.
 /// Issue #2255: Implements file upload with validation and storage.
+/// Security: Magic byte validation, path traversal prevention, size limits.
 /// </summary>
 internal class UploadGameImageCommandHandler : ICommandHandler<UploadGameImageCommand, UploadGameImageResult>
 {
@@ -17,16 +20,6 @@ internal class UploadGameImageCommandHandler : ICommandHandler<UploadGameImageCo
     // File size limits (bytes)
     private const long MaxIconSizeBytes = 2 * 1024 * 1024; // 2MB for icons
     private const long MaxImageSizeBytes = 5 * 1024 * 1024; // 5MB for images
-
-    // Allowed MIME types
-    private static readonly HashSet<string> AllowedMimeTypes = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "image/png",
-        "image/jpeg",
-        "image/jpg",
-        "image/webp",
-        "image/svg+xml"
-    };
 
     public UploadGameImageCommandHandler(
         IBlobStorageService storageService,
@@ -44,6 +37,10 @@ internal class UploadGameImageCommandHandler : ICommandHandler<UploadGameImageCo
 
         try
         {
+            // SECURITY FIX: Validate gameId to prevent path traversal (CWE-22, CWE-73)
+            // Code review finding: Defense-in-depth requires validation at handler level
+            PathSecurity.ValidateIdentifier(command.GameId, nameof(command.GameId));
+
             // Validate file stream
             if (command.FileStream == null || !command.FileStream.CanRead)
             {
@@ -55,6 +52,21 @@ internal class UploadGameImageCommandHandler : ICommandHandler<UploadGameImageCo
                     ErrorMessage: "Invalid file stream"
                 );
             }
+
+            if (!command.FileStream.CanSeek)
+            {
+                return new UploadGameImageResult(
+                    Success: false,
+                    FileId: null,
+                    FileUrl: null,
+                    FileSizeBytes: 0,
+                    ErrorMessage: "Stream must be seekable for validation"
+                );
+            }
+
+            // SECURITY FIX: Reset stream position to ensure accurate validation
+            // Code review finding: Stream position may be advanced after Length check
+            command.FileStream.Position = 0;
 
             // Validate file size
             var maxSize = command.ImageType == ImageType.Icon ? MaxIconSizeBytes : MaxImageSizeBytes;
@@ -71,17 +83,43 @@ internal class UploadGameImageCommandHandler : ICommandHandler<UploadGameImageCo
             }
 
             // Validate MIME type from file extension
-            var mimeType = GetMimeTypeFromFileName(command.FileName);
-            if (mimeType == null || !AllowedMimeTypes.Contains(mimeType))
+            var mimeType = ImageFileValidator.GetMimeTypeFromFileName(command.FileName);
+            if (mimeType == null || !ImageFileValidator.AllowedMimeTypes.Contains(mimeType))
             {
                 return new UploadGameImageResult(
                     Success: false,
                     FileId: null,
                     FileUrl: null,
                     FileSizeBytes: command.FileStream.Length,
-                    ErrorMessage: "Invalid file type. Allowed: PNG, JPEG, WebP, SVG"
+                    ErrorMessage: "Invalid file type. Allowed: PNG, JPEG, WebP (SVG excluded for security)"
                 );
             }
+
+            // SECURITY FIX: Validate file content using magic bytes (not just extension)
+            // Code review finding: Extension-only validation vulnerable to renamed malicious files
+            var isValidImage = await ImageFileValidator.ValidateMagicBytesAsync(
+                command.FileStream,
+                mimeType
+            ).ConfigureAwait(false);
+
+            if (!isValidImage)
+            {
+                _logger.LogWarning(
+                    "File {FileName} claimed to be {MimeType} but magic bytes validation failed",
+                    command.FileName,
+                    mimeType
+                );
+
+                return new UploadGameImageResult(
+                    Success: false,
+                    FileId: null,
+                    FileUrl: null,
+                    FileSizeBytes: command.FileStream.Length,
+                    ErrorMessage: "File content does not match declared type. Possible malicious file."
+                );
+            }
+
+            // Stream position is already reset to 0 by ValidateMagicBytesAsync
 
             // Store file using BlobStorageService
             var storageResult = await _storageService.StoreAsync(
@@ -145,19 +183,5 @@ internal class UploadGameImageCommandHandler : ICommandHandler<UploadGameImageCo
                 ErrorMessage: "An unexpected error occurred during file upload"
             );
         }
-    }
-
-    private static string? GetMimeTypeFromFileName(string fileName)
-    {
-        var extension = Path.GetExtension(fileName)?.ToLowerInvariant();
-        return extension switch
-        {
-            ".png" => "image/png",
-            ".jpg" => "image/jpeg",
-            ".jpeg" => "image/jpeg",
-            ".webp" => "image/webp",
-            ".svg" => "image/svg+xml",
-            _ => null
-        };
     }
 }

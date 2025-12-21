@@ -543,6 +543,17 @@ internal static class GameEndpoints
         var (authorized, _, error) = context.RequireAdminOrEditorSession();
         if (!authorized) return error!;
 
+        // SECURITY FIX: Validate Content-Type is multipart/form-data
+        // Code review finding: Explicit validation improves error messages
+        if (!context.Request.HasFormContentType)
+        {
+            return Results.BadRequest(new
+            {
+                error = "validation_failed",
+                message = "Request must be multipart/form-data"
+            });
+        }
+
         // Read multipart form data
         var form = await context.Request.ReadFormAsync(ct).ConfigureAwait(false);
         var file = form.Files.GetFile("file");
@@ -588,46 +599,64 @@ internal static class GameEndpoints
         }
 
         // Create command with file stream
-        using var fileStream = file.OpenReadStream();
-        var command = new UploadGameImageCommand(
-            FileStream: fileStream,
-            FileName: file.FileName,
-            GameId: gameId,
-            ImageType: imageType
-        );
-
-        var result = await mediator.Send(command, ct).ConfigureAwait(false);
-
-        if (!result.Success)
+        // SECURITY FIX: Copy to MemoryStream to avoid disposal issues with MediatR
+        // Code review finding: Using statement may dispose before handler completes
+        var memoryStream = new MemoryStream();
+        try
         {
-            logger.LogWarning(
-                "Image upload failed for game {GameId}, type {ImageType}: {Error}",
-                gameId,
-                imageType,
-                result.ErrorMessage
-            );
-
-            return Results.BadRequest(new
+            var fileStream = file.OpenReadStream();
+            await using (fileStream.ConfigureAwait(false))
             {
-                error = "upload_failed",
-                message = result.ErrorMessage
-            });
+                await fileStream.CopyToAsync(memoryStream, ct).ConfigureAwait(false);
+                memoryStream.Position = 0; // Reset for handler to read
+
+                var command = new UploadGameImageCommand(
+                    FileStream: memoryStream,
+                    FileName: file.FileName,
+                    GameId: gameId,
+                    ImageType: imageType
+                );
+
+                var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+                if (!result.Success)
+                {
+                    logger.LogWarning(
+                        "Image upload failed for game {GameId}, type {ImageType}: {Error}",
+                        gameId,
+                        imageType,
+                        result.ErrorMessage
+                    );
+
+                    return Results.BadRequest(new
+                    {
+                        error = "upload_failed",
+                        message = result.ErrorMessage
+                    });
+                }
+
+                logger.LogInformation(
+                    "Successfully uploaded {ImageType} for game {GameId}: {FileId} ({Size} bytes)",
+                    imageType,
+                    gameId,
+                    result.FileId,
+                    result.FileSizeBytes
+                );
+
+                return Results.Ok(new
+                {
+                    success = true,
+                    fileId = result.FileId,
+                    fileUrl = result.FileUrl,
+                    fileSizeBytes = result.FileSizeBytes
+                });
+            }
         }
-
-        logger.LogInformation(
-            "Successfully uploaded {ImageType} for game {GameId}: {FileId} ({Size} bytes)",
-            imageType,
-            gameId,
-            result.FileId,
-            result.FileSizeBytes
-        );
-
-        return Results.Ok(new
+        finally
         {
-            success = true,
-            fileId = result.FileId,
-            fileUrl = result.FileUrl,
-            fileSizeBytes = result.FileSizeBytes
-        });
+            // RESOURCE FIX: Dispose MemoryStream after use
+            // Code review finding: Proper disposal of IDisposable resources
+            await memoryStream.DisposeAsync().ConfigureAwait(false);
+        }
     }
 }

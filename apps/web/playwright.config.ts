@@ -186,8 +186,9 @@ export default defineConfig<ChromaticConfig>({
             // Dev server crashes after ~48 minutes under sustained test load
             // Production build is already created by CI workflow (pnpm build)
             // Issue #2247: Heap increase LOCAL ONLY (dev server memory leak mitigation)
+            // Issue #2261: Force production server for error state tests (FORCE_PRODUCTION_SERVER=true)
             command:
-              process.env.CI === 'true'
+              process.env.CI === 'true' || process.env.FORCE_PRODUCTION_SERVER === 'true'
                 ? 'node ./node_modules/next/dist/bin/next start -p 3000'
                 : 'node --max-old-space-size=8192 ./node_modules/next/dist/bin/next dev -p 3000',
             url: 'http://localhost:3000',

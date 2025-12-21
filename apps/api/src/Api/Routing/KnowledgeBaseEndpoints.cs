@@ -28,6 +28,7 @@ internal static class KnowledgeBaseEndpoints
         MapChatHistoryEndpoints(group);
         MapChatLifecycleEndpoints(group);
         MapChatStateEndpoints(group);
+        MapChatUpdateEndpoints(group);
         MapChatMessageEndpoints(group);
         MapChatExportEndpoints(group);
 
@@ -103,6 +104,15 @@ internal static class KnowledgeBaseEndpoints
         // CHAT-THREAD-06: Reopen chat thread
         group.MapPost("/chat-threads/{threadId:guid}/reopen", HandleReopenThread)
         .WithName("ReopenThread")
+        .RequireSession()
+        .WithTags("ChatThreads");
+    }
+
+    private static void MapChatUpdateEndpoints(RouteGroupBuilder group)
+    {
+        // ISSUE-2257: Update chat thread title
+        group.MapPatch("/chat-threads/{threadId:guid}", HandleUpdateChatThreadTitle)
+        .WithName("UpdateChatThreadTitle")
         .RequireSession()
         .WithTags("ChatThreads");
     }
@@ -446,6 +456,47 @@ internal static class KnowledgeBaseEndpoints
         return Results.Ok(result);
     }
 
+    private static async Task<IResult> HandleUpdateChatThreadTitle(
+        Guid threadId,
+        UpdateChatThreadTitleRequest req,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+        var userId = session!.User!.Id;
+
+        if (string.IsNullOrWhiteSpace(req.Title))
+        {
+            return Results.BadRequest(new { error = "Title is required" });
+        }
+
+        // Verify thread ownership before mutation
+        var threadQuery = new GetChatThreadByIdQuery(threadId);
+        var existingThread = await mediator.Send(threadQuery, ct).ConfigureAwait(false);
+
+        if (existingThread == null)
+        {
+            return Results.NotFound(new { error = "Thread not found" });
+        }
+
+        if (existingThread.UserId != userId &&
+            !string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+        {
+            logger.LogWarning("User {UserId} denied access to update thread {ThreadId} (owner: {OwnerId})",
+                userId, threadId, existingThread.UserId);
+            return Results.Forbid();
+        }
+
+        var command = new UpdateChatThreadTitleCommand(threadId, req.Title);
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+        logger.LogInformation("User {UserId} updated title for thread {ThreadId}", userId, threadId);
+
+        return Results.Ok(result);
+    }
+
     private static async Task<IResult> HandleAddMessageToThread(
         Guid threadId,
         AddMessageRequest req,
@@ -597,4 +648,11 @@ internal record KnowledgeBaseSearchRequest(
     double? minScore = null,
     string? searchMode = null,
     string? language = null
+);
+
+/// <summary>
+/// Request model for updating chat thread title (Issue #2257).
+/// </summary>
+internal record UpdateChatThreadTitleRequest(
+    string Title
 );

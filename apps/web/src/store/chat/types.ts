@@ -81,7 +81,7 @@ export interface ChatActions {
   createChat: () => Promise<void>;
   deleteChat: (chatId: string) => Promise<void>;
   selectChat: (chatId: string) => Promise<void>;
-  updateChatTitle: (chatId: string, title: string) => void;
+  updateChatTitle: (chatId: string, title: string) => Promise<void>;
 }
 
 export type ChatSlice = ChatState & ChatActions;

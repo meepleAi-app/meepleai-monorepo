@@ -73,6 +73,7 @@ export interface ChatClient {
   closeThread(threadId: string): Promise<ChatThreadDto>;
   reopenThread(threadId: string): Promise<ChatThreadDto>;
   deleteThread(threadId: string): Promise<void>;
+  updateThreadTitle(threadId: string, title: string): Promise<ChatThreadDto>;
 
   // Chat Messages
   updateMessage(chatId: string, messageId: string, content: string): Promise<ChatMessageResponse>;
@@ -173,6 +174,14 @@ export function createChatClient({ httpClient }: CreateChatClientParams): ChatCl
 
     async deleteThread(threadId: string): Promise<void> {
       return httpClient.delete(`/api/v1/chat-threads/${threadId}`);
+    },
+
+    async updateThreadTitle(threadId: string, title: string): Promise<ChatThreadDto> {
+      return httpClient.patch(
+        `/api/v1/chat-threads/${encodeURIComponent(threadId)}`,
+        { title },
+        ChatThreadDtoSchema
+      );
     },
 
     // ========== Chat Messages ==========

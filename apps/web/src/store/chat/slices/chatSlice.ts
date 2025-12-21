@@ -184,15 +184,58 @@ export const createChatSlice: StateCreator<
     await loadMessages(chatId);
   },
 
-  updateChatTitle: (chatId, title) =>
-    set(state => {
-      const { selectedGameId } = get();
-      if (!selectedGameId) return;
+  updateChatTitle: async (chatId, title) => {
+    const { selectedGameId, setLoading, setError } = get();
 
-      const threads = state.chatsByGame[selectedGameId] ?? [];
-      const thread = threads.find(t => t.id === chatId);
-      if (thread) {
-        thread.title = title;
+    if (!selectedGameId) return;
+
+    // Store original title for rollback
+    const threads = get().chatsByGame[selectedGameId] ?? [];
+    const thread = threads.find(t => t.id === chatId);
+    const originalTitle = thread?.title;
+
+    // Optimistic update
+    set(state => {
+      const currentThreads = state.chatsByGame[selectedGameId] ?? [];
+      const currentThread = currentThreads.find(t => t.id === chatId);
+      if (currentThread) {
+        currentThread.title = title;
       }
-    }),
+    });
+
+    setLoading('updating', true);
+    setError(null);
+
+    try {
+      const updatedThread = await api.chat.updateThreadTitle(chatId, title);
+
+      // Sync with server response
+      set(state => {
+        const currentThreads = state.chatsByGame[selectedGameId] ?? [];
+        const currentThread = currentThreads.find(t => t.id === chatId);
+        if (currentThread) {
+          currentThread.title = updatedThread.title;
+        }
+      });
+    } catch (err) {
+      logger.error(
+        'Failed to update thread title',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('ChatSlice', 'updateChatTitle', { chatId, title })
+      );
+
+      // Rollback optimistic update
+      set(state => {
+        const currentThreads = state.chatsByGame[selectedGameId] ?? [];
+        const currentThread = currentThreads.find(t => t.id === chatId);
+        if (currentThread && originalTitle !== undefined) {
+          currentThread.title = originalTitle;
+        }
+      });
+
+      setError("Errore nell'aggiornamento del titolo");
+    } finally {
+      setLoading('updating', false);
+    }
+  },
 });

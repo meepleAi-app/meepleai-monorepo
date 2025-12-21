@@ -37,14 +37,31 @@ internal static class InfrastructureServiceExtensions
         // Only configure Postgres in non-test environments (tests will override with SQLite)
         if (!environment.IsEnvironment("Testing"))
         {
+            // Issue #2152: Debug ALL environment variables to find ConnectionStrings__Postgres
+            Console.WriteLine("[DEBUG #2152] === Environment Variables Containing 'POSTGRES' ===");
+            foreach (System.Collections.DictionaryEntry env in Environment.GetEnvironmentVariables())
+            {
+                var key = env.Key?.ToString() ?? "";
+                if (key.Contains("POSTGRES", StringComparison.OrdinalIgnoreCase) || key.Contains("ConnectionStrings", StringComparison.OrdinalIgnoreCase))
+                {
+                    var val = env.Value?.ToString() ?? "NULL";
+                    var maskedVal = val.Length > 50 ? val.Substring(0, 50) + "..." : val;
+                    Console.WriteLine($"  {key} = {maskedVal}");
+                }
+            }
+            Console.WriteLine("[DEBUG #2152] ===================================================");
+
             // Issue #2152: Read ConnectionStrings__Postgres directly from env var to bypass ALL config caching
             var envVarConnectionString = Environment.GetEnvironmentVariable("ConnectionStrings__Postgres");
+            Console.WriteLine($"[DEBUG #2152] Environment.GetEnvironmentVariable('ConnectionStrings__Postgres'): {(envVarConnectionString != null ? envVarConnectionString.Substring(0, Math.Min(80, envVarConnectionString.Length)) : "NULL")}");
 
             // SEC-708: Build connection string from Docker Secrets if available
             var connectionString = envVarConnectionString
                 ?? configuration["ConnectionStrings__Postgres"]
                 ?? configuration.GetConnectionString("Postgres")
                 ?? SecretsHelper.BuildPostgresConnectionString(configuration);
+
+            Console.WriteLine($"[DEBUG #2152] FINAL connectionString source: {(envVarConnectionString != null ? "Environment.GetEnvironmentVariable" : configuration["ConnectionStrings__Postgres"] != null ? "configuration[]" : configuration.GetConnectionString("Postgres") != null ? "GetConnectionString" : "SecretsHelper")}");
 
             // PERF-09: Optimize Postgres connection pooling for better throughput
             services.AddDbContext<MeepleAiDbContext>(options =>

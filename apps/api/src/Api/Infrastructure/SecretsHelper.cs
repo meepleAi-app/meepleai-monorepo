@@ -116,11 +116,15 @@ internal static class SecretsHelper
         IConfiguration config,
         ILogger? logger = null)
     {
+        Console.WriteLine("[DEBUG #2152] SecretsHelper.BuildPostgresConnectionString() called");
+
         var host = config["POSTGRES_HOST"] ?? "postgres";
         var port = config["POSTGRES_PORT"] ?? "5432";
         var database = config["POSTGRES_DB"] ?? config["ConnectionStrings:DefaultDatabase"] ?? "meepleai";
         // Issue #2152: Change default username from 'meeple' to 'postgres' for CI/standard PostgreSQL compatibility
         var username = config["POSTGRES_USER"] ?? "postgres";
+
+        Console.WriteLine($"[DEBUG #2152] SecretsHelper values: Host={host}, Port={port}, DB={database}, User={username}");
 
         // Get password from secret file or direct config
         var password = GetSecretOrValue(config, "POSTGRES_PASSWORD", logger, required: true);

@@ -169,6 +169,7 @@ jobs:
           # Issue #2152: Explicit POSTGRES_* vars for SecretsHelper.BuildPostgresConnectionString()
           POSTGRES_USER: 'postgres'
           POSTGRES_PASSWORD: 'testpass123'
+          POSTGRES_PASSWORD_FILE: ''  # Disable file reading, use direct value
           POSTGRES_DB: 'meepleai_test'
           POSTGRES_HOST: 'localhost'
           POSTGRES_PORT: '5432'

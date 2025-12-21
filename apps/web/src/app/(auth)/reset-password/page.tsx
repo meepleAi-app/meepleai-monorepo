@@ -340,7 +340,7 @@ function ResetPasswordPageContent() {
           </div>
         )}
 
-        <form onSubmit={handleRequestReset} className="space-y-4">
+        <form noValidate onSubmit={handleRequestReset} className="space-y-4">
           <AccessibleFormInput
             label="Email Address"
             type="email"
@@ -458,7 +458,7 @@ function ResetPasswordPageContent() {
           </div>
         )}
 
-        <form onSubmit={handleConfirmReset} className="space-y-4">
+        <form noValidate onSubmit={handleConfirmReset} className="space-y-4">
           <AccessibleFormInput
             label="New Password"
             type="password"

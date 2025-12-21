@@ -111,8 +111,8 @@ internal static class SecretsHelper
     /// </summary>
     /// <param name="config">Configuration instance</param>
     /// <param name="logger">Optional logger for diagnostics</param>
-    /// <returns>Complete PostgreSQL connection string</returns>
-    public static string BuildPostgresConnectionString(
+    /// <returns>Complete PostgreSQL connection string, or null if password not configured</returns>
+    public static string? BuildPostgresConnectionString(
         IConfiguration config,
         ILogger? logger = null)
     {
@@ -127,7 +127,18 @@ internal static class SecretsHelper
         Console.WriteLine($"[DEBUG #2152] SecretsHelper values: Host={host}, Port={port}, DB={database}, User={username}");
 
         // Get password from secret file or direct config
-        var password = GetSecretOrValue(config, "POSTGRES_PASSWORD", logger, required: true);
+        // Issue #2152: Try GetSecretOrValue first, then Environment.GetEnvironmentVariable directly
+        var password = GetSecretOrValue(config, "POSTGRES_PASSWORD", logger, required: false)
+            ?? Environment.GetEnvironmentVariable("POSTGRES_PASSWORD");
+
+        Console.WriteLine($"[DEBUG #2152] SecretsHelper password source: {(password != null ? "found" : "NULL")}");
+
+        // If no password configured, return null to allow fallback to other connection string sources
+        if (string.IsNullOrEmpty(password))
+        {
+            Console.WriteLine("[DEBUG #2152] SecretsHelper: POSTGRES_PASSWORD not found anywhere, returning null for fallback");
+            return null;
+        }
 
         var connectionString = $"Host={host};Port={port};Database={database};Username={username};Password={password}";
 

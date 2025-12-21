@@ -93,11 +93,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
+      # Issue #2152: Re-enabled caching with fixed cache key (now includes appsettings*.json hash)
       - name: Setup backend environment
         uses: ./.github/actions/setup-backend
         with:
           dotnet-version: '9.0.x'
           working-directory: apps/api
+          cache-nuget: 'true'
 
       - name: Install k6
         run: |

@@ -118,7 +118,7 @@ jobs:
         working-directory: apps/api/src/Api
         run: dotnet build --configuration Release --no-restore
         env:
-          ConnectionStrings__Postgres: 'Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=testpass123'
+          # Issue #2152: Removed ConnectionStrings__Postgres (framework corrupts it). Use POSTGRES_* instead
 
       - name: Install EF Core tools
         run: dotnet tool install --global dotnet-ef --version 9.0.11
@@ -159,7 +159,7 @@ jobs:
         working-directory: apps/api/src/Api
         run: dotnet ef database update --configuration Release
         env:
-          ConnectionStrings__Postgres: 'Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=testpass123'
+          # Issue #2152: Removed ConnectionStrings__Postgres (framework corrupts it). Use POSTGRES_* instead
 
       # Issue #1663: Test user is now seeded automatically on API startup via EnsureTestUserExistsAsync
       # No need for separate seeding step - reduces workflow complexity and eliminates race conditions
@@ -170,7 +170,7 @@ jobs:
           nohup dotnet run --configuration Release > ../../../../api.log 2>&1 &
           echo $! > ../../../../api.pid
         env:
-          ConnectionStrings__Postgres: 'Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=testpass123'
+          # Issue #2152: Removed ConnectionStrings__Postgres (framework corrupts it). Use POSTGRES_* instead
           # Issue #2152: Explicit POSTGRES_USER to ensure SecretsHelper fallback uses correct default
           POSTGRES_USER: 'postgres'
           POSTGRES_PASSWORD: 'testpass123'
@@ -203,7 +203,7 @@ jobs:
           tail -n 100 api.log || echo "⚠️ Could not read api.log"
           exit 1
         env:
-          ConnectionStrings__Postgres: 'Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=testpass123'
+          # Issue #2152: Removed ConnectionStrings__Postgres (framework corrupts it). Use POSTGRES_* instead
 
       - name: Run k6 performance tests
         working-directory: tests/k6

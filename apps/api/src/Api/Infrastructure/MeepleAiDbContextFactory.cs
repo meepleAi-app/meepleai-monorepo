@@ -28,10 +28,11 @@ internal class MeepleAiDbContextFactory : IDesignTimeDbContextFactory<MeepleAiDb
 
         // Issue #921: Allow dummy connection for migrations without real DB
         // Issue #2112: Try both uppercase (Windows) and camelCase (Linux CI) for env var
+        // Issue #2152: Try ConnectionStrings__Postgres first, then build from POSTGRES_* vars
         var connectionString = Environment.GetEnvironmentVariable("CONNECTIONSTRINGS__POSTGRES")
             ?? Environment.GetEnvironmentVariable("ConnectionStrings__Postgres")  // Linux CI compatibility
             ?? Environment.GetEnvironmentVariable("POSTGRES_CONNECTION_STRING")
-            ?? "Host=localhost;Database=meepleai_migrations;Username=postgres;Password=postgres"; // Dummy for migrations
+            ?? BuildConnectionStringFromEnvVars(); // Issue #2152: Build from POSTGRES_* vars
 
         optionsBuilder.UseNpgsql(connectionString);
 
@@ -39,6 +40,18 @@ internal class MeepleAiDbContextFactory : IDesignTimeDbContextFactory<MeepleAiDb
         var mediator = new NoOpMediator();
         var eventCollector = new NoOpEventCollector();
         return new MeepleAiDbContext(optionsBuilder.Options, mediator, eventCollector);
+    }
+
+    // Issue #2152: Build connection string from individual POSTGRES_* env vars
+    private static string BuildConnectionStringFromEnvVars()
+    {
+        var host = Environment.GetEnvironmentVariable("POSTGRES_HOST") ?? "localhost";
+        var port = Environment.GetEnvironmentVariable("POSTGRES_PORT") ?? "5432";
+        var database = Environment.GetEnvironmentVariable("POSTGRES_DB") ?? "meepleai_migrations";
+        var username = Environment.GetEnvironmentVariable("POSTGRES_USER") ?? "postgres";
+        var password = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD") ?? "postgres";
+
+        return $"Host={host};Port={port};Database={database};Username={username};Password={password}";
     }
 
     /// <summary>

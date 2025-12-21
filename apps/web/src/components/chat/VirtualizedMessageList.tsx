@@ -214,9 +214,13 @@ interface MessageRowProps {
 }
 
 /**
- * MessageRow - Individual message wrapper
+ * MessageRow - Individual message wrapper (memoized for performance)
  */
-function MessageRow({ message, onCitationClick, userAvatar }: MessageRowProps) {
+const MessageRow = React.memo(function MessageRow({
+  message,
+  onCitationClick,
+  userAvatar,
+}: MessageRowProps) {
   // Convert MessageType citations to ChatMessage Citation format
   const citations: Citation[] | undefined = message.citations?.map(c => ({
     id: c.documentId,
@@ -237,7 +241,7 @@ function MessageRow({ message, onCitationClick, userAvatar }: MessageRowProps) {
       />
     </div>
   );
-}
+});
 
 interface StreamingMessageRowProps {
   content: string;

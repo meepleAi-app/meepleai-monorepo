@@ -194,9 +194,12 @@ internal static class ObservabilityServiceExtensions
             return;
         }
 
-        // Issue #2152: Prioritize ConnectionStrings__Postgres env var FIRST to bypass appsettings cache
+        // Issue #2152: Read ConnectionStrings__Postgres directly from env var to bypass ALL config caching
+        var envVarConnectionString = Environment.GetEnvironmentVariable("ConnectionStrings__Postgres");
+
         // SEC-708: Build connection string from Docker Secrets if available (only for non-testing)
-        var healthCheckConnectionString = configuration["ConnectionStrings__Postgres"]
+        var healthCheckConnectionString = envVarConnectionString
+            ?? configuration["ConnectionStrings__Postgres"]
             ?? configuration.GetConnectionString("Postgres")
             ?? SecretsHelper.BuildPostgresConnectionString(configuration);
 

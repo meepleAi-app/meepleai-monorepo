@@ -621,7 +621,7 @@ function UserModal({ mode, user, onClose, onCreate, onUpdate }: UserModalProps) 
       <div className="bg-white p-8 rounded-lg max-w-lg w-[90%]" onClick={e => e.stopPropagation()}>
         <h2 className="mt-0">{mode === 'create' ? 'Create User' : 'Edit User'}</h2>
 
-        <form onSubmit={handleSubmit}>
+        <form noValidate onSubmit={handleSubmit}>
           {/* Email */}
           <div className="mb-4">
             <label htmlFor="email" className="block mb-2 font-medium">

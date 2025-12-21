@@ -109,6 +109,14 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y k6
 
+      # Issue #2152: Force delete cached appsettings.Development.json before clean/build
+      - name: Delete cached appsettings files
+        working-directory: apps/api/src/Api
+        run: |
+          echo "Removing any cached appsettings.Development.json from bin/ directories..."
+          find bin obj -name "appsettings.Development.json" -delete 2>/dev/null || true
+          echo "✅ Cached appsettings files removed"
+
       # Issue #2152: Clean build outputs to ensure appsettings.Development.json changes are applied
       - name: Clean API build outputs
         working-directory: apps/api/src/Api

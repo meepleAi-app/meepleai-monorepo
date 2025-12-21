@@ -165,17 +165,12 @@ jobs:
         run: |
           nohup dotnet run --configuration Release > ../../../../api.log 2>&1 &
           echo $! > ../../../../api.pid
-          # Issue #2152: Explicit POSTGRES_USER to ensure SecretsHelper fallback uses correct default
-          POSTGRES_USER: 'postgres'
-          POSTGRES_PASSWORD: 'testpass123'
-          POSTGRES_DB: 'meepleai_test'
+        env:
           ConnectionStrings__Redis: 'localhost:6379'
           ConnectionStrings__Qdrant: 'http://localhost:6333'
-          N8N_URL: 'http://localhost:5678'  # Issue #2112: Override for CI service containers
-          HYPERDX_URL: 'http://localhost:8000'  # Issue #2112: Override for CI service containers
-          # Issue #2152: Disable PostgreSQL health check to bypass early connection during startup
+          N8N_URL: 'http://localhost:5678'
+          HYPERDX_URL: 'http://localhost:8000'
           HealthChecks__Postgres__Enabled: 'false'
-          # Issue #2152: Use CI environment to load appsettings.CI.json (bypasses Development cache issues)
           ASPNETCORE_ENVIRONMENT: CI
           ASPNETCORE_URLS: 'http://0.0.0.0:8080'
 

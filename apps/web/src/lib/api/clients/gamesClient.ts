@@ -287,6 +287,58 @@ export function createGamesClient({ httpClient }: CreateGamesClientParams) {
       );
     },
 
+    /**
+     * Upload game image (icon or cover)
+     * POST /api/v1/games/upload-image
+     * Issue #2255: File upload implementation for game creation wizard
+     *
+     * @param file File object to upload (PNG, JPEG, WebP, SVG)
+     * @param gameId Game ID for storage organization
+     * @param imageType Type of image ('icon' for thumbnails, 'image' for covers)
+     * @returns Upload result with file URL and metadata
+     */
+    async uploadImage(
+      file: File,
+      gameId: string,
+      imageType: 'icon' | 'image'
+    ): Promise<{
+      success: boolean;
+      fileId?: string;
+      fileUrl?: string;
+      fileSizeBytes?: number;
+      error?: string;
+    }> {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('gameId', gameId);
+      formData.append('imageType', imageType);
+
+      // Use native fetch for FormData (httpClient doesn't support multipart)
+      const baseUrl = httpClient['baseUrl'] || 'http://localhost:8080';
+      const response = await fetch(`${baseUrl}/api/v1/games/upload-image`, {
+        method: 'POST',
+        credentials: 'include', // Send cookies for authentication
+        body: formData,
+        // Don't set Content-Type - browser sets it automatically with boundary for multipart
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Upload failed' }));
+        return {
+          success: false,
+          error: errorData.message || `Upload failed with status ${response.status}`,
+        };
+      }
+
+      const data = await response.json();
+      return {
+        success: data.success,
+        fileId: data.fileId,
+        fileUrl: data.fileUrl,
+        fileSizeBytes: data.fileSizeBytes,
+      };
+    },
+
     // ========== RuleSpec Management ==========
 
     /**

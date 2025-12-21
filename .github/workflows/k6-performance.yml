@@ -93,11 +93,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      # Issue #2152: Create appsettings.Development.json with correct PostgreSQL username
+      # Issue #2152: Disable caching to ensure fresh build without cached appsettings
+      - name: Setup backend environment
+        uses: ./.github/actions/setup-backend
+        with:
+          dotnet-version: '9.0.x'
+          working-directory: apps/api
+          cache-nuget: 'false'  # Disable all caching for clean build
+
+      # Issue #2152: Create appsettings.Development.json AFTER cache restore to prevent overwrite
       - name: Create appsettings.Development.json with postgres username
         working-directory: apps/api/src/Api
         run: |
-          echo "Creating appsettings.Development.json with Username=postgres..."
+          echo "Creating appsettings.Development.json with Username=postgres (after cache restore)..."
           cat > appsettings.Development.json <<'EOF'
           {
             "ConnectionStrings": {
@@ -111,14 +119,6 @@ jobs:
           }
           EOF
           echo "✅ appsettings.Development.json created with correct config"
-
-      # Issue #2152: Disable caching to ensure fresh build without cached appsettings
-      - name: Setup backend environment
-        uses: ./.github/actions/setup-backend
-        with:
-          dotnet-version: '9.0.x'
-          working-directory: apps/api
-          cache-nuget: 'false'  # Disable all caching for clean build
 
       - name: Install k6
         run: |

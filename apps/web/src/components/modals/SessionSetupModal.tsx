@@ -196,8 +196,10 @@ export function SessionSetupModal({
     setPlayers(players.map(p => (p.id === id ? { ...p, [field]: value } : p)));
 
     // Clear field-specific validation error
-    if (validationErrors[`${field}_${id}`]) {
-      const { [`${field}_${id}`]: _, ...rest } = validationErrors;
+    // Note: validation uses 'name' key, not 'playerName'
+    const errorKey = field === 'playerName' ? 'name' : field;
+    if (validationErrors[`${errorKey}_${id}`]) {
+      const { [`${errorKey}_${id}`]: _, ...rest } = validationErrors;
       setValidationErrors(rest);
     }
   };

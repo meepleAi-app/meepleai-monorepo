@@ -58,6 +58,10 @@ internal static class GameEndpoints
 
         // Update game (DDD/CQRS) - Admin/Editor only
         group.MapPut("/games/{id}", HandleUpdateGame);
+
+        // Upload game image (icon or cover) - Issue #2255
+        group.MapPost("/games/upload-image", HandleUploadGameImage)
+        .DisableAntiforgery(); // Required for multipart/form-data file uploads
     }
 
     private static void MapSessionLifecycleEndpoints(RouteGroupBuilder group)
@@ -527,5 +531,132 @@ internal static class GameEndpoints
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
         return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleUploadGameImage(
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        // Auth check - Admin/Editor only
+        var (authorized, _, error) = context.RequireAdminOrEditorSession();
+        if (!authorized) return error!;
+
+        // SECURITY FIX: Validate Content-Type is multipart/form-data
+        // Code review finding: Explicit validation improves error messages
+        if (!context.Request.HasFormContentType)
+        {
+            return Results.BadRequest(new
+            {
+                error = "validation_failed",
+                message = "Request must be multipart/form-data"
+            });
+        }
+
+        // Read multipart form data
+        var form = await context.Request.ReadFormAsync(ct).ConfigureAwait(false);
+        var file = form.Files.GetFile("file");
+
+        if (file == null || file.Length == 0)
+        {
+            return Results.BadRequest(new
+            {
+                error = "validation_failed",
+                details = new Dictionary<string, string>(StringComparer.Ordinal)
+                {
+                    ["file"] = "No file provided"
+                }
+            });
+        }
+
+        // Parse form fields
+        var gameId = form["gameId"].ToString();
+        var imageTypeStr = form["imageType"].ToString();
+
+        if (string.IsNullOrWhiteSpace(gameId))
+        {
+            return Results.BadRequest(new
+            {
+                error = "validation_failed",
+                details = new Dictionary<string, string>(StringComparer.Ordinal)
+                {
+                    ["gameId"] = "Game ID is required"
+                }
+            });
+        }
+
+        if (!Enum.TryParse<ImageType>(imageTypeStr, ignoreCase: true, out var imageType))
+        {
+            return Results.BadRequest(new
+            {
+                error = "validation_failed",
+                details = new Dictionary<string, string>(StringComparer.Ordinal)
+                {
+                    ["imageType"] = "Invalid image type. Must be 'Icon' or 'Image'"
+                }
+            });
+        }
+
+        // Create command with file stream
+        // SECURITY FIX: Copy to MemoryStream to avoid disposal issues with MediatR
+        // Code review finding: Using statement may dispose before handler completes
+        var memoryStream = new MemoryStream();
+        try
+        {
+            var fileStream = file.OpenReadStream();
+            await using (fileStream.ConfigureAwait(false))
+            {
+                await fileStream.CopyToAsync(memoryStream, ct).ConfigureAwait(false);
+                memoryStream.Position = 0; // Reset for handler to read
+
+                var command = new UploadGameImageCommand(
+                    FileStream: memoryStream,
+                    FileName: file.FileName,
+                    GameId: gameId,
+                    ImageType: imageType
+                );
+
+                var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+                if (!result.Success)
+                {
+                    logger.LogWarning(
+                        "Image upload failed for game {GameId}, type {ImageType}: {Error}",
+                        gameId,
+                        imageType,
+                        result.ErrorMessage
+                    );
+
+                    return Results.BadRequest(new
+                    {
+                        error = "upload_failed",
+                        message = result.ErrorMessage
+                    });
+                }
+
+                logger.LogInformation(
+                    "Successfully uploaded {ImageType} for game {GameId}: {FileId} ({Size} bytes)",
+                    imageType,
+                    gameId,
+                    result.FileId,
+                    result.FileSizeBytes
+                );
+
+                return Results.Ok(new
+                {
+                    success = true,
+                    fileId = result.FileId,
+                    fileUrl = result.FileUrl,
+                    fileSizeBytes = result.FileSizeBytes
+                });
+            }
+        }
+        finally
+        {
+            // RESOURCE FIX: Dispose MemoryStream after use
+            // Code review finding: Proper disposal of IDisposable resources
+            await memoryStream.DisposeAsync().ConfigureAwait(false);
+        }
     }
 }

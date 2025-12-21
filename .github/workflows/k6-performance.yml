@@ -93,7 +93,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      # Issue #2152: Disable caching to ensure fresh appsettings.Development.json
+      # Issue #2152: Force delete cached appsettings.Development.json BEFORE setup-backend (which restores cache)
+      - name: Delete appsettings.Development.json from source
+        working-directory: apps/api/src/Api
+        run: |
+          echo "Force deleting appsettings.Development.json from source to prevent MSBuild copy..."
+          rm -f appsettings.Development.json || true
+          echo "✅ appsettings.Development.json removed from source"
+
+      # Issue #2152: Disable caching to ensure fresh build without cached appsettings
       - name: Setup backend environment
         uses: ./.github/actions/setup-backend
         with:
@@ -109,15 +117,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y k6
 
-      # Issue #2152: Force delete cached appsettings.Development.json before clean/build
-      - name: Delete cached appsettings files
-        working-directory: apps/api/src/Api
-        run: |
-          echo "Removing any cached appsettings.Development.json from bin/ directories..."
-          find bin obj -name "appsettings.Development.json" -delete 2>/dev/null || true
-          echo "✅ Cached appsettings files removed"
-
-      # Issue #2152: Clean build outputs to ensure appsettings.Development.json changes are applied
+      # Issue #2152: Clean build outputs
       - name: Clean API build outputs
         working-directory: apps/api/src/Api
         run: dotnet clean --configuration Release

@@ -31,6 +31,10 @@ env:
   TEST_POSTGRES_USER: 'postgres'
   TEST_POSTGRES_PASSWORD: 'testpass123'
   TEST_DB_NAME: meepleai_test
+  # Issue #2152: Add POSTGRES_* vars (without TEST_ prefix) for SecretsHelper.BuildPostgresConnectionString()
+  POSTGRES_USER: 'postgres'
+  POSTGRES_PASSWORD: 'testpass123'
+  POSTGRES_DB: 'meepleai_test'
 
 jobs:
   k6-performance-tests:
@@ -160,6 +164,10 @@ jobs:
           echo $! > ../../../../api.pid
         env:
           ConnectionStrings__Postgres: 'Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=testpass123'
+          # Issue #2152: Explicit POSTGRES_USER to ensure SecretsHelper fallback uses correct default
+          POSTGRES_USER: 'postgres'
+          POSTGRES_PASSWORD: 'testpass123'
+          POSTGRES_DB: 'meepleai_test'
           ConnectionStrings__Redis: 'localhost:6379'
           ConnectionStrings__Qdrant: 'http://localhost:6333'
           N8N_URL: 'http://localhost:5678'  # Issue #2112: Override for CI service containers

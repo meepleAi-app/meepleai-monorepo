@@ -59,6 +59,15 @@ export function GameCreationStep({
         toast.error('Seleziona un file immagine');
         return;
       }
+
+      // SECURITY FIX: Client-side file size validation (icon max 2MB)
+      // Code review finding: Validate early for better UX
+      const maxIconSize = 2 * 1024 * 1024; // 2MB
+      if (file.size > maxIconSize) {
+        toast.error('Icona troppo grande (max 2MB)');
+        return;
+      }
+
       setIconFile(file);
       // Create preview
       const reader = new FileReader();
@@ -74,6 +83,15 @@ export function GameCreationStep({
         toast.error('Seleziona un file immagine');
         return;
       }
+
+      // SECURITY FIX: Client-side file size validation (image max 5MB)
+      // Code review finding: Validate early for better UX
+      const maxImageSize = 5 * 1024 * 1024; // 5MB
+      if (file.size > maxImageSize) {
+        toast.error('Immagine troppo grande (max 5MB)');
+        return;
+      }
+
       setImageFile(file);
       // Create preview
       const reader = new FileReader();
@@ -100,7 +118,7 @@ export function GameCreationStep({
         imageUrl: null,
       });
 
-      // Step 2: Upload files if provided (Issue #2255)
+      // Step 2: Upload files if provided and link to game (Issue #2255)
       let finalIconUrl: string | null = null;
       let finalImageUrl: string | null = null;
 
@@ -134,9 +152,14 @@ export function GameCreationStep({
         }
       }
 
-      // Note: In future, we could update the game with the uploaded URLs
-      // For now, files are stored but not linked to the game record
-      // This can be extended in a follow-up issue if needed
+      // Step 3: Link uploaded files to game record (Issue #2255 - Code review fix)
+      // Code review finding: Files were orphaned without database link
+      if (finalIconUrl || finalImageUrl) {
+        await api.games.update(result.id, {
+          iconUrl: finalIconUrl,
+          imageUrl: finalImageUrl,
+        });
+      }
 
       toast.success(`Gioco "${gameName}" creato con successo!`);
       onComplete(result.id, gameName.trim());

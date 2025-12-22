@@ -12,19 +12,21 @@
  * - Validation and confirmation dialogs for destructive changes
  */
 
-import { useState, useEffect, useCallback } from "react";
-import Link from "next/link";
-import { toast } from "@/components/layout";
-import { api, SystemConfigurationDto } from "@/lib/api";
-import FeatureFlagsTab from "@/components/admin/FeatureFlagsTab";
-import CategoryConfigTab from "@/components/admin/CategoryConfigTab";
-import { ErrorDisplay } from "@/components/errors";
-import { categorizeError } from "@/lib/errorUtils";
-import { useAuthUser } from '@/components/auth/AuthProvider';
+import { useState, useEffect, useCallback } from 'react';
+
+import Link from 'next/link';
+
 import { AdminAuthGuard } from '@/components/admin/AdminAuthGuard';
+import CategoryConfigTab from '@/components/admin/CategoryConfigTab';
+import FeatureFlagsTab from '@/components/admin/FeatureFlagsTab';
+import { useAuthUser } from '@/components/auth/AuthProvider';
+import { ErrorDisplay } from '@/components/errors';
+import { toast } from '@/components/layout';
+import { api, SystemConfigurationDto } from '@/lib/api';
+import { categorizeError } from '@/lib/errorUtils';
 
 // Tab types
-type TabId = "feature-flags" | "rate-limiting" | "ai-llm" | "rag";
+type TabId = 'feature-flags' | 'rate-limiting' | 'ai-llm' | 'rag';
 
 interface Tab {
   id: TabId;
@@ -35,28 +37,28 @@ interface Tab {
 
 const TABS: Tab[] = [
   {
-    id: "feature-flags",
-    label: "Feature Flags",
-    icon: "🚩",
-    description: "Enable/disable features at runtime",
+    id: 'feature-flags',
+    label: 'Feature Flags',
+    icon: '🚩',
+    description: 'Enable/disable features at runtime',
   },
   {
-    id: "rate-limiting",
-    label: "Rate Limiting",
-    icon: "⚡",
-    description: "Configure API rate limits per role",
+    id: 'rate-limiting',
+    label: 'Rate Limiting',
+    icon: '⚡',
+    description: 'Configure API rate limits per role',
   },
   {
-    id: "ai-llm",
-    label: "AI / LLM",
-    icon: "🤖",
-    description: "AI model parameters and settings",
+    id: 'ai-llm',
+    label: 'AI / LLM',
+    icon: '🤖',
+    description: 'AI model parameters and settings',
   },
   {
-    id: "rag",
-    label: "RAG",
-    icon: "🔍",
-    description: "Vector search and chunking configuration",
+    id: 'rag',
+    label: 'RAG',
+    icon: '🔍',
+    description: 'Vector search and chunking configuration',
   },
 ];
 
@@ -65,7 +67,7 @@ export function AdminPageClient() {
 
   if (!user) return null;
   // State
-  const [activeTab, setActiveTab] = useState<TabId>("feature-flags");
+  const [activeTab, setActiveTab] = useState<TabId>('feature-flags');
   const [configurations, setConfigurations] = useState<SystemConfigurationDto[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
@@ -90,13 +92,13 @@ export function AdminPageClient() {
       const cats = await api.config.getCategories();
       setCategories(cats);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to load configurations";
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load configurations';
       setError(errorMessage);
 
-      if (errorMessage.includes("Unauthorized") || errorMessage.includes("403")) {
-        toast.error("Admin access required");
+      if (errorMessage.includes('Unauthorized') || errorMessage.includes('403')) {
+        toast.error('Admin access required');
         setTimeout(() => {
-          window.location.href = "/login";
+          window.location.href = '/login';
         }, 2000);
       } else {
         toast.error(errorMessage);
@@ -110,18 +112,18 @@ export function AdminPageClient() {
     try {
       const result = await api.config.getConfigurations(undefined, undefined, false, 1, 100);
       setConfigurations(result.items);
-      toast.success("Configurations reloaded");
-    } catch (err) {
-      toast.error("Failed to reload configurations");
+      toast.success('Configurations reloaded');
+    } catch (_err) {
+      toast.error('Failed to reload configurations');
     }
   }, []);
 
   const handleInvalidateCache = async () => {
     try {
       await api.config.invalidateCache();
-      toast.success("Cache invalidated successfully");
-    } catch (err) {
-      toast.error("Failed to invalidate cache");
+      toast.success('Cache invalidated successfully');
+    } catch (_err) {
+      toast.error('Failed to invalidate cache');
     }
   };
 
@@ -142,7 +144,7 @@ export function AdminPageClient() {
   }
 
   // Error state (if not auth error)
-  if (error && !error.includes("Unauthorized") && !error.includes("403")) {
+  if (error && !error.includes('Unauthorized') && !error.includes('403')) {
     return (
       <AdminAuthGuard
         loading={authLoading}
@@ -174,7 +176,7 @@ export function AdminPageClient() {
               <div className="flex items-center gap-3">
                 <span className="text-yellow-600 dark:text-yellow-400 text-xl">⚠️</span>
                 <p className="text-sm text-yellow-800 dark:text-yellow-200 font-medium">
-                  Configuration changes require server restart to take effect.{" "}
+                  Configuration changes require server restart to take effect.{' '}
                   <a
                     href="https://docs.meepleai.dev/admin/restart"
                     className="underline hover:no-underline"
@@ -234,15 +236,14 @@ export function AdminPageClient() {
             {/* Tab Headers */}
             <div className="border-b border-slate-200 dark:border-slate-700">
               <nav className="flex" aria-label="Configuration tabs">
-                {TABS.map((tab) => (
+                {TABS.map(tab => (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
                     className={`flex-1 px-6 py-4 text-center font-medium transition-colors border-b-2 ${
-
                       activeTab === tab.id
-                        ? "border-blue-600 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20"
-                        : "border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50"
+                        ? 'border-blue-600 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20'
+                        : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50'
                     }`}
                   >
                     <div className="flex items-center justify-center gap-2">
@@ -257,14 +258,14 @@ export function AdminPageClient() {
 
             {/* Tab Content */}
             <div className="p-6">
-              {activeTab === "feature-flags" && (
+              {activeTab === 'feature-flags' && (
                 <FeatureFlagsTab
                   configurations={configurations}
                   onConfigurationChange={reloadConfigurations}
                 />
               )}
 
-              {activeTab === "rate-limiting" && (
+              {activeTab === 'rate-limiting' && (
                 <CategoryConfigTab
                   title="Rate Limiting Configuration"
                   category="RateLimiting"
@@ -273,7 +274,7 @@ export function AdminPageClient() {
                 />
               )}
 
-              {activeTab === "ai-llm" && (
+              {activeTab === 'ai-llm' && (
                 <CategoryConfigTab
                   title="AI / LLM Configuration"
                   category="AiLlm"
@@ -282,7 +283,7 @@ export function AdminPageClient() {
                 />
               )}
 
-              {activeTab === "rag" && (
+              {activeTab === 'rag' && (
                 <CategoryConfigTab
                   title="RAG Configuration"
                   category="Rag"
@@ -296,7 +297,9 @@ export function AdminPageClient() {
           {/* Footer Stats */}
           <div className="mt-6 grid grid-cols-3 gap-4">
             <div className="bg-white dark:bg-slate-800 rounded-lg p-4 shadow">
-              <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">Total Configurations</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">
+                Total Configurations
+              </p>
               <p className="text-2xl font-bold text-slate-900 dark:text-white">
                 {configurations.length}
               </p>
@@ -304,7 +307,7 @@ export function AdminPageClient() {
             <div className="bg-white dark:bg-slate-800 rounded-lg p-4 shadow">
               <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">Active</p>
               <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                {configurations.filter((c) => c.isActive).length}
+                {configurations.filter(c => c.isActive).length}
               </p>
             </div>
             <div className="bg-white dark:bg-slate-800 rounded-lg p-4 shadow">

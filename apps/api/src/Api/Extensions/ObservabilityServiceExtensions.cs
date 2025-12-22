@@ -186,10 +186,24 @@ internal static class ObservabilityServiceExtensions
             return;
         }
 
+        // Issue #2152: Allow disabling Postgres health check via configuration
+        var healthCheckEnabled = configuration.GetValue("HealthChecks:Postgres:Enabled", defaultValue: true);
+        if (!healthCheckEnabled)
+        {
+            Console.WriteLine("[INFO] PostgreSQL health check disabled via HealthChecks:Postgres:Enabled configuration");
+            return;
+        }
+
+        // Issue #2152: Try SecretsHelper FIRST (reads uncorrupted POSTGRES_* vars)
+        var secretsHelperResult = SecretsHelper.BuildPostgresConnectionString(configuration);
+
         // SEC-708: Build connection string from Docker Secrets if available (only for non-testing)
-        var healthCheckConnectionString = configuration.GetConnectionString("Postgres")
-            ?? configuration["ConnectionStrings__Postgres"]
-            ?? SecretsHelper.BuildPostgresConnectionString(configuration);
+        // Issue #2152: Use SecretsHelper if succeeded, otherwise fallback
+        var healthCheckConnectionString = secretsHelperResult != null
+            ? secretsHelperResult
+            : (Environment.GetEnvironmentVariable("ConnectionStrings__Postgres")
+                ?? configuration["ConnectionStrings__Postgres"]
+                ?? configuration.GetConnectionString("Postgres"));
 
         if (string.IsNullOrEmpty(healthCheckConnectionString))
         {

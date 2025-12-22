@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { useForm, Controller } from 'react-hook-form';
+
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm, Controller } from 'react-hook-form';
 import { toast } from 'sonner';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,12 +15,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { alertRulesApi } from '@/lib/api/alert-rules.api';
 import {
   createAlertRuleSchema,
   type CreateAlertRule,
   type AlertRule,
 } from '@/lib/api/schemas/alert-rules.schemas';
-import { alertRulesApi } from '@/lib/api/alert-rules.api';
 
 // Severity options with visual indicators
 const SEVERITY_OPTIONS = [
@@ -30,11 +32,12 @@ const SEVERITY_OPTIONS = [
 
 interface AlertRuleFormProps {
   rule: AlertRule | null;
+  initialData?: Partial<CreateAlertRule>;
   onSubmit: () => void;
   onCancel: () => void;
 }
 
-export function AlertRuleForm({ rule, onSubmit, onCancel }: AlertRuleFormProps) {
+export function AlertRuleForm({ rule, initialData, onSubmit, onCancel }: AlertRuleFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const {
@@ -44,25 +47,35 @@ export function AlertRuleForm({ rule, onSubmit, onCancel }: AlertRuleFormProps) 
     formState: { errors },
   } = useForm<CreateAlertRule>({
     resolver: zodResolver(createAlertRuleSchema),
-    defaultValues: rule
+    defaultValues: initialData
       ? {
-          name: rule.name,
-          alertType: rule.alertType,
-          severity: rule.severity,
-          thresholdValue: rule.thresholdValue,
-          thresholdUnit: rule.thresholdUnit,
-          durationMinutes: rule.durationMinutes,
-          description: rule.description || '',
+          name: initialData.name || '',
+          alertType: initialData.alertType || '',
+          severity: initialData.severity || 'Warning',
+          thresholdValue: initialData.thresholdValue || 0,
+          thresholdUnit: initialData.thresholdUnit || '%',
+          durationMinutes: initialData.durationMinutes || 5,
+          description: initialData.description || '',
         }
-      : {
-          name: '',
-          alertType: '',
-          severity: 'Warning',
-          thresholdValue: 0,
-          thresholdUnit: '%',
-          durationMinutes: 5,
-          description: '',
-        },
+      : rule
+        ? {
+            name: rule.name,
+            alertType: rule.alertType,
+            severity: rule.severity,
+            thresholdValue: rule.thresholdValue,
+            thresholdUnit: rule.thresholdUnit,
+            durationMinutes: rule.durationMinutes,
+            description: rule.description || '',
+          }
+        : {
+            name: '',
+            alertType: '',
+            severity: 'Warning',
+            thresholdValue: 0,
+            thresholdUnit: '%',
+            durationMinutes: 5,
+            description: '',
+          },
   });
 
   const onSubmitForm = async (data: CreateAlertRule) => {

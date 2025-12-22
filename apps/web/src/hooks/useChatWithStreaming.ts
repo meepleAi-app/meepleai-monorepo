@@ -15,9 +15,10 @@
  */
 
 import { useCallback, useMemo } from 'react';
-import { useChatStore } from '@/store/chat/store';
-import { useStreamingChat } from '@/lib/hooks/useStreamingChat';
+
 import type { Citation } from '@/lib/api/schemas/streaming.schemas';
+import { useStreamingChat } from '@/lib/hooks/useStreamingChat';
+import { useChatStore } from '@/store/chat/store';
 
 export function useChatWithStreaming() {
   const store = useChatStore();
@@ -29,14 +30,14 @@ export function useChatWithStreaming() {
 
   // Streaming hook (Issue #1007)
   const [streamingState, streamingControls] = useStreamingChat({
-    onToken: useCallback((token: string, accumulated: string) => {
+    onToken: useCallback((_token: string, _accumulated: string) => {
       // State updates automatically via hook
     }, []),
-    onStateUpdate: useCallback((state: string) => {
+    onStateUpdate: useCallback((_state: string) => {
       // State updates automatically via hook
     }, []),
     onComplete: useCallback(
-      (answer: string, citations: Citation[], confidence: number | null) => {
+      (answer: string, _citations: Citation[], _confidence: number | null) => {
         if (!activeChatId) return;
 
         // Add assistant message to chat

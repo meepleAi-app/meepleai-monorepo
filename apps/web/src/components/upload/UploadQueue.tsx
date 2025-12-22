@@ -3,11 +3,15 @@
  * Displays the list of files being uploaded with aggregate progress
  */
 
-import type { UploadQueueItem as UploadQueueItemType, UploadQueueStats } from '@/hooks/useUploadQueue';
-import { UploadQueueItem } from './UploadQueueItem';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Badge } from '@/components/ui/badge';
+import type {
+  UploadQueueItem as UploadQueueItemType,
+  UploadQueueStats,
+} from '@/hooks/useUploadQueue';
+
+import { UploadQueueItem } from './UploadQueueItem';
 
 interface UploadQueueProps {
   items: UploadQueueItemType[];
@@ -24,7 +28,7 @@ export function UploadQueue({
   onCancel,
   onRetry,
   onRemove,
-  onClearCompleted
+  onClearCompleted,
 }: UploadQueueProps) {
   if (items.length === 0) {
     return (
@@ -34,9 +38,10 @@ export function UploadQueue({
     );
   }
 
-  const totalProgress = items.length > 0
-    ? Math.round(items.reduce((sum, item) => sum + item.progress, 0) / items.length)
-    : 0;
+  const totalProgress =
+    items.length > 0
+      ? Math.round(items.reduce((sum, item) => sum + item.progress, 0) / items.length)
+      : 0;
 
   const activeCount = stats.uploading + stats.processing;
   const completedCount = stats.succeeded + stats.failed + stats.cancelled;
@@ -48,22 +53,16 @@ export function UploadQueue({
       <div className="p-4 bg-gray-50 rounded-md mb-4 border border-gray-300">
         <div className="flex justify-between items-center mb-3">
           <div>
-            <div className="text-base font-semibold text-gray-900">
-              Upload Queue
-            </div>
+            <div className="text-base font-semibold text-gray-900">Upload Queue</div>
             <div className="text-xs text-gray-600 mt-1">
               {activeCount > 0 ? (
                 <>
                   Uploading {activeCount} of {stats.total} files ({totalProgress}% total)
                 </>
               ) : stats.pending > 0 ? (
-                <>
-                  {stats.pending} files waiting to upload
-                </>
+                <>{stats.pending} files waiting to upload</>
               ) : (
-                <>
-                  All uploads complete
-                </>
+                <>All uploads complete</>
               )}
             </div>
           </div>
@@ -80,24 +79,12 @@ export function UploadQueue({
         </div>
 
         {/* Overall Progress Bar */}
-        <Progress
-          value={totalProgress}
-          className="h-2.5"
-          aria-label="Overall upload progress"
-        />
+        <Progress value={totalProgress} className="h-2.5" aria-label="Overall upload progress" />
 
         {/* Stats Summary */}
         <div className="flex gap-2 mt-3 flex-wrap">
-          {stats.pending > 0 && (
-            <Badge variant="secondary">
-              {stats.pending} pending
-            </Badge>
-          )}
-          {stats.uploading > 0 && (
-            <Badge variant="default">
-              {stats.uploading} uploading
-            </Badge>
-          )}
+          {stats.pending > 0 && <Badge variant="secondary">{stats.pending} pending</Badge>}
+          {stats.uploading > 0 && <Badge variant="default">{stats.uploading} uploading</Badge>}
           {stats.processing > 0 && (
             <Badge variant="secondary" className="bg-orange-100 text-orange-600">
               {stats.processing} processing
@@ -108,22 +95,14 @@ export function UploadQueue({
               {stats.succeeded} succeeded
             </Badge>
           )}
-          {stats.failed > 0 && (
-            <Badge variant="destructive">
-              {stats.failed} failed
-            </Badge>
-          )}
-          {stats.cancelled > 0 && (
-            <Badge variant="outline">
-              {stats.cancelled} cancelled
-            </Badge>
-          )}
+          {stats.failed > 0 && <Badge variant="destructive">{stats.failed} failed</Badge>}
+          {stats.cancelled > 0 && <Badge variant="outline">{stats.cancelled} cancelled</Badge>}
         </div>
       </div>
 
       {/* Queue Items */}
       <div role="list" aria-label="Upload queue items">
-        {items.map((item) => (
+        {items.map(item => (
           <div key={item.id} role="listitem">
             <UploadQueueItem
               item={item}

@@ -7,10 +7,10 @@
 'use client';
 
 import React, { useState } from 'react';
+
 import { AppShell } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button-redesign';
 import { Input } from '@/components/ui/input-redesign';
-import { Textarea } from '@/components/ui/textarea-redesign';
 import {
   Select,
   SelectContent,
@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select-redesign';
+import { Textarea } from '@/components/ui/textarea-redesign';
 
 export default function ComponentsShowcase() {
   const [inputValue, setInputValue] = useState('');

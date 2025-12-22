@@ -16,7 +16,7 @@
  */
 
 import { test, expect } from './fixtures/chromatic';
-import { LoginPage, AuthHelper, USER_FIXTURES } from './pages';
+import { LoginPage, AuthHelper } from './pages';
 
 test.describe('Authentication Validation Negative Scenarios - Issue #1494', () => {
   test.describe('Login form validation', () => {

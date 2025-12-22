@@ -5,7 +5,7 @@
  */
 
 import { test, expect } from './fixtures/chromatic';
-import { setupQATestEnvironment, QAResponse } from './helpers/qa-test-utils';
+import { setupQATestEnvironment } from './helpers/qa-test-utils';
 
 test.describe('Q&A Interface - Multi-Turn Conversations (Issue #1009)', () => {
   test('should maintain context across follow-up questions', async ({ page }) => {

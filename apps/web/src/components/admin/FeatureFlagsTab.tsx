@@ -10,9 +10,11 @@
  */
 
 import { useState, useEffect } from 'react';
+
 import { toast } from '@/components/layout/Toast';
-import { api, SystemConfigurationDto } from '../../lib/api';
 import { Switch } from '@/components/ui/switch';
+
+import { api, SystemConfigurationDto } from '../../lib/api';
 
 interface FeatureFlagsTabProps {
   configurations: SystemConfigurationDto[];

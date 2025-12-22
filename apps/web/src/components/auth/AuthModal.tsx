@@ -12,13 +12,16 @@
  */
 
 import { useState, useEffect } from 'react';
+
 import { useRouter } from 'next/navigation';
+
 import { AccessibleModal } from '@/components/accessible';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useAuth, type AuthUser } from '@/hooks/useAuth';
+
 import { LoginForm, LoginFormData } from './LoginForm';
-import { RegisterForm, RegisterFormData } from './RegisterForm';
 import OAuthButtons from './OAuthButtons';
-import { useAuth } from '@/hooks/useAuth';
+import { RegisterForm, RegisterFormData } from './RegisterForm';
 
 // ============================================================================
 // Component Props
@@ -28,8 +31,7 @@ export interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
   defaultMode?: 'login' | 'register';
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Auth provider user type varies
-  onSuccess?: (user: any) => void;
+  onSuccess?: (user: AuthUser) => void;
   sessionExpiredMessage?: boolean;
 }
 

@@ -6,6 +6,7 @@
  */
 
 import { toast } from 'sonner';
+
 import { type CategorizedError, ErrorCategory } from './errorUtils';
 
 /**
@@ -13,8 +14,8 @@ import { type CategorizedError, ErrorCategory } from './errorUtils';
  */
 export const TOAST_CONFIG = {
   duration: {
-    transient: 5000,  // Auto-dismiss after 5 seconds
-    persistent: Infinity,  // Require manual dismissal
+    transient: 5000, // Auto-dismiss after 5 seconds
+    persistent: Infinity, // Require manual dismissal
   },
   position: 'top-right' as const,
 };
@@ -24,9 +25,9 @@ export const TOAST_CONFIG = {
  */
 export function shouldShowToast(error: CategorizedError): boolean {
   // Only show toasts for transient errors that can be retried
-  return error.canRetry && (
-    error.category === ErrorCategory.Network ||
-    error.category === ErrorCategory.Server
+  return (
+    error.canRetry &&
+    (error.category === ErrorCategory.Network || error.category === ErrorCategory.Server)
   );
 }
 

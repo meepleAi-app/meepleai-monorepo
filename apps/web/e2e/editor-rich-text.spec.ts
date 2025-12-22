@@ -5,7 +5,7 @@
  */
 
 import { test, expect } from './fixtures/chromatic';
-import { getTextMatcher, t } from './fixtures/i18n';
+import { getTextMatcher } from './fixtures/i18n';
 
 /**
  * E2E Tests for EDIT-03: Rich Text Editor

@@ -1,6 +1,8 @@
-import type { Meta, StoryObj } from '@storybook/react';
-import { EmptyState } from './EmptyState';
 import { Upload, FolderOpen, Gamepad2, MessageSquare, Users } from 'lucide-react';
+
+import { EmptyState } from './EmptyState';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 /**
  * EmptyState - Reusable empty state component

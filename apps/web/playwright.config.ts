@@ -1,7 +1,8 @@
-import { defineConfig, devices } from '@playwright/test';
-import { ChromaticConfig } from '@chromatic-com/playwright';
-import { defineCoverageReporterConfig } from '@bgotink/playwright-coverage';
 import path from 'path';
+
+import { defineCoverageReporterConfig } from '@bgotink/playwright-coverage';
+import { ChromaticConfig } from '@chromatic-com/playwright';
+import { defineConfig, devices } from '@playwright/test';
 
 // Issue #2009: Prometheus reporter configuration (typed for TypeScript)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Playwright reporter config allows flexible structure
@@ -44,7 +45,7 @@ const prometheusReporter: any[] = process.env.PROMETHEUS_REMOTE_WRITE_URL
 
 export default defineConfig<ChromaticConfig>({
   testDir: './e2e',
-  timeout: 60000, // 60s global timeout for dev mode
+  timeout: process.env.CI === 'true' ? 90000 : 60000, // Issue #20375956158: 90s in CI for accessibility tests, 60s local
   fullyParallel: process.env.CI !== 'true', // Issue #1868: Disable parallel in CI to prevent axe-core race conditions
   forbidOnly: process.env.CI === 'true',
   retries: process.env.CI === 'true' ? 2 : 0, // Issue #2008: Retry strategy - CI transient failures, local fast feedback
@@ -184,10 +185,12 @@ export default defineConfig<ChromaticConfig>({
             // Issue #2007 Phase 2: Use production server in CI for stability
             // Dev server crashes after ~48 minutes under sustained test load
             // Production build is already created by CI workflow (pnpm build)
+            // Issue #2247: Heap increase LOCAL ONLY (dev server memory leak mitigation)
+            // Issue #2261: Force production server for error state tests (FORCE_PRODUCTION_SERVER=true)
             command:
-              process.env.CI === 'true'
+              process.env.CI === 'true' || process.env.FORCE_PRODUCTION_SERVER === 'true'
                 ? 'node ./node_modules/next/dist/bin/next start -p 3000'
-                : 'node --max-old-space-size=4096 ./node_modules/next/dist/bin/next dev -p 3000',
+                : 'node --max-old-space-size=8192 ./node_modules/next/dist/bin/next dev -p 3000',
             url: 'http://localhost:3000',
             reuseExistingServer: !process.env.CI,
             timeout: 180 * 1000, // 3min for server startup

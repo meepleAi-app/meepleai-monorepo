@@ -1,6 +1,8 @@
-import type { Meta, StoryObj } from '@storybook/react';
-import { Toggle } from './toggle';
 import { Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
+
+import { Toggle } from './toggle';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 /**
  * Toggle component for on/off state controls with button styling.

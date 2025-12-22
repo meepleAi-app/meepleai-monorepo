@@ -1,5 +1,6 @@
-import type { Meta, StoryObj } from '@storybook/react';
 import { ReportsPageClient } from './client';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 /**
  * Admin Reports Management (Issue #920)

@@ -10,10 +10,12 @@
  */
 
 import { StateCreator } from 'zustand';
-import { ChatStore, GameSlice } from '../types';
+
 import { api } from '@/lib/api';
-import { logger } from '@/lib/logger';
 import { createErrorContext } from '@/lib/errors';
+import { logger } from '@/lib/logger';
+
+import { ChatStore, GameSlice } from '../types';
 
 export const createGameSlice: StateCreator<
   ChatStore,

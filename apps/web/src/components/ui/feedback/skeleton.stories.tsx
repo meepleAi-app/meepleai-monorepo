@@ -1,5 +1,6 @@
-import type { Meta, StoryObj } from '@storybook/react';
 import { Skeleton } from './skeleton';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 /**
  * Skeleton component for loading placeholders and content shimmer.

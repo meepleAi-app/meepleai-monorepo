@@ -16,6 +16,7 @@
 import { create } from 'zustand';
 import { devtools, persist, createJSONStorage } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
+
 import { api } from '@/lib/api';
 import type { NotificationDto } from '@/lib/api';
 
@@ -53,7 +54,7 @@ export interface NotificationState {
 export const useNotificationStore = create<NotificationState>()(
   devtools(
     persist(
-      immer((set, get) => ({
+      immer((set, _get) => ({
         // Initial state
         notifications: [],
         unreadCount: 0,
@@ -140,7 +141,7 @@ export const useNotificationStore = create<NotificationState>()(
           });
 
           try {
-            const updatedCount = await api.notifications.markAllNotificationsRead();
+            const _updatedCount = await api.notifications.markAllNotificationsRead();
 
             set(state => {
               state.notifications.forEach(n => {

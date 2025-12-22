@@ -1,5 +1,6 @@
-import { encrypt, decrypt, clearEncryptionKey } from './secureStorage';
 import { logger } from '@/lib/logger';
+
+import { encrypt, decrypt, clearEncryptionKey } from './secureStorage';
 
 const STORAGE_KEY = 'meepleai:apiKey';
 

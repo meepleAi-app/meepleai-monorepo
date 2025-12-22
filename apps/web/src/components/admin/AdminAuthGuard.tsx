@@ -21,6 +21,7 @@
  */
 
 import Link from 'next/link';
+
 import type { AuthUser } from '@/types/auth';
 import { hasRole } from '@/types/auth';
 
@@ -37,7 +38,7 @@ export function AdminAuthGuard({
   loading,
   user,
   loadingMessage = 'Authenticating...',
-  backgroundClass = 'min-h-dvh bg-gray-50 p-8'
+  backgroundClass = 'min-h-dvh bg-gray-50 p-8',
 }: AdminAuthGuardProps) {
   if (loading) {
     return (
@@ -61,9 +62,7 @@ export function AdminAuthGuard({
         <div className="max-w-7xl mx-auto">
           <div className="max-w-md mx-auto mt-12">
             <div className="p-6 bg-red-50 border border-red-600 rounded-lg mb-4">
-              <h2 className="text-lg font-semibold text-red-900 mb-2">
-                Unauthorized Access
-              </h2>
+              <h2 className="text-lg font-semibold text-red-900 mb-2">Unauthorized Access</h2>
               <p className="text-red-800">
                 Admin access required. Please log in with an administrator account.
               </p>

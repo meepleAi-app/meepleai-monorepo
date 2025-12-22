@@ -20,11 +20,13 @@
 'use client';
 
 import * as React from 'react';
-import { WifiOff, RefreshCw, AlertTriangle, X, Loader2 } from 'lucide-react';
+
 import { cva, type VariantProps } from 'class-variance-authority';
-import { cn } from '@/lib/utils';
-import { useNetworkStatus } from '@/hooks/useNetworkStatus';
+import { WifiOff, RefreshCw, AlertTriangle, X, Loader2 } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
+import { useNetworkStatus } from '@/hooks/useNetworkStatus';
+import { cn } from '@/lib/utils';
 
 // ============================================================================
 // Variants
@@ -77,8 +79,13 @@ export interface OfflineBannerProps
 const OfflineBanner = React.forwardRef<HTMLDivElement, OfflineBannerProps>(
   ({ className, queuedActionsCount = 0, onRetry, dismissible = false, message, ...props }, ref) => {
     const [isDismissed, setIsDismissed] = React.useState(false);
-    const { isOnline, isOffline, connectionQuality, isReconnecting, reconnectAttempts } =
-      useNetworkStatus();
+    const {
+      isOnline: _isOnline,
+      isOffline,
+      connectionQuality,
+      isReconnecting,
+      reconnectAttempts,
+    } = useNetworkStatus();
 
     // Reset dismissed state when going offline again
     React.useEffect(() => {

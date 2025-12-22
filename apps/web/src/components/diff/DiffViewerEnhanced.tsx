@@ -1,15 +1,17 @@
 import { useState, useMemo, useEffect } from 'react';
-import { DiffSummary } from "./DiffSummary";
-import { ChangeItem } from "../versioning/ChangeItem";
-import { DiffViewModeToggle } from "./DiffViewModeToggle";
-import { DiffToolbar } from "./DiffToolbar";
-import { SideBySideDiffView } from "./SideBySideDiffView";
+
 import {
   processDiff,
   identifyCollapsibleSections,
   filterChangesByQuery,
-  CollapsibleSection
-} from "@/lib/diffProcessor";
+  CollapsibleSection,
+} from '@/lib/diffProcessor';
+
+import { DiffSummary } from './DiffSummary';
+import { DiffToolbar } from './DiffToolbar';
+import { DiffViewModeToggle } from './DiffViewModeToggle';
+import { SideBySideDiffView } from './SideBySideDiffView';
+import { ChangeItem } from '../versioning/ChangeItem';
 
 // Existing types from original DiffViewer
 type RuleAtom = {
@@ -26,7 +28,7 @@ type FieldChange = {
   newValue?: string | null;
 };
 
-type ChangeType = "Added" | "Modified" | "Deleted" | "Unchanged";
+type ChangeType = 'Added' | 'Modified' | 'Deleted' | 'Unchanged';
 
 type RuleAtomChange = {
   type: ChangeType;
@@ -68,12 +70,14 @@ type DiffViewerEnhancedProps = {
 export function DiffViewerEnhanced({
   diff,
   showOnlyChanges,
-  defaultViewMode = 'list'
+  defaultViewMode = 'list',
 }: DiffViewerEnhancedProps) {
   const [viewMode, setViewMode] = useState<'list' | 'side-by-side'>(defaultViewMode);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentChangeIndex, setCurrentChangeIndex] = useState(0);
-  const [collapsibleSections, setCollapsibleSections] = useState<Map<string, CollapsibleSection>>(new Map());
+  const [collapsibleSections, setCollapsibleSections] = useState<Map<string, CollapsibleSection>>(
+    new Map()
+  );
 
   // Convert RuleSpecDiff to JSON strings for diff.js processing
   const { oldJson, newJson } = useMemo(() => {
@@ -91,7 +95,7 @@ export function DiffViewerEnhanced({
 
     return {
       oldJson: JSON.stringify(oldRules, null, 2),
-      newJson: JSON.stringify(newRules, null, 2)
+      newJson: JSON.stringify(newRules, null, 2),
     };
   }, [diff.changes]);
 
@@ -119,9 +123,7 @@ export function DiffViewerEnhanced({
   const filteredChanges = useMemo(() => {
     const changes = diff.changes || [];
     if (viewMode === 'list') {
-      return showOnlyChanges
-        ? changes.filter((c) => c.type !== "Unchanged")
-        : changes;
+      return showOnlyChanges ? changes.filter(c => c.type !== 'Unchanged') : changes;
     }
 
     if (!processedDiff) return [];
@@ -160,9 +162,15 @@ export function DiffViewerEnhanced({
     return (
       <div data-testid="diff-viewer">
         {/* Hidden test data elements for test compatibility */}
-        <div data-testid="diff-from-version" style={{ display: 'none' }}>{diff.fromVersion}</div>
-        <div data-testid="diff-to-version" style={{ display: 'none' }}>{diff.toVersion}</div>
-        <div data-testid="diff-show-only-changes" style={{ display: 'none' }}>{String(showOnlyChanges)}</div>
+        <div data-testid="diff-from-version" style={{ display: 'none' }}>
+          {diff.fromVersion}
+        </div>
+        <div data-testid="diff-to-version" style={{ display: 'none' }}>
+          {diff.toVersion}
+        </div>
+        <div data-testid="diff-show-only-changes" style={{ display: 'none' }}>
+          {String(showOnlyChanges)}
+        </div>
 
         <DiffViewModeToggle currentMode={viewMode} onModeChange={setViewMode} />
         <div data-testid="diff-summary">
@@ -176,9 +184,7 @@ export function DiffViewerEnhanced({
               Nessuna modifica da visualizzare
             </div>
           ) : (
-            changesToShow.map((change, index) => (
-              <ChangeItem key={index} change={change} />
-            ))
+            changesToShow.map((change, index) => <ChangeItem key={index} change={change} />)
           )}
         </div>
       </div>
@@ -192,9 +198,15 @@ export function DiffViewerEnhanced({
     return (
       <div data-testid="diff-viewer">
         {/* Hidden test data elements for test compatibility */}
-        <div data-testid="diff-from-version" style={{ display: 'none' }}>{diff.fromVersion}</div>
-        <div data-testid="diff-to-version" style={{ display: 'none' }}>{diff.toVersion}</div>
-        <div data-testid="diff-show-only-changes" style={{ display: 'none' }}>{String(showOnlyChanges)}</div>
+        <div data-testid="diff-from-version" style={{ display: 'none' }}>
+          {diff.fromVersion}
+        </div>
+        <div data-testid="diff-to-version" style={{ display: 'none' }}>
+          {diff.toVersion}
+        </div>
+        <div data-testid="diff-show-only-changes" style={{ display: 'none' }}>
+          {String(showOnlyChanges)}
+        </div>
 
         <DiffViewModeToggle currentMode={viewMode} onModeChange={setViewMode} />
         <div data-testid="diff-summary">
@@ -208,9 +220,7 @@ export function DiffViewerEnhanced({
               Nessuna modifica da visualizzare
             </div>
           ) : (
-            changesToShow.map((change, index) => (
-              <ChangeItem key={index} change={change} />
-            ))
+            changesToShow.map((change, index) => <ChangeItem key={index} change={change} />)
           )}
         </div>
       </div>
@@ -220,9 +230,15 @@ export function DiffViewerEnhanced({
   return (
     <div className="diff-viewer-enhanced" data-testid="diff-viewer">
       {/* Hidden test data elements for test compatibility */}
-      <div data-testid="diff-from-version" style={{ display: 'none' }}>{diff.fromVersion}</div>
-      <div data-testid="diff-to-version" style={{ display: 'none' }}>{diff.toVersion}</div>
-      <div data-testid="diff-show-only-changes" style={{ display: 'none' }}>{String(showOnlyChanges)}</div>
+      <div data-testid="diff-from-version" style={{ display: 'none' }}>
+        {diff.fromVersion}
+      </div>
+      <div data-testid="diff-to-version" style={{ display: 'none' }}>
+        {diff.toVersion}
+      </div>
+      <div data-testid="diff-show-only-changes" style={{ display: 'none' }}>
+        {String(showOnlyChanges)}
+      </div>
       <div data-testid="diff-summary" style={{ display: 'none' }}>
         {diff.summary.added} added, {diff.summary.modified} modified, {diff.summary.deleted} deleted
       </div>

@@ -13,8 +13,9 @@
  * ```
  */
 
-import { mergeTests } from '@playwright/test';
 import { test as testWithCoverage } from '@bgotink/playwright-coverage';
+import { mergeTests } from '@playwright/test';
+
 import { test as testWithAuth } from './fixtures/auth';
 
 /**

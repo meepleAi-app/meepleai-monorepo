@@ -9,9 +9,9 @@
  * - UI state (loading, errors)
  */
 
-import { ChatThread, Message, Game, Agent } from '@/types';
 import { AgentDto } from '@/lib/api/schemas/agents.schemas';
 import type { FeedbackOutcome } from '@/lib/constants/feedback';
+import { ChatThread, Message, Game, Agent } from '@/types';
 
 // ============================================================================
 // Loading State
@@ -81,7 +81,7 @@ export interface ChatActions {
   createChat: () => Promise<void>;
   deleteChat: (chatId: string) => Promise<void>;
   selectChat: (chatId: string) => Promise<void>;
-  updateChatTitle: (chatId: string, title: string) => void;
+  updateChatTitle: (chatId: string, title: string) => Promise<void>;
 }
 
 export type ChatSlice = ChatState & ChatActions;

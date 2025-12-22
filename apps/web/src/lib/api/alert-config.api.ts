@@ -3,6 +3,7 @@
  */
 
 import { HttpClient } from './core/httpClient';
+
 import type {
   AlertConfiguration,
   UpdateAlertConfiguration,

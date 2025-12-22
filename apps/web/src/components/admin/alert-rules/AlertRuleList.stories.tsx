@@ -1,7 +1,10 @@
-import type { Meta, StoryObj } from '@storybook/react';
 import { fn } from 'storybook/test';
-import { AlertRuleList } from './AlertRuleList';
+
 import type { AlertRule } from '@/lib/api/schemas/alert-rules.schemas';
+
+import { AlertRuleList } from './AlertRuleList';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 /**
  * AlertRuleList Component - Issue #921

@@ -1,7 +1,9 @@
-import type { Meta, StoryObj } from '@storybook/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { http, HttpResponse } from 'msw';
+
 import AlertRulesPage from './page';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 /**
  * Alert Rules Management Page - Issue #921
@@ -279,5 +281,37 @@ export const TemplatesTab: Story = {
     if (templatesTab instanceof HTMLElement) {
       templatesTab.click();
     }
+  },
+};
+
+/**
+ * Template Applied - Create dialog with pre-filled form from template (Issue #2253)
+ * Visual regression test for template application workflow
+ */
+export const TemplateApplied: Story = {
+  play: async ({ canvasElement }) => {
+    // Switch to Templates tab
+    const templatesTab = canvasElement.querySelector('[value="templates"]');
+    if (templatesTab instanceof HTMLElement) {
+      templatesTab.click();
+    }
+
+    // Wait for templates to render
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // Click first "Apply Template" button
+    const applyButtons = canvasElement.querySelectorAll('button');
+    const applyButton = Array.from(applyButtons).find(btn => btn.textContent?.includes('Apply'));
+    if (applyButton instanceof HTMLElement) {
+      applyButton.click();
+    }
+
+    // Wait for dialog to open with pre-filled form
+    await new Promise(resolve => setTimeout(resolve, 300));
+  },
+  parameters: {
+    chromatic: {
+      delay: 1000, // Extra delay for dialog animation
+    },
   },
 };

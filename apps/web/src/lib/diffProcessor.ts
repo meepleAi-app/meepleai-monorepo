@@ -47,10 +47,7 @@ export interface ProcessedDiff {
  * Process diff between old and new JSON objects
  * Converts to line-by-line diff with metadata for rendering
  */
-export function processDiff(
-  oldContent: string,
-  newContent: string
-): ProcessedDiff {
+export function processDiff(oldContent: string, newContent: string): ProcessedDiff {
   const diff = diffLines(oldContent, newContent);
 
   const oldLines: DiffLine[] = [];
@@ -61,18 +58,18 @@ export function processDiff(
   let newLineNum = 1;
   let changeGroupId = 0;
 
-  diff.forEach((part) => {
+  diff.forEach(part => {
     const lines = part.value.split('\n').filter(Boolean);
 
     if (part.added) {
       // Lines only in new version
       const changeStart = newLineNum;
-      lines.forEach((content) => {
+      lines.forEach(content => {
         newLines.push({
           lineNumber: newLineNum++,
           content,
           type: 'added',
-          newLineNumber: newLineNum - 1
+          newLineNumber: newLineNum - 1,
         });
         oldLines.push({
           lineNumber: null,
@@ -89,17 +86,17 @@ export function processDiff(
         oldStartLine: oldLineNum,
         oldEndLine: oldLineNum,
         newStartLine: changeStart,
-        newEndLine: newLineNum - 1
+        newEndLine: newLineNum - 1,
       });
     } else if (part.removed) {
       // Lines only in old version
       const changeStart = oldLineNum;
-      lines.forEach((content) => {
+      lines.forEach(content => {
         oldLines.push({
           lineNumber: oldLineNum++,
           content,
           type: 'deleted',
-          originalLineNumber: oldLineNum - 1
+          originalLineNumber: oldLineNum - 1,
         });
         newLines.push({
           lineNumber: null,
@@ -116,25 +113,25 @@ export function processDiff(
         oldStartLine: changeStart,
         oldEndLine: oldLineNum - 1,
         newStartLine: newLineNum,
-        newEndLine: newLineNum
+        newEndLine: newLineNum,
       });
     } else {
       // Unchanged lines in both versions
-      lines.forEach((content) => {
+      lines.forEach(content => {
         const matchingId = `line-${oldLineNum}-${newLineNum}`;
         oldLines.push({
           lineNumber: oldLineNum++,
           content,
           type: 'unchanged',
           originalLineNumber: oldLineNum - 1,
-          matchingLineId: matchingId
+          matchingLineId: matchingId,
         });
         newLines.push({
           lineNumber: newLineNum++,
           content,
           type: 'unchanged',
           newLineNumber: newLineNum - 1,
-          matchingLineId: matchingId
+          matchingLineId: matchingId,
         });
       });
     }
@@ -146,17 +143,14 @@ export function processDiff(
     oldLines,
     newLines,
     changes,
-    statistics
+    statistics,
   };
 }
 
 /**
  * Calculate diff statistics from processed lines
  */
-export function calculateStatistics(
-  oldLines: DiffLine[],
-  newLines: DiffLine[]
-): DiffStatistics {
+export function calculateStatistics(oldLines: DiffLine[], newLines: DiffLine[]): DiffStatistics {
   const added = newLines.filter(l => l.type === 'added').length;
   const deleted = oldLines.filter(l => l.type === 'deleted').length;
   const unchanged = oldLines.filter(l => l.type === 'unchanged').length;
@@ -166,7 +160,7 @@ export function calculateStatistics(
     deleted,
     modified: 0, // We'll calculate this from field-level changes later
     unchanged,
-    totalLines: Math.max(oldLines.length, newLines.length)
+    totalLines: Math.max(oldLines.length, newLines.length),
   };
 }
 
@@ -181,14 +175,14 @@ export function identifyCollapsibleSections(
   const sections: CollapsibleSection[] = [];
   let currentSection: CollapsibleSection | null = null as CollapsibleSection | null;
 
-  lines.forEach((line, index) => {
+  lines.forEach((line, _index) => {
     if (line.type === 'unchanged' && line.lineNumber !== null) {
       if (!currentSection) {
         currentSection = {
           startLine: line.lineNumber,
           endLine: line.lineNumber,
           lineCount: 1,
-          isCollapsed: true // Default to collapsed
+          isCollapsed: true, // Default to collapsed
         };
       } else {
         currentSection.endLine = line.lineNumber;
@@ -224,19 +218,11 @@ export function filterChangesByQuery(
 
   const lowerQuery = query.toLowerCase();
 
-  return changes.filter((change) => {
-    const relevantOldLines = oldLines.slice(
-      change.oldStartLine - 1,
-      change.oldEndLine
-    );
-    const relevantNewLines = newLines.slice(
-      change.newStartLine - 1,
-      change.newEndLine
-    );
+  return changes.filter(change => {
+    const relevantOldLines = oldLines.slice(change.oldStartLine - 1, change.oldEndLine);
+    const relevantNewLines = newLines.slice(change.newStartLine - 1, change.newEndLine);
 
     const allLines = [...relevantOldLines, ...relevantNewLines];
-    return allLines.some(line =>
-      line.content.toLowerCase().includes(lowerQuery)
-    );
+    return allLines.some(line => line.content.toLowerCase().includes(lowerQuery));
   });
 }

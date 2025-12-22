@@ -11,8 +11,9 @@
  * - Complements other security measures (CSP, httpOnly cookies, etc.)
  */
 
-import { logger } from './logger';
 import { sanitizeError } from '@/lib/errors';
+
+import { logger } from './logger';
 
 const ENCRYPTION_KEY_STORAGE = 'meepleai:encryption:key';
 const ALGORITHM = 'AES-GCM';

@@ -11,11 +11,12 @@
  * @see ../../tests/postman/README.md for Postman collection documentation
  */
 
-import { test, expect } from './fixtures/chromatic';
 import { exec } from 'child_process';
-import { promisify } from 'util';
 import * as fs from 'fs';
 import * as path from 'path';
+import { promisify } from 'util';
+
+import { test, expect } from './fixtures/chromatic';
 
 const execAsync = promisify(exec);
 

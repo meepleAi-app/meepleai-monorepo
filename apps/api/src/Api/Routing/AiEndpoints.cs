@@ -315,9 +315,7 @@ internal static class AiEndpoints
     private static async Task<IResult> HandleQaRequest(
         QaRequest req,
         HttpContext context,
-        IRagService rag,
-        IResponseQualityService qualityService, // AI-11: Quality scoring
-        IMediator mediator, // CHAT-02: for GenerateFollowUpQuestionsQuery (Issue #1188) + AI logging
+        IMediator mediator, // DDD/CQRS: Use IMediator only
         IOptions<FollowUpQuestionsConfiguration> followUpConfig, // CHAT-02
         ILogger<Program> logger,
         bool bypassCache = false,
@@ -347,18 +345,38 @@ internal static class AiEndpoints
         logger.LogInformation("QA request from user {UserId} for game {GameId}: {Query} (bypassCache: {BypassCache}, generateFollowUps: {GenerateFollowUps})",
             session.User!.Id, req.gameId, req.query, bypassCache, generateFollowUps);
 
-        // ISSUE-1194: Error handling now centralized in middleware + pipeline behavior
-        // AI-14: Use hybrid search with configurable search mode (default: Hybrid)
-        // PERF-03: Support cache bypass via query parameter
-        // AI-09: Language parameter defaults to null (uses "en")
-        var resp = await rag.AskWithHybridSearchAsync(
-            req.gameId,
-            req.query,
-            searchMode: req.searchMode,
-            language: null,
-            bypassCache,
-            ct).ConfigureAwait(false);
+        // DDD/CQRS Migration: Use AskQuestionQuery via IMediator instead of IRagService
+        if (!Guid.TryParse(req.gameId, out var gameGuid))
+        {
+            return Results.BadRequest(new { error = "Invalid game ID format" });
+        }
+
+        var askQuery = new BoundedContexts.KnowledgeBase.Application.Queries.AskQuestionQuery(
+            GameId: gameGuid,
+            Question: req.query,
+            ThreadId: null, // No thread context for legacy endpoint
+            SearchMode: req.searchMode.ToString(),
+            Language: "en",
+            BypassCache: bypassCache
+        );
+
+        var qaResponse = await mediator.Send(askQuery, ct).ConfigureAwait(false);
         var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
+
+        // Map QaResponseDto to legacy QaResponse format (for backward compatibility)
+        var snippets = qaResponse.Sources.Select(src => new Snippet(
+            text: src.TextContent,
+            source: $"PDF:{src.VectorDocumentId}",
+            page: src.PageNumber,
+            line: 0,
+            score: (float)src.RelevanceScore
+        )).ToList();
+
+        var resp = new QaResponse(
+            answer: qaResponse.Answer,
+            snippets: snippets,
+            confidence: qaResponse.OverallConfidence
+        );
 
         // CHAT-02: Generate follow-up questions if enabled
         IReadOnlyList<string>? followUpQuestions = null;
@@ -384,12 +402,23 @@ internal static class AiEndpoints
 
         logger.LogInformation("QA response delivered for game {GameId}", req.gameId);
 
-        // AI-11: Calculate quality scores from response data using actual RAG scores
-        var qualityScores = CalculateQualityScores(qualityService, resp.snippets, resp.answer);
+        // AI-11: Build quality scores from handler-calculated metrics
+        // Handler already calculated SearchConfidence, LlmConfidence, OverallConfidence via QualityTrackingDomainService
+        // Only need to calculate CitationQuality here (simple ratio calculation)
+        var citationQuality = CalculateCitationQuality(resp.snippets.Count, resp.answer);
+
+        var qualityScores = new QualityScores
+        {
+            RagConfidence = qaResponse.SearchConfidence, // From handler
+            LlmConfidence = qaResponse.LlmConfidence, // From handler
+            CitationQuality = citationQuality, // Calculated locally
+            OverallConfidence = qaResponse.OverallConfidence, // From handler
+            IsLowQuality = qaResponse.IsLowQuality // From handler
+        };
 
         // AI-11: Debug logging for quality scores
         logger.LogInformation(
-            "Quality scores calculated - RAG: {RagConf:F3}, LLM: {LlmConf:F3}, Citation: {CitConf:F3}, Overall: {OverallConf:F3}, IsLowQuality: {IsLowQuality}",
+            "Quality scores - RAG: {RagConf:F3}, LLM: {LlmConf:F3}, Citation: {CitConf:F3}, Overall: {OverallConf:F3}, IsLowQuality: {IsLowQuality}",
             qualityScores.RagConfidence,
             qualityScores.LlmConfidence,
             qualityScores.CitationQuality,
@@ -405,7 +434,7 @@ internal static class AiEndpoints
         return Results.Json(finalResponse); // CHAT-02: Return response with follow-up questions
     }
 
-    private static async Task<IResult> HandleExplainRequest(ExplainRequest req, HttpContext context, IRagService rag, IMediator mediator, ILogger<Program> logger, CancellationToken ct)
+    private static async Task<IResult> HandleExplainRequest(ExplainRequest req, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct)
     {
         // Session validated by RequireSessionFilter
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
@@ -419,10 +448,49 @@ internal static class AiEndpoints
         logger.LogInformation("Explain request from user {UserId} for game {GameId}: {Topic}",
             session.User!.Id, req.gameId, req.topic);
 
-        // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
-        // AI-09: Language parameter defaults to null (uses "en")
-        var resp = await rag.ExplainAsync(req.gameId, req.topic, language: null, ct).ConfigureAwait(false);
+        // DDD/CQRS Migration: Use ExplainQuery via IMediator instead of IRagService
+        if (!Guid.TryParse(req.gameId, out var gameGuid))
+        {
+            return Results.BadRequest(new { error = "Invalid game ID format" });
+        }
+
+        var explainQuery = new BoundedContexts.KnowledgeBase.Application.Queries.ExplainQuery(
+            GameId: gameGuid,
+            Topic: req.topic,
+            Language: "en"
+        );
+
+        var explainResponse = await mediator.Send(explainQuery, ct).ConfigureAwait(false);
         var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
+
+        // Map ExplainResponseDto to legacy ExplainResponse format (for backward compatibility)
+        var outlineParts = explainResponse.Outline.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        var mainTopic = outlineParts.Length > 0 ? outlineParts[0] : req.topic;
+        var sections = outlineParts.Skip(1)
+            .Select(s => s.TrimStart('•', ' ', '\t'))
+            .Where(s => !string.IsNullOrWhiteSpace(s))
+            .ToList();
+
+        var outline = new ExplainOutline(mainTopic, sections);
+
+        var snippets = explainResponse.Citations.Select(c => new Snippet(
+            text: c.Snippet,
+            source: $"PDF:{c.DocumentId}",
+            page: c.PageNumber,
+            line: 0,
+            score: (float)c.RelevanceScore
+        )).ToList();
+
+        var resp = new ExplainResponse(
+            outline: outline,
+            script: explainResponse.Script,
+            citations: snippets,
+            estimatedReadingTimeMinutes: (int)Math.Ceiling(explainResponse.EstimatedReadingTimeSeconds / 60.0),
+            promptTokens: 0, // Not tracked in new handler
+            completionTokens: 0,
+            totalTokens: 0,
+            confidence: explainResponse.Confidence
+        );
 
         logger.LogInformation("Explain response delivered for game {GameId}, estimated {Minutes} min read",
             req.gameId, resp.estimatedReadingTimeMinutes);
@@ -865,24 +933,28 @@ internal static class AiEndpoints
         return null;
     }
 
-    private static QualityScores CalculateQualityScores(
-        IResponseQualityService qualityService,
-        IReadOnlyList<Snippet> snippets,
-        string answer)
+    /// <summary>
+    /// Calculate citation quality as ratio of citations to paragraphs.
+    /// Simple heuristic: more citations relative to content = better quality.
+    /// Capped at 1.0 (no penalty for over-citing).
+    /// </summary>
+    private static double CalculateCitationQuality(int citationCount, string? responseText)
     {
-        var ragSearchResults = snippets.Select(s => new RagSearchResult { Score = s.score }).ToList();
-        var citations = snippets.Select(s => new Citation
+        if (string.IsNullOrWhiteSpace(responseText))
         {
-            DocumentId = Guid.NewGuid(),
-            PageNumber = s.page,
-            SnippetText = s.text
-        }).ToList();
+            return 0.0;
+        }
 
-        return qualityService.CalculateQualityScores(
-            ragSearchResults,
-            citations,
-            answer,
-            null);
+        // Count paragraphs (split by double newlines or single newlines)
+        var paragraphs = responseText
+            .Split(new[] { "\n\n", "\n" }, StringSplitOptions.RemoveEmptyEntries)
+            .Where(p => !string.IsNullOrWhiteSpace(p))
+            .ToArray();
+
+        var paragraphCount = Math.Max(1, paragraphs.Length);
+
+        // Calculate ratio and cap at 1.0
+        return Math.Min(citationCount / (double)paragraphCount, 1.0);
     }
 
     private static async Task LogQaRequestAsync(

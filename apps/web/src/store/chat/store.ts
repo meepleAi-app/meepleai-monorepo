@@ -15,18 +15,18 @@
  * - UI: Loading states, errors
  */
 
-import { create } from 'zustand';
-import { immer } from 'zustand/middleware/immer';
-import { subscribeWithSelector } from 'zustand/middleware';
 import { temporal } from 'zundo';
+import { create } from 'zustand';
+import { subscribeWithSelector } from 'zustand/middleware';
 import { devtools, persist, createJSONStorage } from 'zustand/middleware';
+import { immer } from 'zustand/middleware/immer';
 
-import { ChatStore } from './types';
-import { createSessionSlice } from './slices/sessionSlice';
-import { createGameSlice } from './slices/gameSlice';
 import { createChatSlice } from './slices/chatSlice';
+import { createGameSlice } from './slices/gameSlice';
 import { createMessagesSlice } from './slices/messagesSlice';
+import { createSessionSlice } from './slices/sessionSlice';
 import { createUISlice } from './slices/uiSlice';
+import { ChatStore } from './types';
 
 // ============================================================================
 // Store Creation with Middleware Stack

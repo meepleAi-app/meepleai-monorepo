@@ -15,9 +15,11 @@
  */
 
 import * as React from 'react';
+
 import { Label } from '@/components/ui/label';
-import { useFormField } from './FormField';
 import { cn } from '@/lib/utils';
+
+import { useFormField } from './FormField';
 
 export const FormLabel = React.forwardRef<
   React.ElementRef<typeof Label>,

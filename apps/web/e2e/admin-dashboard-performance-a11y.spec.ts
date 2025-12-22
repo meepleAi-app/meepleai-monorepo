@@ -12,10 +12,12 @@
  * Dependencies: #885 (✅), #886 (✅)
  */
 
-import { test as base, expect, Page } from './fixtures/chromatic';
 import AxeBuilder from '@axe-core/playwright';
-import type { Result } from 'axe-core';
+
+import { test as base, expect, Page } from './fixtures/chromatic';
 import { AdminHelper } from './pages';
+
+import type { Result } from 'axe-core';
 
 const test = base.extend<{ adminPage: Page }>({
   adminPage: async ({ page }: { page: Page }, use: (page: Page) => Promise<void>) => {

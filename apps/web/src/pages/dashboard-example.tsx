@@ -6,7 +6,9 @@
  */
 
 import React from 'react';
+
 import Head from 'next/head';
+
 import { QuickActions } from '@/components/dashboard';
 
 export default function DashboardExample() {

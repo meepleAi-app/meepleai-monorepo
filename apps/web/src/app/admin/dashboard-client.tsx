@@ -14,14 +14,7 @@
 'use client';
 
 import { useCallback, useMemo } from 'react';
-import { AdminLayout } from '@/components/admin/AdminLayout';
-import { MetricsGrid } from '@/components/admin/MetricsGrid';
-import { ActivityFeed } from '@/components/admin/ActivityFeed';
-import { QuickActions, type QuickAction } from '@/components/admin/QuickActions';
-import { SystemStatus, type ServiceStatus } from '@/components/admin/SystemStatus';
-import type { StatCardProps } from '@/components/admin/StatCard';
-import { useDashboardData } from '@/hooks/queries/useDashboardData';
-import type { DashboardMetrics } from '@/lib/api';
+
 import {
   FileUpIcon,
   UsersIcon,
@@ -30,6 +23,15 @@ import {
   MessageSquareIcon,
   DatabaseIcon,
 } from 'lucide-react';
+
+import { ActivityFeed } from '@/components/admin/ActivityFeed';
+import { AdminLayout } from '@/components/admin/AdminLayout';
+import { MetricsGrid } from '@/components/admin/MetricsGrid';
+import { QuickActions, type QuickAction } from '@/components/admin/QuickActions';
+import type { StatCardProps } from '@/components/admin/StatCard';
+import { SystemStatus, type ServiceStatus } from '@/components/admin/SystemStatus';
+import { useDashboardData } from '@/hooks/queries/useDashboardData';
+import type { DashboardMetrics } from '@/lib/api';
 
 /**
  * Derives system status from metrics

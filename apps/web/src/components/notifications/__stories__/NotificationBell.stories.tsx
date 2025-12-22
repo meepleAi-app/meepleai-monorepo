@@ -11,11 +11,14 @@
  * - Loading state
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
-import { NotificationBell } from '../NotificationBell';
-import { useNotificationStore } from '@/store/notification/store';
 import { useEffect } from 'react';
+
 import type { NotificationDto } from '@/lib/api';
+import { useNotificationStore } from '@/store/notification/store';
+
+import { NotificationBell } from '../NotificationBell';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta: Meta<typeof NotificationBell> = {
   title: 'Components/Notifications/NotificationBell',

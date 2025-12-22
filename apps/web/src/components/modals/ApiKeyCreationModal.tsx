@@ -28,6 +28,15 @@
  */
 
 import { useState, useEffect } from 'react';
+
+import { Copy, Check, AlertCircle, Info, Calendar, Key } from 'lucide-react';
+
+import { LoadingButton } from '@/components/loading/LoadingButton';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Dialog,
   DialogContent,
@@ -36,24 +45,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/overlays/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
 import { api, CreateApiKeyResponse } from '@/lib/api';
-import { Copy, Check, AlertCircle, Info, Calendar, Key } from 'lucide-react';
-import { LoadingButton } from '@/components/loading/LoadingButton';
-import { logger } from '@/lib/logger';
 import { createErrorContext } from '@/lib/errors';
+import { logger } from '@/lib/logger';
 
 export interface ApiKeyCreationModalProps {
   /** Whether the modal is open */
@@ -157,7 +152,7 @@ export function ApiKeyCreationModal({
     if (formData.metadata.trim()) {
       try {
         JSON.parse(formData.metadata);
-      } catch (e) {
+      } catch (_e) {
         errors.metadata = 'Metadata must be valid JSON';
       }
     }

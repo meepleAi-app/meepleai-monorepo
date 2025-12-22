@@ -1,15 +1,17 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+
 import Link from 'next/link';
-import { api, CacheStats } from '@/lib/api';
-import { cn } from '@/lib/utils';
+
+import { AdminAuthGuard } from '@/components/admin/AdminAuthGuard';
+import { useAuthUser } from '@/components/auth/AuthProvider';
 import { ErrorDisplay } from '@/components/errors';
+import { api, CacheStats } from '@/lib/api';
+import { createErrorContext } from '@/lib/errors';
 import { categorizeError } from '@/lib/errorUtils';
 import { logger } from '@/lib/logger';
-import { createErrorContext } from '@/lib/errors';
-import { useAuthUser } from '@/components/auth/AuthProvider';
-import { AdminAuthGuard } from '@/components/admin/AdminAuthGuard';
+import { cn } from '@/lib/utils';
 
 type Game = {
   id: string;

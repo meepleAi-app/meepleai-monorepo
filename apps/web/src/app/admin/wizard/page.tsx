@@ -9,6 +9,7 @@
  */
 
 import { RequireRole } from '@/components/auth/RequireRole';
+
 import { AdminWizardClient } from './client';
 
 export default function AdminWizardPage() {

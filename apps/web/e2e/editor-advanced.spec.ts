@@ -5,7 +5,7 @@
  */
 
 import { test, expect } from './fixtures/chromatic';
-import { getTextMatcher, t } from './fixtures/i18n';
+import { getTextMatcher } from './fixtures/i18n';
 import { WaitHelper } from './helpers/WaitHelper';
 
 test.describe('RuleSpecEditor E2E', () => {

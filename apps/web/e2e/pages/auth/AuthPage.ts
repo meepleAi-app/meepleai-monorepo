@@ -1,11 +1,12 @@
-import { Page, Locator } from '@playwright/test';
-import { BasePage } from '../base/BasePage';
+import { Locator } from '@playwright/test';
+
 import {
   IAuthPage,
   LoginCredentials,
   RegistrationData,
   TwoFactorData,
 } from '../../types/pom-interfaces';
+import { BasePage } from '../base/BasePage';
 
 /**
  * AuthPage - Authentication page interactions
@@ -143,14 +144,9 @@ export class AuthPage extends BasePage implements IAuthPage {
   async register(data: RegistrationData): Promise<void> {
     await this.fill(this.registerForm.getByLabel(/email/i), data.email);
     await this.fill(this.registerForm.getByLabel(/password/i), data.password);
-    await this.fill(
-      this.registerForm.getByLabel(/display name|nome/i),
-      data.displayName
-    );
+    await this.fill(this.registerForm.getByLabel(/display name|nome/i), data.displayName);
 
-    await this.click(
-      this.registerForm.getByRole('button', { name: /registra|register/i })
-    );
+    await this.click(this.registerForm.getByRole('button', { name: /registra|register/i }));
   }
 
   /**
@@ -205,9 +201,7 @@ export class AuthPage extends BasePage implements IAuthPage {
    * Wait for 2FA prompt to appear (after successful password login)
    */
   async waitFor2FAPrompt(): Promise<void> {
-    await this.waitForElement(
-      this.page.getByRole('heading', { name: /two.factor|2fa/i })
-    );
+    await this.waitForElement(this.page.getByRole('heading', { name: /two.factor|2fa/i }));
   }
 
   // ========================================================================
@@ -309,16 +303,17 @@ export class AuthPage extends BasePage implements IAuthPage {
    * Click "Enable Two-Factor Authentication" button
    */
   async clickEnableTwoFactor(): Promise<void> {
-    await this.click(
-      this.page.getByRole('button', { name: /enable two.factor authentication/i })
-    );
+    await this.click(this.page.getByRole('button', { name: /enable two.factor authentication/i }));
   }
 
   /**
    * Get QR code element
    */
   private get qrCode(): Locator {
-    return this.page.locator('svg').filter({ has: this.page.locator('path') }).first();
+    return this.page
+      .locator('svg')
+      .filter({ has: this.page.locator('path') })
+      .first();
   }
 
   /**
@@ -335,7 +330,7 @@ export class AuthPage extends BasePage implements IAuthPage {
     // Click "Can't scan QR code? Enter manually" details element
     await this.click(this.page.locator('details > summary'));
     const secretCode = this.page.locator('code').filter({ hasText: /^[A-Z0-9]{32}$/ });
-    return await secretCode.textContent() || '';
+    return (await secretCode.textContent()) || '';
   }
 
   /**
@@ -370,10 +365,7 @@ export class AuthPage extends BasePage implements IAuthPage {
    * Enter TOTP verification code in settings page
    */
   async enterVerificationCode(code: string): Promise<void> {
-    await this.fill(
-      this.page.getByPlaceholder('000000'),
-      code
-    );
+    await this.fill(this.page.getByPlaceholder('000000'), code);
   }
 
   /**
@@ -406,9 +398,7 @@ export class AuthPage extends BasePage implements IAuthPage {
    * Get backup codes remaining count from settings page
    */
   async getBackupCodesCount(): Promise<number> {
-    const countText = await this.page
-      .getByText(/backup codes remaining:\s*\d+/i)
-      .textContent();
+    const countText = await this.page.getByText(/backup codes remaining:\s*\d+/i).textContent();
     const match = countText?.match(/(\d+)/);
     return match ? parseInt(match[1], 10) : 0;
   }
@@ -418,15 +408,9 @@ export class AuthPage extends BasePage implements IAuthPage {
    */
   async fillDisableTwoFactorForm(password: string, code: string): Promise<void> {
     // Find password input in disable section
-    await this.fill(
-      this.page.getByLabel(/current password/i),
-      password
-    );
+    await this.fill(this.page.getByLabel(/current password/i), password);
     // Find TOTP/backup code input in disable section
-    await this.fill(
-      this.page.getByLabel(/totp code or backup code/i),
-      code
-    );
+    await this.fill(this.page.getByLabel(/totp code or backup code/i), code);
   }
 
   /**
@@ -434,7 +418,7 @@ export class AuthPage extends BasePage implements IAuthPage {
    */
   async clickDisableTwoFactor(): Promise<void> {
     // Handle browser confirmation dialog
-    this.page.once('dialog', (dialog) => dialog.accept());
+    this.page.once('dialog', dialog => dialog.accept());
     await this.click(this.page.getByRole('button', { name: /disable 2fa/i }));
   }
 
@@ -450,9 +434,7 @@ export class AuthPage extends BasePage implements IAuthPage {
    * Assert 2FA status message
    */
   async assert2FAEnabled(): Promise<void> {
-    await this.waitForElement(
-      this.page.getByText(/two.factor authentication is enabled/i)
-    );
+    await this.waitForElement(this.page.getByText(/two.factor authentication is enabled/i));
   }
 
   /**
@@ -636,7 +618,7 @@ export class AuthPage extends BasePage implements IAuthPage {
    */
   async clickUnlinkProvider(provider: 'google' | 'discord' | 'github'): Promise<void> {
     // Handle confirmation dialog
-    this.page.once('dialog', (dialog) => dialog.accept());
+    this.page.once('dialog', dialog => dialog.accept());
     const button = this.getProviderButton(provider).filter({ hasText: /unlink/i });
     await this.click(button);
   }
@@ -653,9 +635,12 @@ export class AuthPage extends BasePage implements IAuthPage {
    * @param provider - OAuth provider
    */
   async isProviderLinked(provider: 'google' | 'discord' | 'github'): Promise<boolean> {
-    const card = this.page.locator('.bg-white, .dark\\:bg-slate-800').filter({
-      hasText: new RegExp(provider, 'i')
-    }).filter({ hasText: /linked/i });
+    const card = this.page
+      .locator('.bg-white, .dark\\:bg-slate-800')
+      .filter({
+        hasText: new RegExp(provider, 'i'),
+      })
+      .filter({ hasText: /linked/i });
     return await this.isVisible(card);
   }
 
@@ -706,18 +691,14 @@ export class AuthPage extends BasePage implements IAuthPage {
    * Wait for OAuth callback success message
    */
   async waitForOAuthCallbackSuccess(): Promise<void> {
-    await this.waitForElement(
-      this.page.getByText(/successfully linked|account linked/i)
-    );
+    await this.waitForElement(this.page.getByText(/successfully linked|account linked/i));
   }
 
   /**
    * Wait for OAuth callback error message
    */
   async waitForOAuthCallbackError(): Promise<void> {
-    await this.waitForElement(
-      this.page.getByText(/failed to link|error linking|already linked/i)
-    );
+    await this.waitForElement(this.page.getByText(/failed to link|error linking|already linked/i));
   }
 
   /**

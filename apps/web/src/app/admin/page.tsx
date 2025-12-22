@@ -16,6 +16,7 @@
  */
 
 import { RequireRole } from '@/components/auth/RequireRole';
+
 import { DashboardClient } from './dashboard-client';
 
 export default function AdminPage() {

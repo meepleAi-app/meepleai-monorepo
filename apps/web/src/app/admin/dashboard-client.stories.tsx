@@ -1,5 +1,6 @@
-import type { Meta, StoryObj } from '@storybook/react';
 import { DashboardClient } from './dashboard-client';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 /**
  * Enhanced Admin Dashboard - Issue #874, #889

@@ -7,14 +7,17 @@
  */
 
 import { useState, useCallback } from 'react';
+
+import Image from 'next/image';
+
+import { toast } from '@/components/layout';
+import { Spinner } from '@/components/loading';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Spinner } from '@/components/loading';
-import { toast } from '@/components/layout';
-import { api } from '@/lib/api';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { api } from '@/lib/api';
 
 interface GameCreationStepProps {
   pdfId: string;
@@ -26,7 +29,7 @@ interface GameCreationStepProps {
 type ImageInputMode = 'url' | 'upload';
 
 export function GameCreationStep({
-  pdfId,
+  pdfId: _pdfId,
   pdfFileName,
   onComplete,
   onBack,
@@ -56,6 +59,15 @@ export function GameCreationStep({
         toast.error('Seleziona un file immagine');
         return;
       }
+
+      // SECURITY FIX: Client-side file size validation (icon max 2MB)
+      // Code review finding: Validate early for better UX
+      const maxIconSize = 2 * 1024 * 1024; // 2MB
+      if (file.size > maxIconSize) {
+        toast.error('Icona troppo grande (max 2MB)');
+        return;
+      }
+
       setIconFile(file);
       // Create preview
       const reader = new FileReader();
@@ -71,6 +83,15 @@ export function GameCreationStep({
         toast.error('Seleziona un file immagine');
         return;
       }
+
+      // SECURITY FIX: Client-side file size validation (image max 5MB)
+      // Code review finding: Validate early for better UX
+      const maxImageSize = 5 * 1024 * 1024; // 5MB
+      if (file.size > maxImageSize) {
+        toast.error('Immagine troppo grande (max 5MB)');
+        return;
+      }
+
       setImageFile(file);
       // Create preview
       const reader = new FileReader();
@@ -88,34 +109,57 @@ export function GameCreationStep({
     setCreating(true);
 
     try {
-      // Determine final URLs
-      let finalIconUrl: string | null = null;
-      let finalImageUrl: string | null = null;
-
-      // For now, we use URL inputs directly
-      // TODO: Implement file upload to storage if iconFile/imageFile are set
-      if (iconMode === 'url' && iconUrl.trim()) {
-        finalIconUrl = iconUrl.trim();
-      } else if (iconMode === 'upload' && iconFile) {
-        // File upload would go here - for MVP, we'll use the preview data URL
-        // In production, this would upload to a storage service
-        finalIconUrl = iconPreview;
-      }
-
-      if (imageMode === 'url' && imageUrl.trim()) {
-        finalImageUrl = imageUrl.trim();
-      } else if (imageMode === 'upload' && imageFile) {
-        finalImageUrl = imagePreview;
-      }
-
-      // Create game with extended parameters
+      // Step 1: Create game first (without images) to get gameId
       const result = await api.games.create({
         name: gameName.trim(),
         publisher: publisher.trim() || null,
         yearPublished: yearPublished ?? null,
-        iconUrl: finalIconUrl,
-        imageUrl: finalImageUrl,
+        iconUrl: null,
+        imageUrl: null,
       });
+
+      // Step 2: Upload files if provided and link to game (Issue #2255)
+      let finalIconUrl: string | null = null;
+      let finalImageUrl: string | null = null;
+
+      if (iconMode === 'url' && iconUrl.trim()) {
+        // Use URL directly
+        finalIconUrl = iconUrl.trim();
+      } else if (iconMode === 'upload' && iconFile) {
+        // Upload icon file to storage
+        toast.info('Caricamento icona...');
+        const uploadResult = await api.games.uploadImage(iconFile, result.id, 'icon');
+        if (uploadResult.success && uploadResult.fileUrl) {
+          finalIconUrl = uploadResult.fileUrl;
+        } else {
+          toast.warning(`Errore caricamento icona: ${uploadResult.error || 'Errore sconosciuto'}`);
+        }
+      }
+
+      if (imageMode === 'url' && imageUrl.trim()) {
+        // Use URL directly
+        finalImageUrl = imageUrl.trim();
+      } else if (imageMode === 'upload' && imageFile) {
+        // Upload cover image to storage
+        toast.info('Caricamento immagine copertina...');
+        const uploadResult = await api.games.uploadImage(imageFile, result.id, 'image');
+        if (uploadResult.success && uploadResult.fileUrl) {
+          finalImageUrl = uploadResult.fileUrl;
+        } else {
+          toast.warning(
+            `Errore caricamento immagine: ${uploadResult.error || 'Errore sconosciuto'}`
+          );
+        }
+      }
+
+      // Step 3: Link uploaded files to game record (Issue #2255 - Code review fix)
+      // Code review finding: Files were orphaned without database link
+      if (finalIconUrl || finalImageUrl) {
+        await api.games.update(result.id, {
+          iconUrl: finalIconUrl,
+          imageUrl: finalImageUrl,
+        });
+      }
 
       toast.success(`Gioco "${gameName}" creato con successo!`);
       onComplete(result.id, gameName.trim());
@@ -132,11 +176,9 @@ export function GameCreationStep({
     iconMode,
     iconUrl,
     iconFile,
-    iconPreview,
     imageMode,
     imageUrl,
     imageFile,
-    imagePreview,
     onComplete,
   ]);
 
@@ -210,14 +252,18 @@ export function GameCreationStep({
             />
             {iconUrl && (
               <div className="flex justify-center">
-                <img
-                  src={iconUrl}
-                  alt="Icon preview"
-                  className="w-16 h-16 object-cover rounded-lg border"
-                  onError={e => {
-                    (e.target as HTMLImageElement).style.display = 'none';
-                  }}
-                />
+                <div className="relative w-16 h-16 rounded-lg border overflow-hidden">
+                  <Image
+                    src={iconUrl}
+                    alt="Icon preview"
+                    fill
+                    className="object-cover"
+                    sizes="64px"
+                    onError={e => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                </div>
               </div>
             )}
           </TabsContent>
@@ -225,11 +271,16 @@ export function GameCreationStep({
             <Input type="file" accept="image/*" onChange={handleIconFileChange} />
             {iconPreview && (
               <div className="flex justify-center">
-                <img
-                  src={iconPreview}
-                  alt="Icon preview"
-                  className="w-16 h-16 object-cover rounded-lg border"
-                />
+                <div className="relative w-16 h-16 rounded-lg border overflow-hidden">
+                  <Image
+                    src={iconPreview}
+                    alt="Icon preview"
+                    fill
+                    className="object-cover"
+                    sizes="64px"
+                    unoptimized
+                  />
+                </div>
               </div>
             )}
           </TabsContent>
@@ -253,14 +304,18 @@ export function GameCreationStep({
             />
             {imageUrl && (
               <div className="flex justify-center">
-                <img
-                  src={imageUrl}
-                  alt="Cover preview"
-                  className="max-w-xs max-h-48 object-cover rounded-lg border"
-                  onError={e => {
-                    (e.target as HTMLImageElement).style.display = 'none';
-                  }}
-                />
+                <div className="relative max-w-xs h-48 rounded-lg border overflow-hidden">
+                  <Image
+                    src={imageUrl}
+                    alt="Cover preview"
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, 384px"
+                    onError={e => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                </div>
               </div>
             )}
           </TabsContent>
@@ -268,11 +323,16 @@ export function GameCreationStep({
             <Input type="file" accept="image/*" onChange={handleImageFileChange} />
             {imagePreview && (
               <div className="flex justify-center">
-                <img
-                  src={imagePreview}
-                  alt="Cover preview"
-                  className="max-w-xs max-h-48 object-cover rounded-lg border"
-                />
+                <div className="relative max-w-xs h-48 rounded-lg border overflow-hidden">
+                  <Image
+                    src={imagePreview}
+                    alt="Cover preview"
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, 384px"
+                    unoptimized
+                  />
+                </div>
               </div>
             )}
           </TabsContent>

@@ -38,8 +38,10 @@ runs:
         path: |
           ${{ inputs.working-directory }}/src/**/bin
           ${{ inputs.working-directory }}/src/**/obj
-        key: ${{ runner.os }}-dotnet-build-${{ hashFiles(format('{0}/**/*.csproj', inputs.working-directory)) }}-${{ hashFiles(format('{0}/**/*.cs', inputs.working-directory)) }}
+        # Issue #2152: Include *.json in hash to invalidate cache when appsettings change
+        key: ${{ runner.os }}-dotnet-build-${{ hashFiles(format('{0}/**/*.csproj', inputs.working-directory)) }}-${{ hashFiles(format('{0}/**/*.cs', inputs.working-directory)) }}-${{ hashFiles(format('{0}/**/appsettings*.json', inputs.working-directory)) }}
         restore-keys: |
+          ${{ runner.os }}-dotnet-build-${{ hashFiles(format('{0}/**/*.csproj', inputs.working-directory)) }}-${{ hashFiles(format('{0}/**/*.cs', inputs.working-directory)) }}-
           ${{ runner.os }}-dotnet-build-${{ hashFiles(format('{0}/**/*.csproj', inputs.working-directory)) }}-
           ${{ runner.os }}-dotnet-build-
 

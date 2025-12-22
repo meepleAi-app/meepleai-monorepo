@@ -41,6 +41,7 @@ jobs:
     name: K6 Performance Tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    continue-on-error: true  # Issue #2284: Non-blocking performance monitoring
     # Only run scheduled tests on main branch
     if: github.event_name != 'schedule' || github.ref == 'refs/heads/main'
 

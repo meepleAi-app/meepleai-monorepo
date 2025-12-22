@@ -6,6 +6,8 @@
  * for MeepleAI component library following WCAG 2.1 AA/AAA standards.
  */
 
+import * as React from 'react';
+
 import { AccessibleButton } from './AccessibleButton';
 import { AccessibleFormInput } from './AccessibleFormInput';
 
@@ -383,6 +385,3 @@ export const KeyboardNavigationDemo: Story = {
     </div>
   ),
 };
-
-// Fix React import for Stories
-import * as React from 'react';

@@ -194,12 +194,16 @@ internal static class ObservabilityServiceExtensions
             return;
         }
 
-        // Issue #2152: Prioritize SecretsHelper FIRST (reads uncorrupted POSTGRES_* vars)
+        // Issue #2152: Try SecretsHelper FIRST (reads uncorrupted POSTGRES_* vars)
+        var secretsHelperResult = SecretsHelper.BuildPostgresConnectionString(configuration);
+
         // SEC-708: Build connection string from Docker Secrets if available (only for non-testing)
-        var healthCheckConnectionString = SecretsHelper.BuildPostgresConnectionString(configuration)
-            ?? Environment.GetEnvironmentVariable("ConnectionStrings__Postgres")
-            ?? configuration["ConnectionStrings__Postgres"]
-            ?? configuration.GetConnectionString("Postgres");
+        // Issue #2152: Use SecretsHelper if succeeded, otherwise fallback
+        var healthCheckConnectionString = secretsHelperResult != null
+            ? secretsHelperResult
+            : (Environment.GetEnvironmentVariable("ConnectionStrings__Postgres")
+                ?? configuration["ConnectionStrings__Postgres"]
+                ?? configuration.GetConnectionString("Postgres"));
 
         if (string.IsNullOrEmpty(healthCheckConnectionString))
         {

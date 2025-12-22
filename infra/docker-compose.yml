@@ -5,7 +5,8 @@ services:
     restart: unless-stopped
     profiles: [minimal, dev, observability, ai, automation, full]
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-meeple}
+      # Issue #2152: Changed default from 'meeple' to 'postgres' for standard PostgreSQL compatibility
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
       POSTGRES_DB: ${POSTGRES_DB:-meepleai}
       # Performance tuning aligned with resource limits
@@ -601,7 +602,8 @@ services:
       ASPNETCORE_URLS: http://+:8080
       # SEC-708: Connection string will be built from secret file
       # Password read from /run/secrets/postgres-password
-      POSTGRES_USER: ${POSTGRES_USER:-meeple}
+      # Issue #2152: Changed default from 'meeple' to 'postgres' for consistency with container user
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_DB: ${POSTGRES_DB:-meepleai}
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
       QDRANT_URL: http://qdrant:6333

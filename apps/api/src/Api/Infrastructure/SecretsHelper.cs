@@ -19,6 +19,8 @@ namespace Api.Infrastructure;
 ///   1. OPENROUTER_API_KEY_FILE environment variable (path to secret file)
 ///   2. OPENROUTER_API_KEY environment variable (direct value)
 ///   3. Throws InvalidOperationException if neither is found
+///
+/// Issue #2152: Cache invalidation trigger for appsettings.Development.json changes.
 /// </summary>
 internal static class SecretsHelper
 {
@@ -109,18 +111,34 @@ internal static class SecretsHelper
     /// </summary>
     /// <param name="config">Configuration instance</param>
     /// <param name="logger">Optional logger for diagnostics</param>
-    /// <returns>Complete PostgreSQL connection string</returns>
-    public static string BuildPostgresConnectionString(
+    /// <returns>Complete PostgreSQL connection string, or null if password not configured</returns>
+    public static string? BuildPostgresConnectionString(
         IConfiguration config,
         ILogger? logger = null)
     {
+        Console.WriteLine("[DEBUG #2152] SecretsHelper.BuildPostgresConnectionString() called");
+
         var host = config["POSTGRES_HOST"] ?? "postgres";
         var port = config["POSTGRES_PORT"] ?? "5432";
         var database = config["POSTGRES_DB"] ?? config["ConnectionStrings:DefaultDatabase"] ?? "meepleai";
-        var username = config["POSTGRES_USER"] ?? "meeple";
+        // Issue #2152: Change default username from 'meeple' to 'postgres' for CI/standard PostgreSQL compatibility
+        var username = config["POSTGRES_USER"] ?? "postgres";
+
+        Console.WriteLine($"[DEBUG #2152] SecretsHelper values: Host={host}, Port={port}, DB={database}, User={username}");
 
         // Get password from secret file or direct config
-        var password = GetSecretOrValue(config, "POSTGRES_PASSWORD", logger, required: true);
+        // Issue #2152: Try GetSecretOrValue first, then Environment.GetEnvironmentVariable directly
+        var password = GetSecretOrValue(config, "POSTGRES_PASSWORD", logger, required: false)
+            ?? Environment.GetEnvironmentVariable("POSTGRES_PASSWORD");
+
+        Console.WriteLine($"[DEBUG #2152] SecretsHelper password source: {(password != null ? "found" : "NULL")}");
+
+        // If no password configured, return null to allow fallback to other connection string sources
+        if (string.IsNullOrEmpty(password))
+        {
+            Console.WriteLine("[DEBUG #2152] SecretsHelper: POSTGRES_PASSWORD not found anywhere, returning null for fallback");
+            return null;
+        }
 
         var connectionString = $"Host={host};Port={port};Database={database};Username={username};Password={password}";
 

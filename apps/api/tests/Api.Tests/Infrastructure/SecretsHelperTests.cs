@@ -210,11 +210,11 @@ public class SecretsHelperTests
             // Act
             var connectionString = SecretsHelper.BuildPostgresConnectionString(config, NullLogger.Instance);
 
-            // Assert - should use defaults
+            // Assert - should use defaults (Issue #2152: default username is now 'postgres')
             Assert.Contains("Host=postgres", connectionString);
             Assert.Contains("Port=5432", connectionString);
             Assert.Contains("Database=meepleai", connectionString);
-            Assert.Contains("Username=meeple", connectionString);
+            Assert.Contains("Username=postgres", connectionString);
             Assert.Contains("Password=password", connectionString);
         }
         finally

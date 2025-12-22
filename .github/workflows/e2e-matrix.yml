@@ -30,7 +30,7 @@ jobs:
   e2e-matrix:
     name: E2E Shard ${{ matrix.shard }}
     runs-on: ubuntu-latest
-    timeout-minutes: 10  # Reduced from 20min (Phase 2 optimization)
+    timeout-minutes: 15  # Issue #2284: Increased from 10min to prevent timeout failures
     strategy:
       fail-fast: false  # Continue running other shards even if one fails
       matrix:

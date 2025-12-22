@@ -4,16 +4,14 @@ using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Application.Queries;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.BoundedContexts.GameManagement.Application.Commands;
+using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.Extensions;
-using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
-using Api.Services.Pdf;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using PdfIndexingErrorCode = Api.BoundedContexts.DocumentProcessing.Application.DTOs.PdfIndexingErrorCode;
 
 #pragma warning disable MA0048 // File name must match type name - Contains Interface with supporting types
@@ -400,7 +398,7 @@ internal static class PdfEndpoints
     private static async Task<IResult> HandleBggSearch(
                 [FromQuery] string? q,
         [FromQuery] bool exact,
-        IBggApiService bggService,
+        IMediator mediator,
         ILogger<Program> logger,
         CancellationToken ct)
     {
@@ -411,14 +409,20 @@ internal static class PdfEndpoints
 
         var validatedQuery = q!;
 
-        var results = await bggService.SearchGamesAsync(validatedQuery, exact, ct).ConfigureAwait(false);
+        // DDD Migration Phase 3.3: Use SearchBggGamesQuery via IMediator
+        var query = new SearchBggGamesQuery(
+            SearchTerm: validatedQuery,
+            ExactMatch: exact
+        );
+
+        var results = await mediator.Send(query, ct).ConfigureAwait(false);
         logger.LogInformation("BGG search returned {Count} results for query: {Query}", results.Count, validatedQuery);
         return Results.Json(new { results });
     }
 
     private static async Task<IResult> HandleGetBggGameDetails(
         int bggId,
-                IBggApiService bggService,
+        IMediator mediator,
         ILogger<Program> logger,
         CancellationToken ct)
     {
@@ -427,7 +431,9 @@ internal static class PdfEndpoints
             return Results.BadRequest(new { error = "Invalid BGG ID. Must be a positive integer." });
         }
 
-        var details = await bggService.GetGameDetailsAsync(bggId, ct).ConfigureAwait(false);
+        // DDD Migration Phase 3.3: Use GetBggGameDetailsQuery via IMediator
+        var query = new GetBggGameDetailsQuery(BggId: bggId);
+        var details = await mediator.Send(query, ct).ConfigureAwait(false);
 
         if (details == null)
         {
@@ -457,44 +463,43 @@ internal static class PdfEndpoints
         return Results.Json(pdf);
     }
 
-    private static async Task<IResult> HandleDownloadPdf(Guid pdfId, HttpContext context, MeepleAiDbContext db, IBlobStorageService blobStorageService, ILogger<Program> logger, CancellationToken ct)
+    private static async Task<IResult> HandleDownloadPdf(Guid pdfId, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct)
     {
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-
-        var pdf = await db.PdfDocuments
-            .Where(p => p.Id == pdfId)
-            .Select(p => new { p.Id, p.GameId, p.FileName, p.FilePath, p.ContentType, p.UploadedByUserId })
-            .FirstOrDefaultAsync(ct).ConfigureAwait(false);
-
-        if (pdf == null)
-        {
-            logger.LogWarning("PDF {PdfId} not found for download", pdfId);
-            return Results.NotFound(new { error = "PDF not found" });
-        }
-
         var userId = session!.User!.Id;
-
         bool isAdmin = string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
-        bool isOwner = pdf.UploadedByUserId == userId;
 
-        if (!isAdmin && !isOwner)
+        // DDD Migration Phase 4: Use DownloadPdfQuery via IMediator
+        var query = new DownloadPdfQuery(
+            PdfId: pdfId,
+            UserId: userId,
+            IsAdmin: isAdmin
+        );
+
+        PdfDownloadResult? result;
+        try
         {
-            logger.LogWarning("User {UserId} denied access to download PDF {PdfId} (owner: {OwnerId})",
-                session!.User!.Id, pdfId, pdf.UploadedByUserId);
+            result = await mediator.Send(query, ct).ConfigureAwait(false);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            logger.LogWarning(ex, "Access denied for user {UserId} to download PDF {PdfId}", userId, pdfId);
             return Results.Forbid();
         }
 
-        var fileStream = await blobStorageService.RetrieveAsync(pdf.Id.ToString("N"), pdf.GameId.ToString(), ct).ConfigureAwait(false);
-
-        if (fileStream == null)
+        if (result == null)
         {
-            logger.LogError("PDF file not found in storage for {PdfId} at path {FilePath}", pdfId, pdf.FilePath);
-            return Results.NotFound(new { error = "PDF file not found in storage" });
+            logger.LogWarning("PDF {PdfId} not found for download", pdfId);
+            return Results.NotFound(new { error = "PDF not found or file not in storage" });
         }
 
-        logger.LogInformation("User {UserId} downloading PDF {PdfId}", session!.User!.Id, pdfId);
+        logger.LogInformation("User {UserId} downloading PDF {PdfId}", userId, pdfId);
 
-        return Results.Stream(fileStream, contentType: pdf.ContentType ?? "application/pdf", fileDownloadName: pdf.FileName, enableRangeProcessing: true);
+        return Results.Stream(
+            result.FileStream,
+            contentType: result.ContentType,
+            fileDownloadName: result.FileName,
+            enableRangeProcessing: true);
     }
 
     private static async Task<IResult> HandleDeletePdf(
@@ -689,40 +694,36 @@ internal static class PdfEndpoints
         return Results.Ok(progress);
     }
 
-    private static async Task<IResult> HandleCancelPdfProcessing(Guid pdfId, HttpContext context, IMediator mediator, IBackgroundTaskService backgroundTaskService, ILogger<Program> logger, CancellationToken ct)
+    private static async Task<IResult> HandleCancelPdfProcessing(Guid pdfId, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct)
     {
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-        var pdf = await mediator.Send(new GetPdfOwnershipQuery(pdfId), ct).ConfigureAwait(false);
-
-        if (pdf == null)
-        {
-            return Results.NotFound(new { error = "PDF not found" });
-        }
-
         var userId = session!.User!.Id;
+        bool isAdmin = string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
 
-        if (pdf.UploadedByUserId != userId &&
-            !string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+        // DDD Migration Phase 4: Use CancelPdfProcessingCommand via IMediator
+        var command = new CancelPdfProcessingCommand(
+            PdfId: pdfId,
+            UserId: userId,
+            IsAdmin: isAdmin
+        );
+
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+        if (!result.Success)
         {
-            return Results.Forbid();
+            return result.ErrorCode switch
+            {
+                "NOT_FOUND" => Results.NotFound(new { error = result.Message }),
+                "FORBIDDEN" => Results.Forbid(),
+                "ALREADY_COMPLETED" => Results.BadRequest(new { error = result.Message }),
+                "TASK_NOT_FOUND" => Results.BadRequest(new { error = result.Message }),
+                _ => Results.BadRequest(new { error = result.Message })
+            };
         }
 
-        if (string.Equals(pdf.ProcessingStatus, "completed", StringComparison.Ordinal) || string.Equals(pdf.ProcessingStatus, "failed", StringComparison.Ordinal))
-        {
-            return Results.BadRequest(new { error = "Processing already completed or failed" });
-        }
+        logger.LogInformation("User {UserId} cancelled processing for PDF {PdfId}", userId, pdfId);
 
-        var cancelled = backgroundTaskService.CancelTask(pdfId.ToString());
-
-        if (!cancelled)
-        {
-            logger.LogWarning("Failed to cancel processing for PDF {PdfId} - task not found", pdfId);
-            return Results.BadRequest(new { error = "Processing task not found or already completed" });
-        }
-
-        logger.LogInformation("User {UserId} cancelled processing for PDF {PdfId}", session!.User!.Id, pdfId);
-
-        return Results.Ok(new { message = "Processing cancellation requested" });
+        return Results.Ok(new { message = result.Message });
     }
 
     private static async Task<IResult> HandleGenerateRuleSpec(Guid pdfId, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct)

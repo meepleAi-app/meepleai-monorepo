@@ -39,9 +39,9 @@ export default function ScraperPage() {
         setStatus('Success');
         setLog((json.stdout ?? '') + (json.stderr ? '\n' + json.stderr : ''));
       }
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Generic error handling
-    } catch (err: any) {
-      setStatus(`Error: ${err.message}`);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+      setStatus(`Error: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -59,9 +59,9 @@ export default function ScraperPage() {
       }
       setResults(json.items ?? []);
       setStatus(`Found ${json.items?.length ?? 0} results`);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Generic error handling
-    } catch (err: any) {
-      setStatus(`Error: ${err.message}`);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+      setStatus(`Error: ${errorMessage}`);
     }
   };
 

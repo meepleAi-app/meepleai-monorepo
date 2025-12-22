@@ -24,6 +24,11 @@
  */
 
 import { useState, useEffect } from 'react';
+
+import { Plus, Trash2, AlertCircle } from 'lucide-react';
+
+import { LoadingButton } from '@/components/loading/LoadingButton';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -32,7 +37,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -43,10 +47,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Game, SessionPlayerDto, GameSessionDto, api } from '@/lib/api';
-import { Plus, Trash2, AlertCircle } from 'lucide-react';
-import { LoadingButton } from '@/components/loading/LoadingButton';
-import { logger } from '@/lib/logger';
 import { createErrorContext } from '@/lib/errors';
+import { logger } from '@/lib/logger';
 
 export interface SessionSetupModalProps {
   /** Whether the modal is open */
@@ -106,15 +108,12 @@ export function SessionSetupModal({
   // Initialize players when modal opens
   useEffect(() => {
     if (isOpen && players.length === 0) {
-      const initialPlayers: PlayerFormData[] = Array.from(
-        { length: minPlayers },
-        (_, i) => ({
-          id: crypto.randomUUID(),
-          playerName: '',
-          playerOrder: i + 1,
-          color: PLAYER_COLORS[i % PLAYER_COLORS.length].value,
-        })
-      );
+      const initialPlayers: PlayerFormData[] = Array.from({ length: minPlayers }, (_, i) => ({
+        id: crypto.randomUUID(),
+        playerName: '',
+        playerOrder: i + 1,
+        color: PLAYER_COLORS[i % PLAYER_COLORS.length].value,
+      }));
       setPlayers(initialPlayers);
     }
   }, [isOpen, players.length, minPlayers]);
@@ -142,17 +141,17 @@ export function SessionSetupModal({
     }
 
     // Check for empty names
-    players.forEach((player) => {
+    players.forEach(player => {
       if (!player.playerName.trim()) {
         errors[`name_${player.id}`] = 'Player name is required';
       }
     });
 
     // Check for duplicate names
-    const names = players.map((p) => p.playerName.trim().toLowerCase());
+    const names = players.map(p => p.playerName.trim().toLowerCase());
     const duplicates = names.filter((name, index) => names.indexOf(name) !== index);
     if (duplicates.length > 0) {
-      players.forEach((player) => {
+      players.forEach(player => {
         if (duplicates.includes(player.playerName.trim().toLowerCase())) {
           errors[`name_${player.id}`] = 'Player names must be unique';
         }
@@ -182,7 +181,7 @@ export function SessionSetupModal({
     if (players.length <= minPlayers) return;
 
     const updatedPlayers = players
-      .filter((p) => p.id !== id)
+      .filter(p => p.id !== id)
       .map((p, index) => ({ ...p, playerOrder: index + 1 }));
 
     setPlayers(updatedPlayers);
@@ -194,15 +193,13 @@ export function SessionSetupModal({
     field: keyof PlayerFormData,
     value: string | number | null
   ) => {
-    setPlayers(
-      players.map((p) =>
-        p.id === id ? { ...p, [field]: value } : p
-      )
-    );
+    setPlayers(players.map(p => (p.id === id ? { ...p, [field]: value } : p)));
 
     // Clear field-specific validation error
-    if (validationErrors[`${field}_${id}`]) {
-      const { [`${field}_${id}`]: _, ...rest } = validationErrors;
+    // Note: validation uses 'name' key, not 'playerName'
+    const errorKey = field === 'playerName' ? 'name' : field;
+    if (validationErrors[`${errorKey}_${id}`]) {
+      const { [`${errorKey}_${id}`]: _, ...rest } = validationErrors;
       setValidationErrors(rest);
     }
   };
@@ -218,7 +215,7 @@ export function SessionSetupModal({
 
     try {
       // Convert to API format
-      const sessionPlayers: SessionPlayerDto[] = players.map((p) => ({
+      const sessionPlayers: SessionPlayerDto[] = players.map(p => ({
         playerName: p.playerName.trim(),
         playerOrder: p.playerOrder,
         color: p.color,
@@ -237,13 +234,12 @@ export function SessionSetupModal({
       logger.error(
         'Failed to start session',
         err instanceof Error ? err : new Error(String(err)),
-        createErrorContext('SessionSetupModal', 'handleSubmit', { gameId: game.id, playerCount: players.length })
+        createErrorContext('SessionSetupModal', 'handleSubmit', {
+          gameId: game.id,
+          playerCount: players.length,
+        })
       );
-      setError(
-        err instanceof Error
-          ? err.message
-          : 'Failed to start session. Please try again.'
-      );
+      setError(err instanceof Error ? err.message : 'Failed to start session. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -308,7 +304,7 @@ export function SessionSetupModal({
               </Button>
             </div>
 
-            {players.map((player, index) => (
+            {players.map((player, _index) => (
               <div
                 key={player.id}
                 className="flex items-start gap-3 p-3 border rounded-md bg-slate-50 dark:bg-slate-900/50"
@@ -333,9 +329,7 @@ export function SessionSetupModal({
                       id={`player-name-${player.id}`}
                       placeholder={`Player ${player.playerOrder} name`}
                       value={player.playerName}
-                      onChange={(e) =>
-                        handlePlayerChange(player.id, 'playerName', e.target.value)
-                      }
+                      onChange={e => handlePlayerChange(player.id, 'playerName', e.target.value)}
                       disabled={isSubmitting}
                       aria-invalid={!!validationErrors[`name_${player.id}`]}
                       aria-describedby={
@@ -366,9 +360,7 @@ export function SessionSetupModal({
                     </Label>
                     <Select
                       value={player.color ?? undefined}
-                      onValueChange={(value) =>
-                        handlePlayerChange(player.id, 'color', value)
-                      }
+                      onValueChange={value => handlePlayerChange(player.id, 'color', value)}
                       disabled={isSubmitting}
                     >
                       <SelectTrigger id={`player-color-${player.id}`} className="w-full">
@@ -377,20 +369,19 @@ export function SessionSetupModal({
                             <div className="flex items-center gap-2">
                               <div
                                 className={`w-4 h-4 rounded-full border ${
-                                  PLAYER_COLORS.find((c) => c.value === player.color)
-                                    ?.className
+                                  PLAYER_COLORS.find(c => c.value === player.color)?.className
                                 }`}
                                 aria-hidden="true"
                               />
                               <span>
-                                {PLAYER_COLORS.find((c) => c.value === player.color)?.label}
+                                {PLAYER_COLORS.find(c => c.value === player.color)?.label}
                               </span>
                             </div>
                           )}
                         </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
-                        {PLAYER_COLORS.map((color) => (
+                        {PLAYER_COLORS.map(color => (
                           <SelectItem key={color.value} value={color.value}>
                             <div className="flex items-center gap-2">
                               <div
@@ -424,12 +415,7 @@ export function SessionSetupModal({
         </div>
 
         <DialogFooter>
-          <LoadingButton
-            type="button"
-            variant="outline"
-            onClick={onClose}
-            isLoading={isSubmitting}
-          >
+          <LoadingButton type="button" variant="outline" onClick={onClose} isLoading={isSubmitting}>
             Cancel
           </LoadingButton>
           <LoadingButton

@@ -5,13 +5,14 @@
  */
 
 import React from 'react';
-import { Game, GameSessionDto } from '@/lib/api';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+
+import { Users, Clock, Calendar, Trophy, PlayCircle, AlertCircle } from 'lucide-react';
+
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Separator } from '@/components/ui/separator';
-import { Users, Clock, Calendar, Trophy, PlayCircle, AlertCircle } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Game, GameSessionDto } from '@/lib/api';
 
 interface GameSessionsTabProps {
   game: Game;
@@ -52,7 +53,7 @@ function formatDuration(minutes: number): string {
   return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
 }
 
-export function GameSessionsTab({ game, sessions = [] }: GameSessionsTabProps) {
+export function GameSessionsTab({ game: _game, sessions = [] }: GameSessionsTabProps) {
   const activeSessions = sessions.filter(s =>
     ['inprogress', 'in progress', 'paused', 'setup'].includes(s.status.toLowerCase())
   );

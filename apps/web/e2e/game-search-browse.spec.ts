@@ -5,8 +5,8 @@
  */
 
 import { test, expect } from './fixtures/chromatic';
+import { AuthHelper, USER_FIXTURES } from './pages';
 import { GamePage } from './pages/game/GamePage';
-import { AuthHelper, GamesHelper, USER_FIXTURES } from './pages';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 

@@ -1,14 +1,16 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+
 import { useRouter } from 'next/navigation';
-import { api } from '@/lib/api';
-import { cn } from '@/lib/utils';
-import { ErrorDisplay } from '@/components/errors';
-import { categorizeError } from '@/lib/errorUtils';
-import { getErrorMessage } from '@/lib/utils/errorHandler';
-import { useAuthUser } from '@/components/auth/AuthProvider';
+
 import { AdminAuthGuard } from '@/components/admin/AdminAuthGuard';
+import { useAuthUser } from '@/components/auth/AuthProvider';
+import { ErrorDisplay } from '@/components/errors';
+import { api } from '@/lib/api';
+import { categorizeError } from '@/lib/errorUtils';
+import { cn } from '@/lib/utils';
+import { getErrorMessage } from '@/lib/utils/errorHandler';
 
 type PromptTemplate = {
   id: string;
@@ -18,13 +20,6 @@ type PromptTemplate = {
   createdAt: string;
   updatedAt: string;
   activeVersionId?: string | null;
-};
-
-type PagedResult = {
-  templates: PromptTemplate[];
-  totalPages: number;
-  page: number;
-  total: number;
 };
 
 type ModalState = {
@@ -424,7 +419,7 @@ export function AdminPageClient() {
                 {modalState.mode === 'create' ? 'Create Template' : 'Edit Template'}
               </h2>
 
-              <form onSubmit={handleSubmit}>
+              <form noValidate onSubmit={handleSubmit}>
                 <div className="mb-4">
                   <label className="block mb-2 font-medium">Name</label>
                   <input

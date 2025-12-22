@@ -9,8 +9,10 @@
  */
 
 import React from 'react';
+
 import { cn } from '@/lib/utils';
-import { Badge, type BadgeProps } from './badge';
+
+import { Badge } from './badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../overlays/tooltip';
 
 // ============================================================================

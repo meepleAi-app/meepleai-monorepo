@@ -39,13 +39,15 @@ using AspNetIpNetwork = Microsoft.AspNetCore.HttpOverrides.IPNetwork;
 AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
 
 // Load environment variables from .env.development file (single source of truth for secrets)
-// SECURITY: Only load .env files in Development environment - NEVER in Production
+// SECURITY: Only load .env files in Development environment - NEVER in Production/CI
 // Uses clobberExistingVars: false so launchSettings.json values (localhost) take priority
 // This allows: OAuth credentials from .env.development + localhost connections from launchSettings.json
+// Issue #2152: Skip .env loading in CI environment to prevent env var corruption
 var aspNetCoreEnv = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
 var isDevelopmentEnv = string.Equals(aspNetCoreEnv, "Development", StringComparison.OrdinalIgnoreCase);
+var isCIEnv = string.Equals(aspNetCoreEnv, "CI", StringComparison.OrdinalIgnoreCase);
 
-if (isDevelopmentEnv)
+if (isDevelopmentEnv && !isCIEnv)
 {
     var envFilePath = Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..", "..", ".env.development");
     if (File.Exists(envFilePath))
@@ -59,10 +61,14 @@ if (isDevelopmentEnv)
         var altEnvPath = Path.Combine(Directory.GetCurrentDirectory(), ".env.development");
         if (File.Exists(altEnvPath))
         {
-            Env.Load(altEnvPath, new LoadOptions(setEnvVars: true, clobberExistingVars: false));
+            Env.Load(envFilePath, new LoadOptions(setEnvVars: true, clobberExistingVars: false));
             Console.WriteLine("[DotNetEnv] Loaded .env.development for local development");
         }
     }
+}
+else if (isCIEnv)
+{
+    Console.WriteLine("[DotNetEnv] CI environment detected - skipping .env.development loading");
 }
 
 var builder = WebApplication.CreateBuilder(args);
@@ -314,8 +320,10 @@ using (var scope = app.Services.CreateScope())
         // Bootstrap: Create initial admin user if database is empty
         await EnsureInitialAdminUserAsync(app, db, scope.ServiceProvider).ConfigureAwait(false);
 
-        // K6 Performance Testing: Ensure test user exists in Development/Test environments (Issue #1663)
-        if (app.Environment.IsDevelopment() || string.Equals(app.Environment.EnvironmentName, "Test", StringComparison.Ordinal))
+        // K6 Performance Testing: Ensure test user exists in Development/Test/CI environments (Issue #1663, #2152)
+        if (app.Environment.IsDevelopment()
+            || string.Equals(app.Environment.EnvironmentName, "Test", StringComparison.Ordinal)
+            || string.Equals(app.Environment.EnvironmentName, "CI", StringComparison.Ordinal))
         {
             await EnsureTestUserExistsAsync(app, db, scope.ServiceProvider).ConfigureAwait(false);
         }

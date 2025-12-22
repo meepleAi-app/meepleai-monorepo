@@ -8,12 +8,14 @@
  */
 
 import { useState, useCallback, useRef } from 'react';
+
+import Link from 'next/link';
+
+import { toast } from '@/components/layout';
+import { Spinner } from '@/components/loading';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Spinner } from '@/components/loading';
-import { toast } from '@/components/layout';
-import Link from 'next/link';
 
 interface QAStepProps {
   gameId: string;
@@ -43,7 +45,7 @@ export function QAStep({ gameId, gameName, chatThreadId, onReset }: QAStepProps)
   const [messages, setMessages] = useState<Message[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [currentAnswer, setCurrentAnswer] = useState('');
-  const [currentCitations, setCurrentCitations] = useState<Citation[]>([]);
+  const [_currentCitations, setCurrentCitations] = useState<Citation[]>([]);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
@@ -123,7 +125,7 @@ export function QAStep({ gameId, gameName, chatThreadId, onReset }: QAStepProps)
               if (parsed.error) {
                 throw new Error(parsed.error);
               }
-            } catch (parseErr) {
+            } catch (_parseErr) {
               // Ignore parse errors for incomplete JSON
               if (data !== '[DONE]' && data.trim()) {
                 // It might be plain text token

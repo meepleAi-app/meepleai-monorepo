@@ -6,8 +6,7 @@
  */
 
 import React from 'react';
-import { useChatStore } from '@/store/chat/store';
-import { SkeletonLoader } from '../loading/SkeletonLoader';
+
 import {
   Select,
   SelectContent,
@@ -16,6 +15,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { AgentDto } from '@/lib/api/schemas/agents.schemas';
+import { useChatStore } from '@/store/chat/store';
+
+import { SkeletonLoader } from '../loading/SkeletonLoader';
 
 export function AgentSelector() {
   // Issue #1676: Migrated from useChatContext to direct Zustand store

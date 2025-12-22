@@ -7,7 +7,7 @@
  * @issue #1840 (PAGE-004)
  */
 
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 
 // Test configuration
 test.describe.configure({ mode: 'parallel' });

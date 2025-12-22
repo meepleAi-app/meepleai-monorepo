@@ -1,5 +1,6 @@
-import type { Meta, StoryObj } from '@storybook/react';
 import { PdfTable } from './PdfTable';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 /**
  * PdfTable - Display uploaded PDFs with actions

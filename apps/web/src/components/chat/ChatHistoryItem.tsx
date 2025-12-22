@@ -6,9 +6,10 @@
  */
 
 import React from 'react';
-import { ChatThread } from '@/types';
+
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { ChatThread } from '@/types';
 
 interface ChatHistoryItemProps {
   chat: ChatThread;
@@ -27,14 +28,12 @@ export function ChatHistoryItem({ chat, isActive, onSelect, onDelete }: ChatHist
     <li
       className={cn(
         'p-3 mb-2 rounded cursor-pointer relative text-sm border',
-        isActive
-          ? 'bg-primary/10 border-primary'
-          : 'bg-background border-border'
+        isActive ? 'bg-primary/10 border-primary' : 'bg-background border-border'
       )}
       onClick={onSelect}
       role="button"
       tabIndex={0}
-      onKeyDown={(e) => {
+      onKeyDown={e => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
           onSelect();
@@ -48,7 +47,7 @@ export function ChatHistoryItem({ chat, isActive, onSelect, onDelete }: ChatHist
         variant="destructive"
         size="sm"
         className="absolute top-2 right-2 h-7 px-2 text-xs"
-        onClick={(e) => {
+        onClick={e => {
           e.stopPropagation();
           onDelete();
         }}

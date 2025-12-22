@@ -5,25 +5,32 @@
  * Displays all chat threads for the selected game.
  * Shows loading skeletons, empty state, and manages thread selection/deletion.
  * Updated to use ThreadListItem for thread display.
+ * Issue #2258: Refactored to use shared useThreadDeletion hook.
  */
 
 import React from 'react';
+
+import { useThreadDeletion } from '@/hooks/useThreadDeletion';
 import { useChatStore } from '@/store/chat/store';
-import { ThreadListItem } from './ThreadListItem';
-import { SkeletonLoader } from '../loading/SkeletonLoader';
 import { ChatThread } from '@/types';
 
+import { ThreadListItem } from './ThreadListItem';
+import { SkeletonLoader } from '../loading/SkeletonLoader';
+
 export function ChatHistory() {
+  // Thread deletion hook (Issue #2258)
+  const { handleThreadDelete, ConfirmDialogComponent } = useThreadDeletion();
+
   // Issue #1676: Migrated from useChatContext to direct Zustand store
-  const { selectedGameId, chatsByGame, activeChatIds, selectChat, deleteChat, loading } =
-    useChatStore(state => ({
+  const { selectedGameId, chatsByGame, activeChatIds, selectChat, loading } = useChatStore(
+    state => ({
       selectedGameId: state.selectedGameId,
       chatsByGame: state.chatsByGame,
       activeChatIds: state.activeChatIds,
       selectChat: state.selectChat,
-      deleteChat: state.deleteChat,
       loading: state.loading,
-    }));
+    })
+  );
 
   // Derived values
   const activeChatId = selectedGameId ? activeChatIds[selectedGameId] : null;
@@ -34,7 +41,7 @@ export function ChatHistory() {
   };
 
   const handleDeleteChat = (chatId: string) => {
-    void deleteChat(chatId);
+    void handleThreadDelete(chatId);
   };
 
   if (loading.chats) {
@@ -107,6 +114,9 @@ export function ChatHistory() {
           </ul>
         </div>
       )}
+
+      {/* Confirmation dialog for thread deletion (Issue #2258) */}
+      <ConfirmDialogComponent />
     </nav>
   );
 }

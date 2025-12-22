@@ -5,7 +5,6 @@
  */
 
 import { test, expect } from './fixtures/chromatic';
-import { getTextMatcher, t } from './fixtures/i18n';
 
 /**
  * Visual Debug Demo - Investigate Portal Issue Interactively

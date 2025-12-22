@@ -1,6 +1,7 @@
-import type { Meta, StoryObj } from '@storybook/react';
 import { ActivityFeed } from './ActivityFeed';
+
 import type { ActivityEvent } from './ActivityFeed';
+import type { Meta, StoryObj } from '@storybook/react';
 
 /**
  * ActivityFeed - Issue #884

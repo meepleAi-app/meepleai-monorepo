@@ -7,8 +7,9 @@
  * to minimize flakiness and reduce diff noise.
  */
 
-import type { Page } from '@playwright/test';
 import { test, expect } from './fixtures/chromatic';
+
+import type { Page } from '@playwright/test';
 
 // Desktop viewport to capture full component blocks without wrapping
 test.use({

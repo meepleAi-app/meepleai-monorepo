@@ -5,7 +5,6 @@
  */
 
 import { test, expect } from './fixtures/chromatic';
-import { LoginPage } from './pages';
 
 const WEB_BASE = 'http://localhost:3000';
 

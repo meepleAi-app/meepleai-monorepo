@@ -5,8 +5,9 @@
  * Covers: auto-generated, custom items, various paths.
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
 import { AdminBreadcrumbs } from './AdminBreadcrumbs';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta: Meta<typeof AdminBreadcrumbs> = {
   title: 'Admin/AdminBreadcrumbs',

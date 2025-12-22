@@ -1,38 +1,25 @@
 'use client';
 
 import { Suspense, useCallback, useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+
 import Link from 'next/link';
-import { api } from '@/lib/api';
+import { useSearchParams } from 'next/navigation';
+
 import { CommentThread } from '@/components/comments';
 import { DiffViewerEnhanced } from '@/components/diff';
 import { VersionTimeline, VersionTimelineFilters } from '@/components/versioning';
+import { api } from '@/lib/api';
+import type { RuleSpecHistory, RuleSpecDiff } from '@/lib/api/schemas';
+import { createErrorContext } from '@/lib/errors';
+import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';
 import { getErrorMessage } from '@/lib/utils/errorHandler';
-import { logger } from '@/lib/logger';
-import { createErrorContext } from '@/lib/errors';
-import type {
-  RuleSpecVersion,
-  RuleSpecHistory,
-  RuleAtom,
-  RuleSpec,
-  RuleSpecDiff,
-  RuleAtomChange,
-  DiffSummary,
-  FieldChange,
-  ChangeType,
-} from '@/lib/api/schemas';
 
 type AuthUser = {
   id: string;
   email: string;
   displayName?: string | null;
   role: string;
-};
-
-type AuthResponse = {
-  user: AuthUser;
-  expiresAt: string;
 };
 
 function VersionHistoryContent() {

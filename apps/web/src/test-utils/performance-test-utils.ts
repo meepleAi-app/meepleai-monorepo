@@ -9,8 +9,10 @@
  * Uses Vitest + @testing-library/react (React 19 compatible)
  */
 
-import { renderHook, RenderHookResult } from '@testing-library/react';
 import { ReactNode } from 'react';
+
+import { renderHook, RenderHookResult } from '@testing-library/react';
+
 import { logger } from '@/lib/logger';
 
 // ============================================================================

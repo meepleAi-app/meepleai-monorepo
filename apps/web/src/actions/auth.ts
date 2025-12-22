@@ -14,10 +14,10 @@
 'use client';
 
 import { api, ApiError } from '@/lib/api';
-import { getLocalizedError, type LocalizedError, successMessages } from '@/lib/i18n/errors';
-import type { AuthUser } from '@/types';
-import { logger } from '@/lib/logger';
 import { createErrorContext } from '@/lib/errors';
+import { getLocalizedError, type LocalizedError, successMessages } from '@/lib/i18n/errors';
+import { logger } from '@/lib/logger';
+import type { AuthUser } from '@/types';
 
 // ============================================================================
 // Types

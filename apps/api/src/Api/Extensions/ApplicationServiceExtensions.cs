@@ -220,7 +220,7 @@ internal static class ApplicationServiceExtensions
     private static IServiceCollection AddQualityServices(this IServiceCollection services)
     {
         // AI-11: Quality tracking services
-        services.AddScoped<IResponseQualityService, ResponseQualityService>();
+        // DDD Migration Phase 3.1: ResponseQualityService removed - quality logic now in QualityTrackingDomainService
         services.AddSingleton<QualityMetrics>();
         services.AddSingleton<QualityReportService>();
         services.AddSingleton<IQualityReportService>(sp => sp.GetRequiredService<QualityReportService>());

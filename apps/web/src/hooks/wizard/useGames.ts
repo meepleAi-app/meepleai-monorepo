@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+
 import { api } from '@/lib/api';
 import type { AuthUser } from '@/types/auth';
 
@@ -21,7 +22,7 @@ interface GameSummary {
  *
  * @param user - Authenticated user from server-side props (optional for backward compat)
  */
-export function useGames(user?: AuthUser) {
+export function useGames(_user?: AuthUser) {
   const [games, setGames] = useState<GameSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);

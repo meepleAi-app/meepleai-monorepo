@@ -28,6 +28,15 @@
  */
 
 import { useState, useEffect } from 'react';
+
+import { Copy, Check, AlertCircle, Share2, Eye, MessageSquare, Calendar, Info } from 'lucide-react';
+
+import { LoadingButton } from '@/components/loading/LoadingButton';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Dialog,
   DialogContent,
@@ -36,9 +45,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/overlays/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -46,13 +52,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
 import { api, type CreateShareLinkResponse } from '@/lib/api';
-import { Copy, Check, AlertCircle, Share2, Eye, MessageSquare, Calendar, Info } from 'lucide-react';
-import { LoadingButton } from '@/components/loading/LoadingButton';
-import { logger } from '@/lib/logger';
 import { createErrorContext } from '@/lib/errors';
+import { logger } from '@/lib/logger';
 
 export interface ShareChatModalProps {
   /** Whether the modal is open */

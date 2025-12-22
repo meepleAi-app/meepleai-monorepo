@@ -105,7 +105,7 @@ public class PrometheusHttpClientTests
                 ""resultType"": ""vector"",
                 ""result"": [
                     {
-                        ""metric"": { ""instance"": ""localhost:9090"", ""job"": ""prometheus"" },
+                        ""metric"": { ""__name__"": ""test_metric"", ""instance"": ""localhost:9090"", ""job"": ""prometheus"" },
                         ""value"": [1733760000, ""1""]
                     }
                 ]

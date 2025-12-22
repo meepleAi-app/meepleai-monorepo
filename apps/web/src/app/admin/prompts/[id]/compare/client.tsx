@@ -1,15 +1,16 @@
 'use client';
 
-import type { AuthUser } from '@/types/auth';
 import React, { useState, useEffect, useCallback } from 'react';
-import { useRouter, useParams } from 'next/navigation';
-import Link from 'next/link';
+
 import dynamic from 'next/dynamic';
-import { api } from '@/lib/api';
-import { cn } from '@/lib/utils';
+import Link from 'next/link';
+import { useRouter, useParams } from 'next/navigation';
+
 import { ErrorDisplay } from '@/components/errors';
+import { api } from '@/lib/api';
 import { categorizeError } from '@/lib/errorUtils';
 import { getErrorMessage } from '@/lib/utils/errorHandler';
+import type { AuthUser } from '@/types/auth';
 
 // Dynamically import Monaco DiffEditor to avoid SSR issues
 const DiffEditor = dynamic(() => import('@monaco-editor/react').then(mod => mod.DiffEditor), {
@@ -28,8 +29,8 @@ interface AdminPageClientProps {
   user: AuthUser;
 }
 
-export function AdminPageClient({ user }: AdminPageClientProps) {
-  const router = useRouter();
+export function AdminPageClient({ user: _user }: AdminPageClientProps) {
+  const _router = useRouter();
   const params = useParams();
   const id = params?.id as string | undefined;
 

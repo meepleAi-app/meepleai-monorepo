@@ -5,11 +5,13 @@
  * Features: responsive layout, loading skeleton, smooth transitions, empty state.
  */
 
-import { StatCard, type StatCardProps } from './StatCard';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardContent } from '@/components/ui/card';
 import { BarChart3 } from 'lucide-react';
+
+import { Card, CardContent } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+
+import { StatCard, type StatCardProps } from './StatCard';
 
 const SKELETON_COUNT = 12;
 

@@ -7,8 +7,8 @@
  */
 
 import { test as base, expect, Page } from './fixtures/chromatic';
-import { AdminHelper } from './pages';
 import { getTextMatcher } from './fixtures/i18n';
+import { AdminHelper } from './pages';
 
 const test = base.extend<{ adminPage: Page }>({
   adminPage: async ({ page }: { page: Page }, use: (page: Page) => Promise<void>) => {

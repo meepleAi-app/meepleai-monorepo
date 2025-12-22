@@ -1,12 +1,20 @@
 import { type FormEvent, useState } from 'react';
+
 import { CheckCircle2 } from 'lucide-react';
-import { Card } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+
 import { LoadingButton } from '@/components/loading';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
 
 interface GameSummary {
   id: string;
@@ -37,7 +45,7 @@ export function GamePicker({
   selectedGameId,
   onGameSelect,
   onGameCreate,
-  loading = false
+  loading = false,
 }: GamePickerProps) {
   const [newGameName, setNewGameName] = useState('');
   const [creating, setCreating] = useState(false);
@@ -69,7 +77,7 @@ export function GamePicker({
     }
   };
 
-  const selectedGame = games.find((g) => g.id === selectedGameId);
+  const selectedGame = games.find(g => g.id === selectedGameId);
 
   return (
     <Card className="p-4 space-y-4">
@@ -84,7 +92,7 @@ export function GamePicker({
             <SelectValue placeholder="Choose a game..." />
           </SelectTrigger>
           <SelectContent>
-            {games.map((game) => (
+            {games.map(game => (
               <SelectItem key={game.id} value={game.id}>
                 {game.title}
               </SelectItem>
@@ -101,7 +109,7 @@ export function GamePicker({
           <Input
             id="new-game"
             value={newGameName}
-            onChange={(e) => {
+            onChange={e => {
               setNewGameName(e.target.value);
               setError(null);
             }}
@@ -117,9 +125,7 @@ export function GamePicker({
             Create
           </LoadingButton>
         </div>
-        {error && (
-          <p className="text-sm text-destructive">{error}</p>
-        )}
+        {error && <p className="text-sm text-destructive">{error}</p>}
       </form>
 
       {selectedGame && (

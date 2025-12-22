@@ -19,10 +19,11 @@ import React, {
   useEffect,
   PropsWithChildren,
 } from 'react';
-import { AuthUser } from '@/types';
+
 import { api } from '@/lib/api';
 import { identifyUser } from '@/lib/hyperdx';
 import { logger } from '@/lib/logger';
+import { AuthUser } from '@/types';
 
 // ============================================================================
 // Types
@@ -62,7 +63,7 @@ export { AuthContext };
 export function AuthProvider({ children }: PropsWithChildren) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(true);
+  const [_initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const loadCurrentUser = useCallback(async () => {

@@ -1,4 +1,3 @@
-import type { Meta, StoryObj } from '@storybook/react';
 import {
   Sheet,
   SheetContent,
@@ -9,8 +8,10 @@ import {
   SheetFooter,
 } from './sheet';
 import { Button } from '../primitives/button';
-import { Label } from '../primitives/label';
 import { Input } from '../primitives/input';
+import { Label } from '../primitives/label';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 /**
  * Sheet component for slide-out panels and drawers.

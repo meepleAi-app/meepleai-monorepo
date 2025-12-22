@@ -1,8 +1,9 @@
 import React from 'react';
-import { DiffStatistics as DiffStats } from '../../lib/diffProcessor';
-import { DiffStatistics } from './DiffStatistics';
-import { DiffSearchInput } from './DiffSearchInput';
+
 import { DiffNavigationControls } from './DiffNavigationControls';
+import { DiffSearchInput } from './DiffSearchInput';
+import { DiffStatistics } from './DiffStatistics';
+import { DiffStatistics as DiffStats } from '../../lib/diffProcessor';
 
 export interface DiffToolbarProps {
   statistics: DiffStats;
@@ -30,10 +31,12 @@ export function DiffToolbar({
   onNavigatePrev,
   onNavigateNext,
   showNavigation,
-  compact = false
+  compact = false,
 }: DiffToolbarProps) {
   return (
-    <div className={`diff-toolbar flex flex-wrap items-center gap-4 p-4 border-b ${compact ? 'diff-toolbar--compact p-2 gap-2' : ''}`}>
+    <div
+      className={`diff-toolbar flex flex-wrap items-center gap-4 p-4 border-b ${compact ? 'diff-toolbar--compact p-2 gap-2' : ''}`}
+    >
       <div className="diff-toolbar-section diff-toolbar-section--stats">
         <DiffStatistics statistics={statistics} compact={compact} />
       </div>

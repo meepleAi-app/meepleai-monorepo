@@ -5,13 +5,14 @@
  * Covers: BGG search and game details
  */
 
-import type { HttpClient } from '../core/httpClient';
 import {
   BggSearchResponseSchema,
   BggGameDetailsSchema,
   type BggSearchResponse,
   type BggGameDetails,
 } from '../schemas';
+
+import type { HttpClient } from '../core/httpClient';
 
 export interface CreateBggClientParams {
   httpClient: HttpClient;
@@ -54,10 +55,7 @@ export function createBggClient({ httpClient }: CreateBggClientParams) {
      * @param bggId BoardGameGeek game ID
      */
     async getGameDetails(bggId: number): Promise<BggGameDetails> {
-      const response = await httpClient.get(
-        `/api/v1/bgg/games/${bggId}`,
-        BggGameDetailsSchema
-      );
+      const response = await httpClient.get(`/api/v1/bgg/games/${bggId}`, BggGameDetailsSchema);
 
       if (!response) {
         throw new Error(`Game with BGG ID ${bggId} not found`);

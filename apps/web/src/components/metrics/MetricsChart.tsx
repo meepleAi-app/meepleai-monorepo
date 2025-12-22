@@ -14,8 +14,9 @@
  */
 'use client';
 
-import dynamic from 'next/dynamic';
 import { Suspense } from 'react';
+
+import dynamic from 'next/dynamic';
 
 // Dynamic imports to avoid SSR/bundle bloat (follows AdminCharts pattern)
 const isTest = process.env.NODE_ENV === 'test';

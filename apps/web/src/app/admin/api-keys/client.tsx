@@ -1,14 +1,26 @@
 'use client';
 
-import type { AuthUser } from '@/types/auth';
-import { useCallback, useEffect, useState, startTransition } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+
+import { AlertCircle, Key, Download, Trash2, BarChart3, Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
-import { api } from '@/lib/api';
-import { cn } from '@/lib/utils';
-import { useAuthUser } from '@/components/auth/AuthProvider';
+
 import { AdminAuthGuard, BulkActionBar } from '@/components/admin';
+import { useAuthUser } from '@/components/auth/AuthProvider';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -24,24 +36,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
-import { AlertCircle, Key, Download, Upload, Trash2, BarChart3, Eye, EyeOff } from 'lucide-react';
+import { api } from '@/lib/api';
 import type {
   ApiKeyWithStatsDto,
   CreateApiKeyRequest,
   CreateApiKeyResponse,
 } from '@/lib/api/schemas';
+import { cn } from '@/lib/utils';
 
 type ToastMessage = {
   id: string;
@@ -250,7 +251,7 @@ export function ApiKeysPageClient() {
           setSelectedKeys(new Set());
           setConfirmation({ isOpen: false, title: '', message: '', onConfirm: () => {} });
           fetchApiKeys();
-        } catch (err) {
+        } catch (_err) {
           addToast('error', 'Failed to delete some API keys');
           setConfirmation({ isOpen: false, title: '', message: '', onConfirm: () => {} });
         }
@@ -277,7 +278,7 @@ export function ApiKeysPageClient() {
       window.URL.revokeObjectURL(url);
 
       addToast('success', 'API keys exported successfully');
-    } catch (err) {
+    } catch (_err) {
       addToast('error', 'Failed to export API keys');
     }
   }, [userIdFilter, statusFilter, searchTerm, addToast]);

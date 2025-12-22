@@ -1,6 +1,8 @@
-import type { Meta, StoryObj } from '@storybook/react';
-import { AlertDialog } from './alert-dialog';
 import { useState } from 'react';
+
+import { AlertDialog } from './alert-dialog';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 /**
  * AlertDialog - Custom alert dialog component that replaces window.alert()

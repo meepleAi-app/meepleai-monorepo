@@ -11,6 +11,10 @@
  */
 'use client';
 
+import { useState } from 'react';
+
+import dynamic from 'next/dynamic';
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select,
@@ -19,8 +23,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import dynamic from 'next/dynamic';
-import { useState } from 'react';
 
 // Dynamic import to avoid SSR issues
 const MetricsChart = dynamic(
@@ -60,7 +62,7 @@ export function TestingTrendChart({
   targetLabel = 'Target',
   color = '#1a73e8',
   showTarget = true,
-  unit = '',
+  unit: _unit = '',
 }: TestingTrendChartProps) {
   const [timeRange, setTimeRange] = useState<TimeRange>('7d');
 

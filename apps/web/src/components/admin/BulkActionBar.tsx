@@ -41,11 +41,14 @@
  */
 
 import React, { useMemo } from 'react';
+
 import { X, AlertCircle } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
-import { Button } from '@/components/ui/primitives/button';
+
 import { Badge } from '@/components/ui/data-display/badge';
+import { Button } from '@/components/ui/primitives/button';
 import { cn } from '@/lib/utils';
+
+import type { LucideIcon } from 'lucide-react';
 
 /**
  * Action button configuration for bulk operations

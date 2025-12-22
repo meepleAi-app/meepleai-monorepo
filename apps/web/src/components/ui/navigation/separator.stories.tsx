@@ -1,5 +1,6 @@
-import type { Meta, StoryObj } from '@storybook/react';
 import { Separator } from './separator';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 /**
  * Separator component for visual division of content sections.

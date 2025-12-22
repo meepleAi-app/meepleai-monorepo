@@ -1,6 +1,8 @@
 /* eslint-disable security/detect-object-injection -- Safe size config Record access */
 import React from 'react';
+
 import { Star } from 'lucide-react';
+
 import { cn } from '@/lib/utils';
 
 export interface RatingStarsProps {

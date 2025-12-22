@@ -5,7 +5,6 @@
  */
 
 import { test, expect } from './fixtures/chromatic';
-import { getTextMatcher, t } from './fixtures/i18n';
 
 const apiBase = 'http://localhost:8080';
 

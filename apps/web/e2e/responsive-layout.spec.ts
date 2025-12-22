@@ -11,7 +11,6 @@ import {
   checkTabletLayout,
   checkDesktopLayout,
   checkNoHorizontalOverflow,
-  checkTextReadability,
   checkTouchTargets,
   getViewportInfo,
 } from './helpers/responsive-utils';

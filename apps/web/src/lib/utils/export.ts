@@ -7,8 +7,8 @@
  * Issue #2139: Testing Dashboard Export Functionality
  */
 
-import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 /**
  * Testing metrics data structure for export

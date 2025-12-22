@@ -13,11 +13,13 @@
  */
 
 import React, { ReactNode } from 'react';
-import { ErrorBoundary } from './ErrorBoundary';
-import { ErrorDisplay } from './ErrorDisplay';
+
+import { createErrorContext } from '@/lib/errors';
 import { categorizeError } from '@/lib/errorUtils';
 import { logger } from '@/lib/logger';
-import { createErrorContext } from '@/lib/errors';
+
+import { ErrorBoundary } from './ErrorBoundary';
+import { ErrorDisplay } from './ErrorDisplay';
 
 interface RouteErrorBoundaryProps {
   /**
@@ -55,7 +57,7 @@ export function RouteErrorBoundary({
   routeName,
   showDetails = process.env.NODE_ENV === 'development',
   fallbackRender,
-  onError
+  onError,
 }: RouteErrorBoundaryProps) {
   const handleError = (error: Error, errorInfo: React.ErrorInfo) => {
     // Log to console in development
@@ -64,7 +66,10 @@ export function RouteErrorBoundary({
       logger.error(
         'Component stack',
         new Error(errorInfo.componentStack || 'No component stack'),
-        createErrorContext('RouteErrorBoundary', 'handleError', { routeName: routeName || 'unknown route', componentStack: errorInfo.componentStack })
+        createErrorContext('RouteErrorBoundary', 'handleError', {
+          routeName: routeName || 'unknown route',
+          componentStack: errorInfo.componentStack,
+        })
       );
     }
 
@@ -104,4 +109,3 @@ export function RouteErrorBoundary({
     </ErrorBoundary>
   );
 }
-

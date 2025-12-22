@@ -9,16 +9,18 @@
  * @dependency react-window ^2.2.3
  */
 
-import React, { useRef, useEffect, useMemo } from 'react';
+import React, { useRef, useEffect } from 'react';
+
 // @ts-ignore - react-window types not available in v2.x
-import { List as FixedSizeList } from 'react-window';
-// @ts-ignore - auto-sizer types
 import AutoSizer from 'react-virtualized-auto-sizer';
+import { List as FixedSizeList } from 'react-window';
+
+// @ts-ignore - auto-sizer types
 import { ChatMessage, type Citation } from '@/components/ui/chat-message';
 import { Message as MessageType } from '@/types';
 
 // Type for list children (from react-window)
-interface ListChildComponentProps {
+interface _ListChildComponentProps {
   index: number;
   style: React.CSSProperties;
 }
@@ -82,6 +84,16 @@ const VIRTUALIZATION_THRESHOLD = 50;
  * />
  * ```
  */
+// Type for react-window v2 List ref
+interface ListRef {
+  readonly element: HTMLDivElement | null;
+  scrollToRow(config: {
+    align?: 'auto' | 'smart' | 'center' | 'end' | 'start';
+    behavior?: 'auto' | 'smooth' | 'instant';
+    index: number;
+  }): void;
+}
+
 export function VirtualizedMessageList({
   messages,
   streamingMessage,
@@ -90,8 +102,7 @@ export function VirtualizedMessageList({
   userAvatar = { fallback: 'U' },
   className,
 }: VirtualizedMessageListProps) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const listRef = useRef<any>(null);
+  const listRef = useRef<ListRef | null>(null);
 
   // Disable virtualization for small lists
   const shouldVirtualize = messages.length >= VIRTUALIZATION_THRESHOLD;
@@ -99,7 +110,7 @@ export function VirtualizedMessageList({
   // Scroll to bottom when new messages arrive
   useEffect(() => {
     if (listRef.current && shouldVirtualize) {
-      listRef.current.scrollToItem(messages.length - 1, 'end');
+      listRef.current.scrollToRow({ index: messages.length - 1, align: 'end' });
     }
   }, [messages.length, shouldVirtualize]);
 
@@ -107,10 +118,21 @@ export function VirtualizedMessageList({
   // v2 API: rowComponent receives { index, style, ariaAttributes }
   const RowComponent = React.useMemo(
     () =>
-      ({ index, style }: { index: number; style: React.CSSProperties }) => {
+      ({
+        index,
+        style,
+      }: {
+        index: number;
+        style: React.CSSProperties;
+        ariaAttributes?: {
+          'aria-posinset': number;
+          'aria-setsize': number;
+          role: string;
+        };
+      }) => {
         // eslint-disable-next-line security/detect-object-injection
         const message = messages[index];
-        if (!message) return null;
+        if (!message) return <div style={style} />;
 
         return (
           <div style={style}>
@@ -153,14 +175,14 @@ export function VirtualizedMessageList({
   return (
     <div className={className} style={{ height: '100%', width: '100%' }}>
       <AutoSizer>
-        {({ height, width }: { height: number; width: number }) => (
+        {({ height, width: _width }: { height: number; width: number }) => (
           <FixedSizeList
             listRef={listRef}
             defaultHeight={height}
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Component type requires generic any for row rendering
-            rowComponent={RowComponent as any}
+            rowComponent={RowComponent}
             rowCount={messages.length}
             rowHeight={FIXED_MESSAGE_HEIGHT}
+            // @ts-expect-error - react-window v2 rowProps type incompatibility
             rowProps={{}}
             overscanCount={5}
           />
@@ -192,9 +214,13 @@ interface MessageRowProps {
 }
 
 /**
- * MessageRow - Individual message wrapper
+ * MessageRow - Individual message wrapper (memoized for performance)
  */
-function MessageRow({ message, onCitationClick, userAvatar }: MessageRowProps) {
+const MessageRow = React.memo(function MessageRow({
+  message,
+  onCitationClick,
+  userAvatar,
+}: MessageRowProps) {
   // Convert MessageType citations to ChatMessage Citation format
   const citations: Citation[] | undefined = message.citations?.map(c => ({
     id: c.documentId,
@@ -215,7 +241,7 @@ function MessageRow({ message, onCitationClick, userAvatar }: MessageRowProps) {
       />
     </div>
   );
-}
+});
 
 interface StreamingMessageRowProps {
   content: string;

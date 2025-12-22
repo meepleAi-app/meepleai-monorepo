@@ -4,8 +4,9 @@
  * Visual regression testing for footer with CTAs and legal links.
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
 import { LandingFooter } from './LandingFooter';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta: Meta<typeof LandingFooter> = {
   title: 'Landing/LandingFooter',

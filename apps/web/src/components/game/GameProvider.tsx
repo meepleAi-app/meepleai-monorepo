@@ -18,8 +18,9 @@ import React, {
   useEffect,
   PropsWithChildren,
 } from 'react';
-import { Game, Agent } from '@/types';
+
 import { api } from '@/lib/api';
+import { Game, Agent } from '@/types';
 
 // ============================================================================
 // Types

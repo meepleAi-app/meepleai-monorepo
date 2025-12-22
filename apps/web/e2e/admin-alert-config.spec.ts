@@ -10,8 +10,9 @@
  */
 
 import { test as base, expect } from './fixtures/chromatic';
-import type { Page } from '@playwright/test';
 import { AdminHelper } from './pages';
+
+import type { Page } from '@playwright/test';
 
 const test = base.extend<{ adminPage: Page }>({
   adminPage: async ({ page }: { page: Page }, use: (page: Page) => Promise<void>) => {

@@ -4,10 +4,12 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
+
 import { Command } from 'cmdk';
 import { Search, MessageSquare, FileText, Gamepad2, Bot, Clock, X, Filter } from 'lucide-react';
-import { useSearch } from '@/hooks/useSearch';
+
 import { SearchFilters as SearchFiltersComponent } from '@/components/search/SearchFilters';
+import { useSearch } from '@/hooks/useSearch';
 import type { SearchResult, SearchFilters, Game, Agent, Message, ChatThread } from '@/types';
 
 interface CommandPaletteProps {

@@ -1,7 +1,8 @@
-import { Page, Locator, expect } from '@playwright/test';
-import { BasePage } from '../base/BasePage';
-import { IChatPage, ChatSource } from '../../types/pom-interfaces';
+import { Locator, expect } from '@playwright/test';
+
 import { getTextMatcher } from '../../fixtures/i18n';
+import { IChatPage, ChatSource } from '../../types/pom-interfaces';
+import { BasePage } from '../base/BasePage';
 
 /**
  * ChatPage - Chat interface interactions

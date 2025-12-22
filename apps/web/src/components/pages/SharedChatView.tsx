@@ -17,17 +17,19 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { api, type GetSharedThreadResponse } from '@/lib/api';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
+
 import { AlertCircle, Eye, MessageSquare, Loader2 } from 'lucide-react';
-import { Message } from '@/components/chat/Message';
+import { useSearchParams } from 'next/navigation';
+
 import { CommentBox } from '@/components/chat/CommentBox';
-import { logger } from '@/lib/logger';
+import { Message } from '@/components/chat/Message';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { api, type GetSharedThreadResponse } from '@/lib/api';
 import { createErrorContext } from '@/lib/errors';
+import { logger } from '@/lib/logger';
 
 export function SharedChatView() {
   const searchParams = useSearchParams();

@@ -178,6 +178,8 @@ jobs:
           N8N_URL: 'http://localhost:5678'
           HYPERDX_URL: 'http://localhost:8000'
           HealthChecks__Postgres__Enabled: 'false'
+          # Dummy API key for CI (background services require it)
+          OPENROUTER_API_KEY: 'sk-or-v1-dummy-key-for-ci-testing-only'
           ASPNETCORE_ENVIRONMENT: CI
           ASPNETCORE_URLS: 'http://0.0.0.0:8080'
 

@@ -13,15 +13,17 @@ namespace Api.BoundedContexts.WorkflowIntegration.Application.Commands.N8NTempla
 /// </summary>
 internal sealed class ImportN8NTemplateCommandHandler : ICommandHandler<ImportN8NTemplateCommand, ImportTemplateResponse>
 {
-    private readonly N8NTemplateService _templateService;
+    private readonly IN8NTemplateService _templateService;
     private readonly ILogger<ImportN8NTemplateCommandHandler> _logger;
 
     public ImportN8NTemplateCommandHandler(
-        N8NTemplateService templateService,
+        IN8NTemplateService templateService,
         ILogger<ImportN8NTemplateCommandHandler> logger)
     {
-        _templateService = templateService ?? throw new ArgumentNullException(nameof(templateService));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(templateService);
+        _templateService = templateService;
+        ArgumentNullException.ThrowIfNull(logger);
+        _logger = logger;
     }
 
     public async Task<ImportTemplateResponse> Handle(ImportN8NTemplateCommand command, CancellationToken cancellationToken)

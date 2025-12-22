@@ -51,14 +51,16 @@ internal sealed class YearPublished : ValueObject
 
     public override string ToString() => Value.ToString();
 
+#pragma warning disable S3877 // Null check is necessary for safety in implicit conversion
     public static implicit operator int(YearPublished year)
     {
-        if (year is null) throw new ArgumentNullException(nameof(year));
+        ArgumentNullException.ThrowIfNull(year);
         return year.Value;
     }
+#pragma warning restore S3877
 
     public int ToInt32()
     {
-        throw new NotImplementedException();
+        throw new NotSupportedException("Use implicit conversion to int instead");
     }
 }

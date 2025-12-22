@@ -9,6 +9,7 @@ using Api.Infrastructure.Entities;
 using Api.Middleware;
 using Api.Models;
 using MediatR;
+using Microsoft.AspNetCore.Mvc;
 
 #pragma warning disable MA0048 // File name must match type name - Contains Interface with supporting types
 namespace Api.Routing;
@@ -21,564 +22,619 @@ internal static class KnowledgeBaseEndpoints
 {
     public static RouteGroupBuilder MapKnowledgeBaseEndpoints(this RouteGroupBuilder group)
     {
+        MapSearchEndpoint(group);
+        MapAskEndpoint(group);
+        MapChatLookupEndpoints(group);
+        MapChatHistoryEndpoints(group);
+        MapChatLifecycleEndpoints(group);
+        MapChatStateEndpoints(group);
+        MapChatUpdateEndpoints(group);
+        MapChatMessageEndpoints(group);
+        MapChatExportEndpoints(group);
+
+        return group;
+    }
+
+    private static void MapSearchEndpoint(RouteGroupBuilder group)
+    {
         // DDD-PHASE3: Vector/hybrid search endpoint using MediatR
-        group.MapPost("/knowledge-base/search", async (
-            KnowledgeBaseSearchRequest req,
-            HttpContext context,
-            IMediator mediator,
-            ILogger<Program> logger,
-            CancellationToken ct = default) =>
-        {
-            // Session validated by RequireSessionFilter
-            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-
-
-            // Validate request
-            if (!Guid.TryParse(req.gameId, out var gameId))
-            {
-                return Results.BadRequest(new { error = "Invalid gameId format" });
-            }
-
-            // Issue #1445: Use centralized query validation
-            var queryError = QueryValidator.ValidateQuery(req.query);
-            if (queryError != null)
-            {
-                return Results.BadRequest(new { error = queryError });
-            }
-
-            logger.LogInformation(
-                "KnowledgeBase search request from user {UserId} for game {GameId}: {Query}",
-                session!.User!.Id, gameId, req.query);
-
-            // Create query
-            var query = new SearchQuery(
-                GameId: gameId,
-                Query: req.query,
-                TopK: req.topK ?? 5,
-                MinScore: req.minScore ?? 0.55,
-                SearchMode: req.searchMode ?? "hybrid",
-                Language: req.language ?? "en"
-            );
-
-            // Execute via MediatR
-            var results = await mediator.Send(query, ct).ConfigureAwait(false);
-
-            logger.LogInformation(
-                "KnowledgeBase search completed: {ResultCount} results found",
-                results.Count);
-
-            return Results.Ok(new
-            {
-                success = true,
-                results = results,
-                count = results.Count,
-                searchMode = query.SearchMode
-            });
-        })
+        group.MapPost("/knowledge-base/search", HandleSearch)
         .WithName("KnowledgeBaseSearch")
-        .RequireSession() // Issue #1446: Automatic session validation
+        .RequireSession()
         .WithTags("KnowledgeBase");
+    }
 
+    private static void MapAskEndpoint(RouteGroupBuilder group)
+    {
         // DDD-PHASE3: RAG Q&A endpoint using MediatR
-        group.MapPost("/knowledge-base/ask", async (
-            KnowledgeBaseAskRequest req,
-            HttpContext context,
-            IMediator mediator,
-            ILogger<Program> logger,
-            CancellationToken ct = default) =>
-        {
-            // Session validated by RequireSessionFilter
-            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-
-
-            // Validate request
-            if (!Guid.TryParse(req.gameId, out var gameId))
-            {
-                return Results.BadRequest(new { error = "Invalid gameId format" });
-            }
-
-            // Issue #1445: Use centralized query validation
-            var queryError = QueryValidator.ValidateQuery(req.query);
-            if (queryError != null)
-            {
-                return Results.BadRequest(new { error = queryError });
-            }
-
-            logger.LogInformation(
-                "KnowledgeBase Q&A request from user {UserId} for game {GameId}: {Query}",
-                session!.User!.Id, gameId, req.query);
-
-            // Create query
-            var query = new AskQuestionQuery(
-                GameId: gameId,
-                Question: req.query,
-                Language: req.language ?? "en",
-                BypassCache: req.bypassCache ?? false
-            );
-
-            // Execute via MediatR
-            var response = await mediator.Send(query, ct).ConfigureAwait(false);
-
-            logger.LogInformation(
-                "KnowledgeBase Q&A completed: Confidence={Confidence}, IsLowQuality={IsLowQuality}",
-                response.OverallConfidence, response.IsLowQuality);
-
-            return Results.Ok(new
-            {
-                success = true,
-                answer = response.Answer,
-                sources = response.Sources,
-                searchConfidence = response.SearchConfidence,
-                llmConfidence = response.LlmConfidence,
-                overallConfidence = response.OverallConfidence,
-                isLowQuality = response.IsLowQuality,
-                citations = response.Citations
-            });
-        })
+        group.MapPost("/knowledge-base/ask", HandleAsk)
         .WithName("KnowledgeBaseAsk")
-        .RequireSession() // Issue #1446: Automatic session validation
+        .RequireSession()
         .WithTags("KnowledgeBase");
+    }
 
-        // CHAT-THREAD-01: Create chat thread
-        group.MapPost("/chat-threads", async (
-            CreateChatThreadRequest req,
-            HttpContext context,
-            IMediator mediator,
-            ILogger<Program> logger,
-            CancellationToken ct = default) =>
-        {
-            // Session validated by RequireSessionFilter
-            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-
-
-            var userId = session!.User!.Id;
-
-            logger.LogInformation("Creating chat thread for user {UserId}, game {GameId}", userId, req.GameId);
-
-            var command = new CreateChatThreadCommand(
-                UserId: userId,
-                GameId: req.GameId,
-                Title: req.Title,
-                InitialMessage: req.InitialMessage
-            );
-
-            var result = await mediator.Send(command, ct).ConfigureAwait(false);
-            return Results.Created($"/api/v1/chat-threads/{result.Id}", result);
-        })
-        .WithName("CreateChatThread")
-        .RequireSession() // Issue #1446: Automatic session validation
-        .WithTags("ChatThreads");
-
+    private static void MapChatLookupEndpoints(RouteGroupBuilder group)
+    {
         // CHAT-THREAD-02: Get chat thread by ID
-        group.MapGet("/chat-threads/{threadId:guid}", async (
-            Guid threadId,
-            HttpContext context,
-            IMediator mediator,
-            ILogger<Program> logger,
-            CancellationToken ct = default) =>
-        {
-            // Session validated by RequireSessionFilter
-            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-
-
-            var query = new GetChatThreadByIdQuery(threadId);
-            var result = await mediator.Send(query, ct).ConfigureAwait(false);
-
-            if (result == null)
-            {
-                return Results.NotFound(new { error = "Thread not found" });
-            }
-
-            // Authorization: User can only access their own threads unless admin
-            var userId = session!.User!.Id;
-
-            if (result.UserId != userId &&
-                !string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.Forbid();
-            }
-
-            return Results.Ok(result);
-        })
+        group.MapGet("/chat-threads/{threadId:guid}", HandleGetChatThreadById)
         .WithName("GetChatThreadById")
-        .RequireSession() // Issue #1446: Automatic session validation
+        .RequireSession()
         .WithTags("ChatThreads");
 
         // CHAT-THREAD-03: Get threads by game
-        group.MapGet("/chat-threads", async (
-            [Microsoft.AspNetCore.Mvc.FromQuery] Guid? gameId,
-            HttpContext context,
-            IMediator mediator,
-            ILogger<Program> logger,
-            CancellationToken ct = default) =>
-        {
-            // Session validated by RequireSessionFilter
-            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-
-
-            if (gameId.HasValue)
-            {
-                var userId = session!.User!.Id;
-
-                var query = new GetChatThreadsByGameQuery(gameId.Value, userId);
-                var results = await mediator.Send(query, ct).ConfigureAwait(false);
-
-                return Results.Ok(new { threads = results, count = results.Count });
-            }
-            else
-            {
-                return Results.BadRequest(new { error = "gameId query parameter required" });
-            }
-        })
+        group.MapGet("/chat-threads", HandleGetChatThreadsByGame)
         .WithName("GetChatThreadsByGame")
-        .RequireSession() // Issue #1446: Automatic session validation
+        .RequireSession()
         .WithTags("ChatThreads");
+    }
 
+    private static void MapChatHistoryEndpoints(RouteGroupBuilder group)
+    {
         // CHAT-HISTORY-01: Get user's chat history for dashboard (Issue #2026)
-        // Code Review: Optimized with lightweight DTO, correct totalCount, input validation
-        group.MapGet("/knowledge-base/my-chats", async (
-            [Microsoft.AspNetCore.Mvc.FromQuery] int skip,
-            [Microsoft.AspNetCore.Mvc.FromQuery] int take,
-            HttpContext context,
-            IMediator mediator,
-            ILogger<Program> logger,
-            CancellationToken ct = default) =>
-        {
-            // Pagination constants
-            const int DEFAULT_PAGE_SIZE = 50;
-            const int MAX_PAGE_SIZE = 100;
-            const int MAX_SKIP = 10000; // Prevent DoS via excessive skip
-
-            // Session validated by RequireSessionFilter
-            var session = context.Items[nameof(SessionStatusDto)] as SessionStatusDto;
-            if (session?.User?.Id is not Guid userId)
-            {
-                logger.LogWarning("GetMyChatHistory called without valid session");
-                return Results.Unauthorized();
-            }
-
-            // Apply safe defaults and limits for pagination
-            var safeSkip = skip < 0 ? 0 : Math.Min(skip, MAX_SKIP);
-            var safeTake = take <= 0 ? DEFAULT_PAGE_SIZE : Math.Min(take, MAX_PAGE_SIZE);
-
-            if (skip > MAX_SKIP)
-            {
-                logger.LogWarning(
-                    "User {UserId} attempted excessive skip ({Skip}), capped at {Max}",
-                    userId, skip, MAX_SKIP);
-            }
-
-            logger.LogInformation(
-                "Fetching chat history for user {UserId} (skip: {Skip}, take: {Take})",
-                userId,
-                safeSkip,
-                safeTake);
-
-            try
-            {
-                var query = new GetMyChatHistoryQuery(userId, safeSkip, safeTake);
-                var result = await mediator.Send(query, ct).ConfigureAwait(false);
-
-                // Match project convention: use 'threads' and 'count' (not 'chats' and 'totalCount')
-                return Results.Ok(new
-                {
-                    threads = result.Chats,
-                    count = result.TotalCount,
-                    page = new
-                    {
-                        skip = safeSkip,
-                        take = safeTake,
-                        hasMore = safeSkip + result.Chats.Count < result.TotalCount
-                    }
-                });
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Failed to fetch chat history for user {UserId}", userId);
-                return Results.Problem("Failed to load chat history");
-            }
-        })
+        group.MapGet("/knowledge-base/my-chats", HandleGetMyChatHistory)
         .WithName("GetMyChatHistory")
-        .RequireSession() // Issue #1446: Automatic session validation
+        .RequireSession()
         .WithTags("ChatThreads")
         .WithDescription("Retrieve user's chat history for dashboard display (optimized, lightweight)");
+    }
 
-        // CHAT-THREAD-04: Add message to thread
-        group.MapPost("/chat-threads/{threadId:guid}/messages", async (
-            Guid threadId,
-            AddMessageRequest req,
-            HttpContext context,
-            IMediator mediator,
-            ILogger<Program> logger,
-            CancellationToken ct = default) =>
-        {
-            // Session validated by RequireSessionFilter
-            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-
-
-            if (string.IsNullOrWhiteSpace(req.Content))
-            {
-                return Results.BadRequest(new { error = "Content is required" });
-            }
-
-            // SEC: Authorize BEFORE executing command to prevent unauthorized mutations
-            var userId = session!.User!.Id;
-
-            // Verify thread ownership before mutation
-            var threadQuery = new GetChatThreadByIdQuery(threadId);
-            var existingThread = await mediator.Send(threadQuery, ct).ConfigureAwait(false);
-
-            if (existingThread == null)
-            {
-                return Results.NotFound(new { error = "Thread not found" });
-            }
-
-            if (existingThread.UserId != userId &&
-                !string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                logger.LogWarning("User {UserId} denied access to add message to thread {ThreadId} (owner: {OwnerId})",
-                    userId, threadId, existingThread.UserId);
-                return Results.Forbid();
-            }
-
-            var command = new AddMessageCommand(
-                ThreadId: threadId,
-                Content: req.Content,
-                Role: req.Role
-            );
-
-            var result = await mediator.Send(command, ct).ConfigureAwait(false);
-            return Results.Ok(result);
-        })
-        .WithName("AddMessageToThread")
-        .RequireSession() // Issue #1446: Automatic session validation
+    private static void MapChatLifecycleEndpoints(RouteGroupBuilder group)
+    {
+        // CHAT-THREAD-01: Create chat thread
+        group.MapPost("/chat-threads", HandleCreateChatThread)
+        .WithName("CreateChatThread")
+        .RequireSession()
         .WithTags("ChatThreads");
 
+        // ISSUE-1184: Delete chat thread
+        group.MapDelete("/chat-threads/{threadId:guid}", HandleDeleteChatThread)
+        .WithName("DeleteChatThread")
+        .RequireSession()
+        .WithTags("ChatThreads");
+    }
+
+    private static void MapChatStateEndpoints(RouteGroupBuilder group)
+    {
         // CHAT-THREAD-05: Close chat thread
-        group.MapPost("/chat-threads/{threadId:guid}/close", async (
-            Guid threadId,
-            HttpContext context,
-            IMediator mediator,
-            ILogger<Program> logger,
-            CancellationToken ct = default) =>
-        {
-            // Session validated by RequireSessionFilter
-            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-            // session!.User!.Id is already a Guid from SessionStatusDto
-            var userId = session!.User!.Id;
-
-            // Verify thread ownership before mutation
-            var threadQuery = new GetChatThreadByIdQuery(threadId);
-            var existingThread = await mediator.Send(threadQuery, ct).ConfigureAwait(false);
-
-            if (existingThread == null)
-            {
-                return Results.NotFound(new { error = "Thread not found" });
-            }
-
-            if (existingThread.UserId != userId &&
-                !string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                logger.LogWarning("User {UserId} denied access to close thread {ThreadId} (owner: {OwnerId})",
-                    userId, threadId, existingThread.UserId);
-                return Results.Forbid();
-            }
-
-            var command = new CloseThreadCommand(threadId);
-            var result = await mediator.Send(command, ct).ConfigureAwait(false);
-            return Results.Ok(result);
-        })
+        group.MapPost("/chat-threads/{threadId:guid}/close", HandleCloseThread)
         .WithName("CloseThread")
-        .RequireSession() // Issue #1446: Automatic session validation
+        .RequireSession()
         .WithTags("ChatThreads");
 
         // CHAT-THREAD-06: Reopen chat thread
-        group.MapPost("/chat-threads/{threadId:guid}/reopen", async (
-            Guid threadId,
-            HttpContext context,
-            IMediator mediator,
-            ILogger<Program> logger,
-            CancellationToken ct = default) =>
-        {
-            // Session validated by RequireSessionFilter
-            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-            // session!.User!.Id is already a Guid from SessionStatusDto
-            var userId = session!.User!.Id;
-
-            // Verify thread ownership before mutation
-            var threadQuery = new GetChatThreadByIdQuery(threadId);
-            var existingThread = await mediator.Send(threadQuery, ct).ConfigureAwait(false);
-
-            if (existingThread == null)
-            {
-                return Results.NotFound(new { error = "Thread not found" });
-            }
-
-            if (existingThread.UserId != userId &&
-                !string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                logger.LogWarning("User {UserId} denied access to reopen thread {ThreadId} (owner: {OwnerId})",
-                    userId, threadId, existingThread.UserId);
-                return Results.Forbid();
-            }
-
-            var command = new ReopenThreadCommand(threadId);
-            var result = await mediator.Send(command, ct).ConfigureAwait(false);
-            return Results.Ok(result);
-        })
+        group.MapPost("/chat-threads/{threadId:guid}/reopen", HandleReopenThread)
         .WithName("ReopenThread")
-        .RequireSession() // Issue #1446: Automatic session validation
+        .RequireSession()
+        .WithTags("ChatThreads");
+    }
+
+    private static void MapChatUpdateEndpoints(RouteGroupBuilder group)
+    {
+        // ISSUE-2257: Update chat thread title
+        group.MapPatch("/chat-threads/{threadId:guid}", HandleUpdateChatThreadTitle)
+        .WithName("UpdateChatThreadTitle")
+        .RequireSession()
+        .WithTags("ChatThreads");
+    }
+
+    private static void MapChatMessageEndpoints(RouteGroupBuilder group)
+    {
+        // CHAT-THREAD-04: Add message to thread
+        group.MapPost("/chat-threads/{threadId:guid}/messages", HandleAddMessageToThread)
+        .WithName("AddMessageToThread")
+        .RequireSession()
         .WithTags("ChatThreads");
 
+        // ISSUE-1184: Update message in thread
+        group.MapPut("/chat-threads/{threadId:guid}/messages/{messageId:guid}", HandleUpdateChatMessage)
+        .WithName("UpdateChatMessage")
+        .RequireSession()
+        .WithTags("ChatThreads");
+
+        // ISSUE-1184: Delete message from thread
+        group.MapDelete("/chat-threads/{threadId:guid}/messages/{messageId:guid}", HandleDeleteChatMessage)
+        .WithName("DeleteChatMessage")
+        .RequireSession()
+        .WithTags("ChatThreads");
+    }
+
+    private static void MapChatExportEndpoints(RouteGroupBuilder group)
+    {
         // ISSUE-860: Export chat thread (DDD implementation)
-        group.MapGet("/chat-threads/{threadId:guid}/export", async (
-            Guid threadId,
-            [Microsoft.AspNetCore.Mvc.FromQuery] string? format,
-            HttpContext context,
-            IMediator mediator,
-            ILogger<Program> logger,
-            CancellationToken ct = default) =>
-        {
-            // Session validated by RequireSessionFilter
-            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-            // session!.User!.Id is already a Guid from SessionStatusDto
-            var userId = session!.User!.Id;
-
-            // Verify thread ownership before export
-            var threadQuery = new GetChatThreadByIdQuery(threadId);
-            var existingThread = await mediator.Send(threadQuery, ct).ConfigureAwait(false);
-
-            if (existingThread == null)
-            {
-                return Results.NotFound(new { error = "Thread not found" });
-            }
-
-            if (existingThread.UserId != userId &&
-                !string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                logger.LogWarning("User {UserId} denied access to export thread {ThreadId} (owner: {OwnerId})",
-                    userId, threadId, existingThread.UserId);
-                return Results.Forbid();
-            }
-
-            // Default to JSON if no format specified
-            var exportFormat = format?.ToLowerInvariant() ?? "json";
-
-            var command = new ExportChatCommand(threadId, exportFormat);
-            var result = await mediator.Send(command, ct).ConfigureAwait(false);
-
-            // Generate filename for logging purposes
-            var threadTitle = existingThread.Title?.Replace(" ", "_") ?? "chat";
-            var sanitizedTitle = new string(threadTitle.Where(c => char.IsLetterOrDigit(c) || c == '_' || c == '-').ToArray());
-            var filename = $"{sanitizedTitle}_{threadId.ToString()[..8]}.{result.FileExtension}";
-
-            logger.LogInformation("User {UserId} exported thread {ThreadId} in {Format} format as {Filename}",
-                userId, threadId, result.Format, filename);
-
-            // Return file with appropriate content type
-            return Results.Content(
-                result.Content,
-                result.ContentType,
-                null,
-                statusCode: 200);
-        })
+        group.MapGet("/chat-threads/{threadId:guid}/export", HandleExportChatThread)
         .WithName("ExportChatThread")
-        .RequireSession() // Issue #1446: Automatic session validation
+        .RequireSession()
         .WithTags("ChatThreads")
         .Produces<string>(200, "application/json", "text/markdown")
         .ProducesProblem(400)
         .ProducesProblem(404)
         .ProducesProblem(403)
         .ProducesProblem(500);
+    }
 
-        // ISSUE-1184: Update message in thread
-        group.MapPut("/chat-threads/{threadId:guid}/messages/{messageId:guid}", async (
-            Guid threadId,
-            Guid messageId,
-            UpdateMessageRequest req,
-            HttpContext context,
-            IMediator mediator,
-            ILogger<Program> logger,
-            CancellationToken ct = default) =>
+    private static async Task<IResult> HandleSearch(
+        KnowledgeBaseSearchRequest req,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+        if (!Guid.TryParse(req.gameId, out var gameId))
         {
-            // Session validated by RequireSessionFilter
-            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+            return Results.BadRequest(new { error = "Invalid gameId format" });
+        }
 
+        var queryError = QueryValidator.ValidateQuery(req.query);
+        if (queryError != null)
+        {
+            return Results.BadRequest(new { error = queryError });
+        }
 
-            var userId = session!.User!.Id;
+        logger.LogInformation(
+            "KnowledgeBase search request from user {UserId} for game {GameId}: {Query}",
+            session!.User!.Id, gameId, req.query);
 
-            if (string.IsNullOrWhiteSpace(req.Content))
+        var query = new SearchQuery(
+            GameId: gameId,
+            Query: req.query,
+            TopK: req.topK ?? 5,
+            MinScore: req.minScore ?? 0.55,
+            SearchMode: req.searchMode ?? "hybrid",
+            Language: req.language ?? "en"
+        );
+
+        var results = await mediator.Send(query, ct).ConfigureAwait(false);
+
+        logger.LogInformation(
+            "KnowledgeBase search completed: {ResultCount} results found",
+            results.Count);
+
+        return Results.Ok(new
+        {
+            success = true,
+            results = results,
+            count = results.Count,
+            searchMode = query.SearchMode
+        });
+    }
+
+    private static async Task<IResult> HandleAsk(
+        KnowledgeBaseAskRequest req,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+        if (!Guid.TryParse(req.gameId, out var gameId))
+        {
+            return Results.BadRequest(new { error = "Invalid gameId format" });
+        }
+
+        var queryError = QueryValidator.ValidateQuery(req.query);
+        if (queryError != null)
+        {
+            return Results.BadRequest(new { error = queryError });
+        }
+
+        logger.LogInformation(
+            "KnowledgeBase Q&A request from user {UserId} for game {GameId}: {Query}",
+            session!.User!.Id, gameId, req.query);
+
+        var query = new AskQuestionQuery(
+            GameId: gameId,
+            Question: req.query,
+            Language: req.language ?? "en",
+            BypassCache: req.bypassCache ?? false
+        );
+
+        var response = await mediator.Send(query, ct).ConfigureAwait(false);
+
+        logger.LogInformation(
+            "KnowledgeBase Q&A completed: Confidence={Confidence}, IsLowQuality={IsLowQuality}",
+            response.OverallConfidence, response.IsLowQuality);
+
+        return Results.Ok(new
+        {
+            success = true,
+            answer = response.Answer,
+            sources = response.Sources,
+            searchConfidence = response.SearchConfidence,
+            llmConfidence = response.LlmConfidence,
+            overallConfidence = response.OverallConfidence,
+            isLowQuality = response.IsLowQuality,
+            citations = response.Citations
+        });
+    }
+
+    private static async Task<IResult> HandleGetMyChatHistory(
+        [FromQuery] int skip,
+        [FromQuery] int take,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        const int DEFAULT_PAGE_SIZE = 50;
+        const int MAX_PAGE_SIZE = 100;
+        const int MAX_SKIP = 10000;
+
+        var session = context.Items[nameof(SessionStatusDto)] as SessionStatusDto;
+        if (session?.User?.Id is not Guid userId)
+        {
+            logger.LogWarning("GetMyChatHistory called without valid session");
+            return Results.Unauthorized();
+        }
+
+        var safeSkip = skip < 0 ? 0 : Math.Min(skip, MAX_SKIP);
+        var safeTake = take <= 0 ? DEFAULT_PAGE_SIZE : Math.Min(take, MAX_PAGE_SIZE);
+
+        if (skip > MAX_SKIP)
+        {
+            logger.LogWarning("User {UserId} attempted excessive skip ({Skip}), capped at {Max}", userId, skip, MAX_SKIP);
+        }
+
+        logger.LogInformation("Fetching chat history for user {UserId} (skip: {Skip}, take: {Take})", userId, safeSkip, safeTake);
+
+        try
+        {
+            var query = new GetMyChatHistoryQuery(userId, safeSkip, safeTake);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+            return Results.Ok(new
             {
-                return Results.BadRequest(new { error = "Content is required" });
-            }
-
-            var command = new UpdateMessageCommand(threadId, messageId, req.Content, userId);
-            var result = await mediator.Send(command, ct).ConfigureAwait(false);
-
-            logger.LogInformation("User {UserId} updated message {MessageId} in thread {ThreadId}",
-                userId, messageId, threadId);
-
-            return Results.Ok(result);
-        })
-        .WithName("UpdateChatMessage")
-        .RequireSession() // Issue #1446: Automatic session validation
-        .WithTags("ChatThreads");
-
-        // ISSUE-1184: Delete message from thread
-        group.MapDelete("/chat-threads/{threadId:guid}/messages/{messageId:guid}", async (
-            Guid threadId,
-            Guid messageId,
-            HttpContext context,
-            IMediator mediator,
-            ILogger<Program> logger,
-            CancellationToken ct = default) =>
+                threads = result.Chats,
+                count = result.TotalCount,
+                page = new
+                {
+                    skip = safeSkip,
+                    take = safeTake,
+                    hasMore = safeSkip + result.Chats.Count < result.TotalCount
+                }
+            });
+        }
+        catch (Exception ex)
         {
-            // Session validated by RequireSessionFilter
-            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+            logger.LogError(ex, "Failed to fetch chat history for user {UserId}", userId);
+            return Results.Problem("Failed to load chat history");
+        }
+    }
 
+    private static async Task<IResult> HandleGetChatThreadById(
+        Guid threadId,
+        HttpContext context,
+        IMediator mediator,
+                CancellationToken ct)
+    {
+        var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
-            var userId = session!.User!.Id;
+        var query = new GetChatThreadByIdQuery(threadId);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
 
-            var isAdmin = string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
-
-            var command = new DeleteMessageCommand(threadId, messageId, userId, isAdmin);
-            var result = await mediator.Send(command, ct).ConfigureAwait(false);
-
-            logger.LogInformation("User {UserId} deleted message {MessageId} from thread {ThreadId} (admin: {IsAdmin})",
-                userId, messageId, threadId, isAdmin);
-
-            return Results.Ok(result);
-        })
-        .WithName("DeleteChatMessage")
-        .RequireSession() // Issue #1446: Automatic session validation
-        .WithTags("ChatThreads");
-
-        // ISSUE-1184: Delete chat thread
-        group.MapDelete("/chat-threads/{threadId:guid}", async (
-            Guid threadId,
-            HttpContext context,
-            IMediator mediator,
-            ILogger<Program> logger,
-            CancellationToken ct = default) =>
+        if (result == null)
         {
-            // Session validated by RequireSessionFilter
-            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+            return Results.NotFound(new { error = "Thread not found" });
+        }
 
+        var userId = session!.User!.Id;
 
+        if (result.UserId != userId &&
+            !string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+        {
+            return Results.Forbid();
+        }
+
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGetChatThreadsByGame(
+        [FromQuery] Guid? gameId,
+        HttpContext context,
+        IMediator mediator,
+                CancellationToken ct)
+    {
+        var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+        if (gameId.HasValue)
+        {
             var userId = session!.User!.Id;
+            var query = new GetChatThreadsByGameQuery(gameId.Value, userId);
+            var results = await mediator.Send(query, ct).ConfigureAwait(false);
+            return Results.Ok(new { threads = results, count = results.Count });
+        }
+        else
+        {
+            return Results.BadRequest(new { error = "gameId query parameter required" });
+        }
+    }
 
-            var command = new DeleteChatThreadCommand(threadId, userId);
-            await mediator.Send(command, ct).ConfigureAwait(false);
+    private static async Task<IResult> HandleCreateChatThread(
+        CreateChatThreadRequest req,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+        var userId = session!.User!.Id;
 
-            logger.LogInformation("User {UserId} deleted thread {ThreadId}", userId, threadId);
+        logger.LogInformation("Creating chat thread for user {UserId}, game {GameId}", userId, req.GameId);
 
-            return Results.NoContent();
-        })
-        .WithName("DeleteChatThread")
-        .RequireSession() // Issue #1446: Automatic session validation
-        .WithTags("ChatThreads");
+        var command = new CreateChatThreadCommand(
+            UserId: userId,
+            GameId: req.GameId,
+            Title: req.Title,
+            InitialMessage: req.InitialMessage
+        );
 
-        return group;
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+        return Results.Created($"/api/v1/chat-threads/{result.Id}", result);
+    }
+
+    private static async Task<IResult> HandleDeleteChatThread(
+        Guid threadId,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+        var userId = session!.User!.Id;
+
+        var command = new DeleteChatThreadCommand(threadId, userId);
+        await mediator.Send(command, ct).ConfigureAwait(false);
+
+        logger.LogInformation("User {UserId} deleted thread {ThreadId}", userId, threadId);
+
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> HandleCloseThread(
+        Guid threadId,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+        var userId = session!.User!.Id;
+
+        // Verify thread ownership before mutation
+        var threadQuery = new GetChatThreadByIdQuery(threadId);
+        var existingThread = await mediator.Send(threadQuery, ct).ConfigureAwait(false);
+
+        if (existingThread == null)
+        {
+            return Results.NotFound(new { error = "Thread not found" });
+        }
+
+        if (existingThread.UserId != userId &&
+            !string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+        {
+            logger.LogWarning("User {UserId} denied access to close thread {ThreadId} (owner: {OwnerId})",
+                userId, threadId, existingThread.UserId);
+            return Results.Forbid();
+        }
+
+        var command = new CloseThreadCommand(threadId);
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleReopenThread(
+        Guid threadId,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+        var userId = session!.User!.Id;
+
+        // Verify thread ownership before mutation
+        var threadQuery = new GetChatThreadByIdQuery(threadId);
+        var existingThread = await mediator.Send(threadQuery, ct).ConfigureAwait(false);
+
+        if (existingThread == null)
+        {
+            return Results.NotFound(new { error = "Thread not found" });
+        }
+
+        if (existingThread.UserId != userId &&
+            !string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+        {
+            logger.LogWarning("User {UserId} denied access to reopen thread {ThreadId} (owner: {OwnerId})",
+                userId, threadId, existingThread.UserId);
+            return Results.Forbid();
+        }
+
+        var command = new ReopenThreadCommand(threadId);
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleUpdateChatThreadTitle(
+        Guid threadId,
+        UpdateChatThreadTitleRequest req,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+        var userId = session!.User!.Id;
+
+        if (string.IsNullOrWhiteSpace(req.Title))
+        {
+            return Results.BadRequest(new { error = "Title is required" });
+        }
+
+        // Verify thread ownership before mutation
+        var threadQuery = new GetChatThreadByIdQuery(threadId);
+        var existingThread = await mediator.Send(threadQuery, ct).ConfigureAwait(false);
+
+        if (existingThread == null)
+        {
+            return Results.NotFound(new { error = "Thread not found" });
+        }
+
+        if (existingThread.UserId != userId &&
+            !string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+        {
+            logger.LogWarning("User {UserId} denied access to update thread {ThreadId} (owner: {OwnerId})",
+                userId, threadId, existingThread.UserId);
+            return Results.Forbid();
+        }
+
+        var command = new UpdateChatThreadTitleCommand(threadId, req.Title);
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+        logger.LogInformation("User {UserId} updated title for thread {ThreadId}", userId, threadId);
+
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleAddMessageToThread(
+        Guid threadId,
+        AddMessageRequest req,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+        if (string.IsNullOrWhiteSpace(req.Content))
+        {
+            return Results.BadRequest(new { error = "Content is required" });
+        }
+
+        var userId = session!.User!.Id;
+
+        // Verify thread ownership before mutation
+        var threadQuery = new GetChatThreadByIdQuery(threadId);
+        var existingThread = await mediator.Send(threadQuery, ct).ConfigureAwait(false);
+
+        if (existingThread == null)
+        {
+            return Results.NotFound(new { error = "Thread not found" });
+        }
+
+        if (existingThread.UserId != userId &&
+            !string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+        {
+            logger.LogWarning("User {UserId} denied access to add message to thread {ThreadId} (owner: {OwnerId})",
+                userId, threadId, existingThread.UserId);
+            return Results.Forbid();
+        }
+
+        var command = new AddMessageCommand(
+            ThreadId: threadId,
+            Content: req.Content,
+            Role: req.Role
+        );
+
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleUpdateChatMessage(
+        Guid threadId,
+        Guid messageId,
+        UpdateMessageRequest req,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+        var userId = session!.User!.Id;
+
+        if (string.IsNullOrWhiteSpace(req.Content))
+        {
+            return Results.BadRequest(new { error = "Content is required" });
+        }
+
+        var command = new UpdateMessageCommand(threadId, messageId, req.Content, userId);
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+        logger.LogInformation("User {UserId} updated message {MessageId} in thread {ThreadId}",
+            userId, messageId, threadId);
+
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleDeleteChatMessage(
+        Guid threadId,
+        Guid messageId,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+        var userId = session!.User!.Id;
+        var isAdmin = string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+
+        var command = new DeleteMessageCommand(threadId, messageId, userId, isAdmin);
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+        logger.LogInformation("User {UserId} deleted message {MessageId} from thread {ThreadId} (admin: {IsAdmin})",
+            userId, messageId, threadId, isAdmin);
+
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleExportChatThread(
+        Guid threadId,
+        [FromQuery] string? format,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+        var userId = session!.User!.Id;
+
+        // Verify thread ownership before export
+        var threadQuery = new GetChatThreadByIdQuery(threadId);
+        var existingThread = await mediator.Send(threadQuery, ct).ConfigureAwait(false);
+
+        if (existingThread == null)
+        {
+            return Results.NotFound(new { error = "Thread not found" });
+        }
+
+        if (existingThread.UserId != userId &&
+            !string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+        {
+            logger.LogWarning("User {UserId} denied access to export thread {ThreadId} (owner: {OwnerId})",
+                userId, threadId, existingThread.UserId);
+            return Results.Forbid();
+        }
+
+        // Default to JSON if no format specified
+        var exportFormat = format?.ToLowerInvariant() ?? "json";
+
+        var command = new ExportChatCommand(threadId, exportFormat);
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+        // Generate filename for logging purposes
+        var threadTitle = existingThread.Title?.Replace(" ", "_") ?? "chat";
+        var sanitizedTitle = string.Concat(threadTitle.Where(c => char.IsLetterOrDigit(c) || c == '_' || c == '-'));
+        var filename = $"{sanitizedTitle}_{threadId.ToString()[..8]}.{result.FileExtension}";
+
+        logger.LogInformation("User {UserId} exported thread {ThreadId} in {Format} format as {Filename}",
+            userId, threadId, result.Format, filename);
+
+        return Results.Content(
+            result.Content,
+            result.ContentType,
+            null,
+            statusCode: 200);
     }
 }
 
@@ -592,4 +648,11 @@ internal record KnowledgeBaseSearchRequest(
     double? minScore = null,
     string? searchMode = null,
     string? language = null
+);
+
+/// <summary>
+/// Request model for updating chat thread title (Issue #2257).
+/// </summary>
+internal record UpdateChatThreadTitleRequest(
+    string Title
 );

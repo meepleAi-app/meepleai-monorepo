@@ -36,9 +36,10 @@
  * ```
  */
 
+import { ReactNode, useRef } from 'react';
+
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
-import { ReactNode, useRef } from 'react';
 
 export interface AccessibleModalProps {
   /**

@@ -12,10 +12,12 @@
  * - Mobile/tablet/desktop viewports
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
-import { InfrastructureClient } from './infrastructure-client';
 import { api } from '@/lib/api';
 import type { InfrastructureDetails } from '@/lib/api';
+
+import { InfrastructureClient } from './infrastructure-client';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta: Meta<typeof InfrastructureClient> = {
   title: 'Admin/Pages/InfrastructureClient',

@@ -26,7 +26,7 @@ namespace Api.Tests.Services;
 /// Tests verify that RagService works correctly with HybridLlmService (BGAI-020)
 /// by validating response structures and error handling for all RAG methods.
 /// </summary>
-public class RagServiceIntegrationTests : IDisposable
+public sealed class RagServiceIntegrationTests : IDisposable
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly Mock<IEmbeddingService> _mockEmbeddingService;
@@ -37,7 +37,6 @@ public class RagServiceIntegrationTests : IDisposable
     private readonly Mock<ILogger<RagService>> _mockLogger;
     private readonly Mock<IQueryExpansionService> _mockQueryExpansion;
     private readonly Mock<ISearchResultReranker> _mockReranker;
-    private readonly Mock<ICitationExtractorService> _mockCitationExtractor;
     private readonly Mock<IRagConfigurationProvider> _mockConfigProvider;
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
@@ -61,7 +60,7 @@ public class RagServiceIntegrationTests : IDisposable
         _mockLogger = new Mock<ILogger<RagService>>();
         _mockQueryExpansion = new Mock<IQueryExpansionService>();
         _mockReranker = new Mock<ISearchResultReranker>();
-        _mockCitationExtractor = new Mock<ICitationExtractorService>();
+
 
         // Use shared test helper for config provider setup
         _mockConfigProvider = RagTestHelpers.CreateDefaultConfigProvider();
@@ -344,7 +343,7 @@ public class RagServiceIntegrationTests : IDisposable
                 It.IsAny<float[]>(),
                 It.IsAny<string>(),
                 It.IsAny<int>(),
-                It.IsAny<IReadOnlyList<string>?>(),
+                It.IsAny<List<string>?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new SearchResult
             {
@@ -378,7 +377,7 @@ public class RagServiceIntegrationTests : IDisposable
                 gameId,
                 It.IsAny<SearchMode>(),
                 It.IsAny<int>(),
-                It.IsAny<IReadOnlyList<Guid>?>(),
+                It.IsAny<List<Guid>?>(),
                 It.IsAny<float>(),
                 It.IsAny<float>(),
                 It.IsAny<CancellationToken>()))

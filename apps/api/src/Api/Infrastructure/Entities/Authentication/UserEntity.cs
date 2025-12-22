@@ -4,7 +4,7 @@ namespace Api.Infrastructure.Entities;
 /// User entity - persistence model.
 /// DDD-PHASE2: Converted to Guid IDs and string Role for domain alignment.
 /// </summary>
-internal class UserEntity
+public class UserEntity
 {
     required public Guid Id { get; set; }
     required public string Email { get; set; }

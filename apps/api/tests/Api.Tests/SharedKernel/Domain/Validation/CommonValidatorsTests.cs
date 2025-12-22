@@ -346,7 +346,7 @@ public class CommonValidatorsTests
         Assert.True(result.IsFailure);
         Assert.NotNull(result.Error);
     }
-    private enum TestEnum
+    private enum TestValidationStatus
     {
         Value1,
         Value2,
@@ -360,7 +360,7 @@ public class CommonValidatorsTests
     public void IsValidEnum_WithValidValue_ReturnsSuccess(string value)
     {
         // Act
-        var result = value.IsValidEnum<TestEnum>();
+        var result = value.IsValidEnum<TestValidationStatus>();
 
         // Assert
         Assert.True(result.IsSuccess);
@@ -373,7 +373,7 @@ public class CommonValidatorsTests
     public void IsValidEnum_WithInvalidValue_ReturnsFailure(string value)
     {
         // Act
-        var result = value.IsValidEnum<TestEnum>();
+        var result = value.IsValidEnum<TestValidationStatus>();
 
         // Assert
         Assert.True(result.IsFailure);

@@ -239,3 +239,5 @@ dotnet_diagnostic.S3881.severity = warning
 dotnet_diagnostic.S2139.severity = warning
 # CA1062: Validate arguments of public methods to avoid null dereferences
 dotnet_diagnostic.CA1062.severity = warning
+[**/Migrations/*.cs]
+dotnet_diagnostic.CA1861.severity = none

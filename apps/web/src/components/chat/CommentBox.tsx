@@ -25,14 +25,15 @@
  */
 
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { api } from '@/lib/api';
+
 import { Send, AlertCircle, Check } from 'lucide-react';
+
 import { LoadingButton } from '@/components/loading/LoadingButton';
-import { logger } from '@/lib/logger';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Textarea } from '@/components/ui/textarea';
+import { api } from '@/lib/api';
 import { createErrorContext } from '@/lib/errors';
+import { logger } from '@/lib/logger';
 
 export interface CommentBoxProps {
   /** Share link JWT token */

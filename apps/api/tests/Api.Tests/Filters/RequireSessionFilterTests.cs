@@ -39,7 +39,12 @@ public class RequireSessionFilterTests
 
         public override IList<object?> Arguments => new List<object?>();
 
-        public override T GetArgument<T>(int index) => throw new NotImplementedException();
+        public override T GetArgument<T>(int index)
+        {
+#pragma warning disable MA0025 // Implement the functionality - This is a test stub, not used in tests
+            throw new NotImplementedException();
+#pragma warning restore MA0025
+        }
     }
 
     [Fact]

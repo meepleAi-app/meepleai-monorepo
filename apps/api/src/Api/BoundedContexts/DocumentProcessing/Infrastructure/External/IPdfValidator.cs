@@ -23,23 +23,23 @@ internal interface IPdfValidator
     /// </summary>
     /// <param name="pdfStream">PDF file stream to validate</param>
     /// <param name="fileName">Original file name (for logging and MIME detection)</param>
-    /// <param name="ct">Cancellation token</param>
+    /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Validation result with errors and metadata</returns>
     Task<PdfValidationResult> ValidateAsync(
         Stream pdfStream,
         string fileName,
-        CancellationToken ct = default);
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Extracts PDF metadata without full validation.
     /// Used for metadata-only operations (e.g., quick info retrieval).
     /// </summary>
     /// <param name="pdfStream">PDF file stream</param>
-    /// <param name="ct">Cancellation token</param>
+    /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>PDF metadata or null if extraction fails</returns>
     Task<PdfMetadata?> ExtractMetadataAsync(
         Stream pdfStream,
-        CancellationToken ct = default);
+        CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -74,3 +74,4 @@ internal record PdfMetadata(
     long FileSizeBytes,
     bool HasText = false,
     bool HasImages = false);
+

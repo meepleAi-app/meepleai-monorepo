@@ -14,9 +14,9 @@
 'use client';
 
 import { api, ApiError, type ExportFormat } from '@/lib/api';
+import { createErrorContext } from '@/lib/errors';
 import { getLocalizedError, type LocalizedError, successMessages } from '@/lib/i18n/errors';
 import { logger } from '@/lib/logger';
-import { createErrorContext } from '@/lib/errors';
 
 // ============================================================================
 // Types
@@ -101,8 +101,7 @@ export async function exportChatAction(
     }
 
     // Call API (this will trigger download)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- API client type narrowing
-    await (api.chat as any).exportChat(chatId, {
+    await api.chat.exportChat(chatId, {
       format,
       dateFrom: dateFrom || undefined,
       dateTo: dateTo || undefined,

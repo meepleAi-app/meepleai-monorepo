@@ -2,15 +2,16 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { api } from '@/lib/api';
-import { ErrorDisplay } from '@/components/errors';
-import { categorizeError } from '@/lib/errorUtils';
-import { LoadingButton } from '@/components/loading/LoadingButton';
-import { getErrorMessage } from '@/lib/utils/errorHandler';
-import { logger } from '@/lib/logger';
-import { createErrorContext } from '@/lib/errors';
-import { useAuthUser } from '@/components/auth/AuthProvider';
+
 import { AdminAuthGuard } from '@/components/admin/AdminAuthGuard';
+import { useAuthUser } from '@/components/auth/AuthProvider';
+import { ErrorDisplay } from '@/components/errors';
+import { LoadingButton } from '@/components/loading/LoadingButton';
+import { api } from '@/lib/api';
+import { createErrorContext } from '@/lib/errors';
+import { categorizeError } from '@/lib/errorUtils';
+import { logger } from '@/lib/logger';
+import { getErrorMessage } from '@/lib/utils/errorHandler';
 
 interface TemplateParameter {
   name: string;
@@ -396,7 +397,7 @@ const TemplateImportModal = ({
         </div>
 
         {/* Modal Body */}
-        <form onSubmit={handleSubmit} className="p-6">
+        <form noValidate onSubmit={handleSubmit} className="p-6">
           <div className="space-y-6">
             {template.parameters.length === 0 ? (
               <p className="text-gray-600 text-center py-4">

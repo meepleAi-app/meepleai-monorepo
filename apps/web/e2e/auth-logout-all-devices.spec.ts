@@ -6,6 +6,7 @@
  */
 
 import { test, expect, Page } from '@playwright/test';
+
 import { setupMockAuth } from './fixtures/auth';
 
 const API_BASE =

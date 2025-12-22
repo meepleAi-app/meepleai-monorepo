@@ -144,7 +144,7 @@ internal static class DocumentProcessingServiceExtensions
     /// <summary>
     /// Get Polly retry policy with configurable max retries
     /// </summary>
-    private static IAsyncPolicy<HttpResponseMessage> GetRetryPolicy(int maxRetries)
+    private static Polly.Retry.AsyncRetryPolicy<HttpResponseMessage> GetRetryPolicy(int maxRetries)
     {
         return HttpPolicyExtensions
             .HandleTransientHttpError()

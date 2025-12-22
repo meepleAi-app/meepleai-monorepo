@@ -63,8 +63,7 @@ internal sealed record AgentResponseDto
     /// </summary>
     public static AgentResponseDto FromDomain(AgentInvocationResult result)
     {
-        if (result == null)
-            throw new ArgumentNullException(nameof(result));
+        ArgumentNullException.ThrowIfNull(result);
 
         var qualityLevel = result.Confidence.Value switch
         {

@@ -87,7 +87,7 @@ internal class DeleteMessageCommandHandler : ICommandHandler<DeleteMessageComman
                 isAdminDelete = request.IsAdmin,
                 deletedAt = message.DeletedAt
             }),
-            ct: cancellationToken).ConfigureAwait(false);
+            cancellationToken: cancellationToken).ConfigureAwait(false);
 
         return MapToDto(thread);
     }
@@ -121,3 +121,4 @@ internal class DeleteMessageCommandHandler : ICommandHandler<DeleteMessageComman
         );
     }
 }
+

@@ -27,11 +27,19 @@ internal static class AuditEndpoints
                         ? "ERROR"
                         : "INFO";
 
-                    var message = !string.IsNullOrWhiteSpace(log.ResponseSnippet)
-                        ? log.ResponseSnippet!
-                        : !string.IsNullOrWhiteSpace(log.Query)
-                            ? log.Query!
-                            : $"{log.Endpoint} request ({log.Status})";
+                    string message;
+                    if (!string.IsNullOrWhiteSpace(log.ResponseSnippet))
+                    {
+                        message = log.ResponseSnippet!;
+                    }
+                    else if (!string.IsNullOrWhiteSpace(log.Query))
+                    {
+                        message = log.Query!;
+                    }
+                    else
+                    {
+                        message = $"{log.Endpoint} request ({log.Status})";
+                    }
 
                     return new LogEntryResponse(
                         log.CreatedAt,

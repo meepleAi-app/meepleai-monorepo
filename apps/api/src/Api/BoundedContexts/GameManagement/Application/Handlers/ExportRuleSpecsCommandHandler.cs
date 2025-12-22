@@ -16,6 +16,13 @@ internal class ExportRuleSpecsCommandHandler : ICommandHandler<ExportRuleSpecsCo
 {
     private readonly MeepleAiDbContext _dbContext;
 
+    // CA1869: Cache JsonSerializerOptions for better performance
+    private static readonly JsonSerializerOptions s_jsonOptions = new()
+    {
+        WriteIndented = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
+
     public ExportRuleSpecsCommandHandler(MeepleAiDbContext dbContext)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
@@ -72,12 +79,6 @@ internal class ExportRuleSpecsCommandHandler : ICommandHandler<ExportRuleSpecsCo
                 using (var entryStream = entry.Open())
                 using (var writer = new StreamWriter(entryStream))
                 {
-                    var jsonOptions = new JsonSerializerOptions
-                    {
-                        WriteIndented = true,
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                    };
-
                     var exportObject = new
                     {
                         gameId = spec.GameId.ToString(),
@@ -96,7 +97,7 @@ internal class ExportRuleSpecsCommandHandler : ICommandHandler<ExportRuleSpecsCo
                             .ToList()
                     };
 
-                    var json = JsonSerializer.Serialize(exportObject, jsonOptions);
+                    var json = JsonSerializer.Serialize(exportObject, s_jsonOptions);
                     await writer.WriteAsync(json).ConfigureAwait(false);
                 }
             }

@@ -18,6 +18,7 @@
  */
 
 import React from 'react';
+
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Import all animation utilities
@@ -27,10 +28,8 @@ import {
   TRANSITIONS,
   DURATIONS,
   EASINGS,
-  SPRING_CONFIGS,
   STAGGER,
   createStaggerContainer,
-  fadeIn,
   slideUp,
   slideDown,
   slideLeft,
@@ -212,11 +211,7 @@ export function FastStaggerList({ items }: { items: string[] }) {
   const customStagger = createStaggerContainer(0, STAGGER.fast);
 
   return (
-    <motion.div
-      variants={customStagger}
-      initial="initial"
-      animate="animate"
-    >
+    <motion.div variants={customStagger} initial="initial" animate="animate">
       {items.map((item, index) => (
         <motion.div
           key={index}
@@ -320,7 +315,7 @@ export function CustomTransitionExample() {
 export function TypeSafeExample() {
   // These are type-safe and will show TypeScript errors if used incorrectly
   const duration: number = DURATIONS.normal; // 300ms
-  const easing: string = EASINGS.easeOut;
+  const _easing: string = EASINGS.easeOut;
   const stagger: number = STAGGER.normal;
 
   return (

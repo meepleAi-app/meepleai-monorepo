@@ -18,12 +18,20 @@ namespace Api.Services;
 /// </summary>
 internal class PromptEvaluationService : IPromptEvaluationService
 {
+    private static readonly char[] SentenceSeparators = { '.', '!', '?' };
     private readonly IRagService _ragService;
     private readonly MeepleAiDbContext _dbContext;
     private readonly ILogger<PromptEvaluationService> _logger;
     private readonly string _allowedDatasetsDirectory;
     private readonly TimeProvider _timeProvider;
     private readonly IConfigurationService _configService;
+
+    // CA1869: Cache JsonSerializerOptions for better performance
+    private static readonly JsonSerializerOptions s_exportOptions = new()
+    {
+        WriteIndented = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
     public PromptEvaluationService(
         IRagService ragService,
         MeepleAiDbContext dbContext,
@@ -45,7 +53,7 @@ internal class PromptEvaluationService : IPromptEvaluationService
     /// Loads a test dataset from JSON file with validation
     /// SECURITY: Path traversal protection and file size limits
     /// </summary>
-    public async Task<PromptTestDataset> LoadDatasetAsync(string datasetPath, CancellationToken ct = default)
+    public async Task<PromptTestDataset> LoadDatasetAsync(string datasetPath, CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Loading test dataset from {Path}", datasetPath);
 
@@ -83,7 +91,7 @@ internal class PromptEvaluationService : IPromptEvaluationService
             }
 
             // Read and deserialize JSON
-            var jsonContent = await File.ReadAllTextAsync(fullPath, ct).ConfigureAwait(false);
+            var jsonContent = await File.ReadAllTextAsync(fullPath, cancellationToken).ConfigureAwait(false);
             var dataset = JsonSerializer.Deserialize<PromptTestDataset>(jsonContent);
 
             if (dataset == null)
@@ -175,7 +183,7 @@ internal class PromptEvaluationService : IPromptEvaluationService
         string versionId,
         string datasetPath,
         Action<int, int>? progressCallback = null,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         _logger.LogInformation(
             "Starting evaluation for template {TemplateId}, version {VersionId}, dataset {DatasetPath}",
@@ -186,12 +194,12 @@ internal class PromptEvaluationService : IPromptEvaluationService
         try
         {
             // Step 1: Load dataset
-            var dataset = await LoadDatasetAsync(datasetPath, ct).ConfigureAwait(false);
+            var dataset = await LoadDatasetAsync(datasetPath, cancellationToken).ConfigureAwait(false);
 
             // Step 2: Get prompt content from database
             var version = await _dbContext.PromptVersions
                 .AsNoTracking()
-                .FirstOrDefaultAsync(v => v.Id.ToString() == versionId, ct).ConfigureAwait(false);
+                .FirstOrDefaultAsync(v => v.Id.ToString() == versionId, cancellationToken).ConfigureAwait(false);
 
             if (version == null)
             {
@@ -216,7 +224,7 @@ internal class PromptEvaluationService : IPromptEvaluationService
                 progressCallback?.Invoke(i + 1, totalQueries);
 
                 // Execute single test case
-                var queryResult = await EvaluateSingleQueryAsync(testCase, customPrompt, ct).ConfigureAwait(false);
+                var queryResult = await EvaluateSingleQueryAsync(testCase, customPrompt, cancellationToken).ConfigureAwait(false);
                 queryResults.Add(queryResult);
 
                 _logger.LogDebug(
@@ -275,7 +283,7 @@ internal class PromptEvaluationService : IPromptEvaluationService
     private async Task<QueryEvaluationResult> EvaluateSingleQueryAsync(
         PromptTestCase testCase,
         string customPrompt,
-        CancellationToken ct)
+        CancellationToken cancellationToken)
     {
         var gameId = testCase.GameId ?? Guid.Empty.ToString();
 
@@ -291,7 +299,7 @@ internal class PromptEvaluationService : IPromptEvaluationService
                 customPrompt,
                 searchMode: SearchMode.Hybrid,
                 language: "en",
-                cancellationToken: ct).ConfigureAwait(false);
+                cancellationToken: cancellationToken).ConfigureAwait(false);
 
             queryStopwatch.Stop();
 
@@ -375,11 +383,9 @@ internal class PromptEvaluationService : IPromptEvaluationService
             return true; // No keywords required, pass by default
         }
 
-        var responseLower = response.ToLowerInvariant();
-
         // Check if ALL required keywords are present
         return testCase.RequiredKeywords.All(keyword =>
-            responseLower.Contains(keyword.ToLowerInvariant()));
+            response.Contains(keyword, StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>
@@ -394,9 +400,8 @@ internal class PromptEvaluationService : IPromptEvaluationService
         // Check for forbidden keywords (hallucination detection)
         if (testCase.ForbiddenKeywords != null && testCase.ForbiddenKeywords.Count > 0)
         {
-            var responseLower = response.ToLowerInvariant();
             var hasForbiddenKeywords = testCase.ForbiddenKeywords.Any(keyword =>
-                responseLower.Contains(keyword.ToLowerInvariant()));
+                response.Contains(keyword, StringComparison.InvariantCultureIgnoreCase));
 
             if (hasForbiddenKeywords)
                 return false; // Hallucination detected, not relevant
@@ -421,11 +426,11 @@ internal class PromptEvaluationService : IPromptEvaluationService
             return false;
 
         // If there are required keywords, check coverage
+        // If there are required keywords, check coverage
         if (testCase.RequiredKeywords != null && testCase.RequiredKeywords.Count > 0)
         {
-            var responseLower = response.ToLowerInvariant();
             var coveredKeywords = testCase.RequiredKeywords.Count(keyword =>
-                responseLower.Contains(keyword.ToLowerInvariant()));
+                response.Contains(keyword, StringComparison.OrdinalIgnoreCase));
 
             // At least 75% of required keywords should be covered for completeness
             var coverageRatio = (double)coveredKeywords / testCase.RequiredKeywords.Count;
@@ -446,7 +451,7 @@ internal class PromptEvaluationService : IPromptEvaluationService
             return false;
 
         // Check for basic structure indicators
-        var sentences = response.Split(new[] { '.', '!', '?' }, StringSplitOptions.RemoveEmptyEntries);
+        var sentences = response.Split(SentenceSeparators, StringSplitOptions.RemoveEmptyEntries);
         if (sentences.Length == 0)
             return false;
 
@@ -608,7 +613,7 @@ internal class PromptEvaluationService : IPromptEvaluationService
         string baselineVersionId,
         string candidateVersionId,
         string datasetPath,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         _logger.LogInformation(
             "Comparing prompt versions: Baseline {BaselineId} vs Candidate {CandidateId}",
@@ -617,8 +622,8 @@ internal class PromptEvaluationService : IPromptEvaluationService
         try
         {
             // Run evaluations on both versions
-            var baselineResult = await EvaluateAsync(templateId, baselineVersionId, datasetPath, null, ct).ConfigureAwait(false);
-            var candidateResult = await EvaluateAsync(templateId, candidateVersionId, datasetPath, null, ct).ConfigureAwait(false);
+            var baselineResult = await EvaluateAsync(templateId, baselineVersionId, datasetPath, null, cancellationToken).ConfigureAwait(false);
+            var candidateResult = await EvaluateAsync(templateId, candidateVersionId, datasetPath, null, cancellationToken).ConfigureAwait(false);
 
             // BGAI-041: Calculate deltas for new 5-metric framework
             var deltas = new MetricDeltas
@@ -654,11 +659,13 @@ internal class PromptEvaluationService : IPromptEvaluationService
             _logger.LogError(ex, "Dataset not found during comparison for template {TemplateId}", templateId);
             throw new InvalidOperationException("Failed to compare prompts: dataset file not found", ex);
         }
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
         catch (InvalidOperationException ex)
         {
             _logger.LogError(ex, "Invalid operation during comparison for template {TemplateId}", templateId);
             throw;
         }
+#pragma warning restore S2139
     }
 
     /// <summary>
@@ -745,7 +752,7 @@ internal class PromptEvaluationService : IPromptEvaluationService
     /// </summary>
     public string GenerateReport(PromptEvaluationResult result, ReportFormat format = ReportFormat.Markdown)
     {
-        ArgumentNullException.ThrowIfNull(result, nameof(result));
+        ArgumentNullException.ThrowIfNull(result);
         return format switch
         {
             ReportFormat.Markdown => GenerateMarkdownReport(result),
@@ -833,19 +840,15 @@ internal class PromptEvaluationService : IPromptEvaluationService
     /// </summary>
     private string GenerateJsonReport(PromptEvaluationResult result)
     {
-        return JsonSerializer.Serialize(result, new JsonSerializerOptions
-        {
-            WriteIndented = true,
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-        });
+        return JsonSerializer.Serialize(result, s_exportOptions);
     }
 
     /// <summary>
     /// Stores evaluation results in database for historical tracking
     /// </summary>
-    public async Task StoreResultsAsync(PromptEvaluationResult result, CancellationToken ct = default)
+    public async Task StoreResultsAsync(PromptEvaluationResult result, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(result, nameof(result));
+        ArgumentNullException.ThrowIfNull(result);
         _logger.LogInformation("Storing evaluation result {EvaluationId} to database", result.EvaluationId);
 
         try
@@ -871,7 +874,7 @@ internal class PromptEvaluationService : IPromptEvaluationService
             };
 
             _dbContext.PromptEvaluationResults.Add(entity);
-            await _dbContext.SaveChangesAsync(ct).ConfigureAwait(false);
+            await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation("Successfully stored evaluation result {EvaluationId}", result.EvaluationId);
         }
@@ -893,7 +896,7 @@ internal class PromptEvaluationService : IPromptEvaluationService
     public async Task<List<PromptEvaluationResult>> GetHistoricalResultsAsync(
         string templateId,
         int limit = 10,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Retrieving historical evaluation results for template {TemplateId}, limit {Limit}",
             templateId, limit);
@@ -905,7 +908,7 @@ internal class PromptEvaluationService : IPromptEvaluationService
                 .Where(e => e.TemplateId.ToString() == templateId)
                 .OrderByDescending(e => e.ExecutedAt)
                 .Take(limit)
-                .ToListAsync(ct).ConfigureAwait(false);
+                .ToListAsync(cancellationToken).ConfigureAwait(false);
 
             // BGAI-041: Retrieve new 5-metric framework results
             var results = entities.Select(e => new PromptEvaluationResult

@@ -12,9 +12,8 @@
  */
 
 import { test as base, expect, Page } from './fixtures/chromatic';
-import { AuthHelper, GamesHelper, USER_FIXTURES } from './pages';
-import { getTextMatcher, t } from './fixtures/i18n';
 import { WaitHelper } from './helpers/WaitHelper';
+import { AuthHelper, GamesHelper, USER_FIXTURES } from './pages';
 
 // Extend test with editor authentication
 const test = base.extend<{ editorPage: Page }>({

@@ -59,7 +59,16 @@ public class AdminStatsServiceUnitTests : IDisposable
 
     public void Dispose()
     {
-        _dbContext?.Dispose();
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            _dbContext?.Dispose();
+        }
     }
 
     #region Role Filter Tests

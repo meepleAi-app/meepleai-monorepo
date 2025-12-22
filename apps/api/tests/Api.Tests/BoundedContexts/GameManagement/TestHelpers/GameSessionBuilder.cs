@@ -6,7 +6,7 @@ namespace Api.Tests.BoundedContexts.GameManagement.TestHelpers;
 /// <summary>
 /// Builder for creating GameSession test instances with sensible defaults.
 /// </summary>
-public class GameSessionBuilder
+internal class GameSessionBuilder
 {
     private Guid _id = Guid.NewGuid();
     private Guid _gameId = Guid.NewGuid();

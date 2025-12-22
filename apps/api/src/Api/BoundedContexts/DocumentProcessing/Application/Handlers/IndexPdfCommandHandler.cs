@@ -321,12 +321,13 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
         VectorDocumentEntity vectorDoc,
         string errorMessage,
         PdfIndexingErrorCode errorCode,
-        CancellationToken ct)
+        CancellationToken cancellationToken)
     {
         vectorDoc.IndexingStatus = "failed";
         vectorDoc.IndexingError = errorMessage;
-        await _db.SaveChangesAsync(ct).ConfigureAwait(false);
+        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         return IndexingResultDto.CreateFailure(errorMessage, errorCode);
     }
 }
+

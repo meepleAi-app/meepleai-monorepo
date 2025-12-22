@@ -11,13 +11,19 @@ using System.Globalization;
 
 namespace Api.Services;
 
-internal class N8NTemplateService
+internal class N8NTemplateService : IN8NTemplateService
 {
     private readonly MeepleAiDbContext _db;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IConfiguration _configuration;
     private readonly ILogger<N8NTemplateService> _logger;
     private readonly string _templatesPath;
+
+    // CA1869: Cache JsonSerializerOptions for better performance
+    private static readonly JsonSerializerOptions s_jsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
 
     public N8NTemplateService(
         MeepleAiDbContext db,
@@ -82,39 +88,33 @@ internal class N8NTemplateService
             try
             {
                 var json = await File.ReadAllTextAsync(file, ct).ConfigureAwait(false);
-                var template = JsonSerializer.Deserialize<WorkflowTemplateFile>(json, new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                });
+                var template = JsonSerializer.Deserialize<WorkflowTemplateFile>(json, s_jsonOptions);
 
-                if (template != null)
+                if (template != null &&
+                    (category == null || template.Category.Equals(category, StringComparison.OrdinalIgnoreCase)))
                 {
-                    // Filter by category if specified
-                    if (category == null || template.Category.Equals(category, StringComparison.OrdinalIgnoreCase))
-                    {
-                        templates.Add(new WorkflowTemplateDto(
-                            template.Id,
-                            template.Name,
-                            template.Version,
-                            template.Description,
-                            template.Category,
-                            template.Author,
-                            template.Tags,
-                            template.Icon,
-                            template.Screenshot,
-                            template.Documentation,
-                            template.Parameters.Select(p => new TemplateParameterDto(
-                                p.Name,
-                                p.Type,
-                                p.Label,
-                                p.Description,
-                                p.Required,
-                                p.Default,
-                                p.Options,
-                                p.Sensitive
-                            )).ToList()
-                        ));
-                    }
+                    templates.Add(new WorkflowTemplateDto(
+                        template.Id,
+                        template.Name,
+                        template.Version,
+                        template.Description,
+                        template.Category,
+                        template.Author,
+                        template.Tags,
+                        template.Icon,
+                        template.Screenshot,
+                        template.Documentation,
+                        template.Parameters.Select(p => new TemplateParameterDto(
+                            p.Name,
+                            p.Type,
+                            p.Label,
+                            p.Description,
+                            p.Required,
+                            p.Default,
+                            p.Options,
+                            p.Sensitive
+                        )).ToList()
+                    ));
                 }
             }
 #pragma warning disable CA1031 // Do not catch general exception types
@@ -159,10 +159,7 @@ internal class N8NTemplateService
         try
         {
             var json = await File.ReadAllTextAsync(filePath, ct).ConfigureAwait(false);
-            var template = JsonSerializer.Deserialize<WorkflowTemplateFile>(json, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
+            var template = JsonSerializer.Deserialize<WorkflowTemplateFile>(json, s_jsonOptions);
 
             if (template == null)
             {
@@ -219,7 +216,7 @@ internal class N8NTemplateService
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(templateId);
-        ArgumentNullException.ThrowIfNull(parameters, nameof(parameters));
+        ArgumentNullException.ThrowIfNull(parameters);
         // Load template
         var template = await GetTemplateAsync(templateId, ct).ConfigureAwait(false);
         if (template == null)
@@ -275,7 +272,7 @@ internal class N8NTemplateService
         {
             var template = JsonSerializer.Deserialize<WorkflowTemplateFile>(
                 templateJson,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                s_jsonOptions);
 
             if (template == null)
             {
@@ -284,53 +281,13 @@ internal class N8NTemplateService
             }
 
             // Validate required fields
-            if (string.IsNullOrWhiteSpace(template.Id))
-                errors.Add("Template ID is required");
-
-            if (string.IsNullOrWhiteSpace(template.Name))
-                errors.Add("Template name is required");
-
-            if (string.IsNullOrWhiteSpace(template.Version))
-                errors.Add("Template version is required");
-
-            if (string.IsNullOrWhiteSpace(template.Description))
-                errors.Add("Template description is required");
-
-            if (string.IsNullOrWhiteSpace(template.Category))
-                errors.Add("Template category is required");
-
-            if (template.Workflow == null)
-                errors.Add("Workflow definition is required");
-
-            if (template.Parameters == null)
-                errors.Add("Parameters array is required (can be empty)");
+            ValidateRequiredFields(template, errors);
 
             // Validate workflow structure
-            if (template.Workflow is JsonElement workflowElement)
-            {
-                if (!workflowElement.TryGetProperty("nodes", out _))
-                    errors.Add("Workflow must have 'nodes' property");
-
-                if (!workflowElement.TryGetProperty("connections", out _))
-                    errors.Add("Workflow must have 'connections' property");
-            }
+            ValidateWorkflowStructure(template, errors);
 
             // Validate parameter definitions
-            if (template.Parameters != null)
-            {
-                for (int i = 0; i < template.Parameters.Count; i++)
-                {
-                    var param = template.Parameters[i];
-                    if (string.IsNullOrWhiteSpace(param.Name))
-                        errors.Add($"Parameter [{i}] name is required");
-
-                    if (string.IsNullOrWhiteSpace(param.Type))
-                        errors.Add($"Parameter [{i}] type is required");
-
-                    if (string.IsNullOrWhiteSpace(param.Label))
-                        errors.Add($"Parameter [{i}] label is required");
-                }
-            }
+            ValidateParameterDefinitions(template, errors);
 
             return new ValidateTemplateResponse(errors.Count == 0, errors.Count > 0 ? errors : null);
         }
@@ -338,6 +295,61 @@ internal class N8NTemplateService
         {
             errors.Add($"Invalid JSON: {ex.Message}");
             return new ValidateTemplateResponse(false, errors);
+        }
+    }
+
+    private void ValidateRequiredFields(WorkflowTemplateFile template, List<string> errors)
+    {
+        if (string.IsNullOrWhiteSpace(template.Id))
+            errors.Add("Template ID is required");
+
+        if (string.IsNullOrWhiteSpace(template.Name))
+            errors.Add("Template name is required");
+
+        if (string.IsNullOrWhiteSpace(template.Version))
+            errors.Add("Template version is required");
+
+        if (string.IsNullOrWhiteSpace(template.Description))
+            errors.Add("Template description is required");
+
+        if (string.IsNullOrWhiteSpace(template.Category))
+            errors.Add("Template category is required");
+
+        if (template.Workflow == null)
+            errors.Add("Workflow definition is required");
+
+        if (template.Parameters == null)
+            errors.Add("Parameters array is required (can be empty)");
+    }
+
+    private void ValidateWorkflowStructure(WorkflowTemplateFile template, List<string> errors)
+    {
+        if (template.Workflow is JsonElement workflowElement)
+        {
+            if (!workflowElement.TryGetProperty("nodes", out _))
+                errors.Add("Workflow must have 'nodes' property");
+
+            if (!workflowElement.TryGetProperty("connections", out _))
+                errors.Add("Workflow must have 'connections' property");
+        }
+    }
+
+    private void ValidateParameterDefinitions(WorkflowTemplateFile template, List<string> errors)
+    {
+        if (template.Parameters != null)
+        {
+            for (int i = 0; i < template.Parameters.Count; i++)
+            {
+                var param = template.Parameters[i];
+                if (string.IsNullOrWhiteSpace(param.Name))
+                    errors.Add($"Parameter [{i}] name is required");
+
+                if (string.IsNullOrWhiteSpace(param.Type))
+                    errors.Add($"Parameter [{i}] type is required");
+
+                if (string.IsNullOrWhiteSpace(param.Label))
+                    errors.Add($"Parameter [{i}] label is required");
+            }
         }
     }
     private void ValidateParameters(
@@ -348,17 +360,13 @@ internal class N8NTemplateService
         ArgumentNullException.ThrowIfNull(providedParams);
         var missingParams = new List<string>();
 
-        foreach (var param in templateParams.Where(p => p.Required))
-        {
-            // CODE-04: Use TryGetValue to avoid double dictionary lookup
-            if (!providedParams.TryGetValue(param.Name, out var paramValue) ||
-                string.IsNullOrWhiteSpace(paramValue))
-            {
-                missingParams.Add(param.Name);
-            }
-        }
+        missingParams.AddRange(templateParams
+            .Where(p => p.Required)
+            .Where(param => !providedParams.TryGetValue(param.Name, out var paramValue) ||
+                            string.IsNullOrWhiteSpace(paramValue))
+            .Select(p => p.Name));
 
-        if (missingParams.Any())
+        if (missingParams.Count > 0)
         {
             throw new InvalidOperationException(
                 $"Missing required parameters: {string.Join(", ", missingParams)}");
@@ -371,32 +379,30 @@ internal class N8NTemplateService
             if (!providedParams.TryGetValue(param.Name, out var value))
                 continue;
 
-            switch (param.Type.ToLower(CultureInfo.InvariantCulture))
+            if (string.Equals(param.Type, "number", StringComparison.OrdinalIgnoreCase))
             {
-                case "number":
-                    if (!int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out _) && !double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out _))
-                    {
-                        throw new InvalidOperationException(
-                            $"Parameter '{param.Name}' must be a number");
-                    }
-                    break;
-
-                case "boolean":
-                    if (!bool.TryParse(value, out _))
-                    {
-                        throw new InvalidOperationException(
-                            $"Parameter '{param.Name}' must be true or false");
-                    }
-                    break;
-
-                case "select":
-                    if (param.Options != null && !param.Options.Contains(value, StringComparer.Ordinal))
-                    {
-                        throw new InvalidOperationException(
-                            $"Parameter '{param.Name}' must be one of: {string.Join(", ", param.Options)}");
-                    }
-                    break;
+                if (!int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out _) && !double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out _))
+                {
+                    throw new InvalidOperationException(
+                        $"Parameter '{param.Name}' must be a number");
+                }
             }
+            else if (string.Equals(param.Type, "boolean", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!bool.TryParse(value, out _))
+                {
+                    throw new InvalidOperationException(
+                        $"Parameter '{param.Name}' must be true or false");
+                }
+            }
+            else if (string.Equals(param.Type, "select", StringComparison.OrdinalIgnoreCase) &&
+                     param.Options != null &&
+                     !param.Options.Contains(value, StringComparer.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"Parameter '{param.Name}' must be one of: {string.Join(", ", param.Options)}");
+            }
+
         }
     }
 
@@ -439,15 +445,21 @@ internal class N8NTemplateService
         string workflowJson,
         CancellationToken ct)
     {
-        // CA2000 suppression: HttpClient from IHttpClientFactory MUST NOT be disposed manually.
-        // The factory manages HttpMessageHandler pooling and lifetime. See: https://learn.microsoft.com/en-us/dotnet/architecture/microservices/implement-resilient-applications/use-httpclientfactory-to-implement-resilient-http-requests
-#pragma warning disable CA2000 // Dispose objects before losing scope - False positive: IHttpClientFactory manages HttpClient lifetime
-        var httpClient = _httpClientFactory.CreateClient();
-#pragma warning restore CA2000 // Dispose objects before losing scope
-
         // Decrypt API key
         var apiKey = DecryptApiKey(config.ApiKeyEncrypted);
 
+        // Parse and validate workflow
+        var workflowData = ParseAndValidateWorkflow(workflowJson);
+
+        // Build workflow request
+        var requestJson = BuildWorkflowRequest(workflowName, workflowData);
+
+        // Send to n8n
+        return await SendWorkflowToN8nAsync(config.BaseUrl, apiKey, requestJson, ct).ConfigureAwait(false);
+    }
+
+    private JsonElement ParseAndValidateWorkflow(string workflowJson)
+    {
         // Parse workflow JSON to add metadata
         JsonElement workflowData;
         try
@@ -461,15 +473,23 @@ internal class N8NTemplateService
         }
 
         // Validate required workflow structure
-        if (!workflowData.TryGetProperty("nodes", out var nodes))
+        if (!workflowData.TryGetProperty("nodes", out _))
         {
             throw new ArgumentException("Workflow JSON is missing required 'nodes' property", nameof(workflowJson));
         }
 
-        if (!workflowData.TryGetProperty("connections", out var connections))
+        if (!workflowData.TryGetProperty("connections", out _))
         {
             throw new ArgumentException("Workflow JSON is missing required 'connections' property", nameof(workflowJson));
         }
+
+        return workflowData;
+    }
+
+    private string BuildWorkflowRequest(string workflowName, JsonElement workflowData)
+    {
+        var nodes = workflowData.GetProperty("nodes");
+        var connections = workflowData.GetProperty("connections");
 
         // Create n8n workflow creation request
         var createRequest = new
@@ -486,11 +506,25 @@ internal class N8NTemplateService
             active = false // Don't activate immediately
         };
 
-        var requestJson = JsonSerializer.Serialize(createRequest);
+        return JsonSerializer.Serialize(createRequest);
+    }
+
+    private async Task<string> SendWorkflowToN8nAsync(
+        string baseUrl,
+        string apiKey,
+        string requestJson,
+        CancellationToken ct)
+    {
+        // CA2000 suppression: HttpClient from IHttpClientFactory MUST NOT be disposed manually.
+        // The factory manages HttpMessageHandler pooling and lifetime. See: https://learn.microsoft.com/en-us/dotnet/architecture/microservices/implement-resilient-applications/use-httpclientfactory-to-implement-resilient-http-requests
+#pragma warning disable CA2000 // Dispose objects before losing scope - False positive: IHttpClientFactory manages HttpClient lifetime
+        var httpClient = _httpClientFactory.CreateClient();
+#pragma warning restore CA2000 // Dispose objects before losing scope
+
         // CODE-01: Use using for StringContent to ensure proper disposal (CWE-404)
         using var content = new StringContent(requestJson, Encoding.UTF8, "application/json");
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, $"{config.BaseUrl}/api/v1/workflows");
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/api/v1/workflows");
         request.Headers.Add("X-N8N-API-KEY", apiKey);
         request.Content = content;
 

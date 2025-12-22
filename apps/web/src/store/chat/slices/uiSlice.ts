@@ -13,9 +13,11 @@
  */
 
 import { StateCreator } from 'zustand';
-import { ChatStore, UISlice } from '../types';
-import { logger } from '@/lib/logger';
+
 import { createErrorContext } from '@/lib/errors';
+import { logger } from '@/lib/logger';
+
+import { ChatStore, UISlice } from '../types';
 
 export const createUISlice: StateCreator<
   ChatStore,

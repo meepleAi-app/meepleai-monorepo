@@ -21,8 +21,10 @@ internal class AiResponseCacheService : IAiResponseCacheService
         IHybridCacheService hybridCache,
         ILogger<AiResponseCacheService> logger)
     {
-        _hybridCache = hybridCache ?? throw new ArgumentNullException(nameof(hybridCache));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(hybridCache);
+        _hybridCache = hybridCache;
+        ArgumentNullException.ThrowIfNull(logger);
+        _logger = logger;
     }
 
     /// <inheritdoc />
@@ -37,9 +39,9 @@ internal class AiResponseCacheService : IAiResponseCacheService
             // Try to get from HybridCache (no factory, so returns null if not found)
             // Note: HybridCache doesn't have a simple Get operation, so we simulate it
             // by using GetOrCreateAsync with a factory that returns null
-            var result = await _hybridCache.GetOrCreateAsync(
+            var result = await _hybridCache.GetOrCreateAsync<T>(
                 cacheKey: cacheKey,
-                factory: _ => Task.FromResult((T?)null!),
+                factory: _ => Task.FromResult<T>(null!),
                 tags: null,
                 expiration: null,
                 ct: ct
@@ -94,7 +96,7 @@ internal class AiResponseCacheService : IAiResponseCacheService
             var tags = ExtractTagsFromCacheKey(cacheKey);
 
             // Use GetOrCreateAsync to ensure value is cached with tags
-            await _hybridCache.GetOrCreateAsync(
+            await _hybridCache.GetOrCreateAsync<T>(
                 cacheKey: cacheKey,
                 factory: _ => Task.FromResult(response),
                 tags: tags,

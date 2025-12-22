@@ -13,22 +13,22 @@ internal interface IOcrService
     /// </summary>
     /// <param name="pdfPath">Path to the PDF file</param>
     /// <param name="pageIndex">Zero-based page index</param>
-    /// <param name="ct">Cancellation token</param>
+    /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>OCR result containing extracted text and confidence score</returns>
     Task<OcrResult> ExtractTextFromPageAsync(
         string pdfPath,
         int pageIndex,
-        CancellationToken ct = default);
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Performs OCR on an entire PDF document
     /// </summary>
     /// <param name="pdfPath">Path to the PDF file</param>
-    /// <param name="ct">Cancellation token</param>
+    /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>OCR result containing extracted text from all pages and average confidence</returns>
     Task<OcrResult> ExtractTextFromPdfAsync(
         string pdfPath,
-        CancellationToken ct = default);
+        CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -58,3 +58,4 @@ internal record OcrResult
             ErrorMessage = errorMessage
         };
 }
+

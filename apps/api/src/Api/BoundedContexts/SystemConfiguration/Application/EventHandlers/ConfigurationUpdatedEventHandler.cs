@@ -17,7 +17,7 @@ internal sealed class ConfigurationUpdatedEventHandler : DomainEventHandlerBase<
     public ConfigurationUpdatedEventHandler(
         MeepleAiDbContext dbContext,
         IHybridCacheService cache,
-        ILogger<DomainEventHandlerBase<ConfigurationUpdatedEvent>> logger)
+        ILogger<ConfigurationUpdatedEventHandler> logger)
         : base(dbContext, logger)
     {
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));

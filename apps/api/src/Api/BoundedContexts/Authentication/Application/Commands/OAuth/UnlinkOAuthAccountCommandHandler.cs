@@ -95,6 +95,11 @@ internal sealed class UnlinkOAuthAccountCommandHandler : ICommandHandler<UnlinkO
                 ErrorMessage = ex.Message
             };
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: COMMAND HANDLER PATTERN - CQRS handler boundary
+        // Specific exceptions (ValidationException, DomainException) caught separately above.
+        // Generic catch handles unexpected infrastructure failures (DB, network, memory)
+        // to prevent exception propagation to API layer. Returns Result<T> pattern.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error while unlinking OAuth account for user {UserId}", command.UserId);
@@ -104,5 +109,6 @@ internal sealed class UnlinkOAuthAccountCommandHandler : ICommandHandler<UnlinkO
                 ErrorMessage = "An unexpected error occurred while unlinking the OAuth account"
             };
         }
+#pragma warning restore CA1031
     }
 }

@@ -9,7 +9,7 @@ internal sealed class VectorDocumentSearchedEventHandler : DomainEventHandlerBas
 {
     public VectorDocumentSearchedEventHandler(
         MeepleAiDbContext dbContext,
-        ILogger<DomainEventHandlerBase<VectorDocumentSearchedEvent>> logger)
+        ILogger<VectorDocumentSearchedEventHandler> logger)
         : base(dbContext, logger)
     {
     }

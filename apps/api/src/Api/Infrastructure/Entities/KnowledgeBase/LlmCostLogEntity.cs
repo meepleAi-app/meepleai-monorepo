@@ -8,7 +8,7 @@ namespace Api.Infrastructure.Entities;
 /// Stores financial cost data for all LLM requests (OpenRouter, Ollama).
 /// Supports per-user/per-tier cost attribution and cost analytics.
 /// </remarks>
-internal class LlmCostLogEntity
+public class LlmCostLogEntity
 {
     /// <summary>
     /// Unique identifier for this cost log entry

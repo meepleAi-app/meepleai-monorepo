@@ -5,8 +5,9 @@
  * Chromatic integration for flow visualization.
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
 import { HowItWorksSection } from './HowItWorksSection';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta: Meta<typeof HowItWorksSection> = {
   title: 'Landing/HowItWorksSection',

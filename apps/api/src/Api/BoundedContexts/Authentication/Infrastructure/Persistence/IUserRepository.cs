@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 /// Repository interface for User aggregate root.
 /// Provides data access operations specific to users.
 /// </summary>
-internal interface IUserRepository : IRepository<User, Guid>
+public interface IUserRepository : IRepository<User, Guid>
 {
     /// <summary>
     /// Finds a user by their email address.

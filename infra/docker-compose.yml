@@ -1,10 +1,12 @@
 services:
   postgres:
     image: postgres:16.4-alpine3.20
+    container_name: meepleai-postgres
     restart: unless-stopped
     profiles: [minimal, dev, observability, ai, automation, full]
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-meeple}
+      # Issue #2152: Changed default from 'meeple' to 'postgres' for standard PostgreSQL compatibility
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
       POSTGRES_DB: ${POSTGRES_DB:-meepleai}
       # Performance tuning aligned with resource limits
@@ -38,6 +40,7 @@ services:
 
   qdrant:
     image: qdrant/qdrant:v1.12.4
+    container_name: meepleai-qdrant
     restart: unless-stopped
     profiles: [minimal, dev, observability, ai, automation, full]
     ports:
@@ -64,6 +67,7 @@ services:
 
   redis:
     image: redis:7.4.1-alpine3.20
+    container_name: meepleai-redis
     restart: unless-stopped
     profiles: [minimal, dev, observability, ai, automation, full]
     command: ["sh","-c","redis-server --appendonly yes --requirepass $(cat /run/secrets/redis-password) --maxmemory 768mb --maxmemory-policy allkeys-lru"]
@@ -124,6 +128,7 @@ services:
 
   ollama:
     image: ollama/ollama:0.3.14
+    container_name: meepleai-ollama
     restart: unless-stopped
     profiles: [ai, full]
     environment:
@@ -190,6 +195,7 @@ services:
     build:
       context: ../apps/embedding-service
       dockerfile: ./Dockerfile
+    container_name: meepleai-embedding
     restart: unless-stopped
     profiles: [ai, full]
     ports:
@@ -361,6 +367,7 @@ services:
 
   prometheus:
     image: prom/prometheus:v3.7.0
+    container_name: meepleai-prometheus
     restart: unless-stopped
     profiles: [dev, observability, full]
     command:
@@ -394,6 +401,7 @@ services:
   # OPS-05: Error Monitoring & Alerting
   alertmanager:
     image: prom/alertmanager:v0.27.0
+    container_name: meepleai-alertmanager
     restart: unless-stopped
     profiles: [observability, full]
     env_file:
@@ -453,6 +461,7 @@ services:
   # P3-705: cAdvisor for container metrics
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:v0.49.1
+    container_name: meepleai-cadvisor
     restart: unless-stopped
     profiles: [observability, full]
     privileged: true
@@ -479,6 +488,7 @@ services:
   # P3-705: node-exporter for host metrics
   node-exporter:
     image: prom/node-exporter:v1.8.2
+    container_name: meepleai-node-exporter
     restart: unless-stopped
     profiles: [observability, full]
     command:
@@ -503,6 +513,7 @@ services:
 
   grafana:
     image: grafana/grafana:11.4.0
+    container_name: meepleai-grafana
     restart: unless-stopped
     profiles: [dev, observability, full]
     environment:
@@ -545,6 +556,7 @@ services:
 
   n8n:
     image: n8nio/n8n:1.114.4
+    container_name: meepleai-n8n
     restart: unless-stopped
     profiles: [automation, full]
     environment:
@@ -580,6 +592,7 @@ services:
     build:
       context: ../apps/api
       dockerfile: ./src/Api/Dockerfile
+    container_name: meepleai-api
     restart: unless-stopped
     profiles: [minimal, dev, observability, ai, automation, full]
     env_file:
@@ -589,7 +602,8 @@ services:
       ASPNETCORE_URLS: http://+:8080
       # SEC-708: Connection string will be built from secret file
       # Password read from /run/secrets/postgres-password
-      POSTGRES_USER: ${POSTGRES_USER:-meeple}
+      # Issue #2152: Changed default from 'meeple' to 'postgres' for consistency with container user
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_DB: ${POSTGRES_DB:-meepleai}
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
       QDRANT_URL: http://qdrant:6333
@@ -657,6 +671,7 @@ services:
     build:
       context: ../apps/web
       dockerfile: ./Dockerfile
+    container_name: meepleai-web
     restart: unless-stopped
     profiles: [minimal, dev, observability, ai, automation, full]
     env_file:

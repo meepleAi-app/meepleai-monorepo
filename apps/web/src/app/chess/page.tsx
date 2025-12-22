@@ -1,13 +1,15 @@
 'use client';
 
 import { FormEvent, useEffect, useState } from 'react';
+
+import { Chess } from 'chess.js';
 import Link from 'next/link';
 import { Chessboard, type PieceDropHandlerArgs } from 'react-chessboard';
-import { Chess } from 'chess.js';
+
 import { api } from '@/lib/api';
-import { cn } from '@/lib/utils';
-import { logger } from '@/lib/logger';
 import { createErrorContext } from '@/lib/errors';
+import { logger } from '@/lib/logger';
+import { cn } from '@/lib/utils';
 import type { Message } from '@/types';
 
 // Type definitions
@@ -16,17 +18,6 @@ type AuthUser = {
   email: string;
   displayName?: string | null;
   role: string;
-};
-
-type AuthResponse = {
-  user: AuthUser;
-  expiresAt: string;
-};
-
-type ChessResponse = {
-  answer: string;
-  fen?: string;
-  suggestedMoves?: string[];
 };
 
 export default function ChessPage() {
@@ -201,7 +192,7 @@ export default function ChessPage() {
     }
   };
 
-  const onDrop = ({ piece, sourceSquare, targetSquare }: PieceDropHandlerArgs) => {
+  const onDrop = ({ piece: _piece, sourceSquare, targetSquare }: PieceDropHandlerArgs) => {
     // targetSquare can be null when piece is dropped off board
     if (!targetSquare) return false;
 

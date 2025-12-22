@@ -12,6 +12,7 @@
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
+
 import type { Citation } from '@/types';
 
 /**
@@ -160,7 +161,7 @@ export function useMockStreaming(
   }, [stopStreaming]);
 
   const startStreaming = useCallback(
-    async (gameId: string, query: string, chatId?: string, searchMode: string = 'Hybrid') => {
+    async (gameId: string, query: string, chatId?: string, _searchMode: string = 'Hybrid') => {
       // Stop any existing stream
       stopStreaming();
 

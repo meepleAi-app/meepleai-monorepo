@@ -45,6 +45,10 @@ internal class ApiKeyUsedEventHandler : INotificationHandler<ApiKeyUsedEvent>
                 notification.Endpoint,
                 notification.UsedAt);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: EVENT HANDLER PATTERN - Background event processing
+        // Event handlers must not throw exceptions (violates mediator/event pattern).
+        // Errors logged for monitoring; failed usage logging doesn't break API requests.
         catch (Exception ex)
         {
             // Log error but don't throw - usage logging should not break the request
@@ -54,5 +58,6 @@ internal class ApiKeyUsedEventHandler : INotificationHandler<ApiKeyUsedEvent>
                 notification.KeyId,
                 notification.Endpoint);
         }
+#pragma warning restore CA1031
     }
 }

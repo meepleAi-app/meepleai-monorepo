@@ -7,7 +7,7 @@ namespace Api.Infrastructure.Entities;
 /// Issue #2051: Tracks which document collections are selected for each chat thread
 /// </summary>
 [Table("chat_thread_collections")]
-internal class ChatThreadCollectionEntity
+public class ChatThreadCollectionEntity
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid ChatThreadId { get; set; }

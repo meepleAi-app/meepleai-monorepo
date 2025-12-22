@@ -19,6 +19,21 @@ internal static class TwoFactorEndpoints
     // AUTH-07: Two-Factor Authentication endpoints
     public static RouteGroupBuilder MapTwoFactorEndpoints(this RouteGroupBuilder group)
     {
+
+        // Setup and Enable flows
+        MapTwoFactorSetupEndpoints(group);
+        // Login verification
+        MapTwoFactorVerificationEndpoints(group);
+        // Self-management (Disable, Status)
+        MapTwoFactorManagementEndpoints(group);
+        // Admin overrides
+        MapTwoFactorAdminEndpoints(group);
+
+        return group;
+    }
+
+    private static void MapTwoFactorSetupEndpoints(RouteGroupBuilder group)
+    {
         group.MapPost("/auth/2fa/setup", async (HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             var userIdStr = context.User.FindFirst("sub")?.Value;
@@ -87,7 +102,10 @@ internal static class TwoFactorEndpoints
         .RequireAuthorization()
         .WithName("Enable2FA")
         .WithTags("Authentication");
+    }
 
+    private static void MapTwoFactorVerificationEndpoints(RouteGroupBuilder group)
+    {
         group.MapPost("/auth/2fa/verify", async (TwoFactorVerifyRequest request, HttpContext context, IRateLimitService rateLimitService, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             // Rate limit: 3 attempts per minute per session token
@@ -131,7 +149,10 @@ internal static class TwoFactorEndpoints
         })
         .WithName("Verify2FA")
         .WithTags("Authentication");
+    }
 
+    private static void MapTwoFactorManagementEndpoints(RouteGroupBuilder group)
+    {
         group.MapPost("/auth/2fa/disable", async (TwoFactorDisableRequest request, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             var userIdStr = context.User.FindFirst("sub")?.Value;
@@ -157,7 +178,7 @@ internal static class TwoFactorEndpoints
             if (!result.Success)
             {
                 logger.LogWarning("2FA disable failed for user {UserId}: {ErrorMessage}", userId, result.ErrorMessage);
-                if (result.ErrorMessage?.Contains("password", StringComparison.OrdinalIgnoreCase) == true)
+                if (result.ErrorMessage?.Contains("password", StringComparison.OrdinalIgnoreCase) is true)
                 {
                     return Results.Unauthorized();
                 }
@@ -202,7 +223,10 @@ internal static class TwoFactorEndpoints
         .RequireAuthorization()
         .WithName("Get2FAStatus")
         .WithTags("Users");
+    }
 
+    private static void MapTwoFactorAdminEndpoints(RouteGroupBuilder group)
+    {
         // AUTH-08: Admin override to disable 2FA for locked-out users
         group.MapPost("/auth/admin/2fa/disable", async (AdminDisable2FARequest request, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
@@ -241,7 +265,7 @@ internal static class TwoFactorEndpoints
                     result.ErrorMessage);
 
                 // Return appropriate status code based on error
-                if (result.ErrorMessage?.Contains("Unauthorized") == true)
+                if (result.ErrorMessage?.Contains("Unauthorized") is true)
                 {
                     return Results.Json(new { error = result.ErrorMessage }, statusCode: 403);
                 }
@@ -277,6 +301,7 @@ internal static class TwoFactorEndpoints
         .Produces(401)
         .Produces(403);
 
-        return group;
+
     }
+
 }

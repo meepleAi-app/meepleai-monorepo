@@ -26,8 +26,10 @@ internal class GetNotificationsQueryHandler : IQueryHandler<GetNotificationsQuer
         INotificationRepository notificationRepository,
         IConfigurationService configService)
     {
-        _notificationRepository = notificationRepository ?? throw new ArgumentNullException(nameof(notificationRepository));
-        _configService = configService ?? throw new ArgumentNullException(nameof(configService));
+        ArgumentNullException.ThrowIfNull(notificationRepository);
+        _notificationRepository = notificationRepository;
+        ArgumentNullException.ThrowIfNull(configService);
+        _configService = configService;
     }
 
     public async Task<List<NotificationDto>> Handle(GetNotificationsQuery query, CancellationToken cancellationToken)

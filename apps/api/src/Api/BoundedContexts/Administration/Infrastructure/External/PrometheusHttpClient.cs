@@ -14,6 +14,12 @@ internal class PrometheusHttpClient : IPrometheusQueryService
     private readonly HttpClient _httpClient;
     private readonly ILogger<PrometheusHttpClient> _logger;
 
+    // CA1869: Cache JsonSerializerOptions for better performance
+    private static readonly JsonSerializerOptions s_jsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
     public PrometheusHttpClient(
         HttpClient httpClient,
         IOptions<PrometheusOptions> options,
@@ -63,10 +69,7 @@ internal class PrometheusHttpClient : IPrometheusQueryService
             response.EnsureSuccessStatusCode();
 
             var content = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-            var prometheusResponse = JsonSerializer.Deserialize<PrometheusApiResponse>(content, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
+            var prometheusResponse = JsonSerializer.Deserialize<PrometheusApiResponse>(content, s_jsonOptions);
 
             if (prometheusResponse is null || !string.Equals(prometheusResponse.Status, "success", StringComparison.Ordinal))
             {
@@ -111,10 +114,7 @@ internal class PrometheusHttpClient : IPrometheusQueryService
             response.EnsureSuccessStatusCode();
 
             var content = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-            var prometheusResponse = JsonSerializer.Deserialize<PrometheusApiResponse>(content, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
+            var prometheusResponse = JsonSerializer.Deserialize<PrometheusApiResponse>(content, s_jsonOptions);
 
             if (prometheusResponse is null || !string.Equals(prometheusResponse.Status, "success", StringComparison.Ordinal))
             {
@@ -141,7 +141,8 @@ internal class PrometheusHttpClient : IPrometheusQueryService
     {
         // Prometheus step format: number + unit (s=seconds, m=minutes, h=hours, d=days, w=weeks, y=years)
         // Examples: "5m", "1h", "30s", "1d"
-        if (!System.Text.RegularExpressions.Regex.IsMatch(step, @"^\d+[smhdwy]$"))
+        if (!System.Text.RegularExpressions.Regex.IsMatch(step, @"^\d+[smhdwy]$",
+            System.Text.RegularExpressions.RegexOptions.None, TimeSpan.FromSeconds(1)))
         {
             throw new ArgumentException(
                 "Step must be in Prometheus duration format (e.g., '5m', '1h', '30s', '1d')",
@@ -182,10 +183,9 @@ internal class PrometheusHttpClient : IPrometheusQueryService
                     }
                 }
             }
-            else if (result.Value is not null)
+            else if (result.Value is JsonElement element && element.ValueKind == JsonValueKind.Array)
             {
                 // Instant query response: single [timestamp, value] array
-                if (result.Value is JsonElement element && element.ValueKind == JsonValueKind.Array)
                 {
                     var array = element.EnumerateArray().ToArray();
                     if (array.Length >= 2)

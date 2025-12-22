@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 /// EF Core implementation of Session repository.
 /// Maps between domain Session entity and UserSessionEntity persistence model.
 /// </summary>
-internal class SessionRepository : RepositoryBase, ISessionRepository
+public class SessionRepository : RepositoryBase, ISessionRepository
 {
     private readonly TimeProvider _timeProvider;
 
@@ -65,6 +65,7 @@ internal class SessionRepository : RepositoryBase, ISessionRepository
 
     public async Task AddAsync(Session session, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(session);
         // Collect domain events BEFORE mapping to persistence entity
         CollectDomainEvents(session);
 
@@ -74,6 +75,7 @@ internal class SessionRepository : RepositoryBase, ISessionRepository
 
     public async Task UpdateAsync(Session session, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(session);
         // Collect domain events BEFORE updating persistence entity
         CollectDomainEvents(session);
 

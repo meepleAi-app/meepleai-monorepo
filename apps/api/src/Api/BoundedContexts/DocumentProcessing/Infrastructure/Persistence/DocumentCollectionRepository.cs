@@ -69,14 +69,14 @@ internal class DocumentCollectionRepository : RepositoryBase, IDocumentCollectio
 
     public async Task AddAsync(DocumentCollection collection, CancellationToken cancellationToken = default)
     {
-        if (collection is null) throw new ArgumentNullException(nameof(collection));
+        ArgumentNullException.ThrowIfNull(collection);
         var entity = MapToPersistence(collection);
         await DbContext.DocumentCollections.AddAsync(entity, cancellationToken).ConfigureAwait(false);
     }
 
     public Task UpdateAsync(DocumentCollection collection, CancellationToken cancellationToken = default)
     {
-        if (collection is null) throw new ArgumentNullException(nameof(collection));
+        ArgumentNullException.ThrowIfNull(collection);
         var entity = MapToPersistence(collection);
 
         // Check if already tracked
@@ -91,7 +91,7 @@ internal class DocumentCollectionRepository : RepositoryBase, IDocumentCollectio
 
     public Task DeleteAsync(DocumentCollection collection, CancellationToken cancellationToken = default)
     {
-        if (collection is null) throw new ArgumentNullException(nameof(collection));
+        ArgumentNullException.ThrowIfNull(collection);
         var entity = MapToPersistence(collection);
         DbContext.DocumentCollections.Remove(entity);
         return Task.CompletedTask;

@@ -11,10 +11,13 @@
  */
 
 import { useMemo } from 'react';
+
+import { ActivityIcon, ArrowRightIcon } from 'lucide-react';
 import Link from 'next/link';
+
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { ActivityIcon, ArrowRightIcon } from 'lucide-react';
+
 import { severityStyles, eventIcons, formatRelativeTimestamp } from './utils/activityUtils';
 
 export interface ActivityEvent {

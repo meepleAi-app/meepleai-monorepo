@@ -22,8 +22,10 @@
  */
 
 import * as React from 'react';
-import { useFormField } from './FormField';
+
 import { cn } from '@/lib/utils';
+
+import { useFormField } from './FormField';
 
 export const FormError = React.forwardRef<
   HTMLParagraphElement,
@@ -40,10 +42,7 @@ export const FormError = React.forwardRef<
     <p
       ref={ref}
       id={formMessageId}
-      className={cn(
-        'text-sm text-red-600 dark:text-red-400 mt-1',
-        className
-      )}
+      className={cn('text-sm text-red-600 dark:text-red-400 mt-1', className)}
       role="alert"
       aria-live="polite"
       {...props}

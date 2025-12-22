@@ -4,9 +4,10 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { retryWithBackoff, isRetryableError } from '../lib/retryUtils';
-import { extractCorrelationId } from '../lib/errorUtils';
+
 import { ApiError } from '../lib/api';
+import { extractCorrelationId } from '../lib/errorUtils';
+import { retryWithBackoff, isRetryableError } from '../lib/retryUtils';
 
 export type UploadStatus =
   | 'pending'
@@ -550,7 +551,7 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
         // Use activeUploadsRef instead of queue state for accurate count
         // queue state updates asynchronously, but ref is synchronous!
         const activeCount = activeUploadsRef.current.size;
-        const stats = getStats();
+        const _stats = getStats();
 
         // Check if we can start more uploads
         if (activeCount >= concurrencyLimit) {

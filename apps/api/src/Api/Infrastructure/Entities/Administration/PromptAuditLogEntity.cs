@@ -4,7 +4,7 @@ namespace Api.Infrastructure.Entities;
 /// Represents an audit log entry for prompt template changes.
 /// Records all create, update, activate, and deactivate operations.
 /// </summary>
-internal class PromptAuditLogEntity
+public class PromptAuditLogEntity
 {
     /// <summary>
     /// Unique identifier for the audit log entry.

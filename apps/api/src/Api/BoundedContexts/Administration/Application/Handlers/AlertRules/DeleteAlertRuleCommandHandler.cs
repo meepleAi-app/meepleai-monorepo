@@ -11,10 +11,11 @@ internal class DeleteAlertRuleCommandHandler : IRequestHandler<DeleteAlertRuleCo
     public DeleteAlertRuleCommandHandler(IAlertRuleRepository repository) =>
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
 
-    public async Task<Unit> Handle(DeleteAlertRuleCommand request, CancellationToken ct)
+    public async Task<Unit> Handle(DeleteAlertRuleCommand request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
-        await _repository.DeleteAsync(request.Id, ct).ConfigureAwait(false);
+        await _repository.DeleteAsync(request.Id, cancellationToken).ConfigureAwait(false);
         return Unit.Value;
     }
 }
+

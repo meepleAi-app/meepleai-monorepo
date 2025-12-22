@@ -1,6 +1,7 @@
-import type { Meta, StoryObj } from '@storybook/react';
-import { Textarea } from './textarea';
 import { Label } from './label';
+import { Textarea } from './textarea';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 /**
  * Textarea component for multi-line text input.

@@ -18,7 +18,7 @@ namespace Api.Tests.Services;
 /// BGAI-042: Weekly automated quality evaluation job.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
-public class WeeklyEvaluationServiceTests : IDisposable
+public sealed class WeeklyEvaluationServiceTests : IDisposable
 {
     private readonly Mock<IServiceScopeFactory> _scopeFactoryMock;
     private readonly Mock<IServiceScope> _scopeMock;
@@ -237,10 +237,10 @@ public class WeeklyEvaluationServiceTests : IDisposable
         _config.RagDatasetPath = "datasets/rag/evaluation.json";
         var options = Options.Create(_config);
 
-        var ragServiceMock = new Mock<IRagEvaluationService>();
+        // When RAG evaluation is disabled, service won't be requested from DI
         _serviceProviderMock
             .Setup(x => x.GetService(typeof(IRagEvaluationService)))
-            .Returns(ragServiceMock.Object);
+            .Returns(null!);
 
         _mediatorMock
             .Setup(x => x.Send(It.IsAny<GenerateQualityReportQuery>(), It.IsAny<CancellationToken>()))
@@ -271,8 +271,9 @@ public class WeeklyEvaluationServiceTests : IDisposable
         await service.StopAsync(_cts.Token);
 
         // Assert
-        ragServiceMock.Verify(
-            x => x.LoadDatasetAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+        // RAG evaluation should not be invoked when disabled
+        _serviceProviderMock.Verify(
+            x => x.GetService(typeof(IRagEvaluationService)),
             Times.Never);
     }
 

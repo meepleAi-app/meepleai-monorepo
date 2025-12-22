@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.Authentication.Domain.ValueObjects;
 /// Represents a hashed password value object.
 /// Uses PBKDF2 with 210,000 iterations for secure password hashing.
 /// </summary>
-internal sealed class PasswordHash : ValueObject
+public sealed class PasswordHash : ValueObject
 {
     private const string HashVersion = "v1";
     private const int SaltSize = 16; // 128 bits
@@ -72,7 +72,11 @@ internal sealed class PasswordHash : ValueObject
 
     public override string ToString() => "[REDACTED]"; // Never expose hash value
 
-    public static implicit operator string(PasswordHash hash) => hash.Value;
+    public static implicit operator string(PasswordHash hash)
+    {
+        ArgumentNullException.ThrowIfNull(hash);
+        return hash.Value;
+    }
 
     private static string CreateVersionedHash(string plaintextPassword)
     {

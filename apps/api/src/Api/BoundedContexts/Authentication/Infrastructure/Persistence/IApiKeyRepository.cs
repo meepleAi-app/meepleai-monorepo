@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 /// Note: ApiKey is not an aggregate root, but we provide repository for query convenience.
 /// API keys are managed through the User aggregate root.
 /// </summary>
-internal interface IApiKeyRepository
+public interface IApiKeyRepository
 {
     /// <summary>
     /// Finds an API key by its key prefix (first 8 characters).

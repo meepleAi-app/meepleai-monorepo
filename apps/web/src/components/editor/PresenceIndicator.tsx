@@ -12,8 +12,9 @@
 'use client';
 
 import * as React from 'react';
-import { cn } from '@/lib/utils';
+
 import type { EditorLock } from '@/lib/api/schemas';
+import { cn } from '@/lib/utils';
 import type { LockAcquisitionStatus } from '@/stores/RuleSpecLockStore';
 
 export interface PresenceIndicatorProps {

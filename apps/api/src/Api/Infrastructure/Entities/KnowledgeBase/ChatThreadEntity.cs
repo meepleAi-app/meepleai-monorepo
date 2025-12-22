@@ -4,7 +4,7 @@ namespace Api.Infrastructure.Entities;
 /// EF Core entity for chat thread persistence (DDD KnowledgeBase context).
 /// Represents a conversation thread with Q&A history.
 /// </summary>
-internal class ChatThreadEntity
+public class ChatThreadEntity
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid UserId { get; set; }

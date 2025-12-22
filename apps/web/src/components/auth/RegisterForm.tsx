@@ -10,9 +10,10 @@
  * - i18n support
  */
 
-import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
 import * as z from 'zod';
+
 import { AccessibleFormInput } from '@/components/accessible';
 import { LoadingButton } from '@/components/loading/LoadingButton';
 import {
@@ -110,7 +111,7 @@ export function RegisterForm({
     }
 
     // Remove confirmPassword before sending to API
-    const { confirmPassword, ...registerData } = data;
+    const { confirmPassword: _confirmPassword, ...registerData } = data;
     await onSubmit(registerData);
   };
 

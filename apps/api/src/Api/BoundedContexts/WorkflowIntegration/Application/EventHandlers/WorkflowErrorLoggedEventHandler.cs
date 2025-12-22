@@ -12,7 +12,7 @@ internal sealed class WorkflowErrorLoggedEventHandler : DomainEventHandlerBase<W
 {
     public WorkflowErrorLoggedEventHandler(
         MeepleAiDbContext dbContext,
-        ILogger<DomainEventHandlerBase<WorkflowErrorLoggedEvent>> logger)
+        ILogger<WorkflowErrorLoggedEventHandler> logger)
         : base(dbContext, logger)
     {
     }

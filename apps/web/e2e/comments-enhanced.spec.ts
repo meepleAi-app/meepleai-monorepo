@@ -5,8 +5,8 @@
  * Issue #2007: Updated to use role-based fixtures (editorPage, adminPage)
  */
 
+import { t } from './fixtures/i18n';
 import { test, expect } from './fixtures/roles';
-import { getTextMatcher, t } from './fixtures/i18n';
 
 /**
  * E2E Tests for EDIT-05: Enhanced Comments System (Threaded Replies, Mentions, Resolution)

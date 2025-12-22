@@ -21,24 +21,25 @@
 
 'use client';
 
-import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+
 import Link from 'next/link';
-import type { AuthUser } from '@/types/auth';
-import { api } from '@/lib/api';
+import { useRouter, useSearchParams } from 'next/navigation';
+
 import {
   RichTextEditor,
   ViewModeToggle,
   ConflictResolutionModal,
   PresenceIndicator,
 } from '@/components/editor';
+import { useAuthUser } from '@/hooks/useAuthUser';
 import { useDebounce } from '@/hooks/useDebounce';
+import { api } from '@/lib/api';
+import type { RuleSpec } from '@/lib/api/schemas';
+import { createErrorContext } from '@/lib/errors';
+import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';
 import { getErrorMessage } from '@/lib/utils/errorHandler';
-import { logger } from '@/lib/logger';
-import { createErrorContext } from '@/lib/errors';
-import { useAuthUser } from '@/hooks/useAuthUser';
-import type { RuleAtom, RuleSpec } from '@/lib/api/schemas';
 import {
   useRuleSpecLockStore,
   selectHasLock,
@@ -51,11 +52,6 @@ import {
   type LockApiClient,
 } from '@/stores/RuleSpecLockStore';
 
-type AuthResponse = {
-  user: AuthUser;
-  expiresAt: string;
-};
-
 type HistoryEntry = {
   content: string;
   timestamp: number;
@@ -65,7 +61,7 @@ type ViewMode = 'rich' | 'json';
 
 export function EditorClient() {
   const { user } = useAuthUser();
-  const router = useRouter();
+  const _router = useRouter();
   const searchParams = useSearchParams();
   const gameId = searchParams?.get('gameId') ?? null;
 
@@ -456,7 +452,7 @@ export function EditorClient() {
             const localVersion: RuleSpec = JSON.parse(contentToSave);
             handleConflict(localVersion, remoteVersion, errorMsg);
           }
-        } catch (fetchErr) {
+        } catch (_fetchErr) {
           setErrorMessage('Conflitto rilevato ma impossibile recuperare la versione remota');
         }
       } else {

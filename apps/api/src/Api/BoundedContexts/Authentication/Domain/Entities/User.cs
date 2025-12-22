@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.Authentication.Domain.Entities;
 /// User aggregate root.
 /// Represents an authenticated user in the system with identity, credentials, and role.
 /// </summary>
-internal sealed class User : AggregateRoot<Guid>
+public sealed class User : AggregateRoot<Guid>
 {
     public Email Email { get; private set; }
     public string DisplayName { get; private set; }
@@ -122,6 +122,7 @@ internal sealed class User : AggregateRoot<Guid>
     /// </summary>
     public void UpdateEmail(Email newEmail)
     {
+        ArgumentNullException.ThrowIfNull(newEmail);
         if (Email == newEmail)
             return; // No change
 
@@ -149,6 +150,8 @@ internal sealed class User : AggregateRoot<Guid>
     /// </summary>
     public void AssignRole(Role newRole, Role requesterRole)
     {
+        ArgumentNullException.ThrowIfNull(newRole);
+        ArgumentNullException.ThrowIfNull(requesterRole);
         // Only admins can assign roles
         if (!requesterRole.IsAdmin())
             throw new DomainException("Only administrators can assign roles");
@@ -168,6 +171,7 @@ internal sealed class User : AggregateRoot<Guid>
     /// </summary>
     public void UpdateRole(Role newRole)
     {
+        ArgumentNullException.ThrowIfNull(newRole);
         if (Role == newRole)
             return; // No change
 
@@ -186,8 +190,8 @@ internal sealed class User : AggregateRoot<Guid>
     /// <exception cref="DomainException">Thrown when 2FA is already enabled or backup codes are invalid.</exception>
     public void Enable2FA(TotpSecret totpSecret, List<BackupCode>? backupCodes = null)
     {
-        if (totpSecret == null)
-            throw new ArgumentNullException(nameof(totpSecret));
+        ArgumentNullException.ThrowIfNull(totpSecret);
+
 
         if (IsTwoFactorEnabled)
             throw new DomainException("Two-factor authentication is already enabled");
@@ -274,8 +278,8 @@ internal sealed class User : AggregateRoot<Guid>
     /// <exception cref="DomainException">Thrown when provider is already linked.</exception>
     public void LinkOAuthAccount(OAuthAccount account)
     {
-        if (account == null)
-            throw new ArgumentNullException(nameof(account));
+        ArgumentNullException.ThrowIfNull(account);
+
 
         // Validate provider is supported (account constructor already validates this, but check again)
         if (!OAuthAccount.SupportedProviders.Contains(account.Provider))
@@ -354,7 +358,7 @@ internal sealed class User : AggregateRoot<Guid>
         bool hasPassword = PasswordHash != null;
 
         // User has at least one OAuth account
-        bool hasOAuth = _oauthAccounts.Any();
+        bool hasOAuth = _oauthAccounts.Count > 0;
 
         return hasPassword || hasOAuth;
     }
@@ -369,11 +373,11 @@ internal sealed class User : AggregateRoot<Guid>
     /// <exception cref="DomainException">Thrown when requester is not an admin.</exception>
     public void UpdateTier(UserTier newTier, Role requesterRole)
     {
-        if (newTier == null)
-            throw new ArgumentNullException(nameof(newTier));
+        ArgumentNullException.ThrowIfNull(newTier);
 
-        if (requesterRole == null)
-            throw new ArgumentNullException(nameof(requesterRole));
+
+        ArgumentNullException.ThrowIfNull(requesterRole);
+
 
         // Only admins can change user tiers
         if (!requesterRole.IsAdmin())

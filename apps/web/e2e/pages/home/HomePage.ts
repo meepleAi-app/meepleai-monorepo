@@ -1,7 +1,8 @@
 import { Locator, expect } from '@playwright/test';
-import { BasePage } from '../base/BasePage';
+
 import { getFlexibleMatcher, getTextMatcher } from '../../fixtures/i18n';
 import { IHomePage } from '../../types/pom-interfaces';
+import { BasePage } from '../base/BasePage';
 
 /**
  * HomePage - Landing page interactions and assertions
@@ -46,7 +47,9 @@ export class HomePage extends BasePage implements IHomePage {
   }
 
   private get featuresHeading(): Locator {
-    return this.featuresSection.getByRole('heading', { name: getTextMatcher('home.features.title') });
+    return this.featuresSection.getByRole('heading', {
+      name: getTextMatcher('home.features.title'),
+    });
   }
 
   private getFeatureCardHeading(key: string): Locator {

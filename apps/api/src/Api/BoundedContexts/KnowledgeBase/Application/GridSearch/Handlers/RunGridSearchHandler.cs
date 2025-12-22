@@ -228,6 +228,10 @@ internal sealed class RunGridSearchHandler : IRequestHandler<RunGridSearchComman
                 result.SampleResults.Count,
                 configStopwatch.Elapsed.TotalMilliseconds);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: BACKGROUND TASK PATTERN - Grid search error isolation
+        // Background tasks must not throw exceptions (would terminate grid search batch).
+        // Errors logged for monitoring; failed configurations recorded with error state for analysis.
         catch (Exception ex)
         {
             configStopwatch.Stop();
@@ -242,6 +246,7 @@ internal sealed class RunGridSearchHandler : IRequestHandler<RunGridSearchComman
                 ex.Message,
                 configStopwatch.Elapsed.TotalMilliseconds);
         }
+#pragma warning restore CA1031
     }
 
     private void LogSummary(GridSearchResult result)

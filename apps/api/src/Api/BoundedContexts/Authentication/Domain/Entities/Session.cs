@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.Authentication.Domain.Entities;
 /// Sessions have a limited lifetime and can be revoked.
 /// Aggregate root for session lifecycle management.
 /// </summary>
-internal sealed class Session : AggregateRoot<Guid>
+public sealed class Session : AggregateRoot<Guid>
 {
     public Guid UserId { get; private set; }
     public string TokenHash { get; private set; }
@@ -50,6 +50,7 @@ internal sealed class Session : AggregateRoot<Guid>
         string? userAgent = null,
         TimeProvider? timeProvider = null) : base(id)
     {
+        ArgumentNullException.ThrowIfNull(token);
         UserId = userId;
         TokenHash = token.ComputeHash();
         CreatedAt = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
@@ -66,6 +67,7 @@ internal sealed class Session : AggregateRoot<Guid>
     /// </summary>
     public bool IsValid(TimeProvider timeProvider)
     {
+        ArgumentNullException.ThrowIfNull(timeProvider);
         var now = timeProvider.GetUtcNow().UtcDateTime;
 
         // Session is valid if not expired and not revoked
@@ -97,6 +99,7 @@ internal sealed class Session : AggregateRoot<Guid>
     /// </summary>
     public bool IsExpired(TimeProvider timeProvider)
     {
+        ArgumentNullException.ThrowIfNull(timeProvider);
         return timeProvider.GetUtcNow().UtcDateTime >= ExpiresAt;
     }
 

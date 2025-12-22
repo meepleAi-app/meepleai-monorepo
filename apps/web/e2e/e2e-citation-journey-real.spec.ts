@@ -47,14 +47,14 @@
  * - Services: Requires full stack running
  */
 
-import { test, expect } from './fixtures/chromatic';
 import path from 'path';
+
 import { authenticateViaAPI } from './fixtures/auth';
+import { test, expect } from './fixtures/chromatic';
 import {
   uploadPdfAndWaitForProcessing,
   navigateToChatAndSelectGame,
   sendQuestionAndWaitForResponse,
-  verifyCitationDisplay,
 } from './helpers/citation-test-utils';
 import { WaitHelper } from './helpers/WaitHelper';
 

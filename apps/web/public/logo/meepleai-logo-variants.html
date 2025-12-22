@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MeepleAI Logo - Varianti con Forma Autentica</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=Outfit:wght@700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            min-height: 100vh;
+            padding: 2rem;
+            font-family: system-ui, sans-serif;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 1.5rem;
+            padding: 3rem;
+            box-shadow: 0 24px 64px rgba(0, 0, 0, 0.3);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .card {
+            background: #f8fafc;
+            border-radius: 1rem;
+            padding: 2rem;
+            text-align: center;
+            border: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: #3B82F6;
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(59, 130, 246, 0.2);
+        }
+
+        .logo-display {
+            background: white;
+            padding: 3rem 2rem;
+            border-radius: 0.75rem;
+            margin-bottom: 1.5rem;
+            min-height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .logo-display::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background:
+                repeating-linear-gradient(90deg, transparent, transparent 19px, #f1f5f9 19px, #f1f5f9 20px),
+                repeating-linear-gradient(0deg, transparent, transparent 19px, #f1f5f9 19px, #f1f5f9 20px);
+            border-radius: 0.75rem;
+        }
+
+        .logo-display img {
+            position: relative;
+            z-index: 1;
+        }
+
+        .dark-bg {
+            background: #0f172a !important;
+        }
+
+        h3 {
+            color: #1e293b;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .description {
+            color: #64748b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        .label {
+            display: inline-block;
+            background: linear-gradient(135deg, #3B82F6, #8B5CF6);
+            color: white;
+            padding: 0.4rem 1rem;
+            border-radius: 2rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 style="text-align: center; font-size: 2.5rem; font-weight: 800; background: linear-gradient(135deg, #3B82F6, #8B5CF6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 1rem;">
+            MeepleAI Logo Finale
+        </h1>
+        <p style="text-align: center; color: #64748b; font-size: 1.1rem; margin-bottom: 3rem;">
+            Forma autentica del meeple con elementi AI integrati
+        </p>
+
+        <div class="grid">
+            <!-- Variant 1: Circuit Pattern -->
+            <div class="card">
+                <div class="label">Variant 1: AI Circuit</div>
+                <h3>Meeple con Circuiti AI</h3>
+                <div class="logo-display">
+                    <svg width="120" height="120" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:#3B82F6" />
+                                <stop offset="100%" style="stop-color:#8B5CF6" />
+                            </linearGradient>
+                        </defs>
+                        <path d="M 50 15 A 12 12 0 1 1 50 39 A 12 12 0 1 1 50 15 M 50 39 L 50 42 L 15 42 L 12 45 L 12 52 L 15 55 L 28 55 L 32 60 L 35 70 L 30 88 L 28 95 L 45 95 L 50 75 L 55 95 L 72 95 L 70 88 L 65 70 L 68 60 L 72 55 L 85 55 L 88 52 L 88 45 L 85 42 L 50 42 Z" fill="url(#grad1)"/>
+                        <g opacity="0.4" stroke="#10B981" stroke-width="1.5" fill="none">
+                            <circle cx="50" cy="27" r="6"/>
+                            <line x1="50" y1="45" x2="50" y2="58"/>
+                            <circle cx="50" cy="58" r="3"/>
+                            <line x1="47" y1="58" x2="32" y2="58"/>
+                            <line x1="53" y1="58" x2="68" y2="58"/>
+                            <circle cx="32" cy="58" r="2"/>
+                            <circle cx="68" cy="58" r="2"/>
+                        </g>
+                        <circle cx="50" cy="58" r="3" fill="#10B981" opacity="0.9"/>
+                        <circle cx="50" cy="58" r="1.5" fill="white"/>
+                    </svg>
+                </div>
+                <p class="description">
+                    Pattern circuiti AI integrato nella silhouette classica. Gradient moderno, tech-forward.
+                </p>
+            </div>
+
+            <!-- Variant 2: Glowing Core -->
+            <div class="card">
+                <div class="label">Variant 2: Energy Core</div>
+                <h3>Meeple con Energia AI</h3>
+                <div class="logo-display dark-bg">
+                    <svg width="120" height="120" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:#3B82F6" />
+                                <stop offset="100%" style="stop-color:#8B5CF6" />
+                            </linearGradient>
+                            <radialGradient id="glow">
+                                <stop offset="0%" style="stop-color:#10B981;stop-opacity:1" />
+                                <stop offset="100%" style="stop-color:#10B981;stop-opacity:0" />
+                            </radialGradient>
+                        </defs>
+                        <circle cx="50" cy="58" r="20" fill="url(#glow)" opacity="0.6"/>
+                        <path d="M 50 15 A 12 12 0 1 1 50 39 A 12 12 0 1 1 50 15 M 50 39 L 50 42 L 15 42 L 12 45 L 12 52 L 15 55 L 28 55 L 32 60 L 35 70 L 30 88 L 28 95 L 45 95 L 50 75 L 55 95 L 72 95 L 70 88 L 65 70 L 68 60 L 72 55 L 85 55 L 88 52 L 88 45 L 85 42 L 50 42 Z" fill="url(#grad2)"/>
+                        <circle cx="50" cy="58" r="6" fill="#10B981">
+                            <animate attributeName="r" values="5;7;5" dur="2s" repeatCount="indefinite"/>
+                        </circle>
+                        <circle cx="50" cy="58" r="3" fill="white" opacity="0.9"/>
+                    </svg>
+                </div>
+                <p class="description">
+                    Energy core pulsante al centro. Effetto glow animato, perfetto per dark mode.
+                </p>
+            </div>
+
+            <!-- Variant 3: Geometric Pattern -->
+            <div class="card">
+                <div class="label">Variant 3: Data Grid</div>
+                <h3>Meeple con Pattern Dati</h3>
+                <div class="logo-display">
+                    <svg width="120" height="120" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <linearGradient id="grad3" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:#3B82F6" />
+                                <stop offset="100%" style="stop-color:#8B5CF6" />
+                            </linearGradient>
+                            <pattern id="dots" x="0" y="0" width="8" height="8" patternUnits="userSpaceOnUse">
+                                <circle cx="4" cy="4" r="1" fill="#10B981" opacity="0.4"/>
+                            </pattern>
+                        </defs>
+                        <path d="M 50 15 A 12 12 0 1 1 50 39 A 12 12 0 1 1 50 15 M 50 39 L 50 42 L 15 42 L 12 45 L 12 52 L 15 55 L 28 55 L 32 60 L 35 70 L 30 88 L 28 95 L 45 95 L 50 75 L 55 95 L 72 95 L 70 88 L 65 70 L 68 60 L 72 55 L 85 55 L 88 52 L 88 45 L 85 42 L 50 42 Z" fill="url(#grad3)"/>
+                        <path d="M 50 15 A 12 12 0 1 1 50 39 A 12 12 0 1 1 50 15 M 50 39 L 50 42 L 15 42 L 12 45 L 12 52 L 15 55 L 28 55 L 32 60 L 35 70 L 30 88 L 28 95 L 45 95 L 50 75 L 55 95 L 72 95 L 70 88 L 65 70 L 68 60 L 72 55 L 85 55 L 88 52 L 88 45 L 85 42 L 50 42 Z" fill="url(#dots)"/>
+                        <rect x="35" y="50" width="30" height="20" fill="#10B981" opacity="0.2" rx="2"/>
+                        <text x="50" y="63" font-family="monospace" font-size="8" fill="white" text-anchor="middle" font-weight="bold">AI</text>
+                    </svg>
+                </div>
+                <p class="description">
+                    Pattern dots + badge "AI". Data-driven aesthetic, tech ma friendly.
+                </p>
+            </div>
+
+            <!-- Variant 4: Outline with Tech -->
+            <div class="card">
+                <div class="label">Variant 4: Tech Outline</div>
+                <h3>Meeple Outline Tecnologico</h3>
+                <div class="logo-display">
+                    <svg width="120" height="120" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <linearGradient id="grad4" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:#3B82F6" />
+                                <stop offset="100%" style="stop-color:#8B5CF6" />
+                            </linearGradient>
+                        </defs>
+                        <path d="M 50 15 A 12 12 0 1 1 50 39 A 12 12 0 1 1 50 15 M 50 39 L 50 42 L 15 42 L 12 45 L 12 52 L 15 55 L 28 55 L 32 60 L 35 70 L 30 88 L 28 95 L 45 95 L 50 75 L 55 95 L 72 95 L 70 88 L 65 70 L 68 60 L 72 55 L 85 55 L 88 52 L 88 45 L 85 42 L 50 42 Z"
+                              fill="none"
+                              stroke="url(#grad4)"
+                              stroke-width="4"
+                              stroke-linejoin="round"/>
+                        <circle cx="50" cy="27" r="8" fill="none" stroke="url(#grad4)" stroke-width="3"/>
+                        <g stroke="#10B981" stroke-width="2" fill="#10B981">
+                            <line x1="50" y1="45" x2="50" y2="58"/>
+                            <circle cx="50" cy="58" r="4"/>
+                            <line x1="46" y1="58" x2="32" y2="58"/>
+                            <line x1="54" y1="58" x2="68" y2="58"/>
+                            <circle cx="32" cy="58" r="2.5"/>
+                            <circle cx="68" cy="58" r="2.5"/>
+                            <line x1="50" y1="62" x2="50" y2="70"/>
+                            <circle cx="50" cy="70" r="2"/>
+                        </g>
+                    </svg>
+                </div>
+                <p class="description">
+                    Outline elegante con network di circuiti AI. Minimale ma distintivo.
+                </p>
+            </div>
+
+            <!-- Variant 5: Dual Tone -->
+            <div class="card">
+                <div class="label">Variant 5: Dual Tone</div>
+                <h3>Meeple Bicolore AI</h3>
+                <div class="logo-display">
+                    <svg width="120" height="120" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M 50 15 A 12 12 0 1 1 50 39 A 12 12 0 1 1 50 15 M 50 39 L 50 42 L 15 42 L 12 45 L 12 52 L 15 55 L 28 55 L 32 60 L 35 70 L 30 88 L 28 95 L 45 95 L 50 75 L 55 95 L 72 95 L 70 88 L 65 70 L 68 60 L 72 55 L 85 55 L 88 52 L 88 45 L 85 42 L 50 42 Z" fill="#3B82F6"/>
+                        <path d="M 50 39 L 50 42 L 15 42 L 12 45 L 12 52 L 15 55 L 28 55 L 32 60 L 35 70 L 30 88 L 28 95 L 45 95 L 50 75 Z" fill="#8B5CF6"/>
+                        <circle cx="50" cy="27" r="7" fill="white" opacity="0.3"/>
+                        <circle cx="50" cy="58" r="8" fill="#10B981"/>
+                        <text x="50" y="62" font-family="'Fredoka', sans-serif" font-size="10" fill="white" text-anchor="middle" font-weight="bold">AI</text>
+                    </svg>
+                </div>
+                <p class="description">
+                    Split color blu/viola con badge AI centrale. Bold e statement-making.
+                </p>
+            </div>
+
+            <!-- Variant 6: Minimal Clean -->
+            <div class="card">
+                <div class="label">Variant 6: Clean Minimal</div>
+                <h3>Meeple Pulito Moderno</h3>
+                <div class="logo-display">
+                    <svg width="120" height="120" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <linearGradient id="grad6" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:#3B82F6" />
+                                <stop offset="100%" style="stop-color:#8B5CF6" />
+                            </linearGradient>
+                        </defs>
+                        <path d="M 50 15 A 12 12 0 1 1 50 39 A 12 12 0 1 1 50 15 M 50 39 L 50 42 L 15 42 L 12 45 L 12 52 L 15 55 L 28 55 L 32 60 L 35 70 L 30 88 L 28 95 L 45 95 L 50 75 L 55 95 L 72 95 L 70 88 L 65 70 L 68 60 L 72 55 L 85 55 L 88 52 L 88 45 L 85 42 L 50 42 Z" fill="url(#grad6)"/>
+                        <circle cx="50" cy="58" r="5" fill="white"/>
+                        <circle cx="50" cy="58" r="3" fill="#10B981"/>
+                        <circle cx="50" cy="58" r="1" fill="white"/>
+                    </svg>
+                </div>
+                <p class="description">
+                    Meeple pulito con AI core minimalista. Elegante, versatile, scalabile.
+                </p>
+            </div>
+        </div>
+
+        <!-- Full Logo Examples -->
+        <div style="margin-top: 3rem;">
+            <h2 style="text-align: center; font-size: 1.75rem; color: #1e293b; margin-bottom: 2rem; font-weight: 700;">
+                Logo Completo con Wordmark
+            </h2>
+
+            <div class="card">
+                <div class="label">Primary Logo</div>
+                <div class="logo-display">
+                    <img src="meepleai-logo-full.svg" alt="MeepleAI Full Logo" height="100" />
+                </div>
+                <p class="description">
+                    <strong>File:</strong> meepleai-logo-full.svg (340x100px)<br/>
+                    Uso principale: Navbar, header, marketing materials
+                </p>
+            </div>
+        </div>
+
+        <!-- Size Comparison -->
+        <div style="margin-top: 3rem; padding: 2rem; background: #f1f5f9; border-radius: 1rem;">
+            <h2 style="text-align: center; font-size: 1.5rem; color: #1e293b; margin-bottom: 1.5rem; font-weight: 700;">
+                Test Scalabilità - Variant 1 (Raccomandato)
+            </h2>
+            <div style="display: flex; align-items: flex-end; justify-content: center; gap: 2rem; flex-wrap: wrap; padding: 2rem; background: white; border-radius: 0.75rem;">
+                <div style="text-align: center;">
+                    <img src="meepleai-logo-icon.svg" width="16" height="16" style="margin-bottom: 0.5rem;" />
+                    <div style="font-size: 0.75rem; color: #64748b; font-weight: 600;">16px<br/>Favicon</div>
+                </div>
+                <div style="text-align: center;">
+                    <img src="meepleai-logo-icon.svg" width="32" height="32" style="margin-bottom: 0.5rem;" />
+                    <div style="font-size: 0.75rem; color: #64748b; font-weight: 600;">32px<br/>App Icon</div>
+                </div>
+                <div style="text-align: center;">
+                    <img src="meepleai-logo-icon.svg" width="64" height="64" style="margin-bottom: 0.5rem;" />
+                    <div style="font-size: 0.75rem; color: #64748b; font-weight: 600;">64px<br/>Navbar</div>
+                </div>
+                <div style="text-align: center;">
+                    <img src="meepleai-logo-icon.svg" width="128" height="128" style="margin-bottom: 0.5rem;" />
+                    <div style="font-size: 0.75rem; color: #64748b; font-weight: 600;">128px<br/>Hero</div>
+                </div>
+                <div style="text-align: center;">
+                    <img src="meepleai-logo-icon.svg" width="200" height="200" style="margin-bottom: 0.5rem;" />
+                    <div style="font-size: 0.75rem; color: #64748b; font-weight: 600;">200px<br/>Large Display</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recommendation -->
+        <div style="margin-top: 3rem; padding: 2rem; background: linear-gradient(135deg, #dbeafe, #e0e7ff); border-radius: 1rem; border: 3px solid #3B82F6;">
+            <h3 style="font-size: 1.5rem; color: #1e293b; margin-bottom: 1rem; text-align: center;">
+                🏆 Raccomandazione Finale
+            </h3>
+            <p style="color: #475569; line-height: 1.8; text-align: center; font-size: 1.05rem;">
+                <strong style="color: #3B82F6; font-size: 1.2rem;">Variant 1: AI Circuit</strong> combina perfettamente:<br/>
+                ✅ Forma autentica del meeple (riconoscibile)<br/>
+                ✅ Elementi AI integrati (circuiti tech)<br/>
+                ✅ Gradient moderno (blu-viola accattivante)<br/>
+                ✅ Scalabilità perfetta (16px → 512px)<br/>
+                ✅ Core animato (energia AI pulsante)
+            </p>
+            <div style="margin-top: 1.5rem; text-align: center;">
+                <strong style="color: #1e293b;">File principale:</strong>
+                <code style="background: white; padding: 0.5rem 1rem; border-radius: 0.5rem; display: inline-block; margin-top: 0.5rem; color: #3B82F6; font-weight: 600;">
+                    /apps/web/public/logo/meepleai-logo-icon.svg
+                </code>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

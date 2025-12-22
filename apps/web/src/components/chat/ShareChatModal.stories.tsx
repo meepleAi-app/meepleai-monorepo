@@ -5,10 +5,13 @@
  * Tests both form state and success state with URL display.
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
-import { ShareChatModal } from './ShareChatModal';
 import { useState } from 'react';
+
 import { fn } from 'storybook/test';
+
+import { ShareChatModal } from './ShareChatModal';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta: Meta<typeof ShareChatModal> = {
   title: 'Chat/ShareChatModal',

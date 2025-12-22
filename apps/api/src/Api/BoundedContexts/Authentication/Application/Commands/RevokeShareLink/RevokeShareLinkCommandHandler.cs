@@ -26,7 +26,7 @@ internal sealed class RevokeShareLinkCommandHandler : IRequestHandler<RevokeShar
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
-        if (request is null) throw new ArgumentNullException(nameof(request));
+        ArgumentNullException.ThrowIfNull(request);
         // Load share link via repository
         var shareLink = await _shareLinkRepository.GetByIdAsync(request.ShareLinkId, cancellationToken).ConfigureAwait(false);
 

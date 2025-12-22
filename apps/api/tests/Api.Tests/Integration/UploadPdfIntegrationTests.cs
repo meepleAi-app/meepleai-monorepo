@@ -222,7 +222,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         if (!services.Any(s => s.ServiceType == typeof(IAiResponseCacheService)))
         {
             var cacheMock = new Mock<IAiResponseCacheService>();
-            cacheMock.Setup(c => c.InvalidateGameAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            cacheMock.Setup(c => c.InvalidateGameAsync(It.IsAny<string>()!, It.IsAny<CancellationToken>()))
                 .Returns(Task.CompletedTask);
             services.AddSingleton<IAiResponseCacheService>(cacheMock.Object);
         }
@@ -230,7 +230,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         if (!services.Any(s => s.ServiceType == typeof(IBlobStorageService)))
         {
             var blobStorageMock = new Mock<IBlobStorageService>();
-            blobStorageMock.Setup(b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            blobStorageMock.Setup(b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>()!, It.IsAny<string>()!, It.IsAny<CancellationToken>()))
                 .ReturnsAsync((Stream stream, string fileName, string gameId, CancellationToken ct) =>
                 {
                     var filePath = Path.Combine(_testDataDirectory!, $"{gameId}_{fileName}");
@@ -238,7 +238,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
                     stream.CopyTo(fileStream);
                     return new BlobStorageResult(true, Guid.NewGuid().ToString(), filePath, stream.Length, null);
                 });
-            blobStorageMock.Setup(b => b.DeleteAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            blobStorageMock.Setup(b => b.DeleteAsync(It.IsAny<string>()!, It.IsAny<string>()!, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(true);
             services.AddSingleton<IBlobStorageService>(blobStorageMock.Object);
         }
@@ -269,7 +269,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         if (!services.Any(s => s.ServiceType == typeof(IConfigurationService)))
         {
             var configServiceMock = new Mock<IConfigurationService>();
-            configServiceMock.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<string>()))
+            configServiceMock.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>()!, It.IsAny<int?>(), It.IsAny<string>()))
                 .Returns(Task.FromResult<int?>(null));
             services.AddSingleton<IConfigurationService>(configServiceMock.Object);
         }
@@ -417,6 +417,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
 
         var command = new UploadPdfCommand(
             GameId: testGame.Id.ToString(),
+            Metadata: null,
             UserId: testUser.Id,
             File: formFile);
 
@@ -447,6 +448,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
 
         var command = new UploadPdfCommand(
             GameId: testGame.Id.ToString(),
+            Metadata: null,
             UserId: testUser.Id,
             File: formFile);
 
@@ -477,6 +479,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
 
         var command = new UploadPdfCommand(
             GameId: testGame.Id.ToString(),
+            Metadata: null,
             UserId: testUser.Id,
             File: formFile);
 
@@ -508,6 +511,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
 
         var command = new UploadPdfCommand(
             GameId: testGame.Id.ToString(),
+            Metadata: null,
             UserId: testUser.Id,
             File: formFile);
 
@@ -539,6 +543,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
 
         var command = new UploadPdfCommand(
             GameId: testGame.Id.ToString(),
+            Metadata: null,
             UserId: testUser.Id,
             File: formFile);
 
@@ -573,6 +578,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
 
         var command = new UploadPdfCommand(
             GameId: testGame.Id.ToString(),
+            Metadata: null,
             UserId: testUser.Id,
             File: formFile);
 
@@ -605,6 +611,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
 
         var command = new UploadPdfCommand(
             GameId: testGame.Id.ToString(),
+            Metadata: null,
             UserId: testUser.Id,
             File: formFile);
 
@@ -644,6 +651,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
 
             var command = new UploadPdfCommand(
                 GameId: testGame.Id.ToString(),
+                Metadata: null,
                 UserId: testUser.Id,
                 File: formFile);
 
@@ -696,6 +704,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
 
                 var command = new UploadPdfCommand(
                     GameId: testGame.Id.ToString(),
+                    Metadata: null,
                     UserId: testUser.Id,
                     File: formFile);
 
@@ -775,6 +784,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
 
         var command = new UploadPdfCommand(
             GameId: testGame.Id.ToString(),
+            Metadata: null,
             UserId: testUser.Id,
             File: formFile);
 
@@ -832,6 +842,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
 
         var command = new UploadPdfCommand(
             GameId: nonExistentGameId.ToString(), // Non-existent game will trigger FK constraint
+            Metadata: null,
             UserId: testUser.Id,
             File: formFile);
 
@@ -893,6 +904,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
 
         var command = new UploadPdfCommand(
             GameId: testGame.Id.ToString(),
+            Metadata: null,
             UserId: testUser.Id,
             File: formFile);
 
@@ -995,6 +1007,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
 
         var command = new UploadPdfCommand(
             GameId: testGame.Id.ToString(),
+            Metadata: null,
             UserId: testUser.Id,
             File: formFile);
 
@@ -1056,6 +1069,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
 
         var command = new UploadPdfCommand(
             GameId: testGame.Id.ToString(),
+            Metadata: null,
             UserId: testUser.Id,
             File: formFile);
 
@@ -1085,6 +1099,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
 
         var command = new UploadPdfCommand(
             GameId: testGame.Id.ToString(),
+            Metadata: null,
             UserId: testUser.Id,
             File: formFile);
 
@@ -1133,6 +1148,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
 
         var command = new UploadPdfCommand(
             GameId: testGame.Id.ToString(),
+            Metadata: null,
             UserId: testUser.Id,
             File: formFile);
 
@@ -1201,6 +1217,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
 
         var command = new UploadPdfCommand(
             GameId: testGame.Id.ToString(),
+            Metadata: null,
             UserId: testUser.Id,
             File: formFile);
 
@@ -1254,6 +1271,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
 
         var command = new UploadPdfCommand(
             GameId: testGame.Id.ToString(),
+            Metadata: null,
             UserId: testUser.Id,
             File: formFile);
 
@@ -1281,6 +1299,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
 
         var command = new UploadPdfCommand(
             GameId: testGame.Id.ToString(),
+            Metadata: null,
             UserId: testUser.Id,
             File: formFile);
 
@@ -1324,7 +1343,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
 
         var pdfBytes = CreateValidPdfBytes(1024 * 20);
         var formFile = CreateMockFormFile("idempotency_test.pdf", pdfBytes);
-        var command = new UploadPdfCommand(testGame.Id.ToString(), testUser.Id, formFile);
+        var command = new UploadPdfCommand(testGame.Id.ToString(), null, testUser.Id, formFile);
 
         var handler = _serviceProvider!.GetRequiredService<UploadPdfCommandHandler>();
         var firstResult = await handler.Handle(command, TestCancellationToken);
@@ -1371,9 +1390,9 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         // Act: Upload PDF (triggers quota reservation)
         var pdfBytes = CreateValidPdfBytes(1024 * 25);
         var formFile = CreateMockFormFile("quota_success_test.pdf", pdfBytes);
-        var command = new UploadPdfCommand(testGame.Id.ToString(), testUser.Id, formFile);
+        var command = new UploadPdfCommand(testGame.Id.ToString(), null, testUser.Id, formFile);
 
-        var handler = _serviceProvider.GetRequiredService<UploadPdfCommandHandler>();
+        var handler = _serviceProvider!.GetRequiredService<UploadPdfCommandHandler>();
         var result = await handler.Handle(command, TestCancellationToken);
 
         result.Success.Should().BeTrue();
@@ -1384,7 +1403,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         afterReservationQuota.DailyUploadsUsed.Should().Be(initialQuota.DailyUploadsUsed + 1);
 
         // Check Redis for reservation
-        var redis = _serviceProvider.GetRequiredService<IConnectionMultiplexer>();
+        var redis = _serviceProvider!.GetRequiredService<IConnectionMultiplexer>();
         var db = redis.GetDatabase();
         var reservationKey = $"pdf:quota:reservation:{testUser.Id}:{pdfId}";
         (await db.KeyExistsAsync(reservationKey)).Should().BeTrue();
@@ -1424,7 +1443,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         afterReservationQuota.DailyUploadsUsed.Should().Be(initialQuota.DailyUploadsUsed + 1);
 
         // Verify reservation exists
-        var redis = _serviceProvider.GetRequiredService<IConnectionMultiplexer>();
+        var redis = _serviceProvider!.GetRequiredService<IConnectionMultiplexer>();
         var db = redis.GetDatabase();
         var reservationKey = $"pdf:quota:reservation:{testUser.Id}:{pdfId}";
         (await db.KeyExistsAsync(reservationKey)).Should().BeTrue();
@@ -1455,7 +1474,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         reservationResult.Reserved.Should().BeTrue();
 
         // Verify reservation exists with TTL
-        var redis = _serviceProvider.GetRequiredService<IConnectionMultiplexer>();
+        var redis = _serviceProvider!.GetRequiredService<IConnectionMultiplexer>();
         var db = redis.GetDatabase();
         var reservationKey = $"pdf:quota:reservation:{testUser.Id}:{pdfId}";
         (await db.KeyExistsAsync(reservationKey)).Should().BeTrue();

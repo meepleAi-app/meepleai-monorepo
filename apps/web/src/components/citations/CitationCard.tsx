@@ -11,10 +11,11 @@
  * Uses Shadcn/UI Card component for consistent design.
  */
 
+import React from 'react';
+
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { Citation } from '@/types';
-import React from 'react';
 
 interface CitationCardProps {
   citation: Citation;

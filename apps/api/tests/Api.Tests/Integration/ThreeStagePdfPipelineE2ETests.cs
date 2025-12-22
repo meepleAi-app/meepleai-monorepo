@@ -29,9 +29,6 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
 {
     private readonly Action<string> _output;
     private IContainer? _unstructuredContainer;
-#pragma warning disable CS0649 // Field is never assigned (reserved for future SmolDocling container initialization)
-    private IContainer? _smoldoclingContainer;
-#pragma warning restore CS0649
     private readonly IConfiguration _configuration;
     private readonly ILogger<EnhancedPdfProcessingOrchestrator> _logger;
     private readonly IOptions<PdfProcessingOptions> _options;
@@ -71,11 +68,7 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
             await _unstructuredContainer.DisposeAsync();
         }
 
-        if (_smoldoclingContainer != null)
-        {
-            await _smoldoclingContainer.StopAsync(TestCancellationToken);
-            await _smoldoclingContainer.DisposeAsync();
-        }
+
 
         _output("Cleanup complete");
     }
@@ -94,7 +87,7 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
         _output("Test 1: Happy path - Stage 1 high quality");
 
         // Act
-        var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream, ct: TestCancellationToken);
+        var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream, cancellationToken: TestCancellationToken);
 
         // Assert
         Assert.True(result.Success, "Happy path should succeed");
@@ -125,7 +118,7 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
         _output("Test 2: Fallback - Stage 1 low quality → Stage 2");
 
         // Act
-        var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream, ct: TestCancellationToken);
+        var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream, cancellationToken: TestCancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -155,7 +148,7 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
         _output("Test 3: Fallback - Stage 1&2 fail → Stage 3");
 
         // Act
-        var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream, ct: TestCancellationToken);
+        var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream, cancellationToken: TestCancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -184,7 +177,7 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
         _output("Test 4: Quality gate - Stage 1 (0.50) rejected, Stage 2 (0.85) accepted");
 
         // Act
-        var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream, ct: TestCancellationToken);
+        var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream, cancellationToken: TestCancellationToken);
 
         // Assert - Quality gate should trigger fallback
         Assert.True(result.Success);
@@ -213,7 +206,7 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
         _output("Test 5: All stages fail - error handling");
 
         // Act
-        var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream, ct: TestCancellationToken);
+        var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream, cancellationToken: TestCancellationToken);
 
         // Assert - Returns Stage 3 result (even if failed)
         Assert.False(result.Success);
@@ -283,7 +276,7 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
             await using var pdfStream = File.OpenRead(BarragePdfPath);
             var sw = Stopwatch.StartNew();
 
-            var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream, ct: TestCancellationToken);
+            var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream, cancellationToken: TestCancellationToken);
 
             sw.Stop();
             latencies.Add(sw.ElapsedMilliseconds);
@@ -338,7 +331,7 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
         public Task<TextExtractionResult> ExtractTextAsync(
             Stream pdfStream,
             bool enableOcrFallback = true,
-            CancellationToken ct = default)
+            CancellationToken cancellationToken = default)
         {
             CallCount++;
 
@@ -358,7 +351,7 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
         public Task<PagedTextExtractionResult> ExtractPagedTextAsync(
             Stream pdfStream,
             bool enableOcrFallback = true,
-            CancellationToken ct = default)
+            CancellationToken cancellationToken = default)
         {
             PagedCallCount++;
 

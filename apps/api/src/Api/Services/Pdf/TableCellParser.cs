@@ -8,7 +8,6 @@ namespace Api.Services.Pdf;
 /// </summary>
 internal class TableCellParser : ITableCellParser
 {
-#pragma warning disable MA0051 // Method is too long
     /// <param name="existingBoundaries">Optional pre-computed column boundaries to maintain consistency across rows</param>
     public ColumnSplitResult SplitIntoColumns(PositionedTextLine line, IList<ColumnBoundary>? existingBoundaries)
     {
@@ -16,38 +15,65 @@ internal class TableCellParser : ITableCellParser
 
         if (line.Characters.Count == 0)
         {
-            if (existingBoundaries != null)
-            {
-                result.Boundaries = existingBoundaries;
-                result.Columns = Enumerable.Repeat(string.Empty, existingBoundaries.Count).ToList();
-            }
-
-            return result;
+            return HandleEmptyLine(existingBoundaries, result);
         }
 
         if (existingBoundaries == null || existingBoundaries.Count == 0)
         {
-            var layout = DetectColumnLayout(line);
-            result.Boundaries = layout.Boundaries;
-            result.Columns = layout.Columns;
-
-            if (result.Columns.Count > 0)
-            {
-                var text = line.GetTrimmedText();
-                var textualColumns = Regex
-                    .Split(text, "\\s{2,}", RegexOptions.CultureInvariant | RegexOptions.NonBacktracking)
-                    .Select(segment => segment.Trim())
-                    .ToList();
-
-                if (textualColumns.Count == result.Columns.Count && textualColumns.Count > 0)
-                {
-                    result.Columns = textualColumns;
-                }
-            }
-
-            return result;
+            return DetectAndApplyNewColumnLayout(line, result);
         }
 
+        return AssignCharactersToColumns(line, existingBoundaries, result);
+    }
+
+    /// <summary>
+    /// Handles empty line case by returning empty columns for existing boundaries
+    /// </summary>
+    private static ColumnSplitResult HandleEmptyLine(IList<ColumnBoundary>? existingBoundaries, ColumnSplitResult result)
+    {
+        if (existingBoundaries != null)
+        {
+            result.Boundaries = existingBoundaries;
+            result.Columns = Enumerable.Repeat(string.Empty, existingBoundaries.Count).ToList();
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Detects new column layout and applies textual column splitting
+    /// </summary>
+    private ColumnSplitResult DetectAndApplyNewColumnLayout(PositionedTextLine line, ColumnSplitResult result)
+    {
+        var layout = DetectColumnLayout(line);
+        result.Boundaries = layout.Boundaries;
+        result.Columns = layout.Columns;
+
+        if (result.Columns.Count > 0)
+        {
+            var text = line.GetTrimmedText();
+            var textualColumns = Regex
+                .Split(text, "\\s{2,}", RegexOptions.CultureInvariant | RegexOptions.NonBacktracking)
+                .Select(segment => segment.Trim())
+                .ToList();
+
+            if (textualColumns.Count == result.Columns.Count && textualColumns.Count > 0)
+            {
+                result.Columns = textualColumns;
+            }
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Assigns characters to existing column boundaries
+    /// </summary>
+    private ColumnSplitResult AssignCharactersToColumns(
+        PositionedTextLine line,
+        IList<ColumnBoundary> existingBoundaries,
+        ColumnSplitResult result)
+    {
         var boundaries = existingBoundaries
             .Select(b => b.Clone())
             .OrderBy(b => b.Start)
@@ -90,7 +116,6 @@ internal class TableCellParser : ITableCellParser
 
         return result;
     }
-#pragma warning restore MA0051 // Method is too long
 
     public DetectedColumnLayout DetectColumnLayout(PositionedTextLine line)
     {

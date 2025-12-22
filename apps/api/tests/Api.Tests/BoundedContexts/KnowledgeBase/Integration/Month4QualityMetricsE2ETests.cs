@@ -64,7 +64,6 @@ public sealed class Month4QualityMetricsE2ETests : IAsyncLifetime
     // Test data
     private Guid _testUserId;
     private Guid _testGameId;
-    private Guid _testThreadId;
 
     public Month4QualityMetricsE2ETests(SharedTestcontainersFixture fixture)
     {
@@ -230,7 +229,7 @@ public sealed class Month4QualityMetricsE2ETests : IAsyncLifetime
             CreatedAt = DateTime.UtcNow
         };
         _dbContext.ChatThreads.Add(threadEntity);
-        _testThreadId = threadEntity.Id;
+
 
         await _dbContext.SaveChangesAsync(TestCancellationToken);
     }
@@ -429,7 +428,7 @@ public sealed class Month4QualityMetricsE2ETests : IAsyncLifetime
 /// <summary>
 /// Test implementation of IMeterFactory for integration tests
 /// </summary>
-internal class TestMeterFactory : IMeterFactory
+internal sealed class TestMeterFactory : IMeterFactory
 {
     public Meter Create(MeterOptions options)
     {

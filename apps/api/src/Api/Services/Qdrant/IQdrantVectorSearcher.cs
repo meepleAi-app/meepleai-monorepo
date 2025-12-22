@@ -15,7 +15,7 @@ internal interface IQdrantVectorSearcher
         float[] queryEmbedding,
         Filter? filter = null,
         int limit = 5,
-        CancellationToken ct = default);
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Convert Qdrant search results to domain model

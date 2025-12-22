@@ -5,35 +5,36 @@
  * Covers: Games CRUD, filtering, sorting, pagination, documents
  */
 
-import type { HttpClient } from '../core/httpClient';
 import { z } from 'zod';
+
 import {
+  AcquireLockResultSchema,
+  AgentDtoSchema,
+  EditorLockSchema,
+  GameFAQSchema,
   GameSchema,
   GameSessionDtoSchema,
-  PaginatedGamesResponseSchema,
-  PdfDocumentDtoSchema,
-  RuleSpecSchema,
-  RuleSpecHistorySchema,
-  VersionTimelineSchema,
-  RuleSpecDiffSchema,
-  GameFAQSchema,
   GetGameFAQsResultSchema,
-  EditorLockSchema,
-  AcquireLockResultSchema,
+  RuleSpecDiffSchema,
+  RuleSpecHistorySchema,
+  RuleSpecSchema,
+  VersionTimelineSchema,
+  type AcquireLockResult,
+  type AgentDto,
+  type EditorLock,
   type Game,
+  type GameFAQ,
   type GameSessionDto,
+  type GetGameFAQsResult,
   type PaginatedGamesResponse,
   type PdfDocumentDto,
   type RuleSpec,
+  type RuleSpecDiff,
   type RuleSpecHistory,
   type VersionTimeline,
-  type RuleSpecDiff,
-  type GameFAQ,
-  type GetGameFAQsResult,
-  type EditorLock,
-  type AcquireLockResult,
 } from '../schemas';
-import { AgentDtoSchema, type AgentDto } from '../schemas';
+
+import type { HttpClient } from '../core/httpClient';
 
 export interface CreateGamesClientParams {
   httpClient: HttpClient;
@@ -77,6 +78,7 @@ export interface CreateGameRequest {
   maxPlayTimeMinutes?: number | null;
   iconUrl?: string | null;
   imageUrl?: string | null;
+  bggId?: number | null;
 }
 
 /**
@@ -283,6 +285,67 @@ export function createGamesClient({ httpClient }: CreateGamesClientParams) {
         '/api/v1/games',
         payload
       );
+    },
+
+    /**
+     * Update existing game
+     * PUT /api/v1/games/{id}
+     * Issue #2255: Extended to support iconUrl and imageUrl updates
+     */
+    async update(id: string, updates: Partial<CreateGameRequest>): Promise<Game> {
+      return httpClient.put<Game>(`/api/v1/games/${encodeURIComponent(id)}`, updates, GameSchema);
+    },
+
+    /**
+     * Upload game image (icon or cover)
+     * POST /api/v1/games/upload-image
+     * Issue #2255: File upload implementation for game creation wizard
+     *
+     * @param file File object to upload (PNG, JPEG, WebP, SVG)
+     * @param gameId Game ID for storage organization
+     * @param imageType Type of image ('icon' for thumbnails, 'image' for covers)
+     * @returns Upload result with file URL and metadata
+     */
+    async uploadImage(
+      file: File,
+      gameId: string,
+      imageType: 'icon' | 'image'
+    ): Promise<{
+      success: boolean;
+      fileId?: string;
+      fileUrl?: string;
+      fileSizeBytes?: number;
+      error?: string;
+    }> {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('gameId', gameId);
+      formData.append('imageType', imageType);
+
+      // Use native fetch for FormData (httpClient doesn't support multipart)
+      const baseUrl = httpClient['baseUrl'] || 'http://localhost:8080';
+      const response = await fetch(`${baseUrl}/api/v1/games/upload-image`, {
+        method: 'POST',
+        credentials: 'include', // Send cookies for authentication
+        body: formData,
+        // Don't set Content-Type - browser sets it automatically with boundary for multipart
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Upload failed' }));
+        return {
+          success: false,
+          error: errorData.message || `Upload failed with status ${response.status}`,
+        };
+      }
+
+      const data = await response.json();
+      return {
+        success: data.success,
+        fileId: data.fileId,
+        fileUrl: data.fileUrl,
+        fileSizeBytes: data.fileSizeBytes,
+      };
     },
 
     // ========== RuleSpec Management ==========

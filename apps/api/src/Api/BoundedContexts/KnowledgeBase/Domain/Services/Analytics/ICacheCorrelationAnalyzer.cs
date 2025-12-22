@@ -15,7 +15,7 @@ internal interface ICacheCorrelationAnalyzer
     Task<CacheCorrelationReport> AnalyzeCacheEffectivenessAsync(
         DateOnly startDate,
         DateOnly endDate,
-        CancellationToken ct = default);
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Calculate estimated cost savings from cache hits
@@ -23,7 +23,7 @@ internal interface ICacheCorrelationAnalyzer
     Task<decimal> CalculateCacheSavingsAsync(
         DateOnly startDate,
         DateOnly endDate,
-        CancellationToken ct = default);
+        CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -43,3 +43,4 @@ internal record CacheCorrelationReport
     public required double CacheEfficiencyScore { get; init; }
     public required List<string> Recommendations { get; init; }
 }
+

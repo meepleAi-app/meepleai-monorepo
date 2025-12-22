@@ -185,7 +185,7 @@ internal sealed class ResilientRetrievalService : IRerankedRetrievalService, IDi
                 RerankScore: c.RerankScore,
                 FinalRank: index + 1,
                 // FIX MA0011: Use IFormatProvider for culture-aware conversion
-                PageNumber: c.Metadata?.TryGetValue("page_number", out var pageObj) == true
+                PageNumber: c.Metadata?.TryGetValue("page_number", out var pageObj) is true
                     ? Convert.ToInt32(pageObj, CultureInfo.InvariantCulture)
                     : null,
                 Metadata: c.Metadata

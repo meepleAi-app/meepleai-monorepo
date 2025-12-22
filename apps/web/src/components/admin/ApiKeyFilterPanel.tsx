@@ -26,11 +26,14 @@
  */
 
 import React from 'react';
-import { X, Search, Calendar, Clock, Shield } from 'lucide-react';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
+
+import { X, Search, Clock, Shield } from 'lucide-react';
+
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { DateRangePicker } from '@/components/ui/inputs/date-range-picker';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -38,7 +41,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
 import type { ApiKeyFilters, ApiKeyScope, ApiKeyStatus } from '@/types';
 import { AVAILABLE_SCOPES, AVAILABLE_STATUSES } from '@/types';
 
@@ -67,7 +69,7 @@ export interface ApiKeyFilterPanelProps {
 /**
  * Format date for input[type="date"]
  */
-function formatDateForInput(date?: Date): string {
+function _formatDateForInput(date?: Date): string {
   if (!date) return '';
   return date.toISOString().split('T')[0];
 }
@@ -115,28 +117,28 @@ export const ApiKeyFilterPanel: React.FC<ApiKeyFilterPanelProps> = ({
     });
   };
 
-  const handleCreatedFromChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const _handleCreatedFromChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onFiltersChange({
       ...filters,
       createdFrom: parseDateFromInput(e.target.value),
     });
   };
 
-  const handleCreatedToChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const _handleCreatedToChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onFiltersChange({
       ...filters,
       createdTo: parseDateFromInput(e.target.value),
     });
   };
 
-  const handleExpiresFromChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const _handleExpiresFromChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onFiltersChange({
       ...filters,
       expiresFrom: parseDateFromInput(e.target.value),
     });
   };
 
-  const handleExpiresToChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const _handleExpiresToChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onFiltersChange({
       ...filters,
       expiresTo: parseDateFromInput(e.target.value),

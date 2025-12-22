@@ -6,17 +6,18 @@
  */
 
 import { z } from 'zod';
-import { createApiError, NetworkError, SchemaValidationError, ApiError } from './errors';
-import { logApiError, logger } from './logger';
+
 import { getStoredApiKeySync } from './apiKeyStore';
-import { withRetry, RetryOptions, parseRetryAfter } from './retryPolicy';
-import { recordRetryAttempt, recordRetrySuccess, recordRetryFailure } from './metrics';
 import {
   canExecute as canExecuteCircuit,
   recordSuccess as recordCircuitSuccess,
   recordFailure as recordCircuitFailure,
 } from './circuitBreaker';
+import { createApiError, NetworkError, SchemaValidationError, ApiError } from './errors';
+import { logApiError, logger } from './logger';
+import { recordRetryAttempt, recordRetrySuccess, recordRetryFailure } from './metrics';
 import { globalRequestCache, CacheKeyOptions } from './requestCache';
+import { withRetry, RetryOptions, parseRetryAfter } from './retryPolicy';
 
 export interface HttpClientConfig {
   baseUrl: string;

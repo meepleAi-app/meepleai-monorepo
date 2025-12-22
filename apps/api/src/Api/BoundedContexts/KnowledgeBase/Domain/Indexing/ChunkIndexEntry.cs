@@ -93,7 +93,7 @@ internal sealed class ChunkIndexEntry
         if (vector == null || vector.Length == 0)
             throw new ArgumentException("Vector cannot be empty", nameof(vector));
 
-        ArgumentNullException.ThrowIfNull(payload, nameof(payload));
+        ArgumentNullException.ThrowIfNull(payload);
 
         return new ChunkIndexEntry
         {

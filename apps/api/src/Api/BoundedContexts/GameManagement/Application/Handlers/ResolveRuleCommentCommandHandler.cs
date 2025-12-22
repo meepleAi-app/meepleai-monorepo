@@ -48,7 +48,7 @@ internal class ResolveRuleCommentCommandHandler : IRequestHandler<ResolveRuleCom
         comment.UpdatedAt = _timeProvider.GetUtcNow().UtcDateTime;
 
         // Recursively resolve replies if requested
-        if (command.ResolveReplies && comment.Replies.Any())
+        if (command.ResolveReplies && comment.Replies.Count > 0)
         {
             await ResolveRepliesRecursiveAsync(comment.Id, command.ResolvedByUserId, cancellationToken).ConfigureAwait(false);
         }
@@ -97,20 +97,20 @@ internal class ResolveRuleCommentCommandHandler : IRequestHandler<ResolveRuleCom
         var maxDepth = 10; // Safety limit
         var depth = 0;
 
-        while (currentLevel.Any() && depth < maxDepth)
+        while (currentLevel.Count > 0 && depth < maxDepth)
         {
             var children = await _dbContext.RuleSpecComments
                 .Where(c => currentLevel.Contains(c.ParentCommentId!.Value))
                 .ToListAsync(cancellationToken).ConfigureAwait(false);
 
-            if (!children.Any())
+            if (children.Count == 0)
             {
                 break;
             }
 
             // Check for circular references
             var newIds = children.Select(c => c.Id).Where(id => !visited.Contains(id)).ToList();
-            if (!newIds.Any() && children.Any())
+            if (newIds.Count == 0 && children.Count > 0)
             {
                 _logger.LogWarning(
                     "Circular reference detected while loading descendants of {ParentId} at depth {Depth}",

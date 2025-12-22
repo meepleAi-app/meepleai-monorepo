@@ -16,10 +16,11 @@
  */
 
 import { useCallback, useState } from 'react';
-import { Message } from '@/types';
-import { useChatStore, useActiveMessages } from '@/store/chat';
-import { logger } from '@/lib/logger';
+
 import { createErrorContext } from '@/lib/errors';
+import { logger } from '@/lib/logger';
+import { useChatStore, useActiveMessages } from '@/store/chat';
+import { Message } from '@/types';
 
 export interface UseChatOptimisticResult {
   /**
@@ -45,9 +46,9 @@ export interface UseChatOptimisticResult {
  */
 export function useChatOptimistic(): UseChatOptimisticResult {
   // Zustand store - single source of truth
-  const selectedGameId = useChatStore((state) => state.selectedGameId);
-  const selectedAgentId = useChatStore((state) => state.selectedAgentId);
-  const sendMessage = useChatStore((state) => state.sendMessage);
+  const selectedGameId = useChatStore(state => state.selectedGameId);
+  const selectedAgentId = useChatStore(state => state.selectedAgentId);
+  const sendMessage = useChatStore(state => state.sendMessage);
   const messages = useActiveMessages();
 
   const [optimisticId, setOptimisticId] = useState<string | null>(null);
@@ -99,11 +100,7 @@ export function useChatOptimistic(): UseChatOptimisticResult {
         throw err;
       }
     },
-    [
-      selectedGameId,
-      selectedAgentId,
-      sendMessage,
-    ]
+    [selectedGameId, selectedAgentId, sendMessage]
   );
 
   return {

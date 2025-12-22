@@ -1,4 +1,5 @@
 using Api.BoundedContexts.Administration.Infrastructure.Services.Formatters;
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.Administration.Infrastructure.Services;
@@ -36,7 +37,7 @@ internal sealed partial class ReportGeneratorService
 
     private async Task<ReportContent> GenerateUserActivityReportAsync(
         IReadOnlyDictionary<string, object> parameters,
-        CancellationToken ct)
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(parameters);
         var startDate = (DateTime)parameters["startDate"];
@@ -48,7 +49,7 @@ internal sealed partial class ReportGeneratorService
             .GroupBy(u => u.CreatedAt.Date)
             .Select(g => new { Date = g.Key, Count = g.Count() })
             .OrderBy(x => x.Date)
-            .ToListAsync(ct)
+            .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
         // Login activity (via sessions)
@@ -57,7 +58,7 @@ internal sealed partial class ReportGeneratorService
             .GroupBy(s => s.CreatedAt.Date)
             .Select(g => new { Date = g.Key, Count = g.Count() })
             .OrderBy(x => x.Date)
-            .ToListAsync(ct)
+            .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
         // Session creation
@@ -66,11 +67,11 @@ internal sealed partial class ReportGeneratorService
             .GroupBy(s => s.CreatedAt.Date)
             .Select(g => new { Date = g.Key, Count = g.Count() })
             .OrderBy(x => x.Date)
-            .ToListAsync(ct)
+            .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
         // ISSUE-917: Enhanced with multi-line chart
-        var dateLabels = registrations.Select(r => r.Date.ToString("MMM dd")).ToArray();
+        var dateLabels = registrations.Select(r => r.Date.ToString("MMM dd", CultureInfo.InvariantCulture)).ToArray();
         var registrationValues = registrations.Select(r => (double)r.Count).ToArray();
         var loginValues = logins.Select(l => (double)l.Count).ToArray();
 
@@ -82,7 +83,7 @@ internal sealed partial class ReportGeneratorService
                 Data: registrations.Select(r => new ReportDataRow(
                     new Dictionary<string, object>
 (StringComparer.Ordinal) {
-                        ["Date"] = r.Date.ToString("yyyy-MM-dd"),
+                        ["Date"] = r.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
                         ["Registrations"] = r.Count
                     })).ToList(),
                 Chart: new ChartData(
@@ -99,7 +100,7 @@ internal sealed partial class ReportGeneratorService
                 Data: logins.Select(l => new ReportDataRow(
                     new Dictionary<string, object>
 (StringComparer.Ordinal) {
-                        ["Date"] = l.Date.ToString("yyyy-MM-dd"),
+                        ["Date"] = l.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
                         ["Logins"] = l.Count
                     })).ToList(),
                 Chart: new ChartData(
@@ -128,3 +129,4 @@ internal sealed partial class ReportGeneratorService
             Sections: sections);
     }
 }
+

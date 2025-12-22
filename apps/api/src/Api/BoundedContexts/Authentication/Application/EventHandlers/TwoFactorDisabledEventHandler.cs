@@ -20,7 +20,7 @@ internal sealed class TwoFactorDisabledEventHandler : DomainEventHandlerBase<Two
         MeepleAiDbContext dbContext,
         IUserRepository userRepository,
         IEmailService emailService,
-        ILogger<DomainEventHandlerBase<TwoFactorDisabledEvent>> logger)
+        ILogger<TwoFactorDisabledEventHandler> logger)
         : base(dbContext, logger)
     {
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
@@ -47,6 +47,10 @@ internal sealed class TwoFactorDisabledEventHandler : DomainEventHandlerBase<Two
                     domainEvent.WasAdminOverride);
             }
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: EVENT HANDLER PATTERN - Background event processing
+        // Event handlers must not throw exceptions (violates mediator/event pattern).
+        // Errors logged for monitoring; failed email delivery doesn't block 2FA operations.
         catch (Exception ex)
         {
             // Log error but don't fail the event handler - email is non-critical
@@ -55,6 +59,7 @@ internal sealed class TwoFactorDisabledEventHandler : DomainEventHandlerBase<Two
                 "Failed to send 2FA disabled email to user {UserId}",
                 domainEvent.UserId);
         }
+#pragma warning restore CA1031
     }
 
     protected override Guid? GetUserId(TwoFactorDisabledEvent domainEvent) => domainEvent.UserId;

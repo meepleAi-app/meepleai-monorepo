@@ -9,7 +9,7 @@ internal sealed class MessageDeletedEventHandler : DomainEventHandlerBase<Messag
 {
     public MessageDeletedEventHandler(
         MeepleAiDbContext dbContext,
-        ILogger<DomainEventHandlerBase<MessageDeletedEvent>> logger)
+        ILogger<MessageDeletedEventHandler> logger)
         : base(dbContext, logger)
     {
     }

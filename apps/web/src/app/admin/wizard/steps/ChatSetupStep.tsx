@@ -7,10 +7,11 @@
  */
 
 import { useState, useCallback, useEffect, useRef } from 'react';
+
+import { toast } from '@/components/layout';
+import { Spinner } from '@/components/loading';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Spinner } from '@/components/loading';
-import { toast } from '@/components/layout';
 import { api } from '@/lib/api';
 
 interface ChatSetupStepProps {
@@ -78,7 +79,7 @@ export function ChatSetupStep({ gameId, gameName, pdfId, onComplete, onBack }: C
             }
             break;
         }
-      } catch (err) {
+      } catch (_err) {
         // On error, assume completed for demo purposes
         setProcessingStatus('completed');
         setProcessingProgress(100);

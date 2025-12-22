@@ -20,8 +20,8 @@ internal sealed class DomainEventCollector : IDomainEventCollector
     /// </summary>
     public void CollectEventsFrom(IAggregateRoot aggregate)
     {
-        if (aggregate == null)
-            throw new ArgumentNullException(nameof(aggregate));
+        ArgumentNullException.ThrowIfNull(aggregate);
+
 
         lock (_lock)
         {

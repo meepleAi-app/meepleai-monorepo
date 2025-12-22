@@ -15,7 +15,9 @@
  */
 
 import { Metadata } from 'next';
+
 import { RequireRole } from '@/components/auth/RequireRole';
+
 import { ManagementPageClient } from './client';
 
 export const metadata: Metadata = {

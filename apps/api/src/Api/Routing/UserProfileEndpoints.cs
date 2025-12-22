@@ -22,6 +22,27 @@ internal static class UserProfileEndpoints
 {
     public static RouteGroupBuilder MapUserProfileEndpoints(this RouteGroupBuilder group)
     {
+        // AUTH-PROFILE-01: User profile management
+        MapProfileManagementEndpoints(group);
+        // USER-QUOTA-01: User quota management
+        MapQuotaEndpoints(group);
+        // AUTH-PROFILE-04: User preferences
+        MapPreferenceEndpoints(group);
+        // USER-ACTIVITY-01: User activity timeline
+        MapActivityEndpoints(group);
+
+        return group;
+    }
+
+    private static void MapProfileManagementEndpoints(RouteGroupBuilder group)
+    {
+        MapGetUserProfile(group);
+        MapUpdateUserProfile(group);
+        MapChangePassword(group);
+    }
+
+    private static void MapGetUserProfile(RouteGroupBuilder group)
+    {
         // Get user profile (AUTH-PROFILE-01)
         group.MapGet("/users/profile", async (
             HttpContext context,
@@ -56,7 +77,10 @@ internal static class UserProfileEndpoints
         .Produces(200)
         .Produces(401)
         .Produces(404);
+    }
 
+    private static void MapUpdateUserProfile(RouteGroupBuilder group)
+    {
         // Update user profile (AUTH-PROFILE-02)
         group.MapPut("/users/profile", async (
             [FromBody] UpdateProfilePayload payload,
@@ -100,7 +124,10 @@ internal static class UserProfileEndpoints
         .Produces(200)
         .Produces(400)
         .Produces(401);
+    }
 
+    private static void MapChangePassword(RouteGroupBuilder group)
+    {
         // Change password (AUTH-PROFILE-03)
         group.MapPut("/users/profile/password", async (
             [FromBody] ChangePasswordPayload payload,
@@ -146,7 +173,10 @@ internal static class UserProfileEndpoints
         .Produces(200)
         .Produces(400)
         .Produces(401);
+    }
 
+    private static void MapQuotaEndpoints(RouteGroupBuilder group)
+    {
         // Get user's PDF upload quota (USER-QUOTA-01)
         group.MapGet("/users/me/upload-quota", async (
             HttpContext context,
@@ -188,7 +218,16 @@ internal static class UserProfileEndpoints
         .Produces(200)
         .Produces(400)
         .Produces(401);
+    }
 
+    private static void MapPreferenceEndpoints(RouteGroupBuilder group)
+    {
+        MapUpdateUserPreferences(group);
+        MapGetUserPreferences(group);
+    }
+
+    private static void MapUpdateUserPreferences(RouteGroupBuilder group)
+    {
         // Update user preferences (AUTH-PROFILE-04)
         group.MapPut("/users/preferences", async (
             [FromBody] UpdatePreferencesPayload payload,
@@ -229,7 +268,10 @@ internal static class UserProfileEndpoints
         .Produces<UserProfileDto>(200)
         .Produces(400)
         .Produces(401);
+    }
 
+    private static void MapGetUserPreferences(RouteGroupBuilder group)
+    {
         // Get user preferences (AUTH-PROFILE-05)
         group.MapGet("/users/preferences", async (
             HttpContext context,
@@ -271,7 +313,10 @@ internal static class UserProfileEndpoints
 **Response**: UserPreferences object with current settings.")
         .Produces(200)
         .Produces(401);
+    }
 
+    private static void MapActivityEndpoints(RouteGroupBuilder group)
+    {
         // Get user activity timeline (USER-ACTIVITY-01 - Issue #911)
         group.MapGet("/users/me/activity", async (
             HttpContext context,
@@ -323,8 +368,6 @@ internal static class UserProfileEndpoints
         .Produces(200)
         .Produces(400)
         .Produces(401);
-
-        return group;
     }
 }
 

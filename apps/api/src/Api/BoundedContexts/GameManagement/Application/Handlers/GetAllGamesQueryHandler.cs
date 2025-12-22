@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Handlers;
 /// <summary>
 /// Handles get all games query.
 /// </summary>
-internal class GetAllGamesQueryHandler : IQueryHandler<GetAllGamesQuery, IReadOnlyList<GameDto>>
+internal class GetAllGamesQueryHandler : IQueryHandler<GetAllGamesQuery, PaginatedGamesResponse>
 {
     private readonly IGameRepository _gameRepository;
 
@@ -18,11 +18,33 @@ internal class GetAllGamesQueryHandler : IQueryHandler<GetAllGamesQuery, IReadOn
         _gameRepository = gameRepository ?? throw new ArgumentNullException(nameof(gameRepository));
     }
 
-    public async Task<IReadOnlyList<GameDto>> Handle(GetAllGamesQuery query, CancellationToken cancellationToken)
+    public async Task<PaginatedGamesResponse> Handle(GetAllGamesQuery query, CancellationToken cancellationToken)
     {
-        var games = await _gameRepository.GetAllAsync(cancellationToken).ConfigureAwait(false);
+        // Validate and sanitize pagination parameters
+        var page = query.Page < 1 ? 1 : query.Page;
+        var pageSize = Math.Clamp(query.PageSize < 1 ? 20 : query.PageSize, 1, 100);
 
-        return games.Select(MapToDto).ToList();
+        // Get paginated games from repository
+        var (games, total) = await _gameRepository.GetPaginatedAsync(
+            query.Search,
+            page,
+            pageSize,
+            cancellationToken
+        ).ConfigureAwait(false);
+
+        // Map to DTOs
+        var gameDtos = games.Select(MapToDto).ToList();
+
+        // Calculate total pages
+        var totalPages = total > 0 ? (int)Math.Ceiling((double)total / pageSize) : 0;
+
+        return new PaginatedGamesResponse(
+            Games: gameDtos,
+            Total: total,
+            Page: page,
+            PageSize: pageSize,
+            TotalPages: totalPages
+        );
     }
 
     private static GameDto MapToDto(Game game)

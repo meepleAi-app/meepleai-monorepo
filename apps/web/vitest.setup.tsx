@@ -38,17 +38,17 @@ vi.mock('framer-motion', () => {
     return React.forwardRef((props: any, ref: any) => {
       // Remove all framer-motion specific props and keep only standard HTML props
       const {
-        animate,
-        initial,
-        exit,
-        transition,
-        whileHover,
-        whileTap,
-        whileInView,
-        viewport,
-        drag,
-        dragConstraints,
-        onAnimationComplete,
+        animate: _animate,
+        initial: _initial,
+        exit: _exit,
+        transition: _transition,
+        whileHover: _whileHover,
+        whileTap: _whileTap,
+        whileInView: _whileInView,
+        viewport: _viewport,
+        drag: _drag,
+        dragConstraints: _dragConstraints,
+        onAnimationComplete: _onAnimationComplete,
         style,
         ...rest
       } = props;
@@ -77,7 +77,7 @@ vi.mock('framer-motion', () => {
     // AnimatePresence mock that renders all children immediately
     // This is necessary because jsdom doesn't support requestAnimationFrame
     // and AnimatePresence uses lazy rendering that doesn't work in test environment
-    AnimatePresence: ({ children, mode }: any) => {
+    AnimatePresence: ({ children, mode: _mode }: any) => {
       // In test environment, render all children immediately without animation delays
       // This ensures form elements are accessible to tests via getByLabelText/getByRole
       return React.createElement(
@@ -193,7 +193,7 @@ if (typeof global.Worker === 'undefined') {
       this.scriptURL = scriptURL;
     }
 
-    postMessage(message: any) {
+    postMessage(_message: any) {
       // Mock implementation - tests will override with vi.spyOn()
     }
 
@@ -349,7 +349,7 @@ if (typeof global.Response === 'undefined') {
 // Mock global fetch for API testing
 // jsdom doesn't provide fetch, so we need to mock it for components that use API client
 if (typeof global.fetch === 'undefined') {
-  global.fetch = vi.fn((url: string, options?: any) => {
+  global.fetch = vi.fn((_url: string, _options?: any) => {
     // Default mock implementation returns successful empty response
     // Individual tests should override this with vi.fn() or test-specific implementations
     return Promise.resolve(
@@ -409,7 +409,7 @@ if (typeof global.FileReader === 'undefined' || !global.FileReader.prototype.rea
       }, 0);
     }
 
-    readAsDataURL(blob: Blob) {
+    readAsDataURL(_blob: Blob) {
       // Simple mock for readAsDataURL
       this.readyState = 1;
       setTimeout(() => {
@@ -420,7 +420,7 @@ if (typeof global.FileReader === 'undefined' || !global.FileReader.prototype.rea
       }, 0);
     }
 
-    readAsText(blob: Blob) {
+    readAsText(_blob: Blob) {
       this.readyState = 1;
       setTimeout(() => {
         this.result = '%PDF-1.4';

@@ -26,6 +26,9 @@ internal class StreamExplainQueryHandler : IStreamingQueryHandler<StreamExplainQ
     // Script chunk size for streaming (characters per chunk)
     private const int ScriptChunkSize = 500;
 
+    // Word delimiters for reading time calculation (CA1861)
+    private static readonly char[] WordDelimiters = { ' ', '\n', '\r', '\t' };
+
     public StreamExplainQueryHandler(
         IEmbeddingService embeddingService,
         IQdrantService qdrantService,
@@ -108,9 +111,13 @@ internal class StreamExplainQueryHandler : IStreamingQueryHandler<StreamExplainQ
             }
         }
 
-        // Step 5: Emit completion
+        // Step 5: Emit completion with calculated metrics
+        var wordCount = script.Split(WordDelimiters, StringSplitOptions.RemoveEmptyEntries).Length;
+        var estimatedMinutes = Math.Max(1, (int)Math.Ceiling(wordCount / 200.0)); // 200 words/min reading speed
+        var maxConfidence = searchResults!.Max(r => r.Score);
+
         yield return CreateEvent(StreamingEventType.Complete,
-            new StreamingComplete(0, 0, 0, 0, null));
+            new StreamingComplete(estimatedMinutes, 0, 0, 0, maxConfidence));
 
         _logger.LogInformation("Streaming explain completed for game {GameId}, topic: {Topic}",
             query.GameId, query.Topic);
@@ -195,7 +202,7 @@ internal class StreamExplainQueryHandler : IStreamingQueryHandler<StreamExplainQ
             var firstSentence = text.Split('.')[0];
             if (firstSentence.Length > 60)
             {
-                firstSentence = firstSentence.Substring(0, 57) + "...";
+                firstSentence = string.Concat(firstSentence.AsSpan(0, 57), "...");
             }
             sections.Add(firstSentence);
         }

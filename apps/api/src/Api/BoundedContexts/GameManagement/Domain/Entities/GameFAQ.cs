@@ -38,8 +38,10 @@ internal sealed class GameFAQ : AggregateRoot<Guid>
             throw new ArgumentException("Game ID cannot be empty", nameof(gameId));
 
         GameId = gameId;
-        Question = question ?? throw new ArgumentNullException(nameof(question));
-        Answer = answer ?? throw new ArgumentNullException(nameof(answer));
+        ArgumentNullException.ThrowIfNull(question);
+        Question = question;
+        ArgumentNullException.ThrowIfNull(answer);
+        Answer = answer;
         Upvotes = 0;
         CreatedAt = DateTime.UtcNow;
     }
@@ -49,8 +51,10 @@ internal sealed class GameFAQ : AggregateRoot<Guid>
     /// </summary>
     public void Update(FAQQuestion question, FAQAnswer answer)
     {
-        Question = question ?? throw new ArgumentNullException(nameof(question));
-        Answer = answer ?? throw new ArgumentNullException(nameof(answer));
+        ArgumentNullException.ThrowIfNull(question);
+        Question = question;
+        ArgumentNullException.ThrowIfNull(answer);
+        Answer = answer;
         UpdatedAt = DateTime.UtcNow;
     }
 

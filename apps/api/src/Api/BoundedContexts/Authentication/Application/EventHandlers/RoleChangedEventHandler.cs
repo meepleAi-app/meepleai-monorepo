@@ -13,7 +13,7 @@ internal sealed class RoleChangedEventHandler : DomainEventHandlerBase<RoleChang
 {
     public RoleChangedEventHandler(
         MeepleAiDbContext dbContext,
-        ILogger<DomainEventHandlerBase<RoleChangedEvent>> logger)
+        ILogger<RoleChangedEventHandler> logger)
         : base(dbContext, logger)
     {
     }

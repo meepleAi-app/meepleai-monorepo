@@ -1,4 +1,5 @@
 import React from 'react';
+
 import { DiffStatistics as DiffStats } from '../../lib/diffProcessor';
 
 export interface DiffStatisticsProps {

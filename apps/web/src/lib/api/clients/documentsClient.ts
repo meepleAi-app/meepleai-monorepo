@@ -11,7 +11,8 @@
  * - Delete collections and documents
  */
 
-import type { HttpClient } from '../core/httpClient';
+import { z } from 'zod';
+
 import {
   type CreateDocumentCollectionRequest,
   type DocumentCollection,
@@ -23,7 +24,8 @@ import {
   collectionDocumentSchema,
 } from '../schemas/documents.schemas';
 import { PdfDocumentDtoSchema, type PdfDocumentDto } from '../schemas/pdf.schemas';
-import { z } from 'zod';
+
+import type { HttpClient } from '../core/httpClient';
 
 export interface DocumentsClient {
   /**

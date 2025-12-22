@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 /// EF Core implementation of ApiKey repository.
 /// Maps between domain ApiKey entity and ApiKeyEntity persistence model.
 /// </summary>
-internal class ApiKeyRepository : RepositoryBase, IApiKeyRepository
+public class ApiKeyRepository : RepositoryBase, IApiKeyRepository
 {
     public ApiKeyRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
         : base(dbContext, eventCollector)
@@ -65,6 +65,7 @@ internal class ApiKeyRepository : RepositoryBase, IApiKeyRepository
 
     public async Task AddAsync(ApiKey apiKey, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(apiKey);
         // Collect domain events BEFORE mapping to persistence entity
         CollectDomainEvents(apiKey);
 
@@ -74,6 +75,7 @@ internal class ApiKeyRepository : RepositoryBase, IApiKeyRepository
 
     public async Task UpdateAsync(ApiKey apiKey, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(apiKey);
         // Collect domain events BEFORE updating persistence entity
         CollectDomainEvents(apiKey);
 

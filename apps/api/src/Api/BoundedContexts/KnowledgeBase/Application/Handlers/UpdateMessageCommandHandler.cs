@@ -80,7 +80,7 @@ internal class UpdateMessageCommandHandler : ICommandHandler<UpdateMessageComman
                 newContent = request.NewContent,
                 updatedAt = message.UpdatedAt
             }),
-            ct: cancellationToken).ConfigureAwait(false);
+            cancellationToken: cancellationToken).ConfigureAwait(false);
 
         return MapToDto(thread);
     }
@@ -114,3 +114,4 @@ internal class UpdateMessageCommandHandler : ICommandHandler<UpdateMessageComman
         );
     }
 }
+

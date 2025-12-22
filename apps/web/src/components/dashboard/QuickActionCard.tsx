@@ -14,10 +14,12 @@
  */
 
 import React from 'react';
+
 import { cva, type VariantProps } from 'class-variance-authority';
+import { LucideIcon } from 'lucide-react';
+
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { LucideIcon } from 'lucide-react';
 
 // ============================================================================
 // Variants Configuration (class-variance-authority)

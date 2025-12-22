@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 /// EF Core implementation of User repository.
 /// Maps between domain User entity and UserEntity persistence model.
 /// </summary>
-internal class UserRepository : RepositoryBase, IUserRepository
+public class UserRepository : RepositoryBase, IUserRepository
 {
     public UserRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
         : base(dbContext, eventCollector)
@@ -70,6 +70,7 @@ internal class UserRepository : RepositoryBase, IUserRepository
 
     public async Task AddAsync(User entity, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(entity);
         // Collect domain events BEFORE mapping to persistence entity
         CollectDomainEvents(entity);
 
@@ -110,6 +111,7 @@ internal class UserRepository : RepositoryBase, IUserRepository
 
     public async Task UpdateAsync(User entity, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(entity);
         // Collect domain events BEFORE updating persistence entity
         CollectDomainEvents(entity);
 
@@ -162,6 +164,7 @@ internal class UserRepository : RepositoryBase, IUserRepository
 
     public async Task DeleteAsync(User entity, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(entity);
         var userEntity = await DbContext.Users.FindAsync(new object[] { entity.Id }, cancellationToken).ConfigureAwait(false);
         if (userEntity != null)
         {
@@ -244,7 +247,7 @@ internal class UserRepository : RepositoryBase, IUserRepository
         }
 
         // Reconstruct OAuth accounts collection
-        if (entity.OAuthAccounts.Any())
+        if (entity.OAuthAccounts.Count > 0)
         {
             var oauthAccounts = entity.OAuthAccounts.Select(oauthEntity => new OAuthAccount(
                 oauthEntity.Id,

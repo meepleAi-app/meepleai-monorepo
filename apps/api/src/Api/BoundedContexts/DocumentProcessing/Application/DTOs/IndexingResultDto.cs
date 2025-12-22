@@ -37,7 +37,7 @@ internal record IndexingResultDto
 /// <summary>
 /// Error codes for PDF indexing failures
 /// </summary>
-internal enum PdfIndexingErrorCode
+public enum PdfIndexingErrorCode
 {
     PdfNotFound,
     TextExtractionRequired,

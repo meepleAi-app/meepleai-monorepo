@@ -81,10 +81,16 @@ internal class AdminDisable2FACommandHandler : ICommandHandler<AdminDisable2FACo
             _logger.LogWarning(ex, "Domain exception during admin 2FA disable for user {TargetUserId}", command.TargetUserId);
             return new AdminDisable2FAResult(Success: false, ErrorMessage: ex.Message);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: COMMAND HANDLER PATTERN - CQRS handler boundary
+        // Specific exceptions (DomainException) caught separately above.
+        // Generic catch handles unexpected infrastructure failures (DB, network, memory)
+        // to prevent exception propagation to API layer. Returns Result pattern.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error during admin 2FA disable for user {TargetUserId}", command.TargetUserId);
             return new AdminDisable2FAResult(Success: false, ErrorMessage: "An error occurred while disabling two-factor authentication");
         }
+#pragma warning restore CA1031
     }
 }

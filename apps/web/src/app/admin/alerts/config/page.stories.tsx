@@ -1,7 +1,9 @@
-import type { Meta, StoryObj } from '@storybook/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { http, HttpResponse } from 'msw';
+
 import AlertConfigPage from './page';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 /**
  * Alert Configuration Page - Issue #915
@@ -223,7 +225,7 @@ export const Default: Story = {};
  * Shows populated SMTP settings with multiple recipients
  */
 export const EmailTab: Story = {
-  play: async ({ canvasElement }) => {
+  play: async ({ canvasElement: _canvasElement }) => {
     // Tab is active by default
   },
 };

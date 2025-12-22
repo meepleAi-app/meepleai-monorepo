@@ -23,7 +23,6 @@ public class ResilientRetrievalServiceTests
     private readonly Mock<IHybridSearchService> _hybridSearchMock;
     private readonly Mock<ICrossEncoderReranker> _rerankerMock;
     private readonly Mock<IParentChunkResolver> _parentResolverMock;
-    private readonly Mock<HybridCache> _cacheMock;
     private readonly Mock<ILogger<ResilientRetrievalService>> _loggerMock;
     private readonly ResilientRetrievalOptions _options;
 
@@ -32,7 +31,6 @@ public class ResilientRetrievalServiceTests
         _hybridSearchMock = new Mock<IHybridSearchService>();
         _rerankerMock = new Mock<ICrossEncoderReranker>();
         _parentResolverMock = new Mock<IParentChunkResolver>();
-        _cacheMock = new Mock<HybridCache>();
         _loggerMock = new Mock<ILogger<ResilientRetrievalService>>();
         _options = new ResilientRetrievalOptions
         {
@@ -80,7 +78,7 @@ public class ResilientRetrievalServiceTests
                 It.IsAny<Guid>(),
                 It.IsAny<SearchMode>(),
                 It.IsAny<int>(),
-                It.IsAny<IReadOnlyList<Guid>?>(),
+                It.IsAny<List<Guid>?>(),
                 It.IsAny<float>(),
                 It.IsAny<float>(),
                 It.IsAny<CancellationToken>()))
@@ -138,7 +136,7 @@ public class ResilientRetrievalServiceTests
                 It.IsAny<Guid>(),
                 It.IsAny<SearchMode>(),
                 It.IsAny<int>(),
-                It.IsAny<IReadOnlyList<Guid>?>(),
+                It.IsAny<List<Guid>?>(),
                 It.IsAny<float>(),
                 It.IsAny<float>(),
                 It.IsAny<CancellationToken>()))
@@ -174,7 +172,7 @@ public class ResilientRetrievalServiceTests
                 It.IsAny<Guid>(),
                 It.IsAny<SearchMode>(),
                 It.IsAny<int>(),
-                It.IsAny<IReadOnlyList<Guid>?>(),
+                It.IsAny<List<Guid>?>(),
                 It.IsAny<float>(),
                 It.IsAny<float>(),
                 It.IsAny<CancellationToken>()))
@@ -211,7 +209,7 @@ public class ResilientRetrievalServiceTests
                 It.IsAny<Guid>(),
                 It.IsAny<SearchMode>(),
                 It.IsAny<int>(),
-                It.IsAny<IReadOnlyList<Guid>?>(),
+                It.IsAny<List<Guid>?>(),
                 It.IsAny<float>(),
                 It.IsAny<float>(),
                 It.IsAny<CancellationToken>()))
@@ -253,7 +251,7 @@ public class ResilientRetrievalServiceTests
                 It.IsAny<Guid>(),
                 It.IsAny<SearchMode>(),
                 It.IsAny<int>(),
-                It.IsAny<IReadOnlyList<Guid>?>(),
+                It.IsAny<List<Guid>?>(),
                 It.IsAny<float>(),
                 It.IsAny<float>(),
                 It.IsAny<CancellationToken>()))
@@ -323,7 +321,7 @@ public class ResilientRetrievalServiceTests
                 It.IsAny<Guid>(),
                 It.IsAny<SearchMode>(),
                 It.IsAny<int>(),
-                It.IsAny<IReadOnlyList<Guid>?>(),
+                It.IsAny<List<Guid>?>(),
                 It.IsAny<float>(),
                 It.IsAny<float>(),
                 It.IsAny<CancellationToken>()))
@@ -392,7 +390,7 @@ public class ResilientRetrievalServiceTests
                 It.IsAny<Guid>(),
                 SearchMode.Semantic,
                 It.IsAny<int>(),
-                It.IsAny<IReadOnlyList<Guid>?>(),
+                It.IsAny<List<Guid>?>(),
                 It.IsAny<float>(),
                 It.IsAny<float>(),
                 It.IsAny<CancellationToken>()))
@@ -415,7 +413,7 @@ public class ResilientRetrievalServiceTests
                 gameId,
                 SearchMode.Semantic,
                 15, // topK * CandidateMultiplier (5 * 3)
-                It.IsAny<IReadOnlyList<Guid>?>(),
+                It.IsAny<List<Guid>?>(),
                 It.IsAny<float>(),
                 It.IsAny<float>(),
                 It.IsAny<CancellationToken>()),

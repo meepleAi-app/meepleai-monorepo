@@ -12,10 +12,12 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+
 import { useRouter } from 'next/navigation';
+
+import { userKeys } from '@/hooks/queries/useCurrentUser';
 import { api } from '@/lib/api';
 import { getQueryClient } from '@/lib/queryClient';
-import { userKeys } from '@/hooks/queries/useCurrentUser';
 
 // ============================================================================
 // Types
@@ -70,7 +72,7 @@ export function useAuth(): UseAuthReturn {
       setLoading(true);
       const user = await api.auth.getMe();
       setUser(user);
-    } catch (err) {
+    } catch (_err) {
       // Session not found or expired - this is expected for logged-out users
       setUser(null);
     } finally {
@@ -169,7 +171,7 @@ export function useAuth(): UseAuthReturn {
       await queryClient.invalidateQueries({ queryKey: userKeys.current() });
 
       await router.push('/');
-    } catch (err: unknown) {
+    } catch (_err: unknown) {
       // Clear user state even if API call fails
       setUser(null);
 

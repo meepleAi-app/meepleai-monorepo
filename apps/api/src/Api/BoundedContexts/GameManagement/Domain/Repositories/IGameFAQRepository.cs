@@ -43,4 +43,11 @@ internal interface IGameFAQRepository
     /// Checks if an FAQ exists.
     /// </summary>
     Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Atomically increments the upvote count for an FAQ.
+    /// Thread-safe operation that prevents race conditions.
+    /// Issue #2186: Fixed concurrent upvote handling.
+    /// </summary>
+    Task<GameFAQ> IncrementUpvoteAsync(Guid id, CancellationToken cancellationToken = default);
 }

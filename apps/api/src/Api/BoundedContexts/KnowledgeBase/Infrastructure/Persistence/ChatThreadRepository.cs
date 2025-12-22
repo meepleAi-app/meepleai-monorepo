@@ -21,6 +21,14 @@ internal class ChatThreadRepository : RepositoryBase, IChatThreadRepository
     {
     }
 
+    // CA1869: Cache JsonSerializerOptions for better performance
+    private static readonly JsonSerializerOptions s_jsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        Converters = { new LegacyPersistenceChatMessageDtoConverter() }
+    };
+
     public async Task<ChatThread?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var threadEntity = await DbContext.ChatThreads
@@ -134,14 +142,7 @@ internal class ChatThreadRepository : RepositoryBase, IChatThreadRepository
     private static ChatThread MapToDomain(Api.Infrastructure.Entities.ChatThreadEntity entity)
     {
         // Deserialize messages from JSON using flexible DTO that handles both legacy and modern formats
-        var jsonOptions = new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true,
-            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
-            Converters = { new LegacyPersistenceChatMessageDtoConverter() }
-        };
-
-        var messageDtos = JsonSerializer.Deserialize<List<PersistenceChatMessageDto>>(entity.MessagesJson, jsonOptions)
+        var messageDtos = JsonSerializer.Deserialize<List<PersistenceChatMessageDto>>(entity.MessagesJson, s_jsonOptions)
             ?? new List<PersistenceChatMessageDto>();
 
         // ISSUE-1215: Generate stable fallback values for legacy messages and hydrate all fields

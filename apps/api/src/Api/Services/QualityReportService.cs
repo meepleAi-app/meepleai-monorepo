@@ -46,8 +46,10 @@ internal class QualityReportService : BackgroundService, IQualityReportService
         IConfiguration configuration,
         TimeProvider? timeProvider = null)
     {
-        _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(scopeFactory);
+        _scopeFactory = scopeFactory;
+        ArgumentNullException.ThrowIfNull(logger);
+        _logger = logger;
         _timeProvider = timeProvider ?? TimeProvider.System;
 
         // Read configuration with defaults
@@ -92,9 +94,9 @@ internal class QualityReportService : BackgroundService, IQualityReportService
             {
                 await GenerateScheduledReportAsync(stoppingToken).ConfigureAwait(false);
             }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            catch (OperationCanceledException ex) when (stoppingToken.IsCancellationRequested)
             {
-                _logger.LogInformation("Quality report generation cancelled (application shutting down)");
+                _logger.LogInformation(ex, "Quality report generation cancelled (application shutting down)");
                 break;
             }
 #pragma warning disable CA1031 // Do not catch general exception types
@@ -183,10 +185,10 @@ internal class QualityReportService : BackgroundService, IQualityReportService
             TotalResponses = totalResponses,
             LowQualityCount = lowQualityCount,
             LowQualityPercentage = totalResponses > 0 ? (lowQualityCount / (double)totalResponses) * 100 : 0.0,
-            AverageRagConfidence = logs.Any() ? logs.Average(l => l.RagConfidence) : null,
-            AverageLlmConfidence = logs.Any() ? logs.Average(l => l.LlmConfidence) : null,
-            AverageCitationQuality = logs.Any() ? logs.Average(l => l.CitationQuality) : null,
-            AverageOverallConfidence = logs.Any() ? logs.Average(l => l.OverallConfidence) : null
+            AverageRagConfidence = logs.Count > 0 ? logs.Average(l => l.RagConfidence) : null,
+            AverageLlmConfidence = logs.Count > 0 ? logs.Average(l => l.LlmConfidence) : null,
+            AverageCitationQuality = logs.Count > 0 ? logs.Average(l => l.CitationQuality) : null,
+            AverageOverallConfidence = logs.Count > 0 ? logs.Average(l => l.OverallConfidence) : null
         };
 
         return report;

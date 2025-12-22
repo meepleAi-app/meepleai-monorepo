@@ -1157,6 +1157,9 @@ namespace Api.Migrations
                     b.Property<string>("ImageUrl")
                         .HasColumnType("text");
 
+                    b.Property<string>("Language")
+                        .HasColumnType("text");
+
                     b.Property<int?>("MaxPlayTimeMinutes")
                         .HasColumnType("integer");
 
@@ -1175,6 +1178,12 @@ namespace Api.Migrations
                         .HasColumnType("character varying(128)");
 
                     b.Property<string>("Publisher")
+                        .HasColumnType("text");
+
+                    b.Property<string>("VersionNumber")
+                        .HasColumnType("text");
+
+                    b.Property<string>("VersionType")
                         .HasColumnType("text");
 
                     b.Property<int?>("YearPublished")

@@ -15,6 +15,8 @@ internal record UpdateAlertConfigurationCommand(
 
 internal class UpdateAlertConfigurationCommandValidator : AbstractValidator<UpdateAlertConfigurationCommand>
 {
+    private static readonly string[] AllowedCategories = { "Email", "Slack", "PagerDuty", "Global" };
+
     public UpdateAlertConfigurationCommandValidator()
     {
         RuleFor(x => x.ConfigKey)
@@ -27,7 +29,7 @@ internal class UpdateAlertConfigurationCommandValidator : AbstractValidator<Upda
 
         RuleFor(x => x.Category)
             .NotEmpty().WithMessage("Category is required")
-            .Must(c => new[] { "Email", "Slack", "PagerDuty", "Global" }.Contains(c, StringComparer.Ordinal))
+            .Must(c => AllowedCategories.Contains(c, StringComparer.Ordinal))
             .WithMessage("Category must be one of: Email, Slack, PagerDuty, Global");
 
         RuleFor(x => x.UpdatedBy)

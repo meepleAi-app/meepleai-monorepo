@@ -77,7 +77,7 @@ internal static class PdfUploadTestHelpers
     /// </summary>
     public static CancellationTokenSource CreateDelayedCancellation(int delayMilliseconds)
     {
-        using var cts = new CancellationTokenSource();
+        var cts = new CancellationTokenSource();
         cts.CancelAfter(delayMilliseconds);
         return cts;
     }

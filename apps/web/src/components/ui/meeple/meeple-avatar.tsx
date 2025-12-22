@@ -10,6 +10,7 @@
  */
 
 import React from 'react';
+
 import { cn } from '@/lib/utils';
 
 export type MeepleAvatarState = 'idle' | 'thinking' | 'confident' | 'searching' | 'uncertain';

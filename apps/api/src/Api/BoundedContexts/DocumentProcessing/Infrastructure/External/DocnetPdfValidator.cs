@@ -47,25 +47,13 @@ internal class DocnetPdfValidator : IPdfValidator
     public async Task<PdfValidationResult> ValidateAsync(
         Stream pdfStream,
         string fileName,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         // Precondition validation
-        if (pdfStream == null)
+        var preconditionResult = ValidatePreconditions(pdfStream, fileName);
+        if (preconditionResult != null)
         {
-            return PdfValidationResult.CreateFailure(new Dictionary<string, string>
-(StringComparer.Ordinal)
-            {
-                ["stream"] = "PDF stream cannot be null"
-            });
-        }
-
-        if (string.IsNullOrWhiteSpace(fileName))
-        {
-            return PdfValidationResult.CreateFailure(new Dictionary<string, string>
-(StringComparer.Ordinal)
-            {
-                ["fileName"] = "File name cannot be empty"
-            });
+            return preconditionResult;
         }
 
         var errors = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -74,100 +62,13 @@ internal class DocnetPdfValidator : IPdfValidator
         try
         {
             // Step 1: Technical validation - Magic bytes
-            if (!await ValidateMagicBytesAsync(pdfStream, ct).ConfigureAwait(false))
-            {
-                errors["fileFormat"] = "Invalid PDF file format. File does not start with PDF signature.";
-            }
+            await ValidateTechnicalFormatAsync(pdfStream, errors, cancellationToken).ConfigureAwait(false);
 
-            // Reset stream for further processing
-            pdfStream.Position = 0;
+            // Step 2 & 3: Business validation - File size and MIME type
+            ValidateBusinessRules(pdfStream, fileName, errors);
 
-            // Step 2: Business validation - File size
-            if (pdfStream.Length < 1)
-            {
-                errors["fileSize"] = "File size must be at least 1 byte";
-            }
-            else
-            {
-                var fileSize = new FileSize(pdfStream.Length);
-                var fileSizeResult = _domainService.ValidateFileSize(fileSize);
-                if (!fileSizeResult.IsSuccess)
-                {
-                    errors[fileSizeResult.FieldName!] = fileSizeResult.Error!;
-                }
-            }
-
-            // Step 3: Business validation - MIME type
-            var contentType = GetContentType(fileName);
-            var mimeResult = _domainService.ValidateMimeType(contentType);
-            if (!mimeResult.IsSuccess)
-            {
-                errors[mimeResult.FieldName!] = mimeResult.Error!;
-            }
-
-            // Step 4: Technical validation - Docnet parsing + metadata extraction
-            await DocnetSemaphore.WaitAsync(ct).ConfigureAwait(false);
-            try
-            {
-                // S5445 fix: Use secure temp file creation instead of Path.GetTempFileName()
-                var tempFile = SecureTempFileHelper.CreateSecureTempFilePath(".pdf");
-                try
-                {
-                    using (var fileStream = new FileStream(tempFile, FileMode.Create, FileAccess.Write, FileShare.None))
-                    {
-                        await pdfStream.CopyToAsync(fileStream, ct).ConfigureAwait(false);
-                    }
-
-                    // Reset stream position for potential further use
-                    pdfStream.Position = 0;
-
-                    // Validate with Docnet.Core
-                    var validationResult = await Task.Run(() => ValidatePdfWithDocnet(tempFile), ct).ConfigureAwait(false);
-
-                    if (validationResult.Errors.Count > 0)
-                    {
-                        foreach (var error in validationResult.Errors)
-                        {
-                            errors[error.Key] = error.Value;
-                        }
-                    }
-
-                    if (validationResult.Metadata != null)
-                    {
-                        metadata = validationResult.Metadata;
-
-                        // Step 5: Business validation - Page count
-                        var pageCount = new PageCount(metadata.PageCount);
-                        var pageCountResult = _domainService.ValidatePageCount(pageCount);
-                        if (!pageCountResult.IsSuccess)
-                        {
-                            errors[pageCountResult.FieldName!] = pageCountResult.Error!;
-                        }
-
-                        // Step 6: Business validation - PDF version
-                        if (!string.IsNullOrEmpty(metadata.PdfVersion))
-                        {
-                            if (DomainPdfVersion.TryParse(metadata.PdfVersion, out var version) && version != null)
-                            {
-                                var versionResult = _domainService.ValidatePdfVersion(version);
-                                if (!versionResult.IsSuccess)
-                                {
-                                    errors[versionResult.FieldName!] = versionResult.Error!;
-                                }
-                            }
-                        }
-                    }
-                }
-                finally
-                {
-                    // Clean up temporary file
-                    CleanupTempFile(tempFile);
-                }
-            }
-            finally
-            {
-                DocnetSemaphore.Release();
-            }
+            // Step 4 & 5: Docnet validation + metadata business rules
+            metadata = await ValidateWithDocnetAndExtractMetadataAsync(pdfStream, errors, cancellationToken).ConfigureAwait(false);
 
             // Return result
             if (errors.Count > 0)
@@ -219,12 +120,169 @@ internal class DocnetPdfValidator : IPdfValidator
 #pragma warning restore CA1031 // Do not catch general exception types
     }
 
-    public async Task<PdfMetadata?> ExtractMetadataAsync(Stream pdfStream, CancellationToken ct = default)
+    /// <summary>
+    /// Validates preconditions (null checks) for PDF validation.
+    /// Returns failure result if preconditions fail, null otherwise.
+    /// </summary>
+    private static PdfValidationResult? ValidatePreconditions(Stream? pdfStream, string? fileName)
+    {
+        if (pdfStream == null)
+        {
+            return PdfValidationResult.CreateFailure(new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["stream"] = "PDF stream cannot be null"
+            });
+        }
+
+        if (string.IsNullOrWhiteSpace(fileName))
+        {
+            return PdfValidationResult.CreateFailure(new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["fileName"] = "File name cannot be empty"
+            });
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Validates technical PDF format (magic bytes).
+    /// </summary>
+    private static async Task ValidateTechnicalFormatAsync(
+        Stream pdfStream,
+        Dictionary<string, string> errors,
+        CancellationToken cancellationToken)
+    {
+        if (!await ValidateMagicBytesAsync(pdfStream, cancellationToken).ConfigureAwait(false))
+        {
+            errors["fileFormat"] = "Invalid PDF file format. File does not start with PDF signature.";
+        }
+
+        // Reset stream for further processing
+        pdfStream.Position = 0;
+    }
+
+    /// <summary>
+    /// Validates business rules (file size and MIME type).
+    /// </summary>
+    private void ValidateBusinessRules(
+        Stream pdfStream,
+        string fileName,
+        Dictionary<string, string> errors)
+    {
+        // File size validation
+        if (pdfStream.Length < 1)
+        {
+            errors["fileSize"] = "File size must be at least 1 byte";
+        }
+        else
+        {
+            var fileSize = new FileSize(pdfStream.Length);
+            var fileSizeResult = _domainService.ValidateFileSize(fileSize);
+            if (!fileSizeResult.IsSuccess)
+            {
+                errors[fileSizeResult.FieldName!] = fileSizeResult.Error!;
+            }
+        }
+
+        // MIME type validation
+        var contentType = GetContentType(fileName);
+        var mimeResult = _domainService.ValidateMimeType(contentType);
+        if (!mimeResult.IsSuccess)
+        {
+            errors[mimeResult.FieldName!] = mimeResult.Error!;
+        }
+    }
+
+    /// <summary>
+    /// Validates PDF with Docnet.Core and extracts metadata.
+    /// Also validates metadata business rules (page count, PDF version).
+    /// </summary>
+    private async Task<PdfMetadata?> ValidateWithDocnetAndExtractMetadataAsync(
+        Stream pdfStream,
+        Dictionary<string, string> errors,
+        CancellationToken cancellationToken)
+    {
+        PdfMetadata? metadata = null;
+
+        await DocnetSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var tempFile = SecureTempFileHelper.CreateSecureTempFilePath(".pdf");
+            try
+            {
+                // Write stream to temp file
+                using (var fileStream = new FileStream(tempFile, FileMode.Create, FileAccess.Write, FileShare.None))
+                {
+                    await pdfStream.CopyToAsync(fileStream, cancellationToken).ConfigureAwait(false);
+                }
+
+                pdfStream.Position = 0;
+
+                // Validate with Docnet.Core
+                var validationResult = await Task.Run(() => ValidatePdfWithDocnet(tempFile), cancellationToken).ConfigureAwait(false);
+
+                // Collect Docnet errors
+                if (validationResult.Errors.Count > 0)
+                {
+                    foreach (var error in validationResult.Errors)
+                    {
+                        errors[error.Key] = error.Value;
+                    }
+                }
+
+                // Validate metadata business rules
+                if (validationResult.Metadata != null)
+                {
+                    metadata = validationResult.Metadata;
+                    ValidateMetadataBusinessRules(metadata, errors);
+                }
+            }
+            finally
+            {
+                CleanupTempFile(tempFile);
+            }
+        }
+        finally
+        {
+            DocnetSemaphore.Release();
+        }
+
+        return metadata;
+    }
+
+    /// <summary>
+    /// Validates business rules on extracted PDF metadata (page count, PDF version).
+    /// </summary>
+    private void ValidateMetadataBusinessRules(PdfMetadata metadata, Dictionary<string, string> errors)
+    {
+        // Page count validation
+        var pageCount = new PageCount(metadata.PageCount);
+        var pageCountResult = _domainService.ValidatePageCount(pageCount);
+        if (!pageCountResult.IsSuccess)
+        {
+            errors[pageCountResult.FieldName!] = pageCountResult.Error!;
+        }
+
+        // PDF version validation
+        if (!string.IsNullOrEmpty(metadata.PdfVersion) &&
+            DomainPdfVersion.TryParse(metadata.PdfVersion, out var version) &&
+            version != null)
+        {
+            var versionResult = _domainService.ValidatePdfVersion(version);
+            if (!versionResult.IsSuccess)
+            {
+                errors[versionResult.FieldName!] = versionResult.Error!;
+            }
+        }
+    }
+
+    public async Task<PdfMetadata?> ExtractMetadataAsync(Stream pdfStream, CancellationToken cancellationToken = default)
     {
         if (pdfStream == null)
             return null;
 
-        await DocnetSemaphore.WaitAsync(ct).ConfigureAwait(false);
+        await DocnetSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
             // S5445 fix: Use secure temp file creation instead of Path.GetTempFileName()
@@ -233,12 +291,12 @@ internal class DocnetPdfValidator : IPdfValidator
             {
                 using (var fileStream = new FileStream(tempFile, FileMode.Create, FileAccess.Write, FileShare.None))
                 {
-                    await pdfStream.CopyToAsync(fileStream, ct).ConfigureAwait(false);
+                    await pdfStream.CopyToAsync(fileStream, cancellationToken).ConfigureAwait(false);
                 }
 
                 pdfStream.Position = 0;
 
-                var result = await Task.Run(() => ValidatePdfWithDocnet(tempFile), ct).ConfigureAwait(false);
+                var result = await Task.Run(() => ValidatePdfWithDocnet(tempFile), cancellationToken).ConfigureAwait(false);
                 return result.Metadata;
             }
             finally
@@ -256,7 +314,7 @@ internal class DocnetPdfValidator : IPdfValidator
     /// Validates PDF magic bytes at the start of the stream.
     /// PDF files must start with "%PDF-" signature (0x25 0x50 0x44 0x46 0x2D).
     /// </summary>
-    private static async Task<bool> ValidateMagicBytesAsync(Stream stream, CancellationToken ct)
+    private static async Task<bool> ValidateMagicBytesAsync(Stream stream, CancellationToken cancellationToken)
     {
         if (stream.Length < PdfMagicBytes.Length)
         {
@@ -265,7 +323,7 @@ internal class DocnetPdfValidator : IPdfValidator
 
         stream.Position = 0;
         var buffer = new byte[PdfMagicBytes.Length];
-        var bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, ct).ConfigureAwait(false);
+        var bytesRead = await stream.ReadAsync(buffer.AsMemory(), cancellationToken).ConfigureAwait(false);
 
         if (bytesRead < PdfMagicBytes.Length)
         {
@@ -422,3 +480,4 @@ public class PdfValidationException : Exception
     {
     }
 }
+

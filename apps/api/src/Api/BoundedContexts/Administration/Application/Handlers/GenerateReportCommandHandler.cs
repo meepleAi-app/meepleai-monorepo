@@ -27,7 +27,7 @@ internal sealed class GenerateReportCommandHandler : ICommandHandler<GenerateRep
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public async Task<GenerateReportResult> Handle(GenerateReportCommand command, CancellationToken ct)
+    public async Task<GenerateReportResult> Handle(GenerateReportCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
         _logger.LogInformation(
@@ -36,7 +36,7 @@ internal sealed class GenerateReportCommandHandler : ICommandHandler<GenerateRep
 
         // Create execution record
         var execution = ReportExecution.Create(Guid.Empty); // On-demand, no report ID
-        await _executionRepository.AddAsync(execution, ct).ConfigureAwait(false);
+        await _executionRepository.AddAsync(execution, cancellationToken).ConfigureAwait(false);
 
         try
         {
@@ -45,7 +45,7 @@ internal sealed class GenerateReportCommandHandler : ICommandHandler<GenerateRep
                 command.Template,
                 command.Format,
                 command.Parameters,
-                ct).ConfigureAwait(false);
+                cancellationToken).ConfigureAwait(false);
 
             // Update execution as completed
             // Note: In production, outputPath would save to storage (S3, Azure Blob, etc.)
@@ -53,7 +53,7 @@ internal sealed class GenerateReportCommandHandler : ICommandHandler<GenerateRep
                 outputPath: $"temp://{reportData.FileName}",
                 fileSizeBytes: reportData.FileSizeBytes);
 
-            await _executionRepository.UpdateAsync(completedExecution, ct).ConfigureAwait(false);
+            await _executionRepository.UpdateAsync(completedExecution, cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Report generated successfully: ExecutionId={ExecutionId}, FileName={FileName}",
@@ -65,6 +65,11 @@ internal sealed class GenerateReportCommandHandler : ICommandHandler<GenerateRep
                 Content: reportData.Content,
                 FileSizeBytes: reportData.FileSizeBytes);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: COMMAND HANDLER PATTERN - DB status update before rethrow
+        // Catches all exceptions during report generation to update execution status in DB
+        // before rethrowing. No logging here to avoid double logging (caller logs exception).
+        // Ensures DB reflects failed execution state for audit/monitoring.
         catch (Exception ex)
         {
             // S2139: Logging removed to avoid double logging (caller will log).
@@ -72,9 +77,11 @@ internal sealed class GenerateReportCommandHandler : ICommandHandler<GenerateRep
 
             // Update execution as failed
             var failedExecution = execution.Fail(ex.Message);
-            await _executionRepository.UpdateAsync(failedExecution, ct).ConfigureAwait(false);
+            await _executionRepository.UpdateAsync(failedExecution, cancellationToken).ConfigureAwait(false);
 
             throw;
         }
+#pragma warning restore CA1031
     }
 }
+

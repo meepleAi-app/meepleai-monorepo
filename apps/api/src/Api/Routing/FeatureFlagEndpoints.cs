@@ -17,7 +17,16 @@ internal static class FeatureFlagEndpoints
 {
     public static RouteGroupBuilder MapFeatureFlagEndpoints(this RouteGroupBuilder group)
     {
-        // List all feature flags
+        MapListFeatureFlagsEndpoint(group);
+        MapGetFeatureFlagEndpoint(group);
+        MapToggleFeatureFlagEndpoint(group);
+        MapCreateFeatureFlagEndpoint(group);
+
+        return group;
+    }
+
+    private static void MapListFeatureFlagsEndpoint(RouteGroupBuilder group)
+    {
         group.MapGet("/admin/feature-flags", async (
             HttpContext context,
             IMediator mediator,
@@ -55,8 +64,10 @@ internal static class FeatureFlagEndpoints
         .Produces<object>(StatusCodes.Status200OK)
         .Produces(StatusCodes.Status401Unauthorized)
         .Produces(StatusCodes.Status403Forbidden);
+    }
 
-        // Get specific feature flag status
+    private static void MapGetFeatureFlagEndpoint(RouteGroupBuilder group)
+    {
         group.MapGet("/admin/feature-flags/{key}", async (
             string key,
             HttpContext context,
@@ -97,8 +108,10 @@ internal static class FeatureFlagEndpoints
         .Produces(StatusCodes.Status404NotFound)
         .Produces(StatusCodes.Status401Unauthorized)
         .Produces(StatusCodes.Status403Forbidden);
+    }
 
-        // Toggle feature flag
+    private static void MapToggleFeatureFlagEndpoint(RouteGroupBuilder group)
+    {
         group.MapPost("/admin/feature-flags/{key}/toggle", async (
             string key,
             HttpContext context,
@@ -154,8 +167,10 @@ internal static class FeatureFlagEndpoints
         .Produces(StatusCodes.Status404NotFound)
         .Produces(StatusCodes.Status401Unauthorized)
         .Produces(StatusCodes.Status403Forbidden);
+    }
 
-        // Create new feature flag
+    private static void MapCreateFeatureFlagEndpoint(RouteGroupBuilder group)
+    {
         group.MapPost("/admin/feature-flags", async (
             CreateFeatureFlagRequest request,
             HttpContext context,
@@ -201,8 +216,6 @@ internal static class FeatureFlagEndpoints
         .Produces(StatusCodes.Status400BadRequest)
         .Produces(StatusCodes.Status401Unauthorized)
         .Produces(StatusCodes.Status403Forbidden);
-
-        return group;
     }
 }
 

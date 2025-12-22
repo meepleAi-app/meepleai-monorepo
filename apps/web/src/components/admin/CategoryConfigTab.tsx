@@ -6,10 +6,12 @@
  */
 
 import { useState, useEffect } from 'react';
+
 import { toast } from '@/components/layout/Toast';
+
 import { api, SystemConfigurationDto, UpdateConfigurationRequest } from '../../lib/api';
-import { Input } from '../ui/input';
 import { Button } from '../ui/button';
+import { Input } from '../ui/input';
 
 interface CategoryConfigTabProps {
   title: string;
@@ -104,7 +106,7 @@ export default function CategoryConfigTab({
         `Configuration '${config.key}' ${config.isActive ? 'deactivated' : 'activated'}`
       );
       onConfigurationChange();
-    } catch (err) {
+    } catch (_err) {
       toast.error('Failed to toggle configuration');
     } finally {
       setSaving(null);

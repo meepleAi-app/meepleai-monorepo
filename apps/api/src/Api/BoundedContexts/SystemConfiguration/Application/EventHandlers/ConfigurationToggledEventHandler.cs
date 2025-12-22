@@ -17,7 +17,7 @@ internal sealed class ConfigurationToggledEventHandler : DomainEventHandlerBase<
     public ConfigurationToggledEventHandler(
         MeepleAiDbContext dbContext,
         IHybridCacheService cache,
-        ILogger<DomainEventHandlerBase<ConfigurationToggledEvent>> logger)
+        ILogger<ConfigurationToggledEventHandler> logger)
         : base(dbContext, logger)
     {
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));

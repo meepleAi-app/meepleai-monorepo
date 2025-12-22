@@ -34,20 +34,20 @@ internal class RrfFusionDomainService
         foreach (var result in vectorResults)
         {
             var score = 1.0 / (rrfK + result.Rank);
-            if (rrfScores.ContainsKey(result.VectorDocumentId))
-                rrfScores[result.VectorDocumentId] += score;
-            else
+            if (!rrfScores.TryGetValue(result.VectorDocumentId, out var existingScore))
                 rrfScores[result.VectorDocumentId] = score;
+            else
+                rrfScores[result.VectorDocumentId] = existingScore + score;
         }
 
         // Add scores from keyword results
         foreach (var result in keywordResults)
         {
             var score = 1.0 / (rrfK + result.Rank);
-            if (rrfScores.ContainsKey(result.VectorDocumentId))
-                rrfScores[result.VectorDocumentId] += score;
-            else
+            if (!rrfScores.TryGetValue(result.VectorDocumentId, out var existingScore))
                 rrfScores[result.VectorDocumentId] = score;
+            else
+                rrfScores[result.VectorDocumentId] = existingScore + score;
         }
 
         // Combine all results and re-rank by RRF score

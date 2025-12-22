@@ -65,8 +65,20 @@ internal class PlaywrightReportParserService : IPlaywrightReportParserService
             var coverage = totalTests > 0 ? Math.Min(100, totalTests * 0.5m) : 0;
 
             // Determine status
-            var status = passRate >= 95 && flakyRate <= 5 ? "pass" :
-                        passRate >= 80 && flakyRate <= 10 ? "warning" : "fail";
+            // Determine status
+            string status;
+            if (passRate >= 95 && flakyRate <= 5)
+            {
+                status = "pass";
+            }
+            else if (passRate >= 80 && flakyRate <= 10)
+            {
+                status = "warning";
+            }
+            else
+            {
+                status = "fail";
+            }
 
             var lastRunAt = File.GetLastWriteTimeUtc(latestReport);
 
@@ -93,11 +105,16 @@ internal class PlaywrightReportParserService : IPlaywrightReportParserService
 
             return metrics;
         }
+#pragma warning disable CA1031
+        // Justification: INFRASTRUCTURE SERVICE PATTERN - Graceful degradation
+        // Catches all file I/O and JSON parsing failures. Returns null instead of throwing
+        // to allow dashboard to handle missing metrics gracefully. Non-critical data retrieval.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error parsing Playwright E2E metrics");
             return null;
         }
+#pragma warning restore CA1031
     }
 
     public async Task<bool> ReportsExistAsync(CancellationToken cancellationToken = default)

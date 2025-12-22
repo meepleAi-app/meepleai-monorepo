@@ -35,20 +35,20 @@ internal class DocnetPdfTextExtractor : IPdfTextExtractor
     public async Task<TextExtractionResult> ExtractTextAsync(
         Stream pdfStream,
         bool enableOcrFallback = true,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         string? tempFilePath = null;
 
         try
         {
             // Step 1: Write stream to temp file (Docnet.Core requires file path)
-            tempFilePath = await WriteTempFileAsync(pdfStream, ct).ConfigureAwait(false);
+            tempFilePath = await WriteTempFileAsync(pdfStream, cancellationToken).ConfigureAwait(false);
 
             // Step 2: Extract raw text with Docnet (infrastructure)
-            await DocnetSemaphore.WaitAsync(ct).ConfigureAwait(false);
+            await DocnetSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
             {
-                var (rawText, pageCount) = await Task.Run(() => ExtractRawText(tempFilePath), ct).ConfigureAwait(false);
+                var (rawText, pageCount) = await Task.Run(() => ExtractRawText(tempFilePath), cancellationToken).ConfigureAwait(false);
 
                 // Step 3: Normalize text (domain service)
                 var normalizedText = PdfTextProcessingDomainService.NormalizeText(rawText);
@@ -56,62 +56,14 @@ internal class DocnetPdfTextExtractor : IPdfTextExtractor
                 // Step 4: Assess quality (domain service)
                 var quality = PdfTextProcessingDomainService.AssessQuality(normalizedText, pageCount);
 
-                // Step 5: OCR fallback decision (domain service)
-                var shouldOcr = enableOcrFallback
-                    && _ocrService != null
-                    && _domainService.ShouldTriggerOcr(normalizedText, pageCount);
-
-                if (shouldOcr && _ocrService != null)
-                {
-                    _logger.LogInformation(
-                        "Standard extraction quality too low (Quality: {Quality}). Falling back to OCR for temp file",
-                        quality);
-
-                    // Step 6: Trigger OCR (infrastructure - delegate to IOcrService)
-                    var ocrResult = await _ocrService.ExtractTextFromPdfAsync(tempFilePath, ct).ConfigureAwait(false);
-
-                    if (!ocrResult.Success)
-                    {
-                        _logger.LogWarning(
-                            "OCR fallback failed: {Error}. Using standard extraction.",
-                            ocrResult.ErrorMessage);
-
-                        // Use standard extraction despite poor quality
-                        return TextExtractionResult.CreateSuccess(
-                            normalizedText,
-                            pageCount,
-                            normalizedText.Length,
-                            ocrTriggered: false,
-                            quality);
-                    }
-
-                    // Step 7: Normalize OCR text (domain service)
-                    var normalizedOcrText = PdfTextProcessingDomainService.NormalizeText(ocrResult.ExtractedText);
-                    var ocrQuality = PdfTextProcessingDomainService.AssessQuality(normalizedOcrText, ocrResult.PageCount);
-
-                    _logger.LogInformation(
-                        "OCR extraction completed. Pages: {PageCount}, Characters: {CharCount}, Quality: {Quality}",
-                        ocrResult.PageCount, normalizedOcrText.Length, ocrQuality);
-
-                    return TextExtractionResult.CreateSuccess(
-                        normalizedOcrText,
-                        ocrResult.PageCount,
-                        normalizedOcrText.Length,
-                        ocrTriggered: true,
-                        ocrQuality);
-                }
-
-                // Standard extraction was good enough
-                _logger.LogInformation(
-                    "Extracted text from PDF. Pages: {PageCount}, Characters: {CharCount}, Quality: {Quality}",
-                    pageCount, normalizedText.Length, quality);
-
-                return TextExtractionResult.CreateSuccess(
+                // Step 5: OCR fallback if needed
+                return await ProcessWithOcrFallbackAsync(
                     normalizedText,
                     pageCount,
-                    normalizedText.Length,
-                    ocrTriggered: false,
-                    quality);
+                    quality,
+                    enableOcrFallback,
+                    tempFilePath,
+                    cancellationToken).ConfigureAwait(false);
             }
             finally
             {
@@ -161,23 +113,92 @@ internal class DocnetPdfTextExtractor : IPdfTextExtractor
         }
     }
 
+    /// <summary>
+    /// Processes extraction result with OCR fallback if quality is too low.
+    /// </summary>
+    private async Task<TextExtractionResult> ProcessWithOcrFallbackAsync(
+        string normalizedText,
+        int pageCount,
+        ExtractionQuality quality,
+        bool enableOcrFallback,
+        string tempFilePath,
+        CancellationToken cancellationToken)
+    {
+        // Check if OCR fallback is needed
+        var shouldOcr = enableOcrFallback
+            && _ocrService != null
+            && _domainService.ShouldTriggerOcr(normalizedText, pageCount);
+
+        if (!shouldOcr)
+        {
+            // Standard extraction was good enough
+            _logger.LogInformation(
+                "Extracted text from PDF. Pages: {PageCount}, Characters: {CharCount}, Quality: {Quality}",
+                pageCount, normalizedText.Length, quality);
+
+            return TextExtractionResult.CreateSuccess(
+                normalizedText,
+                pageCount,
+                normalizedText.Length,
+                ocrTriggered: false,
+                quality);
+        }
+
+        // Trigger OCR fallback
+        _logger.LogInformation(
+            "Standard extraction quality too low (Quality: {Quality}). Falling back to OCR for temp file",
+            quality);
+
+        var ocrResult = await _ocrService!.ExtractTextFromPdfAsync(tempFilePath, cancellationToken).ConfigureAwait(false);
+
+        if (!ocrResult.Success)
+        {
+            _logger.LogWarning(
+                "OCR fallback failed: {Error}. Using standard extraction.",
+                ocrResult.ErrorMessage);
+
+            // Use standard extraction despite poor quality
+            return TextExtractionResult.CreateSuccess(
+                normalizedText,
+                pageCount,
+                normalizedText.Length,
+                ocrTriggered: false,
+                quality);
+        }
+
+        // Process OCR result
+        var normalizedOcrText = PdfTextProcessingDomainService.NormalizeText(ocrResult.ExtractedText);
+        var ocrQuality = PdfTextProcessingDomainService.AssessQuality(normalizedOcrText, ocrResult.PageCount);
+
+        _logger.LogInformation(
+            "OCR extraction completed. Pages: {PageCount}, Characters: {CharCount}, Quality: {Quality}",
+            ocrResult.PageCount, normalizedOcrText.Length, ocrQuality);
+
+        return TextExtractionResult.CreateSuccess(
+            normalizedOcrText,
+            ocrResult.PageCount,
+            normalizedOcrText.Length,
+            ocrTriggered: true,
+            ocrQuality);
+    }
+
     public async Task<PagedTextExtractionResult> ExtractPagedTextAsync(
         Stream pdfStream,
         bool enableOcrFallback = true,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         string? tempFilePath = null;
 
         try
         {
             // Step 1: Write stream to temp file (Docnet.Core requires file path)
-            tempFilePath = await WriteTempFileAsync(pdfStream, ct).ConfigureAwait(false);
+            tempFilePath = await WriteTempFileAsync(pdfStream, cancellationToken).ConfigureAwait(false);
 
             // Step 2: Extract paged text with Docnet (infrastructure)
-            await DocnetSemaphore.WaitAsync(ct).ConfigureAwait(false);
+            await DocnetSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
             {
-                var pageChunks = await Task.Run(() => ExtractPagedRawText(tempFilePath), ct).ConfigureAwait(false);
+                var pageChunks = await Task.Run(() => ExtractPagedRawText(tempFilePath), cancellationToken).ConfigureAwait(false);
 
                 var totalPages = pageChunks.Count;
                 var totalChars = pageChunks.Sum(pc => pc.CharCount);
@@ -325,7 +346,7 @@ internal class DocnetPdfTextExtractor : IPdfTextExtractor
     /// <summary>
     /// Writes PDF stream to temporary file for Docnet.Core processing
     /// </summary>
-    private async Task<string> WriteTempFileAsync(Stream pdfStream, CancellationToken ct)
+    private async Task<string> WriteTempFileAsync(Stream pdfStream, CancellationToken cancellationToken)
     {
         var tempPath = Path.Combine(Path.GetTempPath(), $"pdf_extract_{Guid.NewGuid()}.pdf");
 
@@ -338,8 +359,8 @@ internal class DocnetPdfTextExtractor : IPdfTextExtractor
             useAsync: true);
         await using (fileStream.ConfigureAwait(false))
         {
-            await pdfStream.CopyToAsync(fileStream, ct).ConfigureAwait(false);
-            await fileStream.FlushAsync(ct).ConfigureAwait(false);
+            await pdfStream.CopyToAsync(fileStream, cancellationToken).ConfigureAwait(false);
+            await fileStream.FlushAsync(cancellationToken).ConfigureAwait(false);
 
             return tempPath;
         }
@@ -370,3 +391,4 @@ internal class DocnetPdfTextExtractor : IPdfTextExtractor
         }
     }
 }
+

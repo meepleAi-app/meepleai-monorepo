@@ -31,6 +31,10 @@ env:
   TEST_POSTGRES_USER: 'postgres'
   TEST_POSTGRES_PASSWORD: 'testpass123'
   TEST_DB_NAME: meepleai_test
+  # Issue #2152: Add POSTGRES_* vars (without TEST_ prefix) for SecretsHelper.BuildPostgresConnectionString()
+  POSTGRES_USER: 'postgres'
+  POSTGRES_PASSWORD: 'testpass123'
+  POSTGRES_DB: 'meepleai_test'
 
 jobs:
   k6-performance-tests:
@@ -89,11 +93,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
+      # Issue #2152: Re-enabled caching with fixed cache key (now includes appsettings*.json hash)
       - name: Setup backend environment
         uses: ./.github/actions/setup-backend
         with:
           dotnet-version: '9.0.x'
           working-directory: apps/api
+          cache-nuget: 'true'
 
       - name: Install k6
         run: |
@@ -103,11 +109,14 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y k6
 
+      # Issue #2152: Clean build outputs
+      - name: Clean API build outputs
+        working-directory: apps/api/src/Api
+        run: dotnet clean --configuration Release
+
       - name: Build API
         working-directory: apps/api/src/Api
         run: dotnet build --configuration Release --no-restore
-        env:
-          ConnectionStrings__Postgres: 'Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=testpass123'
 
       - name: Install EF Core tools
         run: dotnet tool install --global dotnet-ef --version 9.0.11
@@ -147,8 +156,6 @@ jobs:
       - name: Apply migrations
         working-directory: apps/api/src/Api
         run: dotnet ef database update --configuration Release
-        env:
-          ConnectionStrings__Postgres: 'Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=testpass123'
 
       # Issue #1663: Test user is now seeded automatically on API startup via EnsureTestUserExistsAsync
       # No need for separate seeding step - reduces workflow complexity and eliminates race conditions
@@ -159,12 +166,21 @@ jobs:
           nohup dotnet run --configuration Release > ../../../../api.log 2>&1 &
           echo $! > ../../../../api.pid
         env:
-          ConnectionStrings__Postgres: 'Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=testpass123'
+          # Issue #2152: Explicit POSTGRES_* vars for SecretsHelper.BuildPostgresConnectionString()
+          POSTGRES_USER: 'postgres'
+          POSTGRES_PASSWORD: 'testpass123'
+          POSTGRES_PASSWORD_FILE: ''  # Disable file reading, use direct value
+          POSTGRES_DB: 'meepleai_test'
+          POSTGRES_HOST: 'localhost'
+          POSTGRES_PORT: '5432'
           ConnectionStrings__Redis: 'localhost:6379'
           ConnectionStrings__Qdrant: 'http://localhost:6333'
-          N8N_URL: 'http://localhost:5678'  # Issue #2112: Override for CI service containers
-          HYPERDX_URL: 'http://localhost:8000'  # Issue #2112: Override for CI service containers
-          ASPNETCORE_ENVIRONMENT: Development  # Issue #1663: Dev mode enables test user seeding + relaxed rate limits
+          N8N_URL: 'http://localhost:5678'
+          HYPERDX_URL: 'http://localhost:8000'
+          HealthChecks__Postgres__Enabled: 'false'
+          # Dummy API key for CI (background services require it)
+          OPENROUTER_API_KEY: 'sk-or-v1-dummy-key-for-ci-testing-only'
+          ASPNETCORE_ENVIRONMENT: CI
           ASPNETCORE_URLS: 'http://0.0.0.0:8080'
 
       # Issue #2020: Add ConnectionStrings__Postgres to prevent EF Core from defaulting to 'root' user
@@ -184,8 +200,6 @@ jobs:
           echo "Last 100 lines of API logs:"
           tail -n 100 api.log || echo "⚠️ Could not read api.log"
           exit 1
-        env:
-          ConnectionStrings__Postgres: 'Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=testpass123'
 
       - name: Run k6 performance tests
         working-directory: tests/k6

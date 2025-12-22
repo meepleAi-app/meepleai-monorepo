@@ -13,7 +13,7 @@ internal sealed class OAuthAccountUnlinkedEventHandler : DomainEventHandlerBase<
 {
     public OAuthAccountUnlinkedEventHandler(
         MeepleAiDbContext dbContext,
-        ILogger<DomainEventHandlerBase<OAuthAccountUnlinkedEvent>> logger)
+        ILogger<OAuthAccountUnlinkedEventHandler> logger)
         : base(dbContext, logger)
     {
     }

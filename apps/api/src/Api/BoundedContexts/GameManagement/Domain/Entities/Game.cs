@@ -44,7 +44,8 @@ internal sealed class Game : AggregateRoot<Guid>
         PlayerCount? playerCount = null,
         PlayTime? playTime = null) : base(id)
     {
-        Title = title ?? throw new ArgumentNullException(nameof(title));
+        ArgumentNullException.ThrowIfNull(title);
+        Title = title;
         Publisher = publisher;
         YearPublished = yearPublished;
         PlayerCount = playerCount;

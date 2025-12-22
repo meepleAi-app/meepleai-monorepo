@@ -1,6 +1,10 @@
+// eslint-disable-next-line import/order -- Storybook Preview type import (edge case)
 import type { Preview } from '@storybook/react';
-import { withThemeByClassName } from '@storybook/addon-themes';
+
 import React from 'react';
+
+import { withThemeByClassName } from '@storybook/addon-themes';
+
 import '../src/styles/globals.css'; // Import Tailwind CSS
 import { AuthContext } from '../src/components/auth/AuthProvider';
 

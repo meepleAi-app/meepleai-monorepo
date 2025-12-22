@@ -8,8 +8,9 @@
  */
 
 import { useQuery, UseQueryResult } from '@tanstack/react-query';
-import { AuthUser } from '@/types';
+
 import { getCurrentUser } from '@/actions/auth';
+import { AuthUser } from '@/types';
 
 /**
  * Query key factory for user queries

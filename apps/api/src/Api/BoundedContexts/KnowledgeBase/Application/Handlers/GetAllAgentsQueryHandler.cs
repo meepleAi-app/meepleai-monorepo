@@ -37,7 +37,7 @@ internal class GetAllAgentsQueryHandler : IRequestHandler<GetAllAgentsQuery, Lis
             var agentType = AgentType.Parse(request.Type);
             agents = await _agentRepository.GetByTypeAsync(agentType, cancellationToken).ConfigureAwait(false);
         }
-        else if (request.ActiveOnly == true)
+        else if (request.ActiveOnly.GetValueOrDefault(false))
         {
             // Only active agents
             agents = await _agentRepository.GetAllActiveAsync(cancellationToken).ConfigureAwait(false);

@@ -20,8 +20,10 @@ internal sealed class GetWorkflowErrorByIdQueryHandler : IQueryHandler<GetWorkfl
         IWorkflowErrorLoggingService errorLoggingService,
         ILogger<GetWorkflowErrorByIdQueryHandler> logger)
     {
-        _errorLoggingService = errorLoggingService ?? throw new ArgumentNullException(nameof(errorLoggingService));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(errorLoggingService);
+        _errorLoggingService = errorLoggingService;
+        ArgumentNullException.ThrowIfNull(logger);
+        _logger = logger;
     }
 
     public async Task<WorkflowErrorDto?> Handle(GetWorkflowErrorByIdQuery query, CancellationToken cancellationToken)

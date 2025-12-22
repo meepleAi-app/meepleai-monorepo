@@ -9,7 +9,7 @@ using System.Diagnostics.CodeAnalysis;
 public class ForbiddenException : HttpException
 {
     [SetsRequiredMembers]
-    public ForbiddenException(string message = "Access denied")
+    public ForbiddenException(string message)
         : base(StatusCodes.Status403Forbidden, "forbidden", message)
     {
     }
@@ -19,7 +19,9 @@ public class ForbiddenException : HttpException
         : base(StatusCodes.Status403Forbidden, "forbidden", message, innerException)
     {
     }
+    [SetsRequiredMembers]
     public ForbiddenException()
+        : base(StatusCodes.Status403Forbidden, "forbidden", "Access denied")
     {
     }
 }

@@ -4,7 +4,7 @@ namespace Api.Infrastructure.Entities;
 /// User backup code entity - persistence model.
 /// DDD-PHASE2: Converted to Guid IDs for domain alignment.
 /// </summary>
-internal class UserBackupCodeEntity
+public class UserBackupCodeEntity
 {
     required public Guid Id { get; set; }
     required public Guid UserId { get; set; }

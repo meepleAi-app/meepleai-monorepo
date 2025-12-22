@@ -27,7 +27,8 @@
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { SSEParser } from '@/lib/utils/sseParser';
+
+import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import {
   StreamingEventType,
   parseEventData,
@@ -35,7 +36,7 @@ import {
   type Citation,
   type TypedStreamingEvent,
 } from '@/lib/api/schemas/streaming.schemas';
-import { useNetworkStatus } from '@/hooks/useNetworkStatus';
+import { SSEParser } from '@/lib/utils/sseParser';
 
 // ============================================================================
 // Constants

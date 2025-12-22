@@ -5,13 +5,14 @@
  * Covers: Game sessions management (active, history, CRUD, lifecycle)
  */
 
-import type { HttpClient } from '../core/httpClient';
 import {
   GameSessionDtoSchema,
   PaginatedSessionsResponseSchema,
   type GameSessionDto,
   type PaginatedSessionsResponse,
 } from '../schemas';
+
+import type { HttpClient } from '../core/httpClient';
 
 export interface CreateSessionsClientParams {
   httpClient: HttpClient;

@@ -3,6 +3,7 @@ using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using MediatR;
 using Microsoft.Extensions.Caching.Distributed;
+using System.Globalization;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Commands.AddCommentToSharedThread;
 
@@ -60,7 +61,7 @@ internal sealed class AddCommentToSharedThreadCommandHandler
         // Check rate limiting
         var rateLimitKey = $"share_link_comments:{validation.ShareLinkId}";
         var commentCountStr = await _cache.GetStringAsync(rateLimitKey, cancellationToken).ConfigureAwait(false);
-        var commentCount = commentCountStr != null ? int.Parse(commentCountStr) : 0;
+        var commentCount = commentCountStr != null ? int.Parse(commentCountStr, CultureInfo.InvariantCulture) : 0;
 
         if (commentCount >= MaxCommentsPerHour)
         {
@@ -79,12 +80,12 @@ internal sealed class AddCommentToSharedThreadCommandHandler
         // Validate content
         if (string.IsNullOrWhiteSpace(request.Content))
         {
-            throw new ArgumentException("Message content cannot be empty", nameof(request.Content));
+            throw new ArgumentException("Message content cannot be empty", nameof(request));
         }
 
         if (request.Content.Length > 4000)
         {
-            throw new ArgumentException("Message content exceeds maximum length (4000 characters)", nameof(request.Content));
+            throw new ArgumentException("Message content exceeds maximum length (4000 characters)", nameof(request));
         }
 
         // Add user message to thread (domain method)
@@ -96,7 +97,7 @@ internal sealed class AddCommentToSharedThreadCommandHandler
         // Update rate limit counter
         await _cache.SetStringAsync(
             rateLimitKey,
-            (commentCount + 1).ToString(),
+            (commentCount + 1).ToString(CultureInfo.InvariantCulture),
             new DistributedCacheEntryOptions
             {
                 AbsoluteExpirationRelativeToNow = RateLimitWindow

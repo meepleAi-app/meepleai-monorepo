@@ -22,27 +22,28 @@
 
 'use client';
 
-import Link from 'next/link';
 import { useCallback, useEffect, useState, useMemo } from 'react';
-import type { AuthUser } from '@/types/auth';
-import { api, ApiError } from '@/lib/api';
-import { categorizeError, type CategorizedError } from '@/lib/errorUtils';
-import { ErrorDisplay } from '@/components/errors';
-import { ProcessingProgress } from '@/components/progress';
-import { MultiFileUpload } from '@/components/upload';
+
+import Link from 'next/link';
+
 import { MultiDocumentCollectionUpload } from '@/components/documents';
-import { WizardSteps } from '@/components/wizard/WizardSteps';
+import { ErrorDisplay } from '@/components/errors';
 import { GamePicker } from '@/components/game/GamePicker';
-import { PdfUploadForm } from '@/components/pdf/PdfUploadForm';
+import { LoadingButton, Spinner } from '@/components/loading';
 import { PdfTable } from '@/components/pdf/PdfTable';
-import { useWizard, type WizardStep } from '@/hooks/wizard/useWizard';
-import { useGames } from '@/hooks/wizard/useGames';
-import { usePdfs, type PdfDocument } from '@/hooks/wizard/usePdfs';
+import { PdfUploadForm } from '@/components/pdf/PdfUploadForm';
+import { ProcessingProgress } from '@/components/progress';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { LoadingButton, Spinner } from '@/components/loading';
+import { MultiFileUpload } from '@/components/upload';
+import { WizardSteps } from '@/components/wizard/WizardSteps';
 import { useAuthUser } from '@/hooks/useAuthUser';
+import { useGames } from '@/hooks/wizard/useGames';
+import { usePdfs, type PdfDocument } from '@/hooks/wizard/usePdfs';
+import { useWizard } from '@/hooks/wizard/useWizard';
+import { api, ApiError } from '@/lib/api';
 import type { RuleAtom, RuleSpec } from '@/lib/api/schemas';
+import { type CategorizedError } from '@/lib/errorUtils';
 
 const enableProcessingProgress = process.env.NEXT_PUBLIC_ENABLE_PROGRESS_UI === 'true';
 
@@ -426,7 +427,7 @@ export function UploadClient({
                   <MultiDocumentCollectionUpload
                     gameId={confirmedGameId}
                     gameName={confirmedGame.title}
-                    onSuccess={collectionId => {
+                    onSuccess={_collectionId => {
                       // Optionally navigate to collection view or show success
                       void refetchPdfs();
                       setUploadMode('single'); // Return to single mode after success

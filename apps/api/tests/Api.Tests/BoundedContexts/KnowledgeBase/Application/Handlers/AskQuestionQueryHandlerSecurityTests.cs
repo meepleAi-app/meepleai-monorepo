@@ -49,7 +49,7 @@ public class AskQuestionQueryHandlerSecurityTests
         mockEmbeddingService
             .Setup(e => e.GenerateEmbeddingAsync(
                 It.IsAny<string>(),
-                It.IsAny<string?>(),
+                It.IsAny<string>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EmbeddingResult
             {
@@ -90,7 +90,7 @@ public class AskQuestionQueryHandlerSecurityTests
                 It.IsAny<Guid>(),
                 It.IsAny<SearchMode>(),
                 It.IsAny<int>(),
-                It.IsAny<IReadOnlyList<Guid>?>(),
+                It.IsAny<List<Guid>?>(),
                 It.IsAny<float>(),
                 It.IsAny<float>(),
                 It.IsAny<CancellationToken>()))
@@ -116,10 +116,10 @@ public class AskQuestionQueryHandlerSecurityTests
         _mockValidationPipeline
             .Setup(v => v.ValidateWithMultiModelAsync(
                 It.IsAny<Api.Models.QaResponse>(),
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<string>(),
+                It.IsAny<string>()!,
+                It.IsAny<string>()!,
+                It.IsAny<string>()!,
+                It.IsAny<string>()!,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new RagValidationResult
             {

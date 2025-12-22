@@ -6,7 +6,7 @@ namespace Api.Tests.BoundedContexts.GameManagement.TestHelpers;
 /// <summary>
 /// Builder for creating Game test instances with sensible defaults.
 /// </summary>
-public class GameBuilder
+internal class GameBuilder
 {
     private Guid _id = Guid.NewGuid();
     private GameTitle _title = new("Catan");

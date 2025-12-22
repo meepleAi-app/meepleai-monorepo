@@ -171,7 +171,7 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
     public async Task<string> CreateIsolatedDatabaseAsync(string databaseName)
     {
         // Validate database name to prevent SQL injection (CA2100 suppression)
-        if (!System.Text.RegularExpressions.Regex.IsMatch(databaseName, @"^[a-zA-Z0-9_]+$"))
+        if (!System.Text.RegularExpressions.Regex.IsMatch(databaseName, @"^[a-zA-Z0-9_]+$", System.Text.RegularExpressions.RegexOptions.None, TimeSpan.FromSeconds(1)))
         {
             throw new ArgumentException("Database name must contain only alphanumeric characters and underscores", nameof(databaseName));
         }
@@ -204,7 +204,7 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
     public async Task DropIsolatedDatabaseAsync(string databaseName)
     {
         // Validate database name to prevent SQL injection (CA2100 suppression)
-        if (!System.Text.RegularExpressions.Regex.IsMatch(databaseName, @"^[a-zA-Z0-9_]+$"))
+        if (!System.Text.RegularExpressions.Regex.IsMatch(databaseName, @"^[a-zA-Z0-9_]+$", System.Text.RegularExpressions.RegexOptions.None, TimeSpan.FromSeconds(1)))
         {
             throw new ArgumentException("Database name must contain only alphanumeric characters and underscores", nameof(databaseName));
         }

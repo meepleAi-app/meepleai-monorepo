@@ -12,10 +12,11 @@ internal class GetAlertRuleByIdQueryHandler : IRequestHandler<GetAlertRuleByIdQu
     public GetAlertRuleByIdQueryHandler(IAlertRuleRepository repository) =>
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
 
-    public async Task<AlertRuleDto?> Handle(GetAlertRuleByIdQuery request, CancellationToken ct)
+    public async Task<AlertRuleDto?> Handle(GetAlertRuleByIdQuery request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
-        var rule = await _repository.GetByIdAsync(request.Id, ct).ConfigureAwait(false);
+        var rule = await _repository.GetByIdAsync(request.Id, cancellationToken).ConfigureAwait(false);
         return rule == null ? null : new AlertRuleDto(rule.Id, rule.Name, rule.AlertType, rule.Severity.ToDisplayString(), rule.Threshold.Value, rule.Threshold.Unit, rule.Duration.Minutes, rule.IsEnabled, rule.Description, rule.CreatedAt, rule.UpdatedAt);
     }
 }
+

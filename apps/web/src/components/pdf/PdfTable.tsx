@@ -1,12 +1,8 @@
 import { FileText } from 'lucide-react';
+
 import { Card } from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableHead,
-  TableHeader,
-  TableRow
-} from '@/components/ui/table';
+import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+
 import { PdfTableRow } from './PdfTableRow';
 
 interface PdfDocument {
@@ -29,7 +25,6 @@ interface PdfTableProps {
   onOpenLog?: (pdf: PdfDocument) => void;
 }
 
-
 /**
  * PdfTable - Display uploaded PDFs with actions
  *
@@ -47,7 +42,7 @@ export function PdfTable({
   error = null,
   retryingPdfId = null,
   onRetryParsing,
-  onOpenLog
+  onOpenLog,
 }: PdfTableProps) {
   if (loading) {
     return (
@@ -103,7 +98,7 @@ export function PdfTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {pdfs.map((pdf) => (
+            {pdfs.map(pdf => (
               <PdfTableRow
                 key={pdf.id}
                 pdf={pdf}

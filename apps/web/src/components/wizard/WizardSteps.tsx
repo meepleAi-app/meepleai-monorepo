@@ -1,4 +1,5 @@
 import { Check } from 'lucide-react';
+
 import { cn } from '@/lib/utils';
 
 interface WizardStep {
@@ -27,9 +28,9 @@ export function WizardSteps({
   steps,
   currentStep,
   onStepClick,
-  allowSkip = false
+  allowSkip = false,
 }: WizardStepsProps) {
-  const currentIndex = steps.findIndex((s) => s.id === currentStep);
+  const currentIndex = steps.findIndex(s => s.id === currentStep);
 
   return (
     <nav aria-label="Progress" className="mb-8">
@@ -56,33 +57,23 @@ export function WizardSteps({
                 <div
                   className={cn(
                     'w-10 h-10 rounded-full mx-auto mb-2 flex items-center justify-center font-semibold transition-colors',
-                    isActive &&
-                      'bg-primary text-primary-foreground ring-2 ring-ring ring-offset-2',
+                    isActive && 'bg-primary text-primary-foreground ring-2 ring-ring ring-offset-2',
                     isComplete && 'bg-green-600 text-white',
                     !isActive && !isComplete && 'bg-muted text-muted-foreground'
                   )}
                 >
-                  {isComplete ? (
-                    <Check className="w-5 h-5" aria-hidden="true" />
-                  ) : (
-                    index + 1
-                  )}
+                  {isComplete ? <Check className="w-5 h-5" aria-hidden="true" /> : index + 1}
                 </div>
                 <div className="text-sm font-medium">{step.label}</div>
                 {step.description && (
-                  <div className="text-xs text-muted-foreground mt-1">
-                    {step.description}
-                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">{step.description}</div>
                 )}
               </button>
 
               {/* Connector line */}
               {index < steps.length - 1 && (
                 <div
-                  className={cn(
-                    'h-0.5 w-full mt-5',
-                    isComplete ? 'bg-green-600' : 'bg-muted'
-                  )}
+                  className={cn('h-0.5 w-full mt-5', isComplete ? 'bg-green-600' : 'bg-muted')}
                   aria-hidden="true"
                 />
               )}

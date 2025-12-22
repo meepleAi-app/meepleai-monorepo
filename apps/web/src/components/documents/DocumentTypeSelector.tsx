@@ -8,6 +8,7 @@
  */
 
 import * as React from 'react';
+
 import {
   Select,
   SelectContent,
@@ -15,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/overlays/select';
+
 import { DocumentBadge, type DocumentType } from './DocumentBadge';
 
 export type { DocumentType };

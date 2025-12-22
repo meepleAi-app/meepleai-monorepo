@@ -5,8 +5,9 @@
  * Chromatic integration for automated visual testing.
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
 import { HeroSection } from './HeroSection';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta: Meta<typeof HeroSection> = {
   title: 'Landing/HeroSection',

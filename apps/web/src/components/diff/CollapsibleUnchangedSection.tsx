@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+
 import { CollapsibleSection } from '../../lib/diffProcessor';
 
 export interface CollapsibleUnchangedSectionProps {
@@ -12,7 +13,7 @@ export interface CollapsibleUnchangedSectionProps {
  * Reduces visual clutter in large diffs
  */
 export const CollapsibleUnchangedSection = React.memo<CollapsibleUnchangedSectionProps>(
-  ({ section, onToggle, side }) => {
+  ({ section, onToggle, side: _side }) => {
     const [isAnimating, setIsAnimating] = useState(false);
 
     const handleToggle = () => {
@@ -29,9 +30,7 @@ export const CollapsibleUnchangedSection = React.memo<CollapsibleUnchangedSectio
           aria-expanded={!section.isCollapsed}
           aria-label={`${section.isCollapsed ? 'Expand' : 'Collapse'} ${section.lineCount} unchanged lines`}
         >
-          <span className="collapsible-icon">
-            {section.isCollapsed ? '⬇' : '⬆'}
-          </span>
+          <span className="collapsible-icon">{section.isCollapsed ? '⬇' : '⬆'}</span>
           <span className="collapsible-text">
             {section.isCollapsed
               ? `⬇ Expand ${section.lineCount} unchanged lines (${section.startLine}-${section.endLine})`

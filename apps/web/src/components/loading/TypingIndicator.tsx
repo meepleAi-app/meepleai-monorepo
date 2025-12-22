@@ -15,6 +15,7 @@
  */
 
 import { motion, AnimatePresence } from 'framer-motion';
+
 import { useReducedMotion } from '@/lib/animations';
 
 export interface TypingIndicatorProps {
@@ -37,11 +38,7 @@ export interface TypingIndicatorProps {
 /**
  * TypingIndicator component for chat interfaces
  */
-export function TypingIndicator({
-  visible,
-  agentName,
-  className = '',
-}: TypingIndicatorProps) {
+export function TypingIndicator({ visible, agentName, className = '' }: TypingIndicatorProps) {
   const shouldReduceMotion = useReducedMotion();
 
   // Animation variants for container

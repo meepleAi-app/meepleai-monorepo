@@ -4,10 +4,12 @@
  * Visual regression tests for Chromatic.
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
-import { UserActivityTimeline } from './UserActivityTimeline';
 import { api } from '@/lib/api';
 import type { GetUserActivityResult } from '@/lib/api/schemas';
+
+import { UserActivityTimeline } from './UserActivityTimeline';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 // Mock API responses
 const mockEmptyActivity: GetUserActivityResult = {

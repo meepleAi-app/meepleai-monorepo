@@ -4,7 +4,7 @@ namespace Api.Infrastructure.Entities;
 /// Represents a specific version of a prompt template.
 /// Each template can have multiple versions, but only one can be active at a time.
 /// </summary>
-internal class PromptVersionEntity
+public class PromptVersionEntity
 {
     /// <summary>
     /// Unique identifier for the version.

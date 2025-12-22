@@ -66,11 +66,8 @@ internal sealed record AgentInvocationContext
         if (string.IsNullOrWhiteSpace(query))
             throw new ArgumentException("Query cannot be empty", nameof(query));
 
-        if (queryVector == null)
-            throw new ArgumentNullException(nameof(queryVector));
-
-        if (candidateEmbeddings == null)
-            throw new ArgumentNullException(nameof(candidateEmbeddings));
+        ArgumentNullException.ThrowIfNull(queryVector);
+        ArgumentNullException.ThrowIfNull(candidateEmbeddings);
 
         InvocationId = Guid.NewGuid();
         Query = query.Trim();

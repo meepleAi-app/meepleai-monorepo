@@ -137,11 +137,13 @@ internal sealed class FileSize : ValueObject
     /// <summary>
     /// Implicit conversion to long for convenience.
     /// </summary>
+#pragma warning disable S3877 // Null check is necessary for safety in implicit conversion
     public static implicit operator long(FileSize fileSize)
     {
-        if (fileSize is null) throw new ArgumentNullException(nameof(fileSize));
+        ArgumentNullException.ThrowIfNull(fileSize);
         return fileSize.Bytes;
     }
+#pragma warning restore S3877
 
     /// <summary>
     /// Common file sizes as static constants.
@@ -152,6 +154,6 @@ internal sealed class FileSize : ValueObject
 
     public long ToInt64()
     {
-        throw new NotImplementedException();
+        throw new NotSupportedException("Use implicit conversion to long instead");
     }
 }

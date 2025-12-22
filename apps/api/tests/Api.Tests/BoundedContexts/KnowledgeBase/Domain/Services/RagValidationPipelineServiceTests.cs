@@ -23,7 +23,6 @@ public class RagValidationPipelineServiceTests
     private readonly Mock<IMultiModelValidationService> _mockMultiModelValidation;
     private readonly Mock<ICitationValidationService> _mockCitationValidation;
     private readonly Mock<IHallucinationDetectionService> _mockHallucinationDetection;
-    private readonly Mock<ValidationAccuracyTrackingService> _mockAccuracyTracking;
     private readonly Mock<ILogger<RagValidationPipelineService>> _mockLogger;
     private readonly RagValidationPipelineService _service;
 
@@ -33,7 +32,6 @@ public class RagValidationPipelineServiceTests
         _mockMultiModelValidation = new Mock<IMultiModelValidationService>();
         _mockCitationValidation = new Mock<ICitationValidationService>();
         _mockHallucinationDetection = new Mock<IHallucinationDetectionService>();
-        _mockAccuracyTracking = new Mock<ValidationAccuracyTrackingService>();
         _mockLogger = new Mock<ILogger<RagValidationPipelineService>>();
 
         _service = new RagValidationPipelineService(

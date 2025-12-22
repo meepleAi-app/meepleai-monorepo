@@ -38,7 +38,7 @@
  */
 
 import { useState, useCallback, useRef } from 'react';
-import { SSEParser } from '@/lib/utils/sseParser';
+
 import {
   StreamingEventType,
   parseEventData,
@@ -46,6 +46,7 @@ import {
   type Citation,
   type TypedStreamingEvent,
 } from '@/lib/api/schemas/streaming.schemas';
+import { SSEParser } from '@/lib/utils/sseParser';
 
 /**
  * Streaming chat state

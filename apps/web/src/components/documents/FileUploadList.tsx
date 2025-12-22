@@ -13,11 +13,14 @@
 'use client';
 
 import * as React from 'react';
+
 import { X, FileText, GripVertical, AlertCircle } from 'lucide-react';
-import { Button } from '@/components/ui/primitives/button';
+
 import { Card } from '@/components/ui/data-display/card';
-import { DocumentTypeSelector, type DocumentType } from './DocumentTypeSelector';
+import { Button } from '@/components/ui/primitives/button';
 import { cn } from '@/lib/utils';
+
+import { DocumentTypeSelector, type DocumentType } from './DocumentTypeSelector';
 
 export interface FileUploadItem {
   id: string;

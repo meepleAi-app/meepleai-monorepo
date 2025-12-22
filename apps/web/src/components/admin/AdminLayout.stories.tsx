@@ -5,10 +5,13 @@
  * Covers: full layout, collapsed, badges, responsive.
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
-import { AdminLayout } from './AdminLayout';
-import { Button } from '@/components/ui/button';
 import { BellIcon, RefreshCwIcon } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
+
+import { AdminLayout } from './AdminLayout';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta: Meta<typeof AdminLayout> = {
   title: 'Admin/AdminLayout',

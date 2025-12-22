@@ -26,7 +26,7 @@ internal class AuditService
         string? details = null,
         string? ipAddress = null,
         string? userAgent = null,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         try
         {
@@ -46,7 +46,7 @@ internal class AuditService
             };
 
             _db.AuditLogs.Add(auditLog);
-            await _db.SaveChangesAsync(ct).ConfigureAwait(false);
+            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
@@ -69,7 +69,7 @@ internal class AuditService
         string? resourceId = null,
         string? ipAddress = null,
         string? userAgent = null,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         var details = $"User in scope {userScope} attempted to access {resource} requiring scope {requiredScope}";
 
@@ -82,7 +82,7 @@ internal class AuditService
             details,
             ipAddress,
             userAgent,
-            ct).ConfigureAwait(false);
+            cancellationToken).ConfigureAwait(false);
 
         _logger.LogWarning(
             "Access denied: User {UserId} in scope {UserScope} attempted to access {Resource} requiring scope {RequiredScope}",

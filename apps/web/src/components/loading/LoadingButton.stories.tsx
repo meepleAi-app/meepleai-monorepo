@@ -1,6 +1,8 @@
-import type { Meta, StoryObj } from '@storybook/react';
-import { LoadingButton } from './LoadingButton';
 import { Mail, Download } from 'lucide-react';
+
+import { LoadingButton } from './LoadingButton';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 /**
  * LoadingButton - Button with integrated loading state

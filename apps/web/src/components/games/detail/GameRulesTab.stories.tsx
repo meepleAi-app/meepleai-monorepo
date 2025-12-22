@@ -1,6 +1,8 @@
-import type { Meta, StoryObj } from '@storybook/react';
-import { GameRulesTab } from './GameRulesTab';
 import type { Game, PdfDocumentDto } from '@/lib/api';
+
+import { GameRulesTab } from './GameRulesTab';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const mockGame: Game = {
   id: 'game-1',

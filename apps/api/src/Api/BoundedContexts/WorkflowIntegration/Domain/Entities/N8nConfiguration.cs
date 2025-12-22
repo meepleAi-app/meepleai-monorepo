@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.WorkflowIntegration.Domain.Entities;
 /// <summary>
 /// N8NConfiguration aggregate root representing n8n instance configuration.
 /// </summary>
-internal sealed class N8NConfiguration : AggregateRoot<Guid>
+public sealed class N8NConfiguration : AggregateRoot<Guid>
 {
     public string Name { get; private set; }
     public WorkflowUrl BaseUrl { get; private set; }
@@ -47,7 +47,8 @@ internal sealed class N8NConfiguration : AggregateRoot<Guid>
             throw new ArgumentException("API key cannot be empty", nameof(apiKeyEncrypted));
 
         Name = name.Trim();
-        BaseUrl = baseUrl ?? throw new ArgumentNullException(nameof(baseUrl));
+        ArgumentNullException.ThrowIfNull(baseUrl);
+        BaseUrl = baseUrl;
         ApiKeyEncrypted = apiKeyEncrypted;
         WebhookUrl = webhookUrl;
         IsActive = true;

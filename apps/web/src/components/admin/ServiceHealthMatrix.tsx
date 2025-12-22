@@ -12,11 +12,13 @@
  * - i18n support
  */
 
-import { cn } from '@/lib/utils';
-import { ServiceCard } from './ServiceCard';
+import { AlertCircle } from 'lucide-react';
+
 import type { ServiceHealthStatus } from '@/lib/api';
 import { getInfrastructureI18n, type Locale } from '@/lib/i18n/infrastructure';
-import { AlertCircle } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+import { ServiceCard } from './ServiceCard';
 
 export interface ServiceHealthMatrixProps {
   /** Array of service health statuses from API */

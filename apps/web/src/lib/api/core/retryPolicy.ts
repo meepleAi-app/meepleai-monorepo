@@ -16,10 +16,11 @@
  * - 429 rate limits (handled separately)
  */
 
-import { logApiError, logger } from './logger';
-import { ApiError, NetworkError, ServerError } from './errors';
-import { sanitizeError } from '@/lib/errors';
 import { API_CONFIG } from '@/config';
+import { sanitizeError } from '@/lib/errors';
+
+import { ApiError, NetworkError, ServerError } from './errors';
+import { logApiError, logger } from './logger';
 
 export interface RetryConfig {
   /** Maximum number of retry attempts (default: 3) */

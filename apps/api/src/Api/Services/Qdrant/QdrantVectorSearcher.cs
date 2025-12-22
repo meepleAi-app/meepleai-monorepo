@@ -28,7 +28,7 @@ internal class QdrantVectorSearcher : IQdrantVectorSearcher
         float[] queryEmbedding,
         Filter? filter = null,
         int limit = 5,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         try
         {
@@ -37,7 +37,7 @@ internal class QdrantVectorSearcher : IQdrantVectorSearcher
                 vector: queryEmbedding,
                 filter: filter,
                 limit: (ulong)limit,
-                cancellationToken: ct
+                cancellationToken: cancellationToken
             ).ConfigureAwait(false);
 
             _logger.LogDebug("Search in collection {CollectionName} returned {Count} results",

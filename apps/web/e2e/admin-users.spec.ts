@@ -6,8 +6,8 @@
  */
 
 import { test as base, expect, Page } from './fixtures/chromatic';
-import { AdminHelper } from './pages';
 import { getTextMatcher, t } from './fixtures/i18n';
+import { AdminHelper } from './pages';
 
 // Extended test with admin authentication
 const test = base.extend<{ adminPage: Page }>({

@@ -15,7 +15,9 @@
 'use client';
 
 import { useEffect } from 'react';
-import { CheckCheck } from 'lucide-react';
+
+import { Bell, CheckCheck } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -23,11 +25,12 @@ import {
   selectNotifications,
   selectIsLoading,
 } from '@/store/notification/store';
+
 import { NotificationItem } from './NotificationItem';
 
 export function NotificationPanel() {
   const notifications = useNotificationStore(selectNotifications);
-  const isLoading = useNotificationStore(selectIsLoading);
+  const _isLoading = useNotificationStore(selectIsLoading);
   const isFetching = useNotificationStore(state => state.isFetching);
   const error = useNotificationStore(state => state.error);
   const fetchNotifications = useNotificationStore(state => state.fetchNotifications);
@@ -100,6 +103,3 @@ export function NotificationPanel() {
     </div>
   );
 }
-
-// Bell icon import for empty state
-import { Bell } from 'lucide-react';

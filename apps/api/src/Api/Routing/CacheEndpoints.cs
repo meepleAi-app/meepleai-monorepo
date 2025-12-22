@@ -1,6 +1,7 @@
 using Api.BoundedContexts.GameManagement.Application.Queries;
+using Api.BoundedContexts.KnowledgeBase.Application.Commands;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.Extensions;
-using Api.Models;
 using Api.Services;
 using MediatR;
 
@@ -14,13 +15,14 @@ internal static class CacheEndpoints
 {
     public static RouteGroupBuilder MapCacheEndpoints(this RouteGroupBuilder group)
     {
-        // PERF-03: Cache management endpoints
-        group.MapGet("/admin/cache/stats", async (HttpContext context, IAiResponseCacheService cacheService, string? gameId = null, CancellationToken ct = default) =>
+        // PERF-03: Cache management endpoints - DDD Migration Phase 3.2
+        group.MapGet("/admin/cache/stats", async (HttpContext context, IMediator mediator, string? gameId = null, CancellationToken ct = default) =>
         {
             var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            var stats = await cacheService.GetCacheStatsAsync(gameId, ct).ConfigureAwait(false);
+            var query = new GetCacheStatsQuery(GameId: gameId);
+            var stats = await mediator.Send(query, ct).ConfigureAwait(false);
             return Results.Json(stats);
         })
         .WithName("GetCacheStats")
@@ -31,7 +33,7 @@ internal static class CacheEndpoints
         .Produces(StatusCodes.Status403Forbidden)
         .Produces(StatusCodes.Status500InternalServerError);
 
-        group.MapDelete("/admin/cache/games/{gameId:guid}", async (Guid gameId, HttpContext context, IAiResponseCacheService cacheService, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapDelete("/admin/cache/games/{gameId:guid}", async (Guid gameId, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
@@ -44,7 +46,11 @@ internal static class CacheEndpoints
             }
 
             logger.LogInformation("Admin {AdminId} invalidating cache for game {GameId}", session!.User!.Id, gameId);
-            await cacheService.InvalidateGameAsync(gameId.ToString(), ct).ConfigureAwait(false);
+
+            // DDD Migration Phase 3.2: Use InvalidateGameCacheCommand via IMediator
+            var command = new InvalidateGameCacheCommand(GameId: gameId);
+            await mediator.Send(command, ct).ConfigureAwait(false);
+
             logger.LogInformation("Successfully invalidated cache for game {GameId}", gameId);
             return Results.Json(new { ok = true, message = $"Cache invalidated for game '{gameId}'" });
         })
@@ -58,7 +64,7 @@ internal static class CacheEndpoints
         .Produces(StatusCodes.Status404NotFound)
         .Produces(StatusCodes.Status500InternalServerError);
 
-        group.MapDelete("/admin/cache/tags/{tag}", async (string tag, HttpContext context, IAiResponseCacheService cacheService, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapDelete("/admin/cache/tags/{tag}", async (string tag, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
@@ -69,7 +75,11 @@ internal static class CacheEndpoints
             }
 
             logger.LogInformation("Admin {AdminId} invalidating cache by tag {Tag}", session!.User!.Id, tag);
-            await cacheService.InvalidateByCacheTagAsync(tag, ct).ConfigureAwait(false);
+
+            // DDD Migration Phase 3.2: Use InvalidateCacheByTagCommand via IMediator
+            var command = new InvalidateCacheByTagCommand(Tag: tag);
+            await mediator.Send(command, ct).ConfigureAwait(false);
+
             logger.LogInformation("Successfully invalidated cache by tag {Tag}", tag);
             return Results.Json(new { ok = true, message = $"Cache invalidated for tag '{tag}'" });
         })

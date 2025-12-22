@@ -36,7 +36,9 @@ internal static class ObservabilityServiceExtensions
             IWebHostEnvironment environment)
     {
         // Issue #1563: HyperDX OpenTelemetry configuration
+#pragma warning disable S1075 // URIs should not be hardcoded - Default/Fallback value
         var hyperDxEndpoint = configuration["HYPERDX_OTLP_ENDPOINT"] ?? "http://meepleai-hyperdx:14317";
+#pragma warning restore S1075
         var serviceName = "meepleai-api";
         var serviceVersion = "1.0.0";
         var isDevelopment = environment.IsDevelopment();
@@ -80,7 +82,7 @@ internal static class ObservabilityServiceExtensions
                 {
                     // Don't trace health checks or metrics endpoints
                     var path = httpContext.Request.Path.Value ?? string.Empty;
-                    return !path.StartsWith("/health", StringComparison.Ordinal) && !path.Equals("/metrics");
+                    return !path.StartsWith("/health", StringComparison.Ordinal) && !path.Equals("/metrics", StringComparison.Ordinal);
                 };
             })
             .AddHttpClientInstrumentation(options =>
@@ -184,10 +186,24 @@ internal static class ObservabilityServiceExtensions
             return;
         }
 
+        // Issue #2152: Allow disabling Postgres health check via configuration
+        var healthCheckEnabled = configuration.GetValue("HealthChecks:Postgres:Enabled", defaultValue: true);
+        if (!healthCheckEnabled)
+        {
+            Console.WriteLine("[INFO] PostgreSQL health check disabled via HealthChecks:Postgres:Enabled configuration");
+            return;
+        }
+
+        // Issue #2152: Try SecretsHelper FIRST (reads uncorrupted POSTGRES_* vars)
+        var secretsHelperResult = SecretsHelper.BuildPostgresConnectionString(configuration);
+
         // SEC-708: Build connection string from Docker Secrets if available (only for non-testing)
-        var healthCheckConnectionString = configuration.GetConnectionString("Postgres")
-            ?? configuration["ConnectionStrings__Postgres"]
-            ?? SecretsHelper.BuildPostgresConnectionString(configuration);
+        // Issue #2152: Use SecretsHelper if succeeded, otherwise fallback
+        var healthCheckConnectionString = secretsHelperResult != null
+            ? secretsHelperResult
+            : (Environment.GetEnvironmentVariable("ConnectionStrings__Postgres")
+                ?? configuration["ConnectionStrings__Postgres"]
+                ?? configuration.GetConnectionString("Postgres"));
 
         if (string.IsNullOrEmpty(healthCheckConnectionString))
         {
@@ -205,10 +221,12 @@ internal static class ObservabilityServiceExtensions
     private static void AddExternalHealthChecks(IHealthChecksBuilder builder, IConfiguration configuration)
     {
         // S1075: Default URLs extracted to const
+#pragma warning disable S1075 // URIs should not be hardcoded - Default/Fallback values
         const string DefaultRedisConnectionString = "localhost:6379";
         const string DefaultQdrantUrl = "http://localhost:6333";
         const string DefaultN8nUrl = "http://n8n:5678";
         const string DefaultHyperDxUrl = "http://meepleai-hyperdx:8000";
+#pragma warning restore S1075
 
         var healthCheckRedisConnectionString = configuration["REDIS_URL"] ?? DefaultRedisConnectionString;
         var healthCheckQdrantUrl = configuration["QDRANT_URL"] ?? DefaultQdrantUrl;

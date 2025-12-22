@@ -104,6 +104,11 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
                 ErrorMessage = ex.Message
             };
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: COMMAND HANDLER PATTERN - CQRS handler boundary
+        // Specific exceptions (ValidationException, DomainException) caught separately above.
+        // Generic catch handles unexpected infrastructure failures (DB, network, memory)
+        // to prevent exception propagation to API layer. Returns Result<T> pattern.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error during OAuth callback for provider {Provider}", command.Provider);
@@ -113,6 +118,7 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
                 ErrorMessage = "An unexpected error occurred during OAuth authentication"
             };
         }
+#pragma warning restore CA1031
     }
 
     /// <summary>
@@ -181,7 +187,7 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
         var oauthAccount = await _db.OAuthAccounts
             .Include(oa => oa.User)
             .FirstOrDefaultAsync(oa =>
-                oa.Provider == provider.ToLowerInvariant() &&
+                string.Equals(oa.Provider, provider, StringComparison.OrdinalIgnoreCase) &&
                 oa.ProviderUserId == userInfo!.Id, cancellationToken).ConfigureAwait(false);
 
         UserEntity? user;
@@ -202,7 +208,7 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
         else
         {
             // Check if user exists with same email (auto-link for MVP)
-            user = await _db.Users.FirstOrDefaultAsync(u => u.Email == userInfo!.Email.ToLowerInvariant(), cancellationToken).ConfigureAwait(false);
+            user = await _db.Users.FirstOrDefaultAsync(u => string.Equals(u.Email, userInfo!.Email, StringComparison.InvariantCultureIgnoreCase), cancellationToken).ConfigureAwait(false);
 
             if (user == null)
             {

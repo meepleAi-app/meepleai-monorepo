@@ -1,11 +1,13 @@
-import type { Meta, StoryObj } from '@storybook/react';
 import React from 'react';
+
 import {
   EndpointDistributionChart,
   LatencyDistributionChart,
   RequestsTimeSeriesChart,
   FeedbackChart,
 } from './AdminCharts';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta: Meta = {
   title: 'Admin/Charts/Dashboard',

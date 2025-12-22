@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.WorkflowIntegration.Domain.Entities;
 /// <summary>
 /// WorkflowErrorLog aggregate root representing an error from workflow execution.
 /// </summary>
-internal sealed class WorkflowErrorLog : AggregateRoot<Guid>
+public sealed class WorkflowErrorLog : AggregateRoot<Guid>
 {
     public string WorkflowId { get; private set; }
     public string ExecutionId { get; private set; }

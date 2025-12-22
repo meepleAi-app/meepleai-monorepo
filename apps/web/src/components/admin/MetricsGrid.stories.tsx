@@ -1,6 +1,3 @@
-import type { Meta, StoryObj } from '@storybook/react';
-import { MetricsGrid } from './MetricsGrid';
-import type { StatCardProps } from './StatCard';
 import {
   Users,
   Activity,
@@ -15,6 +12,11 @@ import {
   Bell,
   CheckCircle,
 } from 'lucide-react';
+
+import { MetricsGrid } from './MetricsGrid';
+
+import type { StatCardProps } from './StatCard';
+import type { Meta, StoryObj } from '@storybook/react';
 
 /**
  * MetricsGrid - Issue #874, #883

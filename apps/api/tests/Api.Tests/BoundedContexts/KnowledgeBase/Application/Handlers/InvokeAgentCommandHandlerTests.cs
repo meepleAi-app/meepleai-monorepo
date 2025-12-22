@@ -22,8 +22,6 @@ public class InvokeAgentCommandHandlerTests
     private readonly Mock<IAgentRepository> _mockAgentRepo;
     private readonly Mock<IEmbeddingRepository> _mockEmbeddingRepo;
     private readonly Mock<IEmbeddingService> _mockEmbeddingService;
-    private readonly AgentOrchestrationService _orchestrationService;
-    private readonly VectorSearchDomainService _vectorSearchService;
     private readonly QualityTrackingDomainService _qualityTrackingService;
     private readonly Mock<ILogger<InvokeAgentCommandHandler>> _mockLogger;
     private readonly InvokeAgentCommandHandler _handler;
@@ -33,8 +31,6 @@ public class InvokeAgentCommandHandlerTests
         _mockAgentRepo = new Mock<IAgentRepository>();
         _mockEmbeddingRepo = new Mock<IEmbeddingRepository>();
         _mockEmbeddingService = new Mock<IEmbeddingService>();
-        _orchestrationService = new AgentOrchestrationService();
-        _vectorSearchService = new VectorSearchDomainService();
         _qualityTrackingService = new QualityTrackingDomainService();
         _mockLogger = new Mock<ILogger<InvokeAgentCommandHandler>>();
 
@@ -145,7 +141,7 @@ public class InvokeAgentCommandHandlerTests
         _mockAgentRepo.Setup(r => r.GetByIdAsync(agentId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(agent);
         _mockEmbeddingService.Setup(s => s.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((EmbeddingResult?)null);
+            .ReturnsAsync((EmbeddingResult)null!);
 
         var command = new InvokeAgentCommand(
             AgentId: agentId,

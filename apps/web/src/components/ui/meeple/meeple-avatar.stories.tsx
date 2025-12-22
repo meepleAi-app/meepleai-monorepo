@@ -1,5 +1,6 @@
-import type { Meta, StoryObj } from '@storybook/react';
 import { MeepleAvatar } from './meeple-avatar';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 /**
  * MeepleAvatar displays an animated AI assistant character with 5 distinct states

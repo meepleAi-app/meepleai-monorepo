@@ -21,12 +21,12 @@ internal interface IKeywordSearchService
     /// <param name="language">Language code for FTS configuration: "it" → meepleai_italian, "en" → english (default: "it")</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>List of keyword search results with BM25-style relevance scores</returns>
-    Task<IReadOnlyList<KeywordSearchResult>> SearchAsync(
+    Task<List<KeywordSearchResult>> SearchAsync(
         string query,
         Guid gameId,
         int limit = 10,
         bool phraseSearch = false,
-        IReadOnlyList<string>? boostTerms = null,
+        List<string>? boostTerms = null,
         string language = "it",
         CancellationToken cancellationToken = default);
 
@@ -40,7 +40,7 @@ internal interface IKeywordSearchService
     /// <param name="language">Language code for FTS configuration: "it" → meepleai_italian, "en" → english (default: "it")</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>List of PDF document search results</returns>
-    Task<IReadOnlyList<KeywordDocumentResult>> SearchDocumentsAsync(
+    Task<List<KeywordDocumentResult>> SearchDocumentsAsync(
         string query,
         Guid gameId,
         int limit = 10,
@@ -69,7 +69,7 @@ internal record KeywordSearchResult
     /// <summary>
     /// Matched search terms highlighted in the content.
     /// </summary>
-    public IReadOnlyList<string> MatchedTerms { get; init; } = Array.Empty<string>();
+    public List<string> MatchedTerms { get; init; } = new List<string>();
 }
 
 /// <summary>

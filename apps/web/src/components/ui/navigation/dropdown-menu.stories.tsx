@@ -1,4 +1,17 @@
-import type { Meta, StoryObj } from '@storybook/react';
+import {
+  Cloud,
+  CreditCard,
+  Github,
+  Keyboard,
+  LogOut,
+  Mail,
+  MessageSquare,
+  PlusCircle,
+  Settings,
+  User,
+  UserPlus,
+} from 'lucide-react';
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,20 +28,8 @@ import {
   DropdownMenuSubTrigger,
 } from './dropdown-menu';
 import { Button } from '../primitives/button';
-import {
-  Cloud,
-  CreditCard,
-  Github,
-  Keyboard,
-  LogOut,
-  Mail,
-  MessageSquare,
-  Plus,
-  PlusCircle,
-  Settings,
-  User,
-  UserPlus,
-} from 'lucide-react';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 /**
  * DropdownMenu component for contextual menus and action lists.

@@ -9,7 +9,7 @@ internal sealed class GameSessionAbandonedEventHandler : DomainEventHandlerBase<
 {
     public GameSessionAbandonedEventHandler(
         MeepleAiDbContext dbContext,
-        ILogger<DomainEventHandlerBase<GameSessionAbandonedEvent>> logger)
+        ILogger<GameSessionAbandonedEventHandler> logger)
         : base(dbContext, logger)
     {
     }

@@ -1,7 +1,8 @@
 /* eslint-disable security/detect-object-injection -- Safe Map/array access operations */
 import React, { useState, useCallback } from 'react';
-import { ProcessedDiff, CollapsibleSection } from '../../lib/diffProcessor';
+
 import { DiffCodePanel } from './DiffCodePanel';
+import { ProcessedDiff, CollapsibleSection } from '../../lib/diffProcessor';
 
 export interface SideBySideDiffViewProps {
   processedDiff: ProcessedDiff;

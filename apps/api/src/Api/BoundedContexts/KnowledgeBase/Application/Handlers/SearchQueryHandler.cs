@@ -156,7 +156,7 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
             gameId,
             SearchMode.Keyword,
             topK,
-            documentIds, // Issue #2051: Pass document filter
+            documentIds?.ToList(), // Issue #2051: Pass document filter
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         // Map keyword results to domain entities

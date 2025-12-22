@@ -5,6 +5,11 @@
  * - User messages: Edit and delete buttons (shown on hover)
  * - Assistant messages: Helpful/Not-helpful feedback buttons
  *
+ * Performance: React.memo optimized (Issue #2245)
+ * - Used in message lists (VirtualizedMessageList)
+ * - Pure presentational component
+ * - Prevents re-renders when message list updates
+ *
  * Simplified version for Phase 3 - will be enhanced in Phase 4 with:
  * - Hover state management
  * - Loading states during operations
@@ -12,10 +17,11 @@
  */
 
 import React from 'react';
-import { Message } from '@/types';
+
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
 import { FEEDBACK_OUTCOMES, type FeedbackOutcome } from '@/lib/constants/feedback';
+import { cn } from '@/lib/utils';
+import { Message } from '@/types';
 
 interface MessageActionsProps {
   message: Message;
@@ -27,23 +33,19 @@ interface MessageActionsProps {
   isUpdating?: boolean;
 }
 
-export function MessageActions({
+export const MessageActions = React.memo(function MessageActions({
   message,
   isUser,
   onEdit,
   onDelete,
   onFeedback,
   isEditing = false,
-  isUpdating = false
+  isUpdating = false,
 }: MessageActionsProps) {
   // User message actions (edit/delete)
   if (isUser && !isEditing) {
     return (
-      <div
-        className={cn(
-          "message-actions flex gap-1 opacity-0 transition-opacity duration-200"
-        )}
-      >
+      <div className={cn('message-actions flex gap-1 opacity-0 transition-opacity duration-200')}>
         <Button
           onClick={() => onEdit?.(message.id, message.content)}
           disabled={isUpdating}
@@ -73,11 +75,7 @@ export function MessageActions({
   // Assistant message actions (feedback)
   if (!isUser) {
     return (
-      <div
-        role="group"
-        aria-label="Message feedback"
-        className="flex gap-2 mt-2"
-      >
+      <div role="group" aria-label="Message feedback" className="flex gap-2 mt-2">
         <Button
           onClick={() => onFeedback?.(message.id, FEEDBACK_OUTCOMES.HELPFUL)}
           aria-label="Mark as helpful"
@@ -85,10 +83,10 @@ export function MessageActions({
           variant="ghost"
           size="sm"
           className={cn(
-            "h-auto px-2 py-1 text-xs gap-1",
+            'h-auto px-2 py-1 text-xs gap-1',
             message.feedback === FEEDBACK_OUTCOMES.HELPFUL
-              ? "bg-green-600 text-white hover:bg-green-700"
-              : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+              ? 'bg-green-600 text-white hover:bg-green-700'
+              : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
           )}
         >
           <span>👍</span>
@@ -101,10 +99,10 @@ export function MessageActions({
           variant="ghost"
           size="sm"
           className={cn(
-            "h-auto px-2 py-1 text-xs gap-1",
+            'h-auto px-2 py-1 text-xs gap-1',
             message.feedback === FEEDBACK_OUTCOMES.NOT_HELPFUL
-              ? "bg-red-600 text-white hover:bg-red-700"
-              : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+              ? 'bg-red-600 text-white hover:bg-red-700'
+              : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
           )}
         >
           <span>👎</span>
@@ -115,4 +113,4 @@ export function MessageActions({
   }
 
   return null;
-}
+});

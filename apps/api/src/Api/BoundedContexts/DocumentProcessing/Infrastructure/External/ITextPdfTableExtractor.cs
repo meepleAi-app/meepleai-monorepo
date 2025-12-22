@@ -50,7 +50,7 @@ internal class ITextPdfTableExtractor : IPdfTableExtractor
     public async Task<TableExtractionResult> ExtractTablesAsync(
         string filePath,
         bool convertToAtomicRules = true,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         // Validation (Infrastructure concern)
         if (string.IsNullOrWhiteSpace(filePath))
@@ -67,7 +67,7 @@ internal class ITextPdfTableExtractor : IPdfTableExtractor
         {
             // Offload blocking I/O to thread pool
             var (tables, atomicRules) = await Task.Run(() =>
-                ExtractTablesFromPdf(filePath, convertToAtomicRules), ct).ConfigureAwait(false);
+                ExtractTablesFromPdf(filePath, convertToAtomicRules), cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Successfully extracted {TableCount} tables from PDF: {FilePath}",
@@ -115,7 +115,7 @@ internal class ITextPdfTableExtractor : IPdfTableExtractor
     /// <inheritdoc />
     public async Task<StructuredContentResult> ExtractStructuredContentAsync(
         string filePath,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         // Validation (Infrastructure concern)
         if (string.IsNullOrWhiteSpace(filePath))
@@ -132,7 +132,7 @@ internal class ITextPdfTableExtractor : IPdfTableExtractor
         {
             // Offload blocking I/O to thread pool
             var result = await Task.Run(() =>
-                ExtractStructuredDataFromPdf(filePath), ct).ConfigureAwait(false);
+                ExtractStructuredDataFromPdf(filePath), cancellationToken).ConfigureAwait(false);
 
             return result;
         }
@@ -267,79 +267,7 @@ internal class ITextPdfTableExtractor : IPdfTableExtractor
         for (int pageNum = 1; pageNum <= pageCount; pageNum++)
         {
             var page = pdfDoc.GetPage(pageNum);
-
-            // Infrastructure: Extract text lines
-            List<PositionedTextLine> pageLines;
-            try
-            {
-                pageLines = _tableDetectionService?.ExtractPageLines(page) ?? new List<PositionedTextLine>();
-            }
-            catch
-            {
-                pageLines = new List<PositionedTextLine>();
-            }
-
-            // Infrastructure: Detect tables
-            List<PdfTable> pageTables = new();
-            try
-            {
-                var detected = _tableDetectionService?.DetectTablesInPage(pageLines, pageNum);
-                if (detected != null)
-                {
-                    pageTables = detected;
-                }
-            }
-            catch
-            {
-                // Fallback
-            }
-
-            if (pageTables.Count == 0)
-            {
-                // Fallback to concrete detector
-                var detector = new TableDetectionService(new TableCellParser());
-                var fallbackLines = detector.ExtractPageLines(page);
-                pageTables = detector.DetectTablesInPage(fallbackLines, pageNum);
-            }
-
-            if (pageTables != null && pageTables.Count > 0)
-            {
-                tables.AddRange(pageTables);
-
-                foreach (var table in pageTables)
-                {
-                    // DOMAIN DELEGATION: Convert table to atomic rules
-                    var rules = _tableToAtomicRuleConverter.ConvertTableToAtomicRules(table);
-                    if (rules != null && rules.Count > 0)
-                    {
-                        atomicRules.AddRange(rules);
-                    }
-                }
-            }
-
-            // Infrastructure: Detect diagrams
-            List<PdfDiagram>? pageDiagrams = null;
-            try
-            {
-                pageDiagrams = _tableStructureAnalyzer?.DetectDiagramsInPage(page, pageNum);
-            }
-            catch
-            {
-                // Fallback
-            }
-
-            if (pageDiagrams == null)
-            {
-                // Fallback to concrete analyzer
-                var analyzer = new TableStructureAnalyzer(
-                    NullLogger<TableStructureAnalyzer>.Instance);
-                pageDiagrams = analyzer.DetectDiagramsInPage(page, pageNum);
-            }
-
-            if (pageDiagrams != null)
-            {
-                diagrams.AddRange(pageDiagrams);
-            }
+            ProcessPageForStructuredContent(page, pageNum, tables, diagrams, atomicRules);
         }
 
         _logger.LogInformation(
@@ -348,4 +276,89 @@ internal class ITextPdfTableExtractor : IPdfTableExtractor
 
         return StructuredContentResult.CreateSuccess(tables, diagrams, atomicRules);
     }
+
+    /// <summary>
+    /// Processes a single page to extract tables, diagrams, and atomic rules.
+    /// </summary>
+    private void ProcessPageForStructuredContent(
+        iText.Kernel.Pdf.PdfPage page,
+        int pageNum,
+        List<PdfTable> tables,
+        List<PdfDiagram> diagrams,
+        List<string> atomicRules)
+    {
+        // Infrastructure: Extract text lines
+        List<PositionedTextLine> pageLines;
+        try
+        {
+            pageLines = _tableDetectionService?.ExtractPageLines(page) ?? new List<PositionedTextLine>();
+        }
+        catch
+        {
+            pageLines = new List<PositionedTextLine>();
+        }
+
+        // Infrastructure: Detect tables
+        List<PdfTable> pageTables = new();
+        try
+        {
+            var detected = _tableDetectionService?.DetectTablesInPage(pageLines, pageNum);
+            if (detected != null)
+            {
+                pageTables = detected;
+            }
+        }
+        catch
+        {
+            // Fallback
+        }
+
+        if (pageTables.Count == 0)
+        {
+            // Fallback to concrete detector
+            var detector = new TableDetectionService(new TableCellParser());
+            var fallbackLines = detector.ExtractPageLines(page);
+            pageTables = detector.DetectTablesInPage(fallbackLines, pageNum);
+        }
+
+        if (pageTables != null && pageTables.Count > 0)
+        {
+            tables.AddRange(pageTables);
+
+            foreach (var table in pageTables)
+            {
+                // DOMAIN DELEGATION: Convert table to atomic rules
+                var rules = _tableToAtomicRuleConverter.ConvertTableToAtomicRules(table);
+                if (rules != null && rules.Count > 0)
+                {
+                    atomicRules.AddRange(rules);
+                }
+            }
+        }
+
+        // Infrastructure: Detect diagrams
+        List<PdfDiagram>? pageDiagrams = null;
+        try
+        {
+            pageDiagrams = _tableStructureAnalyzer?.DetectDiagramsInPage(page, pageNum);
+        }
+        catch
+        {
+            // Fallback
+        }
+
+        if (pageDiagrams == null)
+        {
+            // Fallback to concrete analyzer
+            var analyzer = new TableStructureAnalyzer(
+                NullLogger<TableStructureAnalyzer>.Instance);
+            pageDiagrams = analyzer.DetectDiagramsInPage(page, pageNum);
+        }
+
+        if (pageDiagrams != null)
+        {
+            diagrams.AddRange(pageDiagrams);
+        }
+    }
 }
+

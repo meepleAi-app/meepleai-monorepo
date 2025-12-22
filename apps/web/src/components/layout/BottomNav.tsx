@@ -19,9 +19,10 @@
 
 'use client';
 
+import { Home, Gamepad2, MessageSquare, Settings, User } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Gamepad2, MessageSquare, Settings, User } from 'lucide-react';
+
 import { cn } from '@/lib/utils';
 
 interface NavItem {

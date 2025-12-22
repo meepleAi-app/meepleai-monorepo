@@ -10,9 +10,11 @@
  */
 
 import { useEffect, useCallback, useRef } from 'react';
+
 import { useRouter } from 'next/navigation'; // App Router
-import { logger } from '@/lib/logger';
+
 import { createErrorContext } from '@/lib/errors';
+import { logger } from '@/lib/logger';
 
 /**
  * Keyboard shortcut definition
@@ -33,7 +35,8 @@ export interface KeyboardShortcut {
 /**
  * Platform-specific modifier keys
  */
-export const isMac = typeof window !== 'undefined' && navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+export const isMac =
+  typeof window !== 'undefined' && navigator.platform.toUpperCase().indexOf('MAC') >= 0;
 export const modKey = isMac ? '⌘' : 'Ctrl';
 export const altKey = isMac ? '⌥' : 'Alt';
 export const shiftKey = '⇧';
@@ -55,10 +58,14 @@ export function formatShortcut(shortcut: KeyboardShortcut): string {
   }
 
   // Special key names
-  const keyName = shortcut.key === '/' ? '/'
-    : shortcut.key === 'Enter' ? '↵'
-    : shortcut.key === 'Escape' ? 'Esc'
-    : shortcut.key.toUpperCase();
+  const keyName =
+    shortcut.key === '/'
+      ? '/'
+      : shortcut.key === 'Enter'
+        ? '↵'
+        : shortcut.key === 'Escape'
+          ? 'Esc'
+          : shortcut.key.toUpperCase();
 
   parts.push(keyName);
 
@@ -85,7 +92,7 @@ function matchesShortcut(event: KeyboardEvent, shortcut: KeyboardShortcut): bool
   const wantsMod = shortcut.ctrl || shortcut.meta;
   const hasMod = event.ctrlKey || event.metaKey;
 
-  const modifierMatch = wantsMod ? hasMod : (!event.ctrlKey && !event.metaKey);
+  const modifierMatch = wantsMod ? hasMod : !event.ctrlKey && !event.metaKey;
 
   return modifierMatch && shiftMatch && altMatch;
 }
@@ -168,9 +175,7 @@ export function useKeyboardShortcuts(shortcuts: KeyboardShortcut[], enabled = tr
       // Don't trigger shortcuts when typing in input fields
       const target = event.target as HTMLElement;
       const isInputField =
-        target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.isContentEditable;
+        target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
 
       for (const shortcut of shortcutsRef.current) {
         // Skip disabled shortcuts
@@ -181,9 +186,7 @@ export function useKeyboardShortcuts(shortcuts: KeyboardShortcut[], enabled = tr
           // Special handling for input fields
           // Allow Escape and search shortcuts (Cmd+/) even in input fields
           const allowInInputField =
-            shortcut.key === 'Escape' ||
-            shortcut.key === '/' ||
-            shortcut.key === '?';
+            shortcut.key === 'Escape' || shortcut.key === '/' || shortcut.key === '?';
 
           if (isInputField && !allowInInputField) {
             continue;
@@ -228,19 +231,16 @@ export function useKeyboardShortcuts(shortcuts: KeyboardShortcut[], enabled = tr
 /**
  * Hook for global app-level shortcuts with router integration
  */
-export function useGlobalKeyboardShortcuts(options: {
-  onOpenCommandPalette?: () => void;
-  onOpenShortcutsHelp?: () => void;
-  onCloseModal?: () => void;
-  enabled?: boolean;
-} = {}) {
+export function useGlobalKeyboardShortcuts(
+  options: {
+    onOpenCommandPalette?: () => void;
+    onOpenShortcutsHelp?: () => void;
+    onCloseModal?: () => void;
+    enabled?: boolean;
+  } = {}
+) {
   const router = useRouter();
-  const {
-    onOpenCommandPalette,
-    onOpenShortcutsHelp,
-    onCloseModal,
-    enabled = true,
-  } = options;
+  const { onOpenCommandPalette, onOpenShortcutsHelp, onCloseModal, enabled = true } = options;
 
   const handleNewChat = useCallback(() => {
     router.push('/chat');

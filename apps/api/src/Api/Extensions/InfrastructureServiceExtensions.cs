@@ -55,14 +55,19 @@ internal static class InfrastructureServiceExtensions
             var envVarConnectionString = Environment.GetEnvironmentVariable("ConnectionStrings__Postgres");
             Console.WriteLine($"[DEBUG #2152] Environment.GetEnvironmentVariable('ConnectionStrings__Postgres'): {(envVarConnectionString != null ? envVarConnectionString.Substring(0, Math.Min(80, envVarConnectionString.Length)) : "NULL")}");
 
-            // Issue #2152: Prioritize SecretsHelper FIRST (reads uncorrupted POSTGRES_* vars)
-            // SEC-708: Build connection string from Docker Secrets if available
-            var connectionString = SecretsHelper.BuildPostgresConnectionString(configuration)
-                ?? envVarConnectionString
-                ?? configuration["ConnectionStrings__Postgres"]
-                ?? configuration.GetConnectionString("Postgres");
+            // Issue #2152: Try SecretsHelper FIRST (reads uncorrupted POSTGRES_* vars)
+            var secretsHelperResult = SecretsHelper.BuildPostgresConnectionString(configuration);
 
-            Console.WriteLine($"[DEBUG #2152] FINAL connectionString source: {(envVarConnectionString != null ? "Environment.GetEnvironmentVariable" : configuration["ConnectionStrings__Postgres"] != null ? "configuration[]" : configuration.GetConnectionString("Postgres") != null ? "GetConnectionString" : "SecretsHelper")}");
+            // SEC-708: Build connection string from Docker Secrets if available
+            // Issue #2152: Use SecretsHelper if it succeeded, otherwise fallback to (possibly corrupted) env vars
+            var connectionString = secretsHelperResult != null
+                ? secretsHelperResult
+                : (envVarConnectionString
+                    ?? configuration["ConnectionStrings__Postgres"]
+                    ?? configuration.GetConnectionString("Postgres")
+                    ?? throw new InvalidOperationException("No PostgreSQL connection string configured"));
+
+            Console.WriteLine($"[DEBUG #2152] FINAL connectionString source: {(secretsHelperResult != null ? "SecretsHelper (POSTGRES_* vars)" : envVarConnectionString != null ? "Environment.GetEnvironmentVariable (corrupted)" : "IConfiguration")}");
 
             // PERF-09: Optimize Postgres connection pooling for better throughput
             services.AddDbContext<MeepleAiDbContext>(options =>

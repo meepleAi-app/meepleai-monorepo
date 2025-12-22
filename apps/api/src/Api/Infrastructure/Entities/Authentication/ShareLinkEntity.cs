@@ -9,7 +9,7 @@ namespace Api.Infrastructure.Entities.Authentication;
 /// Maps to ShareLink domain aggregate.
 /// </summary>
 [Table("share_links")]
-internal sealed class ShareLinkEntity
+public sealed class ShareLinkEntity
 {
     [Key]
     [Column("id")]

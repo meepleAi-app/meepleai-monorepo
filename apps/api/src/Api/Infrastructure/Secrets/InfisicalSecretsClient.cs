@@ -91,11 +91,16 @@ internal class InfisicalSecretsClient : IInfisicalClient
             // Rethrowing allows the caller (e.g. startup) to handle the failure appropriately
             throw new InvalidOperationException($"HTTP error fetching secret {secretName}: {ex.StatusCode}", ex);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: EXCEPTION WRAPPING PATTERN - Domain boundary
+        // Wraps infrastructure exceptions (JSON, network, unexpected) into domain exception.
+        // Preserves inner exception for debugging. HttpRequestException caught separately.
         catch (Exception ex)
         {
             // Wrap in a more meaningful exception for the domain
             throw new InvalidOperationException($"Failed to fetch secret {secretName}", ex);
         }
+#pragma warning restore CA1031
     }
 
     public async Task<SecretVersion[]> GetSecretVersionsAsync(
@@ -155,14 +160,19 @@ internal class InfisicalSecretsClient : IInfisicalClient
         }
         catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
-            _logger.LogWarning("Version history not supported or secret {SecretName} not found", secretName);
+            _logger.LogWarning(ex, "Version history not supported or secret {SecretName} not found", secretName);
             return Array.Empty<SecretVersion>();
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: EXCEPTION WRAPPING PATTERN - Domain boundary
+        // Wraps infrastructure exceptions into domain exception. Preserves inner exception.
+        // HttpRequestException with NotFound caught separately above.
         catch (Exception ex)
         {
             // S2139: Do not log and rethrow.
             throw new InvalidOperationException($"Failed to fetch version history for {secretName}", ex);
         }
+#pragma warning restore CA1031
     }
 
     public async Task<bool> HealthCheckAsync(CancellationToken cancellationToken = default)
@@ -193,11 +203,25 @@ internal class InfisicalSecretsClient : IInfisicalClient
                 response.StatusCode);
             return false;
         }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogWarning(ex, "Infisical health check failed - HTTP error");
+            return false; // Health check failure, return false
+        }
+        catch (TaskCanceledException ex)
+        {
+            _logger.LogWarning(ex, "Infisical health check timed out");
+            return false; // Timeout is unhealthy
+        }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: HEALTH CHECK PATTERN - Non-critical monitoring
+        // Health check failures return false; don't throw. Specific HTTP/timeout caught separately.
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Infisical health check exception");
-            return false;
+            _logger.LogError(ex, "Unexpected error during Infisical health check");
+            return false; // Unexpected errors indicate unhealthy state
         }
+#pragma warning restore CA1031
     }
 
     private async Task EnsureAuthenticatedAsync(CancellationToken cancellationToken)
@@ -245,14 +269,26 @@ internal class InfisicalSecretsClient : IInfisicalClient
                 "Successfully authenticated with Infisical (token expires at {ExpiresAt})",
                 _tokenExpiresAt);
         }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "HTTP error authenticating with Infisical");
+            throw; // Rethrow - authentication failure prevents secret access
+        }
+        catch (TaskCanceledException ex)
+        {
+            _logger.LogError(ex, "Timeout authenticating with Infisical");
+            throw; // Rethrow - authentication timeout prevents secret access
+        }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: EXCEPTION WRAPPING PATTERN - Authentication boundary
+        // Wraps infrastructure exceptions into domain exception. Specific HTTP/timeout caught separately.
+        // Authentication failures must propagate to prevent secret access with invalid credentials.
         catch (Exception ex)
         {
-            // S2139: Ensure we don't double log.
-            // The InvalidOperationException will be caught and logged by the caller if it crashes the app startup
-            // or the specific operation requesting the secret.
-            throw new InvalidOperationException(
-                "Failed to authenticate with Infisical. Check CLIENT_ID and CLIENT_SECRET.", ex);
+            _logger.LogError(ex, "Unexpected error authenticating with Infisical");
+            throw new InvalidOperationException("Failed to authenticate with Infisical", ex);
         }
+#pragma warning restore CA1031
     }
 }
 

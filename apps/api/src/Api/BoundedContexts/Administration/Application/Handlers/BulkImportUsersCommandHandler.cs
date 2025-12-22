@@ -19,6 +19,7 @@ internal class BulkImportUsersCommandHandler : ICommandHandler<BulkImportUsersCo
 {
     private const int MaxBulkSize = 1000;
     private const int MaxCsvSizeBytes = 10 * 1024 * 1024; // 10MB
+    private static readonly char[] NewLineSeparators = { '\r', '\n' };
     private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<BulkImportUsersCommandHandler> _logger;
@@ -74,11 +75,17 @@ internal class BulkImportUsersCommandHandler : ICommandHandler<BulkImportUsersCo
         {
             throw;
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: COMMAND HANDLER PATTERN - Wraps unexpected infrastructure failures
+        // DomainException caught separately above and rethrown.
+        // Generic catch wraps unexpected exceptions (DB, network, memory) in DomainException
+        // for consistent API error handling. Logs with full context before wrapping.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Critical error during bulk user import");
             throw new DomainException($"Bulk user import failed: {ex.Message}", ex);
         }
+#pragma warning restore CA1031
     }
 
     /// <summary>
@@ -124,7 +131,7 @@ internal class BulkImportUsersCommandHandler : ICommandHandler<BulkImportUsersCo
             .Select(g => g.Key)
             .ToList();
 
-        if (duplicateEmails.Any())
+        if (duplicateEmails.Count > 0)
         {
             throw new DomainException($"CSV contains duplicate emails: {string.Join(", ", duplicateEmails)}");
         }
@@ -141,7 +148,7 @@ internal class BulkImportUsersCommandHandler : ICommandHandler<BulkImportUsersCo
             }
         }
 
-        if (existingEmails.Any())
+        if (existingEmails.Count > 0)
         {
             throw new DomainException($"The following emails already exist: {string.Join(", ", existingEmails)}");
         }
@@ -179,11 +186,17 @@ internal class BulkImportUsersCommandHandler : ICommandHandler<BulkImportUsersCo
                 await _userRepository.AddAsync(user, cancellationToken).ConfigureAwait(false);
                 successCount++;
             }
+#pragma warning disable CA1031 // Do not catch general exception types
+            // Justification: BULK OPERATION PATTERN - Individual import failure handling
+            // Catches all exceptions during user creation (validation, DB constraints, etc.)
+            // to collect errors without stopping batch processing. Each failure is logged
+            // and added to error list for reporting. Allows partial success in bulk import.
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error importing user at line {LineNumber}", lineNumber);
                 errors.Add($"Line {lineNumber} ({record.Email}): {ex.Message}");
             }
+#pragma warning restore CA1031
         }
 
         return (successCount, errors);
@@ -192,7 +205,7 @@ internal class BulkImportUsersCommandHandler : ICommandHandler<BulkImportUsersCo
     private static List<UserImportRecord> ParseCsv(string csvContent, List<string> errors)
     {
         var records = new List<UserImportRecord>();
-        var lines = csvContent.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+        var lines = csvContent.Split(NewLineSeparators, StringSplitOptions.RemoveEmptyEntries);
 
         if (lines.Length == 0)
         {

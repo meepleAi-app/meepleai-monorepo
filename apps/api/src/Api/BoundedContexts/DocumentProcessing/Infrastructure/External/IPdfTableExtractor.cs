@@ -14,22 +14,22 @@ internal interface IPdfTableExtractor
     /// </summary>
     /// <param name="filePath">Path to the PDF file</param>
     /// <param name="convertToAtomicRules">Whether to convert tables to atomic rules (default: true)</param>
-    /// <param name="ct">Cancellation token</param>
+    /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Table extraction result with tables and optional atomic rules</returns>
     Task<TableExtractionResult> ExtractTablesAsync(
         string filePath,
         bool convertToAtomicRules = true,
-        CancellationToken ct = default);
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Extracts comprehensive structured content (tables, diagrams, atomic rules) from a PDF
     /// </summary>
     /// <param name="filePath">Path to the PDF file</param>
-    /// <param name="ct">Cancellation token</param>
+    /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Structured content extraction result</returns>
     Task<StructuredContentResult> ExtractStructuredContentAsync(
         string filePath,
-        CancellationToken ct = default);
+        CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -98,3 +98,4 @@ internal record StructuredContentResult
             ErrorMessage = errorMessage
         };
 }
+

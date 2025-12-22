@@ -19,10 +19,12 @@ namespace Api.Extensions;
 
 internal static class ApplicationServiceExtensions
 {
-    [Obsolete]
+#pragma warning disable S1133 // Method marked obsolete but kept for backward compatibility during migration
+    [Obsolete("Use modular service registration methods instead (AddVectorSearchServices, AddDomainServices, etc.)")]
     public static IServiceCollection AddApplicationServices(
         this IServiceCollection services,
         IConfiguration configuration)
+#pragma warning restore S1133
     {
         services.AddVectorSearchServices(configuration);
         services.AddDomainServices();
@@ -110,7 +112,7 @@ internal static class ApplicationServiceExtensions
 
         // N8N services
         services.AddScoped<N8NConfigService>();
-        services.AddScoped<N8NTemplateService>(); // N8N-04: Workflow template service
+        services.AddScoped<IN8NTemplateService, N8NTemplateService>(); // N8N-04: Workflow template service
 
         // N8N-05: Workflow error logging service
         services.AddScoped<IWorkflowErrorLoggingService, WorkflowErrorLoggingService>();
@@ -218,7 +220,7 @@ internal static class ApplicationServiceExtensions
     private static IServiceCollection AddQualityServices(this IServiceCollection services)
     {
         // AI-11: Quality tracking services
-        services.AddScoped<IResponseQualityService, ResponseQualityService>();
+        // DDD Migration Phase 3.1: ResponseQualityService removed - quality logic now in QualityTrackingDomainService
         services.AddSingleton<QualityMetrics>();
         services.AddSingleton<QualityReportService>();
         services.AddSingleton<IQualityReportService>(sp => sp.GetRequiredService<QualityReportService>());

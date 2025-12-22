@@ -14,17 +14,17 @@ internal interface IModelRecommendationService
     /// </summary>
     /// <param name="useCase">Use case type (qa, explain, setup)</param>
     /// <param name="prioritizeCost">True to prioritize cost over quality</param>
-    /// <param name="ct">Cancellation token</param>
+    /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Recommended model with rationale</returns>
     Task<ModelRecommendation> GetRecommendationAsync(
         string useCase,
         bool prioritizeCost = false,
-        CancellationToken ct = default);
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Compare models by cost and quality metrics
     /// </summary>
-    Task<List<ModelComparison>> CompareModelsAsync(CancellationToken ct = default);
+    Task<List<ModelComparison>> CompareModelsAsync(CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -52,3 +52,4 @@ internal record ModelComparison
     public required string QualityTier { get; init; }
     public required double CostQualityRatio { get; init; }
 }
+

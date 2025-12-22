@@ -18,6 +18,7 @@
  */
 
 import { ReactNode, useEffect, useState } from 'react';
+
 import { initializeHyperDX } from '@/lib/hyperdx';
 
 interface HyperDXProviderProps {

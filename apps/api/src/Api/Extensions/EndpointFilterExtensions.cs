@@ -82,7 +82,7 @@ internal static class EndpointFilterExtensions
     ///     {
     ///         // Session authentication
     ///     }
-    ///     else if (context.User.Identity?.IsAuthenticated == true)
+    ///     else if (context.User.Identity?.IsAuthenticated is true)
     ///     {
     ///         // API key authentication
     ///     }

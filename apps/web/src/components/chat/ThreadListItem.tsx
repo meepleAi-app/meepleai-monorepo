@@ -11,6 +11,7 @@
  */
 
 import React from 'react';
+
 import { cn } from '@/lib/utils';
 import { ChatThread } from '@/types';
 
@@ -55,10 +56,10 @@ export function ThreadListItem({ thread, isActive, onSelect, onDelete }: ThreadL
     <li className="list-none">
       <div
         className={cn(
-          "w-full px-3 py-2.5 mb-1 rounded transition-colors flex flex-col gap-1 relative group",
+          'w-full px-3 py-2.5 mb-1 rounded transition-colors flex flex-col gap-1 relative group',
           isActive
-            ? "bg-[#e8f0fe] text-[#1a73e8]"
-            : "bg-transparent text-[#202124] hover:bg-[#f1f3f4]"
+            ? 'bg-[#e8f0fe] text-[#1a73e8]'
+            : 'bg-transparent text-[#202124] hover:bg-[#f1f3f4]'
         )}
         aria-current={isActive ? 'true' : undefined}
       >
@@ -78,8 +79,8 @@ export function ThreadListItem({ thread, isActive, onSelect, onDelete }: ThreadL
         <div className="flex items-center justify-between gap-2 relative" style={{ zIndex: 2 }}>
           <span
             className={cn(
-              "flex-1 text-sm font-medium truncate pointer-events-none",
-              isArchived && "opacity-60"
+              'flex-1 text-sm font-medium truncate pointer-events-none',
+              isArchived && 'opacity-60'
             )}
             title={displayTitle}
           >
@@ -123,10 +124,7 @@ export function ThreadListItem({ thread, isActive, onSelect, onDelete }: ThreadL
         {/* Thread Metadata Row */}
         <div className="flex items-center gap-2 text-[11px] text-[#5f6368] pointer-events-none">
           {/* Message Count */}
-          <span
-            className="flex items-center gap-1"
-            aria-label={`${thread.messageCount} messages`}
-          >
+          <span className="flex items-center gap-1" aria-label={`${thread.messageCount} messages`}>
             <svg
               width="12"
               height="12"

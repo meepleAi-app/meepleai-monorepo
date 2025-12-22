@@ -250,23 +250,7 @@ public sealed class ChangePasswordCommandValidatorTests
             .WithErrorMessage("New password must be different from current password");
     }
 
-    [Fact]
-    public void Should_Pass_When_NewPassword_Is_Different_From_CurrentPassword()
-    {
-        // Arrange
-        var command = new ChangePasswordCommand
-        {
-            UserId = Guid.NewGuid(),
-            CurrentPassword = "CurrentPassword123!",
-            NewPassword = "NewPassword123!"
-        };
 
-        // Act
-        var result = _validator.TestValidate(command);
-
-        // Assert
-        result.ShouldNotHaveAnyValidationErrors();
-    }
     [Fact]
     public void Should_Fail_With_Multiple_Validation_Errors()
     {

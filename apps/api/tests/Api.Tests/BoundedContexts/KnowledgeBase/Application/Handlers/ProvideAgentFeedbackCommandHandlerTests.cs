@@ -22,12 +22,10 @@ public class ProvideAgentFeedbackCommandHandlerTests
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
     private readonly Mock<ILogger<ProvideAgentFeedbackCommandHandler>> _mockLogger;
-    private readonly TimeProvider _timeProvider;
 
     public ProvideAgentFeedbackCommandHandlerTests()
     {
         _mockLogger = new Mock<ILogger<ProvideAgentFeedbackCommandHandler>>();
-        _timeProvider = TimeProvider.System;
     }
 
     /// <summary>

@@ -3,9 +3,11 @@
  * Visual regression testing with Chromatic
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
 import React, { useState } from 'react';
+
 import { ErrorBoundary } from './ErrorBoundary';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta = {
   title: 'Components/Errors/ErrorBoundary',

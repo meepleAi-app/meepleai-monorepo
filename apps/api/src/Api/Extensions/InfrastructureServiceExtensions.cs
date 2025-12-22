@@ -37,10 +37,37 @@ internal static class InfrastructureServiceExtensions
         // Only configure Postgres in non-test environments (tests will override with SQLite)
         if (!environment.IsEnvironment("Testing"))
         {
+            // Issue #2152: Debug ALL environment variables to find ConnectionStrings__Postgres
+            Console.WriteLine("[DEBUG #2152] === Environment Variables Containing 'POSTGRES' ===");
+            foreach (System.Collections.DictionaryEntry env in Environment.GetEnvironmentVariables())
+            {
+                var key = env.Key?.ToString() ?? "";
+                if (key.Contains("POSTGRES", StringComparison.OrdinalIgnoreCase) || key.Contains("ConnectionStrings", StringComparison.OrdinalIgnoreCase))
+                {
+                    var val = env.Value?.ToString() ?? "NULL";
+                    var maskedVal = val.Length > 50 ? val.Substring(0, 50) + "..." : val;
+                    Console.WriteLine($"  {key} = {maskedVal}");
+                }
+            }
+            Console.WriteLine("[DEBUG #2152] ===================================================");
+
+            // Issue #2152: Read ConnectionStrings__Postgres directly from env var to bypass ALL config caching
+            var envVarConnectionString = Environment.GetEnvironmentVariable("ConnectionStrings__Postgres");
+            Console.WriteLine($"[DEBUG #2152] Environment.GetEnvironmentVariable('ConnectionStrings__Postgres'): {(envVarConnectionString != null ? envVarConnectionString.Substring(0, Math.Min(80, envVarConnectionString.Length)) : "NULL")}");
+
+            // Issue #2152: Try SecretsHelper FIRST (reads uncorrupted POSTGRES_* vars)
+            var secretsHelperResult = SecretsHelper.BuildPostgresConnectionString(configuration);
+
             // SEC-708: Build connection string from Docker Secrets if available
-            var connectionString = configuration.GetConnectionString("Postgres")
-                ?? configuration["ConnectionStrings__Postgres"]
-                ?? SecretsHelper.BuildPostgresConnectionString(configuration);
+            // Issue #2152: Use SecretsHelper if it succeeded, otherwise fallback to (possibly corrupted) env vars
+            var connectionString = secretsHelperResult != null
+                ? secretsHelperResult
+                : (envVarConnectionString
+                    ?? configuration["ConnectionStrings__Postgres"]
+                    ?? configuration.GetConnectionString("Postgres")
+                    ?? throw new InvalidOperationException("No PostgreSQL connection string configured"));
+
+            Console.WriteLine($"[DEBUG #2152] FINAL connectionString source: {(secretsHelperResult != null ? "SecretsHelper (POSTGRES_* vars)" : envVarConnectionString != null ? "Environment.GetEnvironmentVariable (corrupted)" : "IConfiguration")}");
 
             // PERF-09: Optimize Postgres connection pooling for better throughput
             services.AddDbContext<MeepleAiDbContext>(options =>
@@ -81,7 +108,9 @@ internal static class InfrastructureServiceExtensions
         IConfiguration configuration)
     {
         // PERF-09: Configure Redis with optimized connection pooling
+#pragma warning disable S1075 // URIs should not be hardcoded - Default/Fallback value
         var redisUrl = configuration["REDIS_URL"] ?? "localhost:6379";
+#pragma warning restore S1075
         services.AddSingleton<IConnectionMultiplexer>(sp =>
         {
             var config = ConfigurationOptions.Parse(redisUrl);
@@ -173,7 +202,9 @@ internal static class InfrastructureServiceExtensions
         // Ollama client with optimized settings
         services.AddHttpClient("Ollama", client =>
         {
+#pragma warning disable S1075 // URIs should not be hardcoded - Default/Fallback value
             var ollamaUrl = configuration["OLLAMA_URL"] ?? "http://localhost:11434";
+#pragma warning restore S1075
             client.BaseAddress = new Uri(ollamaUrl);
             var timeoutSeconds = configuration.GetValue<int>("AIAgents:DefaultTimeoutSeconds", 30);
             client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
@@ -188,7 +219,9 @@ internal static class InfrastructureServiceExtensions
 
         // OpenRouter client with optimized settings (unified gateway for cloud AI models)
         // S1075: OpenRouter API endpoint (official public endpoint)
+#pragma warning disable S1075 // URIs should not be hardcoded - Official API endpoint
         const string OpenRouterApiBaseUrl = "https://openrouter.ai/api/v1/";
+#pragma warning restore S1075
 
         services.AddHttpClient("OpenRouter", client =>
         {
@@ -207,7 +240,9 @@ internal static class InfrastructureServiceExtensions
         // Qdrant client with optimized settings
         services.AddHttpClient("Qdrant", client =>
         {
+#pragma warning disable S1075 // URIs should not be hardcoded - Default/Fallback value
             var qdrantUrl = configuration["QdrantUrl"] ?? "http://localhost:6333";
+#pragma warning restore S1075
             client.BaseAddress = new Uri(qdrantUrl);
             var timeoutSeconds = configuration.GetValue<int>("AIAgents:DefaultTimeoutSeconds", 30);
             client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);

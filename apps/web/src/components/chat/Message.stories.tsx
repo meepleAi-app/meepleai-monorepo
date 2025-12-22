@@ -3,10 +3,12 @@
  * Issue #1676: Chromatic visual regression testing
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
-import { Message } from './Message';
 import { ChatContext, type ChatContextValue } from '@/store/chat/StorybookContext';
 import type { Message as MessageType } from '@/types';
+
+import { Message } from './Message';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const userMessage: MessageType = {
   id: 'msg-1',

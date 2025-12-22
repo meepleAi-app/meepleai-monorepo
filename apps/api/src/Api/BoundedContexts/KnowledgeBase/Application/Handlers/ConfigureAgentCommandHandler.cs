@@ -74,7 +74,13 @@ internal class ConfigureAgentCommandHandler : IRequestHandler<ConfigureAgentComm
                 ErrorCode: "INVALID_CONFIGURATION"
             );
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: COMMAND HANDLER PATTERN - CQRS handler boundary
+        // Specific ArgumentException is handled above
+        // Generic catch handles unexpected infrastructure failures (DB, network, memory)
+        // to prevent exception propagation to API layer. Returns Result/Response pattern.
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             _logger.LogError(ex, "Error configuring agent {AgentId}", request.AgentId);
             return new ConfigureAgentResult(

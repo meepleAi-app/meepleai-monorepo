@@ -13,7 +13,8 @@ internal class ConfigurationWrapper : IConfigurationWrapper
 
     public ConfigurationWrapper(IConfiguration configuration)
     {
-        _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+        ArgumentNullException.ThrowIfNull(configuration);
+        _configuration = configuration;
     }
 
     /// <inheritdoc />

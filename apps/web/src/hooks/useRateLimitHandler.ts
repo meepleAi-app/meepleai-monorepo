@@ -24,6 +24,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+
 import { RateLimitError } from '@/lib/api/core/errors';
 
 export interface UseRateLimitHandlerResult {
@@ -70,7 +71,7 @@ export function useRateLimitHandler(): UseRateLimitHandlerResult {
 
     // Start countdown timer
     timerRef.current = setInterval(() => {
-      setRemainingSeconds((prev) => {
+      setRemainingSeconds(prev => {
         if (prev <= 1) {
           // Timer expired
           if (timerRef.current) {

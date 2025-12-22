@@ -14,15 +14,18 @@
 'use client';
 
 import { useEffect } from 'react';
+
 import { Bell } from 'lucide-react';
+
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
 } from '@/components/ui/dropdown-menu';
-import { Button } from '@/components/ui/button';
 import { useNotificationStore, selectUnreadCount } from '@/store/notification/store';
+
 import { NotificationPanel } from './NotificationPanel';
 
 export function NotificationBell() {

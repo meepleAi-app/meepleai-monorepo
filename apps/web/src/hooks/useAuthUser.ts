@@ -22,6 +22,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+
 import { getCurrentUser } from '@/actions/auth';
 import type { AuthUser } from '@/types/auth';
 

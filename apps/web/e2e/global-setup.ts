@@ -7,8 +7,8 @@
  * 2. Starts memory monitoring for resource consumption visibility
  */
 
-import { waitForServerHealth } from './helpers/server-health';
 import { MemoryMonitor } from './helpers/memory-monitor';
+import { waitForServerHealth } from './helpers/server-health';
 
 export default async function globalSetup() {
   console.log('🔍 Waiting for server to be healthy...');

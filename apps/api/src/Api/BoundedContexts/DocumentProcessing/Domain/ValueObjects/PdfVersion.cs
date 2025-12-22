@@ -102,8 +102,7 @@ internal sealed class PdfVersion : ValueObject
     /// <returns>True if this version >= other version</returns>
     public bool IsAtLeast(PdfVersion other)
     {
-        if (other == null)
-            throw new ArgumentNullException(nameof(other));
+        ArgumentNullException.ThrowIfNull(other);
 
         if (Major > other.Major)
             return true;
@@ -122,8 +121,7 @@ internal sealed class PdfVersion : ValueObject
     /// <returns>True if versions are compatible</returns>
     public bool IsCompatibleWith(PdfVersion other)
     {
-        if (other == null)
-            throw new ArgumentNullException(nameof(other));
+        ArgumentNullException.ThrowIfNull(other);
 
         // Same major version and this minor >= other minor
         return Major == other.Major && Minor >= other.Minor;

@@ -15,6 +15,41 @@ internal static class ApiKeyEndpoints
 {
     public static RouteGroupBuilder MapApiKeyEndpoints(this RouteGroupBuilder group)
     {
+        MapApiKeyManagementEndpoints(group);
+        MapApiKeyUsageEndpoints(group);
+        MapAdminApiKeyEndpoints(group);
+
+        return group;
+    }
+
+    private static void MapApiKeyManagementEndpoints(RouteGroupBuilder group)
+    {
+        MapCreateApiKeyEndpoint(group);
+        MapListApiKeysEndpoint(group);
+        MapGetApiKeyEndpoint(group);
+        MapUpdateApiKeyEndpoint(group);
+        MapRevokeApiKeyEndpoint(group);
+    }
+
+    private static void MapApiKeyUsageEndpoints(RouteGroupBuilder group)
+    {
+        MapRotateApiKeyEndpoint(group);
+        MapGetApiKeyUsageEndpoint(group);
+        MapGetApiKeyStatsEndpoint(group);
+        MapGetApiKeyLogsEndpoint(group);
+    }
+
+    private static void MapAdminApiKeyEndpoints(RouteGroupBuilder group)
+    {
+        MapAdminDeleteApiKeyEndpoint(group);
+        MapAdminGetApiKeysStatsEndpoint(group);
+        MapAdminBulkExportApiKeysEndpoint(group);
+        MapAdminBulkImportApiKeysEndpoint(group);
+    }
+
+    // Helpers
+    private static void MapCreateApiKeyEndpoint(RouteGroupBuilder group)
+    {
         // API-04: API Key Management endpoints
         group.MapPost("/api-keys", async (Api.Models.CreateApiKeyRequest request, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
@@ -38,7 +73,10 @@ internal static class ApiKeyEndpoints
             return Results.Created($"/api/v1/api-keys/{result.ApiKey.Id}", result);
         })
         .RequireSession(); // Issue #1446: Automatic session validation
+    }
 
+    private static void MapListApiKeysEndpoint(RouteGroupBuilder group)
+    {
         group.MapGet("/api-keys", async (HttpContext context, IMediator mediator, bool includeRevoked = false, int page = 1, int pageSize = 20, CancellationToken ct = default) =>
         {
             // Session validated by RequireSessionFilter
@@ -53,7 +91,10 @@ internal static class ApiKeyEndpoints
             return Results.Json(result);
         })
         .RequireSession(); // Issue #1446: Automatic session validation
+    }
 
+    private static void MapGetApiKeyEndpoint(RouteGroupBuilder group)
+    {
         group.MapGet("/api-keys/{keyId}", async (string keyId, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             // Session validated by RequireSessionFilter
@@ -71,7 +112,10 @@ internal static class ApiKeyEndpoints
             return Results.Json(apiKey);
         })
         .RequireSession(); // Issue #1446: Automatic session validation
+    }
 
+    private static void MapUpdateApiKeyEndpoint(RouteGroupBuilder group)
+    {
         group.MapPut("/api-keys/{keyId}", async (string keyId, UpdateApiKeyRequest request, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             // Session validated by RequireSessionFilter
@@ -95,7 +139,10 @@ internal static class ApiKeyEndpoints
             return Results.Json(updated);
         })
         .RequireSession(); // Issue #1446: Automatic session validation
+    }
 
+    private static void MapRevokeApiKeyEndpoint(RouteGroupBuilder group)
+    {
         group.MapDelete("/api-keys/{keyId}", async (string keyId, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             // Session validated by RequireSessionFilter
@@ -116,7 +163,10 @@ internal static class ApiKeyEndpoints
             return Results.NoContent();
         })
         .RequireSession(); // Issue #1446: Automatic session validation
+    }
 
+    private static void MapRotateApiKeyEndpoint(RouteGroupBuilder group)
+    {
         group.MapPost("/api-keys/{keyId}/rotate", async (string keyId, RotateApiKeyRequest? request, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             // Session validated by RequireSessionFilter
@@ -140,7 +190,10 @@ internal static class ApiKeyEndpoints
             return Results.Json(result);
         })
         .RequireSession(); // Issue #1446: Automatic session validation
+    }
 
+    private static void MapGetApiKeyUsageEndpoint(RouteGroupBuilder group)
+    {
         group.MapGet("/api-keys/{keyId}/usage", async (string keyId, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             // Session validated by RequireSessionFilter
@@ -158,7 +211,10 @@ internal static class ApiKeyEndpoints
             return Results.Json(usage);
         })
         .RequireSession(); // Issue #1446: Automatic session validation
+    }
 
+    private static void MapGetApiKeyStatsEndpoint(RouteGroupBuilder group)
+    {
         // ISSUE-904: Get detailed usage statistics for an API key
         group.MapGet("/api-keys/{keyId}/stats", async (string keyId, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
@@ -184,7 +240,10 @@ internal static class ApiKeyEndpoints
             return Results.Json(stats);
         })
         .RequireSession(); // Issue #1446: Automatic session validation
+    }
 
+    private static void MapGetApiKeyLogsEndpoint(RouteGroupBuilder group)
+    {
         // ISSUE-904: Get usage logs for an API key (paginated)
         group.MapGet("/api-keys/{keyId}/logs", async (string keyId, HttpContext context, IMediator mediator, ILogger<Program> logger, int skip = 0, int take = 50, CancellationToken ct = default) =>
         {
@@ -220,7 +279,10 @@ internal static class ApiKeyEndpoints
             });
         })
         .RequireSession(); // Issue #1446: Automatic session validation
+    }
 
+    private static void MapAdminDeleteApiKeyEndpoint(RouteGroupBuilder group)
+    {
         // API-04: Admin API Key Management endpoint
         group.MapDelete("/admin/api-keys/{keyId}", async (string keyId, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
@@ -242,7 +304,10 @@ internal static class ApiKeyEndpoints
             return Results.NoContent();
         })
         .RequireAdminSession(); // Issue #1446: Automatic admin session validation
+    }
 
+    private static void MapAdminGetApiKeysStatsEndpoint(RouteGroupBuilder group)
+    {
         // ISSUE-904: Admin endpoint - Get all API keys with usage statistics
         group.MapGet("/admin/api-keys/stats", async (HttpContext context, IMediator mediator, ILogger<Program> logger, Guid? userId = null, bool includeRevoked = false, CancellationToken ct = default) =>
         {
@@ -269,7 +334,10 @@ internal static class ApiKeyEndpoints
             });
         })
         .RequireAdminSession(); // Issue #1446: Automatic admin session validation
+    }
 
+    private static void MapAdminBulkExportApiKeysEndpoint(RouteGroupBuilder group)
+    {
         // ISSUE-906: Bulk CSV export for API keys
         group.MapGet("/admin/api-keys/bulk/export", async (HttpContext context, IMediator mediator, ILogger<Program> logger, Guid? userId = null, bool? isActive = null, string? searchTerm = null, CancellationToken ct = default) =>
         {
@@ -293,7 +361,10 @@ internal static class ApiKeyEndpoints
                 fileName);
         })
         .RequireAdminSession(); // Issue #1446: Automatic admin session validation
+    }
 
+    private static void MapAdminBulkImportApiKeysEndpoint(RouteGroupBuilder group)
+    {
         // ISSUE-906: Bulk CSV import for API keys
         group.MapPost("/admin/api-keys/bulk/import", async (HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
@@ -324,7 +395,5 @@ internal static class ApiKeyEndpoints
         })
         .RequireAdminSession() // Issue #1446: Automatic admin session validation
         .DisableAntiforgery(); // CSV upload requires form data
-
-        return group;
     }
 }

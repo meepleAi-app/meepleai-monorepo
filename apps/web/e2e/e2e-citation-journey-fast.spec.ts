@@ -38,7 +38,6 @@
  */
 
 import { test, expect } from './fixtures/chromatic';
-import { setupAuthRoutes, waitForAutoSelection } from './helpers/qa-test-utils';
 import {
   verifyCitationDisplay,
   verifyNoCitations,
@@ -48,8 +47,6 @@ import {
   SSEStreamEvent,
   setupCitationTestEnv,
   sendQuestionAndWaitForResponse,
-  CitationResponse,
-  mockCitationAPI,
 } from './helpers/citation-test-utils';
 
 /**

@@ -115,7 +115,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
 
         // Register configuration service mock
         var configServiceMock = new Mock<IConfigurationService>();
-        configServiceMock.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<string?>()))
+        configServiceMock.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>()!, It.IsAny<int?>(), It.IsAny<string?>()))
             .ReturnsAsync((int?)null); // Use default limits
         services.AddSingleton<IConfigurationService>(configServiceMock.Object);
 
@@ -163,7 +163,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
     private async Task<User> CreateUserAsync(UserTier tier, AuthRole? role = null)
     {
         var userRepo = _serviceProvider!.GetRequiredService<IUserRepository>();
-        var unitOfWork = _serviceProvider.GetRequiredService<IUnitOfWork>();
+        var unitOfWork = _serviceProvider!.GetRequiredService<IUnitOfWork>();
 
         var user = new User(
             id: Guid.NewGuid(),
@@ -448,7 +448,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
 
         // Act - Upgrade to Premium
         var userRepo = _serviceProvider!.GetRequiredService<IUserRepository>();
-        var unitOfWork = _serviceProvider.GetRequiredService<IUnitOfWork>();
+        var unitOfWork = _serviceProvider!.GetRequiredService<IUnitOfWork>();
 
         user.UpdateTier(UserTier.Premium, AuthRole.Admin);
         await userRepo.UpdateAsync(user, TestCancellationToken);
@@ -482,7 +482,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
 
         // Act - Downgrade to Free
         var userRepo = _serviceProvider!.GetRequiredService<IUserRepository>();
-        var unitOfWork = _serviceProvider.GetRequiredService<IUnitOfWork>();
+        var unitOfWork = _serviceProvider!.GetRequiredService<IUnitOfWork>();
 
         user.UpdateTier(UserTier.Free, AuthRole.Admin);
         await userRepo.UpdateAsync(user, TestCancellationToken);
@@ -542,7 +542,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
 
         // Act - Create new quota service instance (simulates service restart)
         var configServiceMock = new Mock<IConfigurationService>();
-        configServiceMock.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<string?>()))
+        configServiceMock.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>()!, It.IsAny<int?>(), It.IsAny<string?>()))
             .ReturnsAsync((int?)null);
 
         var newQuotaService = new PdfUploadQuotaService(

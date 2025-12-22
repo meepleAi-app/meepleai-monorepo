@@ -4,25 +4,16 @@
  * @see apps/web/e2e/pages/helpers/AuthHelper.ts
  */
 
-import { test, expect } from './fixtures/chromatic';
-import { AuthPage } from './pages/auth/AuthPage';
 import { loginAsUser } from './fixtures/auth';
-import { WaitHelper } from './helpers/WaitHelper';
+import { test, expect } from './fixtures/chromatic';
 import {
   setupTwoFactorMocks,
   mockTwoFactorStatus,
-  mockTwoFactorSetup,
   mockTwoFactorEnable,
-  mockTwoFactorVerify,
   mockTwoFactorDisable,
-  mockExpiredTempSession,
-  mockBackupCodeUsage,
-  generateMockBackupCodes,
-  generateMockTotpSecret,
-  generateMockQRCodeUri,
-  type Mock2FAStatus,
-  type MockTotpSetup,
 } from './fixtures/twoFactor';
+import { WaitHelper } from './helpers/WaitHelper';
+import { AuthPage } from './pages/auth/AuthPage';
 
 // ============================================================================
 // Test Suite: 2FA Setup & Enable Flow

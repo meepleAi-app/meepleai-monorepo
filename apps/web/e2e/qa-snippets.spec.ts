@@ -7,7 +7,6 @@
  */
 
 import { test, expect, Page } from './fixtures/chromatic';
-import { getTextMatcher, t } from './fixtures/i18n';
 import { waitForAutoSelection } from './helpers/qa-test-utils';
 
 const apiBase = 'http://localhost:8080';

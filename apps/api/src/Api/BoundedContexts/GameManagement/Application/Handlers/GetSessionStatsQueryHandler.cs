@@ -36,7 +36,7 @@ internal class GetSessionStatsQueryHandler : IQueryHandler<GetSessionStatsQuery,
         var completedSessions = sessions.Count(s => s.Status == SessionStatus.Completed);
         var abandonedSessions = sessions.Count(s => s.Status == SessionStatus.Abandoned);
 
-        var averageDuration = sessions.Any()
+        var averageDuration = sessions.Count > 0
             ? (int)Math.Round(sessions.Average(s => s.Duration.TotalMinutes))
             : 0;
 
@@ -52,12 +52,12 @@ internal class GetSessionStatsQueryHandler : IQueryHandler<GetSessionStatsQuery,
                 var winnerName = session.WinnerName.Trim();
 
                 // Store original casing from first occurrence for display
-                if (!originalNames.ContainsKey(winnerName))
-                    originalNames[winnerName] = winnerName;
+                originalNames.TryAdd(winnerName, winnerName);
 
-                if (!winCounts.ContainsKey(winnerName))
-                    winCounts[winnerName] = 0;
-                winCounts[winnerName]++;
+                if (!winCounts.TryGetValue(winnerName, out var count))
+                    winCounts[winnerName] = 1;
+                else
+                    winCounts[winnerName] = count + 1;
             }
         }
 

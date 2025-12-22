@@ -3,9 +3,11 @@
  * Issue #1676: Chromatic visual regression testing
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
-import { MessageEditForm } from './MessageEditForm';
 import { ChatContext, type ChatContextValue } from '@/store/chat/StorybookContext';
+
+import { MessageEditForm } from './MessageEditForm';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const createMockContext = (overrides: Partial<ChatContextValue> = {}): ChatContextValue => ({
   editingMessageId: 'msg-1',

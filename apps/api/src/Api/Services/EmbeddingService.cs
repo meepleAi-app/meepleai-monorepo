@@ -24,8 +24,10 @@ internal class EmbeddingService : IEmbeddingService
     {
         // S1450: providerFactory used only locally for initialization
         ArgumentNullException.ThrowIfNull(providerFactory);
-        _config = config?.Value ?? throw new ArgumentNullException(nameof(config));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(config);
+        _config = config.Value;
+        ArgumentNullException.ThrowIfNull(logger);
+        _logger = logger;
 
         // Initialize providers
         _primaryProvider = providerFactory.GetPrimaryProvider();

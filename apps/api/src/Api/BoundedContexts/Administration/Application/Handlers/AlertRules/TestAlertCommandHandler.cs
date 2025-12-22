@@ -18,7 +18,7 @@ internal class TestAlertCommandHandler : IRequestHandler<TestAlertCommand, bool>
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public async Task<bool> Handle(TestAlertCommand request, CancellationToken ct)
+    public async Task<bool> Handle(TestAlertCommand request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
         try
@@ -38,7 +38,7 @@ internal class TestAlertCommandHandler : IRequestHandler<TestAlertCommand, bool>
                     ["test"] = true,
                     ["channel"] = request.Channel
                 },
-                ct).ConfigureAwait(false);
+                cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Test alert sent successfully: Type={AlertType}, Channel={Channel}",
@@ -47,6 +47,11 @@ internal class TestAlertCommandHandler : IRequestHandler<TestAlertCommand, bool>
 
             return true;
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: COMMAND HANDLER PATTERN - Test/diagnostic operation failure handling
+        // Catches all exceptions during test alert send (network, config, service failures)
+        // to return false instead of throwing. Logs error for diagnostics. Test operations
+        // should not throw exceptions - returning false indicates test failure.
         catch (Exception ex)
         {
             _logger.LogError(
@@ -57,5 +62,7 @@ internal class TestAlertCommandHandler : IRequestHandler<TestAlertCommand, bool>
                 ex.Message);
             return false;
         }
+#pragma warning restore CA1031
     }
 }
+

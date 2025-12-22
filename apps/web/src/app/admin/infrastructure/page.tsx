@@ -19,6 +19,7 @@
  */
 
 import { RequireRole } from '@/components/auth/RequireRole';
+
 import { InfrastructureClient } from './infrastructure-client';
 
 export default function InfrastructurePage() {

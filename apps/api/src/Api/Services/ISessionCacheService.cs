@@ -9,10 +9,10 @@ internal interface ISessionCacheService
     /// <summary>
     /// Invalidate a specific session (e.g., on logout)
     /// </summary>
-    Task InvalidateAsync(string tokenHash, CancellationToken ct = default);
+    Task InvalidateAsync(string tokenHash, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Invalidate all sessions for a user (e.g., password change)
     /// </summary>
-    Task InvalidateUserSessionsAsync(Guid userId, CancellationToken ct = default);
+    Task InvalidateUserSessionsAsync(Guid userId, CancellationToken cancellationToken = default);
 }

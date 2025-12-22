@@ -15,6 +15,8 @@ internal record CreateAlertRuleCommand(
 
 internal class CreateAlertRuleCommandValidator : AbstractValidator<CreateAlertRuleCommand>
 {
+    private static readonly string[] AllowedSeverities = { "Info", "Warning", "Error", "Critical" };
+
     public CreateAlertRuleCommandValidator()
     {
         RuleFor(x => x.Name)
@@ -27,7 +29,7 @@ internal class CreateAlertRuleCommandValidator : AbstractValidator<CreateAlertRu
 
         RuleFor(x => x.Severity)
             .NotEmpty().WithMessage("Severity is required")
-            .Must(s => new[] { "Info", "Warning", "Error", "Critical" }.Contains(s, StringComparer.Ordinal))
+            .Must(s => AllowedSeverities.Contains(s, StringComparer.Ordinal))
             .WithMessage("Severity must be one of: Info, Warning, Error, Critical");
 
         RuleFor(x => x.ThresholdValue)

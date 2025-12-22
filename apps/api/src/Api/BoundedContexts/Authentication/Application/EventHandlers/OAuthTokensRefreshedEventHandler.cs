@@ -13,7 +13,7 @@ internal sealed class OAuthTokensRefreshedEventHandler : DomainEventHandlerBase<
 {
     public OAuthTokensRefreshedEventHandler(
         MeepleAiDbContext dbContext,
-        ILogger<DomainEventHandlerBase<OAuthTokensRefreshedEvent>> logger)
+        ILogger<OAuthTokensRefreshedEventHandler> logger)
         : base(dbContext, logger)
     {
     }

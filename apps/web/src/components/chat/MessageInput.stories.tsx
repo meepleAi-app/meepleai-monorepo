@@ -1,6 +1,8 @@
-import type { Meta, StoryObj } from '@storybook/react';
-import { MessageInput } from './MessageInput';
 import { ChatContext, type ChatContextValue } from '@/store/chat/StorybookContext';
+
+import { MessageInput } from './MessageInput';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 /**
  * MessageInput component for sending chat messages.

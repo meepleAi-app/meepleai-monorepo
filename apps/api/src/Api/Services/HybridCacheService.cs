@@ -27,7 +27,9 @@ internal class HybridCacheService : IHybridCacheService
     // Statistics tracking (in-memory per instance)
     private long _totalHits;
     private long _totalMisses;
+#pragma warning disable CS0649 // Field is never assigned to - reserved for future stampede prevention tracking
     private long _stampedePreventions;
+#pragma warning restore CS0649
 
     public HybridCacheService(
         HybridCache hybridCache,
@@ -38,7 +40,7 @@ internal class HybridCacheService : IHybridCacheService
         ArgumentNullException.ThrowIfNull(hybridCache);
         _hybridCache = hybridCache;
         ArgumentNullException.ThrowIfNull(config);
-        _config = config.Value ?? throw new ArgumentNullException(nameof(config));
+        _config = config.Value;
         ArgumentNullException.ThrowIfNull(logger);
         _logger = logger;
         _redis = redis;
@@ -46,7 +48,6 @@ internal class HybridCacheService : IHybridCacheService
     }
 
     /// <inheritdoc />
-#pragma warning disable MA0051
     public async Task<T> GetOrCreateAsync<T>(
         string cacheKey,
         Func<CancellationToken, Task<T>> factory,
@@ -61,22 +62,10 @@ internal class HybridCacheService : IHybridCacheService
         try
         {
             // HybridCache GetOrCreateAsync provides built-in cache stampede protection
-            var result = await _hybridCache.GetOrCreateAsync(
+            var result = await _hybridCache.GetOrCreateAsync<T>(
                 key: cacheKey,
-                factory: async cancellationToken =>
-                {
-                    _logger.LogDebug("Cache MISS for key: {CacheKey}. Executing factory.", cacheKey);
-                    Interlocked.Increment(ref _totalMisses);
-
-                    var value = await factory(cancellationToken).ConfigureAwait(false);
-                    return value;
-                },
-                options: new HybridCacheEntryOptions
-                {
-                    Expiration = effectiveExpiration,
-                    LocalCacheExpiration = effectiveExpiration, // L1 cache expiration
-                    Flags = HybridCacheEntryFlags.DisableCompression // AI responses already compressed by LLM
-                },
+                factory: CreateFactoryWrapper(factory, cacheKey),
+                options: CreateCacheEntryOptions(effectiveExpiration),
                 tags: tags,
                 cancellationToken: ct
             ).ConfigureAwait(false);
@@ -95,27 +84,62 @@ internal class HybridCacheService : IHybridCacheService
 
             return result;
         }
-        catch (RedisConnectionException ex)
+        catch (Exception ex) when (ex is RedisConnectionException or RedisTimeoutException or InvalidOperationException or JsonException)
         {
-            _logger.LogError(ex, "Redis connection failed for key {CacheKey}. Falling back to factory.", cacheKey);
-            // Redis unavailable, execute factory directly
-            return await factory(ct).ConfigureAwait(false);
+            return await HandleCacheException(ex, cacheKey, factory, ct).ConfigureAwait(false);
         }
-        catch (RedisTimeoutException ex)
+    }
+    /// <summary>
+    /// Creates a factory wrapper that logs cache misses and increments miss counter
+    /// </summary>
+    private Func<CancellationToken, ValueTask<T>> CreateFactoryWrapper<T>(Func<CancellationToken, Task<T>> factory, string cacheKey) where T : class
+    {
+        return cancellationToken => new ValueTask<T>(ExecuteFactoryAsync(factory, cacheKey, cancellationToken));
+    }
+
+    private async Task<T> ExecuteFactoryAsync<T>(Func<CancellationToken, Task<T>> factory, string cacheKey, CancellationToken cancellationToken) where T : class
+    {
+        _logger.LogDebug("Cache MISS for key: {CacheKey}. Executing factory.", cacheKey);
+        Interlocked.Increment(ref _totalMisses);
+
+        var value = await factory(cancellationToken).ConfigureAwait(false);
+        return value;
+    }
+
+    /// <summary>
+    /// Creates cache entry options with the specified expiration
+    /// </summary>
+    private static HybridCacheEntryOptions CreateCacheEntryOptions(TimeSpan expiration)
+    {
+        return new HybridCacheEntryOptions
         {
-            _logger.LogWarning(ex, "Redis timeout for key {CacheKey}. Falling back to factory.", cacheKey);
-            return await factory(ct).ConfigureAwait(false);
-        }
-        catch (InvalidOperationException ex)
+            Expiration = expiration,
+            LocalCacheExpiration = expiration, // L1 cache expiration
+            Flags = HybridCacheEntryFlags.DisableCompression // AI responses already compressed by LLM
+        };
+    }
+
+    /// <summary>
+    /// Handles cache exceptions by logging and falling back to factory
+    /// </summary>
+    private async Task<T> HandleCacheException<T>(
+        Exception ex,
+        string cacheKey,
+        Func<CancellationToken, Task<T>> factory,
+        CancellationToken ct) where T : class
+    {
+        var logLevel = ex is RedisTimeoutException ? LogLevel.Warning : LogLevel.Error;
+        var message = ex switch
         {
-            _logger.LogError(ex, "Invalid cache operation for key {CacheKey}. Falling back to factory.", cacheKey);
-            return await factory(ct).ConfigureAwait(false);
-        }
-        catch (JsonException ex)
-        {
-            _logger.LogError(ex, "JSON serialization error for key {CacheKey}. Falling back to factory.", cacheKey);
-            return await factory(ct).ConfigureAwait(false);
-        }
+            RedisConnectionException => "Redis connection failed for key {CacheKey}. Falling back to factory.",
+            RedisTimeoutException => "Redis timeout for key {CacheKey}. Falling back to factory.",
+            InvalidOperationException => "Invalid cache operation for key {CacheKey}. Falling back to factory.",
+            JsonException => "JSON serialization error for key {CacheKey}. Falling back to factory.",
+            _ => "Cache error for key {CacheKey}. Falling back to factory."
+        };
+
+        _logger.Log(logLevel, ex, message, cacheKey);
+        return await factory(ct).ConfigureAwait(false);
     }
 
 
@@ -130,15 +154,13 @@ internal class HybridCacheService : IHybridCacheService
 
         ArgumentNullException.ThrowIfNull(factory);
 
-        if (tags != null && _config.EnableTags)
+        if (tags != null && _config.EnableTags && tags.Length > _config.MaxTagsPerEntry)
         {
-            if (tags.Length > _config.MaxTagsPerEntry)
-            {
-                throw new ArgumentException(
-                    $"Number of tags ({tags.Length}) exceeds maximum allowed ({_config.MaxTagsPerEntry})",
-                    nameof(tags));
-            }
+            throw new ArgumentException(
+                $"Number of tags ({tags.Length}) exceeds maximum allowed ({_config.MaxTagsPerEntry})",
+                nameof(tags));
         }
+
     }
 
     /// <inheritdoc />

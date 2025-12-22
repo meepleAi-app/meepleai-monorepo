@@ -21,7 +21,7 @@ const ENDPOINT_COLORS: Record<string, string> = {
   chess: '#34a853',
 };
 
-const COLORS = ['#1a73e8', '#f9ab00', '#a142f4', '#34a853', '#ea4335'];
+const _COLORS = ['#1a73e8', '#f9ab00', '#a142f4', '#34a853', '#ea4335'];
 
 const ChartSkeleton = () => (
   <div className="h-[300px] w-full animate-pulse rounded-lg bg-slate-100 dark:bg-slate-800" />
@@ -227,8 +227,9 @@ export function FeedbackChart({ feedbackCounts }: FeedbackChartProps) {
  * Admin charts (Recharts) - dynamically loaded to avoid SSR/bundle bloat.
  */
 
-import dynamic from 'next/dynamic';
 import { Suspense } from 'react';
+
+import dynamic from 'next/dynamic';
 
 const isTest = process.env.NODE_ENV === 'test';
 const recharts = isTest ? require('recharts') : null;

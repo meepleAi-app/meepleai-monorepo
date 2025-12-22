@@ -5,7 +5,7 @@ namespace Api.Infrastructure.Entities;
 /// AUTH-07: Secure temp token between password validation and 2FA verification
 /// DDD-PHASE2: Converted to Guid IDs for domain alignment.
 /// </summary>
-internal class TempSessionEntity
+public class TempSessionEntity
 {
     required public Guid Id { get; set; }
     required public Guid UserId { get; set; }

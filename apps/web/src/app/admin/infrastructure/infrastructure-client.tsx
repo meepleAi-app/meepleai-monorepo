@@ -20,29 +20,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { AdminLayout } from '@/components/admin/AdminLayout';
-import { ServiceHealthMatrix } from '@/components/admin/ServiceHealthMatrix';
-import { MetricsChart, type DataPoint, type DataSeries } from '@/components/metrics/MetricsChart';
-import { GrafanaEmbed } from '@/components/admin/GrafanaEmbed';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { api } from '@/lib/api';
-import { getInfrastructureI18n, type Locale } from '@/lib/i18n/infrastructure';
-import { toast } from 'sonner';
+
 import {
   RefreshCwIcon,
   DownloadIcon,
@@ -55,14 +33,39 @@ import {
   TrendingUpIcon,
   ClockIcon,
 } from 'lucide-react';
-import type { InfrastructureDetails, ServiceHealthStatus, HealthState } from '@/lib/api';
+import { toast } from 'sonner';
+
+import { AdminLayout } from '@/components/admin/AdminLayout';
+import { GrafanaEmbed } from '@/components/admin/GrafanaEmbed';
+import { ServiceHealthMatrix } from '@/components/admin/ServiceHealthMatrix';
+import { MetricsChart, type DataPoint, type DataSeries } from '@/components/metrics/MetricsChart';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
+import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useUserLocale } from '@/hooks/useUserLocale';
+import { api } from '@/lib/api';
+import type { InfrastructureDetails, HealthState } from '@/lib/api';
+import { getInfrastructureI18n, type Locale } from '@/lib/i18n/infrastructure';
 
 type FilterMode = 'all' | 'healthy' | 'unhealthy';
 type SortField = 'name' | 'status' | 'responseTime';
 type TimeRange = '1h' | '6h' | '24h' | '7d';
 
 export function InfrastructureClient() {
-  const locale: Locale = 'it'; // TODO: Get from user preferences
+  const locale = useUserLocale() as Locale; // User preferences → browser → default
   const i18n = getInfrastructureI18n(locale);
 
   // State

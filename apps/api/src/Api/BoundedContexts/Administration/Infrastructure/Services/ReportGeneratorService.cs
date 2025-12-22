@@ -37,7 +37,7 @@ internal sealed partial class ReportGeneratorService : IReportGeneratorService
         ReportTemplate template,
         ReportFormat format,
         IReadOnlyDictionary<string, object> parameters,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         _logger.LogInformation(
             "Generating {Template} report in {Format} format",
@@ -53,10 +53,10 @@ internal sealed partial class ReportGeneratorService : IReportGeneratorService
         // Generate content based on template
         var content = template switch
         {
-            ReportTemplate.SystemHealth => await GenerateSystemHealthReportAsync(parameters, ct).ConfigureAwait(false),
-            ReportTemplate.UserActivity => await GenerateUserActivityReportAsync(parameters, ct).ConfigureAwait(false),
-            ReportTemplate.AIUsage => await GenerateAIUsageReportAsync(parameters, ct).ConfigureAwait(false),
-            ReportTemplate.ContentMetrics => await GenerateContentMetricsReportAsync(parameters, ct).ConfigureAwait(false),
+            ReportTemplate.SystemHealth => await GenerateSystemHealthReportAsync(parameters, cancellationToken).ConfigureAwait(false),
+            ReportTemplate.UserActivity => await GenerateUserActivityReportAsync(parameters, cancellationToken).ConfigureAwait(false),
+            ReportTemplate.AIUsage => await GenerateAIUsageReportAsync(parameters, cancellationToken).ConfigureAwait(false),
+            ReportTemplate.ContentMetrics => await GenerateContentMetricsReportAsync(parameters, cancellationToken).ConfigureAwait(false),
             _ => throw new ArgumentOutOfRangeException(nameof(template), template, "Unknown report template")
         };
 
@@ -96,3 +96,4 @@ internal sealed partial class ReportGeneratorService : IReportGeneratorService
         };
     }
 }
+

@@ -5,9 +5,11 @@
  * Covers: ratings, badges, states, responsive behavior
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
-import { GameCard } from './GameCard';
 import type { Game } from '@/lib/api';
+
+import { GameCard } from './GameCard';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta = {
   title: 'Components/Games/GameCard',

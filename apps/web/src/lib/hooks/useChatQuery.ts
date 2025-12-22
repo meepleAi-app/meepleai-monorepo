@@ -1,5 +1,6 @@
-import type { Citation } from '@/types';
 import { useCallback, useState } from 'react';
+
+import type { Citation } from '@/types';
 
 type Snippet = {
   text: string;

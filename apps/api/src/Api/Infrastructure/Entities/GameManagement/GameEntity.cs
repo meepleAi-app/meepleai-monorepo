@@ -1,6 +1,6 @@
 namespace Api.Infrastructure.Entities;
 
-internal class GameEntity
+public class GameEntity
 {
     // DDD-PHASE2: Converted to Guid for domain alignment
     public Guid Id { get; set; } = Guid.NewGuid();
@@ -22,6 +22,22 @@ internal class GameEntity
     // Admin Wizard: Game images
     public string? IconUrl { get; set; }
     public string? ImageUrl { get; set; }
+
+    // PDF Upload: Version tracking (Issue: Game auto-creation)
+    /// <summary>
+    /// Type of game version: base, expansion, errata, home_rule
+    /// </summary>
+    public string? VersionType { get; set; }
+
+    /// <summary>
+    /// Language code: it, en, de, fr, es, etc.
+    /// </summary>
+    public string? Language { get; set; }
+
+    /// <summary>
+    /// Version number: 1.0, 2.0, 1.5, etc.
+    /// </summary>
+    public string? VersionNumber { get; set; }
 
     public ICollection<RuleSpecEntity> RuleSpecs { get; set; } = new List<RuleSpecEntity>();
     public ICollection<AgentEntity> Agents { get; set; } = new List<AgentEntity>();

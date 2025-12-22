@@ -391,14 +391,14 @@ internal class OAuthService : IOAuthService
         var emails = JsonSerializer.Deserialize<JsonElement>(jsonResponse);
 
         // Find primary verified email
-        foreach (var emailObj in emails.EnumerateArray())
+        var verifiedEmail = emails.EnumerateArray()
+            .Where(e => e.GetProperty("primary").GetBoolean() && e.GetProperty("verified").GetBoolean())
+            .Select(e => e.GetProperty("email").GetString())
+            .FirstOrDefault();
+
+        if (verifiedEmail != null)
         {
-            if (emailObj.GetProperty("primary").GetBoolean() &&
-                emailObj.GetProperty("verified").GetBoolean())
-            {
-                return emailObj.GetProperty("email").GetString()
-                    ?? throw new InvalidOperationException("Primary email is null");
-            }
+            return verifiedEmail!;
         }
 
         throw new InvalidOperationException("No verified primary email found on GitHub account");
@@ -430,7 +430,7 @@ internal class OAuthService : IOAuthService
     /// <inheritdoc />
     public async Task<OAuthTokenResponse?> RefreshTokenAsync(Guid userId, string provider)
     {
-        ArgumentNullException.ThrowIfNull(provider, nameof(provider));
+        ArgumentNullException.ThrowIfNull(provider);
         // GitHub doesn't support refresh tokens
         if (provider.Equals("github", StringComparison.OrdinalIgnoreCase))
         {

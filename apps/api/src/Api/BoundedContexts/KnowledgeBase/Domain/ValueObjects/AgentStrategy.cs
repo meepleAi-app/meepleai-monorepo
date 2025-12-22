@@ -14,6 +14,16 @@ internal sealed record AgentStrategy
     public string Name { get; init; }
     public IReadOnlyDictionary<string, object> Parameters { get; init; }
 
+    private static readonly string[] DefaultModels = { "gpt-4", "claude-3-opus" };
+    private static readonly string[] ValidationLayers =
+    {
+        "RetrievalScore",
+        "LLMConfidence",
+        "CitationVerification",
+        "ForbiddenKeywords",
+        "ConsensusCheck"
+    };
+
     private AgentStrategy(string name, Dictionary<string, object> parameters)
     {
         if (string.IsNullOrWhiteSpace(name))
@@ -69,7 +79,7 @@ internal sealed record AgentStrategy
             parameters: new Dictionary<string, object>
 (StringComparer.Ordinal)
             {
-                ["Models"] = models ?? new[] { "gpt-4", "claude-3-opus" },
+                ["Models"] = models ?? DefaultModels,
                 ["ConsensusThreshold"] = consensusThreshold
             }
         );
@@ -103,14 +113,7 @@ internal sealed record AgentStrategy
             {
                 ["MinConfidence"] = minConfidence,
                 ["EnableMultiLayer"] = enableMultiLayer,
-                ["Layers"] = new[]
-                {
-                    "RetrievalScore",
-                    "LLMConfidence",
-                    "CitationVerification",
-                    "ForbiddenKeywords",
-                    "ConsensusCheck"
-                }
+                ["Layers"] = ValidationLayers
             }
         );
 

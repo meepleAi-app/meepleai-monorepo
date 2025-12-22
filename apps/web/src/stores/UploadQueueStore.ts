@@ -16,6 +16,9 @@
  * - All public methods call ensureWorkerInitialized() before Worker interaction
  */
 
+import { createErrorContext } from '@/lib/errors';
+import { logger } from '@/lib/logger';
+
 import type {
   WorkerRequest,
   WorkerResponse,
@@ -23,8 +26,6 @@ import type {
   FileData,
 } from '../workers/uploadQueue.worker';
 import type { UploadQueueItem as WorkerUploadQueueItem } from '../workers/uploadQueue.worker';
-import { logger } from '@/lib/logger';
-import { createErrorContext } from '@/lib/errors';
 
 // Re-export types for public API
 export type { UploadStatus, UploadQueueState } from '../workers/uploadQueue.worker';

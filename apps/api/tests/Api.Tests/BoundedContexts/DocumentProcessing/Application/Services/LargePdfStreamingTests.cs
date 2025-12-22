@@ -280,7 +280,7 @@ file class FakeExtractor : IPdfTextExtractor
         _name = name;
     }
 
-    public Task<TextExtractionResult> ExtractTextAsync(Stream pdfStream, bool enableOcrFallback = true, CancellationToken ct = default)
+    public Task<TextExtractionResult> ExtractTextAsync(Stream pdfStream, bool enableOcrFallback = true, CancellationToken cancellationToken = default)
     {
         var result = new TextExtractionResult(
             Success: _success,
@@ -294,9 +294,11 @@ file class FakeExtractor : IPdfTextExtractor
         return Task.FromResult(result);
     }
 
-    public Task<PagedTextExtractionResult> ExtractPagedTextAsync(Stream pdfStream, bool enableOcrFallback = true, CancellationToken ct = default)
+    public Task<PagedTextExtractionResult> ExtractPagedTextAsync(Stream pdfStream, bool enableOcrFallback = true, CancellationToken cancellationToken = default)
     {
+#pragma warning disable MA0025 // Implement the functionality - This is a test stub, not used in tests
         throw new NotImplementedException();
+#pragma warning restore MA0025
     }
 }
 
@@ -314,12 +316,14 @@ file class FakePagedExtractor : IPdfTextExtractor
         _chunks = chunks ?? new List<PageTextChunk>();
     }
 
-    public Task<TextExtractionResult> ExtractTextAsync(Stream pdfStream, bool enableOcrFallback = true, CancellationToken ct = default)
+    public Task<TextExtractionResult> ExtractTextAsync(Stream pdfStream, bool enableOcrFallback = true, CancellationToken cancellationToken = default)
     {
+#pragma warning disable MA0025 // Implement the functionality - This is a test stub, not used in tests
         throw new NotImplementedException();
+#pragma warning restore MA0025
     }
 
-    public Task<PagedTextExtractionResult> ExtractPagedTextAsync(Stream pdfStream, bool enableOcrFallback = true, CancellationToken ct = default)
+    public Task<PagedTextExtractionResult> ExtractPagedTextAsync(Stream pdfStream, bool enableOcrFallback = true, CancellationToken cancellationToken = default)
     {
         var result = new PagedTextExtractionResult(
             Success: _success,

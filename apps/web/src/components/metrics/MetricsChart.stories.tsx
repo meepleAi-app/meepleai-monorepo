@@ -1,6 +1,8 @@
-import type { Meta, StoryObj } from '@storybook/react';
 import React from 'react';
+
 import { MetricsChart } from './MetricsChart';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta: Meta<typeof MetricsChart> = {
   title: 'Components/MetricsChart',

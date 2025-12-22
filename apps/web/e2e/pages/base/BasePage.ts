@@ -1,4 +1,5 @@
 import { Page, Locator, expect } from '@playwright/test';
+
 import { IBasePage, WaitOptions, ClickOptions } from '../../types/pom-interfaces';
 
 /**

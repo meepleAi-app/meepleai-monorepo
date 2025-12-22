@@ -29,7 +29,7 @@ namespace Api.Tests.Services;
 /// </remarks>
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Security", "CA5394:Do not use insecure randomness", Justification = "Random.Shared used for test latency simulation only, not cryptographic purposes")]
 [Trait("Category", TestCategories.Unit)]
-public class RagServicePerformanceTests : IDisposable
+public sealed class RagServicePerformanceTests : IDisposable
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly Action<string> _output;
@@ -317,9 +317,9 @@ public class RagServicePerformanceTests : IDisposable
                 It.IsAny<float[]>(),
                 It.IsAny<string>(),
                 It.IsAny<int>(),
-                It.IsAny<IReadOnlyList<string>?>(),
+                It.IsAny<List<string>?>(),
                 It.IsAny<CancellationToken>()))
-            .Returns(async (string gameId, float[] embedding, string lang, int limit, IReadOnlyList<string>? documentIds, CancellationToken ct) =>
+            .Returns(async (string gameId, float[] embedding, string lang, int limit, List<string>? documentIds, CancellationToken ct) =>
             {
                 // Simulate realistic vector search latency: 100-200ms
                 await Task.Delay(Random.Shared.Next(100, 200), ct);
@@ -342,11 +342,11 @@ public class RagServicePerformanceTests : IDisposable
                 It.IsAny<Guid>(),
                 It.IsAny<SearchMode>(),
                 It.IsAny<int>(),
-                It.IsAny<IReadOnlyList<Guid>?>(),
+                It.IsAny<List<Guid>?>(),
                 It.IsAny<float>(),
                 It.IsAny<float>(),
                 It.IsAny<CancellationToken>()))
-            .Returns(async (string query, Guid gameId, SearchMode mode, int limit, IReadOnlyList<Guid>? documentIds, float vw, float kw, CancellationToken ct) =>
+            .Returns(async (string query, Guid gameId, SearchMode mode, int limit, List<Guid>? documentIds, float vw, float kw, CancellationToken ct) =>
             {
                 // Simulate realistic hybrid search latency: 150-250ms
                 await Task.Delay(Random.Shared.Next(150, 250), ct);

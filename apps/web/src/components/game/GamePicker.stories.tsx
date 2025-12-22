@@ -1,5 +1,6 @@
-import type { Meta, StoryObj } from '@storybook/react';
 import { GamePicker } from './GamePicker';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 // Mock function for onClick handlers in Storybook (avoids Vitest/Jest dependency)
 const fn = <T extends unknown[], R>(implementation?: (...args: T) => R) =>
@@ -165,7 +166,7 @@ export const ValidationError: Story = {
       }
     }),
   },
-  play: async ({ canvasElement }) => {
+  play: async ({ canvasElement: _canvasElement }) => {
     // Note: This is for documentation purposes
     // In actual usage, user would type short name and click Create
   },

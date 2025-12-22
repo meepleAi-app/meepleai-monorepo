@@ -29,8 +29,10 @@
  */
 
 import { ReactNode } from 'react';
-import { Button } from '@/components/ui/button';
+
 import { Loader2 } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 export interface LoadingButtonProps extends React.ComponentPropsWithoutRef<typeof Button> {
@@ -71,10 +73,7 @@ export function LoadingButton({
       disabled={disabled || isLoading}
       aria-busy={isLoading}
       aria-live="polite"
-      className={cn(
-        isLoading && 'opacity-70 cursor-not-allowed',
-        className
-      )}
+      className={cn(isLoading && 'opacity-70 cursor-not-allowed', className)}
     >
       {isLoading && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
       {isLoading ? loadingText || null : children}

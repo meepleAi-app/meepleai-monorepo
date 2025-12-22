@@ -8,15 +8,20 @@ namespace Api.SharedKernel.Infrastructure;
 /// Base repository class providing domain event collection for all repositories.
 /// Ensures domain events are collected from aggregates before persistence.
 /// </summary>
-internal abstract class RepositoryBase
+public abstract class RepositoryBase
 {
-    protected readonly MeepleAiDbContext DbContext;
-    protected readonly IDomainEventCollector EventCollector;
+    private readonly MeepleAiDbContext _dbContext;
+    private readonly IDomainEventCollector _eventCollector;
+
+    protected MeepleAiDbContext DbContext => _dbContext;
+    protected IDomainEventCollector EventCollector => _eventCollector;
 
     protected RepositoryBase(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
     {
-        DbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
-        EventCollector = eventCollector ?? throw new ArgumentNullException(nameof(eventCollector));
+        ArgumentNullException.ThrowIfNull(dbContext);
+        _dbContext = dbContext;
+        ArgumentNullException.ThrowIfNull(eventCollector);
+        _eventCollector = eventCollector;
     }
 
     /// <summary>

@@ -4,8 +4,10 @@
  */
 
 import { useState, useMemo, useCallback, useEffect } from 'react';
+
 import Fuse from 'fuse.js';
-import type { IFuseOptions } from 'fuse.js';
+
+import { CHAT_CONFIG } from '@/config';
 import type {
   SearchResult,
   SearchFilters,
@@ -17,7 +19,8 @@ import type {
   AgentSearchResult,
 } from '@/types';
 import type { Game, Agent, Message, ChatThread } from '@/types';
-import { CHAT_CONFIG } from '@/config';
+
+import type { IFuseOptions } from 'fuse.js';
 
 /**
  * Search data sources

@@ -85,12 +85,12 @@ internal sealed class ProviderHealthCheckService : BackgroundService, IProviderH
     /// <summary>
     /// Perform health checks on all providers
     /// </summary>
-    private async Task PerformHealthChecksAsync(CancellationToken ct)
+    private async Task PerformHealthChecksAsync(CancellationToken cancellationToken)
     {
         using var scope = _scopeFactory.CreateScope();
         var clients = scope.ServiceProvider.GetRequiredService<IEnumerable<ILlmClient>>();
 
-        var tasks = clients.Select(client => CheckProviderHealthAsync(client, ct));
+        var tasks = clients.Select(client => CheckProviderHealthAsync(client, cancellationToken));
         await Task.WhenAll(tasks).ConfigureAwait(false);
 
         // Log summary
@@ -101,13 +101,13 @@ internal sealed class ProviderHealthCheckService : BackgroundService, IProviderH
     /// <summary>
     /// Check health of a single provider
     /// </summary>
-    private async Task CheckProviderHealthAsync(ILlmClient client, CancellationToken ct)
+    private async Task CheckProviderHealthAsync(ILlmClient client, CancellationToken cancellationToken)
     {
         var providerName = client.ProviderName;
 
         try
         {
-            using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             cts.CancelAfter(TimeSpan.FromSeconds(HealthCheckTimeoutSeconds));
 
             // Determine appropriate model for health check
@@ -146,9 +146,9 @@ internal sealed class ProviderHealthCheckService : BackgroundService, IProviderH
                 }
             }
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException ex)
         {
-            _logger.LogWarning(
+            _logger.LogWarning(ex,
                 "Health check TIMEOUT: {Provider} (>{Timeout}s)",
                 providerName, HealthCheckTimeoutSeconds);
 
@@ -228,3 +228,4 @@ internal sealed class ProviderHealthCheckService : BackgroundService, IProviderH
         }
     }
 }
+

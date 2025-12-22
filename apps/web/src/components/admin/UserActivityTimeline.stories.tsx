@@ -5,9 +5,10 @@
  * Covers all states, variants, and edge cases.
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
-import { UserActivityTimeline } from './UserActivityTimeline';
 import { UserActivityEvent } from './UserActivityItem';
+import { UserActivityTimeline } from './UserActivityTimeline';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta = {
   title: 'Components/Admin/UserActivityTimeline',

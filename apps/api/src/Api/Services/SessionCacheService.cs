@@ -21,7 +21,7 @@ internal class SessionCacheService : ISessionCacheService
         _logger = logger;
     }
 
-    public async Task InvalidateAsync(string tokenHash, CancellationToken ct = default)
+    public async Task InvalidateAsync(string tokenHash, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -48,7 +48,7 @@ internal class SessionCacheService : ISessionCacheService
         }
     }
 
-    public async Task InvalidateUserSessionsAsync(Guid userId, CancellationToken ct = default)
+    public async Task InvalidateUserSessionsAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         try
         {

@@ -1,6 +1,7 @@
-import type { Meta, StoryObj } from '@storybook/react';
 import { Checkbox } from './checkbox';
 import { Label } from './label';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 /**
  * Checkbox component for boolean selections and multi-select interfaces.

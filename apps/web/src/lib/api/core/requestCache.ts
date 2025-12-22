@@ -14,8 +14,9 @@
  * - Option-sensitive caching (circuit breaker, retry config)
  */
 
-import { logger } from './logger';
 import { sanitizeError } from '@/lib/errors';
+
+import { logger } from './logger';
 
 /**
  * Configuration for request cache

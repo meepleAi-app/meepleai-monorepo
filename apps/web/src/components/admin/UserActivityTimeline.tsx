@@ -12,11 +12,14 @@
  */
 
 import { useState, useMemo } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { UserActivityItem, UserActivityEvent } from './UserActivityItem';
-import { UserActivityFilters, UserActivityFiltersState } from './UserActivityFilters';
+
 import { ActivityIcon, FilterIcon } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+
+import { UserActivityFilters, UserActivityFiltersState } from './UserActivityFilters';
+import { UserActivityItem, UserActivityEvent } from './UserActivityItem';
 
 export interface UserActivityTimelineProps {
   events: UserActivityEvent[];

@@ -9,6 +9,7 @@
  */
 
 import { StateCreator } from 'zustand';
+
 import { ChatStore, SessionSlice } from '../types';
 
 export const createSessionSlice: StateCreator<

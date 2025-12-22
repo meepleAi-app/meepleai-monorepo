@@ -9,16 +9,18 @@
  */
 
 import React from 'react';
-import { Game } from '@/lib/api';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+
 import { MessageSquare, Star, HelpCircle, Users, AlertCircle } from 'lucide-react';
+
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Game } from '@/lib/api';
 
 interface GameCommunityTabProps {
   game: Game;
 }
 
-export function GameCommunityTab({ game }: GameCommunityTabProps) {
+export function GameCommunityTab({ game: _game }: GameCommunityTabProps) {
   return (
     <div className="space-y-6" role="region" aria-label="Community features">
       {/* Overview Alert */}

@@ -1601,12 +1601,20 @@ describe('CommentItem', () => {
       const editButton = screen.getByRole('button', { name: 'Edit comment' });
       await user.click(editButton);
 
+      // Wait for edit mode to activate
+      await waitFor(() => {
+        expect(screen.getByRole('textbox')).toBeInTheDocument();
+      });
+
       const saveButton = screen.getByRole('button', { name: 'Salva' });
       await user.click(saveButton);
 
       // During submission, textarea should be disabled
-      const textarea = screen.getByDisplayValue('This is a test comment');
-      expect(textarea).toBeDisabled();
+      // CommentItem uses native <textarea> in edit mode, not MentionInput
+      await waitFor(() => {
+        const textarea = screen.getByRole('textbox');
+        expect(textarea).toBeDisabled();
+      });
     });
   });
 

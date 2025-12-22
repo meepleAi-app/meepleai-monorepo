@@ -43,6 +43,9 @@ internal class SimulateErrorCommandHandler : IRequestHandler<SimulateErrorComman
         _logger.LogWarning("Simulating error type: {ErrorType}", request.ErrorType);
 
         // Generate error based on type
+#pragma warning disable MA0014 // ConfigureAwait already present on line 50
+#pragma warning disable CA2201 // Exception types intentional for test endpoint simulation
+#pragma warning disable S112 // General exceptions intentional for test endpoint
         return request.ErrorType.ToLowerInvariant() switch
         {
             "500" => throw new InvalidOperationException($"Simulated 500 Internal Server Error (test endpoint)"),
@@ -51,12 +54,17 @@ internal class SimulateErrorCommandHandler : IRequestHandler<SimulateErrorComman
             "exception" => throw new ApplicationException($"Simulated unhandled exception (test endpoint)"),
             _ => throw new ArgumentException($"Invalid error type: {request.ErrorType}. Valid types: 500, 400, timeout, exception", nameof(request))
         };
+#pragma warning restore S112
+#pragma warning restore CA2201
+#pragma warning restore MA0014
     }
 
     private static async Task<Unit> SimulateTimeoutAsync(CancellationToken cancellationToken)
     {
         // Simulate a long-running operation that times out
+#pragma warning disable MA0014 // ConfigureAwait already present
         await Task.Delay(30000, cancellationToken).ConfigureAwait(false); // 30 seconds - exceeds typical timeout
+#pragma warning restore MA0014
         throw new TimeoutException("Simulated timeout error (test endpoint)");
     }
 }

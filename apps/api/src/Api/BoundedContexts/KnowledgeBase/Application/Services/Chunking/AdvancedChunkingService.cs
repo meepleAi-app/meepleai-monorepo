@@ -28,14 +28,11 @@ internal sealed class AdvancedChunkingService : IAdvancedChunkingService
     public Task<List<HierarchicalChunk>> ChunkDocumentAsync(
         ExtractedDocument document,
         ChunkingConfiguration? config = null,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
-        ct.ThrowIfCancellationRequested();
+        cancellationToken.ThrowIfCancellationRequested();
 
-        if (document == null)
-            throw new ArgumentNullException(nameof(document));
-
-        var chunks = new List<HierarchicalChunk>();
+        ArgumentNullException.ThrowIfNull(document);
 
         // Step 1: Auto-select strategy if not provided
         var elementTypes = document.Sections.Select(s => s.ElementType).ToList();
@@ -46,6 +43,7 @@ internal sealed class AdvancedChunkingService : IAdvancedChunkingService
             document.Id, config.Name, config.ChunkSizeTokens, config.OverlapPercentage * 100);
 
         // Step 2: Process sections if available, otherwise treat as single section
+        List<HierarchicalChunk> chunks;
         if (document.Sections.Count > 0)
         {
             chunks = ProcessSections(document, config);
@@ -69,9 +67,9 @@ internal sealed class AdvancedChunkingService : IAdvancedChunkingService
         string text,
         Guid documentId,
         ChunkingConfiguration? config = null,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
-        ct.ThrowIfCancellationRequested();
+        cancellationToken.ThrowIfCancellationRequested();
 
         if (string.IsNullOrWhiteSpace(text))
             return Task.FromResult(new List<HierarchicalChunk>());
@@ -263,6 +261,8 @@ internal sealed class AdvancedChunkingService : IAdvancedChunkingService
         return childChunks;
     }
 
+    private static readonly string[] ParagraphSeparators = { "\r\n\r\n", "\n\n" };
+
     /// <summary>
     /// Splits text into paragraphs based on double newlines.
     /// </summary>
@@ -270,7 +270,7 @@ internal sealed class AdvancedChunkingService : IAdvancedChunkingService
     {
         // Split on double newlines (paragraph breaks)
         var paragraphs = text.Split(
-            new[] { "\r\n\r\n", "\n\n" },
+            ParagraphSeparators,
             StringSplitOptions.None);
 
         return paragraphs
@@ -279,3 +279,4 @@ internal sealed class AdvancedChunkingService : IAdvancedChunkingService
             .ToList();
     }
 }
+

@@ -4,10 +4,13 @@
  * Visual testing for API Key creation modal with advanced features.
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
-import { ApiKeyCreationModal } from './ApiKeyCreationModal';
 import { useState } from 'react';
+
 import { fn } from 'storybook/test';
+
+import { ApiKeyCreationModal } from './ApiKeyCreationModal';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta: Meta<typeof ApiKeyCreationModal> = {
   title: 'Modals/ApiKeyCreationModal',

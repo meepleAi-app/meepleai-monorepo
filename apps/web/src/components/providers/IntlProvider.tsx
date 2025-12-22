@@ -18,10 +18,12 @@
  */
 
 import { ReactNode, useMemo } from 'react';
+
 import { IntlProvider as ReactIntlProvider } from 'react-intl';
-import { DEFAULT_LOCALE, type Locale, getMessages, flattenMessages } from '@/locales';
-import { logger } from '@/lib/logger';
+
 import { createErrorContext } from '@/lib/errors';
+import { logger } from '@/lib/logger';
+import { DEFAULT_LOCALE, type Locale, getMessages, flattenMessages } from '@/locales';
 
 interface IntlProviderProps {
   children: ReactNode;
@@ -43,7 +45,7 @@ function getBrowserLocale(): Locale {
 
   try {
     const browserLang = window.navigator.language?.split('-')[0]?.toLowerCase();
-    return (browserLang === 'it' || browserLang === 'en') ? browserLang as Locale : DEFAULT_LOCALE;
+    return browserLang === 'it' || browserLang === 'en' ? (browserLang as Locale) : DEFAULT_LOCALE;
   } catch {
     return DEFAULT_LOCALE;
   }
@@ -83,7 +85,7 @@ export function IntlProvider({ children, locale }: IntlProviderProps) {
       messages={flatMessages}
       locale={currentLocale}
       defaultLocale={DEFAULT_LOCALE}
-      onError={(err) => {
+      onError={err => {
         // Only log missing translation errors in development
         if (process.env.NODE_ENV === 'development') {
           if (err.code === 'MISSING_TRANSLATION') {
@@ -92,7 +94,10 @@ export function IntlProvider({ children, locale }: IntlProviderProps) {
             logger.error(
               'Intl error',
               err instanceof Error ? err : new Error(String(err)),
-              createErrorContext('IntlProvider', 'onError', { locale: currentLocale, errorCode: err.code })
+              createErrorContext('IntlProvider', 'onError', {
+                locale: currentLocale,
+                errorCode: err.code,
+              })
             );
           }
         }

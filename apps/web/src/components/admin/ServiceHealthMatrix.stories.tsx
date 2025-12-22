@@ -5,9 +5,11 @@
  * Coverage: All states, loading, empty, layouts, responsive.
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
-import { ServiceHealthMatrix } from './ServiceHealthMatrix';
 import type { ServiceHealthStatus } from '@/lib/api';
+
+import { ServiceHealthMatrix } from './ServiceHealthMatrix';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 // Mock data generator
 const createMockService = (

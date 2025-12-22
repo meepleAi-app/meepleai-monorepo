@@ -6,6 +6,9 @@ import reactHooks from "eslint-plugin-react-hooks";
 import jsxA11y from "eslint-plugin-jsx-a11y";
 import security from "eslint-plugin-security";
 import noUnsanitized from "eslint-plugin-no-unsanitized";
+import nextPlugin from "@next/eslint-plugin-next/dist/index.js";
+import unusedImports from "eslint-plugin-unused-imports";
+import importPlugin from "eslint-plugin-import";
 
 // Custom security rules
 import noIncompleteSanitization from "./eslint-rules/no-incomplete-sanitization.js";
@@ -80,6 +83,9 @@ export default [
       "jsx-a11y": jsxA11y,
       security: security,
       "no-unsanitized": noUnsanitized,
+      "@next/next": nextPlugin,
+      "unused-imports": unusedImports,
+      import: importPlugin,
       // Custom security rules
       "local": {
         rules: {
@@ -107,18 +113,63 @@ export default [
       // React Hooks rules
       "react-hooks/rules-of-hooks": "error",
 
+      // Unused imports plugin (auto-fixable)
+      "unused-imports/no-unused-imports": "error",
+
+      // Import ordering (Issue #2246)
+      // Enforce consistent import organization: React → External → Internal → Relative
+      "import/order": [
+        "warn",
+        {
+          groups: [
+            "builtin", // Node.js built-in modules
+            "external", // External libraries (npm packages)
+            "internal", // Internal modules (aliased with @/)
+            ["parent", "sibling"], // Relative imports (../, ./)
+            "index", // Index imports (./index)
+            "type", // TypeScript type imports
+          ],
+          pathGroups: [
+            {
+              pattern: "react",
+              group: "external",
+              position: "before",
+            },
+            {
+              pattern: "@/**",
+              group: "internal",
+              position: "after",
+            },
+          ],
+          pathGroupsExcludedImportTypes: ["react"],
+          "newlines-between": "always",
+          alphabetize: {
+            order: "asc",
+            caseInsensitive: true,
+          },
+        },
+      ],
+
       // TypeScript rules
-      // Temporarily relaxed for alpha phase - will be re-enabled incrementally
-      "@typescript-eslint/no-unused-vars": "off",
-      // TS-001: Enforce type safety - no explicit any types (Issue #1431)
-      // Changed to warn temporarily to reduce noise during security implementation
-      "@typescript-eslint/no-explicit-any": "warn",
+      // TS-002: Enforce no unused variables with TypeScript convention (Issue #2244)
+      // Allow variables/args prefixed with _ to be unused (common TS pattern)
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+        },
+      ],
+      // TS-001: Enforce type safety - no explicit any types (Issue #1431, #2244)
+      // Strict mode enabled - use proper types instead of any
+      "@typescript-eslint/no-explicit-any": "error",
       "no-unused-vars": "off", // Use @typescript-eslint/no-unused-vars instead
       "no-undef": "off", // TypeScript handles this better than ESLint
 
-      // React Hooks - enforce dependency arrays to prevent infinite loops (Issue #XXXX)
-      // Changed to warn to reduce noise - should be fixed gradually
-      "react-hooks/exhaustive-deps": "warn",
+      // React Hooks - enforce dependency arrays to prevent infinite loops (Issue #2244)
+      // Strict mode enabled - ensures correct hook dependencies
+      "react-hooks/exhaustive-deps": "error",
 
       // Accessibility rules (basic)
       "jsx-a11y/alt-text": "warn",
@@ -126,6 +177,10 @@ export default [
       // Temporarily relaxed - many false positives in library integrations
       "jsx-a11y/click-events-have-key-events": "off",
       "jsx-a11y/no-static-element-interactions": "off",
+
+      // Next.js specific rules
+      "@next/next/no-img-element": "warn",
+      "@next/next/no-html-link-for-pages": "warn",
 
       // ============================================================================
       // Security Rules (SEC-001 to SEC-015) - Issue #XXXX

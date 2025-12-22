@@ -178,8 +178,8 @@ internal sealed record EvaluationResult
         IReadOnlyList<EvaluationSampleResult> sampleResults)
     {
         var metrics = CalculateMetrics(sampleResults);
-        var metricsByDifficulty = CalculateMetricsByGroup(sampleResults, true);
-        var metricsByCategory = CalculateMetricsByGroup(sampleResults, false);
+        var metricsByDifficulty = CalculateMetricsByGroup(sampleResults);
+        var metricsByCategory = CalculateMetricsByGroup(sampleResults);
 
         return new EvaluationResult
         {
@@ -231,10 +231,12 @@ internal sealed record EvaluationResult
         );
     }
 
-    private static IReadOnlyDictionary<string, EvaluationMetrics> CalculateMetricsByGroup(
-        IReadOnlyList<EvaluationSampleResult> results,
-        bool byDifficulty)
+    private static Dictionary<string, EvaluationMetrics> CalculateMetricsByGroup(
+        IReadOnlyList<EvaluationSampleResult> results
+        )
     {
+        ArgumentNullException.ThrowIfNull(results);
+
         // Note: This is a simplified implementation. In practice, you'd need to
         // group samples by difficulty or category and calculate metrics per group.
         // For now, returning empty to satisfy the caller signatures.

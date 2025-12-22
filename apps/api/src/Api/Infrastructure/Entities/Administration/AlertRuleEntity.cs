@@ -6,7 +6,7 @@ namespace Api.Infrastructure.Entities.Administration;
 /// Alert rule entity for dynamic alert configuration (Issue #921)
 /// Stores user-defined alert rules that can be evaluated at runtime.
 /// </summary>
-internal class AlertRuleEntity
+public class AlertRuleEntity
 {
     public Guid Id { get; set; }
 

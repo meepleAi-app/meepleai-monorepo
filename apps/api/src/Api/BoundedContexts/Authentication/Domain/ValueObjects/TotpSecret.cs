@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Authentication.Domain.ValueObjects;
 /// Encapsulates the encrypted secret string for two-factor authentication.
 /// The actual encryption/decryption is handled by infrastructure services.
 /// </summary>
-internal sealed class TotpSecret : ValueObject
+public sealed class TotpSecret : ValueObject
 {
     public string EncryptedValue { get; }
 
@@ -44,5 +44,9 @@ internal sealed class TotpSecret : ValueObject
 
     public override string ToString() => "[TOTP_SECRET_REDACTED]";
 
-    public static implicit operator string(TotpSecret secret) => secret.EncryptedValue;
+    public static implicit operator string(TotpSecret secret)
+    {
+        ArgumentNullException.ThrowIfNull(secret);
+        return secret.EncryptedValue;
+    }
 }

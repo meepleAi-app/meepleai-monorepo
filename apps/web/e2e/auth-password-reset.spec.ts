@@ -5,7 +5,6 @@
  */
 
 import { test, expect, Page } from './fixtures/chromatic';
-import { AuthPage } from './pages/auth/AuthPage';
 import {
   setupMockEmailService,
   setupMockTokenVerification,
@@ -14,6 +13,7 @@ import {
   wasEmailSentTo,
   clearCapturedEmails,
 } from './fixtures/email';
+import { AuthPage } from './pages/auth/AuthPage';
 
 const API_BASE = 'http://localhost:8080';
 

@@ -29,8 +29,9 @@
  */
 
 import { type LucideIcon, Inbox, Search, Lock, AlertCircle, FileQuestion } from 'lucide-react';
-import { cn } from '@/lib/utils';
+
 import { useReducedMotion } from '@/lib/animations';
+import { cn } from '@/lib/utils';
 
 export interface EmptyStateAction {
   /** Button label text */

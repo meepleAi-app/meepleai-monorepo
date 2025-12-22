@@ -14,8 +14,9 @@
  */
 
 import { isServer, QueryClient, DefaultOptions } from '@tanstack/react-query';
-import { logger } from '@/lib/logger';
+
 import { createErrorContext } from '@/lib/errors';
+import { logger } from '@/lib/logger';
 
 /**
  * Default options for all queries and mutations
@@ -39,7 +40,7 @@ const defaultOptions: DefaultOptions = {
     retry: 1,
 
     // Log mutation errors
-    onError: (error) => {
+    onError: error => {
       logger.error(
         'Mutation error',
         error instanceof Error ? error : new Error(String(error)),

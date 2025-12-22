@@ -55,10 +55,10 @@ internal sealed class GenerateQualityReportQueryHandler : IQueryHandler<Generate
             TotalResponses = totalResponses,
             LowQualityCount = lowQualityCount,
             LowQualityPercentage = totalResponses > 0 ? (lowQualityCount / (double)totalResponses) * 100 : 0.0,
-            AverageRagConfidence = logs.Any() ? logs.Average(l => l.RagConfidence) : null,
-            AverageLlmConfidence = logs.Any() ? logs.Average(l => l.LlmConfidence) : null,
-            AverageCitationQuality = logs.Any() ? logs.Average(l => l.CitationQuality) : null,
-            AverageOverallConfidence = logs.Any() ? logs.Average(l => l.OverallConfidence) : null
+            AverageRagConfidence = logs.Count > 0 ? logs.Average(l => l.RagConfidence) : null,
+            AverageLlmConfidence = logs.Count > 0 ? logs.Average(l => l.LlmConfidence) : null,
+            AverageCitationQuality = logs.Count > 0 ? logs.Average(l => l.CitationQuality) : null,
+            AverageOverallConfidence = logs.Count > 0 ? logs.Average(l => l.OverallConfidence) : null
         };
 
         _logger.LogInformation(

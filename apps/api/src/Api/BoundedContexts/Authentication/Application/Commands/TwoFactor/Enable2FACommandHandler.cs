@@ -43,10 +43,15 @@ internal class Enable2FACommandHandler : ICommandHandler<Enable2FACommand, Enabl
                 return new Enable2FAResult(Success: false, ErrorMessage: "Invalid verification code");
             }
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: COMMAND HANDLER PATTERN - CQRS handler boundary
+        // Generic catch handles unexpected infrastructure failures (DB, network, memory)
+        // to prevent exception propagation to API layer. Returns Result pattern.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error enabling 2FA for user {UserId}", command.UserId);
             return new Enable2FAResult(Success: false, ErrorMessage: "An error occurred while enabling two-factor authentication");
         }
+#pragma warning restore CA1031
     }
 }

@@ -1,6 +1,8 @@
-import type { Meta, StoryObj } from '@storybook/react';
-import { Alert, AlertTitle, AlertDescription } from './alert';
 import { Terminal, AlertCircle, CheckCircle, Info } from 'lucide-react';
+
+import { Alert, AlertTitle, AlertDescription } from './alert';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 /**
  * Alert component for displaying contextual messages and notifications.

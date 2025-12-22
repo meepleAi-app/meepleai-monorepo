@@ -6,7 +6,7 @@ namespace Api.Models;
 /// <summary>
 /// Represents the progress state of PDF processing pipeline
 /// </summary>
-internal class ProcessingProgress
+public class ProcessingProgress
 {
     /// <summary>
     /// Current step in the processing pipeline
@@ -113,7 +113,7 @@ internal class ProcessingProgress
 /// <summary>
 /// Processing pipeline steps for PDF documents
 /// </summary>
-internal enum ProcessingStep
+public enum ProcessingStep
 {
     /// <summary>
     /// File is being uploaded to server (0-20%)

@@ -8,7 +8,7 @@ namespace Api.Infrastructure.Entities.UserNotifications;
 /// Persistence model for Notification aggregate.
 /// </summary>
 [Table("notifications")]
-internal class NotificationEntity
+public class NotificationEntity
 {
     [Key]
     [Column("id")]

@@ -13,6 +13,7 @@
  */
 
 import { useState, useCallback, useRef } from 'react';
+
 import type { Citation } from '@/types';
 
 // Event types that match the backend
@@ -61,7 +62,7 @@ type FollowUpQuestionsData = {
   questions: string[];
 };
 
-type StreamingEvent = {
+type _StreamingEvent = {
   type: StreamingEventType;
   data:
     | StateUpdateData

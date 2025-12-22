@@ -1,9 +1,11 @@
-import { useCallback, useEffect } from "react";
-import { EditorContent, useEditor } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
-import Placeholder from "@tiptap/extension-placeholder";
-import CharacterCount from "@tiptap/extension-character-count";
-import EditorToolbar from "./EditorToolbar";
+import { useCallback, useEffect } from 'react';
+
+import CharacterCount from '@tiptap/extension-character-count';
+import Placeholder from '@tiptap/extension-placeholder';
+import { EditorContent, useEditor } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+
+import EditorToolbar from './EditorToolbar';
 
 type RichTextEditorProps = {
   content: string;
@@ -31,26 +33,26 @@ export default function RichTextEditor({
   content,
   onChange,
   onBlur,
-  placeholder = "Inizia a scrivere le regole del gioco...",
+  placeholder = 'Inizia a scrivere le regole del gioco...',
   isValid = true,
-  autoFocus = false
+  autoFocus = false,
 }: RichTextEditorProps) {
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
         heading: {
-          levels: [1, 2, 3, 4, 5, 6]
+          levels: [1, 2, 3, 4, 5, 6],
         },
         codeBlock: {
           HTMLAttributes: {
-            class: "code-block"
-          }
-        }
+            class: 'code-block',
+          },
+        },
       }),
       Placeholder.configure({
-        placeholder
+        placeholder,
       }),
-      CharacterCount
+      CharacterCount,
     ],
     content,
     autofocus: autoFocus,
@@ -67,10 +69,11 @@ export default function RichTextEditor({
     },
     editorProps: {
       attributes: {
-        class: "prose prose-sm max-w-none focus:outline-none",
-        style: "min-height: 600px; padding: 12px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 14px; line-height: 1.6;"
-      }
-    }
+        class: 'prose prose-sm max-w-none focus:outline-none',
+        style:
+          "min-height: 600px; padding: 12px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 14px; line-height: 1.6;",
+      },
+    },
   });
 
   // Update editor content when prop changes (external updates)
@@ -90,11 +93,7 @@ export default function RichTextEditor({
   const { characters, words } = getCharacterCount();
 
   if (!editor) {
-    return (
-      <div className="p-3 text-gray-400">
-        Caricamento editor...
-      </div>
-    );
+    return <div className="p-3 text-gray-400">Caricamento editor...</div>;
   }
 
   return (

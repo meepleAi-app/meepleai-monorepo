@@ -1,8 +1,11 @@
-import type { Meta, StoryObj } from '@storybook/react';
-import { fn } from 'storybook/test';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { AlertRuleForm } from './AlertRuleForm';
+import { fn } from 'storybook/test';
+
 import type { AlertRule } from '@/lib/api/schemas/alert-rules.schemas';
+
+import { AlertRuleForm } from './AlertRuleForm';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 /**
  * AlertRuleForm Component - Issue #921

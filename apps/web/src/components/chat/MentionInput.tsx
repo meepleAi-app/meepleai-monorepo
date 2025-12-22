@@ -1,9 +1,10 @@
 /* eslint-disable security/detect-object-injection -- Safe array index and object access */
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { api, type UserSearchResult } from '@/lib/api';
+
 import { useDebounce } from '@/hooks/useDebounce';
-import { logger } from '@/lib/logger';
+import { api, type UserSearchResult } from '@/lib/api';
 import { createErrorContext } from '@/lib/errors';
+import { logger } from '@/lib/logger';
 
 interface MentionInputProps {
   value: string;

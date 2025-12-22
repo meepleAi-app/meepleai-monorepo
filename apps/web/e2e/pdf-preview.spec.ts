@@ -7,7 +7,6 @@
  */
 
 import { test, expect } from './fixtures/chromatic';
-import { AuthHelper, GamesHelper, USER_FIXTURES } from './pages';
 
 /**
  * E2E Test: PDF Preview Component

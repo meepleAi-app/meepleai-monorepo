@@ -15,13 +15,13 @@ internal class ApiKeyUsageLogRepository : IApiKeyUsageLogRepository
 
     public ApiKeyUsageLogRepository(MeepleAiDbContext context)
     {
-        _context = context ?? throw new ArgumentNullException(nameof(context));
+        ArgumentNullException.ThrowIfNull(context);
+        _context = context;
     }
 
     public async Task AddAsync(ApiKeyUsageLog usageLog, CancellationToken cancellationToken = default)
     {
-        if (usageLog == null)
-            throw new ArgumentNullException(nameof(usageLog));
+        ArgumentNullException.ThrowIfNull(usageLog);
 
         var entity = new ApiKeyUsageLogEntity
         {

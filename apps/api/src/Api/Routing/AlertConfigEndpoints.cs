@@ -14,6 +14,18 @@ internal static class AlertConfigEndpoints
     {
         var group = app.MapGroup("/api/v1/admin/alert-rules").WithTags("Admin", "AlertRules");
 
+        MapGetAllAlertRulesEndpoint(group);
+        MapGetAlertRuleByIdEndpoint(group);
+        MapCreateAlertRuleEndpoint(group);
+        MapUpdateAlertRuleEndpoint(group);
+        MapDeleteAlertRuleEndpoint(group);
+        MapToggleAlertRuleEndpoint(group);
+
+        MapGlobalAdminEndpoints(app);
+    }
+
+    private static void MapGetAllAlertRulesEndpoint(RouteGroupBuilder group)
+    {
         // GET /api/v1/admin/alert-rules
         group.MapGet("/", async (IMediator mediator, CancellationToken ct) =>
         {
@@ -23,7 +35,10 @@ internal static class AlertConfigEndpoints
         .RequireAuthorization()
         .WithName("GetAllAlertRules")
         .WithOpenApi();
+    }
 
+    private static void MapGetAlertRuleByIdEndpoint(RouteGroupBuilder group)
+    {
         // GET /api/v1/admin/alert-rules/{id}
         group.MapGet("/{id:guid}", async (Guid id, IMediator mediator, CancellationToken ct) =>
         {
@@ -33,7 +48,10 @@ internal static class AlertConfigEndpoints
         .RequireAuthorization()
         .WithName("GetAlertRuleById")
         .WithOpenApi();
+    }
 
+    private static void MapCreateAlertRuleEndpoint(RouteGroupBuilder group)
+    {
         // POST /api/v1/admin/alert-rules
         group.MapPost("/", async ([FromBody] CreateAlertRuleRequest request, HttpContext context, IMediator mediator, CancellationToken ct) =>
         {
@@ -57,7 +75,10 @@ internal static class AlertConfigEndpoints
         .RequireAuthorization()
         .WithName("CreateAlertRule")
         .WithOpenApi();
+    }
 
+    private static void MapUpdateAlertRuleEndpoint(RouteGroupBuilder group)
+    {
         // PUT /api/v1/admin/alert-rules/{id}
         group.MapPut("/{id:guid}", async (Guid id, [FromBody] UpdateAlertRuleRequest request, HttpContext context, IMediator mediator, CancellationToken ct) =>
         {
@@ -81,7 +102,10 @@ internal static class AlertConfigEndpoints
         .RequireAuthorization()
         .WithName("UpdateAlertRule")
         .WithOpenApi();
+    }
 
+    private static void MapDeleteAlertRuleEndpoint(RouteGroupBuilder group)
+    {
         // DELETE /api/v1/admin/alert-rules/{id}
         group.MapDelete("/{id:guid}", async (Guid id, IMediator mediator, CancellationToken ct) =>
         {
@@ -91,7 +115,10 @@ internal static class AlertConfigEndpoints
         .RequireAuthorization()
         .WithName("DeleteAlertRule")
         .WithOpenApi();
+    }
 
+    private static void MapToggleAlertRuleEndpoint(RouteGroupBuilder group)
+    {
         // PATCH /api/v1/admin/alert-rules/{id}/toggle
         group.MapPatch("/{id:guid}/toggle", async (Guid id, HttpContext context, IMediator mediator, CancellationToken ct) =>
         {
@@ -103,7 +130,10 @@ internal static class AlertConfigEndpoints
         .RequireAuthorization()
         .WithName("ToggleAlertRule")
         .WithOpenApi();
+    }
 
+    private static void MapGlobalAdminEndpoints(IEndpointRouteBuilder app)
+    {
         // GET /api/v1/admin/alert-templates
         app.MapGet("/api/v1/admin/alert-templates", async (IMediator mediator, CancellationToken ct) =>
         {

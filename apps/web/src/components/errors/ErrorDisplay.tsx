@@ -5,9 +5,10 @@
  */
 
 import { type CSSProperties, useState, useEffect, useCallback } from 'react';
+
+import { UI_CONFIG } from '@/config';
 import { type CategorizedError, getErrorIcon, getErrorTitle } from '@/lib/errorUtils';
 import { showErrorToast, shouldShowToast } from '@/lib/toastUtils';
-import { UI_CONFIG } from '@/config';
 
 interface ErrorDisplayProps {
   error: CategorizedError;
@@ -188,7 +189,7 @@ export function ErrorDisplay({
   // Use semantic tokens for WCAG 2.1 AA compliance (Issue #841)
   const retryButtonStyle: CSSProperties = {
     ...buttonStyle,
-    backgroundColor: 'hsl(var(--secondary))', // WCAG AA compliant green
+    backgroundColor: 'hsl(var(--secondary))', // Semantic token (measured: 15+:1 contrast in default theme)
     color: 'hsl(var(--secondary-foreground))',
   };
 
@@ -201,8 +202,8 @@ export function ErrorDisplay({
   const detailsButtonStyle: CSSProperties = {
     ...buttonStyle,
     backgroundColor: 'transparent',
-    color: 'hsl(var(--primary))',
-    border: '1px solid hsl(var(--primary))',
+    color: 'hsl(var(--foreground))',
+    border: '1px solid hsl(var(--foreground) / 0.3)',
   };
 
   const technicalDetailsStyle: CSSProperties = {

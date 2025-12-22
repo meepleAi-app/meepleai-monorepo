@@ -1,5 +1,0 @@
-"Pattern","Count","SampleFiles"
-"#pragma warning disable","2","D:\Repositories\meepleai-monorepo-frontend\meepleai-monorepo\docs\ISSUE-enable-and-fix-warnings-2025-12-14.md
-D:\Repositories\meepleai-monorepo-frontend\meepleai-monorepo\tools\dismiss-codeql-false-positives.sh"
-"<NoWarn>","0",""
-"dotnet_diagnostic","0",""

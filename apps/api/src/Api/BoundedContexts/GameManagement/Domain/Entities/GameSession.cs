@@ -43,7 +43,8 @@ internal sealed class GameSession : AggregateRoot<Guid>
         if (gameId == Guid.Empty)
             throw new ArgumentException("GameId cannot be empty", nameof(gameId));
 
-        var playerList = players?.ToList() ?? throw new ArgumentNullException(nameof(players));
+        ArgumentNullException.ThrowIfNull(players);
+        var playerList = players.ToList();
 
         if (playerList.Count == 0)
             throw new ArgumentException("Session must have at least one player", nameof(players));
@@ -151,8 +152,7 @@ internal sealed class GameSession : AggregateRoot<Guid>
     /// </summary>
     public void AddPlayer(SessionPlayer player)
     {
-        if (player == null)
-            throw new ArgumentNullException(nameof(player));
+        ArgumentNullException.ThrowIfNull(player);
 
         if (Status.IsFinished)
             throw new InvalidOperationException($"Cannot add player to finished session (status: {Status})");

@@ -4,9 +4,11 @@
  * Visual testing for comment input in shared chat threads.
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
-import { CommentBox } from './CommentBox';
 import { fn } from 'storybook/test';
+
+import { CommentBox } from './CommentBox';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta: Meta<typeof CommentBox> = {
   title: 'Chat/CommentBox',

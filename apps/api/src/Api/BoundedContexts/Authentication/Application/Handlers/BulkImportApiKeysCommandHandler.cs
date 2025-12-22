@@ -81,7 +81,13 @@ internal class BulkImportApiKeysCommandHandler : ICommandHandler<BulkImportApiKe
         {
             throw;
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: COMMAND HANDLER PATTERN - CQRS handler boundary
+        // Specific DomainException is handled above and re-thrown
+        // Generic catch handles unexpected infrastructure failures (DB, network, memory)
+        // to prevent exception propagation to API layer. Returns Result/Response pattern.
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             _logger.LogError(ex, "Critical error during bulk API key import");
             throw new DomainException($"Bulk API key import failed: {ex.Message}", ex);
@@ -137,7 +143,7 @@ internal class BulkImportApiKeysCommandHandler : ICommandHandler<BulkImportApiKe
         }
 
         var missingUserIds = userIds.Except(existingUserIds).ToList();
-        if (missingUserIds.Any())
+        if (missingUserIds.Count > 0)
         {
             throw new DomainException($"The following user IDs do not exist: {string.Join(", ", missingUserIds)}");
         }
@@ -157,7 +163,7 @@ internal class BulkImportApiKeysCommandHandler : ICommandHandler<BulkImportApiKe
             .Select(g => $"{g.KeyName} (User: {g.UserId})")
             .ToList();
 
-        if (duplicateKeys.Any())
+        if (duplicateKeys.Count > 0)
         {
             throw new DomainException($"CSV contains duplicate key names for same user: {string.Join(", ", duplicateKeys)}");
         }
@@ -174,7 +180,7 @@ internal class BulkImportApiKeysCommandHandler : ICommandHandler<BulkImportApiKe
             }
         }
 
-        if (existingKeyNames.Any())
+        if (existingKeyNames.Count > 0)
         {
             throw new DomainException($"The following key names already exist for their users: {string.Join(", ", existingKeyNames)}");
         }
@@ -221,7 +227,13 @@ internal class BulkImportApiKeysCommandHandler : ICommandHandler<BulkImportApiKe
 
                 successCount++;
             }
+#pragma warning disable CA1031 // Do not catch general exception types
+            // Justification: BULK OPERATION PATTERN - Individual import failure handling
+            // Allows bulk operation to continue processing remaining items when individual
+            // API key creation fails due to validation, DB constraints, or infrastructure issues.
+            // Each failure is logged and tracked in errors collection for reporting.
             catch (Exception ex)
+#pragma warning restore CA1031
             {
                 _logger.LogError(ex, "Error importing API key at line {LineNumber}", lineNumber);
                 errors.Add($"Line {lineNumber} ({record.KeyName}): {ex.Message}");
@@ -231,18 +243,37 @@ internal class BulkImportApiKeysCommandHandler : ICommandHandler<BulkImportApiKe
         return (successCount, errors, importedKeys);
     }
 
+    private static readonly char[] CsvSeparators = { '\r', '\n' };
+
     private static List<ApiKeyImportRecord> ParseCsv(string csvContent, List<string> errors)
     {
         var records = new List<ApiKeyImportRecord>();
-        var lines = csvContent.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+        var lines = csvContent.Split(CsvSeparators, StringSplitOptions.RemoveEmptyEntries);
 
         if (lines.Length == 0)
         {
             throw new DomainException("CSV file is empty");
         }
 
+        ValidateHeader(lines[0]);
+
+        // Parse data rows
+        for (int i = 1; i < lines.Length; i++)
+        {
+            var record = ParseAndValidateLine(lines[i], i + 1, errors);
+            if (record != null)
+            {
+                records.Add(record);
+            }
+        }
+
+        return records;
+    }
+
+    private static void ValidateHeader(string headerLine)
+    {
         // Validate header
-        var header = lines[0].Split(',');
+        var header = headerLine.Split(',');
         if (header.Length != 5 ||
             !header[0].Equals("userId", StringComparison.OrdinalIgnoreCase) ||
             !header[1].Equals("keyName", StringComparison.OrdinalIgnoreCase) ||
@@ -252,75 +283,75 @@ internal class BulkImportApiKeysCommandHandler : ICommandHandler<BulkImportApiKe
         {
             throw new DomainException("Invalid CSV header. Expected: userId,keyName,scopes,expiresAt,metadata");
         }
+    }
 
-        // Parse data rows
-        for (int i = 1; i < lines.Length; i++)
+    private static ApiKeyImportRecord? ParseAndValidateLine(string line, int lineNumber, List<string> errors)
+    {
+        var trimmedLine = line.Trim();
+        if (string.IsNullOrWhiteSpace(trimmedLine))
         {
-            var line = lines[i].Trim();
-            if (string.IsNullOrWhiteSpace(line)) continue;
-
-            var fields = ParseCsvLine(line);
-            if (fields.Count != 5)
-            {
-                errors.Add($"Line {i + 1}: Invalid format (expected 5 fields, got {fields.Count})");
-                continue;
-            }
-
-            var userIdStr = fields[0].Trim();
-            var keyName = fields[1].Trim();
-            var scopes = fields[2].Trim();
-            var expiresAtStr = fields[3].Trim();
-            var metadata = fields[4].Trim();
-
-            // Basic validation
-            if (!Guid.TryParse(userIdStr, out var userId))
-            {
-                errors.Add($"Line {i + 1}: Invalid user ID format");
-                continue;
-            }
-
-            if (string.IsNullOrWhiteSpace(keyName))
-            {
-                errors.Add($"Line {i + 1}: Key name is required");
-                continue;
-            }
-
-            if (string.IsNullOrWhiteSpace(scopes))
-            {
-                errors.Add($"Line {i + 1}: Scopes are required");
-                continue;
-            }
-
-            DateTime? expiresAt = null;
-            if (!string.IsNullOrWhiteSpace(expiresAtStr))
-            {
-                if (DateTime.TryParseExact(expiresAtStr, "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var parsedDate))
-                {
-                    expiresAt = parsedDate.ToUniversalTime();
-
-                    // Validate expiry is in the future
-                    if (expiresAt <= DateTime.UtcNow)
-                    {
-                        errors.Add($"Line {i + 1}: Expiry date must be in the future");
-                        continue;
-                    }
-                }
-                else
-                {
-                    errors.Add($"Line {i + 1}: Invalid expiry date format (expected: yyyy-MM-dd HH:mm:ss)");
-                    continue;
-                }
-            }
-
-            // Metadata can be null or empty
-            var metadataValue = string.IsNullOrWhiteSpace(metadata) || metadata.Equals("null", StringComparison.OrdinalIgnoreCase)
-                ? null
-                : metadata;
-
-            records.Add(new ApiKeyImportRecord(userId, keyName, scopes, expiresAt, metadataValue));
+            return null;
         }
 
-        return records;
+        var fields = ParseCsvLine(trimmedLine);
+        if (fields.Count != 5)
+        {
+            errors.Add($"Line {lineNumber}: Invalid format (expected 5 fields, got {fields.Count})");
+            return null;
+        }
+
+        var userIdStr = fields[0].Trim();
+        var keyName = fields[1].Trim();
+        var scopes = fields[2].Trim();
+        var expiresAtStr = fields[3].Trim();
+        var metadata = fields[4].Trim();
+
+        // Basic validation
+        if (!Guid.TryParse(userIdStr, out var userId))
+        {
+            errors.Add($"Line {lineNumber}: Invalid user ID format");
+            return null;
+        }
+
+        if (string.IsNullOrWhiteSpace(keyName))
+        {
+            errors.Add($"Line {lineNumber}: Key name is required");
+            return null;
+        }
+
+        if (string.IsNullOrWhiteSpace(scopes))
+        {
+            errors.Add($"Line {lineNumber}: Scopes are required");
+            return null;
+        }
+
+        DateTime? expiresAt = null;
+        if (!string.IsNullOrWhiteSpace(expiresAtStr))
+        {
+            if (DateTime.TryParseExact(expiresAtStr, "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var parsedDate))
+            {
+                expiresAt = parsedDate.ToUniversalTime();
+
+                // Validate expiry is in the future
+                if (expiresAt <= DateTime.UtcNow)
+                {
+                    errors.Add($"Line {lineNumber}: Expiry date must be in the future");
+                    return null;
+                }
+            }
+            else
+            {
+                errors.Add($"Line {lineNumber}: Invalid expiry date format (expected: yyyy-MM-dd HH:mm:ss)");
+                return null;
+            }
+        }
+
+        // Metadata can be null or empty
+        var metadataValue = string.IsNullOrWhiteSpace(metadata) || metadata.Equals("null", StringComparison.OrdinalIgnoreCase)
+            ? null
+            : metadata;
+
+        return new ApiKeyImportRecord(userId, keyName, scopes, expiresAt, metadataValue);
     }
 
     private static List<string> ParseCsvLine(string line)

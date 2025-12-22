@@ -9,7 +9,7 @@ internal sealed class PlayerAddedToSessionEventHandler : DomainEventHandlerBase<
 {
     public PlayerAddedToSessionEventHandler(
         MeepleAiDbContext dbContext,
-        ILogger<DomainEventHandlerBase<PlayerAddedToSessionEvent>> logger)
+        ILogger<PlayerAddedToSessionEventHandler> logger)
         : base(dbContext, logger)
     {
     }

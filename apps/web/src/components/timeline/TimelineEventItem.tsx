@@ -1,16 +1,16 @@
 // UI-04: Timeline event item component
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import {
   TimelineEvent,
   Snippet,
   getEventTypeLabel,
   getEventTypeColor,
   getStatusIcon,
-  formatDuration
-} from "@/lib/timeline-types";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+  formatDuration,
+} from '@/lib/timeline-types';
+import { cn } from '@/lib/utils';
 
 interface TimelineEventItemProps {
   event: TimelineEvent;
@@ -25,23 +25,20 @@ export function TimelineEventItem({
   isSelected,
   onSelect,
   isExpanded,
-  onToggleExpand
+  onToggleExpand,
 }: TimelineEventItemProps) {
   const typeColor = getEventTypeColor(event.type);
   const statusIcon = getStatusIcon(event.status);
 
   return (
     <Card
-      className={cn(
-        "mb-3 transition-all border",
-        isSelected ? "border-2 bg-muted" : ""
-      )}
+      className={cn('mb-3 transition-all border', isSelected ? 'border-2 bg-muted' : '')}
       style={isSelected ? { borderColor: typeColor } : {}}
     >
       <CardHeader
         className={cn(
-          "p-3 cursor-pointer flex-row items-center gap-3 space-y-0",
-          isExpanded && "border-b"
+          'p-3 cursor-pointer flex-row items-center gap-3 space-y-0',
+          isExpanded && 'border-b'
         )}
         onClick={() => onSelect(event.id)}
       >
@@ -78,16 +75,16 @@ export function TimelineEventItem({
 
         {/* Expand/Collapse Button */}
         <Button
-          onClick={(e) => {
+          onClick={e => {
             e.stopPropagation();
             onToggleExpand(event.id);
           }}
           variant="ghost"
           size="sm"
           className="shrink-0 text-base"
-          title={isExpanded ? "Comprimi" : "Espandi"}
+          title={isExpanded ? 'Comprimi' : 'Espandi'}
         >
-          {isExpanded ? "▲" : "▼"}
+          {isExpanded ? '▲' : '▼'}
         </Button>
       </CardHeader>
 
@@ -95,7 +92,7 @@ export function TimelineEventItem({
       {isExpanded && (
         <CardContent className="p-3 bg-muted/50 text-xs text-foreground">
           {/* Message Content */}
-          {event.data.message && event.type === "message" && (
+          {event.data.message && event.type === 'message' && (
             <div className="mb-3">
               <div className="font-semibold mb-1.5 text-slate-500">Messaggio:</div>
               <div className="p-2.5 bg-white border border-gray-300 rounded whitespace-pre-wrap">
@@ -111,13 +108,12 @@ export function TimelineEventItem({
                 Citazioni ({event.data.citations.length}):
               </div>
               {event.data.citations.map((citation: Snippet, idx: number) => (
-                <div
-                  key={idx}
-                  className="p-2 bg-white border border-gray-300 rounded mb-1.5"
-                >
+                <div key={idx} className="p-2 bg-white border border-gray-300 rounded mb-1.5">
                   <div className="font-medium mb-1">
                     {citation.source}
-                    {citation.page !== null && citation.page !== undefined && ` (Pagina ${citation.page})`}
+                    {citation.page !== null &&
+                      citation.page !== undefined &&
+                      ` (Pagina ${citation.page})`}
                   </div>
                   <div className="text-slate-500 text-[11px]">{citation.text}</div>
                 </div>
@@ -140,9 +136,7 @@ export function TimelineEventItem({
                 )}
                 {event.data.metrics.promptTokens !== undefined && (
                   <div className="p-2 bg-white border border-gray-300 rounded">
-                    <div className="text-[10px] text-slate-500 mb-0.5">
-                      Token Prompt
-                    </div>
+                    <div className="text-[10px] text-slate-500 mb-0.5">Token Prompt</div>
                     <div className="font-semibold text-blue-600">
                       {event.data.metrics.promptTokens}
                     </div>
@@ -150,9 +144,7 @@ export function TimelineEventItem({
                 )}
                 {event.data.metrics.completionTokens !== undefined && (
                   <div className="p-2 bg-white border border-gray-300 rounded">
-                    <div className="text-[10px] text-slate-500 mb-0.5">
-                      Token Completamento
-                    </div>
+                    <div className="text-[10px] text-slate-500 mb-0.5">Token Completamento</div>
                     <div className="font-semibold text-blue-600">
                       {event.data.metrics.completionTokens}
                     </div>
@@ -160,9 +152,7 @@ export function TimelineEventItem({
                 )}
                 {event.data.metrics.totalTokens !== undefined && (
                   <div className="p-2 bg-white border border-gray-300 rounded">
-                    <div className="text-[10px] text-slate-500 mb-0.5">
-                      Totale Token
-                    </div>
+                    <div className="text-[10px] text-slate-500 mb-0.5">Totale Token</div>
                     <div className="font-semibold text-blue-600">
                       {event.data.metrics.totalTokens}
                     </div>

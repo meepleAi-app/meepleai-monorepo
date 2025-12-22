@@ -40,6 +40,8 @@ internal partial class RuleAtomParsingDomainService
         }
     }
 
+    private static readonly char[] NewLineSeparators = { '\r', '\n' };
+
     /// <summary>
     /// Parses rules from extracted text by splitting on newlines.
     /// Filters out empty lines.
@@ -52,7 +54,7 @@ internal partial class RuleAtomParsingDomainService
         }
 
         return extractedText
-            .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+            .Split(NewLineSeparators, StringSplitOptions.RemoveEmptyEntries)
             .Select(line => line.Trim())
             .Where(line => !string.IsNullOrWhiteSpace(line))
             .ToList();

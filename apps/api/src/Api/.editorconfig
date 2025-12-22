@@ -1,0 +1,10 @@
+# EditorConfig for MeepleAI Api project
+# https://editorconfig.org
+
+root = true
+
+[*.cs]
+# MA0051: Method is too long
+# Increased from default 60 to 100 lines to accommodate routing files with multiple endpoint definitions
+# while still maintaining quality control for business logic methods
+MA0051.maximum_lines_per_method = 100

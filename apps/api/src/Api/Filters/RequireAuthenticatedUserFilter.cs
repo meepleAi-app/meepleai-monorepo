@@ -24,7 +24,7 @@ namespace Api.Filters;
 ///     {
 ///         // Session authentication
 ///     }
-///     else if (context.User.Identity?.IsAuthenticated == true)
+///     else if (context.User.Identity?.IsAuthenticated is true)
 ///     {
 ///         // API key authentication
 ///     }

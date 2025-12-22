@@ -27,8 +27,7 @@ internal class ValidationAccuracyTrackingService
         PromptEvaluationResult evaluationResult,
         int expectedValidCount)
     {
-        if (evaluationResult == null)
-            throw new ArgumentNullException(nameof(evaluationResult));
+        ArgumentNullException.ThrowIfNull(evaluationResult);
 
         if (expectedValidCount < 0 || expectedValidCount > evaluationResult.TotalQueries)
             throw new ArgumentException(
@@ -77,11 +76,8 @@ internal class ValidationAccuracyTrackingService
         int expectedValidCount,
         Func<QueryEvaluationResult, bool> metricSelector)
     {
-        if (evaluationResult == null)
-            throw new ArgumentNullException(nameof(evaluationResult));
-
-        if (metricSelector == null)
-            throw new ArgumentNullException(nameof(metricSelector));
+        ArgumentNullException.ThrowIfNull(evaluationResult);
+        ArgumentNullException.ThrowIfNull(metricSelector);
 
         if (expectedValidCount < 0 || expectedValidCount > evaluationResult.TotalQueries)
             throw new ArgumentException(
@@ -153,8 +149,7 @@ internal class ValidationAccuracyTrackingService
         ValidationAccuracyMetrics metrics,
         string context)
     {
-        if (metrics == null)
-            throw new ArgumentNullException(nameof(metrics));
+        ArgumentNullException.ThrowIfNull(metrics);
 
         if (string.IsNullOrWhiteSpace(context))
             throw new ArgumentException("Context cannot be null or whitespace", nameof(context));
@@ -175,7 +170,7 @@ internal class ValidationAccuracyTrackingService
     /// <summary>
     /// Generates actionable recommendations based on metrics.
     /// </summary>
-    private static IReadOnlyList<string> GenerateRecommendations(ValidationAccuracyMetrics metrics)
+    private static List<string> GenerateRecommendations(ValidationAccuracyMetrics metrics)
     {
         var recommendations = new List<string>();
 

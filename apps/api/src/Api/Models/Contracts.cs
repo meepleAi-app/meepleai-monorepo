@@ -160,7 +160,7 @@ internal record N8NTestResult(
 );
 
 // N8N-04: Workflow template models
-internal record WorkflowTemplateDto(
+public record WorkflowTemplateDto(
     string Id,
     string Name,
     string Version,
@@ -174,7 +174,7 @@ internal record WorkflowTemplateDto(
     IList<TemplateParameterDto> Parameters
 );
 
-internal record TemplateParameterDto(
+public record TemplateParameterDto(
     string Name,
     string Type,
     string Label,
@@ -185,7 +185,7 @@ internal record TemplateParameterDto(
     bool Sensitive
 );
 
-internal record WorkflowTemplateDetailDto(
+public record WorkflowTemplateDetailDto(
     string Id,
     string Name,
     string Version,
@@ -204,7 +204,7 @@ internal record ImportTemplateRequest(
     IDictionary<string, string> Parameters
 );
 
-internal record ImportTemplateResponse(
+public record ImportTemplateResponse(
     string WorkflowId,
     string Message
 );
@@ -213,7 +213,7 @@ internal record ValidateTemplateRequest(
     string TemplateJson
 );
 
-internal record ValidateTemplateResponse(
+public record ValidateTemplateResponse(
     [property: JsonPropertyName("valid")] bool IsValid,
     [property: JsonPropertyName("errors")] IList<string>? Errors
 );
@@ -552,11 +552,11 @@ internal record UserSearchResultDto(
 // ADMIN-02: Analytics Dashboard models
 internal record DashboardStatsDto(
     DashboardMetrics Metrics,
-    IReadOnlyList<TimeSeriesDataPoint> UserTrend,
-    IReadOnlyList<TimeSeriesDataPoint> SessionTrend,
-    IReadOnlyList<TimeSeriesDataPoint> ApiRequestTrend,
-    IReadOnlyList<TimeSeriesDataPoint> PdfUploadTrend,
-    IReadOnlyList<TimeSeriesDataPoint> ChatMessageTrend,
+    List<TimeSeriesDataPoint> UserTrend,
+    List<TimeSeriesDataPoint> SessionTrend,
+    List<TimeSeriesDataPoint> ApiRequestTrend,
+    List<TimeSeriesDataPoint> PdfUploadTrend,
+    List<TimeSeriesDataPoint> ChatMessageTrend,
     DateTime GeneratedAt
 );
 
@@ -643,7 +643,7 @@ internal record ExportDataRequest(
 );
 
 // AI-13: BoardGameGeek API integration models
-internal record BggSearchResultDto(
+public record BggSearchResultDto(
     int BggId,
     string Name,
     int? YearPublished,
@@ -651,7 +651,7 @@ internal record BggSearchResultDto(
     string Type // "boardgame", "boardgameexpansion", etc.
 );
 
-internal record BggGameDetailsDto(
+public record BggGameDetailsDto(
     int BggId,
     string Name,
     string? Description,
@@ -674,7 +674,7 @@ internal record BggGameDetailsDto(
     IList<string> Publishers
 );
 
-internal record BggSearchRequest(
+public record BggSearchRequest(
     [Required][MinLength(1)] string Query,
     bool Exact = false
 );

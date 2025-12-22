@@ -5,8 +5,9 @@
  * Covers: BGG conversion, sizes, variants, half-stars
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
 import { RatingStars } from './rating-stars';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta = {
   title: 'Components/UI/RatingStars',

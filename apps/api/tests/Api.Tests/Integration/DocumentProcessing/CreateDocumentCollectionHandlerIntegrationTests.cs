@@ -39,7 +39,6 @@ public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLife
     private MeepleAiDbContext? _dbContext;
     private IMediator? _mediator;
     private IDocumentCollectionRepository? _repository;
-    private IUnitOfWork? _unitOfWork;
 
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
     private static readonly Guid TestUserId = new("10000000-0000-0000-0000-000000000001");
@@ -81,7 +80,6 @@ public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLife
         _dbContext = serviceProvider.GetRequiredService<MeepleAiDbContext>();
         _mediator = serviceProvider.GetRequiredService<IMediator>();
         _repository = serviceProvider.GetRequiredService<IDocumentCollectionRepository>();
-        _unitOfWork = serviceProvider.GetRequiredService<IUnitOfWork>();
 
         for (var attempt = 0; attempt < 3; attempt++)
         {

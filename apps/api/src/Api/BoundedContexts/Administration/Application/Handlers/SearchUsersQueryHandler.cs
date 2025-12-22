@@ -44,10 +44,15 @@ internal class SearchUsersQueryHandler : IQueryHandler<SearchUsersQuery, IReadOn
             _logger.LogInformation("Found {Count} users matching query: {Query}", results.Count, query.SearchQuery);
             return results;
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: QUERY HANDLER PATTERN - CQRS query boundary
+        // Generic catch handles unexpected infrastructure failures (DB, network)
+        // to prevent exception propagation to API layer. Returns empty result on failure.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error searching users with query: {Query}", query.SearchQuery);
             return Array.Empty<UserSearchResultDto>();
         }
+#pragma warning restore CA1031
     }
 }

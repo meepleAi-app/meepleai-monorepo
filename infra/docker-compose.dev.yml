@@ -14,7 +14,8 @@ services:
 
   postgres:
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-meeple}
+      # Issue #2152: Changed default from 'meeple' to 'postgres' for standard PostgreSQL compatibility
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-meeplepass}  # Plain password for dev
       POSTGRES_PASSWORD_FILE: ""
       POSTGRES_DB: ${POSTGRES_DB:-meepleai}
@@ -28,7 +29,8 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
       # Use plain connection string for dev (no secrets)
-      ConnectionStrings__Postgres: "Host=postgres;Database=${POSTGRES_DB:-meepleai};Username=${POSTGRES_USER:-meeple};Password=${POSTGRES_PASSWORD:-meeplepass}"
+      # Issue #2152: Changed default username from 'meeple' to 'postgres'
+      ConnectionStrings__Postgres: "Host=postgres;Database=${POSTGRES_DB:-meepleai};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-meeplepass}"
       POSTGRES_PASSWORD_FILE: ""
       QDRANT_URL: http://qdrant:6333
       REDIS_URL: "redis:6379,password=changeme-redis-dev-please-set,abortConnect=false"

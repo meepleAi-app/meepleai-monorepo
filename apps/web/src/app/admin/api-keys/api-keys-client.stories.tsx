@@ -1,9 +1,11 @@
-import type { Meta, StoryObj } from '@storybook/react';
-import { ApiKeysPageClient } from './client';
 import { AuthProvider } from '@/components/auth/AuthProvider';
 import type { AuthUser } from '@/types/auth';
 
-const mockAdminUser: AuthUser = {
+import { ApiKeysPageClient } from './client';
+
+import type { Meta, StoryObj } from '@storybook/react';
+
+const _mockAdminUser: AuthUser = {
   id: '123e4567-e89b-12d3-a456-426614174000',
   email: 'admin@meepleai.com',
   displayName: 'Admin User',

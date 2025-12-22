@@ -17,9 +17,9 @@ internal class GetAllAlertConfigurationsQueryHandler : IRequestHandler<GetAllAle
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
     }
 
-    public async Task<List<AlertConfigurationDto>> Handle(GetAllAlertConfigurationsQuery request, CancellationToken ct)
+    public async Task<List<AlertConfigurationDto>> Handle(GetAllAlertConfigurationsQuery request, CancellationToken cancellationToken)
     {
-        var configs = await _repository.GetAllAsync(ct).ConfigureAwait(false);
+        var configs = await _repository.GetAllAsync(cancellationToken).ConfigureAwait(false);
 
         return configs.Select(c => new AlertConfigurationDto(
             c.Id,
@@ -32,3 +32,4 @@ internal class GetAllAlertConfigurationsQueryHandler : IRequestHandler<GetAllAle
             c.UpdatedBy)).ToList();
     }
 }
+

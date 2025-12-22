@@ -12,7 +12,7 @@ namespace Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 /// EF Core implementation of OAuth account repository.
 /// Maps between domain OAuthAccount entity and OAuthAccountEntity persistence model.
 /// </summary>
-internal class OAuthAccountRepository : RepositoryBase, IOAuthAccountRepository
+public class OAuthAccountRepository : RepositoryBase, IOAuthAccountRepository
 {
     private readonly ILogger<OAuthAccountRepository> _logger;
 
@@ -34,6 +34,7 @@ internal class OAuthAccountRepository : RepositoryBase, IOAuthAccountRepository
 
     public async Task<OAuthAccount?> GetByUserIdAndProviderAsync(Guid userId, string provider, CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(provider);
         var normalizedProvider = provider.ToLowerInvariant();
         var entity = await DbContext.OAuthAccounts
             .AsNoTracking()
@@ -57,6 +58,7 @@ internal class OAuthAccountRepository : RepositoryBase, IOAuthAccountRepository
 
     public async Task<OAuthAccount?> GetByProviderUserIdAsync(string provider, string providerUserId, CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(provider);
         var normalizedProvider = provider.ToLowerInvariant();
         var entity = await DbContext.OAuthAccounts
             .AsNoTracking()
@@ -78,6 +80,7 @@ internal class OAuthAccountRepository : RepositoryBase, IOAuthAccountRepository
 
     public async Task AddAsync(OAuthAccount entity, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(entity);
         // Collect domain events BEFORE mapping to persistence entity
         CollectDomainEvents(entity);
 
@@ -87,6 +90,7 @@ internal class OAuthAccountRepository : RepositoryBase, IOAuthAccountRepository
 
     public async Task UpdateAsync(OAuthAccount entity, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(entity);
         // Collect domain events BEFORE updating persistence entity
         CollectDomainEvents(entity);
 
@@ -97,6 +101,7 @@ internal class OAuthAccountRepository : RepositoryBase, IOAuthAccountRepository
 
     public async Task DeleteAsync(OAuthAccount entity, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(entity);
         var oauthEntity = await DbContext.OAuthAccounts.FindAsync(new object[] { entity.Id }, cancellationToken).ConfigureAwait(false);
         if (oauthEntity != null)
         {
@@ -117,6 +122,7 @@ internal class OAuthAccountRepository : RepositoryBase, IOAuthAccountRepository
 
     public async Task<bool> ExistsByUserIdAndProviderAsync(Guid userId, string provider, CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(provider);
         var normalizedProvider = provider.ToLowerInvariant();
         return await DbContext.OAuthAccounts
             .AsNoTracking()

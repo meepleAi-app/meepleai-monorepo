@@ -21,11 +21,19 @@ internal sealed class ReportExecutionRepository : IReportExecutionRepository
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
     }
 
-    public async Task<ReportExecution?> GetByIdAsync(Guid id, CancellationToken ct = default)
+    // CA1869: Cache JsonSerializerOptions for better performance
+    private static readonly JsonSerializerOptions s_deserializeOptions = new()
+    {
+        MaxDepth = 10,
+        PropertyNameCaseInsensitive = false,
+        AllowTrailingCommas = false
+    };
+
+    public async Task<ReportExecution?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var entity = await _dbContext.ReportExecutions
             .AsNoTracking()
-            .FirstOrDefaultAsync(e => e.Id == id, ct)
+            .FirstOrDefaultAsync(e => e.Id == id, cancellationToken)
             .ConfigureAwait(false);
 
         return entity is not null ? MapToDomain(entity) : null;
@@ -34,14 +42,14 @@ internal sealed class ReportExecutionRepository : IReportExecutionRepository
     public async Task<IReadOnlyList<ReportExecution>> GetByReportIdAsync(
         Guid reportId,
         int limit = 50,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         var entities = await _dbContext.ReportExecutions
             .AsNoTracking()
             .Where(e => e.ReportId == reportId)
             .OrderByDescending(e => e.StartedAt)
             .Take(limit)
-            .ToListAsync(ct)
+            .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
         return entities.Select(MapToDomain).ToList();
@@ -49,30 +57,30 @@ internal sealed class ReportExecutionRepository : IReportExecutionRepository
 
     public async Task<IReadOnlyList<ReportExecution>> GetRecentExecutionsAsync(
         int limit = 100,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         var entities = await _dbContext.ReportExecutions
             .AsNoTracking()
             .OrderByDescending(e => e.StartedAt)
             .Take(limit)
-            .ToListAsync(ct)
+            .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
         return entities.Select(MapToDomain).ToList();
     }
 
-    public async Task AddAsync(ReportExecution execution, CancellationToken ct = default)
+    public async Task AddAsync(ReportExecution execution, CancellationToken cancellationToken = default)
     {
         var entity = MapToEntity(execution);
-        await _dbContext.ReportExecutions.AddAsync(entity, ct).ConfigureAwait(false);
-        await _dbContext.SaveChangesAsync(ct).ConfigureAwait(false);
+        await _dbContext.ReportExecutions.AddAsync(entity, cancellationToken).ConfigureAwait(false);
+        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task UpdateAsync(ReportExecution execution, CancellationToken ct = default)
+    public async Task UpdateAsync(ReportExecution execution, CancellationToken cancellationToken = default)
     {
         var entity = MapToEntity(execution);
         _dbContext.ReportExecutions.Update(entity);
-        await _dbContext.SaveChangesAsync(ct).ConfigureAwait(false);
+        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
     // Domain to Entity mapping
@@ -96,17 +104,9 @@ internal sealed class ReportExecutionRepository : IReportExecutionRepository
     // Entity to Domain mapping
     private static ReportExecution MapToDomain(ReportExecutionEntity entity)
     {
-        // ISSUE-916: Safe JSON deserialization with type restrictions (SECURITY)
-        var options = new JsonSerializerOptions
-        {
-            MaxDepth = 10,
-            PropertyNameCaseInsensitive = false,
-            AllowTrailingCommas = false
-        };
-
         var metadata = string.IsNullOrWhiteSpace(entity.ExecutionMetadataJson)
             ? new Dictionary<string, object>(StringComparer.Ordinal)
-            : JsonSerializer.Deserialize<Dictionary<string, object>>(entity.ExecutionMetadataJson, options)
+            : JsonSerializer.Deserialize<Dictionary<string, object>>(entity.ExecutionMetadataJson, s_deserializeOptions)
               ?? new Dictionary<string, object>(StringComparer.Ordinal);
 
         return new ReportExecution
@@ -124,3 +124,4 @@ internal sealed class ReportExecutionRepository : IReportExecutionRepository
         };
     }
 }
+

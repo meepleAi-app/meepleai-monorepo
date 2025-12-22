@@ -5,15 +5,12 @@
  * Covers: Sessions, 2FA, User Profile, Preferences
  */
 
-import type { HttpClient } from '../core/httpClient';
 import { setStoredApiKey, clearStoredApiKey } from '../core/apiKeyStore';
 import {
-  AuthUserSchema,
   LoginResponseSchema,
   RegisterResponseSchema,
   LogoutResponseSchema,
   CurrentUserResponseSchema,
-  VerifyResetTokenResponseSchema,
   RequestPasswordResetResponseSchema,
   ConfirmPasswordResetResponseSchema,
   SessionStatusResponseSchema,
@@ -30,11 +27,6 @@ import {
   ApiKeyLoginResponseSchema,
   UserSearchResultSchema,
   type AuthUser,
-  type LoginResponse,
-  type RegisterResponse,
-  type LogoutResponse,
-  type CurrentUserResponse,
-  type VerifyResetTokenResponse,
   type RequestPasswordResetResponse,
   type ConfirmPasswordResetResponse,
   type SessionStatusResponse,
@@ -64,6 +56,8 @@ import {
   type RevokeAllSessionsResponse,
   type RevokeAllSessionsRequest,
 } from '../schemas';
+
+import type { HttpClient } from '../core/httpClient';
 
 export interface CreateAuthClientParams {
   httpClient: HttpClient;

@@ -1,7 +1,9 @@
-import type { Meta, StoryObj } from '@storybook/react';
-import { GameOverviewTab } from './GameOverviewTab';
 import { api } from '@/lib/api';
 import type { Game, BggGameDetails } from '@/lib/api';
+
+import { GameOverviewTab } from './GameOverviewTab';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 // Mock API for Storybook
 const mockBggDetails: BggGameDetails = {

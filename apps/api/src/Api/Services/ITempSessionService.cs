@@ -24,5 +24,5 @@ internal interface ITempSessionService
     /// <summary>
     /// Cleanup expired temporary sessions (background task)
     /// </summary>
-    Task CleanupExpiredSessionsAsync(CancellationToken ct = default);
+    Task CleanupExpiredSessionsAsync(CancellationToken cancellationToken = default);
 }

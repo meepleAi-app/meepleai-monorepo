@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.Authentication.Domain.Entities;
 /// Supports Google, Discord, and GitHub OAuth 2.0.
 /// Aggregate root for OAuth account lifecycle management.
 /// </summary>
-internal sealed class OAuthAccount : AggregateRoot<Guid>
+public sealed class OAuthAccount : AggregateRoot<Guid>
 {
     public Guid UserId { get; private set; }
     public string Provider { get; private set; }
@@ -52,6 +52,7 @@ internal sealed class OAuthAccount : AggregateRoot<Guid>
         string? refreshTokenEncrypted = null,
         DateTime? tokenExpiresAt = null) : base(id)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(provider);
         if (!SupportedProviders.Contains(provider))
             throw new ValidationException(nameof(provider), $"Unsupported OAuth provider: {provider}. Supported: {string.Join(", ", SupportedProviders)}");
 

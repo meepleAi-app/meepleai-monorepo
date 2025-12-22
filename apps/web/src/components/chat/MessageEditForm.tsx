@@ -11,9 +11,10 @@
  */
 
 import React from 'react';
-import { useChatStore } from '@/store/chat/store';
+
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { useChatStore } from '@/store/chat/store';
 
 export function MessageEditForm() {
   // Issue #1676: Migrated from useChatContext to direct Zustand store

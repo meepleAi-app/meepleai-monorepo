@@ -9,22 +9,24 @@
  * Issue #1077: FE-IMP-001 - Bootstrap App Router + Shared Providers
  */
 
+import { useState, useEffect, ReactNode } from 'react';
+
 import { ThemeProvider } from 'next-themes';
-import { ErrorBoundary, RouteErrorBoundary } from '@/components/errors';
-import { Toaster } from '@/components/ui/sonner';
-import { useSessionCheck } from '@/hooks/useSessionCheck';
-import { logger } from '@/lib/logger';
-import { createErrorContext } from '@/lib/errors';
-import { SessionWarningModal } from '@/components/modals';
+
+import { QueryProvider } from '@/app/QueryProvider';
 import { AccessibleSkipLink } from '@/components/accessible';
 import { AuthProvider } from '@/components/auth/AuthProvider';
-import { QueryProvider } from '@/app/QueryProvider';
-import { IntlProvider } from '@/components/providers/IntlProvider';
-import { api } from '@/lib/api';
+import { ErrorBoundary, RouteErrorBoundary } from '@/components/errors';
 import { KeyboardShortcutsHelp } from '@/components/layout';
+import { SessionWarningModal } from '@/components/modals';
+import { IntlProvider } from '@/components/providers/IntlProvider';
+import { Toaster } from '@/components/ui/sonner';
 import { useGlobalKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { useSessionCheck } from '@/hooks/useSessionCheck';
+import { api } from '@/lib/api';
 import { hydrateApiKey } from '@/lib/api/core/apiKeyStore';
-import { useState, useEffect, ReactNode } from 'react';
+import { createErrorContext } from '@/lib/errors';
+import { logger } from '@/lib/logger';
 
 interface AppProvidersProps {
   children: ReactNode;
@@ -36,26 +38,28 @@ function AppContent({ children }: { children: ReactNode }) {
 
   // Issue #1100: Keyboard shortcuts system
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
-  const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [_showCommandPalette, setShowCommandPalette] = useState(false);
 
   // Enable axe-core accessibility checks in development (UI-05, Issue #841)
   // Moved to useEffect to avoid page crashes during Playwright tests
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
-      import('@axe-core/react').then((axe) => {
-        const React = require('react');
-        const ReactDOM = require('react-dom');
-        axe.default(React, ReactDOM, 1000);
-      }).catch(() => {
-        // Silently fail if axe-core fails to load
-      });
+      import('@axe-core/react')
+        .then(axe => {
+          const React = require('react');
+          const ReactDOM = require('react-dom');
+          axe.default(React, ReactDOM, 1000);
+        })
+        .catch(() => {
+          // Silently fail if axe-core fails to load
+        });
     }
   }, []);
 
   // Hydrate API key from sessionStorage on app startup
   // This restores the encrypted API key into memory after page reload
   useEffect(() => {
-    hydrateApiKey().catch((error) => {
+    hydrateApiKey().catch(error => {
       // Log error but don't block app startup
       logger.error(
         'Failed to hydrate API key on startup',
@@ -138,10 +142,7 @@ export function AppProviders({ children }: AppProvidersProps) {
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
         <QueryProvider>
           <AuthProvider>
-            <ErrorBoundary
-              componentName="App"
-              showDetails={process.env.NODE_ENV === 'development'}
-            >
+            <ErrorBoundary componentName="App" showDetails={process.env.NODE_ENV === 'development'}>
               <RouteErrorBoundary routeName="AppContent">
                 <AppContent>{children}</AppContent>
               </RouteErrorBoundary>

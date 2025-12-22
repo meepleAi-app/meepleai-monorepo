@@ -97,143 +97,20 @@ internal class RagService : IRagService
             var cachedResponse = await _cache.GetAsync<QaResponse>(cacheKey, cancellationToken).ConfigureAwait(false);
             if (cachedResponse != null)
             {
-                LogInformation("Returning cached QA response for game {GameId}", gameId);
+                _logger.LogInformation("Returning cached QA response for game {GameId}", gameId);
                 return cachedResponse;
             }
         }
         else
         {
-            LogInformation("Cache bypassed for game {GameId} (Fresh Answer requested)", gameId);
+            _logger.LogInformation("Cache bypassed for game {GameId} (Fresh Answer requested)", gameId);
         }
 
         // Issue #1441: Use centralized exception handling to eliminate 5 duplicate catch blocks
         return await ExecuteRagOperationAsync(
             async () =>
             {
-                // CONFIG-04: Load dynamic RAG configuration
-                var topK = await _configProvider.GetRagConfigAsync("TopK", DefaultTopK).ConfigureAwait(false);
-                activity?.SetTag("rag.config.topK", topK);
-
-                // Step 1: PERF-08 - Generate query variations for improved recall
-                var queryVariations = await _queryExpansion.GenerateQueryVariationsAsync(query!, language, cancellationToken).ConfigureAwait(false);
-                activity?.SetTag("query.variations.count", queryVariations.Count);
-
-                _logger.LogDebug("Generated {Count} query variations: {Variations}",
-                    queryVariations.Count, string.Join(", ", queryVariations.Take(3)));
-
-                // Step 2: Generate embeddings for all query variations
-                // AI-09: Use language-aware embedding service
-                var embeddingTasks = queryVariations
-                    .Select(q => _embeddingService.GenerateEmbeddingAsync(q, language, cancellationToken))
-                    .ToList();
-                var embeddingResults = await Task.WhenAll(embeddingTasks).ConfigureAwait(false);
-
-                var embeddings = embeddingResults
-                    .Where(r => r.Success && r.Embeddings.Count > 0)
-                    .Select(r => r.Embeddings[0])
-                    .ToList();
-
-                if (embeddings.Count == 0)
-                {
-                    _logger.LogError("Failed to generate query embeddings for language {Language}", language);
-                    return new QaResponse("Unable to process query.", Array.Empty<Snippet>());
-                }
-
-                // Step 3: PERF-08 - Search Qdrant with all query variations (parallel execution)
-                // CONFIG-04: Use dynamic topK from configuration
-                var searchTasks = embeddings
-                    .Select(embedding => _qdrantService.SearchAsync(gameId, embedding, language, limit: topK, documentIds: null, cancellationToken))
-                    .ToList();
-                var searchResults = await Task.WhenAll(searchTasks).ConfigureAwait(false);
-
-                // Step 4: PERF-08 - Fuse and deduplicate results using Reciprocal Rank Fusion (RRF)
-                var fusedResults = await _reranker.FuseSearchResultsAsync(searchResults.Where(r => r.Success).ToList()).ConfigureAwait(false);
-
-                if (fusedResults.Count == 0)
-                {
-                    LogInformation("No vector results found for query in game {GameId}", gameId);
-                    return new QaResponse("Not specified", Array.Empty<Snippet>());
-                }
-
-                // Take top 3 results after fusion
-                var topResults = fusedResults.Take(3).ToList();
-                activity?.SetTag("results.fused.count", fusedResults.Count);
-                activity?.SetTag("results.final.count", topResults.Count);
-
-                // Step 5: Build snippets from fused results
-                var snippets = topResults.Select(r => new Snippet(
-                    r.Text,
-                    $"PDF:{r.PdfId}",
-                    r.Page,
-                    0, // line number not tracked in chunks
-                    r.Score // AI-11: Include actual search score for quality tracking
-                )).ToList();
-
-                // Step 6: Build context from retrieved chunks
-                var context = string.Join("\n\n---\n\n", topResults.Select(r =>
-                    $"[Page {r.Page}]\n{r.Text}"));
-
-                // AI-07.1: Use PromptTemplateService for advanced prompt engineering
-                var questionType = _promptTemplateService.ClassifyQuestion(query!);
-                Guid? gameGuid = Guid.TryParse(gameId, out var guid) ? guid : null;
-                var template = await _promptTemplateService.GetTemplateAsync(gameGuid, questionType).ConfigureAwait(false);
-
-                var systemPrompt = _promptTemplateService.RenderSystemPrompt(template);
-                var userPrompt = _promptTemplateService.RenderUserPrompt(template, context, query!);
-
-                _logger.LogDebug(
-                    "Using prompt template for game {GameId}, question type {QuestionType}",
-                    gameId, questionType);
-
-                var llmResult = await _llmService.GenerateCompletionAsync(systemPrompt, userPrompt, cancellationToken).ConfigureAwait(false);
-
-                if (!llmResult.Success || string.IsNullOrWhiteSpace(llmResult.Response))
-                {
-                    _logger.LogError("Failed to generate LLM response: {Error}", llmResult.ErrorMessage);
-                    return new QaResponse("Unable to generate answer.", snippets);
-                }
-
-                var answer = llmResult.Response.Trim();
-                var confidence = topResults.Count > 0
-                    ? (double?)topResults.Max(r => r.Score)
-                    : null;
-
-                // OPS-02: Add trace attributes for successful operation
-                activity?.SetTag("response.tokens", llmResult.Usage.TotalTokens);
-                activity?.SetTag("response.confidence", confidence ?? 0.0);
-                activity?.SetTag("snippets.count", snippets.Count);
-                activity?.SetTag("success", true);
-
-                LogInformation(
-                    "RAG query answered with {SnippetCount} snippets, LLM generated answer: {AnswerPreview}",
-                    snippets.Count, StringHelper.Truncate(answer, 50));
-
-                var metadata = llmResult.Metadata.Count > 0
-                    ? new Dictionary<string, string>(llmResult.Metadata, StringComparer.Ordinal)
-                    : null;
-
-                var response = new QaResponse(
-                    answer,
-                    snippets,
-                    llmResult.Usage.PromptTokens,
-                    llmResult.Usage.CompletionTokens,
-                    llmResult.Usage.TotalTokens,
-                    confidence,
-                    metadata);
-
-                // AI-05: Cache the response for future requests
-                await _cache.SetAsync(cacheKey, response, 86400, cancellationToken).ConfigureAwait(false);
-
-                // OPS-02: Record metrics
-                stopwatch.Stop();
-                MeepleAiMetrics.RecordRagRequest(stopwatch.Elapsed.TotalMilliseconds, gameId, success: true);
-                MeepleAiMetrics.TokensUsed.Record(llmResult.Usage.TotalTokens, new TagList { { "game.id", gameId }, { "operation", "qa" } });
-                if (confidence.HasValue)
-                {
-                    MeepleAiMetrics.ConfidenceScore.Record(confidence.Value, new TagList { { "game.id", gameId }, { "operation", "qa" } });
-                }
-
-                return response;
+                return await ProcessAskRequestAsync(gameId, query!, language, cacheKey, activity, stopwatch, cancellationToken).ConfigureAwait(false);
             },
             "RAG query",
             gameId,
@@ -241,6 +118,172 @@ internal class RagService : IRagService
             activity,
             stopwatch,
             GetQaErrorResponseFactories()).ConfigureAwait(false);
+    }
+
+    private async Task<QaResponse> ProcessAskRequestAsync(
+        string gameId,
+        string query,
+        string language,
+        string cacheKey,
+        Activity? activity,
+        Stopwatch stopwatch,
+        CancellationToken cancellationToken)
+    {
+        // CONFIG-04: Load dynamic RAG configuration
+        var topK = await _configProvider.GetRagConfigAsync("TopK", DefaultTopK).ConfigureAwait(false);
+        activity?.SetTag("rag.config.topK", topK);
+
+        // Step 1: PERF-08 - Retrieve and fuse results
+        var fusedResults = await ExecuteRetrievalPhaseAsync(query, gameId, language, topK, activity, cancellationToken).ConfigureAwait(false);
+
+        if (fusedResults.Count == 0)
+        {
+            _logger.LogInformation("No vector results found for query in game {GameId}", gameId);
+            return new QaResponse("Not specified", Array.Empty<Snippet>());
+        }
+
+        // Take top 3 results after fusion
+        var topResults = fusedResults.Take(3).ToList();
+        activity?.SetTag("results.fused.count", fusedResults.Count);
+        activity?.SetTag("results.final.count", topResults.Count);
+
+        // Step 2: Generate answer
+        return await ExecuteGenerationPhaseAsync(
+            query,
+            gameId,
+            topResults,
+            cacheKey,
+            activity,
+            stopwatch,
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<List<SearchResultItem>> ExecuteRetrievalPhaseAsync(
+        string query,
+        string gameId,
+        string language,
+        int topK,
+        Activity? activity,
+        CancellationToken cancellationToken)
+    {
+        // Step 1: PERF-08 - Generate query variations for improved recall
+        var queryVariations = await _queryExpansion.GenerateQueryVariationsAsync(query, language, cancellationToken).ConfigureAwait(false);
+        activity?.SetTag("query.variations.count", queryVariations.Count);
+
+        _logger.LogDebug("Generated {Count} query variations: {Variations}",
+            queryVariations.Count, string.Join(", ", queryVariations.Take(3)));
+
+        // Step 2: Generate embeddings for all query variations
+        // AI-09: Use language-aware embedding service
+        var embeddingTasks = queryVariations
+            .Select(q => _embeddingService.GenerateEmbeddingAsync(q, language, cancellationToken))
+            .ToList();
+        var embeddingResults = await Task.WhenAll(embeddingTasks).ConfigureAwait(false);
+
+        var embeddings = embeddingResults
+            .Where(r => r.Success && r.Embeddings.Count > 0)
+            .Select(r => r.Embeddings[0])
+            .ToList();
+
+        if (embeddings.Count == 0)
+        {
+            _logger.LogError("Failed to generate query embeddings for language {Language}", language);
+            return new List<SearchResultItem>();
+        }
+
+        // Step 3: PERF-08 - Search Qdrant with all query variations (parallel execution)
+        var searchTasks = embeddings
+            .Select(embedding => _qdrantService.SearchAsync(gameId, embedding, language, limit: topK, documentIds: null, cancellationToken))
+            .ToList();
+        var searchResults = await Task.WhenAll(searchTasks).ConfigureAwait(false);
+
+        // Step 4: PERF-08 - Fuse and deduplicate results using Reciprocal Rank Fusion (RRF)
+        return await _reranker.FuseSearchResultsAsync(searchResults.Where(r => r.Success).ToList()).ConfigureAwait(false);
+    }
+
+    private async Task<QaResponse> ExecuteGenerationPhaseAsync(
+        string query,
+        string gameId,
+        List<SearchResultItem> topResults,
+        string cacheKey,
+        Activity? activity,
+        Stopwatch stopwatch,
+        CancellationToken cancellationToken)
+    {
+        // Step 5: Build snippets from fused results
+        var snippets = topResults.Select(r => new Snippet(
+            r.Text,
+            $"PDF:{r.PdfId}",
+            r.Page,
+            0, // line number not tracked in chunks
+            r.Score // AI-11: Include actual search score for quality tracking
+        )).ToList();
+
+        // Step 6: Build context from retrieved chunks
+        var context = string.Join("\n\n---\n\n", topResults.Select(r =>
+            $"[Page {r.Page}]\n{r.Text}"));
+
+        // AI-07.1: Use PromptTemplateService for advanced prompt engineering
+        var questionType = _promptTemplateService.ClassifyQuestion(query);
+        Guid? gameGuid = Guid.TryParse(gameId, out var guid) ? guid : null;
+        var template = await _promptTemplateService.GetTemplateAsync(gameGuid, questionType).ConfigureAwait(false);
+
+        var systemPrompt = _promptTemplateService.RenderSystemPrompt(template);
+        var userPrompt = _promptTemplateService.RenderUserPrompt(template, context, query);
+
+        _logger.LogDebug(
+            "Using prompt template for game {GameId}, question type {QuestionType}",
+            gameId, questionType);
+
+        var llmResult = await _llmService.GenerateCompletionAsync(systemPrompt, userPrompt, cancellationToken).ConfigureAwait(false);
+
+        if (!llmResult.Success || string.IsNullOrWhiteSpace(llmResult.Response))
+        {
+            _logger.LogError("Failed to generate LLM response: {Error}", llmResult.ErrorMessage);
+            return new QaResponse("Unable to generate answer.", snippets);
+        }
+
+        var answer = llmResult.Response.Trim();
+        var confidence = topResults.Count > 0
+            ? (double?)topResults.Max(r => r.Score)
+            : null;
+
+        // OPS-02: Add trace attributes for successful operation
+        activity?.SetTag("response.tokens", llmResult.Usage.TotalTokens);
+        activity?.SetTag("response.confidence", confidence ?? 0.0);
+        activity?.SetTag("snippets.count", snippets.Count);
+        activity?.SetTag("success", true);
+
+        _logger.LogInformation(
+            "RAG query answered with {SnippetCount} snippets, LLM generated answer: {AnswerPreview}",
+            snippets.Count, StringHelper.Truncate(answer, 50));
+
+        var metadata = llmResult.Metadata.Count > 0
+            ? new Dictionary<string, string>(llmResult.Metadata, StringComparer.Ordinal)
+            : null;
+
+        var response = new QaResponse(
+            answer,
+            snippets,
+            llmResult.Usage.PromptTokens,
+            llmResult.Usage.CompletionTokens,
+            llmResult.Usage.TotalTokens,
+            confidence,
+            metadata);
+
+        // AI-05: Cache the response for future requests
+        await _cache.SetAsync(cacheKey, response, 86400, cancellationToken).ConfigureAwait(false);
+
+        // OPS-02: Record metrics
+        stopwatch.Stop();
+        MeepleAiMetrics.RecordRagRequest(stopwatch.Elapsed.TotalMilliseconds, gameId, success: true);
+        MeepleAiMetrics.TokensUsed.Record(llmResult.Usage.TotalTokens, new TagList { { "game.id", gameId }, { "operation", "qa" } });
+        if (confidence.HasValue)
+        {
+            MeepleAiMetrics.ConfidenceScore.Record(confidence.Value, new TagList { { "game.id", gameId }, { "operation", "qa" } });
+        }
+
+        return response;
     }
 
     /// <summary>
@@ -275,95 +318,16 @@ internal class RagService : IRagService
         var cachedResponse = await _cache.GetAsync<ExplainResponse>(cacheKey, cancellationToken).ConfigureAwait(false);
         if (cachedResponse != null)
         {
-            LogInformation("Returning cached Explain response for game {GameId}, topic: {Topic}, language: {Language}", gameId, topic, language);
+            _logger.LogInformation("Returning cached Explain response for game {GameId}, topic: {Topic}, language: {Language}", gameId, topic, language);
             return cachedResponse;
         }
 
         // Issue #1441: Use centralized exception handling to eliminate 5 duplicate catch blocks
+        // Issue #1441: Use centralized exception handling to eliminate 5 duplicate catch blocks
         return await ExecuteRagOperationAsync(
             async () =>
             {
-                // CONFIG-04: Load dynamic RAG configuration
-                var topK = await _configProvider.GetRagConfigAsync("TopK", DefaultTopK).ConfigureAwait(false);
-
-                // Step 1: Generate embedding for the topic
-                // AI-09: Use language-aware embedding service
-                var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(topic, language, cancellationToken).ConfigureAwait(false);
-                if (!embeddingResult.Success || embeddingResult.Embeddings.Count == 0)
-                {
-                    _logger.LogError("Failed to generate topic embedding for language {Language}: {Error}", language, embeddingResult.ErrorMessage);
-                    return CreateEmptyExplainResponse("Unable to process topic.");
-                }
-
-                var topicEmbedding = embeddingResult.Embeddings[0];
-
-                // Step 2: Search Qdrant for relevant chunks (get more for comprehensive explanation)
-                // AI-09: Filter search by language
-                // CONFIG-04: Use dynamic topK from configuration
-                var searchResult = await _qdrantService.SearchAsync(gameId, topicEmbedding, language, limit: topK, documentIds: null, cancellationToken).ConfigureAwait(false);
-
-                if (!searchResult.Success || searchResult.Results.Count == 0)
-                {
-                    LogInformation("No vector results found for topic {Topic} in game {GameId}", topic, gameId);
-                    return CreateEmptyExplainResponse($"No relevant information found about '{topic}' in the rulebook.");
-                }
-
-                // Step 3: Build outline from retrieved chunks
-                var outline = BuildOutline(topic, searchResult.Results);
-
-                // Step 4: Build script from chunks with proper structure
-                var script = BuildScript(topic, searchResult.Results);
-
-                // Step 5: Create citations
-                var citations = searchResult.Results.Select(r => new Snippet(
-                    r.Text,
-                    $"PDF:{r.PdfId}",
-                    r.Page,
-                    0, // line number not tracked in chunks
-                    r.Score // AI-11: Include actual search score for quality tracking
-                )).ToList();
-
-                // Step 6: Calculate estimated reading time (average reading speed: 200 words/minute)
-                var wordCount = script.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
-                var estimatedMinutes = Math.Max(1, (int)Math.Ceiling(wordCount / 200.0));
-
-                LogInformation(
-                    "RAG explain generated for topic '{Topic}' with {SectionCount} sections, {CitationCount} citations, ~{Minutes} min read",
-                    topic, outline.sections.Count, citations.Count, estimatedMinutes);
-
-                var confidence = searchResult.Results.Count > 0
-                    ? (double?)searchResult.Results.Max(r => r.Score)
-                    : null;
-
-                // OPS-02: Add trace attributes for successful operation
-                activity?.SetTag("sections.count", outline.sections.Count);
-                activity?.SetTag("citations.count", citations.Count);
-                activity?.SetTag("estimated.minutes", estimatedMinutes);
-                activity?.SetTag("response.confidence", confidence ?? 0.0);
-                activity?.SetTag("success", true);
-
-                var response = new ExplainResponse(
-                    outline,
-                    script,
-                    citations,
-                    estimatedMinutes,
-                    0,
-                    0,
-                    0,
-                    confidence);
-
-                // AI-05: Cache the response for future requests
-                await _cache.SetAsync(cacheKey, response, 86400, cancellationToken).ConfigureAwait(false);
-
-                // OPS-02: Record metrics
-                stopwatch.Stop();
-                MeepleAiMetrics.RecordRagRequest(stopwatch.Elapsed.TotalMilliseconds, gameId, success: true);
-                if (confidence.HasValue)
-                {
-                    MeepleAiMetrics.ConfidenceScore.Record(confidence.Value, new TagList { { "game.id", gameId }, { "operation", "explain" } });
-                }
-
-                return response;
+                return await ProcessExplainRequestAsync(gameId, topic, language, cacheKey, activity, stopwatch, cancellationToken).ConfigureAwait(false);
             },
             "RAG explain",
             gameId,
@@ -372,6 +336,143 @@ internal class RagService : IRagService
             stopwatch,
             GetExplainErrorResponseFactories(),
             $"topic: {topic}").ConfigureAwait(false);
+    }
+
+    private async Task<ExplainResponse> ProcessExplainRequestAsync(
+        string gameId,
+        string topic,
+        string language,
+        string cacheKey,
+        Activity? activity,
+        Stopwatch stopwatch,
+        CancellationToken cancellationToken)
+    {
+        // CONFIG-04: Load dynamic RAG configuration
+        var topK = await _configProvider.GetRagConfigAsync("TopK", DefaultTopK).ConfigureAwait(false);
+
+        // Step 1: Retrieval
+        var searchResults = await ExecuteExplainRetrievalAsync(topic, gameId, language, topK, cancellationToken).ConfigureAwait(false);
+
+        if (searchResults == null)
+        {
+            return CreateEmptyExplainResponse("Unable to process topic.");
+        }
+
+        if (searchResults.Count == 0)
+        {
+            _logger.LogInformation("No vector results found for topic {Topic} in game {GameId}", topic, gameId);
+            return CreateEmptyExplainResponse($"No relevant information found about '{topic}' in the rulebook.");
+        }
+
+        // Step 2: Generation (Formatting)
+        return await GenerateExplanationResponseAsync(
+            topic,
+            gameId,
+            language,
+            searchResults,
+            cacheKey,
+            activity,
+            stopwatch,
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<List<SearchResultItem>?> ExecuteExplainRetrievalAsync(
+        string topic,
+        string gameId,
+        string language,
+        int topK,
+        CancellationToken cancellationToken)
+    {
+        // Step 1: Generate embedding for the topic
+        // AI-09: Use language-aware embedding service
+        var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(topic, language, cancellationToken).ConfigureAwait(false);
+        if (!embeddingResult.Success || embeddingResult.Embeddings.Count == 0)
+        {
+            _logger.LogError("Failed to generate topic embedding for language {Language}: {Error}", language, embeddingResult.ErrorMessage);
+            return null;
+        }
+
+        var topicEmbedding = embeddingResult.Embeddings[0];
+
+        // Step 2: Search Qdrant for relevant chunks (get more for comprehensive explanation)
+        // AI-09: Filter search by language
+        // CONFIG-04: Use dynamic topK from configuration
+        var searchResult = await _qdrantService.SearchAsync(gameId, topicEmbedding, language, limit: topK, documentIds: null, cancellationToken).ConfigureAwait(false);
+
+        if (!searchResult.Success)
+        {
+            return new List<SearchResultItem>();
+        }
+
+        return searchResult.Results;
+    }
+
+    private async Task<ExplainResponse> GenerateExplanationResponseAsync(
+        string topic,
+        string gameId,
+        string language,
+        List<SearchResultItem> results,
+        string cacheKey,
+        Activity? activity,
+        Stopwatch stopwatch,
+        CancellationToken cancellationToken)
+    {
+        // Step 3: Build outline from retrieved chunks
+        var outline = BuildOutline(topic, results);
+
+        // Step 4: Build script from chunks with proper structure
+        var script = BuildScript(topic, results);
+
+        // Step 5: Create citations
+        var citations = results.Select(r => new Snippet(
+            r.Text,
+            $"PDF:{r.PdfId}",
+            r.Page,
+            0, // line number not tracked in chunks
+            r.Score // AI-11: Include actual search score for quality tracking
+        )).ToList();
+
+        // Step 6: Calculate estimated reading time (average reading speed: 200 words/minute)
+        var wordCount = script.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
+        var estimatedMinutes = Math.Max(1, (int)Math.Ceiling(wordCount / 200.0));
+
+        _logger.LogInformation(
+            "RAG explain generated for topic '{Topic}' with {SectionCount} sections, {CitationCount} citations, ~{Minutes} min read",
+            topic, outline.sections.Count, citations.Count, estimatedMinutes);
+
+        var confidence = results.Count > 0
+            ? (double?)results.Max(r => r.Score)
+            : null;
+
+        // OPS-02: Add trace attributes for successful operation
+        activity?.SetTag("sections.count", outline.sections.Count);
+        activity?.SetTag("citations.count", citations.Count);
+        activity?.SetTag("estimated.minutes", estimatedMinutes);
+        activity?.SetTag("response.confidence", confidence ?? 0.0);
+        activity?.SetTag("success", true);
+
+        var response = new ExplainResponse(
+            outline,
+            script,
+            citations,
+            estimatedMinutes,
+            0,
+            0,
+            0,
+            confidence);
+
+        // AI-05: Cache the response for future requests
+        await _cache.SetAsync(cacheKey, response, 86400, cancellationToken).ConfigureAwait(false);
+
+        // OPS-02: Record metrics
+        stopwatch.Stop();
+        MeepleAiMetrics.RecordRagRequest(stopwatch.Elapsed.TotalMilliseconds, gameId, success: true);
+        if (confidence.HasValue)
+        {
+            MeepleAiMetrics.ConfidenceScore.Record(confidence.Value, new TagList { { "game.id", gameId }, { "operation", "explain" } });
+        }
+
+        return response;
     }
 
     private ExplainResponse CreateEmptyExplainResponse(string message)
@@ -384,7 +485,7 @@ internal class RagService : IRagService
         );
     }
 
-    private ExplainOutline BuildOutline(string topic, IReadOnlyList<SearchResultItem> results)
+    private ExplainOutline BuildOutline(string topic, List<SearchResultItem> results)
     {
         // Extract key sections from the retrieved chunks
         // For now, create sections based on the number of chunks retrieved
@@ -402,13 +503,7 @@ internal class RagService : IRagService
         return new ExplainOutline(topic, sections);
     }
 
-    private void LogInformation(string message, params object?[] args)
-    {
-        if (_logger.IsEnabled(LogLevel.Information))
-        {
-            _logger.LogInformation(message, args);
-        }
-    }
+
 
     /// <summary>
     /// Issue #1441: Centralized exception handling wrapper for RAG operations.
@@ -457,7 +552,7 @@ internal class RagService : IRagService
 #pragma warning restore CA1031
     }
 
-    private string BuildScript(string topic, IReadOnlyList<SearchResultItem> results)
+    private string BuildScript(string topic, List<SearchResultItem> results)
     {
         // Build a structured explanation script with citations
         var scriptParts = new List<string>();
@@ -557,127 +652,20 @@ internal class RagService : IRagService
             var cachedResponse = await _cache.GetAsync<QaResponse>(cacheKey, cancellationToken).ConfigureAwait(false);
             if (cachedResponse != null)
             {
-                LogInformation("Returning cached hybrid search QA response for game {GameId}, mode {SearchMode}", gameId, searchMode);
+                _logger.LogInformation("Returning cached hybrid search QA response for game {GameId}, mode {SearchMode}", gameId, searchMode);
                 return cachedResponse;
             }
         }
         else
         {
-            LogInformation("Cache bypassed for game {GameId} (Fresh Hybrid Answer requested)", gameId);
+            _logger.LogInformation("Cache bypassed for game {GameId} (Fresh Hybrid Answer requested)", gameId);
         }
 
         // Issue #1441: Use centralized exception handling to eliminate 5 duplicate catch blocks
         return await ExecuteRagOperationAsync(
             async () =>
             {
-                // CONFIG-04: Load dynamic RAG configuration for top K
-                var topK = await _configProvider.GetRagConfigAsync("TopK", DefaultTopK).ConfigureAwait(false);
-                activity?.SetTag("rag.config.topK", topK);
-
-                // Step 1: Parse gameId to Guid for hybrid search
-                if (!Guid.TryParse(gameId, out var gameGuid))
-                {
-                    _logger.LogError("Invalid game ID format: {GameId}", gameId);
-                    return new QaResponse("Invalid game ID format.", Array.Empty<Snippet>());
-                }
-
-                // Step 2: AI-14 - Use hybrid search service to retrieve results
-                var hybridResults = await _hybridSearchService.SearchAsync(
-                    query!,
-                    gameGuid,
-                    mode: searchMode,
-                    limit: topK,
-                    cancellationToken: cancellationToken).ConfigureAwait(false);
-
-                if (hybridResults.Count == 0)
-                {
-                    LogInformation("No hybrid search results found for query in game {GameId}, mode {SearchMode}", gameId, searchMode);
-                    return new QaResponse("Not specified", Array.Empty<Snippet>());
-                }
-
-                // Take top 3-5 results for context building (configurable via topK)
-                var topResults = hybridResults.Take(Math.Min(5, topK)).ToList();
-                activity?.SetTag("results.hybrid.count", hybridResults.Count);
-                activity?.SetTag("results.final.count", topResults.Count);
-
-                _logger.LogDebug("Hybrid search returned {Count} results, using top {TopCount} for context",
-                    hybridResults.Count, topResults.Count);
-
-                // Step 3: Convert HybridSearchResult to Snippet format
-                var snippets = topResults.Select(r => new Snippet(
-                    r.Content,
-                    $"PDF:{r.PdfDocumentId}",
-                    r.PageNumber ?? 0, // Use page number from hybrid result
-                    0, // line number not tracked in chunks
-                    r.HybridScore // AI-11: Use hybrid RRF score for quality tracking
-                )).ToList();
-
-                // Step 4: Build context from retrieved chunks
-                var context = string.Join("\n\n---\n\n", topResults.Select(r =>
-                    $"[Page {r.PageNumber ?? 0}]\n{r.Content}"));
-
-                // AI-07.1: Use PromptTemplateService for advanced prompt engineering
-                var questionType = _promptTemplateService.ClassifyQuestion(query!);
-                Guid? gameGuidNullable = gameGuid;
-                var template = await _promptTemplateService.GetTemplateAsync(gameGuidNullable, questionType).ConfigureAwait(false);
-
-                var systemPrompt = _promptTemplateService.RenderSystemPrompt(template);
-                var userPrompt = _promptTemplateService.RenderUserPrompt(template, context, query!);
-
-                _logger.LogDebug(
-                    "Using prompt template for game {GameId}, question type {QuestionType}, search mode {SearchMode}",
-                    gameId, questionType, searchMode);
-
-                // Step 5: Generate LLM response
-                var llmResult = await _llmService.GenerateCompletionAsync(systemPrompt, userPrompt, cancellationToken).ConfigureAwait(false);
-
-                if (!llmResult.Success || string.IsNullOrWhiteSpace(llmResult.Response))
-                {
-                    _logger.LogError("Failed to generate LLM response: {Error}", llmResult.ErrorMessage);
-                    return new QaResponse("Unable to generate answer.", snippets);
-                }
-
-                var answer = llmResult.Response.Trim();
-                var confidence = topResults.Count > 0
-                    ? (double?)topResults.Max(r => r.HybridScore)
-                    : null;
-
-                // OPS-02: Add trace attributes for successful operation
-                activity?.SetTag("response.tokens", llmResult.Usage.TotalTokens);
-                activity?.SetTag("response.confidence", confidence ?? 0.0);
-                activity?.SetTag("snippets.count", snippets.Count);
-                activity?.SetTag("success", true);
-
-                LogInformation(
-                    "Hybrid search ({Mode}) QA answered with {SnippetCount} snippets, LLM generated answer: {AnswerPreview}",
-                    searchMode, snippets.Count, StringHelper.Truncate(answer, 50));
-
-                var metadata = llmResult.Metadata.Count > 0
-                    ? new Dictionary<string, string>(llmResult.Metadata, StringComparer.Ordinal)
-                    : null;
-
-                var response = new QaResponse(
-                    answer,
-                    snippets,
-                    llmResult.Usage.PromptTokens,
-                    llmResult.Usage.CompletionTokens,
-                    llmResult.Usage.TotalTokens,
-                    confidence,
-                    metadata);
-
-                // AI-05: Cache the response for future requests
-                await _cache.SetAsync(cacheKey, response, 86400, cancellationToken).ConfigureAwait(false);
-
-                // OPS-02: Record metrics
-                stopwatch.Stop();
-                MeepleAiMetrics.RecordRagRequest(stopwatch.Elapsed.TotalMilliseconds, gameId, success: true);
-                MeepleAiMetrics.TokensUsed.Record(llmResult.Usage.TotalTokens, new TagList { { "game.id", gameId }, { "operation", "qa_hybrid" } });
-                if (confidence.HasValue)
-                {
-                    MeepleAiMetrics.ConfidenceScore.Record(confidence.Value, new TagList { { "game.id", gameId }, { "operation", "qa_hybrid" } });
-                }
-
-                return response;
+                return await ProcessAskWithHybridSearchRequestAsync(gameId, query!, searchMode, language, cacheKey, activity, stopwatch, cancellationToken).ConfigureAwait(false);
             },
             "hybrid search RAG query",
             gameId,
@@ -686,6 +674,164 @@ internal class RagService : IRagService
             stopwatch,
             GetQaErrorResponseFactories(),
             $"mode: {searchMode}").ConfigureAwait(false);
+    }
+
+    private async Task<QaResponse> ProcessAskWithHybridSearchRequestAsync(
+        string gameId,
+        string query,
+        SearchMode searchMode,
+        string language,
+        string cacheKey,
+        Activity? activity,
+        Stopwatch stopwatch,
+        CancellationToken cancellationToken)
+    {
+        // CONFIG-04: Load dynamic RAG configuration for top K
+        var topK = await _configProvider.GetRagConfigAsync("TopK", DefaultTopK).ConfigureAwait(false);
+        activity?.SetTag("rag.config.topK", topK);
+
+        // Step 1 & 2: Retrieval
+        var hybridResults = await ExecuteHybridRetrievalAsync(query, gameId, searchMode, topK, cancellationToken).ConfigureAwait(false);
+
+        if (hybridResults == null)
+        {
+            return new QaResponse("Invalid game ID format.", Array.Empty<Snippet>());
+        }
+
+        if (hybridResults.Count == 0)
+        {
+            _logger.LogInformation("No hybrid search results found for query in game {GameId}, mode {SearchMode}", gameId, searchMode);
+            return new QaResponse("Not specified", Array.Empty<Snippet>());
+        }
+
+        // Take top 3-5 results for context building (configurable via topK)
+        var topResults = hybridResults.Take(Math.Min(5, topK)).ToList();
+        activity?.SetTag("results.hybrid.count", hybridResults.Count);
+        activity?.SetTag("results.final.count", topResults.Count);
+
+        _logger.LogDebug("Hybrid search returned {Count} results, using top {TopCount} for context",
+            hybridResults.Count, topResults.Count);
+
+        // Step 2: Generation
+        return await ExecuteHybridGenerationPhaseAsync(
+            query,
+            gameId,
+            searchMode,
+            topResults,
+            cacheKey,
+            activity,
+            stopwatch,
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<List<HybridSearchResult>?> ExecuteHybridRetrievalAsync(
+        string query,
+        string gameId,
+        SearchMode searchMode,
+        int topK,
+        CancellationToken cancellationToken)
+    {
+        // Step 1: Parse gameId to Guid for hybrid search
+        if (!Guid.TryParse(gameId, out var gameGuid))
+        {
+            _logger.LogError("Invalid game ID format: {GameId}", gameId);
+            return null;
+        }
+
+        // Step 2: AI-14 - Use hybrid search service to retrieve results
+        return await _hybridSearchService.SearchAsync(
+            query,
+            gameGuid,
+            mode: searchMode,
+            limit: topK,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<QaResponse> ExecuteHybridGenerationPhaseAsync(
+        string query,
+        string gameId,
+        SearchMode searchMode,
+        List<HybridSearchResult> topResults,
+        string cacheKey,
+        Activity? activity,
+        Stopwatch stopwatch,
+        CancellationToken cancellationToken)
+    {
+        // Step 3: Convert HybridSearchResult to Snippet format
+        var snippets = topResults.Select(r => new Snippet(
+            r.Content,
+            $"PDF:{r.PdfDocumentId}",
+            r.PageNumber ?? 0, // Use page number from hybrid result
+            0, // line number not tracked in chunks
+            r.HybridScore // AI-11: Use hybrid RRF score for quality tracking
+        )).ToList();
+
+        // Step 4: Build context from retrieved chunks
+        var context = string.Join("\n\n---\n\n", topResults.Select(r =>
+            $"[Page {r.PageNumber ?? 0}]\n{r.Content}"));
+
+        // AI-07.1: Use PromptTemplateService for advanced prompt engineering
+        var questionType = _promptTemplateService.ClassifyQuestion(query);
+        Guid? gameGuid = Guid.TryParse(gameId, out var guid) ? guid : null;
+        var template = await _promptTemplateService.GetTemplateAsync(gameGuid, questionType).ConfigureAwait(false);
+
+        var systemPrompt = _promptTemplateService.RenderSystemPrompt(template);
+        var userPrompt = _promptTemplateService.RenderUserPrompt(template, context, query);
+
+        _logger.LogDebug(
+            "Using prompt template for game {GameId}, question type {QuestionType}, search mode {SearchMode}",
+            gameId, questionType, searchMode);
+
+        // Step 5: Generate LLM response
+        var llmResult = await _llmService.GenerateCompletionAsync(systemPrompt, userPrompt, cancellationToken).ConfigureAwait(false);
+
+        if (!llmResult.Success || string.IsNullOrWhiteSpace(llmResult.Response))
+        {
+            _logger.LogError("Failed to generate LLM response: {Error}", llmResult.ErrorMessage);
+            return new QaResponse("Unable to generate answer.", snippets);
+        }
+
+        var answer = llmResult.Response.Trim();
+        var confidence = topResults.Count > 0
+            ? (double?)topResults.Max(r => r.HybridScore)
+            : null;
+
+        // OPS-02: Add trace attributes for successful operation
+        activity?.SetTag("response.tokens", llmResult.Usage.TotalTokens);
+        activity?.SetTag("response.confidence", confidence ?? 0.0);
+        activity?.SetTag("snippets.count", snippets.Count);
+        activity?.SetTag("success", true);
+
+        _logger.LogInformation(
+            "Hybrid search ({Mode}) QA answered with {SnippetCount} snippets, LLM generated answer: {AnswerPreview}",
+            searchMode, snippets.Count, StringHelper.Truncate(answer, 50));
+
+        var metadata = llmResult.Metadata.Count > 0
+            ? new Dictionary<string, string>(llmResult.Metadata, StringComparer.Ordinal)
+            : null;
+
+        var response = new QaResponse(
+            answer,
+            snippets,
+            llmResult.Usage.PromptTokens,
+            llmResult.Usage.CompletionTokens,
+            llmResult.Usage.TotalTokens,
+            confidence,
+            metadata);
+
+        // AI-05: Cache the response for future requests
+        await _cache.SetAsync(cacheKey, response, 86400, cancellationToken).ConfigureAwait(false);
+
+        // OPS-02: Record metrics
+        stopwatch.Stop();
+        MeepleAiMetrics.RecordRagRequest(stopwatch.Elapsed.TotalMilliseconds, gameId, success: true);
+        MeepleAiMetrics.TokensUsed.Record(llmResult.Usage.TotalTokens, new TagList { { "game.id", gameId }, { "operation", "qa_hybrid" } });
+        if (confidence.HasValue)
+        {
+            MeepleAiMetrics.ConfidenceScore.Record(confidence.Value, new TagList { { "game.id", gameId }, { "operation", "qa_hybrid" } });
+        }
+
+        return response;
     }
 
     /// <summary>
@@ -729,52 +875,84 @@ internal class RagService : IRagService
         return await ExecuteRagOperationAsync(
             async () =>
             {
-                // CONFIG-04: Load dynamic RAG configuration for top K
-                var topK = await _configProvider.GetRagConfigAsync("TopK", DefaultTopK).ConfigureAwait(false);
-                activity?.SetTag("rag.config.topK", topK);
+                return await ProcessAskWithCustomPromptRequestAsync(gameId, query!, customSystemPrompt, searchMode, activity, stopwatch, cancellationToken).ConfigureAwait(false);
+            },
+            "custom prompt RAG query",
+            gameId,
+            "qa_custom_prompt",
+            activity,
+            stopwatch,
+            GetQaErrorResponseFactories()).ConfigureAwait(false);
+    }
 
-                // Step 1: Parse gameId to Guid for hybrid search
-                if (!Guid.TryParse(gameId, out var gameGuid))
-                {
-                    _logger.LogError("Invalid game ID format: {GameId}", gameId);
-                    return new QaResponse("Invalid game ID format.", Array.Empty<Snippet>());
-                }
+    private async Task<QaResponse> ProcessAskWithCustomPromptRequestAsync(
+        string gameId,
+        string query,
+        string customSystemPrompt,
+        SearchMode searchMode,
+        Activity? activity,
+        Stopwatch stopwatch,
+        CancellationToken cancellationToken)
+    {
+        // CONFIG-04: Load dynamic RAG configuration for top K
+        var topK = await _configProvider.GetRagConfigAsync("TopK", DefaultTopK).ConfigureAwait(false);
+        activity?.SetTag("rag.config.topK", topK);
 
-                // Step 2: Use hybrid search service to retrieve results
-                var hybridResults = await _hybridSearchService.SearchAsync(
-                    query!,
-                    gameGuid,
-                    mode: searchMode,
-                    limit: topK,
-                    cancellationToken: cancellationToken).ConfigureAwait(false);
+        // Step 1: Retrieval (Reuse Shared Hybrid Retrieval)
+        var hybridResults = await ExecuteHybridRetrievalAsync(query, gameId, searchMode, topK, cancellationToken).ConfigureAwait(false);
 
-                if (hybridResults.Count == 0)
-                {
-                    LogInformation("No hybrid search results found for query in game {GameId}", gameId);
-                    return new QaResponse("Not specified", Array.Empty<Snippet>());
-                }
+        if (hybridResults == null)
+        {
+            return new QaResponse("Invalid game ID format.", Array.Empty<Snippet>());
+        }
 
-                // Take top 3-5 results for context building
-                var topResults = hybridResults.Take(Math.Min(5, topK)).ToList();
-                activity?.SetTag("results.hybrid.count", hybridResults.Count);
-                activity?.SetTag("results.final.count", topResults.Count);
+        if (hybridResults.Count == 0)
+        {
+            _logger.LogInformation("No hybrid search results found for query in game {GameId}", gameId);
+            return new QaResponse("Not specified", Array.Empty<Snippet>());
+        }
 
-                // Step 3: Convert HybridSearchResult to Snippet format
-                var snippets = topResults.Select(r => new Snippet(
-                    r.Content,
-                    $"PDF:{r.PdfDocumentId}",
-                    r.PageNumber ?? 0,
-                    0,
-                    r.HybridScore
-                )).ToList();
+        // Take top 3-5 results for context building
+        var topResults = hybridResults.Take(Math.Min(5, topK)).ToList();
+        activity?.SetTag("results.hybrid.count", hybridResults.Count);
+        activity?.SetTag("results.final.count", topResults.Count);
 
-                // Step 4: Build context from retrieved chunks
-                var context = string.Join("\n\n---\n\n", topResults.Select(r =>
-                    $"[Page {r.PageNumber ?? 0}]\n{r.Content}"));
+        // Step 2: Generation with Custom Prompt
+        return await ExecuteCustomPromptGenerationPhaseAsync(
+            query,
+            gameId,
+            customSystemPrompt,
+            topResults,
+            activity,
+            stopwatch,
+            cancellationToken).ConfigureAwait(false);
+    }
 
-                // Step 5: Build user prompt using template pattern
-                // ADMIN-01: Use custom system prompt instead of retrieved prompt
-                var userPrompt = $@"Context from rulebook:
+    private async Task<QaResponse> ExecuteCustomPromptGenerationPhaseAsync(
+        string query,
+        string gameId,
+        string customSystemPrompt,
+        List<HybridSearchResult> topResults,
+        Activity? activity,
+        Stopwatch stopwatch,
+        CancellationToken cancellationToken)
+    {
+        // Step 3: Convert HybridSearchResult to Snippet format
+        var snippets = topResults.Select(r => new Snippet(
+            r.Content,
+            $"PDF:{r.PdfDocumentId}",
+            r.PageNumber ?? 0,
+            0,
+            r.HybridScore
+        )).ToList();
+
+        // Step 4: Build context from retrieved chunks
+        var context = string.Join("\n\n---\n\n", topResults.Select(r =>
+            $"[Page {r.PageNumber ?? 0}]\n{r.Content}"));
+
+        // Step 5: Build user prompt using template pattern
+        // ADMIN-01: Use custom system prompt instead of retrieved prompt
+        var userPrompt = $@"Context from rulebook:
 {context}
 
 Question: {query}
@@ -785,66 +963,59 @@ Instructions:
 3. Always cite page numbers when possible
 4. Be concise and accurate";
 
-                _logger.LogDebug(
-                    "Using custom system prompt for evaluation (length: {PromptLength} chars)",
-                    customSystemPrompt.Length);
+        _logger.LogDebug(
+            "Using custom system prompt for evaluation (length: {PromptLength} chars)",
+            customSystemPrompt.Length);
 
-                // Step 6: Generate LLM response with custom prompt
-                var llmResult = await _llmService.GenerateCompletionAsync(
-                    customSystemPrompt,
-                    userPrompt,
-                    cancellationToken).ConfigureAwait(false);
+        // Step 6: Generate LLM response with custom prompt
+        var llmResult = await _llmService.GenerateCompletionAsync(
+            customSystemPrompt,
+            userPrompt,
+            cancellationToken).ConfigureAwait(false);
 
-                if (!llmResult.Success || string.IsNullOrWhiteSpace(llmResult.Response))
-                {
-                    _logger.LogError("Failed to generate LLM response: {Error}", llmResult.ErrorMessage);
-                    return new QaResponse("Unable to generate answer.", snippets);
-                }
+        if (!llmResult.Success || string.IsNullOrWhiteSpace(llmResult.Response))
+        {
+            _logger.LogError("Failed to generate LLM response: {Error}", llmResult.ErrorMessage);
+            return new QaResponse("Unable to generate answer.", snippets);
+        }
 
-                var answer = llmResult.Response.Trim();
-                var confidence = topResults.Count > 0
-                    ? (double?)topResults.Max(r => r.HybridScore)
-                    : null;
+        var answer = llmResult.Response.Trim();
+        var confidence = topResults.Count > 0
+            ? (double?)topResults.Max(r => r.HybridScore)
+            : null;
 
-                // OPS-02: Add trace attributes
-                activity?.SetTag("response.tokens", llmResult.Usage.TotalTokens);
-                activity?.SetTag("response.confidence", confidence ?? 0.0);
-                activity?.SetTag("snippets.count", snippets.Count);
-                activity?.SetTag("success", true);
+        // OPS-02: Add trace attributes
+        activity?.SetTag("response.tokens", llmResult.Usage.TotalTokens);
+        activity?.SetTag("response.confidence", confidence ?? 0.0);
+        activity?.SetTag("snippets.count", snippets.Count);
+        activity?.SetTag("success", true);
 
-                LogInformation(
-                    "Custom prompt QA answered with {SnippetCount} snippets, LLM generated answer: {AnswerPreview}",
-                    snippets.Count, StringHelper.Truncate(answer, 50));
+        _logger.LogInformation(
+            "Custom prompt QA answered with {SnippetCount} snippets, LLM generated answer: {AnswerPreview}",
+            snippets.Count, StringHelper.Truncate(answer, 50));
 
-                var metadata = llmResult.Metadata.Count > 0
-                    ? new Dictionary<string, string>(llmResult.Metadata, StringComparer.Ordinal)
-                    : null;
+        var metadata = llmResult.Metadata.Count > 0
+            ? new Dictionary<string, string>(llmResult.Metadata, StringComparer.Ordinal)
+            : null;
 
-                var response = new QaResponse(
-                    answer,
-                    snippets,
-                    llmResult.Usage.PromptTokens,
-                    llmResult.Usage.CompletionTokens,
-                    llmResult.Usage.TotalTokens,
-                    confidence,
-                    metadata);
+        var response = new QaResponse(
+            answer,
+            snippets,
+            llmResult.Usage.PromptTokens,
+            llmResult.Usage.CompletionTokens,
+            llmResult.Usage.TotalTokens,
+            confidence,
+            metadata);
 
-                // OPS-02: Record metrics
-                stopwatch.Stop();
-                MeepleAiMetrics.RecordRagRequest(stopwatch.Elapsed.TotalMilliseconds, gameId, success: true);
-                MeepleAiMetrics.TokensUsed.Record(llmResult.Usage.TotalTokens, new TagList { { "game.id", gameId }, { "operation", "qa_custom_prompt" } });
-                if (confidence.HasValue)
-                {
-                    MeepleAiMetrics.ConfidenceScore.Record(confidence.Value, new TagList { { "game.id", gameId }, { "operation", "qa_custom_prompt" } });
-                }
+        // OPS-02: Record metrics
+        stopwatch.Stop();
+        MeepleAiMetrics.RecordRagRequest(stopwatch.Elapsed.TotalMilliseconds, gameId, success: true);
+        MeepleAiMetrics.TokensUsed.Record(llmResult.Usage.TotalTokens, new TagList { { "game.id", gameId }, { "operation", "qa_custom_prompt" } });
+        if (confidence.HasValue)
+        {
+            MeepleAiMetrics.ConfidenceScore.Record(confidence.Value, new TagList { { "game.id", gameId }, { "operation", "qa_custom_prompt" } });
+        }
 
-                return response;
-            },
-            "custom prompt RAG query",
-            gameId,
-            "qa_custom_prompt",
-            activity,
-            stopwatch,
-            GetQaErrorResponseFactories()).ConfigureAwait(false);
+        return response;
     }
 }

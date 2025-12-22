@@ -1,5 +1,6 @@
-import type { Meta, StoryObj } from '@storybook/react';
 import { Progress } from './progress';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 /**
  * Progress component for displaying task completion and loading states.

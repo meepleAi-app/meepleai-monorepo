@@ -1,4 +1,5 @@
 import React from 'react';
+
 import { DiffLine, CollapsibleSection } from '../../lib/diffProcessor';
 
 export interface DiffLineNumberGutterProps {
@@ -16,10 +17,7 @@ export const DiffLineNumberGutter = React.memo<DiffLineNumberGutterProps>(
     const isLineInCollapsedSection = (lineNum: number | null): boolean => {
       if (lineNum === null) return false;
       return collapsibleSections.some(
-        section =>
-          section.isCollapsed &&
-          lineNum >= section.startLine &&
-          lineNum <= section.endLine
+        section => section.isCollapsed && lineNum >= section.startLine && lineNum <= section.endLine
       );
     };
 

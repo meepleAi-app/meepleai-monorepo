@@ -70,26 +70,9 @@ public sealed class Enable2FACommandValidatorTests
     [InlineData("12345")]
     [InlineData("1234")]
     [InlineData("123")]
-    public void Should_Fail_When_TotpCode_Is_Too_Short(string totpCode)
-    {
-        // Arrange
-        var command = new Enable2FACommand(
-            UserId: Guid.NewGuid(),
-            TotpCode: totpCode
-        );
-
-        // Act
-        var result = _validator.TestValidate(command);
-
-        // Assert
-        result.ShouldHaveValidationErrorFor(x => x.TotpCode)
-            .WithErrorMessage("TOTP code must be exactly 6 digits");
-    }
-
-    [Theory]
     [InlineData("1234567")]
     [InlineData("12345678")]
-    public void Should_Fail_When_TotpCode_Is_Too_Long(string totpCode)
+    public void Should_Fail_When_TotpCode_Length_Is_Invalid(string totpCode)
     {
         // Arrange
         var command = new Enable2FACommand(

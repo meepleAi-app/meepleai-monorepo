@@ -7,8 +7,10 @@
 'use client';
 
 import React, { useState } from 'react';
+
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+
 import { MeepleLogo } from '../ui/meeple-logo';
 
 interface AppShellProps {

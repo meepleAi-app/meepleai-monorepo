@@ -10,6 +10,18 @@ internal sealed class EvaluationDataset
 {
     private readonly List<EvaluationSample> _samples = [];
 
+    // CA1869: Cache JsonSerializerOptions for better performance
+    private static readonly JsonSerializerOptions s_serializeOptions = new()
+    {
+        WriteIndented = true,
+        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
+    };
+
+    private static readonly JsonSerializerOptions s_deserializeOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
+    };
+
     /// <summary>
     /// Dataset name for identification.
     /// </summary>
@@ -113,7 +125,7 @@ internal sealed class EvaluationDataset
     public IReadOnlyList<EvaluationSample> GetByGameId(string gameId)
     {
         return _samples
-            .Where(s => s.GameId?.Equals(gameId, StringComparison.OrdinalIgnoreCase) == true)
+            .Where(s => s.GameId?.Equals(gameId, StringComparison.OrdinalIgnoreCase) is true)
             .ToList()
             .AsReadOnly();
     }
@@ -183,13 +195,8 @@ internal sealed class EvaluationDataset
     {
         ArgumentNullException.ThrowIfNull(other);
 
-        foreach (var sample in other.Samples)
-        {
-            if (!_samples.Any(s => string.Equals(s.Id, sample.Id, StringComparison.Ordinal)))
-            {
-                _samples.Add(sample);
-            }
-        }
+        _samples.AddRange(other.Samples.Where(sample =>
+            !_samples.Any(s => string.Equals(s.Id, sample.Id, StringComparison.Ordinal))));
 
         SourceType = "combined";
     }
@@ -223,11 +230,7 @@ internal sealed class EvaluationDataset
             }).ToList()
         };
 
-        return JsonSerializer.Serialize(dto, new JsonSerializerOptions
-        {
-            WriteIndented = true,
-            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
-        });
+        return JsonSerializer.Serialize(dto, s_serializeOptions);
     }
 
     /// <summary>
@@ -235,10 +238,8 @@ internal sealed class EvaluationDataset
     /// </summary>
     public static EvaluationDataset FromJson(string json)
     {
-        var dto = JsonSerializer.Deserialize<DatasetDto>(json, new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
-        }) ?? throw new InvalidOperationException("Failed to deserialize dataset JSON.");
+        var dto = JsonSerializer.Deserialize<DatasetDto>(json, s_deserializeOptions)
+            ?? throw new InvalidOperationException("Failed to deserialize dataset JSON.");
 
         var dataset = new EvaluationDataset
         {

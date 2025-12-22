@@ -46,7 +46,7 @@ internal class UserContextEnricher : ILogEventEnricher
     public void Enrich(LogEvent logEvent, ILogEventPropertyFactory propertyFactory)
     {
         var httpContext = _httpContextAccessor.HttpContext;
-        if (httpContext?.User?.Identity?.IsAuthenticated == true)
+        if (httpContext?.User?.Identity?.IsAuthenticated is true)
         {
             var userId = httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             var userEmail = httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;

@@ -34,9 +34,9 @@ internal sealed record AdminReport
         string createdBy,
         IReadOnlyList<string>? emailRecipients = null)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(name, nameof(name));
-        ArgumentException.ThrowIfNullOrWhiteSpace(description, nameof(description));
-        ArgumentException.ThrowIfNullOrWhiteSpace(createdBy, nameof(createdBy));
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        ArgumentException.ThrowIfNullOrWhiteSpace(description);
+        ArgumentException.ThrowIfNullOrWhiteSpace(createdBy);
 
         var validatedRecipients = ValidateEmailRecipients(emailRecipients);
 
@@ -110,7 +110,8 @@ internal sealed record AdminReport
 
         var emailRegex = new System.Text.RegularExpressions.Regex(
             @"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$",
-            System.Text.RegularExpressions.RegexOptions.Compiled);
+            System.Text.RegularExpressions.RegexOptions.Compiled,
+            TimeSpan.FromSeconds(1)); // MA0009: Add timeout to prevent ReDoS attacks
 
         var validatedList = new List<string>();
         foreach (var email in recipients)

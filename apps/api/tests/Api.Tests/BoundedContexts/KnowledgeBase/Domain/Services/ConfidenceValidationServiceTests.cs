@@ -339,7 +339,7 @@ public class ConfidenceValidationServiceTests
         Assert.False(result.IsValid);
         Assert.Equal(ValidationSeverity.Critical, result.Severity);
         Assert.Contains("Invalid confidence value (NaN)", result.ValidationMessage, StringComparison.OrdinalIgnoreCase);
-        Assert.True(double.IsNaN(result.ActualConfidence.Value));
+        Assert.True(double.IsNaN(result.ActualConfidence!.Value));
     }
 
     [Fact]
@@ -355,7 +355,7 @@ public class ConfidenceValidationServiceTests
         Assert.False(result.IsValid);
         Assert.Equal(ValidationSeverity.Critical, result.Severity);
         Assert.Contains("Invalid confidence value (Positive Infinity)", result.ValidationMessage, StringComparison.OrdinalIgnoreCase);
-        Assert.True(double.IsPositiveInfinity(result.ActualConfidence.Value));
+        Assert.True(double.IsPositiveInfinity(result.ActualConfidence!.Value));
     }
 
     [Fact]
@@ -371,7 +371,7 @@ public class ConfidenceValidationServiceTests
         Assert.False(result.IsValid);
         Assert.Equal(ValidationSeverity.Critical, result.Severity);
         Assert.Contains("Invalid confidence value (Negative Infinity)", result.ValidationMessage, StringComparison.OrdinalIgnoreCase);
-        Assert.True(double.IsNegativeInfinity(result.ActualConfidence.Value));
+        Assert.True(double.IsNegativeInfinity(result.ActualConfidence!.Value));
     }
 
     [Theory]

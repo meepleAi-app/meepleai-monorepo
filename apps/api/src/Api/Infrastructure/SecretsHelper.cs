@@ -19,6 +19,8 @@ namespace Api.Infrastructure;
 ///   1. OPENROUTER_API_KEY_FILE environment variable (path to secret file)
 ///   2. OPENROUTER_API_KEY environment variable (direct value)
 ///   3. Throws InvalidOperationException if neither is found
+///
+/// Issue #2152: Cache invalidation trigger for appsettings.Development.json changes.
 /// </summary>
 internal static class SecretsHelper
 {
@@ -48,7 +50,7 @@ internal static class SecretsHelper
             if (!File.Exists(filePath))
             {
                 var error = $"Secret file not found: {filePath} (from {fileKey})";
-                logger?.LogError(error);
+                logger?.LogError("Secret file not found: {FilePath} (from {FileKey})", filePath, fileKey);
                 throw new FileNotFoundException(error, filePath);
             }
 
@@ -59,7 +61,7 @@ internal static class SecretsHelper
                 if (string.IsNullOrWhiteSpace(secretValue))
                 {
                     var error = $"Secret file is empty: {filePath} (from {fileKey})";
-                    logger?.LogError(error);
+                    logger?.LogError("Secret file is empty: {FilePath} (from {FileKey})", filePath, fileKey);
                     throw new InvalidOperationException(error);
                 }
 
@@ -75,7 +77,7 @@ internal static class SecretsHelper
             catch (Exception ex) when (ex is not FileNotFoundException)
             {
                 var error = $"Failed to read secret file: {filePath} (from {fileKey})";
-                logger?.LogError(ex, error);
+                logger?.LogError(ex, "Failed to read secret file: {FilePath} (from {FileKey})", filePath, fileKey);
                 throw new IOException(error, ex);
             }
         }
@@ -96,7 +98,7 @@ internal static class SecretsHelper
         if (required)
         {
             var error = $"{key} not configured. Set either {key} or {fileKey} environment variable.";
-            logger?.LogError(error);
+            logger?.LogError("{ConfigKey} not configured. Set either {ConfigKey} or {FileKey} environment variable.", key, key, fileKey);
             throw new InvalidOperationException(error);
         }
 
@@ -109,18 +111,34 @@ internal static class SecretsHelper
     /// </summary>
     /// <param name="config">Configuration instance</param>
     /// <param name="logger">Optional logger for diagnostics</param>
-    /// <returns>Complete PostgreSQL connection string</returns>
-    public static string BuildPostgresConnectionString(
+    /// <returns>Complete PostgreSQL connection string, or null if password not configured</returns>
+    public static string? BuildPostgresConnectionString(
         IConfiguration config,
         ILogger? logger = null)
     {
+        Console.WriteLine("[DEBUG #2152] SecretsHelper.BuildPostgresConnectionString() called");
+
         var host = config["POSTGRES_HOST"] ?? "postgres";
         var port = config["POSTGRES_PORT"] ?? "5432";
         var database = config["POSTGRES_DB"] ?? config["ConnectionStrings:DefaultDatabase"] ?? "meepleai";
-        var username = config["POSTGRES_USER"] ?? "meeple";
+        // Issue #2152: Change default username from 'meeple' to 'postgres' for CI/standard PostgreSQL compatibility
+        var username = config["POSTGRES_USER"] ?? "postgres";
+
+        Console.WriteLine($"[DEBUG #2152] SecretsHelper values: Host={host}, Port={port}, DB={database}, User={username}");
 
         // Get password from secret file or direct config
-        var password = GetSecretOrValue(config, "POSTGRES_PASSWORD", logger, required: true);
+        // Issue #2152: Try GetSecretOrValue first, then Environment.GetEnvironmentVariable directly
+        var password = GetSecretOrValue(config, "POSTGRES_PASSWORD", logger, required: false)
+            ?? Environment.GetEnvironmentVariable("POSTGRES_PASSWORD");
+
+        Console.WriteLine($"[DEBUG #2152] SecretsHelper password source: {(password != null ? "found" : "NULL")}");
+
+        // If no password configured, return null to allow fallback to other connection string sources
+        if (string.IsNullOrEmpty(password))
+        {
+            Console.WriteLine("[DEBUG #2152] SecretsHelper: POSTGRES_PASSWORD not found anywhere, returning null for fallback");
+            return null;
+        }
 
         var connectionString = $"Host={host};Port={port};Database={database};Username={username};Password={password}";
 

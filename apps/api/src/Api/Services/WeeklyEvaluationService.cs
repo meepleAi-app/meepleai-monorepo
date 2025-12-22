@@ -74,9 +74,12 @@ internal class WeeklyEvaluationService : BackgroundService
         IOptions<WeeklyEvaluationConfiguration> config,
         TimeProvider? timeProvider = null)
     {
-        _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _config = config?.Value ?? throw new ArgumentNullException(nameof(config));
+        ArgumentNullException.ThrowIfNull(scopeFactory);
+        _scopeFactory = scopeFactory;
+        ArgumentNullException.ThrowIfNull(logger);
+        _logger = logger;
+        ArgumentNullException.ThrowIfNull(config);
+        _config = config.Value;
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
@@ -130,9 +133,9 @@ internal class WeeklyEvaluationService : BackgroundService
             {
                 await RunWeeklyEvaluationAsync(stoppingToken).ConfigureAwait(false);
             }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            catch (OperationCanceledException ex) when (stoppingToken.IsCancellationRequested)
             {
-                _logger.LogInformation("Weekly evaluation cancelled (application shutting down)");
+                _logger.LogInformation(ex, "Weekly evaluation cancelled (application shutting down)");
                 break;
             }
 #pragma warning disable CA1031 // Do not catch general exception types
@@ -246,7 +249,7 @@ internal class WeeklyEvaluationService : BackgroundService
                 dataset,
                 topK: 10,
                 thresholds: null,
-                ct: cancellationToken).ConfigureAwait(false);
+                cancellationToken: cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "RAG evaluation completed: MRR={MRR:F4}, P@5={P5:F4}, Latency p95={Latency:F2}ms",

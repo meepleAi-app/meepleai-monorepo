@@ -1,7 +1,8 @@
 /* eslint-disable security/detect-object-injection -- Safe version data array access */
 import React, { useEffect, useState } from 'react';
-import { Chrono } from 'react-chrono';
+
 import { useRouter } from 'next/navigation';
+import { Chrono } from 'react-chrono';
 
 interface VersionNode {
   id: string;

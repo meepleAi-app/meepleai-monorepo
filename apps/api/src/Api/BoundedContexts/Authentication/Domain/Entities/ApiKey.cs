@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.Authentication.Domain.Entities;
 /// API keys provide scoped access and can be revoked.
 /// Aggregate root for API key lifecycle management.
 /// </summary>
-internal sealed class ApiKey : AggregateRoot<Guid>
+public sealed class ApiKey : AggregateRoot<Guid>
 {
     public Guid UserId { get; private set; }
     public string KeyName { get; private set; }

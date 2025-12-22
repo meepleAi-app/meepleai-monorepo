@@ -11,6 +11,8 @@
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Api.Tests" />
+    <!-- Required for Moq to create proxies of internal types in generic contexts (e.g., ILogger<InternalService>) -->
+    <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="AspNetCore.HealthChecks.NpgSql" Version="9.0.0" />

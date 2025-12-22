@@ -1,12 +1,14 @@
 'use client';
 
 import { FormEvent, useEffect, useState } from 'react';
+
 import Link from 'next/link';
+
 import { api } from '@/lib/api';
-import { cn } from '@/lib/utils';
-import { logger } from '@/lib/logger';
-import { createErrorContext } from '@/lib/errors';
 import type { SetupGuideResponse, SetupGuideResponseStep, Snippet } from '@/lib/api/schemas';
+import { createErrorContext } from '@/lib/errors';
+import { logger } from '@/lib/logger';
+import { cn } from '@/lib/utils';
 
 // Type definitions
 type AuthUser = {
@@ -14,11 +16,6 @@ type AuthUser = {
   email: string;
   displayName?: string | null;
   role: string;
-};
-
-type AuthResponse = {
-  user: AuthUser;
-  expiresAt: string;
 };
 
 type Game = {
@@ -273,7 +270,7 @@ export default function SetupPage() {
   if (!authUser) {
     return (
       <main className="p-6 max-w-[900px] mx-auto font-sans">
-        <Link href="/" className="text-primary no-underline hover:underline">
+        <Link href="/" className="text-foreground no-underline hover:underline">
           ← Back to Home
         </Link>
         <div className="mt-6 p-8 text-center border border-border rounded-lg">

@@ -18,14 +18,14 @@ const TEST_USER_ADMIN = {
   role: 'Admin',
 };
 
-const REPORT_TEMPLATES = [
+const _REPORT_TEMPLATES = [
   { value: 'SystemHealth', label: 'System Health' },
   { value: 'UserActivity', label: 'User Activity' },
   { value: 'AIUsage', label: 'AI/LLM Usage' },
   { value: 'ContentMetrics', label: 'Content Metrics' },
 ];
 
-const REPORT_FORMATS = ['CSV', 'JSON', 'PDF'];
+const _REPORT_FORMATS = ['CSV', 'JSON', 'PDF'];
 
 test.describe('Admin Reports - Report Generation', () => {
   test.beforeEach(async ({ page }) => {

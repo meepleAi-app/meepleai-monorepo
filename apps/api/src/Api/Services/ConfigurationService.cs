@@ -77,7 +77,7 @@ internal class ConfigurationService : IConfigurationService
 
 #pragma warning disable CS8634
 #pragma warning disable CS8621
-        var cachedValue = await _cache.GetOrCreateAsync(
+        var cachedValue = await _cache.GetOrCreateAsync<SystemConfigurationDto?>(
             cacheKey,
             async cancel =>
             {

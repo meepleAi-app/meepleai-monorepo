@@ -9,15 +9,19 @@ using Api.BoundedContexts.Administration.Infrastructure.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 using Polly;
+using Polly.CircuitBreaker;
 using Polly.Extensions.Http;
+using Polly.Retry;
 using Quartz;
 
 namespace Api.BoundedContexts.Administration.Infrastructure.DependencyInjection;
 
 internal static class AdministrationServiceExtensions
 {
-    [Obsolete]
+#pragma warning disable S1133 // Method marked obsolete but kept for backward compatibility during migration
+    [Obsolete("Use AddAdministrationInfrastructure instead for modular registration")]
     public static IServiceCollection AddAdministrationContext(this IServiceCollection services)
+#pragma warning restore S1133
     {
         // Repositories
         services.AddScoped<IAlertRepository, AlertRepository>();
@@ -76,7 +80,7 @@ internal static class AdministrationServiceExtensions
         return services;
     }
 
-    private static IAsyncPolicy<HttpResponseMessage> GetRetryPolicy()
+    private static AsyncRetryPolicy<HttpResponseMessage> GetRetryPolicy()
     {
         return HttpPolicyExtensions
             .HandleTransientHttpError()
@@ -89,7 +93,7 @@ internal static class AdministrationServiceExtensions
                 });
     }
 
-    private static IAsyncPolicy<HttpResponseMessage> GetCircuitBreakerPolicy()
+    private static AsyncCircuitBreakerPolicy<HttpResponseMessage> GetCircuitBreakerPolicy()
     {
         return HttpPolicyExtensions
             .HandleTransientHttpError()

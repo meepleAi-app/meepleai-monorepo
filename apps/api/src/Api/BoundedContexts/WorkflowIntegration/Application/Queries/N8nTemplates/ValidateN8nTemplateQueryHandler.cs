@@ -12,15 +12,17 @@ namespace Api.BoundedContexts.WorkflowIntegration.Application.Queries.N8NTemplat
 /// </summary>
 internal sealed class ValidateN8NTemplateQueryHandler : IQueryHandler<ValidateN8NTemplateQuery, ValidateTemplateResponse>
 {
-    private readonly N8NTemplateService _templateService;
+    private readonly IN8NTemplateService _templateService;
     private readonly ILogger<ValidateN8NTemplateQueryHandler> _logger;
 
     public ValidateN8NTemplateQueryHandler(
-        N8NTemplateService templateService,
+        IN8NTemplateService templateService,
         ILogger<ValidateN8NTemplateQueryHandler> logger)
     {
-        _templateService = templateService ?? throw new ArgumentNullException(nameof(templateService));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(templateService);
+        _templateService = templateService;
+        ArgumentNullException.ThrowIfNull(logger);
+        _logger = logger;
     }
 
     public Task<ValidateTemplateResponse> Handle(ValidateN8NTemplateQuery query, CancellationToken cancellationToken)

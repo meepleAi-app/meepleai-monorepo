@@ -17,7 +17,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Application.Commands.ShareLin
 /// Uses InMemory database for DbContext operations.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
-public class CreateShareLinkCommandHandlerTests : IDisposable
+public sealed class CreateShareLinkCommandHandlerTests : IDisposable
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly Mock<IShareLinkRepository> _shareLinkRepositoryMock;

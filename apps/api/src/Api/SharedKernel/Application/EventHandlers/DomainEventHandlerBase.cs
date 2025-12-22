@@ -16,17 +16,19 @@ internal abstract class DomainEventHandlerBase<TEvent> : INotificationHandler<TE
     where TEvent : IDomainEvent
 {
     private readonly MeepleAiDbContext _dbContext;
-    protected readonly ILogger<DomainEventHandlerBase<TEvent>> Logger;
+    protected readonly ILogger Logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DomainEventHandlerBase{TEvent}"/> class.
     /// </summary>
     protected DomainEventHandlerBase(
         MeepleAiDbContext dbContext,
-        ILogger<DomainEventHandlerBase<TEvent>> logger)
+        ILogger logger)
     {
-        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
-        Logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(dbContext);
+        _dbContext = dbContext;
+        ArgumentNullException.ThrowIfNull(logger);
+        Logger = logger;
     }
 
     /// <summary>

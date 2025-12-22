@@ -61,7 +61,10 @@ internal class PdfTextProcessingDomainService
 
         // Step 3: Fix broken paragraphs (lines that end mid-word)
         // If a line ends with a letter (mid-word) and next line starts with a letter, merge them
-        text = Regex.Replace(text, @"([a-z])\n([a-z])", "$1$2", RegexOptions.ExplicitCapture, TimeSpan.FromSeconds(1));
+        // Note: ExplicitCapture intentionally NOT used here - we need capture groups for replacement
+#pragma warning disable MA0023 // Add RegexOptions.ExplicitCapture - disabled because we need $1 and $2 substitution
+        text = Regex.Replace(text, @"([a-z])\n([a-z])", "$1$2", RegexOptions.None, TimeSpan.FromSeconds(1));
+#pragma warning restore MA0023
 
         // Step 4: Normalize multiple newlines to paragraph breaks (max 2 newlines)
         text = Regex.Replace(text, @"\n{3,}", "\n\n", RegexOptions.ExplicitCapture, TimeSpan.FromSeconds(1));
@@ -119,7 +122,7 @@ internal class PdfTextProcessingDomainService
 /// <summary>
 /// Represents the quality of text extraction
 /// </summary>
-internal enum ExtractionQuality
+public enum ExtractionQuality
 {
     /// <summary>Very low quality - likely needs OCR (&lt;50 chars/page)</summary>
     VeryLow,

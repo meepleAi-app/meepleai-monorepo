@@ -1,21 +1,22 @@
-"use client"
+'use client';
 
-import * as React from "react"
-import { AlertDialog, type AlertDialogProps, type AlertVariant } from "@/components/ui/alert-dialog"
+import * as React from 'react';
+
+import { AlertDialog, type AlertVariant } from '@/components/ui/alert-dialog';
 
 export interface AlertOptions {
-  title: string
-  message: string
-  variant?: AlertVariant
-  buttonText?: string
+  title: string;
+  message: string;
+  variant?: AlertVariant;
+  buttonText?: string;
 }
 
 interface AlertState {
-  isOpen: boolean
-  title: string
-  message: string
-  variant: AlertVariant
-  buttonText: string
+  isOpen: boolean;
+  title: string;
+  message: string;
+  variant: AlertVariant;
+  buttonText: string;
 }
 
 /**
@@ -85,43 +86,43 @@ interface AlertState {
  */
 export function useAlertDialog() {
   // Use ref to store resolve callback to prevent unnecessary re-renders
-  const resolveRef = React.useRef<(() => void) | null>(null)
+  const resolveRef = React.useRef<(() => void) | null>(null);
 
   const [state, setState] = React.useState<AlertState>({
     isOpen: false,
-    title: "",
-    message: "",
-    variant: "info",
-    buttonText: "OK",
-  })
+    title: '',
+    message: '',
+    variant: 'info',
+    buttonText: 'OK',
+  });
 
   const alert = React.useCallback((options: AlertOptions): Promise<void> => {
-    return new Promise<void>((resolve) => {
-      resolveRef.current = resolve
+    return new Promise<void>(resolve => {
+      resolveRef.current = resolve;
       setState({
         isOpen: true,
         title: options.title,
         message: options.message,
-        variant: options.variant ?? "info",
-        buttonText: options.buttonText ?? "OK",
-      })
-    })
-  }, [])
+        variant: options.variant ?? 'info',
+        buttonText: options.buttonText ?? 'OK',
+      });
+    });
+  }, []);
 
   const handleClose = React.useCallback(() => {
-    resolveRef.current?.()
-    resolveRef.current = null
-    setState((prev) => ({ ...prev, isOpen: false }))
-  }, [])
+    resolveRef.current?.();
+    resolveRef.current = null;
+    setState(prev => ({ ...prev, isOpen: false }));
+  }, []);
 
   const handleOpenChange = React.useCallback((open: boolean) => {
     if (!open) {
       // Dialog was closed via overlay or escape key
-      resolveRef.current?.()
-      resolveRef.current = null
-      setState((prev) => ({ ...prev, isOpen: false }))
+      resolveRef.current?.();
+      resolveRef.current = null;
+      setState(prev => ({ ...prev, isOpen: false }));
     }
-  }, [])
+  }, []);
 
   const AlertDialogComponent = React.useCallback(() => {
     return (
@@ -134,11 +135,11 @@ export function useAlertDialog() {
         buttonText={state.buttonText}
         onClose={handleClose}
       />
-    )
-  }, [state, handleOpenChange, handleClose])
+    );
+  }, [state, handleOpenChange, handleClose]);
 
   return {
     alert,
     AlertDialogComponent,
-  }
+  };
 }

@@ -5,10 +5,13 @@
  * Covers: default, with user, with actions.
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
-import { AdminHeader } from './AdminHeader';
-import { Button } from '@/components/ui/button';
 import { BellIcon, MenuIcon } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
+
+import { AdminHeader } from './AdminHeader';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta: Meta<typeof AdminHeader> = {
   title: 'Admin/AdminHeader',

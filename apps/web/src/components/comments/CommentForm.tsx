@@ -1,7 +1,9 @@
 import { useState } from 'react';
+
 import { useTranslations } from 'next-intl';
-import { logger } from '@/lib/logger';
+
 import { createErrorContext } from '@/lib/errors';
+import { logger } from '@/lib/logger';
 
 interface CommentFormProps {
   onSubmit: (commentText: string, atomId: string | null) => Promise<void>;

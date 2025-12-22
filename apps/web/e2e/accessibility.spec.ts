@@ -1,11 +1,4 @@
 /**
- * E2E Accessibility Tests (UI-05)
- *
- * Comprehensive accessibility testing with Playwright + axe-core
- * Tests all major pages for WCAG 2.1 AA compliance
- */
-
-/**
  * E2E Accessibility Tests (UI-05) - MIGRATED TO POM
  *
  * Comprehensive accessibility testing with Playwright + axe-core
@@ -14,12 +7,13 @@
  * @see apps/web/e2e/pages/ - Page Object Model architecture
  */
 
-import { test, expect } from './fixtures/chromatic';
 import AxeBuilder from '@axe-core/playwright';
-import type { Result } from 'axe-core';
-import { getTextMatcher, t } from './fixtures/i18n';
-import { AuthHelper } from './pages';
+
 import { setupMockAuth } from './fixtures/auth';
+import { test, expect } from './fixtures/chromatic';
+import { t } from './fixtures/i18n';
+
+import type { Result } from 'axe-core';
 
 // Helper to get readable violations
 function formatViolations(violations: Result[]) {
@@ -37,10 +31,10 @@ function formatViolations(violations: Result[]) {
  * These rules are disabled while the underlying UI issues are being fixed
  * TODO: Remove these exclusions as issues are resolved
  *
- * - color-contrast: Multiple components have insufficient color contrast (Issue #1868)
- * - aria-allowed-attr: Chat textarea has invalid aria-describedby (Issue #1868)
+ * Issue #1868 is CLOSED - re-enabling rules to verify fixes
+ * Phase 5 (Issue #2234): Full WCAG 2.1 AA audit without exclusions
  */
-const KNOWN_A11Y_ISSUES = ['color-contrast', 'aria-allowed-attr'];
+const KNOWN_A11Y_ISSUES: string[] = [];
 
 /**
  * CI Environment Detection
@@ -82,6 +76,15 @@ test.beforeEach(async ({ page }) => {
       body: JSON.stringify({ error: 'Unauthorized' }),
     });
   });
+});
+
+/**
+ * Cleanup route handlers after each test to prevent memory accumulation
+ * Issue #2247: Fix heap overflow caused by accumulated Playwright route handlers
+ */
+test.afterEach(async ({ page }) => {
+  // Clean up all route handlers to prevent memory leak
+  await page.unroute('**/*');
 });
 
 /**
@@ -440,7 +443,9 @@ test.describe('Accessibility - Error States', () => {
 
     // Try to access protected page
     await page.goto('/settings');
-    await page.waitForLoadState('networkidle');
+
+    // Wait for error display or redirect (don't wait for networkidle with error mocks)
+    await page.waitForTimeout(2000);
 
     // Should redirect or show error - test current page accessibility
     const results = await new AxeBuilder({ page })
@@ -458,7 +463,9 @@ test.describe('Accessibility - Error States', () => {
   test('404 Not Found page should be accessible', async ({ page }) => {
     // Navigate to non-existent page
     await page.goto('/this-page-does-not-exist-404');
-    await page.waitForLoadState('networkidle');
+
+    // Wait for 404 page to render (don't wait for networkidle)
+    await page.waitForTimeout(2000);
 
     const results = await new AxeBuilder({ page })
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
@@ -472,33 +479,41 @@ test.describe('Accessibility - Error States', () => {
     expect(results.violations).toEqual([]);
   });
 
-  test('500 Internal Server Error should be accessible', async ({ page }) => {
-    // Mock 500 error for a commonly accessed endpoint
-    await page.route('**/api/v1/games', async route => {
-      await route.fulfill({
-        status: 500,
-        contentType: 'application/json',
-        body: JSON.stringify({ error: 'Internal Server Error' }),
+  // Issue #2261: Resolved - Now runs with production server (FORCE_PRODUCTION_SERVER=true)
+  test(
+    '500 Internal Server Error should be accessible',
+    { tag: '@error-state' },
+    async ({ page }) => {
+      // Mock 500 error for a commonly accessed endpoint
+      await page.route('**/api/v1/games', async route => {
+        await route.fulfill({
+          status: 500,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: 'Internal Server Error' }),
+        });
       });
-    });
 
-    await page.goto('/games');
-    await page.waitForLoadState('networkidle');
+      await page.goto('/games');
 
-    // Error state should still be accessible
-    const results = await new AxeBuilder({ page })
-      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
-      .disableRules(KNOWN_A11Y_ISSUES)
-      .analyze();
+      // Wait for error state to render (don't wait for networkidle with error mock)
+      await page.waitForTimeout(2000);
 
-    if (results.violations.length > 0) {
-      console.error('❌ 500 error state violations:', formatViolations(results.violations));
+      // Error state should still be accessible
+      const results = await new AxeBuilder({ page })
+        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+        .disableRules(KNOWN_A11Y_ISSUES)
+        .analyze();
+
+      if (results.violations.length > 0) {
+        console.error('❌ 500 error state violations:', formatViolations(results.violations));
+      }
+
+      expect(results.violations).toEqual([]);
     }
+  );
 
-    expect(results.violations).toEqual([]);
-  });
-
-  test('403 Forbidden error should be accessible', async ({ page }) => {
+  // Issue #2261: Resolved - Now runs with production server (FORCE_PRODUCTION_SERVER=true)
+  test('403 Forbidden error should be accessible', { tag: '@error-state' }, async ({ page }) => {
     // Setup user role (not admin)
     await page.route('**/api/v1/auth/me', async route => {
       await route.fulfill({
@@ -525,7 +540,9 @@ test.describe('Accessibility - Error States', () => {
     });
 
     await page.goto('/admin');
-    await page.waitForLoadState('networkidle');
+
+    // Wait for error state to render (don't wait for networkidle with error mock)
+    await page.waitForTimeout(2000);
 
     // Error state should be accessible
     const results = await new AxeBuilder({ page })
@@ -540,7 +557,8 @@ test.describe('Accessibility - Error States', () => {
     expect(results.violations).toEqual([]);
   });
 
-  test('Loading state should be accessible', async ({ page }) => {
+  // Issue #2261: Resolved - Now runs with production server (FORCE_PRODUCTION_SERVER=true)
+  test('Loading state should be accessible', { tag: '@error-state' }, async ({ page }) => {
     // Setup mock auth
     await setupMockAuth(page, 'User', 'user@meepleai.dev');
 
@@ -558,8 +576,8 @@ test.describe('Accessibility - Error States', () => {
     // Start navigation
     await page.goto('/games');
 
-    // Wait a bit for loading state to appear (but not complete)
-    await page.waitForTimeout(300);
+    // Wait for loading state to appear and complete (don't wait for networkidle)
+    await page.waitForTimeout(2000);
 
     // Check loading state accessibility
     const results = await new AxeBuilder({ page })
@@ -573,19 +591,19 @@ test.describe('Accessibility - Error States', () => {
 
     // Loading states should have appropriate ARIA labels
     expect(results.violations).toEqual([]);
-
-    // Wait for page to finish loading
-    await page.waitForLoadState('networkidle');
   });
 
-  test('Network timeout error should be accessible', async ({ page }) => {
+  // Issue #2261: Resolved - Now runs with production server (FORCE_PRODUCTION_SERVER=true)
+  test('Network timeout error should be accessible', { tag: '@error-state' }, async ({ page }) => {
     // Mock timeout by aborting request
     await page.route('**/api/v1/games', async route => {
       await route.abort('timedout');
     });
 
     await page.goto('/games');
-    await page.waitForLoadState('networkidle');
+
+    // Wait for error state to render (don't wait for networkidle with timeout mock)
+    await page.waitForTimeout(2000);
 
     // Error state should be accessible
     const results = await new AxeBuilder({ page })

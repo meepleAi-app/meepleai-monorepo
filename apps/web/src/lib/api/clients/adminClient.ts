@@ -6,14 +6,12 @@
  */
 
 import { z } from 'zod';
-import type { HttpClient } from '../core/httpClient';
+
 import {
   AdminUserSchema,
   AdminUserResponseSchema,
-  DeleteUserResponseSchema,
   PromptTemplateSchema,
   PromptResponseSchema,
-  DeletePromptResponseSchema,
   ActivateVersionResponseSchema,
   AdminStatsSchema,
   AiRequestsResponseSchema,
@@ -31,11 +29,9 @@ import {
   type CreateUserRequest,
   type UpdateUserRequest,
   type AdminUser,
-  type DeleteUserResponse,
   type CreatePromptRequest,
   type UpdatePromptRequest,
   type PromptTemplate,
-  type DeletePromptResponse,
   type ActivateVersionResponse,
   type AdminStats,
   type AiRequest,
@@ -51,25 +47,10 @@ import {
   type RecentActivityDto,
   type GetUserActivityResult,
   type UserActivityFilters,
-  ApiKeyDtoSchema,
-  ApiKeyUsageStatsDtoSchema,
-  ApiKeyWithStatsDtoSchema,
-  CreateApiKeyRequestSchema,
-  CreateApiKeyResponseSchema,
-  UpdateApiKeyRequestSchema,
   GetAllApiKeysWithStatsResponseSchema,
   BulkImportApiKeysResultSchema,
-  type ApiKeyDto,
-  type ApiKeyUsageStatsDto,
-  type ApiKeyWithStatsDto,
-  type CreateApiKeyRequest,
-  type CreateApiKeyResponse,
-  type UpdateApiKeyRequest,
   type GetAllApiKeysWithStatsResponse,
   type BulkImportApiKeysResult,
-  GenerateReportRequestSchema,
-  ScheduleReportRequestSchema,
-  UpdateReportScheduleRequestSchema,
   ScheduleReportResponseSchema,
   GetScheduledReportsResponseSchema,
   GetReportExecutionsResponseSchema,
@@ -86,6 +67,8 @@ import {
   type PerformanceMetrics,
   type E2EMetrics,
 } from '../schemas';
+
+import type { HttpClient } from '../core/httpClient';
 
 export interface CreateAdminClientParams {
   httpClient: HttpClient;

@@ -50,8 +50,8 @@ public class GetAllGamesQueryHandlerTests
         };
 
         _gameRepositoryMock
-            .Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(games);
+            .Setup(r => r.GetPaginatedAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((games, games.Count));
 
         var query = new GetAllGamesQuery();
 
@@ -60,20 +60,21 @@ public class GetAllGamesQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(3, result.Count);
+        Assert.Equal(3, result.Total);
+        Assert.Equal(3, result.Games.Count);
 
-        Assert.Equal("Catan", result[0].Title);
-        Assert.Equal("Kosmos", result[0].Publisher);
-        Assert.Equal(1995, result[0].YearPublished);
+        Assert.Equal("Catan", result.Games[0].Title);
+        Assert.Equal("Kosmos", result.Games[0].Publisher);
+        Assert.Equal(1995, result.Games[0].YearPublished);
 
-        Assert.Equal("Pandemic", result[1].Title);
-        Assert.Equal(2, result[1].MinPlayers);
-        Assert.Equal(4, result[1].MaxPlayers);
+        Assert.Equal("Pandemic", result.Games[1].Title);
+        Assert.Equal(2, result.Games[1].MinPlayers);
+        Assert.Equal(4, result.Games[1].MaxPlayers);
 
-        Assert.Equal("Ticket to Ride", result[2].Title);
+        Assert.Equal("Ticket to Ride", result.Games[2].Title);
 
         _gameRepositoryMock.Verify(
-            r => r.GetAllAsync(It.IsAny<CancellationToken>()),
+            r => r.GetPaginatedAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -89,8 +90,8 @@ public class GetAllGamesQueryHandlerTests
         };
 
         _gameRepositoryMock
-            .Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(games);
+            .Setup(r => r.GetPaginatedAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((games, games.Count));
 
         var query = new GetAllGamesQuery();
 
@@ -99,8 +100,8 @@ public class GetAllGamesQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Single(result);
-        Assert.Equal("Chess", result[0].Title);
+        Assert.Single(result.Games);
+        Assert.Equal("Chess", result.Games[0].Title);
     }
 
     [Fact]
@@ -110,8 +111,8 @@ public class GetAllGamesQueryHandlerTests
         var games = new List<Game>();
 
         _gameRepositoryMock
-            .Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(games);
+            .Setup(r => r.GetPaginatedAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((games, 0));
 
         var query = new GetAllGamesQuery();
 
@@ -120,7 +121,8 @@ public class GetAllGamesQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Empty(result);
+        Assert.Empty(result.Games);
+        Assert.Equal(0, result.Total);
     }
 
     [Fact]
@@ -148,8 +150,8 @@ public class GetAllGamesQueryHandlerTests
         };
 
         _gameRepositoryMock
-            .Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(games);
+            .Setup(r => r.GetPaginatedAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((games, games.Count));
 
         var query = new GetAllGamesQuery();
 
@@ -157,22 +159,22 @@ public class GetAllGamesQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(3, result.Count);
+        Assert.Equal(3, result.Games.Count);
 
         // Minimal game
-        Assert.Equal("Simple Game", result[0].Title);
-        Assert.Null(result[0].Publisher);
-        Assert.Null(result[0].YearPublished);
+        Assert.Equal("Simple Game", result.Games[0].Title);
+        Assert.Null(result.Games[0].Publisher);
+        Assert.Null(result.Games[0].YearPublished);
 
         // Game with publisher
-        Assert.Equal("Published Game", result[1].Title);
-        Assert.Equal("Publisher", result[1].Publisher);
+        Assert.Equal("Published Game", result.Games[1].Title);
+        Assert.Equal("Publisher", result.Games[1].Publisher);
 
         // Complete game
-        Assert.Equal("Complete Game", result[2].Title);
-        Assert.NotNull(result[2].Publisher);
-        Assert.NotNull(result[2].YearPublished);
-        Assert.NotNull(result[2].MinPlayers);
+        Assert.Equal("Complete Game", result.Games[2].Title);
+        Assert.NotNull(result.Games[2].Publisher);
+        Assert.NotNull(result.Games[2].YearPublished);
+        Assert.NotNull(result.Games[2].MinPlayers);
     }
 
     [Fact]
@@ -195,8 +197,8 @@ public class GetAllGamesQueryHandlerTests
         };
 
         _gameRepositoryMock
-            .Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(games);
+            .Setup(r => r.GetPaginatedAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((games, games.Count));
 
         var query = new GetAllGamesQuery();
 
@@ -204,10 +206,10 @@ public class GetAllGamesQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(3, result.Count);
-        Assert.Equal(13, result[0].BggId);
-        Assert.Equal(30549, result[1].BggId);
-        Assert.Null(result[2].BggId);
+        Assert.Equal(3, result.Games.Count);
+        Assert.Equal(13, result.Games[0].BggId);
+        Assert.Equal(30549, result.Games[1].BggId);
+        Assert.Null(result.Games[2].BggId);
     }
     [Fact]
     public async Task Handle_WithCancellationToken_PassesToRepository()
@@ -222,8 +224,8 @@ public class GetAllGamesQueryHandlerTests
         var cancellationToken = cts.Token;
 
         _gameRepositoryMock
-            .Setup(r => r.GetAllAsync(cancellationToken))
-            .ReturnsAsync(games);
+            .Setup(r => r.GetPaginatedAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), cancellationToken))
+            .ReturnsAsync((games, games.Count));
 
         var query = new GetAllGamesQuery();
 
@@ -232,10 +234,10 @@ public class GetAllGamesQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Single(result);
+        Assert.Single(result.Games);
 
         _gameRepositoryMock.Verify(
-            r => r.GetAllAsync(cancellationToken),
+            r => r.GetPaginatedAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), cancellationToken),
             Times.Once);
     }
     [Fact]
@@ -259,8 +261,8 @@ public class GetAllGamesQueryHandlerTests
         };
 
         _gameRepositoryMock
-            .Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(games);
+            .Setup(r => r.GetPaginatedAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((games, games.Count));
 
         var query = new GetAllGamesQuery();
 
@@ -268,7 +270,7 @@ public class GetAllGamesQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        var dto = result[0];
+        var dto = result.Games[0];
         Assert.Equal(gameId, dto.Id);
         Assert.Equal("Wingspan", dto.Title);
         Assert.Equal("Stonemaier Games", dto.Publisher);

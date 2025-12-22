@@ -13,7 +13,7 @@ internal sealed class GameLinkedToBggEventHandler : DomainEventHandlerBase<GameL
 {
     public GameLinkedToBggEventHandler(
         MeepleAiDbContext dbContext,
-        ILogger<DomainEventHandlerBase<GameLinkedToBggEvent>> logger)
+        ILogger<GameLinkedToBggEventHandler> logger)
         : base(dbContext, logger)
     {
     }

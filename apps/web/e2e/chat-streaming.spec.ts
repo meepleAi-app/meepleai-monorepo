@@ -5,8 +5,6 @@
  */
 
 import { test as base, expect, Page } from './fixtures/chromatic';
-import { AuthHelper, USER_FIXTURES } from './pages';
-import { WaitHelper } from './helpers/WaitHelper';
 import {
   mockGamesAPI,
   mockAgentsAPI,
@@ -14,6 +12,8 @@ import {
   QATestGame,
   QATestAgent,
 } from './helpers/qa-test-utils';
+import { WaitHelper } from './helpers/WaitHelper';
+import { AuthHelper, USER_FIXTURES } from './pages';
 
 const test = base.extend<{ userPage: Page }>({
   userPage: async ({ page }, use) => {

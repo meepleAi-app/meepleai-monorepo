@@ -1,4 +1,5 @@
-import { Page, Locator, expect } from '@playwright/test';
+import { Locator, expect } from '@playwright/test';
+
 import { BasePage } from '../base/BasePage';
 
 /**
@@ -319,11 +320,14 @@ export class PromptManagementPage extends AdminPage {
 
     for (const row of rows) {
       const versionText = await row.locator('[data-testid="version-number"]').textContent();
-      const isActive = await row.locator('[data-testid="active-badge"]').isVisible().catch(() => false);
+      const isActive = await row
+        .locator('[data-testid="active-badge"]')
+        .isVisible()
+        .catch(() => false);
 
       versions.push({
         version: parseInt(versionText || '0'),
-        active: isActive
+        active: isActive,
       });
     }
 
@@ -430,7 +434,9 @@ export class BulkExportPage extends AdminPage {
    * @param gameName - Game name
    */
   async selectGame(gameName: string): Promise<void> {
-    const gameCheckbox = this.gameList.locator(`[data-game-name="${gameName}"]`).getByRole('checkbox');
+    const gameCheckbox = this.gameList
+      .locator(`[data-game-name="${gameName}"]`)
+      .getByRole('checkbox');
     await this.click(gameCheckbox);
   }
 

@@ -6,14 +6,16 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef, type CSSProperties } from 'react';
+
 import { api, type ProcessingProgress as ApiProcessingProgress } from '@/lib/api';
 import {
   ProcessingStep,
   type ProcessingProgress as ProcessingProgressType,
   isProcessingComplete,
   getStepLabel,
-  getStepOrder
+  getStepOrder,
 } from '@/types/pdf';
+
 import { SkeletonLoader } from '../loading';
 
 interface ProcessingProgressProps {
@@ -30,10 +32,10 @@ const MAX_POLL_DURATION_MS = 600000; // 10 minutes max
  */
 function transformApiProgress(apiProgress: ApiProcessingProgress): ProcessingProgressType {
   const stepMap: Record<string, ProcessingStep> = {
-    'Pending': ProcessingStep.Uploading, // Map Pending to Uploading step
-    'Processing': ProcessingStep.Extracting, // Map Processing to Extracting step
-    'Completed': ProcessingStep.Completed,
-    'Failed': ProcessingStep.Failed
+    Pending: ProcessingStep.Uploading, // Map Pending to Uploading step
+    Processing: ProcessingStep.Extracting, // Map Processing to Extracting step
+    Completed: ProcessingStep.Completed,
+    Failed: ProcessingStep.Failed,
   };
 
   return {
@@ -41,10 +43,9 @@ function transformApiProgress(apiProgress: ApiProcessingProgress): ProcessingPro
     percentComplete: apiProgress.percentComplete,
     estimatedTimeRemaining: undefined,
     errorMessage: apiProgress.error || undefined,
-    updatedAt: new Date().toISOString()
+    updatedAt: new Date().toISOString(),
   };
 }
-
 
 /**
  * Formats seconds into human-readable time (e.g., "2 min 30 sec")
@@ -127,7 +128,11 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
         ) {
           hasNotifiedCompletionRef.current = true;
           onComplete();
-        } else if (transformedProgress.currentStep === ProcessingStep.Failed && onError && transformedProgress.errorMessage) {
+        } else if (
+          transformedProgress.currentStep === ProcessingStep.Failed &&
+          onError &&
+          transformedProgress.errorMessage
+        ) {
           onError(transformedProgress.errorMessage);
         }
       }
@@ -167,7 +172,9 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
           clearInterval(intervalRef.current);
           intervalRef.current = null;
         }
-        setNetworkError('Processing timeout exceeded (10 minutes). Please refresh to check status.');
+        setNetworkError(
+          'Processing timeout exceeded (10 minutes). Please refresh to check status.'
+        );
         return;
       }
 
@@ -233,7 +240,7 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
     padding: '24px',
     border: '1px solid #e0e0e0',
     borderRadius: '8px',
-    backgroundColor: '#f9fafb'
+    backgroundColor: '#f9fafb',
   };
 
   const headerStyle: CSSProperties = {
@@ -241,7 +248,7 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
     marginBottom: '16px',
     fontSize: '18px',
     fontWeight: 600,
-    color: '#333'
+    color: '#333',
   };
 
   const progressBarContainerStyle: CSSProperties = {
@@ -250,7 +257,7 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
     backgroundColor: '#e5e7eb',
     borderRadius: '999px',
     overflow: 'hidden',
-    marginBottom: '16px'
+    marginBottom: '16px',
   };
 
   const progressBarFillStyle: CSSProperties = {
@@ -262,14 +269,14 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
         : progress?.currentStep === ProcessingStep.Failed
           ? '#d93025'
           : '#0070f3',
-    transition: 'width 0.6s ease'
+    transition: 'width 0.6s ease',
   };
 
   const stepIndicatorContainerStyle: CSSProperties = {
     display: 'flex',
     justifyContent: 'space-between',
     marginBottom: '20px',
-    gap: '8px'
+    gap: '8px',
   };
 
   const stepIndicatorStyle = (step: ProcessingStep): CSSProperties => {
@@ -287,7 +294,7 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
       backgroundColor: isActive ? '#e3f2fd' : isCompleted ? '#e8f5e9' : '#f5f5f5',
       border: `2px solid ${isActive ? '#0070f3' : isCompleted ? '#34a853' : '#ddd'}`,
       color: isActive ? '#0070f3' : isCompleted ? '#34a853' : '#666',
-      fontWeight: isActive ? 600 : 400
+      fontWeight: isActive ? 600 : 400,
     };
   };
 
@@ -295,13 +302,13 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
     marginBottom: '12px',
     fontSize: '16px',
     color: '#444',
-    fontWeight: 500
+    fontWeight: 500,
   };
 
   const timeRemainingStyle: CSSProperties = {
     marginBottom: '16px',
     fontSize: '14px',
-    color: '#666'
+    color: '#666',
   };
 
   const errorMessageStyle: CSSProperties = {
@@ -311,7 +318,7 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
     borderRadius: '4px',
     color: '#d93025',
     marginBottom: '16px',
-    fontSize: '14px'
+    fontSize: '14px',
   };
 
   const networkErrorStyle: CSSProperties = {
@@ -321,12 +328,12 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
     borderRadius: '4px',
     color: '#ff6f00',
     marginBottom: '16px',
-    fontSize: '14px'
+    fontSize: '14px',
   };
 
   const buttonContainerStyle: CSSProperties = {
     display: 'flex',
-    gap: '12px'
+    gap: '12px',
   };
 
   const cancelButtonStyle: CSSProperties = {
@@ -337,7 +344,7 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
     borderRadius: '4px',
     fontSize: '14px',
     fontWeight: 500,
-    cursor: canceling ? 'not-allowed' : 'pointer'
+    cursor: canceling ? 'not-allowed' : 'pointer',
   };
 
   const dialogOverlayStyle: CSSProperties = {
@@ -350,7 +357,7 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 1000
+    zIndex: 1000,
   };
 
   const dialogStyle: CSSProperties = {
@@ -358,7 +365,7 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
     padding: '24px',
     borderRadius: '8px',
     maxWidth: '400px',
-    width: '90%'
+    width: '90%',
   };
 
   const dialogTitleStyle: CSSProperties = {
@@ -366,20 +373,20 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
     marginBottom: '16px',
     fontSize: '18px',
     fontWeight: 600,
-    color: '#333'
+    color: '#333',
   };
 
   const dialogTextStyle: CSSProperties = {
     marginBottom: '20px',
     fontSize: '14px',
     color: '#666',
-    lineHeight: 1.5
+    lineHeight: 1.5,
   };
 
   const dialogButtonContainerStyle: CSSProperties = {
     display: 'flex',
     gap: '12px',
-    justifyContent: 'flex-end'
+    justifyContent: 'flex-end',
   };
 
   const dialogCancelButtonStyle: CSSProperties = {
@@ -390,7 +397,7 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
     borderRadius: '4px',
     fontSize: '14px',
     fontWeight: 500,
-    cursor: 'pointer'
+    cursor: 'pointer',
   };
 
   const dialogConfirmButtonStyle: CSSProperties = {
@@ -401,7 +408,7 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
     borderRadius: '4px',
     fontSize: '14px',
     fontWeight: 500,
-    cursor: 'pointer'
+    cursor: 'pointer',
   };
 
   // Non-terminal steps for step indicator
@@ -410,7 +417,7 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
     ProcessingStep.Extracting,
     ProcessingStep.Chunking,
     ProcessingStep.Embedding,
-    ProcessingStep.Indexing
+    ProcessingStep.Indexing,
   ];
 
   if (loading && !progress) {
@@ -440,7 +447,7 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
 
       {/* Step Indicators */}
       <div style={stepIndicatorContainerStyle} aria-label="Processing steps">
-        {steps.map((step) => (
+        {steps.map(step => (
           <div key={step} style={stepIndicatorStyle(step)} title={getStepLabel(step)}>
             {step}
           </div>
@@ -502,8 +509,14 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
 
       {/* Cancel Confirmation Dialog */}
       {showCancelDialog && (
-        <div style={dialogOverlayStyle} onClick={handleCancelDialogClose} role="dialog" aria-modal="true" aria-labelledby="cancel-dialog-title">
-          <div style={dialogStyle} onClick={(e) => e.stopPropagation()}>
+        <div
+          style={dialogOverlayStyle}
+          onClick={handleCancelDialogClose}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="cancel-dialog-title"
+        >
+          <div style={dialogStyle} onClick={e => e.stopPropagation()}>
             <h4 id="cancel-dialog-title" style={dialogTitleStyle}>
               Cancel PDF Processing?
             </h4>

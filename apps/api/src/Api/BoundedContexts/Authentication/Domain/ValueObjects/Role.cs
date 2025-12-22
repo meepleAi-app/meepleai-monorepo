@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.Authentication.Domain.ValueObjects;
 /// <summary>
 /// Represents a user role in the system.
 /// </summary>
-internal sealed class Role : ValueObject
+public sealed class Role : ValueObject
 {
     public static readonly Role User = new("user");
     public static readonly Role Editor = new("editor");
@@ -42,6 +42,7 @@ internal sealed class Role : ValueObject
 
     public bool HasPermission(Role requiredRole)
     {
+        ArgumentNullException.ThrowIfNull(requiredRole);
         // Admin has all permissions
         if (IsAdmin()) return true;
 
@@ -59,5 +60,9 @@ internal sealed class Role : ValueObject
 
     public override string ToString() => Value;
 
-    public static implicit operator string(Role role) => role.Value;
+    public static implicit operator string(Role role)
+    {
+        ArgumentNullException.ThrowIfNull(role);
+        return role.Value;
+    }
 }

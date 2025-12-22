@@ -1,8 +1,11 @@
-import type { Meta, StoryObj } from '@storybook/react';
 import { useState } from 'react';
-import { SessionSetupModal } from './SessionSetupModal';
+
 import { Button } from '@/components/ui/button';
 import type { Game } from '@/lib/api';
+
+import { SessionSetupModal } from './SessionSetupModal';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const mockGame: Game = {
   id: 'game-1',

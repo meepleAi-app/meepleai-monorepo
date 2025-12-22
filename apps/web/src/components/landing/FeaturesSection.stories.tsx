@@ -5,8 +5,9 @@
  * Chromatic integration for responsive testing.
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
 import { FeaturesSection } from './FeaturesSection';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta: Meta<typeof FeaturesSection> = {
   title: 'Landing/FeaturesSection',

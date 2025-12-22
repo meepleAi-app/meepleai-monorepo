@@ -58,7 +58,7 @@ public class PdfQualityValidationDomainServiceTests
         validation.QualityScore.Should().Be(0.85);
         validation.Threshold.Should().Be(0.80);
         validation.Report.QualityLevel.Should().Be("Good");
-        validation.Report.Recommendation.Should().Contain("meets threshold");
+        validation.Report.Recommendation.Should().Be("Quality is sufficient for indexing.");
     }
 
     [Fact]
@@ -79,7 +79,7 @@ public class PdfQualityValidationDomainServiceTests
         validation.Passed.Should().BeFalse();
         validation.QualityScore.Should().Be(0.70);
         validation.Report.QualityLevel.Should().Be("Acceptable");
-        validation.Report.Recommendation.Should().Contain("below optimal threshold");
+        validation.Report.Recommendation.Should().Contain("below threshold");
     }
 
     [Fact]
@@ -100,7 +100,7 @@ public class PdfQualityValidationDomainServiceTests
         validation.Passed.Should().BeFalse();
         validation.QualityScore.Should().Be(0.50);
         validation.Report.QualityLevel.Should().Be("Poor");
-        validation.Report.Recommendation.Should().ContainEquivalentOf("poor");
+        validation.Report.Recommendation.Should().Contain("below threshold");
     }
 
     [Fact]
@@ -121,7 +121,7 @@ public class PdfQualityValidationDomainServiceTests
         validation.Passed.Should().BeFalse();
         validation.QualityScore.Should().Be(0.25);
         validation.Report.QualityLevel.Should().Be("Critical");
-        validation.Report.Recommendation.Should().ContainEquivalentOf("critical");
+        validation.Report.Recommendation.Should().Contain("very low quality");
     }
 
     [Fact]

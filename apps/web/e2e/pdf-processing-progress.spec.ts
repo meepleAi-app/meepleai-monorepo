@@ -13,7 +13,6 @@
 
 import { test as base, expect, type Page } from './fixtures/chromatic';
 import { AuthHelper, GamesHelper, USER_FIXTURES } from './pages';
-import { getTextMatcher, t } from './fixtures/i18n';
 
 // Extend test with editor authentication
 const test = base.extend<{ editorPage: Page; gameId: string }>({

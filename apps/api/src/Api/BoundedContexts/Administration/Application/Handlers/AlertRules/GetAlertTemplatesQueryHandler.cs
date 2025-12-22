@@ -5,7 +5,7 @@ namespace Api.BoundedContexts.Administration.Application.Handlers.AlertRules;
 
 internal class GetAlertTemplatesQueryHandler : IRequestHandler<GetAlertTemplatesQuery, List<AlertTemplateDto>>
 {
-    public Task<List<AlertTemplateDto>> Handle(GetAlertTemplatesQuery request, CancellationToken ct)
+    public Task<List<AlertTemplateDto>> Handle(GetAlertTemplatesQuery request, CancellationToken cancellationToken)
     {
         var templates = new List<AlertTemplateDto>
         {
@@ -20,3 +20,4 @@ internal class GetAlertTemplatesQueryHandler : IRequestHandler<GetAlertTemplates
         return Task.FromResult(templates);
     }
 }
+

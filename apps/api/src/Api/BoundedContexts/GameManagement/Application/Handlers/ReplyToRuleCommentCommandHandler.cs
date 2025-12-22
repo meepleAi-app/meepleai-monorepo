@@ -136,15 +136,15 @@ internal partial class ReplyToRuleCommentCommandHandler : IRequestHandler<ReplyT
                 .Distinct(StringComparer.Ordinal)
                 .ToList();
 
-            if (!mentionedUsernames.Any())
+            if (mentionedUsernames.Count == 0)
             {
                 return new List<string>();
             }
 
             var users = await _dbContext.Users
                 .AsNoTracking()
-                .Where(u => (u.DisplayName != null && mentionedUsernames.Contains(u.DisplayName.ToLower(CultureInfo.InvariantCulture)))
-                    || (u.Email != null && mentionedUsernames.Any(m => u.Email.ToLower(CultureInfo.InvariantCulture).StartsWith(m))))
+                .Where(u => (u.DisplayName != null && mentionedUsernames.Any(m => string.Equals(u.DisplayName, m, StringComparison.InvariantCultureIgnoreCase)))
+                    || (u.Email != null && mentionedUsernames.Any(m => u.Email.StartsWith(m, StringComparison.OrdinalIgnoreCase))))
                 .Select(u => u.Id.ToString())
                 .Distinct()
                 .ToListAsync(cancellationToken).ConfigureAwait(false);

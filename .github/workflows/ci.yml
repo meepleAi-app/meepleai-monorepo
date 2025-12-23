@@ -424,7 +424,7 @@ jobs:
         env:
           ASPNETCORE_ENVIRONMENT: Development
           # Issue #2152: Changed hardcoded Username from 'meepleai' to 'postgres' for consistency
-          ConnectionStrings__Postgres: ${{ secrets.TEST_DB_CONNECTION_STRING || 'Host=localhost;Port=5432;Database=meepleai_dev;Username=postgres;Password=meepleai_dev_password' }}
+          ConnectionStrings__Postgres: ${{ secrets.NEW_TEST_DB_CONNECTION_STRING || 'Host=localhost;Port=5432;Database=meepleai_dev;Username=postgres;Password=meepleai_dev_password' }}
           QDRANT_URL: "http://localhost:6333"
           REDIS_URL: "localhost:6379"
           OPENROUTER_API_KEY: "test-key-for-ci"
@@ -680,7 +680,7 @@ jobs:
           QDRANT_URL: http://127.0.0.1:6333
           REDIS_URL: 127.0.0.1:6379
           # Issue #2152: Changed hardcoded Username from 'meeple' to 'postgres'
-          ConnectionStrings__Postgres: ${{ secrets.TEST_DB_CONNECTION_STRING || 'Host=127.0.0.1;Port=5432;Database=meepleai_test;Username=postgres;Password=meeplepass;Maximum Pool Size=100' }}
+          ConnectionStrings__Postgres: ${{ secrets.NEW_TEST_DB_CONNECTION_STRING || 'Host=127.0.0.1;Port=5432;Database=meepleai_test;Username=postgres;Password=meeplepass;Maximum Pool Size=100' }}
           OTEL_EXPORTER_OTLP_ENDPOINT: http://localhost:4318
         run: |
           # Issue #1820: Category-based execution for performance optimization
@@ -735,7 +735,7 @@ jobs:
           QDRANT_URL: http://127.0.0.1:6333
           REDIS_URL: 127.0.0.1:6379
           # Issue #2152: Changed hardcoded Username from 'meeple' to 'postgres'
-          ConnectionStrings__Postgres: ${{ secrets.TEST_DB_CONNECTION_STRING || 'Host=127.0.0.1;Port=5432;Database=meepleai_test;Username=postgres;Password=meeplepass;Maximum Pool Size=100' }}
+          ConnectionStrings__Postgres: ${{ secrets.NEW_TEST_DB_CONNECTION_STRING || 'Host=127.0.0.1;Port=5432;Database=meepleai_test;Username=postgres;Password=meeplepass;Maximum Pool Size=100' }}
           OTEL_EXPORTER_OTLP_ENDPOINT: http://localhost:4318
         run: |
           # Run tests with randomized order to validate test isolation
@@ -917,7 +917,7 @@ jobs:
           QDRANT_URL: http://127.0.0.1:6333
           REDIS_URL: 127.0.0.1:6379
           # Issue #2152: Changed hardcoded Username from 'meeple' to 'postgres'
-          ConnectionStrings__Postgres: ${{ secrets.TEST_DB_CONNECTION_STRING || 'Host=127.0.0.1;Port=5432;Database=meepleai_test;Username=postgres;Password=meeplepass;Maximum Pool Size=100' }}
+          ConnectionStrings__Postgres: ${{ secrets.NEW_TEST_DB_CONNECTION_STRING || 'Host=127.0.0.1;Port=5432;Database=meepleai_test;Username=postgres;Password=meeplepass;Maximum Pool Size=100' }}
         run: |
           # Quality Tests: Validate AI quality metrics on golden dataset
           # Thresholds:
@@ -939,7 +939,7 @@ jobs:
           CI: true
           QDRANT_URL: http://127.0.0.1:6333
           # Issue #2152: Changed hardcoded Username from 'meeple' to 'postgres'
-          ConnectionStrings__Postgres: ${{ secrets.TEST_DB_CONNECTION_STRING || 'Host=127.0.0.1;Port=5432;Database=meepleai_test;Username=postgres;Password=meeplepass;Maximum Pool Size=100' }}
+          ConnectionStrings__Postgres: ${{ secrets.NEW_TEST_DB_CONNECTION_STRING || 'Host=127.0.0.1;Port=5432;Database=meepleai_test;Username=postgres;Password=meeplepass;Maximum Pool Size=100' }}
         run: |
           # Create output directory
           mkdir -p evaluation-reports
@@ -1116,7 +1116,7 @@ jobs:
           QDRANT_URL: http://127.0.0.1:6333
           REDIS_URL: 127.0.0.1:6379
           # Issue #2152: Changed hardcoded Username from 'meeple' to 'postgres'
-          ConnectionStrings__Postgres: ${{ secrets.TEST_DB_CONNECTION_STRING || 'Host=127.0.0.1;Port=5432;Database=meepleai_test;Username=postgres;Password=meeplepass;Maximum Pool Size=100' }}
+          ConnectionStrings__Postgres: ${{ secrets.NEW_TEST_DB_CONNECTION_STRING || 'Host=127.0.0.1;Port=5432;Database=meepleai_test;Username=postgres;Password=meeplepass;Maximum Pool Size=100' }}
           OTEL_EXPORTER_OTLP_ENDPOINT: http://localhost:4318
         run: |
           echo "::notice::Running LLM integration tests with Ollama"

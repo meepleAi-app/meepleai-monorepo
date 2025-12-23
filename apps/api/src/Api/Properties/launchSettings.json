@@ -8,7 +8,7 @@
       "applicationUrl": "http://localhost:8080",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
-        "ConnectionStrings__Postgres": "Host=localhost;Database=meepleai;Username=meeple;Password=meeplepass;Pooling=true;Minimum Pool Size=2;Maximum Pool Size=20",
+        "ConnectionStrings__Postgres": "Host=localhost;Database=meepleai;Username=postgres;Password=meeplepass;Pooling=true;Minimum Pool Size=2;Maximum Pool Size=20",
         "REDIS_URL": "localhost:6379,password=changeme-redis-dev-please-set,abortConnect=false",
         "QDRANT_URL": "http://localhost:6333",
         "OLLAMA_URL": "http://localhost:11434"

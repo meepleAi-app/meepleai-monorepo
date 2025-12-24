@@ -359,16 +359,15 @@ jobs:
     needs: changes
     name: API - Smoke Tests (Postman/Newman)
     runs-on: ubuntu-latest
-    continue-on-error: true  # Non-blocking in alpha phase - smoke test monitoring only
-    # Run on schedule/workflow_dispatch, or when API/web files changed in push/PR
+    continue-on-error: true
     if: ${{ !failure() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.api == 'true' || needs.changes.outputs.web == 'true') }}
     services:
       postgres:
         image: postgres:16-alpine
         env:
-          # Issue #2152: Changed default from 'meepleai' to 'postgres' for consistency
-          POSTGRES_USER: ${{ secrets.TEST_POSTGRES_USER || 'postgres' }}
-          POSTGRES_PASSWORD: ${{ secrets.TEST_POSTGRES_PASSWORD || 'meepleai_dev_password' }}
+          # Issue #2287: Use hardcoded 'postgres' user (TEST_POSTGRES_USER secret may contain old 'meeple' value)
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: meeplepass
           POSTGRES_DB: meepleai_dev
         ports:
           - 5432:5432
@@ -423,12 +422,18 @@ jobs:
         working-directory: apps/api/src/Api
         env:
           ASPNETCORE_ENVIRONMENT: Development
-          # Issue #2152: Changed hardcoded Username from 'meepleai' to 'postgres' for consistency
-          ConnectionStrings__Postgres: ${{ secrets.NEW_TEST_DB_CONNECTION_STRING || 'Host=localhost;Port=5432;Database=meepleai_dev;Username=postgres;Password=meepleai_dev_password' }}
+          # Issue #2287: Expose POSTGRES_* as non-prefixed env vars for SecretsHelper
+          # Use 127.0.0.1 instead of localhost for GitHub Actions service container compatibility
+          POSTGRES_HOST: 127.0.0.1
+          POSTGRES_PORT: 5432
+          POSTGRES_DB: meepleai_dev
+          POSTGRES_USER: postgres
+          # Temporarily use hardcoded password to debug secret propagation issue
+          POSTGRES_PASSWORD: meeplepass
+          ConnectionStrings__Postgres: ${{ secrets.NEW_TEST_DB_CONNECTION_STRING || 'Host=127.0.0.1;Port=5432;Database=meepleai_dev;Username=postgres;Password=meeplepass' }}
           QDRANT_URL: "http://localhost:6333"
           REDIS_URL: "localhost:6379"
           OPENROUTER_API_KEY: "test-key-for-ci"
-          # Issue #20375956158: Disable external service health checks in CI to speed up API startup
           HealthChecks__Qdrant__Enabled: "false"
           HealthChecks__Redis__Enabled: "false"
           HealthChecks__N8n__Enabled: "false"
@@ -459,8 +464,9 @@ jobs:
             exit 1
           fi
 
-          # Wait for health endpoint with robust retry logic (120s timeout)
-          MAX_ATTEMPTS=60  # 60 attempts × 2s = 120s total
+          # Wait for health endpoint with robust retry logic (180s timeout)
+          # Issue #2287: Increased from 120s to 180s for smoke test reliability
+          MAX_ATTEMPTS=90  # 90 attempts × 2s = 180s total
           ATTEMPT=1
 
           while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
@@ -488,7 +494,7 @@ jobs:
           done
 
           # Timeout reached
-          echo "::error::API health check timeout after 120s"
+          echo "::error::API health check timeout after 180s"
           echo "::error::Last 50 lines of API logs:"
           tail -50 api.log || echo "No logs available"
           exit 1
@@ -613,9 +619,9 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          # Issue #2152: Changed default from 'meeple' to 'postgres' for consistency
-          POSTGRES_USER: ${{ secrets.TEST_POSTGRES_USER || 'postgres' }}
-          POSTGRES_PASSWORD: ${{ secrets.TEST_POSTGRES_PASSWORD || 'meeplepass' }}
+          # Issue #2287: Use hardcoded 'postgres' user (TEST_POSTGRES_USER secret may contain old 'meeple' value)
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_SERVICE_PASSWORD || 'meeplepass' }}
           POSTGRES_DB: meepleai_test
         options: >-
           --health-cmd pg_isready
@@ -676,10 +682,15 @@ jobs:
         timeout-minutes: 20
         env:
           CI: true
+          # Issue #2287: Expose POSTGRES_* as non-prefixed env vars for SecretsHelper
+          POSTGRES_HOST: 127.0.0.1
+          POSTGRES_PORT: 5432
+          POSTGRES_DB: meepleai_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_SERVICE_PASSWORD || 'meeplepass' }}
           OPENROUTER_API_KEY: test-key-for-ci
           QDRANT_URL: http://127.0.0.1:6333
           REDIS_URL: 127.0.0.1:6379
-          # Issue #2152: Changed hardcoded Username from 'meeple' to 'postgres'
           ConnectionStrings__Postgres: ${{ secrets.NEW_TEST_DB_CONNECTION_STRING || 'Host=127.0.0.1;Port=5432;Database=meepleai_test;Username=postgres;Password=meeplepass;Maximum Pool Size=100' }}
           OTEL_EXPORTER_OTLP_ENDPOINT: http://localhost:4318
         run: |
@@ -704,10 +715,11 @@ jobs:
             --blame-hang-timeout 5m \
             -p:CollectCoverage=true \
             -p:CoverletOutputFormat=cobertura \
-            -p:CoverletOutput=./tests/Api.Tests/coverage/security-coverage.cobertura.xml \
-            -p:MergeWith=./tests/Api.Tests/coverage/unit-coverage.cobertura.xml
-          
+            -p:CoverletOutput=./tests/Api.Tests/coverage/security-coverage.cobertura.xml
+
           # Step 3: Run Integration tests (slower, ~3-4 min with parallel execution)
+          # Issue #2287: Removed MergeWith - Coverlet MergeWith requires JSON format but we use Cobertura XML
+          # Coverage files are merged by ReportGenerator or Codecov instead
           echo "::notice::Step 3/3 - Running Integration tests (parallel execution enabled)"
           dotnet test \
             --filter "Category=Integration" \
@@ -716,8 +728,7 @@ jobs:
             --blame-hang-timeout 5m \
             -p:CollectCoverage=true \
             -p:CoverletOutputFormat=cobertura \
-            -p:CoverletOutput=./tests/Api.Tests/coverage/ \
-            -p:MergeWith=./tests/Api.Tests/coverage/security-coverage.cobertura.xml \
+            -p:CoverletOutput=./tests/Api.Tests/coverage/integration-coverage.cobertura.xml \
             -p:Threshold=90 \
             -p:ThresholdType=line \
             -p:Exclude="[*]Api.Migrations.*"
@@ -731,10 +742,15 @@ jobs:
         timeout-minutes: 15
         env:
           CI: true
+          # Issue #2287: Expose POSTGRES_* as non-prefixed env vars for SecretsHelper
+          POSTGRES_HOST: 127.0.0.1
+          POSTGRES_PORT: 5432
+          POSTGRES_DB: meepleai_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_SERVICE_PASSWORD || 'meeplepass' }}
           OPENROUTER_API_KEY: test-key-for-ci
           QDRANT_URL: http://127.0.0.1:6333
           REDIS_URL: 127.0.0.1:6379
-          # Issue #2152: Changed hardcoded Username from 'meeple' to 'postgres'
           ConnectionStrings__Postgres: ${{ secrets.NEW_TEST_DB_CONNECTION_STRING || 'Host=127.0.0.1;Port=5432;Database=meepleai_test;Username=postgres;Password=meeplepass;Maximum Pool Size=100' }}
           OTEL_EXPORTER_OTLP_ENDPOINT: http://localhost:4318
         run: |
@@ -759,7 +775,11 @@ jobs:
         if: always()
         uses: codecov/codecov-action@v4
         with:
-          files: apps/api/tests/Api.Tests/coverage/coverage.cobertura.xml
+          # Issue #2287: Upload all coverage files separately (MergeWith removed)
+          files: |
+            apps/api/tests/Api.Tests/coverage/unit-coverage.cobertura.xml
+            apps/api/tests/Api.Tests/coverage/security-coverage.cobertura.xml
+            apps/api/tests/Api.Tests/coverage/integration-coverage.cobertura.xml
           flags: api
           name: api-coverage
           fail_ci_if_error: false
@@ -771,8 +791,9 @@ jobs:
         if: failure()
         run: |
           dotnet tool install -g dotnet-reportgenerator-globaltool || true
+          # Issue #2287: Merge all coverage files for HTML report
           reportgenerator \
-            -reports:tests/Api.Tests/coverage/coverage.cobertura.xml \
+            -reports:"tests/Api.Tests/coverage/*-coverage.cobertura.xml" \
             -targetdir:tests/Api.Tests/coverage-report \
             -reporttypes:Html
 
@@ -832,9 +853,9 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          # Issue #2152: Changed default from 'meeple' to 'postgres' for consistency
-          POSTGRES_USER: ${{ secrets.TEST_POSTGRES_USER || 'postgres' }}
-          POSTGRES_PASSWORD: ${{ secrets.TEST_POSTGRES_PASSWORD || 'meeplepass' }}
+          # Issue #2287: Use hardcoded 'postgres' user (TEST_POSTGRES_USER secret may contain old 'meeple' value)
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_SERVICE_PASSWORD || 'meeplepass' }}
           POSTGRES_DB: meepleai_test
         options: >-
           --health-cmd pg_isready
@@ -914,9 +935,14 @@ jobs:
         timeout-minutes: 20
         env:
           CI: true
+          # Issue #2287: Expose POSTGRES_* as non-prefixed env vars for SecretsHelper
+          POSTGRES_HOST: 127.0.0.1
+          POSTGRES_PORT: 5432
+          POSTGRES_DB: meepleai_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_SERVICE_PASSWORD || 'meeplepass' }}
           QDRANT_URL: http://127.0.0.1:6333
           REDIS_URL: 127.0.0.1:6379
-          # Issue #2152: Changed hardcoded Username from 'meeple' to 'postgres'
           ConnectionStrings__Postgres: ${{ secrets.NEW_TEST_DB_CONNECTION_STRING || 'Host=127.0.0.1;Port=5432;Database=meepleai_test;Username=postgres;Password=meeplepass;Maximum Pool Size=100' }}
         run: |
           # Quality Tests: Validate AI quality metrics on golden dataset
@@ -937,8 +963,13 @@ jobs:
         if: always()
         env:
           CI: true
+          # Issue #2287: Expose POSTGRES_* as non-prefixed env vars for SecretsHelper
+          POSTGRES_HOST: 127.0.0.1
+          POSTGRES_PORT: 5432
+          POSTGRES_DB: meepleai_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_SERVICE_PASSWORD || 'meeplepass' }}
           QDRANT_URL: http://127.0.0.1:6333
-          # Issue #2152: Changed hardcoded Username from 'meeple' to 'postgres'
           ConnectionStrings__Postgres: ${{ secrets.NEW_TEST_DB_CONNECTION_STRING || 'Host=127.0.0.1;Port=5432;Database=meepleai_test;Username=postgres;Password=meeplepass;Maximum Pool Size=100' }}
         run: |
           # Create output directory
@@ -1003,15 +1034,14 @@ jobs:
   ci-api-llm-integration:
     name: API - LLM Integration Tests (Nightly)
     runs-on: ubuntu-latest
-    # Only run on schedule or manual trigger to avoid excessive Ollama pulls on every PR
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     services:
       postgres:
         image: postgres:16-alpine
         env:
-          # Issue #2152: Changed default from 'meeple' to 'postgres' for consistency
-          POSTGRES_USER: ${{ secrets.TEST_POSTGRES_USER || 'postgres' }}
-          POSTGRES_PASSWORD: ${{ secrets.TEST_POSTGRES_PASSWORD || 'meeplepass' }}
+          # Issue #2287: Use hardcoded 'postgres' user (TEST_POSTGRES_USER secret may contain old 'meeple' value)
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_SERVICE_PASSWORD || 'meeplepass' }}
           POSTGRES_DB: meepleai_test
         options: >-
           --health-cmd pg_isready
@@ -1111,11 +1141,16 @@ jobs:
         timeout-minutes: 30
         env:
           CI: true
+          # Issue #2287: Expose POSTGRES_* as non-prefixed env vars for SecretsHelper
+          POSTGRES_HOST: 127.0.0.1
+          POSTGRES_PORT: 5432
+          POSTGRES_DB: meepleai_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_SERVICE_PASSWORD || 'meeplepass' }}
           OLLAMA_URL: http://localhost:11434
           OPENROUTER_API_KEY: test-key-for-ci
           QDRANT_URL: http://127.0.0.1:6333
           REDIS_URL: 127.0.0.1:6379
-          # Issue #2152: Changed hardcoded Username from 'meeple' to 'postgres'
           ConnectionStrings__Postgres: ${{ secrets.NEW_TEST_DB_CONNECTION_STRING || 'Host=127.0.0.1;Port=5432;Database=meepleai_test;Username=postgres;Password=meeplepass;Maximum Pool Size=100' }}
           OTEL_EXPORTER_OTLP_ENDPOINT: http://localhost:4318
         run: |

@@ -1,91 +1,77 @@
 #!/usr/bin/env node
+
 /**
- * Schema Validation Script
- *
- * Validates RuleSpec example files against their JSON schemas.
- * This script is run by CI to ensure schema examples are valid.
- *
- * Usage: node schemas/validate-all-examples.js
- *
- * Exit codes:
- *   0 - All examples valid (or no examples to validate)
- *   1 - Validation errors found
+ * Validate all RuleSpec example JSON files against the schema
+ * This script ensures all example RuleSpec files are valid before deployment
  */
 
 const fs = require('fs');
 const path = require('path');
 
-const SCHEMAS_DIR = path.join(__dirname);
-const EXAMPLES_PATTERN = /\.example\.json$/;
+const SCHEMA_DIR = __dirname;
+const EXAMPLES_DIR = path.join(SCHEMA_DIR, 'examples');
 
-function findExampleFiles(dir) {
-  const files = [];
-
-  if (!fs.existsSync(dir)) {
-    return files;
-  }
-
-  const entries = fs.readdirSync(dir, { withFileTypes: true });
-
-  for (const entry of entries) {
-    const fullPath = path.join(dir, entry.name);
-
-    if (entry.isDirectory()) {
-      files.push(...findExampleFiles(fullPath));
-    } else if (entry.isFile() && EXAMPLES_PATTERN.test(entry.name)) {
-      files.push(fullPath);
-    }
-  }
-
-  return files;
-}
-
-function validateJsonFile(filePath) {
+// Simple validation function (extend with actual schema validation if needed)
+function validateRuleSpec(filePath) {
   try {
     const content = fs.readFileSync(filePath, 'utf8');
-    JSON.parse(content);
-    return { valid: true };
+    const json = JSON.parse(content);
+
+    // Basic required fields check
+    const requiredFields = ['gameId', 'gameName', 'version'];
+    const missingFields = requiredFields.filter(field => !json[field]);
+
+    if (missingFields.length > 0) {
+      console.error(`❌ ${path.basename(filePath)}: Missing fields: ${missingFields.join(', ')}`);
+      return false;
+    }
+
+    console.log(`✅ ${path.basename(filePath)}: Valid`);
+    return true;
   } catch (error) {
-    return { valid: false, error: error.message };
+    console.error(`❌ ${path.basename(filePath)}: ${error.message}`);
+    return false;
   }
 }
 
 function main() {
-  console.log('Schema Validation: Checking RuleSpec examples...\n');
+  console.log('🔍 Validating RuleSpec examples...\n');
 
-  const exampleFiles = findExampleFiles(SCHEMAS_DIR);
-
-  if (exampleFiles.length === 0) {
-    console.log('No example files found to validate.');
-    console.log('Validation passed (no examples).\n');
-    process.exit(0);
+  // Create examples directory if it doesn't exist
+  if (!fs.existsSync(EXAMPLES_DIR)) {
+    fs.mkdirSync(EXAMPLES_DIR, { recursive: true });
+    console.log('⚠️  No examples directory found. Created empty directory.');
+    console.log('✅ Validation passed (no examples to validate)\n');
+    return;
   }
 
-  console.log(`Found ${exampleFiles.length} example file(s):\n`);
+  // Find all JSON files in examples directory
+  const exampleFiles = fs.readdirSync(EXAMPLES_DIR)
+    .filter(file => file.endsWith('.json'))
+    .map(file => path.join(EXAMPLES_DIR, file));
 
-  let hasErrors = false;
+  if (exampleFiles.length === 0) {
+    console.log('⚠️  No example files found in schemas/examples/');
+    console.log('✅ Validation passed (no examples to validate)\n');
+    return;
+  }
 
+  // Validate each file
+  let allValid = true;
   for (const file of exampleFiles) {
-    const relativePath = path.relative(SCHEMAS_DIR, file);
-    const result = validateJsonFile(file);
-
-    if (result.valid) {
-      console.log(`  ✓ ${relativePath}`);
-    } else {
-      console.log(`  ✗ ${relativePath}`);
-      console.log(`    Error: ${result.error}\n`);
-      hasErrors = true;
+    const isValid = validateRuleSpec(file);
+    if (!isValid) {
+      allValid = false;
     }
   }
 
-  console.log('');
-
-  if (hasErrors) {
-    console.log('Validation FAILED: Some examples have errors.\n');
-    process.exit(1);
-  } else {
-    console.log('Validation PASSED: All examples are valid.\n');
+  console.log();
+  if (allValid) {
+    console.log(`✅ All ${exampleFiles.length} example(s) validated successfully`);
     process.exit(0);
+  } else {
+    console.log('❌ Validation failed. Please fix the errors above.');
+    process.exit(1);
   }
 }
 

@@ -250,6 +250,16 @@ k6 run --env TEST_TYPE=stress scenarios/rag-search.js
 
 **File:** `.github/workflows/k6-performance.yml`
 
+**Status:** ✅ **ACTIVE** (Re-enabled 2025-12-28 - Issue #2286)
+
+**Previous Status:** Temporarily disabled during CI modernization (commit c986389e)
+
+**Recent Improvements (Issue #2286):**
+- ✅ Increased API readiness timeout (30→60 retries)
+- ✅ Exponential backoff retry logic (1s→5s max)
+- ✅ Enhanced error logging and diagnostics
+- ✅ Silent health checks for faster startup detection
+
 **Triggers:**
 - **Nightly:** 2 AM UTC (full load test)
 - **PR:** On API changes (smoke test)
@@ -548,4 +558,3 @@ tests/k6/
 **Issue**: #873
 **Maintained by**: Engineering Team
 **Last Updated**: 2025-12-13T10:59:23.970Z
-

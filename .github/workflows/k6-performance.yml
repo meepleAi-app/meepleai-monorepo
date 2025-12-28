@@ -176,6 +176,11 @@ jobs:
         env:
           # Issue #2286: CRITICAL - ASPNETCORE_ENVIRONMENT must be FIRST to override defaults
           ASPNETCORE_ENVIRONMENT: CI
+          # Issue #2286: Disable rate limiting via configuration override (launchSettings forces Development)
+          RateLimit__User__MaxTokens: '999999'
+          RateLimit__User__RefillRate: '10000'
+          RateLimit__Anonymous__MaxTokens: '999999'
+          RateLimit__Anonymous__RefillRate: '10000'
           # Issue #2152: Explicit POSTGRES_* vars for SecretsHelper.BuildPostgresConnectionString()
           POSTGRES_USER: 'postgres'
           POSTGRES_PASSWORD: 'testpass123'

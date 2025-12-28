@@ -58,7 +58,8 @@ export default function (data) {
       const body = JSON.parse(response.body);
       check(body, {
         'has sessions array': (b) => Array.isArray(b),
-        'has at least one session': (b) => b.length > 0,
+        // Issue #2286: Smoke tests don't require data (infrastructure validation only)
+        'has at least one session': (b) => testType === 'smoke' || b.length > 0,
         'sessions have required fields': (b) => {
           if (b.length === 0) return true;
           const session = b[0];

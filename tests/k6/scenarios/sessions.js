@@ -40,7 +40,7 @@ export default function (data) {
   // Issue #1663: Use retry with exponential backoff for rate limit resilience
   const response = retryWithBackoff(() =>
     http.get(
-      `${config.apiBaseUrl}/api/v1/auth/sessions`,
+      `${config.apiBaseUrl}/api/v1/users/me/sessions`,
       {
         headers: headers,
         tags: { endpoint: 'sessions' },

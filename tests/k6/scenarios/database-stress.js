@@ -144,7 +144,7 @@ export function readHeavy(data) {
   const operations = [
     () => http.get(`${config.apiBaseUrl}/api/v1/games`, { headers, tags: { endpoint: 'database', operation: 'read-all' } }),
     () => http.get(`${config.apiBaseUrl}/api/v1/games/${config.testGameId}`, { headers, tags: { endpoint: 'database', operation: 'read-one' } }),
-    () => http.get(`${config.apiBaseUrl}/api/v1/auth/sessions`, { headers, tags: { endpoint: 'database', operation: 'read-sessions' } }),
+    () => http.get(`${config.apiBaseUrl}/api/v1/users/me/sessions`, { headers, tags: { endpoint: 'database', operation: 'read-sessions' } }),
   ];
 
   const operation = operations[Math.floor(Math.random() * operations.length)];

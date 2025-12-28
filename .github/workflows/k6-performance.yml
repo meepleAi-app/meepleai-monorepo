@@ -174,6 +174,8 @@ jobs:
           nohup dotnet run --configuration Release > ../../../../api.log 2>&1 &
           echo $! > ../../../../api.pid
         env:
+          # Issue #2286: CRITICAL - ASPNETCORE_ENVIRONMENT must be FIRST to override defaults
+          ASPNETCORE_ENVIRONMENT: CI
           # Issue #2152: Explicit POSTGRES_* vars for SecretsHelper.BuildPostgresConnectionString()
           POSTGRES_USER: 'postgres'
           POSTGRES_PASSWORD: 'testpass123'
@@ -188,7 +190,6 @@ jobs:
           HealthChecks__Postgres__Enabled: 'false'
           # Dummy API key for CI (background services require it)
           OPENROUTER_API_KEY: 'sk-or-v1-dummy-key-for-ci-testing-only'
-          ASPNETCORE_ENVIRONMENT: CI
           ASPNETCORE_URLS: 'http://0.0.0.0:8080'
 
       # Issue #2020: Add ConnectionStrings__Postgres to prevent EF Core from defaulting to 'root' user

@@ -30,6 +30,14 @@ internal class RateLimitingMiddleware
     {
         try
         {
+            // Issue #2286: Disable rate limiting for CI environment (K6 performance tests)
+            var env = context.RequestServices.GetRequiredService<IHostEnvironment>();
+            if (string.Equals(env.EnvironmentName, "CI", StringComparison.Ordinal))
+            {
+                await _next(context).ConfigureAwait(false);
+                return;
+            }
+
             var services = context.RequestServices;
 
             // Prefer concrete RateLimitService to support test overrides; fallback to interface

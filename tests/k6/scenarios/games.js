@@ -61,9 +61,9 @@ export default function (data) {
         // Issue #2286: Smoke tests don't require data (infrastructure validation only)
         'has at least one game': (b) => testType === 'smoke' || b.length > 0,
         'games have required fields': (b) => {
-          if (b.length === 0) return true;
+          if (!Array.isArray(b) || b.length === 0) return true;
           const game = b[0];
-          return game.id && game.title && game.publisher;
+          return game && game.id && game.title && game.publisher;
         },
       });
     } catch (e) {

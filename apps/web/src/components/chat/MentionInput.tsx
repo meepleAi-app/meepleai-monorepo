@@ -166,24 +166,37 @@ export function MentionInput({
       return;
     }
 
+    let cancelled = false;
+
     const searchUsers = async () => {
+      if (cancelled) return;
       setIsSearching(true);
       try {
         const results = await api.auth.searchUsers(debouncedQuery);
-        setSearchResults(results || []);
+        if (!cancelled) {
+          setSearchResults(results || []);
+        }
       } catch (error) {
-        logger.error(
-          'Failed to search users',
-          error instanceof Error ? error : new Error(String(error)),
-          createErrorContext('MentionInput', 'searchUsers', { query: debouncedQuery })
-        );
-        setSearchResults([]);
+        if (!cancelled) {
+          logger.error(
+            'Failed to search users',
+            error instanceof Error ? error : new Error(String(error)),
+            createErrorContext('MentionInput', 'searchUsers', { query: debouncedQuery })
+          );
+          setSearchResults([]);
+        }
       } finally {
-        setIsSearching(false);
+        if (!cancelled) {
+          setIsSearching(false);
+        }
       }
     };
 
     searchUsers();
+
+    return () => {
+      cancelled = true;
+    };
   }, [debouncedQuery, mentionState.isOpen, minLength]);
 
   // Handle user selection

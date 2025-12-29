@@ -257,7 +257,7 @@ describe('MentionInput', () => {
 
     it('navigates down with ArrowDown key', async () => {
       const textarea = screen.getByRole('combobox');
-      const options = screen.getAllByRole('option');
+      const options = await screen.findAllByRole('option');
 
       expect(options[0]).toHaveAttribute('aria-selected', 'true');
 
@@ -289,7 +289,7 @@ describe('MentionInput', () => {
 
     it('does not go below first option with ArrowUp', async () => {
       const textarea = screen.getByRole('combobox');
-      const options = screen.getAllByRole('option');
+      const options = await screen.findAllByRole('option');
 
       expect(options[0]).toHaveAttribute('aria-selected', 'true');
 
@@ -372,8 +372,8 @@ describe('MentionInput', () => {
         { timeout: 3000 }
       );
 
-      // Get any option with Alice in it
-      const options = screen.getAllByRole('option');
+      // Wait for options to be rendered
+      const options = await screen.findAllByRole('option');
       const aliceOption = options[0]; // First option should be Alice
       fireEvent.click(aliceOption);
 
@@ -400,7 +400,7 @@ describe('MentionInput', () => {
         { timeout: 3000 }
       );
 
-      const options = screen.getAllByRole('option');
+      const options = await screen.findAllByRole('option');
       const bobOption = options.find(opt => opt.textContent?.includes('Bob Builder'));
       fireEvent.click(bobOption!);
 
@@ -431,7 +431,7 @@ describe('MentionInput', () => {
         { timeout: 3000 }
       );
 
-      const options = screen.getAllByRole('option');
+      const options = await screen.findAllByRole('option');
       const aliceOption = options[0];
       fireEvent.click(aliceOption);
 
@@ -450,7 +450,7 @@ describe('MentionInput', () => {
         expect(screen.getByRole('listbox')).toBeInTheDocument();
       });
 
-      const options = screen.getAllByRole('option');
+      const options = await screen.findAllByRole('option');
       expect(options[0]).toHaveAttribute('aria-selected', 'true');
 
       fireEvent.mouseEnter(options[2]);

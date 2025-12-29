@@ -86,15 +86,15 @@ test.describe('CHAT-06: Message Editing and Deletion', () => {
     await editTextarea.clear();
     await editTextarea.fill(editedMessage);
 
-    // Mock the API update response
-    await chatHelper.mockMessageEdit(true);
+    // ✅ REMOVED MOCK: Use real message edit API
+    // Real backend PUT /api/v1/chats/{threadId}/messages/{messageId} must work
 
     // Click Save button
     const saveButton = page.locator('button[aria-label="Save edited message"]');
     await expect(saveButton).toBeEnabled();
     await saveButton.click({ force: true });
 
-    // Wait for API call and UI update
+    // Wait for real API call and UI update (longer timeout)
 
     // Verify message updated with new content
     await expect(page.getByText(editedMessage)).toBeVisible({ timeout: 5000 });
@@ -181,13 +181,13 @@ test.describe('CHAT-06: Message Editing and Deletion', () => {
     // Verify modal content
     await expect(page.getByText(/eliminerà permanentemente/i)).toBeVisible();
 
-    // Mock the API delete response
-    await chatHelper.mockMessageDelete(true);
+    // ✅ REMOVED MOCK: Use real message delete API
+    // Real backend DELETE /api/v1/chats/{threadId}/messages/{messageId} must work
 
     // Click "Elimina" button
     await page.getByRole('button', { name: 'Elimina' }).click({ force: true });
 
-    // Wait for deletion to process
+    // Wait for real deletion to process (longer timeout)
 
     // Verify modal closes
     await expect(page.getByRole('heading', { name: 'Eliminare il messaggio?' })).not.toBeVisible({

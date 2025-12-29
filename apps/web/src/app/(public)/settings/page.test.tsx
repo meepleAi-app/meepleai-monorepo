@@ -943,7 +943,13 @@ describe('SettingsPage', () => {
       const saveButton = screen.getByTestId('save-profile-button');
       await user.click(saveButton);
 
-      expect(saveButton).toBeDisabled();
+      // Issue #2284: Add waitFor to handle async loading state update (race condition fix)
+      await waitFor(
+        () => {
+          expect(saveButton).toBeDisabled();
+        },
+        { timeout: 1000 }
+      );
 
       await waitFor(
         () => {

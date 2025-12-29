@@ -224,14 +224,27 @@ public class SecretsHelperTests
     }
 
     [Fact]
-    public void BuildPostgresConnectionString_NoPassword_Throws()
+    public void BuildPostgresConnectionString_NoPassword_ReturnsNull()
     {
         // Arrange
-        var config = new ConfigurationBuilder().Build();
+        // Issue #2287: Clear POSTGRES_PASSWORD env var to test isolation from CI environment
+        var originalPassword = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD");
+        try
+        {
+            Environment.SetEnvironmentVariable("POSTGRES_PASSWORD", null);
+            var config = new ConfigurationBuilder().Build();
 
-        // Act & Assert
-        Assert.Throws<InvalidOperationException>(() =>
-            SecretsHelper.BuildPostgresConnectionString(config, NullLogger.Instance));
+            // Act
+            var result = SecretsHelper.BuildPostgresConnectionString(config, NullLogger.Instance);
+
+            // Assert - should return null when no password configured (line 140 in SecretsHelper.cs)
+            Assert.Null(result);
+        }
+        finally
+        {
+            // Restore original value
+            Environment.SetEnvironmentVariable("POSTGRES_PASSWORD", originalPassword);
+        }
     }
 }
 

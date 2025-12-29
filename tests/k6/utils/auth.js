@@ -100,7 +100,7 @@ export function logout(baseUrl, sessionToken) {
  */
 export function getSessions(baseUrl, sessionToken) {
   const response = http.get(
-    `${baseUrl}/api/v1/auth/sessions`,
+    `${baseUrl}/api/v1/users/me/sessions`,
     { headers: getHeaders(sessionToken) }
   );
 

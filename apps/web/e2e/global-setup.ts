@@ -14,8 +14,17 @@ export default async function globalSetup() {
   console.log('🔍 Waiting for server to be healthy...');
 
   try {
+    // Check frontend server
     await waitForServerHealth('http://localhost:3000', 60, 1000);
     console.log('✅ Server is ready for testing');
+
+    // Optional: Check backend API if E2E_REAL_BACKEND is set
+    if (process.env.E2E_REAL_BACKEND === 'true') {
+      const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
+      console.log(`🔍 Checking backend API health (${apiBase})...`);
+      await waitForServerHealth(`${apiBase}`, 60, 1000);
+      console.log('✅ Backend API is ready');
+    }
   } catch (error) {
     console.error('❌ Server health check failed:', error);
     throw error;

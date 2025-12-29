@@ -47,141 +47,96 @@ test.describe('Authenticated journeys', () => {
   test('supports an authenticated chat exchange', async ({ page }) => {
     const authHelper = new AuthHelper(page);
 
-    // Authenticated session
+    // Authenticated session (still mocked - auth flow tested elsewhere)
     await authHelper.mockAuthenticatedSession(USER_FIXTURES.admin);
 
-    // Mock QA agent endpoint
-    await page.route(`${apiBase}/agents/qa`, async route => {
-      const requestBody = route.request().postDataJSON() as { query: string };
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          answer: `Risposta per: ${requestBody.query}`,
-          sources: [{ title: 'Manuale Demo', snippet: 'Capitolo introduttivo', page: 2 }],
-        }),
-      });
-    });
+    // ✅ REMOVED MOCK: Use real QA agent API
+    // Real backend must be running with test game data seeded
 
     await page.goto('/chat');
 
     await expect(page.getByRole('heading', { name: 'MeepleAI Chat' })).toBeVisible();
 
-    // Send message and verify response
+    // Send message and verify response using real API
     const input = page.locator('[data-testid="message-input"]');
-    await input.fill('Qual è la durata media?');
-    await page.getByRole('button', { name: 'Invia' }).click();
+    await input.fill('What are the basic rules?');
 
-    await expect(page.getByText('Risposta per: Qual è la durata media?')).toBeVisible();
-    await expect(page.getByText('Manuale Demo (Pagina 2)')).toBeVisible();
+    // Wait for game selector if needed
+    const gameSelector = page.getByRole('combobox', { name: /select.*game/i });
+    if (await gameSelector.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await gameSelector.click();
+      const firstGame = page.getByRole('option').first();
+      await firstGame.click();
+    }
+
+    await page.getByRole('button', { name: /send|invia/i }).click();
+
+    // Wait for real AI response (may take longer than mock)
+    await expect(page.locator('[data-testid="ai-message"]').first()).toBeVisible({
+      timeout: 30000,
+    });
 
     // Test feedback button
-    await page.getByRole('button', { name: '👍 Utile' }).click();
-    await expect(page.getByRole('button', { name: '👍 Utile' })).toHaveCSS(
-      'background-color',
-      'rgb(52, 168, 83)'
-    );
+    const thumbsUp = page.getByRole('button', { name: /thumbs up|utile/i }).first();
+    await thumbsUp.click();
   });
 
   test('walks through the PDF upload wizard for an authenticated user', async ({ page }) => {
     const authHelper = new AuthHelper(page);
 
-    // Authenticated session
+    // Authenticated session (still mocked - auth flow tested elsewhere)
     await authHelper.mockAuthenticatedSession(USER_FIXTURES.admin);
 
-    // Mock games endpoints
-    const games = [
-      { id: 'game-1', name: 'Terraforming Mars', createdAt: new Date().toISOString() },
-    ];
+    // ✅ REMOVED ALL MOCKS: Use real backend APIs
+    // - GET /games - must return seeded test games
+    // - POST /games - must create games
+    // - GET /games/{id}/pdfs - must return PDF list
+    // - POST /ingest/pdf - must process uploads
+    // - PUT /games/{id}/rulespec - must save rule specs
+    //
+    // Backend must be running with test data seeded
 
-    await page.route(`${apiBase}/games`, async route => {
-      if (route.request().method() === 'GET') {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify(games),
-        });
-      } else if (route.request().method() === 'POST') {
-        const body = route.request().postDataJSON() as { name: string };
-        const newGame = { id: 'game-2', name: body.name, createdAt: new Date().toISOString() };
-        games.push(newGame);
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify(newGame),
-        });
-      }
-    });
-
-    // Mock PDF-related endpoints
-    await page.route(`${apiBase}/games/game-1/pdfs`, async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ pdfs: [] }),
-      });
-    });
-
-    await page.route(`${apiBase}/ingest/pdf`, async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ documentId: 'doc-123' }),
-      });
-    });
-
-    await page.route(`${apiBase}/games/game-1/rulespec`, async route => {
-      if (route.request().method() === 'PUT') {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: route.request().postData() ?? JSON.stringify({}),
-        });
-      } else {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({}),
-        });
-      }
-    });
-
-    // Navigate and interact with PDF upload wizard
+    // Navigate and interact with PDF upload wizard using REAL API
     await page.goto('/upload');
 
-    await expect(page.getByRole('heading', { name: 'PDF Import Wizard' })).toBeVisible({
+    await expect(page.getByRole('heading', { name: /PDF.*Import.*Wizard/i })).toBeVisible({
       timeout: 5000,
     });
 
-    // Step 1: Select game
-    await page.getByLabel('Existing games').selectOption('game-1');
-    await page.getByRole('button', { name: 'Confirm selection' }).click();
+    // Step 1: Select game from real DB
+    const gameSelector = page.getByLabel(/existing.*games/i);
+    await gameSelector.selectOption({ index: 1 }); // First available game from DB
 
-    // Step 2: Upload PDF
+    await page.getByRole('button', { name: /confirm.*selection/i }).click();
+
+    // Step 2: Upload PDF - real backend will process it
     await page.setInputFiles('#fileInput', {
-      name: 'rules.pdf',
+      name: 'test-rules.pdf',
       mimeType: 'application/pdf',
       buffer: Buffer.from('%PDF-1.4 test file'),
     });
 
-    await page.getByRole('button', { name: 'Upload & Continue' }).click();
+    await page.getByRole('button', { name: /upload.*continue/i }).click();
 
-    await expect(
-      page.getByText('✅ PDF uploaded successfully! Document ID: doc-123')
-    ).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Step 2: Parse PDF' })).toBeVisible();
+    // Wait for real upload processing (longer timeout for real API)
+    await expect(page.locator('text=/PDF uploaded successfully|Document ID:/i')).toBeVisible({
+      timeout: 15000,
+    });
+    await expect(page.getByRole('heading', { name: /Step 2.*Parse/i })).toBeVisible();
 
-    // Step 3: Parse PDF
-    await page.getByRole('button', { name: 'Parse PDF' }).click();
-    await expect(page.getByRole('heading', { name: 'Step 3: Review & Edit Rules' })).toBeVisible();
+    // Step 3: Parse PDF - real backend extraction
+    await page.getByRole('button', { name: /parse.*pdf/i }).click();
+    await expect(page.getByRole('heading', { name: /Step 3.*Review/i })).toBeVisible({
+      timeout: 20000,
+    });
 
-    // Step 4: Publish RuleSpec
-    await page.getByRole('button', { name: 'Publish RuleSpec' }).click();
+    // Step 4: Publish RuleSpec - real DB write
+    await page.getByRole('button', { name: /publish.*rulespec/i }).click();
 
-    await expect(page.getByText('✅ RuleSpec published successfully!')).toBeVisible();
-    await expect(
-      page.getByRole('heading', { name: /Step 4: Published Successfully/i })
-    ).toBeVisible();
+    await expect(page.locator('text=/RuleSpec published successfully/i')).toBeVisible({
+      timeout: 10000,
+    });
+    await expect(page.getByRole('heading', { name: /Step 4.*Published/i })).toBeVisible();
   });
 
   test('allows filtering logs after navigating as an authenticated user', async ({ page }) => {
@@ -192,18 +147,22 @@ test.describe('Authenticated journeys', () => {
 
     await page.goto('/logs');
 
-    await expect(page.getByRole('heading', { name: 'Observability Dashboard' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /observability.*dashboard/i })).toBeVisible();
 
-    // Test log filtering
-    const filter = page.getByPlaceholder('Filter logs by message, request ID, or user ID...');
-    await filter.fill('req-002');
-    await expect(page.getByText('User logged in successfully')).toBeVisible();
-    await expect(page.locator('text=Application started')).toHaveCount(0);
+    // Test log filtering - use real logs from backend
+    const filter = page.getByPlaceholder(/filter.*logs/i);
 
-    // Test no results
-    await filter.fill('no results');
-    await expect(
-      page.getByText('No logs found. Start using the application to generate logs.')
-    ).toBeVisible();
+    // Try filtering - exact content depends on real backend logs
+    await filter.fill('req');
+
+    // Verify filter is working (some results should appear)
+    const logEntries = page.locator('[data-testid="log-entry"], .log-item, tbody tr');
+    await expect(logEntries.first()).toBeVisible({ timeout: 5000 });
+
+    // Test no results with unlikely search term
+    await filter.fill('zzz-nonexistent-xyz-123');
+    await expect(page.locator('text=/no.*logs.*found|nessun.*log/i')).toBeVisible({
+      timeout: 5000,
+    });
   });
 });

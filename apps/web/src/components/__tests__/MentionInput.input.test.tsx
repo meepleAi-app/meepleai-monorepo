@@ -295,8 +295,13 @@ describe('MentionInput', () => {
 
     it('does not go below first option with ArrowUp', async () => {
       const textarea = screen.getByRole('combobox');
-      const options = screen.getAllByRole('option');
 
+      // Wait for options to be rendered
+      await waitFor(() => {
+        expect(screen.getAllByRole('option')).toHaveLength(3);
+      });
+
+      const options = screen.getAllByRole('option');
       expect(options[0]).toHaveAttribute('aria-selected', 'true');
 
       fireEvent.keyDown(textarea, { key: 'ArrowUp' });

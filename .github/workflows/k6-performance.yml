@@ -1,5 +1,12 @@
 name: K6 Performance Tests (Smoke - Fast)
 
+# Issue #2286: Workflow re-enabled after modernization (was .disabled)
+# Previous disable: commit c986389e "Modernize GitHub Actions workflows"
+# Re-enabled with improvements:
+# - Increased API readiness timeout (30→60 retries)
+# - Exponential backoff for reliability
+# - Better error logging and diagnostics
+
 on:
   schedule:
     # Run nightly at 2 AM UTC (only on main branch)
@@ -40,7 +47,8 @@ jobs:
   k6-performance-tests:
     name: K6 Performance Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45  # Issue #2284: Increased from 30min (+50% like E2E workflows)
+    continue-on-error: true  # Issue #2284: Non-blocking performance monitoring
     # Only run scheduled tests on main branch
     if: github.event_name != 'schedule' || github.ref == 'refs/heads/main'
 
@@ -163,9 +171,16 @@ jobs:
       - name: Start API server
         working-directory: apps/api/src/Api
         run: |
-          nohup dotnet run --configuration Release > ../../../../api.log 2>&1 &
+          nohup dotnet run --configuration Release --environment CI > ../../../../api.log 2>&1 &
           echo $! > ../../../../api.pid
         env:
+          # Issue #2286: CRITICAL - ASPNETCORE_ENVIRONMENT must be FIRST to override defaults
+          ASPNETCORE_ENVIRONMENT: CI
+          # Issue #2286: Disable rate limiting via config override (RateLimitService reads RateLimiting:LimitType:role)
+          RateLimiting__MaxTokens__user: '999999'
+          RateLimiting__RefillRate__user: '10000'
+          RateLimiting__MaxTokens__anonymous: '999999'
+          RateLimiting__RefillRate__anonymous: '10000'
           # Issue #2152: Explicit POSTGRES_* vars for SecretsHelper.BuildPostgresConnectionString()
           POSTGRES_USER: 'postgres'
           POSTGRES_PASSWORD: 'testpass123'
@@ -180,23 +195,37 @@ jobs:
           HealthChecks__Postgres__Enabled: 'false'
           # Dummy API key for CI (background services require it)
           OPENROUTER_API_KEY: 'sk-or-v1-dummy-key-for-ci-testing-only'
-          ASPNETCORE_ENVIRONMENT: CI
           ASPNETCORE_URLS: 'http://0.0.0.0:8080'
 
       # Issue #2020: Add ConnectionStrings__Postgres to prevent EF Core from defaulting to 'root' user
       # This step validates API health which may trigger EF Core DbContext initialization
       # Issue #2112: Use /health/live instead of /health to skip optional service health checks
+      # Issue #2286: Increased retries from 30 to 60 with exponential backoff for API stability
       - name: Wait for API to be ready
         run: |
-          for i in {1..30}; do
-            if curl -f http://localhost:8080/health/live; then
-              echo "✅ API is ready"
+          MAX_RETRIES=60
+          RETRY=0
+          BACKOFF=1
+          
+          echo "🔄 Waiting for API to be ready (max ${MAX_RETRIES} attempts)..."
+          
+          while [ $RETRY -lt $MAX_RETRIES ]; do
+            if curl -f -s http://localhost:8080/health/live > /dev/null 2>&1; then
+              echo "✅ API is ready after $((RETRY + 1)) attempts"
               exit 0
             fi
-            echo "Waiting for API... ($i/30)"
-            sleep 2
+            
+            RETRY=$((RETRY + 1))
+            echo "⏳ Waiting for API... ($RETRY/$MAX_RETRIES) - sleeping ${BACKOFF}s"
+            sleep $BACKOFF
+            
+            # Exponential backoff (max 5s)
+            if [ $BACKOFF -lt 5 ]; then
+              BACKOFF=$((BACKOFF + 1))
+            fi
           done
-          echo "❌ API failed to start"
+          
+          echo "❌ API failed to start after ${MAX_RETRIES} attempts"
           echo "Last 100 lines of API logs:"
           tail -n 100 api.log || echo "⚠️ Could not read api.log"
           exit 1

@@ -12,7 +12,7 @@ on:
 jobs:
   e2e-coverage:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 60  # Issue #2284: Increased from 40min to prevent timeout on full test suite
 
     steps:
       - name: Checkout

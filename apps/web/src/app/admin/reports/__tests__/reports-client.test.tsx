@@ -123,12 +123,8 @@ describe('ReportsPageClient', () => {
     it('should display Generate tab by default', async () => {
       renderWithAuth(<ReportsPageClient />);
 
-      await waitFor(() => {
-        expect(screen.getByRole('tab', { name: /generate/i })).toHaveAttribute(
-          'data-state',
-          'active'
-        );
-      });
+      const generateTab = await screen.findByRole('tab', { name: /generate/i });
+      expect(generateTab).toHaveAttribute('data-state', 'active');
     });
 
     it('should switch to Scheduled tab', async () => {
@@ -139,7 +135,8 @@ describe('ReportsPageClient', () => {
         expect(api.admin.getScheduledReports).toHaveBeenCalled();
       });
 
-      const scheduledTab = screen.getByRole('tab', { name: /scheduled/i });
+      // Wait for tab to be rendered
+      const scheduledTab = await screen.findByRole('tab', { name: /scheduled/i });
       await user.click(scheduledTab);
 
       expect(scheduledTab).toHaveAttribute('data-state', 'active');
@@ -153,7 +150,7 @@ describe('ReportsPageClient', () => {
         expect(api.admin.getReportExecutions).toHaveBeenCalled();
       });
 
-      const historyTab = screen.getByRole('tab', { name: /history/i });
+      const historyTab = await screen.findByRole('tab', { name: /history/i });
       await user.click(historyTab);
 
       expect(historyTab).toHaveAttribute('data-state', 'active');
@@ -237,7 +234,7 @@ describe('ReportsPageClient', () => {
       });
 
       // Switch to scheduled tab
-      const scheduledTab = screen.getByRole('tab', { name: /scheduled/i });
+      const scheduledTab = await screen.findByRole('tab', { name: /scheduled/i });
       await user.click(scheduledTab);
 
       await waitFor(() => {
@@ -256,7 +253,7 @@ describe('ReportsPageClient', () => {
       });
 
       // Switch to scheduled tab
-      const scheduledTab = screen.getByRole('tab', { name: /scheduled/i });
+      const scheduledTab = await screen.findByRole('tab', { name: /scheduled/i });
       await user.click(scheduledTab);
 
       await waitFor(() => {
@@ -275,7 +272,7 @@ describe('ReportsPageClient', () => {
       });
 
       // Switch to history tab
-      const historyTab = screen.getByRole('tab', { name: /history/i });
+      const historyTab = await screen.findByRole('tab', { name: /history/i });
       await user.click(historyTab);
 
       // Just verify the tab is active - executions list is tested in visual tests
@@ -293,7 +290,7 @@ describe('ReportsPageClient', () => {
       });
 
       // Switch to history tab
-      const historyTab = screen.getByRole('tab', { name: /history/i });
+      const historyTab = await screen.findByRole('tab', { name: /history/i });
       await user.click(historyTab);
 
       await waitFor(() => {

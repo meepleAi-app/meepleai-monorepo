@@ -274,6 +274,11 @@ describe('MentionInput', () => {
 
       // Navigate down first
       fireEvent.keyDown(textarea, { key: 'ArrowDown' });
+
+      await waitFor(() => {
+        expect(screen.getAllByRole('option')[1]).toHaveAttribute('aria-selected', 'true');
+      });
+
       fireEvent.keyDown(textarea, { key: 'ArrowDown' });
 
       await waitFor(() => {
@@ -304,9 +309,18 @@ describe('MentionInput', () => {
     it('does not go beyond last option with ArrowDown', async () => {
       const textarea = screen.getByRole('combobox');
 
-      // Navigate to last option
+      // Navigate to last option with proper timing
       fireEvent.keyDown(textarea, { key: 'ArrowDown' });
+      await waitFor(() => {
+        expect(screen.getAllByRole('option')[1]).toHaveAttribute('aria-selected', 'true');
+      });
+
       fireEvent.keyDown(textarea, { key: 'ArrowDown' });
+      await waitFor(() => {
+        expect(screen.getAllByRole('option')[2]).toHaveAttribute('aria-selected', 'true');
+      });
+
+      // Try to go beyond last option
       fireEvent.keyDown(textarea, { key: 'ArrowDown' });
       fireEvent.keyDown(textarea, { key: 'ArrowDown' });
 

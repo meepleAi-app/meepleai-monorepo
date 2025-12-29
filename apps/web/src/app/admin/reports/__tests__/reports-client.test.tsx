@@ -190,7 +190,8 @@ describe('ReportsPageClient', () => {
         expect(api.admin.getScheduledReports).toHaveBeenCalled();
       });
 
-      const generateButton = screen.getByRole('button', { name: /generate report/i });
+      // Wait for button to be rendered
+      const generateButton = await screen.findByRole('button', { name: /generate report/i });
       await user.click(generateButton);
 
       const confirmButton = screen.getByRole('button', { name: /^generate$/i });

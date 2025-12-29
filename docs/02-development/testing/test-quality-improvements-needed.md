@@ -1,6 +1,7 @@
 # Test Quality Improvements Needed
 
 Generated: 2025-12-29
+**Tracking Issue**: #2299 (E2E mock removal epic)
 
 ## Overview
 Systematic test quality issues identified during GitHub Actions troubleshooting.

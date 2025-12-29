@@ -274,6 +274,11 @@ describe('MentionInput', () => {
 
       // Navigate down first
       fireEvent.keyDown(textarea, { key: 'ArrowDown' });
+
+      await waitFor(() => {
+        expect(screen.getAllByRole('option')[1]).toHaveAttribute('aria-selected', 'true');
+      });
+
       fireEvent.keyDown(textarea, { key: 'ArrowDown' });
 
       await waitFor(() => {

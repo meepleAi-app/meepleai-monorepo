@@ -40,7 +40,7 @@ export default function (data) {
   // Issue #1663: Use retry with exponential backoff for rate limit resilience
   const response = retryWithBackoff(() =>
     http.get(
-      `${config.apiBaseUrl}/api/v1/auth/sessions`,
+      `${config.apiBaseUrl}/api/v1/users/me/sessions`,
       {
         headers: headers,
         tags: { endpoint: 'sessions' },
@@ -58,11 +58,12 @@ export default function (data) {
       const body = JSON.parse(response.body);
       check(body, {
         'has sessions array': (b) => Array.isArray(b),
-        'has at least one session': (b) => b.length > 0,
+        // Issue #2286: Smoke tests don't require data (infrastructure validation only)
+        'has at least one session': (b) => testType === 'smoke' || b.length > 0,
         'sessions have required fields': (b) => {
-          if (b.length === 0) return true;
+          if (!Array.isArray(b) || b.length === 0) return true;
           const session = b[0];
-          return session.id && session.userId && session.createdAt;
+          return session && session.id && session.userId && session.createdAt;
         },
       });
     } catch (e) {

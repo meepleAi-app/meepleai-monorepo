@@ -46,7 +46,7 @@ export function getHeaders(sessionToken = null) {
   };
 
   if (sessionToken) {
-    headers['Cookie'] = `meepleai-session=${sessionToken}`;
+    headers['Cookie'] = `meepleai_session=${sessionToken}`;
   }
 
   return headers;

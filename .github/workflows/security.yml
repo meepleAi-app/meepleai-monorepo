@@ -1,0 +1,139 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/**'
+      - '.github/workflows/**'
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '0 2 * * 1' # Weekly on Mondays
+  workflow_dispatch:
+
+concurrency:
+  group: security-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  # CodeQL SAST
+  codeql:
+    name: CodeQL Analysis
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        language: ['csharp', 'javascript']
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          queries: security-extended
+
+      # Build C# for analysis
+      - name: Setup .NET
+        if: matrix.language == 'csharp'
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Build .NET
+        if: matrix.language == 'csharp'
+        working-directory: apps/api
+        run: |
+          sudo apt-get update && sudo apt-get install -y libgdiplus
+          dotnet restore
+          dotnet build --no-restore
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
+
+  # Dependency scanning
+  dependencies:
+    name: Dependency Vulnerabilities
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # .NET dependencies
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Scan .NET Dependencies
+        working-directory: apps/api
+        run: |
+          dotnet restore
+          dotnet list package --vulnerable --include-transitive > vuln-report.txt || true
+          cat vuln-report.txt
+
+          # Fail on HIGH/CRITICAL
+          if grep -iE "(High|Critical)" vuln-report.txt; then
+            echo "❌ HIGH/CRITICAL vulnerabilities found"
+            exit 1
+          fi
+
+      # Frontend dependencies
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: apps/web/pnpm-lock.yaml
+
+      - name: Scan Frontend Dependencies
+        working-directory: apps/web
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm audit --audit-level=high > audit-report.txt 2>&1 || true
+          cat audit-report.txt
+
+          # Fail on HIGH/CRITICAL
+          if pnpm audit --audit-level=high 2>&1 | grep -i "high\|critical"; then
+            echo "❌ HIGH/CRITICAL vulnerabilities found"
+            exit 1
+          fi
+
+  # Secrets scanning with Semgrep
+  secrets:
+    name: Secrets Detection
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Semgrep
+        run: |
+          semgrep scan \
+            --config=p/secrets \
+            --config=p/security-audit \
+            --sarif \
+            --output=semgrep.sarif \
+            --verbose || true
+
+      - name: Upload SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: semgrep.sarif
+          category: semgrep
+        if: always()

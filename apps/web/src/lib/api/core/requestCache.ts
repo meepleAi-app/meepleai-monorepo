@@ -429,8 +429,9 @@ export class RequestCache {
 
   /**
    * Stringify object with sorted keys for consistent hashing
+   * Includes circular reference protection via WeakSet
    */
-  private stringifyWithSortedKeys(obj: unknown): string {
+  private stringifyWithSortedKeys(obj: unknown, visited = new WeakSet<object>()): string {
     if (obj === null || obj === undefined) {
       return JSON.stringify(obj);
     }
@@ -439,15 +440,21 @@ export class RequestCache {
       return JSON.stringify(obj);
     }
 
+    // Circular reference protection
+    if (visited.has(obj)) {
+      return '"[Circular]"';
+    }
+    visited.add(obj);
+
     if (Array.isArray(obj)) {
-      return `[${obj.map(item => this.stringifyWithSortedKeys(item)).join(',')}]`;
+      return `[${obj.map(item => this.stringifyWithSortedKeys(item, visited)).join(',')}]`;
     }
 
     // Sort object keys
     const sortedKeys = Object.keys(obj).sort();
     const pairs = sortedKeys.map(key => {
       const value = (obj as Record<string, unknown>)[key];
-      return `"${key}":${this.stringifyWithSortedKeys(value)}`;
+      return `"${key}":${this.stringifyWithSortedKeys(value, visited)}`;
     });
 
     return `{${pairs.join(',')}}`;

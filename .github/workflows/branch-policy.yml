@@ -9,6 +9,8 @@ on:
 jobs:
   validate-source-branch:
     runs-on: ubuntu-latest
+    # Skip validation for Dependabot PRs
+    if: github.actor != 'dependabot[bot]'
     steps:
       - name: Validate PR source branch
         env:

@@ -271,8 +271,13 @@ describe('MentionInput', () => {
     it('navigates up with ArrowUp key', async () => {
       const textarea = screen.getByRole('combobox');
 
-      // Navigate down first
+      // Navigate down first with proper timing
       fireEvent.keyDown(textarea, { key: 'ArrowDown' });
+
+      await waitFor(() => {
+        expect(screen.getAllByRole('option')[1]).toHaveAttribute('aria-selected', 'true');
+      });
+
       fireEvent.keyDown(textarea, { key: 'ArrowDown' });
 
       await waitFor(() => {

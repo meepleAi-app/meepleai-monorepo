@@ -367,7 +367,7 @@ jobs:
         env:
           # Issue #2287: Use hardcoded 'postgres' user (TEST_POSTGRES_USER secret may contain old 'meeple' value)
           POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: meeplepass
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_SERVICE_PASSWORD || 'meeplepass' }}
           POSTGRES_DB: meepleai_dev
         ports:
           - 5432:5432
@@ -428,8 +428,7 @@ jobs:
           POSTGRES_PORT: 5432
           POSTGRES_DB: meepleai_dev
           POSTGRES_USER: postgres
-          # Temporarily use hardcoded password to debug secret propagation issue
-          POSTGRES_PASSWORD: meeplepass
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_SERVICE_PASSWORD || 'meeplepass' }}
           ConnectionStrings__Postgres: ${{ secrets.NEW_TEST_DB_CONNECTION_STRING || 'Host=127.0.0.1;Port=5432;Database=meepleai_dev;Username=postgres;Password=meeplepass' }}
           QDRANT_URL: "http://localhost:6333"
           REDIS_URL: "localhost:6379"

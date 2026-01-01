@@ -139,18 +139,23 @@ cd apps/web && pnpm dev                                 # T3 :3000
 
 ---
 
-## Key Docs
+## Key Docs (Living Documentation v1.0)
 
-See [docs/INDEX.md](docs/INDEX.md) (~189 docs)
+**Living Docs System**: Auto-generate da codice + ADR manuali (47 files, ~84% riduzione)
 
-| Doc | Path |
-|-----|------|
-| Architecture | `docs/01-architecture/overview/system-architecture.md` |
-| API Spec | `docs/03-api/board-game-ai-api-specification.md` |
-| ADRs | `docs/01-architecture/adr/adr-001|003b|016-*.md` |
-| Security | `SECURITY.md`, `docs/06-security/` |
-| Testing | `docs/02-development/testing/test-writing-guide.md` |
-| Traefik | `infra/traefik/README.md` |
+| Resource | Path/URL |
+|----------|----------|
+| **INDEX** | [docs/INDEX.md](docs/INDEX.md) (complete documentation index) |
+| **Living Docs Guide** | [docs/living-documentation.md](docs/living-documentation.md) |
+| **API Reference** | http://localhost:8080/scalar/v1 (Scalar UI - interactive) |
+| **OpenAPI Spec** | http://localhost:8080/openapi/v1.json (auto-generated) |
+| **ADRs** | [docs/01-architecture/adr/](docs/01-architecture/adr/) (22 architectural decisions) |
+| **Architecture** | [docs/01-architecture/overview/](docs/01-architecture/overview/) (system design) |
+| **Security** | [SECURITY.md](SECURITY.md) (consolidated security docs) |
+| **Traefik** | [infra/traefik/README.md](infra/traefik/README.md) (reverse proxy config) |
+
+**Bounded Context README**: `apps/api/src/Api/BoundedContexts/{Context}/README.md` (template-based)
+**XML Docs**: Auto-generated on build → `apps/api/src/Api/bin/Debug/net9.0/Api.xml`
 
 ---
 

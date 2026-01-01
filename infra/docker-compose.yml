@@ -600,14 +600,8 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
-      # SEC-708: Connection string will be built from secret file
-      # Password read from /run/secrets/postgres-password
-      # Issue #2152: Changed default from 'meeple' to 'postgres' for consistency with container user
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-meepleai}
-      POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
+      # Postgres/Redis connection details come from api.env.dev and secrets
       QDRANT_URL: http://qdrant:6333
-      REDIS_URL: "redis:6379,password=changeme-redis-dev-please-set,abortConnect=false"
       OLLAMA_URL: http://ollama:11434
       EMBEDDING_PROVIDER: ollama
       EMBEDDING_MODEL: mxbai-embed-large
@@ -627,8 +621,13 @@ services:
       INITIAL_ADMIN_DISPLAY_NAME: ${INITIAL_ADMIN_DISPLAY_NAME:-System Admin}
     secrets:
       - postgres-password
+      - redis-password
       - openrouter-api-key
       - initial-admin-password
+    volumes:
+      - ./scripts/load-secrets-env.sh:/scripts/load-secrets-env.sh:ro
+    entrypoint: ["/scripts/load-secrets-env.sh"]
+    command: ["dotnet", "Api.dll"]
     # Direct port binding for development (Next.js proxy handles routing)
     ports:
       - "127.0.0.1:8080:8080"

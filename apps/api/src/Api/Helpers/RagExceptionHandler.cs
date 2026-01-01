@@ -103,6 +103,7 @@ internal static class RagExceptionHandler
     /// <param name="activity">OpenTelemetry activity span for tracing</param>
     /// <param name="stopwatch">Stopwatch for measuring duration</param>
     /// <param name="errorResponseFactories">Dictionary mapping exception type names to error response factories</param>
+    /// <param name="additionalInfo"></param>
     /// <returns>Error response of type TResponse</returns>
     public static TResponse HandleExceptionDispatch<TResponse>(
         Exception exception,

@@ -45,7 +45,7 @@ internal class RateLimitService : IRateLimitService
     /// <param name="key">Unique identifier for rate limit (e.g., IP address or user ID)</param>
     /// <param name="maxTokens">Maximum tokens in bucket (burst capacity)</param>
     /// <param name="refillRate">Tokens added per second</param>
-    /// <param name="ct">Cancellation token</param>
+    /// <param name="cancellationToken"></param>
     /// <returns>Result with allowed status and retry-after seconds if rate limited</returns>
     public async Task<RateLimitResult> CheckRateLimitAsync(
         string key,
@@ -151,7 +151,7 @@ internal class RateLimitService : IRateLimitService
     /// Fallback chain: DB (role-specific) → DB (global) → appsettings.json → hardcoded defaults.
     /// </summary>
     /// <param name="role">User role (admin, editor, user, anonymous)</param>
-    /// <param name="ct">Cancellation token</param>
+    /// <param name="cancellationToken"></param>
     /// <returns>Rate limit configuration for the role</returns>
     public async Task<RateLimitConfig> GetConfigForRoleAsync(string? role, CancellationToken cancellationToken = default)
     {

@@ -104,6 +104,7 @@
       "confirmPasswordPlaceholder": "••••••••",
       "createAccount": "Create Account",
       "creatingAccount": "Creating account...",
+      "loadingMessage": "Creating account...",
       "displayName": "Display name",
       "displayNameOptional": "Display Name (Optional)",
       "displayNamePlaceholder": "John Doe",

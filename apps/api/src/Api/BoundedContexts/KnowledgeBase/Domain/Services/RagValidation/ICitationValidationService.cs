@@ -14,6 +14,7 @@ internal interface ICitationValidationService
     /// </summary>
     /// <param name="snippets">Citations/snippets to validate</param>
     /// <param name="gameId">Game ID for context</param>
+    /// <param name="cancellationToken"></param>
     /// <returns>Validation result with errors if any</returns>
     Task<CitationValidationResult> ValidateCitationsAsync(
         IReadOnlyList<Snippet> snippets,

@@ -46,8 +46,6 @@ internal static class StringHelper
     /// Sanitizes a filename by removing or replacing invalid and dangerous characters.
     /// Provides comprehensive protection against path traversal, control characters, and OS-specific invalid chars.
     /// </summary>
-    /// <param name="filename">The filename to sanitize</param>
-    /// <param name="maxLength">Maximum length of the sanitized filename (default: 200)</param>
     /// <param name="fallbackName">Fallback name if sanitization results in empty string (default: "file")</param>
     /// <returns>Sanitized filename safe for file system operations</returns>
     /// <remarks>

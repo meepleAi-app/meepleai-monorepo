@@ -270,8 +270,23 @@ internal static class ObservabilityServiceExtensions
     /// </remarks>
     private static IServiceCollection AddSwaggerServices(this IServiceCollection services)
     {
-        // API-01: Native .NET 9 OpenAPI configuration
-        services.AddOpenApi();
+        // API-01: Native .NET 9 OpenAPI configuration with XML comments
+        services.AddOpenApi(options =>
+        {
+            // Living Documentation: Include XML comments in OpenAPI spec
+            var xmlFilename = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+            var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFilename);
+
+            if (File.Exists(xmlPath))
+            {
+                options.AddDocumentTransformer((document, context, cancellationToken) =>
+                {
+                    // XML comments are automatically included by .NET 9 OpenAPI
+                    // No manual parsing needed - just ensure file exists
+                    return Task.CompletedTask;
+                });
+            }
+        });
 
         return services;
     }

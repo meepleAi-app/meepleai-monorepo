@@ -13,7 +13,7 @@ internal interface IPromptEvaluationService
     /// Loads a test dataset from JSON file with schema validation
     /// </summary>
     /// <param name="datasetPath">Absolute or relative path to JSON dataset file</param>
-    /// <param name="ct">Cancellation token</param>
+    /// <param name="cancellationToken"></param>
     /// <returns>Loaded and validated test dataset</returns>
     Task<PromptTestDataset> LoadDatasetAsync(string datasetPath, CancellationToken cancellationToken = default);
 
@@ -25,7 +25,7 @@ internal interface IPromptEvaluationService
     /// <param name="versionId">Specific version ID to evaluate</param>
     /// <param name="datasetPath">Path to test dataset JSON file</param>
     /// <param name="progressCallback">Optional callback for progress updates (query index, total queries)</param>
-    /// <param name="ct">Cancellation token</param>
+    /// <param name="cancellationToken"></param>
     /// <returns>Evaluation results with metrics and query breakdown</returns>
     Task<PromptEvaluationResult> EvaluateAsync(
         string templateId,
@@ -41,7 +41,7 @@ internal interface IPromptEvaluationService
     /// <param name="baselineVersionId">Baseline version (usually current active)</param>
     /// <param name="candidateVersionId">Candidate version to compare</param>
     /// <param name="datasetPath">Path to test dataset JSON file</param>
-    /// <param name="ct">Cancellation token</param>
+    /// <param name="cancellationToken"></param>
     /// <returns>A/B comparison with delta metrics and recommendation</returns>
     Task<PromptComparisonResult> CompareVersionsAsync(
         string templateId,
@@ -62,7 +62,7 @@ internal interface IPromptEvaluationService
     /// Stores evaluation results in database for historical tracking
     /// </summary>
     /// <param name="result">Evaluation result to store</param>
-    /// <param name="ct">Cancellation token</param>
+    /// <param name="cancellationToken"></param>
     Task StoreResultsAsync(PromptEvaluationResult result, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -70,7 +70,7 @@ internal interface IPromptEvaluationService
     /// </summary>
     /// <param name="templateId">Template ID</param>
     /// <param name="limit">Maximum number of results to return</param>
-    /// <param name="ct">Cancellation token</param>
+    /// <param name="cancellationToken"></param>
     /// <returns>List of past evaluation results, ordered by execution date descending</returns>
     Task<List<PromptEvaluationResult>> GetHistoricalResultsAsync(
         string templateId,

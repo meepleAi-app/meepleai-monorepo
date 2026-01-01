@@ -8,6 +8,9 @@
     <AnalysisLevel>latest-Recommended</AnalysisLevel>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <!-- Living Documentation: Generate XML documentation file for API -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);1591</NoWarn> <!-- Suppress missing XML comment warnings -->
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Api.Tests" />

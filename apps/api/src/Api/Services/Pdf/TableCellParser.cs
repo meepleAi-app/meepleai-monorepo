@@ -8,6 +8,7 @@ namespace Api.Services.Pdf;
 /// </summary>
 internal class TableCellParser : ITableCellParser
 {
+    /// <param name="line"></param>
     /// <param name="existingBoundaries">Optional pre-computed column boundaries to maintain consistency across rows</param>
     public ColumnSplitResult SplitIntoColumns(PositionedTextLine line, IList<ColumnBoundary>? existingBoundaries)
     {

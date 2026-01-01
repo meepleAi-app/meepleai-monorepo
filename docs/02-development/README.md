@@ -1,576 +1,487 @@
-# Development Documentation
+# Development Guide
 
-**Developer Guides, Testing, Refactoring, and Implementation Notes** - Everything developers need to build and maintain MeepleAI.
+**MeepleAI Development Documentation** - Guide complete per sviluppatori
 
 ---
 
-## 📁 Directory Structure
+## Quick Start
 
-```
-02-development/
-├── guides/                        # Technical implementation guides
-│   ├── ai-agents-guide.md
-│   ├── ai-provider-integration.md
-│   ├── codebase-maintenance.md
-│   ├── dependency-management.md
-│   ├── llm-integration-guide.md
-│   ├── migration-management.md
-│   └── pdf-processing-guide.md   ⭐
-├── refactoring/                   # DDD migration documentation
-│   ├── legacy-code-inventory.md  # Complete inventory (150+ pages)
-│   ├── legacy-code-dashboard.md  # Progress tracking ⭐
-│   ├── implementation-notes.md   # Migration notes
-│   └── next-steps.md             # Remaining tasks
-├── implementation/                # Implementation findings
-│   └── (archived - see docs/archive/bgai-implementations/)
-├── testing/                       # Testing documentation (21 files)
-│   ├── testing-guide.md          # Comprehensive test writing guide (60+ pages) ⭐
-│   ├── testing-strategy.md       # Test pyramid, quality gates (30 pages) ⭐
-│   ├── testing-quick-reference.md
-│   ├── testing-react-19-patterns.md
-│   ├── testing-specialized.md
-│   ├── manual-testing-guide.md   # 🇮🇹 Italian manual QA guide
-│   └── ...15 more testing docs
-└── README.md                      # This file
+### Prerequisites
+- .NET 9 SDK
+- Node.js 20+ (con pnpm)
+- Docker Desktop
+- PostgreSQL 16+ (via Docker)
+- Git
+
+### Local Setup
+
+**1. Clone e Dependencies**
+```bash
+git clone <repo-url>
+cd meepleai-monorepo
+
+# Backend dependencies (auto-restore on build)
+cd apps/api/src/Api
+dotnet restore
+
+# Frontend dependencies
+cd ../../../web
+pnpm install
 ```
 
----
+**2. Environment Configuration**
+```bash
+# Copy environment template
+cp .env.example .env.local
 
-## 🚀 Quick Start for Developers
+# Required variables
+OPENROUTER_API_KEY=<your-key>
+ConnectionStrings__Postgres=Host=localhost;Port=5432;Database=meepleai;Username=postgres;Password=postgres
+QDRANT_URL=http://localhost:6333
+REDIS_URL=localhost:6379
+INITIAL_ADMIN_EMAIL=admin@meepleai.com
+INITIAL_ADMIN_PASSWORD=<secure-password>
+NEXT_PUBLIC_API_BASE=http://localhost:8080
+```
 
-**New developer onboarding** - Read in this order:
+**3. Start Infrastructure**
+```bash
+cd infra
+docker compose up -d postgres qdrant redis
+```
 
-1. **[Quick Start](../00-getting-started/quick-start.md)** - Get MeepleAI running locally in 15 minutes
-2. **[Testing Guide](./testing/testing-guide.md)** - Learn how to write tests (90%+ coverage required)
-3. **[DDD Quick Reference](../01-architecture/ddd/quick-reference.md)** - Understand DDD patterns used in codebase
-4. **[Legacy Code Dashboard](./refactoring/legacy-code-dashboard.md)** - Current DDD migration status
-5. **[PDF Processing Guide](./guides/pdf-processing-guide.md)** - Understand PDF pipeline (if working on PDF features)
-6. **[LLM Integration Guide](./guides/llm-integration-guide.md)** - Understand LLM integration (if working on RAG/chat)
+**4. Run Backend (Terminal 1)**
+```bash
+cd apps/api/src/Api
+dotnet run
+# API available at http://localhost:8080
+# Swagger UI at http://localhost:8080/scalar/v1
+```
 
----
-
-## 📚 Documentation by Category
-
-### Technical Guides
-
-**Practical implementation guides for common development tasks.**
-
-| Guide | Description | Priority | Pages |
-|-------|-------------|----------|-------|
-| [PDF Processing Guide](./guides/pdf-processing-guide.md) | 3-stage PDF pipeline implementation (Unstructured, SmolDocling, Docnet) | ⭐ Essential (if PDF work) | 20+ |
-| [LLM Integration Guide](./guides/llm-integration-guide.md) | Integrate OpenRouter, OpenAI, Claude for RAG/chat | ⭐ Essential (if LLM work) | 15+ |
-| [ADR-013](../01-architecture/adr/adr-013-nswag-typescript-generation.md) / [ADR-014](../01-architecture/adr/adr-014-nswag-msbuild-removal.md) | OpenAPI spec generation & TypeScript client (Scalar UI at `/scalar/v1`) | Recommended (if API work) | 15 |
-| [AI Provider Integration](./guides/ai-provider-integration.md) | Add new AI providers (OpenRouter, OpenAI, etc.) | Recommended | 10 |
-| [Dependency Management](./guides/dependency-management.md) | Managing NuGet/npm dependencies, versioning | Recommended | 8 |
-| [Migration Management](./guides/migration-management.md) | EF Core migrations best practices | Recommended | 8 |
-| [Codebase Maintenance](./guides/codebase-maintenance.md) | Code quality, refactoring, cleanup | Optional | 10 |
-| [AI Agents Guide](./guides/ai-agents-guide.md) | AI agent framework (Agent Lightning) | Optional | 12 |
-
-**When to use each guide**:
-
-- **PDF Processing**: Working on document upload, extraction, or quality validation
-- **LLM Integration**: Adding RAG features, chat improvements, or new LLM providers
-- **ADR-013/ADR-014**: Adding API endpoints, updating OpenAPI spec, regenerating TypeScript types
-- **AI Provider Integration**: Switching LLM providers (e.g., OpenRouter → Azure OpenAI)
-- **Dependency Management**: Updating packages, resolving version conflicts
-- **Migration Management**: Creating/applying database migrations
-- **Codebase Maintenance**: Refactoring, removing technical debt
-- **AI Agents**: Building autonomous AI agents (experimental)
+**5. Run Frontend (Terminal 2)**
+```bash
+cd apps/web
+pnpm dev
+# Web app at http://localhost:3000
+```
 
 ---
 
-### Testing Documentation
+## Architecture Overview
 
-**Comprehensive testing guides - 90%+ coverage enforced across all code.**
+### DDD Bounded Contexts
 
-| Document | Description | Priority | Pages |
-|----------|-------------|----------|-------|
-| [Testing Guide](./testing/testing-guide.md) | Complete test writing guide (unit, integration, E2E) | ⭐ Essential | 60+ |
-| [Testing Strategy](./testing/testing-strategy.md) | Test pyramid, quality gates, coverage requirements | ⭐ Essential | 30 |
-| [Testing Quick Reference](./testing/testing-quick-reference.md) | Quick lookup for test patterns (AAA, mocking, etc.) | Recommended | 5 |
-| [Testing React 19 Patterns](./testing/testing-react-19-patterns.md) | React 19 specific testing patterns | Recommended | 10 |
-| [Testing Specialized](./testing/testing-specialized.md) | Manual, accessibility, concurrency, API testing | Recommended | 15 |
-| [Manual Testing Guide](./testing/manual-testing-guide.md) | 🇮🇹 Italian manual QA procedures | Optional | 20 |
+Il progetto segue DDD con 7 bounded contexts, ciascuno con pattern CQRS/MediatR:
 
-**Additional Testing Docs** (15 more files in [testing/](./testing/)):
-- E2E contribution guides
-- Performance testing
-- Accessibility testing
-- API testing
-- Concurrency testing
-- Test patterns
+```
+apps/api/src/Api/BoundedContexts/
+├── Authentication/         # Auth, sessions, API keys, OAuth, 2FA
+├── GameManagement/         # Games catalog, play sessions
+├── KnowledgeBase/          # RAG, vectors, chat (Hybrid RRF)
+├── DocumentProcessing/     # PDF upload, extraction, validation
+├── WorkflowIntegration/    # n8n workflows, error logging
+├── SystemConfiguration/    # Runtime config, feature flags
+└── Administration/         # Users, alerts, audit, analytics
+```
 
-**Testing Quick Reference**:
+**Pattern per Context**:
+```
+{Context}/
+├── Domain/             # Entities, Value Objects, Domain Events
+├── Application/        # Commands, Queries, Handlers (CQRS)
+└── Infrastructure/     # Repositories, External Services
+```
+
+### HTTP Layer (Routing)
+
+Tutti gli endpoint HTTP usano **SOLO** `IMediator.Send()`, ZERO dipendenze da services:
 
 ```csharp
-// Backend (xUnit + Moq)
-[Fact]
-public async Task LoginCommand_ValidCredentials_ReturnsSuccess()
+// apps/api/Routing/AuthenticationEndpoints.cs
+app.MapPost("/api/v1/auth/register", async (
+    RegisterCommand command,
+    IMediator mediator) =>
 {
-    // Arrange
-    var mockRepo = new Mock<IUserRepository>();
-    mockRepo.Setup(r => r.GetByEmailAsync(It.IsAny<string>()))
-            .ReturnsAsync(new User { Email = "test@example.com" });
-    var handler = new LoginCommandHandler(mockRepo.Object);
-
-    // Act
-    var result = await handler.Handle(new LoginCommand("test@example.com", "password123"), CancellationToken.None);
-
-    // Assert
-    Assert.True(result.IsSuccess);
-}
-```
-
-```typescript
-// Frontend (Jest + RTL)
-import { render, screen, userEvent } from '@/test-utils';
-import { LoginForm } from '../LoginForm';
-
-test('submits login form', async () => {
-  const onSubmit = jest.fn();
-  render(<LoginForm onSubmit={onSubmit} />);
-
-  await userEvent.type(screen.getByLabelText(/email/i), 'user@example.com');
-  await userEvent.type(screen.getByLabelText(/password/i), 'password123');
-  await userEvent.click(screen.getByRole('button', { name: /login/i }));
-
-  expect(onSubmit).toHaveBeenCalledWith({
-    email: 'user@example.com',
-    password: 'password123'
-  });
-});
-```
-
-**Coverage Requirements**:
-- **Overall**: 90%+ enforced
-- **Domain Logic**: 95%+ (pure business logic, no excuses)
-- **Application Handlers**: 90%+
-- **Infrastructure**: 80%+
-- **Frontend Components**: 90%+
-
----
-
-### Refactoring (DDD Migration)
-
-**DDD migration documentation - 100% complete as of 2025-11-15.**
-
-| Document | Description | Priority | Pages |
-|----------|-------------|----------|-------|
-| [Legacy Code Dashboard](./refactoring/legacy-code-dashboard.md) | Visual progress tracking dashboard | ⭐ Essential | 10 |
-| [Legacy Code Inventory](./refactoring/legacy-code-inventory.md) | Complete inventory of legacy services | Recommended | 150+ |
-| [Implementation Notes](./refactoring/implementation-notes.md) | Migration notes and lessons learned | Recommended | 15 |
-| [Next Steps](./refactoring/next-steps.md) | Remaining refactoring tasks (1%) | Optional | 5 |
-
-**DDD Migration Status** (2025-11-15):
-
-✅ **100% complete**
-
-**Achievements**:
-- ✅ 7/7 bounded contexts migrated (6 at 100%, 1 at 95%)
-- ✅ 72+ CQRS handlers operational
-- ✅ 60+ endpoints migrated to MediatR
-- ✅ 2,070 lines legacy code removed (DDD migration complete)
-  - GameService: 181 lines (→ GameManagement bounded context)
-  - AuthService: 346 lines (→ Authentication bounded context)
-  - PDF services: 1,300 lines (→ DocumentProcessing bounded context)
-  - UserManagementService: 243 lines (→ Administration bounded context)
-- ✅ 99.1% test pass rate maintained
-- ✅ Zero build errors
-
-**Retained Services** (orchestration/infrastructure):
-- ConfigurationService
-- AdminStatsService
-- AlertingService
-- RagService (RAG orchestration)
-
-**Pattern Reused for Migration**:
-1. Implement CQRS handlers (Commands/Queries)
-2. Migrate HTTP endpoints to use `IMediator.Send()`
-3. Run tests (ensure 90%+ coverage)
-4. Remove legacy service
-5. Commit and push
-
-**Example Migration**:
-
-Before (Legacy):
-```csharp
-// Routing/AuthRoutes.cs (CURRENT - uses MediatR)
-app.MapPost("/api/v1/auth/login", async (LoginCommand cmd, IMediator mediator) =>
-{
-    var result = await authService.LoginAsync(req.Email, req.Password);
+    var result = await mediator.Send(command);
     return Results.Ok(result);
 });
 ```
 
-After (DDD + CQRS):
-```csharp
-// Routing/AuthenticationRoutes.cs
-app.MapPost("/api/v1/auth/login", async (LoginRequest req, IMediator mediator) =>
-{
-    var command = new LoginCommand(req.Email, req.Password);
-    var result = await mediator.Send(command);
-    return result.IsSuccess ? Results.Ok(result.Value) : Results.BadRequest(result.Error);
-});
-
-// BoundedContexts/Authentication/Application/Handlers/LoginCommandHandler.cs
-public class LoginCommandHandler : IRequestHandler<LoginCommand, Result<LoginResponse>>
-{
-    public async Task<Result<LoginResponse>> Handle(LoginCommand request, CancellationToken ct)
-    {
-        // Domain logic here
-    }
-}
-```
-
 ---
 
-### Implementation Findings
+## Development Workflow
 
-**Specific implementation investigations and findings.**
+### Adding a New Feature
 
-| Document | Description |
-|----------|-------------|
-| [RAG Service Migration](../archive/bgai-implementations/bgai-023-ragservice-migration.md) | RAG service migration findings (BGAI-023) |
-| [Cost Tracking Verification](../archive/bgai-implementations/bgai-026-cost-tracking.md) | LLM cost tracking verification (BGAI-026) |
+**Pattern**: Domain → Application (Command/Query) → Handler → Endpoint → Tests
 
----
-
-## 🎯 Common Development Tasks
-
-### Adding a New Feature (DDD Pattern)
-
-**Example**: Add "Delete Game Session" feature
-
-**Step 1: Domain Logic**
+**1. Domain Layer**
 ```csharp
-// BoundedContexts/GameManagement/Domain/Aggregates/GameSession.cs
-public class GameSession : AggregateRoot
+// BoundedContexts/{Context}/Domain/Entities/MyEntity.cs
+public class MyEntity
 {
-    public void Delete(Guid userId)
+    public Guid Id { get; private set; }
+    public string Name { get; private set; }
+
+    // Constructor + Factory methods
+    public static MyEntity Create(string name) => new() { Name = name };
+}
+```
+
+**2. Application Layer - Command**
+```csharp
+// BoundedContexts/{Context}/Application/Commands/CreateMyEntityCommand.cs
+public record CreateMyEntityCommand(string Name) : IRequest<MyEntityDto>;
+
+// Handler
+public class CreateMyEntityCommandHandler : IRequestHandler<CreateMyEntityCommand, MyEntityDto>
+{
+    private readonly AppDbContext _db;
+
+    public async Task<MyEntityDto> Handle(CreateMyEntityCommand request, CancellationToken ct)
     {
-        // Business rules validation
-        if (IsActive)
-            throw new InvalidOperationException("Cannot delete active session");
-
-        if (CreatedBy != userId)
-            throw new UnauthorizedAccessException("Not authorized to delete");
-
-        Status = SessionStatus.Deleted;
-        DeletedAt = DateTime.UtcNow;
-
-        // Raise domain event
-        AddDomainEvent(new GameSessionDeletedEvent(Id));
+        var entity = MyEntity.Create(request.Name);
+        _db.MyEntities.Add(entity);
+        await _db.SaveChangesAsync(ct);
+        return new MyEntityDto { Id = entity.Id, Name = entity.Name };
     }
 }
 ```
 
-**Step 2: Application Command**
+**3. HTTP Endpoint**
 ```csharp
-// BoundedContexts/GameManagement/Application/Commands/DeleteGameSessionCommand.cs
-public record DeleteGameSessionCommand(Guid SessionId, Guid UserId) : IRequest<Result<Unit>>;
-```
-
-**Step 3: Command Handler**
-```csharp
-// BoundedContexts/GameManagement/Application/Handlers/DeleteGameSessionCommandHandler.cs
-public class DeleteGameSessionCommandHandler : IRequestHandler<DeleteGameSessionCommand, Result<Unit>>
+// Routing/MyContextEndpoints.cs
+public static void MapMyContextEndpoints(this IEndpointRouteBuilder app)
 {
-    private readonly IGameSessionRepository _repository;
-    private readonly ILogger<DeleteGameSessionCommandHandler> _logger;
-
-    public async Task<Result<Unit>> Handle(DeleteGameSessionCommand request, CancellationToken ct)
+    app.MapPost("/api/v1/mycontext", async (
+        CreateMyEntityCommand command,
+        IMediator mediator) =>
     {
-        var session = await _repository.GetByIdAsync(request.SessionId, ct);
-        if (session == null)
-            return Result.Failure<Unit>("Session not found");
-
-        session.Delete(request.UserId);
-        await _repository.SaveChangesAsync(ct);
-
-        _logger.LogInformation("Game session {SessionId} deleted by {UserId}", request.SessionId, request.UserId);
-
-        return Result.Success(Unit.Value);
-    }
+        var result = await mediator.Send(command);
+        return Results.Ok(result);
+    })
+    .WithTags("MyContext")
+    .WithOpenApi();
 }
 ```
 
-**Step 4: HTTP Endpoint**
+**4. Tests**
 ```csharp
-// Routing/GameRoutes.cs
-app.MapDelete("/api/v1/games/sessions/{id}", async (Guid id, IMediator mediator, ClaimsPrincipal user) =>
-{
-    var userId = GetUserIdFromClaims(user);
-    var command = new DeleteGameSessionCommand(id, userId);
-    var result = await mediator.Send(command);
-
-    return result.IsSuccess ? Results.NoContent() : Results.BadRequest(result.Error);
-});
-```
-
-**Step 5: Tests**
-```csharp
-// tests/Api.Tests/BoundedContexts/GameManagement/DeleteGameSessionCommandHandlerTests.cs
-public class DeleteGameSessionCommandHandlerTests
+// tests/Api.Tests/BoundedContexts/MyContext/CreateMyEntityTests.cs
+public class CreateMyEntityTests : IClassFixture<WebApplicationFactory<Program>>
 {
     [Fact]
-    public async Task Handle_ValidSession_DeletesSuccessfully()
+    public async Task CreateMyEntity_ShouldReturnDto()
     {
         // Arrange
-        var mockRepo = new Mock<IGameSessionRepository>();
-        var session = new GameSession { Id = Guid.NewGuid(), CreatedBy = userId };
-        mockRepo.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(session);
-
-        var handler = new DeleteGameSessionCommandHandler(mockRepo.Object, Mock.Of<ILogger>());
-        var command = new DeleteGameSessionCommand(session.Id, userId);
+        var command = new CreateMyEntityCommand("Test");
 
         // Act
-        var result = await handler.Handle(command, CancellationToken.None);
+        var result = await _mediator.Send(command);
 
         // Assert
-        Assert.True(result.IsSuccess);
-        Assert.Equal(SessionStatus.Deleted, session.Status);
-        mockRepo.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        result.Name.Should().Be("Test");
     }
+}
+```
+
+### Database Migrations
+
+**Create Migration**
+```bash
+cd apps/api/src/Api
+dotnet ef migrations add AddMyEntity --project .
+```
+
+**Apply Migration (auto-apply on startup)**
+```bash
+dotnet run
+# Migrations applied automatically via DbInitializer
+```
+
+**Rollback Migration**
+```bash
+dotnet ef database update <PreviousMigrationName>
+```
+
+---
+
+## Code Standards
+
+### Backend (C#)
+
+**Required**:
+- Nullable reference types enabled
+- `async/await` for I/O operations
+- Dependency Injection via constructor
+- Structured logging with Serilog
+- `using` statements for IDisposable
+- XML comments for public APIs
+
+**Example**:
+```csharp
+/// <summary>
+/// Retrieves game by ID
+/// </summary>
+/// <param name="gameId">Game identifier</param>
+/// <returns>Game DTO or null if not found</returns>
+public async Task<GameDto?> GetGameAsync(Guid gameId)
+{
+    return await _db.Games
+        .AsNoTracking()
+        .Where(g => g.Id == gameId)
+        .Select(g => new GameDto { Id = g.Id, Name = g.Name })
+        .FirstOrDefaultAsync();
+}
+```
+
+### Frontend (TypeScript)
+
+**Required**:
+- TypeScript strict mode
+- ESLint + Prettier compliance
+- No `any` types (use `unknown` with type guards)
+- API calls via `@/lib/api` client
+- Component documentation with JSDoc
+
+**Example**:
+```typescript
+/**
+ * Fetches game by ID
+ * @param gameId - Game identifier
+ * @returns Game DTO or null
+ */
+export async function getGame(gameId: string): Promise<GameDto | null> {
+  const response = await apiClient.get<GameDto>(`/api/v1/games/${gameId}`);
+  return response.data;
 }
 ```
 
 ---
 
-### Writing Tests (90%+ Coverage Required)
+## Testing Strategy
 
-**Backend Test (xUnit + Moq)**:
+### Backend Tests
+
+**Stack**: xUnit + Moq + Testcontainers + FluentAssertions
+
+**Coverage Target**: >90%
+
+**Test Categories**:
 ```csharp
+// Unit Tests
 [Fact]
-public async Task RegisterCommand_ValidRequest_CreatesUser()
+public void EntityCreate_ShouldValidateInput() { }
+
+// Integration Tests with Testcontainers
+[Fact]
+public async Task Handler_ShouldPersistToDatabase() { }
+```
+
+**Run Tests**:
+```bash
+cd apps/api
+dotnet test
+```
+
+### Frontend Tests
+
+**Stack**: Vitest + Testing Library + Playwright
+
+**Coverage Target**: >90%
+
+**Test Categories**:
+```typescript
+// Unit Tests (Vitest)
+describe('useGameQuery', () => {
+  it('should fetch game data', async () => { });
+});
+
+// E2E Tests (Playwright)
+test('user can login and view games', async ({ page }) => { });
+```
+
+**Run Tests**:
+```bash
+cd apps/web
+pnpm test              # Unit tests
+pnpm test:e2e          # E2E tests
+pnpm test:coverage     # Coverage report
+```
+
+---
+
+## Debugging
+
+### Backend Debugging
+
+**VS Code Launch Configuration**:
+```json
 {
-    // Arrange
-    var mockRepo = new Mock<IUserRepository>();
-    mockRepo.Setup(r => r.ExistsAsync(It.IsAny<string>())).ReturnsAsync(false);
-    mockRepo.Setup(r => r.AddAsync(It.IsAny<User>())).Returns(Task.CompletedTask);
-
-    var handler = new RegisterCommandHandler(mockRepo.Object, Mock.Of<IPasswordHasher>());
-    var command = new RegisterCommand("user@example.com", "Password123!");
-
-    // Act
-    var result = await handler.Handle(command, CancellationToken.None);
-
-    // Assert
-    Assert.True(result.IsSuccess);
-    mockRepo.Verify(r => r.AddAsync(It.Is<User>(u => u.Email == "user@example.com")), Times.Once);
+  "name": ".NET Core Launch (API)",
+  "type": "coreclr",
+  "request": "launch",
+  "preLaunchTask": "build",
+  "program": "${workspaceFolder}/apps/api/src/Api/bin/Debug/net9.0/Api.dll",
+  "cwd": "${workspaceFolder}/apps/api/src/Api",
+  "env": {
+    "ASPNETCORE_ENVIRONMENT": "Development"
+  }
 }
 ```
 
-**Frontend Test (Jest + RTL)**:
+**Logs Location**:
+- Console: stdout
+- HyperDX: http://localhost:8080 → logs panel
+- Seq (optional): http://localhost:5341
+
+### Frontend Debugging
+
+**Browser DevTools**:
+- Network tab for API calls
+- Console for errors
+- React DevTools for component state
+
+**VS Code Debugging**:
+```json
+{
+  "name": "Next.js: debug",
+  "type": "node-terminal",
+  "request": "launch",
+  "command": "pnpm dev"
+}
+```
+
+---
+
+## Performance Optimization
+
+### Backend Performance
+
+**Query Optimization**:
+```csharp
+// ✅ GOOD - AsNoTracking for read-only queries
+var games = await _db.Games
+    .AsNoTracking()
+    .ToListAsync();
+
+// ❌ BAD - Tracking overhead for read-only data
+var games = await _db.Games.ToListAsync();
+```
+
+**Caching Strategy**:
+```csharp
+// HybridCache (L1 + L2)
+var result = await _cache.GetOrCreateAsync(
+    $"game:{id}",
+    async entry =>
+    {
+        entry.SetAbsoluteExpiration(TimeSpan.FromMinutes(5));
+        return await _db.Games.FindAsync(id);
+    }
+);
+```
+
+### Frontend Performance
+
+**Code Splitting**:
 ```typescript
-import { render, screen } from '@/test-utils';
-import { GameCard } from '../GameCard';
+// Dynamic imports for large components
+const GameDetailsModal = dynamic(() => import('./GameDetailsModal'), {
+  loading: () => <Skeleton />,
+});
+```
 
-test('displays game information', () => {
-  const game = {
-    id: '1',
-    name: 'Catan',
-    players: '3-4',
-    duration: '60-90 min'
-  };
-
-  render(<GameCard game={game} />);
-
-  expect(screen.getByText('Catan')).toBeInTheDocument();
-  expect(screen.getByText('3-4')).toBeInTheDocument();
-  expect(screen.getByText('60-90 min')).toBeInTheDocument();
+**React Query Optimization**:
+```typescript
+// Stale-while-revalidate pattern
+const { data } = useQuery({
+  queryKey: ['games'],
+  queryFn: getGames,
+  staleTime: 5 * 60 * 1000, // 5 min
+  cacheTime: 10 * 60 * 1000, // 10 min
 });
 ```
 
 ---
 
-### Managing Dependencies
+## Common Tasks
 
-**Backend (NuGet)**:
+### Add New Bounded Context
+
+1. Create directory structure:
 ```bash
-# Add package
-dotnet add package Serilog.Sinks.Seq
-
-# Update package
-dotnet add package Serilog.Sinks.Seq --version 8.0.0
-
-# Remove package
-dotnet remove package Serilog.Sinks.Seq
-
-# List packages
-dotnet list package
-
-# Check for vulnerabilities
-dotnet list package --vulnerable
+mkdir -p apps/api/src/Api/BoundedContexts/MyContext/{Domain,Application,Infrastructure}
 ```
 
-**Frontend (pnpm)**:
+2. Add entities, commands, handlers
+3. Register in `Program.cs`:
+```csharp
+builder.Services.AddMediatR(cfg =>
+    cfg.RegisterServicesFromAssembly(typeof(MyContextCommand).Assembly));
+```
+
+4. Create README from template:
 ```bash
-# Add package
-pnpm add react-query
+cp apps/api/src/Api/BoundedContexts/README-TEMPLATE.md \
+   apps/api/src/Api/BoundedContexts/MyContext/README.md
+```
 
-# Add dev dependency
-pnpm add -D jest
+### Update Dependencies
 
-# Update package
-pnpm update react-query
+**Backend**:
+```bash
+dotnet list package --outdated
+dotnet add package <PackageName>
+```
 
-# Remove package
-pnpm remove react-query
-
-# List outdated
+**Frontend**:
+```bash
 pnpm outdated
-
-# Audit for vulnerabilities
-pnpm audit --audit-level=high
+pnpm update <package-name>
 ```
 
----
+### Generate API Client
 
-### Creating Database Migrations
-
-```bash
-# Add migration
-cd apps/api/src/Api
-dotnet ef migrations add AddGameSessionDeletedAt
-
-# Update database (apply migrations)
-dotnet ef database update
-
-# Rollback to specific migration
-dotnet ef database update <PreviousMigrationName>
-
-# Remove last migration (if not applied)
-dotnet ef migrations remove
-
-# Generate SQL script
-dotnet ef migrations script > migration.sql
-```
-
-**Migration Best Practices**:
-- Use descriptive names (`AddUserEmailIndex`, not `Migration1`)
-- Test migrations on local database first
-- Review generated SQL before applying
-- Always have rollback plan
-- Never modify applied migrations (create new migration instead)
-
-See [Migration Management Guide](./guides/migration-management.md) for details.
+**Auto-generated on build** via Scalar OpenAPI:
+- Frontend client: `apps/web/src/lib/api.ts`
+- OpenAPI spec: http://localhost:8080/openapi/v1.json
 
 ---
 
-## 🔍 Finding What You Need
+## Troubleshooting
 
-### By Role
+### Common Issues
 
-**I'm a Backend Developer**:
-1. [DDD Quick Reference](../01-architecture/ddd/quick-reference.md) - Domain patterns
-2. [Testing Guide](./testing/testing-guide.md) - How to write tests
-3. [Legacy Code Dashboard](./refactoring/legacy-code-dashboard.md) - DDD migration status
-4. [PDF Processing Guide](./guides/pdf-processing-guide.md) - PDF features
-5. [LLM Integration Guide](./guides/llm-integration-guide.md) - RAG/chat features
+| Issue | Solution |
+|-------|----------|
+| Migration errors | `dotnet ef database update <PreviousMigration>` |
+| CORS errors | Check `NEXT_PUBLIC_API_BASE` and `credentials: "include"` |
+| Port conflicts | Kill processes: `lsof -ti:8080 \| xargs kill` (Mac/Linux) |
+| Database connection | Verify PostgreSQL running: `docker ps \| grep postgres` |
+| Redis connection | Check Redis: `docker logs meepleai-redis` |
 
-**I'm a Frontend Developer**:
-1. [Testing Guide](./testing/testing-guide.md) - Jest + RTL patterns
-2. [Testing React 19 Patterns](./testing/testing-react-19-patterns.md) - React 19 specific
-3. [Frontend Architecture](../04-frontend/architecture.md) - Frontend design
-4. [Accessibility Standards](../04-frontend/accessibility-standards.md) - A11y requirements
+### Debug Checklist
 
-**I'm a QA Engineer**:
-1. [Testing Strategy](./testing/testing-strategy.md) - Overall strategy
-2. [Manual Testing Guide](./testing/manual-testing-guide.md) - 🇮🇹 Italian manual QA
-3. [Testing Specialized](./testing/testing-specialized.md) - Accessibility, E2E, API testing
-4. [E2E Contribution Guide](./testing/e2e-contribution-guide.md) - Playwright tests
-
-### By Task
-
-**Writing Tests**:
-- [Testing Guide](./testing/testing-guide.md) - Comprehensive guide
-- [Testing Quick Reference](./testing/testing-quick-reference.md) - Quick patterns
-
-**Adding New Feature**:
-- [DDD Quick Reference](../01-architecture/ddd/quick-reference.md) - Domain patterns
-- [CQRS Flow Diagram](../01-architecture/diagrams/cqrs-mediatr-flow.md) - Request flow
-- Common Development Tasks section above
-
-**Working on RAG**:
-- [LLM Integration Guide](./guides/llm-integration-guide.md)
-- [ADR-001: Hybrid RAG](../01-architecture/adr/adr-001-hybrid-rag.md)
-- [RAG System Diagram](../01-architecture/diagrams/rag-system-detailed.md)
-
-**Working on PDF**:
-- [PDF Processing Guide](./guides/pdf-processing-guide.md)
-- [ADR-003b: Unstructured PDF](../01-architecture/adr/adr-003b-unstructured-pdf.md)
-- [PDF Pipeline Diagram](../01-architecture/diagrams/pdf-pipeline-detailed.md)
-
-**Refactoring**:
-- [Legacy Code Dashboard](./refactoring/legacy-code-dashboard.md)
-- [Implementation Notes](./refactoring/implementation-notes.md)
-- [Codebase Maintenance](./guides/codebase-maintenance.md)
+- [ ] Environment variables set correctly
+- [ ] All infrastructure services running (postgres, qdrant, redis)
+- [ ] Migrations applied successfully
+- [ ] No port conflicts
+- [ ] API key configured (for OpenRouter)
+- [ ] Frontend API base URL matches backend port
 
 ---
 
-## 🤝 Contributing
+## Resources
 
-### Code Quality Standards
-
-**C# (.NET)**:
-- Nullable references enabled
-- Async/await for all I/O operations
-- Dependency injection (constructor injection)
-- ILogger for logging (structured logging with Serilog)
-- IDisposable: Always use `using`, avoid resource leaks
-- Repository pattern for data access
-
-**TypeScript/React**:
-- Strict mode enabled
-- ESLint + Prettier
-- Avoid `any` type
-- Functional components + hooks
-- Absolute imports (`@/components/...`)
-
-### Pull Request Checklist
-
-**Before submitting PR**:
-- [ ] Tests written (90%+ coverage)
-- [ ] All tests passing (`dotnet test` / `pnpm test`)
-- [ ] Code formatted (`dotnet format` / `pnpm lint:fix`)
-- [ ] TypeScript errors fixed (`pnpm typecheck`)
-- [ ] Build succeeds (`dotnet build` / `pnpm build`)
-- [ ] Documentation updated (if public API changed)
-- [ ] Migration created (if database schema changed)
-- [ ] Commits follow convention (`feat:`, `fix:`, `refactor:`, etc.)
-
-**PR Naming Convention**:
-```
-[CATEGORY] Brief description
-
-Categories:
-- [API] - Backend API changes
-- [WEB] - Frontend changes
-- [INFRA] - Infrastructure changes
-- [DOCS] - Documentation only
-- [TEST] - Test only changes
-- [REFACTOR] - Code refactoring
-- [FIX] - Bug fixes
-
-Example: [API] Add delete game session endpoint
-```
+- [Architecture Overview](../01-architecture/overview/system-architecture.md)
+- [API Documentation](http://localhost:8080/scalar/v1)
+- [Living Documentation Guide](../living-documentation.md)
+- [ADRs](../01-architecture/adr/)
+- [Bounded Context READMEs](../../apps/api/src/Api/BoundedContexts/)
 
 ---
 
-## 🔗 Related Documentation
-
-- **[CLAUDE.md](../../CLAUDE.md)** - Complete development guide
-- **[Architecture](../01-architecture/)** - System architecture & ADRs
-- **[API Specification](../03-api/board-game-ai-api-specification.md)** - REST API docs
-- **[Frontend](../04-frontend/)** - Frontend architecture & guides
-- **[Operations](../05-operations/)** - Deployment & runbooks
-
----
-
-**Last Updated**: 2025-12-13T10:59:23.970Z
-**Maintainer**: Development Team
-**Total Documents**: 30+ files
-**Test Coverage**: 90%+ enforced
-
-
+**Version**: 1.0
+**Last Updated**: 2026-01-01
+**Maintainers**: Engineering Team

@@ -10,7 +10,7 @@ internal interface ITableDetectionService
     /// <summary>
     /// Detects tables in a PDF page using positioned text analysis
     /// </summary>
-    /// <param name="page">PDF page to analyze</param>
+    /// <param name="lines"></param>
     /// <param name="pageNum">Page number for metadata</param>
     /// <returns>List of detected tables</returns>
     List<PdfTable> DetectTablesInPage(List<PositionedTextLine> lines, int pageNum);

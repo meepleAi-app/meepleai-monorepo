@@ -47,7 +47,7 @@ internal interface IPromptTemplateService
     /// Gets active prompt from cache-first architecture (Redis → PostgreSQL → Config fallback)
     /// </summary>
     /// <param name="templateName">Unique template name (e.g., "qa-system-prompt")</param>
-    /// <param name="ct">Cancellation token</param>
+    /// <param name="cancellationToken"></param>
     /// <returns>Active prompt content or null if not found</returns>
     Task<string?> GetActivePromptAsync(string templateName, CancellationToken cancellationToken = default);
 
@@ -58,7 +58,7 @@ internal interface IPromptTemplateService
     /// <param name="templateId">Template ID</param>
     /// <param name="versionId">Version ID to activate</param>
     /// <param name="activatedByUserId">User ID performing the activation</param>
-    /// <param name="ct">Cancellation token</param>
+    /// <param name="cancellationToken"></param>
     /// <returns>True if activated successfully, false if version not found</returns>
     Task<bool> ActivateVersionAsync(Guid templateId, Guid versionId, Guid activatedByUserId, CancellationToken cancellationToken = default);
 
@@ -66,6 +66,6 @@ internal interface IPromptTemplateService
     /// Invalidates cache for a specific template (manual refresh)
     /// </summary>
     /// <param name="templateName">Template name to invalidate</param>
-    /// <param name="ct">Cancellation token</param>
+    /// <param name="cancellationToken"></param>
     Task InvalidateCacheAsync(string templateName, CancellationToken cancellationToken = default);
 }

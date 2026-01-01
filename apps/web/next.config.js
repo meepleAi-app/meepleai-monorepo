@@ -165,6 +165,9 @@ const nextConfig = {
     // Note: PDF.js aliases not needed in Turbopack (handled differently)
   },
 
+  // Fix cross-origin warning from 127.0.0.1 to localhost
+  allowedDevOrigins: ['127.0.0.1', 'localhost'],
+
   // Webpack config for backward compatibility (use --webpack flag if needed)
   webpack: config => {
     // PDF.js worker configuration - only used with --webpack flag

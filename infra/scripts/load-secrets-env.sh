@@ -33,6 +33,13 @@ load_secret "n8n-basic-auth-password" "N8N_BASIC_AUTH_PASSWORD"
 load_secret "n8n-encryption-key" "N8N_ENCRYPTION_KEY"
 load_secret "redis-password" "REDIS_PASSWORD"
 
+# Build Redis connection string with password from secret
+if [ -f "$SECRETS_DIR/redis-password" ]; then
+    REDIS_PASSWORD_VALUE=$(cat "$SECRETS_DIR/redis-password" | tr -d '\n\r' | xargs)
+    export REDIS_URL="redis:6379,password=${REDIS_PASSWORD_VALUE},abortConnect=false"
+    echo "[secrets] built REDIS_URL with password from redis-password secret"
+fi
+
 # Application / API keys
 load_secret "openrouter-api-key" "OPENROUTER_API_KEY"
 load_secret "initial-admin-password" "INITIAL_ADMIN_PASSWORD"

@@ -108,7 +108,8 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
     /// Validates PDF file structure by checking for required PDF headers and trailers.
     /// Prevents upload of corrupted or malformed files that would fail during processing.
     /// </summary>
-    /// <param name="stream">The file stream to validate</param>
+    /// <param name="file"></param>
+    /// <param name="cancellationToken"></param>
     /// <param name="fileName">The file name for logging</param>
     /// <returns>Tuple of (isValid, errorMessage)</returns>
 

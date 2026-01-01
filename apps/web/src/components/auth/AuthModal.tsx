@@ -47,19 +47,22 @@ export function AuthModal({
   sessionExpiredMessage = false,
 }: AuthModalProps) {
   const router = useRouter();
-  const { login, register, error, clearError, loading } = useAuth();
+  const { login, register, error, clearError } = useAuth();
   const [activeTab, setActiveTab] = useState<'login' | 'register'>(defaultMode);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
 
   // Reset tab when modal opens/closes or default mode changes
   useEffect(() => {
     if (isOpen) {
       setActiveTab(defaultMode);
       clearError();
+      setIsAuthenticating(false); // Reset authenticating state on modal open
     }
   }, [isOpen, defaultMode, clearError]);
 
   // Handle login submission
   const handleLogin = async (data: LoginFormData) => {
+    setIsAuthenticating(true);
     try {
       const user = await login(data);
       onSuccess?.(user);
@@ -68,11 +71,14 @@ export function AuthModal({
     } catch (err) {
       // Error is already set in useAuth hook
       console.error('Login failed:', err);
+    } finally {
+      setIsAuthenticating(false);
     }
   };
 
   // Handle registration submission
   const handleRegister = async (data: Omit<RegisterFormData, 'confirmPassword'>) => {
+    setIsAuthenticating(true);
     try {
       const user = await register(data);
       onSuccess?.(user);
@@ -81,6 +87,8 @@ export function AuthModal({
     } catch (err) {
       // Error is already set in useAuth hook
       console.error('Registration failed:', err);
+    } finally {
+      setIsAuthenticating(false);
     }
   };
 
@@ -88,6 +96,7 @@ export function AuthModal({
   const handleTabChange = (value: string) => {
     setActiveTab(value as 'login' | 'register');
     clearError();
+    setIsAuthenticating(false); // Reset authenticating state on tab switch
   };
 
   return (
@@ -137,7 +146,7 @@ export function AuthModal({
           <TabsContent value="login" className="space-y-4 mt-4">
             <LoginForm
               onSubmit={handleLogin}
-              loading={loading}
+              loading={isAuthenticating}
               error={error}
               onErrorDismiss={clearError}
             />
@@ -147,7 +156,7 @@ export function AuthModal({
           <TabsContent value="register" className="space-y-4 mt-4">
             <RegisterForm
               onSubmit={handleRegister}
-              loading={loading}
+              loading={isAuthenticating}
               error={error}
               onErrorDismiss={clearError}
               showRoleSelector={false}

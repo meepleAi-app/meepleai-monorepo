@@ -40,6 +40,7 @@ internal class QualityReportService : BackgroundService, IQualityReportService
     /// <param name="scopeFactory">Service scope factory for creating scoped dependencies</param>
     /// <param name="logger">Logger instance</param>
     /// <param name="configuration">Application configuration</param>
+    /// <param name="timeProvider"></param>
     public QualityReportService(
         IServiceScopeFactory scopeFactory,
         ILogger<QualityReportService> logger,

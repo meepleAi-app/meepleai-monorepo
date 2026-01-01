@@ -28,12 +28,14 @@ internal static class GameEndpoints
     private static void MapGameRetrievalEndpoints(RouteGroupBuilder group)
     {
         // Get all games (DDD/CQRS) with pagination support
+        // PUBLIC: Allow unauthenticated access for game discovery
         group.MapGet("/games", HandleGetAllGames)
-        .RequireAuthenticatedUser(); // Issue #1446: Dual authentication (session OR API key)
+        .AllowAnonymous();
 
         // Get game by ID (DDD/CQRS)
+        // PUBLIC: Allow unauthenticated access for game details
         group.MapGet("/games/{id}", HandleGetGameById)
-        .RequireAuthenticatedUser(); // Issue #1446: Dual authentication (session OR API key)
+        .AllowAnonymous();
 
         // Get all sessions for a game (DDD/CQRS)
         // Issue #1675: Frontend needs game sessions listing

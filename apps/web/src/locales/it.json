@@ -104,6 +104,7 @@
       "confirmPasswordPlaceholder": "••••••••",
       "createAccount": "Crea Account",
       "creatingAccount": "Creazione account in corso...",
+      "loadingMessage": "Creazione account in corso...",
       "displayName": "Nome visualizzato",
       "displayNameOptional": "Nome Visualizzato (Opzionale)",
       "displayNamePlaceholder": "Mario Rossi",

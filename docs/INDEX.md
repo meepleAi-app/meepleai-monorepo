@@ -1,438 +1,249 @@
 # MeepleAI Documentation Index
 
-**Project**: Italian Board Game Rules AI Assistant
-**Version**: 3.1 (Post-Cleanup)
-**Last Updated**: 2025-12-18
-**Total Documents**: ~85 (consolidated from 140+)
+**Living Documentation System** - Docs auto-generate da codice + ADR manuali
 
 ---
 
-## 📋 Documentation Consolidation (2025-12-08)
+## Quick Access
 
-**Status**: ✅ Phase 1-4 Complete
-**Reduction**: 140+ → ~90 files (-36%)
-**Strategy**: Delete obsolete, consolidate duplicates, standardize naming
+| Resource | URL |
+|----------|-----|
+| **API Docs (Scalar UI)** | http://localhost:8080/scalar/v1 |
+| **OpenAPI Spec** | http://localhost:8080/openapi/v1.json |
+| **Living Docs Guide** | [living-documentation.md](living-documentation.md) |
+| **README** | [../README.md](../README.md) |
+| **CLAUDE.md** | [../CLAUDE.md](../CLAUDE.md) |
 
-**New Consolidated Guides**:
-- 📚 [Comprehensive Testing Guide](./02-development/testing/comprehensive-testing-guide.md) - All test types in one place
-- 🧪 [Test Patterns Reference](./02-development/testing/test-patterns-reference.md) - Quick pattern lookup
-- 🐳 [Docker Resources Guide](./02-development/docker-resources-guide.md) - Complete resource configuration
-- 🎨 [Design System v2.0](./04-frontend/design-system.md) - Consolidated design guide
-- 🔒 [Security Patterns](./06-security/security-patterns.md) - All security patterns
-- 🏗️ [Infrastructure Overview](./05-operations/infrastructure-overview.md) - Complete infra guide
-- 📊 [Prometheus Setup](./05-operations/monitoring/prometheus-setup.md) - Monitoring & alerts
-- ⚙️ [Workflow Automation](./05-operations/workflow-automation.md) - n8n workflows
+---
 
-**Details**: [CONSOLIDATION-FINAL-SUMMARY.md](./CONSOLIDATION-FINAL-SUMMARY.md)
+## Documentation Structure
+
+### 01. Architecture (Manual)
+
+**ADR - Architecture Decision Records** (`01-architecture/adr/` - 22 files)
+- [ADR-001](01-architecture/adr/adr-001-hybrid-rag.md): Hybrid RAG (Vector + Keyword)
+- [ADR-003b](01-architecture/adr/adr-003b-unstructured-pdf.md): PDF Processing Pipeline
+- [ADR-004b](01-architecture/adr/adr-004b-hybrid-llm.md): Hybrid LLM Strategy
+- [ADR-006](01-architecture/adr/adr-006-multi-layer-validation.md): 5-Layer Validation System
+- [ADR-008](01-architecture/adr/adr-008-streaming-cqrs-migration.md): SSE Streaming + CQRS
+- [ADR-016](01-architecture/adr/adr-016-ddd-bounded-contexts.md): DDD Bounded Contexts
+- [All ADRs →](01-architecture/adr/)
+
+**System Overview** (`01-architecture/overview/`)
+- [System Architecture](01-architecture/overview/system-architecture.md)
+- [Architecture Diagrams](01-architecture/diagrams/)
+
+**Domain-Driven Design** (`01-architecture/ddd/`)
+- Domain patterns and bounded context definitions
+
+### 02. Development Guide ⭐ NEW
+
+**[Development Guide](02-development/README.md)** - Complete developer documentation
+
+**Topics Covered**:
+- Quick Start & Local Setup
+- DDD Bounded Contexts Overview
+- Development Workflow (New Features, Migrations)
+- Code Standards (Backend C# & Frontend TypeScript)
+- Testing Strategy
+- Debugging & Performance Optimization
+- Common Tasks & Troubleshooting
+
+### 03. API Documentation ⭐ NEW
+
+**[API Reference](03-api/README.md)** - Complete REST API documentation
+
+**Topics Covered**:
+- Authentication (Cookie, API Key, OAuth)
+- All API Endpoints Reference
+- Request/Response Examples
+- Error Handling & Status Codes
+- Rate Limiting & Pagination
+- Webhooks & Data Models
+- Client Libraries & Examples
+
+### 04. Deployment Guide ⭐ NEW
+
+**[Deployment Guide](04-deployment/README.md)** - Production deployment documentation
+
+**Topics Covered**:
+- Local Development Setup
+- Production Deployment (Docker + Traefik)
+- Infrastructure Configuration
+- Database Management & Backups
+- Monitoring & Observability (Grafana, Prometheus)
+- Scaling & Performance
+- Security Hardening
+- CI/CD Pipeline
+- Disaster Recovery
+
+### 05. Testing Documentation ⭐ NEW
+
+**[Testing Guide](05-testing/README.md)** - Comprehensive testing strategy
+
+**Topics Covered**:
+- Testing Philosophy & Pyramid
+- Backend Testing (xUnit + Testcontainers)
+- Frontend Testing (Vitest + Testing Library)
+- E2E Testing (Playwright)
+- Test Coverage (90%+ targets)
+- Best Practices & CI/CD Integration
+- Performance Testing (k6)
+- Accessibility Testing
+
+---
+
+## Living Documentation (Auto-Generated)
+
+### Backend - Bounded Contexts
+
+Each context has auto-generated README: `apps/api/src/Api/BoundedContexts/{Context}/README.md`
+
+**Available Contexts**:
+- [KnowledgeBase](../apps/api/src/Api/BoundedContexts/KnowledgeBase/README.md): RAG pipeline, hybrid search, chat
+- [Authentication](../apps/api/src/Api/BoundedContexts/Authentication/README.md): OAuth, 2FA, API keys
+- [DocumentProcessing](../apps/api/src/Api/BoundedContexts/DocumentProcessing/README.md): PDF extraction
+- [GameManagement](../apps/api/src/Api/BoundedContexts/GameManagement/README.md): Games catalog
+- [SystemConfiguration](../apps/api/src/Api/BoundedContexts/SystemConfiguration/README.md): Dynamic config
+- [Administration](../apps/api/src/Api/BoundedContexts/Administration/README.md): Users, alerts, audit
+- [WorkflowIntegration](../apps/api/src/Api/BoundedContexts/WorkflowIntegration/README.md): n8n workflows
+
+**Template**: [README-TEMPLATE.md](../apps/api/src/Api/BoundedContexts/README-TEMPLATE.md)
+
+### API Documentation (Auto-Generated)
+
+- **XML Docs**: `apps/api/src/Api/bin/Debug/net9.0/Api.xml` (generated on build)
+- **OpenAPI Spec**: http://localhost:8080/openapi/v1.json
+- **Interactive UI**: http://localhost:8080/scalar/v1 (Scalar API Explorer)
+
+### Frontend Documentation
+
+- **JSDoc Comments**: Block comments `/** */` on all exported functions/components
+- **TypeDoc Generation**: `npx typedoc --out docs-generated src/lib`
+
+---
+
+## Documentation Guidelines
+
+### Backend (C#) - XML Comments
+
+**Required for all public APIs**:
+```csharp
+/// <summary>
+/// Executes RAG query with hybrid retrieval (vector + keyword)
+/// </summary>
+/// <param name="request">Query request with question and game context</param>
+/// <returns>Answer DTO with confidence score and sources</returns>
+/// <exception cref="ValidationException">Invalid question format</exception>
+public async Task<AnswerDto> HandleAsync(AskQuestionCommand request)
+{
+    // Implementation
+}
+```
+
+### Frontend (TypeScript) - JSDoc Comments
+
+**Required for all exported functions/components**:
+```typescript
+/**
+ * Executes RAG query with streaming response
+ * @param question - User question about game rules
+ * @param gameId - Game identifier
+ * @returns Promise with streaming answer and sources
+ * @throws {ApiError} Network or validation errors
+ */
+export async function askQuestion(
+  question: string,
+  gameId: string
+): Promise<AnswerDto> {
+  // Implementation
+}
+```
+
+---
+
+## Documentation Maintenance
+
+### When to Update
+
+**Architecture Docs**:
+- Create ADR for significant architectural decisions
+- Update system diagrams when components change
+- Document new bounded contexts with README
+
+**Development Docs**:
+- Update when new workflows are established
+- Add troubleshooting entries for recurring issues
+- Document new development tools or practices
+
+**API Docs**:
+- Auto-generated on build (no manual updates)
+- Add examples for complex endpoints
+- Document breaking changes immediately
+
+**Deployment Docs**:
+- Update when infrastructure changes
+- Document new deployment procedures
+- Add troubleshooting for production issues
+
+**Testing Docs**:
+- Update when testing strategy changes
+- Add examples for new testing patterns
+- Document coverage targets and CI requirements
+
+### Living Documentation Principles
+
+1. **Code is Truth**: Code auto-generates documentation via XML/JSDoc
+2. **Manual for Context**: ADRs, system overviews, workflows require manual docs
+3. **Keep Minimal**: Remove outdated docs, maintain high signal-to-noise ratio
+4. **Single Source**: Avoid duplication, link to canonical sources
+5. **Version Control**: All docs in Git, reviewed in PRs
+
+---
+
+## Migration History
+
+### v1.1 (2026-01-01)
+
+**Added**:
+- ✅ `docs/02-development/`: Development guide (new)
+- ✅ `docs/03-api/`: API documentation (new)
+- ✅ `docs/04-deployment/`: Deployment guide (new)
+- ✅ `docs/05-testing/`: Testing documentation (new)
+
+**Purpose**: Restore practical documentation that complements living docs for onboarding and operations
+
+### v1.0 (2024-12-31)
+
+**Removed** (84% reduction: 301 → 47 files):
+- ❌ Previous `docs/02-development/` → Replaced by living docs
+- ❌ Previous `docs/03-api/` → Replaced by OpenAPI
+- ❌ `docs/04-*`, `docs/05-*`, `docs/06-*`, `docs/07-*`, `docs/08-*`, `docs/10-*`
+
+**Backup**: `docs-backup-20241231/`
 
 ---
 
 ## Quick Navigation
 
-**New Team Members** — Read in this order:
-1. [Quick Start](./00-getting-started/quick-start.md) - Get up and running in 15 minutes
-2. [System Architecture](./01-architecture/overview/system-architecture.md) - Understand the technical design
-3. [API Specification](./03-api/board-game-ai-api-specification.md) - Learn the API
-4. [Testing Strategy](./02-development/testing/board-game-ai-testing-strategy.md) - Quality standards
-5. [Deployment Guide](./05-operations/deployment-guide.md) - Complete deployment workflow with Git strategy **NEW**
+### For Developers
+1. **Getting Started**: [Development Guide](02-development/README.md)
+2. **API Reference**: [API Documentation](03-api/README.md)
+3. **Testing**: [Testing Guide](05-testing/README.md)
+4. **Architecture**: [ADRs](01-architecture/adr/)
 
-**Find docs by role** — See [README.md](./README.md#-finding-documentation) for role-based navigation
+### For DevOps
+1. **Deployment**: [Deployment Guide](04-deployment/README.md)
+2. **Monitoring**: [Deployment Guide - Monitoring](04-deployment/README.md#monitoring--observability)
+3. **Backups**: [Deployment Guide - Database](04-deployment/README.md#database-management)
 
----
-
-## Documentation Categories
-
-### [00 - Getting Started](./00-getting-started/)
-**Audience**: All users, new team members, players
-**Purpose**: Quick start guides, onboarding, project overview, user documentation
-
-- [User Guide (IT)](./00-getting-started/user-guide.md) ⭐ **NEW** - Guida completa per giocatori (italiano)
-- [Quick Start](./00-getting-started/quick-start.md) - Local setup in 15 minutes
-- [Guida Setup Locale (IT)](./00-getting-started/guida-setup-locale.md) - Setup dettagliato in italiano
-- [Executive Summary](./00-getting-started/executive-summary.md) - Project overview
-- [Overview](./00-getting-started/overview.md) - Documentation structure
-
-### [01 - Architecture](./01-architecture/)
-**Audience**: Architects, senior developers, technical leadership
-**Purpose**: System design, architectural decisions, technical diagrams
-
-#### Subdirectories
-- **[overview/](./01-architecture/overview/)** - High-level architecture docs
-  - [System Architecture](./01-architecture/overview/system-architecture.md) (60+ pages)
-  - [Consolidation Strategy](./01-architecture/overview/consolidation-strategy.md)
-
-- **[adr/](./01-architecture/adr/)** - Architecture Decision Records (6 ADRs)
-  - [ADR-001: Hybrid RAG](./01-architecture/adr/adr-001-hybrid-rag.md)
-  - [ADR-002: Multilingual Embedding](./01-architecture/adr/adr-002-multilingual-embedding.md)
-  - [ADR-003: PDF Processing](./01-architecture/adr/adr-003-pdf-processing.md)
-  - [ADR-003b: Unstructured PDF](./01-architecture/adr/adr-003b-unstructured-pdf.md)
-  - [ADR-004: AI Agents](./01-architecture/adr/adr-004-ai-agents.md)
-  - [ADR-004b: Hybrid LLM](./01-architecture/adr/adr-004b-hybrid-llm.md)
-
-- **[diagrams/](./01-architecture/diagrams/)** - Architecture diagrams (Mermaid)
-  - [Bounded Contexts Interactions](./01-architecture/diagrams/bounded-contexts-interactions.md)
-  - [CQRS/MediatR Flow](./01-architecture/diagrams/cqrs-mediatr-flow.md)
-  - [GitHub Actions Flow](./01-architecture/diagrams/github-actions-flow.md) - CI/CD workflow visualization
-  - [Infrastructure Overview](./01-architecture/diagrams/infrastructure-overview.md)
-  - [PDF Pipeline Detailed](./01-architecture/diagrams/pdf-pipeline-detailed.md)
-  - [RAG System Detailed](./01-architecture/diagrams/rag-system-detailed.md)
-
-- **[components/](./01-architecture/components/)** - Component-specific docs
-  - [PDF Extraction Alternatives](./01-architecture/components/pdf-extraction-alternatives.md)
-  - [Confidence Validation](./01-architecture/components/confidence-validation.md)
-  - [agent-lightning/](./01-architecture/components/agent-lightning/) - Agent Lightning docs (5 files)
-  - [amplifier/](./01-architecture/components/amplifier/) - Amplifier docs (3 files)
-
-- **[ddd/](./01-architecture/ddd/)** - Domain-Driven Design
-  - [DDD Quick Reference](./01-architecture/ddd/quick-reference.md)
-
-### [02 - Development](./02-development/)
-**Audience**: Developers, QA engineers, refactoring team
-**Purpose**: Development guides, testing, refactoring, implementation notes
-
-- [**Docker Resources Guide**](./02-development/docker-resources-guide.md) ⭐ **CONSOLIDATED** - Complete Docker resource limits and optimization
-- [Backend Developer Guide (IT)](./02-development/backend/GUIDA-SVILUPPATORE-BACKEND.md) - Complete backend guide
-- [Frontend Developer Guide (IT)](./02-development/frontend/GUIDA-SVILUPPATORE-FRONTEND.md) - Complete frontend guide
-- [Backend Codebase Analysis](./02-development/analysis-summary.md) - Historical analysis (converted from .txt)
-
-#### Subdirectories
-- **[guides/](./02-development/guides/)** - Technical guides (~10 files)
-  - [LLM Integration](./02-development/guides/llm-integration-guide.md)
-  - [PDF Processing Guide](./02-development/guides/pdf-processing-guide.md)
-  - [PDF Processing Troubleshooting](./02-development/guides/pdf-processing-troubleshooting.md)
-  - [Local Debugging Guide](./02-development/guides/local-debugging-guide.md)
-  - [Unstructured Setup](./02-development/guides/unstructured-setup.md)
-  - _...and more guides_
-
-- **[refactoring/](./02-development/refactoring/)** - DDD migration docs (4 files)
-  - [Legacy Code Inventory](./02-development/refactoring/legacy-code-inventory.md) (150+ pages)
-  - [Legacy Code Dashboard](./02-development/refactoring/legacy-code-dashboard.md)
-  - [Implementation Notes](./02-development/refactoring/implementation-notes.md)
-  - [Next Steps](./02-development/refactoring/next-steps.md)
-
-- **[implementation/](./02-development/implementation/)** - Implementation findings (2 files)
-  - [RAG Service Migration](./02-development/implementation/bgai-023-ragservice-migration.md)
-  - [Cost Tracking Verification](./02-development/implementation/bgai-026-cost-tracking.md)
-
-- **[features/](./02-development/features/)** - Feature specifications (2 files)
-  - [PDF Background Processing Reliability](./02-development/features/pdf-background-processing-reliability.md)
-  - [User Tier Upload Limits](./02-development/features/user-tier-upload-limits.md)
-
-- **[code-review/](./02-development/code-review/)** - Code review checklists and reports (6 files)
-  - [Authentication System Review](./02-development/code-review/AUTHENTICATION-SYSTEM-REVIEW-2025-11-22.md)
-  - [Backend Comprehensive Review](./02-development/code-review/backend-comprehensive-review-2025-11-22.md)
-  - [Infrastructure Comprehensive Review](./02-development/code-review/infrastructure-comprehensive-review-2025-11-22.md)
-  - [Logging Events System Review](./02-development/code-review/LOGGING-EVENTS-SYSTEM-REVIEW-2025-11-22.md)
-  - [PDF Processing Checklist](./02-development/code-review/pdf-processing-checklist.md)
-
-- **[testing/](./02-development/testing/)** - Testing documentation (~15 files, consolidated)
-  - [Comprehensive Testing Guide](./02-development/testing/comprehensive-testing-guide.md) ⭐ **CONSOLIDATED** - All test types (unit, integration, E2E, manual, performance, visual)
-  - [Test Patterns Reference](./02-development/testing/test-patterns-reference.md) ⭐ **CONSOLIDATED** - Quick pattern lookup
-  - [Golden Dataset Testing Guide](./02-development/testing/golden-dataset-testing-guide.md) - RAG accuracy validation (Issue #999)
-  - [UI Element Identification Guide](./02-development/testing/ui-element-identification-guide.md) - Test selector best practices
-  - [Testing Strategy](./02-development/testing/core/testing-strategy.md)
-  - [Accessibility Testing](./02-development/testing/accessibility-testing-guide.md)
-  - [E2E Contribution Guide](./02-development/testing/e2e-contribution-guide.md)
-  - [Page Object Model Architecture](./02-development/testing/pom-architecture-design.md)
-  - [Visual Testing Guide](./02-development/testing/visual-testing-guide.md) - Chromatic integration
-  - _...and more testing docs_
-
-### [03 - API](./03-api/)
-**Audience**: API consumers, frontend developers, integrators
-**Purpose**: API specification, endpoints, authentication
-
-- [API Specification](./03-api/board-game-ai-api-specification.md) (40 pages) ⭐
-- [LLM Cost Tracking API](./03-api/llm-cost-tracking-api.md)
-
-### [04 - Frontend](./04-frontend/)
-**Audience**: Frontend developers, UI/UX designers
-**Purpose**: Frontend architecture, design system, performance
-
-- [Architecture](./04-frontend/architecture.md)
-- [Accessibility Standards](./04-frontend/accessibility-standards.md)
-- [Internationalization Strategy](./04-frontend/internationalization-strategy.md)
-- [Performance Requirements](./04-frontend/performance-requirements.md)
-- [Shadcn/UI Installation](./04-frontend/shadcn-ui-installation.md)
-- [Testing Strategy](./04-frontend/testing-strategy.md)
-- [Use Cases](./04-frontend/use-cases.md)
-- [**User Flows**](./04-frontend/user-flows.md) ⭐ **CONSOLIDATED** - Complete user journeys (v2.0)
-  - [Edge Cases & Error States](./04-frontend/user-flows-edge-cases.md) - Error handling supplement
-
-### [05 - Operations](./05-operations/)
-**Audience**: DevOps, SRE, on-call engineers
-**Purpose**: Deployment, monitoring, incident response, infrastructure
-
-- [**Infrastructure Overview**](./05-operations/infrastructure-overview.md) ⭐ **CONSOLIDATED** - Complete infrastructure guide (Docker Compose, profiles, 17 services)
-- [**Deployment Guide**](./05-operations/deployment-guide.md) (50+ pages) - Complete workflow with Git/GitHub integration
-
-#### Subdirectories
-- **[deployment/](./05-operations/deployment/)** - Deployment guides (6 files)
-  - [Multi-Environment Strategy](./05-operations/deployment/multi-environment-strategy.md)
-  - [Frontend Deployment](./05-operations/deployment/frontend-deployment.md)
-  - [Disaster Recovery](./05-operations/deployment/disaster-recovery.md)
-  - [Traefik Guide](./05-operations/deployment/traefik-guide.md) ⭐ **NEW** - Reverse proxy setup (Issue #703)
-  - [Traefik Testing](./05-operations/deployment/traefik-testing.md) ⭐ **NEW** - Testing procedures
-  - [Traefik Production](./05-operations/deployment/traefik-production.md) ⭐ **NEW** - Production checklist
-  - **[infrastructure/](./05-operations/deployment/infrastructure/)** - Infrastructure provider comparison
-    - [EU Hosting Providers Comparison](./05-operations/deployment/infrastructure/EU_HOSTING_COMPARISON_2025.md) - Top 10 EU providers
-
-- **[runbooks/](./05-operations/runbooks/)** - Incident runbooks (~10 files)
-  - [High Error Rate](./05-operations/runbooks/high-error-rate.md)
-  - [Slow Performance](./05-operations/runbooks/slow-performance.md)
-  - [High Memory Usage](./05-operations/runbooks/high-memory-usage.md)
-  - [Dependency Down](./05-operations/runbooks/dependency-down.md)
-  - [Infrastructure Monitoring](./05-operations/runbooks/infrastructure-monitoring.md) ⭐ **NEW** (Issue #705)
-  - [RAG Evaluation Pipeline](./05-operations/runbooks/rag-evaluation-pipeline.md)
-  - [Prompt Management Deployment](./05-operations/runbooks/prompt-management-deployment.md)
-  - _...and more runbooks_
-
-- **[monitoring/](./05-operations/monitoring/)** - Observability (~5 files)
-  - [Prometheus Setup](./05-operations/monitoring/prometheus-setup.md) ⭐ **CONSOLIDATED** - Complete monitoring guide (40+ alerts)
-  - [Prometheus LLM Queries](./05-operations/monitoring/prometheus-llm-queries.md) - Query examples
-  - [Grafana LLM Cost Dashboard](./05-operations/monitoring/grafana-llm-cost-dashboard.md) - Cost tracking
-  - [Slack Notifications](./05-operations/monitoring/slack-notifications.md) - Alert routing
-  - [Logging & Audit](./05-operations/monitoring/logging-and-audit.md)
-
-- **[backup/](./05-operations/backup/)** - Backup & recovery (2 files) ⭐ **NEW** (Issue #704)
-  - [Backup Strategy](./05-operations/backup/backup-strategy.md) - Automated backups
-  - [Restore Procedures](./05-operations/backup/restore-procedures.md) - Recovery steps
-
-- **[Workflow Automation](./05-operations/workflow-automation.md)** ⭐ **CONSOLIDATED** - n8n workflows (13 templates + production)
-
-### [06 - Security](./06-security/)
-**Audience**: Security team, compliance, developers
-**Purpose**: Security audits, vulnerability remediation, best practices
-
-- [**Security Patterns**](./06-security/security-patterns.md) ⭐ **CONSOLIDATED** - All security patterns (resource management, credentials, validation, encoding)
-- [**Code Warnings Remediation Plan**](./06-security/code-warnings-remediation-plan.md) ⭐ **NEW** - Security analyzer remediation (CA3xxx, CA2xxx, S2xxx)
-- [Security Audit 2025-11-04](./06-security/security-audit-2025-11-04.md)
-- [Environment Variables Production Guide](./06-security/environment-variables-production.md) ⭐ **NEW**
-- [Code Scanning Remediation](./06-security/code-scanning-remediation-summary.md)
-- [OAuth Security](./06-security/oauth-security.md)
-- [Log Forging Prevention](./06-security/log-forging-prevention.md)
-- [Disposable Resource Leak Remediation](./06-security/disposable-resource-leak-remediation.md)
-- [Generic Catch Analysis](./06-security/generic-catch-analysis.md)
-- [Null Reference Remediation](./06-security/null-reference-remediation.md)
-- [Sensitive Info Exposure Fix](./06-security/sensitive-info-exposure-fix-733.md)
-- [**Branch Protection Rules**](./06-security/branch-protection-rules.md) ⭐ **NEW** - GitHub branch protection configuration
-- [**Signed Commits Guide**](./06-security/signed-commits-guide.md) ⭐ **NEW** - GPG commit signing setup
-
-### [07 - Project Management](./07-project-management/)
-**Audience**: Project managers, product owners, leadership
-**Purpose**: Planning, roadmap, team organization, sprint tracking
-
-#### Subdirectories
-- **[planning/](./07-project-management/planning/)** - Implementation plans (7 files)
-  - [Backend Implementation Plan](./07-project-management/planning/backend-implementation-plan.md)
-  - [Frontend Implementation Plan](./07-project-management/planning/frontend-implementation-plan.md)
-  - [Issue Status Tracker](./07-project-management/planning/issue-status-tracker.md)
-  - _...and 4 more planning docs_
-
-- **[roadmap/](./07-project-management/roadmap/)** - Strategic roadmap (1 file)
-  - [ROADMAP.md](./07-project-management/roadmap/ROADMAP.md) (50 pages) ⭐ - Active roadmap with 136 open issues
-
-- **[organization/](./07-project-management/organization/)** - Team & execution (12 files)
-  - [Execution Calendar](./07-project-management/organization/board-game-ai-execution-calendar.md)
-  - [Sprint Overview](./07-project-management/organization/board-game-ai-sprint-overview.md)
-  - [Onboarding Guide](./07-project-management/organization/onboarding_guide.md)
-  - [Solo Developer Execution Plan](./07-project-management/organization/solo-developer-execution-plan.md)
-  - _...and 8 more org docs_
-
-- **[completion-reports/](./07-project-management/completion-reports/)** - Phase reports (1 file)
-  - [Phase 1a Completion](./07-project-management/completion-reports/phase-1a-completion-report.md)
-
-### [08 - Business](./08-business/)
-**Audience**: Investors, founders, business stakeholders
-**Purpose**: Business strategy, revenue model, market analysis
-
-- [Business Plan](./08-business/board-game-ai-business-plan.md) (35 pages) ⭐
-
-#### Subdirectories
-- **[cost-analysis/](./08-business/cost-analysis/)** - Infrastructure cost analysis & budget planning ⭐ **NEW**
-  - [Cost Analysis 2025](./08-business/cost-analysis/COST_ANALYSIS_2025.md) (600+ pages) - Full-scale analysis (10K+ users)
-  - [Cost Analysis Optimized 2025](./08-business/cost-analysis/COST_ANALYSIS_OPTIMIZED_2025.md) (800+ pages) - Right-sized for 2-5K users ⭐ **RECOMMENDED**
-  - [Cost Data Export](./08-business/cost-analysis/cost-analysis-data.csv) - CSV export for analysis
-  - [Optimized Cost Data Export](./08-business/cost-analysis/cost-analysis-optimized-2025.csv) - CSV export
-
-### [09 - Research](./09-research/)
-**Audience**: Research team, technical leadership
-**Purpose**: Research findings, competitive analysis, experiments
-
-- [Ollama Quality Findings](./09-research/bgai-016-ollama-quality-findings.md)
-
-### [10 - Knowledge Base](./10-knowledge-base/)
-**Audience**: All users
-**Purpose**: External references, research papers, wiki content
-
-- [AI Systems for Board Games 2025](./10-knowledge-base/Sistemi%20AI%20per%20arbitrare%20giochi%20da%20tavolo%20%20stato%20dell'arte%202025.md) (Italian)
-- [Game Scraper](./10-knowledge-base/game-scraper.md) ⭐ **NEW** - BoardGameGeek scraper documentation
-- [references/](./10-knowledge-base/references/) - External references
-  - [OpenRouter Models Reference](./10-knowledge-base/references/openrouter-models-reference.wiki)
+### For Product/QA
+1. **API Testing**: [API Documentation](03-api/README.md)
+2. **E2E Testing**: [Testing Guide - E2E](05-testing/README.md#e2e-testing-playwright)
+3. **System Overview**: [Architecture](01-architecture/overview/system-architecture.md)
 
 ---
 
-## Key Concepts & Glossary
-
-### Technical Terms
-
-**RAG (Retrieval Augmented Generation)**: Architecture combining document retrieval with LLM generation for accurate, cited responses.
-
-**Vector Database**: Specialized database for high-dimensional similarity search (Qdrant). Stores embeddings for semantic search.
-
-**Embedding**: Numerical vector (1024 dimensions) representing text semantics. Similar texts have similar embeddings.
-
-**Hallucination**: AI-generated content that is factually incorrect. Target: <3% hallucination rate.
-
-**Confidence Score**: Numerical measure (0.0-1.0) of AI certainty. Threshold: ≥0.70 required.
-
-**RRF (Reciprocal Rank Fusion)**: Algorithm combining ranked lists from vector + keyword search (70/30 weighting).
-
-**CQRS**: Command Query Responsibility Segregation pattern. Separate read/write models.
-
-**DDD (Domain-Driven Design)**: Software design approach focused on bounded contexts and domain models.
-
-### Business Terms
-
-**MAU (Monthly Active Users)**: Target 10,000 by Phase 4.
-
-**LTV (Lifetime Value)**: Total revenue from a customer over their lifetime.
-
-**CAC (Customer Acquisition Cost)**: Cost to acquire one customer.
-
-**Churn Rate**: % customers canceling per month. Target: <10%.
-
-**NPS (Net Promoter Score)**: Customer satisfaction metric (-100 to +100).
-
----
-
-## Documentation Statistics
-
-- **Total Files**: ~95 markdown documents (consolidated from 116)
-- **Total Pages**: ~750 pages (estimated)
-- **Categories**: 11 numbered folders (00-10)
-- **Recent Cleanup**: Removed 20+ duplicate/obsolete files (Nov 2025)
-- **Largest Docs**:
-  - Legacy Code Inventory: 150+ pages
-  - System Architecture: 60+ pages
-  - Strategic Roadmap: 50 pages
-  - API Specification: 40 pages
-  - Business Plan: 35 pages
-  - Deployment Guide: 50+ pages
-  - Testing Strategy: 30 pages
-
----
-
-## Documentation Roadmap
-
-### Completed (2025-11-13)
-- ✅ Major reorganization into numbered folders
-- ✅ Updated README with role-based navigation
-- ✅ Created comprehensive INDEX
-- ✅ Standardized file naming (kebab-case)
-
-### Planned (Q1 2025)
-- [ ] Add missing ADRs (ADR-005: Vector DB, ADR-006: Caching)
-- [ ] Create developer onboarding video walkthrough
-- [ ] Add interactive architecture diagrams (clickable)
-- [ ] Consolidate testing docs (reduce from 21 to ~10 files)
-- [ ] Create API client SDK documentation
-
-### Backlog
-- [ ] Translations (English versions of Italian docs)
-- [ ] API examples in more languages (Go, Ruby, Java)
-- [ ] Video tutorials for complex topics (RAG, DDD)
-- [ ] Documentation search tool improvements
-- [ ] Automated link checking in CI/CD
-
----
-
-## Related Documentation
-
-### External Resources
-
-**Research Foundation**:
-- [AI Systems for Board Games 2025](./10-knowledge-base/Sistemi%20AI%20per%20arbitrare%20giochi%20da%20tavolo%20%20stato%20dell'arte%202025.md) - Comprehensive landscape analysis
-
-**Academic Papers**:
-- Mills 2013: "Learning Board Game Rules from an Instruction Manual"
-- IEEE CoG 2024: "Grammar-based Game Description Generation using LLMs"
-
-**Community**:
-- La Tana dei Goblin: https://www.gdt.it/forum (Italian community)
-- BoardGameGeek: https://boardgamegeek.com (global database)
-
-**Technology**:
-- Qdrant Docs: https://qdrant.tech/documentation/
-- LangChain: https://python.langchain.com
-- OpenRouter: https://openrouter.ai/docs
-
----
-
-## Document Maintenance
-
-### Review Schedule
-
-**Monthly** (every 30 days):
-- Update INDEX with new documents
-- Check for broken links
-- Update statistics (file count, page count)
-
-**Quarterly** (every 3 months):
-- Review Strategic Roadmap, adjust timelines
-- Update Architecture Overview with new patterns
-- Review API Specification for breaking changes
-- Update Business Plan with revenue actuals
-
-**Annual** (every 12 months):
-- Comprehensive documentation audit
-- Archive outdated documents
-- Update competitive landscape
-- Review and update ADRs
-
----
-
-## Contributing
-
-See [README.md - Contributing Documentation](./README.md#-contributing-documentation) for full guidelines.
-
-**Quick checklist**:
-- [ ] File in correct numbered folder (00-10)
-- [ ] Kebab-case naming
-- [ ] Added to README and INDEX
-- [ ] Internal links tested
-- [ ] Metadata updated
-- [ ] PR with `[DOCS]` prefix
-
----
-
-## Contact
-
-**Documentation Issues**:
-- GitHub Issues: Tag with `documentation`
-
-**Technical Questions**:
-- Email: engineering@meepleai.dev
-
-**Business Inquiries**:
-- Email: business@meepleai.dev
-
----
-
-**Legend**: ⭐ = Essential reading, highly recommended
-
-**Index Metadata**:
-- **Version**: 2.3
-- **Maintainer**: Documentation Team
-- **Last Updated**: 2025-12-18
-- **Next Review**: 2025-12-28
-- **Recent Changes**:
-  - Cleanup: Removed obsolete/temp files from docs root
-  - Consolidated: issues/ → code-warnings-remediation-plan.md
-  - Merged: code-reviews/, diagrams/, features/ → proper numbered folders
-  - Consolidated: user-flows files (v2.0)
-
-
-
-
-
-
+**Version**: 1.1
+**Last Updated**: 2026-01-01
+**Maintainers**: Engineering Team

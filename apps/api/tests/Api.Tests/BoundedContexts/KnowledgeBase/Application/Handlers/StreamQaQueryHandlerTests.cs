@@ -549,6 +549,348 @@ public class StreamQaQueryHandlerTests
         _qualityTrackingServiceMock.Verify(x => x.CalculateLlmConfidence(It.IsAny<string>(), It.IsAny<List<DomainSearchResult>>()), Times.Once);
         _qualityTrackingServiceMock.Verify(x => x.CalculateOverallConfidence(searchConfidence, llmConfidence), Times.Once);
     }
+
+    [Fact]
+    public async Task Handle_LowConfidenceThreshold_CompletesWithWarning()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid().ToString();
+        var query = new StreamQaQuery(gameId, "Ambiguous question?", null);
+
+        _cacheMock
+            .Setup(x => x.GetAsync<QaResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((QaResponse?)null);
+
+        // Setup search with LOW relevance scores
+        var queryEmbedding = new float[] { 0.1f, 0.2f, 0.3f };
+        _embeddingServiceMock
+            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EmbeddingResult
+            {
+                Success = true,
+                Embeddings = new List<float[]> { queryEmbedding }
+            });
+
+        var vectorDocumentId = Guid.NewGuid();
+        var embedding = new Embedding(
+            id: Guid.NewGuid(),
+            vectorDocumentId: vectorDocumentId,
+            textContent: "Vague rule text",
+            vector: new Vector(queryEmbedding),
+            model: "text-embedding-3-small",
+            chunkIndex: 0,
+            pageNumber: 1
+        );
+
+        _embeddingRepositoryMock
+            .Setup(x => x.SearchByVectorAsync(It.IsAny<Guid>(), It.IsAny<Vector>(), It.IsAny<int>(), It.IsAny<double>(), It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Embedding> { embedding });
+
+        // Low relevance score (0.55)
+        var lowScoreResult = new DomainSearchResult(
+            id: Guid.NewGuid(),
+            vectorDocumentId: vectorDocumentId,
+            textContent: "Vague rule text",
+            pageNumber: 1,
+            relevanceScore: new Confidence(0.55),
+            rank: 1,
+            searchMethod: "vector"
+        );
+
+        _vectorSearchServiceMock
+            .Setup(x => x.Search(It.IsAny<Vector>(), It.IsAny<List<Embedding>>(), It.IsAny<int>(), It.IsAny<double>()))
+            .Returns(new List<DomainSearchResult> { lowScoreResult });
+
+        _hybridSearchServiceMock
+            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<Guid>(), SearchMode.Keyword, It.IsAny<int>(), It.IsAny<List<Guid>?>(), It.IsAny<float>(), It.IsAny<float>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<HybridSearchResult>());
+
+        _rrfFusionServiceMock
+            .Setup(x => x.FuseResults(It.IsAny<List<DomainSearchResult>>(), It.IsAny<List<DomainSearchResult>>(), It.IsAny<int>()))
+            .Returns(new List<DomainSearchResult> { lowScoreResult });
+
+        SetupPromptMocks(QuestionType.General);
+        SetupLlmStreamingMock(new[] { "Uncertain", " answer" });
+
+        // Mock LOW confidence from quality tracking
+        var searchConfidence = new Confidence(0.55);
+        var llmConfidence = new Confidence(0.75);
+        var overallConfidence = new Confidence(0.65); // Below 0.70 threshold
+
+        _qualityTrackingServiceMock
+            .Setup(x => x.CalculateSearchConfidence(It.IsAny<List<DomainSearchResult>>()))
+            .Returns(searchConfidence);
+
+        _qualityTrackingServiceMock
+            .Setup(x => x.CalculateLlmConfidence(It.IsAny<string>(), It.IsAny<List<DomainSearchResult>>()))
+            .Returns(llmConfidence);
+
+        _qualityTrackingServiceMock
+            .Setup(x => x.CalculateOverallConfidence(searchConfidence, llmConfidence))
+            .Returns(overallConfidence);
+
+        // Act
+        var events = new List<RagStreamingEvent>();
+        await foreach (var evt in _handler.Handle(query, TestContext.Current.CancellationToken))
+        {
+            events.Add(evt);
+        }
+
+        // Assert
+        var completeEvent = events.LastOrDefault(e => e.Type == StreamingEventType.Complete);
+        Assert.NotNull(completeEvent);
+        var complete = Assert.IsType<StreamingComplete>(completeEvent.Data);
+
+        // Validate confidence is below ADR-006 threshold (0.70)
+        Assert.True(complete.confidence.HasValue);
+        Assert.True(complete.confidence.Value < 0.70, $"Expected confidence < 0.70 (warning threshold), got {complete.confidence.Value}");
+        Assert.Equal(0.65, complete.confidence.Value, 0.001);
+
+        // Verify response still completes (no error)
+        var errorEvent = events.FirstOrDefault(e => e.Type == StreamingEventType.Error);
+        Assert.Null(errorEvent);
+
+        // Verify token events were emitted
+        var tokenEvents = events.Where(e => e.Type == StreamingEventType.Token).ToList();
+        Assert.NotEmpty(tokenEvents);
+    }
+
+    [Fact]
+    public async Task Handle_HallucinationDetection_NoLlmCitations()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid().ToString();
+        var query = new StreamQaQuery(gameId, "Detailed rules question?", null);
+
+        _cacheMock
+            .Setup(x => x.GetAsync<QaResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((QaResponse?)null);
+
+        // Setup search with HIGH quality snippets
+        var queryEmbedding = new float[] { 0.1f, 0.2f, 0.3f };
+        _embeddingServiceMock
+            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EmbeddingResult
+            {
+                Success = true,
+                Embeddings = new List<float[]> { queryEmbedding }
+            });
+
+        var vectorDocumentId = Guid.NewGuid();
+        var highQualityResults = new List<DomainSearchResult>
+        {
+            new DomainSearchResult(Guid.NewGuid(), vectorDocumentId, "High quality snippet 1", 1, new Confidence(0.95), 1, "vector"),
+            new DomainSearchResult(Guid.NewGuid(), vectorDocumentId, "High quality snippet 2", 2, new Confidence(0.92), 2, "vector"),
+            new DomainSearchResult(Guid.NewGuid(), vectorDocumentId, "High quality snippet 3", 3, new Confidence(0.90), 3, "vector")
+        };
+
+        var embeddings = highQualityResults.Select((result, index) => new Embedding(
+            id: Guid.NewGuid(),
+            vectorDocumentId: vectorDocumentId,
+            textContent: result.TextContent,
+            vector: new Vector(queryEmbedding),
+            model: "text-embedding-3-small",
+            chunkIndex: index,
+            pageNumber: result.PageNumber
+        )).ToList();
+
+        _embeddingRepositoryMock
+            .Setup(x => x.SearchByVectorAsync(It.IsAny<Guid>(), It.IsAny<Vector>(), It.IsAny<int>(), It.IsAny<double>(), It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(embeddings);
+
+        _vectorSearchServiceMock
+            .Setup(x => x.Search(It.IsAny<Vector>(), It.IsAny<List<Embedding>>(), It.IsAny<int>(), It.IsAny<double>()))
+            .Returns(highQualityResults);
+
+        _hybridSearchServiceMock
+            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<Guid>(), SearchMode.Keyword, It.IsAny<int>(), It.IsAny<List<Guid>?>(), It.IsAny<float>(), It.IsAny<float>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<HybridSearchResult>());
+
+        _rrfFusionServiceMock
+            .Setup(x => x.FuseResults(It.IsAny<List<DomainSearchResult>>(), It.IsAny<List<DomainSearchResult>>(), It.IsAny<int>()))
+            .Returns(highQualityResults);
+
+        SetupPromptMocks(QuestionType.General);
+
+        // Setup LLM to generate answer WITHOUT citation markers (hallucination scenario)
+        var answerWithoutCitations = new[] { "This", " is", " an", " answer", " without", " any", " citations", " or", " references", "." };
+        SetupLlmStreamingMock(answerWithoutCitations);
+
+        // Mock quality tracking to detect missing citations
+        var searchConfidence = new Confidence(0.95); // High search quality
+        var llmConfidence = new Confidence(0.50); // Low LLM confidence due to missing citations
+        var overallConfidence = new Confidence(0.72); // Weighted average reflects low LLM confidence
+
+        _qualityTrackingServiceMock
+            .Setup(x => x.CalculateSearchConfidence(It.IsAny<List<DomainSearchResult>>()))
+            .Returns(searchConfidence);
+
+        _qualityTrackingServiceMock
+            .Setup(x => x.CalculateLlmConfidence(It.IsAny<string>(), It.IsAny<List<DomainSearchResult>>()))
+            .Returns(llmConfidence); // Detects missing citations
+
+        _qualityTrackingServiceMock
+            .Setup(x => x.CalculateOverallConfidence(searchConfidence, llmConfidence))
+            .Returns(overallConfidence);
+
+        // Act
+        var events = new List<RagStreamingEvent>();
+        await foreach (var evt in _handler.Handle(query, TestContext.Current.CancellationToken))
+        {
+            events.Add(evt);
+        }
+
+        // Assert
+        var completeEvent = events.LastOrDefault(e => e.Type == StreamingEventType.Complete);
+        Assert.NotNull(completeEvent);
+        var complete = Assert.IsType<StreamingComplete>(completeEvent.Data);
+
+        // Verify overall confidence reflects low LLM confidence (hallucination detection)
+        Assert.True(complete.confidence.HasValue);
+        Assert.True(complete.confidence.Value < 0.90, "Overall confidence should be reduced when LLM provides no citations");
+
+        // Verify search confidence was high but LLM confidence was low
+        _qualityTrackingServiceMock.Verify(
+            x => x.CalculateSearchConfidence(It.Is<List<DomainSearchResult>>(r => r.Count == 3)),
+            Times.Once
+        );
+
+        // Verify CalculateLlmConfidence was called (string will have been concatenated)
+        _qualityTrackingServiceMock.Verify(
+            x => x.CalculateLlmConfidence(It.IsAny<string>(), It.IsAny<List<DomainSearchResult>>()),
+            Times.Once
+        );
+
+        // Verify full answer was constructed
+        var tokenEvents = events.Where(e => e.Type == StreamingEventType.Token).ToList();
+        Assert.Equal(answerWithoutCitations.Length, tokenEvents.Count);
+    }
+
+    [Fact]
+    public async Task Handle_MultiDocumentFiltering_Issue2051()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid().ToString();
+        var docId1 = Guid.NewGuid();
+        var docId2 = Guid.NewGuid();
+        var documentIds = new List<Guid> { docId1, docId2 };
+
+        var query = new StreamQaQuery(gameId, "Question for specific documents?", ThreadId: null, DocumentIds: documentIds);
+
+        _cacheMock
+            .Setup(x => x.GetAsync<QaResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((QaResponse?)null);
+
+        SetupSearchMocks(gameId, query.Query);
+        SetupPromptMocks(QuestionType.General);
+        SetupLlmStreamingMock(new[] { "Filtered", " answer" });
+        SetupQualityTrackingMocks();
+
+        // Act
+        var events = new List<RagStreamingEvent>();
+        await foreach (var evt in _handler.Handle(query, TestContext.Current.CancellationToken))
+        {
+            events.Add(evt);
+        }
+
+        // Assert
+        // Verify hybrid search was called with documentIds filter (Issue #2051)
+        _hybridSearchServiceMock.Verify(
+            x => x.SearchAsync(
+                It.IsAny<string>(),
+                It.IsAny<Guid>(),
+                SearchMode.Keyword,
+                It.IsAny<int>(),
+                It.Is<List<Guid>?>(docIds =>
+                    docIds != null &&
+                    docIds.Count == 2 &&
+                    docIds.Contains(docId1) &&
+                    docIds.Contains(docId2)
+                ),
+                It.IsAny<float>(),
+                It.IsAny<float>(),
+                It.IsAny<CancellationToken>()
+            ),
+            Times.Once,
+            "SearchAsync should be called with matching documentIds list for filtering"
+        );
+
+        // Verify response completed successfully
+        var completeEvent = events.LastOrDefault(e => e.Type == StreamingEventType.Complete);
+        Assert.NotNull(completeEvent);
+
+        // Verify no errors
+        var errorEvent = events.FirstOrDefault(e => e.Type == StreamingEventType.Error);
+        Assert.Null(errorEvent);
+    }
+
+    [Fact]
+    public async Task Handle_LlmStreamingErrorMidGeneration_PropagatesException()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid().ToString();
+        var query = new StreamQaQuery(gameId, "Test query for error handling", null);
+
+        _cacheMock
+            .Setup(x => x.GetAsync<QaResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((QaResponse?)null);
+
+        SetupSearchMocks(gameId, query.Query);
+        SetupPromptMocks(QuestionType.General);
+
+        // Setup LLM to return partial tokens then throw HttpRequestException mid-stream
+        _llmServiceMock
+            .Setup(x => x.GenerateCompletionStreamAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(StreamTokensWithError());
+
+        _qualityTrackingServiceMock
+            .Setup(x => x.CalculateSearchConfidence(It.IsAny<List<DomainSearchResult>>()))
+            .Returns(new Confidence(0.9));
+
+        // Act & Assert
+        var events = new List<RagStreamingEvent>();
+        var exceptionThrown = false;
+        var partialTokensReceived = false;
+
+        try
+        {
+            await foreach (var evt in _handler.Handle(query, TestContext.Current.CancellationToken))
+            {
+                events.Add(evt);
+
+                // Check if we received any token events before error
+                if (evt.Type == StreamingEventType.Token)
+                {
+                    partialTokensReceived = true;
+                }
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            exceptionThrown = true;
+            Assert.Contains("LLM streaming error", ex.Message, StringComparison.OrdinalIgnoreCase);
+        }
+
+        // Assert exception was thrown (not caught by handler)
+        Assert.True(exceptionThrown, "HttpRequestException should propagate from streaming error");
+
+        // Verify some token events were emitted before error
+        Assert.True(partialTokensReceived, "Should have received partial tokens before error");
+        var tokenEvents = events.Where(e => e.Type == StreamingEventType.Token).ToList();
+        Assert.NotEmpty(tokenEvents);
+        Assert.True(tokenEvents.Count == 3, "Should have exactly 3 tokens before error (from StreamTokensWithError)");
+
+        // Verify NO Complete event (streaming was interrupted)
+        var completeEvent = events.FirstOrDefault(e => e.Type == StreamingEventType.Complete);
+        Assert.Null(completeEvent);
+
+        // Verify cache was NOT called (no storage of partial response)
+        _cacheMock.Verify(
+            x => x.SetAsync(It.IsAny<string>(), It.IsAny<QaResponse>(), It.IsAny<int>(), It.IsAny<CancellationToken>()),
+            Times.Never,
+            "Cache should not store partial responses after errors"
+        );
+    }
     private void SetupHappyPathMocks(string gameId, string userQuery)
     {
         _cacheMock
@@ -718,6 +1060,20 @@ public class StreamQaQueryHandlerTests
             Usage: new LlmUsage(10, 8, 18),
             Cost: new LlmCost { InputCost = 0.0001m, OutputCost = 0.0008m, ModelId = "test-model", Provider = "Test" },
             IsFinal: true);
+    }
+
+    private async IAsyncEnumerable<StreamChunk> StreamTokensWithError()
+    {
+        // Yield partial tokens before error
+        var partialTokens = new[] { "Partial", " answer", " before" };
+        foreach (var token in partialTokens)
+        {
+            await Task.Delay(TestConstants.Timing.MinimalDelay);
+            yield return new StreamChunk(Content: token);
+        }
+
+        // Throw HttpRequestException mid-stream
+        throw new HttpRequestException("LLM streaming error: Connection interrupted");
     }
 
     private ChatThread CreateChatThread(Guid threadId, string gameId, int messageCount)

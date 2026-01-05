@@ -1,11 +1,17 @@
 /**
  * Auth OAuth Advanced E2E Tests - MIGRATED TO POM
+ * CONSOLIDATED MOCKS - Issue #2299
+ *
+ * All /auth/me endpoint mocks have been consolidated to AuthHelper.
+ * OAuth provider mocks (google/discord/github) remain inline as they're
+ * provider-specific and not part of the standard auth session pattern.
  *
  * @see apps/web/e2e/pages/helpers/AuthHelper.ts
  */
 
 import { test, expect } from './fixtures/chromatic';
 import { AuthPage } from './pages/auth/AuthPage';
+import { AuthHelper } from './pages/helpers/AuthHelper';
 
 const API_BASE = 'http://localhost:8080';
 
@@ -38,28 +44,23 @@ const API_BASE = 'http://localhost:8080';
 
 test.describe('OAuth Advanced Scenarios', () => {
   let authPage: AuthPage;
+  let authHelper: AuthHelper;
 
   test.beforeEach(async ({ page }) => {
     authPage = new AuthPage(page);
+    authHelper = new AuthHelper(page);
 
     // Disable animations for stable tests
     await page.emulateMedia({ reducedMotion: 'reduce' });
 
-    // Mock authentication endpoint
-    await page.route(`${API_BASE}/api/v1/auth/me`, async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          user: {
-            id: 'test-user-id',
-            email: 'test@example.com',
-            displayName: 'Test User',
-            role: 'User',
-          },
-        }),
-      });
-    });
+    // Mock authenticated session using AuthHelper (replaces inline /auth/me mock)
+    const testUser = {
+      id: 'test-user-id',
+      email: 'test@example.com',
+      displayName: 'Test User',
+      role: 'User' as const,
+    };
+    await authHelper.mockAuthenticatedSession(testUser);
   });
 
   /**

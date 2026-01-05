@@ -101,7 +101,6 @@ internal class ApiKeyAuthenticationService
     /// Returns both the full plaintext key (only shown once) and the entity to save.
     /// The key format is: mpl_{environment}_{random_base64}
     /// </summary>
-    /// <param name="environment">Environment prefix (live/test)</param>
     /// <returns>Tuple of (plaintext key, key entity)</returns>
     private static readonly string[] ValidEnvironments = { "live", "test" };
 

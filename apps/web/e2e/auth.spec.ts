@@ -1,5 +1,10 @@
 /**
- * E2E Authentication Tests - MIGRATED TO PAGE OBJECT MODEL
+ * E2E Authentication Tests - MIGRATED TO PAGE OBJECT MODEL + REAL BACKEND
+ *
+ * ✅ CONVERTED: Uses real backend APIs instead of mocks (Issue #2299)
+ * - Removed 14 page.route() mocks
+ * - Requires backend running on http://localhost:8080
+ * - Backend must have seeded test data
  *
  * Tests SSR auth protection, login flows, and user profile management
  * across the application.
@@ -12,7 +17,18 @@
  * 5. Password change functionality
  * 6. Logout flow
  *
+ * Real APIs Used:
+ * - GET /api/v1/games (games list)
+ * - GET /api/v1/admin/stats (admin dashboard stats)
+ * - GET /api/v1/admin/users (user management)
+ * - GET /api/v1/users/profile (fetch user profile)
+ * - PUT /api/v1/users/profile (update profile)
+ * - PUT /api/v1/users/profile/password (change password)
+ * - GET /api/v1/auth/2fa/status (2FA status)
+ * - GET /api/v1/users/me/oauth-accounts (OAuth accounts)
+ *
  * @see apps/web/e2e/page-objects/ - Page Object Model architecture
+ * @see Issue #2299 - E2E mock removal epic
  */
 
 import { test, expect } from './fixtures/chromatic';
@@ -127,25 +143,13 @@ test.describe('SSR Auth Protection', () => {
 
     await authHelper.mockAuthenticatedSession(USER_FIXTURES.admin);
 
-    // Mock games endpoint for upload page
-    await page.route(`${apiBase}/api/v1/games*`, async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          games: [],
-          totalCount: 0,
-          pageNumber: 1,
-          pageSize: 10,
-          totalPages: 0,
-        }),
-      });
-    });
+    // ✅ REMOVED MOCK: Use real games API
+    // Real backend GET /api/v1/games must return seeded test games
 
     await page.goto('/upload');
 
-    // Should stay on /upload page
-    await expect(page).toHaveURL(/\/upload/, { timeout: 3000 });
+    // Should stay on /upload page (real API will load games)
+    await expect(page).toHaveURL(/\/upload/, { timeout: 5000 });
   });
 
   test('should allow authenticated editor to access /upload', async ({ page }) => {
@@ -153,25 +157,13 @@ test.describe('SSR Auth Protection', () => {
 
     await authHelper.mockAuthenticatedSession(USER_FIXTURES.editor);
 
-    // Mock games endpoint
-    await page.route(`${apiBase}/api/v1/games*`, async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          games: [],
-          totalCount: 0,
-          pageNumber: 1,
-          pageSize: 10,
-          totalPages: 0,
-        }),
-      });
-    });
+    // ✅ REMOVED MOCK: Use real games API
+    // Real backend GET /api/v1/games must return seeded test games
 
     await page.goto('/upload');
 
-    // Should stay on /upload page
-    await expect(page).toHaveURL(/\/upload/, { timeout: 3000 });
+    // Should stay on /upload page (real API will load games)
+    await expect(page).toHaveURL(/\/upload/, { timeout: 5000 });
   });
 
   test('should allow authenticated editor to access /editor', async ({ page }) => {
@@ -213,23 +205,13 @@ test.describe('Role-Based Authorization', () => {
 
     await authHelper.mockAuthenticatedSession(USER_FIXTURES.admin);
 
-    // Mock admin stats endpoint
-    await page.route(`${apiBase}/api/v1/admin/stats`, async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          totalUsers: 10,
-          totalGames: 5,
-          totalQueries: 100,
-        }),
-      });
-    });
+    // ✅ REMOVED MOCK: Use real admin stats API
+    // Real backend GET /api/v1/admin/stats must return actual stats
 
     await page.goto('/admin');
 
-    // Should stay on /admin page
-    await expect(page).toHaveURL(/\/admin/, { timeout: 3000 });
+    // Should stay on /admin page (real API will load stats)
+    await expect(page).toHaveURL(/\/admin/, { timeout: 5000 });
   });
 
   test('should block non-admin from /admin/users', async ({ page }) => {
@@ -247,25 +229,13 @@ test.describe('Role-Based Authorization', () => {
 
     await authHelper.mockAuthenticatedSession(USER_FIXTURES.admin);
 
-    // Mock users endpoint
-    await page.route(`${apiBase}/api/v1/admin/users*`, async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          users: [USER_FIXTURES.admin],
-          totalCount: 1,
-          pageNumber: 1,
-          pageSize: 10,
-          totalPages: 1,
-        }),
-      });
-    });
+    // ✅ REMOVED MOCK: Use real admin users API
+    // Real backend GET /api/v1/admin/users must return user list
 
     await page.goto('/admin/users');
 
-    // Should stay on /admin/users page
-    await expect(page).toHaveURL(/\/admin\/users/, { timeout: 3000 });
+    // Should stay on /admin/users page (real API will load users)
+    await expect(page).toHaveURL(/\/admin\/users/, { timeout: 5000 });
   });
 });
 
@@ -275,56 +245,18 @@ test.describe('User Profile Management', () => {
 
     await authHelper.mockAuthenticatedSession(USER_FIXTURES.admin);
 
-    // Mock profile endpoints
-    await page.route(`${apiBase}/api/v1/users/profile`, async route => {
-      if (route.request().method() === 'GET') {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            Email: USER_FIXTURES.admin.email,
-            DisplayName: USER_FIXTURES.admin.displayName,
-            Role: USER_FIXTURES.admin.role,
-            IsTwoFactorEnabled: false,
-          }),
-        });
-      } else if (route.request().method() === 'PUT') {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            ok: true,
-            message: 'Profile updated successfully',
-          }),
-        });
-      }
-    });
-
-    // Mock 2FA status
-    await page.route(`${apiBase}/api/v1/auth/2fa/status`, async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          isEnabled: false,
-          backupCodesRemaining: 0,
-        }),
-      });
-    });
-
-    // Mock OAuth accounts
-    await page.route(`${apiBase}/api/v1/users/me/oauth-accounts`, async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([]),
-      });
-    });
+    // ✅ REMOVED ALL MOCKS: Use real profile, 2FA, and OAuth APIs
+    // Real backend must handle:
+    // - GET /api/v1/users/profile (fetch profile data)
+    // - PUT /api/v1/users/profile (update profile)
+    // - GET /api/v1/auth/2fa/status (fetch 2FA status)
+    // - GET /api/v1/users/me/oauth-accounts (fetch OAuth accounts)
 
     await page.goto('/settings');
 
-    // Wait for profile to load
-    await page.waitForTimeout(1000);
+    // Wait for real profile data to load (longer timeout for real API)
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(2000);
 
     // Update display name
     const displayNameInput = page
@@ -336,8 +268,8 @@ test.describe('User Profile Management', () => {
     const saveButton = page.locator('button:has-text("Save"), button:has-text("Update")').first();
     await saveButton.click();
 
-    // Should show success message
-    await expect(page.locator('text=/success|updated|saved/i')).toBeVisible({ timeout: 3000 });
+    // Should show success message (real API response)
+    await expect(page.locator('text=/success|updated|saved/i')).toBeVisible({ timeout: 5000 });
   });
 
   test('should change password successfully', async ({ page }) => {
@@ -345,53 +277,16 @@ test.describe('User Profile Management', () => {
 
     await authHelper.mockAuthenticatedSession(USER_FIXTURES.admin);
 
-    // Mock profile endpoint
-    await page.route(`${apiBase}/api/v1/users/profile`, async route => {
-      if (route.request().method() === 'GET') {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            Email: USER_FIXTURES.admin.email,
-            DisplayName: USER_FIXTURES.admin.displayName,
-            Role: USER_FIXTURES.admin.role,
-            IsTwoFactorEnabled: false,
-          }),
-        });
-      }
-    });
-
-    // Mock password change endpoint
-    await page.route(`${apiBase}/api/v1/users/profile/password`, async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          ok: true,
-          message: 'Password changed successfully',
-        }),
-      });
-    });
-
-    // Mock 2FA and OAuth endpoints
-    await page.route(`${apiBase}/api/v1/auth/2fa/status`, async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ isEnabled: false, backupCodesRemaining: 0 }),
-      });
-    });
-
-    await page.route(`${apiBase}/api/v1/users/me/oauth-accounts`, async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([]),
-      });
-    });
+    // ✅ REMOVED ALL MOCKS: Use real profile and password change APIs
+    // Real backend must handle:
+    // - GET /api/v1/users/profile (fetch profile data)
+    // - PUT /api/v1/users/profile/password (change password)
+    // - GET /api/v1/auth/2fa/status (fetch 2FA status)
+    // - GET /api/v1/users/me/oauth-accounts (fetch OAuth accounts)
 
     await page.goto('/settings');
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(2000);
 
     // Fill password change form
     await page.fill(
@@ -413,8 +308,8 @@ test.describe('User Profile Management', () => {
       .first();
     await changePasswordBtn.click();
 
-    // Should show success message
-    await expect(page.locator('text=/success|changed|updated/i')).toBeVisible({ timeout: 3000 });
+    // Should show success message (real API response)
+    await expect(page.locator('text=/success|changed|updated/i')).toBeVisible({ timeout: 5000 });
   });
 
   test('should show error when passwords do not match', async ({ page }) => {
@@ -422,39 +317,16 @@ test.describe('User Profile Management', () => {
 
     await authHelper.mockAuthenticatedSession(USER_FIXTURES.admin);
 
-    // Mock profile endpoint
-    await page.route(`${apiBase}/api/v1/users/profile`, async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          Email: USER_FIXTURES.admin.email,
-          DisplayName: USER_FIXTURES.admin.displayName,
-          Role: USER_FIXTURES.admin.role,
-          IsTwoFactorEnabled: false,
-        }),
-      });
-    });
-
-    // Mock 2FA and OAuth
-    await page.route(`${apiBase}/api/v1/auth/2fa/status`, async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ isEnabled: false, backupCodesRemaining: 0 }),
-      });
-    });
-
-    await page.route(`${apiBase}/api/v1/users/me/oauth-accounts`, async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([]),
-      });
-    });
+    // ✅ REMOVED ALL MOCKS: Use real profile APIs
+    // Real backend must handle:
+    // - GET /api/v1/users/profile (fetch profile data)
+    // - GET /api/v1/auth/2fa/status (fetch 2FA status)
+    // - GET /api/v1/users/me/oauth-accounts (fetch OAuth accounts)
+    // Frontend validation should catch password mismatch
 
     await page.goto('/settings');
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(2000);
 
     // Fill with mismatched passwords
     await page.fill(
@@ -476,7 +348,7 @@ test.describe('User Profile Management', () => {
       .first();
     await changePasswordBtn.click();
 
-    // Should show error
-    await expect(page.locator('text=/match|error|invalid/i')).toBeVisible({ timeout: 3000 });
+    // Should show error (frontend or backend validation)
+    await expect(page.locator('text=/match|error|invalid/i')).toBeVisible({ timeout: 5000 });
   });
 });

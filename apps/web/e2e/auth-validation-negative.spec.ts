@@ -1,6 +1,10 @@
 /**
  * Authentication Validation Negative Scenarios E2E Tests - Issue #1494
  *
+ * ✅ CONVERTED: Uses real backend APIs instead of mocks (Issue #2299)
+ * - Removed 1 page.route() mock
+ * - Requires backend running on http://localhost:8080
+ *
  * @see apps/web/e2e/pages/helpers/AuthHelper.ts
  * @see apps/web/e2e/pages/LoginPage.ts
  *
@@ -11,8 +15,13 @@
  * - Invalid email formats
  * - Weak password validation
  * - Empty field handling
- * - Duplicate registration
+ * - Duplicate registration (real 409 error from backend)
  * - Password mismatch
+ *
+ * Real APIs Used:
+ * - POST /api/v1/auth/register (409 Conflict for duplicates)
+ *
+ * @see Issue #2299 - E2E mock removal epic
  */
 
 import { test, expect } from './fixtures/chromatic';
@@ -118,14 +127,9 @@ test.describe('Authentication Validation Negative Scenarios - Issue #1494', () =
 
       await authHelper.mockUnauthenticatedSession();
 
-      // Mock registration endpoint with 409 Conflict for duplicate email
-      await page.route('**/api/v1/auth/register', route => {
-        route.fulfill({
-          status: 409,
-          contentType: 'application/json',
-          body: JSON.stringify({ error: 'Email already exists' }),
-        });
-      });
+      // ✅ REMOVED MOCK: Use real registration API
+      // Real backend POST /api/v1/auth/register must return 409 Conflict for duplicate emails
+      // Note: Test requires a duplicate email in test database (e.g., admin@meepleai.dev)
 
       await page.goto('/register');
 

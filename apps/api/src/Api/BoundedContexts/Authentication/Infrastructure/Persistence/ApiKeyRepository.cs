@@ -123,6 +123,9 @@ public class ApiKeyRepository : RepositoryBase, IApiKeyRepository
         var isActiveProp = typeof(ApiKey).GetProperty("IsActive");
         isActiveProp?.SetValue(apiKey, entity.IsActive);
 
+        var usageCountProp = typeof(ApiKey).GetProperty("UsageCount");
+        usageCountProp?.SetValue(apiKey, entity.UsageCount);
+
         return apiKey;
     }
 
@@ -145,6 +148,7 @@ public class ApiKeyRepository : RepositoryBase, IApiKeyRepository
             RevokedAt = domainEntity.RevokedAt,
             RevokedBy = domainEntity.RevokedBy,
             IsActive = domainEntity.IsActive,
+            UsageCount = domainEntity.UsageCount,
             Metadata = domainEntity.Metadata,
             User = null! // Required navigation property, will be loaded by EF Core
         };

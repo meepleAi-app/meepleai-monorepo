@@ -308,6 +308,7 @@ export function AdminPageClient() {
                 setPage(1);
               }}
               className="p-2 border border-gray-300 rounded"
+              aria-label="Filter by role"
             >
               <option value="all">All Roles</option>
               <option value="Admin">Admin</option>
@@ -345,7 +346,6 @@ export function AdminPageClient() {
             },
           ]}
           onClearSelection={() => setSelectedUsers(new Set())}
-          testId="users-bulk-action-bar"
         />
 
         {/* User Table */}
@@ -501,12 +501,17 @@ export function AdminPageClient() {
             onClick={() =>
               setConfirmation({ isOpen: false, title: '', message: '', onConfirm: () => {} })
             }
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="confirmation-title"
           >
             <div
               className="bg-white p-8 rounded-lg max-w-lg w-[90%]"
               onClick={e => e.stopPropagation()}
             >
-              <h2 className="mt-0">{confirmation.title}</h2>
+              <h2 id="confirmation-title" className="mt-0">
+                {confirmation.title}
+              </h2>
               <p>{confirmation.message}</p>
               <div className="flex justify-end gap-4 mt-6">
                 <button
@@ -617,9 +622,14 @@ function UserModal({ mode, user, onClose, onCreate, onUpdate }: UserModalProps) 
     <div
       className="fixed inset-0 bg-black/50 flex justify-center items-center z-[1000]"
       onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-title"
     >
       <div className="bg-white p-8 rounded-lg max-w-lg w-[90%]" onClick={e => e.stopPropagation()}>
-        <h2 className="mt-0">{mode === 'create' ? 'Create User' : 'Edit User'}</h2>
+        <h2 id="modal-title" className="mt-0">
+          {mode === 'create' ? 'Create User' : 'Edit User'}
+        </h2>
 
         <form noValidate onSubmit={handleSubmit}>
           {/* Email */}

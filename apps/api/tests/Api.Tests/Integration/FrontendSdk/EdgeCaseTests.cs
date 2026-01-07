@@ -314,8 +314,11 @@ public class EdgeCaseTests : IAsyncLifetime
             content.Should().NotBeNull();
 
             // Frontend SDK should handle paginated responses
-            // Response should be array (even if empty)
-            content.Should().StartWith("[");
+            // Response should be structured pagination object with games array
+            content.Should().Contain("\"games\":");
+            content.Should().Contain("\"total\":");
+            content.Should().Contain("\"page\":");
+            content.Should().Contain("\"pageSize\":");
         }
     }
     [Fact(DisplayName = "POST with Unicode characters should handle correctly")]

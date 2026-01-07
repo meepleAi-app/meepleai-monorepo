@@ -57,7 +57,6 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
     private readonly SharedTestcontainersFixture _fixture;
     private string _isolatedDbConnectionString = string.Empty;
     private string _databaseName = string.Empty;
-    private IContainer? _redisContainer;
     private MeepleAiDbContext? _dbContext;
     private IServiceProvider? _serviceProvider;
     private IConnectionMultiplexer? _redis;
@@ -72,7 +71,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
 
     public async ValueTask InitializeAsync()
     {
-        // Issue #2031: Migrated to SharedTestcontainersFixture for Docker hijack prevention and performance
+        // Issue #2031: Use SharedTestcontainersFixture for both PostgreSQL AND Redis to prevent Docker hijack
         _databaseName = "test_uploadpdf";
         _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
@@ -80,20 +79,8 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         _testDataDirectory = Path.Combine(Path.GetTempPath(), "meepleai-test-pdfs-" + Guid.NewGuid());
         Directory.CreateDirectory(_testDataDirectory);
 
-        // Start Redis container with CONFIG SET enabled for FLUSHDB
-        _redisContainer = new ContainerBuilder()
-            .WithImage("redis:7-alpine")
-            .WithPortBinding(6379, true)
-            .WithCommand("redis-server", "--save", "\"\"", "--appendonly", "no")
-            .WithWaitStrategy(Wait.ForUnixContainer()
-                .UntilCommandIsCompleted("redis-cli", "ping"))
-            .Build();
-
-        await _redisContainer.StartAsync(TestCancellationToken);
-
-        // Setup services
-        var redisPort = _redisContainer.GetMappedPublicPort(6379);
-        var redisConnectionString = $"localhost:{redisPort}";
+        // Use SharedTestcontainersFixture Redis (no separate container needed!)
+        var redisConnectionString = _fixture.RedisConnectionString;
 
         var services = new ServiceCollection();
         services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
@@ -182,7 +169,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         else
             (_serviceProvider as IDisposable)?.Dispose();
 
-        // Issue #2031: Use SharedTestcontainersFixture for PostgreSQL cleanup
+        // Issue #2031: Use SharedTestcontainersFixture for cleanup (no separate Redis container to dispose)
         if (!string.IsNullOrEmpty(_databaseName))
         {
             try
@@ -193,12 +180,6 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
             {
                 // Ignore cleanup errors
             }
-        }
-
-        if (_redisContainer != null)
-        {
-            await _redisContainer.StopAsync(TestCancellationToken);
-            await _redisContainer.DisposeAsync();
         }
     }
 

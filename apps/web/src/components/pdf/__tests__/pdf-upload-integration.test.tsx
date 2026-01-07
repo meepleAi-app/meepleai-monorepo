@@ -13,9 +13,9 @@
  * Mocks: API calls, File objects
  */
 
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import React from 'react';
 
 // Mock API
@@ -204,11 +204,23 @@ function PdfUploadForm() {
 describe('PDF Upload Integration Tests - Issue #2307', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockApiDocuments.uploadPdf.mockResolvedValue({
-      id: 'doc-123',
-      fileName: 'test.pdf',
-      uploadedAt: new Date().toISOString(),
-    });
+    // Add delay to simulate real upload and allow state updates to render
+    mockApiDocuments.uploadPdf.mockImplementation(
+      () =>
+        new Promise(resolve => {
+          setTimeout(() => {
+            resolve({
+              id: 'doc-123',
+              fileName: 'test.pdf',
+              uploadedAt: new Date().toISOString(),
+            });
+          }, 200);
+        })
+    );
+  });
+
+  afterEach(() => {
+    cleanup();
   });
 
   // ============================================================================
@@ -238,9 +250,12 @@ describe('PDF Upload Integration Tests - Issue #2307', () => {
       await user.click(uploadButton);
 
       // Verify uploading indicator
-      await waitFor(() => {
-        expect(screen.getByLabelText(/uploading indicator/i)).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(screen.getByLabelText(/uploading indicator/i)).toBeInTheDocument();
+        },
+        { timeout: 2000 }
+      );
 
       // Verify progress bar appears
       await waitFor(() => {
@@ -380,18 +395,31 @@ describe('PDF Upload Integration Tests - Issue #2307', () => {
       await user.click(uploadButton);
 
       // Wait for upload to start
-      await waitFor(() => {
-        expect(screen.getByLabelText(/uploading indicator/i)).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(screen.getByLabelText(/uploading indicator/i)).toBeInTheDocument();
+        },
+        { timeout: 2000 }
+      );
 
       // Cancel during upload (note: cancel button is disabled during upload in this implementation)
       // So we test cancellation before upload starts
 
       vi.mocked(mockApiDocuments.uploadPdf).mockClear();
 
-      // Reset to clear queue
+      // Clean up previous render and create fresh component
+      cleanup();
       render(<PdfUploadForm />);
-      await user.upload(fileInput, file);
+      const freshFileInput = screen.getByLabelText(/file input/i);
+      await user.upload(freshFileInput, file);
+
+      // Wait for file to appear in queue before cancelling
+      await waitFor(
+        () => {
+          expect(screen.getByText(/large-file.pdf/i)).toBeInTheDocument();
+        },
+        { timeout: 1000 }
+      );
 
       const cancelButton = screen.getByLabelText(/cancel upload/i);
       await user.click(cancelButton);
@@ -421,10 +449,13 @@ describe('PDF Upload Integration Tests - Issue #2307', () => {
       await user.upload(fileInput, largeFile);
 
       // Verify error message
-      await waitFor(() => {
-        const errorAlert = screen.getByLabelText(/validation errors/i);
-        expect(errorAlert).toHaveTextContent(/file size must be less than 50mb/i);
-      });
+      await waitFor(
+        () => {
+          const errorAlert = screen.getByLabelText(/validation errors/i);
+          expect(errorAlert).toHaveTextContent(/file size must be less than 50mb/i);
+        },
+        { timeout: 2000 }
+      );
 
       // Verify file not added to queue
       expect(screen.queryByLabelText(/file queue/i)).not.toBeInTheDocument();
@@ -448,24 +479,41 @@ describe('PDF Upload Integration Tests - Issue #2307', () => {
 
       const fileInput = screen.getByLabelText(/file input/i);
 
-      // Test text file
-      await user.upload(fileInput, textFile);
-
-      await waitFor(() => {
-        const errorAlert = screen.getByLabelText(/validation errors/i);
-        expect(errorAlert).toHaveTextContent(/only pdf files are supported/i);
-        expect(errorAlert).toHaveTextContent(/document.txt/i);
+      // Test text file - use fireEvent for better file simulation
+      const fileList = Object.assign([textFile], {
+        item: (index: number) => (index === 0 ? textFile : null),
       });
+      Object.defineProperty(fileInput, 'files', { value: fileList, writable: true });
+      fireEvent.change(fileInput);
+
+      await waitFor(
+        () => {
+          const errorAlert = screen.getByLabelText(/validation errors/i);
+          expect(errorAlert).toHaveTextContent(/only pdf files are supported/i);
+          expect(errorAlert).toHaveTextContent(/document.txt/i);
+        },
+        { timeout: 2000 }
+      );
 
       // Clear and test image file
+      cleanup();
       render(<PdfUploadForm />);
-      await user.upload(fileInput, imageFile);
+      const freshFileInput = screen.getByLabelText(/file input/i);
 
-      await waitFor(() => {
-        const errorAlert = screen.getByLabelText(/validation errors/i);
-        expect(errorAlert).toHaveTextContent(/only pdf files are supported/i);
-        expect(errorAlert).toHaveTextContent(/cover.jpg/i);
+      const imageFileList = Object.assign([imageFile], {
+        item: (index: number) => (index === 0 ? imageFile : null),
       });
+      Object.defineProperty(freshFileInput, 'files', { value: imageFileList, writable: true });
+      fireEvent.change(freshFileInput);
+
+      await waitFor(
+        () => {
+          const errorAlert = screen.getByLabelText(/validation errors/i);
+          expect(errorAlert).toHaveTextContent(/only pdf files are supported/i);
+          expect(errorAlert).toHaveTextContent(/cover.jpg/i);
+        },
+        { timeout: 2000 }
+      );
     });
 
     it('should handle mixed valid and invalid files', async () => {
@@ -479,14 +527,23 @@ describe('PDF Upload Integration Tests - Issue #2307', () => {
       ];
 
       const fileInput = screen.getByLabelText(/file input/i);
-      await user.upload(fileInput, files);
+
+      // Use fireEvent for better file simulation with multiple files
+      const fileList = Object.assign(files, {
+        item: (index: number) => files[index] || null,
+      });
+      Object.defineProperty(fileInput, 'files', { value: fileList, writable: true });
+      fireEvent.change(fileInput);
 
       // Verify only invalid file shows error
-      await waitFor(() => {
-        const errorAlert = screen.getByLabelText(/validation errors/i);
-        expect(errorAlert).toHaveTextContent(/invalid.txt/i);
-        expect(errorAlert).toHaveTextContent(/only pdf files are supported/i);
-      });
+      await waitFor(
+        () => {
+          const errorAlert = screen.getByLabelText(/validation errors/i);
+          expect(errorAlert).toHaveTextContent(/invalid.txt/i);
+          expect(errorAlert).toHaveTextContent(/only pdf files are supported/i);
+        },
+        { timeout: 2000 }
+      );
 
       // Verify no files added to queue (validation failed for batch)
       expect(screen.queryByLabelText(/file queue/i)).not.toBeInTheDocument();

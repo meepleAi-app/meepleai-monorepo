@@ -14,6 +14,7 @@
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import React from 'react';
 
 import BoardGameAskClient from '../BoardGameAskClient';
 import { useChatQuery } from '@/lib/hooks/useChatQuery';
@@ -888,7 +889,11 @@ describe('Chat Integration Tests - Issue #2307', () => {
       const mockClipboard = {
         writeText: vi.fn().mockResolvedValue(undefined),
       };
-      Object.assign(navigator, { clipboard: mockClipboard });
+      Object.defineProperty(navigator, 'clipboard', {
+        value: mockClipboard,
+        writable: true,
+        configurable: true,
+      });
 
       function ChatThreadShare() {
         const [shareLink, setShareLink] = React.useState<string | null>(null);

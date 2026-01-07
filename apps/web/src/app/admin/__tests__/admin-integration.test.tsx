@@ -496,7 +496,9 @@ describe('Admin Panel Integration Tests - Issue #2307', () => {
       await user.type(displayNameInput, 'New User');
       await user.selectOptions(roleSelect, 'Admin');
 
-      const submitButton = screen.getByRole('button', { name: /create/i });
+      // Use form-specific button to avoid ambiguity with "Create User" button
+      const userForm = screen.getByLabelText(/user form/i);
+      const submitButton = within(userForm).getByRole('button', { name: /create/i });
       await user.click(submitButton);
 
       await waitFor(() => {

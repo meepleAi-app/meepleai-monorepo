@@ -4,7 +4,7 @@ const byDir = {};
 
 Object.keys(data).forEach(file => {
   if (!file.includes('__tests__') && file.includes('/components/')) {
-    const match = file.match(/components\/([^\/]+)/);
+    const match = file.match(/components\/([^/]+)/);
     const dir = match ? match[1] : 'root';
     const cov = data[file];
     const lineCov = cov.s
@@ -33,23 +33,23 @@ Object.keys(byDir)
   .sort()
   .forEach(dir => {
     const avg = (byDir[dir].totalCov / byDir[dir].files).toFixed(1);
-    console.log(
+    console.warn(
       `${dir}: ${avg}% (${byDir[dir].files} files) - Uncovered: ${byDir[dir].uncovered.length}`
     );
 
     if (byDir[dir].uncovered.length > 0 && byDir[dir].uncovered.length <= 10) {
       byDir[dir].uncovered.forEach(u => {
-        console.log(`  - ${u.file} (${u.cov}%)`);
+        console.warn(`  - ${u.file} (${u.cov}%)`);
       });
     }
   });
 
 // Summary of highest priority gaps
-console.log('\n=== HIGH PRIORITY GAPS (<50% coverage) ===');
+console.warn('\n=== HIGH PRIORITY GAPS (<50% coverage) ===');
 Object.keys(byDir).forEach(dir => {
   byDir[dir].uncovered
     .filter(u => parseFloat(u.cov) < 50)
     .forEach(u => {
-      console.log(`${dir}/${u.file}: ${u.cov}%`);
+      console.warn(`${dir}/${u.file}: ${u.cov}%`);
     });
 });

@@ -45,7 +45,7 @@ const mockApiKeysData = {
         keyPrefix: 'mpl_prod_',
         scopes: 'read:games,read:rules',
         createdAt: '2025-01-01T00:00:00Z',
-        expiresAt: '2026-01-01T00:00:00Z',
+        expiresAt: '2026-12-31T23:59:59Z',
         lastUsedAt: '2025-12-11T10:30:00Z',
         isActive: true,
       },

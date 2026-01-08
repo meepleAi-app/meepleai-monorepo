@@ -1,5 +1,10 @@
 /**
- * Auth OAuth Registration E2E Tests
+ * Auth OAuth Registration E2E Tests - CONSOLIDATED MOCKS
+ *
+ * ✅ REFACTORED: Consolidated 9 inline /auth/me mocks to AuthHelper (Issue #2299)
+ * - Removed 9 duplicate inline page.route() calls → authHelper.mockAuthenticatedSession()
+ * - Removed 4 dead helper functions (createSessionCookies, generateSessionToken, etc.) ~90 lines
+ * - OAuth provider mocks MAINTAINED (mockOAuthLogin tested elsewhere)
  *
  * Tests for new user registration via OAuth providers (Google, Discord, GitHub).
  * This covers the scenario where a user has NO existing account and registers
@@ -11,8 +16,11 @@
  * 3. Backend creates user & session → redirects to /auth/callback?success=true&new=true
  * 4. Frontend shows success → redirects to /dashboard
  *
+ * Note: Auth session mocks consolidated to AuthHelper per Issue #2299 pattern
+ *
  * @see apps/web/e2e/pages/helpers/AuthHelper.ts
  * @see apps/web/src/app/auth/callback/page.tsx
+ * @see Issue #2299 - E2E mock consolidation
  */
 
 import { test, expect } from './fixtures/chromatic';
@@ -27,14 +35,6 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 type OAuthProvider = 'google' | 'discord' | 'github';
 
 /**
- * Session cookie names (from AuthHelper patterns)
- */
-const SESSION_COOKIES = {
-  SESSION: 'meepleai_session',
-  USER_ROLE: 'meepleai_user_role',
-} as const;
-
-/**
  * OAuth callback URL parameters
  */
 const CALLBACK_PARAMS = {
@@ -45,22 +45,6 @@ const CALLBACK_PARAMS = {
   ERROR_INVALID_STATE: 'error=invalid_state',
   ERROR_SERVER: 'error=server_error',
 } as const;
-
-/**
- * Cookie configuration defaults
- */
-const COOKIE_CONFIG = {
-  domain: 'localhost',
-  path: '/',
-  secure: false,
-  sameSite: 'Lax' as const,
-};
-
-/**
- * Generate session token for test
- */
-const generateSessionToken = (provider: OAuthProvider, context: string) =>
-  `test-oauth-${provider}-${context}-${Date.now()}`;
 
 /**
  * New user fixtures for OAuth registration scenarios
@@ -86,24 +70,6 @@ const OAUTH_NEW_USER_FIXTURES: Record<OAuthProvider, UserFixture> = {
     role: 'User',
   },
 };
-
-/**
- * Helper to create session cookies for tests
- */
-const createSessionCookies = (provider: OAuthProvider, context: string) => [
-  {
-    name: SESSION_COOKIES.SESSION,
-    value: generateSessionToken(provider, context),
-    ...COOKIE_CONFIG,
-    httpOnly: true,
-  },
-  {
-    name: SESSION_COOKIES.USER_ROLE,
-    value: 'user',
-    ...COOKIE_CONFIG,
-    httpOnly: false,
-  },
-];
 
 /**
  * E2E Tests for OAuth Registration Flow (New Users)
@@ -150,20 +116,8 @@ test.describe('OAuth Registration - New Users', () => {
       // Mock the OAuth login redirect
       await authHelper.mockOAuthLogin(provider);
 
-      // Mock the /auth/me endpoint to return the new user (after successful OAuth)
-      await page.route(`${API_BASE}/api/v1/auth/me`, async route => {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            user: newUser,
-            expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-          }),
-        });
-      });
-
-      // Set session cookies (simulating backend setting them after OAuth)
-      await page.context().addCookies(createSessionCookies(provider, 'registration'));
+      // Mock authenticated session after OAuth (consolidated to AuthHelper)
+      await authHelper.mockAuthenticatedSession(newUser);
 
       // Simulate the callback page with success for new user
       await page.goto(`/auth/callback?${CALLBACK_PARAMS.SUCCESS_NEW_USER}`);
@@ -182,20 +136,8 @@ test.describe('OAuth Registration - New Users', () => {
     test('Google OAuth registration extracts profile data correctly', async ({ page }) => {
       const newUser = OAUTH_NEW_USER_FIXTURES[provider];
 
-      // Mock authenticated session after registration
-      await page.route(`${API_BASE}/api/v1/auth/me`, async route => {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            user: newUser,
-            expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-          }),
-        });
-      });
-
-      // Set session cookies
-      await page.context().addCookies(createSessionCookies(provider, 'profile'));
+      // Mock authenticated session after registration (consolidated to AuthHelper)
+      await authHelper.mockAuthenticatedSession(newUser);
 
       // Simulate successful OAuth callback for new user
       await page.goto(`/auth/callback?${CALLBACK_PARAMS.SUCCESS_NEW_USER}`);
@@ -204,9 +146,8 @@ test.describe('OAuth Registration - New Users', () => {
       await page.waitForURL(/dashboard/, { timeout: 5000 });
 
       // Verify session established
-      const cookies = await authHelper.getSessionCookies();
-      const hasSessionCookie = cookies.some(c => c.name === SESSION_COOKIES.SESSION);
-      expect(hasSessionCookie).toBe(true);
+      const isAuthenticated = await authHelper.verifyAuthenticated();
+      expect(isAuthenticated).toBe(true);
     });
   });
 
@@ -222,20 +163,8 @@ test.describe('OAuth Registration - New Users', () => {
       // Mock the OAuth login redirect
       await authHelper.mockOAuthLogin(provider);
 
-      // Mock authenticated session
-      await page.route(`${API_BASE}/api/v1/auth/me`, async route => {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            user: newUser,
-            expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-          }),
-        });
-      });
-
-      // Set session cookies
-      await page.context().addCookies(createSessionCookies(provider, 'registration'));
+      // Mock authenticated session (consolidated to AuthHelper)
+      await authHelper.mockAuthenticatedSession(newUser);
 
       // Simulate successful OAuth callback
       await page.goto(`/auth/callback?${CALLBACK_PARAMS.SUCCESS_NEW_USER}`);
@@ -254,20 +183,8 @@ test.describe('OAuth Registration - New Users', () => {
     test('Discord OAuth registration handles Discord-specific profile', async ({ page }) => {
       const newUser = OAUTH_NEW_USER_FIXTURES[provider];
 
-      // Mock authenticated session
-      await page.route(`${API_BASE}/api/v1/auth/me`, async route => {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            user: newUser,
-            expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-          }),
-        });
-      });
-
-      // Set session cookies
-      await page.context().addCookies(createSessionCookies(provider, 'profile'));
+      // Mock authenticated session (consolidated to AuthHelper)
+      await authHelper.mockAuthenticatedSession(newUser);
 
       // Simulate OAuth callback
       await page.goto(`/auth/callback?${CALLBACK_PARAMS.SUCCESS_NEW_USER}`);
@@ -276,9 +193,8 @@ test.describe('OAuth Registration - New Users', () => {
       await page.waitForURL(/dashboard/, { timeout: 5000 });
 
       // Verify session established
-      const cookies = await authHelper.getSessionCookies();
-      const hasSessionCookie = cookies.some(c => c.name === SESSION_COOKIES.SESSION);
-      expect(hasSessionCookie).toBe(true);
+      const isAuthenticated = await authHelper.verifyAuthenticated();
+      expect(isAuthenticated).toBe(true);
     });
   });
 
@@ -294,20 +210,8 @@ test.describe('OAuth Registration - New Users', () => {
       // Mock the OAuth login redirect
       await authHelper.mockOAuthLogin(provider);
 
-      // Mock authenticated session
-      await page.route(`${API_BASE}/api/v1/auth/me`, async route => {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            user: newUser,
-            expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-          }),
-        });
-      });
-
-      // Set session cookies
-      await page.context().addCookies(createSessionCookies(provider, 'registration'));
+      // Mock authenticated session (consolidated to AuthHelper)
+      await authHelper.mockAuthenticatedSession(newUser);
 
       // Simulate successful OAuth callback
       await page.goto(`/auth/callback?${CALLBACK_PARAMS.SUCCESS_NEW_USER}`);
@@ -326,20 +230,8 @@ test.describe('OAuth Registration - New Users', () => {
     test('GitHub OAuth registration extracts GitHub username', async ({ page }) => {
       const newUser = OAUTH_NEW_USER_FIXTURES[provider];
 
-      // Mock authenticated session
-      await page.route(`${API_BASE}/api/v1/auth/me`, async route => {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            user: newUser,
-            expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-          }),
-        });
-      });
-
-      // Set session cookies
-      await page.context().addCookies(createSessionCookies(provider, 'profile'));
+      // Mock authenticated session (consolidated to AuthHelper)
+      await authHelper.mockAuthenticatedSession(newUser);
 
       // Simulate OAuth callback
       await page.goto(`/auth/callback?${CALLBACK_PARAMS.SUCCESS_NEW_USER}`);
@@ -361,20 +253,8 @@ test.describe('OAuth Registration - New Users', () => {
       const provider: OAuthProvider = 'google';
       const newUser = OAUTH_NEW_USER_FIXTURES[provider];
 
-      // Mock persistent authenticated session
-      await page.route(`${API_BASE}/api/v1/auth/me`, async route => {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            user: newUser,
-            expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-          }),
-        });
-      });
-
-      // Set session cookies
-      await page.context().addCookies(createSessionCookies(provider, 'persistence'));
+      // Mock persistent authenticated session (consolidated to AuthHelper)
+      await authHelper.mockAuthenticatedSession(newUser);
 
       // Simulate OAuth callback with success
       await page.goto(`/auth/callback?${CALLBACK_PARAMS.SUCCESS_NEW_USER}`);
@@ -470,20 +350,8 @@ test.describe('OAuth Registration - New Users', () => {
       const provider: OAuthProvider = 'google';
       const newUser = OAUTH_NEW_USER_FIXTURES[provider];
 
-      // Mock authenticated session
-      await page.route(`${API_BASE}/api/v1/auth/me`, async route => {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            user: newUser,
-            expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-          }),
-        });
-      });
-
-      // Set session cookies (simulating backend setting them after OAuth)
-      await page.context().addCookies(createSessionCookies(provider, 'register-page'));
+      // Mock authenticated session (consolidated to AuthHelper)
+      await authHelper.mockAuthenticatedSession(newUser);
 
       // Simulate OAuth callback after user completes registration with provider
       await page.goto(`/auth/callback?${CALLBACK_PARAMS.SUCCESS_NEW_USER}`);

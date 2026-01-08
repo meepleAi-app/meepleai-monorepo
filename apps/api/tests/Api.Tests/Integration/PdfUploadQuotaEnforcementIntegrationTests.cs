@@ -46,7 +46,6 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
     private readonly SharedTestcontainersFixture _fixture;
     private string _isolatedDbConnectionString = string.Empty;
     private string _databaseName = string.Empty;
-    private IContainer? _redisContainer;
     private MeepleAiDbContext? _dbContext;
     private IServiceProvider? _serviceProvider;
     private IConnectionMultiplexer? _redis;
@@ -61,31 +60,12 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
 
     public async ValueTask InitializeAsync()
     {
-        // Issue #2031: Migrated to SharedTestcontainersFixture for Docker hijack prevention and performance
+        // Issue #2031: Use SharedTestcontainersFixture for both PostgreSQL AND Redis to prevent Docker hijack
         _databaseName = "test_quota";
         _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
-        // Setup Redis container (not migrated - Redis stays individual container)
-        string redisConnectionString;
-        var externalRedis = Environment.GetEnvironmentVariable("TEST_REDIS_CONNSTRING");
-
-        if (!string.IsNullOrWhiteSpace(externalRedis))
-        {
-            redisConnectionString = externalRedis;
-        }
-        else
-        {
-            _redisContainer = new ContainerBuilder()
-                .WithImage("redis:7-alpine")
-                .WithPortBinding(6379, true)
-                .WithWaitStrategy(Wait.ForUnixContainer()
-                    .UntilCommandIsCompleted("redis-cli", "ping"))
-                .Build();
-
-            await _redisContainer.StartAsync(TestCancellationToken);
-            var redisPort = _redisContainer.GetMappedPublicPort(6379);
-            redisConnectionString = $"localhost:{redisPort}";
-        }
+        // Use SharedTestcontainersFixture Redis (no separate container needed!)
+        var redisConnectionString = _fixture.RedisConnectionString;
 
         var services = new ServiceCollection();
         services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
@@ -154,11 +134,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
             }
         }
 
-        if (_redisContainer != null)
-        {
-            await _redisContainer.StopAsync(TestCancellationToken);
-            await _redisContainer.DisposeAsync();
-        }
+        // Issue #2031: No separate Redis container to dispose (using SharedTestcontainersFixture)
     }
     private async Task<User> CreateUserAsync(UserTier tier, AuthRole? role = null)
     {

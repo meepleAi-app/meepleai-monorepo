@@ -174,9 +174,13 @@ jobs:
           nohup dotnet run --configuration Release --environment CI > ../../../../api.log 2>&1 &
           echo $! > ../../../../api.pid
         env:
+          # Issue #2296: Explicit rate limiting bypass for K6 performance tests
+          # Primary mechanism - more reliable than ASPNETCORE_ENVIRONMENT
+          DISABLE_RATE_LIMITING: 'true'
           # Issue #2286: CRITICAL - ASPNETCORE_ENVIRONMENT must be FIRST to override defaults
           ASPNETCORE_ENVIRONMENT: CI
           # Issue #2286: Disable rate limiting via config override (RateLimitService reads RateLimiting:LimitType:role)
+          # Defense in depth: keeping config overrides as additional safety
           RateLimiting__MaxTokens__user: '999999'
           RateLimiting__RefillRate__user: '10000'
           RateLimiting__MaxTokens__anonymous: '999999'

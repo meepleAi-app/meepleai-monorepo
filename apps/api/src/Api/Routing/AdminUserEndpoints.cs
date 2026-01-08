@@ -3,6 +3,7 @@ using Api.BoundedContexts.Administration.Application.DTOs;
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.Extensions;
+using Api.Infrastructure.Security;
 using Api.Models;
 using Api.SharedKernel.Domain.Exceptions;
 using MediatR;
@@ -197,7 +198,7 @@ internal static class AdminUserEndpoints
         var (authorized, session, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
-        logger.LogInformation("Admin {AdminId} creating new user with email {Email}", session!.User!.Id, request.Email);
+        logger.LogInformation("Admin {AdminId} creating new user with email {Email}", session!.User!.Id, DataMasking.MaskEmail(request.Email));
         var command = new CreateUserCommand(request.Email, request.Password, request.DisplayName, request.Role ?? "user");
         var user = await mediator.Send(command, ct).ConfigureAwait(false);
         logger.LogInformation("User {UserId} created successfully", user.Id);

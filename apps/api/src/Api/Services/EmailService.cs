@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Net;
 using System.Net.Mail;
+using Api.Infrastructure.Security;
 using Microsoft.Extensions.Configuration;
 
 namespace Api.Services;
@@ -68,7 +69,7 @@ internal class EmailService : IEmailService
 
             _logger.LogInformation(
                 "Password reset email sent successfully to {Email}",
-                toEmail);
+                DataMasking.MaskEmail(toEmail));
         }
 #pragma warning disable CA1031 // Do not catch general exception types
         // Justification: Infrastructure adapter - Wraps external SMTP service exceptions (authentication, network, timeout) into domain exception
@@ -78,7 +79,7 @@ internal class EmailService : IEmailService
             _logger.LogError(
                 ex,
                 "Failed to send password reset email to {Email}",
-                toEmail);
+                DataMasking.MaskEmail(toEmail));
             throw new InvalidOperationException("Failed to send password reset email", ex);
         }
 #pragma warning restore CA1031
@@ -114,7 +115,7 @@ internal class EmailService : IEmailService
 
             _logger.LogInformation(
                 "Two-factor authentication disabled email sent successfully to {Email} (Admin override: {AdminOverride})",
-                toEmail,
+                DataMasking.MaskEmail(toEmail),
                 wasAdminOverride);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
@@ -125,7 +126,7 @@ internal class EmailService : IEmailService
             _logger.LogError(
                 ex,
                 "Failed to send two-factor authentication disabled email to {Email}",
-                toEmail);
+                DataMasking.MaskEmail(toEmail));
             throw new InvalidOperationException("Failed to send two-factor authentication disabled email", ex);
         }
 #pragma warning restore CA1031

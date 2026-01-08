@@ -58,6 +58,10 @@ export const useChatStoreWithSelectors = createSelectors(useChatStore);
 // Convenience Hooks for Common Patterns
 // ============================================================================
 
+// Stable empty array to prevent infinite re-renders
+// React will re-render if selector returns new reference each time
+const EMPTY_ARRAY: never[] = [];
+
 /**
  * Get current game's chats
  * Combines selectedGameId + chatsByGame for convenience
@@ -65,8 +69,8 @@ export const useChatStoreWithSelectors = createSelectors(useChatStore);
 export function useCurrentChats() {
   return useChatStore(state => {
     const gameId = state.selectedGameId;
-    if (!gameId) return [];
-    return state.chatsByGame[gameId] ?? [];
+    if (!gameId) return EMPTY_ARRAY;
+    return state.chatsByGame[gameId] ?? EMPTY_ARRAY;
   });
 }
 
@@ -94,12 +98,12 @@ export function useActiveChat() {
 export function useActiveMessages() {
   return useChatStore(state => {
     const gameId = state.selectedGameId;
-    if (!gameId) return [];
+    if (!gameId) return EMPTY_ARRAY;
 
     const activeChatId = state.activeChatIds[gameId];
-    if (!activeChatId) return [];
+    if (!activeChatId) return EMPTY_ARRAY;
 
-    return state.messagesByChat[activeChatId] ?? [];
+    return state.messagesByChat[activeChatId] ?? EMPTY_ARRAY;
   });
 }
 

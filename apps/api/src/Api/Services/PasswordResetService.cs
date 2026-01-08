@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using Api.Helpers;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.Services;
@@ -56,7 +57,7 @@ internal class PasswordResetService : IPasswordResetService
         {
             _logger.LogWarning(
                 "Password reset rate limit exceeded for email: {Email}. Retry after {RetryAfter}s",
-                normalizedEmail,
+                DataMasking.MaskEmail(normalizedEmail),
                 rateLimitResult.RetryAfterSeconds);
             throw new InvalidOperationException("Too many password reset requests. Please try again later.");
         }

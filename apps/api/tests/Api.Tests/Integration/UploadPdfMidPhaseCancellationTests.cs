@@ -53,7 +53,6 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
     private readonly SharedTestcontainersFixture _fixture;
     private string _isolatedDbConnectionString = string.Empty;
     private string _databaseName = string.Empty;
-    private IContainer? _redisContainer;
     private MeepleAiDbContext? _dbContext;
     private IServiceProvider? _serviceProvider;
     private IConnectionMultiplexer? _redis;
@@ -68,27 +67,15 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
 
     public async ValueTask InitializeAsync()
     {
-        // Issue #2031: Migrated to SharedTestcontainersFixture for Docker hijack prevention and performance
+        // Issue #2031: Use SharedTestcontainersFixture for both PostgreSQL AND Redis to prevent Docker hijack
         _databaseName = "test_uploadcancel";
         _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
         _testDataDirectory = Path.Combine(Path.GetTempPath(), "meepleai-midphase-test-" + Guid.NewGuid());
         Directory.CreateDirectory(_testDataDirectory);
 
-        // Start Redis container
-        _redisContainer = new ContainerBuilder()
-            .WithImage("redis:7-alpine")
-            .WithPortBinding(6379, true)
-            .WithCommand("redis-server", "--save", "\"\"", "--appendonly", "no")
-            .WithWaitStrategy(Wait.ForUnixContainer()
-                .UntilCommandIsCompleted("redis-cli", "ping"))
-            .Build();
-
-        await _redisContainer.StartAsync(TestCancellationToken);
-
-        // Setup services
-        var redisPort = _redisContainer.GetMappedPublicPort(6379);
-        var redisConnectionString = $"localhost:{redisPort}";
+        // Use SharedTestcontainersFixture Redis (no separate container needed!)
+        var redisConnectionString = _fixture.RedisConnectionString;
 
         var services = new ServiceCollection();
         services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
@@ -166,11 +153,7 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
             }
         }
 
-        if (_redisContainer != null)
-        {
-            await _redisContainer.StopAsync(TestCancellationToken);
-            await _redisContainer.DisposeAsync();
-        }
+        // Issue #2031: No separate Redis container to dispose (using SharedTestcontainersFixture)
     }
 
     private void RegisterDefaultMockServices(IServiceCollection services)
@@ -241,6 +224,11 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
             var quotaMock = new Mock<IPdfUploadQuotaService>();
             quotaMock.Setup(q => q.CheckQuotaAsync(It.IsAny<Guid>(), It.IsAny<UserTier>(), It.IsAny<AuthRole>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(PdfUploadQuotaResult.Success(0, int.MaxValue, 0, int.MaxValue, DateTime.MaxValue, DateTime.MaxValue));
+            // FIX: Add missing ReserveQuotaAsync mock setup (Issue #2307 - PDF test failures)
+            quotaMock.Setup(q => q.ReserveQuotaAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(QuotaReservationResult.Success(DateTime.UtcNow.AddHours(1)));
+            quotaMock.Setup(q => q.ReleaseQuotaAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .Returns(Task.CompletedTask);
             services.AddSingleton<IPdfUploadQuotaService>(quotaMock.Object);
         }
     }

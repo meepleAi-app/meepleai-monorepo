@@ -55,26 +55,6 @@ internal static class CookieHelpers
         context.Response.Cookies.Delete(sessionCookieName, options);
     }
 
-    // User Role Cookie Methods
-
-    public static void WriteUserRoleCookie(HttpContext context, string role, DateTime expiresAt)
-    {
-        ArgumentNullException.ThrowIfNull(context);
-        var options = CreateUserRoleCookieOptions(context, expiresAt);
-        const string roleCookieName = "meepleai_user_role";
-        context.Response.Cookies.Append(roleCookieName, role, options);
-    }
-
-    public static void RemoveUserRoleCookie(HttpContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
-        var options = BuildUserRoleCookieOptions(context);
-        options.Expires = DateTimeOffset.UnixEpoch;
-
-        const string roleCookieName = "meepleai_user_role";
-        context.Response.Cookies.Delete(roleCookieName, options);
-    }
-
     // API Key Cookie Methods
 
     public static void WriteApiKeyCookie(HttpContext context, string apiKey, DateTime? expiresAt = null)
@@ -233,60 +213,4 @@ internal static class CookieHelpers
         return options;
     }
 
-    private static CookieOptions CreateUserRoleCookieOptions(HttpContext context, DateTime expiresAt)
-    {
-        ArgumentNullException.ThrowIfNull(context);
-        var options = BuildUserRoleCookieOptions(context);
-        options.Expires = expiresAt;
-        return options;
-    }
-
-    private static CookieOptions BuildUserRoleCookieOptions(HttpContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
-        var configuration = GetSessionCookieConfiguration(context);
-        var isHttps = context.Request.IsHttps;
-
-        if (!isHttps && configuration.UseForwardedProto &&
-            context.Request.Headers.TryGetValue("X-Forwarded-Proto", out var forwardedProto))
-        {
-            if (forwardedProto.Any(proto => string.Equals(proto, "https", StringComparison.OrdinalIgnoreCase)))
-            {
-                isHttps = true;
-            }
-        }
-
-        var secure = configuration.Secure ?? isHttps;
-        var secureForced = false;
-
-        if (!secure && !configuration.Secure.HasValue)
-        {
-            secure = true;
-            secureForced = true;
-        }
-
-        var sameSite = configuration.SameSite ?? (secure ? SameSiteMode.None : SameSiteMode.Lax);
-
-        if (secureForced && sameSite != SameSiteMode.None)
-        {
-            sameSite = SameSiteMode.None;
-        }
-
-        var path = string.IsNullOrWhiteSpace(configuration.Path) ? "/" : configuration.Path;
-
-        var options = new CookieOptions
-        {
-            HttpOnly = false, // Allow JavaScript to read for client-side routing
-            Secure = secure,
-            SameSite = sameSite,
-            Path = path
-        };
-
-        if (!string.IsNullOrWhiteSpace(configuration.Domain))
-        {
-            options.Domain = configuration.Domain;
-        }
-
-        return options;
-    }
 }

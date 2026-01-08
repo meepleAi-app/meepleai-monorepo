@@ -1,6 +1,7 @@
 using Api.Configuration;
 using Api.Extensions;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Security;
 using Api.Models;
 using Api.Services;
 using MediatR;
@@ -64,10 +65,9 @@ internal static class AuthenticationEndpoints
                 IpAddress: context.Connection.RemoteIpAddress?.ToString(),
                 UserAgent: context.Request.Headers.UserAgent.ToString());
 
-            logger.LogInformation("User registration attempt for {Email}", payload.Email);
+            logger.LogInformation("User registration attempt for {Email}", DataMasking.MaskEmail(payload.Email));
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
             CookieHelpers.WriteSessionCookie(context, result.SessionToken, result.ExpiresAt);
-            CookieHelpers.WriteUserRoleCookie(context, result.User.Role, result.ExpiresAt);
             logger.LogInformation("User {UserId} registered successfully with role {Role}", result.User.Id, result.User.Role);
 
             return Results.Json(new { user = result.User, expiresAt = result.ExpiresAt });
@@ -96,7 +96,7 @@ internal static class AuthenticationEndpoints
                 IpAddress: context.Connection.RemoteIpAddress?.ToString(),
                 UserAgent: context.Request.Headers.UserAgent.ToString());
 
-            logger.LogInformation("Login attempt for {Email}", payload.Email);
+            logger.LogInformation("Login attempt for {Email}", DataMasking.MaskEmail(payload.Email));
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
             if (result.RequiresTwoFactor)
@@ -112,7 +112,7 @@ internal static class AuthenticationEndpoints
 
             if (result.User == null || result.SessionToken == null)
             {
-                logger.LogWarning("Login failed for {Email}: missing user or session token", payload.Email);
+                logger.LogWarning("Login failed for {Email}: missing user or session token", DataMasking.MaskEmail(payload.Email));
                 CookieHelpers.RemoveSessionCookie(context);
                 return Results.Unauthorized();
             }
@@ -120,7 +120,6 @@ internal static class AuthenticationEndpoints
             var sessionExpirationDays = (await configService.GetValueAsync<int?>("Authentication:SessionManagement:SessionExpirationDays", 30).ConfigureAwait(false)) ?? 30;
             var expiresAt = DateTime.UtcNow.AddDays(sessionExpirationDays);
             CookieHelpers.WriteSessionCookie(context, result.SessionToken, expiresAt);
-            CookieHelpers.WriteUserRoleCookie(context, result.User.Role, expiresAt);
             logger.LogInformation("User {UserId} logged in successfully", result.User.Id);
 
             return Results.Json(new { user = result.User, expiresAt });
@@ -142,7 +141,6 @@ internal static class AuthenticationEndpoints
             }
 
             CookieHelpers.RemoveSessionCookie(context);
-            CookieHelpers.RemoveUserRoleCookie(context);
             return Results.Json(new { ok = true });
         });
     }
@@ -170,7 +168,6 @@ internal static class AuthenticationEndpoints
 
             var protectedApiKey = apiKeyCookieService.Protect(payload.ApiKey);
             CookieHelpers.WriteApiKeyCookie(context, protectedApiKey);
-            CookieHelpers.WriteUserRoleCookie(context, result.User.Role, DateTime.UtcNow.AddDays(90));
             logger.LogInformation("User {UserId} validated API key {ApiKeyId} and cookie issued", result.User.Id, result.ApiKeyId);
 
             return Results.Json(new
@@ -198,7 +195,6 @@ Clients can also store the key securely and send it via the `Authorization: ApiK
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
             CookieHelpers.RemoveApiKeyCookie(context);
-            CookieHelpers.RemoveUserRoleCookie(context);
             logger.LogInformation("API key cookie removed");
 
             return Results.Json(new { ok = true, message = result.Message });
@@ -519,7 +515,6 @@ Clients can also store the key securely and send it via the `Authorization: ApiK
             if (result.CurrentSessionRevoked)
             {
                 CookieHelpers.RemoveSessionCookie(context);
-                CookieHelpers.RemoveUserRoleCookie(context);
             }
 
             logger.LogInformation(

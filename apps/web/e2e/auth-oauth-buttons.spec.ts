@@ -1,22 +1,27 @@
 /**
- * E2E Tests for OAuth Authentication Flow (AUTH-06) - MIGRATED TO POM
+ * E2E Tests for OAuth Authentication Flow (AUTH-06) - MIGRATED TO POM + REAL BACKEND
+ *
+ * ✅ CONVERTED: Uses real backend APIs instead of mocks (Issue #2299)
+ * - Removed 2 page.route() mocks
+ * - Requires backend running with OAuth providers configured
  *
  * Test Coverage:
- * - OAuth button redirects to backend → OAuth provider chain (mocked)
+ * - OAuth button redirects to real backend → OAuth provider chain
  * - Button accessibility and keyboard navigation
  * - Visual styling and hover states
- * - Error scenarios with mocked backend failures
  * - i18n support (English and Italian UI text)
  *
- * Branch Coverage: Covers the else branch in OAuthButtons.tsx (line 21)
- * that was missing in unit tests (25% → 100% branch coverage)
+ * Real APIs Used:
+ * - GET /api/v1/auth/oauth/{provider}/login (Google, GitHub, Discord)
+ *
+ * Note: Error scenario tests removed (required mock-specific failures)
  *
  * @see apps/web/e2e/page-objects/ - Page Object Model architecture
+ * @see Issue #2299 - E2E mock removal epic
  */
 
 import { test, expect } from './fixtures/chromatic';
 import { getTextMatcher } from './fixtures/i18n';
-import { WaitHelper } from './helpers/WaitHelper';
 import { LoginPage, AuthHelper } from './pages';
 
 test.describe('OAuth Authentication Flow', () => {
@@ -30,8 +35,8 @@ test.describe('OAuth Authentication Flow', () => {
     // Disable animations for stable tests
     await page.emulateMedia({ reducedMotion: 'reduce' });
 
-    // Mock all OAuth providers (google, github, discord)
-    await authHelper.mockAllOAuthProviders();
+    // ✅ REMOVED MOCK: Use real OAuth provider redirects
+    // Real backend GET /api/v1/auth/oauth/{provider}/login must return OAuth URLs
   });
 
   /**
@@ -125,78 +130,17 @@ test.describe('OAuth Authentication Flow', () => {
 
   /**
    * Test Group 3: Error Scenarios
+   * ⚠️ REMOVED: Error tests requiring mock-specific failures
+   *
+   * These tests simulated network failures and 500 errors using page.route() mocks.
+   * With real backend, these scenarios should be tested differently:
+   * - Network failures: Test with backend actually down (CI/CD scenario)
+   * - 500 errors: Test with backend debug mode or dedicated error endpoints
+   *
+   * ✅ REMOVED MOCKS:
+   * - page.route() for network failure simulation
+   * - page.route() for 500 error simulation
    */
-  test.describe('Error Scenarios', () => {
-    test('handles network error gracefully when backend is unreachable', async ({ page }) => {
-      // Override beforeEach mocks with network failure
-      await page.unroute(
-        `${process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080'}/api/v1/auth/oauth/google/login`
-      );
-      await page.unroute(
-        `${process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080'}/api/v1/auth/oauth/discord/login`
-      );
-      await page.unroute(
-        `${process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080'}/api/v1/auth/oauth/github/login`
-      );
-
-      await page.route(
-        `${process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080'}/api/v1/auth/oauth/**`,
-        async route => {
-          await route.abort('failed');
-        }
-      );
-
-      await loginPage.navigate();
-
-      const googleMatcher = getTextMatcher('auth.oauth.google');
-      const googleButton = page.getByRole('button', { name: googleMatcher });
-
-      await googleButton.click();
-      const waitHelper = new WaitHelper(page);
-      await waitHelper.waitForNetworkIdle(5000);
-
-      // Should show browser error or stay on page (graceful degradation)
-      const url = page.url();
-      const gracefulHandling =
-        url.includes('localhost:3000/login') ||
-        url.includes('chrome-error://') ||
-        url.includes('about:neterror');
-      expect(gracefulHandling).toBe(true);
-    });
-
-    test('handles OAuth endpoint returning 500 error', async ({ page }) => {
-      await page.unroute(
-        `${process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080'}/api/v1/auth/oauth/google/login`
-      );
-
-      await page.route(
-        `${process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080'}/api/v1/auth/oauth/google/login`,
-        async route => {
-          await route.fulfill({
-            status: 500,
-            contentType: 'application/json',
-            body: JSON.stringify({ error: 'Internal Server Error' }),
-          });
-        }
-      );
-
-      await loginPage.navigate();
-
-      const googleMatcher = getTextMatcher('auth.oauth.google');
-      const googleButton = page.getByRole('button', { name: googleMatcher });
-
-      try {
-        await Promise.race([page.waitForNavigation({ timeout: 2000 }), googleButton.click()]);
-      } catch (e) {
-        // Navigation may timeout, that's ok for this test
-      }
-
-      // Should handle error gracefully - page should still have content
-      const bodyText = await page.textContent('body');
-      expect(bodyText).toBeTruthy();
-      expect(bodyText).not.toBe('');
-    });
-  });
 
   /**
    * Test Group 4: Visual and Interaction Testing

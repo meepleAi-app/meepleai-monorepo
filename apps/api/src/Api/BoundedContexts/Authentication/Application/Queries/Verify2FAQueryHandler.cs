@@ -1,4 +1,5 @@
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
+using Api.Infrastructure.Security;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 
@@ -35,7 +36,7 @@ internal class Verify2FAQueryHandler : IQueryHandler<Verify2FAQuery, Verify2FARe
 
             if (user == null)
             {
-                _logger.LogWarning("2FA verify failed: User not found for email {Email}", query.Email);
+                _logger.LogWarning("2FA verify failed: User not found for email {Email}", DataMasking.MaskEmail(query.Email));
                 return new Verify2FAResult(IsValid: false, ErrorMessage: "User not found");
             }
 
@@ -58,7 +59,7 @@ internal class Verify2FAQueryHandler : IQueryHandler<Verify2FAQuery, Verify2FARe
         // to prevent exception propagation to API layer. Returns Result pattern.
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error verifying 2FA code for email {Email}", query.Email);
+            _logger.LogError(ex, "Error verifying 2FA code for email {Email}", DataMasking.MaskEmail(query.Email));
             return new Verify2FAResult(IsValid: false, ErrorMessage: "Verification error");
         }
 #pragma warning restore CA1031

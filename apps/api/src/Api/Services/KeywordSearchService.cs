@@ -230,9 +230,9 @@ internal class KeywordSearchService : IKeywordSearchService
     /// </summary>
     /// <remarks>
     /// Examples:
-    /// - Simple: "castling" → "castling"
-    /// - Phrase: "en passant" with phraseSearch=true → "en <-> passant"
-    /// - Boost: "check" with boostTerms=["check", "checkmate"] → "check:A | checkmate:A"
+    /// - Simple: "castling" returns "castling"
+    /// - Phrase: "en passant" with phraseSearch=true returns "en passant" with proximity operator
+    /// - Boost: "check" with boostTerms=["check", "checkmate"] returns boosted query
     /// </remarks>
     private string BuildTsQuery(string query, bool phraseSearch, List<string>? boostTerms)
     {

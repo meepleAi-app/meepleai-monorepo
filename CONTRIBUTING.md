@@ -473,6 +473,34 @@ pnpm test:e2e:ui
 - [ ] Commits follow conventional commit format
 - [ ] Branch is up-to-date with `main`
 
+### PR Scope Guidelines
+
+**Keep PRs focused on a single concern:**
+- Each PR should address one issue or feature
+- Bundling unrelated fixes reduces clarity and complicates rollbacks
+
+**If discovering related issues during work:**
+
+**Option A: Separate PR** (Recommended)
+- Create a new issue for unrelated fix
+- Submit separate PR linked to new issue
+- Keeps git history clean and rollbacks safe
+
+**Option B: Document in PR Body**
+- If fixes are tightly coupled or block the same workflow
+- Clearly document all additional fixes in PR description
+- Example: "Also fixes: coverlet XML merge error, schema validation script"
+
+**CI/CD Fixes Exception:**
+- Multiple CI fixes can be bundled if they block the same workflow
+- Example: database auth + test configuration in same CI job
+- Still document all fixes in PR body
+
+**Rationale:**
+- Git history easier to navigate
+- Safer rollbacks if one fix causes issues
+- Better PR clarity and review focus
+
 ### Creating a PR
 
 1. **Push Your Branch**:

@@ -239,7 +239,9 @@ internal static class ApplicationServiceExtensions
     public static IServiceCollection AddFluentValidation(this IServiceCollection services)
     {
         // Register all validators from the Authentication bounded context
-        services.AddValidatorsFromAssemblyContaining<BoundedContexts.Authentication.Application.Validators.LoginCommandValidator>();
+        // NOTE: includeInternalTypes: true required because validators are internal sealed classes
+        services.AddValidatorsFromAssemblyContaining<BoundedContexts.Authentication.Application.Validators.LoginCommandValidator>(
+            includeInternalTypes: true);
 
         return services;
     }

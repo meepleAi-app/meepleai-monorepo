@@ -30,8 +30,17 @@ internal class RateLimitingMiddleware
     {
         try
         {
+            // Issue #2296: Explicit bypass for CI/testing - primary mechanism
+            // More reliable than ASPNETCORE_ENVIRONMENT which has initialization subtleties
+            var disableRateLimiting = Environment.GetEnvironmentVariable("DISABLE_RATE_LIMITING");
+            if (string.Equals(disableRateLimiting, "true", StringComparison.OrdinalIgnoreCase))
+            {
+                await _next(context).ConfigureAwait(false);
+                return;
+            }
+
             // Issue #2286: Disable rate limiting for CI environment (K6 performance tests)
-            // Check both IHostEnvironment and direct env var as fallback
+            // Defense in depth: fallback to environment-based detection
             var env = context.RequestServices.GetRequiredService<IHostEnvironment>();
             var aspnetcoreEnv = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
             if (string.Equals(env.EnvironmentName, "CI", StringComparison.Ordinal) ||

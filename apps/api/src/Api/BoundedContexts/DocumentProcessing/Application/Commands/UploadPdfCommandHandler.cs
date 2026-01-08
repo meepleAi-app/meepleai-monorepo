@@ -110,7 +110,6 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
     /// </summary>
     /// <param name="file"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="fileName">The file name for logging</param>
     /// <returns>Tuple of (isValid, errorMessage)</returns>
 
     /// <summary>

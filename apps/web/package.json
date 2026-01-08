@@ -63,6 +63,7 @@
     ]
   },
   "dependencies": {
+    "@emotion/is-prop-valid": "^1.4.0",
     "@hookform/resolvers": "^5.2.2",
     "@hyperdx/browser": "^0.22.0",
     "@monaco-editor/react": "^4.7.0",
@@ -102,7 +103,7 @@
     "framer-motion": "^12.23.25",
     "fuse.js": "^7.1.0",
     "html2canvas": "^1.4.1",
-    "jspdf": "^3.0.4",
+    "jspdf": "^4.0.0",
     "lucide-react": "^0.556.0",
     "next": "16.1.1",
     "next-intl": "^4.6.0",
@@ -205,6 +206,7 @@
   },
   "pnpm": {
     "overrides": {
+      "@babel/runtime": ">=7.26.10",
       "dompurify": ">=3.2.4",
       "glob": ">=10.5.0",
       "js-yaml": ">=4.1.1",

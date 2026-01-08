@@ -3,6 +3,7 @@ using Api.Configuration; // CHAT-02
 using Api.Extensions;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Security;
 using Api.Logging;
 using Api.Middleware;
 using Api.Models;
@@ -495,7 +496,7 @@ static bool TryGetAdminCredentials(
     // Validate email format
     if (!adminEmail.Contains('@'))
     {
-        app.Logger.LogError("Invalid INITIAL_ADMIN_EMAIL format: {Email}", adminEmail);
+        app.Logger.LogError("Invalid INITIAL_ADMIN_EMAIL format: {Email}", DataMasking.MaskEmail(adminEmail));
         return false;
     }
 
@@ -678,7 +679,7 @@ static async Task CreateDemoUserIfNotExists(
     }
     catch (Exception ex)
     {
-        app.Logger.LogWarning(ex, "Failed to create demo user {Email} - non-critical for production", email);
+        app.Logger.LogWarning(ex, "Failed to create demo user {Email} - non-critical for production", DataMasking.MaskEmail(email));
     }
 }
 

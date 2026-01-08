@@ -4,7 +4,7 @@ namespace Api.Helpers;
 
 /// <summary>
 /// Wrapper interface for IConfiguration to enable mocking of extension methods.
-/// Solves TEST-900 RC-1: Moq cannot mock extension methods like Exists() and GetValue<T>().
+/// Solves TEST-900 RC-1: Moq cannot mock extension methods like Exists() and GetValue().
 /// </summary>
 internal interface IConfigurationWrapper
 {
@@ -16,7 +16,7 @@ internal interface IConfigurationWrapper
 
     /// <summary>
     /// Gets a typed configuration value.
-    /// Wraps ConfigurationBinder.GetValue<T>() extension method.
+    /// Wraps ConfigurationBinder.GetValue() extension method.
     /// </summary>
     T? GetValue<T>(string key);
 

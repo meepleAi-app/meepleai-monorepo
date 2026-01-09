@@ -5,18 +5,19 @@
  * Covers both API-level and UI-level game creation flows.
  *
  * Test Coverage:
- * - Admin can create game via API
- * - Editor can create game via API
- * - Regular user cannot create game (403)
- * - Admin can create game via UI (upload page)
- * - Validation errors are handled correctly
- * - Game creation with all required fields
+ * - Admin can create game via API ✅ (Real Backend)
+ * - Editor can create game via API ✅ (Real Backend)
+ * - Regular user cannot create game (403) ⏭️ (Error injection - skipped)
+ * - Admin can create game via UI ✅ (Real Backend)
+ * - Validation errors are handled correctly ✅ (Real Backend)
+ * - Game creation with all required fields ✅ (Real Backend)
  *
  * @see apps/api/src/Api/BoundedContexts/GameManagement
  * @see apps/web/e2e/pages/upload/UploadPage.ts
  */
 
 import { test, expect } from './fixtures/chromatic';
+import { AuthHelper, USER_FIXTURES } from './pages';
 import { UploadPage } from './pages/upload/UploadPage';
 
 /**
@@ -400,46 +401,16 @@ test.describe('Admin Game Creation', () => {
 
     test('Admin can create game via upload page UI', async ({ page }) => {
       const uploadPage = new UploadPage(page);
+      const authHelper = new AuthHelper(page);
       const gameTitle = generateGameTitle('UI Created Game');
 
-      // Mock auth endpoint to return admin user (only intercepts browser-side requests)
-      await page.route(`${API_BASE}${ENDPOINTS.AUTH_ME}`, async route => {
-        await route.fulfill({
-          status: HTTP_STATUS.OK,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            user: createMockUser(ROLES.ADMIN, CREDENTIALS.ADMIN.email),
-            expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-          }),
-        });
-      });
+      // ✅ CHANGED: Use AuthHelper instead of inline /auth/me mock
+      await authHelper.mockAuthenticatedSession(USER_FIXTURES.admin);
 
-      // Mock games list endpoint
-      await page.route(`${API_BASE}${ENDPOINTS.GAMES}`, async route => {
-        const method = route.request().method();
-
-        if (method === 'GET') {
-          await route.fulfill({
-            status: HTTP_STATUS.OK,
-            contentType: 'application/json',
-            body: JSON.stringify([]),
-          });
-        } else if (method === 'POST') {
-          const requestData = route.request().postDataJSON();
-          await route.fulfill({
-            status: HTTP_STATUS.CREATED,
-            contentType: 'application/json',
-            body: JSON.stringify({
-              id: `game-${Date.now()}`,
-              ...requestData,
-              createdAt: new Date().toISOString(),
-            }),
-          });
-        }
-      });
-
-      // Set session cookies
-      await page.context().addCookies(createSessionCookies(ROLES.ADMIN, 'ui-create'));
+      // ✅ REMOVED MOCK: Use real Games API (GET + POST)
+      // Real backend GET /api/v1/games must return game list
+      // Real backend POST /api/v1/games must create game and return 201
+      // Note: UI test verifies upload page workflow with backend seeded data
 
       // Navigate to upload page
       await page.goto('/upload');
@@ -464,29 +435,13 @@ test.describe('Admin Game Creation', () => {
     });
 
     test('Upload page shows game creation form for admin', async ({ page }) => {
-      // Mock auth endpoint to return admin user
-      await page.route(`${API_BASE}${ENDPOINTS.AUTH_ME}`, async route => {
-        await route.fulfill({
-          status: HTTP_STATUS.OK,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            user: createMockUser(ROLES.ADMIN, CREDENTIALS.ADMIN.email),
-            expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-          }),
-        });
-      });
+      const authHelper = new AuthHelper(page);
 
-      // Mock games list
-      await page.route(`${API_BASE}${ENDPOINTS.GAMES}`, async route => {
-        await route.fulfill({
-          status: HTTP_STATUS.OK,
-          contentType: 'application/json',
-          body: JSON.stringify([]),
-        });
-      });
+      // ✅ CHANGED: Use AuthHelper (replaces auth mock + cookies)
+      await authHelper.mockAuthenticatedSession(USER_FIXTURES.admin);
 
-      // Set session cookies
-      await page.context().addCookies(createSessionCookies(ROLES.ADMIN, 'form-check'));
+      // ✅ REMOVED MOCK: Use real Games API (GET)
+      // Real backend GET /api/v1/games must return game list for selector
 
       // Navigate to upload page
       await page.goto('/upload');
@@ -514,35 +469,14 @@ test.describe('Admin Game Creation', () => {
     });
 
     test('Game selector shows existing games', async ({ page }) => {
-      const existingGames = [
-        { id: 'game-1', title: 'Catan', publisher: 'Kosmos' },
-        { id: 'game-2', title: 'Ticket to Ride', publisher: 'Days of Wonder' },
-        { id: 'game-3', title: 'Pandemic', publisher: 'Z-Man Games' },
-      ];
+      const authHelper = new AuthHelper(page);
 
-      // Mock auth endpoint
-      await page.route(`${API_BASE}${ENDPOINTS.AUTH_ME}`, async route => {
-        await route.fulfill({
-          status: HTTP_STATUS.OK,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            user: createMockUser(ROLES.ADMIN, CREDENTIALS.ADMIN.email),
-            expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-          }),
-        });
-      });
+      // ✅ CHANGED: Use AuthHelper (replaces auth mock + cookies)
+      await authHelper.mockAuthenticatedSession(USER_FIXTURES.admin);
 
-      // Mock games list with existing games
-      await page.route(`${API_BASE}${ENDPOINTS.GAMES}`, async route => {
-        await route.fulfill({
-          status: HTTP_STATUS.OK,
-          contentType: 'application/json',
-          body: JSON.stringify(existingGames),
-        });
-      });
-
-      // Set session cookies
-      await page.context().addCookies(createSessionCookies(ROLES.ADMIN, 'existing-games'));
+      // ✅ REMOVED MOCK: Use real Games API (GET)
+      // Real backend GET /api/v1/games must return existing games from database
+      // Note: Test verifies game selector displays backend seeded games
 
       // Navigate to upload page
       await page.goto('/upload');
@@ -556,10 +490,14 @@ test.describe('Admin Game Creation', () => {
       if (await gameSelector.isVisible()) {
         await gameSelector.click();
 
-        // Verify existing games are listed
-        for (const game of existingGames) {
-          await expect(page.getByText(game.title)).toBeVisible({ timeout: 3000 });
-        }
+        // ✅ CHANGED: Verify selector shows backend games (not specific mock titles)
+        // Wait for dropdown options to appear
+        const options = page.locator('option, [role="option"]');
+        await expect(options.first()).toBeVisible({ timeout: 3000 });
+
+        // Verify at least one game option is available
+        const optionCount = await options.count();
+        expect(optionCount).toBeGreaterThan(0);
       }
     });
   });

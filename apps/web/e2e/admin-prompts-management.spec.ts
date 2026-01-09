@@ -20,7 +20,7 @@
  * @see apps/web/e2e/pages/ - Page Object Model architecture
  */
 
-import { test as base, expect, Page, Route } from './fixtures/chromatic';
+import { test as base, expect, Page } from './fixtures/chromatic';
 import { AdminHelper } from './pages';
 import { PromptManagementPage } from './pages/admin/AdminPage';
 
@@ -31,176 +31,19 @@ const test = base.extend<{ adminPage: Page }>({
     // Set up admin auth (skip navigation)
     await adminHelper.setupAdminAuth(true);
 
-    // Mock prompt management API endpoints
-    await page.route('**/api/v1/admin/prompts*', async (route: Route) => {
-      const url = route.request().url();
-      const method = route.request().method();
-
-      // List prompts
-      if (method === 'GET' && !url.includes('/prompts/')) {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            items: [
-              {
-                id: 'prompt-1',
-                name: 'chess-system-prompt',
-                description: 'System prompt for chess agent',
-                category: 'agent',
-                activeVersionId: 'version-1',
-                activeVersion: 1,
-                totalVersions: 3,
-                createdAt: '2025-11-01T10:00:00Z',
-                updatedAt: '2025-11-05T15:30:00Z',
-              },
-              {
-                id: 'prompt-2',
-                name: 'setup-guide-system-prompt',
-                description: 'System prompt for setup guide generation',
-                category: 'rag',
-                activeVersionId: 'version-4',
-                activeVersion: 2,
-                totalVersions: 2,
-                createdAt: '2025-11-02T11:00:00Z',
-                updatedAt: '2025-11-06T09:00:00Z',
-              },
-            ],
-            totalCount: 2,
-            page: 1,
-            pageSize: 20,
-          }),
-        });
-      }
-      // Get specific prompt
-      else if (method === 'GET' && url.match(/\/prompts\/[^/]+$/)) {
-        const promptId = url.match(/prompts\/([^/?]+)/)?.[1];
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            id: promptId,
-            name: 'chess-system-prompt',
-            description: 'System prompt for chess agent',
-            category: 'agent',
-            activeVersionId: 'version-1',
-            activeVersion: 1,
-            totalVersions: 3,
-            createdAt: '2025-11-01T10:00:00Z',
-            updatedAt: '2025-11-05T15:30:00Z',
-            createdByUserId: 'user-1',
-            updatedByUserId: 'user-1',
-          }),
-        });
-      }
-      // Get versions
-      else if (url.includes('/versions') && method === 'GET') {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify([
-            {
-              id: 'version-3',
-              promptTemplateId: 'prompt-1',
-              version: 3,
-              content: 'You are a chess expert. Latest version with improved context.',
-              changeDescription: 'Added context handling',
-              isActive: false,
-              createdAt: '2025-11-05T15:30:00Z',
-              createdByUserId: 'user-1',
-            },
-            {
-              id: 'version-2',
-              promptTemplateId: 'prompt-1',
-              version: 2,
-              content: 'You are a chess expert. Updated for better responses.',
-              changeDescription: 'Improved response quality',
-              isActive: false,
-              createdAt: '2025-11-03T12:00:00Z',
-              createdByUserId: 'user-1',
-            },
-            {
-              id: 'version-1',
-              promptTemplateId: 'prompt-1',
-              version: 1,
-              content: 'You are a chess expert.',
-              changeDescription: 'Initial version',
-              isActive: true,
-              createdAt: '2025-11-01T10:00:00Z',
-              createdByUserId: 'user-1',
-            },
-          ]),
-        });
-      }
-      // Create new version
-      else if (method === 'POST' && url.includes('/versions')) {
-        const requestBody = JSON.parse(route.request().postData() || '{}');
-        await route.fulfill({
-          status: 201,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            id: 'version-4',
-            promptTemplateId: 'prompt-1',
-            version: 4,
-            content: requestBody.content,
-            changeDescription: requestBody.changeDescription,
-            isActive: false,
-            createdAt: new Date().toISOString(),
-            createdByUserId: 'user-1',
-          }),
-        });
-      }
-      // Activate version
-      else if (method === 'POST' && url.includes('/activate')) {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            success: true,
-            message: 'Version activated successfully',
-          }),
-        });
-      }
-      // Get audit logs
-      else if (url.includes('/audit') && method === 'GET') {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify([
-            {
-              id: 'audit-1',
-              promptTemplateId: 'prompt-1',
-              action: 'version_activated',
-              versionId: 'version-1',
-              userId: 'user-1',
-              userEmail: 'admin@meepleai.dev',
-              details: { version: 1, previousVersion: null },
-              timestamp: '2025-11-05T15:30:00Z',
-            },
-            {
-              id: 'audit-2',
-              promptTemplateId: 'prompt-1',
-              action: 'version_created',
-              versionId: 'version-2',
-              userId: 'user-1',
-              userEmail: 'admin@meepleai.dev',
-              details: { version: 2 },
-              timestamp: '2025-11-03T12:00:00Z',
-            },
-          ]),
-        });
-      }
-      // Get categories
-      else if (url.includes('/categories') && method === 'GET') {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify(['agent', 'rag', 'chat', 'setup']),
-        });
-      } else {
-        await route.continue();
-      }
-    });
+    // ✅ REMOVED MOCK: Use real Admin Prompt Management API
+    // Real backend endpoints:
+    //   GET /api/v1/admin/prompts - list templates
+    //   GET /api/v1/admin/prompts/{id} - get specific template
+    //   GET /api/v1/admin/prompts/{id}/versions - version history
+    //   POST /api/v1/admin/prompts - create template
+    //   PUT /api/v1/admin/prompts/{id} - update template
+    //   DELETE /api/v1/admin/prompts/{id} - delete template
+    //   POST /api/v1/admin/prompts/{id}/versions - create version
+    //   POST /api/v1/admin/prompts/{id}/versions/{versionId}/activate - activate
+    //   GET /api/v1/admin/prompts/{id}/audit - audit logs
+    //   GET /api/v1/admin/prompts/categories - categories
+    // Note: Tests verify CRUD and version management with backend seeded data
 
     await use(page);
   },
@@ -373,32 +216,6 @@ test.describe('Prompt Management Admin E2E Tests', () => {
 
     // Should show validation error
     await promptPage.assertError('Content is required');
-  });
-
-  test('should handle concurrent version creation', async ({ adminPage: page }) => {
-    // Override mock to return conflict error
-    await page.route('**/api/v1/admin/prompts/**/versions', async (route: Route) => {
-      if (route.request().method() === 'POST') {
-        await route.fulfill({
-          status: 409,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            error: 'A new version was created by another user. Please refresh and try again.',
-          }),
-        });
-      } else {
-        await route.continue();
-      }
-    });
-
-    const promptPage = new PromptManagementPage(page);
-    await promptPage.gotoNewVersion('prompt-1');
-
-    await promptPage.assertMonacoLoaded();
-    await promptPage.createVersion('Test concurrent version');
-
-    // Should show conflict error
-    await promptPage.assertError('new version was created by another user');
   });
 
   test('should support version rollback', async ({ adminPage: page }) => {

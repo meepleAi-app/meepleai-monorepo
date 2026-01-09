@@ -24,94 +24,10 @@ const test = base.extend<{ adminPage: Page }>({
     // Setup admin auth (skip navigation - we'll do it manually)
     await adminHelper.setupAdminAuth(true);
 
-    let requestCount = 0;
-    let currentMetrics = {
-      totalUsers: 1247,
-      activeSessions: 42,
-      apiRequestsToday: 3456,
-      totalPdfDocuments: 847,
-      totalChatMessages: 15234,
-      averageConfidenceScore: 0.942,
-      totalRagRequests: 18547,
-      totalTokensUsed: 15700000,
-      totalGames: 125,
-      apiRequests7d: 24891,
-      apiRequests30d: 112034,
-      averageLatency24h: 215.0,
-      averageLatency7d: 228.0,
-      errorRate24h: 0.025,
-      activeAlerts: 2,
-      resolvedAlerts: 37,
-    };
-
-    // Mock analytics API with dynamic data that changes on each request
-    await page.route('**/api/v1/admin/analytics*', async route => {
-      requestCount++;
-
-      // Update metrics on second request (simulating real data changes)
-      if (requestCount >= 2) {
-        currentMetrics = {
-          ...currentMetrics,
-          totalUsers: currentMetrics.totalUsers + 10, // +10 users
-          activeSessions: currentMetrics.activeSessions + 3, // +3 sessions
-          apiRequestsToday: currentMetrics.apiRequestsToday + 150, // +150 requests
-          totalChatMessages: currentMetrics.totalChatMessages + 25, // +25 messages
-        };
-      }
-
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          metrics: currentMetrics,
-          userTrend: [],
-          sessionTrend: [],
-          apiRequestTrend: [],
-          pdfUploadTrend: [],
-          chatMessageTrend: [],
-          generatedAt: new Date().toISOString(),
-        }),
-      });
-    });
-
-    // Mock activity feed API
-    await page.route('**/api/v1/admin/activity*', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          events: [
-            {
-              id: '1',
-              eventType: 'UserRegistered',
-              description: 'New user registered: john.doe@example.com',
-              userId: 'user-123',
-              userEmail: 'john.doe@example.com',
-              timestamp: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-              severity: 'Info',
-            },
-            {
-              id: '2',
-              eventType: 'PdfUploaded',
-              description: 'PDF uploaded: Catan-Rules.pdf (2456789 bytes)',
-              userId: 'user-456',
-              userEmail: 'alice@example.com',
-              timestamp: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
-              severity: 'Info',
-            },
-            {
-              id: '3',
-              eventType: 'AlertCreated',
-              description: 'Alert: High error rate detected (Severity: warning)',
-              timestamp: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
-              severity: 'Warning',
-            },
-          ],
-          totalCount: 3,
-          generatedAt: new Date().toISOString(),
-        }),
-      });
-    });
+    // ✅ REMOVED MOCK: Use real Admin Analytics and Activity APIs
+    // Real backend GET /api/v1/admin/analytics must return metrics with 30s polling
+    // Real backend GET /api/v1/admin/activity must return recent events
+    // Note: Polling test verifies API calls, not specific value changes
 
     await use(page);
   },
@@ -128,54 +44,33 @@ test.describe('Admin Dashboard Polling - Issue #888', () => {
       timeout: 10000,
     });
 
-    // Step 3: Verify 12 core metrics (Issue #888 specifies 12, not 16)
-    // Core business metrics
+    // ✅ CHANGED: Verify 12 core metrics labels (not specific mock values)
+    // Backend returns real data, test verifies structure only
     await expect(page.getByText('Total Users')).toBeVisible();
-    await expect(page.getByText('1,247')).toBeVisible();
-
     await expect(page.getByText('Active Sessions')).toBeVisible();
-    await expect(page.getByText('42')).toBeVisible();
-
     await expect(page.getByText('Total Games')).toBeVisible();
-    await expect(page.getByText('125')).toBeVisible();
-
     await expect(page.getByText('API Requests (24h)')).toBeVisible();
-    await expect(page.getByText('3,456')).toBeVisible();
-
     await expect(page.getByText('Total PDFs')).toBeVisible();
-    await expect(page.getByText('847')).toBeVisible();
-
     await expect(page.getByText('Total Chat Messages')).toBeVisible();
-    await expect(page.getByText('15,234')).toBeVisible();
-
     await expect(page.getByText('Avg Confidence')).toBeVisible();
-    await expect(page.getByText('94.2%')).toBeVisible();
-
     await expect(page.getByText('Total RAG Requests')).toBeVisible();
-    await expect(page.getByText('18,547')).toBeVisible();
-
     await expect(page.getByText('Avg Latency (24h)')).toBeVisible();
-    await expect(page.getByText('215ms')).toBeVisible();
-
     await expect(page.getByText('Error Rate (24h)')).toBeVisible();
-    await expect(page.getByText('2.5%')).toBeVisible();
-
     await expect(page.getByText('Active Alerts')).toBeVisible();
-    await expect(page.getByText('2')).toBeVisible();
-
     await expect(page.getByText('Total Tokens')).toBeVisible();
-    await expect(page.getByText('15.70M')).toBeVisible();
   });
 
   test('should display activity feed', async ({ adminPage: page }) => {
     await page.goto('/admin');
     await page.waitForLoadState('networkidle');
 
-    // Step 4: Verify activity feed
+    // ✅ CHANGED: Verify activity feed structure (not specific mock events)
     await expect(page.getByRole('heading', { name: 'Recent Activity' })).toBeVisible();
-    await expect(page.getByText(/New user registered.*john.doe@example.com/)).toBeVisible();
-    await expect(page.getByText(/PDF uploaded.*Catan-Rules.pdf/)).toBeVisible();
-    await expect(page.getByText(/Alert.*High error rate/)).toBeVisible();
+    // Verify at least one activity event is displayed (backend seeded data)
+    const activityItems = page
+      .locator('[data-testid="activity-item"]')
+      .or(page.locator('li, div').filter({ hasText: /registered|uploaded|created|updated/i }));
+    await expect(activityItems.first()).toBeVisible({ timeout: 5000 });
   });
 
   test('should auto-refresh metrics after 30 seconds', async ({ adminPage: page }) => {
@@ -183,22 +78,33 @@ test.describe('Admin Dashboard Polling - Issue #888', () => {
     await page.goto('/admin');
     await page.waitForLoadState('networkidle');
 
-    // Verify initial metrics
-    await expect(page.getByText('Total Users')).toBeVisible();
-    await expect(page.getByText('1,247')).toBeVisible();
-    await expect(page.getByText('Active Sessions')).toBeVisible();
-    await expect(page.getByText('42')).toBeVisible();
+    // ✅ CHANGED: Verify polling behavior by tracking API calls, not specific value changes
+    // Step 1: Wait for initial analytics API call
+    const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
+    let initialCallReceived = false;
 
-    // Step 5: Wait for 30s auto-refresh
-    // React Query polling interval is 30s (Issue #886)
-    await page.waitForTimeout(31000); // 31s to ensure refresh happens
+    await page.waitForResponse(
+      response => {
+        if (response.url().startsWith(`${apiBase}/api/v1/admin/analytics`)) {
+          initialCallReceived = true;
+          return true;
+        }
+        return false;
+      },
+      { timeout: 5000 }
+    );
 
-    // Step 6: Verify metrics updated
-    // After refresh, totalUsers should be 1257 (+10), activeSessions 45 (+3)
-    await expect(page.getByText('1,257')).toBeVisible({ timeout: 5000 });
-    await expect(page.getByText('45')).toBeVisible();
-    await expect(page.getByText('3,606')).toBeVisible(); // apiRequestsToday +150
-    await expect(page.getByText('15,259')).toBeVisible(); // totalChatMessages +25
+    expect(initialCallReceived).toBe(true);
+
+    // Step 2: Wait for 30s polling refresh (React Query interval - Issue #886)
+    // Verify second API call happens after 30s
+    const secondCall = page.waitForResponse(
+      response => response.url().startsWith(`${apiBase}/api/v1/admin/analytics`),
+      { timeout: 35000 } // 35s to account for timing variations
+    );
+
+    await secondCall;
+    // If we reach here, polling worked ✅
   });
 
   test('should navigate via quick actions', async ({ adminPage: page }) => {

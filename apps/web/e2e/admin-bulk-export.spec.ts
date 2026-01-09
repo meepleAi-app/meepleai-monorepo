@@ -29,59 +29,10 @@ const test = base.extend<{ adminPage: Page }>({
     // Set up admin auth with mocks (skip navigation)
     await adminHelper.setupAdminAuth(true);
 
-    // Mock games endpoint
-    await page.route('**/api/v1/games', async (route: Route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([
-          {
-            id: 'chess',
-            title: 'Chess',
-            description: 'Classic chess game',
-            createdAt: '2025-11-01T10:00:00Z',
-          },
-          {
-            id: 'monopoly',
-            name: 'Monopoly',
-            description: 'Property trading board game',
-            createdAt: '2025-11-02T11:00:00Z',
-          },
-          {
-            id: 'scrabble',
-            name: 'Scrabble',
-            description: 'Word-building game',
-            createdAt: '2025-11-03T12:00:00Z',
-          },
-          {
-            id: 'risk',
-            name: 'Risk',
-            description: 'Strategy war game',
-            createdAt: '2025-11-04T13:00:00Z',
-          },
-        ]),
-      });
-    });
-
-    // Mock bulk export endpoint
-    await page.route('**/api/v1/rulespecs/bulk/export', async (route: Route) => {
-      const requestBody = JSON.parse(route.request().postData() || '{}');
-      const ruleSpecIds = requestBody.ruleSpecIds || [];
-
-      // Simulate ZIP file creation
-      const zipContent = Buffer.from('PK\x03\x04'); // Minimal ZIP header
-      const timestamp = new Date().toISOString().split('T')[0];
-      const filename = `rulespecs-bulk-${timestamp}.zip`;
-
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/zip',
-        headers: {
-          'Content-Disposition': `attachment; filename="${filename}"`,
-        },
-        body: zipContent,
-      });
-    });
+    // ✅ REMOVED MOCK: Use real Game and RuleSpec Bulk Export APIs
+    // Real backend GET /api/v1/games must return game list for selection
+    // Real backend POST /api/v1/rulespecs/bulk/export must return ZIP file
+    // Note: Tests verify UI interactions and ZIP download trigger
 
     await use(page);
   },

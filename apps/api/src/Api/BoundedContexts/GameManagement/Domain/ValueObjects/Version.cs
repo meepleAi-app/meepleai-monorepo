@@ -11,8 +11,8 @@ namespace Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 internal sealed class Version : ValueObject, IComparable<Version>, IEquatable<Version>
 {
     // FIX MA0009: Add timeout to prevent ReDoS attacks
-    // FIX MA0023: Add ExplicitCapture to prevent capturing unneeded groups
-    private static readonly Regex VersionRegex = new(@"^(\d+)\.(\d+)\.(\d+)$", RegexOptions.Compiled | RegexOptions.ExplicitCapture, TimeSpan.FromSeconds(1));
+    // Use named groups for ExplicitCapture compatibility
+    private static readonly Regex VersionRegex = new(@"^(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)$", RegexOptions.Compiled | RegexOptions.ExplicitCapture, TimeSpan.FromSeconds(1));
 
     public int Major { get; }
     public int Minor { get; }
@@ -43,9 +43,9 @@ internal sealed class Version : ValueObject, IComparable<Version>, IEquatable<Ve
         if (!match.Success)
             throw new ValidationException($"Invalid version format: {version}. Expected: major.minor.patch (e.g., 1.0.0)");
 
-        Major = int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture);
-        Minor = int.Parse(match.Groups[2].Value, CultureInfo.InvariantCulture);
-        Patch = int.Parse(match.Groups[3].Value, CultureInfo.InvariantCulture);
+        Major = int.Parse(match.Groups["major"].Value, CultureInfo.InvariantCulture);
+        Minor = int.Parse(match.Groups["minor"].Value, CultureInfo.InvariantCulture);
+        Patch = int.Parse(match.Groups["patch"].Value, CultureInfo.InvariantCulture);
         Value = version.Trim();
     }
 

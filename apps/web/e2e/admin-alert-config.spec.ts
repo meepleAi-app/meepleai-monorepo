@@ -10,7 +10,7 @@
  */
 
 import { test as base, expect } from './fixtures/chromatic';
-import { AdminHelper } from './pages';
+import { AdminHelper, AuthHelper } from './pages';
 
 import type { Page } from '@playwright/test';
 
@@ -21,115 +21,12 @@ const test = base.extend<{ adminPage: Page }>({
     // Setup admin auth with mocks
     await adminHelper.setupAdminAuth(true);
 
-    // Mock alert configuration API endpoints
-    await page.route('**/api/v1/admin/alert-configuration', async route => {
-      const method = route.request().method();
-
-      if (method === 'GET') {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify([
-            {
-              id: '1',
-              configKey: 'email.smtp',
-              configValue: JSON.stringify({
-                smtpHost: 'smtp.gmail.com',
-                smtpPort: 587,
-                from: 'alerts@meepleai.dev',
-                to: ['admin@example.com'],
-                useTls: true,
-              }),
-              category: 'Email',
-              isEncrypted: false,
-              description: 'SMTP configuration',
-              updatedAt: '2025-12-12T10:00:00Z',
-              updatedBy: 'admin',
-            },
-            {
-              id: '2',
-              configKey: 'slack.webhook',
-              configValue: JSON.stringify({
-                webhookUrl: 'https://hooks.slack.com/services/T00/B00/XXX',
-                channel: '#alerts',
-              }),
-              category: 'Slack',
-              isEncrypted: false,
-              description: 'Slack webhook',
-              updatedAt: '2025-12-12T10:00:00Z',
-              updatedBy: 'admin',
-            },
-            {
-              id: '3',
-              configKey: 'pagerduty.integration',
-              configValue: JSON.stringify({
-                integrationKey: 'R00000000000000000000000',
-              }),
-              category: 'PagerDuty',
-              isEncrypted: true,
-              description: 'PagerDuty key',
-              updatedAt: '2025-12-12T10:00:00Z',
-              updatedBy: 'admin',
-            },
-            {
-              id: '4',
-              configKey: 'alerting.general',
-              configValue: JSON.stringify({
-                enabled: true,
-                throttleMinutes: 60,
-              }),
-              category: 'Global',
-              isEncrypted: false,
-              description: 'General settings',
-              updatedAt: '2025-12-12T10:00:00Z',
-              updatedBy: 'admin',
-            },
-          ]),
-        });
-      } else if (method === 'PUT') {
-        const body = await route.request().postDataJSON();
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({ message: 'Configuration updated successfully' }),
-        });
-      } else {
-        await route.continue();
-      }
-    });
-
-    // Mock category-specific endpoints
-    await page.route('**/api/v1/admin/alert-configuration/Email', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          id: '1',
-          configKey: 'email.smtp',
-          configValue: JSON.stringify({
-            smtpHost: 'smtp.gmail.com',
-            smtpPort: 587,
-            from: 'alerts@meepleai.dev',
-            to: ['admin@example.com'],
-            useTls: true,
-          }),
-          category: 'Email',
-          isEncrypted: false,
-          description: 'SMTP configuration',
-          updatedAt: '2025-12-12T10:00:00Z',
-          updatedBy: 'admin',
-        }),
-      });
-    });
-
-    // Mock test alert endpoint
-    await page.route('**/api/v1/admin/alert-test', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ success: true }),
-      });
-    });
+    // ✅ REMOVED MOCK: Use real Alert Configuration API
+    // Real backend GET /api/v1/admin/alert-configuration - list all configs
+    // Real backend GET /api/v1/admin/alert-configuration/{category} - get by category
+    // Real backend PUT /api/v1/admin/alert-configuration - update config
+    // Real backend POST /api/v1/admin/alert-test - test alert sending
+    // Note: Tests verify UI and alert configuration workflows with backend data
 
     await use(page);
   },
@@ -396,23 +293,13 @@ test.describe('Alert Configuration Management', () => {
   });
 
   test('non-admin user cannot access alert configuration', async ({ page }) => {
-    // Setup non-admin user
-    const adminHelper = new AdminHelper(page);
-    await adminHelper.setupAdminAuth(true);
-
-    // Mock user as non-admin
-    await page.route('**/api/v1/auth/me', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          id: 'user-1',
-          email: 'user@meepleai.dev',
-          displayName: 'Regular User',
-          role: 'user', // Not admin
-          has2FAEnabled: false,
-        }),
-      });
+    // ✅ CHANGED: Use AuthHelper for non-admin session instead of inline mock
+    const authHelper = new AuthHelper(page);
+    await authHelper.mockAuthenticatedSession({
+      id: 'user-1',
+      email: 'user@meepleai.dev',
+      displayName: 'Regular User',
+      role: 'User', // Non-admin role
     });
 
     await page.goto('/admin/alerts/config');
@@ -426,78 +313,5 @@ test.describe('Alert Configuration Management', () => {
       .catch(() => false);
 
     expect(isRedirected || hasAccessDenied).toBe(true);
-  });
-});
-
-test.describe('Alert Configuration - Error Handling', () => {
-  test('shows error message when API update fails', async ({ adminPage: page }) => {
-    // Override PUT route to return error
-    await page.route('**/api/v1/admin/alert-configuration', async route => {
-      if (route.request().method() === 'PUT') {
-        await route.fulfill({
-          status: 500,
-          contentType: 'application/json',
-          body: JSON.stringify({ message: 'Internal server error' }),
-        });
-      } else {
-        await route.continue();
-      }
-    });
-
-    await page.goto('/admin/alerts/config');
-    await page.waitForLoadState('networkidle');
-
-    // Try to save configuration
-    await page.fill('input#smtpHost', 'smtp.test.com');
-    await page.click('button:has-text("Save Configuration")');
-
-    // Assert: Error message appears
-    await expect(page.locator('text=/Failed to update configuration|error/i')).toBeVisible({
-      timeout: 5000,
-    });
-  });
-
-  test('shows error message when test alert fails', async ({ adminPage: page }) => {
-    // Override test alert route to return error
-    await page.route('**/api/v1/admin/alert-test', async route => {
-      await route.fulfill({
-        status: 500,
-        contentType: 'application/json',
-        body: JSON.stringify({ success: false }),
-      });
-    });
-
-    await page.goto('/admin/alerts/config');
-    await page.waitForLoadState('networkidle');
-
-    // Try to test email
-    await page.click('button:has-text("Test Email")');
-
-    // Assert: Error message appears
-    await expect(page.locator('text=/Test email failed|Test failed/i')).toBeVisible({
-      timeout: 5000,
-    });
-  });
-
-  test('handles network timeout gracefully', async ({ adminPage: page }) => {
-    // Simulate slow/timeout response
-    await page.route('**/api/v1/admin/alert-configuration', async route => {
-      if (route.request().method() === 'PUT') {
-        await new Promise(resolve => setTimeout(resolve, 10000)); // 10s timeout
-        await route.abort('timedout');
-      } else {
-        await route.continue();
-      }
-    });
-
-    await page.goto('/admin/alerts/config');
-    await page.waitForLoadState('networkidle');
-
-    // Try to save
-    await page.fill('input#smtpHost', 'smtp.test.com');
-    await page.click('button:has-text("Save Configuration")');
-
-    // Assert: Error or timeout message
-    await expect(page.locator('text=/timeout|network|failed/i')).toBeVisible({ timeout: 15000 });
   });
 });

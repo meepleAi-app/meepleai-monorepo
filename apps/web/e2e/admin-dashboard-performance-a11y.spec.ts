@@ -24,62 +24,10 @@ const test = base.extend<{ adminPage: Page }>({
     const adminHelper = new AdminHelper(page);
     await adminHelper.setupAdminAuth(true);
 
-    // Mock analytics API
-    await page.route('**/api/v1/admin/analytics*', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          metrics: {
-            totalUsers: 1247,
-            activeSessions: 42,
-            apiRequestsToday: 3456,
-            totalPdfDocuments: 847,
-            totalChatMessages: 15234,
-            averageConfidenceScore: 0.942,
-            totalRagRequests: 18547,
-            totalTokensUsed: 15700000,
-            totalGames: 125,
-            apiRequests7d: 24891,
-            apiRequests30d: 112034,
-            averageLatency24h: 215.0,
-            averageLatency7d: 228.0,
-            errorRate24h: 0.025,
-            activeAlerts: 2,
-            resolvedAlerts: 37,
-          },
-          userTrend: [],
-          sessionTrend: [],
-          apiRequestTrend: [],
-          pdfUploadTrend: [],
-          chatMessageTrend: [],
-          generatedAt: new Date().toISOString(),
-        }),
-      });
-    });
-
-    // Mock activity API
-    await page.route('**/api/v1/admin/activity*', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          events: [
-            {
-              id: '1',
-              eventType: 'UserRegistered',
-              description: 'New user registered: john.doe@example.com',
-              userId: 'user-123',
-              userEmail: 'john.doe@example.com',
-              timestamp: new Date().toISOString(),
-              severity: 'Info',
-            },
-          ],
-          totalCount: 1,
-          generatedAt: new Date().toISOString(),
-        }),
-      });
-    });
+    // ✅ REMOVED MOCK: Use real Admin Analytics and Activity APIs
+    // Real backend GET /api/v1/admin/analytics must return 16 metrics (Issue #874)
+    // Real backend GET /api/v1/admin/activity must return recent event feed
+    // Note: Performance and accessibility tests work with any backend data
 
     await use(page);
   },

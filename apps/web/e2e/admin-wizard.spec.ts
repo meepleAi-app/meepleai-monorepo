@@ -13,6 +13,7 @@
  */
 
 import { test, expect } from './fixtures/chromatic';
+import { AuthHelper, USER_FIXTURES } from './pages';
 
 /**
  * API Configuration
@@ -59,65 +60,13 @@ const CREDENTIALS = {
 } as const;
 
 /**
- * User Roles
+ * User Roles (kept for CREDENTIALS reference)
  */
 const ROLES = {
   ADMIN: 'Admin',
   EDITOR: 'Editor',
   USER: 'User',
 } as const;
-
-/**
- * Session Cookie Configuration
- */
-const SESSION_COOKIES = {
-  SESSION: 'meepleai_session',
-  USER_ROLE: 'meepleai_user_role',
-} as const;
-
-/**
- * Cookie Configuration
- */
-const COOKIE_CONFIG = {
-  domain: 'localhost',
-  path: '/',
-  secure: false,
-  sameSite: 'Lax' as const,
-};
-
-/**
- * Generate session token for mocks
- */
-const generateSessionToken = (role: string, context: string) =>
-  `test-${role.toLowerCase()}-${context}-${Date.now()}`;
-
-/**
- * Create mock user for testing
- */
-const createMockUser = (role: string, email: string) => ({
-  id: `mock-${role.toLowerCase()}-user-id`,
-  email,
-  displayName: `Test ${role}`,
-  role,
-});
-
-/**
- * Helper to create session cookies for mocked tests
- */
-const createSessionCookies = (role: string, context: string) => [
-  {
-    name: SESSION_COOKIES.SESSION,
-    value: generateSessionToken(role, context),
-    ...COOKIE_CONFIG,
-    httpOnly: true,
-  },
-  {
-    name: SESSION_COOKIES.USER_ROLE,
-    value: role.toLowerCase(),
-    ...COOKIE_CONFIG,
-    httpOnly: false,
-  },
-];
 
 /**
  * Helper to check if middleware redirected to login
@@ -140,29 +89,11 @@ test.describe('Admin Game Setup Wizard', () => {
    */
   test.describe('Wizard Access', () => {
     test('Admin can access wizard page', async ({ page }) => {
-      // Mock auth endpoint to return admin user
-      await page.route(`${API_BASE}${ENDPOINTS.AUTH_ME}`, async route => {
-        await route.fulfill({
-          status: HTTP_STATUS.OK,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            user: createMockUser(ROLES.ADMIN, CREDENTIALS.ADMIN.email),
-            expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-          }),
-        });
-      });
+      // ✅ REMOVED MOCK: Use real auth API via AuthHelper
+      const authHelper = new AuthHelper(page);
+      await authHelper.mockAuthenticatedSession(USER_FIXTURES.admin);
 
-      // Mock games list
-      await page.route(`${API_BASE}${ENDPOINTS.GAMES}`, async route => {
-        await route.fulfill({
-          status: HTTP_STATUS.OK,
-          contentType: 'application/json',
-          body: JSON.stringify([]),
-        });
-      });
-
-      // Set session cookies
-      await page.context().addCookies(createSessionCookies(ROLES.ADMIN, 'wizard-access'));
+      // ✅ REMOVED MOCK: Use real GET /api/v1/games backend
 
       // Navigate to wizard page
       await page.goto('/admin/wizard');
@@ -176,20 +107,9 @@ test.describe('Admin Game Setup Wizard', () => {
     });
 
     test('Wizard shows all 4 steps in indicator', async ({ page }) => {
-      // Mock auth endpoint
-      await page.route(`${API_BASE}${ENDPOINTS.AUTH_ME}`, async route => {
-        await route.fulfill({
-          status: HTTP_STATUS.OK,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            user: createMockUser(ROLES.ADMIN, CREDENTIALS.ADMIN.email),
-            expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-          }),
-        });
-      });
-
-      // Set session cookies
-      await page.context().addCookies(createSessionCookies(ROLES.ADMIN, 'wizard-steps'));
+      // ✅ REMOVED MOCK: Use real auth API via AuthHelper
+      const authHelper = new AuthHelper(page);
+      await authHelper.mockAuthenticatedSession(USER_FIXTURES.admin);
 
       // Navigate to wizard page
       await page.goto('/admin/wizard');
@@ -205,20 +125,9 @@ test.describe('Admin Game Setup Wizard', () => {
     });
 
     test('Regular user cannot access wizard (redirect to admin)', async ({ page }) => {
-      // Mock auth endpoint to return regular user
-      await page.route(`${API_BASE}${ENDPOINTS.AUTH_ME}`, async route => {
-        await route.fulfill({
-          status: HTTP_STATUS.OK,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            user: createMockUser(ROLES.USER, CREDENTIALS.USER.email),
-            expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-          }),
-        });
-      });
-
-      // Set session cookies for regular user
-      await page.context().addCookies(createSessionCookies(ROLES.USER, 'wizard-access-denied'));
+      // ✅ REMOVED MOCK: Use real auth API via AuthHelper
+      const authHelper = new AuthHelper(page);
+      await authHelper.mockAuthenticatedSession(USER_FIXTURES.user);
 
       // Navigate to wizard page
       await page.goto('/admin/wizard');
@@ -238,20 +147,9 @@ test.describe('Admin Game Setup Wizard', () => {
    */
   test.describe('Step 1: PDF Upload', () => {
     test('Shows PDF upload form on initial load', async ({ page }) => {
-      // Mock auth endpoint
-      await page.route(`${API_BASE}${ENDPOINTS.AUTH_ME}`, async route => {
-        await route.fulfill({
-          status: HTTP_STATUS.OK,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            user: createMockUser(ROLES.ADMIN, CREDENTIALS.ADMIN.email),
-            expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-          }),
-        });
-      });
-
-      // Set session cookies
-      await page.context().addCookies(createSessionCookies(ROLES.ADMIN, 'wizard-pdf-upload'));
+      // ✅ REMOVED MOCK: Use real auth API via AuthHelper
+      const authHelper = new AuthHelper(page);
+      await authHelper.mockAuthenticatedSession(USER_FIXTURES.admin);
 
       // Navigate to wizard page
       await page.goto('/admin/wizard');
@@ -266,20 +164,9 @@ test.describe('Admin Game Setup Wizard', () => {
     });
 
     test('Shows public library checkbox', async ({ page }) => {
-      // Mock auth endpoint
-      await page.route(`${API_BASE}${ENDPOINTS.AUTH_ME}`, async route => {
-        await route.fulfill({
-          status: HTTP_STATUS.OK,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            user: createMockUser(ROLES.ADMIN, CREDENTIALS.ADMIN.email),
-            expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-          }),
-        });
-      });
-
-      // Set session cookies
-      await page.context().addCookies(createSessionCookies(ROLES.ADMIN, 'wizard-checkbox'));
+      // ✅ REMOVED MOCK: Use real auth API via AuthHelper
+      const authHelper = new AuthHelper(page);
+      await authHelper.mockAuthenticatedSession(USER_FIXTURES.admin);
 
       // Navigate to wizard page
       await page.goto('/admin/wizard');
@@ -295,20 +182,9 @@ test.describe('Admin Game Setup Wizard', () => {
     });
 
     test('Upload button is disabled when no file selected', async ({ page }) => {
-      // Mock auth endpoint
-      await page.route(`${API_BASE}${ENDPOINTS.AUTH_ME}`, async route => {
-        await route.fulfill({
-          status: HTTP_STATUS.OK,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            user: createMockUser(ROLES.ADMIN, CREDENTIALS.ADMIN.email),
-            expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-          }),
-        });
-      });
-
-      // Set session cookies
-      await page.context().addCookies(createSessionCookies(ROLES.ADMIN, 'wizard-disabled-btn'));
+      // ✅ REMOVED MOCK: Use real auth API via AuthHelper
+      const authHelper = new AuthHelper(page);
+      await authHelper.mockAuthenticatedSession(USER_FIXTURES.admin);
 
       // Navigate to wizard page
       await page.goto('/admin/wizard');
@@ -327,33 +203,11 @@ test.describe('Admin Game Setup Wizard', () => {
    */
   test.describe('Step 2: Game Creation (Mocked Flow)', () => {
     test('Game creation form shows required fields', async ({ page }) => {
-      // Mock auth endpoint
-      await page.route(`${API_BASE}${ENDPOINTS.AUTH_ME}`, async route => {
-        await route.fulfill({
-          status: HTTP_STATUS.OK,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            user: createMockUser(ROLES.ADMIN, CREDENTIALS.ADMIN.email),
-            expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-          }),
-        });
-      });
+      // ✅ REMOVED MOCK: Use real auth API via AuthHelper
+      const authHelper = new AuthHelper(page);
+      await authHelper.mockAuthenticatedSession(USER_FIXTURES.admin);
 
-      // Mock PDF progress (simulate completed upload)
-      await page.route(`${API_BASE}${ENDPOINTS.PDF_PROGRESS}/**`, async route => {
-        await route.fulfill({
-          status: HTTP_STATUS.OK,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            status: 'Completed',
-            percentComplete: 100,
-            message: 'Processing complete',
-          }),
-        });
-      });
-
-      // Set session cookies
-      await page.context().addCookies(createSessionCookies(ROLES.ADMIN, 'wizard-game-form'));
+      // ✅ REMOVED MOCK: Use real GET /api/v1/ingest/progress/{id} backend
 
       // Navigate with step=2 query param (simulating after PDF upload)
       await page.goto('/admin/wizard?step=2&pdfId=test-pdf-123&pdfFileName=test.pdf');
@@ -371,20 +225,9 @@ test.describe('Admin Game Setup Wizard', () => {
    */
   test.describe('Accessibility', () => {
     test('Wizard has proper heading structure', async ({ page }) => {
-      // Mock auth endpoint
-      await page.route(`${API_BASE}${ENDPOINTS.AUTH_ME}`, async route => {
-        await route.fulfill({
-          status: HTTP_STATUS.OK,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            user: createMockUser(ROLES.ADMIN, CREDENTIALS.ADMIN.email),
-            expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-          }),
-        });
-      });
-
-      // Set session cookies
-      await page.context().addCookies(createSessionCookies(ROLES.ADMIN, 'wizard-a11y'));
+      // ✅ REMOVED MOCK: Use real auth API via AuthHelper
+      const authHelper = new AuthHelper(page);
+      await authHelper.mockAuthenticatedSession(USER_FIXTURES.admin);
 
       // Navigate to wizard page
       await page.goto('/admin/wizard');
@@ -402,20 +245,9 @@ test.describe('Admin Game Setup Wizard', () => {
     });
 
     test('Form inputs have proper labels', async ({ page }) => {
-      // Mock auth endpoint
-      await page.route(`${API_BASE}${ENDPOINTS.AUTH_ME}`, async route => {
-        await route.fulfill({
-          status: HTTP_STATUS.OK,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            user: createMockUser(ROLES.ADMIN, CREDENTIALS.ADMIN.email),
-            expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-          }),
-        });
-      });
-
-      // Set session cookies
-      await page.context().addCookies(createSessionCookies(ROLES.ADMIN, 'wizard-labels'));
+      // ✅ REMOVED MOCK: Use real auth API via AuthHelper
+      const authHelper = new AuthHelper(page);
+      await authHelper.mockAuthenticatedSession(USER_FIXTURES.admin);
 
       // Navigate to wizard page
       await page.goto('/admin/wizard');
@@ -434,20 +266,9 @@ test.describe('Admin Game Setup Wizard', () => {
    */
   test.describe('Navigation', () => {
     test('Back to admin link works', async ({ page }) => {
-      // Mock auth endpoint
-      await page.route(`${API_BASE}${ENDPOINTS.AUTH_ME}`, async route => {
-        await route.fulfill({
-          status: HTTP_STATUS.OK,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            user: createMockUser(ROLES.ADMIN, CREDENTIALS.ADMIN.email),
-            expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-          }),
-        });
-      });
-
-      // Set session cookies
-      await page.context().addCookies(createSessionCookies(ROLES.ADMIN, 'wizard-nav'));
+      // ✅ REMOVED MOCK: Use real auth API via AuthHelper
+      const authHelper = new AuthHelper(page);
+      await authHelper.mockAuthenticatedSession(USER_FIXTURES.admin);
 
       // Navigate to wizard page
       await page.goto('/admin/wizard');

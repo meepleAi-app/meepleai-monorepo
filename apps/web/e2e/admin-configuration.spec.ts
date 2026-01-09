@@ -15,40 +15,10 @@ const test = base.extend<{ adminPage: Page }>({
     // Setup admin auth with mocks (skip navigation)
     await adminHelper.setupAdminAuth(true);
 
-    // Set up configuration API mocks BEFORE any navigation
-    await page.route('**/api/v1/admin/configurations*', async route => {
-      if (route.request().method() === 'GET') {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            items: [
-              {
-                id: 'config-1',
-                key: 'Features:TestFlag',
-                value: 'true',
-                valueType: 'bool',
-                category: 'FeatureFlags',
-                isActive: true,
-              },
-            ],
-            total: 1,
-            page: 1,
-            pageSize: 100,
-          }),
-        });
-      } else {
-        await route.continue();
-      }
-    });
-
-    await page.route('**/api/v1/admin/configurations/categories', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(['FeatureFlags', 'RateLimiting', 'AI', 'RAG']),
-      });
-    });
+    // ✅ REMOVED MOCK: Use real Admin Configuration API
+    // Real backend GET /api/v1/admin/configurations must return paginated config items
+    // Real backend GET /api/v1/admin/configurations/categories must return category list
+    // Note: Test verifies UI structure, works with any backend configuration data
 
     await use(page);
   },

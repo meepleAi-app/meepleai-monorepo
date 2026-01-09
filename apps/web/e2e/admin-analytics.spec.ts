@@ -17,55 +17,10 @@ const test = base.extend<{ adminPage: Page }>({
     // Setup admin auth (skip navigation)
     await adminHelper.setupAdminAuth(true);
 
-    // Set up analytics API mocks BEFORE any navigation
-    await page.route('**/api/v1/admin/analytics*', async route => {
-      const url = route.request().url();
-
-      // Handle export endpoint
-      if (url.includes('/export')) {
-        const format = JSON.parse(route.request().postData() || '{}').format || 'csv';
-        const content =
-          format === 'csv'
-            ? 'Date,Users,Sessions\n2025-11-05,10,5'
-            : JSON.stringify({
-                metrics: { totalUsers: 10 },
-                generatedAt: new Date().toISOString(),
-              });
-
-        await route.fulfill({
-          status: 200,
-          contentType: format === 'csv' ? 'text/csv' : 'application/json',
-          headers: {
-            'Content-Disposition': `attachment; filename="analytics-${new Date().toISOString().split('T')[0]}.${format}"`,
-          },
-          body: content,
-        });
-      } else {
-        // Handle regular analytics endpoint
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            metrics: {
-              totalUsers: 10,
-              activeSessions: 5,
-              apiRequestsToday: 100,
-              totalPdfDocuments: 20,
-              totalChatMessages: 50,
-              averageConfidenceScore: 0.85,
-              totalRagRequests: 30,
-              totalTokensUsed: 5000,
-            },
-            userTrend: [{ date: '2025-11-05', count: 2 }],
-            sessionTrend: [{ date: '2025-11-05', count: 5 }],
-            apiRequestTrend: [{ date: '2025-11-05', count: 100 }],
-            pdfUploadTrend: [{ date: '2025-11-05', count: 3 }],
-            chatMessageTrend: [{ date: '2025-11-05', count: 15 }],
-            generatedAt: new Date().toISOString(),
-          }),
-        });
-      }
-    });
+    // ✅ REMOVED MOCK: Use real Admin Analytics API
+    // Real backend GET /api/v1/admin/analytics must return metrics + trend data
+    // Real backend POST /api/v1/admin/analytics/export must support CSV/JSON export
+    // Note: Test verifies UI structure only, no specific values checked
 
     await use(page);
   },

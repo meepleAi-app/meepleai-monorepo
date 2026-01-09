@@ -117,6 +117,9 @@ test.describe('Admin Reports - Report Generation', () => {
   });
 
   test('should handle report generation errors gracefully', async ({ page }) => {
+    // ✅ MAINTAINED MOCK: Error injection test (Issue #2299 - Pattern: Skip)
+    // Mock simulates backend 500 error to validate frontend error handling
+    // Real backend cannot reliably trigger this failure scenario
     await page.route('**/api/v1/admin/reports/generate', route => {
       route.fulfill({
         status: 500,
@@ -334,6 +337,9 @@ test.describe('Admin Reports - Email Validation', () => {
   });
 
   test('should handle email delivery failures gracefully', async ({ page }) => {
+    // ✅ MAINTAINED MOCK: Error injection test (Issue #2299 - Pattern: Skip)
+    // Mocks simulate email delivery failure scenario to validate frontend error handling
+    // Real SMTP failures are non-deterministic and cannot be reliably triggered in E2E
     await page.route('**/api/v1/admin/reports/schedule', route => {
       route.fulfill({
         status: 200,

@@ -695,6 +695,19 @@ public class RegisterCommandHandlerTests
         _sessionRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Session>(), token), Times.Once);
         _unitOfWorkMock.Verify(x => x.SaveChangesAsync(token), Times.Once);
     }
+
+    [Fact]
+    public async Task Handle_WithNullCommand_ThrowsArgumentNullException()
+    {
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentNullException>(
+            () => _handler.Handle(null!, TestContext.Current.CancellationToken)
+        );
+
+        _userRepositoryMock.Verify(x => x.GetByEmailAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()), Times.Never);
+        _userRepositoryMock.Verify(x => x.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     private User CreateTestUser(string email = "test@example.com", string password = "SecurePassword123!")
     {
         return new User(

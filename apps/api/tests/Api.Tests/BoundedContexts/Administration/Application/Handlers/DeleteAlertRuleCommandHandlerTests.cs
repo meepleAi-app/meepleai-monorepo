@@ -1,6 +1,8 @@
 using Api.BoundedContexts.Administration.Application.Commands.AlertRules;
 using Api.BoundedContexts.Administration.Application.Handlers.AlertRules;
+using Api.BoundedContexts.Administration.Domain.Aggregates.AlertRules;
 using Api.BoundedContexts.Administration.Domain.Repositories;
+using Api.SharedKernel.Domain.Exceptions;
 using Api.Tests.Constants;
 using FluentAssertions;
 using Moq;
@@ -70,5 +72,38 @@ public class DeleteAlertRuleCommandHandlerTests
             _handler.Handle(command!, CancellationToken.None));
 
         _mockRepository.Verify(r => r.DeleteAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    // === VALIDATION FAILURE TESTS (Week 10-11: Validation branch coverage) ===
+
+    [Fact]
+    public async Task Handle_EmptyRuleId_ThrowsValidationException()
+    {
+        // Arrange
+        var command = new DeleteAlertRuleCommand(Guid.Empty);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(() =>
+            _handler.Handle(command, CancellationToken.None));
+
+        _mockRepository.Verify(r => r.DeleteAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_RuleNotFound_ThrowsDomainException()
+    {
+        // Arrange
+        var ruleId = Guid.NewGuid();
+        var command = new DeleteAlertRuleCommand(ruleId);
+
+        _mockRepository
+            .Setup(r => r.GetByIdAsync(ruleId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((AlertRule?)null);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<DomainException>(() =>
+            _handler.Handle(command, CancellationToken.None));
+
+        _mockRepository.Verify(r => r.DeleteAsync(ruleId, It.IsAny<CancellationToken>()), Times.Never);
     }
 }

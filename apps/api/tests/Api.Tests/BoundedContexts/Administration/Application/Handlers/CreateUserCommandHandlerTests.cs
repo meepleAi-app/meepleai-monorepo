@@ -176,4 +176,107 @@ public class CreateUserCommandHandlerTests
         Assert.Equal("Test User", capturedUser.DisplayName); // No whitespace
         Assert.Equal("Test User", result.DisplayName);
     }
+
+    // === VALIDATION FAILURE TESTS (Week 10-11 Part 1) ===
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task Handle_EmptyEmail_ThrowsValidationException(string emptyEmail)
+    {
+        // Arrange
+        var command = new CreateUserCommand(emptyEmail, "Password123!", "Test User", "User");
+
+        // Act & Assert
+        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
+            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+
+        _mockUserRepository.Verify(r => r.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+
+    [Fact]
+    public async Task Handle_ExcessivelyLongEmail_ThrowsValidationException()
+    {
+        // Arrange
+        var longEmail = new string('a', 300) + "@example.com";
+        var command = new CreateUserCommand(longEmail, "TestPassword123!", "Test User", "User");
+
+        // Act & Assert
+        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
+            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+
+        _mockUserRepository.Verify(r => r.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData("invalid-email")]
+    [InlineData("@example.com")]
+    [InlineData("user@")]
+    [InlineData("invalid@")]
+    [InlineData("spaces in@email.com")]
+    public async Task Handle_InvalidEmailFormat_ThrowsValidationException(string invalidEmail)
+    {
+        // Arrange
+        var command = new CreateUserCommand(invalidEmail, "TestPassword123!", "Test User", "User");
+
+        // Act & Assert
+        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
+            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+
+        _mockUserRepository.Verify(r => r.GetByEmailAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_InvalidRole_ThrowsValidationException()
+    {
+        // Arrange
+        var command = new CreateUserCommand("user@example.com", "TestPassword123!", "Test User", "InvalidRole");
+
+        // Act & Assert
+        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
+            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+
+        _mockUserRepository.Verify(r => r.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData("a")]
+    [InlineData("short")]
+    public async Task Handle_ShortPassword_ThrowsValidationException(string shortPassword)
+    {
+        // Arrange
+        var command = new CreateUserCommand("user@example.com", shortPassword, "Test User", "User");
+
+        _mockUserRepository
+            .Setup(r => r.GetByEmailAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((User?)null);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
+            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+
+        // Email validation happens before password, so GetByEmailAsync IS called
+        _mockUserRepository.Verify(r => r.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task Handle_EmptyPassword_ThrowsValidationException(string emptyPassword)
+    {
+        // Arrange
+        var command = new CreateUserCommand("user@example.com", emptyPassword, "Test User", "User");
+
+        _mockUserRepository
+            .Setup(r => r.GetByEmailAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((User?)null);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
+            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+
+        // Email validation happens before password, so GetByEmailAsync IS called
+        _mockUserRepository.Verify(r => r.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
 }

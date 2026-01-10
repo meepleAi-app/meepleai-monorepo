@@ -131,4 +131,34 @@ public class EnableAlertRuleCommandHandlerTests
 
         _mockRepository.Verify(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
     }
+
+    // === VALIDATION FAILURE TESTS (Week 10-11: Validation branch coverage) ===
+
+    [Fact]
+    public async Task Handle_EmptyRuleId_ThrowsValidationException()
+    {
+        // Arrange
+        var command = new EnableAlertRuleCommand(Guid.Empty, "admin@test.com");
+
+        // Act & Assert
+        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(() =>
+            _handler.Handle(command, CancellationToken.None));
+
+        _mockRepository.Verify(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task Handle_EmptyUpdatedBy_ThrowsValidationException(string emptyUpdatedBy)
+    {
+        // Arrange
+        var command = new EnableAlertRuleCommand(Guid.NewGuid(), emptyUpdatedBy);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(() =>
+            _handler.Handle(command, CancellationToken.None));
+
+        _mockRepository.Verify(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
 }

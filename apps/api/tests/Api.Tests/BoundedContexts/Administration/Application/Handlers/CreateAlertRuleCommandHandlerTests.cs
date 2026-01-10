@@ -103,4 +103,128 @@ public class CreateAlertRuleCommandHandlerTests
 
         _mockRepository.Verify(r => r.AddAsync(It.IsAny<AlertRule>(), It.IsAny<CancellationToken>()), Times.Never);
     }
+
+    // === VALIDATION FAILURE TESTS (Week 10-11: Validation branch coverage) ===
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task Handle_EmptyRuleName_ThrowsValidationException(string emptyName)
+    {
+        // Arrange
+        var command = new CreateAlertRuleCommand(
+            Name: emptyName,
+            AlertType: "SystemMetric",
+            Severity: "Critical",
+            ThresholdValue: 85.0,
+            ThresholdUnit: "percentage",
+            DurationMinutes: 5,
+            Description: null,
+            CreatedBy: "admin@test.com"
+        );
+
+        // Act & Assert
+        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(() =>
+            _handler.Handle(command, CancellationToken.None));
+
+        _mockRepository.Verify(r => r.AddAsync(It.IsAny<AlertRule>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("InvalidSeverity")]
+    public async Task Handle_InvalidSeverity_ThrowsValidationException(string invalidSeverity)
+    {
+        // Arrange
+        var command = new CreateAlertRuleCommand(
+            Name: "Test Rule",
+            AlertType: "SystemMetric",
+            Severity: invalidSeverity,
+            ThresholdValue: 85.0,
+            ThresholdUnit: "percentage",
+            DurationMinutes: 5,
+            Description: null,
+            CreatedBy: "admin@test.com"
+        );
+
+        // Act & Assert
+        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(() =>
+            _handler.Handle(command, CancellationToken.None));
+
+        _mockRepository.Verify(r => r.AddAsync(It.IsAny<AlertRule>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-10.0)]
+    [InlineData(100.1)]
+    public async Task Handle_InvalidThresholdValue_ThrowsValidationException(double invalidThreshold)
+    {
+        // Arrange
+        var command = new CreateAlertRuleCommand(
+            Name: "Test Rule",
+            AlertType: "SystemMetric",
+            Severity: "Critical",
+            ThresholdValue: invalidThreshold,
+            ThresholdUnit: "percentage",
+            DurationMinutes: 5,
+            Description: null,
+            CreatedBy: "admin@test.com"
+        );
+
+        // Act & Assert
+        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(() =>
+            _handler.Handle(command, CancellationToken.None));
+
+        _mockRepository.Verify(r => r.AddAsync(It.IsAny<AlertRule>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-5)]
+    public async Task Handle_InvalidDurationMinutes_ThrowsValidationException(int invalidDuration)
+    {
+        // Arrange
+        var command = new CreateAlertRuleCommand(
+            Name: "Test Rule",
+            AlertType: "SystemMetric",
+            Severity: "Critical",
+            ThresholdValue: 85.0,
+            ThresholdUnit: "percentage",
+            DurationMinutes: invalidDuration,
+            Description: null,
+            CreatedBy: "admin@test.com"
+        );
+
+        // Act & Assert
+        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(() =>
+            _handler.Handle(command, CancellationToken.None));
+
+        _mockRepository.Verify(r => r.AddAsync(It.IsAny<AlertRule>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task Handle_EmptyCreatedBy_ThrowsValidationException(string emptyCreatedBy)
+    {
+        // Arrange
+        var command = new CreateAlertRuleCommand(
+            Name: "Test Rule",
+            AlertType: "SystemMetric",
+            Severity: "Critical",
+            ThresholdValue: 85.0,
+            ThresholdUnit: "percentage",
+            DurationMinutes: 5,
+            Description: null,
+            CreatedBy: emptyCreatedBy
+        );
+
+        // Act & Assert
+        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(() =>
+            _handler.Handle(command, CancellationToken.None));
+
+        _mockRepository.Verify(r => r.AddAsync(It.IsAny<AlertRule>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
 }

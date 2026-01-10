@@ -708,6 +708,171 @@ public class RegisterCommandHandlerTests
         _userRepositoryMock.Verify(x => x.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    // === VALIDATION FAILURE TESTS (Week 10-11: Validation branch coverage) ===
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task Handle_EmptyEmail_ThrowsValidationException(string emptyEmail)
+    {
+        // Arrange
+        var command = new RegisterCommand(
+            Email: emptyEmail,
+            Password: "SecurePassword123!",
+            DisplayName: "Test User",
+            Role: null,
+            IpAddress: "127.0.0.1",
+            UserAgent: "TestAgent"
+        );
+
+        // Act & Assert
+        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
+            () => _handler.Handle(command, TestContext.Current.CancellationToken)
+        );
+
+        _userRepositoryMock.Verify(x => x.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData("invalid-email")]
+    [InlineData("@example.com")]
+    [InlineData("user@")]
+    [InlineData("user @example.com")]
+    public async Task Handle_InvalidEmailFormat_ThrowsValidationException(string invalidEmail)
+    {
+        // Arrange
+        var command = new RegisterCommand(
+            Email: invalidEmail,
+            Password: "SecurePassword123!",
+            DisplayName: "Test User",
+            Role: null,
+            IpAddress: "127.0.0.1",
+            UserAgent: "TestAgent"
+        );
+
+        // Act & Assert
+        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
+            () => _handler.Handle(command, TestContext.Current.CancellationToken)
+        );
+
+        _userRepositoryMock.Verify(x => x.GetByEmailAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task Handle_EmptyPassword_ThrowsValidationException(string emptyPassword)
+    {
+        // Arrange
+        var command = new RegisterCommand(
+            Email: "user@example.com",
+            Password: emptyPassword,
+            DisplayName: "Test User",
+            Role: null,
+            IpAddress: "127.0.0.1",
+            UserAgent: "TestAgent"
+        );
+
+        // Act & Assert
+        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
+            () => _handler.Handle(command, TestContext.Current.CancellationToken)
+        );
+
+        _userRepositoryMock.Verify(x => x.GetByEmailAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task Handle_EmptyDisplayName_ThrowsValidationException(string emptyName)
+    {
+        // Arrange
+        var command = new RegisterCommand(
+            Email: "user@example.com",
+            Password: "SecurePassword123!",
+            DisplayName: emptyName,
+            Role: null,
+            IpAddress: "127.0.0.1",
+            UserAgent: "TestAgent"
+        );
+
+        // Act & Assert
+        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
+            () => _handler.Handle(command, TestContext.Current.CancellationToken)
+        );
+
+        _userRepositoryMock.Verify(x => x.GetByEmailAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_ExcessivelyLongEmail_ThrowsValidationException()
+    {
+        // Arrange
+        var longEmail = new string('a', 300) + "@example.com";
+        var command = new RegisterCommand(
+            Email: longEmail,
+            Password: "SecurePassword123!",
+            DisplayName: "Test User",
+            Role: null,
+            IpAddress: "127.0.0.1",
+            UserAgent: "TestAgent"
+        );
+
+        // Act & Assert
+        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
+            () => _handler.Handle(command, TestContext.Current.CancellationToken)
+        );
+    }
+
+    [Theory]
+    [InlineData("a")]
+    [InlineData("ab")]
+    [InlineData("short")]
+    public async Task Handle_ShortPassword_ThrowsValidationException(string shortPassword)
+    {
+        // Arrange
+        var command = new RegisterCommand(
+            Email: "user@example.com",
+            Password: shortPassword,
+            DisplayName: "Test User",
+            Role: null,
+            IpAddress: "127.0.0.1",
+            UserAgent: "TestAgent"
+        );
+
+        // Act & Assert
+        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
+            () => _handler.Handle(command, TestContext.Current.CancellationToken)
+        );
+
+        _userRepositoryMock.Verify(x => x.GetByEmailAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_InvalidRole_ThrowsValidationException()
+    {
+        // Arrange
+        var command = new RegisterCommand(
+            Email: "user@example.com",
+            Password: "SecurePassword123!",
+            DisplayName: "Test User",
+            Role: "InvalidRole",  // Invalid role value
+            IpAddress: "127.0.0.1",
+            UserAgent: "TestAgent"
+        );
+
+        _userRepositoryMock
+            .Setup(x => x.GetByEmailAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((User?)null);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
+            () => _handler.Handle(command, TestContext.Current.CancellationToken)
+        );
+
+        _userRepositoryMock.Verify(x => x.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     private User CreateTestUser(string email = "test@example.com", string password = "SecurePassword123!")
     {
         return new User(

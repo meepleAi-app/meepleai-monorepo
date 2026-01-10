@@ -542,6 +542,92 @@ public class LoginCommandHandlerTests
         _sessionRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Session>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    // === VALIDATION FAILURE TESTS (Week 10-11: Additional validation coverage) ===
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData(null)]
+    public async Task Handle_EmptyOrNullPassword_ThrowsValidationException(string? password)
+    {
+        // Arrange
+        var command = new LoginCommand(
+            Email: "user@example.com",
+            Password: password!,
+            IpAddress: "127.0.0.1",
+            UserAgent: "TestAgent"
+        );
+
+        // Act & Assert
+        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
+            () => _handler.Handle(command, TestContext.Current.CancellationToken)
+        );
+
+        _sessionRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Session>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData("   ")]
+    [InlineData("invalid@")]
+    [InlineData("@invalid.com")]
+    [InlineData("spaces in@email.com")]
+    public async Task Handle_MalformedEmail_ThrowsValidationException(string malformedEmail)
+    {
+        // Arrange
+        var command = new LoginCommand(
+            Email: malformedEmail,
+            Password: "ValidPassword123!",
+            IpAddress: "127.0.0.1",
+            UserAgent: "TestAgent"
+        );
+
+        // Act & Assert
+        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
+            () => _handler.Handle(command, TestContext.Current.CancellationToken)
+        );
+
+        _userRepositoryMock.Verify(x => x.GetByEmailAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_ExcessivelyLongEmail_ThrowsValidationException()
+    {
+        // Arrange
+        var longEmail = new string('a', 300) + "@example.com"; // Exceeds typical email length limits
+        var command = new LoginCommand(
+            Email: longEmail,
+            Password: "ValidPassword123!",
+            IpAddress: "127.0.0.1",
+            UserAgent: "TestAgent"
+        );
+
+        // Act & Assert
+        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
+            () => _handler.Handle(command, TestContext.Current.CancellationToken)
+        );
+    }
+
+    [Theory]
+    [InlineData("a")]
+    [InlineData("ab")]
+    public async Task Handle_ExcessivelyShortPassword_ThrowsValidationException(string shortPassword)
+    {
+        // Arrange
+        var command = new LoginCommand(
+            Email: "user@example.com",
+            Password: shortPassword,
+            IpAddress: "127.0.0.1",
+            UserAgent: "TestAgent"
+        );
+
+        // Act & Assert
+        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
+            () => _handler.Handle(command, TestContext.Current.CancellationToken)
+        );
+
+        _userRepositoryMock.Verify(x => x.GetByEmailAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     private User CreateTestUser(string email, string password, bool is2FAEnabled)
     {
         var user = new User(
